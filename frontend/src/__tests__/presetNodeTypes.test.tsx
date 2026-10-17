@@ -32,7 +32,7 @@ import {
 
 // ── the page that used to send the Chinese label ─────────────────────
 
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }), useSearchParams: () => null }));
 
 jest.mock("@soulledger/core/api", () => ({
   workflowApi: {

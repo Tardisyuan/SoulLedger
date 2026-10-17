@@ -626,10 +626,14 @@ function SoulInboxContent() {
   // 身份带殿名:这一页此前没报,带上落回租户展示名(「中国地府」),与其余各页的「酆都 · 第十殿」不是一个写法。
   usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
-  const [folder, setFolder] = useState<FolderKey>("all");
+  const urlParams = useSearchParams();
+  // `?folder=`:首页待办条「待我回的书信 / 未分配的书信」带来的。只认这两个文件夹。
+  const [folder, setFolder] = useState<FolderKey>(
+    urlParams?.get("folder") === "assigned_to_me" ? "assigned_to_me" : urlParams?.get("folder") === "awaiting_reply" ? "awaiting_reply" : "all"
+  );
   const [page, setPage] = useState(1);
   // `?c=<会话 id>`:通知「打开来信」带来的,一进来就打开那一封(收件箱没有逐封的路由)。
-  const opening = useSearchParams()?.get("c") || null;
+  const opening = urlParams?.get("c") || null;
   const [selectedId, setSelectedId] = useState<string | null>(opening);
   const counts = useInboxFolders();
   const list = useInboxConversations({ page, ...paramsOf(folder) });

@@ -13,7 +13,7 @@ import { cleanup, render, screen, waitFor, fireEvent } from "@testing-library/re
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
-import { deathSyncApi, dispatchApi, judgmentApi, ledgerApi } from "@soulledger/core/api";
+import { deathSyncApi, dispatchApi, judgmentApi, ledgerApi, officerAppApi } from "@soulledger/core/api";
 import { tZh, zh } from "./support/zhBundle";
 
 const mockReplace = jest.fn();
@@ -34,10 +34,14 @@ jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { proposed: jest.fn() },
   judgmentApi: { next: jest.fn() },
   deathSyncApi: { summary: jest.fn() },
+  officerAppApi: { todo: jest.fn() },
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
 jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { list: jest.fn() } }));
+jest.mock("@soulledger/core/api/social-moderation", () => ({ socialModerationApi: { reports: jest.fn() } }));
+const mockedReports = (jest.requireMock("@soulledger/core/api/social-moderation") as { socialModerationApi: { reports: jest.Mock } })
+  .socialModerationApi.reports;
 const mockedPlans = (jest.requireMock("@soulledger/core/api/sentence-plans") as { sentencePlansApi: { list: jest.Mock } })
   .sentencePlansApi.list;
 
@@ -73,6 +77,16 @@ const mockedStats = ledgerApi.statsOverview as jest.Mock;
 const mockedProposed = dispatchApi.proposed as jest.Mock;
 const mockedNext = judgmentApi.next as jest.Mock;
 const mockedDeathSummary = deathSyncApi.summary as jest.Mock;
+const mockedOfficerTodo = officerAppApi.todo as jest.Mock;
+const group = (count: number) => ({ count, items: [] });
+const officerTodo = (counts: Partial<Record<string, number>> = {}) => ({
+  data: Object.fromEntries(
+    ["approvals", "reassignments", "cooldowns", "rebirths", "letters", "unassigned_letters"].map((k) => [k, group(counts[k] ?? 0)])
+  ),
+});
+/** The seven cells after the first four (2026-10-17), all zero by default: approvals, rebirths, cooldowns,
+ *  letters, unassigned letters, sentence requests, reports. */
+const LATER_ZEROS = Array<string>(7).fill("0");
 const mockedExport = ledgerApi.exportStats as jest.Mock;
 
 /** 服务端的等宽直方图:[-300, 300) 每 50 一格,两端开口 —— 共 14 格。 */
@@ -140,6 +154,8 @@ beforeEach(() => {
   mockedNext.mockResolvedValue({ data: { total: 0 } });
   mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
   mockedPlans.mockResolvedValue({ data: { count: 0, results: [] } });
+  mockedOfficerTodo.mockResolvedValue(officerTodo());
+  mockedReports.mockResolvedValue({ data: { count: 0, results: [] } });
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
@@ -346,10 +362,10 @@ describe("DashboardPage overview", () => {
       const retry = await screen.findByRole("button", { name: "common.retry" });
       // The queue and death-sync cells still show their numbers beside the failure.
       const counts = () => Array.from(container.querySelectorAll("[data-todo-count]")).map((el) => el.textContent);
-      await waitFor(() => expect(counts()).toEqual(["0", "3", "0"]));
+      await waitFor(() => expect(counts()).toEqual(["0", "3", "0", ...LATER_ZEROS]));
       const nextCalls = mockedNext.mock.calls.length;
       fireEvent.click(retry);
-      await waitFor(() => expect(counts()).toEqual(["4", "0", "3", "0"]));
+      await waitFor(() => expect(counts()).toEqual(["4", "0", "3", "0", ...LATER_ZEROS]));
       expect(screen.queryByText("dashboard.todo.load_error")).not.toBeInTheDocument();
       expect(mockedNext.mock.calls.length).toBe(nextCalls);
     });
@@ -359,9 +375,9 @@ describe("DashboardPage overview", () => {
       const { container } = renderPage();
       await screen.findByText("dashboard.todo.unbooked");
       const cells = Array.from(container.querySelectorAll<HTMLElement>("[data-todo]"));
-      expect(cells).toHaveLength(4);
-      expect(cells.map((c) => c.hasAttribute("data-todo-mine"))).toEqual([true, false, true, false]);
-      expect(cells.map((c) => c.querySelectorAll('[data-testid="row-mark"]').length)).toEqual([1, 0, 1, 0]);
+      expect(cells).toHaveLength(11);
+      expect(cells.map((c) => c.hasAttribute("data-todo-mine"))).toEqual([true, false, true, false, ...Array(7).fill(false)]);
+      expect(cells.map((c) => c.querySelectorAll('[data-testid="row-mark"]').length)).toEqual([1, 0, 1, 0, ...Array(7).fill(0)]);
       expect(cells[1].querySelector("[data-todo-count]")).toHaveTextContent("0");
       expect(cells[1]).toHaveTextContent("dashboard.todo.none");
     });
@@ -418,6 +434,56 @@ describe("DashboardPage overview", () => {
       expect(mockedNext).not.toHaveBeenCalled();
       expect(mockedDeathSummary).not.toHaveBeenCalled();
       expect(mockedPlans).not.toHaveBeenCalled();
+      expect(mockedOfficerTodo).not.toHaveBeenCalled();
+      expect(mockedReports).not.toHaveBeenCalled();
+    });
+
+    it("the officer work queues come from one /officer-app/todo/ read and link to the page that lists each", async () => {
+      mockedOfficerTodo.mockResolvedValue(officerTodo({ approvals: 2, rebirths: 1, cooldowns: 3, letters: 4, unassigned_letters: 5 }));
+      mockedPlans.mockImplementation(async (params: { pending_request?: boolean }) => ({
+        data: { count: params.pending_request ? 6 : 0, results: [] },
+      }));
+      mockedReports.mockResolvedValue({ data: { count: 7, results: [] } });
+      const { container } = renderPage();
+      const cell = async (label: string) => {
+        await screen.findByText(label);
+        return screen.getByText(label).closest<HTMLElement>("[data-todo]")!;
+      };
+      const expectations: [string, string, string][] = [
+        ["dashboard.todo.approvals", "2", "/workflow?tab=instances"],
+        ["dashboard.todo.rebirths", "1", "/rebirth-applications"],
+        ["dashboard.todo.cooldowns", "3", "/rebirth-applications?tab=shortenings"],
+        ["dashboard.todo.letters", "4", "/soul-inbox?folder=assigned_to_me"],
+        ["dashboard.todo.unassigned_letters", "5", "/soul-inbox?folder=awaiting_reply"],
+        ["dashboard.todo.sentence_requests", "6", "/sentence-requests"],
+        ["dashboard.todo.reports", "7", "/moderation"],
+      ];
+      for (const [label, count, href] of expectations) {
+        const c = await cell(label);
+        await waitFor(() => expect(c.querySelector("[data-todo-count]")).toHaveTextContent(count));
+        expect(c.querySelector("a")).toHaveAttribute("href", href);
+      }
+      // One aggregate read for five cells, not five.
+      expect(mockedOfficerTodo).toHaveBeenCalledTimes(1);
+      expect(mockedPlans).toHaveBeenCalledWith({ pending_request: true, page: 1 });
+      expect(container.querySelectorAll("[data-todo]")).toHaveLength(11);
+    });
+
+    it("each new cell needs its own permission: letters without approvals, reports for a moderator only", async () => {
+      mockUser = { role: "JUDGE", permissions: ["soul_inbox.reply"] };
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.letters")).toBeInTheDocument();
+      expect(screen.getByText("dashboard.todo.unassigned_letters")).toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.approvals")).not.toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.reports")).not.toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.sentence_requests")).not.toBeInTheDocument();
+      expect(mockedReports).not.toHaveBeenCalled();
+      cleanup();
+
+      mockUser = { role: "MODERATOR", permissions: ["social.moderate"] };
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.reports")).toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.letters")).not.toBeInTheDocument();
     });
   });
 
