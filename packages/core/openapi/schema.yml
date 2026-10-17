@@ -36901,6 +36901,9 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - create_time
@@ -36908,6 +36911,7 @@ components:
       - has_date_warning
       - has_record_error
       - id
+      - is_archived
       - is_eval_identity
       - karmic_balance
       - name
