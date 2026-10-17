@@ -7713,7 +7713,9 @@ paths:
   /api/v1/judgment/{id}/reassign/:
     post:
       operationId: v1_judgment_reassign_create
-      description: '改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。'
+      description: |-
+        改派给同一租户里能办案的另一位官员。`{"to": <user id>, "reason": "…"}`(理由可省)。
+        原认领人(不是调用者本人时)收到通知。
       parameters:
       - in: path
         name: id
@@ -7766,7 +7768,9 @@ paths:
   /api/v1/judgment/{id}/release/:
     post:
       operationId: v1_judgment_release_create
-      description: 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。
+      description: |-
+        释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。
+        `{"reason": "…"}` 可省;替别人放回时原认领人收到通知,理由随通知走。
       parameters:
       - in: path
         name: id
@@ -7777,6 +7781,17 @@ paths:
         required: true
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
       security:
       - jwtAuth: []
       responses:
@@ -7881,7 +7896,7 @@ paths:
   /api/v1/judgment/{id}/undefer/:
     post:
       operationId: v1_judgment_undefer_create
-      description: 撤销暂缓,案子回到它按认领人所属的组。
+      description: '撤销暂缓,案子回到它按认领人所属的组。`{"reason": "…"}` 可省;替别人撤销时原认领人收到通知。'
       parameters:
       - in: path
         name: id
@@ -7892,6 +7907,17 @@ paths:
         required: true
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentClaimReason'
       security:
       - jwtAuth: []
       responses:
@@ -12311,6 +12337,7 @@ paths:
           - letter
           - reassignment
           - rebirth
+          - sentence_change
           - unassigned_letter
         description: 只要这一组(加载更多)
       - in: query
@@ -26089,6 +26116,10 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        reassign_requested_by_name:
+          type: string
+          nullable: true
+          readOnly: true
         reassign_reason:
           type: string
           readOnly: true
@@ -26195,6 +26226,7 @@ components:
       - reassign_reason
       - reassign_requested_at
       - reassign_requested_by
+      - reassign_requested_by_name
       - soul
       - soul_name
       - stale_since
@@ -26291,6 +26323,14 @@ components:
           default: ''
       required:
       - statute
+    JudgmentClaimReason:
+      type: object
+      description: '`release/` 与 `undefer/` 的可选输入:替别人放回 / 撤销暂缓时的理由,随通知给原认领人(Design
+        第四十批 O-a)。'
+      properties:
+        reason:
+          type: string
+          maxLength: 500
     JudgmentClaimRefusal:
       type: object
       description: |-
@@ -26642,6 +26682,10 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        reassign_requested_by_name:
+          type: string
+          nullable: true
+          readOnly: true
         reassign_reason:
           type: string
           readOnly: true
@@ -26765,6 +26809,7 @@ components:
       - reassign_reason
       - reassign_requested_at
       - reassign_requested_by
+      - reassign_requested_by_name
       - soul
       - soul_name
       - stale_since
@@ -27024,11 +27069,14 @@ components:
       - retry_after
     JudgmentReassign:
       type: object
-      description: '`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。'
+      description: '`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键),理由可省(官员端必填后带上,随通知给原认领人)。'
       properties:
         to:
           type: integer
           minimum: 1
+        reason:
+          type: string
+          maxLength: 500
       required:
       - to
     JudgmentReassignRequest:
@@ -29347,6 +29395,7 @@ components:
       - DISPATCH_CANCELLED
       - IMPERSONATION_STARTED
       - DEATH_SYNC_RETRY_FAILED
+      - JUDGMENT_CLAIM_CHANGED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -29378,6 +29427,7 @@ components:
         * `DISPATCH_CANCELLED` - Dispatch Cancelled
         * `IMPERSONATION_STARTED` - Impersonation Started
         * `DEATH_SYNC_RETRY_FAILED` - Death Sync Retry Failed
+        * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
     NullEnum:
       enum:
       - null
@@ -32367,6 +32417,10 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        reassign_requested_by_name:
+          type: string
+          nullable: true
+          readOnly: true
         reassign_reason:
           type: string
           readOnly: true
@@ -32775,6 +32829,10 @@ components:
         name:
           type: string
           maxLength: 255
+        soul_code:
+          type: string
+          readOnly: true
+          nullable: true
         current_state:
           allOf:
           - $ref: '#/components/schemas/CurrentStateEnum'
@@ -36608,6 +36666,10 @@ components:
         name:
           type: string
           maxLength: 255
+        soul_code:
+          type: string
+          readOnly: true
+          nullable: true
         current_state:
           allOf:
           - $ref: '#/components/schemas/CurrentStateEnum'
@@ -36757,6 +36819,7 @@ components:
       - merit_score
       - name
       - records
+      - soul_code
       - tenant
       - tenant_code
       - update_time
@@ -38760,6 +38823,10 @@ components:
           $ref: '#/components/schemas/TodoGroup'
         rebirths:
           $ref: '#/components/schemas/TodoGroup'
+        sentence_changes:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 受刑计划变更请求:本殿是原属、等原审判官决定的(最早在前)。需 `judgment.execute`;只看,不推送,计入角标。
         letters:
           allOf:
           - $ref: '#/components/schemas/TodoGroup'
@@ -38774,6 +38841,7 @@ components:
       - letters
       - reassignments
       - rebirths
+      - sentence_changes
       - unassigned_letters
     TodoFacts:
       type: object
@@ -38832,6 +38900,13 @@ components:
         merit_balance:
           type: integer
           description: 仅转生:功过结余 = 功 − 过。
+        cross_civilization:
+          type: boolean
+          nullable: true
+          description: 仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。
+        status:
+          type: string
+          description: 仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。
         cooldown_now_days:
           type: integer
           description: 仅缩短冷却:现在还剩几天。
@@ -38875,6 +38950,9 @@ components:
         is_appeal:
           type: boolean
           description: 仅转生申请:是否申诉(客户端据此选标题措辞)。
+        request_kind:
+          type: string
+          description: 仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。
         feedback_tag:
           type: string
           description: 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。

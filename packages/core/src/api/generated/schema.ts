@@ -3386,7 +3386,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。 */
+        /**
+         * @description 改派给同一租户里能办案的另一位官员。`{"to": <user id>, "reason": "…"}`(理由可省)。
+         *     原认领人(不是调用者本人时)收到通知。
+         */
         post: operations["v1_judgment_reassign_create"];
         delete?: never;
         options?: never;
@@ -3403,7 +3406,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。 */
+        /**
+         * @description 释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。
+         *     `{"reason": "…"}` 可省;替别人放回时原认领人收到通知,理由随通知走。
+         */
         post: operations["v1_judgment_release_create"];
         delete?: never;
         options?: never;
@@ -3460,7 +3466,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 撤销暂缓,案子回到它按认领人所属的组。 */
+        /** @description 撤销暂缓,案子回到它按认领人所属的组。`{"reason": "…"}` 可省;替别人撤销时原认领人收到通知。 */
         post: operations["v1_judgment_undefer_create"];
         delete?: never;
         options?: never;
@@ -11930,6 +11936,7 @@ export interface components {
             /** Format: date-time */
             readonly reassign_requested_at: string | null;
             readonly reassign_requested_by: number | null;
+            readonly reassign_requested_by_name: string | null;
             readonly reassign_reason: string;
             /** Format: date-time */
             readonly stale_since: string | null;
@@ -12011,6 +12018,10 @@ export interface components {
             statute: string;
             /** @default  */
             note: string;
+        };
+        /** @description `release/` 与 `undefer/` 的可选输入:替别人放回 / 撤销暂缓时的理由,随通知给原认领人(Design 第四十批 O-a)。 */
+        JudgmentClaimReason: {
+            reason?: string;
         };
         /**
          * @description 认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
@@ -12171,6 +12182,7 @@ export interface components {
             /** Format: date-time */
             readonly reassign_requested_at: string | null;
             readonly reassign_requested_by: number | null;
+            readonly reassign_requested_by_name: string | null;
             readonly reassign_reason: string;
             /** Format: date-time */
             readonly stale_since: string | null;
@@ -12329,9 +12341,10 @@ export interface components {
             code: string;
             retry_after: number;
         };
-        /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。 */
+        /** @description `POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键),理由可省(官员端必填后带上,随通知给原认领人)。 */
         JudgmentReassign: {
             to: number;
+            reason?: string;
         };
         /**
          * @description `POST /judgment/{id}/request-reassign/` 的输入。理由可省(网页不带);手机端必填后带上,
@@ -13370,9 +13383,10 @@ export interface components {
          *     * `DISPATCH_CANCELLED` - Dispatch Cancelled
          *     * `IMPERSONATION_STARTED` - Impersonation Started
          *     * `DEATH_SYNC_RETRY_FAILED` - Death Sync Retry Failed
+         *     * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerAssistAsk: {
@@ -14958,6 +14972,7 @@ export interface components {
             /** Format: date-time */
             readonly reassign_requested_at?: string | null;
             readonly reassign_requested_by?: number | null;
+            readonly reassign_requested_by_name?: string | null;
             readonly reassign_reason?: string;
             /** Format: date-time */
             readonly stale_since?: string | null;
@@ -15186,6 +15201,7 @@ export interface components {
             /** Format: uuid */
             readonly id?: string;
             name?: string;
+            readonly soul_code?: string | null;
             readonly current_state?: components["schemas"]["CurrentStateEnum"];
             readonly tenant_code?: string;
             readonly tenant?: number;
@@ -17018,6 +17034,7 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             name: string;
+            readonly soul_code: string | null;
             readonly current_state: components["schemas"]["CurrentStateEnum"];
             readonly tenant_code: string;
             readonly tenant: number;
@@ -17945,6 +17962,8 @@ export interface components {
             reassignments: components["schemas"]["TodoGroup"];
             cooldowns: components["schemas"]["TodoGroup"];
             rebirths: components["schemas"]["TodoGroup"];
+            /** @description 受刑计划变更请求:本殿是原属、等原审判官决定的(最早在前)。需 `judgment.execute`;只看,不推送,计入角标。 */
+            sentence_changes: components["schemas"]["TodoGroup"];
             /** @description 待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。 */
             letters: components["schemas"]["TodoGroup"];
             /** @description 未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。 */
@@ -17976,6 +17995,10 @@ export interface components {
             desired_form?: string;
             /** @description 仅转生:功过结余 = 功 − 过。 */
             merit_balance?: number;
+            /** @description 仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。 */
+            cross_civilization?: boolean | null;
+            /** @description 仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。 */
+            status?: string;
             /** @description 仅缩短冷却:现在还剩几天。 */
             cooldown_now_days?: number;
             /** @description 仅缩短冷却:申请改成剩几天。 */
@@ -17999,6 +18022,8 @@ export interface components {
             soul_code?: string;
             /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
             is_appeal?: boolean;
+            /** @description 仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。 */
+            request_kind?: string;
             /** @description 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。 */
             feedback_tag?: string;
         };
@@ -24897,7 +24922,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["JudgmentClaimReason"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentClaimReason"];
+                "multipart/form-data": components["schemas"]["JudgmentClaimReason"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24999,7 +25030,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["JudgmentClaimReason"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentClaimReason"];
+                "multipart/form-data": components["schemas"]["JudgmentClaimReason"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -29329,7 +29366,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 只要这一组(加载更多) */
-                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth" | "unassigned_letter";
+                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
                 /** @description 与 kind 同用:从第几条起,默认 0 */
                 offset?: number;
             };
