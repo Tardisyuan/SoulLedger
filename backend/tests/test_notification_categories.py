@@ -145,10 +145,11 @@ def test_the_timeout_processor_writes_the_timeout_category(judge_user):
 
     from apps.workflow.services import WorkflowService
 
-    wf = SimpleNamespace(id=1, tenant_id=judge_user.tenant_id)
+    wf = SimpleNamespace(id=1, tenant_id=judge_user.tenant_id, workflow_name="w", soul=SimpleNamespace(name="s"))
+    node = SimpleNamespace(node_name="n")
     with patch.object(WorkflowService, "designated_users", return_value=[judge_user]):
-        WorkflowService.notify_designated(wf, None, title="t", message="m", category="approval_timeout")
-        WorkflowService.notify_designated(wf, None, title="t", message="m")
+        WorkflowService.notify_designated(wf, node, kind="workflow_timeout_reminder", hours=1, category="approval_timeout")
+        WorkflowService.notify_designated(wf, node, kind="workflow_node_passed")
     rows = list(UserNotification.objects.filter(user=judge_user).order_by("id"))
     assert [categories.category_of(r.notification_type, r.params) for r in rows] == ["approval_timeout", "approval"]
 

@@ -1025,9 +1025,14 @@ class CrossTenantJudgmentService:
         # Notify all participants, through the bus for the same reason.
         from apps.authentication.models import User
 
+        from apps.notifications import messages
+
         tenants = [p.participant_tenant for p in judgment.participants.all()]
-        title = f"Judgment Concluded: {judgment.title}"
-        message = f"The cross-tenant judgment '{judgment.title}' has concluded with result: {conclusion_type}"
+        # 存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。
+        params = {"title": judgment.title}
+        if conclusion_type == "FAIL":
+            params["kind"] = "cross_judgment_concluded_fail"
+        title, message = messages.render(messages.DEFAULT_LOCALE, messages.kind_for("JUDGMENT_CONCLUDED", params), params)
         judgment_id = str(judgment.id)
 
         def send():
@@ -1042,6 +1047,7 @@ class CrossTenantJudgmentService:
                         notification_type="JUDGMENT_CONCLUDED",
                         related_resource="CrossTenantJudgment",
                         related_id=judgment_id,
+                        params=params,
                     )
 
         _after_commit(send)

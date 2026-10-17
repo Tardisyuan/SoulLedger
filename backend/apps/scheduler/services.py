@@ -359,11 +359,16 @@ def alert_recipients(job: ScheduledJob):
     return users
 
 
-def _notify(job: ScheduledJob, title: str, message: str) -> None:
+def _notify(job: ScheduledJob, kind: str, **params) -> None:
+    """存 zh-Hans 与 params(`kind` 是 apps/notifications/messages.py 的 SYSTEM_KINDS 之一),读时按请求语言重渲染。"""
+    from apps.notifications import messages
     from apps.notifications.models import notify_user
 
+    params = {"task": job.periodic_task.name, **params, "kind": kind}
+    title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
     for user in alert_recipients(job):
-        notify_user(user, title=title, message=message, related_resource="scheduler", related_id=str(job.pk))
+        notify_user(user, title=title, message=message, related_resource="scheduler", related_id=str(job.pk),
+                    params=params)
 
 
 def record_final_status(run: TaskRun) -> None:
@@ -386,11 +391,7 @@ def record_final_status(run: TaskRun) -> None:
             fields.append("last_alerted_at")
         job.save(update_fields=fields)
         if was_healthy:
-            _notify(
-                job,
-                title=f"Scheduled task failed: {job.periodic_task.name}",
-                message=(run.error or "no error detail")[:500],
-            )
+            _notify(job, "scheduled_task_failed", error=(run.error or "-")[:500])
     elif run.status == RunStatus.SUCCESS and job.consecutive_failures:
         job.consecutive_failures = 0
         job.save(update_fields=["consecutive_failures"])
@@ -406,11 +407,7 @@ def alert_overdue(now=None) -> int:
             if job.overdue_alerted_at is None:
                 job.overdue_alerted_at = now
                 job.save(update_fields=["overdue_alerted_at"])
-                _notify(
-                    job,
-                    title=f"Scheduled task did not run: {job.periodic_task.name}",
-                    message=f"expected at {health['expected_at'].isoformat()}, no run recorded since",
-                )
+                _notify(job, "scheduled_task_overdue", expected_at=health["expected_at"].isoformat())
                 alerted += 1
         elif job.overdue_alerted_at is not None:
             job.overdue_alerted_at = None

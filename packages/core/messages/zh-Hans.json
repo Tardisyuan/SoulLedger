@@ -5044,6 +5044,38 @@
     "impersonation_started": {
       "title": "有人在以你的身份查看",
       "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"
+    },
+    "workflow_assigned": {
+      "title": "审批待你处理",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」轮到你处理。"
+    },
+    "workflow_node_passed": {
+      "title": "流程通知",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"
+    },
+    "workflow_timeout_reminder": {
+      "title": "审批超时",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，请尽快处理。"
+    },
+    "workflow_timeout_escalated": {
+      "title": "审批超时",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"
+    },
+    "cross_judgment_concluded": {
+      "title": "跨域审判已结案",
+      "body": "跨域审判「{{title}}」已结案，结论：通过。"
+    },
+    "cross_judgment_concluded_fail": {
+      "title": "跨域审判已结案",
+      "body": "跨域审判「{{title}}」已结案，结论：否决。"
+    },
+    "scheduled_task_failed": {
+      "title": "定时任务失败",
+      "body": "定时任务「{{task}}」执行失败：{{error}}"
+    },
+    "scheduled_task_overdue": {
+      "title": "定时任务没有运行",
+      "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"
     }
   },
   "social_moderation": {
