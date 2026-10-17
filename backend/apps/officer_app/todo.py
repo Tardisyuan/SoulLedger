@@ -233,6 +233,15 @@ def detail(user, kind, pk, request=None):
     scope = scope_of(user, request)
     if kind in ("approval", "rebirth"):
         wf = workflow_for(scope, kind, pk)
+        if wf is None and kind == "approval":
+            # Notices written before 638b4e17 name a rebirth application's workflow as a plain `workflow`:
+            # answer with the application's item (kind/id say so) instead of 404.
+            from apps.workflow.services import WorkflowService
+
+            old = _workflows(scope).filter(pk=pk, case_type=CaseType.REBIRTH_APPLICATION).first()
+            target = WorkflowService.push_target(old) if old else None
+            if target and target["kind"] == "rebirth":
+                return detail(user, "rebirth", target["id"], request)
         if wf is None:
             return None
         facts = item_facts.workflow_facts(wf, user, scope.tenant, reason=wf.notes)

@@ -421,3 +421,21 @@ def test_a_rebirth_workflow_notice_names_the_application_not_the_workflow(
     assert set(rebirth_rows.values_list("related_id", flat=True)) == {str(app.pk)}
     assert not rows.filter(related_id=str(wf.pk)).exists()
     assert rows.filter(related_resource="workflow", related_id=str(plain.pk)).count() == 1
+
+
+def test_an_old_rebirth_notice_naming_the_workflow_lands_on_the_rebirth_item(cn_tenant, judge_user,
+                                                                            django_capture_on_commit_callbacks):
+    """Notices from before 638b4e17 carry related_resource="workflow" + the workflow id; `approval/<workflow>` used
+    to 404 for a rebirth workflow. It now answers with the application's own item; a real unknown id still 404s."""
+    import uuid
+
+    _, soul_client = rebirth_ready_soul(cn_tenant, name="转生丙")
+    with django_capture_on_commit_callbacks(execute=True):
+        assert soul_client.post("/api/v1/me/rebirth-applications/", {"desired_form": "HUMAN"}, format="json")\
+            .status_code == 201
+    client = officer_client(judge_user)
+    item = client.get(TODO).data["rebirths"]["items"][0]
+    wf_id = client.get(f"/api/v1/officer-app/items/rebirth/{item['id']}/").data["workflow_id"]
+    old = client.get(f"/api/v1/officer-app/items/approval/{wf_id}/")
+    assert old.status_code == 200 and old.data["kind"] == "rebirth" and old.data["id"] == item["id"]
+    assert client.get(f"/api/v1/officer-app/items/approval/{uuid.uuid4()}/").status_code == 404
