@@ -10,6 +10,7 @@ import { Pressable, View } from "react-native";
 import { formatWhen } from "../format";
 import { ActionButton, Row } from "../kit";
 import { judgmentActionState, judgmentMoreItems, reasonBlank, type JudgmentActionState } from "../rules";
+import { useCan } from "../session";
 import { Input, Notice, Sheet, Txt, space, useI18n, useOnline, useTheme, useToast } from "../shared";
 
 type Overlay = "menu" | "release" | "defer" | "request_reassign" | null;
@@ -51,7 +52,9 @@ export function JudgmentActionBar({
   // Each sheet clears only itself. The menu's dismissal lands after its close animation -- by then the next sheet
   // (defer / reassign / release) is the overlay, and a blanket reset closed it the moment it opened.
   const closeOnly = (name: Overlay) => () => setOverlay((current) => (current === name ? null : current));
-  const more = judgmentMoreItems(state);
+  // 认领 / 放回 / 暂缓 / 恢复 / 请求改派 都要 `judgment.execute`(只有 judgment.read 的角色点了只会 403):没有就不画。
+  const canExecute = useCan("judgment.execute");
+  const more = canExecute ? judgmentMoreItems(state) : [];
 
   const run = (call: () => Promise<unknown>, doneKey: string, after?: () => void) => {
     setBusy(true);
@@ -112,11 +115,11 @@ export function JudgmentActionBar({
               <Txt variant="nav">⋯</Txt>
             </Pressable>
           ) : null}
-          {state === "unclaimed" ? (
+          {state === "unclaimed" && canExecute ? (
             <ActionButton testID="judgment-claim" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.queue.claim")} onPress={claim} style={{ flex: 1 }} />
-          ) : state === "deferred" ? (
+          ) : state === "deferred" && canExecute ? (
             <ActionButton testID="judgment-undefer" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("judgment.claim.undefer")} onPress={undefer} style={{ flex: 1 }} />
-          ) : state === "desk" ? (
+          ) : state === "desk" || state === "deferred" ? (
             <ActionButton testID="judgment-desk" kind="outline" title={t("officer_app.continue_on_desk")} onPress={onDesk} style={{ flex: 1 }} />
           ) : (
             <ActionButton testID="judgment-write" kind="primary" title={t("officer_app.comment.write")} onPress={onWrite} style={{ flex: 1 }} />

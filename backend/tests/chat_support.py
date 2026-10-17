@@ -135,6 +135,14 @@ class FakeMatrix:
     def recent_messages(self, room_id, *, limit=50):
         return list(reversed(FakeMatrix.rooms[room_id]["messages"]))[:limit]
 
+    def messages_before(self, room_id, event_id, *, limit=50):
+        """与 `SynapseClient.messages_before` 同形:这条之前的一页,新的在前;房间里没有这条就像 Synapse 那样 404。"""
+        messages = FakeMatrix.rooms[room_id]["messages"]
+        at = next((i for i, m in enumerate(messages) if m["event_id"] == event_id), None)
+        if at is None:
+            raise MatrixError("Event not found", errcode="M_NOT_FOUND", status=404)
+        return list(reversed(messages[:at]))[:limit]
+
     def history(self, room_id, *, page=100, max_pages=500):
         """整个房间的消息,旧的在前(与 `SynapseClient.history` 同形;假的不分页)。"""
         return list(FakeMatrix.rooms[room_id]["messages"])

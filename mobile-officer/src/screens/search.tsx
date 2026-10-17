@@ -29,7 +29,7 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
   const sent = useRef(0);
   const { query } = result;
   const fetchPage = useCallback((page: number) => soulsApi.list({ search: query, page }).then((r) => r.data), [query]);
-  const { rows, more } = useMoreRows(result.first, fetchPage);
+  const { rows, more, moreState } = useMoreRows(result.first, fetchPage);
 
   const search = useCallback(() => {
     const query = text.trim();
@@ -71,7 +71,7 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
             right={<Txt tone="muted">›</Txt>}
           />
           ))}
-          <MoreRow more={more} />
+          <MoreRow more={more} state={moreState} />
         </>
       ) : (
         <StateView

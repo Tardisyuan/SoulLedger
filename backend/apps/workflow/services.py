@@ -740,6 +740,15 @@ class WorkflowService:
         return {"kind": "approval", "id": str(workflow.pk)}
 
     @staticmethod
+    def notice_target(workflow) -> dict:
+        """`related_resource` / `related_id` for a notification about this workflow. A rebirth application's workflow
+        names the application (what the officer App's rebirth item is keyed by); an approval id would land on 404."""
+        target = WorkflowService.push_target(workflow)
+        if target["kind"] == "rebirth":
+            return {"related_resource": "rebirth_application", "related_id": target["id"]}
+        return {"related_resource": "workflow", "related_id": str(workflow.id)}
+
+    @staticmethod
     def record_events(workflow, created: bool = False, node=None) -> None:
         """Write the workflow's own events onto the soul's timeline (WORKFLOW_CREATED / _APPROVED / _REJECTED).
 
@@ -863,14 +872,14 @@ class WorkflowService:
         from apps.events.services import EventService
 
         told = 0
+        target = cls.notice_target(workflow)
         for user in cls.designated_users(node, workflow.tenant_id):
             EventService.notify_user(
                 user=user,
                 title=title,
                 message=message,
                 notification_type="WORKFLOW_ASSIGNED",
-                related_resource="workflow",
-                related_id=str(workflow.id),
+                **target,
                 params={"category": category} if category else None,  # 超时的转交 / 提醒走「审批超时」类
             )
             told += 1

@@ -287,7 +287,7 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
   }, [soulId]);
   const { data, error, reload } = useRemote(load);
   const fetchPage = useCallback((page: number) => judgmentApi.list({ soul: soulId, page: String(page) }).then((r) => r.data), [soulId]);
-  const { rows, more } = useMoreRows<Judgment>(data?.page ?? null, fetchPage);
+  const { rows, more, moreState } = useMoreRows<Judgment>(data?.page ?? null, fetchPage);
   if (!data || !rows) return error ? <TabFailed onRetry={reload} /> : <LoadingRows />;
   const plan = [...data.plans].sort((a, b) => b.cycle - a.cycle)[0];
   const verdict = (j: Judgment) => {
@@ -309,7 +309,7 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
           right={<Txt tone="muted">›</Txt>}
         />
       ))}
-      <MoreRow more={more} />
+      <MoreRow more={more} state={moreState} />
       {plan ? <PlanStops plan={plan} /> : null}
     </View>
   );
@@ -426,7 +426,7 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
               ]}
             />
           ))}
-          <MoreRow more={d.more} />
+          <MoreRow more={d.more} state={d.moreState} />
         </View>
       ) : null}
       {reincarnations ? (
@@ -444,7 +444,7 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
               lines={[[t("souls.detail.generation", { n: String(x.cycle_count + 1) }), label("reincarnation.forms", x.rebirth_form), formatWhen(x.reincarnated_at)].join(" · ")]}
             />
           ))}
-          <MoreRow more={r.more} />
+          <MoreRow more={r.more} state={r.moreState} />
         </View>
       ) : null}
     </View>
