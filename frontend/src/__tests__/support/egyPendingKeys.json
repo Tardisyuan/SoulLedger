@@ -1,1 +1,8 @@
-[]
+[
+  "workflow.filter.all",
+  "workflow.filter.civilization",
+  "workflow.filter.clear",
+  "workflow.filter.from",
+  "workflow.filter.search",
+  "workflow.filter.to"
+]

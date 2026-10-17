@@ -1352,6 +1352,14 @@
         "forbidden": "你没有发起审批的权限",
         "failed": "没能发起，请重试"
       }
+    },
+    "filter": {
+      "search": "搜索流程名、灵魂或案件类型",
+      "all": "全部",
+      "civilization": "文明",
+      "from": "创建日期（起）",
+      "to": "创建日期（止）",
+      "clear": "清除筛选"
     }
   },
   "dashboard": {
