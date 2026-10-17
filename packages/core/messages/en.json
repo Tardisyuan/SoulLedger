@@ -5133,12 +5133,12 @@
       "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."
     },
     "cross_judgment_concluded": {
-      "title": "Cross-tenant judgment concluded",
-      "body": "The cross-tenant judgment {{title}} has concluded: passed."
+      "title": "Cross-realm judgment concluded",
+      "body": "The cross-realm judgment {{title}} has concluded: passed."
     },
     "cross_judgment_concluded_fail": {
-      "title": "Cross-tenant judgment concluded",
-      "body": "The cross-tenant judgment {{title}} has concluded: rejected."
+      "title": "Cross-realm judgment concluded",
+      "body": "The cross-realm judgment {{title}} has concluded: rejected."
     },
     "scheduled_task_failed": {
       "title": "Scheduled task failed",
