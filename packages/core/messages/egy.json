@@ -6470,5 +6470,17 @@
     "empty": "Nen Medew Em Setep Pen",
     "empty_all": "Nen Medew Djer",
     "failed": "Nen Ini Medew. Wehem Iri."
+  },
+  "rebirths": {
+    "title": "Sesh Wehem Mesut",
+    "nav_disposition": "Wetep",
+    "col_soul": "Ba",
+    "col_life": "Ankh",
+    "life_value": "Ankh {{from}} → {{to}}",
+    "col_form": "Kheperu Wehem Mesut",
+    "col_to": "Wat",
+    "col_time": "Unut",
+    "total": "Neb {{n}}",
+    "empty": "Wehem Mesut Nen Iri Djer"
   }
 }

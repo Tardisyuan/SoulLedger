@@ -3617,7 +3617,8 @@
       "assistant_admin": "Assistant Admin",
       "moderation": "Circle Moderation",
       "recycle_bin": "Recycle Bin",
-      "sentence_plans": "Sentence Plans"
+      "sentence_plans": "Sentence Plans",
+      "group_rebirth": "Reincarnation"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -6598,5 +6599,17 @@
     "empty": "No events match",
     "empty_all": "No events yet",
     "failed": "Couldn't load events, please try again"
+  },
+  "rebirths": {
+    "title": "Rebirth register",
+    "nav_disposition": "Dispositions",
+    "col_soul": "Soul",
+    "col_life": "Life",
+    "life_value": "Life {{from}} → {{to}}",
+    "col_form": "Form",
+    "col_to": "Going to",
+    "col_time": "Time",
+    "total": "{{n}} records",
+    "empty": "No rebirths yet"
   }
 }

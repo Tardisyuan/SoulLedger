@@ -96,5 +96,6 @@
   "death_sync.webhooks.redeliver_failed",
   "crossJudgments.cancel_reason",
   "crossJudgments.end_error",
-  "crossJudgments.cancel_error"
+  "crossJudgments.cancel_error",
+  "breadcrumb.menu.group_rebirth"
 ]
