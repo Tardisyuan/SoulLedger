@@ -3087,6 +3087,11 @@
       "still_failed": "重试后仍失败：{{reason}}",
       "refused": "这条登记现在不能重试，列表已刷新",
       "count": "已重试 {{count}}/{{max}} 次"
+    },
+    "filter": {
+      "search": "灵魂姓名 / 来源编号 / 幂等键",
+      "from": "收到日期起",
+      "to": "收到日期止"
     }
   },
   "soul_accounts": {

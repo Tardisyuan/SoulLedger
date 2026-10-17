@@ -71,5 +71,8 @@
   "crossJudgments.filter.search",
   "crossJudgments.filter.side",
   "crossJudgments.filter.side_initiated",
-  "crossJudgments.filter.side_participating"
+  "crossJudgments.filter.side_participating",
+  "death_sync.filter.search",
+  "death_sync.filter.from",
+  "death_sync.filter.to"
 ]
