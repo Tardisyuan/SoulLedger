@@ -3235,6 +3235,11 @@ paths:
         `has_draft` 是对调用者那一行 `InboxOfficerState` 的子查询。列表按 `folder=` 切,分页照
         全站默认(`PageNumberPagination`,每页 20)。
       parameters:
+      - in: query
+        name: before
+        schema:
+          type: string
+        description: 比这封更早的一页(event_id)
       - in: path
         name: id
         schema:
@@ -3271,6 +3276,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/InboxMessage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
           description: ''
         '503':
           content:
@@ -3705,6 +3716,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminWebhookConfig'
           description: ''
+  /api/v1/death-sync/admin-webhooks/{id}/test/:
+    post:
+      operationId: v1_death_sync_admin_webhooks_test_create
+      description: |-
+        发一条测试事件(`WEBHOOK_TEST`)到这个端点(审计 2026-10-17 第 14 条)。
+
+        走与真事件同一条路:写一行投递记录、提交后入队、worker 签名发出、失败照常重试。不看订阅的事件清单 ——
+        测的是「这个地址收得到、验得过签名」。停用的 webhook 409 `webhook_inactive`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWebhookDelivery'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/death-sync/admin-webhooks/event-types/:
     get:
       operationId: v1_death_sync_admin_webhooks_event_types_list
@@ -4107,6 +4152,16 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: received_after
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: received_before
+        schema:
+          type: string
+          format: date
       - name: search
         required: false
         in: query
@@ -4219,6 +4274,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationRequest'
           description: ''
+  /api/v1/death-sync/registrations/export/:
+    get:
+      operationId: v1_death_sync_registrations_export_retrieve
+      description: 这一页看得见的登记(同一组筛选)的 CSV,列取自列表序列化器。同类列表的导出写法(`apps/core/exports.py`)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/death-sync/registrations/summary/:
     get:
       operationId: v1_death_sync_registrations_summary_retrieve
@@ -4248,7 +4326,8 @@ paths:
 
         Newest first (model ordering), paginated, filterable by `webhook`,
         `status` and `event_type`. Read-only: a delivery's status is written by
-        the worker (`apps/events/tasks.py`) and by nothing else.
+        the worker (`apps/events/tasks.py`) and by nothing else — `redeliver`
+        writes a new row and leaves the old one as it was.
 
         Scoped through `webhook__tenant` rather than the row's own nullable
         `tenant`: the webhook is the thing an operator manages, and a row whose
@@ -4314,7 +4393,8 @@ paths:
 
         Newest first (model ordering), paginated, filterable by `webhook`,
         `status` and `event_type`. Read-only: a delivery's status is written by
-        the worker (`apps/events/tasks.py`) and by nothing else.
+        the worker (`apps/events/tasks.py`) and by nothing else — `redeliver`
+        writes a new row and leaves the old one as it was.
 
         Scoped through `webhook__tenant` rather than the row's own nullable
         `tenant`: the webhook is the thing an operator manages, and a row whose
@@ -4337,6 +4417,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventWebhookDelivery'
+          description: ''
+  /api/v1/death-sync/webhook-deliveries/{id}/redeliver/:
+    post:
+      operationId: v1_death_sync_webhook_deliveries_redeliver_create
+      description: |-
+        把一条失败的投递再发一次(审计 2026-10-17 第 14 条)。
+
+        新写一行(同一份 payload 快照,与原来的事件名),原行原样留着当记录 —— 不改写它的次数与错误。
+        只收**不会再自动重试**的行:ABANDONED,或 FAILED 且次数已到上限(`attempt_ceiling`);
+        还在重试的 409 `not_finished`(再发一份就是重复投递),成功或待发的同样 409。
+        webhook 已停用 409 `webhook_inactive`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Webhook Delivery.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWebhookDelivery'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/death-sync/webhooks/:
     get:
@@ -4529,6 +4645,30 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: side
+        schema:
+          type: string
+          enum:
+          - initiated
+          - participating
+        description: |-
+          * `initiated` - initiated
+          * `participating` - participating
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - CONCLUDED
+          - PROPOSED
+        description: |-
+          * `PROPOSED` - 提议中
+          * `ACTIVE` - 进行中
+          * `CONCLUDED` - 已结束
+          * `CANCELLED` - 已取消
       tags:
       - v1
       security:
@@ -4848,6 +4988,30 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: side
+        schema:
+          type: string
+          enum:
+          - initiated
+          - participating
+        description: |-
+          * `initiated` - initiated
+          * `participating` - participating
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - CONCLUDED
+          - PROPOSED
+        description: |-
+          * `PROPOSED` - 提议中
+          * `ACTIVE` - 进行中
+          * `CONCLUDED` - 已结束
+          * `CANCELLED` - 已取消
       - in: query
         name: tenant_code
         schema:
@@ -6528,6 +6692,10 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: stale
+        schema:
+          type: boolean
+      - in: query
         name: statute
         schema:
           type: string
@@ -6952,6 +7120,10 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: stale
+        schema:
+          type: boolean
+      - in: query
         name: statute
         schema:
           type: string
@@ -7165,6 +7337,10 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: stale
+        schema:
+          type: boolean
       - in: query
         name: statute
         schema:
@@ -25916,6 +26092,11 @@ components:
         reassign_reason:
           type: string
           readOnly: true
+        stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         karmic_balance:
           type: integer
           nullable: true
@@ -26016,6 +26197,7 @@ components:
       - reassign_requested_by
       - soul
       - soul_name
+      - stale_since
       - verdict
       - workflow
     JudgmentBatch:
@@ -26463,6 +26645,11 @@ components:
         reassign_reason:
           type: string
           readOnly: true
+        stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         karmic_balance:
           type: integer
           nullable: true
@@ -26580,6 +26767,7 @@ components:
       - reassign_requested_by
       - soul
       - soul_name
+      - stale_since
       - verdict
       - workflow
     JudgmentDraft:
@@ -32182,6 +32370,11 @@ components:
         reassign_reason:
           type: string
           readOnly: true
+        stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         karmic_balance:
           type: integer
           nullable: true

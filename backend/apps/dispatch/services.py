@@ -1024,7 +1024,6 @@ class CrossTenantJudgmentService:
 
         # Notify all participants, through the bus for the same reason.
         from apps.authentication.models import User
-
         from apps.notifications import messages
 
         tenants = [p.participant_tenant for p in judgment.participants.all()]

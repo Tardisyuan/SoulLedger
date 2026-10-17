@@ -4,10 +4,9 @@ Tenant-isolation tests for apps.judgment.tasks.
 See apps/ledger/test_tasks.py's module docstring for why this fan-out
 pattern exists — same M15 fix, same shape of test.
 """
+import importlib
 from datetime import timedelta
 from unittest.mock import patch
-
-import importlib
 
 import pytest
 from django.utils import timezone
