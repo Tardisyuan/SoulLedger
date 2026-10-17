@@ -46,7 +46,7 @@ def world(db):
         r = DeathRegistrationRequest.objects.create(
             tenant=tenant, api_key=key(tenant), source_system="HOSP", idempotency_key=idem,
             source_reference_id=ref, status=status, soul=soul, source_payload={})
-        when = datetime.datetime(2026, 10, 1, tzinfo=datetime.timezone.utc) - datetime.timedelta(days=days_ago)
+        when = datetime.datetime(2026, 10, 1, tzinfo=datetime.UTC) - datetime.timedelta(days=days_ago)
         DeathRegistrationRequest.objects.filter(pk=r.pk).update(request_timestamp=when)
         return r
 

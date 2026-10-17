@@ -1831,6 +1831,28 @@ export interface paths {
         patch: operations["v1_death_sync_admin_webhooks_partial_update"];
         trace?: never;
     };
+    "/api/v1/death-sync/admin-webhooks/{id}/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 发一条测试事件(`WEBHOOK_TEST`)到这个端点(审计 2026-10-17 第 14 条)。
+         *
+         *     走与真事件同一条路:写一行投递记录、提交后入队、worker 签名发出、失败照常重试。不看订阅的事件清单 ——
+         *     测的是「这个地址收得到、验得过签名」。停用的 webhook 409 `webhook_inactive`。
+         */
+        post: operations["v1_death_sync_admin_webhooks_test_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/admin-webhooks/event-types/": {
         parameters: {
             query?: never;
@@ -2082,6 +2104,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/registrations/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 这一页看得见的登记(同一组筛选)的 CSV,列取自列表序列化器。同类列表的导出写法(`apps/core/exports.py`)。 */
+        get: operations["v1_death_sync_registrations_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/registrations/summary/": {
         parameters: {
             query?: never;
@@ -2118,7 +2157,8 @@ export interface paths {
          *
          *     Newest first (model ordering), paginated, filterable by `webhook`,
          *     `status` and `event_type`. Read-only: a delivery's status is written by
-         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *     the worker (`apps/events/tasks.py`) and by nothing else — `redeliver`
+         *     writes a new row and leaves the old one as it was.
          *
          *     Scoped through `webhook__tenant` rather than the row's own nullable
          *     `tenant`: the webhook is the thing an operator manages, and a row whose
@@ -2145,7 +2185,8 @@ export interface paths {
          *
          *     Newest first (model ordering), paginated, filterable by `webhook`,
          *     `status` and `event_type`. Read-only: a delivery's status is written by
-         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *     the worker (`apps/events/tasks.py`) and by nothing else — `redeliver`
+         *     writes a new row and leaves the old one as it was.
          *
          *     Scoped through `webhook__tenant` rather than the row's own nullable
          *     `tenant`: the webhook is the thing an operator manages, and a row whose
@@ -2154,6 +2195,30 @@ export interface paths {
         get: operations["v1_death_sync_webhook_deliveries_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/webhook-deliveries/{id}/redeliver/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 把一条失败的投递再发一次(审计 2026-10-17 第 14 条)。
+         *
+         *     新写一行(同一份 payload 快照,与原来的事件名),原行原样留着当记录 —— 不改写它的次数与错误。
+         *     只收**不会再自动重试**的行:ABANDONED,或 FAILED 且次数已到上限(`attempt_ceiling`);
+         *     还在重试的 409 `not_finished`(再发一份就是重复投递),成功或待发的同样 409。
+         *     webhook 已停用 409 `webhook_inactive`。
+         */
+        post: operations["v1_death_sync_webhook_deliveries_redeliver_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11866,6 +11931,8 @@ export interface components {
             readonly reassign_requested_at: string | null;
             readonly reassign_requested_by: number | null;
             readonly reassign_reason: string;
+            /** Format: date-time */
+            readonly stale_since: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -12105,6 +12172,8 @@ export interface components {
             readonly reassign_requested_at: string | null;
             readonly reassign_requested_by: number | null;
             readonly reassign_reason: string;
+            /** Format: date-time */
+            readonly stale_since: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -14890,6 +14959,8 @@ export interface components {
             readonly reassign_requested_at?: string | null;
             readonly reassign_requested_by?: number | null;
             readonly reassign_reason?: string;
+            /** Format: date-time */
+            readonly stale_since?: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -21641,6 +21712,8 @@ export interface operations {
     v1_chat_inbox_messages_list: {
         parameters: {
             query?: {
+                /** @description 比这封更早的一页(event_id) */
+                before?: string;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A search term. */
@@ -21662,6 +21735,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InboxMessage"][];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
                 };
             };
             503: {
@@ -21930,6 +22011,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_test_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventWebhookDelivery"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -22225,6 +22338,8 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                received_after?: string;
+                received_before?: string;
                 /** @description A search term. */
                 search?: string;
                 /**
@@ -22293,6 +22408,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationRequest"];
+                };
+            };
+        };
+    };
+    v1_death_sync_registrations_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -22369,6 +22513,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventWebhookDelivery"];
+                };
+            };
+        };
+    };
+    v1_death_sync_webhook_deliveries_redeliver_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Event Webhook Delivery. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventWebhookDelivery"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -22532,6 +22708,18 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `initiated` - initiated
+                 *     * `participating` - participating
+                 */
+                side?: "initiated" | "participating";
+                /**
+                 * @description * `PROPOSED` - 提议中
+                 *     * `ACTIVE` - 进行中
+                 *     * `CONCLUDED` - 已结束
+                 *     * `CANCELLED` - 已取消
+                 */
+                status?: "ACTIVE" | "CANCELLED" | "CONCLUDED" | "PROPOSED";
             };
             header?: never;
             path?: never;
@@ -22788,6 +22976,18 @@ export interface operations {
                 role: "ADVISOR" | "CHAIRMAN" | "CO_JUDGE";
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `initiated` - initiated
+                 *     * `participating` - participating
+                 */
+                side?: "initiated" | "participating";
+                /**
+                 * @description * `PROPOSED` - 提议中
+                 *     * `ACTIVE` - 进行中
+                 *     * `CONCLUDED` - 已结束
+                 *     * `CANCELLED` - 已取消
+                 */
+                status?: "ACTIVE" | "CANCELLED" | "CONCLUDED" | "PROPOSED";
                 /** @description The civilization being invited. */
                 tenant_code: string;
             };
@@ -23906,6 +24106,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                stale?: boolean;
                 statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
@@ -24226,6 +24427,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                stale?: boolean;
                 statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
@@ -24369,6 +24571,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                stale?: boolean;
                 statute?: string;
                 /**
                  * @description * `PASSED` - Passed / Saved
