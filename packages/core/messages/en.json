@@ -3572,7 +3572,8 @@
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin",
       "moderation": "Circle Moderation",
-      "recycle_bin": "Recycle Bin"
+      "recycle_bin": "Recycle Bin",
+      "sentence_plans": "Sentence Plans"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -5560,7 +5561,16 @@
     "last_refusal_rejected": "The last dispatch was refused by the destination: {{reason}}",
     "last_refusal_rejected_bare": "The last dispatch was refused by the destination",
     "last_refusal_cancelled": "The last dispatch was cancelled",
-    "last_refusal_redispatched": "Sent again {{n}} time(s)"
+    "last_refusal_redispatched": "Sent again {{n}} time(s)",
+    "list_title": "Sentence plans",
+    "list_subtitle": "Plans this civilization owns or holds a stop of",
+    "list_empty": "No sentence plans match",
+    "filter": {
+      "search": "Search soul name",
+      "status": "Status",
+      "awaiting_redispatch": "Dispatch to resend",
+      "pending_request": "Request pending"
+    }
   },
   "seal": {
     "aria": "Seal of {{court}}"

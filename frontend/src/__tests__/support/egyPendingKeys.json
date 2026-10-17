@@ -59,5 +59,13 @@
   "dashboard.todo.letters",
   "dashboard.todo.unassigned_letters",
   "dashboard.todo.sentence_requests",
-  "dashboard.todo.reports"
+  "dashboard.todo.reports",
+  "breadcrumb.menu.sentence_plans",
+  "sentence_plan.list_title",
+  "sentence_plan.list_subtitle",
+  "sentence_plan.list_empty",
+  "sentence_plan.filter.search",
+  "sentence_plan.filter.status",
+  "sentence_plan.filter.awaiting_redispatch",
+  "sentence_plan.filter.pending_request"
 ]

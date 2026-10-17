@@ -3572,7 +3572,8 @@
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理",
       "moderation": "朋友圈审核",
-      "recycle_bin": "回收站"
+      "recycle_bin": "回收站",
+      "sentence_plans": "受刑计划"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -5560,7 +5561,16 @@
     "last_refusal_rejected": "上次调拨被执行地拒绝：{{reason}}",
     "last_refusal_rejected_bare": "上次调拨被执行地拒绝",
     "last_refusal_cancelled": "上次调拨已被取消",
-    "last_refusal_redispatched": "已重发 {{n}} 次"
+    "last_refusal_redispatched": "已重发 {{n}} 次",
+    "list_title": "受刑计划",
+    "list_subtitle": "本文明是原属、或有一站在本文明的受刑计划",
+    "list_empty": "没有符合条件的受刑计划",
+    "filter": {
+      "search": "搜索灵魂姓名",
+      "status": "状态",
+      "awaiting_redispatch": "待重发的调拨",
+      "pending_request": "有待决定的请求"
+    }
   },
   "seal": {
     "aria": "{{court}}之印"
