@@ -76,7 +76,7 @@ export function NoticesTab({ onRead, onLand, gone }: { onRead?: () => void; onLa
             strong={isUnread(n)}
             minHeight={88}
             title={n.title}
-            lines={[n.message, formatWhen(n.created_at), noticeIsDeskOnly(n) ? t("officer_app.notices.on_desk") : ""].filter(Boolean)}
+            lines={[...(n.message ? [n.message] : []), { one: formatWhen(n.created_at) }, ...(noticeIsDeskOnly(n) ? [{ one: t("officer_app.notices.on_desk") }] : [])]}
             gone={!!gone?.has(landingGoneKey(noticeLanding(n)) ?? "")}
             onPress={() => open(n)}
           />

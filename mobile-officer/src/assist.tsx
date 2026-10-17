@@ -24,7 +24,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, Input, Loader, Notice, SectionLabel, Sheet, Txt, space, useI18n, useTheme } from "./shared";
+import { Button, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, space, useI18n, useTheme } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -391,7 +391,7 @@ function History({ assist }: { assist: OfficerAssist }) {
     return (
       <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: theme.hair }]}>
         <Pressable accessibilityRole="button" onPress={() => openOne(c.id)} style={[styles.grow, { gap: space[1], paddingVertical: space[3] }]}>
-          <Txt variant="caption" tone="muted">{`${pageName(c.screen)} · ${when}`}</Txt>
+          <OneLine variant="caption" tone="muted" onPress={() => openOne(c.id)}>{`${pageName(c.screen)} · ${when}`}</OneLine>
           <Txt variant="body" numberOfLines={2}>
             {c.first_question}
           </Txt>

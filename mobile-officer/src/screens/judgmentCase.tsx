@@ -67,7 +67,7 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
                 testID={`evidence-${r.id}`}
                 minHeight={64}
                 title={r.description}
-                lines={[[source?.state === "known" ? source.label : null, recordDate(r)].filter(Boolean).join(" · ")]}
+                lines={[{ one: [source?.state === "known" ? source.label : null, recordDate(r)].filter(Boolean).join(" · ") }]}
                 onPress={() => onOpenRecord(r)}
                 right={<Txt variant="nav">›</Txt>}
               />

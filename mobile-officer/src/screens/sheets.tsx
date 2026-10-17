@@ -286,7 +286,7 @@ export function CosignSheet({
             minHeight={56}
             strong={picked === person.id}
             title={person.name || person.username}
-            lines={[`${person.username} · ${roleLabel(enumLabel, person.role)}`]}
+            lines={[{ one: `${person.username} · ${roleLabel(enumLabel, person.role)}` }]}
             right={<Txt variant="nav">{picked === person.id ? "✓" : "○"}</Txt>}
             onPress={() => setPicked(person.id)}
           />

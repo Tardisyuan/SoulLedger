@@ -38,6 +38,7 @@ import {
   Input,
   Loader,
   Notice,
+  OneLine,
   Screen,
   Sheet,
   SmallButton,
@@ -532,10 +533,10 @@ function LetterLine({
         alignItems: mine ? "flex-end" : "flex-start",
       }}
     >
-      <Txt
+      <OneLine
         variant="caption"
         tone="muted"
-      >{`${who} · ${formatWhen(new Date(message.timestamp).toISOString())}`}</Txt>
+      >{`${who} · ${formatWhen(new Date(message.timestamp).toISOString())}`}</OneLine>
       {message.image ? (
         // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
         <LetterImage

@@ -91,9 +91,9 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
             title={`${row.case_number} · ${row.soul_name}`}
             lines={[
               row.court,
-              ...(group === "mine" && !row.is_final ? [`◇ ${t("officer_app.queue.desk_only")}`] : []),
+              ...(group === "mine" && !row.is_final ? [{ one: `◇ ${t("officer_app.queue.desk_only")}` }] : []),
               // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
-              ...(row.stale_since ? [`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`] : []),
+              ...(row.stale_since ? [{ one: `◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}` }] : []),
             ].filter(Boolean)}
             onPress={() => onOpen(row.id)}
             gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
