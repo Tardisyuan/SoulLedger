@@ -125,12 +125,9 @@ def enforce_cap():
                                 description=f"monthly cap reached: spent {spent:.4f} >= cap {cfg.monthly_cap}")
             closed = True
     if alerted:
-        _notify_admins("助手本月花费已到上限的 80%",
-                       f"本月估算花费 {spent:.2f},上限 {cfg.monthly_cap:.2f}。到上限时助手会自动关闭;每月 1 日早上 8 点(北京时间)换月。")
+        _notify_admins("assistant_cap_warning", spent=f"{spent:.2f}", cap=f"{cfg.monthly_cap:.2f}")
     if closed:
-        _notify_admins("助手已自动关闭:本月花费到达上限",
-                       f"本月估算花费 {spent:.2f} 已到上限 {cfg.monthly_cap:.2f},助手总开关已自动关闭。"
-                       f"次月 1 日早上 8 点(北京时间)会自动重开;也可以到「助手管理」页调高上限后手动打开。")
+        _notify_admins("assistant_cap_closed", spent=f"{spent:.2f}", cap=f"{cfg.monthly_cap:.2f}")
     return closed
 
 
@@ -155,21 +152,26 @@ def maybe_reopen():
         row.cap_closed_for = ""
         config.save_changes(row, {"enabled": True}, user=None,
                             description="reopened: a new month after the monthly-cap close")
-    _notify_admins("助手已自动重开:新的一个月",
-                   "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。")
+    _notify_admins("assistant_reopened")
     return True
 
 
-def _notify_admins(title, message):
+def _notify_admins(kind, **params):
     from apps.authentication.models import User
+    from apps.notifications import messages
     from apps.notifications.models import NotificationType, notify_user
+
+    # 存 zh-Hans 与 params(`kind` 在里面),读时按请求语言重渲染(apps/notifications/messages.py)。
+    params = {"kind": kind, **params}
+    title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
 
     for admin in User.objects.filter(role="ADMIN", is_active=True).order_by("pk"):
         try:
             notify_user(admin, title=title, message=message,
-                        notification_type=NotificationType.SYSTEM, related_resource="assistant_config")
+                        notification_type=NotificationType.SYSTEM, related_resource="assistant_config",
+                        params=params)
         except Exception:  # 开关已经关了(或开了):通知发不出去要留下痕迹,不能无声地丢
-            logger.exception("assistant config notification to admin %s failed: %s", admin.pk, title)
+            logger.exception("assistant config notification to admin %s failed: %s", admin.pk, kind)
 
 
 _ANSWERED = Q(status__in=("ok", "empty"))

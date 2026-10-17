@@ -618,12 +618,16 @@ def _tell_officers_provisioning_failed(soul):
 
     def send():
         from apps.events.services import EventService
+        from apps.notifications import messages
 
+        params = {"kind": "soul_account_provisioning_failed", "soul": soul_name}
+        title, body = messages.render(messages.DEFAULT_LOCALE, params["kind"], params)
         for user in User.objects.filter(pk__in=recipient_ids, is_active=True).select_related("tenant").order_by("pk"):
             EventService.notify_user(
                 user,
-                title="灵魂账号开通失败",
-                message=f"灵魂「{soul_name}」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。",
+                title=title,
+                message=body,
+                params=params,
                 notification_type="SYSTEM",
                 related_resource="soul",
                 related_id=soul_id,

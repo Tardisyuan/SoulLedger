@@ -5206,6 +5206,50 @@
     "scheduled_task_overdue": {
       "title": "定时任务没有运行",
       "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"
+    },
+    "soul_account_provisioning_failed": {
+      "title": "灵魂账号开通失败",
+      "body": "灵魂「{{soul}}」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。"
+    },
+    "rebirth_status_under_review": {
+      "title": "转生申请状态更新",
+      "body": "您的转生申请状态:审批中。"
+    },
+    "rebirth_status_rejected": {
+      "title": "转生申请状态更新",
+      "body": "您的转生申请状态:已驳回。"
+    },
+    "rebirth_status_appealing": {
+      "title": "转生申请状态更新",
+      "body": "您的转生申请状态:申诉中。"
+    },
+    "rebirth_status_appeal_rejected": {
+      "title": "转生申请状态更新",
+      "body": "您的转生申请状态:申诉被驳回。"
+    },
+    "rebirth_status_approved": {
+      "title": "转生申请状态更新",
+      "body": "您的转生申请状态:已批准。"
+    },
+    "cooldown_decided_approved": {
+      "title": "缩短冷却申请有了结果",
+      "body": "您的缩短冷却申请:已批准。"
+    },
+    "cooldown_decided_rejected": {
+      "title": "缩短冷却申请有了结果",
+      "body": "您的缩短冷却申请:已驳回。"
+    },
+    "assistant_cap_warning": {
+      "title": "助手本月花费已到上限的 80%",
+      "body": "本月估算花费 {{spent}},上限 {{cap}}。到上限时助手会自动关闭;每月 1 日早上 8 点(北京时间)换月。"
+    },
+    "assistant_cap_closed": {
+      "title": "助手已自动关闭:本月花费到达上限",
+      "body": "本月估算花费 {{spent}} 已到上限 {{cap}},助手总开关已自动关闭。次月 1 日早上 8 点(北京时间)会自动重开;也可以到「助手管理」页调高上限后手动打开。"
+    },
+    "assistant_reopened": {
+      "title": "助手已自动重开:新的一个月",
+      "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"
     }
   },
   "social_moderation": {

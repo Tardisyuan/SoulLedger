@@ -44,6 +44,8 @@ export interface NotificationEventPayload extends BaseEventPayload {
     is_read: boolean;
     created_at: string;
     user_id: number;
+    /** 各语言的渲染,键是语言包代号(zh-Hans / en / egy);只有分语言的通知才有。 */
+    i18n?: Record<string, { title: string; message: string }>;
   };
 }
 
