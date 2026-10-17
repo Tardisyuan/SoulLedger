@@ -15,7 +15,7 @@ import { Pressable, SectionList, StyleSheet, View } from "react-native";
 
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
-import { Empty, Interp, Notice, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
+import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, usePaged } from "./circle";
 
@@ -65,9 +65,9 @@ function Row({ row, onPress }: { row: SoulInteraction; onPress: () => void }) {
             {comment ? `「${row.excerpt}」` : row.excerpt}
           </Txt>
         ) : null}
-        <Txt variant="caption" tone="muted">
+        <OneLine variant="caption" tone="muted" onPress={onPress}>
           {interactionStamp(row.last_at)}
-        </Txt>
+        </OneLine>
       </View>
     </Pressable>
   );

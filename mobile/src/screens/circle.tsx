@@ -45,6 +45,7 @@ import {
   Interp,
   LandingWash,
   Notice,
+  OneLine,
   PageEmptyArt,
   RadioMark,
   Screen,
@@ -216,13 +217,15 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
         </Pressable>
         <View style={styles.fill}>
           <View style={styles.line}>
-            <Txt style={[styles.name, { color: reborn ? t.inkSubtle : t.ink }]} numberOfLines={1} onPress={onAuthor}>
+            <OneLine style={[styles.name, { color: reborn ? t.inkSubtle : t.ink }]} onPress={onAuthor ?? onPress}>
               {post.author.display_name}
-            </Txt>
+            </OneLine>
             {reborn ? <Tag testID={`reborn-${post.id}`} text={tr("soul_app.circle.post.reborn")} tone="quiet" /> : null}
           </View>
           <View style={[styles.line, styles.meta]}>
-            <Mono>{formatStamp(post.create_time) ?? ""}</Mono>
+            <OneLine variant="value" tone="subtle" style={styles.mono} onPress={onPress}>
+              {formatStamp(post.create_time) ?? ""}
+            </OneLine>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
             {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
             {hidden ? (
@@ -844,10 +847,12 @@ function CommentRow({
       </Pressable>
       <View style={styles.fill}>
         <View style={styles.line}>
-          <Txt style={styles.commentName} onPress={onAuthor}>
+          <OneLine style={styles.commentName} onPress={onAuthor}>
             {c.author.display_name}
-          </Txt>
-          <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
+          </OneLine>
+          <OneLine variant="value" tone="subtle" style={styles.mono}>
+            {formatStamp(c.create_time) ?? ""}
+          </OneLine>
           {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
         </View>
         {parent ? (
@@ -1229,7 +1234,7 @@ const styles = StyleSheet.create({
   lampButtonText: { fontSize: 15, letterSpacing: 0.6 },
   commentsHead: { paddingTop: 16, paddingBottom: 8 },
   comment: { flexDirection: "row", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
-  commentName: { fontSize: 13, lineHeight: 18 },
+  commentName: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
   commentBody: { marginTop: 4, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   replyTo: { marginTop: 4 },

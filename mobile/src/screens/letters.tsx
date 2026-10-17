@@ -26,7 +26,7 @@ import { useI18n } from "../i18n";
 import { TAG_GLYPH } from "../rules";
 import { SessionContext } from "../session";
 import { radius, type Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -96,7 +96,10 @@ export function Tag({ text, tone, glyph, testID }: { text: string; tone: "waitin
           {glyph}
         </Txt>
       ) : null}
-      <Txt style={[styles.tagText, { color }]}>{text}</Txt>
+      {/* S4: a status tag keeps to one line (like `Badge`; the label above carries the whole word). */}
+      <Txt numberOfLines={1} style={[styles.tagText, styles.shrink, { color }]}>
+        {text}
+      </Txt>
     </View>
   );
 }
@@ -138,7 +141,13 @@ function Row({
 }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const { gutter } = useLayout();
+  const { gutter, twoLine } = useLayout();
+  // S4: the name and the time keep to one line each; above 1.5× text the time moves under the name.
+  const time = stamp ? (
+    <OneLine testID={`${testID}-stamp`} variant="value" tone="subtle" style={styles.stamp} onPress={onPress}>
+      {stamp}
+    </OneLine>
+  ) : null;
   return (
     <Pressable
       testID={testID}
@@ -156,17 +165,14 @@ function Row({
       {glyph}
       <View style={styles.fill}>
         <View style={styles.rowHead}>
-          <Txt style={[styles.rowTitle, { fontFamily: family.ui[hall ? 600 : 500] }]} numberOfLines={1}>
+          <OneLine style={[styles.rowTitle, { fontFamily: family.ui[hall ? 600 : 500] }]} onPress={onPress}>
             {title}
-          </Txt>
+          </OneLine>
           {tag}
           <View style={styles.fill} />
-          {stamp ? (
-            <Txt variant="value" tone="subtle" style={styles.stamp}>
-              {stamp}
-            </Txt>
-          ) : null}
+          {twoLine ? null : time}
         </View>
+        {twoLine ? time : null}
         {preview ? (
           <Txt numberOfLines={2} style={[styles.preview, { color: t.inkMuted, fontFamily: quoteFamily(preview) }]}>
             {preview}
@@ -521,13 +527,14 @@ export function FindSoulScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  shrink: { flexShrink: 1 },
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
   sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  rowTitle: { fontSize: 15, lineHeight: 20 },
+  rowTitle: { fontSize: 15, lineHeight: 20, flexShrink: 1 },
   stamp: { fontSize: 11, lineHeight: 16 },
   preview: { fontSize: 15, lineHeight: 24, marginTop: 4 },
   hint: { marginTop: 4 },
