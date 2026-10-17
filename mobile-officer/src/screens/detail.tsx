@@ -155,7 +155,7 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
   );
 }
 
-function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: string; onSettled: () => void; onOpenSoul?: (id: string) => void }) {
+function TodoDetail({ kind: askedKind, id: askedId, onSettled, onOpenSoul }: { kind: TodoKind; id: string; onSettled: () => void; onOpenSoul?: (id: string) => void }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -164,19 +164,23 @@ function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: s
   const load = useCallback(
     async (): Promise<{ item: TodoItemDetail; cooldown: CooldownFacts | null }> => {
       const facts =
-        kind === "cooldown"
-          ? soulAccountsApi.cooldownShortening(id).then(
+        askedKind === "cooldown"
+          ? soulAccountsApi.cooldownShortening(askedId).then(
               (r): CooldownFacts => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, approved: r.data.status === "APPROVED", desiredDays: r.data.desired_remaining_days ?? null }),
               () => null
             )
           : Promise.resolve(null);
-      const [item, cooldown] = await Promise.all([officerAppApi.item(kind, id).then((r) => r.data), facts]);
+      const [item, cooldown] = await Promise.all([officerAppApi.item(askedKind, askedId).then((r) => r.data), facts]);
       return { item, cooldown };
     },
-    [kind, id]
+    [askedKind, askedId]
   );
-  const { data: loaded, error, reload } = useCachedRemote(`detail:${kind}:${id}`, load);
+  const { data: loaded, error, reload } = useCachedRemote(`detail:${askedKind}:${askedId}`, load);
   const data = loaded?.item ?? null;
+  // An old rebirth notice names the workflow (`approval`); the server answers with the application's own item.
+  // Everything below -- cosign, the desk link, the label -- goes by what it answered, not by what was asked.
+  const kind = (data?.kind as TodoKind | undefined) ?? askedKind;
+  const id = data?.id ?? askedId;
   const cooldown = { data: loaded?.cooldown ?? null };
   const [sheet, setSheet] = useState<Verdict | "cosign" | null>(null);
   // A new key per opening: a sheet opened again starts clean.

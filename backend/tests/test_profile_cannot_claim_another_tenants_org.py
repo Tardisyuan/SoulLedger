@@ -142,6 +142,25 @@ def test_an_admin_cannot_hang_a_user_under_another_tenants_organization(api_clie
 
 
 @pytest.mark.django_db
+def test_an_admin_can_set_organization_and_position_when_creating_a_user(api_client, two_tenants):
+    """新建也能带机构与职务(2026-10-17);机构仍须与新账号同租户。"""
+    a, b, org_a, org_b = two_tenants
+    admin = User.objects.create_user(username="org_admin_c", password="x", role="ADMIN", tenant=a)
+    c = client_for(api_client, admin)
+    body = {"username": "fresh_one", "email": "fresh_one@example.com", "password": "Str0ng-pass-phrase!",
+            "role": "VIEWER", "tenant": a.pk, "position": "判官"}
+
+    refused = c.post("/api/v1/users/", {**body, "organization": str(org_b.pk)}, format="json")
+    assert refused.status_code == 400 and "organization" in refused.data, refused.data
+    assert not User.objects.filter(username="fresh_one").exists()
+
+    ok = c.post("/api/v1/users/", {**body, "organization": str(org_a.pk)}, format="json")
+    assert ok.status_code == 201, ok.data
+    made = User.objects.get(username="fresh_one")
+    assert made.organization_id == org_a.pk and made.position == "判官"
+
+
+@pytest.mark.django_db
 def test_role_and_tenant_stay_locked(api_client, viewer, two_tenants):
     """这两个本来就锁着。一起断言,是因为这次改的是同一个序列化器 ——
     收紧一个字段时把另外两个放开,是这类改动最容易出的事故。"""

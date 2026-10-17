@@ -98,6 +98,9 @@ export const soulAssistApi = {
     soulHttp
       .get<AssistConversation[]>("/me/assist/conversations/", { params: before ? { before } : undefined })
       .then((r) => r.data),
+  /** The single newest conversation (`limit=1`): what a reopened drawer may resume. `[]` when there is none. */
+  latest: () =>
+    soulHttp.get<AssistConversation[]>("/me/assist/conversations/", { params: { limit: 1 } }).then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */
   deleteConversation: (id: string) =>
     soulHttp.delete(`/me/assist/conversations/${id}/`).then(() => undefined),

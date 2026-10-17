@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useEffect, useId, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, organizationsApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
+import { usersApi, permApi, organizationsApi, tenantsApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -33,6 +33,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const firstNameId = `${formId}-first-name`;
   const lastNameId = `${formId}-last-name`;
   const positionId = `${formId}-position`;
+  const tenantId = `${formId}-tenant`;
 
   const [formData, setFormData] = useState<CreateUserInput>({
     username: "",
@@ -138,17 +139,29 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
       : [{ value: formData.role ?? "VIEWER", label: formData.role ?? "VIEWER" }];
 
   /**
-   * 所属机构与职务(2026-10-16 起只由管理员在这里设,`PATCH /users/{id}/`)。只在编辑时出现:
-   * 新建时账号的租户还没定,而机构必须与账号同租户。机构取全部页、再按被编辑账号的租户筛 ——
+   * 所属机构与职务(2026-10-16 起只由管理员在这里设,`PATCH /users/{id}/`;新建也可,`POST /users/`)。
+   * 编辑时按账号的租户;新建时要先选了租户才出现,换租户清空已选机构,因为机构必须与账号同租户。机构取全部页、再按租户筛 ——
    * ADMIN 的机构列表跨租户,后端会拒绝别的租户的机构,这里就不让它出现在选项里。
    * 与机构页共用 `["organizations"]` 这把键,机构增删改后两边一起刷新。
    */
+  const userTenant = isEditing ? user?.tenant?.id : formData.tenant;
   const orgsQuery = useQuery({
     queryKey: ["organizations"],
     queryFn: () => organizationsApi.all(),
-    enabled: isOpen && isEditing,
+    enabled: isOpen && userTenant != null,
   });
-  const userTenant = user?.tenant?.id;
+  // 新建时租户在这里选(只有选了才出现机构与职务);只有一个可选租户(非管理员)就直接选上。
+  const tenantsQuery = useQuery({
+    queryKey: ["tenants", "for-user-create"],
+    queryFn: async () => (await tenantsApi.list()).data.results,
+    enabled: isOpen && !isEditing,
+  });
+  const tenantChoices = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data]);
+  useEffect(() => {
+    if (!isEditing && tenantChoices.length === 1) {
+      setFormData((f) => (f.tenant == null ? { ...f, tenant: tenantChoices[0].id } : f));
+    }
+  }, [isEditing, tenantChoices]);
   const tenantOrgs = (orgsQuery.data ?? []).filter((o) => userTenant != null && o.tenant === userTenant);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -175,7 +188,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
       };
       updateMutation.mutate({ id: String(user.id), data: updateData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({ ...formData, position: formData.position || undefined });
     }
   };
 
@@ -314,7 +327,25 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           />
         </div>
 
-        {isEditing && (
+        {!isEditing && tenantChoices.length > 1 && (
+          <SelectField
+            id={tenantId}
+            label={t("users.tenant") || "租户"}
+            value={formData.tenant != null ? String(formData.tenant) : ""}
+            onChange={(e) => {
+              const next = e.target.value ? Number(e.target.value) : undefined;
+              // 机构属于租户:换租户就不能留着旧租户的机构。
+              setFormData({ ...formData, tenant: next, organization: undefined });
+            }}
+            disabled={createMutation.isPending}
+            options={[
+              { value: "", label: t("users.tenant_pick") },
+              ...tenantChoices.map((x) => ({ value: String(x.id), label: x.display_name || x.code })),
+            ]}
+          />
+        )}
+
+        {(isEditing || formData.tenant != null) && (
           <>
             <TextField
               id={positionId}
@@ -323,7 +354,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               maxLength={100}
               value={formData.position ?? ""}
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              disabled={updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending}
             />
             <ParentPicker
               label={t("users.organization")}
