@@ -15,13 +15,10 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
-import { filterChipClass } from "@/src/components/ui/FilterChip";
-import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
+import { WorkflowInstancesPanel } from "@/src/components/workflow/page/WorkflowInstanceList";
 import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
 import { DeleteTemplateModal } from "@/src/components/workflow/page/DeleteTemplateModal";
-import { StartWorkflowDialog } from "@/src/components/workflow/StartWorkflowDialog";
 import {
   TemplatePreview,
   backendPreviewModel,
@@ -49,31 +46,9 @@ export default function WorkflowPage() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmingTemplate, setConfirmingTemplate] = useState<BackendTemplate | null>(null);
 
-  // `isError` / `refetch` 拿出来:这个 tab 此前对「加载失败」和「一条都没有」
-  // 渲染**同一段文案**(「暂无审批实例」)。两条 e2e 测试因此共用一个可观察量 ——
-  // 一个让实例列表永久为空的变异会让两条都通过。
-  // 「只看已超时」:服务端按 `overdue=true` 筛(当前节点的 activated_at + timeout_hours 已过),不在前端猜。
-  const [overdueOnly, setOverdueOnly] = useState(false);
-  // 「发起审批」(W-11):实例页签右上角,持 `workflow.create` 才有。
-  const [startOpen, setStartOpen] = useState(false);
-  const {
-    data: workflowsData,
-    isLoading: isWorkflowsLoading,
-    isError: isWorkflowsError,
-    refetch: refetchWorkflows,
-  } = useQuery({
-    queryKey: overdueOnly ? ["workflows", { overdue: true }] : ["workflows"],
-    queryFn: async () => {
-      const res = overdueOnly ? await workflowApi.list({ overdue: "true" }) : await workflowApi.list();
-      return res.data;
-    },
-    // Pushed: workflow events invalidate `workflowKeys.all` (["workflows"]).
-    staleTime: 0,
-  });
-
   // Fetch templates from backend
   // `isError` / `refetch` here too, for the same reason they were pulled out
-  // for `workflows` above and by the same measurement. This query had neither,
+  // for `workflows` (now in `WorkflowInstancesPanel`) and by the same measurement. This query had neither,
   // and its render branch ended `: null` — so a FAILED templates fetch drew
   // **nothing at all**: no error, no "you have no custom templates yet", just
   // the predefined list below it where the operator's own templates should be.
@@ -96,7 +71,6 @@ export default function WorkflowPage() {
     },
   });
 
-  const workflows = workflowsData?.results ?? [];
   // WorkflowTemplateViewSet sets pagination_class = None, so this list is a
   // bare array — there was never a `.results` on it to unwrap.
   const templates = templatesData ?? [];
@@ -462,40 +436,8 @@ export default function WorkflowPage() {
             />
           </div>
         ) : (
-          /* Instances tab */
-          isWorkflowsError ? (
-            <QueryError onRetry={() => refetchWorkflows()} />
-          ) : (
-            <>
-              {/* 一枚筛选签:只看已超时;导出跟着它走(「当前筛选」)。 */}
-              <div className="flex items-center gap-3 pb-3">
-                <button
-                  type="button"
-                  aria-pressed={overdueOnly}
-                  onClick={() => setOverdueOnly((v) => !v)}
-                  className={filterChipClass(overdueOnly)}
-                >
-                  {overdueOnly && <span aria-hidden="true">✓</span>}
-                  {t("workflow.filter_overdue")}
-                </button>
-                <div className="ml-auto flex items-center justify-end gap-3">
-                  <ExportCsvButton
-                    size="sm"
-                    fetchCsv={() => (overdueOnly ? workflowApi.exportCsv({ overdue: "true" }) : workflowApi.exportCsv())}
-                    page={t("workflow.title")}
-                    hall={hall}
-                    count={workflowsData?.count}
-                  />
-                  <RequirePermission permissions="workflow.create">
-                    <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
-                      {t("workflow.start.action")}
-                    </Button>
-                  </RequirePermission>
-                </div>
-              </div>
-              <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
-            </>
-          )
+          /* Instances tab:筛选、翻页、导出、「发起审批」都在面板里。 */
+          <WorkflowInstancesPanel hall={hall} />
         )}
 
         {/* 查看模板详情弹窗 */}
@@ -504,8 +446,6 @@ export default function WorkflowPage() {
           onClose={() => setViewModalOpen(false)}
           template={viewingTemplate}
         />
-
-        <StartWorkflowDialog isOpen={startOpen} onClose={() => setStartOpen(false)} />
 
         {/* 删除确认弹窗 */}
         <DeleteTemplateModal

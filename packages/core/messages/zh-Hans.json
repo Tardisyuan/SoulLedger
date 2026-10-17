@@ -780,7 +780,10 @@
     },
     "col_location": "原位置",
     "col_deleted_by": "删除人",
-    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。"
+    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。",
+    "search": "搜索名称、删除理由、删除人或原位置",
+    "all_types": "全部类型",
+    "no_match": "没有符合筛选的条目"
   },
   "permissions": {
     "title": "权限管理",
@@ -1352,6 +1355,14 @@
         "forbidden": "你没有发起审批的权限",
         "failed": "没能发起，请重试"
       }
+    },
+    "filter": {
+      "search": "搜索流程名、灵魂或案件类型",
+      "all": "全部",
+      "civilization": "文明",
+      "from": "创建日期（起）",
+      "to": "创建日期（止）",
+      "clear": "清除筛选"
     }
   },
   "dashboard": {
@@ -1856,7 +1867,8 @@
       "col_case_soul": "案号 / 灵魂",
       "col_cycle_kind": "世次 / 种类",
       "undefer": "恢复",
-      "done_undefer": "已恢复，案子回到队列"
+      "done_undefer": "已恢复，案子回到队列",
+      "load_more": "再载入（还有 {{n}} 件）"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2160,7 +2172,17 @@
     "batch_deleted": "已删除 {{count}} 条",
     "batch_delete_error": "删除失败",
     "batch_delete_title": "删除所选的 {{n}} 条通知?",
-    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。"
+    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。",
+    "open_workflow": "打开审批",
+    "open_cross_judgment": "打开跨域审判",
+    "open_soul": "打开灵魂",
+    "open_sentence_plan": "打开受刑计划",
+    "open_sentence_requests": "去受刑请求",
+    "open_letter": "打开来信",
+    "open_death_sync": "去死亡同步",
+    "open_scheduler": "去定时任务",
+    "open_assistant": "去助手管理",
+    "open_failed": "打不开：找不到这条记录了"
   },
   "realms": {
     "title": "地域",
@@ -2560,7 +2582,9 @@
       "FAIL": "否决"
     },
     "case_title": "标题",
-    "status_label": "状态"
+    "status_label": "状态",
+    "original_judgment": "原审判",
+    "original_soul": "灵魂"
   },
   "users": {
     "title": "用户管理",
@@ -2680,7 +2704,11 @@
         "password_weak": "密码不符合规则",
         "unknown": "这一行没能检查"
       }
-    }
+    },
+    "organization": "所属机构",
+    "organization_none": "不属于任何机构",
+    "organization_column": "机构 · 职务",
+    "position": "职务"
   },
   "settings": {
     "title": "设置",
@@ -5463,7 +5491,8 @@
       "seat_actor_none": "暂不指定",
       "seat_actor_empty": "该文明没有可入席的神祇",
       "seat_actor_hint_judging": "联合审判官与主持只能由判官担任",
-      "seat_actor_hint_advisor": "顾问可由任一在任神祇担任"
+      "seat_actor_hint_advisor": "顾问可由任一在任神祇担任",
+      "view": "查看联审"
     },
     "file": {
       "open": "提出请求",

@@ -205,4 +205,26 @@ describe("原审判", () => {
     await screen.findByText(tZh("judgment.detail.final"));
     expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
   });
+
+  // 审计 1017 #10:已挂着联审(`cross_judgment_id`)就不给「开联审」,换成去那一场的链接 —— 没有开的权限也看得到。
+  it("已有联审:没有「开联审」,只有去那场联审的链接", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ cross_judgment_id: "cj-9" }) });
+    as("CN_DIYU", ...JUDGE);
+    const a = renderPage();
+    expect(await screen.findByRole("link", { name: tZh("sentence_plan.cross.view") })).toHaveAttribute("href", "/cross-judgments/cj-9");
+    expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
+    a.unmount();
+
+    as("CN_DIYU", "judgment.read", "judgment.execute");
+    renderPage();
+    expect(await screen.findByRole("link", { name: tZh("sentence_plan.cross.view") })).toHaveAttribute("href", "/cross-judgments/cj-9");
+  });
+
+  it("没有联审(null):照旧是「开联审」,没有链接", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ cross_judgment_id: null }) });
+    as("CN_DIYU", ...JUDGE);
+    renderPage();
+    await screen.findByRole("button", { name: tZh("sentence_plan.cross.open") });
+    expect(screen.queryByTestId("judgment-cross-link")).toBeNull();
+  });
 });

@@ -41,12 +41,14 @@ jest.mock("@soulledger/core/api", () => ({
     get: jest.fn(),
     activate: jest.fn(),
   },
+  judgmentApi: { get: jest.fn() },
 }));
 
 import Page from "@/app/cross-judgments/[id]/page";
 
-const { crossTenantJudgmentsApi } = jest.requireMock("@soulledger/core/api") as {
+const { crossTenantJudgmentsApi, judgmentApi } = jest.requireMock("@soulledger/core/api") as {
   crossTenantJudgmentsApi: { get: jest.Mock; activate: jest.Mock };
+  judgmentApi: { get: jest.Mock };
 };
 
 const participant = {
@@ -158,5 +160,47 @@ describe("cross-judgment detail — activate", () => {
     expect(screen.getByText("欧洲天堂地狱")).toBeTruthy();
     expect(screen.queryByText(/9041/)).toBeNull();
     expect(screen.queryByText(/9052/)).toBeNull();
+  });
+});
+
+// 审计 1017 #10:联审详情链回原审判与灵魂 —— 原审判在发起方租户,只给发起方取、只给发起方画。
+describe("cross-judgment detail — back to the original judgment", () => {
+  beforeEach(() => {
+    crossTenantJudgmentsApi.get.mockReset();
+    judgmentApi.get.mockReset();
+    mockTenant.user = { id: 1, username: "u", tenant: { code: "CN_DIYU" } };
+  });
+
+  it("the initiator gets links to the judgment and to its soul", async () => {
+    judgmentApi.get.mockResolvedValue({ data: { id: "j-7", soul: "s-3", soul_name: "李四" } });
+    renderPage(judgment({ judgment: "j-7" }));
+
+    const origin = await screen.findByTestId("cross-origin");
+    const links = await waitFor(() => {
+      const found = origin.querySelectorAll("a");
+      expect(found).toHaveLength(2);
+      return found;
+    });
+    expect(links[0]).toHaveAttribute("href", "/judgment/j-7");
+    expect(links[1]).toHaveAttribute("href", "/souls/s-3");
+    expect(links[1]).toHaveTextContent("李四");
+    expect(judgmentApi.get).toHaveBeenCalledWith("j-7");
+  });
+
+  it("a participant tenant gets neither, and nothing is fetched for it", async () => {
+    mockTenant.user = { id: 2, username: "eu", tenant: { code: "EU_HEAVEN_HELL" } };
+    renderPage(judgment({ judgment: "j-7" }));
+
+    await screen.findByText("Joint");
+    expect(screen.queryByTestId("cross-origin")).toBeNull();
+    expect(judgmentApi.get).not.toHaveBeenCalled();
+  });
+
+  it("a plain meeting (no judgment) has no links", async () => {
+    renderPage(judgment({ judgment: null }));
+
+    await screen.findByText("Joint");
+    expect(screen.queryByTestId("cross-origin")).toBeNull();
+    expect(judgmentApi.get).not.toHaveBeenCalled();
   });
 });

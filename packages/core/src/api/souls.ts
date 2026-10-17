@@ -103,7 +103,12 @@ interface SoulBase {
  * warning, or an `event_before_birth` error, collapsed to a bool because a
  * list row has no room for the per-record breakdown the detail page shows.
  */
-export type SoulListItem = SoulBase & { has_date_warning: boolean; has_record_error: boolean };
+export type SoulListItem = SoulBase & {
+  has_date_warning: boolean;
+  has_record_error: boolean;
+  /** True only on rows a `show_archived` list brought back; the default list excludes archived souls. */
+  is_archived?: boolean;
+};
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase, ArchiveFields {
@@ -314,6 +319,8 @@ export const soulsApi = {
     has_date_problem?: string;
     /** UUID of one CSV import batch (SoulImportCommitResult.batch_id). */
     import_batch?: string;
+    /** "1": include archived souls (default excludes them; the detail page is where they are unarchived). */
+    show_archived?: string;
   }) => api.get<PaginatedResponse<SoulListItem>>("/souls/", { params }),
   get: (id: string) => api.get<Soul>(`/souls/${id}/`),
   create: (data: object) => api.post<Soul>("/souls/", data),

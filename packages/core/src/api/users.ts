@@ -69,7 +69,8 @@ export interface UpdateUserInput {
   is_active?: boolean;
   tenant?: number;
   tenant_id?: number;
-  organization?: number;
+  /** `null` clears it. Must be in the edited user's own tenant (400 otherwise). */
+  organization?: number | null;
   position?: string;
 }
 
