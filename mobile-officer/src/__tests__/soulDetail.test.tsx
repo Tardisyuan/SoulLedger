@@ -224,6 +224,7 @@ describe("failures", () => {
 
 describe("header", () => {
   it("monogram, code · civilization · life, the state pill and the three signed figures", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, soul_code: "QU33Q9FW5F" } });
     await openSoul(["soul.read", "soul_account.read"]);
     expect(screen.getByTestId("soul-meta").props.children).toBe("QU3 3Q9F W5F · 中国 · 第 3 世");
     expect(screen.getByTestId("soul-state")).toBeTruthy();
@@ -234,9 +235,28 @@ describe("header", () => {
     expect(screen.queryByTestId("soul-residing")).toBeNull();
   });
 
-  it("without soul_account.read the code is left out, not asked for", async () => {
+  it("the code comes with the soul, so a judge without soul_account.read sees it too (Design 第四十批 第四节 4)", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, soul_code: "QU33Q9FW5F" } });
     await openSoul();
+    expect(screen.getByTestId("soul-meta").props.children).toBe("QU3 3Q9F W5F · 中国 · 第 3 世");
+  });
+
+  it("a soul never given an account has no code, and nothing stands in for it", async () => {
+    await openSoul(["soul.read", "soul_account.read"]);
     expect(screen.getByTestId("soul-meta").props.children).toBe("中国 · 第 3 世");
+  });
+
+  it("a soul that is gone (404 / 403) says so, not 没有权限 (Design 第四十批 O-c)", async () => {
+    mockSoul.mockRejectedValue(Object.assign(new Error("HTTP 404"), { response: { status: 404 } }));
+    renderOfficer(<Detail target={{ type: "soul", id: "s1" }} from="查询" onBack={() => {}} onSettled={() => {}} />);
+    expect(await screen.findByTestId("state-gone")).toBeTruthy();
+    expect(screen.getByText("回到查询")).toBeTruthy();
+    expect(screen.queryByTestId("state-denied")).toBeNull();
+  });
+
+  it("no 前世 tab or section: the earlier lives are read through the 第几世 groups (Design 第四十批 第四节 3)", async () => {
+    await openSoul(["soul.read", "judgment.read", "ledger.read", "disposition.read", "reincarnation.read", "events.read"]);
+    expect(screen.queryByText("前世")).toBeNull();
   });
 
   it("archived: □ 已归档 instead of the state, and who / when / why under the header", async () => {

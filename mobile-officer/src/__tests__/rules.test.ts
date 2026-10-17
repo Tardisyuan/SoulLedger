@@ -5,18 +5,26 @@
 import type { TodoItemDetail } from "@soulledger/core/api/officer-app";
 
 import {
+  TODO_GROUPS,
+  VIEW_ONLY_KINDS,
   decisionFailure,
   deskPath,
   failureReasonKey,
+  goneKey,
   hallChoiceOf,
   handledNotice,
   isDenied,
+  judgmentAdminItems,
+  landingGoneKey,
   landingOf,
+  looksLikeCaseNumber,
   noticeIsDeskOnly,
   noticeLanding,
   loginFailureKey,
   reasonMissing,
   passVerdictsOf,
+  reassignCandidates,
+  rebirthCross,
   submitDecision,
 } from "../rules";
 
@@ -25,11 +33,13 @@ const mockCooldownApprove = jest.fn();
 const mockCooldownReject = jest.fn();
 const mockDispatchApprove = jest.fn();
 const mockDispatchReject = jest.fn();
+const mockDecideCross = jest.fn();
 jest.mock("@soulledger/core/api/workflow", () => ({ workflowApi: { approveNode: (...a: unknown[]) => mockApproveNode(...a) } }));
 jest.mock("@soulledger/core/api/soul-accounts", () => ({
   soulAccountsApi: {
     approveCooldownShortening: (...a: unknown[]) => mockCooldownApprove(...a),
     rejectCooldownShortening: (...a: unknown[]) => mockCooldownReject(...a),
+    decideCrossCivilization: (...a: unknown[]) => mockDecideCross(...a),
   },
 }));
 jest.mock("@soulledger/core/api/dispatch", () => ({
@@ -197,5 +207,86 @@ describe("desk links and denial", () => {
     expect(isDenied(http(403))).toBe(true);
     expect(isDenied(http(500))).toBe(false);
     expect(isDenied(new Error("x"))).toBe(false);
+  });
+});
+
+// ── Design 第四十批 ─────────────────────────────────────────────────────
+
+describe("O-b: approving a rebirth's first review on the phone", () => {
+  const rebirth = (facts: Record<string, unknown>, over: Partial<TodoItemDetail> = {}) =>
+    detail({ kind: "rebirth", id: "ra-1", facts: facts as TodoItemDetail["facts"], ...over });
+
+  it("says 不跨 at the first review, sends no-cross first, then the approval", async () => {
+    expect(rebirthCross(rebirth({ cross_civilization: null, node: { index: 1 } }))).toBe("no");
+    mockDecideCross.mockResolvedValue({});
+    await submitDecision({ detail: rebirth({ cross_civilization: null, node: { index: 1 } }), verdict: "approve", reason: "" });
+    expect(mockDecideCross).toHaveBeenCalledWith("ra-1", false);
+    expect(mockDecideCross.mock.invocationCallOrder[0]).toBeLessThan(mockApproveNode.mock.invocationCallOrder[0]);
+  });
+
+  it("does not write the flag again once it is set, nor on a reject", async () => {
+    await submitDecision({ detail: rebirth({ cross_civilization: false, node: { index: 1 } }), verdict: "approve", reason: "" });
+    await submitDecision({ detail: rebirth({ cross_civilization: null, node: { index: 1 } }), verdict: "reject", reason: "r" });
+    expect(mockDecideCross).not.toHaveBeenCalled();
+    expect(mockApproveNode).toHaveBeenCalledTimes(2);
+  });
+
+  it("a 409 from the flag (first review already past) still approves; any other refusal stops it", async () => {
+    mockDecideCross.mockRejectedValueOnce(http(409, { code: "not_in_initial_review" }));
+    await submitDecision({ detail: rebirth({ cross_civilization: null }), verdict: "approve", reason: "" });
+    expect(mockApproveNode).toHaveBeenCalledTimes(1);
+    mockDecideCross.mockRejectedValueOnce(http(403, { code: "not_the_approver" }));
+    await expect(submitDecision({ detail: rebirth({ cross_civilization: null }), verdict: "approve", reason: "" })).rejects.toEqual(http(403, { code: "not_the_approver" }));
+    expect(mockApproveNode).toHaveBeenCalledTimes(1);
+  });
+
+  it("set to cross: the phone only sends it to the desk; a later step or an appeal has no cross line at all", () => {
+    expect(rebirthCross(rebirth({ cross_civilization: true, node: { index: 1 } }))).toBe("desk");
+    expect(rebirthCross(rebirth({ cross_civilization: true, node: { index: 2 } }))).toBe("desk");
+    expect(rebirthCross(rebirth({ cross_civilization: null, node: { index: 2 } }))).toBeNull();
+    expect(rebirthCross(rebirth({ cross_civilization: null }, { is_appeal: true }))).toBeNull();
+    expect(rebirthCross(detail({}))).toBeNull();
+  });
+});
+
+describe("O-a: an admin's ⋯ on a case someone else holds", () => {
+  const j = (over: Record<string, unknown> = {}) => ({ claimed_by: 7, deferred_at: null, concluded_at: null, ...over });
+  it("改派给… · 替他放回 · 暂缓, or 取消暂缓 when deferred", () => {
+    expect(judgmentAdminItems(j(), 1, true)).toEqual(["reassign_to", "release_for", "defer"]);
+    expect(judgmentAdminItems(j({ deferred_at: "2026-10-17T00:00:00Z" }), 1, true)).toEqual(["reassign_to", "release_for", "undefer"]);
+  });
+  it("nothing without judgment.assign, on my own case, an unclaimed one, or a closed one", () => {
+    expect(judgmentAdminItems(j(), 1, false)).toEqual([]);
+    expect(judgmentAdminItems(j({ claimed_by: 1 }), 1, true)).toEqual([]);
+    expect(judgmentAdminItems(j({ claimed_by: null }), 1, true)).toEqual([]);
+    expect(judgmentAdminItems(j({ concluded_at: "2026-10-17T00:00:00Z" }), 1, true)).toEqual([]);
+  });
+  it("the picker: never the holder, fewest cases first, the count column only when every row has one", () => {
+    const o = (id: number, name: string, in_hand?: number) => ({ id, display_name: name, username: `u${id}`, role: "JUDGE", ...(in_hand === undefined ? {} : { in_hand }) });
+    const people = [o(7, "王判官", 1), o(2, "韩判官", 7), o(3, "陆判官", 2), o(4, "钟判官", 4)];
+    const { rows, counts } = reassignCandidates(people, 7, "");
+    expect(rows.map((r) => r.display_name)).toEqual(["陆判官", "钟判官", "韩判官"]);
+    expect(counts).toBe(true);
+    expect(reassignCandidates(people, 7, "钟").rows.map((r) => r.id)).toEqual([4]);
+    expect(reassignCandidates([o(2, "韩判官"), o(3, "陆判官", 2)], 7, "").counts).toBe(false);
+  });
+});
+
+describe("O-c / O-d / O-f", () => {
+  it("a gone detail and the row that opened it share one key", () => {
+    expect(goneKey({ type: "todo", kind: "approval", id: "a" })).toBe(landingGoneKey({ tab: "todo", item: { kind: "approval", id: "a" } }));
+    expect(goneKey({ type: "judgment", id: "j" })).toBe(landingGoneKey({ tab: "todo", judgment: "j" }));
+    expect(goneKey({ type: "soul", id: "s" })).toBe(landingGoneKey({ tab: "todo", soul: "s" }));
+    expect(goneKey({ type: "judgment", id: "x" })).not.toBe(goneKey({ type: "soul", id: "x" }));
+    expect(landingGoneKey(null)).toBeNull();
+  });
+  it("only a whole case number adds the 案件 group", () => {
+    for (const q of ["CN-2026-0042", " cn-2026-0042 ", "SL-2026-10000", "EGDUAT-2026-0001"]) expect(looksLikeCaseNumber(q)).toBe(true);
+    for (const q of ["CN-2026-004", "CN-2026", "王守仁", "S00420031", "CN 2026 0042", "CN-26-0042"]) expect(looksLikeCaseNumber(q)).toBe(false);
+  });
+  it("sentence-plan changes are a to-do kind that only opens the desk", () => {
+    expect(TODO_GROUPS.map((g) => g.kind)).toContain("sentence_change");
+    expect(VIEW_ONLY_KINDS).toEqual(["sentence_change"]);
+    expect(deskPath({ kind: "sentence_change", id: "r" })).toBe("/sentence-requests");
   });
 });

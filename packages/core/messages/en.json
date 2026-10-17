@@ -4991,6 +4991,22 @@
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."
     },
+    "judgment_reassigned_away": {
+      "title": "Case reassigned",
+      "body": "{{by}} reassigned your case of {{soul}} to {{to}}. Reason: {{reason}}"
+    },
+    "judgment_released_for_you": {
+      "title": "Case released",
+      "body": "{{by}} released your case of {{soul}}; it is unclaimed again. Reason: {{reason}}"
+    },
+    "judgment_deferred_for_you": {
+      "title": "Case deferred",
+      "body": "{{by}} deferred your case of {{soul}}. Reason: {{reason}}"
+    },
+    "judgment_undeferred_for_you": {
+      "title": "Case no longer deferred",
+      "body": "{{by}} lifted the deferral on your case of {{soul}}. Reason: {{reason}}"
+    },
     "death_sync_retry_failed": {
       "title": "Death registration retry failed",
       "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."
@@ -6041,7 +6057,9 @@
       "filter_empty_title": "No \"{{kinds}}\" items",
       "filter_empty_body": "Try another type, or clear the filters.",
       "filter_clear": "Clear filters",
-      "see_all": "All {{n}}"
+      "see_all": "All {{n}}",
+      "group_sentence_change": "Punishment plan changes",
+      "on_desk_only": "Handle on computer"
     },
     "queue": {
       "mine": "Mine",
@@ -6059,11 +6077,13 @@
     "continue_on_desk": "Continue on desktop",
     "search": {
       "souls": "Souls",
-      "placeholder": "Name or ID",
+      "placeholder": "Name, number or case number",
       "read_only": "Read-only. Make changes at the desk.",
       "no_souls_title": "Nothing found",
       "no_souls_body": "Try another name or ID.",
-      "residing": "▲ {{where}} · Resident"
+      "residing": "▲ {{where}} · Resident",
+      "group_case": "Cases",
+      "no_soul": "No soul matches this name or number"
     },
     "assist": {
       "entry": "Ask",
@@ -6297,7 +6317,11 @@
       "unassigned_tag": "Unassigned",
       "take": "I'll take it",
       "earlier": "Earlier letters",
-      "earlier_failed": "Couldn't load earlier letters"
+      "earlier_failed": "Couldn't load earlier letters",
+      "handler": "Handled by {{name}}",
+      "handler_none": "Handled by · unassigned",
+      "not_yours": "{{name}} is handling this letter, so only they can reply. To take it, ask them to put it back or ask an admin to hand it to you.",
+      "assign_to_me": "Hand to me"
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
@@ -6347,7 +6371,11 @@
       "summary_more": "Show all",
       "evidence": "Evidence · {{n}}",
       "evidence_attachment": "Attachment {{n}}",
-      "load_failed": "The case details didn't load"
+      "load_failed": "The case details didn't load",
+      "admin_context": "With {{name}} · you're an admin here",
+      "reassign_to": "Reassign to…",
+      "release_for": "Release for {{name}}",
+      "reassign_request": "{{name}} asked to reassign · {{time}}"
     },
     "notify": {
       "intro": "Types you turn off aren't pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
@@ -6371,6 +6399,26 @@
       "current_stop": "◐ Current stop",
       "no_disposition": "No disposition yet",
       "open_label": "Open {{name}}'s soul record"
+    },
+    "reassign": {
+      "title": "Reassign to",
+      "search": "Search names",
+      "hint": "Officers here who can judge · fewest cases first",
+      "load": "{{n}} in hand",
+      "reason": "Reason · required, {{name}} will see it",
+      "confirm": "Reassign to {{name}}",
+      "done": "Reassigned to {{name}}"
+    },
+    "rebirth": {
+      "cross_civ_none": "⇄ Cross-civilisation: no",
+      "cross_civ_body": "Cross-civilisation can only be set at first review, on a computer. Approving now sets it to \"no\" for good.",
+      "approve_no_cross": "Approve · no cross",
+      "decide_on_desk": "Decide on computer",
+      "cross_wanted": "This asks for another civilisation; review it on a computer."
+    },
+    "dispatch": {
+      "approved_next": "Approved. The receiving hall still has to carry it out on a computer before the soul moves.",
+      "awaiting_receiver": "◐ Waiting for receiving hall"
     }
   },
   "print": {
@@ -6466,5 +6514,10 @@
     "empty": "No events match",
     "empty_all": "No events yet",
     "failed": "Couldn't load events, please try again"
+  },
+  "state": {
+    "gone_title": "This is no longer here",
+    "gone_body": "It may have been deleted, or it's no longer something you can see.",
+    "gone_back": "Back to {{from}}"
   }
 }

@@ -54,6 +54,8 @@ CATEGORY_BY_TYPE = {
     "SENTENCE_REQUEST_DECIDED": None,
     "SENTENCE_PLAN_CANCELLED": None,
     "DEATH_SYNC_RETRY_FAILED": None,
+    # 案子被管理员替你放回 / 改派 / 暂缓:关系到自己手上的活,不进可关的表。
+    "JUDGMENT_CLAIM_CHANGED": None,
 }
 
 #: 发送方可以在 `params["category"]` 里改选的类别(只限这里列的,与 `messages.VARIANTS` 同一个做法):

@@ -8,7 +8,7 @@
  * carries a number. The caller is never in the list.
  */
 import { soulInboxApi, type InboxOfficer } from "@soulledger/core/api/soul-inbox";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { View } from "react-native";
 
 import { ActionButton, Row } from "../kit";
@@ -52,6 +52,110 @@ export function LetterMenuSheet({
   );
 }
 
+/** One row of a people picker: who, and an optional second line (「手上 N 封」 / 「手上 N 件」). */
+export interface PickPerson {
+  id: number;
+  name: string;
+  line?: string | null;
+}
+
+/**
+ * The picker the hand-overs share (letter 转给谁 / judgment 改派给, Design 第四十批 O-a): the search box is always
+ * there, the first PEOPLE_SHOWN rows then 「更多」, and a confirm that names the person. `find` filters and orders
+ * (the caller decides who is never in the list); `children` sit above the confirm (the 改派 reason box), and the
+ * caller closes the sheet once `onConfirm` resolves. testIDs are `sheet-<prefix>`, `<prefix>-search`, `<prefix>-<id>` ...
+ */
+export function PeoplePickerSheet({
+  open,
+  prefix,
+  title,
+  hint,
+  find,
+  loading,
+  failed,
+  confirmTitle,
+  idleTitle,
+  searchLabel,
+  onClose,
+  onConfirm,
+  children,
+}: {
+  open: boolean;
+  prefix: string;
+  title: string;
+  hint: string;
+  /** The search box's label; 加签's 「搜索姓名或用户名」 when not given. */
+  searchLabel?: string;
+  find: (q: string) => PickPerson[];
+  loading: boolean;
+  failed: boolean;
+  confirmTitle: (name: string) => string;
+  idleTitle: string;
+  onClose: () => void;
+  /** Resolves when the server accepted it; a rejection shows the problem line and keeps everything typed. */
+  onConfirm: (person: PickPerson) => Promise<unknown>;
+  children?: ReactNode;
+}) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<PickPerson | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState(false);
+  // The first PEOPLE_SHOWN, then 「更多」 shows the rest (the search narrows them too).
+  const [all, setAll] = useState(false);
+  const people = find(q);
+
+  const confirm = () => {
+    if (!picked) return;
+    setBusy(true);
+    setProblem(false);
+    onConfirm(picked)
+      .catch(() => setProblem(true))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
+      <View testID={`sheet-${prefix}`} style={{ paddingVertical: space[5], gap: space[4] }}>
+        <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
+          <Txt variant="title">{title}</Txt>
+          <Txt variant="caption" tone="muted" testID={`${prefix}-hint`}>{hint}</Txt>
+          <Input testID={`${prefix}-search`} label={searchLabel ?? t("officer_app.cosign.search")} value={q} onChangeText={setQ} />
+          {failed ? <FieldError text={t("officer_app.state.error_title")} /> : null}
+        </View>
+        {people.length === 0 && !loading && !failed ? (
+          <Txt variant="caption" tone="muted" style={{ paddingHorizontal: space[5] }}>
+            {t("officer_app.cosign.empty")}
+          </Txt>
+        ) : null}
+        {(all ? people : people.slice(0, PEOPLE_SHOWN)).map((person) => (
+          <Row
+            key={person.id}
+            testID={`${prefix}-${person.id}`}
+            minHeight={56}
+            strong={picked?.id === person.id}
+            title={person.name}
+            lines={person.line ? [person.line] : []}
+            right={<Txt variant="nav">{picked?.id === person.id ? "✓" : "○"}</Txt>}
+            onPress={() => setPicked(person)}
+          />
+        ))}
+        {!all && people.length > PEOPLE_SHOWN ? (
+          <View style={{ paddingHorizontal: space[5], alignItems: "flex-start" }}>
+            <SmallButton testID={`${prefix}-more`} title={t("officer_app.cosign.more", { n: String(people.length - PEOPLE_SHOWN) })} onPress={() => setAll(true)} />
+          </View>
+        ) : null}
+        <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
+          {children}
+          {problem ? <Notice tone="neg" testID={`${prefix}-problem`}>{t("officer_app.state.error_title")}</Notice> : null}
+          <Button testID={`${prefix}-confirm`} title={picked ? confirmTitle(picked.name) : idleTitle} busy={busy} disabled={!picked} onPress={confirm} />
+        </View>
+      </View>
+    </Sheet>
+  );
+}
+
 /** 转给谁？ -- pick one officer, then the button reads 「转给{name}」. */
 export function AssignSheet({
   open,
@@ -68,76 +172,34 @@ export function AssignSheet({
   onAssigned: (name: string) => void;
 }) {
   const { t } = useI18n();
-  const theme = useTheme();
-  const [q, setQ] = useState("");
-  const [picked, setPicked] = useState<InboxOfficer | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState(false);
-  // The first PEOPLE_SHOWN, then 「更多」 shows the rest (the search narrows them too).
-  const [all, setAll] = useState(false);
   const load = useRemote<InboxOfficer[]>(useCallback(() => (open ? soulInboxApi.assignable(id).then((r) => r.data) : Promise.resolve([] as InboxOfficer[])), [id, open]));
-  const people = useMemo(() => assignableOthers(load.data ?? [], selfId, q), [load.data, selfId, q]);
-
-  const confirm = () => {
-    if (!picked) return;
-    setBusy(true);
-    setProblem(false);
-    soulInboxApi
-      .assign(id, picked.user_id)
-      .then(() => {
-        onAssigned(picked.display_name);
-        onClose();
-      })
-      .catch(() => setProblem(true))
-      .finally(() => setBusy(false));
-  };
-
+  const find = useCallback(
+    (q: string): PickPerson[] =>
+      assignableOthers(load.data ?? [], selfId, q).map((p) => {
+        const n = (p as { load?: number | null }).load;
+        return { id: p.user_id, name: p.display_name, line: typeof n === "number" ? t("officer_app.letter.assign_load", { n: String(n) }) : null };
+      }),
+    [load.data, selfId, t],
+  );
   return (
-    <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
-      <View testID="sheet-assign" style={{ paddingVertical: space[5], gap: space[4] }}>
-        <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
-          <Txt variant="title">{t("officer_app.letter.assign_title")}</Txt>
-          <Txt variant="caption" tone="muted" testID="assign-hint">{t("officer_app.letter.assign_hint")}</Txt>
-          <Input testID="assign-search" label={t("officer_app.cosign.search")} value={q} onChangeText={setQ} />
-          {load.error ? <FieldError text={t("officer_app.state.error_title")} /> : null}
-        </View>
-        {people.length === 0 && !load.loading && !load.error ? (
-          <Txt variant="caption" tone="muted" style={{ paddingHorizontal: space[5] }}>
-            {t("officer_app.cosign.empty")}
-          </Txt>
-        ) : null}
-        {(all ? people : people.slice(0, PEOPLE_SHOWN)).map((person) => {
-          const load_ = (person as { load?: number | null }).load;
-          return (
-            <Row
-              key={person.user_id}
-              testID={`assign-${person.user_id}`}
-              minHeight={56}
-              strong={picked?.user_id === person.user_id}
-              title={person.display_name}
-              lines={typeof load_ === "number" ? [t("officer_app.letter.assign_load", { n: String(load_) })] : []}
-              right={<Txt variant="nav">{picked?.user_id === person.user_id ? "✓" : "○"}</Txt>}
-              onPress={() => setPicked(person)}
-            />
-          );
-        })}
-        {!all && people.length > PEOPLE_SHOWN ? (
-          <View style={{ paddingHorizontal: space[5], alignItems: "flex-start" }}>
-            <SmallButton testID="assign-more" title={t("officer_app.cosign.more", { n: String(people.length - PEOPLE_SHOWN) })} onPress={() => setAll(true)} />
-          </View>
-        ) : null}
-        <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
-          {problem ? <Notice tone="neg" testID="assign-problem">{t("officer_app.state.error_title")}</Notice> : null}
-          <Button
-            testID="assign-confirm"
-            title={picked ? t("officer_app.letter.assign_confirm", { name: picked.display_name }) : t("officer_app.letter.assign")}
-            busy={busy}
-            disabled={!picked}
-            onPress={confirm}
-          />
-        </View>
-      </View>
-    </Sheet>
+    <PeoplePickerSheet
+      open={open}
+      prefix="assign"
+      title={t("officer_app.letter.assign_title")}
+      hint={t("officer_app.letter.assign_hint")}
+      find={find}
+      loading={load.loading}
+      failed={!!load.error}
+      confirmTitle={(name) => t("officer_app.letter.assign_confirm", { name })}
+      idleTitle={t("officer_app.letter.assign")}
+      onClose={onClose}
+      onConfirm={(person) =>
+        soulInboxApi.assign(id, person.id).then(() => {
+          onAssigned(person.name);
+          onClose();
+        })
+      }
+    />
   );
 }
 

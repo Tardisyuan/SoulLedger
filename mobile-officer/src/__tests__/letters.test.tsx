@@ -10,7 +10,7 @@ import { TodoTab } from "../screens/todo";
 import { Detail } from "../screens/detail";
 import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
 import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
-import { httpError, renderOfficer } from "./harness";
+import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();
 const mockGet = jest.fn();
@@ -18,6 +18,7 @@ const mockMessages = jest.fn();
 const mockReply = jest.fn();
 const mockTemplates = jest.fn();
 const mockMarkRead = jest.fn();
+const mockAssign = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
   officerAppApi: { todo: (...a: unknown[]) => mockTodo(...a), registerPush: jest.fn(), unregisterPush: jest.fn() },
@@ -29,6 +30,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
     messages: (...a: unknown[]) => mockMessages(...a),
     reply: (...a: unknown[]) => mockReply(...a),
     markRead: (...a: unknown[]) => mockMarkRead(...a),
+    assign: (...a: unknown[]) => mockAssign(...a),
   },
   inboxTemplatesApi: { list: (...a: unknown[]) => mockTemplates(...a) },
 }));
@@ -62,8 +64,8 @@ beforeEach(() => {
 });
 
 describe("rules", () => {
-  it("待回书信 is the last group, after the four that were there", () => {
-    expect(TODO_GROUPS.map((g) => g.field)).toEqual(["approvals", "reassignments", "cooldowns", "rebirths", "letters"]);
+  it("待回书信 comes after the four that were there; 受刑计划变更 (Design 第四十批 O-f) after it", () => {
+    expect(TODO_GROUPS.map((g) => g.field)).toEqual(["approvals", "reassignments", "cooldowns", "rebirths", "letters", "sentence_changes"]);
   });
   it("the assignment notification lands on the thread", () => {
     expect(noticeLanding({ related_resource: "soul_inbox", related_id: "c-1" })).toEqual({ tab: "todo", item: { kind: "letter", id: "c-1" } });
@@ -355,5 +357,45 @@ describe("a soul's pictures in the thread (2026-10-10)", () => {
     expect(within(composer).queryByTestId("letter-image-add")).toBeNull();
     expect(within(composer).queryByTestId("chat-image-add")).toBeNull();
     expect(within(composer).queryByText("图")).toBeNull();
+  });
+});
+
+// ── Design 第四十批 O-e:信头写经办人;别人经办的信,回信框换成一句说明 ─────────
+
+describe("who handles the letter", () => {
+  it("the header says who: 经办 · name, or 经办 · 未分配", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 7, display_name: "阎罗" } } });
+    await openThread();
+    expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 阎罗");
+    expect(screen.getByTestId("letter-composer")).toBeTruthy();
+    expect(screen.queryByTestId("letter-not-yours")).toBeNull();
+  });
+
+  it("unassigned: 经办 · 未分配, and the take bar as before", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: null } });
+    await openThread();
+    expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 未分配");
+    expect(screen.getByTestId("letter-take-bar")).toBeTruthy();
+  });
+
+  it("someone else's: one line instead of the box (not greyed, nothing to confirm), and 转给我 for who may hand letters on", async () => {
+    mockAssign.mockResolvedValue({ data: {} });
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
+    const user = { ...OFFICER, permissions: [...(OFFICER.permissions ?? []), "soul_inbox.reply"] };
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={() => {}} />, { user });
+    await screen.findByTestId("letter-thread");
+    expect(screen.getByTestId("letter-handler").props.children).toBe("经办 · 钟书吏");
+    expect(screen.queryByTestId("letter-composer")).toBeNull();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+    expect(screen.getByText("这封信由钟书吏经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("letter-assign-to-me"));
+    await waitFor(() => expect(mockAssign).toHaveBeenCalledWith("c-1", 7));
+  });
+
+  it("someone else's, without soul_inbox.reply: the line, and no 转给我", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
+    await openThread();
+    expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
+    expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
   });
 });

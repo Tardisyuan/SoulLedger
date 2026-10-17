@@ -39,6 +39,7 @@ from apps.judgment.serializers import (
     JudgmentBatchSerializer,
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
+    JudgmentClaimReasonSerializer,
     JudgmentClaimRefusalSerializer,
     JudgmentCommentSerializer,
     JudgmentConcludeSerializer,
@@ -281,7 +282,10 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
     }
     queryset = (
         Judgment.objects
-        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "realm", "approval_workflow")
+        .select_related(
+            "soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "reassign_requested_by", "realm",
+            "approval_workflow",
+        )
         .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
@@ -862,12 +866,14 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         """认领这件案子。已被别人认领 → 409 `already_claimed`;重复认领自己的 → 200,不写。"""
         return self._claim_response(lambda pk: claims.claim(pk, request.user))
 
-    @extend_schema(request=None, responses=_CLAIM_RESPONSES)
+    @extend_schema(request=JudgmentClaimReasonSerializer, responses=_CLAIM_RESPONSES)
     @action(detail=True, methods=["post"])
     def release(self, request, pk=None):
-        """释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。"""
+        """释放认领。别人的认领只有持 `judgment.assign` 的人能释放(否则 403 `not_claimant`)。
+        `{"reason": "…"}` 可省;替别人放回时原认领人收到通知,理由随通知走。"""
         override = self._may_override()
-        return self._claim_response(lambda pk: claims.release(pk, request.user, may_override=override))
+        reason = self._reason(request)
+        return self._claim_response(lambda pk: claims.release(pk, request.user, may_override=override, reason=reason))
 
     @extend_schema(
         request=JudgmentReassignSerializer,
@@ -875,11 +881,13 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
     )
     @action(detail=True, methods=["post"])
     def reassign(self, request, pk=None):
-        """改派给同一租户里能办案的另一位官员。`{"to": <user id>}`。"""
+        """改派给同一租户里能办案的另一位官员。`{"to": <user id>, "reason": "…"}`(理由可省)。
+        原认领人(不是调用者本人时)收到通知。"""
         serializer = JudgmentReassignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         target = self._assignee(serializer.validated_data["to"])
-        return self._claim_response(lambda pk: claims.reassign(pk, target))
+        reason = serializer.validated_data.get("reason", "")
+        return self._claim_response(lambda pk: claims.reassign(pk, target, actor=request.user, reason=reason))
 
     @extend_schema(request=JudgmentDeferSerializer, responses=_CLAIM_RESPONSES)
     @action(detail=True, methods=["post"])
@@ -893,12 +901,19 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
             lambda pk: claims.defer(pk, request.user, reason, may_override=override)
         )
 
-    @extend_schema(request=None, responses=_CLAIM_RESPONSES)
+    @extend_schema(request=JudgmentClaimReasonSerializer, responses=_CLAIM_RESPONSES)
     @action(detail=True, methods=["post"])
     def undefer(self, request, pk=None):
-        """撤销暂缓,案子回到它按认领人所属的组。"""
+        """撤销暂缓,案子回到它按认领人所属的组。`{"reason": "…"}` 可省;替别人撤销时原认领人收到通知。"""
         override = self._may_override()
-        return self._claim_response(lambda pk: claims.undefer(pk, request.user, may_override=override))
+        reason = self._reason(request)
+        return self._claim_response(lambda pk: claims.undefer(pk, request.user, may_override=override, reason=reason))
+
+    @staticmethod
+    def _reason(request) -> str:
+        body = JudgmentClaimReasonSerializer(data=request.data or {})
+        body.is_valid(raise_exception=True)
+        return body.validated_data.get("reason", "")
 
     @extend_schema(
         responses={

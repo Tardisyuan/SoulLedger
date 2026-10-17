@@ -5988,7 +5988,9 @@
         "letters": "Sesh Er Wesheb",
         "unassigned_letters": "Sesh Nen Redi Djer"
       },
-      "see_all": "Neb · {{n}}"
+      "see_all": "Neb · {{n}}",
+      "group_sentence_change": "Dbh Khemen Wetep",
+      "on_desk_only": "Iri Em Medjat Sab"
     },
     "kinds": {
       "approval": "Sekhet Wat Hesy",
@@ -6011,11 +6013,13 @@
     },
     "search": {
       "souls": "Hehy Ba",
-      "placeholder": "Ren Er Ren Ta",
+      "placeholder": "Ren, Ip Er Ip Sep",
       "read_only": "Maa Wa. Khemen: Em Medjat Sab.",
       "no_souls_title": "Nen Gem Ba",
       "no_souls_body": "Khemen Ren, Er Sesh Ren Ta Neb.",
-      "residing": "▲ {{where}} · Hemes"
+      "residing": "▲ {{where}} · Hemes",
+      "group_case": "Sep",
+      "no_soul": "Nen Ba Hena Ren Er Ip"
     },
     "assist": {
       "entry": "Hehy Medu",
@@ -6228,7 +6232,11 @@
       "done_unarchived": "Ini Em Per Sesh Seth",
       "archived_banner": "Em Per Sesh · {{date}}",
       "unassigned_tag": "Nen Redi Djer",
-      "take": "Shesep"
+      "take": "Shesep",
+      "handler": "Em Djeret · {{name}}",
+      "handler_none": "Em Djeret · Nen Redi Djer",
+      "not_yours": "Sesh Pen Em Djeret {{name}}: Wesheb Wa. Dbh Redi Er Hat, Er Dbh Sab Hery.",
+      "assign_to_me": "Redi Er-I"
     },
     "dispatch_status": {
       "waiting": "Per Ky: Nen Hesy Djer",
@@ -6290,7 +6298,11 @@
       "summary_more": "Wen Neb",
       "evidence": "Medu Maat · {{n}}",
       "evidence_attachment": "Djama Hena {{n}}",
-      "load_failed": "Nen Ini Khet Sep"
+      "load_failed": "Nen Ini Khet Sep",
+      "admin_context": "Em Djeret {{name}} · Sab Hery",
+      "reassign_to": "Hab Ky Er…",
+      "release_for": "Redi Er Hat · {{name}}",
+      "reassign_request": "{{name}}: Dbh Hab Ky · {{time}}"
     },
     "notify": {
       "intro": "Iru Khetem: Nen Sedjem Er Medjat Pen, Nen Em Hena. Smen Wa Hena Medjat Sab; Shat: Em Medjat Sab.",
@@ -6314,6 +6326,26 @@
       "current_stop": "◐ Sekhet Pen",
       "no_disposition": "Wetep Nen Iri Djer",
       "open_label": "Wen Medjat Ba · {{name}}"
+    },
+    "reassign": {
+      "title": "Hab Ky Er",
+      "search": "Hehy Ren",
+      "hint": "Sab Wedja Wesekhet · Sep Kheru Tepy",
+      "load": "Sep {{n}}",
+      "reason": "Khet · Em Tepy; {{name}} Maa",
+      "confirm": "Hab Ky Er {{name}}",
+      "done": "Hab Ky Seth Er {{name}}"
+    },
+    "rebirth": {
+      "cross_civ_none": "⇄ Taui Ky: Nen",
+      "cross_civ_body": "Taui Ky Em Wedja Tepy · Em Medjat Sab. Hesy Pa: «Nen», Nen Khemen.",
+      "approve_no_cross": "Hesy · Nen Taui Ky",
+      "decide_on_desk": "Wedja Em Medjat Sab",
+      "cross_wanted": "Dbh Taui Ky: Wedja Em Medjat Sab."
+    },
+    "dispatch": {
+      "approved_next": "Hesy Seth. Wesekhet Shesep Iri Em Medjat Sab: Ba Nen Shem Djer.",
+      "awaiting_receiver": "◐ Nen Iri Wesekhet Shesep Djer"
     }
   },
   "print": {
@@ -6420,5 +6452,10 @@
     "empty": "Nen Medew Em Setep Pen",
     "empty_all": "Nen Medew Djer",
     "failed": "Nen Ini Medew. Wehem Iri."
+  },
+  "state": {
+    "gone_title": "Nen Wenen Djer",
+    "gone_body": "Fekh Seth, Er Nen Maa-Ek.",
+    "gone_back": "Er Hat · {{from}}"
   }
 }

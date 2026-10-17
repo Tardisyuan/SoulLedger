@@ -7,11 +7,23 @@
  */
 import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 
 import { decisionAllowed, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
-import { decisionFailure, failureReasonKey, hallLabel, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
+import {
+  decisionFailure,
+  deskUrl,
+  failureReasonKey,
+  hallLabel,
+  passVerdictsOf,
+  reasonMissing,
+  rebirthCross,
+  submitDecision,
+  todoTitle,
+  type FailureReason,
+  type Verdict,
+} from "../rules";
 import { effectLine, objectLines } from "../todoFacts";
 import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 import { PEOPLE_SHOWN } from "./letterActions";
@@ -48,6 +60,10 @@ export function DecisionSheet({
   const { t } = useI18n();
   const bio = useBioWord();
   const theme = useTheme();
+  const toast = useToast();
+  // O-b: a rebirth's first review says 「不跨」 on the sheet and on the button; one already set to cross is the desk's.
+  const cross = verdict === "approve" ? rebirthCross(detail) : null;
+  const toDesk = () => void Share.share({ message: deskUrl({ kind: "rebirth", id: detail.id }) }).catch(() => {});
   const [reason, setReason] = useState("");
   // The soul's wish pre-fills the days (editable, same rules); with none the field starts empty as before.
   const [days, setDays] = useState(cooldown?.desiredDays != null ? String(cooldown.desiredDays) : "");
@@ -88,6 +104,8 @@ export function DecisionSheet({
           return;
         }
         return submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined }).then(() => {
+          // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
+          if (detail.kind === "reassignment" && verdict === "approve") toast(t("officer_app.dispatch.approved_next"), "success");
           onDone();
           onClose();
         });
@@ -100,6 +118,15 @@ export function DecisionSheet({
     <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
       <View testID={`sheet-${verdict}`} style={{ padding: space[5], gap: space[4] }}>
         <Txt variant="title">{t(verdict === "approve" ? "officer_app.confirm.approve_title" : "officer_app.confirm.reject_title")}</Txt>
+        {cross === "no" ? (
+          // Written first, above the object: approving here settles it for good.
+          <View testID="decision-cross" style={{ gap: space[1] }}>
+            <Txt variant="bodyLg">{t("officer_app.rebirth.cross_civ_none")}</Txt>
+            <Txt variant="body" tone="muted">{t("officer_app.rebirth.cross_civ_body")}</Txt>
+          </View>
+        ) : cross === "desk" ? (
+          <Txt variant="body" testID="decision-cross-wanted">{t("officer_app.rebirth.cross_wanted")}</Txt>
+        ) : null}
         {/* 对象: a bordered block (what, then who asked). 后果: one sentence under it. */}
         <View testID="decision-object" style={{ borderWidth: 1, borderColor: theme.hair, padding: space[3], gap: space[1] }}>
           <Txt variant="bodyLg">{objectTop}</Txt>
@@ -151,16 +178,28 @@ export function DecisionSheet({
         ) : null}
         {failure ? <Notice tone="neg" testID="decision-failure">{t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}</Notice> : null}
         {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}</Notice> : null}
-        <View style={{ flexDirection: "row", gap: space[3] }}>
-          <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
-          <ActionButton
-            testID="decision-confirm"
-            kind={verdict === "approve" ? "primary" : "ink"}
-            busy={busy}
-            title={t(verdict === "approve" ? "officer_app.confirm.approve_ok" : "officer_app.confirm.reject_ok")}
-            onPress={confirm}
-          />
-        </View>
+        {cross === "desk" ? (
+          // No approval on the phone: approving would turn down the wish for another civilization.
+          <View style={{ flexDirection: "row", gap: space[3] }}>
+            <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
+            <ActionButton testID="decision-desk" kind="primary" title={t("officer_app.continue_on_desk")} onPress={toDesk} />
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", gap: space[3] }}>
+            {cross === "no" ? (
+              <ActionButton testID="decision-desk" kind="outline" title={t("officer_app.rebirth.decide_on_desk")} onPress={toDesk} />
+            ) : (
+              <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
+            )}
+            <ActionButton
+              testID="decision-confirm"
+              kind={verdict === "approve" ? "primary" : "ink"}
+              busy={busy}
+              title={t(cross === "no" ? "officer_app.rebirth.approve_no_cross" : verdict === "approve" ? "officer_app.confirm.approve_ok" : "officer_app.confirm.reject_ok")}
+              onPress={confirm}
+            />
+          </View>
+        )}
       </View>
     </Sheet>
   );

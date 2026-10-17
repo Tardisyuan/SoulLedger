@@ -11,16 +11,14 @@ import { eventsApi, type SoulEvent } from "@soulledger/core/api/events";
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { reincarnationApi, type Reincarnation } from "@soulledger/core/api/reincarnation";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
-import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { formatWhen } from "../format";
-import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
+import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
-import { isDenied } from "../rules";
 import { useSession } from "../session";
 import { GUTTER, Notice, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
@@ -64,26 +62,17 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
   const { t } = useI18n();
   const theme = useTheme();
   const permissions = usePermissionCodes();
-  const canCode = permissions.includes("soul_account.read");
-  // The code is the current life's account (`soul_account.read`); `SoulSerializer` does not carry it. Without the
-  // permission, or when the soul has no account, the header goes without it rather than failing.
+  // The code is the soul's own identifier, not account data (Design 第四十批 第四节 4): `SoulSerializer` carries it
+  // for every reader, so a judge without `soul_account.read` sees it too. A soul never given an account has none.
   const load = useCallback(async (): Promise<{ soul: Soul; code: string | null }> => {
-    const [soul, code] = await Promise.all([
-      soulsApi.get(id).then((r) => r.data),
-      canCode
-        ? soulAccountsApi.accounts({ soul: id }).then(
-            (r) => r.data.results.find((a) => a.retired_at === null)?.soul_code ?? null,
-            () => null
-          )
-        : Promise.resolve(null),
-    ]);
-    return { soul, code };
-  }, [id, canCode]);
+    const soul = (await soulsApi.get(id)).data;
+    return { soul, code: soul.soul_code ?? null };
+  }, [id]);
   const { data, error, reload } = useRemote(load);
   const tabs = soulTabs(permissions);
   const [tab, setTab] = useState<SoulTab>("identity");
   const [opened, setOpened] = useState<SoulTab[]>(["identity"]);
-  const view = viewStateOf({ data, error }, () => false, isDenied);
+  const view = detailStateOf({ data, error });
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   const { soul, code } = data;
   const pick = (next: SoulTab) => {
