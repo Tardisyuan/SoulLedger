@@ -40,9 +40,9 @@ import { useTheme } from "./ui";
 
 /**
  * Decision A4: the same page within 30 minutes continues the last conversation — the one this
- * session already holds. The drawer no longer fetches history to find it (audit 2026-10-17 #3:
- * every open pulled every conversation); after a restart the soul starts fresh and finds the old
- * one in history. A question with no conversation id goes out with `new: true`, so the server
+ * session already holds, else (after a restart) the single latest one, asked for on opening with
+ * `limit=1`. The drawer no longer pulls the whole history to find it (audit 2026-10-17 #3: every
+ * open pulled every conversation); history loads only when its view opens. A question with no conversation id goes out with `new: true`, so the server
  * never continues one the drawer is not showing (2026-10-17 user decision, as the officer App).
  */
 export const ASSIST_CONTINUE_MS = 30 * 60 * 1000;
@@ -183,13 +183,23 @@ export function AssistProvider({
       if (waiting.current || failure?.kind === "not_configured") return;
       setFailure(null);
       // A4: this page's conversation, still within 30 minutes of its last message, is continued.
-      setThread((th) => {
-        const last = th.messages?.[th.messages.length - 1]?.created_at;
-        const fresh = th.id !== null && th.screen === screen && !!last && Date.now() - Date.parse(last) < ASSIST_CONTINUE_MS;
-        return fresh ? th : { id: null, screen, messages: [] };
-      });
+      const last = thread.messages?.[thread.messages.length - 1]?.created_at;
+      const fresh = thread.id !== null && thread.screen === screen && !!last && Date.now() - Date.parse(last) < ASSIST_CONTINUE_MS;
+      if (fresh) return;
+      setThread({ id: null, screen, messages: [] });
+      // After a restart the session holds none: ask for the single latest one (not the whole history) and
+      // resume it if it is this page's and still within 30 minutes. Dropped if the soul has started
+      // something meanwhile (a question on its way, or another conversation chosen).
+      void soulAssistApi.latest().then(
+        ([c]) => {
+          if (!c || c.screen !== screen || Date.now() - Date.parse(c.last_active_at) >= ASSIST_CONTINUE_MS) return;
+          if (waiting.current) return;
+          setThread((th) => (th.id === null && th.screen === screen && !th.messages?.length ? { id: c.id, screen, messages: c.messages } : th));
+        },
+        () => undefined
+      );
     },
-    [failure]
+    [failure, thread]
   );
 
   const close = useCallback(() => {

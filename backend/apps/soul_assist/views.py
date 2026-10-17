@@ -131,7 +131,9 @@ SOUL_HISTORY_PAGE = 50
 class MeAssistConversationsView(AssistView):
     @extend_schema(
         parameters=[OpenApiParameter("before", OpenApiTypes.UUID,
-                                     description="上一页最后一条会话的 id;给了就只列比它更早的。")],
+                                     description="上一页最后一条会话的 id;给了就只列比它更早的。"),
+                    OpenApiParameter("limit", OpenApiTypes.INT,
+                                     description="一次最多给几条(1 到一页的大小);重开抽屉只要最新的一条时给 1。")],
         responses={200: AssistConversationSerializer(many=True), 400: AssistErrorSerializer,
                    403: AssistErrorSerializer, 404: AssistErrorSerializer})
     def get(self, request):
@@ -147,7 +149,11 @@ class MeAssistConversationsView(AssistView):
                 raise service.AssistError("会话不存在。", "not_found", 404)
             # (时间, id) 严格在锚点之后:同一时刻的两条不会一条重复、一条漏掉。
             rows = rows.filter(Q(last_active_at__lt=at) | Q(last_active_at=at, pk__lt=before))
-        rows = rows[:SOUL_HISTORY_PAGE].prefetch_related(
+        try:
+            size = min(max(int(request.query_params.get("limit", SOUL_HISTORY_PAGE)), 1), SOUL_HISTORY_PAGE)
+        except ValueError:
+            raise service.AssistError("limit 不是整数。", "invalid", 400) from None
+        rows = rows[:size].prefetch_related(
             Prefetch("messages", queryset=AssistMessage.objects.order_by("created_at", "id")))
         return Response(AssistConversationSerializer(rows, many=True).data)
 
