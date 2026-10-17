@@ -148,13 +148,16 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # ?show_deleted=true opts back in, matching the "show deleted"
         # toggle convention this feature introduces. Archived souls
         # (has_concluded_judgment souls that were archived instead of
-        # deleted) never come back through this toggle — archiving means
-        # permanently off the list, not reversible the way a soft delete is.
+        # deleted) never come back through *this* toggle; `show_archived`
+        # below is theirs.
         show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
         if not show_deleted:
             qs = qs.filter(is_deleted=False)
-        # 详情与取消归档要找得到已归档的灵魂(链接、搜索打开时详情页显示横条);列表不带。
-        if getattr(self, 'action', None) not in ('retrieve', 'unarchive'):
+        # 详情与取消归档要找得到已归档的灵魂(链接、搜索打开时详情页显示横条);列表默认不带。
+        # `?show_archived=1` 让列表(与导出)把已归档的也列出来 —— 同处置列表的开关(审计 1017 #9):
+        # 否则取消归档的按钮在详情页上,而那个详情页除了直接链接找不到。
+        show_archived = self.request.query_params.get('show_archived', '').lower() in ('1', 'true', 'yes')
+        if not show_archived and getattr(self, 'action', None) not in ('retrieve', 'unarchive'):
             qs = qs.filter(is_archived=False)
         # Apply tenant isolation + DataScope filtering (equivalent to
         # DataScopeViewSetMixin, which this viewset cannot simply inherit

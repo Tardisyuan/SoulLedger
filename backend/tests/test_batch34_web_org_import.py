@@ -140,3 +140,25 @@ class TestArchiveRoundTrip:
         assert back.status_code == 200 and back.data["is_archived"] is False
         listed = admin_client.get("/api/v1/souls/")
         assert str(soul.pk) in [str(r["id"]) for r in listed.data.get("results", listed.data)]
+
+    def test_show_archived_brings_archived_souls_back_into_the_list(self, admin_client, admin_user):
+        """审计 1017 #9:默认列表仍不带已归档的;`?show_archived=1` 带上,且行上 `is_archived` 为真。"""
+        from apps.souls.models import Soul
+
+        kept = Soul.objects.create(name="B34 Kept", tenant=admin_user.tenant)
+        archived = Soul.objects.create(name="B34 Archived", tenant=admin_user.tenant, is_archived=True)
+
+        def rows(url):
+            res = admin_client.get(url)
+            assert res.status_code == 200, res.data
+            return {str(r["id"]): r for r in res.data.get("results", res.data)}
+
+        default = rows("/api/v1/souls/")
+        assert str(kept.pk) in default and str(archived.pk) not in default
+        assert default[str(kept.pk)]["is_archived"] is False
+
+        shown = rows("/api/v1/souls/?show_archived=1")
+        assert str(kept.pk) in shown and str(archived.pk) in shown
+        assert shown[str(archived.pk)]["is_archived"] is True
+        # 不认识的值等于没开。
+        assert str(archived.pk) not in rows("/api/v1/souls/?show_archived=no")

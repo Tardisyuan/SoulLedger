@@ -7,11 +7,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulsPage from "@/app/souls/page";
 
+let mockRows: Record<string, unknown>[] = [];
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
   useSoulImportPreview: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
   useSoulImportCommit: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
   useSouls: () => ({
-    data: { results: [], count: 21 },
+    data: { results: mockRows, count: 21 },
     isLoading: false,
     isError: false,
     isPlaceholderData: false,
@@ -56,6 +57,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
   mockSearch = "";
+  mockRows = [];
   mockExportCsv.mockResolvedValue({ data: new Blob(["id\n"]) });
 });
 
@@ -88,4 +90,24 @@ it("没有筛选时导出整份列表:请求不带任何筛选", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "common.export_scope:21" }));
   await waitFor(() => expect(mockExportCsv).toHaveBeenCalledTimes(1));
   expect(mockExportCsv.mock.calls[0][0]).toEqual({});
+});
+
+// 审计 1017 #9:「显示已归档」同处置页;开着时列表与导出都带 `show_archived=1`,已归档的行标「□ 已归档」。
+it("「显示已归档」开着时导出带 show_archived=1,已归档的行标出来,其余的不标", async () => {
+  mockRows = [
+    { id: "a1", name: "沈青梧", civilization: "CHINESE", current_state: "DISPOSED", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: false, is_archived: true },
+    { id: "b2", name: "Marguerite Vey", civilization: "EUROPEAN", current_state: "JUDGING", birth_date: null, death_date: null, date_problems: [], has_date_warning: false, has_record_error: false, is_eval_identity: false, is_archived: false },
+  ];
+  renderPage();
+  const toggle = await screen.findByRole("button", { name: "records.archive.show_archived" });
+  expect(toggle).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", { name: "common.export_scope:21" }));
+  await waitFor(() => expect(mockExportCsv).toHaveBeenCalledTimes(1));
+  expect(mockExportCsv.mock.calls[0][0]).toEqual({ show_archived: "1" });
+
+  const marks = screen.getAllByTestId("soul-archived");
+  expect(marks).toHaveLength(1);
+  expect(marks[0].closest("tr")).toHaveTextContent("沈青梧");
 });

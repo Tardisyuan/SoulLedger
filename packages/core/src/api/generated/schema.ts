@@ -17153,6 +17153,7 @@ export interface components {
             readonly has_date_warning: boolean;
             readonly has_record_error: boolean;
             readonly is_eval_identity: boolean;
+            readonly is_archived: boolean;
         };
         SoulLoginOutcome: components["schemas"]["SoulLoginResponse"] | components["schemas"]["SoulMfaRequired"];
         SoulLoginRequest: {
