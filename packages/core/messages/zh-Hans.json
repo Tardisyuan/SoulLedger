@@ -2744,6 +2744,7 @@
     },
     "organization": "所属机构",
     "organization_none": "不属于任何机构",
+    "tenant_pick": "选择租户",
     "organization_column": "机构 · 职务",
     "position": "职务"
   },

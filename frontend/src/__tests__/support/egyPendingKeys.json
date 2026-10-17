@@ -22,5 +22,6 @@
   "official_notify.assistant_cap_closed.title",
   "official_notify.assistant_cap_closed.body",
   "official_notify.assistant_reopened.title",
-  "official_notify.assistant_reopened.body"
+  "official_notify.assistant_reopened.body",
+  "users.tenant_pick"
 ]
