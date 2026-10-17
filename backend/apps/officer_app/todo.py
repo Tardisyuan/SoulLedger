@@ -9,6 +9,9 @@
   判官「请管理员改派」(`judgment.claims.request_reassign`)只发一条通知,没有可查询的队列,不在此列。
 * 缩短冷却申请:`OfficerCooldownShorteningViewSet` 的范围(`soul__home_tenant`),状态 PENDING。
 
+* 受刑计划变更请求(`sentence_changes`,Design 第四十批 O-f):本殿是原属、等原审判官决定的 `SentencePlanRequest`
+  (Web「受刑请求」收件箱里「等我决定的」那一半),要 `judgment.execute`(与 `decide` 同一码名)。手机上只看,
+  决定在电脑上;**不推送**(判刑只在电脑上),但计入 `total()`。
 * 未分配的书信(`unassigned_letters`,2026-10-16):同一个收件箱「待回复」里还没人经办的;不计入 `total()`。
 * 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
   「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
@@ -42,7 +45,7 @@ from apps.workflow.models import (
 )
 
 LIST_LIMIT = 10
-KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "unassigned_letter")
+KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter")
 
 
 def scope_of(user, request=None):
@@ -67,6 +70,14 @@ def _dispatches(scope):
     tenant = getattr(scope, "tenant", None)
     qs = DispatchRecord._base_manager.filter(is_deleted=False, target_tenant=tenant) if tenant else DispatchRecord.objects.none()
     return qs.select_related("soul", "source_tenant", "target_tenant", "dispatched_by")
+
+
+def _sentence_changes(scope):
+    """本殿是原属、等原审判官决定的受刑计划变更请求,最早提出的在前。"""
+    from apps.sentence_plan.models import SentencePlanRequest, SentenceRequestStatus
+
+    qs = SentencePlanRequest.objects.filter(status=SentenceRequestStatus.PENDING).select_related("plan__soul")
+    return scope_to_tenant(qs, scope, field="plan__tenant").order_by("create_time")
 
 
 def _letters(scope, unassigned=False):
@@ -118,11 +129,12 @@ def _group(items, offset=0):
 
 # 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
 FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
-            "rebirth": "rebirths", "letter": "letters", "unassigned_letter": "unassigned_letters"}
+            "rebirth": "rebirths", "letter": "letters", "sentence_change": "sentence_changes",
+            "unassigned_letter": "unassigned_letters"}
 
 
 def build(user, request=None, kind=None, offset=0):
-    """五组各 `LIST_LIMIT` 条;`kind` + `offset` 只给那一组、从第 offset 条起(「加载更多」)。
+    """各组各 `LIST_LIMIT` 条;`kind` + `offset` 只给那一组、从第 offset 条起(「加载更多」)。
     整组本来就是整个算出来再切的,所以翻页不多一次查询,也不会因为条目增减而重复(客户端按 id 去重)。"""
     scope = scope_of(user, request)
     waiting = _waiting_workflows(scope)
@@ -146,6 +158,11 @@ def build(user, request=None, kind=None, offset=0):
     if check_permission(user, "dispatch.approve"):
         reassignments = [_item("reassignment", d.pk, d.soul.name if d.soul_id else "", d.proposed_at)
                          for d in _dispatches(scope).filter(status=DispatchStatus.PROPOSED).order_by("proposed_at")]
+    # 受刑计划变更请求:只看。`target` 仍是这一条请求;App 不打开它,底栏「在电脑上处理」。
+    sentence_changes = []
+    if check_permission(user, "judgment.execute"):
+        sentence_changes = [_item("sentence_change", r.pk, r.plan.soul.name, r.create_time, request_kind=r.kind)
+                            for r in _sentence_changes(scope)]
     letters = []
     if check_permission(user, "soul_inbox.reply"):
         # 条目只带灵魂名与来信时刻;正文在 Synapse,不经这里。
@@ -161,7 +178,8 @@ def build(user, request=None, kind=None, offset=0):
                             **({"feedback_tag": c.feedback_tag} if c.feedback_tag else {}))
                       for c in _letters(scope, unassigned=True)]
     groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
-              "rebirths": rebirths, "letters": letters, "unassigned_letters": unassigned}
+              "rebirths": rebirths, "letters": letters, "sentence_changes": sentence_changes,
+              "unassigned_letters": unassigned}
     if kind:
         return _group(groups[FIELD_OF[kind]], offset)
     return {field: _group(items) for field, items in groups.items()}
@@ -222,6 +240,8 @@ def detail(user, kind, pk, request=None):
             app = RebirthApplication.objects.select_related("soul").get(pk=pk)
             facts.update(item_facts.rebirth_facts(app))
             facts["reason"] = app.appeal_statement if wf.is_appeal and app.appeal_statement else app.statement
+            # O-b:初审批准底页按它写「不跨」或只给「在电脑上继续」。
+            facts["cross_civilization"] = app.cross_civilization
         return {"kind": kind, "id": str(pk), "title": wf.soul.name if kind == "rebirth" else wf.workflow_name,
                 "workflow_id": str(wf.pk), "created_at": wf.created_at, "facts": facts,
                 **(_rebirth_facts(wf) if kind == "rebirth" else {}), **_workflow_state(wf, user)}

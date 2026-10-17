@@ -5056,6 +5056,22 @@
       "title": "暂居回归被拦下",
       "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
     },
+    "judgment_reassigned_away": {
+      "title": "案件已改派",
+      "body": "{{by}} 把你手上的案件 {{soul}} 改派给了 {{to}}。理由：{{reason}}"
+    },
+    "judgment_released_for_you": {
+      "title": "案件已被放回",
+      "body": "{{by}} 替你放回了案件 {{soul}}，它回到了待认领。理由：{{reason}}"
+    },
+    "judgment_deferred_for_you": {
+      "title": "案件已暂缓",
+      "body": "{{by}} 暂缓了你手上的案件 {{soul}}。理由：{{reason}}"
+    },
+    "judgment_undeferred_for_you": {
+      "title": "案件已取消暂缓",
+      "body": "{{by}} 取消了你手上案件 {{soul}} 的暂缓。理由：{{reason}}"
+    },
     "death_sync_retry_failed": {
       "title": "死亡登记重试仍失败",
       "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"
@@ -6155,7 +6171,9 @@
       "filter_empty_title": "没有「{{kinds}}」待办",
       "filter_empty_body": "换个类型看看，或清除筛选。",
       "filter_clear": "清除筛选",
-      "see_all": "全部 {{n}} 封"
+      "see_all": "全部 {{n}} 封",
+      "group_sentence_change": "受刑计划变更",
+      "on_desk_only": "在电脑上处理"
     },
     "queue": {
       "mine": "我手上",
@@ -6173,11 +6191,13 @@
     "continue_on_desk": "在电脑上继续",
     "search": {
       "souls": "查灵魂",
-      "placeholder": "名字或编号",
+      "placeholder": "姓名、编号或案号",
       "read_only": "只读。改动请在官员台进行。",
       "no_souls_title": "没有找到",
       "no_souls_body": "换个名字或编号再试。",
-      "residing": "▲ {{where}} · 暂居"
+      "residing": "▲ {{where}} · 暂居",
+      "group_case": "案件",
+      "no_soul": "没有编号或姓名对得上的灵魂"
     },
     "assist": {
       "entry": "问一问",
@@ -6411,7 +6431,11 @@
       "unassigned_tag": "未分配",
       "take": "由我来回",
       "earlier": "更早的信",
-      "earlier_failed": "没取到更早的信"
+      "earlier_failed": "没取到更早的信",
+      "handler": "经办 · {{name}}",
+      "handler_none": "经办 · 未分配",
+      "not_yours": "这封信由{{name}}经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。",
+      "assign_to_me": "转给我"
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
@@ -6461,7 +6485,11 @@
       "summary_more": "展开全文",
       "evidence": "证据 · {{n}}",
       "evidence_attachment": "附件 {{n}}",
-      "load_failed": "案情没有加载出来"
+      "load_failed": "案情没有加载出来",
+      "admin_context": "在{{name}}手上 · 你是本殿管理员",
+      "reassign_to": "改派给…",
+      "release_for": "替{{name}}放回",
+      "reassign_request": "{{name}}请求改派 · {{time}}"
     },
     "notify": {
       "intro": "关掉的类别不推送到这部手机，也不在站内提醒。和网页个人中心是同一份设置；邮件在网页上设置。",
@@ -6485,6 +6513,26 @@
       "current_stop": "◐ 现在在这一站",
       "no_disposition": "还没有处置",
       "open_label": "打开{{name}}的灵魂详情"
+    },
+    "reassign": {
+      "title": "改派给",
+      "search": "搜姓名",
+      "hint": "本殿能审判的官员 · 手上件数少的在前",
+      "load": "手上 {{n}} 件",
+      "reason": "理由 · 必填，{{name}}会收到",
+      "confirm": "改派给{{name}}",
+      "done": "已改派给{{name}}"
+    },
+    "rebirth": {
+      "cross_civ_none": "⇄ 跨文明：不跨",
+      "cross_civ_body": "跨文明只能在初审定，要在电脑上定。现在批准，就按「不跨」定下来，以后不能再改。",
+      "approve_no_cross": "批准 · 不跨",
+      "decide_on_desk": "在电脑上定",
+      "cross_wanted": "申请去往别的文明，要在电脑上审。"
+    },
+    "dispatch": {
+      "approved_next": "已批准。接收方殿还要在电脑上执行一次，灵魂才会动身。",
+      "awaiting_receiver": "◐ 等接收方执行"
     }
   },
   "print": {
@@ -6580,5 +6628,10 @@
     "empty": "没有符合条件的事件",
     "empty_all": "还没有事件",
     "failed": "没能载入事件，请重试"
+  },
+  "state": {
+    "gone_title": "这条已经不在了",
+    "gone_body": "可能已经删除，或者已经不在你能看的范围里。",
+    "gone_back": "回到{{from}}"
   }
 }

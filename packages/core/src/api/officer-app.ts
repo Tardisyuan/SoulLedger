@@ -10,11 +10,16 @@ import type { components } from "./generated/schema";
 
 export type TodoItem = components["schemas"]["TodoItem"];
 export type TodoGroup = components["schemas"]["TodoGroup"];
-export type Todo = components["schemas"]["Todo"];
+/**
+ * Spelled out until the schema is regenerated (Design 第四十批); once it is, each intersection is a no-op:
+ * `sentence_changes` (O-f), a row's `request_kind`, a rebirth's `cross_civilization` (O-b), a dispatch's `status` (O-f).
+ */
+export type Todo = components["schemas"]["Todo"] & { sentence_changes?: TodoGroup };
 export type TodoItemDetail = components["schemas"]["TodoItemDetail"];
 export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
-export type TodoFacts = components["schemas"]["TodoFacts"];
+export type TodoFacts = components["schemas"]["TodoFacts"] & { cross_civilization?: boolean | null; status?: string };
+export type TodoItemExtra = { request_kind?: string };
 export type FactHistory = components["schemas"]["FactHistory"];
 export type FactAttachment = components["schemas"]["FactAttachment"];
 export type FactSoul = components["schemas"]["FactSoul"];
@@ -23,9 +28,10 @@ export type Cosigner = components["schemas"]["Cosigner"];
 /**
  * The kinds of waiting item; `target` on a row is `{ kind, id }`. `letter` (待回书信) is a soul's
  * letter assigned to me: its id is the inbox conversation's, and it has no `item()` detail --
- * the thread is read and answered through `soulInboxApi`.
+ * the thread is read and answered through `soulInboxApi`. `sentence_change` (受刑计划变更请求) is view-only and
+ * has no `item()` detail either: it is decided on the desk.
  */
-export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter";
+export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change";
 
 /**
  * Why a decision (approve / reject) did not go through. `code` on the error body of

@@ -52,6 +52,8 @@ class NotificationType(models.TextChoices):
     IMPERSONATION_STARTED = "IMPERSONATION_STARTED", "Impersonation Started"
     # 死亡登记重试仍失败 → 该租户的 ADMIN(apps/death_sync/views.py::_escalate_failed_retry)。
     DEATH_SYNC_RETRY_FAILED = "DEATH_SYNC_RETRY_FAILED", "Death Sync Retry Failed"
+    # 管理员替别人放回 / 改派 / 暂缓 / 取消暂缓 → 原认领人(apps/judgment/claims.py::_tell_holder)。
+    JUDGMENT_CLAIM_CHANGED = "JUDGMENT_CLAIM_CHANGED", "Judgment Claim Changed"
 
 
 class UserNotification(AuditUserFields, models.Model):

@@ -161,6 +161,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 认领 / 暂缓(apps/judgment/claims.py)。全部只读:只有那几个动作能写,它们在行锁下写。
     claimed_by_name = serializers.SerializerMethodField()
     deferred_by_name = serializers.SerializerMethodField()
+    # 官员端「{name}请求改派」那一行要名字(Design 第四十批 O-a)。
+    reassign_requested_by_name = serializers.SerializerMethodField()
     # 队列一行要显示的两个数,免得每行再请求一次灵魂与证据。
     karmic_balance = serializers.SerializerMethodField()
     evidence_count = serializers.SerializerMethodField()
@@ -197,7 +199,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_by_name", "claimed_at",
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
-            "reassign_requested_at", "reassign_requested_by", "reassign_reason",
+            "reassign_requested_at", "reassign_requested_by", "reassign_requested_by_name", "reassign_reason",
             "stale_since",
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
@@ -240,6 +242,9 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
 
     def get_deferred_by_name(self, obj) -> str | None:
         return self._user_name(obj.deferred_by)
+
+    def get_reassign_requested_by_name(self, obj) -> str | None:
+        return self._user_name(obj.reassign_requested_by)
 
     def get_karmic_balance(self, obj) -> int | None:
         """功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
@@ -599,9 +604,16 @@ class JudgmentDeferSerializer(serializers.Serializer):
 
 
 class JudgmentReassignSerializer(serializers.Serializer):
-    """`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键)。"""
+    """`POST /judgment/{id}/reassign/` 的输入:改派给谁(User 主键),理由可省(官员端必填后带上,随通知给原认领人)。"""
 
     to = serializers.IntegerField(min_value=1)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, trim_whitespace=True)
+
+
+class JudgmentClaimReasonSerializer(serializers.Serializer):
+    """`release/` 与 `undefer/` 的可选输入:替别人放回 / 撤销暂缓时的理由,随通知给原认领人(Design 第四十批 O-a)。"""
+
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, trim_whitespace=True)
 
 
 class AssignableOfficerSerializer(serializers.Serializer):

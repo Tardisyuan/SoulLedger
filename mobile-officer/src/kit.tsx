@@ -5,7 +5,8 @@
  * square; rows 56 / 64 / 72 / 88 high; spacing 4 / 8 / 12 / 16 / 24; the civilization colour only
  * on the identity band, the primary button and the current tab; states by glyph plus words.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { fetchFailureOf } from "@soulledger/core/api/client";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -14,7 +15,43 @@ import { Button, GUTTER, Notice, Txt, family, space, useI18n, useReducedMotion, 
 
 // ── the four states ────────────────────────────────────────────────────
 
-export type ViewState = "loading" | "empty" | "error" | "denied";
+/** `gone` (Design 第四十批 O-c) is a detail's own fifth state: what it showed is deleted or no longer this officer's to see. */
+export type ViewState = "loading" | "empty" | "error" | "denied" | "gone";
+
+/**
+ * Where 「回到{from}」 goes from a detail that is gone: the list the officer came from. `onGone` lets that list grey
+ * the row out once the officer is back (the shell keeps which ones). Without a provider the state has no button.
+ */
+export const GoneContext = createContext<{ from: string; onBack: () => void; onGone?: () => void } | null>(null);
+
+/**
+ * A detail's state: like `viewStateOf`, but a 404 or 403 is `gone` -- not `denied` (that is a whole tab the role
+ * cannot see) and not `error` (nothing a retry fixes). Checked before the data, so a refresh that finds it gone
+ * replaces what was on screen.
+ */
+export function detailStateOf<T>(r: { data: T | null; error: unknown }): ViewState | null {
+  if (r.error && fetchFailureOf(r.error) === "gone") return "gone";
+  return viewStateOf(r, () => false, () => false);
+}
+
+/** 「这条已经不在了」: a hollow dashed circle (not the error's solid mark), two lines, the way back. */
+function GoneView() {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const gone = useContext(GoneContext);
+  const onGone = gone?.onGone;
+  useEffect(() => onGone?.(), [onGone]);
+  return (
+    <View testID="state-gone" style={styles.state}>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.goneMark, { borderColor: t.inkSubtle }]} />
+      <Txt variant="title" accessibilityRole="header">{tr("state.gone_title")}</Txt>
+      <Txt variant="body" tone="muted">
+        {tr("state.gone_body")}
+      </Txt>
+      {gone ? <Button testID="state-gone-back" kind="secondary" title={tr("state.gone_back", { from: gone.from })} onPress={gone.onBack} /> : null}
+    </View>
+  );
+}
 
 /** Five 72-high skeleton rows; `accessibilityState.busy` is the app's `aria-busy`. */
 export function LoadingRows() {
@@ -54,6 +91,7 @@ export function StateView({
   const t = useTheme();
   const { t: tr } = useI18n();
   if (state === "loading") return <LoadingRows />;
+  if (state === "gone") return <GoneView />;
   if (state === "error") {
     return (
       <View testID="state-error" style={styles.state}>
@@ -107,7 +145,10 @@ export function Row({
   highlight,
   minHeight = 72,
   testID,
+  gone,
 }: {
+  /** What it opens is no longer there (O-c): the row is greyed and does nothing. */
+  gone?: boolean;
   title: string;
   lines?: string[];
   glyph?: string;
@@ -121,13 +162,15 @@ export function Row({
   testID?: string;
 }) {
   const t = useTheme();
+  const press = gone ? undefined : onPress;
   return (
     <Pressable
       testID={testID}
-      accessibilityRole={onPress ? "button" : undefined}
-      disabled={!onPress}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }]}
+      accessibilityRole={press ? "button" : undefined}
+      accessibilityState={gone ? { disabled: true } : undefined}
+      disabled={!press}
+      onPress={press}
+      style={({ pressed }) => [styles.row, { minHeight, borderBottomColor: t.hair, backgroundColor: pressed ? t.hair : "transparent" }, gone ? { opacity: 0.45 } : null]}
     >
       {highlight ? <Highlight /> : null}
       {glyph ? (
@@ -438,6 +481,7 @@ export function RefreshFailed({ data, error, onRetry }: { data: unknown; error: 
 const styles = StyleSheet.create({
   skeletonRow: { height: 72, justifyContent: "center", gap: space[3], paddingHorizontal: GUTTER, borderBottomWidth: 1 },
   state: { padding: GUTTER, gap: space[4] },
+  goneMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed" },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },

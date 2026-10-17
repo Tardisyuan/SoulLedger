@@ -119,7 +119,8 @@ describe("the reason and the status line", () => {
   });
 
   it("someone who is not the sender is not told 'the other hall' decided", () => {
-    expect(dispatchStatusLine({ status: "APPROVED", decision_reason: "" } as never, "other")).toMatchObject({ glyph: "✓", key: "dispatch.states.APPROVED" });
+    // 批准不是完成:接收方殿还要在电脑上执行(Design 第四十批 O-f);那句话自带 ◐。
+    expect(dispatchStatusLine({ status: "APPROVED", decision_reason: "" } as never, "other")).toMatchObject({ glyph: "", key: "officer_app.dispatch.awaiting_receiver" });
     expect(dispatchStatusLine({ status: "EXECUTED", decision_reason: "" } as never, "sender")).toMatchObject({ glyph: "→", key: "dispatch.states.EXECUTED" });
   });
 });
@@ -168,10 +169,10 @@ describe("each notice lands on the right screen (through the notices tab)", () =
     noActions();
   });
 
-  it("a stale DISPATCH_PROPOSED tapped after I already approved: read-only, not the action bar", async () => {
+  it("a stale DISPATCH_PROPOSED tapped after I already approved: read-only, not the action bar, waiting for us to execute", async () => {
     mockGet.mockResolvedValue({ data: record({ status: "APPROVED", source_tenant_code: OTHER, target_tenant_code: ME }) });
     await openNotice("DISPATCH_PROPOSED");
-    expect((await screen.findByTestId("dispatch-status")).props.children).toBe("✓ 已批准");
+    expect((await screen.findByTestId("dispatch-status")).props.children).toBe("◐ 等接收方执行");
     noActions();
   });
 
@@ -185,18 +186,24 @@ describe("each notice lands on the right screen (through the notices tab)", () =
 });
 
 describe("a record I cannot read", () => {
-  it("403: the denied state, not a blank page; and no status line", async () => {
-    mockGet.mockRejectedValue(httpError(403));
+  // Design 第四十批 O-c:404 与 403 是同一句「这条已经不在了」,不分删了还是没权限,也不给重试。
+  it.each([403, 404])("%s: 「这条已经不在了」, a way back to 通知, and no status line", async (status) => {
+    mockGet.mockRejectedValue(httpError(status));
     await openNotice("DISPATCH_APPROVED");
-    expect(await screen.findByTestId("state-denied")).toBeTruthy();
+    expect(await screen.findByTestId("state-gone")).toBeTruthy();
+    expect(screen.getByText("这条已经不在了")).toBeTruthy();
+    expect(screen.queryByTestId("state-retry")).toBeNull();
+    expect(screen.queryByTestId("state-denied")).toBeNull();
     expect(screen.queryByTestId("dispatch-status")).toBeNull();
+    fireEvent.press(screen.getByTestId("state-gone-back"));
+    await waitFor(() => expect(screen.queryByTestId("detail")).toBeNull());
   });
 
-  it("404: the same as any other detail that cannot be read (the error state with 重试), and retrying asks again", async () => {
-    mockGet.mockRejectedValueOnce(httpError(404)).mockResolvedValue({ data: record({ status: "APPROVED" }) });
+  it("no answer at all is still the error state with 重试, and retrying asks again", async () => {
+    mockGet.mockRejectedValueOnce(new Error("Network Error")).mockResolvedValue({ data: record({ status: "APPROVED" }) });
     await openNotice("DISPATCH_APPROVED");
     expect(await screen.findByTestId("state-error")).toBeTruthy();
-    expect(screen.queryByTestId("dispatch-status")).toBeNull();
+    expect(screen.queryByTestId("state-gone")).toBeNull();
     fireEvent.press(screen.getByTestId("state-retry"));
     await waitFor(() => expect(screen.getByTestId("dispatch-status")).toBeTruthy());
   });

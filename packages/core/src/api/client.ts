@@ -359,3 +359,17 @@ export async function fetchAllPages<T>(url: string, params: Record<string, strin
   return results;
 }
 
+/**
+ * Why reading ONE thing failed, for a screen that opened it (Design 第四十批 O-c, both apps):
+ * `gone` = the server answered 404 or 403 -- deleted, or no longer this account's to see. One answer
+ * for both on purpose: saying "no permission" tells the reader it still exists. `network` = no answer
+ * at all (offline, timeout); `other` = any other answer (5xx, 400...), which a retry may fix.
+ */
+export type FetchFailure = "gone" | "network" | "other";
+
+export function fetchFailureOf(error: unknown): FetchFailure {
+  const response = (error as { response?: { status?: number } } | null)?.response;
+  if (!response) return "network";
+  return response.status === 404 || response.status === 403 ? "gone" : "other";
+}
+

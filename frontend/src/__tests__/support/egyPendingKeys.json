@@ -93,5 +93,13 @@
   "death_sync.webhooks.redeliver",
   "death_sync.webhooks.redelivered",
   "death_sync.webhooks.redeliver_not_finished",
-  "death_sync.webhooks.redeliver_failed"
+  "death_sync.webhooks.redeliver_failed",
+  "official_notify.judgment_reassigned_away.title",
+  "official_notify.judgment_reassigned_away.body",
+  "official_notify.judgment_released_for_you.title",
+  "official_notify.judgment_released_for_you.body",
+  "official_notify.judgment_deferred_for_you.title",
+  "official_notify.judgment_deferred_for_you.body",
+  "official_notify.judgment_undeferred_for_you.title",
+  "official_notify.judgment_undeferred_for_you.body"
 ]

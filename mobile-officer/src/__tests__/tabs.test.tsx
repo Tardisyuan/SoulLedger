@@ -9,6 +9,7 @@ import { AccessibilityInfo } from "react-native";
 import { RefreshFailed, Row } from "../kit";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab } from "../screens/queue";
+import { SearchTab } from "../screens/search";
 import { TodoTab } from "../screens/todo";
 import { Shell } from "../shell";
 import { OFFICER, httpError, renderOfficer } from "./harness";
@@ -28,6 +29,11 @@ const mockClaim = jest.fn();
 const mockCounts = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
   judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), queueCounts: (...a: unknown[]) => mockCounts(...a) },
+}));
+const mockSouls = jest.fn();
+jest.mock("@soulledger/core/api/souls", () => ({
+  ...jest.requireActual("@soulledger/core/api/souls"),
+  soulsApi: { list: (...a: unknown[]) => mockSouls(...a) },
 }));
 jest.mock("@soulledger/core/api/notifications", () => ({
   notificationsApi: { list: (...a: unknown[]) => mockNotices(...a), markRead: jest.fn(async () => ({})), markAllRead: jest.fn(async () => ({})) },
@@ -347,5 +353,66 @@ describe("the shell", () => {
     });
     await waitFor(() => expect(mockTodo.mock.calls.length).toBeGreaterThan(todoCalls));
     expect(mockNotices.mock.calls.length).toBeGreaterThan(countCalls);
+  });
+});
+
+// ── Design 第四十批 ─────────────────────────────────────────────────────
+
+describe("查询 finds a case by its number too (O-d)", () => {
+  const CASE = { id: "j-42", case_number: "CN-2026-0042", soul_name: "王守仁", court: "酆都第十殿" };
+  const search = (text: string) => {
+    fireEvent.changeText(screen.getByTestId("soul-search"), text);
+    fireEvent(screen.getByTestId("soul-search"), "submitEditing");
+  };
+
+  it("one box, the new placeholder", () => {
+    renderOfficer(<SearchTab onOpenSoul={() => {}} />);
+    expect(screen.getByTestId("soul-search").props.placeholder).toBe("姓名、编号或案号");
+  });
+
+  it("a whole case number pins a 案件 group above the souls, and does not jump to it", async () => {
+    mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
+    mockList.mockResolvedValue({ data: { results: [CASE, { ...CASE, id: "j-43", case_number: "CN-2026-00421" }] } });
+    const onOpenJudgment = jest.fn();
+    renderOfficer(<SearchTab onOpenSoul={() => {}} onOpenJudgment={onOpenJudgment} />);
+    search("cn-2026-0042");
+    expect(await screen.findByTestId("case-row-j-42")).toBeTruthy();
+    expect(screen.queryByTestId("case-row-j-43")).toBeNull(); // only the exact match
+    expect(screen.getByText("案件")).toBeTruthy();
+    expect(await screen.findByTestId("search-no-soul")).toBeTruthy();
+    expect(screen.getByText("没有编号或姓名对得上的灵魂")).toBeTruthy();
+    expect(onOpenJudgment).not.toHaveBeenCalled();
+    expect(mockList).toHaveBeenCalledWith({ search: "cn-2026-0042" });
+    fireEvent.press(screen.getByTestId("case-row-j-42"));
+    expect(onOpenJudgment).toHaveBeenCalledWith("j-42");
+  });
+
+  it("a name does not ask the judgments at all", async () => {
+    mockSouls.mockResolvedValue({ data: { results: [], count: 0, next: null } });
+    renderOfficer(<SearchTab onOpenSoul={() => {}} />);
+    search("王守仁");
+    expect(await screen.findByText("没有找到")).toBeTruthy();
+    expect(mockList).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("search-cases")).toBeNull();
+  });
+});
+
+describe("rows whose detail was gone (O-c)", () => {
+  it("a notice that lands on a gone item is greyed and opens nothing", async () => {
+    mockNotices.mockResolvedValue({
+      data: { results: [{ id: 1, title: "t", message: "", is_read: true, notification_type: "WORKFLOW_ASSIGNED", related_resource: "workflow", related_id: "wf-9", created_at: "2026-10-09T01:00:00Z" }] },
+    });
+    const onLand = jest.fn();
+    renderOfficer(<NoticesTab gone={new Set(["approval:wf-9"])} onLand={onLand} />);
+    fireEvent.press(await screen.findByTestId("notice-1"));
+    expect(onLand).not.toHaveBeenCalled();
+  });
+
+  it("a queue row whose case was gone is greyed and opens nothing", async () => {
+    mockList.mockResolvedValue({ data: { results: [{ id: "j-1", case_number: "C-1", soul_name: "周", court: "" }] } });
+    const onOpen = jest.fn();
+    renderOfficer(<QueueTab gone={new Set(["judgment:j-1"])} onOpen={onOpen} />);
+    fireEvent.press(await screen.findByTestId("queue-row-j-1"));
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });

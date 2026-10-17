@@ -5,6 +5,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { Detail } from "../screens/detail";
+import { ToastProvider } from "../shared";
 import { httpError, renderOfficer } from "./harness";
 
 const mockItem = jest.fn();
@@ -15,6 +16,16 @@ jest.mock("@soulledger/core/api/officer-app", () => ({
   officerAppApi: { item: (...a: unknown[]) => mockItem(...a), addCosigner: (...a: unknown[]) => mockAddCosigner(...a), signerCandidates: jest.fn(async () => ({ data: [{ id: 2, name: "孟婆", username: "mengpo", role: "JUDGE" }] })) },
 }));
 jest.mock("@soulledger/core/api/workflow", () => ({ workflowApi: { approveNode: (...a: unknown[]) => mockApproveNode(...a) } }));
+const mockDecideCross = jest.fn();
+const mockDispatchApprove = jest.fn();
+jest.mock("@soulledger/core/api/soul-accounts", () => ({
+  ...jest.requireActual("@soulledger/core/api/soul-accounts"),
+  soulAccountsApi: { decideCrossCivilization: (...a: unknown[]) => mockDecideCross(...a) },
+}));
+jest.mock("@soulledger/core/api/dispatch", () => ({
+  ...jest.requireActual("@soulledger/core/api/dispatch"),
+  dispatchApi: { approve: (...a: unknown[]) => mockDispatchApprove(...a), reject: jest.fn() },
+}));
 
 const ITEM = {
   kind: "approval",
@@ -206,5 +217,93 @@ describe("waiting for an added signer", () => {
     expect(screen.getByTestId("cosigner-2").props.children).toBe("✓ 孟判官");
     expect(screen.queryByTestId("detail-wait-cosigner")).toBeNull();
     expect(screen.getByTestId("action-approve").props.accessibilityState.disabled).toBe(false);
+  });
+});
+
+// ── Design 第四十批 O-b / O-f ───────────────────────────────────────────
+
+describe("a rebirth's first review on the phone (O-b)", () => {
+  const REBIRTH = { ...ITEM, kind: "rebirth", id: "ra-1", title: "周阿满", facts: { node: { name: "初审", index: 1, total: 2, is_last: false, next_name: "复审" }, cross_civilization: null } };
+  async function openRebirth(item: Record<string, unknown>) {
+    mockItem.mockResolvedValue({ data: item });
+    renderOfficer(<Detail target={{ type: "todo", kind: "rebirth", id: "ra-1" }} onBack={() => {}} onSettled={() => {}} />);
+    await screen.findByTestId("todo-detail");
+    fireEvent.press(screen.getByTestId("action-approve"));
+  }
+
+  it("says 不跨 above everything, and the button says so too; 在电脑上定 beside it", async () => {
+    mockDecideCross.mockResolvedValue({});
+    mockApproveNode.mockResolvedValue({});
+    await openRebirth(REBIRTH);
+    expect(await screen.findByText("⇄ 跨文明：不跨")).toBeTruthy();
+    expect(screen.getByText("跨文明只能在初审定，要在电脑上定。现在批准，就按「不跨」定下来，以后不能再改。")).toBeTruthy();
+    expect(screen.getByText("在电脑上定")).toBeTruthy();
+    expect(screen.getByText("批准 · 不跨")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    await waitFor(() => expect(mockApproveNode).toHaveBeenCalled());
+    expect(mockDecideCross).toHaveBeenCalledWith("ra-1", false);
+  });
+
+  it("set to cross: no approval on the phone, only 在电脑上继续", async () => {
+    await openRebirth({ ...REBIRTH, facts: { ...REBIRTH.facts, cross_civilization: true } });
+    expect(await screen.findByTestId("decision-cross-wanted")).toBeTruthy();
+    expect(screen.queryByTestId("decision-confirm")).toBeNull();
+    expect(screen.getByTestId("decision-desk")).toBeTruthy();
+    expect(screen.queryByText("⇄ 跨文明：不跨")).toBeNull();
+  });
+
+  it("an ordinary approval has no cross line and the plain 批准 button", async () => {
+    await open();
+    fireEvent.press(screen.getByTestId("action-approve"));
+    await screen.findByTestId("sheet-approve");
+    expect(screen.queryByTestId("decision-cross")).toBeNull();
+    expect(screen.queryByText("批准 · 不跨")).toBeNull();
+  });
+});
+
+describe("an approved dispatch still waits for the receiving hall (O-f)", () => {
+  it("the detail says 「◐ 等接收方执行」 once approved", async () => {
+    mockItem.mockResolvedValue({
+      data: { ...ITEM, kind: "reassignment", id: "d1", actionable: false, state: "already_handled", facts: { status: "APPROVED" } },
+    });
+    renderOfficer(<Detail target={{ type: "todo", kind: "reassignment", id: "d1" }} onBack={() => {}} onSettled={() => {}} />);
+    expect(await screen.findByTestId("detail-awaiting-receiver")).toBeTruthy();
+    expect(screen.getByText("◐ 等接收方执行")).toBeTruthy();
+  });
+
+  it("a proposal still open says nothing of the kind", async () => {
+    mockItem.mockResolvedValue({ data: { ...ITEM, kind: "reassignment", id: "d2", facts: { status: "PROPOSED" } } });
+    renderOfficer(<Detail target={{ type: "todo", kind: "reassignment", id: "d2" }} onBack={() => {}} onSettled={() => {}} />);
+    await screen.findByTestId("todo-detail");
+    expect(screen.queryByTestId("detail-awaiting-receiver")).toBeNull();
+  });
+
+  it("approving says the receiving hall still has to carry it out on a computer", async () => {
+    mockDispatchApprove.mockResolvedValue({});
+    mockItem.mockResolvedValue({ data: { ...ITEM, kind: "reassignment", id: "d3", facts: { status: "PROPOSED" } } });
+    renderOfficer(
+      <ToastProvider>
+        <Detail target={{ type: "todo", kind: "reassignment", id: "d3" }} onBack={() => {}} onSettled={() => {}} />
+      </ToastProvider>
+    );
+    await screen.findByTestId("todo-detail");
+    fireEvent.press(screen.getByTestId("action-approve"));
+    fireEvent.press(await screen.findByTestId("decision-confirm"));
+    await waitFor(() => expect(mockDispatchApprove).toHaveBeenCalledWith("d3"));
+    expect(await screen.findByText("已批准。接收方殿还要在电脑上执行一次，灵魂才会动身。")).toBeTruthy();
+  });
+});
+
+describe("a waiting item that is gone (O-c)", () => {
+  it.each([404, 403])("%s: 「这条已经不在了」 and the way back, not the error or the denied state", async (status) => {
+    mockItem.mockRejectedValue(httpError(status));
+    const onBack = jest.fn();
+    renderOfficer(<Detail target={{ type: "todo", kind: "approval", id: "wf-1" }} from="待办" onBack={onBack} onSettled={() => {}} />);
+    expect(await screen.findByTestId("state-gone")).toBeTruthy();
+    expect(screen.getByText("可能已经删除，或者已经不在你能看的范围里。")).toBeTruthy();
+    expect(screen.queryByTestId("state-denied")).toBeNull();
+    expect(screen.queryByTestId("state-retry")).toBeNull();
+    fireEvent.press(screen.getByText("回到待办"));
+    expect(onBack).toHaveBeenCalled();
   });
 });

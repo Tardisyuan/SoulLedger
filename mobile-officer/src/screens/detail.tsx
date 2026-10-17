@@ -9,17 +9,17 @@
  */
 import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
 import { dispatchApi } from "@soulledger/core/api/dispatch";
-import { officerAppApi, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
+import { officerAppApi, type TodoFacts, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
-import { ActionButton, RefreshFailed, StateView, viewStateOf } from "../kit";
-import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, todoTitle, type ItemKind, type Verdict } from "../rules";
-import { useSession } from "../session";
+import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
+import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, type ItemKind, type Verdict } from "../rules";
+import { useCan, useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
@@ -35,9 +35,32 @@ export type DetailTarget =
 
 type Over = Exclude<DetailTarget, { type: "todo" }>;
 
-export function Detail({ target, onBack, onSettled }: { target: DetailTarget; onBack: () => void; onSettled: () => void }) {
+export function Detail({
+  target,
+  from,
+  onBack,
+  onLeave,
+  onSettled,
+  onGone,
+}: {
+  target: DetailTarget;
+  /** The list it was opened from, for 「回到{from}」 when what it shows is gone (O-c). */
+  from?: string;
+  onBack: () => void;
+  /** 「回到{from}」: back to the list it came from (the shell also switches back to that tab). Defaults to `onBack`. */
+  onLeave?: () => void;
+  onSettled: () => void;
+  /** What it shows is gone: the shell greys the row that opened it (keyed by `goneKey`). */
+  onGone?: (key: string) => void;
+}) {
   const { t } = useI18n();
   const theme = useTheme();
+  const key = goneKey(target);
+  // 「回到{from}」 closes the whole detail, from any layer: that is where the officer came from. Only the base target
+  // greys a row; an opened-over soul or judgment has no row of its own in that list.
+  const leave = onLeave ?? onBack;
+  const base = useMemo(() => (from ? { from, onBack: leave, onGone: () => onGone?.(key) } : null), [from, leave, onGone, key]);
+  const over = useMemo(() => (from ? { from, onBack: leave } : null), [from, leave]);
   const [stack, setStack] = useState<Over[]>([]);
   const top = stack.length > 0 ? stack[stack.length - 1] : null;
   const push = (next: Over) => setStack((s) => [...s, next]);
@@ -65,6 +88,7 @@ export function Detail({ target, onBack, onSettled }: { target: DetailTarget; on
         <Icon name="back" size={16} color={theme.ink} />
         <Txt variant="nav">{t("officer_app.back")}</Txt>
       </Pressable>
+      <GoneContext.Provider value={base}>
       <View style={top ? { display: "none" } : { flex: 1 }}>
         {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
         {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
@@ -72,8 +96,11 @@ export function Detail({ target, onBack, onSettled }: { target: DetailTarget; on
         {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} /> : null}
         {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
       </View>
+      </GoneContext.Provider>
+      <GoneContext.Provider value={over}>
       {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
       {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} /> : null}
+      </GoneContext.Provider>
     </View>
   );
 }
@@ -105,7 +132,7 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
   const ownHall = state.status === "signedIn" ? state.user.tenant?.code : null;
   const load = useCallback(() => dispatchApi.get(id).then((r) => r.data), [id]);
   const { data, error, reload } = useCachedRemote(`detail:dispatch:${id}`, load);
-  const view = viewStateOf({ data, error }, () => false, isDenied);
+  const view = detailStateOf({ data, error });
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
   const mode = dispatchView(data, ownHall);
   if (mode.mode === "act") return <TodoDetail kind="reassignment" id={id} onSettled={onSettled} onOpenSoul={onOpenSoul} />;
@@ -119,7 +146,7 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
           {formatWhen(data.proposed_at)}
         </Txt>
         <View style={{ gap: space[1] }}>
-          <Txt variant="bodyLg" testID="dispatch-status">{`${line.glyph} ${t(line.key)}`}</Txt>
+          <Txt variant="bodyLg" testID="dispatch-status">{[line.glyph, t(line.key)].filter(Boolean).join(" ")}</Txt>
           {line.reason ? <Txt variant="body" testID="dispatch-status-reason">{t("officer_app.dispatch_status.reason", { reason: line.reason })}</Txt> : null}
         </View>
         <ContinueOnDesk target={{ kind: "reassignment", id }} />
@@ -158,7 +185,7 @@ function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: s
     setOpened((n) => n + 1);
     setSheet(next);
   };
-  const view = viewStateOf({ data, error }, () => false, isDenied);
+  const view = detailStateOf({ data, error });
 
   const settled = () => {
     // The list behind this screen reloads; this item is asked again, and it answers "already handled".
@@ -193,6 +220,10 @@ function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: s
           </Txt>
           {data.actionable ? (
             <Txt variant="bodyLg" testID="detail-your-step">{`◐ ${t("officer_app.detail.your_step")}`}</Txt>
+          ) : null}
+          {kind === "reassignment" && (data.facts as TodoFacts | undefined)?.status === "APPROVED" ? (
+            // O-f: approved is not moved -- the receiving hall (this one) still executes it on the desk.
+            <Txt variant="bodyLg" testID="detail-awaiting-receiver">{t("officer_app.dispatch.awaiting_receiver")}</Txt>
           ) : null}
           <TodoFactsView detail={data} onOpenSoul={onOpenSoul} />
           {cooldown.data && !data.facts ? (
@@ -261,7 +292,8 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
   // 「已请求」以服务端的 `reassign_requested_at` 为准(`judgmentActionState` 读它);`asked` 只补一种情形:429(10 分钟内问过,但标记已随认领人变动清掉)。
   const [asked, setAsked] = useState(false);
   const [record, setRecord] = useState<SoulRecordEntry | null>(null);
-  const view = viewStateOf({ data, error }, () => false, isDenied);
+  const canAssign = useCan("judgment.assign");
+  const view = detailStateOf({ data, error });
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
   return (
@@ -275,6 +307,15 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
           {data.stale_since ? <Txt variant="bodyLg" testID="judgment-stale">{`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`}</Txt> : null}
+          {/* O-a:有人请求改派,能改派的人在页头下就看到请求与理由(主按钮随之是「改派给…」)。 */}
+          {canAssign && data.reassign_requested_at && data.claimed_by !== me ? (
+            <View testID="judgment-reassign-request" style={{ gap: space[1] }}>
+              <Txt variant="bodyLg">
+                {`◐ ${t("officer_app.case.reassign_request", { name: data.reassign_requested_by_name ?? data.claimed_by_name ?? "", time: formatWhen(data.reassign_requested_at) })}`}
+              </Txt>
+              {data.reassign_reason ? <Txt variant="body">{t("officer_app.dispatch_status.reason", { reason: data.reassign_reason })}</Txt> : null}
+            </View>
+          ) : null}
           <JudgmentCase data={data} onOpenRecord={setRecord} />
           <JudgmentComments id={id} concludedAt={data.concluded_at} readOnly={!!data.deferred_at && data.claimed_by === me} />
           <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>

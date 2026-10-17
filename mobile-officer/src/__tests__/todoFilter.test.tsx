@@ -142,3 +142,48 @@ describe("the to-do type filter", () => {
     expect(screen.queryByTestId("todo-filter-summary")).toBeNull();
   });
 });
+
+// ── Design 第四十批 ─────────────────────────────────────────────────────
+
+describe("受刑计划变更 (O-f) and the page head (第四节 5)", () => {
+  const sentence = { ...row("sentence_change", "r1"), title: "李四", request_kind: "AMEND" };
+
+  it("is its own group: rows that open nothing, 「在电脑上处理」 under them, counted in its chip", async () => {
+    const onOpen = jest.fn();
+    mockTodo.mockResolvedValue({ data: { ...DATA, sentence_changes: group([sentence]) } });
+    renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
+    expect(await screen.findByTestId("todo-group-sentence_change")).toBeTruthy();
+    expect(screen.getByText("受刑计划变更 · 1")).toBeTruthy();
+    expect(chip("sentence_change").props.accessibilityLabel).toBe("受刑计划变更 · 1");
+    expect(screen.getByText("加项 / 减项")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("todo-row-sentence_change-r1"));
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(screen.getByTestId("todo-desk-sentence_change")).toBeTruthy();
+    // The other groups still open.
+    fireEvent.press(screen.getByTestId("todo-row-approval-a1"));
+    expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "a1" });
+  });
+
+  it("an older server without the group draws none", async () => {
+    mount();
+    await screen.findByTestId("todo-group-approval");
+    expect(screen.queryByTestId("todo-group-sentence_change")).toBeNull();
+    expect(screen.queryByTestId("todo-desk-sentence_change")).toBeNull();
+  });
+
+  it("no big 「待我处理」 title any more", async () => {
+    mount();
+    await screen.findByTestId("todo-group-approval");
+    expect(screen.queryByText("待我处理")).toBeNull();
+  });
+
+  it("a row whose detail was gone is greyed and opens nothing (O-c)", async () => {
+    const onOpen = jest.fn();
+    renderOfficer(<TodoTab highlight={null} gone={new Set(["approval:a1"])} onOpen={onOpen} />);
+    fireEvent.press(await screen.findByTestId("todo-row-approval-a1"));
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(screen.getByTestId("todo-row-approval-a1").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(screen.getByTestId("todo-row-approval-a2"));
+    expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "a2" });
+  });
+});
