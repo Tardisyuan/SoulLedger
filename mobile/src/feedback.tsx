@@ -8,7 +8,7 @@ import {
   ANIMATION_SOURCE,
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   useBottomSheetInternal,
   useBottomSheetTimingConfigs,
   useGestureEventsHandlersDefault,
@@ -235,6 +235,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
     });
     return () => sub.remove();
   }, [open, onClose]);
+  const sheetInsets = useSafeAreaInsets();
   const backdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -264,10 +265,13 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       keyboardBlurBehavior="restore"
       enableBlurKeyboardOnGesture
       android_keyboardInputMode="adjustResize"
+      // Content taller than the screen (改派: six people, 更多, a reason, 确认) scrolls inside the sheet instead of
+      // running off the bottom, and the sheet stops under the status bar (2026-10-17 simulator: 确认 was unreachable).
+      topInset={sheetInsets.top}
     >
-      <BottomSheetView>
+      <BottomSheetScrollView keyboardShouldPersistTaps="handled">
         <InSheetContext.Provider value>{children}</InSheetContext.Provider>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }

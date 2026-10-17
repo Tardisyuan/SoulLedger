@@ -317,6 +317,7 @@ jest.mock("@gorhom/bottom-sheet", () => {
     BottomSheetModal,
     BottomSheetModalProvider: Pass,
     BottomSheetView: Pass,
+    BottomSheetScrollView: Pass,
     // Sheet's inputs: the real one only adds keyboard bookkeeping to a TextInput.
     BottomSheetTextInput: require("react-native").TextInput,
     BottomSheetBackdrop: () => null,
