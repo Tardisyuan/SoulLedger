@@ -98,7 +98,7 @@ def test_rebirth_cooldown_provisioning_and_assistant_notices_are_localized(judge
          "The appeal on your rebirth application was rejected."),
         ("cooldown_decided_rejected", {}, "缩短冷却申请有了结果", "您的缩短冷却申请:已驳回。",
          "Your request to shorten the cooldown was rejected."),
-        ("soul_account_provisioning_failed", {"soul": "孟婆之魂"}, "灵魂账号开通失败",
+        ("soul_account_provisioning_failed", {"soul": "孟婆之魂", "command": "backfill_soul_accounts"}, "灵魂账号开通失败",
          "灵魂「孟婆之魂」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。",
          "Soul 孟婆之魂 is registered as dead, but its soul account was not opened. Run backfill_soul_accounts to open it."),
         ("assistant_cap_closed", {"spent": "10.00", "cap": "10.00"}, "助手已自动关闭:本月花费到达上限",

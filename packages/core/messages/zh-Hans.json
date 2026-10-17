@@ -5210,7 +5210,7 @@
     },
     "soul_account_provisioning_failed": {
       "title": "灵魂账号开通失败",
-      "body": "灵魂「{{soul}}」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。"
+      "body": "灵魂「{{soul}}」已登记死亡,但灵魂账号没有开成。请运行 {{command}} 补开。"
     },
     "rebirth_status_under_review": {
       "title": "转生申请状态更新",
