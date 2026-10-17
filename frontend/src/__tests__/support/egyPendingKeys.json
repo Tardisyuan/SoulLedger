@@ -52,5 +52,12 @@
   "official_notify.scheduled_task_failed.title",
   "official_notify.scheduled_task_failed.body",
   "official_notify.scheduled_task_overdue.title",
-  "official_notify.scheduled_task_overdue.body"
+  "official_notify.scheduled_task_overdue.body",
+  "dashboard.todo.approvals",
+  "dashboard.todo.rebirths",
+  "dashboard.todo.cooldowns",
+  "dashboard.todo.letters",
+  "dashboard.todo.unassigned_letters",
+  "dashboard.todo.sentence_requests",
+  "dashboard.todo.reports"
 ]

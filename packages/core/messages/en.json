@@ -1398,7 +1398,14 @@
       "sync_ok": "In sync",
       "unbooked": "Not entered",
       "resend_dispatch": "Dispatches to resend",
-      "go_resend": "Handle →"
+      "go_resend": "Handle →",
+      "approvals": "Approvals waiting on you",
+      "rebirths": "Rebirth applications to decide",
+      "cooldowns": "Cooldown requests to decide",
+      "letters": "Letters awaiting your reply",
+      "unassigned_letters": "Unassigned letters",
+      "sentence_requests": "Sentence plan requests",
+      "reports": "Reports to review"
     },
     "civ_share": "Share",
     "civ_empty": "No souls yet · register one",

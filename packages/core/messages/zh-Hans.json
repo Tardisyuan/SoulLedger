@@ -1398,7 +1398,14 @@
       "sync_ok": "同步正常",
       "unbooked": "未入簿",
       "resend_dispatch": "待重发的调拨",
-      "go_resend": "去处理 →"
+      "go_resend": "去处理 →",
+      "approvals": "审批待我处理",
+      "rebirths": "转生申请待批",
+      "cooldowns": "缩短冷却待批",
+      "letters": "待我回的书信",
+      "unassigned_letters": "未分配的书信",
+      "sentence_requests": "受刑请求",
+      "reports": "举报待处理"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
