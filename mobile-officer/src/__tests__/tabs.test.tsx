@@ -365,9 +365,10 @@ describe("查询 finds a case by its number too (O-d)", () => {
     fireEvent(screen.getByTestId("soul-search"), "submitEditing");
   };
 
-  it("one box, the new placeholder", () => {
+  it("one box, the new placeholder", async () => {
     renderOfficer(<SearchTab onOpenSoul={() => {}} />);
     expect(screen.getByTestId("soul-search").props.placeholder).toBe("姓名、编号或案号");
+    await act(async () => {}); // 打开时取的「最近」等落定
   });
 
   it("a whole case number pins a 案件 group above the souls, and does not jump to it", async () => {

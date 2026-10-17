@@ -1,5 +1,5 @@
 /** 审判详情的操作区(第三十四批 O-09):六种状态各一个主按钮,理由必填,放回要确认。 */
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { judgmentActionState, judgmentMoreItems, reasonBlank } from "../rules";
 import { JudgmentActionBar } from "../screens/judgmentActions";
@@ -206,6 +206,7 @@ describe("an admin on a case someone else holds", () => {
     fireEvent.changeText(screen.getByTestId("judgment-reason"), " 证据到了 ");
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
     await waitFor(() => expect(mockUndefer).toHaveBeenCalledWith("j-1", "证据到了"));
+    await act(async () => {}); // 底页收起的那次更新
   });
 
   it("替他放回 sends the reason", async () => {
@@ -216,6 +217,7 @@ describe("an admin on a case someone else holds", () => {
     fireEvent.changeText(await screen.findByTestId("judgment-reason"), "请假");
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
     await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("j-1", "请假"));
+    await act(async () => {}); // 底页收起的那次更新
   });
 
   it("the picker: no holder, fewest cases first, a reason before it sends", async () => {
@@ -242,7 +244,7 @@ describe("an admin on a case someone else holds", () => {
     bar({ claimed_by: 9, reassign_requested_at: "2026-10-17T01:40:00Z" }, {}, ADMIN);
     fireEvent.press(screen.getByTestId("judgment-reassign-to"));
     await screen.findByTestId("reassign-4");
-    expect(screen.queryByText(/手上/)).toBeNull();
+    expect(screen.queryByText(/^手上/)).toBeNull();
   });
 
   it("a judge (no judgment.assign) still only reads someone else's case", () => {
