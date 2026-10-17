@@ -8597,6 +8597,13 @@ paths:
       operationId: v1_me_assist_conversations_list
       description: '`AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的
         429 体没有 code)。'
+      parameters:
+      - in: query
+        name: before
+        schema:
+          type: string
+          format: uuid
+        description: 上一页最后一条会话的 id;给了就只列比它更早的。
       tags:
       - v1
       security:
@@ -8610,7 +8617,19 @@ paths:
                 items:
                   $ref: '#/components/schemas/AssistConversation'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
         '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+        '404':
           content:
             application/json:
               schema:
@@ -21010,6 +21029,9 @@ components:
           type: boolean
           description: true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省
             false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。
+        new:
+          type: boolean
+          description: true = 开新会话,不续同一页面 30 分钟内的上次会话。
       required:
       - question
       - screen

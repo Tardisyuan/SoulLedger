@@ -4003,7 +4003,8 @@
       "first_rejection_reason": "首次驳回理由",
       "appeal_rejection_reason": "申诉驳回理由",
       "not_recorded": "未记录",
-      "new_result": "新结果"
+      "new_result": "新结果",
+      "gone": "这份申请已不存在。"
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
@@ -4206,7 +4207,8 @@
         "not_found": "未找到。",
         "from_circle": "从朋友圈",
         "circle_hint": "只列同文明、你关注或关注你的灵魂。",
-        "write": "写信"
+        "write": "写信",
+        "circle_error": "没能读到你的圈子。"
       },
       "compose": {
         "placeholder": "说一句……",
@@ -4309,7 +4311,8 @@
         "hidden": "已隐藏 · 他人不可见",
         "hidden_note": "这条被殿司隐藏，只有你还看得到。",
         "comments": "评论 {{n}}",
-        "more": "更多"
+        "more": "更多",
+        "gone": "这条帖子已不存在。"
       },
       "screening": {
         "masked": "已发布。部分内容已被替换。",
@@ -4543,7 +4546,8 @@
       "stopped": "已停止",
       "interrupted": "回答中断",
       "answering_aria": "正在回答",
-      "jump_latest": "↓ 最新"
+      "jump_latest": "↓ 最新",
+      "history_more": "更早的会话"
     },
     "history": {
       "title": "通知记录",
@@ -4565,7 +4569,8 @@
       "brought_forward": "已提前",
       "desired_label": "希望缩短到几天（可选）",
       "desired_hint": "现在还剩 {{n}} 天。填 0 表示希望立即结束；不填则由官员决定。",
-      "desired_invalid": "天数须是 0 到 {{max}} 的整数"
+      "desired_invalid": "天数须是 0 到 {{max}} 的整数",
+      "approved_days": "批准时还剩 {{n}} 天"
     },
     "mfa": {
       "setup": {

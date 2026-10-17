@@ -14,14 +14,14 @@ class AssistAskSerializer(serializers.Serializer):
         required=False,
         help_text="true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);"
                   "缺省 false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。")
+    #: 「新会话」后的第一问:不续「同一页面 30 分钟内」的上次会话。官员 App 先有(第三十九批 O-13),
+    #: 灵魂 App 随后(2026-10-17 用户决定:两端一样,App 不悄悄续另一段会话)。带了 `conversation_id` 时不看它。
+    new = serializers.BooleanField(required=False, help_text="true = 开新会话,不续同一页面 30 分钟内的上次会话。")
 
 
 class OfficerAssistAskSerializer(AssistAskSerializer):
     #: 官员端 Web 的路由段(`frontend/app/<段>/`);只作提示,不改变数据范围。
     screen = serializers.ChoiceField(choices=OFFICER_SCREENS)
-    #: 官员 App 点「新会话」后的第一问:不续「同一页面 30 分钟内」的上次会话(第三十九批 O-13)。
-    #: 带了 `conversation_id` 时不看它。
-    new = serializers.BooleanField(required=False, help_text="true = 开新会话,不续同一页面 30 分钟内的上次会话。")
 
 
 class AssistMessageSerializer(serializers.ModelSerializer):

@@ -75,6 +75,20 @@ it("offers the entry under the cooldown refusal, submits the reason, and reloads
   expect(screen.queryByTestId("request-cooldown-shortening")).toBeNull();
 });
 
+it("the form has a cancel that folds it back to the entry, sending nothing (audit 2026-10-17 #7)", async () => {
+  const calls = stubApi({ "GET /me/rebirth-applications/": { status: 200, data: cooling({ can_shorten_cooldown: true }) } });
+  wrap(<ApplicationsScreen />);
+  fireEvent.press(await screen.findByTestId("request-cooldown-shortening"));
+  fireEvent.changeText(screen.getByTestId("cooldown-shortening-reason"), "家中有事");
+  fireEvent.press(screen.getByTestId("cancel-cooldown-shortening"));
+  expect(screen.queryByTestId("cooldown-shortening-reason")).toBeNull();
+  expect(screen.getByTestId("request-cooldown-shortening")).toBeTruthy();
+  expect(calls.filter((c) => c.method === "POST")).toEqual([]);
+  // What was typed is still there on reopening.
+  fireEvent.press(screen.getByTestId("request-cooldown-shortening"));
+  expect(screen.getByTestId("cooldown-shortening-reason").props.value).toBe("家中有事");
+});
+
 it("is not offered when the refusal is not the cooldown, nor when the server says the chance is used", async () => {
   stubApi({ "/me/rebirth-applications/": { status: 200, data: cooling({ reason: "application_open", can_shorten_cooldown: true }) } });
   wrap(<ApplicationsScreen />);
@@ -91,6 +105,8 @@ it("shows an approval with the list's (shortened) end date, and a rejection with
   });
   wrap(<ApplicationsScreen />);
   expect(await screen.findByText(/^缩短冷却申请已批准，冷却期至 /)).toBeTruthy();
+  // Audit 2026-10-17 #13: how many days the officer left, not only the new end.
+  expect(screen.getByTestId("cooldown-shortening-approved-days")).toHaveTextContent("批准时还剩 3 天");
   expect(screen.queryByTestId("request-cooldown-shortening")).toBeNull();
 
   screen.unmount();
