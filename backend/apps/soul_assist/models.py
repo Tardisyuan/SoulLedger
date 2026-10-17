@@ -21,8 +21,8 @@ SCREENS = ("applications", "sentence", "life", "letters", "circle", "settings", 
 OFFICER_SCREENS = (
     "about", "actors", "admin", "audit", "corpus", "cross-judgments", "dashboard", "death-sync", "dispatch",
     "disposition", "events", "judgment", "ledger", "menus", "moderation", "notifications", "organizations",
-    "permissions", "profile", "realms", "rebirth-applications", "recycle-bin", "scheduler",
-    "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
+    "permissions", "profile", "realms", "rebirth-applications", "rebirths", "recycle-bin", "scheduler",
+    "sentence-plans", "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
     "welcome", "workflow", "other",
 )
 

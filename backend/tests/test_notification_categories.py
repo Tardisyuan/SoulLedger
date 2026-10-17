@@ -145,7 +145,7 @@ def test_the_timeout_processor_writes_the_timeout_category(judge_user):
 
     from apps.workflow.services import WorkflowService
 
-    wf = SimpleNamespace(id=1, tenant_id=judge_user.tenant_id, workflow_name="w", soul=SimpleNamespace(name="s"),
+    wf = SimpleNamespace(id=1, pk=1, tenant_id=judge_user.tenant_id, workflow_name="w", soul=SimpleNamespace(name="s"),
                          case_type="GENERAL")
     node = SimpleNamespace(node_name="n")
     with patch.object(WorkflowService, "designated_users", return_value=[judge_user]):

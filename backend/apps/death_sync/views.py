@@ -605,7 +605,8 @@ class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
         delivery = _record_and_enqueue(
             webhook, domain=original.domain, event_type=original.event_type, payload_json=original.payload_json,
         )
-        return Response(self.get_serializer(delivery).data, status=status.HTTP_201_CREATED)
+        return Response(EventWebhookDeliverySerializer(delivery, context=self.get_serializer_context()).data,
+                        status=status.HTTP_201_CREATED)
 
 
 class DeathSyncHealthView(APIView):

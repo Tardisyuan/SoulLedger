@@ -2323,6 +2323,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 取消会审(第四十批 W-a):理由必填;召集人或发起殿的管理员(`CrossTenantJudgmentService.can_end`)。
+         *
+         *     PROPOSED / ACTIVE → CANCELLED,不会有结论;席上各站保留、只读。原审判随后照常结案
+         *     (`check_cross_judgment` 不再挡)。已结束 / 已取消答 409。
+         */
+        post: operations["v1_dispatch_cross_tenant_judgments_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/cross-tenant-judgments/{id}/conclude/": {
         parameters: {
             query?: never;
@@ -5148,6 +5170,29 @@ export interface paths {
          *     绑定到 Menu 上的操作按钮，每个按钮关联一个 permission codename。
          */
         patch: operations["v1_menus_buttons_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/menus/buttons/config/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 菜单按钮配置的生效集合(第四十批 W-b):每一行 = 某菜单(按 path)下某按钮(按 code)开着没有。
+         *
+         *     页面上的关键按钮「权限码允许 **且** 这里允许」才显示;这里没有那一行 = 允许(存量部署不丢按钮)。
+         *     所以要的是**全部**行,不按 `visible_buttons` 收窄:收窄会把一条「关」的行藏起来,
+         *     前端读成「没有配置 = 显示」。不带 `permission` 字段(见 `MenuButtonConfigSerializer`)。
+         */
+        get: operations["v1_menus_buttons_config_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/menus/list-public/": {
@@ -10619,6 +10664,10 @@ export interface components {
             readonly concluded_at: string | null;
             /** @description PASS or FAIL */
             readonly conclusion_type: string | null;
+            readonly conclusion_note: string;
+            readonly cancel_reason: string;
+            readonly ended_by_name: string | null;
+            readonly can_end: boolean;
             /** Format: uuid */
             judgment?: string | null;
             readonly participants: components["schemas"]["CrossTenantJudgmentParticipant"][];
@@ -10626,6 +10675,10 @@ export interface components {
             readonly create_time: string;
             /** Format: date-time */
             readonly update_time: string;
+        };
+        /** @description 取消会审:理由必填。 */
+        CrossTenantJudgmentCancel: {
+            reason: string;
         };
         /** @description Lightweight serializer for listing cross-tenant judgments. */
         CrossTenantJudgmentList: {
@@ -11191,8 +11244,10 @@ export interface components {
          *     * `profile` - profile
          *     * `realms` - realms
          *     * `rebirth-applications` - rebirth-applications
+         *     * `rebirths` - rebirths
          *     * `recycle-bin` - recycle-bin
          *     * `scheduler` - scheduler
+         *     * `sentence-plans` - sentence-plans
          *     * `sentence-requests` - sentence-requests
          *     * `social` - social
          *     * `soul-credentials` - soul-credentials
@@ -11204,7 +11259,7 @@ export interface components {
          *     * `workflow` - workflow
          * @enum {string}
          */
-        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
         EvalIdentities: {
             /** Format: uuid */
             eval_soul_account: string;
@@ -13054,6 +13109,20 @@ export interface components {
             order?: number;
             is_active?: boolean;
         };
+        /**
+         * @description `/menus/buttons/config/` 的一行:哪个菜单下的哪个按钮开着没有(第四十批 W-b)。
+         *
+         *     只有键与开关,不带 `permission` —— 码名表不因为这个接口对所有角色敞开
+         *     (`button_access.py` 顶上记的那次泄露)。
+         */
+        MenuButtonConfig: {
+            readonly id: number;
+            menu: number;
+            readonly menu_path: string;
+            /** @description 按钮编码，如 add/edit/delete/export */
+            code: string;
+            is_active?: boolean;
+        };
         MenuButtonCreateUpdate: {
             readonly id: number;
             menu: number;
@@ -13588,8 +13657,10 @@ export interface components {
          *     * `profile` - profile
          *     * `realms` - realms
          *     * `rebirth-applications` - rebirth-applications
+         *     * `rebirths` - rebirths
          *     * `recycle-bin` - recycle-bin
          *     * `scheduler` - scheduler
+         *     * `sentence-plans` - sentence-plans
          *     * `sentence-requests` - sentence-requests
          *     * `social` - social
          *     * `soul-credentials` - soul-credentials
@@ -13602,7 +13673,7 @@ export interface components {
          *     * `other` - other
          * @enum {string}
          */
-        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
         /**
          * @description Officer-app login: username + password, **no hall chosen** (2026-10-09).
          *
@@ -14699,6 +14770,10 @@ export interface components {
             readonly concluded_at?: string | null;
             /** @description PASS or FAIL */
             readonly conclusion_type?: string | null;
+            readonly conclusion_note?: string;
+            readonly cancel_reason?: string;
+            readonly ended_by_name?: string | null;
+            readonly can_end?: boolean;
             /** Format: uuid */
             judgment?: string | null;
             readonly participants?: components["schemas"]["CrossTenantJudgmentParticipant"][];
@@ -15132,6 +15207,7 @@ export interface components {
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
+            readonly soul_code?: string | null;
             /** Format: uuid */
             disposition?: string | null;
             target_realm?: string;
@@ -16393,6 +16469,7 @@ export interface components {
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
+            readonly soul_code: string | null;
             /** Format: uuid */
             disposition?: string | null;
             target_realm: string;
@@ -22908,6 +22985,34 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_cross_tenant_judgments_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Cross-Tenant Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrossTenantJudgmentCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["CrossTenantJudgmentCancel"];
+                "multipart/form-data": components["schemas"]["CrossTenantJudgmentCancel"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrossTenantJudgment"];
+                };
+            };
+        };
+    };
     v1_dispatch_cross_tenant_judgments_conclude_create: {
         parameters: {
             query?: never;
@@ -28723,6 +28828,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MenuButtonCreateUpdate"];
+                };
+            };
+        };
+    };
+    v1_menus_buttons_config_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MenuButtonConfig"][];
                 };
             };
         };
