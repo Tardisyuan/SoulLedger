@@ -145,7 +145,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    */
   const orgsQuery = useQuery({
     queryKey: ["organizations"],
-    queryFn: organizationsApi.all,
+    queryFn: () => organizationsApi.all(),
     enabled: isOpen && isEditing,
   });
   const userTenant = user?.tenant?.id;

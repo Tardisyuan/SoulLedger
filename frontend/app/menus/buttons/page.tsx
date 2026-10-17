@@ -14,6 +14,7 @@ import { WIRED_BUTTONS, buttonKey, type WiredButton } from "@/src/lib/menuButton
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { QueryError } from "@/src/components/ui/PageError";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { ListSkeleton } from "@/components/ui/skeleton";
 
 /**
@@ -76,6 +77,8 @@ export default function MenuButtonsPage() {
         <ListSkeleton count={3} />
       ) : config.isError ? (
         <QueryError onRetry={() => config.refetch()} />
+      ) : groups.length === 0 ? (
+        <EmptyState title={t("menu_buttons.no_buttons")} />
       ) : (
         <div className="space-y-3">
           {groups.map(([path, buttons]) => {

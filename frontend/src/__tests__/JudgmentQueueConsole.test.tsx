@@ -867,7 +867,7 @@ describe("身份带殿名跟着眼前这一案", () => {
     mockNext.mockImplementation(async () => cursor({ ...JUDGMENT, court: "" }, 1));
     const set = jest.fn();
     renderInBand(set);
-    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0)); // 案情栏与「我认领的」列表各一处
     expect(set).toHaveBeenLastCalledWith({ title: "plaque.queue", meta: undefined, hall: "中国地府 · plaque.office.trials" });
   });
 });

@@ -286,7 +286,7 @@ describe("test event and redeliver (审计 2026-10-17 第 14 条)", () => {
   it("发测试事件 is on active rows only, POSTs for that webhook, and narrows the log to it", async () => {
     deathSyncApi.testWebhook.mockResolvedValue({ data: delivery({ id: "d9", event_type: "WEBHOOK_TEST", status: "PENDING" }) });
     renderRoute();
-    await screen.findByText("市立医院");
+    await screen.findByText("https://hooks.example.org/a"); // 名字在投递记录里也出现,用地址找这一行
     const rowOf = (text: string) => screen.getAllByRole("row").find((r) => within(r).queryByText(text))!;
     const label = tZh("death_sync.webhooks.send_test");
     // 停用的那一行没有这个按钮。
@@ -294,7 +294,7 @@ describe("test event and redeliver (审计 2026-10-17 第 14 条)", () => {
     deathSyncApi.webhookDeliveries.mockResolvedValue(
       page([delivery({ id: "d9", event_type: "WEBHOOK_TEST", status: "PENDING", attempt: 0, response_status: null, error: "" })])
     );
-    fireEvent.click(within(rowOf("市立医院")).getByRole("button", { name: label }));
+    fireEvent.click(within(rowOf("https://hooks.example.org/a")).getByRole("button", { name: label }));
     await waitFor(() => expect(deathSyncApi.testWebhook).toHaveBeenCalledWith("w1"));
     expect(mockShowToast).toHaveBeenCalledWith(tZh("death_sync.webhooks.test_sent"), "success");
     await waitFor(() => expect(deathSyncApi.webhookDeliveries).toHaveBeenCalledWith({ page: "1", webhook: "w1" }));

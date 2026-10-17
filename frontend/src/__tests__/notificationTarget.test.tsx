@@ -31,7 +31,8 @@ function pyFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const ASSIGNMENT = /related_resource\s*=\s*"([^"]+)"(?:\s+if\s+[^,)]+?\s+else\s+"([^"]+)")?/g;
+// 关键字参数 `related_resource="x"`,或字典里的 `"related_resource": "x"`(WorkflowService.notice_target 就是这样写的)。
+const ASSIGNMENT = /"?related_resource"?\s*[=:]\s*"([^"]+)"(?:\s+if\s+[^,)]+?\s+else\s+"([^"]+)")?/g;
 
 function emitted(): Map<string, string> {
   const where = new Map<string, string>();

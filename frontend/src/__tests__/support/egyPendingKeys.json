@@ -109,5 +109,13 @@
   "menu_buttons.where.row_more",
   "menu_buttons.where.detail_header",
   "menu_buttons.where.detail_more",
-  "menu_buttons.where.detail_actions"
+  "menu_buttons.where.detail_actions",
+  "crossJudgments.end_body",
+  "crossJudgments.cancel_body",
+  "soul_app.settings.email_hint",
+  "soul_app.settings.email_code_sent",
+  "officer_app.search.placeholder",
+  "officer_app.search.no_soul",
+  "officer_app.reassign.hint",
+  "officer_app.rebirth.cross_civ_body"
 ]
