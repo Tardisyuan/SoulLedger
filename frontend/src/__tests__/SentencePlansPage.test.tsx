@@ -76,9 +76,9 @@ describe("SentencePlansPage", () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "周阿满" });
     expect(link).toHaveAttribute("href", "/souls/soul-1");
-    expect(screen.getAllByText(zh.sentence_plan.plan_states.ACTIVE).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(zh("sentence_plan.plan_states.ACTIVE")).length).toBeGreaterThan(0);
     expect(screen.getByText(tZh("sentence_plan.stop", { order: "2" }))).toBeInTheDocument();
-    expect(screen.getByText(zh.sentence_plan.node_states.ACTIVE)).toBeInTheDocument();
+    expect(screen.getByText(zh("sentence_plan.node_states.ACTIVE"))).toBeInTheDocument();
     // 原样的枚举成员不出现在行上;只问第一页,不带任何筛选。
     expect(screen.queryByText("ACTIVE")).not.toBeInTheDocument();
     expect(mockedList).toHaveBeenCalledWith({ page: 1 });
@@ -88,7 +88,7 @@ describe("SentencePlansPage", () => {
     mockSearch = new URLSearchParams("awaiting_redispatch=true");
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalledWith({ page: 1, awaiting_redispatch: true }));
-    expect(screen.getByRole("button", { name: new RegExp(zh.sentence_plan.filter.awaiting_redispatch) })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: new RegExp(zh("sentence_plan.filter.awaiting_redispatch")) })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
@@ -98,17 +98,17 @@ describe("SentencePlansPage", () => {
     renderPage();
     await screen.findByRole("link", { name: "周阿满" });
     fireEvent.change(screen.getByTestId("sentence-plan-search"), { target: { value: "阿满" } });
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(zh.sentence_plan.filter.pending_request) }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(zh("sentence_plan.filter.pending_request")) }));
     await waitFor(() =>
       expect(mockedList).toHaveBeenLastCalledWith({ page: 1, search: "阿满", pending_request: true })
     );
-    fireEvent.click(screen.getByRole("button", { name: zh.filter.clear_all }));
+    fireEvent.click(screen.getByRole("button", { name: zh("filter.clear_all") }));
     await waitFor(() => expect(mockedList).toHaveBeenLastCalledWith({ page: 1 }));
   });
 
   it("says so when nothing matches", async () => {
     mockedList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     renderPage();
-    expect(await screen.findByText(zh.sentence_plan.list_empty)).toBeInTheDocument();
+    expect(await screen.findByText(zh("sentence_plan.list_empty"))).toBeInTheDocument();
   });
 });
