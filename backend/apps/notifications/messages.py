@@ -19,7 +19,7 @@ MESSAGES = {
         "sentence_node_waiting": {"title": "刑满暂留", "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"},
         "sentence_node_refused": {"title": "受刑节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"},
         "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
-        "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
+        "cross_sentence_submitted": {"title": "跨域审判节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请到用户管理为其重置。"},
         "password_help_requested_moderator": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"},
         "impersonation_started": {"title": "有人在以你的身份查看", "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"},
