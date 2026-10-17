@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   rows: { borderTopWidth: 1 },
   navRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1 },
   emailRow: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1 },
-  emailHint: { paddingTop: 6, paddingBottom: 4 },
+  emailHint: { paddingTop: 4, paddingBottom: 4 },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },
   primerHead: { alignItems: "center", gap: 12, paddingTop: 32, paddingBottom: 24, borderBottomWidth: 1 },

@@ -254,7 +254,7 @@ describe("the list", () => {
       }),
       <LettersScreen />
     );
-    const ids = order().filter((id) => /^(hall-row|hall-sealed-|section-rule|soul-row-)/.test(id) && !id.endsWith("-unread"));
+    const ids = order().filter((id) => /^(hall-row|hall-sealed-|section-rule|soul-row-)/.test(id) && !/-(unread|stamp)$/.test(id));
     expect(ids).toEqual(["hall-row", "hall-sealed-old", "section-rule", "soul-row-a", "soul-row-b"]);
     expect(StyleSheet.flatten(screen.getByTestId("section-rule").props.style)).toMatchObject({ height: 1 });
     expect(screen.getByTestId("soul-row-a-unread")).toBeTruthy();
