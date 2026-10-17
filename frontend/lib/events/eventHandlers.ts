@@ -40,6 +40,7 @@
  * which is precisely how the four above went wrong. They are the next two to
  * convert, not an exception to the rule.
  */
+import { getLocale } from "@soulledger/core/platform";
 import {
   notificationKeys,
   schedulerKeys,
@@ -185,8 +186,10 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
   ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
 
   if (payload.notification) {
-    const title = payload.notification.title || "New notification";
-    const message = payload.notification.message || "";
+    // 后端把各语言的渲染一起推来(`i18n`),按当前语言取;没有(旧通知、未分语言的类型)就用存下来的原文。
+    const text = payload.notification.i18n?.[getLocale()];
+    const title = text?.title || payload.notification.title || "New notification";
+    const message = text?.message ?? payload.notification.message ?? "";
     ctx.showToast(message ? `${title}: ${message}` : title, "info", 5000);
   }
 
