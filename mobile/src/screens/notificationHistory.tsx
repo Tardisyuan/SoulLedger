@@ -13,7 +13,7 @@ import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
-import { Button, Empty, Notice, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
@@ -25,6 +25,7 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const landing = landingOf(item.data);
+  const open = landing ? () => landOn(navigation.navigate, landing) : undefined;
   const body = (
     <>
       <View style={styles.fill}>
@@ -33,9 +34,9 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
           {item.body}
         </Txt>
         <View style={styles.meta}>
-          <Txt variant="value" tone="subtle" style={styles.stamp}>
+          <OneLine variant="value" tone="subtle" style={styles.stamp} onPress={open}>
             {formatStamp(item.created_at) ?? ""}
-          </Txt>
+          </OneLine>
           {NOT_DELIVERED.has(item.status) ? (
             <View style={[styles.flag, { borderColor: theme.hair2 }]}>
               <Txt testID={`not-delivered-${item.id}`} variant="label" tone="subtle" style={styles.flagText}>
@@ -53,7 +54,7 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
     <Pressable
       testID={`notification-${item.id}`}
       accessibilityRole="button"
-      onPress={() => landOn(navigation.navigate, landing)}
+      onPress={open}
       style={({ pressed }) => [...style, pressed && styles.pressed]}
     >
       {body}

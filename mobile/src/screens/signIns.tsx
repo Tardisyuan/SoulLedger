@@ -13,7 +13,7 @@ import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { Button, Empty, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
 import type { AppStackParams } from "./applications";
 
@@ -60,7 +60,7 @@ function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; b
 function RecordRow({ record, phone }: { record: SoulSignInRecord; phone: string | undefined }) {
   const theme = useTheme();
   const { t } = useI18n();
-  const { gutter } = useLayout();
+  const { gutter, twoLine } = useLayout();
   const bio = useBiometry();
   const device = record.device === phone ? t("soul_app.security.this_phone") : record.device;
   let text: string;
@@ -72,14 +72,19 @@ function RecordRow({ record, phone }: { record: SoulSignInRecord; phone: string 
       record.method === "face" ? bio.word : record.method === "recovery" ? t("soul_app.security.method_recovery") : t("soul_app.login.password");
     text = `✓ ${method} · ${device}`;
   }
+  const stamp = (
+    <OneLine testID="sign-in-record-stamp" variant="value" tone="muted" style={styles.stamp}>
+      {formatStamp(record.at) ?? ""}
+    </OneLine>
+  );
+  // S4: above 1.5× text the time goes under the line, not beside it.
   return (
-    <View testID="sign-in-record" style={[styles.record, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-      <Txt variant="value" tone="muted" style={styles.stamp}>
-        {formatStamp(record.at) ?? ""}
-      </Txt>
-      <Txt variant="bodyLg" tone={record.ok ? "ink" : "negInk"} style={[styles.fill, !record.ok && styles.bold]}>
+    <View testID="sign-in-record" style={[styles.record, twoLine && styles.recordTwoLine, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
+      {twoLine ? null : stamp}
+      <Txt variant="bodyLg" tone={record.ok ? "ink" : "negInk"} style={[!twoLine && styles.fill, !record.ok && styles.bold]}>
         {text}
       </Txt>
+      {twoLine ? stamp : null}
     </View>
   );
 }
@@ -211,6 +216,7 @@ const styles = StyleSheet.create({
   underline: { textDecorationLine: "underline" },
   dim: { opacity: 0.5 },
   record: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
+  recordTwoLine: { flexDirection: "column", alignItems: "stretch", gap: 4 },
   stamp: { fontSize: 12, letterSpacing: 0.4 },
   bold: { fontFamily: family.ui[600] },
   scrim: { flex: 1, justifyContent: "flex-end" },

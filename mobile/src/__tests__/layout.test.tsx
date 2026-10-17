@@ -3,16 +3,17 @@
  * controlled window: the thresholds themselves are in rules.test.ts.
  */
 import { NavigationContainer } from "@react-navigation/native";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { StyleSheet } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ApplicationDetailScreen } from "../screens/applications";
+import { SignInsScreen } from "../screens/signIns";
 import { themeFor } from "../theme";
-import { DataRow, Input, ThemeContext } from "../ui";
+import { DataRow, Input, OneLine, ThemeContext } from "../ui";
 import { application, stubApi } from "./stubApi";
 
 const mockWindow = { width: 393, height: 852, scale: 3, fontScale: 1 };
@@ -77,5 +78,65 @@ describe("200% text", () => {
     wrap(<ApplicationDetailScreen id="a1" />);
     expect(flat(await screen.findByTestId("step-current-now"))).toMatchObject({ width: 11 });
     expect(screen.getByTestId("step-current-dashed")).toBeTruthy();
+  });
+});
+
+/**
+ * 第二十八批 S4 at the largest system sizes: identifiers / times / amounts keep to one line (cut with …,
+ * long-press for the whole value); "text left, time right" rows become two lines above 1.5×.
+ */
+describe("S4 · one line, and two lines above 1.5×", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("OneLine is one line, cut at the tail, and a long press shows all of it", () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    wrap(<OneLine testID="v">2026-10-12 08:02 · SL-0000-0000-0000</OneLine>);
+    const v = screen.getByTestId("v");
+    expect(v.props.numberOfLines).toBe(1);
+    expect(v.props.ellipsizeMode).toBe("tail");
+    expect(alert).not.toHaveBeenCalled();
+    fireEvent(v, "longPress");
+    expect(alert).toHaveBeenCalledWith("2026-10-12 08:02 · SL-0000-0000-0000");
+  });
+
+  it("a pressable row's own press still reaches the row through the one-line value", () => {
+    const onPress = jest.fn();
+    wrap(<OneLine testID="v" onPress={onPress}>2026-10-12 08:02</OneLine>);
+    fireEvent.press(screen.getByTestId("v"));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("a mono data value keeps to one line; a plain one may wrap", () => {
+    wrap(
+      <>
+        <DataRow label="提交于" mono>2026-10-12 08:02</DataRow>
+        <DataRow label="籍贯">江苏 · 扬州</DataRow>
+      </>
+    );
+    expect(screen.getByText("2026-10-12 08:02").props.numberOfLines).toBe(1);
+    expect(screen.getByText("江苏 · 扬州").props.numberOfLines).toBeUndefined();
+  });
+
+  it("a sign-in record puts its time under the line at 1.5×, beside it at 1×; the time is one line either way", async () => {
+    const at = new Date(2026, 9, 12, 8, 2).toISOString();
+    const routes = {
+      "GET /me/sessions/": { status: 200, data: [] },
+      "GET /me/sign-ins/": { status: 200, data: [{ at, ok: true, method: "password", device: "Android 手机", count: 1, reason: "" }] },
+    };
+    stubApi(routes);
+    Object.assign(mockWindow, { fontScale: 1.5 });
+    const { unmount } = wrap(<SignInsScreen />);
+    const row = await screen.findByTestId("sign-in-record");
+    expect(flat(row).flexDirection).toBe("column");
+    expect(within(row).getByTestId("sign-in-record-stamp").props.numberOfLines).toBe(1);
+    expect(within(row).getByText("2026-10-12 08:02")).toBeTruthy();
+    unmount();
+
+    stubApi(routes);
+    Object.assign(mockWindow, { fontScale: 1 });
+    wrap(<SignInsScreen />);
+    const side = await screen.findByTestId("sign-in-record");
+    expect(flat(side).flexDirection).toBe("row");
+    expect(within(side).getByTestId("sign-in-record-stamp").props.numberOfLines).toBe(1);
   });
 });

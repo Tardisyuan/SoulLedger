@@ -46,6 +46,7 @@ import {
   GUTTER,
   Hairline,
   LandingWash,
+  OneLine,
   Screen,
   Section,
   SectionLabel,
@@ -117,7 +118,7 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
         </View>
         {record.is_milestone && !stack ? milestone : null}
         <View style={styles.fill} />
-        <Txt variant="value" tone="muted">{`${demerit ? "−" : "+"}${record.weight}`}</Txt>
+        <OneLine variant="value" tone="muted">{`${demerit ? "−" : "+"}${record.weight}`}</OneLine>
       </View>
       {/* Handoff 2d: at large text the mark drops to its own line. */}
       {record.is_milestone && stack ? <View style={styles.milestoneLine}>{milestone}</View> : null}
@@ -141,9 +142,9 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
           ) : null}
         </View>
       ) : null}
-      <Txt variant="value" tone="subtle" style={styles.recordDate}>
+      <OneLine variant="value" tone="subtle" style={styles.recordDate}>
         {formatHistoricalDate(record.event_date, locale) ?? tr("common.value.unrecorded")}
-      </Txt>
+      </OneLine>
     </View>
   );
 }
@@ -258,9 +259,9 @@ export function LifeSections({
                   <View style={[styles.fill, styles.appSummary]}>
                     <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
                     <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="bodyLg" />
-                    <Txt variant="value" tone="subtle">
+                    <OneLine variant="value" tone="subtle" onPress={onOpenApplication && !sealed ? () => onOpenApplication(a.id) : undefined}>
                       {formatStamp(a.created_at) ?? unrecorded}
-                    </Txt>
+                    </OneLine>
                   </View>
                   {onOpenApplication ? (
                     <Txt variant="caption" tone="ink" style={styles.link}>

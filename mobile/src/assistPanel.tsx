@@ -30,7 +30,7 @@ import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
-import { Button, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { Button, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
@@ -687,41 +687,44 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
             {tr("soul_app.assist.history_empty")}
           </Txt>
         ) : null}
-        {list?.map((c) => (
-          <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: t.hair }]}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                assist.openConversation(c);
-                onOpened();
-              }}
-              style={styles.fill}
-            >
-              <View style={styles.answerHead}>
-                <View style={[styles.screenTag, { borderLeftColor: t.ink }]}>
-                  <Txt variant="label" tone="muted">
-                    {tr(SCREEN_TITLE[c.screen])}
-                  </Txt>
+        {list?.map((c) => {
+          const open = () => {
+            assist.openConversation(c);
+            onOpened();
+          };
+          return (
+            <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: t.hair }]}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={open}
+                style={styles.fill}
+              >
+                <View style={styles.answerHead}>
+                  <View style={[styles.screenTag, { borderLeftColor: t.ink }]}>
+                    <Txt variant="label" tone="muted">
+                      {tr(SCREEN_TITLE[c.screen])}
+                    </Txt>
+                  </View>
+                  <OneLine variant="value" tone="subtle" onPress={open}>
+                    {stamp(c.last_active_at)}
+                  </OneLine>
                 </View>
-                <Txt variant="value" tone="subtle">
-                  {stamp(c.last_active_at)}
+                <Txt numberOfLines={2} style={{ fontFamily: quoteFamily(c.first_question) }}>
+                  {c.first_question}
                 </Txt>
-              </View>
-              <Txt numberOfLines={2} style={{ fontFamily: quoteFamily(c.first_question) }}>
-                {c.first_question}
-              </Txt>
-            </Pressable>
-            <Pressable
-              testID={`assist-delete-${c.id}`}
-              accessibilityRole="button"
-              accessibilityLabel={tr("soul_app.assist.delete_label")}
-              onPress={() => setAsking(c)}
-              style={styles.icon}
-            >
-              <Icon name="close" size={14} color={t.inkSubtle} strokeWidth={1.3} />
-            </Pressable>
-          </View>
-        ))}
+              </Pressable>
+              <Pressable
+                testID={`assist-delete-${c.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={tr("soul_app.assist.delete_label")}
+                onPress={() => setAsking(c)}
+                style={styles.icon}
+              >
+                <Icon name="close" size={14} color={t.inkSubtle} strokeWidth={1.3} />
+              </Pressable>
+            </View>
+          );
+        })}
         {assist.historyMore ? (
           <SmallButton testID="assist-history-more" title={tr("soul_app.assist.history_more")} onPress={assist.loadMoreHistory} />
         ) : list && list.length > 0 ? (

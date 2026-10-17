@@ -30,7 +30,7 @@ import { shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
-import { Button, Input, Interp, Notice, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
+import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
@@ -583,7 +583,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
             {tr("soul_app.mfa.manage.body")}
           </Txt>
           <Fact label={tr("soul_app.mfa.manage.enabled_at")}>
-            <Txt testID="mfa-enabled-at" style={styles.mono}>{formatStamp(status.confirmed_at) ?? "—"}</Txt>
+            <OneLine testID="mfa-enabled-at" style={styles.mono}>{formatStamp(status.confirmed_at) ?? "—"}</OneLine>
           </Fact>
           <Fact label={tr("soul_app.mfa.manage.last_used")}>
             {used ? (

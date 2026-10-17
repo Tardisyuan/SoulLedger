@@ -261,8 +261,8 @@ describe("long labels", () => {
     );
     expect(flat(screen.getByTestId("short")).flexDirection).toBe("row");
     expect(flat(screen.getByTestId("long")).flexDirection).toBe("column");
-    // A mono value is never shortened.
-    expect(screen.getByText("2026-09-09 16:40").props.numberOfLines).toBeUndefined();
+    // 第二十八批 S4: a mono value keeps to one line (cut with …, long-press reads it whole).
+    expect(screen.getByText("2026-09-09 16:40").props.numberOfLines).toBe(1);
   });
 });
 
