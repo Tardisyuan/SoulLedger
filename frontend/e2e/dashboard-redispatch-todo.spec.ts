@@ -1,16 +1,16 @@
 /**
  * 仪表盘待办条的第四格「待重发的调拨」(`GET /sentence-plans/?awaiting_redispatch=true`)。
  *
- * 有被拒 / 取消后等着重发的计划:显示数字与「去处理 →」,点了落到第一份计划的灵魂详情
- * (受刑计划卡在那里)。没有:这一格照另外三格的约定 —— 照常写 0、不隐藏、右侧是「✓ 已清空」、
+ * 有被拒 / 取消后等着重发的计划:显示数字与「去处理 →」,点了落到受刑计划列表、按同一条件筛好
+ * (审计 1017 #8:不再只落到第一份计划的灵魂,数量大于 1 时其余的也找得到)。没有:这一格照另外三格的约定 —— 照常写 0、不隐藏、右侧是「✓ 已清空」、
  * 没有链接、没有「待我处理」竖条。
  */
-import { expect, test, SENTENCE_PLAN, SOULS, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, SENTENCE_PLAN, setupAuthenticatedPage } from "./fixtures";
 
 const CELL = '[data-todo]:has-text("待重发的调拨")';
 
 test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
-  test("shows the count and an entry that lands on the soul's plan card", async ({ page }) => {
+  test("shows the count and an entry that lands on the plan list, filtered the same way", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/sentence-plans/", (call) =>
       call.query.awaiting_redispatch === "true"
@@ -23,11 +23,10 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
     await expect(cell.locator("[data-todo-count]")).toHaveText("2");
     await expect(cell).toHaveAttribute("data-todo-mine", "");
     const link = cell.getByRole("link", { name: "去处理 →" });
-    await expect(link).toHaveAttribute("href", `/souls/${SOULS[0].id}`);
+    await expect(link).toHaveAttribute("href", "/sentence-plans?awaiting_redispatch=true");
 
     await link.click();
-    await expect(page).toHaveURL(new RegExp(`/souls/${SOULS[0].id}$`));
-    await expect(page.getByTestId("sentence-plan-card")).toBeVisible();
+    await expect(page).toHaveURL(/\/sentence-plans\?awaiting_redispatch=true$/);
   });
 
   test("with nothing waiting it reads 0 and 已清空, like the other cells", async ({ page }) => {
@@ -41,7 +40,7 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
     await expect(cell.getByRole("link")).toHaveCount(0);
   });
 
-  test("at 393px the four cells sit 2×2, left-to-right then top-to-bottom, without overflowing", async ({ page }) => {
+  test("at 393px the cells sit two to a row, left-to-right then top-to-bottom, without overflowing", async ({ page }) => {
     await page.setViewportSize({ width: 393, height: 852 });
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/sentence-plans/", (call) =>
@@ -51,9 +50,10 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
     );
 
     await page.goto("/dashboard");
+    // 审计 1017 #7 之后管理员看得到全部十一格;这里看前四格的排法,与每一格都不溢出。
     const cells = page.locator("[data-todo]");
-    await expect(cells).toHaveCount(4);
-    await expect(cells.nth(3).locator("[data-todo-count]")).toHaveText("12 345");
+    await expect(cells).toHaveCount(11);
+    await expect(page.locator(CELL).locator("[data-todo-count]")).toHaveText("12 345");
     const boxes = await cells.evaluateAll((els) =>
       els.map((el) => {
         const r = el.getBoundingClientRect();
@@ -70,8 +70,8 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
     expect(boxes[2].y).toBeGreaterThan(boxes[0].y + 40);
     expect(Math.abs(boxes[2].y - boxes[3].y)).toBeLessThan(1);
     expect(boxes[3].x).toBeGreaterThan(boxes[2].x + 100);
-    expect(boxes.map((b) => b.spill)).toEqual([false, false, false, false]);
-    expect(boxes.map((b) => b.clipped)).toEqual([false, false, false, false]);
+    expect(boxes.filter((b) => b.spill)).toEqual([]);
+    expect(boxes.filter((b) => b.clipped)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });

@@ -125,7 +125,9 @@ export default function RecycleBinPage() {
         title={t("recycle_bin.title")}
         variant="page"
         subtitle={t("recycle_bin.intro")}
+        // 回收站是空的就没有可筛的:不画筛选条(手机上它会把一屏就够的空页撑出滚动)。
         filters={
+          all.length === 0 ? undefined : (
           <>
             <input
               type="search"
@@ -134,7 +136,7 @@ export default function RecycleBinPage() {
               aria-label={t("recycle_bin.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+              className={cn(fieldControl({ size: "md" }), "flex-1 min-w-0")}
             />
             <FilterChipSelect
               label={t("recycle_bin.col_type")}
@@ -147,6 +149,7 @@ export default function RecycleBinPage() {
               onChange={setTypeFilter}
             />
           </>
+          )
         }
       >
         {/* `compact` (~36px rows) because this page is scan-and-find: the operator
