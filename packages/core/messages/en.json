@@ -2688,7 +2688,11 @@
         "password_weak": "Password does not meet the rules",
         "unknown": "This row could not be checked"
       }
-    }
+    },
+    "organization": "Organization",
+    "organization_none": "No organization",
+    "organization_column": "Organization · Position",
+    "position": "Position"
   },
   "settings": {
     "title": "Settings",

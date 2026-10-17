@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { organizationNotEmptyOf, type Organization, type OrganizationNotEmpty } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
@@ -37,21 +37,27 @@ export function selfAndDescendants(org: Organization, all: readonly Organization
   return out;
 }
 
-/** 可搜索的树:自己和自己的下级置灰,「根」是第一项。搜索命中时保留命中项的祖先,树形不断。 */
-function ParentPicker({
+/**
+ * 可搜索的树:自己和自己的下级置灰,「根」是第一项。搜索命中时保留命中项的祖先,树形不断。
+ * 用户编辑弹层也用它选「所属机构」:那里第一项是 `noneLabel`(不属于任何机构)。
+ */
+export function ParentPicker({
   organizations,
   value,
   onChange,
   disabledIds,
   label,
+  noneLabel,
 }: {
   organizations: readonly Organization[];
   value: number | null;
   onChange: (id: number | null) => void;
   disabledIds: ReadonlySet<number>;
   label: string;
+  noneLabel?: string;
 }) {
   const { t } = useI18n();
+  const labelId = useId();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const byId = new Map(organizations.map((o) => [o.id, o]));
@@ -71,7 +77,7 @@ function ParentPicker({
   const rowClass = "flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm";
   return (
     <div className="flex flex-col gap-1">
-      <span id="org-parent-label" className="text-xs text-[oklch(var(--color-ink-muted))]">{label}</span>
+      <span id={labelId} className="text-xs text-[oklch(var(--color-ink-muted))]">{label}</span>
       <input
         type="search"
         aria-label={t("souls.search")}
@@ -80,7 +86,7 @@ function ParentPicker({
         onChange={(e) => setQuery(e.target.value)}
         className="h-(--control-h-md) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-sm"
       />
-      <div role="radiogroup" aria-labelledby="org-parent-label" className="max-h-56 overflow-y-auto border border-[oklch(var(--color-line))]">
+      <div role="radiogroup" aria-labelledby={labelId} className="max-h-56 overflow-y-auto border border-[oklch(var(--color-line))]">
         <button
           type="button"
           role="radio"
@@ -89,7 +95,7 @@ function ParentPicker({
           className={cn(rowClass, value === null && "bg-[oklch(var(--color-surface-2))] font-semibold")}
         >
           <span aria-hidden="true">{value === null ? "●" : "○"}</span>
-          {t("organization.root")}
+          {noneLabel ?? t("organization.root")}
         </button>
         {rows.map(({ item: o, depth }) => {
           const disabled = disabledIds.has(o.id);

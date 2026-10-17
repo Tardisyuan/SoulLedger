@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useId, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
+import { usersApi, permApi, organizationsApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -10,6 +10,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
+import { ParentPicker } from "@/src/components/organizations/OrganizationDialogs";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const roleId = `${formId}-role`;
   const firstNameId = `${formId}-first-name`;
   const lastNameId = `${formId}-last-name`;
+  const positionId = `${formId}-position`;
 
   const [formData, setFormData] = useState<CreateUserInput>({
     username: "",
@@ -53,6 +55,8 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           first_name: user.first_name || "",
           last_name: user.last_name || "",
           tenant: user.tenant?.id,
+          organization: user.organization?.id,
+          position: user.position || "",
         });
       } else {
         setFormData({
@@ -133,6 +137,20 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
       ? rolesQuery.data.map((r) => ({ value: r.name, label: r.display_name || r.name }))
       : [{ value: formData.role ?? "VIEWER", label: formData.role ?? "VIEWER" }];
 
+  /**
+   * 所属机构与职务(2026-10-16 起只由管理员在这里设,`PATCH /users/{id}/`)。只在编辑时出现:
+   * 新建时账号的租户还没定,而机构必须与账号同租户。机构取全部页、再按被编辑账号的租户筛 ——
+   * ADMIN 的机构列表跨租户,后端会拒绝别的租户的机构,这里就不让它出现在选项里。
+   * 与机构页共用 `["organizations"]` 这把键,机构增删改后两边一起刷新。
+   */
+  const orgsQuery = useQuery({
+    queryKey: ["organizations"],
+    queryFn: organizationsApi.all,
+    enabled: isOpen && isEditing,
+  });
+  const userTenant = user?.tenant?.id;
+  const tenantOrgs = (orgsQuery.data ?? []).filter((o) => userTenant != null && o.tenant === userTenant);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // 一次收齐,而不是逐条 return:三个都空的时候,操作员应该一次看见三条,
@@ -151,6 +169,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         first_name: formData.first_name,
         last_name: formData.last_name,
         tenant: formData.tenant,
+        // `null` 清空所属机构;后端校验机构与被编辑的账号同租户(`UserUpdateSerializer.validate_organization`)。
+        organization: formData.organization ?? null,
+        position: formData.position ?? "",
       };
       updateMutation.mutate({ id: String(user.id), data: updateData });
     } else {
@@ -292,6 +313,28 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             placeholder={t("users.last_name_placeholder") || "姓"}
           />
         </div>
+
+        {isEditing && (
+          <>
+            <TextField
+              id={positionId}
+              label={t("users.position")}
+              type="text"
+              maxLength={100}
+              value={formData.position ?? ""}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              disabled={updateMutation.isPending}
+            />
+            <ParentPicker
+              label={t("users.organization")}
+              noneLabel={t("users.organization_none")}
+              organizations={tenantOrgs}
+              value={formData.organization ?? null}
+              onChange={(id) => setFormData({ ...formData, organization: id ?? undefined })}
+              disabledIds={new Set()}
+            />
+          </>
+        )}
       </form>
     </BaseModal>
   );

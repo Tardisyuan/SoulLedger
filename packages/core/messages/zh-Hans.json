@@ -2688,7 +2688,11 @@
         "password_weak": "密码不符合规则",
         "unknown": "这一行没能检查"
       }
-    }
+    },
+    "organization": "所属机构",
+    "organization_none": "不属于任何机构",
+    "organization_column": "机构 · 职务",
+    "position": "职务"
   },
   "settings": {
     "title": "设置",
