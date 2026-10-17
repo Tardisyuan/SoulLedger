@@ -121,7 +121,7 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
             </Button>
             <Button
               type="button"
-              variant="danger"
+              variant="primary"
               onClick={() => cancel.mutate()}
               loading={cancel.isPending}
               disabled={!reason.trim()}

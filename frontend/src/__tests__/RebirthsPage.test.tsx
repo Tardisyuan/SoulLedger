@@ -69,7 +69,7 @@ describe("转生登记簿", () => {
     const link = await screen.findByRole("link", { name: "周阿满" });
     expect(link).toHaveAttribute("href", "/souls/soul-1#reincarnation-r1");
     expect(screen.getByText(tZh("rebirths.life_value", { from: "3", to: "4" }))).toBeInTheDocument();
-    expect(screen.getByText(tZh("reincarnation.forms.HUMAN"))).toBeInTheDocument();
+    expect(screen.getByText(tZh("reincarnation.forms.HUMAN"), { selector: "td, td *" })).toBeInTheDocument(); // 筛选下拉里也有这个词
     expect(screen.queryByText("HUMAN")).toBeNull();
     expect(screen.getByText(tZh("rebirths.total", { n: "1" }))).toBeInTheDocument();
     expect(mockedList).toHaveBeenCalledWith({ page: "1" });

@@ -408,9 +408,9 @@ describe("DashboardPage overview", () => {
     it("the 重新发起 cell counts this hall's refused dispatches and links to the plan list filtered the same way", async () => {
       mockedPlans.mockResolvedValue({ data: { count: 2, results: [{ soul: "s-9" }, { soul: "s-4" }] } });
       renderPage();
-      const link = (await screen.findByText("dashboard.todo.resend_dispatch")).closest("[data-todo]")!.querySelector("a");
-      // 不再落到第一份计划的灵魂:数量大于 1 时其余的也要找得到。
-      expect(link).toHaveAttribute("href", "/sentence-plans?awaiting_redispatch=true");
+      const cell = (await screen.findByText("dashboard.todo.resend_dispatch")).closest("[data-todo]")!;
+      // 数到了才出链接(取数中只有标签);不再落到第一份计划的灵魂:数量大于 1 时其余的也要找得到。
+      await waitFor(() => expect(cell.querySelector("a")).toHaveAttribute("href", "/sentence-plans?awaiting_redispatch=true"));
       expect(mockedPlans).toHaveBeenCalledWith({ awaiting_redispatch: true, page: 1 });
     });
 

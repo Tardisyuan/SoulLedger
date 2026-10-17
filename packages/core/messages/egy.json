@@ -2569,10 +2569,8 @@
     "end_pass": "Hesy",
     "end_fail": "Nen Hesy",
     "end_note": "Khet · Em Tepy; Maa Em Wedja Tepy",
-    "end_body": "Er Khet: Nen Ak, Nen Dem, Nen Khemen Wedja. Wedja Tepy Khetem.",
     "cancel": "Sehen Wedja Ta Ky",
     "cancel_title": "Sehen Wedja Ta Ky Pen?",
-    "cancel_body": "Nen Wedja. Sesh Wesheb Smen · Maa Wa. Wedja Tepy Khetem Mi Pa.",
     "cancel_keep": "Nen Sehen",
     "ended": "Khetem Seth · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "Sehen Seth. Khet: {{reason}}"
@@ -4151,11 +4149,9 @@
       "group_data": "Djama-I",
       "group_help": "Dbh Hena Wesheb · Sesh Er Wesekhet",
       "email": "Wat Sesh",
-      "email_hint": "Mi Nen Rekh Sekhem: Ip Hab Hena.",
       "email_change": "Khemen",
       "email_add": "Redi",
       "email_none": "Nen Wat Sesh",
-      "email_code_sent": "Ip Hab Seth Er {{email}}",
       "email_done": "Wat Sesh Khemen Seth",
       "email_in_person": "Khemen Wat Sesh: Iyi Er Wesekhet Hena Djama Redi.",
       "push_social": "Medu",
@@ -6068,13 +6064,11 @@
     },
     "search": {
       "souls": "Hehy Ba",
-      "placeholder": "Ren, Ip Er Ip Sep",
       "read_only": "Maa Wa. Khemen: Em Medjat Sab.",
       "no_souls_title": "Nen Gem Ba",
       "no_souls_body": "Khemen Ren, Er Sesh Ren Ta Neb.",
       "residing": "▲ {{where}} · Hemes",
-      "group_case": "Sep",
-      "no_soul": "Nen Ba Hena Ren Er Ip"
+      "group_case": "Sep"
     },
     "assist": {
       "entry": "Hehy Medu",
@@ -6385,7 +6379,6 @@
     "reassign": {
       "title": "Hab Ky Er",
       "search": "Hehy Ren",
-      "hint": "Sab Wedja Wesekhet · Sep Kheru Tepy",
       "load": "Sep {{n}}",
       "reason": "Khet · Em Tepy; {{name}} Maa",
       "confirm": "Hab Ky Er {{name}}",
@@ -6393,7 +6386,6 @@
     },
     "rebirth": {
       "cross_civ_none": "⇄ Taui Ky: Nen",
-      "cross_civ_body": "Taui Ky Em Wedja Tepy · Em Medjat Sab. Hesy Pa: «Nen», Nen Khemen.",
       "approve_no_cross": "Hesy · Nen Taui Ky",
       "decide_on_desk": "Wedja Em Medjat Sab",
       "cross_wanted": "Dbh Taui Ky: Wedja Em Medjat Sab."

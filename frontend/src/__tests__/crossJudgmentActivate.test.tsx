@@ -91,7 +91,7 @@ function renderPage(data: ReturnType<typeof judgment>) {
   );
 }
 
-const ACTIVATE = "激活联审";
+const ACTIVATE = "激活跨域审判";
 
 describe("cross-judgment detail — activate", () => {
   beforeEach(() => {
@@ -109,7 +109,7 @@ describe("cross-judgment detail — activate", () => {
     fireEvent.click(button);
 
     await waitFor(() => expect(crossTenantJudgmentsApi.activate).toHaveBeenCalledWith("cj-1"));
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith("联审已激活", "success"));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith("跨域审判已激活", "success"));
   });
 
   it("a failed activation is reported, not swallowed", async () => {
