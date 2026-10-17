@@ -1,6 +1,7 @@
 [
   "crossJudgments.original_judgment",
   "crossJudgments.original_soul",
+  "judgment.claim.load_more",
   "notifications.open_assistant",
   "notifications.open_cross_judgment",
   "notifications.open_death_sync",
