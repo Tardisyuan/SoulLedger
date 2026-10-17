@@ -780,7 +780,10 @@
     },
     "col_location": "原位置",
     "col_deleted_by": "删除人",
-    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。"
+    "restore_missing_roles": "不能恢复：此审批流模板引用的角色已不存在（{{roles}}）。请先恢复或重建这些角色。",
+    "search": "搜索名称、删除理由、删除人或原位置",
+    "all_types": "全部类型",
+    "no_match": "没有符合筛选的条目"
   },
   "permissions": {
     "title": "权限管理",

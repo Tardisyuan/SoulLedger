@@ -209,3 +209,46 @@ describe("RecycleBinPage columns", () => {
     expect(mockShowToast).not.toHaveBeenCalledWith("recycle_bin.restore_error", "error");
   });
 });
+
+// 审计 1017 #15:类型与搜索都在本地筛 —— 接口一次返回全部条目,不再多请求。
+describe("RecycleBinPage filters", () => {
+  beforeEach(() => {
+    mockUser = { role: "ADMIN", permissions: READ_RESTORE };
+    (recycleBinApi.list as jest.Mock).mockResolvedValue({
+      data: {
+        count: 3,
+        results: [
+          row(),
+          row({ entity_type: "SOUL", kind: "domain", id: "s1", label: "张三", location: { kind: "civilization", value: "CHINESE" }, cascade_id: "c-s1", deleted_by: "cuijue" }),
+          row({ entity_type: "ROLE", id: 9, label: "审计员", location: null, cascade_id: "c-9", delete_reason: "重复了" }),
+        ],
+      },
+    });
+  });
+  const shown = () => screen.getAllByRole("row").slice(1).map((r) => within(r).queryAllByRole("cell")[1]?.textContent ?? "");
+
+  it("offers only the types present, and narrows to one", async () => {
+    renderPage();
+    await screen.findByText("张三");
+    const select = screen.getByRole("combobox", { name: "recycle_bin.col_type" });
+    expect(within(select).getAllByRole("option").map((o) => (o as HTMLOptionElement).value)).toEqual(["", "MENU", "SOUL", "ROLE"]);
+    fireEvent.change(select, { target: { value: "SOUL" } });
+    expect(shown()).toEqual(["张三"]);
+    expect(recycleBinApi.list).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches label, reason, deleter and the localised location", async () => {
+    renderPage();
+    await screen.findByText("张三");
+    const box = screen.getByTestId("bin-search");
+    fireEvent.change(box, { target: { value: "重复" } });
+    expect(shown()).toEqual(["审计员重复了"]);
+    fireEvent.change(box, { target: { value: "CUIJUE" } });
+    expect(shown()).toEqual(["张三"]);
+    fireEvent.change(box, { target: { value: "地府" } });
+    expect(shown()).toEqual(["张三"]);
+    fireEvent.change(box, { target: { value: "没有这个" } });
+    expect(await screen.findByText("recycle_bin.no_match")).toBeInTheDocument();
+    expect(screen.queryByText("recycle_bin.empty")).not.toBeInTheDocument();
+  });
+});
