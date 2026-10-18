@@ -232,6 +232,8 @@ const COLLECTED_FILES = [
   "WorkflowPage.test.tsx",
   // 2026-10-17 手动发起审批的弹层(W-11):依赖、模板三态、跟随模板、每种拒绝、成功跳转。
   "StartWorkflowDialog.test.tsx",
+  // 2026-10-18 第四十三批 W-1 ~ W-5:选站列表、门口那一块、加减站与 segment_changed、审批页「待我选站」、记录句子。
+  "workflowSegments.test.tsx",
   "workflowTitle.test.ts",
   "workflowRoutingRoundTrip.test.ts",
   "a11yEngineBaseline.test.tsx",

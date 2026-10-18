@@ -56,8 +56,9 @@ jest.mock("@soulledger/core/api", () => ({
   },
   soulsApi: { get: jest.fn(), karma: jest.fn() },
   reincarnationApi: { list: jest.fn() },
+  workflowApi: { flowPreview: jest.fn() },
 }));
-const { judgmentApi, soulsApi, reincarnationApi } = jest.requireMock("@soulledger/core/api") as Record<
+const { judgmentApi, soulsApi, reincarnationApi, workflowApi } = jest.requireMock("@soulledger/core/api") as Record<
   string,
   Record<string, jest.Mock>
 >;
@@ -211,7 +212,17 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     ]);
   });
 
-  it("勾上审批流,确认层里的落判键写成「落判并发起」;不勾是「盖印并结案」", async () => {
+  it("勾上审批流,确认层先「下一步」到选站(W-1a),那里的落判键写成「落判并发起」;不勾是「盖印并结案」", async () => {
+    workflowApi.flowPreview.mockResolvedValue({
+      data: {
+        name: "十殿审判流程",
+        stations: [
+          { node_order: 1, node_name: "分流", court_code: "一殿", approver: "秦广王", approver_role: null, is_required: false },
+          { node_order: 2, node_name: "终审", court_code: "十殿", approver: "转轮王", approver_role: null, is_required: true },
+        ],
+        foreign: [],
+      },
+    });
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "1" });
@@ -225,8 +236,15 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }));
     fireEvent.click(toConfirm());
     layer = await screen.findByTestId("confirm-layer");
-    expect(within(layer).getByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") })).toBeInTheDocument();
     expect(within(layer).queryByRole("button", { name: tZh("judgment.desk.stamp") })).toBeNull();
+    expect(judgmentApi.conclude).not.toHaveBeenCalled();
+    fireEvent.click(within(layer).getByRole("button", { name: tZh("workflow.pick.next") }));
+    await within(layer).findByTestId("station-picker");
+    expect(workflowApi.flowPreview).toHaveBeenCalledWith({ judgment: ID });
+    fireEvent.click(await within(layer).findByRole("checkbox", { name: /1 · 分流/ }));
+    fireEvent.click(within(layer).getByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }));
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toMatchObject({ create_workflow: true, skip_node_orders: [1] });
   });
 
   it("⌘⏎ 与落判按钮同一道门:没有 judgment.execute 就不落判", async () => {

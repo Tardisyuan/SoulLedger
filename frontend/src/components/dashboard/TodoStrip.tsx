@@ -147,8 +147,8 @@ export function TodoStrip() {
     enabled: canApprove || canLetters,
     staleTime: 60_000,
   });
-  const officerCount = (group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters") =>
-    ({ ...officerQ, data: officerQ.data?.[group].count }) as UseQueryResult<number>;
+  const officerCount = (group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters" | "pick_nodes") =>
+    ({ ...officerQ, data: officerQ.data?.[group]?.count }) as UseQueryResult<number>;
   const canSentenceRequests = hasPermission("judgment.execute");
   const sentenceRequestQ = useQuery({
     queryKey: ["dashboard", "todo", "sentence-requests"],
@@ -218,6 +218,17 @@ export function TodoStrip() {
             linkText={t("dashboard.todo.go_approve")}
             clearText={t("dashboard.todo.none")}
           />
+          {/* 待我选站(第四十三批 W-2):外域流程里本域那一段;点了到审批页最上面那一组。只在有的时候占一格 ——
+              选站只来自跨域审判,常年是 0,不给每位审批人一格永远空着的。 */}
+          {(officerQ.data?.pick_nodes?.count ?? 0) > 0 && (
+            <TodoCell
+              label={t("dashboard.todo.pick_nodes")}
+              query={officerCount("pick_nodes")}
+              href="/workflow?tab=instances"
+              linkText={t("dashboard.todo.go_pick")}
+              clearText={t("dashboard.todo.none")}
+            />
+          )}
           <TodoCell
             label={t("dashboard.todo.rebirths")}
             query={officerCount("rebirths")}

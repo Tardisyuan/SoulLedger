@@ -599,6 +599,16 @@ class WorkflowService:
             "approver_role": assignment.get("approver_role", ""),
         }
 
+    @staticmethod
+    def judgment_case_type(civilization: str, is_appeal: bool = False) -> str:
+        """The case type a concluded judgment's workflow runs when the caller names none (also what the W-1
+        station list previews for a conclusion, `GET /workflows/flow-preview/?judgment=`)."""
+        if is_appeal:
+            return CaseType.APPEAL
+        if civilization == Civilization.EGYPTIAN:
+            return CaseType.HEART_WEIGHING
+        return CaseType.ROUTINE  # Chinese and European default
+
     @classmethod
     def create_from_judgment(
         cls,
@@ -633,16 +643,8 @@ class WorkflowService:
         soul = judgment.soul
         civilization = soul.civilization
 
-        # Determine case type
         if case_type is None:
-            if is_appeal:
-                case_type = CaseType.APPEAL
-            elif civilization == Civilization.CHINESE:
-                case_type = CaseType.ROUTINE
-            elif civilization == Civilization.EGYPTIAN:
-                case_type = CaseType.HEART_WEIGHING
-            else:
-                case_type = CaseType.ROUTINE  # European default
+            case_type = cls.judgment_case_type(civilization, is_appeal)
 
         # Validation, template, nodes and events: `start_workflow`.
         return cls.start_workflow(

@@ -503,3 +503,62 @@ def test_the_pick_task_lands_in_the_realms_todo(w):
     # 选了之后就不在了。
     assert _pick(w.eg_judge, wf, 2).status_code == 200
     assert officer_client(w.eg_judge).get(TODO).data["pick_nodes"]["count"] == 0
+
+
+# ── W-1 选站列表:生成之前(`GET /workflows/flow-preview/`)───────────────────
+#
+# 列出的站序必须就是 `skip_node_orders` 认的那些,「必须走」必须就是生成之后 `is_required` 的那一站,外域段的顺序
+# 与 `add_foreign` 建出来的一样 —— 都拿真生成的流程对一遍,而不是只看预览自己。
+
+PREVIEW = f"{WF}flow-preview/"
+
+
+def _open_cross(w, realms):
+    soul, case = plan.open_case(w.cn)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj.judgment = case
+    cj.save(update_fields=["judgment"])
+    for order, realm in enumerate(realms, start=2):
+        seat = CrossTenantJudgmentService.add_participant(cj, realm, None, ParticipantRole.CO_JUDGE, node_order=order)
+        CrossTenantJudgmentService.submit_sentence(seat, plan.stop_realm(realm), 5, "", None)
+    CrossTenantJudgmentService.activate(cj)
+    return soul, case
+
+
+def test_the_preview_lists_what_the_conclusion_then_builds(w):
+    _soul, case = _open_cross(w, [w.eu, w.eg])
+    res = officer_client(w.cn_judge).get(PREVIEW, {"judgment": str(case.pk)})
+    assert res.status_code == 200, res.content
+    body = res.json()
+    assert [s["node_order"] for s in body["stations"]] == [1, 2, 3]
+    assert [s["is_required"] for s in body["stations"]] == [False, False, True]
+    assert [(f["order"], f["tenant_code"], f["default_node_count"]) for f in body["foreign"]] == [
+        (2, w.eu.code, 3), (3, w.eg.code, 3)]
+
+    case.conclude("PASSED", "", skip_node_orders=[1])
+    wf = ApprovalWorkflow.objects.get(judgment=case)
+    local = ApprovalNode.objects.filter(segment__workflow=wf, segment__order=1).order_by("node_order")
+    assert [n.is_required for n in local] == [False, False, True]
+    assert [(s.order, s.tenant.code) for s in WorkflowSegment.objects.filter(workflow=wf, order__gt=1)
+            .order_by("order")] == [(2, w.eu.code), (3, w.eg.code)]
+
+
+def test_a_manual_start_previews_without_foreign_realms(w):
+    soul, _case = plan.open_case(w.cn)
+    res = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"})
+    assert res.status_code == 200, res.content
+    assert len(res.json()["stations"]) == 3
+    assert res.json()["foreign"] == []
+
+
+def test_another_halls_case_is_not_found(w):
+    soul, case = _open_cross(w, [w.eg])
+    assert officer_client(w.eg_judge).get(PREVIEW, {"judgment": str(case.pk)}).status_code == 404
+    assert officer_client(w.eg_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).status_code == 404
+
+
+def test_a_manual_start_needs_a_case_type_or_template(w):
+    soul, _case = plan.open_case(w.cn)
+    res = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk)})
+    assert res.status_code == 400
+    assert res.json()["code"] == "case_type_required"

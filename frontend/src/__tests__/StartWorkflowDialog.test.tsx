@@ -38,12 +38,14 @@ const mockCaseTypes = jest.fn();
 const mockTemplates = jest.fn();
 const mockSoulsList = jest.fn();
 const mockJudgments = jest.fn();
+const mockPreview = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   workflowApi: {
     start: (...a: unknown[]) => mockStart(...a),
     caseTypes: (...a: unknown[]) => mockCaseTypes(...a),
     templates: { list: (...a: unknown[]) => mockTemplates(...a) },
+    flowPreview: (...a: unknown[]) => mockPreview(...a),
   },
   soulsApi: { list: (...a: unknown[]) => mockSoulsList(...a) },
   judgmentApi: { list: (...a: unknown[]) => mockJudgments(...a) },
@@ -85,6 +87,17 @@ beforeEach(() => {
   mockSoulsList.mockResolvedValue({ data: { count: 1, results: [SOUL] } });
   mockSoulDetail.mockReturnValue(SOUL);
   mockStart.mockResolvedValue({ data: { id: "wf-new" } });
+  mockPreview.mockResolvedValue({
+    data: {
+      name: "十殿审判流程",
+      stations: [
+        { node_order: 1, node_name: "分流", court_code: "一殿", approver: "秦广王", approver_role: null, is_required: false },
+        { node_order: 2, node_name: "复核", court_code: "三殿", approver: "宋帝王", approver_role: null, is_required: false },
+        { node_order: 3, node_name: "终审", court_code: "十殿", approver: "转轮王", approver_role: null, is_required: true },
+      ],
+      foreign: [],
+    },
+  });
 });
 
 function renderDialog(props: { lockedSoul?: Soul } = { lockedSoul: SOUL }) {
@@ -100,7 +113,13 @@ function renderDialog(props: { lockedSoul?: Soul } = { lockedSoul: SOUL }) {
 
 const caseTypeSelect = () => screen.getByLabelText(/workflow\.detail\.case_type/) as HTMLSelectElement;
 const reasonBox = () => screen.getByLabelText(/^workflow\.start\.reason\*?$/) as HTMLTextAreaElement;
-const submit = () => fireEvent.click(screen.getByRole("button", { name: "workflow.start.submit" }));
+/** 第 1 步「下一步」(W-1a:选站是第 2 步),再「发起」。理由为空时停在第 1 步,不点第二下。 */
+const submit = () => {
+  const next = screen.queryByRole("button", { name: "workflow.pick.next" });
+  if (next) fireEvent.click(next);
+  const go = screen.queryByRole("button", { name: "workflow.start.submit" });
+  if (go) fireEvent.click(go);
+};
 
 async function pickCaseType(value = "ROUTINE") {
   await waitFor(() => expect(within(caseTypeSelect()).getAllByRole("option").length).toBeGreaterThan(1));
@@ -347,5 +366,42 @@ describe("StartWorkflowDialog — 审批编号", () => {
     renderDialog();
     await fillAndSubmit();
     expect(await screen.findByText("workflow.start.errors.duplicate(常规审判,WF-0582)")).toBeInTheDocument();
+  });
+});
+
+describe("StartWorkflowDialog — 第 2 步选站(第四十三批 W-1a)", () => {
+  async function toStations() {
+    renderDialog();
+    await pickCaseType();
+    fireEvent.change(reasonBox(), { target: { value: "复核" } });
+    fireEvent.click(screen.getByRole("button", { name: "workflow.pick.next" }));
+    return screen.findByTestId("station-picker");
+  }
+
+  it("按灵魂与案件类型取本域的站;终审勾灰点不动,不发请求就不算选站", async () => {
+    await toStations();
+    expect(mockPreview).toHaveBeenCalledWith({ soul: "soul-1", case_type: "ROUTINE" });
+    const final = await screen.findByRole("checkbox", { name: /3 · 终审/ });
+    expect(final).toBeChecked();
+    expect(final).toBeDisabled();
+    fireEvent.click(final);
+    expect(final).toBeChecked();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it("取消勾选的站以站序送进 skip_node_orders;全选时请求里没有这一项", async () => {
+    await toStations();
+    fireEvent.click(await screen.findByRole("checkbox", { name: /1 · 分流/ }));
+    fireEvent.click(screen.getByRole("button", { name: "workflow.start.submit" }));
+    await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
+    expect(mockStart.mock.calls[0][0]).toMatchObject({ skip_node_orders: [1] });
+    expect(mockStart.mock.calls[0][0].skip_node_orders).not.toContain(3);
+  });
+
+  it("「上一步」回到表单,已填的不丢", async () => {
+    await toStations();
+    fireEvent.click(screen.getByRole("button", { name: "workflow.pick.back" }));
+    expect(screen.queryByTestId("station-picker")).not.toBeInTheDocument();
+    expect(reasonBox().value).toBe("复核");
   });
 });
