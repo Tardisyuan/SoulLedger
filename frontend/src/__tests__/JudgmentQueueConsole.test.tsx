@@ -218,8 +218,8 @@ describe("JudgmentQueueConsole", () => {
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT.id, {
       verdict: "PASSED",
       notes: "",
-      create_workflow: false,
     });
+    expect(mockConclude.mock.calls[0][1]).not.toHaveProperty("create_workflow");
     await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
     // Absence: nothing on screen offers to take it back.
     expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();

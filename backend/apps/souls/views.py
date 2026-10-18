@@ -489,8 +489,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     def correct_settlement(self, request, pk=None):
         """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
 
-        Not a state transition (SoulState.SETTLED has no valid_transitions,
-        deliberately) — an ADMIN-only, reason-required, separately audited
+        Not a state transition (SETTLED's one transition belongs to reopening a
+        finished sentence plan) — an ADMIN-only, reason-required, separately audited
         correction. See Soul.correct_settlement.
         """
         soul = self.get_object()
@@ -592,10 +592,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        # REINCARNATING -> DISPOSED exists for one writer: reopening a finished sentence plan
-        # (apps/sentence_plan/requests.py::append_cross_stops). By hand it would leave a soul DISPOSED
-        # with no plan to serve, so it is not offered here.
-        reopen_only = soul.current_state == SoulState.REINCARNATING and new_state == SoulState.DISPOSED
+        # REINCARNATING -> DISPOSED and SETTLED -> DISPOSED exist for one writer: reopening a finished
+        # sentence plan (apps/sentence_plan/requests.py::append_cross_stops). By hand they would leave a
+        # soul DISPOSED with no plan to serve, so they are not offered here (a mistaken settlement is
+        # `correct_settlement`).
+        reopen_only = (soul.current_state in (SoulState.REINCARNATING, SoulState.SETTLED)
+                       and new_state == SoulState.DISPOSED)
         if reopen_only or not soul.can_transition_to(new_state):
             return Response(
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},

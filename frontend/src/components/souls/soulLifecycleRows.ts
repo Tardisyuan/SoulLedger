@@ -372,8 +372,9 @@ const PIPELINE_ORDER = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING"] as cons
 type PipelineState = (typeof PIPELINE_ORDER)[number];
 export type FutureStageKey = "JUDGING" | "DISPOSED" | "REINCARNATING" | "NEXT_LIFE";
 
-/** SETTLED/LOST are absorbing states with no valid outward transition
- * (Soul.can_transition_to returns [] for both) — nothing is pending. */
+/** SETTLED/LOST have nothing pending. LOST has no outward transition; SETTLED's
+ * only one (back to DISPOSED, when a cross-realm judgment reopens a finished
+ * sentence plan — Soul.can_transition_to) is not a stage anyone waits for. */
 export function computeFutureStages(currentState: string): FutureStageKey[] {
   if (currentState === "SETTLED" || currentState === "LOST") return [];
   const idx = PIPELINE_ORDER.indexOf(currentState as PipelineState);
