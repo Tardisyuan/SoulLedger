@@ -50,6 +50,8 @@ jest.mock("@soulledger/core/api", () => ({
   // TemplateDetailModal names each node's approver through RoleName, which
   // reads the role table. Empty unless a test says otherwise.
   permApi: { roles: { list: jest.fn().mockResolvedValue({ data: [] }) } },
+  // 实例页签最上面的「待我选站」(第四十三批 W-2)读官员待办;空的就不画。
+  officerAppApi: { todo: jest.fn().mockResolvedValue({ data: {} }) },
 }));
 
 export const mockShowToast = jest.fn();

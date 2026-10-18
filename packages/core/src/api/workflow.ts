@@ -133,6 +133,27 @@ export type WorkflowSegmentRefusal =
   | "remind_too_soon"
   | "workflow_closed";
 
+/** FlowPreviewSerializer (backend/apps/workflow/serializers.py) — `GET /workflows/flow-preview/`. */
+export interface FlowPreviewStation {
+  /** The station's order; an unticked one goes into `skip_node_orders` by this number. */
+  node_order: number;
+  node_name: string;
+  court_code: string;
+  /** A named officer, or the one person a role resolves to; null when a role has several. */
+  approver: string | null;
+  /** The role member when the station goes to a role (translated by the client). */
+  approver_role: string | null;
+  /** The final review: it cannot be skipped. */
+  is_required: boolean;
+}
+
+export interface FlowPreview {
+  name: string;
+  stations: FlowPreviewStation[];
+  /** Realms that follow in cross-realm judgment order; their own judges pick their stations. */
+  foreign: { order: number; tenant_code: string; realm_name: string; default_node_count: number }[];
+}
+
 /** CrossJudgmentWorkflowSummarySerializer — the progress line on the cross-realm judgment page (W-4). */
 export interface CrossJudgmentWorkflowSummary {
   id: string;
@@ -417,6 +438,12 @@ export const workflowApi = {
   /** 发起时可选的案件类型(`workflow.create` 码名)。`civilization` 与 `soul` 二选一。 */
   caseTypes: (params: { civilization: string } | { soul: string }) =>
     api.get<WorkflowCaseTypeOption[]>("/workflows/case-types/", { params }),
+  /**
+   * W-1 选站列表(第四十三批):流程生成之前本域默认流程的各站与接在后面的外域。结案时给 `judgment`;
+   * 手动发起时给 `soul` 加 `case_type` 或 `template`(可再带关联的 `judgment`)。`workflow.read` 码名。
+   */
+  flowPreview: (params: { judgment: string } | { soul: string; case_type?: string; template?: string; judgment?: string }) =>
+    api.get<FlowPreview>("/workflows/flow-preview/", { params }),
   advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),
   /**
    * ApprovalWorkflowViewSet.escalate — 越级推进,`workflow.escalate` 码名。

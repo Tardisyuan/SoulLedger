@@ -177,6 +177,8 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Request kinds inside an <option>, which can hold no child element.",
   [path.join("src", "components", "judgment", "JudgmentDeskStage.tsx")]:
     "Interpolated into t('judgment.desk.confirm_body', { verdict }) as a parameter, not rendered; the same layer renders the verdict itself with <DomainEnum>.",
+  [path.join("src", "components", "workflow", "segments", "PickNodesGroup.tsx")]:
+    "The convening realm's civilization name is interpolated into t('workflow.pick_group.row_meta', { realm }) as a parameter, not rendered.",
   [path.join("app", "recycle-bin", "page.tsx")]:
     "Interpolated into t('recycle_bin.dependent_count', { type }) as a parameter, not rendered.",
   [path.join("app", "workflow", "[id]", "page.tsx")]:

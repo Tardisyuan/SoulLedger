@@ -18,6 +18,7 @@ import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections"
 import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
 import { CrossJudgmentSeatForm } from "@/src/components/cross-judgments/CrossJudgmentSeatForm";
 import { CrossJudgmentEndControls } from "@/src/components/cross-judgments/CrossJudgmentEndControls";
+import { CrossJudgmentFlow } from "@/src/components/cross-judgments/CrossJudgmentFlow";
 
 /**
  * Case state → badge tone, the same table the list page carries.
@@ -347,6 +348,9 @@ export default function CrossJudgmentDetailPage() {
         </div>
 
         <div className="min-w-0">
+          {/* 审批流程的进度与各域顺序(第四十三批 W-4):只在挂了原审判的跨域审判上。 */}
+          {!loading && judgment?.judgment && <CrossJudgmentFlow judgment={judgment} />}
+
           {/* 发起方请各文明入席(PROPOSED;按租户代码,N3=(a) 带站 / 顾问不带)。 */}
           {!loading && judgment && <CrossJudgmentSeatForm judgment={judgment} />}
 

@@ -125,7 +125,9 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
   const mine = user?.tenant?.code ?? null;
   const canWrite = hasPermission("cross_judgment.create");
   const isInitiator = mine !== null && mine === judgment.initiating_tenant_code;
-  const canReorder = canWrite && isInitiator && judgment.status === "PROPOSED" && seats.length > 1;
+  // 第四十三批:审批流程生成后各域顺序锁定(流程按它建了各域的段),拖柄去掉;服务端答 409 `order_locked`。
+  const canReorder =
+    canWrite && isInitiator && judgment.status === "PROPOSED" && seats.length > 1 && !judgment.order_locked;
   const canFill = canWrite && (judgment.status === "PROPOSED" || judgment.status === "ACTIVE");
   const misplacedEternal = ordered.some(
     (s, i) => s.sentence_submitted_at && s.sentence_is_eternal && i !== ordered.length - 1
@@ -138,7 +140,15 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
       showToast(t("sentence_plan.cross.order_saved"), "success");
       queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
     },
-    onError: (error) => showToast(errorText(error) ?? t("sentence_plan.cross.order_error"), "error"),
+    onError: (error) => {
+      if ((error as { response?: { data?: { code?: string } } })?.response?.data?.code === "order_locked") {
+        setDraft(null);
+        showToast(t("crossJudgments.order.locked"), "error");
+        queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+        return;
+      }
+      showToast(errorText(error) ?? t("sentence_plan.cross.order_error"), "error");
+    },
   });
 
   const move = (index: number, delta: number) => {
