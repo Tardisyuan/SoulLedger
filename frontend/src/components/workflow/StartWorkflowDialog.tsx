@@ -15,6 +15,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { cn } from "@/lib/utils";
+import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
 
 const REASON_MAX = 1000;
 const FORM_ID = "start-workflow-form";
@@ -108,6 +109,10 @@ export function StartWorkflowDialog({
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [judgment, setJudgment] = useState("");
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  /** 第 1 步填表,第 2 步选站(第四十三批 W-1a:审批页手动发起时选站是第 2 步)。 */
+  const [step, setStep] = useState<1 | 2>(1);
+  /** 第 2 步取消勾选的站(站序)。换了灵魂 / 案件类型 / 模板就作废。 */
+  const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
 
   const soulId = lockedSoul?.id ?? pickedSoulId;
 
@@ -180,15 +185,23 @@ export function StartWorkflowDialog({
           ...(priority === null ? {} : { priority }),
           reason: reason.trim(),
           ...(judgment ? { judgment } : {}),
+          ...(skipOrders.size ? { skip_node_orders: [...skipOrders].map(Number) } : {}),
         })
       ).data,
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       showToast(t("workflow.start.done"), "success");
+      // 下次打开从第 1 步、全选开始。
+      setStep(1);
+      setSkipOrders(new Set());
       onClose();
       router.push(`/workflow/${created.id}`);
     },
-    onError: (e) => setRefusal(startWorkflowRefusal(e, t, soul?.civilization)),
+    onError: (e) => {
+      // 提示条在第 1 步的表头下(哪一格出错就回到那一格)。
+      setRefusal(startWorkflowRefusal(e, t, soul?.civilization));
+      setStep(1);
+    },
   });
 
   /** 改了出错的那一格,提示条就消失。 */
@@ -222,11 +235,17 @@ export function StartWorkflowDialog({
       title={t("workflow.start.title")}
       footer={
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={start.isPending}>
-            {t("common.cancel")}
-          </Button>
+          {step === 1 ? (
+            <Button type="button" variant="ghost" onClick={onClose} disabled={start.isPending}>
+              {t("common.cancel")}
+            </Button>
+          ) : (
+            <Button type="button" variant="ghost" onClick={() => setStep(1)} disabled={start.isPending}>
+              {t("workflow.pick.back")}
+            </Button>
+          )}
           <Button type="submit" form={FORM_ID} variant="primary" loading={start.isPending} disabled={!soulId || !caseType}>
-            {t("workflow.start.submit")}
+            {step === 1 ? t("workflow.pick.next") : t("workflow.start.submit")}
           </Button>
         </div>
       }
@@ -240,11 +259,28 @@ export function StartWorkflowDialog({
           // 理由为空:不出提示条,只在理由框下写一行。
           if (!reason.trim()) {
             setReasonError(t("workflow.start.errors.reason_required"));
+            setStep(1);
+            return;
+          }
+          if (step === 1) {
+            setRefusal(null);
+            setStep(2);
             return;
           }
           start.mutate();
         }}
       >
+        {step === 2 ? (
+          <FlowStationPicker
+            params={{
+              soul: soulId,
+              ...(template ? { template } : { case_type: caseType }),
+              ...(judgment ? { judgment } : {}),
+            }}
+            skipped={skipOrders}
+            onChange={setSkipOrders}
+          />
+        ) : null}
         {refusal ? (
           <div role="alert" className="flex flex-col gap-2 rounded-control border border-[oklch(var(--color-ink))] px-3 py-3 text-sm">
             <span className="text-pretty">{refusal.message}</span>
@@ -264,6 +300,7 @@ export function StartWorkflowDialog({
             ) : null}
           </div>
         ) : null}
+        <div hidden={step === 2} className="space-y-4">
 
         {lockedSoul ? (
           <div data-locked-soul="" className="flex flex-col gap-1">
@@ -294,6 +331,7 @@ export function StartWorkflowDialog({
               setCaseType("");
               setTemplate("");
               setJudgment("");
+              setSkipOrders(new Set());
               touched("soul");
             }}
             options={soulOptions}
@@ -317,6 +355,7 @@ export function StartWorkflowDialog({
           onChange={(e) => {
             setCaseType(e.target.value);
             setTemplate("");
+            setSkipOrders(new Set());
             touched("case_type");
           }}
           options={[
@@ -335,6 +374,7 @@ export function StartWorkflowDialog({
               value={template}
               onChange={(e) => {
                 setTemplate(e.target.value);
+                setSkipOrders(new Set());
                 touched("template");
               }}
               options={[
@@ -415,6 +455,7 @@ export function StartWorkflowDialog({
           }}
           options={judgmentOptions}
         />
+        </div>
       </form>
     </BaseModal>
   );

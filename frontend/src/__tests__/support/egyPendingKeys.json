@@ -1,4 +1,18 @@
 [
   "scheduler.jobs.workflow_pick_reminders_for_tenant",
-  "workflow.gate.no_picker_body"
+  "workflow.gate.no_picker_body",
+  "workflow.pick.next",
+  "workflow.pick.back",
+  "workflow.pick.cross_forced",
+  "workflow.pick.load_error",
+  "workflow.pick_group.action",
+  "dashboard.todo.go_pick",
+  "workflow.history.picked_all",
+  "workflow.history.adjusted_added",
+  "workflow.history.adjusted_skipped",
+  "workflow.history.default",
+  "workflow.gate.stopped_here",
+  "workflow.gate.remind_too_soon",
+  "workflow.segment.error",
+  "crossJudgments.workflow_running"
 ]

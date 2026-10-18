@@ -37,7 +37,11 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
       setEnding(false);
       done();
     },
-    onError: () => showToast(t("crossJudgments.end_error"), "error"),
+    onError: (error) => {
+      // 第四十三批:并入了审批流程的跨域审判由流程结束(走完 = 通过,驳回 = 不通过);流程还在走时手动结束答 409。
+      const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      showToast(t(code === "workflow_running" ? "crossJudgments.workflow_running" : "crossJudgments.end_error"), "error");
+    },
   });
   const cancel = useMutation({
     mutationFn: () => crossTenantJudgmentsApi.cancel(judgment.id, reason.trim()),
@@ -49,6 +53,21 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
   });
 
   if (!judgment.can_end) return null;
+
+  /* 取消的正文(第四十三批 W-4b):审批流程还在走时,说清楚外域段会怎样。流程已经走进某个外域段时,那一段的当前站
+     与之后的站(含它的终审)一并跳过、流程随即结束;否则还没走的外域段全部跳过、流程走完本域后结束。 */
+  const flow = judgment.workflow ?? null;
+  const flowRunning = !!flow && (flow.status === "IN_PROGRESS" || flow.status === "PENDING");
+  const inForeign = flowRunning && flow.at && flow.at.segment > 1 ? flow.at : null;
+  const unstarted = flowRunning
+    ? flow.segments.filter((s) => s.order > 1 && (s.state === "AWAITING_PICK" || s.state === "PICKED")).map((s) => s.realm_name)
+    : [];
+  const cancelBody = inForeign
+    ? t("crossJudgments.cancel_flow_body_in_realm", { realm: inForeign.realm_name })
+    : unstarted.length > 0
+      ? t("crossJudgments.cancel_flow_body", { realms: unstarted.join("、") })
+      : t("crossJudgments.cancel_body");
+  const withdrawsPicks = flowRunning && flow.segments.some((s) => s.state === "AWAITING_PICK");
 
   return (
     <>
@@ -132,7 +151,8 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
           </div>
         }
       >
-        <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.cancel_body")}</p>
+        <p data-testid="cross-cancel-body" className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{cancelBody}</p>
+        {withdrawsPicks && <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.cancel_flow_note")}</p>}
         <TextAreaField
           label={t("crossJudgments.cancel_reason")}
           value={reason}
