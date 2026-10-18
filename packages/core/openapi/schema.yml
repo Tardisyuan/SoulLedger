@@ -12401,6 +12401,7 @@ paths:
           - approval
           - cooldown
           - letter
+          - pick
           - reassignment
           - rebirth
           - sentence_change
@@ -20245,6 +20246,64 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/workflows/{id}/adjust/:
+    post:
+      operationId: v1_workflows_adjust_create
+      description: |-
+        加减站: restore skipped stations / skip pending ones of ONE segment, after the current stop; the final
+        review stays. Reason required; audited; the affected stations' approvers are told.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Approval Workflow.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAdjust'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowAdjust'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowAdjust'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/workflows/{id}/advance/:
     post:
       operationId: v1_workflows_advance_create
@@ -20366,6 +20425,207 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+  /api/v1/workflows/{id}/segments/{order}/pick/:
+    post:
+      operationId: v1_workflows_segments_pick_create
+      description: |-
+        A participating realm picks which of its stations run (or re-picks, until its segment starts).
+        `version` is the segment's as loaded; another pick since then answers 409 `segment_changed`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Approval Workflow.
+        required: true
+      - in: path
+        name: order
+        schema:
+          type: integer
+        description: 段序号(1 = 本域)
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowPick'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowPick'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowPick'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/workflows/{id}/segments/{order}/remind/:
+    post:
+      operationId: v1_workflows_segments_remind_create
+      description: |-
+        再提醒一次: the convening hall reminds a realm that has not picked. Once an hour per segment
+        (429 `remind_too_soon` with `retry_after` seconds).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Approval Workflow.
+        required: true
+      - in: path
+        name: order
+        schema:
+          type: integer
+        description: 段序号(1 = 本域)
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowRemind'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/workflows/{id}/segments/{order}/use-default/:
+    post:
+      operationId: v1_workflows_segments_use_default_create
+      description: |-
+        按默认流程走: the convening hall's admin picks every station for a realm and the flow goes on — after
+        `segments.OVERDUE_DAYS` days at its gate, or at once when that realm has nobody who can pick.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Approval Workflow.
+        required: true
+      - in: path
+        name: order
+        schema:
+          type: integer
+        description: 段序号(1 = 本域)
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/workflows/{id}/stats/:
     get:
@@ -21095,6 +21355,26 @@ components:
           readOnly: true
         branches_json:
           readOnly: true
+        segment_order:
+          type: integer
+          readOnly: true
+          nullable: true
+        order_in_segment:
+          type: integer
+          nullable: true
+          readOnly: true
+        skip_kind:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SkipKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        skip_reason:
+          type: string
+          readOnly: true
+        is_required:
+          type: boolean
+          readOnly: true
       required:
       - activated_at
       - approver
@@ -21106,12 +21386,17 @@ components:
       - decided_at
       - decision_history
       - id
+      - is_required
       - kind
       - node_name
       - node_order
+      - order_in_segment
       - reject_to
+      - segment_order
       - signatures_json
       - signers_json
+      - skip_kind
+      - skip_reason
       - status
       - threshold
       - timed_out_at
@@ -21301,18 +21586,44 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowSegment'
+          readOnly: true
+        awaiting_segment:
+          type: integer
+          nullable: true
+          readOnly: true
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowHistoryEntry'
+          readOnly: true
+        can_adjust:
+          type: boolean
+          readOnly: true
+        cross_judgment_id:
+          type: string
+          nullable: true
+          readOnly: true
       required:
+      - awaiting_segment
+      - can_adjust
       - completed_at
       - created_at
+      - cross_judgment_id
       - current_node
       - current_node_detail
       - end_reason
+      - history
       - id
       - judgment_case_number
       - judgment_verdict
       - nodes
       - number
       - return_count
+      - segments
       - soul
       - soul_name
       - status
@@ -23240,6 +23551,78 @@ components:
           type: boolean
       required:
       - cross_civilization
+    CrossFlowAt:
+      type: object
+      properties:
+        segment:
+          type: integer
+        realm_name:
+          type: string
+        node_name:
+          type: string
+        hall:
+          type: string
+      required:
+      - hall
+      - node_name
+      - realm_name
+      - segment
+    CrossFlowGate:
+      type: object
+      properties:
+        segment:
+          type: integer
+        realm_name:
+          type: string
+        days:
+          type: integer
+          nullable: true
+      required:
+      - days
+      - realm_name
+      - segment
+    CrossJudgmentWorkflowSummary:
+      type: object
+      description: |-
+        跨域审判页顶部那一条(W-4),`segments.cross_summary` 构造。`fixed` = 已选站的段里要走的站数,
+        `done` = 已通过 / 经过 / 越级的站数。
+      properties:
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        at:
+          allOf:
+          - $ref: '#/components/schemas/CrossFlowAt'
+          nullable: true
+        at_gate:
+          allOf:
+          - $ref: '#/components/schemas/CrossFlowGate'
+          nullable: true
+        fixed:
+          type: integer
+        done:
+          type: integer
+        pending_realms:
+          type: array
+          items:
+            type: string
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowSegment'
+      required:
+      - at
+      - at_gate
+      - done
+      - fixed
+      - id
+      - number
+      - pending_realms
+      - segments
+      - status
     CrossTenantJudgment:
       type: object
       description: |-
@@ -23313,6 +23696,14 @@ components:
           items:
             $ref: '#/components/schemas/CrossTenantJudgmentParticipant'
           readOnly: true
+        workflow:
+          allOf:
+          - $ref: '#/components/schemas/CrossJudgmentWorkflowSummary'
+          nullable: true
+          readOnly: true
+        order_locked:
+          type: boolean
+          readOnly: true
         create_time:
           type: string
           format: date-time
@@ -23334,10 +23725,12 @@ components:
       - initiating_tenant
       - initiating_tenant_code
       - initiating_tenant_display_name
+      - order_locked
       - participants
       - status
       - title
       - update_time
+      - workflow
     CrossTenantJudgmentCancel:
       type: object
       description: 取消会审:理由必填。
@@ -26493,7 +26886,13 @@ components:
           default: ''
         create_workflow:
           type: boolean
-          default: false
+          nullable: true
+        skip_node_orders:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 100
         statute_ids:
           type: array
           items:
@@ -31652,6 +32051,26 @@ components:
           readOnly: true
         branches_json:
           readOnly: true
+        segment_order:
+          type: integer
+          readOnly: true
+          nullable: true
+        order_in_segment:
+          type: integer
+          nullable: true
+          readOnly: true
+        skip_kind:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SkipKindEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        skip_reason:
+          type: string
+          readOnly: true
+        is_required:
+          type: boolean
+          readOnly: true
     PatchedApprovalWorkflow:
       type: object
       description: |-
@@ -31770,6 +32189,27 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowSegment'
+          readOnly: true
+        awaiting_segment:
+          type: integer
+          nullable: true
+          readOnly: true
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowHistoryEntry'
+          readOnly: true
+        can_adjust:
+          type: boolean
+          readOnly: true
+        cross_judgment_id:
+          type: string
+          nullable: true
+          readOnly: true
     PatchedBackupUpdate:
       type: object
       description: 与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。
@@ -31973,6 +32413,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CrossTenantJudgmentParticipant'
+          readOnly: true
+        workflow:
+          allOf:
+          - $ref: '#/components/schemas/CrossJudgmentWorkflowSummary'
+          nullable: true
+          readOnly: true
+        order_locked:
+          type: boolean
           readOnly: true
         create_time:
           type: string
@@ -36656,6 +37104,16 @@ components:
       - role
       - user_count
       - users
+    SkipKindEnum:
+      enum:
+      - AT_PICK
+      - LATER
+      - CANCELLED
+      type: string
+      description: |-
+        * `AT_PICK` - 选站时跳过
+        * `LATER` - 中途跳过
+        * `CANCELLED` - 跨域审判取消
     SocialHandledTypeEnum:
       enum:
       - POST
@@ -39008,10 +39466,15 @@ components:
           allOf:
           - $ref: '#/components/schemas/TodoGroup'
           description: 未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。
+        pick_nodes:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。
       required:
       - approvals
       - cooldowns
       - letters
+      - pick_nodes
       - reassignments
       - rebirths
       - sentence_changes
@@ -39129,6 +39592,29 @@ components:
         feedback_tag:
           type: string
           description: 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。
+        segment_order:
+          type: integer
+          description: 仅选站:本域排第几(1 = 发起殿)。
+        go:
+          type: integer
+          description: 仅选站:本域这一段要走的站数。
+        total:
+          type: integer
+          description: 仅选站:本域这一段的站数(默认流程)。
+        realm:
+          type: string
+          description: 仅选站:发起殿的租户代码。
+        hall:
+          type: string
+          description: 仅选站:发起殿的显示名。
+        gate_days:
+          type: integer
+          nullable: true
+          description: 仅选站:流程已在门口等的第几天;还没到门口时 null。
+        stations_ahead:
+          type: integer
+          nullable: true
+          description: 仅选站:轮到本域之前还有几站;已在门口时 null。
       required:
       - created_at
       - id
@@ -40377,6 +40863,32 @@ components:
       - create_time
       - id
       - url
+    WorkflowAdjust:
+      type: object
+      description: '`POST /workflows/{id}/adjust/` (加减站): stations of ONE segment
+        to restore / to skip. Reason required.'
+      properties:
+        restore_node_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+        skip_node_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+        reason:
+          type: string
+          maxLength: 1000
+        version:
+          type: integer
+          minimum: 1
+      required:
+      - reason
+      - version
     WorkflowCaseType:
       type: object
       description: |-
@@ -40393,6 +40905,44 @@ components:
       required:
       - builtin
       - value
+    WorkflowHistoryEntry:
+      type: object
+      description: 「选站」「加减站」记录(审计行)。`actor` 只对同一个域的人给。
+      properties:
+        kind:
+          type: string
+          description: picked / adjusted / default
+        segment:
+          type: integer
+          nullable: true
+        realm:
+          type: string
+          description: 该段所属域的租户代码
+        actor:
+          type: string
+          nullable: true
+        at:
+          type: string
+          format: date-time
+        restored:
+          type: array
+          items:
+            type: string
+        skipped:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+      required:
+      - actor
+      - at
+      - kind
+      - realm
+      - reason
+      - restored
+      - segment
+      - skipped
     WorkflowNodeAction:
       type: object
       description: Serializer for node approval action.
@@ -40411,6 +40961,123 @@ components:
           maxLength: 2000
       required:
       - verdict
+    WorkflowPick:
+      type: object
+      description: |-
+        `POST /workflows/{id}/segments/{order}/pick/`: the stations of that segment to skip (the rest run).
+        `version` is the segment's as the picker loaded it.
+      properties:
+        skip_node_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+        version:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - version
+    WorkflowReason:
+      type: object
+      description: '`POST /workflows/{id}/segments/{order}/use-default/`.'
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+      - reason
+    WorkflowRemind:
+      type: object
+      properties:
+        order:
+          type: integer
+        reminded_at:
+          type: string
+          format: date-time
+      required:
+      - order
+      - reminded_at
+    WorkflowSegment:
+      type: object
+      description: |-
+        One realm's segment of a workflow (第四十三批), as `segments.segment_row` builds it. `state` is derived:
+        AWAITING_PICK / PICKED (not started) / RUNNING / DONE / SKIPPED. `go` / `total` = stations to run / all.
+        `picked_by_name` is null for another realm's segment (外域人员信息不外露). `can_*` are for the requester.
+      properties:
+        order:
+          type: integer
+        is_local:
+          type: boolean
+        tenant_code:
+          type: string
+        realm_name:
+          type: string
+        civilization:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+        go:
+          type: integer
+        total:
+          type: integer
+        default_node_count:
+          type: integer
+        version:
+          type: integer
+        picked_at:
+          type: string
+          format: date-time
+          nullable: true
+        picked_by_name:
+          type: string
+          nullable: true
+        at_gate:
+          type: boolean
+          description: 流程正停在这一段门口等它选站。
+        gate_days:
+          type: integer
+          nullable: true
+          description: 在门口第几天(到达那天是第 1 天)。
+        no_picker:
+          type: boolean
+          description: 该域没有能选站的判官(待办已转给殿管理员)。
+        current_order_in_segment:
+          type: integer
+          nullable: true
+        can_pick:
+          type: boolean
+        can_use_default:
+          type: boolean
+        can_remind:
+          type: boolean
+      required:
+      - at_gate
+      - can_pick
+      - can_remind
+      - can_use_default
+      - civilization
+      - current_order_in_segment
+      - default_node_count
+      - gate_days
+      - go
+      - is_local
+      - name
+      - no_picker
+      - order
+      - picked_at
+      - picked_by_name
+      - realm_name
+      - state
+      - tenant_code
+      - total
+      - version
     WorkflowStart:
       type: object
       description: |-
@@ -40439,6 +41106,12 @@ components:
         judgment:
           type: string
           format: uuid
+        skip_node_orders:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 100
       required:
       - reason
       - soul

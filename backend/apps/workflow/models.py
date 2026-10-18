@@ -683,7 +683,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         self.completed_at = now
         self.end_reason = end_reason
         # A flow that merged a cross-realm judgment ends it: COMPLETED = PASS, REJECTED = FAIL (第四十三批 rule 7).
-        # Same transaction; raises `segments.CrossConclusionRefused` when the bench cannot conclude yet.
+        # Same transaction; raises `segments.CrossConclusionRefusedError` when the bench cannot conclude yet.
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)

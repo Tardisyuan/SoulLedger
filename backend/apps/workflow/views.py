@@ -399,7 +399,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     ip_address=request.META.get("REMOTE_ADDR"),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
-        except segments.SegmentRefused as refused:
+        except segments.SegmentRefusedError as refused:
             return _refused(refused)
         except WorkflowInProgressError as busy:
             return Response(
@@ -485,7 +485,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # `skipped_node` and `advanced_to` were measured to be the same id.
         try:
             escalated = workflow.escalate_current_node(user=request.user, reason=reason)
-        except segments.CrossConclusionRefused as exc:
+        except segments.CrossConclusionRefusedError as exc:
             # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment.
             return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
         if not escalated:
@@ -652,7 +652,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                         # The application's status follows the workflow in the SAME transaction (lock order:
                         # workflow, node, then application; see rebirth.sync_from_workflow).
                         rebirth.sync_from_workflow(workflow.pk)
-        except segments.CrossConclusionRefused as exc:
+        except segments.CrossConclusionRefusedError as exc:
             # The last stop of a flow that merged a cross-realm judgment ends that judgment (第四十三批), and it
             # cannot end yet — a participating realm has not filled its sentence stop. Nothing was recorded.
             return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
@@ -710,7 +710,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     # ── 第四十三批:选站 / 加减站 / 按默认流程走 / 再提醒一次 ────────────────
     #
     # Who may do each is decided per segment in `apps/workflow/segments.py` (its module docstring has the
-    # table); a refusal there is `SegmentRefused`, answered with its own code and status and nothing written.
+    # table); a refusal there is `SegmentRefusedError`, answered with its own code and status and nothing written.
 
     def _segment_response(self, request, workflow_id):
         workflow = self.get_queryset().get(pk=workflow_id)
@@ -730,7 +730,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             segments.pick(workflow.pk, int(order), request.user, skip_node_ids=body.validated_data["skip_node_ids"],
                           version=body.validated_data["version"], reason=body.validated_data["reason"],
                           request=request)
-        except segments.SegmentRefused as refused:
+        except segments.SegmentRefusedError as refused:
             return _refused(refused)
         return self._segment_response(request, workflow.pk)
 
@@ -749,7 +749,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             segments.adjust(workflow.pk, request.user, restore_node_ids=data["restore_node_ids"],
                             skip_node_ids=data["skip_node_ids"], reason=data["reason"], version=data["version"],
                             request=request)
-        except segments.SegmentRefused as refused:
+        except segments.SegmentRefusedError as refused:
             return _refused(refused)
         return self._segment_response(request, workflow.pk)
 
@@ -766,9 +766,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         try:
             segments.use_default(workflow.pk, int(order), request.user, body.validated_data["reason"],
                                  request=request)
-        except segments.SegmentRefused as refused:
+        except segments.SegmentRefusedError as refused:
             return _refused(refused)
-        except segments.CrossConclusionRefused as exc:
+        except segments.CrossConclusionRefusedError as exc:
             return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
         return self._segment_response(request, workflow.pk)
 
@@ -782,7 +782,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         workflow = self.get_object()
         try:
             segment = segments.remind(workflow.pk, int(order), request.user, request=request)
-        except segments.SegmentRefused as refused:
+        except segments.SegmentRefusedError as refused:
             return _refused(refused)
         return Response(WorkflowRemindSerializer({"order": segment.order, "reminded_at": segment.last_reminded_at}).data)
 

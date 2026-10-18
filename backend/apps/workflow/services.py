@@ -690,7 +690,7 @@ class WorkflowService:
         Raises:
             ValueError: case_type not valid for the soul's civilization, or a node-less template.
             WorkflowInProgressError: ``exclusive`` and the soul already has a live workflow of this case type.
-            segments.SegmentRefused: a skipped station is unknown or is the final review.
+            segments.SegmentRefusedError: a skipped station is unknown or is the final review.
         """
         from apps.souls.models import Soul
         from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
