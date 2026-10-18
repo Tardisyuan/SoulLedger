@@ -442,11 +442,12 @@ def test_a_realm_that_no_longer_matches_is_caught_at_conclude(bench, eg):
 
 def test_an_unfinished_bench_now_refuses_the_conclusion(bench):
     """阶段 1 时这条是「计划记下挂着的联审」;阶段 2 起(Q17)联审没结束,原审判结不了案、什么都不写。
-    结束了的联审怎样抄进计划见 tests/test_sentence_plan_phase2.py。"""
+    第四十三批起只拒「明说不生成审批流程」的结案:不说就强制生成流程、联审并入流程
+    (tests/test_workflow_segments.py)。结束了的联审怎样抄进计划见 tests/test_sentence_plan_phase2.py。"""
     from apps.sentence_plan.services import CrossJudgmentOpenError
 
     with pytest.raises(CrossJudgmentOpenError):
-        bench["case"].conclude(Verdict.PASSED, "")
+        bench["case"].conclude(Verdict.PASSED, "", create_workflow=False)
     bench["case"].refresh_from_db()
     assert bench["case"].verdict is None
     assert not SentencePlan.all_objects.filter(soul=bench["case"].soul).exists()

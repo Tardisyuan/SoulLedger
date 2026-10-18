@@ -300,6 +300,58 @@ def _apply(soul, plan, req):
     plan_amended(soul, plan, touched, request_id=req.pk, added=added_nodes)
 
 
+def append_cross_stops(cross):
+    """审批流程并入的跨域审判以 PASS 结束(第四十三批):参与方的站追加到灵魂受刑计划的队尾 —— 与 `_apply` 的
+    2.x 追加同一条路(排在现有各站之后,永久刑期必须最后,事件 / 审计 / 通知走 `plan_amended`)。
+
+    只在原审判**已经结案**时追加:还没结案的是存量那种先结联审、后结原审判的,参与方的站在原审判结案时
+    由 `SentencePlanService.create_from_conclusion` 抄。同一场联审已经抄过 / 追加过(有本审判加的外站)就什么都不做。
+    计划已经结束(或没有建)时记 warning、不追加 —— 灵魂已不在受刑中,补站会把一个结束的计划重新打开。
+    """
+    import logging
+
+    from apps.dispatch.models import ParticipantRole
+    from apps.judgment.models import Judgment
+
+    if cross.judgment_id is None:
+        return []
+    judgment = Judgment.all_objects.filter(pk=cross.judgment_id).first()
+    if judgment is None or not judgment.is_final:
+        return []
+    found = SentencePlan.all_objects.filter(
+        origin_judgment_id=judgment.pk, is_deleted=False, status__in=IN_PROGRESS_PLAN_STATUSES,
+    ).select_related("soul").first()
+    if found is None:
+        logging.getLogger(__name__).warning(
+            "sentence_plan: cross judgment %s concluded PASS but judgment %s has no plan in progress; no stops added",
+            cross.pk, judgment.pk)
+        return []
+    soul = _lock_soul(found.soul)
+    plan = _lock_plan(found.pk)
+    nodes = _lock_nodes(plan)
+    if any(n.added_by_judgment_id == judgment.pk and not n.is_home for n in nodes):
+        return []
+    seats = list(cross.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
+                 .select_related("participant_tenant").order_by("node_order"))
+    if not seats:
+        return []
+    live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
+    anchor = max(n.order for n in live)
+    added = [
+        SentenceNode.objects.create(
+            plan=plan, order=anchor + i, tenant_code=seat.participant_tenant.code, is_home=False,
+            status=SentenceNodeStatus.PENDING, realm_code=seat.sentence_realm_code,
+            sentence_years=seat.sentence_years, is_eternal=seat.sentence_is_eternal,
+            memory_reset=seat.sentence_memory_reset or "NONE", added_by_judgment_id=judgment.pk,
+            reason=seat.sentence_notes,
+        )
+        for i, seat in enumerate(seats, start=1)
+    ]
+    _assert_eternal_last(live + added)
+    plan_amended(soul, plan, {n.tenant_code for n in added}, judgment_id=judgment.pk, added=added)
+    return added
+
+
 def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None, added=()):
     """节点集合变了:事件、审计、通知(被加 / 被删节点所在文明的判官 + 原属判官)、推送。
 

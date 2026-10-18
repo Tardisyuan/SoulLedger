@@ -80,6 +80,7 @@ from apps.sentence_plan.requests import PlanChangeRefusedError
 from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
+from apps.workflow.segments import SegmentRefused
 
 #: Upper bound on how many ids a caller may ask us to skip in one request.
 #: The skip set is session state the *client* holds (see `next_pending`), so
@@ -1393,7 +1394,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         serializer.is_valid(raise_exception=True)
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
-        create_workflow = serializer.validated_data.get("create_workflow", False)
+        create_workflow = serializer.validated_data.get("create_workflow")
         statute_ids = serializer.validated_data.get("statute_ids") or []
         plan_changes = serializer.validated_data.get("plan_changes") or None
 
@@ -1405,6 +1406,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
                 term_years=serializer.validated_data.get("term_years"),
                 eternal=serializer.validated_data.get("eternal"),
                 by=request.user,
+                skip_node_orders=serializer.validated_data.get("skip_node_orders") or (),
             )
         except ClaimRefusedError as exc:
             # 409 `claimed_by_other`:别人认领的案子,只有认领人、ADMIN、殿主能结。什么都没写。
@@ -1418,8 +1420,12 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         except CitationRefusedError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except CrossJudgmentOpenError as exc:
-            # Q17:挂着的联审没结束(或它的节点内容不再通过校验)。什么都没写。
-            return Response({"error": str(exc), "code": exc.code}, status=status.HTTP_409_CONFLICT)
+            # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400
+            # `workflow_required`,第四十三批)。什么都没写。
+            return Response({"error": str(exc), "code": exc.code}, status=exc.status)
+        except SegmentRefused as exc:
+            # 选站:跳过了终审(`final_required`)或模板里没有的站(`unknown_node`)。什么都没写。
+            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not
             # under judgment. This used to be **silent**: `transition_to`'s

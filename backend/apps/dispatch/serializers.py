@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, JudgmentStatus
 from apps.judgment.models import Judgment
+from apps.workflow.serializers import CrossJudgmentWorkflowSummarySerializer
 
 #: A proposal's reason is what the target tenant decides on. Counted in
 #: characters (`len` of a str, not bytes), after trimming whitespace, so
@@ -379,6 +380,10 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
     # `can_end`:这位请求者能不能结束 / 取消(`CrossTenantJudgmentService.can_end`),页面据此给入口。
     ended_by_name = serializers.SerializerMethodField()
     can_end = serializers.SerializerMethodField()
+    # 第四十三批 W-4:原审判结案时生成的审批流程(顶部那一条进度);有了它「各域顺序」就锁定(`order` / 入席答 409
+    # `order_locked`)。没挂审判、或还没生成流程时 null / false。
+    workflow = serializers.SerializerMethodField()
+    order_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = CrossTenantJudgment
@@ -398,6 +403,8 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "can_end",
             "judgment",
             "participants",
+            "workflow",
+            "order_locked",
             "create_time",
             "update_time",
         ]
@@ -454,6 +461,27 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
                     for field in blocked
                 })
         return attrs
+
+    def _workflow(self, obj):
+        from apps.workflow.models import ApprovalWorkflow
+
+        if obj.judgment_id is None:
+            return None
+        cache = self.context.setdefault("_cross_workflow", {})
+        if obj.pk not in cache:
+            cache[obj.pk] = ApprovalWorkflow.objects.filter(judgment_id=obj.judgment_id).first()
+        return cache[obj.pk]
+
+    @extend_schema_field(CrossJudgmentWorkflowSummarySerializer(allow_null=True))
+    def get_workflow(self, obj):
+        from apps.workflow import segments
+
+        workflow = self._workflow(obj)
+        return segments.cross_summary(workflow, self.context.get("request")) if workflow is not None else None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_order_locked(self, obj):
+        return self._workflow(obj) is not None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_ended_by_name(self, obj):

@@ -361,7 +361,13 @@ export interface JudgmentCitation {
 export interface ConcludeJudgmentPayload {
   verdict: string;
   notes?: string;
+  /**
+   * Omitted = no workflow, except while a cross-realm judgment is open on the case (第四十三批): then one is
+   * generated and merges the bench; an explicit `false` answers 400 `workflow_required`.
+   */
   create_workflow?: boolean;
+  /** W-1: this realm's station orders unticked; the final review answers 400 `final_required`. */
+  skip_node_orders?: number[];
   /** Grounds filed with the verdict; refused ids abort the conclusion. */
   statute_ids?: string[];
   /**

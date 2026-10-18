@@ -46,6 +46,7 @@ from apps.dispatch.services import (
     CrossTenantJudgmentService,
     DispatchNotCancellableError,
     DispatchService,
+    OrderLockedError,
     ResidenceReturnBlockedError,
 )
 from apps.perm.filters import DataScopeFilter
@@ -875,7 +876,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
                 node_order=serializer.validated_data.get("node_order"),
             )
             judgment.refresh_from_db()
-            return Response(CrossTenantJudgmentSerializer(judgment).data)
+            return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
+        except OrderLockedError as e:
+            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -947,7 +950,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         judgment.refresh_from_db()
-        return Response(CrossTenantJudgmentSerializer(judgment).data)
+        return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
 
     @extend_schema(request=CrossTenantJudgmentOrderSerializer, responses=CrossTenantJudgmentSerializer)
     @action(detail=True, methods=["post"])
@@ -961,10 +964,13 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         serializer.is_valid(raise_exception=True)
         try:
             CrossTenantJudgmentService.reorder_nodes(judgment, serializer.validated_data["participants"])
+        except OrderLockedError as e:
+            # 第四十三批:审批流程已按这个顺序建了各域的段。
+            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         judgment = self.get_queryset().get(pk=judgment.pk)
-        return Response(CrossTenantJudgmentSerializer(judgment).data)
+        return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
 
     @extend_schema(request=None, responses=CrossTenantJudgmentSerializer)
     @action(detail=True, methods=["post"])
@@ -981,7 +987,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return refused
         try:
             judgment = CrossTenantJudgmentService.activate(judgment)
-            return Response(CrossTenantJudgmentSerializer(judgment).data)
+            return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

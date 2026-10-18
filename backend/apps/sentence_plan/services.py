@@ -41,11 +41,16 @@ class CrossJudgmentOpenError(Exception):
     """原审判挂着一场未结束的联审(Q17),或那场联审的节点内容不再通过校验。结案什么都不写。"""
 
     code = "cross_judgment_open"
+    #: HTTP status the conclusion endpoint answers with. 400 for `workflow_required` (第四十三批: the request
+    #: itself asked for no workflow while the bench is still open), 409 for every other refusal.
+    status = 409
 
-    def __init__(self, message, code=None):
+    def __init__(self, message, code=None, status=None):
         super().__init__(message)
         if code:
             self.code = code
+        if status:
+            self.status = status
 
 
 # ── 通知与事件 ───────────────────────────────────────────────────────────
@@ -245,7 +250,17 @@ class SentencePlanService:
         return cross
 
     @staticmethod
-    def create_from_conclusion(judgment, disposition, cross=None):
+    def open_cross_judgment(judgment):
+        """挂着的、还没结束的联审(PROPOSED / ACTIVE),或 None。第四十三批起它不再挡原审判结案:结案强制生成
+        审批流程,联审并入流程,由流程走完 / 驳回来结束它(`apps/workflow/segments.py`)。"""
+        from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
+
+        return CrossTenantJudgment._base_manager.filter(
+            judgment_id=judgment.pk, is_deleted=False, status__in=(JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE),
+        ).first()
+
+    @staticmethod
+    def create_from_conclusion(judgment, disposition, cross=None, open_cross=None):
         """原属审判(ORIGINAL)结案 → 一份计划 + 原属节点(ACTIVE,挂着刚建的处置)
         + 联审参与方的节点(PENDING,内容抄自参与方;只有 PASS 的联审,Q15)。
 
@@ -262,14 +277,15 @@ class SentencePlanService:
         home = soul.home_tenant if soul.home_tenant_id is not None else soul.tenant
         if home is None or judgment.tenant_id != home.pk:
             return None
-        if cross is not None and disposition.is_eternal:
+        bench = cross if cross is not None else open_cross
+        if bench is not None and disposition.is_eternal:
             # Q5 同一条校验,原属节点也跑(2026-09-19 用户决定):原属处置是永久刑期,后面却还有联审
             # 抄来的节点 —— 那些节点永远执行不到。结案整体回滚。错误码沿用 Q5 在请求路径上的
             # `eternal_not_last`(同一条规则,一个码)。
             from apps.dispatch.models import CrossTenantJudgmentParticipant, ParticipantRole
 
             seats = CrossTenantJudgmentParticipant.all_objects.filter(
-                judgment_id=cross.pk, is_deleted=False,
+                judgment_id=bench.pk, is_deleted=False,
             ).exclude(role=ParticipantRole.ADVISOR).count()
             if seats:
                 raise CrossJudgmentOpenError(

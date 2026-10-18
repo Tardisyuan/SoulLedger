@@ -107,12 +107,13 @@ def test_after_cancel_the_seats_are_read_only(bench):
 
 
 def test_the_original_judgment_concludes_after_cancel(bench):
+    """第四十三批起挂着的联审不挡结案,而是强制生成审批流程;明说不要流程(create_workflow=False)才被拒。"""
     from apps.sentence_plan.services import CrossJudgmentOpenError
 
     with pytest.raises(CrossJudgmentOpenError):
-        bench["case"].conclude(Verdict.PASSED, "")
+        bench["case"].conclude(Verdict.PASSED, "", create_workflow=False)
     assert _cancel(bench["convener"], bench["cj"]).status_code == 200
-    bench["case"].conclude(Verdict.PASSED, "")
+    bench["case"].conclude(Verdict.PASSED, "", create_workflow=False)
     bench["case"].refresh_from_db()
     assert bench["case"].is_final
 
