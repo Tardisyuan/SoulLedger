@@ -233,7 +233,7 @@ SITES = [
     ('apps/tenants/middleware.py', 'TenantMiddleware._resolve_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/views.py', 'TenantViewSet.get_queryset', 'Tenant.objects', 1, 'FILTERED', "wrapped in scope_to_tenant(field='pk')"),
     ('apps/workflow/management/commands/process_workflow_timeouts.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
-    ('apps/workflow/management/commands/seed_workflow_templates.py', 'Command.handle', 'Tenant.objects', 1, 'CLI', 'operator seed command: picks Tenant.objects.first() as the default owner of seeded templates (arbitrary tenant by design; not a request path)'),
+    ('apps/workflow/management/commands/seed_workflow_templates.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'operator seed command: resolves the four halls by their globally unique codes (CIVILIZATION_TENANT); every template it writes carries its hall as tenant explicitly'),
     ('apps/workflow/models.py', 'ApprovalWorkflow._lock_and_reload', 'ApprovalWorkflow._base_manager', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/workflow/services.py', 'WorkflowService._resolve_approver', 'Actor._base_manager', 1, 'FILTERED', 'explicit tenant_id=tenant_id'),
     ('apps/workflow/tasks.py', 'process_timeouts_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),

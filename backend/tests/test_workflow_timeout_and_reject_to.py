@@ -1,6 +1,6 @@
 """驳回到 (reject-to), its loop cap, and per-node timeouts.
 
-The cap is mutation-proved: with the `return_count >= MAX_REJECT_RETURNS` check
+The cap is mutation-proved: with the `_returns_spent(failed) >= MAX_REJECT_RETURNS` check (was `return_count >=`, before the cap went per segment on 2026-10-19)
 removed from `ApprovalWorkflow._return_to`, `test_the_return_cap_ends_the_loop`
 goes red — the fourth FAIL sends the flow back again instead of ending it.
 """
