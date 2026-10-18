@@ -1,1 +1,4 @@
-[]
+[
+  "scheduler.jobs.workflow_pick_reminders_for_tenant",
+  "workflow.gate.no_picker_body"
+]

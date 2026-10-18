@@ -44,6 +44,11 @@ MESSAGES = {
         "workflow_node_passed": {"title": "流程通知", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"},
         "workflow_timeout_reminder": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，请尽快处理。"},
         "workflow_timeout_escalated": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"},
+        "workflow_pick_nodes": {"title": "请为本域选站", "body": "{{soul}} · {{realm}}发起的审批流程，本域排第 {{order}}。轮到本域之前请选好。"},
+        "workflow_pick_waiting": {"title": "流程在等本域选站", "body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"},
+        "workflow_pick_overdue": {"title": "{{realm}}超过 3 天未选站", "body": "{{soul}} · 审批流程停在{{realm}}门口已 {{n}} 天。可以再提醒，或按默认流程走。"},
+        "workflow_nodes_adjusted": {"title": "审批流程的站有变动", "body": "{{soul}} · {{by}}:加回 {{added}},跳过 {{skipped}}。理由:{{reason}}"},
+        "workflow_pick_withdrawn": {"title": "选站待办已撤回", "body": "跨域审判「{{title}}」已取消,{{soul}}的选站不用再做。"},
         "cross_judgment_concluded": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：通过。"},
         "cross_judgment_concluded_fail": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：否决。"},
         "cross_judgment_cancelled": {"title": "跨域审判已取消", "body": "跨域审判「{{title}}」已取消。理由：{{reason}}"},
@@ -99,6 +104,11 @@ MESSAGES = {
         "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
         "workflow_timeout_reminder": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours. Please handle it soon."},
         "workflow_timeout_escalated": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."},
+        "workflow_pick_nodes": {"title": "Pick this realm's stations", "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."},
+        "workflow_pick_waiting": {"title": "A flow is waiting for this realm to pick", "body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."},
+        "workflow_pick_overdue": {"title": "{{realm}} hasn't picked in 3 days", "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."},
+        "workflow_nodes_adjusted": {"title": "Stations changed in an approval flow", "body": "{{soul}} · {{by}}: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}"},
+        "workflow_pick_withdrawn": {"title": "Pick-stations task withdrawn", "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."},
         "cross_judgment_concluded": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: passed."},
         "cross_judgment_concluded_fail": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: rejected."},
         "cross_judgment_cancelled": {"title": "Cross-realm judgment cancelled", "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"},
@@ -152,6 +162,11 @@ MESSAGES = {
         "workflow_node_passed": {"title": "Sedjem Wat", "body": "{{soul}} · Wat Hesy «{{workflow}}»: Shem Seth «{{node}}»."},
         "workflow_timeout_escalated": {"title": "Wat Hesy: Unut Khetem", "body": "{{soul}} · Wat Hesy «{{workflow}}» · «{{node}}»: Unut {{hours}}, Nen Iri. Hab Er-Ek."},
         "workflow_timeout_reminder": {"title": "Wat Hesy: Unut Khetem", "body": "{{soul}} · Wat Hesy «{{workflow}}» · «{{node}}»: Unut {{hours}}, Nen Iri. Iri Em Khet Seth."},
+        "workflow_pick_nodes": {"title": "Setep Sekhet Ta Pen", "body": "{{soul}} · Wat Hesy {{realm}}: Ta Pen Hesb {{order}}. Setep Er Tepy Ta Pen."},
+        "workflow_pick_waiting": {"title": "Wat Hesy Em Smen · Ta Pen Setep Sekhet", "body": "{{soul}} · {{realm}}: Shem Seth. Setep Sekhet Ta Pen, Er Khet Shem."},
+        "workflow_pick_overdue": {"title": "{{realm}}: Nen Setep Sekhet · Hru 3", "body": "{{soul}} · Wat Hesy Em Smen · {{realm}} · Hru {{n}}. Wehem Sedjem Sab, Er Shem Mi Wat Hesy Tepy."},
+        "workflow_nodes_adjusted": {"title": "Wat Hesy: Sekhet Khemen Seth", "body": "{{soul}} · {{by}}: Redi Wehem {{added}} · Iri Tepy {{skipped}}. Khet: {{reason}}"},
+        "workflow_pick_withdrawn": {"title": "Setep Sekhet Sehen Seth", "body": "Wedja Ta Ky «{{title}}» Sehen Seth. {{soul}}: Nen Setep Sekhet."},
         "assistant_cap_closed": {"title": "Hehy Medu Khetem Seth: Hesb Abed Er Pehwy", "body": "Hesb Tepy Abed Pen: {{spent}} · Er Pehwy {{cap}}. Wen-Khetem Neb Khetem Seth. Abed Mawy: Hru 1, Unut 8 — Wen Djes-Ef. Er: Khemen Er Pehwy Em Smen Hehy Medu, Wen Em Djeret."},
         "assistant_cap_warning": {"title": "Hehy Medu: Hesb Abed Pen 80% Er Pehwy", "body": "Hesb Tepy Abed Pen: {{spent}} · Er Pehwy {{cap}}. Er Pehwy: Khetem Djes-Ef. Abed Mawy: Hru 1, Unut 8."},
         "assistant_reopened": {"title": "Hehy Medu Wen Wehem Seth: Abed Mawy", "body": "Abed Tepy: Hesb Er Pehwy, Hehy Medu Khetem Djes-Ef. Abed Pen: Wen Wehem Seth (Abed Mawy: Hru 1, Unut 8)."},
@@ -221,7 +236,10 @@ VARIANTS = {
     # 请求改派带了理由(手机端必填)就用带「理由」的句子;网页不带理由,旧通知也没有,仍是原句。
     "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
     # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。
-    "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated"},
+    # 第四十三批:选站待办、门口等待、逾期、加减站、撤回(apps/workflow/segments.py)也走 WORKFLOW_ASSIGNED。
+    "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated",
+                          "workflow_pick_nodes", "workflow_pick_waiting", "workflow_pick_overdue",
+                          "workflow_nodes_adjusted", "workflow_pick_withdrawn"},
     "cross_judgment_concluded": {"cross_judgment_concluded_fail", "cross_judgment_cancelled"},
     # 替别人做的四件事共用一个类型(JUDGMENT_CLAIM_CHANGED),各自一句(apps/judgment/claims.py::_tell_holder)。
     "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you"},
@@ -242,10 +260,12 @@ def render(locale, kind, params):
     # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `official_notify.<kind>`):读作 zh-Hans,
     # 与前端「egy 缺键读 zh-Hans」同一条规则。
     entry = MESSAGES[locale].get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
-    body = entry["body"]
+    title, body = entry["title"], entry["body"]
+    # Titles are filled too: `workflow_pick_overdue` (第四十三批) is the first title that names something.
     for name, value in params.items():
+        title = title.replace("{{" + name + "}}", str(value))
         body = body.replace("{{" + name + "}}", str(value))
-    return entry["title"], body
+    return title, body
 
 
 def render_all(notification_type, params):
