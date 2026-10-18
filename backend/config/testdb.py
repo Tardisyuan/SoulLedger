@@ -43,3 +43,49 @@ def suffix_postgres_test_databases(databases: dict, suffix: str) -> None:
             continue
         base = db.get("TEST", {}).get("NAME") or f"test_{db['NAME']}"
         db.setdefault("TEST", {})["NAME"] = f"{base}_{suffix}"
+
+
+# --- One migration per run: clone worker databases from a template ----------
+#
+# Under `pytest -n 4` on PostgreSQL every xdist worker used to create its own
+# database and replay all ~389 migrations against 115, four times over the
+# network. Now the xdist controller (the process with no `workerinput`) builds
+# `test_soulledger_tpl_<suffix>` once and migrates it; each worker's database is
+# `CREATE DATABASE ... TEMPLATE` that (Django's own TEST["TEMPLATE"]), and its
+# migrate finds nothing to apply. The controller drops the template at session
+# end, or straight away if building it failed. Wiring: root conftest.py.
+
+def postgres_aliases(databases: dict) -> list:
+    """Aliases that get a database of their own on PostgreSQL (mirrors don't)."""
+    return [
+        alias for alias, db in databases.items()
+        if "postgresql" in db.get("ENGINE", "") and not db.get("TEST", {}).get("MIRROR")
+    ]
+
+
+def template_names(databases: dict, suffix: str) -> dict:
+    """{alias: template database name}, e.g. `test_soulledger_tpl_<suffix>`."""
+    out = {}
+    for alias in postgres_aliases(databases):
+        db = databases[alias]
+        base = db.get("TEST", {}).get("NAME") or f"test_{db['NAME']}"
+        out[alias] = f"{base}_tpl_{suffix}"
+    return out
+
+
+def wants_template(databases: dict, *, distributing: bool, reuse_db: bool, nomigrations: bool) -> bool:
+    """Build a template only when it saves work and cannot change behaviour.
+
+    Not without xdist (one database, nothing to share), not with `--reuse-db`
+    (workers keep their databases; a clone would be wasted or ignored), not with
+    `--nomigrations` (workers then build tables with syncdb, which fails on a
+    clone that already has them), and never for SQLite.
+    """
+    return distributing and not reuse_db and not nomigrations and bool(postgres_aliases(databases))
+
+
+def use_templates(databases: dict, templates: dict) -> None:
+    """Point each alias's TEST TEMPLATE at its template, in place (worker side)."""
+    for alias, name in templates.items():
+        if alias in databases:
+            databases[alias].setdefault("TEST", {})["TEMPLATE"] = name
