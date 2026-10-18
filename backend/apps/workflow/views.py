@@ -16,7 +16,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.perm.filters import DataScopeFilter
-from apps.workflow import decision_codes
+from apps.workflow import decision_codes, segments
 from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
 from apps.workflow.serializers import (
@@ -25,8 +25,12 @@ from apps.workflow.serializers import (
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
     ApproverPreviewSerializer,
+    WorkflowAdjustSerializer,
     WorkflowCaseTypeSerializer,
     WorkflowNodeActionSerializer,
+    WorkflowPickSerializer,
+    WorkflowReasonSerializer,
+    WorkflowRemindSerializer,
     WorkflowStartSerializer,
     WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
@@ -180,7 +184,33 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 def _nodes_with_approver():
     """The nested node serializer reads `approver.username` / `.display_name`;
     a bare `prefetch_related("nodes")` would pay one query per decided node."""
-    return Prefetch("nodes", queryset=ApprovalNode.objects.select_related("approver"))
+    return Prefetch("nodes", queryset=ApprovalNode.objects.select_related("approver", "segment"))
+
+
+class WorkflowPartyPermission(TenantPermission):
+    """The workflow's own tenant, or a realm that runs one of its segments (第四十三批).
+
+    `TenantPermission` compares `obj.tenant`, the convening hall. A participating realm of a merged cross-realm
+    judgment must reach the workflow too — to read it, pick and adjust its own segment and decide its own
+    stations — and only those (`segments.FOREIGN_ACTIONS`). The membership is `WorkflowSegment.tenant`, the
+    same one `segments.foreign_workflows` widens the queryset by; which segment a request may change is decided
+    in `segments` itself. Same shape as `apps/dispatch/permissions.py`.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if super().has_object_permission(request, view, obj):
+            return True
+        if getattr(view, "action", None) not in segments.FOREIGN_ACTIONS:
+            return False
+        return segments.is_party(obj, getattr(request, "tenant", None))
+
+
+#: The `{order}` path segment of the segment actions (1 = the workflow's own realm).
+_SEGMENT_ORDER = OpenApiParameter("order", int, OpenApiParameter.PATH, description="段序号(1 = 本域)")
+
+
+def _refused(exc):
+    return Response({"code": exc.code, "error": str(exc), **exc.extra}, status=exc.status)
 
 
 class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -193,9 +223,15 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     # JUDGE-and-ADMIN, and that split is the separation of duties the
     # MODERATOR entry in ROLE_PERMISSIONS is written around. It had never once
     # been applied to a request.
-    permission_classes = [TenantPermission, CodenamePermission]
+    permission_classes = [WorkflowPartyPermission, CodenamePermission]
     permission_codename = "workflow"
     extra_permissions = {
+        # 第四十三批: who may pick / adjust / use the default / remind is decided per segment
+        # (`apps/workflow/segments.py`); the codename only says "may read approval flows".
+        'pick': ['workflow.read'],
+        'adjust': ['workflow.read'],
+        'use_default': ['workflow.read'],
+        'remind': ['workflow.read'],
         'advance': ['workflow.advance'],
         'escalate': ['workflow.escalate'],
         'approve_node': ['workflow.approve'],
@@ -221,7 +257,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         qs = ApprovalWorkflow._base_manager.select_related(
             "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
         ).prefetch_related(_nodes_with_approver()).all()
-        return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
+        own = DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
+        if self.action not in segments.FOREIGN_ACTIONS:
+            return own
+        # A participating realm reaches the workflow through its own segment, for these actions only (第四十三批).
+        return own | segments.foreign_workflows(qs, self.request)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -340,6 +380,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 workflow = WorkflowService.start_workflow(
                     soul, case_type=case_type, tenant=tenant, template=template, judgment=judgment,
                     priority=data.get("priority"), notes=reason, exclusive=True,
+                    skip_node_orders=data.get("skip_node_orders") or (), picked_by=request.user,
                 )
                 AuditLog.objects.create(
                     tenant=tenant,
@@ -358,6 +399,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     ip_address=request.META.get("REMOTE_ADDR"),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
+        except segments.SegmentRefused as refused:
+            return _refused(refused)
         except WorkflowInProgressError as busy:
             return Response(
                 {"code": "workflow_in_progress",
@@ -368,7 +411,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
         except ValueError as e:
             return Response({"code": "invalid_case_type", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(ApprovalWorkflowSerializer(workflow).data, status=status.HTTP_201_CREATED)
+        return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
     @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
@@ -404,7 +447,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """
         workflow = self.get_object()
         if workflow.advance_to_next():
-            return Response(ApprovalWorkflowSerializer(workflow).data)
+            return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
         return Response(
             {"error": "No next node available or workflow already completed"},
             status=status.HTTP_400_BAD_REQUEST,
@@ -440,7 +483,12 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # here left it PENDING, so `get_next_node()` handed it straight back
         # and the audit row below recorded a skip that had not happened -- its
         # `skipped_node` and `advanced_to` were measured to be the same id.
-        if not workflow.escalate_current_node(user=request.user, reason=reason):
+        try:
+            escalated = workflow.escalate_current_node(user=request.user, reason=reason)
+        except segments.CrossConclusionRefused as exc:
+            # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment.
+            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        if not escalated:
             return Response(
                 {"error": "No pending node to escalate past"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -466,7 +514,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
 
-        return Response(ApprovalWorkflowSerializer(workflow).data)
+        return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
 
     @extend_schema(request=WorkflowNodeActionSerializer, responses=ApprovalWorkflowSerializer)
     @action(detail=True, methods=["post"])
@@ -604,6 +652,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                         # The application's status follows the workflow in the SAME transaction (lock order:
                         # workflow, node, then application; see rebirth.sync_from_workflow).
                         rebirth.sync_from_workflow(workflow.pk)
+        except segments.CrossConclusionRefused as exc:
+            # The last stop of a flow that merged a cross-realm judgment ends that judgment (第四十三批), and it
+            # cannot end yet — a participating realm has not filled its sentence stop. Nothing was recorded.
+            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
         except ValueError as exc:
             # `complete_node` raises when the node declares
             # `required_verdicts` and this verdict is not in it. A 400 rather
@@ -622,7 +674,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             # decision's transaction).
             node.refresh_from_db()
             WorkflowService.announce(workflow, node=node)
-            return Response(ApprovalWorkflowSerializer(workflow).data)
+            return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
         # `complete_node` now re-checks the node's status under a row lock, so
         # the common reason to land here is that another decision was recorded
         # between this request's guard and that lock. "Failed to complete node"
@@ -654,6 +706,85 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         workflow = self.get_object()
         stats = WorkflowService.get_workflow_stats(workflow)
         return Response(stats)
+
+    # ── 第四十三批:选站 / 加减站 / 按默认流程走 / 再提醒一次 ────────────────
+    #
+    # Who may do each is decided per segment in `apps/workflow/segments.py` (its module docstring has the
+    # table); a refusal there is `SegmentRefused`, answered with its own code and status and nothing written.
+
+    def _segment_response(self, request, workflow_id):
+        workflow = self.get_queryset().get(pk=workflow_id)
+        return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
+
+    @extend_schema(parameters=[_SEGMENT_ORDER], request=WorkflowPickSerializer,
+                   responses={200: ApprovalWorkflowSerializer, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT,
+                              404: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"], url_path=r"segments/(?P<order>[0-9]+)/pick")
+    def pick(self, request, pk=None, order=None):
+        """A participating realm picks which of its stations run (or re-picks, until its segment starts).
+        `version` is the segment's as loaded; another pick since then answers 409 `segment_changed`."""
+        workflow = self.get_object()
+        body = WorkflowPickSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            segments.pick(workflow.pk, int(order), request.user, skip_node_ids=body.validated_data["skip_node_ids"],
+                          version=body.validated_data["version"], reason=body.validated_data["reason"],
+                          request=request)
+        except segments.SegmentRefused as refused:
+            return _refused(refused)
+        return self._segment_response(request, workflow.pk)
+
+    @extend_schema(request=WorkflowAdjustSerializer,
+                   responses={200: ApprovalWorkflowSerializer, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT,
+                              409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"])
+    def adjust(self, request, pk=None):
+        """加减站: restore skipped stations / skip pending ones of ONE segment, after the current stop; the final
+        review stays. Reason required; audited; the affected stations' approvers are told."""
+        workflow = self.get_object()
+        body = WorkflowAdjustSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        try:
+            segments.adjust(workflow.pk, request.user, restore_node_ids=data["restore_node_ids"],
+                            skip_node_ids=data["skip_node_ids"], reason=data["reason"], version=data["version"],
+                            request=request)
+        except segments.SegmentRefused as refused:
+            return _refused(refused)
+        return self._segment_response(request, workflow.pk)
+
+    @extend_schema(parameters=[_SEGMENT_ORDER], request=WorkflowReasonSerializer,
+                   responses={200: ApprovalWorkflowSerializer, 400: OpenApiTypes.OBJECT, 403: OpenApiTypes.OBJECT,
+                              404: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"], url_path=r"segments/(?P<order>[0-9]+)/use-default")
+    def use_default(self, request, pk=None, order=None):
+        """按默认流程走: the convening hall's admin picks every station for a realm and the flow goes on — after
+        `segments.OVERDUE_DAYS` days at its gate, or at once when that realm has nobody who can pick."""
+        workflow = self.get_object()
+        body = WorkflowReasonSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            segments.use_default(workflow.pk, int(order), request.user, body.validated_data["reason"],
+                                 request=request)
+        except segments.SegmentRefused as refused:
+            return _refused(refused)
+        except segments.CrossConclusionRefused as exc:
+            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return self._segment_response(request, workflow.pk)
+
+    @extend_schema(parameters=[_SEGMENT_ORDER], request=None,
+                   responses={200: WorkflowRemindSerializer, 403: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT,
+                              409: OpenApiTypes.OBJECT, 429: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"], url_path=r"segments/(?P<order>[0-9]+)/remind")
+    def remind(self, request, pk=None, order=None):
+        """再提醒一次: the convening hall reminds a realm that has not picked. Once an hour per segment
+        (429 `remind_too_soon` with `retry_after` seconds)."""
+        workflow = self.get_object()
+        try:
+            segment = segments.remind(workflow.pk, int(order), request.user, request=request)
+        except segments.SegmentRefused as refused:
+            return _refused(refused)
+        return Response(WorkflowRemindSerializer({"order": segment.order, "reminded_at": segment.last_reminded_at}).data)
 
     @action(detail=False, methods=["post"])
     def create_from_judgment(self, request):
@@ -699,7 +830,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         if workflow:
-            return Response(ApprovalWorkflowSerializer(workflow).data, status=status.HTTP_201_CREATED)
+            return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)
         return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)
 
 

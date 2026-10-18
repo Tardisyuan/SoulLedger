@@ -13,6 +13,10 @@
   (Web「受刑请求」收件箱里「等我决定的」那一半),要 `judgment.execute`(与 `decide` 同一码名)。手机上只看,
   决定在电脑上;**不推送**(判刑只在电脑上),但计入 `total()`。
 * 未分配的书信(`unassigned_letters`,2026-10-16):同一个收件箱「待回复」里还没人经办的;不计入 `total()`。
+* 待我选站(`pick_nodes`,第四十三批 O-1):其他殿发起、并入了跨域审判的审批流程里,本域那一段还没选站的
+  (`apps/workflow/segments.py::pick_tasks`)。给本域能选站的判官;一个都没有时给殿管理员。流程已在门口等的排最前。
+  条目的 target 是 `{"kind": "pick", "id": <流程 id>}`;选站本身在网页上做,没有单条详情。计入 `total()`。
+  审批节点那一组也包括外域段里轮到我的站(`_workflows` 经 `segments.foreign_workflows` 放宽)。
 * 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
   「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
   所以这里的数与官员台翻到底的条数是同一个数。最早来信的在前(先来先回)。只读我们库里的列与 `last_from`,
@@ -45,7 +49,7 @@ from apps.workflow.models import (
 )
 
 LIST_LIMIT = 10
-KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter")
+KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter", "pick")
 
 
 def scope_of(user, request=None):
@@ -56,9 +60,13 @@ def scope_of(user, request=None):
 
 
 def _workflows(scope):
+    """本殿的流程,加上本殿作为参与域有一段的流程(第四十三批,`segments.foreign_workflows`)。"""
+    from apps.workflow.segments import foreign_workflows
+
     qs = ApprovalWorkflow._base_manager.select_related(
         "soul", "current_node", "current_node__approver", "create_user", "tenant", "judgment")
-    return DataScopeFilter.filter_queryset(scope, scope_to_tenant(qs, scope), ApprovalWorkflow)
+    own = DataScopeFilter.filter_queryset(scope, scope_to_tenant(qs, scope), ApprovalWorkflow)
+    return own | foreign_workflows(qs, scope)
 
 
 def _cooldowns(scope):
@@ -130,7 +138,20 @@ def _group(items, offset=0):
 # 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
 FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
             "rebirth": "rebirths", "letter": "letters", "sentence_change": "sentence_changes",
-            "unassigned_letter": "unassigned_letters"}
+            "unassigned_letter": "unassigned_letters", "pick": "pick_nodes"}
+
+
+def _pick_items(scope):
+    """「待我选站」:soul 作标题;本域要走 / 默认站数、发起殿、本域排第几、在门口第几天或前面还有几站。"""
+    from apps.workflow.segments import pick_tasks
+
+    return [
+        _item("pick", row["workflow"].pk, row["workflow"].soul.name, row["segment"].created_at,
+              segment_order=row["segment"].order, go=row["go"], total=row["total"],
+              realm=row["workflow"].tenant.code, hall=row["workflow"].tenant.display_name,
+              gate_days=row["gate_days"], stations_ahead=row["stations_ahead"])
+        for row in pick_tasks(scope)
+    ]
 
 
 def build(user, request=None, kind=None, offset=0):
@@ -179,7 +200,7 @@ def build(user, request=None, kind=None, offset=0):
                       for c in _letters(scope, unassigned=True)]
     groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
               "rebirths": rebirths, "letters": letters, "sentence_changes": sentence_changes,
-              "unassigned_letters": unassigned}
+              "unassigned_letters": unassigned, "pick_nodes": _pick_items(scope)}
     if kind:
         return _group(groups[FIELD_OF[kind]], offset)
     return {field: _group(items) for field, items in groups.items()}

@@ -59,16 +59,23 @@ def _deadline(node):
     return node.activated_at + timedelta(hours=node.timeout_hours)
 
 
-def _history(wf, node, nodes, user) -> list:
-    """发起 → 已决的节点(按顺序)→ 当前节点。`mine` = 当前节点轮到我。"""
+def _history(wf, node, nodes, user, tenant_id=None) -> list:
+    """发起 → 已决的节点(按顺序)→ 当前节点。`mine` = 当前节点轮到我。
+
+    第四十三批:别的域的人名不给(外域段里轮到我时,本殿与其他参与域的审批人只显示站名)。"""
     from apps.workflow import decision_codes
 
-    steps = [{"kind": "start", "name": "", "actor": _name(wf.create_user), "verdict": "", "comment": "",
-              "at": wf.created_at, "mine": False}]
+    def visible(owner_id):
+        return tenant_id is None or owner_id == tenant_id
+
+    steps = [{"kind": "start", "name": "", "actor": _name(wf.create_user) if visible(wf.tenant_id) else None,
+              "verdict": "", "comment": "", "at": wf.created_at, "mine": False}]
     for n in nodes:
         if n.pk == getattr(node, "pk", None) or n.status not in DECIDED:
             continue
         who = decision_codes.handled_by(n)
+        if n.segment_id is not None and not visible(n.segment.tenant_id):
+            who = None
         steps.append({"kind": "decided", "name": n.node_name, "actor": who["name"] if who else None,
                       "verdict": n.verdict, "comment": n.notes, "at": n.decided_at, "mine": False})
     if node is not None:
@@ -98,11 +105,11 @@ def workflow_facts(wf, user, tenant, *, reason) -> dict:
     steps = [n for n in nodes if n.kind not in AUTOMATIC_KINDS]
     facts = {
         "soul": soul_ref(wf.soul),
-        "requester": _name(wf.create_user),
+        "requester": _name(wf.create_user) if tenant is None or wf.tenant_id == tenant.pk else None,
         "requester_hall": hall_ref(wf.tenant),
         "requested_at": wf.created_at,
         "reason": reason,
-        "history": _history(wf, node, nodes, user),
+        "history": _history(wf, node, nodes, user, getattr(tenant, "pk", None)),
         "attachments": attachments_of(wf.judgment, user, tenant),
     }
     if node is not None:

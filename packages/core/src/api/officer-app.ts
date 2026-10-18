@@ -14,12 +14,26 @@ export type TodoGroup = components["schemas"]["TodoGroup"];
  * Spelled out until the schema is regenerated (Design 第四十批); once it is, each intersection is a no-op:
  * `sentence_changes` (O-f), a row's `request_kind`, a rebirth's `cross_civilization` (O-b), a dispatch's `status` (O-f).
  */
-export type Todo = components["schemas"]["Todo"] & { sentence_changes?: TodoGroup };
+export type Todo = components["schemas"]["Todo"] & { sentence_changes?: TodoGroup; pick_nodes?: TodoGroup };
 export type TodoItemDetail = components["schemas"]["TodoItemDetail"];
 export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
 export type TodoFacts = components["schemas"]["TodoFacts"] & { cross_civilization?: boolean | null; status?: string };
-export type TodoItemExtra = { request_kind?: string };
+/**
+ * Per-kind row fields. A `pick` row (待我选站, 第四十三批): `title` is the soul, `target.id` the workflow; this
+ * realm's `segment_order`, its stations to run / all (`go` / `total`), the convening hall (`realm` code, `hall`
+ * name), and `gate_days` when the flow already waits at this realm's gate, else `stations_ahead`.
+ */
+export type TodoItemExtra = {
+  request_kind?: string;
+  segment_order?: number;
+  go?: number;
+  total?: number;
+  realm?: string;
+  hall?: string;
+  gate_days?: number | null;
+  stations_ahead?: number | null;
+};
 export type FactHistory = components["schemas"]["FactHistory"];
 export type FactAttachment = components["schemas"]["FactAttachment"];
 export type FactSoul = components["schemas"]["FactSoul"];
@@ -69,7 +83,7 @@ export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" 
 export const officerAppApi = {
   todo: () => api.get<Todo>("/officer-app/todo/"),
   /** 加载更多: one group from item `offset` on (10 a page), `{ count, items }`. */
-  todoGroup: (kind: TodoKind | "unassigned_letter", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
+  todoGroup: (kind: TodoKind | "unassigned_letter" | "pick", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
   item: (kind: TodoKind, id: string) => api.get<TodoItemDetail>(`/officer-app/items/${kind}/${id}/`),
   /** 加签候选人: same hall only. */
   signerCandidates: (q?: string) => api.get<SignerCandidate[]>("/officer-app/signer-candidates/", { params: q ? { q } : undefined }),

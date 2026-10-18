@@ -24,6 +24,16 @@ class TodoItemSerializer(serializers.Serializer):
     request_kind = serializers.CharField(required=False, help_text="仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。")
     feedback_tag = serializers.CharField(required=False, help_text="仅书信:从 App「帮助与反馈」来的信的类别码"
                                          "(account / record / app / other);还没人回时才有。")
+    # 仅「待我选站」(kind = pick,第四十三批):`title` 是灵魂名,`id` 是流程。
+    segment_order = serializers.IntegerField(required=False, help_text="仅选站:本域排第几(1 = 发起殿)。")
+    go = serializers.IntegerField(required=False, help_text="仅选站:本域这一段要走的站数。")
+    total = serializers.IntegerField(required=False, help_text="仅选站:本域这一段的站数(默认流程)。")
+    realm = serializers.CharField(required=False, help_text="仅选站:发起殿的租户代码。")
+    hall = serializers.CharField(required=False, help_text="仅选站:发起殿的显示名。")
+    gate_days = serializers.IntegerField(required=False, allow_null=True,
+                                         help_text="仅选站:流程已在门口等的第几天;还没到门口时 null。")
+    stations_ahead = serializers.IntegerField(required=False, allow_null=True,
+                                              help_text="仅选站:轮到本域之前还有几站;已在门口时 null。")
 
 
 class TodoGroupSerializer(serializers.Serializer):
@@ -41,6 +51,8 @@ class TodoSerializer(serializers.Serializer):
     letters = TodoGroupSerializer(help_text="待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。")
     unassigned_letters = TodoGroupSerializer(
         help_text="未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。")
+    pick_nodes = TodoGroupSerializer(
+        help_text="待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。")
 
 
 class FactHallSerializer(serializers.Serializer):

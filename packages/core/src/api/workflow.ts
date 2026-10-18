@@ -48,8 +48,103 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   template_version_number?: number | null;
   /** How many times 驳回到 sent it back (capped at 3). */
   return_count?: number;
-  /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "" otherwise. */
+  /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "CROSS_CANCELLED" when cancelling the merged
+   *  cross-realm judgment ended it; "" otherwise. */
   end_reason?: string;
+  /** 第四十三批: one row per realm (order 1 = this realm); empty for a workflow built before segments. */
+  segments?: WorkflowSegment[];
+  /** The segment the flow stands at the gate of, waiting for that realm to pick; null otherwise. */
+  awaiting_segment?: number | null;
+  /** 选站 / 加减站 records, oldest first (W-3a history tab). */
+  history?: WorkflowHistoryEntry[];
+  /** The requester may change stations now (加减站 entry, W-3b). */
+  can_adjust?: boolean;
+  /** The cross-realm judgment this workflow merged, if any. */
+  cross_judgment_id?: string | null;
+}
+
+/** `WorkflowSegment.state` as shown: AWAITING_PICK / PICKED (not started) / RUNNING / DONE / SKIPPED. */
+export type WorkflowSegmentState = "AWAITING_PICK" | "PICKED" | "RUNNING" | "DONE" | "SKIPPED";
+
+/** WorkflowSegmentSerializer (backend/apps/workflow/serializers.py) — one realm's run of stations. */
+export interface WorkflowSegment {
+  order: number;
+  is_local: boolean;
+  tenant_code: string;
+  realm_name: string;
+  civilization: string;
+  name: string;
+  state: WorkflowSegmentState;
+  /** Stations that run / all of the segment's stations. */
+  go: number;
+  total: number;
+  default_node_count: number;
+  /** Send back with pick / adjust; another change since answers 409 `segment_changed`. */
+  version: number;
+  picked_at: string | null;
+  /** Null for another realm's segment (外域人员信息不外露). */
+  picked_by_name: string | null;
+  at_gate: boolean;
+  /** 「第 N 天」at the gate; day 1 is the day the flow arrived. */
+  gate_days: number | null;
+  /** The realm has no judge who can pick (the task went to its hall admins). */
+  no_picker: boolean;
+  current_order_in_segment: number | null;
+  can_pick: boolean;
+  can_use_default: boolean;
+  can_remind: boolean;
+}
+
+export interface WorkflowHistoryEntry {
+  kind: "picked" | "adjusted" | "default";
+  segment: number | null;
+  /** Tenant code of the segment's realm. */
+  realm: string;
+  /** Null for another realm's officer. */
+  actor: string | null;
+  at: string;
+  restored: string[];
+  skipped: string[];
+  reason: string;
+}
+
+/** Why a station was skipped by a person; null when the engine skipped it by routing. */
+export type WorkflowSkipKind = "AT_PICK" | "LATER" | "CANCELLED";
+
+/** The refusal codes of pick / adjust / use-default / remind (`segments.SegmentRefused`). */
+export type WorkflowSegmentRefusal =
+  | "segment_changed"
+  | "final_required"
+  | "unknown_node"
+  | "not_allowed"
+  | "not_foreign"
+  | "segment_closed"
+  | "segment_started"
+  | "segment_done"
+  | "not_picked"
+  | "not_awaiting"
+  | "node_locked"
+  | "node_changed"
+  | "one_segment"
+  | "nothing_to_change"
+  | "conflicting_change"
+  | "reason_required"
+  | "too_early"
+  | "remind_too_soon"
+  | "workflow_closed";
+
+/** CrossJudgmentWorkflowSummarySerializer — the progress line on the cross-realm judgment page (W-4). */
+export interface CrossJudgmentWorkflowSummary {
+  id: string;
+  number: string;
+  status: string;
+  at: { segment: number; realm_name: string; node_name: string; hall: string } | null;
+  at_gate: { segment: number; realm_name: string; days: number | null } | null;
+  /** Stations to run in the segments already picked. */
+  fixed: number;
+  done: number;
+  pending_realms: string[];
+  segments: WorkflowSegment[];
 }
 
 /**
@@ -110,6 +205,13 @@ export interface ApprovalNode {
   waiting_on_cosigner?: { id: number; name: string } | null;
   timeout_hours?: number | null;
   timeout_action?: WorkflowTimeoutAction | "";
+  /** 第四十三批: the realm's segment (its order) and this station's number inside it; null before segments. */
+  segment_order?: number | null;
+  order_in_segment?: number | null;
+  skip_kind?: WorkflowSkipKind | null;
+  skip_reason?: string;
+  /** The segment's final review: no pick or adjust may skip it. */
+  is_required?: boolean;
 }
 
 /** What a node does (`NodeKind`, backend/apps/workflow/models.py). Absent reads as APPROVAL. */
@@ -289,6 +391,8 @@ export interface StartWorkflowBody {
   priority?: number;
   reason: string;
   judgment?: string;
+  /** W-1: the template's station orders (`node_order`) unticked; the final review answers 400 `final_required`. */
+  skip_node_orders?: number[];
 }
 
 /** `GET /workflows/case-types/` 的一行。标签用语言包 `workflow.case_types.<value>`。
@@ -341,6 +445,18 @@ export const workflowApi = {
     nodeId: string,
     data: { verdict: string; notes?: string; rejection_reason_for_soul?: string; require_reason?: boolean }
   ) => api.post<ApprovalWorkflow>(`/workflows/${workflowId}/approve_node/`, { node_id: nodeId, ...data }),
+  /** 选站 / 改选 (W-1b, W-2): the stations of segment `order` to skip; `version` as loaded (409 `segment_changed`). */
+  pickSegment: (id: string, order: number, body: { skip_node_ids: string[]; version: number; reason?: string }) =>
+    api.post<ApprovalWorkflow>(`/workflows/${id}/segments/${order}/pick/`, body),
+  /** 加减站 (W-3b): one segment, stations after the current one; reason required. */
+  adjust: (id: string, body: { restore_node_ids: string[]; skip_node_ids: string[]; reason: string; version: number }) =>
+    api.post<ApprovalWorkflow>(`/workflows/${id}/adjust/`, body),
+  /** 按默认流程走 (W-5b/c): the convening hall's admin; after 3 days at the gate or when the realm has no picker. */
+  useDefault: (id: string, order: number, body: { reason: string }) =>
+    api.post<ApprovalWorkflow>(`/workflows/${id}/segments/${order}/use-default/`, body),
+  /** 再提醒一次: once an hour per segment (429 `remind_too_soon` with `retry_after` seconds). */
+  remindSegment: (id: string, order: number) =>
+    api.post<{ order: number; reminded_at: string }>(`/workflows/${id}/segments/${order}/remind/`),
   templates: {
     // WorkflowTemplateViewSet is the one view in the project that sets
     // pagination_class = None (backend/apps/workflow/views.py:45), so this
