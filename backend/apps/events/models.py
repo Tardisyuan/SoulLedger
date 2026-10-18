@@ -13,9 +13,10 @@ class EventType(models.TextChoices):
     # Soul audit events
     SOUL_CREATED = "SOUL_CREATED"
     STATE_CHANGED = "STATE_CHANGED"
-    # Deliberately distinct from STATE_CHANGED: SETTLED has no forward
-    # transitions (Soul.can_transition_to), so reverting it is never a
-    # transition the state machine sanctioned — it's an ADMIN-only
+    # Deliberately distinct from STATE_CHANGED: SETTLED's one transition
+    # (Soul.can_transition_to) belongs to reopening a finished sentence plan,
+    # so reverting it is never a transition the state machine sanctioned
+    # for this — it's an ADMIN-only
     # correction of a data-entry error, and the timeline must not render it
     # as if the soul had walked the normal DISPOSED->SETTLED path backwards.
     SETTLEMENT_CORRECTED = "SETTLEMENT_CORRECTED"

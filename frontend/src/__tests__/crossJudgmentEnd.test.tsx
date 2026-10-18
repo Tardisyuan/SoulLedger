@@ -95,6 +95,24 @@ describe("结束 / 取消跨域审判", () => {
     fireEvent.click(confirm);
     await waitFor(() => expect(crossTenantJudgmentsApi.cancel).toHaveBeenCalledWith("cj1", "原审判已撤回"));
   });
+
+  it("审批流程还在走:没有「结束」,换成一行说明;取消还在", () => {
+    renderControls(judgment({ workflow: { status: "IN_PROGRESS", at: null, segments: [] } }));
+    expect(screen.queryByTestId("cross-end")).toBeNull();
+    expect(screen.queryByRole("button", { name: tZh("crossJudgments.end") })).toBeNull();
+    expect(screen.getByTestId("cross-end-flow-running")).toHaveTextContent(tZh("crossJudgments.workflow_running"));
+    expect(screen.getByRole("button", { name: tZh("common.row_actions") })).toBeInTheDocument();
+  });
+
+  it("没有审批流程或流程已结束:有「结束」,没有那行说明", () => {
+    const { unmount } = renderControls(judgment({ workflow: null }));
+    expect(screen.getByTestId("cross-end")).toBeInTheDocument();
+    expect(screen.queryByTestId("cross-end-flow-running")).toBeNull();
+    unmount();
+    renderControls(judgment({ workflow: { status: "COMPLETED", at: null, segments: [] } }));
+    expect(screen.getByTestId("cross-end")).toBeInTheDocument();
+    expect(screen.queryByTestId("cross-end-flow-running")).toBeNull();
+  });
 });
 
 describe("原审判被跨域审判挡住", () => {

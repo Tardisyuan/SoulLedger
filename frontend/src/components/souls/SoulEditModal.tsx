@@ -42,8 +42,10 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const [originLocation, setOriginLocation] = useState("");
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
 
-  // SETTLED is terminal — nothing transitions out of it, not even LOST — so
-  // an operator must not be able to pick it manually. The control is
+  // SETTLED is terminal to an operator — its one way out (back to DISPOSED
+  // when a cross-realm judgment reopens a finished sentence plan) is the
+  // server's, not a pick here; not even LOST — so an operator must not be
+  // able to pick it manually. The control is
   // disabled rather than removed: `currentState` still holds "SETTLED" and
   // round-trips on submit instead of silently reverting to the default.
   const isSettled = soul.current_state === "SETTLED";

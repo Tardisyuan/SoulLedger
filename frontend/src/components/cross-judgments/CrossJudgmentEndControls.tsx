@@ -18,6 +18,8 @@ export const END_NOTE_MAX = 1000;
  *
  * 只给能做的人:`can_end` 由服务端按「召集人或发起殿的管理员,且还在进行」算好,这里不再抄一遍规则。
  * 不能做就什么都不渲染 —— 已结束 / 已取消后页头写结果(见详情页),不留入口。
+ * 挂着的审批流程还在走时不给「结束」(2026-10-18 用户决定:流程走完 / 被驳回时它自己结束),换成一行说明;取消照旧。
+ * 不在服务端把 `can_end` 置 false:取消也看它。409 `workflow_running` 的提示留作兜底(页面数据陈旧时)。
  * 结论两选一、没有默认值;说明与理由都必填,空着按钮不可点。
  */
 export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJudgment }) {
@@ -71,9 +73,15 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
 
   return (
     <>
-      <Button size="sm" onClick={() => setEnding(true)} data-testid="cross-end">
-        {t("crossJudgments.end")}
-      </Button>
+      {flowRunning ? (
+        <p data-testid="cross-end-flow-running" className="max-w-xs text-xs text-[oklch(var(--color-ink-muted))]">
+          {t("crossJudgments.workflow_running")}
+        </p>
+      ) : (
+        <Button size="sm" onClick={() => setEnding(true)} data-testid="cross-end">
+          {t("crossJudgments.end")}
+        </Button>
+      )}
       <ActionsMenu
         menuLabel={t("common.row_actions")}
         items={[{ key: "cancel", label: t("crossJudgments.cancel"), tone: "danger", onSelect: () => setCancelling(true) }]}

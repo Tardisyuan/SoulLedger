@@ -125,14 +125,32 @@ describe("useJudgmentQueue", () => {
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT_A.id, {
       verdict: "FAILED",
       notes: "罪证确凿",
-      create_workflow: false,
     });
+    // W unticked sends no `create_workflow` at all: an explicit false is a 400 `workflow_required` whenever a
+    // cross-realm judgment is open on the case (第四十三批).
+    expect(mockConclude.mock.calls[0][1]).not.toHaveProperty("create_workflow");
     // No pending verdict, no undo, nothing written to disk for a later launch.
     expect(result.current).not.toHaveProperty("pending");
     expect(result.current).not.toHaveProperty("undo");
     expect(result.current).not.toHaveProperty("flush");
     expect(localStorage.length).toBe(0);
     await waitFor(() => expect(result.current.progress.decided).toBe(1));
+  });
+
+  it("W ticked asks for the workflow; there is no way to send an explicit false", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => {
+      void result.current.submitVerdict({ verdict: "PASSED", createWorkflow: true });
+    });
+    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT_A.id, { verdict: "PASSED", notes: "", create_workflow: true });
+    await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_B.id));
+
+    act(() => {
+      void result.current.submitVerdict({ verdict: "PASSED", createWorkflow: false });
+    });
+    expect(mockConclude.mock.calls[1][1]).not.toHaveProperty("create_workflow");
   });
 
   it("advances to the next case immediately", async () => {

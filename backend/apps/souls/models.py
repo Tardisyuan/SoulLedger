@@ -514,8 +514,15 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # (apps/sentence_plan/requests.py::append_cross_stops). Not reachable through
             # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there).
             SoulState.REINCARNATING: [SoulState.ALIVE, SoulState.DISPOSED],
-            # SETTLED is absorbing, and deliberately does not keep LOST
-            # reachable the way DISPOSED does. LOST means the disposition was
+            # SETTLED has exactly one exit, back to DISPOSED, and one writer of it: a cross-realm judgment
+            # concluded PASS after the soul's sentence plan finished reopens that plan and appends the
+            # foreign stops (apps/sentence_plan/requests.py::append_cross_stops; 2026-10-18 user decision).
+            # The plan is unfinished business, so the case was not closed after all. Not reachable through
+            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there), and correcting a
+            # mistaken settlement is still `correct_settlement`, its own event.
+            #
+            # SETTLED deliberately does not keep LOST reachable the way
+            # DISPOSED does. LOST means the disposition was
             # never carried through and the soul went missing on the way to
             # its realm — something that can only happen in transit. Once a
             # soul is in Aaru, or in Ammit, or in the Empyrean, there is no
@@ -523,7 +530,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # bookkeeping problem, not a change in what became of the soul.
             # Letting an administrative mistake re-open a cosmologically closed
             # case is exactly the lie this state exists to stop telling.
-            SoulState.SETTLED: [],
+            SoulState.SETTLED: [SoulState.DISPOSED],
             SoulState.LOST: [],
         }
         return new_state in valid_transitions.get(self.current_state, [])
@@ -680,9 +687,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
 
         Deliberately does not go through transition_to/can_transition_to —
-        SoulState.SETTLED has no valid_transitions by design (see the
-        comment there on why re-opening a cosmologically closed case must
-        never look like an ordinary transition). This is a correction, not
+        SETTLED's only transition (back to DISPOSED) belongs to reopening a
+        finished sentence plan (see the comment there on why re-opening a
+        cosmologically closed case must never look like an ordinary
+        transition). This is a correction, not
         a transition: ADMIN-only (enforced by the view's permission
         codename, not here), requires a reason, and is logged as its own
         SETTLEMENT_CORRECTED event so the lifecycle timeline never renders
