@@ -1363,6 +1363,80 @@
       "from": "创建日期（起）",
       "to": "创建日期（止）",
       "clear": "清除筛选"
+    },
+    "pick": {
+      "title": "这次走哪几站",
+      "subtitle": "{{flow}} · {{n}} 站 · 取消勾选的站这次直接跳过",
+      "col_node": "站",
+      "col_hall": "殿",
+      "col_approver": "审批人",
+      "final_badge": "必须走",
+      "final_reason": "审判结果要由终审定下，这一站不能跳过。",
+      "summary": "本域走 {{go}} 站 · 跳过 {{skip}} 站",
+      "restore_all": "全部恢复",
+      "only_final_title": "这次只走终审",
+      "only_final_body": "其余 {{n}} 站都会跳过，审判直接交{{hall}}{{approver}}定。确定的话照常生成。",
+      "foreign_title": "外域 · 按跨域审判的顺序接在后面",
+      "foreign_by_realm": "由该域判官选站",
+      "foreign_default": "默认流程 {{n}} 站",
+      "foreign_note": "流程发起后，各外域判官同时收到「选站」待办。各域依次走：到了还没选完的外域就停下来等，并提醒那个域。",
+      "position": "本域排第 {{order}} · 前面:{{prev}} {{n}} 站",
+      "confirmed": "已选站 · 轮到本域时通知你",
+      "repick": "改选",
+      "stale_title": "这一段刚被改过",
+      "stale_body": "{{by}} {{time}} 已改了这一段。下面是现在的选择，看一遍再确认。",
+      "stale_view": "看现在的选择"
+    },
+    "pick_group": {
+      "title": "待我选站",
+      "hint": "其他域发起的审批流程，轮到本域那一段之前要选好",
+      "row_title": "{{soul}} · 本域 {{n}} 站",
+      "row_meta": "{{realm}} · {{hall}}发起 · 本域排第 {{order}}",
+      "at_gate": "流程已在门口等 · {{n}} 天",
+      "ahead": "前面还有 {{n}} 站"
+    },
+    "segment": {
+      "local": "本域",
+      "count": "{{go}} / {{total}} 站要走",
+      "not_picked": "还没选站",
+      "done": "已走完"
+    },
+    "node_state": {
+      "skipped_at_pick": "选站时跳过",
+      "skipped_later": "中途跳过",
+      "awaiting_pick": "等待外域选站 · 默认 {{n}} 站"
+    },
+    "legend": "✓ 已通过 · ✕ 已驳回 · ◇ 当前 · · 待走 · ⤼ 已跳过 · ◌ 等待外域选站",
+    "history": {
+      "picked": "{{actor}} 为{{realm}}选站，跳过:{{nodes}}",
+      "adjusted": "{{actor}} 加减站：加回 {{added}},跳过 {{skipped}}。理由:{{reason}}"
+    },
+    "adjust": {
+      "open": "加减站",
+      "title": "加减站 · 本域",
+      "hint": "勾上 = 要走，取消 = 跳过。只改当前站之后的站。",
+      "locked_past": "{{range}} · 已走过或已跳过",
+      "locked_current": "{{node}} · 当前",
+      "locked": "不能改",
+      "mark_add": "加回",
+      "mark_skip": "跳过",
+      "reason": "理由 · 必填，记入审计",
+      "summary": "加回 {{added}} 站 · 跳过 {{skipped}} 站",
+      "saved": "已保存 · 记入审计",
+      "desk_body": "要写理由、逐站核对，请在电脑上做。"
+    },
+    "gate": {
+      "waiting_title": "等待外域选站 · {{realm}} · 第 {{n}} 天",
+      "waiting_body": "本域已走完。已提醒{{realm}}判官，选好后自动继续。",
+      "overdue_body": "每天提醒一次,{{realm}}还没选。",
+      "remind_again": "再提醒一次",
+      "reminded": "已提醒",
+      "use_default": "按默认流程走",
+      "use_default_confirm": "替{{realm}}选全部站并继续。理由必填，记入审计，并通知{{realm}}。",
+      "no_picker_title": "{{realm}}没有能选站的判官",
+      "no_picker_body": "待办已转给该域的殿管理员。管理员也没有时，可以直接按默认流程走。",
+      "foreign_title": "流程在等本域选站",
+      "foreign_body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"
     }
   },
   "dashboard": {
@@ -1405,7 +1479,8 @@
       "letters": "待我回的书信",
       "unassigned_letters": "未分配的书信",
       "sentence_requests": "受刑请求待批",
-      "reports": "举报待处理"
+      "reports": "举报待处理",
+      "pick_nodes": "待我选站 · 外域流程"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
@@ -2621,7 +2696,25 @@
     "ended": "已结束 · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "已取消 · 理由：{{reason}}",
     "end_error": "没能结束，请重试",
-    "cancel_error": "没能取消，请重试"
+    "cancel_error": "没能取消，请重试",
+    "order": {
+      "title": "各域顺序",
+      "hint": "审批流程按这个顺序一域一域走",
+      "locked": "审批流程已生成，顺序不能再改"
+    },
+    "flow": {
+      "at": "走到 {{order}} {{realm}} · {{node}}({{hall}})",
+      "progress": "已定 {{fixed}} 站 · 已走 {{done}}",
+      "pending_realms": "{{realms}}还没选站",
+      "none": "还没生成审批流程 · 结案时勾选生成",
+      "view": "查看审批流程 →",
+      "realm_running": "进行中 · 第 {{n}} 站",
+      "realm_picked": "{{go}} / {{total}} 站 · 已选站",
+      "realm_not_picked": "默认 {{n}} 站 · 还没选站"
+    },
+    "cancel_flow_body": "审批流程里还没走的外域段({{realms}})全部标为跳过，流程走完本域后结束。已走过的站不变。",
+    "cancel_flow_body_in_realm": "正在走的{{realm}}段，当前站和之后的站都标为跳过，流程随即结束。已走过的站不变。",
+    "cancel_flow_note": "外域已发出的「选站」待办一并撤回，并通知各域。"
   },
   "users": {
     "title": "用户管理",
@@ -3718,7 +3811,8 @@
       "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话",
       "authentication_prune_expired_push_registrations": "停用登录已到期的手机推送登记",
       "soul_accounts_prune_data_exports": "清理过期的资料导出",
-      "audit_prune_retained_data": "清理过期的运行数据(投递记录、已读通知、停用设备等)"
+      "audit_prune_retained_data": "清理过期的运行数据(投递记录、已读通知、停用设备等)",
+      "workflow_pick_reminders_for_tenant": "提醒外域选站"
     },
     "status": {
       "PENDING": "排队中",
@@ -5251,6 +5345,26 @@
     "assistant_reopened": {
       "title": "助手已自动重开:新的一个月",
       "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"
+    },
+    "workflow_pick_nodes": {
+      "title": "请为本域选站",
+      "body": "{{soul}} · {{realm}}发起的审批流程，本域排第 {{order}}。轮到本域之前请选好。"
+    },
+    "workflow_pick_waiting": {
+      "title": "流程在等本域选站",
+      "body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"
+    },
+    "workflow_pick_overdue": {
+      "title": "{{realm}}超过 3 天未选站",
+      "body": "{{soul}} · 审批流程停在{{realm}}门口已 {{n}} 天。可以再提醒，或按默认流程走。"
+    },
+    "workflow_nodes_adjusted": {
+      "title": "审批流程的站有变动",
+      "body": "{{soul}} · {{by}}:加回 {{added}},跳过 {{skipped}}。理由:{{reason}}"
+    },
+    "workflow_pick_withdrawn": {
+      "title": "选站待办已撤回",
+      "body": "跨域审判「{{title}}」已取消,{{soul}}的选站不用再做。"
     }
   },
   "social_moderation": {
@@ -6251,7 +6365,8 @@
         "cooldowns": "缩短冷却申请",
         "rebirths": "转生申请",
         "letters": "待回书信",
-        "unassigned_letters": "未分配的书信"
+        "unassigned_letters": "未分配的书信",
+        "pick_nodes": "待我选站"
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。",

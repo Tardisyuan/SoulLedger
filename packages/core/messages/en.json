@@ -1363,6 +1363,80 @@
       "from": "Created from",
       "to": "Created to",
       "clear": "Clear filters"
+    },
+    "pick": {
+      "title": "Which stations this time",
+      "subtitle": "{{flow}} · {{n}} stations · unticked stations are skipped this time",
+      "col_node": "Station",
+      "col_hall": "Hall",
+      "col_approver": "Approver",
+      "final_badge": "Required",
+      "final_reason": "The final review decides the outcome, so it can't be skipped.",
+      "summary": "This realm: {{go}} to go · {{skip}} skipped",
+      "restore_all": "Restore all",
+      "only_final_title": "Only the final review this time",
+      "only_final_body": "The other {{n}} stations are skipped; {{approver}} ({{hall}}) decides directly. Generate as usual if that's intended.",
+      "foreign_title": "Other realms · follow in cross-realm judgment order",
+      "foreign_by_realm": "That realm's judge picks its stations",
+      "foreign_default": "Default flow · {{n}} stations",
+      "foreign_note": "Once the flow starts, each realm's judge gets a \"pick stations\" task at the same time. Realms go one after another; if the next realm hasn't picked yet, the flow waits and reminds it.",
+      "position": "This realm is no. {{order}} · before it: {{prev}}, {{n}} stations",
+      "confirmed": "Stations picked · you'll be told when it's this realm's turn",
+      "repick": "Change picks",
+      "stale_title": "This segment was just changed",
+      "stale_body": "{{by}} changed this segment at {{time}}. Below is the current selection — check it before confirming.",
+      "stale_view": "See current selection"
+    },
+    "pick_group": {
+      "title": "Stations to pick",
+      "hint": "Approval flows from other realms — pick before this realm's turn",
+      "row_title": "{{soul}} · {{n}} stations here",
+      "row_meta": "{{realm}} · from {{hall}} · this realm no. {{order}}",
+      "at_gate": "The flow is waiting · {{n}} days",
+      "ahead": "{{n}} stations ahead"
+    },
+    "segment": {
+      "local": "This realm",
+      "count": "{{go}} of {{total}} stations",
+      "not_picked": "Not picked yet",
+      "done": "Done"
+    },
+    "node_state": {
+      "skipped_at_pick": "Skipped at setup",
+      "skipped_later": "Skipped later",
+      "awaiting_pick": "Waiting for the realm to pick · default {{n}}"
+    },
+    "legend": "✓ Approved · ✕ Rejected · ◇ Current · · To go · ⤼ Skipped · ◌ Waiting for a realm to pick",
+    "history": {
+      "picked": "{{actor}} picked stations for {{realm}}; skipped: {{nodes}}",
+      "adjusted": "{{actor}} changed stations: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}"
+    },
+    "adjust": {
+      "open": "Change stations",
+      "title": "Change stations · this realm",
+      "hint": "Ticked = go, unticked = skip. Only stations after the current one can change.",
+      "locked_past": "{{range}} · done or skipped",
+      "locked_current": "{{node}} · current",
+      "locked": "Can't change",
+      "mark_add": "Restore",
+      "mark_skip": "Skip",
+      "reason": "Reason · required, written to the audit log",
+      "summary": "{{added}} restored · {{skipped}} skipped",
+      "saved": "Saved · recorded in the audit log",
+      "desk_body": "Needs a reason and a station-by-station check — do it on a computer."
+    },
+    "gate": {
+      "waiting_title": "Waiting for {{realm}} to pick · day {{n}}",
+      "waiting_body": "This realm is done. {{realm}}'s judge has been reminded; the flow continues once they pick.",
+      "overdue_body": "Reminded daily; {{realm}} hasn't picked yet.",
+      "remind_again": "Remind again",
+      "reminded": "Reminder sent",
+      "use_default": "Go with the default flow",
+      "use_default_confirm": "Picks every station for {{realm}} and continues. A reason is required; it's written to the audit log and {{realm}} is told.",
+      "no_picker_title": "{{realm}} has no judge who can pick",
+      "no_picker_body": "The task went to that realm's hall admins. If there are none, you can go with the default flow now.",
+      "foreign_title": "A flow is waiting for this realm to pick",
+      "foreign_body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."
     }
   },
   "dashboard": {
@@ -1405,7 +1479,8 @@
       "letters": "Letters awaiting your reply",
       "unassigned_letters": "Unassigned letters",
       "sentence_requests": "Sentence plan requests",
-      "reports": "Reports to review"
+      "reports": "Reports to review",
+      "pick_nodes": "Stations to pick · other realms' flows"
     },
     "civ_share": "Share",
     "civ_empty": "No souls yet · register one",
@@ -2621,7 +2696,25 @@
     "ended": "Ended · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "Cancelled · Reason: {{reason}}",
     "end_error": "Couldn't end it. Try again.",
-    "cancel_error": "Couldn't cancel it. Try again."
+    "cancel_error": "Couldn't cancel it. Try again.",
+    "order": {
+      "title": "Realm order",
+      "hint": "The approval flow goes realm by realm in this order",
+      "locked": "The approval flow exists; the order is fixed"
+    },
+    "flow": {
+      "at": "At {{realm}} (no. {{order}}) · {{node}} ({{hall}})",
+      "progress": "{{fixed}} stations set · {{done}} done",
+      "pending_realms": "{{realms}}: not picked yet",
+      "none": "No approval flow yet · tick it when concluding",
+      "view": "View approval flow →",
+      "realm_running": "In progress · station {{n}}",
+      "realm_picked": "{{go}} / {{total}} · picked",
+      "realm_not_picked": "Default {{n}} · not picked"
+    },
+    "cancel_flow_body": "Unstarted realm segments in the approval flow ({{realms}}) are all marked skipped; the flow ends after this realm. Stations already passed stay as they are.",
+    "cancel_flow_body_in_realm": "In the {{realm}} segment now running, the current and later stations are marked skipped and the flow ends now. Stations already passed stay as they are.",
+    "cancel_flow_note": "Open \"pick stations\" tasks for other realms are withdrawn and each realm is told."
   },
   "users": {
     "title": "User Management",
@@ -3718,7 +3811,8 @@
       "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days",
       "authentication_prune_expired_push_registrations": "Deactivate push registrations whose sign-in has expired",
       "soul_accounts_prune_data_exports": "Delete expired data exports",
-      "audit_prune_retained_data": "Prune expired operational data (delivery logs, read notices, inactive devices)"
+      "audit_prune_retained_data": "Prune expired operational data (delivery logs, read notices, inactive devices)",
+      "workflow_pick_reminders_for_tenant": "Remind realms to pick stations"
     },
     "status": {
       "PENDING": "Queued",
@@ -5251,6 +5345,26 @@
     "assistant_reopened": {
       "title": "Assistant switched back on: new month",
       "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."
+    },
+    "workflow_pick_nodes": {
+      "title": "Pick this realm's stations",
+      "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."
+    },
+    "workflow_pick_waiting": {
+      "title": "A flow is waiting for this realm to pick",
+      "body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."
+    },
+    "workflow_pick_overdue": {
+      "title": "{{realm}} hasn't picked in 3 days",
+      "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."
+    },
+    "workflow_nodes_adjusted": {
+      "title": "Stations changed in an approval flow",
+      "body": "{{soul}} · {{by}}: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}"
+    },
+    "workflow_pick_withdrawn": {
+      "title": "Pick-stations task withdrawn",
+      "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."
     }
   },
   "social_moderation": {
@@ -6251,7 +6365,8 @@
         "cooldowns": "Cooling-off requests",
         "rebirths": "Rebirth applications",
         "letters": "Letters to answer",
-        "unassigned_letters": "Unassigned letters"
+        "unassigned_letters": "Unassigned letters",
+        "pick_nodes": "Stations to pick"
       },
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to you.",
