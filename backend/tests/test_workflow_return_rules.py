@@ -256,7 +256,7 @@ def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
         nodes_json=[{"id": "n1", "node_name": "一", "node_order": 1}])
     _seed()
     assert list(WorkflowTemplate.objects.filter(tenant=cn, case_type="ROUTINE")) == [mine]
-    assert WorkflowTemplate.objects.count() == 10
+    assert WorkflowTemplate.objects.count() == 11  # 本殿自定 1 份 + 种子建的其余 10 份
 
 
 def test_the_seed_overwrites_a_changed_row_only_with_update(halls):
