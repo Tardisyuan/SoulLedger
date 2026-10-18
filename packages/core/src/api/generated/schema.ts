@@ -9216,6 +9216,26 @@ export interface paths {
         patch: operations["v1_workflows_partial_update"];
         trace?: never;
     };
+    "/api/v1/workflows/{id}/adjust/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 加减站: restore skipped stations / skip pending ones of ONE segment, after the current stop; the final
+         *     review stays. Reason required; audited; the affected stations' approvers are told.
+         */
+        post: operations["v1_workflows_adjust_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{id}/advance/": {
         parameters: {
             query?: never;
@@ -9280,6 +9300,66 @@ export interface paths {
          *     it is visible.
          */
         post: operations["v1_workflows_escalate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{id}/segments/{order}/pick/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description A participating realm picks which of its stations run (or re-picks, until its segment starts).
+         *     `version` is the segment's as loaded; another pick since then answers 409 `segment_changed`.
+         */
+        post: operations["v1_workflows_segments_pick_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{id}/segments/{order}/remind/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 再提醒一次: the convening hall reminds a realm that has not picked. Once an hour per segment
+         *     (429 `remind_too_soon` with `retry_after` seconds).
+         */
+        post: operations["v1_workflows_segments_remind_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{id}/segments/{order}/use-default/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 按默认流程走: the convening hall's admin picks every station for a realm and the flow goes on — after
+         *     `segments.OVERDUE_DAYS` days at its gate, or at once when that realm has nobody who can pick.
+         */
+        post: operations["v1_workflows_segments_use_default_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9649,6 +9729,11 @@ export interface components {
             readonly threshold: number | null;
             readonly signatures_json: unknown;
             readonly branches_json: unknown;
+            readonly segment_order: number | null;
+            readonly order_in_segment: number | null;
+            readonly skip_kind: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly skip_reason: string;
+            readonly is_required: boolean;
         };
         /**
          * @description * `ACTOR` - 角色
@@ -9752,6 +9837,11 @@ export interface components {
             readonly return_count: number;
             readonly end_reason: string;
             readonly tenant: number | null;
+            readonly segments: components["schemas"]["WorkflowSegment"][];
+            readonly awaiting_segment: number | null;
+            readonly history: components["schemas"]["WorkflowHistoryEntry"][];
+            readonly can_adjust: boolean;
+            readonly cross_judgment_id: string | null;
         };
         /** @description Lightweight serializer for listing workflows. */
         ApprovalWorkflowList: {
@@ -10634,6 +10724,32 @@ export interface components {
         CrossCivilizationDecision: {
             cross_civilization: boolean;
         };
+        CrossFlowAt: {
+            segment: number;
+            realm_name: string;
+            node_name: string;
+            hall: string;
+        };
+        CrossFlowGate: {
+            segment: number;
+            realm_name: string;
+            days: number | null;
+        };
+        /**
+         * @description 跨域审判页顶部那一条(W-4),`segments.cross_summary` 构造。`fixed` = 已选站的段里要走的站数,
+         *     `done` = 已通过 / 经过 / 越级的站数。
+         */
+        CrossJudgmentWorkflowSummary: {
+            id: string;
+            number: string;
+            status: string;
+            at: components["schemas"]["CrossFlowAt"] | null;
+            at_gate: components["schemas"]["CrossFlowGate"] | null;
+            fixed: number;
+            done: number;
+            pending_realms: string[];
+            segments: components["schemas"]["WorkflowSegment"][];
+        };
         /**
          * @description Serializer for CrossTenantJudgment.
          *
@@ -10671,6 +10787,8 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly participants: components["schemas"]["CrossTenantJudgmentParticipant"][];
+            readonly workflow: components["schemas"]["CrossJudgmentWorkflowSummary"] | null;
+            readonly order_locked: boolean;
             /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */
@@ -12107,8 +12225,8 @@ export interface components {
             verdict: components["schemas"]["JudgmentConcludeVerdictEnum"];
             /** @default  */
             notes: string;
-            /** @default false */
-            create_workflow: boolean;
+            create_workflow?: boolean | null;
+            skip_node_orders?: number[];
             statute_ids?: string[];
             plan_changes?: {
                 [key: string]: unknown;
@@ -14625,6 +14743,11 @@ export interface components {
             readonly threshold?: number | null;
             readonly signatures_json?: unknown;
             readonly branches_json?: unknown;
+            readonly segment_order?: number | null;
+            readonly order_in_segment?: number | null;
+            readonly skip_kind?: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly skip_reason?: string;
+            readonly is_required?: boolean;
         };
         /**
          * @description Serializer for ApprovalWorkflow.
@@ -14687,6 +14810,11 @@ export interface components {
             readonly return_count?: number;
             readonly end_reason?: string;
             readonly tenant?: number | null;
+            readonly segments?: components["schemas"]["WorkflowSegment"][];
+            readonly awaiting_segment?: number | null;
+            readonly history?: components["schemas"]["WorkflowHistoryEntry"][];
+            readonly can_adjust?: boolean;
+            readonly cross_judgment_id?: string | null;
         };
         /** @description 与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。 */
         PatchedBackupUpdate: {
@@ -14781,6 +14909,8 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly participants?: components["schemas"]["CrossTenantJudgmentParticipant"][];
+            readonly workflow?: components["schemas"]["CrossJudgmentWorkflowSummary"] | null;
+            readonly order_locked?: boolean;
             /** Format: date-time */
             readonly create_time?: string;
             /** Format: date-time */
@@ -17012,6 +17142,13 @@ export interface components {
             label: string;
         };
         /**
+         * @description * `AT_PICK` - 选站时跳过
+         *     * `LATER` - 中途跳过
+         *     * `CANCELLED` - 跨域审判取消
+         * @enum {string}
+         */
+        SkipKindEnum: "AT_PICK" | "LATER" | "CANCELLED";
+        /**
          * @description * `POST` - Post
          *     * `COMMENT` - Comment
          * @enum {string}
@@ -18055,6 +18192,8 @@ export interface components {
             letters: components["schemas"]["TodoGroup"];
             /** @description 未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。 */
             unassigned_letters: components["schemas"]["TodoGroup"];
+            /** @description 待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。 */
+            pick_nodes: components["schemas"]["TodoGroup"];
         };
         /** @description O-01:批准前要看清的申请内容。按类给字段,没有的不出现。 */
         TodoFacts: {
@@ -18113,6 +18252,20 @@ export interface components {
             request_kind?: string;
             /** @description 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。 */
             feedback_tag?: string;
+            /** @description 仅选站:本域排第几(1 = 发起殿)。 */
+            segment_order?: number;
+            /** @description 仅选站:本域这一段要走的站数。 */
+            go?: number;
+            /** @description 仅选站:本域这一段的站数(默认流程)。 */
+            total?: number;
+            /** @description 仅选站:发起殿的租户代码。 */
+            realm?: string;
+            /** @description 仅选站:发起殿的显示名。 */
+            hall?: string;
+            /** @description 仅选站:流程已在门口等的第几天;还没到门口时 null。 */
+            gate_days?: number | null;
+            /** @description 仅选站:轮到本域之前还有几站;已在门口时 null。 */
+            stations_ahead?: number | null;
         };
         /**
          * @description `state`:actionable / already_handled / deadline_passed / permission_changed
@@ -18722,6 +18875,13 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        /** @description `POST /workflows/{id}/adjust/` (加减站): stations of ONE segment to restore / to skip. Reason required. */
+        WorkflowAdjust: {
+            restore_node_ids?: string[];
+            skip_node_ids?: string[];
+            reason: string;
+            version: number;
+        };
         /**
          * @description One row of `GET /workflows/case-types/`: a case type the civilization admits.
          *
@@ -18733,6 +18893,20 @@ export interface components {
             value: string;
             builtin: boolean;
         };
+        /** @description 「选站」「加减站」记录(审计行)。`actor` 只对同一个域的人给。 */
+        WorkflowHistoryEntry: {
+            /** @description picked / adjusted / default */
+            kind: string;
+            segment: number | null;
+            /** @description 该段所属域的租户代码 */
+            realm: string;
+            actor: string | null;
+            /** Format: date-time */
+            at: string;
+            restored: string[];
+            skipped: string[];
+            reason: string;
+        };
         /** @description Serializer for node approval action. */
         WorkflowNodeAction: {
             verdict: components["schemas"]["NodeDecisionVerdictEnum"];
@@ -18742,6 +18916,56 @@ export interface components {
             require_reason: boolean;
             /** @default  */
             rejection_reason_for_soul: string;
+        };
+        /**
+         * @description `POST /workflows/{id}/segments/{order}/pick/`: the stations of that segment to skip (the rest run).
+         *     `version` is the segment's as the picker loaded it.
+         */
+        WorkflowPick: {
+            skip_node_ids?: string[];
+            version: number;
+            /** @default  */
+            reason: string;
+        };
+        /** @description `POST /workflows/{id}/segments/{order}/use-default/`. */
+        WorkflowReason: {
+            reason: string;
+        };
+        WorkflowRemind: {
+            order: number;
+            /** Format: date-time */
+            reminded_at: string;
+        };
+        /**
+         * @description One realm's segment of a workflow (第四十三批), as `segments.segment_row` builds it. `state` is derived:
+         *     AWAITING_PICK / PICKED (not started) / RUNNING / DONE / SKIPPED. `go` / `total` = stations to run / all.
+         *     `picked_by_name` is null for another realm's segment (外域人员信息不外露). `can_*` are for the requester.
+         */
+        WorkflowSegment: {
+            order: number;
+            is_local: boolean;
+            tenant_code: string;
+            realm_name: string;
+            civilization: string;
+            name: string;
+            state: string;
+            go: number;
+            total: number;
+            default_node_count: number;
+            version: number;
+            /** Format: date-time */
+            picked_at: string | null;
+            picked_by_name: string | null;
+            /** @description 流程正停在这一段门口等它选站。 */
+            at_gate: boolean;
+            /** @description 在门口第几天(到达那天是第 1 天)。 */
+            gate_days: number | null;
+            /** @description 该域没有能选站的判官(待办已转给殿管理员)。 */
+            no_picker: boolean;
+            current_order_in_segment: number | null;
+            can_pick: boolean;
+            can_use_default: boolean;
+            can_remind: boolean;
         };
         /**
          * @description Body of `POST /workflows/start/` (W-11: 官员为任一灵魂手动发起审批).
@@ -18760,6 +18984,7 @@ export interface components {
             reason: string;
             /** Format: uuid */
             judgment?: string;
+            skip_node_orders?: number[];
         };
         /**
          * @description The dict `WorkflowService.get_workflow_stats` builds.
@@ -29502,7 +29727,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 只要这一组(加载更多) */
-                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
+                kind?: "approval" | "cooldown" | "letter" | "pick" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
                 /** @description 与 kind 同用:从第几条起,默认 0 */
                 offset?: number;
             };
@@ -35646,6 +35871,64 @@ export interface operations {
             };
         };
     };
+    v1_workflows_adjust_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Approval Workflow. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowAdjust"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowAdjust"];
+                "multipart/form-data": components["schemas"]["WorkflowAdjust"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_workflows_advance_create: {
         parameters: {
             query?: never;
@@ -35726,6 +36009,210 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+        };
+    };
+    v1_workflows_segments_pick_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Approval Workflow. */
+                id: string;
+                /** @description 段序号(1 = 本域) */
+                order: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowPick"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowPick"];
+                "multipart/form-data": components["schemas"]["WorkflowPick"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_workflows_segments_remind_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Approval Workflow. */
+                id: string;
+                /** @description 段序号(1 = 本域) */
+                order: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowRemind"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_workflows_segments_use_default_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Approval Workflow. */
+                id: string;
+                /** @description 段序号(1 = 本域) */
+                order: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowReason"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowReason"];
+                "multipart/form-data": components["schemas"]["WorkflowReason"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

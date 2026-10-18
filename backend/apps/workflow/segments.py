@@ -59,7 +59,7 @@ END_REASON_CANCELLED = "CROSS_CANCELLED"
 FOREIGN_ACTIONS = ("retrieve", "approve_node", "pick", "adjust")
 
 
-class SegmentRefused(Exception):
+class SegmentRefusedError(Exception):
     """一次选站 / 加减站 / 默认 / 提醒被拒;什么都没写。视图原样转成 `{code, error, **extra}` 与 `status`。"""
 
     def __init__(self, message, code, status=400, **extra):
@@ -69,7 +69,7 @@ class SegmentRefused(Exception):
         self.extra = extra
 
 
-class CrossConclusionRefused(Exception):
+class CrossConclusionRefusedError(Exception):
     """流程走完要结束跨域审判,而那场审判结束不了(参与方的站还没填等)。决定整体回滚。"""
 
     code = "cross_judgment_incomplete"
@@ -104,7 +104,7 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
     if workflow.tenant_id is None:
         # No hall, no realm to run a segment (only hand-built data has such a workflow): built as before segments.
         if skip_node_orders:
-            raise SegmentRefused("A workflow without a hall has no stations to pick", "no_realm")
+            raise SegmentRefusedError("A workflow without a hall has no stations to pick", "no_realm")
         return WorkflowService._create_nodes(workflow, template, civilization, enter=False)
     now = timezone.now()
     segment = WorkflowSegment.objects.create(
@@ -119,10 +119,10 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
         nodes = {n.node_order: n for n in segment.nodes.all()}
         unknown = sorted(wanted - set(nodes))
         if unknown:
-            raise SegmentRefused(f"No station {unknown} in this flow", "unknown_node", orders=unknown)
+            raise SegmentRefusedError(f"No station {unknown} in this flow", "unknown_node", orders=unknown)
         required = sorted(o for o in wanted if nodes[o].is_required)
         if required:
-            raise SegmentRefused("The final review cannot be skipped", "final_required", orders=required)
+            raise SegmentRefusedError("The final review cannot be skipped", "final_required", orders=required)
         ApprovalNode.objects.filter(pk__in=[nodes[o].pk for o in wanted]).update(
             status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK, skipped_by=user, decided_at=now)
     return first
@@ -271,18 +271,18 @@ def gate_days(segment, now=None):
 def _locked(workflow_id, order=None):
     workflow = ApprovalWorkflow._base_manager.select_for_update().get(pk=workflow_id)
     if workflow.status in TERMINAL_WORKFLOW_STATUSES:
-        raise SegmentRefused("This approval flow has ended", "workflow_closed", status=409)
+        raise SegmentRefusedError("This approval flow has ended", "workflow_closed", status=409)
     if order is None:
         return workflow, None
     segment = WorkflowSegment.objects.select_for_update().filter(workflow=workflow, order=order).first()
     if segment is None:
-        raise SegmentRefused("No such segment", "segment_not_found", status=404)
+        raise SegmentRefusedError("No such segment", "segment_not_found", status=404)
     return workflow, segment
 
 
 def _check_version(segment, version):
     if version is not None and version != segment.version:
-        raise SegmentRefused("This segment was changed since you loaded it", "segment_changed", status=409,
+        raise SegmentRefusedError("This segment was changed since you loaded it", "segment_changed", status=409,
                              version=segment.version,
                              changed_by=_name(segment.picked_by) if segment.picked_by_id else None,
                              changed_at=segment.picked_at.isoformat() if segment.picked_at else None)
@@ -319,10 +319,10 @@ def _apply_pick(workflow, segment, user, skip_ids, reason, now, *, default):
     nodes = {str(n.pk): n for n in segment.nodes.select_for_update()}
     unknown = sorted(skip_ids - set(nodes))
     if unknown:
-        raise SegmentRefused("Not a station of this segment", "unknown_node", node_ids=unknown)
+        raise SegmentRefusedError("Not a station of this segment", "unknown_node", node_ids=unknown)
     required = sorted(i for i in skip_ids if nodes[i].is_required)
     if required:
-        raise SegmentRefused("The final review cannot be skipped", "final_required", node_ids=required)
+        raise SegmentRefusedError("The final review cannot be skipped", "final_required", node_ids=required)
     # 改选:先把上一次选掉的全部放回,再按这一次的选。
     segment.nodes.filter(status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK).update(
         status=NodeStatus.PENDING, skip_kind=None, skipped_by=None, skip_reason="", decided_at=None)
@@ -355,14 +355,14 @@ def pick(workflow_id, order, user, *, skip_node_ids, version, reason="", request
     with transaction.atomic():
         workflow, segment = _locked(workflow_id, order)
         if segment.order == 1:
-            raise SegmentRefused("This realm's own stations are picked when the flow is generated", "not_foreign")
+            raise SegmentRefusedError("This realm's own stations are picked when the flow is generated", "not_foreign")
         if not can_pick(user, segment, request):
-            raise SegmentRefused("Only this realm's judges or hall admins pick its stations", "not_allowed", status=403)
+            raise SegmentRefusedError("Only this realm's judges or hall admins pick its stations", "not_allowed", status=403)
         if segment.state == SegmentState.SKIPPED:
-            raise SegmentRefused("This segment was skipped", "segment_closed", status=409)
+            raise SegmentRefusedError("This segment was skipped", "segment_closed", status=409)
         _check_version(segment, version)
         if segment.state == SegmentState.PICKED and started(segment, workflow):
-            raise SegmentRefused("This segment has started; change stations instead", "segment_started", status=409)
+            raise SegmentRefusedError("This segment has started; change stations instead", "segment_started", status=409)
         resumed = _apply_pick(workflow, segment, user, {str(i) for i in skip_node_ids}, reason, now, default=False)
         transaction.on_commit(lambda: _after_pick(workflow.pk, resumed))
     return workflow, segment
@@ -371,17 +371,17 @@ def pick(workflow_id, order, user, *, skip_node_ids, version, reason="", request
 def use_default(workflow_id, order, user, reason, request=None):
     """召集殿管理员替一个外域选全部站并继续(第 6 条规则)。理由必填、记审计、通知那个域。"""
     if not (reason or "").strip():
-        raise SegmentRefused("A reason is required", "reason_required")
+        raise SegmentRefusedError("A reason is required", "reason_required")
     now = timezone.now()
     with transaction.atomic():
         workflow, segment = _locked(workflow_id, order)
         if not is_convener_admin(user, workflow, request):
-            raise SegmentRefused("Only the convening hall's admins may do this", "not_allowed", status=403)
+            raise SegmentRefusedError("Only the convening hall's admins may do this", "not_allowed", status=403)
         if segment.state != SegmentState.AWAITING_PICK:
-            raise SegmentRefused("This segment is not waiting for a pick", "not_awaiting", status=409)
+            raise SegmentRefusedError("This segment is not waiting for a pick", "not_awaiting", status=409)
         overdue = segment.gate_reached_at is not None and now - segment.gate_reached_at >= timedelta(days=OVERDUE_DAYS)
         if not overdue and pickers(segment.tenant_id):
-            raise SegmentRefused(f"Allowed after {OVERDUE_DAYS} days at the gate, or when the realm has no picker",
+            raise SegmentRefusedError(f"Allowed after {OVERDUE_DAYS} days at the gate, or when the realm has no picker",
                                  "too_early", status=409)
         resumed = _apply_pick(workflow, segment, user, set(), reason.strip(), now, default=True)
         recipients, params = pick_recipients(segment.tenant_id), {
@@ -400,48 +400,48 @@ def adjust(workflow_id, user, *, restore_node_ids, skip_node_ids, reason, versio
     """加减站(第 5 条规则):只改一段、只改当前站之后的站;终审锁定;理由必填;记审计;通知被改到的站的审批人。"""
     restore, skip = {str(i) for i in restore_node_ids}, {str(i) for i in skip_node_ids}
     if not (reason or "").strip():
-        raise SegmentRefused("A reason is required", "reason_required")
+        raise SegmentRefusedError("A reason is required", "reason_required")
     if not restore and not skip:
-        raise SegmentRefused("Nothing to change", "nothing_to_change")
+        raise SegmentRefusedError("Nothing to change", "nothing_to_change")
     if restore & skip:
-        raise SegmentRefused("A station cannot be both restored and skipped", "conflicting_change")
+        raise SegmentRefusedError("A station cannot be both restored and skipped", "conflicting_change")
     now = timezone.now()
     with transaction.atomic():
         workflow, _ = _locked(workflow_id)
         nodes = {str(n.pk): n for n in ApprovalNode.objects.select_for_update().filter(
             workflow=workflow, pk__in=restore | skip)}
         if len(nodes) != len(restore | skip):
-            raise SegmentRefused("Not a station of this flow", "unknown_node",
+            raise SegmentRefusedError("Not a station of this flow", "unknown_node",
                                  node_ids=sorted((restore | skip) - set(nodes)))
         segment_ids = {n.segment_id for n in nodes.values()}
         if len(segment_ids) != 1 or None in segment_ids:
-            raise SegmentRefused("Change one realm's stations at a time", "one_segment")
-        segment = WorkflowSegment.objects.select_for_update().select_related("tenant").get(pk=segment_ids.pop())
+            raise SegmentRefusedError("Change one realm's stations at a time", "one_segment")
+        segment = WorkflowSegment.objects.select_for_update(of=("self",)).select_related("tenant").get(pk=segment_ids.pop())
         if not can_adjust(user, workflow, segment, request):
-            raise SegmentRefused("Only the current approver or this realm's hall admins change stations",
+            raise SegmentRefusedError("Only the current approver or this realm's hall admins change stations",
                                  "not_allowed", status=403)
         _check_version(segment, version)
         if segment.state == SegmentState.AWAITING_PICK:
-            raise SegmentRefused("This realm has not picked its stations yet", "not_picked", status=409)
+            raise SegmentRefusedError("This realm has not picked its stations yet", "not_picked", status=409)
         if segment.state == SegmentState.SKIPPED:
-            raise SegmentRefused("This segment was skipped", "segment_closed", status=409)
+            raise SegmentRefusedError("This segment was skipped", "segment_closed", status=409)
         current = workflow.current_node
         here = current is not None and current.segment_id == segment.pk
         if not here and started(segment, workflow):
-            raise SegmentRefused("This segment is done", "segment_done", status=409)
+            raise SegmentRefusedError("This segment is done", "segment_done", status=409)
         locked = sorted(i for i in nodes if here and nodes[i].node_order <= current.node_order)
         if locked:
-            raise SegmentRefused("Only stations after the current one can change", "node_locked", status=409,
+            raise SegmentRefusedError("Only stations after the current one can change", "node_locked", status=409,
                                  node_ids=locked)
         not_skipped = sorted(i for i in restore if nodes[i].status != NodeStatus.SKIPPED
                              or nodes[i].skip_kind not in RESTORABLE_SKIPS)
         not_pending = sorted(i for i in skip if nodes[i].status != NodeStatus.PENDING)
         if not_skipped or not_pending:
-            raise SegmentRefused("A station is no longer in the state you saw", "node_changed", status=409,
+            raise SegmentRefusedError("A station is no longer in the state you saw", "node_changed", status=409,
                                  node_ids=not_skipped + not_pending)
         required = sorted(i for i in skip if nodes[i].is_required)
         if required:
-            raise SegmentRefused("The final review cannot be skipped", "final_required", node_ids=required)
+            raise SegmentRefusedError("The final review cannot be skipped", "final_required", node_ids=required)
 
         ApprovalNode.objects.filter(pk__in=restore).update(
             status=NodeStatus.PENDING, skip_kind=None, skipped_by=None, skip_reason="", decided_at=None)
@@ -476,12 +476,12 @@ def remind(workflow_id, order, user, request=None):
     with transaction.atomic():
         workflow, segment = _locked(workflow_id, order)
         if not (is_tenant_exempt(user) or _user_tenant_id(user, request) == workflow.tenant_id):
-            raise SegmentRefused("Only the convening hall sends reminders", "not_allowed", status=403)
+            raise SegmentRefusedError("Only the convening hall sends reminders", "not_allowed", status=403)
         if segment.state != SegmentState.AWAITING_PICK:
-            raise SegmentRefused("This segment is not waiting for a pick", "not_awaiting", status=409)
+            raise SegmentRefusedError("This segment is not waiting for a pick", "not_awaiting", status=409)
         if segment.last_reminded_at is not None and now - segment.last_reminded_at < REMIND_INTERVAL:
             wait = REMIND_INTERVAL - (now - segment.last_reminded_at)
-            raise SegmentRefused("Reminded less than an hour ago", "remind_too_soon", status=429,
+            raise SegmentRefusedError("Reminded less than an hour ago", "remind_too_soon", status=429,
                                  retry_after=int(wait.total_seconds()) + 1)
         segment.last_reminded_at = now
         segment.save(update_fields=["last_reminded_at"])
@@ -513,7 +513,7 @@ def on_workflow_finished(workflow, status, end_reason=""):
             CrossTenantJudgmentService.activate(cross)
         CrossTenantJudgmentService.conclude(cross, "PASS" if passed else "FAIL", None, check=passed)
     except ValueError as exc:
-        raise CrossConclusionRefused(str(exc)) from exc
+        raise CrossConclusionRefusedError(str(exc)) from exc
 
 
 def lock_workflow_of(cross):

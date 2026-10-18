@@ -80,7 +80,7 @@ from apps.sentence_plan.requests import PlanChangeRefusedError
 from apps.sentence_plan.services import CrossJudgmentOpenError
 from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
-from apps.workflow.segments import SegmentRefused
+from apps.workflow.segments import SegmentRefusedError
 
 #: Upper bound on how many ids a caller may ask us to skip in one request.
 #: The skip set is session state the *client* holds (see `next_pending`), so
@@ -1423,7 +1423,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
             # Q17:挂着的联审的节点内容不再通过校验(409),或联审没结束而请求说不生成审批流程(400
             # `workflow_required`,第四十三批)。什么都没写。
             return Response({"error": str(exc), "code": exc.code}, status=exc.status)
-        except SegmentRefused as exc:
+        except SegmentRefusedError as exc:
             # 选站:跳过了终审(`final_required`)或模板里没有的站(`unknown_node`)。什么都没写。
             return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except JudgmentNotConcludableError as exc:
