@@ -8380,8 +8380,8 @@ export interface paths {
         /**
          * @description Revert a SETTLED soul to DISPOSED to fix a data-entry error.
          *
-         *     Not a state transition (SoulState.SETTLED has no valid_transitions,
-         *     deliberately) — an ADMIN-only, reason-required, separately audited
+         *     Not a state transition (SETTLED's one transition belongs to reopening a
+         *     finished sentence plan) — an ADMIN-only, reason-required, separately audited
          *     correction. See Soul.correct_settlement.
          */
         post: operations["v1_souls_correct_settlement_create"];
