@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Every civilization must have copy in every bundle, in every namespace that
  * names civilizations.
  *

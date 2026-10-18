@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import { tZh } from "./support/zhBundle";
 

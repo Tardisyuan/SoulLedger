@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * egy 语言包守着「egy 词表与命名规则」里能机械判定的那几条。
  *
  * 词表(Claude Design 定稿)的总原则是「同一概念,永远同一写法」。它统一了七处冲突

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 三份 bundle 里,没有哪条文案等于它自己的键。
  *
  * WHY。约 40 个前端套件把 i18n 桩成 `t: (k) => k`,其中 13 个直接断言键:

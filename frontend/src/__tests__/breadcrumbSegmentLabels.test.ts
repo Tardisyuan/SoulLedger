@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Routes outside the menu tree read their crumb — and so the identity band's title, which is the
  * last crumb — from `breadcrumb.<segment>` (`useBreadcrumbs`). Without a key the raw path segment
  * shows: the band on /notifications read「notifications」, /profile「profile」, /welcome「welcome」,

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * A route's `loading.tsx` is on screen for a few frames at every width, including 393.
  * A skeleton bar with a fixed width near that (`w-96` = 384 px, plus the page's 16 px gutter = 400)
  * pushes the document 7 px wider than the phone for those frames. That is what made

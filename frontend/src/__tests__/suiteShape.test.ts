@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 

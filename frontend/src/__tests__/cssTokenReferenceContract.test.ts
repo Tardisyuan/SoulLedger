@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Every `--color-*` / `--civ-*` custom property a component reaches for has to
  * be one `app/globals.css` actually declares.
  *

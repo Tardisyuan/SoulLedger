@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 手写的字符串联合 == 生成的 schema 枚举。
  *
  * 为什么这些联合还留着手写形式。`packages/core/src/api/generated/schema.ts` 里

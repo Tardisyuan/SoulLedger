@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 品牌色两项(Design 第三批回复,2026-10-03):`--brand-mark` #ECAA3D、`--brand-ground` #10120F。
  * 它们只给品牌标、图标、冷启动,所以真正的使用者不在 CSS 里,而在生成出来的图标与 App 冷启动:
  * - `mobile/scripts/build-app-icon.mjs` 从 globals.css 读这两个令牌(不再自带字面量);
