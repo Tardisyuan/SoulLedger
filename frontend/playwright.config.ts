@@ -7,7 +7,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Locally 2, not Playwright's default of half the cores: four browsers plus
+  // `next start` filled the dev machine (2026-10-19). PW_WORKERS overrides.
+  workers: process.env.CI ? 1 : Number(process.env.PW_WORKERS) || 2,
   reporter: process.env.CI ? [["html", { open: "never" }]] : "html",
   use: {
     baseURL,
