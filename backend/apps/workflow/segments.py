@@ -101,6 +101,11 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
     """本域那一段:建段、建节点(不进入)、按 `skip_node_orders`(模板里的站序)跳过。返回模板的第一个节点。"""
     from apps.workflow.services import WorkflowService
 
+    if workflow.tenant_id is None:
+        # No hall, no realm to run a segment (only hand-built data has such a workflow): built as before segments.
+        if skip_node_orders:
+            raise SegmentRefused("A workflow without a hall has no stations to pick", "no_realm")
+        return WorkflowService._create_nodes(workflow, template, civilization, enter=False)
     now = timezone.now()
     segment = WorkflowSegment.objects.create(
         workflow=workflow, order=1, tenant_id=workflow.tenant_id, civilization=civilization,
