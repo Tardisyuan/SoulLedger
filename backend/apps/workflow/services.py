@@ -399,8 +399,13 @@ class WorkflowService:
         return floor
 
     @classmethod
-    def _create_nodes(cls, workflow: ApprovalWorkflow, template: dict, civilization: str):
+    def _create_nodes(cls, workflow: ApprovalWorkflow, template: dict, civilization: str, *, segment=None,
+                      enter: bool = True, order_offset: int = 0, tenant_id=None):
         """Create ``template``'s nodes on ``workflow``; return the first one.
+
+        第四十三批: ``segment`` is the realm's segment the nodes belong to; ``tenant_id`` is that realm (approvers
+        resolve on its bench, not the workflow's); ``order_offset`` puts a later realm's stations after the ones
+        already there; ``enter=False`` leaves entering to the caller (``start_workflow`` applies the pick first).
 
         Shared by both entry points for the same reason ``_resolve_template``
         is: the two loops were near-identical — same fields, same verdicts, same
@@ -431,12 +436,14 @@ class WorkflowService:
         by_template_id: dict[str, ApprovalNode] = {}
         routing_defs: list[tuple[ApprovalNode, dict]] = []
 
+        tenant_id = tenant_id or workflow.tenant_id
         for position, raw_node_def in enumerate(template["nodes"], start=1):
             node_def = normalize_template_node(raw_node_def, position)
             node = ApprovalNode.objects.create(
                 workflow=workflow,
+                segment=segment,
                 node_name=node_def["node_name"],
-                node_order=node_def["node_order"],
+                node_order=order_offset + node_def["node_order"],
                 node_type=node_def["node_type"],
                 court_code=node_def["court_code"],
                 status=NodeStatus.PENDING,
@@ -451,9 +458,9 @@ class WorkflowService:
                 # Merged, not spread side by side: `_kind_columns` overrides the
                 # approver for 结束 (SYSTEM whatever its label says).
                 **{
-                    **cls._resolve_approver(node_def, civilization, workflow.tenant_id),
+                    **cls._resolve_approver(node_def, civilization, tenant_id),
                     **cls._timeout_columns(node_def),
-                    **cls._kind_columns(node_def, civilization, workflow.tenant_id),
+                    **cls._kind_columns(node_def, civilization, tenant_id),
                 },
             )
             if first_node is None:
@@ -513,6 +520,9 @@ class WorkflowService:
                 f"or escalated. Use WorkflowService._resolve_template, which "
                 f"always answers with at least one node."
             )
+
+        if not enter:
+            return first_node
 
         from django.utils import timezone
 
@@ -596,6 +606,8 @@ class WorkflowService:
         case_type: str | None = None,
         is_appeal: bool = False,
         priority: int | None = None,
+        skip_node_orders=(),
+        picked_by=None,
     ) -> ApprovalWorkflow | None:
         """
         Create an ApprovalWorkflow instance from a Judgment.
@@ -635,7 +647,7 @@ class WorkflowService:
         # Validation, template, nodes and events: `start_workflow`.
         return cls.start_workflow(
             soul, case_type=case_type, tenant=judgment.tenant, judgment=judgment,
-            is_appeal=is_appeal, priority=priority,
+            is_appeal=is_appeal, priority=priority, skip_node_orders=skip_node_orders, picked_by=picked_by,
         )
 
     @classmethod
@@ -651,6 +663,8 @@ class WorkflowService:
         priority: int | None = None,
         notes: str = "",
         exclusive: bool = False,
+        skip_node_orders=(),
+        picked_by=None,
     ) -> ApprovalWorkflow:
         """Build a workflow for ``soul``: row, nodes, WORKFLOW_CREATED event, and the after-commit notification.
 
@@ -668,9 +682,15 @@ class WorkflowService:
         race; only a real PostgreSQL run can. The judgment path does not pass it: a concluded judgment has
         always been allowed a workflow beside, say, a soul's pending rebirth application.
 
+        第四十三批: the workflow's own realm is segment 1, built with ``skip_node_orders`` (template station
+        orders the judge unticked) skipped at pick. When ``judgment`` carries a cross-realm judgment that has not
+        ended, each participating realm gets a segment after it, waiting for that realm to pick
+        (``apps/workflow/segments.py``); each realm is told after commit.
+
         Raises:
             ValueError: case_type not valid for the soul's civilization, or a node-less template.
             WorkflowInProgressError: ``exclusive`` and the soul already has a live workflow of this case type.
+            segments.SegmentRefused: a skipped station is unknown or is the final review.
         """
         from apps.souls.models import Soul
         from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
@@ -713,7 +733,18 @@ class WorkflowService:
             # Create nodes, and refuse a template that has none — see
             # `_create_nodes`. Inside the transaction, so a refusal leaves no
             # half-built workflow behind.
-            cls._create_nodes(workflow, template, civilization)
+            from django.utils import timezone
+
+            from apps.workflow import segments
+
+            first = segments.build_local(workflow, template, civilization, skip_node_orders, user=picked_by)
+            cross = segments.open_cross_for(judgment)
+            if cross is not None:
+                segments.add_foreign(workflow, cross)
+            first.refresh_from_db()
+            entry = first if first.status == NodeStatus.PENDING else workflow.get_next_node()
+            workflow._enter(entry, timezone.now())
+            workflow.save()
             # The WORKFLOW_CREATED row is part of the workflow's record: same transaction.
             cls.record_events(workflow, created=True)
 
@@ -723,6 +754,8 @@ class WorkflowService:
         # (same defect as `30052b65`; tests/test_dispatch_notifications_after_commit.py). Outside any
         # transaction `on_commit` runs at once.
         transaction.on_commit(lambda: cls.announce(workflow, created=True))
+        if cross is not None:
+            transaction.on_commit(lambda: segments.notify_pick_tasks(workflow.pk))
         return workflow
 
     @staticmethod
@@ -842,6 +875,9 @@ class WorkflowService:
         from apps.authentication.models import User
         from apps.workflow.models import NodeKind
 
+        if node.segment_id is not None:
+            # 第四十三批: a segment's stations are held by its own realm's officers, not the workflow's tenant's.
+            tenant_id = node.segment.tenant_id
         if node.kind == NodeKind.COUNTERSIGN:
             # The slots that have not signed yet — the people still owed.
             signed = {s["signer"] for s in node.signatures_json or []}
