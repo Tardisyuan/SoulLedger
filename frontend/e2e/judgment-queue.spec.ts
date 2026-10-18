@@ -94,8 +94,10 @@ test.describe("Critical path: the judgment triage queue", () => {
     expect(api.lastCall("POST", "/judgment/:id/conclude/")?.body).toEqual({
       verdict: "PASSED",
       notes: "",
-      create_workflow: false,
     });
+    // W unticked: no `create_workflow` at all (batch 43), so the server decides — a case with an
+    // open cross-realm judgment gets its workflow, any other gets none. `false` would be refused there.
+    expect(api.lastCall("POST", "/judgment/:id/conclude/")?.body).not.toHaveProperty("create_workflow");
     await expect(page.getByRole("button", { name: "撤销" })).toHaveCount(0);
 
     // ── Leaving sends nothing more ──
