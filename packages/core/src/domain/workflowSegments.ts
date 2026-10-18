@@ -1,7 +1,7 @@
-import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "@soulledger/core/api";
+import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "../api/workflow";
 
 /**
- * 第四十三批:审批流程按域分段的几条读法,选站底页、加减站底页、流程详情左栏共用。
+ * 第四十三批:审批流程按域分段的几条读法,选站底页、加减站底页、流程详情左栏共用 —— 官员台与官员 App 都用。
  * 规则在后端(`apps/workflow/segments.py`),这里只按它返回的字段读,不另算一套。
  */
 
@@ -15,6 +15,9 @@ export function segmentNodes(workflow: Pick<ApprovalWorkflow, "nodes">, order: n
 /** 选站 / 加减站能动的跳过:选站时跳过、中途跳过(`RESTORABLE_SKIPS`)。引擎按路由跳过的与取消跳过的不能加回。 */
 export const isRestorable = (n: ApprovalNode) =>
   n.status === "SKIPPED" && (n.skip_kind === "AT_PICK" || n.skip_kind === "LATER");
+
+/** 段序号 → ①②③(Design 的分段头与外域行都用它)。 */
+export const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
 
 /** 段的「站号」:段内重排(Design W-3a);老后端没有时退回全局站序。 */
 export const stationNo = (n: ApprovalNode) => n.order_in_segment ?? n.node_order;
@@ -53,4 +56,19 @@ export function adjustableSegment(workflow: ApprovalWorkflow, myTenant: string |
   const here = segments.find((s) => s.order === current?.segment_order);
   if (here && (myTenant === null || here.tenant_code === myTenant)) return here;
   return segments.find((s) => s.tenant_code === myTenant && (s.state === "RUNNING" || s.state === "PICKED")) ?? null;
+}
+
+/** 门口满几天算「超过 3 天还没选」(后端 `segments.OVERDUE_DAYS`;到门口那天是第 1 天)。 */
+export const OVERDUE_DAYS = 3;
+
+/**
+ * 流程停在一段门口时,读的人看到哪一种(W-5a/c、O-4):`foreign` = 这一段是读的人自己的域(「流程在等本域选站」);
+ * `no_picker` = 那个域没有能选站的人;`overdue` = 等了超过 3 天(「每天提醒一次,还没选」);否则 `waiting`。
+ */
+export type GateView = "foreign" | "no_picker" | "overdue" | "waiting";
+
+export function gateView(segment: Pick<WorkflowSegment, "tenant_code" | "no_picker" | "gate_days">, myTenant: string | null): GateView {
+  if (myTenant !== null && segment.tenant_code === myTenant) return "foreign";
+  if (segment.no_picker) return "no_picker";
+  return (segment.gate_days ?? 0) > OVERDUE_DAYS ? "overdue" : "waiting";
 }

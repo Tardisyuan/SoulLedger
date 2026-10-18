@@ -10,10 +10,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { PickStationsSheet } from "./PickStationsSheet";
-import { segmentRefusalOf } from "./segmentModel";
-
-/** 门口满几天算「超过 3 天还没选」(后端 `segments.OVERDUE_DAYS`;到门口那天是第 1 天)。 */
-export const OVERDUE_DAYS = 3;
+import { gateView, segmentRefusalOf } from "@soulledger/core/domain/workflowSegments";
 
 /**
  * 流程停在一个外域段门口、等那个域选站时,中栏的那一块(第四十三批 W-5a/b/c,外域那边是 W-2 的「流程在等本域选站」)。
@@ -63,8 +60,10 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
     },
   });
 
-  const mine = myTenant !== null && segment.tenant_code === myTenant;
-  const overdue = (segment.gate_days ?? 0) > OVERDUE_DAYS;
+  // 哪一种由 core 的 `gateView` 定(官员 App 的 O-4 同一个函数)。
+  const view = gateView(segment, myTenant);
+  const mine = view === "foreign";
+  const overdue = view === "overdue";
 
   return (
     <section
