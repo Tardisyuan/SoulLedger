@@ -20808,6 +20808,58 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/v1/workflows/flow-preview/:
+    get:
+      operationId: v1_workflows_flow_preview_retrieve
+      description: |-
+        W-1 选站列表(第四十三批):流程生成之前,本域默认流程的各站与按跨域审判顺序接在后面的外域。
+        模板解析与 `start` / 结案生成同一套(`_resolve_template` / 同样校验的选定模板),所以列出的站序就是
+        `skip_node_orders` 认的那些。灵魂与审判按同一个租户划界:别的殿的是 404。
+      parameters:
+      - in: query
+        name: case_type
+        schema:
+          type: string
+      - in: query
+        name: judgment
+        schema:
+          type: string
+        description: 结案时:审判 id(案件类型按审判取);手动发起时:关联的审判
+      - in: query
+        name: soul
+        schema:
+          type: string
+        description: 手动发起:灵魂 id(与 case_type 或 template 同给)
+      - in: query
+        name: template
+        schema:
+          type: string
+        description: 选定的模板;不给按案件类型取默认
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowPreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/workflows/start/:
     post:
       operationId: v1_workflows_start_create
@@ -25836,6 +25888,70 @@ components:
         * `record` - 我的记录有误
         * `app` - App 出了问题
         * `other` - 其他
+    FlowPreview:
+      type: object
+      description: |-
+        `GET /workflows/flow-preview/` (W-1): the stations of this realm's default flow before the workflow is
+        generated, and the other realms that will follow (`segments.flow_preview`).
+      properties:
+        name:
+          type: string
+        stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowPreviewStation'
+        foreign:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowPreviewForeign'
+      required:
+      - foreign
+      - name
+      - stations
+    FlowPreviewForeign:
+      type: object
+      properties:
+        order:
+          type: integer
+        tenant_code:
+          type: string
+        realm_name:
+          type: string
+        default_node_count:
+          type: integer
+      required:
+      - default_node_count
+      - order
+      - realm_name
+      - tenant_code
+    FlowPreviewStation:
+      type: object
+      properties:
+        node_order:
+          type: integer
+          description: 站序;勾掉的站以它送进 `skip_node_orders`。
+        node_name:
+          type: string
+        court_code:
+          type: string
+        approver:
+          type: string
+          nullable: true
+          description: 具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。
+        approver_role:
+          type: string
+          nullable: true
+          description: 按角色派时的角色成员(客户端翻译)。
+        is_required:
+          type: boolean
+          description: 终审:不能跳过。
+      required:
+      - approver
+      - approver_role
+      - court_code
+      - is_required
+      - node_name
+      - node_order
     Follow:
       type: object
       properties:
