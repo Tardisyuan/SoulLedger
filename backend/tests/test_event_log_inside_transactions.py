@@ -431,13 +431,37 @@ def _cross_conclude_appends_stops():
     _template(w.cn, "CHINESE")
     _template(w.eg, "EGYPTIAN")
     _soul, _case, cj, _wf = merged(w, [w.eg])
-    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None),
+    # 流程还在走时只有流程自己那条路能结(2026-10-18:手动结束 409 `workflow_running`)。
+    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None,
+                                                        by_workflow=True),
             lambda: CrossTenantJudgment.all_objects.get(pk=cj.pk).status == JudgmentStatus.CONCLUDED,
             "SENTENCE_PLAN_AMENDED")
 
 
+def _cross_pass_reopens_finished_plan():
+    """2026-10-18:跨域审判 PASS 时计划已经刑满 —— 计划重开、灵魂 REINCARNATING → DISPOSED(STATE_CHANGED)
+    与审判的 CONCLUDED 同一事务(`append_cross_stops` → `_reopen` → `Soul.transition_to`)。"""
+    from apps.dispatch.models import CrossTenantJudgment
+    from apps.dispatch.services import CrossTenantJudgmentService
+    from apps.sentence_plan.models import SentencePlan
+    from tests.test_workflow_segments import World, _template, merged
+
+    w = World()
+    w.cn, w.eg = _cn(), plan.tenant("EG_DUAT")
+    _template(w.cn, "CHINESE")
+    _template(w.eg, "EGYPTIAN")
+    soul, _case, cj, _wf = merged(w, [w.eg])
+    p = SentencePlan.all_objects.get(soul=soul)
+    plan.serve(soul, p, 1)  # 原属那一站执行完:计划刑满,灵魂等转世
+    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None,
+                                                        by_workflow=True),
+            lambda: SentencePlan.all_objects.get(pk=p.pk).status == "ACTIVE",
+            "STATE_CHANGED")
+
+
 PATHS = {
     "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
+    "cross_pass_reopens_plan/STATE_CHANGED": _cross_pass_reopens_finished_plan,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
