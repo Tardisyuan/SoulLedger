@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
+import { judgmentKeys } from "@soulledger/core/query_keys";
+import { isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -77,6 +81,21 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   const { cursor, progress, submitVerdict, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
+  /* 第四十三批:原审判挂着没结束的跨域审判时,不勾 W 服务端也会生成全站流程(请求里不带 create_workflow)。
+     这里把 W 显示成勾上、点不动,下面一句为什么;要选站去整页。与整页同一把缓存键。 */
+  // 队列行是列表序列化,不带 `cross_judgment_id`;取一次详情(与整页同一把缓存键)。
+  const { data: detail } = useQuery({
+    queryKey: judgmentKeys.detail(judgment?.id ?? ""),
+    queryFn: () => judgmentApi.get(judgment!.id).then((res) => res.data),
+    enabled: !!judgment && (judgment.kind ?? "ORIGINAL") === "ORIGINAL" && !judgment.is_final,
+  });
+  const crossId = detail?.cross_judgment_id ?? null;
+  const { data: cross } = useQuery({
+    queryKey: ["cross-judgments", "detail", crossId],
+    queryFn: () => crossTenantJudgmentsApi.get(crossId!).then((res) => res.data),
+    enabled: !!crossId && !judgment?.is_final,
+  });
+  const crossForced = isCrossJudgmentOpen(cross) && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
 
   // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
   // 案子没记殿或队列空了就写刑名司。
@@ -444,13 +463,19 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               <label className="flex min-h-(--control-h-sm) items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3">
                 <input
                   type="checkbox"
-                  checked={createWorkflow}
+                  checked={createWorkflow || crossForced}
+                  disabled={crossForced}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
                   className="h-4 w-4 accent-[oklch(var(--color-accent))]"
                 />
                 {t("judgment.queue.create_workflow")}
                 <Keycap>W</Keycap>
               </label>
+              {crossForced && (
+                <p data-testid="queue-cross-forced" className="-mt-2 mb-3 text-xs text-[oklch(var(--color-ink-muted))]">
+                  {t("workflow.pick.cross_forced")}
+                </p>
+              )}
             </section>
           </>
         )}
