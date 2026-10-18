@@ -15,9 +15,9 @@ import {
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox";
 import { workflowApi } from "@soulledger/core/api/workflow";
-import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
+import { CIVILIZATION_SHORT_CODES, TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 
-export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
+export const TODO_KINDS: readonly TodoKind[] = ["pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
 
 /** Kinds that are only read on the phone (Design 第四十批 O-f): no detail, the group's bar says 「在电脑上处理」. */
 export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
@@ -26,7 +26,9 @@ export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
  * 转生申请的标题:后端给的是灵魂名,「转生申请 · 名」(申诉:「转生申请申诉 · 名」)在这里按语言包拼。
  * 其他种类的 `title` 原样。
  */
-export function todoTitle(item: { kind: string; title: string; is_appeal?: boolean }, t: (key: string, vars?: Record<string, string>) => string): string {
+export function todoTitle(item: { kind: string; title: string; is_appeal?: boolean; total?: number }, t: (key: string, vars?: Record<string, string>) => string): string {
+  // 待我选站:「{灵魂} · 本域 N 站」,N 是本域这一段的站数(默认流程)。
+  if (item.kind === "pick") return t("workflow.pick_group.row_title", { soul: item.title, n: String(item.total ?? 0) });
   if (item.kind !== "rebirth" || !item.title) return item.title;
   return t(item.is_appeal ? "soul_accounts.rebirth.appeal_title" : "soul_accounts.rebirth.detail_title", { name: item.title });
 }
@@ -40,8 +42,11 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
  * 交给我的 together. It is counted with the rest, and drawn only when it has something.
  * 受刑计划变更 (`sentence_changes`, Design 第四十批 O-f): requests awaiting this hall's original judge. Read-only
  * here and never pushed, but counted with the rest (the server's `total()` counts it too).
+ * 待我选站 (`pick_nodes`, Design 第四十三批 O-1): first, above 审批节点 -- an unpicked realm holds up another hall's
+ * flow. Its rows open the pick page (`screens/pick.tsx`), keyed by the workflow.
  */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
+  { field: "pick_nodes", kind: "pick", label: "officer_app.todo.groups.pick_nodes" },
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },
   { field: "reassignments", kind: "reassignment", label: "officer_app.todo.groups.reassignments" },
   { field: "cooldowns", kind: "cooldown", label: "officer_app.todo.groups.cooldowns" },
@@ -49,6 +54,23 @@ export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: s
   { field: "letters", kind: "letter", label: "officer_app.todo.groups.letters" },
   { field: "sentence_changes", kind: "sentence_change", label: "officer_app.todo.group_sentence_change" },
 ];
+
+/**
+ * 「待我选站」一行标题下的两行(O-1):「{发起域} · {殿}发起 · 本域排第 N」,再一行「流程已在门口等 · N 天」或
+ * 「前面还有 N 站」。`realm` 是发起殿的租户代码,读成文明名(「中国」);认不得时留空,不印代码(同官员台)。
+ */
+export function pickRowLines(
+  row: { realm?: string; hall?: string; segment_order?: number; gate_days?: number | null; stations_ahead?: number | null },
+  t: (key: string, vars?: Record<string, string>) => string,
+  civilization: (code: string | undefined) => string,
+): { meta: string; wait: string; atGate: boolean } {
+  const atGate = row.gate_days != null;
+  return {
+    meta: t("workflow.pick_group.row_meta", { realm: civilization(TENANT_CODE_TO_CIVILIZATION[row.realm ?? ""]), hall: row.hall ?? "", order: String(row.segment_order ?? "") }),
+    wait: atGate ? t("workflow.pick_group.at_gate", { n: String(row.gate_days) }) : t("workflow.pick_group.ahead", { n: String(row.stations_ahead ?? 0) }),
+    atGate,
+  };
+}
 
 export function isTodoKind(value: unknown): value is TodoKind {
   return typeof value === "string" && (TODO_KINDS as readonly string[]).includes(value);
@@ -433,6 +455,7 @@ export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: str
   switch (target.kind) {
     case "dispatch":
     case "approval":
+    case "pick":
       return `/workflow/${target.id}`;
     case "reassignment":
       return `/dispatch/${target.id}`;

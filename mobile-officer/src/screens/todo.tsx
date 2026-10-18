@@ -10,7 +10,7 @@ import { unassignedShown } from "../todoFacts";
 import { useCachedRemote } from "../readCache";
 
 import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
-import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
+import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, pickRowLines, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
 import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
 import { formatWhen } from "../format";
@@ -253,18 +253,22 @@ const FEEDBACK_TAGS: Record<string, string> = {
 
 /** `onOpen` absent: a view-only row (no ›, nothing to press). */
 function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight: boolean; gone?: ReadonlySet<string>; onOpen?: (item: ItemRef) => void }) {
-  const { t } = useI18n();
+  const { t, enumLabel } = useI18n();
   const tagKey = item.feedback_tag ? FEEDBACK_TAGS[item.feedback_tag] : undefined;
   const tag = tagKey ? t("soul_inbox.feedback.label", { category: t(tagKey) }) : null;
   // 受刑计划变更: which kind of request (加项 / 减项 · 重开审判), in the desk's words.
   const requestKind = (item as TodoItemExtra).request_kind;
   const request = requestKind ? t(`sentence_plan.request_kinds.${requestKind}`) : null;
   // S4: every line here is a label, an identifier or a time -- one line each, long-press for the whole.
-  const lines = [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
+  // 待我选站 (O-1): who convened it and where this realm stands, then 「已在门口等 · N 天」 or 「前面还有 N 站」 -- no time.
+  const pick = item.kind === "pick" ? pickRowLines(item as TodoItemExtra, t, (civ) => enumLabel("souls.civilizations", civ).label ?? "") : null;
+  const lines = pick
+    ? [{ one: pick.meta }, { one: pick.wait }]
+    : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
-      glyph="◐"
+      glyph={pick?.atGate ? "◌" : "◐"}
       strong
       title={todoTitle(item, t) || t(`officer_app.kinds.${item.kind}`)}
       lines={lines}

@@ -43,9 +43,10 @@ export type Cosigner = components["schemas"]["Cosigner"];
  * The kinds of waiting item; `target` on a row is `{ kind, id }`. `letter` (待回书信) is a soul's
  * letter assigned to me: its id is the inbox conversation's, and it has no `item()` detail --
  * the thread is read and answered through `soulInboxApi`. `sentence_change` (受刑计划变更请求) is view-only and
- * has no `item()` detail either: it is decided on the desk.
+ * has no `item()` detail either: it is decided on the desk. `pick` (待我选站, 第四十三批) has no `item()` detail:
+ * its id is the workflow's, read through `workflowApi.get` and picked through `workflowApi.pickSegment`.
  */
-export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change";
+export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change" | "pick";
 
 /**
  * Why a decision (approve / reject) did not go through. `code` on the error body of
@@ -83,7 +84,7 @@ export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" 
 export const officerAppApi = {
   todo: () => api.get<Todo>("/officer-app/todo/"),
   /** 加载更多: one group from item `offset` on (10 a page), `{ count, items }`. */
-  todoGroup: (kind: TodoKind | "unassigned_letter" | "pick", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
+  todoGroup: (kind: TodoKind | "unassigned_letter", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
   item: (kind: TodoKind, id: string) => api.get<TodoItemDetail>(`/officer-app/items/${kind}/${id}/`),
   /** 加签候选人: same hall only. */
   signerCandidates: (q?: string) => api.get<SignerCandidate[]>("/officer-app/signer-candidates/", { params: q ? { q } : undefined }),

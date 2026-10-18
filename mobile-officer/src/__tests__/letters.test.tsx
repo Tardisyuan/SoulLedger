@@ -64,8 +64,8 @@ beforeEach(() => {
 });
 
 describe("rules", () => {
-  it("待回书信 comes after the four that were there; 受刑计划变更 (Design 第四十批 O-f) after it", () => {
-    expect(TODO_GROUPS.map((g) => g.field)).toEqual(["approvals", "reassignments", "cooldowns", "rebirths", "letters", "sentence_changes"]);
+  it("待回书信 comes after the four that were there; 受刑计划变更 (Design 第四十批 O-f) after it; 待我选站 (第四十三批 O-1) above them all", () => {
+    expect(TODO_GROUPS.map((g) => g.field)).toEqual(["pick_nodes", "approvals", "reassignments", "cooldowns", "rebirths", "letters", "sentence_changes"]);
   });
   it("the assignment notification lands on the thread", () => {
     expect(noticeLanding({ related_resource: "soul_inbox", related_id: "c-1" })).toEqual({ tab: "todo", item: { kind: "letter", id: "c-1" } });
