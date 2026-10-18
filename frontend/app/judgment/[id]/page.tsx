@@ -69,6 +69,7 @@ import {
 } from "@/src/components/sentence-plan/PlanChangesEditor";
 import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
+import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
 import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import {
   EMPTY_PLACEMENT,
@@ -245,7 +246,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     queryFn: () => crossTenantJudgmentsApi.get(crossId!).then((res) => res.data),
     enabled: !!crossId && !judgment?.is_final,
   });
-  const crossBlocked = isCrossJudgmentOpen(cross);
+  /* 第四十三批:原审判挂着还没结束的跨域审判时不再挡结案 —— 结案必须生成审批流程,跨域审判并进流程里(外域按顺序
+     接在后面)。勾选框锁成勾上。只有不是原审判的(加减项审判)仍按旧规矩挡。 */
+  const crossOpen = isCrossJudgmentOpen(cross);
+  const crossForced = crossOpen && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
+  const crossBlocked = crossOpen && !crossForced;
+  const withWorkflow = createWorkflow || crossForced;
+  /** W-1a 选站:确认层第 2 步里取消勾选的站(站序)。确认层的步数也在这里(⌘⏎ 按步走)。 */
+  const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
+  const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
   /** 提交时才被 409 `cross_judgment_open` 挡下(并发):确认层里换成同一句话。 */
   const [crossRefused, setCrossRefused] = useState(false);
 
@@ -357,7 +366,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     concludeMutation.mutate({
       verdict: selectedVerdict,
       notes,
-      create_workflow: createWorkflow,
+      create_workflow: withWorkflow,
+      ...(withWorkflow && skipOrders.size ? { skip_node_orders: [...skipOrders].map(Number) } : {}),
       ...(planChanges ? { plan_changes: planChanges } : {}),
       ...(isOriginal ? placementFor(placement, selectedVerdict) : {}),
     });
@@ -383,6 +393,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     }
     concludeMutation.reset(); // 每次进层从头来:上一次的结果(含被拒)不属于这一次
     setCrossRefused(false);
+    setConfirmStep(1);
     setConfirming(true);
   }
 
@@ -442,7 +453,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       ),
       "mod+Enter": () => {
         if (!canExecute || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
-        if (confirming) handleConclude();
+        if (confirming && withWorkflow && confirmStep === 1) setConfirmStep(2);
+        else if (confirming) handleConclude();
         else openConfirm();
       },
     },
@@ -1134,14 +1146,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 <input
                   id={createWorkflowId}
                   type="checkbox"
-                  checked={createWorkflow}
+                  checked={withWorkflow}
+                  disabled={crossForced}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
                   className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
                 />
                 <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
                   <span className="text-sm text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
                   <span className="text-xs text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
-                    {t("judgment.detail.create_workflow_hint")}
+                    {crossForced ? t("workflow.pick.cross_forced") : t("judgment.detail.create_workflow_hint")}
                   </span>
                 </label>
               </div>
@@ -1192,7 +1205,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         onClose={() => setConfirming(false)}
         verdict={selectedVerdict}
         court={judgment.court}
-        withWorkflow={createWorkflow}
+        withWorkflow={withWorkflow}
+        step={confirmStep}
+        onStep={setConfirmStep}
+        stations={
+          withWorkflow && !isFinal ? (
+            <FlowStationPicker params={{ judgment: id }} skipped={skipOrders} onChange={setSkipOrders} />
+          ) : undefined
+        }
         pending={concludeMutation.isPending}
         done={concludeMutation.isSuccess}
         stampKey={stamp}

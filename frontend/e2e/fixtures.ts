@@ -1426,6 +1426,8 @@ export class ApiMock {
     this.on("GET", "/officer-app/todo/", {
       approvals: emptyGroup, reassignments: emptyGroup, cooldowns: emptyGroup, rebirths: emptyGroup,
       letters: emptyGroup, unassigned_letters: emptyGroup, sentence_changes: emptyGroup,
+      // 待我选站(第四十三批 W-2):首页待办条一格,审批页「实例」页签最上面一组(没有就不画)。
+      pick_nodes: emptyGroup,
     });
     // 菜单按钮配置(第四十批 W-b):一个数组,不是分页;没有行 = 全部允许。
     this.on("GET", "/menus/buttons/config/", []);
@@ -1790,6 +1792,16 @@ export class ApiMock {
       { value: "APPEAL", builtin: true },
       { value: "SPECIAL", builtin: false },
     ]);
+    // W-1 选站列表(第四十三批):发起审批与结案勾「生成审批流」的第 2 步。同上,登记在 `:id/` 之后。
+    this.on("GET", "/workflows/flow-preview/", {
+      name: "十殿审判流程",
+      stations: [
+        { node_order: 1, node_name: "分流", court_code: "第一殿", approver: "秦广王", approver_role: null, is_required: false },
+        { node_order: 2, node_name: "复核", court_code: "第三殿", approver: "宋帝王", approver_role: null, is_required: false },
+        { node_order: 3, node_name: "终审", court_code: "第十殿", approver: "转轮王", approver_role: null, is_required: true },
+      ],
+      foreign: [],
+    });
     this.on("POST", "/workflows/start/", (call) => ({
       status: 201,
       body: {

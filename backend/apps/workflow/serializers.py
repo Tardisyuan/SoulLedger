@@ -958,6 +958,31 @@ class WorkflowRemindSerializer(serializers.Serializer):
     reminded_at = serializers.DateTimeField()
 
 
+class FlowPreviewStationSerializer(serializers.Serializer):
+    node_order = serializers.IntegerField(help_text="站序;勾掉的站以它送进 `skip_node_orders`。")
+    node_name = serializers.CharField()
+    court_code = serializers.CharField(allow_blank=True)
+    approver = serializers.CharField(allow_null=True, help_text="具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。")
+    approver_role = serializers.CharField(allow_null=True, help_text="按角色派时的角色成员(客户端翻译)。")
+    is_required = serializers.BooleanField(help_text="终审:不能跳过。")
+
+
+class FlowPreviewForeignSerializer(serializers.Serializer):
+    order = serializers.IntegerField()
+    tenant_code = serializers.CharField()
+    realm_name = serializers.CharField()
+    default_node_count = serializers.IntegerField()
+
+
+class FlowPreviewSerializer(serializers.Serializer):
+    """`GET /workflows/flow-preview/` (W-1): the stations of this realm's default flow before the workflow is
+    generated, and the other realms that will follow (`segments.flow_preview`)."""
+
+    name = serializers.CharField()
+    stations = FlowPreviewStationSerializer(many=True)
+    foreign = FlowPreviewForeignSerializer(many=True)
+
+
 class WorkflowCaseTypeSerializer(serializers.Serializer):
     """One row of `GET /workflows/case-types/`: a case type the civilization admits.
 

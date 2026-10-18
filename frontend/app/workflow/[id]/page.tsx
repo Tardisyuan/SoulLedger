@@ -33,6 +33,10 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { KIND_GLYPH } from "@/src/components/workflow/workflowValidation";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { WorkflowSegmentList } from "@/src/components/workflow/segments/WorkflowSegmentList";
+import { WorkflowSegmentHistory } from "@/src/components/workflow/segments/WorkflowSegmentHistory";
+import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowGateBanner";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -88,6 +92,7 @@ export default function WorkflowDetailPage() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
+  const myTenant = useTenant().user?.tenant?.code ?? null;
 
   // Falling back to the raw enum was the §4.6 leak in miniature: a status
   // the bundle didn't cover printed "IN_PROGRESS" at the user.
@@ -276,6 +281,9 @@ export default function WorkflowDetailPage() {
   }
 
   const statusColor = STATUS_COLORS[workflow.status] || STATUS_COLORS.PENDING;
+  const segmented = (workflow.segments?.length ?? 0) > 0;
+  const gateSegment =
+    workflow.awaiting_segment != null ? workflow.segments?.find((seg) => seg.order === workflow.awaiting_segment) ?? null : null;
 
   /**
    * Hoisted out of the JSX rather than written inline in `actions`, and the
@@ -372,7 +380,10 @@ export default function WorkflowDetailPage() {
             </button>
           </div>
 
-          {activeTab === "nodes" && (
+          {/* 第四十三批:按域分段的流程换成分段列表(W-3a);存量流程没有分段,照旧平铺。 */}
+          {activeTab === "nodes" && segmented && <WorkflowSegmentList workflow={workflow} myTenant={myTenant} />}
+
+          {activeTab === "nodes" && !segmented && (
             <>
               <ol>
                 {sortedNodes.map((node) => {
@@ -436,6 +447,7 @@ export default function WorkflowDetailPage() {
 
           {activeTab === "history" && (
             <div className="px-3">
+              <WorkflowSegmentHistory workflow={workflow} />
               <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} />
             </div>
           )}
@@ -443,6 +455,9 @@ export default function WorkflowDetailPage() {
 
         {/* ── 2 · 当前节点 ── */}
         <div className="min-w-0 flex flex-col gap-6 max-lg:order-1">
+          {/* 停在外域段门口等它选站(W-5a/b/c):这时没有当前节点,中栏就是这一块。 */}
+          {gateSegment && <WorkflowGateBanner workflow={workflow} segment={gateSegment} myTenant={myTenant} />}
+
           {currentNode && workflow.status !== "COMPLETED" && (
             <section className="flex flex-col gap-4 px-6 py-6 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
               <div className="flex flex-wrap items-start justify-between gap-3">

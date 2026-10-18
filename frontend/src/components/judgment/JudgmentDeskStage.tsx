@@ -270,6 +270,9 @@ export function JudgmentConfirmLayer({
   stampKey,
   onConfirm,
   refusal,
+  stations,
+  step = 1,
+  onStep,
 }: {
   open: boolean;
   onClose: () => void;
@@ -282,6 +285,13 @@ export function JudgmentConfirmLayer({
   onConfirm: () => void;
   /** 提交被挡下时的那句话(如还有跨域审判没结束);给了就放在盖印键上面,盖印键置灰。 */
   refusal?: ReactNode;
+  /**
+   * 第四十三批 W-1a:勾了「生成审批流」时的选站列表。给了就分两步 —— 第 1 步的主键变成「下一步」,
+   * 第 2 步是这份列表与「上一步 / 落判并发起」。步数由页面持有(⌘⏎ 也要按步走)。
+   */
+  stations?: ReactNode;
+  step?: 1 | 2;
+  onStep?: (step: 1 | 2) => void;
 }) {
   const { t } = useI18n();
   const code = verdict as Verdict;
@@ -294,6 +304,7 @@ export function JudgmentConfirmLayer({
   useEffect(() => {
     if (done) doneRef.current?.focus();
   }, [done]);
+  const picking = !done && withWorkflow && !!stations && step === 2;
   const choice = (
     <p className="font-title text-display-lg text-[oklch(var(--color-ink))]">
       <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(code)}</span>
@@ -321,7 +332,7 @@ export function JudgmentConfirmLayer({
               </Dialog.Close>
             )}
           </header>
-          <div className="mx-auto w-full max-w-[430px] px-4 py-12 text-center">
+          <div className={`mx-auto w-full px-4 py-12 text-center ${picking ? "max-w-[720px]" : "max-w-[430px]"}`}>
             {done ? (
               <>
                 <Seal size={72} stampKey={stampKey} court={court ?? undefined} className="mx-auto" />
@@ -330,6 +341,22 @@ export function JudgmentConfirmLayer({
                 <Button type="button" variant="secondary" size="lg" className="mt-8 w-full" onClick={onClose} ref={doneRef}>
                   {t("judgment.desk.done")}
                 </Button>
+              </>
+            ) : picking ? (
+              <>
+                <Dialog.Title className="sr-only">{t("workflow.pick.title")}</Dialog.Title>
+                {stations}
+                {refusal && <div className="mt-8">{refusal}</div>}
+                <div className="mt-8 flex gap-3">
+                  <Button type="button" variant="secondary" size="lg" className="flex-1" disabled={pending} onClick={() => onStep?.(1)}>
+                    {t("workflow.pick.back")}
+                  </Button>
+                  <Button type="button" variant="primary" size="lg" className="flex-1 gap-2" loading={pending} onClick={onConfirm} ref={stampRef} disabled={!!refusal}>
+                    {pending ? t("judgment.detail.concluding") : t("judgment.detail.conclude_with_workflow")}
+                    <Kbd>⌘⏎</Kbd>
+                  </Button>
+                </div>
+                <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
               </>
             ) : (
               <>
@@ -348,12 +375,23 @@ export function JudgmentConfirmLayer({
                   </span>
                 </div>
                 {refusal && <div className="mt-8">{refusal}</div>}
-                <Button type="button" variant="primary" size="lg" className="mt-8 w-full gap-2" loading={pending} onClick={onConfirm} ref={stampRef} disabled={!!refusal}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="mt-8 w-full gap-2"
+                  loading={pending}
+                  onClick={withWorkflow && stations ? () => onStep?.(2) : onConfirm}
+                  ref={stampRef}
+                  disabled={!!refusal}
+                >
                   {pending
                     ? t("judgment.detail.concluding")
-                    : withWorkflow
-                      ? t("judgment.detail.conclude_with_workflow")
-                      : t("judgment.desk.stamp")}
+                    : withWorkflow && stations
+                      ? t("workflow.pick.next")
+                      : withWorkflow
+                        ? t("judgment.detail.conclude_with_workflow")
+                        : t("judgment.desk.stamp")}
                   <Kbd>⌘⏎</Kbd>
                 </Button>
                 <p className="mt-2 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>

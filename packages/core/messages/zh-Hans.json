@@ -1385,7 +1385,11 @@
       "repick": "改选",
       "stale_title": "这一段刚被改过",
       "stale_body": "{{by}} {{time}} 已改了这一段。下面是现在的选择，看一遍再确认。",
-      "stale_view": "看现在的选择"
+      "stale_view": "看现在的选择",
+      "next": "下一步",
+      "back": "上一步",
+      "cross_forced": "这一案挂着跨域审判：结案要生成审批流程，外域按顺序接在后面。",
+      "load_error": "没能取到这次的站，请重试"
     },
     "pick_group": {
       "title": "待我选站",
@@ -1393,13 +1397,15 @@
       "row_title": "{{soul}} · 本域 {{n}} 站",
       "row_meta": "{{realm}} · {{hall}}发起 · 本域排第 {{order}}",
       "at_gate": "流程已在门口等 · {{n}} 天",
-      "ahead": "前面还有 {{n}} 站"
+      "ahead": "前面还有 {{n}} 站",
+      "action": "选站"
     },
     "segment": {
       "local": "本域",
       "count": "{{go}} / {{total}} 站要走",
       "not_picked": "还没选站",
-      "done": "已走完"
+      "done": "已走完",
+      "error": "没能保存，请重试"
     },
     "node_state": {
       "skipped_at_pick": "选站时跳过",
@@ -1409,7 +1415,11 @@
     "legend": "✓ 已通过 · ✕ 已驳回 · ◇ 当前 · · 待走 · ⤼ 已跳过 · ◌ 等待外域选站",
     "history": {
       "picked": "{{actor}} 为{{realm}}选站，跳过:{{nodes}}",
-      "adjusted": "{{actor}} 加减站：加回 {{added}},跳过 {{skipped}}。理由:{{reason}}"
+      "adjusted": "{{actor}} 加减站：加回 {{added}},跳过 {{skipped}}。理由:{{reason}}",
+      "picked_all": "{{actor}} 为{{realm}}选站，全部要走",
+      "adjusted_added": "{{actor}} 加减站：加回 {{added}}。理由:{{reason}}",
+      "adjusted_skipped": "{{actor}} 加减站：跳过 {{skipped}}。理由:{{reason}}",
+      "default": "{{actor}} 替{{realm}}按默认流程走。理由:{{reason}}"
     },
     "adjust": {
       "open": "加减站",
@@ -1436,7 +1446,9 @@
       "no_picker_title": "{{realm}}没有能选站的判官",
       "no_picker_body": "待办已转给该域的殿管理员。管理员也没有时，可以直接按默认流程走。",
       "foreign_title": "流程在等本域选站",
-      "foreign_body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"
+      "foreign_body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。",
+      "stopped_here": "停在这里",
+      "remind_too_soon": "一小时内已经提醒过，稍后再试"
     }
   },
   "dashboard": {
@@ -1480,7 +1492,8 @@
       "unassigned_letters": "未分配的书信",
       "sentence_requests": "受刑请求待批",
       "reports": "举报待处理",
-      "pick_nodes": "待我选站 · 外域流程"
+      "pick_nodes": "待我选站 · 外域流程",
+      "go_pick": "选站 →"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
@@ -2696,7 +2709,6 @@
     "ended": "已结束 · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "已取消 · 理由：{{reason}}",
     "end_error": "没能结束，请重试",
-    "end_workflow_running": "审批流程还在进行，跨域审判会随流程结束；要提前结束请取消",
     "cancel_error": "没能取消，请重试",
     "order": {
       "title": "各域顺序",
@@ -2715,7 +2727,8 @@
     },
     "cancel_flow_body": "审批流程里还没走的外域段({{realms}})全部标为跳过，流程走完本域后结束。已走过的站不变。",
     "cancel_flow_body_in_realm": "正在走的{{realm}}段，当前站和之后的站都标为跳过，流程随即结束。已走过的站不变。",
-    "cancel_flow_note": "外域已发出的「选站」待办一并撤回，并通知各域。"
+    "cancel_flow_note": "外域已发出的「选站」待办一并撤回，并通知各域。",
+    "workflow_running": "审批流程还在走：流程走完或被驳回时，跨域审判随之结束。要提前停下，请取消跨域审判。"
   },
   "users": {
     "title": "用户管理",

@@ -20,6 +20,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { PickNodesGroup } from "@/src/components/workflow/segments/PickNodesGroup";
 
 /** 与后端 `ApprovalWorkflowStatus` / `CaseType` / `Civilization` 的取值一一对应(`apps/workflow/filters.py` 认这几个)。 */
 const STATUSES = ["PENDING", "IN_PROGRESS", "APPROVED", "REJECTED", "APPEAL", "EXCEPTION", "COMPLETED"] as const;
@@ -85,6 +86,8 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
 
   return (
     <>
+      {/* 待我选站(W-2):审批页最上面一组,有才显示。 */}
+      <PickNodesGroup />
       <div className="flex flex-wrap items-center gap-3 pb-3">
         <input
           type="text"

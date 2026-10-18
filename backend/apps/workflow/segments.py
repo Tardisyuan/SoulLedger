@@ -148,18 +148,71 @@ def cross_of(workflow):
     return CrossTenantJudgment._base_manager.filter(judgment_id=workflow.judgment_id, is_deleted=False).first()
 
 
-def add_foreign(workflow, cross):
-    """每个参与域一段,接在本域之后。顺序:`node_order`(入席时定的「各域顺序」),没有序号的(顾问)按入席先后排后面。
-    同一个域入席两次只算一段;发起方自己的顾问席不另起一段。"""
+def foreign_realms(cross, own_tenant_id, case_type):
+    """跨域审判的各参与域,按流程里各段的顺序:`node_order`(入席时定的「各域顺序」),没有序号的(顾问)按入席先后
+    排后面。同一个域入席两次只算一段;发起方自己的顾问席不另起一段。每项 (租户, 文明, 该域的默认流程)。
+    `add_foreign` 与生成之前的选站列表(`flow_preview`)共用,两处的外域段不会不一样。"""
+    from apps.souls.models import TENANT_CIVILIZATION
+    from apps.workflow.services import WorkflowService
+
     seats = (cross.participants.filter(is_deleted=False).select_related("participant_tenant")
              .order_by(F("node_order").asc(nulls_last=True), "joined_at", "pk"))
-    seen = {workflow.tenant_id}
-    order = 1
+    seen = {own_tenant_id}
     for seat in seats:
         realm = seat.participant_tenant
         if realm.pk in seen:
             continue
         seen.add(realm.pk)
+        civilization = TENANT_CIVILIZATION.get(realm.code, realm.code)
+        template, _priority = WorkflowService._resolve_template(
+            civilization, case_type_for(civilization, case_type), realm)
+        yield realm, civilization, template
+
+
+def flow_preview(soul, case_type, tenant, template, judgment=None):
+    """W-1 选站列表,在流程生成之前:本域默认流程的各站(站序 = `skip_node_orders` 认的 `node_order`、名、殿、
+    审批人、是否必须走),以及按跨域审判顺序接在后面的外域段(只给域名与默认站数,外域的站由那个域自己选)。
+    模板由调用方按 `start_workflow` 同一套解析好传进来;审批人经 `preview.preview_node`(与 `_create_nodes` 同一个
+    解析器);「必须走」与 `mark_required` 同一条规则。结束节点不列:它不能选,也不是一站。"""
+    from apps.workflow.node_shape import normalize_template_node
+    from apps.workflow.preview import preview_node
+
+    civilization = soul.civilization
+    nodes = [normalize_template_node(raw, i) for i, raw in enumerate(template["nodes"], start=1)]
+    manual = [n for n in nodes if (n.get("kind") or NodeKind.APPROVAL) not in AUTOMATIC_KINDS]
+    finals = [n for n in manual if n.get("node_type") == NodeType.FINAL]
+    required = (finals or manual or [None])[-1]
+    stations = []
+    for node in nodes:
+        if (node.get("kind") or NodeKind.APPROVAL) == NodeKind.END:
+            continue
+        who = preview_node(node, civilization, tenant) if tenant is not None else {}
+        actor = who.get("actor")
+        users = who.get("users") or []
+        stations.append({
+            "node_order": node["node_order"],
+            "node_name": node["node_name"],
+            "court_code": node.get("court_code") or "",
+            # 一个具名的人(角色 / 冥官);按角色派、不止一人时只给角色,由客户端翻译。
+            "approver": (actor["name_zh"] or actor["name"]) if actor else (
+                users[0]["display_name"] if who.get("user_count") == 1 else None),
+            "approver_role": who.get("role"),
+            "is_required": node is required,
+        })
+    foreign = []
+    cross = open_cross_for(judgment)
+    if cross is not None and tenant is not None:
+        for order, (realm, _civilization, realm_template) in enumerate(
+                foreign_realms(cross, tenant.pk, case_type), start=2):
+            foreign.append({"order": order, "tenant_code": realm.code, "realm_name": _realm(realm),
+                            "default_node_count": len(realm_template["nodes"])})
+    return {"name": template["name"], "stations": stations, "foreign": foreign}
+
+
+def add_foreign(workflow, cross):
+    """每个参与域一段,接在本域之后(顺序与去重见 `foreign_realms`)。"""
+    order = 1
+    for realm, _civilization, _template in foreign_realms(cross, workflow.tenant_id, workflow.case_type):
         order += 1
         _foreign_segment(workflow, realm, order)
 
