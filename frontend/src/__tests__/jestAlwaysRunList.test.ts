@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * `frontend/jest.always-run.txt` must name exactly the tests that read files.
  *
  * The pre-push hook (and `scripts/run-gates.sh --affected`) runs only the jest

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * A route may not hand-roll a modal out of `fixed inset-0`.
  *
  * ─────────────────────────────────────────────────────────────────────────

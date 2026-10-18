@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 规范 v3 toast 的颜色:实心 ink 底、反白字;失败是实心冷玫红(--color-danger)底。
  *
  * 读 `app/globals.css` 的 `.toast` 与 `.toast[data-type="error"]` 两条规则,取出它们

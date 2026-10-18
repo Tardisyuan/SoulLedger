@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * A page that asks the server for page N must give the user a way to change N.
  *
  * THE LEFTOVER THIS CLOSES. `cfe9f99` fixed two list pages that requested a

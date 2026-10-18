@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * `formatHistoricalDate` writes the month name itself, in the caller's locale.
  *
  * WHY THIS FILE EXISTS. The month came from

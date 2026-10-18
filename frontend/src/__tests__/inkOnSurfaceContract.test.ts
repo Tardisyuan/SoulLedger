@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Every text colour on every ground text can sit on, in both themes, ≥ 4.5:1
  * (WCAG 2.x AA, normal text) — measured from globals.css, not assumed.
  *

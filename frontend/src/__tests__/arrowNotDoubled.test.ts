@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * An arrow written next to `t("key")` must not repeat an arrow the message
  * already carries. `souls.detail.back_to_list` and `workflow.detail.back_to_list`
  * both read 「← 返回…」 in every bundle, and both pages also wrote `← {t(…)}`,

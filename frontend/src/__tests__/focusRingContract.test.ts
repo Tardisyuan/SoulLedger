@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The keyboard focus ring: `:focus-visible` in app/globals.css, and the
  * `--color-focus` token it names.
  *

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The checklist under a new-password box says 「至少 8 位」 and ticks it at 8 (packages/core passwordRules).
  * The server's rule is Django's MinimumLengthValidator with its default. If someone gives that validator
  * an OPTIONS.min_length, or drops a validator the list describes, the list would tick a password the

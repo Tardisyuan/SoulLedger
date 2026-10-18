@@ -113,17 +113,107 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
 
 
 @pytest.fixture(scope="session")
-def django_db_modify_db_settings(django_db_modify_db_settings):
+def django_db_modify_db_settings(django_db_modify_db_settings, request):
     """Give each run its own PostgreSQL test database (`test_soulledger_<hex>`),
     so two concurrent `--create-db` runs on 115 no longer collide. Requests
     pytest-django's fixture first, so the xdist `_gwN` suffix is already on the
     name. SQLite untouched. See backend/config/testdb.py.
+
+    Under xdist the controller hands every worker the run suffix and the
+    template databases it built (`_build_pg_templates` below); the worker then
+    clones its database from the template instead of migrating from scratch.
     """
     from django.conf import settings
 
-    from config.testdb import run_suffix, suffix_postgres_test_databases
+    from config.testdb import run_suffix, suffix_postgres_test_databases, use_templates
 
-    suffix_postgres_test_databases(settings.DATABASES, run_suffix())
+    workerinput = getattr(request.config, "workerinput", {})
+    suffix_postgres_test_databases(settings.DATABASES, workerinput.get(_SUFFIX_KEY) or run_suffix())
+    use_templates(settings.DATABASES, workerinput.get(_TEMPLATES_KEY) or {})
+
+
+_SUFFIX_KEY = "soulledger_db_suffix"
+_TEMPLATES_KEY = "soulledger_db_templates"
+_templates_key = pytest.StashKey[dict]()
+_SUFFIX_KEY_STASH = pytest.StashKey[str]()
+
+
+def _drop_pg_templates(config):
+    """DROP every template this process built. WITH (FORCE): nothing should be
+    connected to it, but a leftover on 115 is the one outcome this must not have."""
+    templates = config.stash.get(_templates_key, {})
+    if not templates:
+        return
+    from django.db import connections
+    from pytest_django.plugin import blocking_manager_key
+
+    with config.stash[blocking_manager_key].unblock():
+        for alias, name in templates.items():
+            creation = connections[alias].creation
+            with creation._nodb_cursor() as cursor:
+                cursor.execute(f"DROP DATABASE IF EXISTS {creation._quote_name(name)} WITH (FORCE)")
+    config.stash[_templates_key] = {}
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionstart(session):
+    """xdist controller only: build and migrate one template per PostgreSQL alias.
+
+    `tryfirst` so this finishes before xdist's own sessionstart (`trylast`)
+    spawns the workers. The controller collects no tests, so it builds every
+    PostgreSQL alias, used or not.
+    """
+    config = session.config
+    if hasattr(config, "workerinput"):
+        return
+    from django.conf import settings
+
+    from config.testdb import run_suffix, template_names, wants_template
+
+    if not wants_template(
+        settings.DATABASES,
+        distributing=config.pluginmanager.hasplugin("dsession"),
+        reuse_db=bool(config.getoption("reuse_db", False)),
+        nomigrations=bool(config.getoption("nomigrations", False)),
+    ):
+        return
+    from django.db import connections
+    from django.test.utils import setup_databases
+    from pytest_django.plugin import blocking_manager_key
+
+    suffix = run_suffix()
+    templates = template_names(settings.DATABASES, suffix)
+    for alias, name in templates.items():
+        settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
+    config.stash[_templates_key] = templates
+    config.stash[_SUFFIX_KEY_STASH] = suffix
+    try:
+        with config.stash[blocking_manager_key].unblock():
+            setup_databases(verbosity=0, interactive=False, aliases=set(templates), serialized_aliases=set())
+            # CREATE DATABASE ... TEMPLATE refuses while anyone is connected to the template.
+            connections.close_all()
+    except BaseException:
+        # sessionfinish never runs when sessionstart raises, so clean up here.
+        _drop_pg_templates(config)
+        raise
+
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_configure_node(node):
+    """xdist controller: tell each worker the run suffix and the templates."""
+    templates = node.config.stash.get(_templates_key, {})
+    if templates:
+        node.workerinput[_SUFFIX_KEY] = node.config.stash[_SUFFIX_KEY_STASH]
+        node.workerinput[_TEMPLATES_KEY] = dict(templates)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session):
+    """Controller: drop the templates after xdist has shut the workers down
+    (its sessionfinish is a plain impl, so `trylast` here runs after it)."""
+    if not hasattr(session.config, "workerinput"):
+        _drop_pg_templates(session.config)
 
 
 @pytest.fixture(scope="session")
