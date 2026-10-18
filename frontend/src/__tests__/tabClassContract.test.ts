@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The bottom-rule tab is spelled in exactly one place.
  *
  * ── THE DEFECT THIS EXISTS FOR ────────────────────────────────────────────

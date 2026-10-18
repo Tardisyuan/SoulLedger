@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { formatAsOf } from "@/src/lib/formatAsOf";
 
 // Local-time constructors on purpose: "same day" is the viewer's calendar day, so the

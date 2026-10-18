@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * "The request failed" and "there is nothing here" are different facts, and a
  * page that renders only the second one lies about the first.
  *

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Every message key handed to `notify` is a real key in all three bundles.
  *
  * WHY THIS HAD TO EXIST BEFORE THE KEY FORM COULD. `notify` used to take a

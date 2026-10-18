@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * `packages/core/src/domain/soulCode.ts` 的字符集与长度要和后端一致:后端生成编号,
  * 前端 / App 校验与输入。两边漂开,就会有一类编号登录页不让输入,或输入框放行而后端从不发。
  * core 自己的 vitest 不读后端文件,所以守卫放在这里(并登记在 jest.always-run.txt)。

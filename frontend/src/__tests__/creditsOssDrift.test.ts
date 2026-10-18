@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 致谢页的开源软件清单(packages/core/src/config/creditsOss.json)是生成的:
  * `backend/.venv/bin/python scripts/gen-credits-oss.py`。依赖增删之后没重跑,这里红 ——
  * 比的是各清单的**直接依赖名集合**,与生成脚本取名的口径相同(工作区自己的包不算)。

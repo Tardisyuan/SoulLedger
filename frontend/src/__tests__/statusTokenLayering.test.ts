@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The `--color-status-{success,error,warning,info}` tokens are the SYSTEM
  * layer, and app/globals.css says so on the block that declares them:
  *

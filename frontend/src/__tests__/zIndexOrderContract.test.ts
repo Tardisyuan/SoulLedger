@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 层级顺序(v3 令牌表 Z-index):吸顶 20 / 导航 30 / Toast 50 / 抽屉 60 / 弹窗 70 / 盖印确认 80。
  *
  * 读 `app/globals.css` 的 `@theme` 里那排 `--z-index-*`,断的是**数值**与**顺序**:Toast 在抽屉与弹窗
