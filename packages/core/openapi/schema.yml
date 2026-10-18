@@ -21427,6 +21427,11 @@ components:
         is_required:
           type: boolean
           readOnly: true
+        jump_target_of:
+          type: array
+          items:
+            $ref: '#/components/schemas/JumpSource'
+          readOnly: true
       required:
       - activated_at
       - approver
@@ -21439,6 +21444,7 @@ components:
       - decision_history
       - id
       - is_required
+      - jump_target_of
       - kind
       - node_name
       - node_order
@@ -25945,11 +25951,17 @@ components:
         is_required:
           type: boolean
           description: 终审:不能跳过。
+        jump_target_of:
+          type: array
+          items:
+            $ref: '#/components/schemas/JumpSource'
+          description: 驳回时会转到这一站的站;其中还要走的站在,这一站就不能跳过(`jump_target_required`)。
       required:
       - approver
       - approver_role
       - court_code
       - is_required
+      - jump_target_of
       - node_name
       - node_order
     Follow:
@@ -27708,6 +27720,19 @@ components:
           readOnly: true
       required:
       - notified
+    JumpSource:
+      type: object
+      description: |-
+        A station whose rejection jumps to this one (`on_fail`). `key` is what the client sends back for that station:
+        its `node_order` before the flow exists (flow preview), its node id after.
+      properties:
+        key:
+          type: string
+        node_name:
+          type: string
+      required:
+      - key
+      - node_name
     KarmaBucket:
       type: object
       description: |-
@@ -32186,6 +32211,11 @@ components:
           readOnly: true
         is_required:
           type: boolean
+          readOnly: true
+        jump_target_of:
+          type: array
+          items:
+            $ref: '#/components/schemas/JumpSource'
           readOnly: true
     PatchedApprovalWorkflow:
       type: object

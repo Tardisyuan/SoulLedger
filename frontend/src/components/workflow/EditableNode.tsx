@@ -12,6 +12,7 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
 
 /**
@@ -63,7 +64,7 @@ function EditableNodeComponent({
   selected: boolean;
   dragging?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const role = data.role ?? "step";
   const issues = data.issueCount ?? 0;
   const kind = data.kind === "COUNTERSIGN" || data.kind === "NOTIFY" || data.kind === "END" ? data.kind : "APPROVAL";
@@ -71,7 +72,7 @@ function EditableNodeComponent({
   const threshold = typeof data.threshold === "number" ? data.threshold : signers;
   const hours = typeof data.timeoutHours === "number" && data.timeoutHours > 0 ? `${data.timeoutHours}h` : "";
   // 右上等宽小字:殿号 · 超时,会签换成门槛 k/n(v3 A1)。
-  const meta = [data.courtCode, kind === "COUNTERSIGN" && signers > 0 ? `${threshold}/${signers}` : hours]
+  const meta = [courtLabel(t, data.courtCode, locale), kind === "COUNTERSIGN" && signers > 0 ? `${threshold}/${signers}` : hours]
     .filter(Boolean)
     .join(" · ");
 

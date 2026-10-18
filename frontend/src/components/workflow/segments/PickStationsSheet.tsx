@@ -13,6 +13,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { StationPicker, type PickRow } from "./StationPicker";
 import { StaleSegmentNotice } from "./StaleSegmentNotice";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { segmentNodes, segmentRealm, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 
 /** 现在库里的选择:这一段里已被跳过的站。 */
@@ -35,7 +36,7 @@ export function PickStationsSheet({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const detail = useQuery({
@@ -80,9 +81,10 @@ export function PickStationsSheet({
     ? segmentNodes(workflow, order).map((n) => ({
         key: n.id,
         label: `${stationNo(n)} · ${n.node_name}`,
-        hall: <DomainText value={n.court_code} />,
+        hall: <DomainText value={courtLabel(t, n.court_code, locale)} />,
         who: n.approver_role ? <DomainEnum namespace="users.roles" value={n.approver_role} /> : null,
         required: !!n.is_required,
+        jumpSources: n.jump_target_of,
       }))
     : [];
   const before = (workflow?.segments ?? []).filter((s) => s.order < order);

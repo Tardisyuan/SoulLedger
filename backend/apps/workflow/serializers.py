@@ -392,6 +392,14 @@ class CrossJudgmentWorkflowSummarySerializer(serializers.Serializer):
     segments = WorkflowSegmentSerializer(many=True)
 
 
+class JumpSourceSerializer(serializers.Serializer):
+    """A station whose rejection jumps to this one (`on_fail`). `key` is what the client sends back for that station:
+    its `node_order` before the flow exists (flow preview), its node id after."""
+
+    key = serializers.CharField()
+    node_name = serializers.CharField()
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -453,6 +461,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     # 第四十三批: which realm's segment (its order, 1 = this realm) and the station's number inside it.
     segment_order = serializers.IntegerField(source="segment.order", read_only=True, allow_null=True, default=None)
     order_in_segment = serializers.SerializerMethodField()
+    jump_target_of = serializers.SerializerMethodField()
 
     def get_order_in_segment(self, node) -> int | None:
         if node.segment_id is None:
@@ -463,6 +472,20 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
                 "pk", flat=True)
             cache[node.segment_id] = {pk: i for i, pk in enumerate(ids, start=1)}
         return cache[node.segment_id].get(node.pk)
+
+    @extend_schema_field(JumpSourceSerializer(many=True))
+    def get_jump_target_of(self, node):
+        """The stations of this segment whose `on_fail` lands here (2026-10-19): pick / adjust lock this one while any
+        of them still runs. All of them, whatever their state — the client works out which still run from its own
+        ticks, so the lock lifts the moment the last one is unticked."""
+        if node.segment_id is None:
+            return []
+        cache = self.context.setdefault("_jump_sources", {})
+        if node.segment_id not in cache:
+            from apps.workflow.segments import jump_sources
+
+            cache[node.segment_id] = jump_sources(list(ApprovalNode.objects.filter(segment_id=node.segment_id)))
+        return [{"key": str(s.pk), "node_name": s.node_name} for s in cache[node.segment_id].get(node.pk, [])]
 
     def to_representation(self, node):
         """Another realm's stations show the realm, not its people (第四十三批, Design W-5c):
@@ -540,6 +563,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "skip_kind",
             "skip_reason",
             "is_required",
+            "jump_target_of",
         ]
         read_only_fields = [
             "id",
@@ -965,6 +989,8 @@ class FlowPreviewStationSerializer(serializers.Serializer):
     approver = serializers.CharField(allow_null=True, help_text="具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。")
     approver_role = serializers.CharField(allow_null=True, help_text="按角色派时的角色成员(客户端翻译)。")
     is_required = serializers.BooleanField(help_text="终审:不能跳过。")
+    jump_target_of = JumpSourceSerializer(
+        many=True, help_text="驳回时会转到这一站的站;其中还要走的站在,这一站就不能跳过(`jump_target_required`)。")
 
 
 class FlowPreviewForeignSerializer(serializers.Serializer):

@@ -4,11 +4,13 @@
  * 一处都不能露出来(2026-10-19 模拟器上「埃及 · Egyptian Afterlife发起」「前面:Egyptian Afterlife 3 站」)。
  */
 import type { LoginUser } from "@soulledger/core/api/auth";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
+import { pickRowLines } from "../rules";
 import { Detail } from "../screens/detail";
 import { TodoTab } from "../screens/todo";
-import { ToastProvider } from "../shared";
+import { ToastProvider, translate } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();
@@ -321,5 +323,82 @@ describe("O-3 / O-4 · the workflow's segments in an approval detail", () => {
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
     expect(screen.queryByTestId("workflow-segments")).toBeNull();
     expect(screen.queryByTestId("segment-gate")).toBeNull();
+  });
+});
+
+// 2026-10-19:入审驳回转到称心(`on_fail`)。入审还要走时称心锁着、像终审一样写理由;取消入审当场解锁,勾回入审时称心一并勾回。
+describe("O-2 · a station others hand rejected cases to", () => {
+  const JUMPY = {
+    ...WORKFLOW,
+    nodes: WORKFLOW.nodes.map((n) =>
+      n.id === "n3" ? { ...n, jump_target_of: [{ key: "n1", node_name: "入审" }] } : n.id === "n1" ? { ...n, court_code: "Hall of Two Truths" } : n,
+    ),
+  };
+
+  it("is locked with its reason while its source runs, unlocks live when the source is unticked, and comes back with it", async () => {
+    mockGet.mockResolvedValue({ data: JUMPY });
+    mockPick.mockResolvedValue({ data: JUMPY });
+    await openPick();
+    const reason = "入审驳回时会转到这里，这一站不能跳过";
+    expect(screen.getByTestId("pick-station-n3").props.accessibilityState).toEqual({ checked: true, disabled: true });
+    expect(screen.getByTestId("pick-jump-reason-n3").props.children).toBe(reason);
+    fireEvent.press(screen.getByTestId("pick-station-n3"));
+    expect(screen.getByTestId("pick-station-n3").props.accessibilityState.checked).toBe(true);
+    // Absence: the source itself and the plain stations carry no such line.
+    expect(screen.queryByTestId("pick-jump-reason-n1")).toBeNull();
+    expect(screen.getAllByText(reason)).toHaveLength(1);
+
+    fireEvent.press(screen.getByTestId("pick-station-n1"));
+    expect(screen.getByTestId("pick-station-n3").props.accessibilityState).toEqual({ checked: true, disabled: false });
+    expect(screen.queryByTestId("pick-jump-reason-n3")).toBeNull();
+    fireEvent.press(screen.getByTestId("pick-station-n3"));
+    expect(screen.getByTestId("pick-station-n3").props.accessibilityState.checked).toBe(false);
+
+    // Ticking the source again ticks its target back: never a pick the server refuses.
+    fireEvent.press(screen.getByTestId("pick-station-n1"));
+    expect(screen.getByTestId("pick-station-n3").props.accessibilityState).toEqual({ checked: true, disabled: true });
+    fireEvent.press(screen.getByTestId("pick-station-n1"));
+    fireEvent.press(screen.getByTestId("pick-station-n3"));
+    await act(async () => fireEvent.press(screen.getByTestId("pick-confirm")));
+    expect(mockPick).toHaveBeenCalledWith("wf-1", 2, { skip_node_ids: ["n1", "n3"], version: 5 });
+  });
+
+  it("shows the court in the reader's language: 两真之殿 on a zh screen, never the stored English", async () => {
+    mockGet.mockResolvedValue({ data: JUMPY });
+    await openPick();
+    expect(screen.getByText(/^两真之殿 · /)).toBeTruthy();
+    expect(screen.queryByText(/Hall of Two Truths/)).toBeNull();
+    // An unknown court is shown as stored.
+    expect(screen.getAllByText(/^真理殿 · /).length).toBeGreaterThan(0);
+  });
+});
+
+describe("courtLabel in the officer app", () => {
+  const zh = (k: string, v?: Record<string, string>) => translate("zh-Hans", k, v);
+  const en = (k: string, v?: Record<string, string>) => translate("en", k, v);
+
+  it("zh shows 天堂 / 第十殿 and en Heaven / Tenth Court, whichever spelling is stored", () => {
+    for (const stored of ["Heaven", "天堂"]) {
+      expect(courtLabel(zh, stored, "zh-Hans")).toBe("天堂");
+      expect(courtLabel(en, stored, "en")).toBe("Heaven");
+    }
+    expect(courtLabel(zh, "第十殿", "zh-Hans")).toBe("第十殿");
+    expect(courtLabel(en, "第十殿", "en")).toBe("Tenth Court");
+    expect(courtLabel(en, "第十殿", "en")).not.toContain("殿");
+    expect(courtLabel(zh, "Heaven", "zh-Hans")).not.toContain("Heaven");
+    // egy has no court words: it shows the English, not the Chinese the bundle fallback would give.
+    expect(courtLabel((k, v) => translate("egy", k, v), "天堂", "egy")).toBe("Heaven");
+  });
+
+  it("an unknown court is shown as stored", () => {
+    expect(courtLabel(en, "真理殿", "en")).toBe("真理殿");
+    expect(courtLabel(en, "", "en")).toBe("");
+  });
+
+  it("the 待我选站 row's hall reads the court in the UI language", () => {
+    const row = { realm: "CN_DIYU", hall: "Chinese Afterlife", court: "第十殿", segment_order: 2, gate_days: 2 };
+    expect(pickRowLines(row, en, () => "China", "en").meta).toContain("Tenth Court");
+    expect(pickRowLines(row, en, () => "China", "en").meta).not.toContain("第十殿");
+    expect(pickRowLines(row, zh, () => "中国", "zh-Hans").meta).toContain("酆都第十殿");
   });
 });

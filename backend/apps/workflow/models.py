@@ -696,16 +696,16 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     def _fail_target(self, node: "ApprovalNode") -> "ApprovalNode | None":
         """Where `on_fail` jumps, or None (the FAIL then ends the flow REJECTED).
 
-        Only inside `node`'s own segment. A target a person skipped (at pick, or later) is not landed on: the jump
-        goes to the next PENDING node after it in the segment, and with none the FAIL ends the flow — the Greek
-        flow's 分区审判 → Minos with Minos picked away (2026-10-19)."""
+        Only inside `node`'s own segment. A SKIPPED target is no target: the FAIL ends the flow REJECTED. Pick and
+        adjust refuse to skip a jump target while a source still runs (`jump_target_required`, 2026-10-19), so this
+        only happens when the template changed after the flow started. It used to fall through to the next PENDING
+        node of the segment; the user ruled that out (2026-10-19): a rejected case must not land on a station
+        nobody chose for rejections."""
         target = node.on_fail
         if target is None or target.workflow_id != self.id or target.segment_id != node.segment_id:
             return None
         if target.status == NodeStatus.SKIPPED:
-            target = (self.nodes.filter(segment_id=node.segment_id, status=NodeStatus.PENDING,
-                                        node_order__gt=max(target.node_order, node.node_order))
-                      .order_by("node_order").first())
+            return None
         return target if self._routable(target) else None
 
     def _return_target(self, target: "ApprovalNode", failed: "ApprovalNode") -> "ApprovalNode | None":

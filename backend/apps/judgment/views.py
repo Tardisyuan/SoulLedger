@@ -1424,7 +1424,8 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
             # `workflow_required`,第四十三批)。什么都没写。
             return Response({"error": str(exc), "code": exc.code}, status=exc.status)
         except SegmentRefusedError as exc:
-            # 选站:跳过了终审(`final_required`)或模板里没有的站(`unknown_node`)。什么都没写。
+            # 选站:跳过了终审(`final_required`)、还有来源要走的驳回目标(`jump_target_required`)
+            # 或模板里没有的站(`unknown_node`)。什么都没写。
             return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except JudgmentNotConcludableError as exc:
             # The soul cannot make the move a conclusion requires — it is not

@@ -438,3 +438,99 @@ describe("选站 / 加减站记录的句子", () => {
     );
   });
 });
+
+// ── 驳回时会转到的站(2026-10-19)──────────────────────────────────────────
+// 别的站驳回时会转到的站:来源还要走时像终审一样锁着,理由写来源;来源都取消时当场解锁;勾回来源时它一并勾回。
+
+describe("驳回时会转到的站不能跳过", () => {
+  const JUMP_ROWS: PickRow[] = [
+    { key: "1", label: "1 · 分区审判", hall: "岔路口草地", who: "Aeacus", required: false },
+    { key: "2", label: "2 · 合议", hall: "岔路口草地", who: "Minos", required: false, jumpSources: [{ key: "1", node_name: "分区审判" }] },
+    { key: "3", label: "3 · 终审", hall: "十殿", who: "转轮王", required: true },
+  ];
+  const reason = (source: string) => tZh("workflow.pick.jump_target_reason", { source });
+
+  function JumpPicker({ onChange }: { onChange: (_next: Set<string>) => void }) {
+    const [skipped, setSkipped] = useState<Set<string>>(new Set());
+    return (
+      <StationPicker
+        flowName="希腊冥界流程"
+        rows={JUMP_ROWS}
+        skipped={skipped}
+        onChange={(next) => {
+          onChange(next);
+          setSkipped(next);
+        }}
+      />
+    );
+  }
+
+  it("锁着、写来源;取消来源当场解锁;再勾回来源时它一并勾回", () => {
+    const onChange = jest.fn();
+    render(<JumpPicker onChange={onChange} />);
+    const target = () => screen.getByRole("checkbox", { name: /2 · 合议/ });
+    expect(target()).toBeChecked();
+    expect(target()).toBeDisabled();
+    expect(screen.getByText(reason("分区审判"))).toBeInTheDocument();
+    fireEvent.click(target());
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /1 · 分区审判/ }));
+    expect(target()).toBeEnabled();
+    expect(screen.queryByText(reason("分区审判"))).toBeNull();
+    fireEvent.click(target());
+    expect(onChange).toHaveBeenLastCalledWith(new Set(["1", "2"]));
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /1 · 分区审判/ }));
+    expect(onChange).toHaveBeenLastCalledWith(new Set());
+    expect(target()).toBeChecked();
+    expect(target()).toBeDisabled();
+  });
+
+  const JUMP_NODES = [
+    node(1, { status: "APPROVED", verdict: "PASSED" }),
+    node(3, { court_code: "Heaven" }),
+    node(4, { status: "SKIPPED", skip_kind: "AT_PICK" }),
+    node(5, { status: "SKIPPED", skip_kind: "AT_PICK", jump_target_of: [{ key: "n4", node_name: "站4" }] }),
+    node(6, { jump_target_of: [{ key: "n3", node_name: "站3" }, { key: "n1", node_name: "站1" }] }),
+    node(7, { node_type: "FINAL", is_required: true, court_code: "第十殿" }),
+  ];
+
+  it("加减站:当前站驳回时转到的站锁着(已经决定的站不算);加回来源时目标一并加回", async () => {
+    const wf = workflowWith([running], JUMP_NODES, { current_node: "n3" });
+    workflowApi.adjust.mockResolvedValue({ data: wf });
+    wrap(<AdjustStationsSheet workflow={wf} segment={running} isOpen onClose={() => {}} />);
+    const list = screen.getByTestId("adjust-stations");
+    const six = within(list).getByRole("checkbox", { name: /站6/ });
+    expect(six).toBeChecked();
+    expect(six).toBeDisabled();
+    // 站1 已经决定,不再驳回到哪:理由里只有当前站。
+    expect(within(list).getByText(reason("站3"))).toBeInTheDocument();
+    expect(within(list).queryByText(reason("站3、站1"))).toBeNull();
+
+    const five = within(list).getByRole("checkbox", { name: /站5/ });
+    expect(five).not.toBeChecked();
+    expect(five).toBeEnabled();
+    fireEvent.click(within(list).getByRole("checkbox", { name: /站4/ }));
+    expect(within(list).getByRole("checkbox", { name: /站5/ })).toBeChecked();
+    expect(within(list).getByRole("checkbox", { name: /站5/ })).toBeDisabled();
+    expect(Array.from(list.querySelectorAll("[data-mark]")).map((m) => m.getAttribute("data-mark"))).toEqual(["add", "add"]);
+    expect(screen.getByTestId("adjust-summary")).toHaveTextContent(tZh("workflow.adjust.summary", { added: "2", skipped: "0" }));
+
+    fireEvent.change(screen.getByLabelText(tZh("workflow.adjust.reason"), { exact: false }), { target: { value: "补审" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() =>
+      expect(workflowApi.adjust).toHaveBeenCalledWith("wf-1", { restore_node_ids: ["n4", "n5"], skip_node_ids: [], reason: "补审", version: 3 })
+    );
+  });
+
+  it("殿名按界面语言:中文界面写 天堂 / 第十殿,不写库里的 Heaven", () => {
+    const wf = workflowWith([running], JUMP_NODES, { current_node: "n1" });
+    wrap(<AdjustStationsSheet workflow={wf} segment={running} isOpen onClose={() => {}} />);
+    const list = screen.getByTestId("adjust-stations");
+    expect(list).toHaveTextContent("天堂");
+    expect(list).toHaveTextContent("第十殿");
+    expect(list).not.toHaveTextContent("Heaven");
+    expect(list).not.toHaveTextContent("Tenth Court");
+  });
+});

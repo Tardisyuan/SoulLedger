@@ -16,7 +16,7 @@ import { PickStationsSheet } from "./PickStationsSheet";
  * 数据与首页待办条同一个请求、同一把缓存键(`/officer-app/todo/` 的 `pick_nodes` 组)。
  */
 export function PickNodesGroup() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const todo = useQuery({
     queryKey: ["dashboard", "todo", "officer"],
     queryFn: async () => (await officerAppApi.todo()).data,
@@ -54,7 +54,7 @@ export function PickNodesGroup() {
                     // 发起殿的租户代码 → 文明名(「中国」),同跨域审判页;认不得时留空,不印代码。
                     realm: resolveEnumDisplay(t, "souls.civilizations", TENANT_CODE_TO_CIVILIZATION[row.realm ?? ""]).label ?? "",
                     // 冥界名 + 审判所在的殿(「酆都第十殿」);不印库里的英文展示名。
-                    hall: pickHall(t, row),
+                    hall: pickHall(t, row, locale),
                     order: String(row.segment_order ?? ""),
                   })}
                 </span>
