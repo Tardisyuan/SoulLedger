@@ -81,6 +81,9 @@ const ENUM_FIELDS = [
   // (ESCALATE / AUTO_REJECT / NOTIFY), drawn through
   // workflow.editor.timeout.action.*.
   "timeout_action",
+  // Added 2026-10-18 by the meta-test: `ApprovalNode.skip_kind`
+  // (AT_PICK / LATER / CANCELLED, batch 43 station picking).
+  "skip_kind",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),
