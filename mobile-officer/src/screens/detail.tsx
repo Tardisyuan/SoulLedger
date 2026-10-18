@@ -8,6 +8,7 @@
  * level). The detail underneath stays mounted, so an open decision sheet or a typed comment is still there.
  */
 import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { officerAppApi, type TodoFacts, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
@@ -325,7 +326,7 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
 }
 
 function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: string) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { state } = useSession();
   const me = state.status === "signedIn" ? state.user.id : null;
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
@@ -345,7 +346,7 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
         <View style={{ padding: space[5], gap: space[4] }}>
           <SectionLabel>{data.case_number}</SectionLabel>
           {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
-          <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
+          <Txt variant="caption" tone="muted">{[courtLabel(t, data.court, locale), data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
           {data.stale_since ? <Txt variant="bodyLg" testID="judgment-stale">{`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`}</Txt> : null}

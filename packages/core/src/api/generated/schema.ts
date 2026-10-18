@@ -9755,6 +9755,7 @@ export interface components {
             readonly skip_kind: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly skip_reason: string;
             readonly is_required: boolean;
+            readonly jump_target_of: components["schemas"]["JumpSource"][];
         };
         /**
          * @description * `ACTOR` - 角色
@@ -11818,6 +11819,8 @@ export interface components {
             approver_role: string | null;
             /** @description 终审:不能跳过。 */
             is_required: boolean;
+            /** @description 驳回时会转到这一站的站;其中还要走的站在,这一站就不能跳过(`jump_target_required`)。 */
+            jump_target_of: components["schemas"]["JumpSource"][];
         };
         Follow: {
             /** Format: uuid */
@@ -12577,6 +12580,14 @@ export interface components {
         /** @description `POST /judgment/{id}/request-reassign/` 的 200:通知了几位管理员。 */
         JudgmentReassignRequestResult: {
             readonly notified: number;
+        };
+        /**
+         * @description A station whose rejection jumps to this one (`on_fail`). `key` is what the client sends back for that station:
+         *     its `node_order` before the flow exists (flow preview), its node id after.
+         */
+        JumpSource: {
+            key: string;
+            node_name: string;
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -14796,6 +14807,7 @@ export interface components {
             readonly skip_kind?: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly skip_reason?: string;
             readonly is_required?: boolean;
+            readonly jump_target_of?: components["schemas"]["JumpSource"][];
         };
         /**
          * @description Serializer for ApprovalWorkflow.

@@ -6,6 +6,9 @@
 节点在生成时就按那个域的默认流程建好、等那个域的人选站(AWAITING_PICK)。各段依次走,不并行:流程走到一个还没选站的段,
 停在门口(`ApprovalWorkflow._stop_at_gate`:没有当前节点、仍是 IN_PROGRESS),那个域选好后从该段第一站继续(`_resume`)。
 
+**驳回时会转到的站(别的站的 `on_fail` 目标)也锁着**,只要还有一个来源要走(`jump_target_required`);来源一并
+跳过时才能跳过它(2026-10-19)。
+
 **每段的终审(`is_required`)必须走**:选站、加减站都不能跳过它;唯一的例外是流程走到某个外域段中间时取消跨域审判,
 那一段的当前站与之后的站(含终审)一并跳过(`on_cross_cancelled`)。
 
@@ -97,6 +100,36 @@ def mark_required(segment):
     ApprovalNode.objects.filter(pk__in=required).update(is_required=True)
 
 
+def jump_sources(nodes):
+    """{target pk: [source nodes]}:`on_fail` 边,只算同一段里的(引擎只走这种,`ApprovalWorkflow._fail_target`)。"""
+    by_pk = {n.pk: n for n in nodes}
+    out = {}
+    for node in sorted(nodes, key=lambda n: n.node_order):
+        target = by_pk.get(node.on_fail_id)
+        if target is not None and target.pk != node.pk and target.segment_id == node.segment_id:
+            out.setdefault(target.pk, []).append(node)
+    return out
+
+
+def _refuse_skipped_jump_targets(nodes, skipped, changed):
+    """被跳过的站若是某个还要走的站的 `on_fail` 目标,拒(2026-10-19 用户决定:驳回不能落到没人选的站上)。
+
+    `skipped` = 这次请求之后会是 SKIPPED 的 pk;「还要走」= 不在 `skipped` 里、还没决定(PENDING,或这次被加回的
+    SKIPPED)。只拦这次请求动到的(`changed`:目标被跳过,或来源被加回),库里早就存在的不归这次请求管。
+    来源一并跳过时目标就能跳过。"""
+    refused = []
+    for target_pk, sources in jump_sources(nodes).items():
+        running = [s for s in sources if s.pk not in skipped and s.status in (NodeStatus.PENDING, NodeStatus.SKIPPED)]
+        if target_pk in skipped and running and (target_pk in changed or any(s.pk in changed for s in running)):
+            target = next(n for n in nodes if n.pk == target_pk)
+            refused.append({"node_id": str(target.pk), "node_order": target.node_order, "node_name": target.node_name,
+                            "sources": [s.node_name for s in running]})
+    if refused:
+        names = "; ".join(f"{r['node_name']} ← {', '.join(r['sources'])}" for r in refused)
+        raise SegmentRefusedError(f"Rejected cases are handed to this station, so it cannot be skipped: {names}",
+                                  "jump_target_required", jump_targets=refused)
+
+
 def build_local(workflow, template, civilization, skip_node_orders=(), user=None):
     """本域那一段:建段、建节点(不进入)、按 `skip_node_orders`(模板里的站序)跳过。返回模板的第一个节点。"""
     from apps.workflow.services import WorkflowService
@@ -123,6 +156,8 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
         required = sorted(o for o in wanted if nodes[o].is_required)
         if required:
             raise SegmentRefusedError("The final review cannot be skipped", "final_required", orders=required)
+        skipped = {nodes[o].pk for o in wanted}
+        _refuse_skipped_jump_targets(list(nodes.values()), skipped, skipped)
         ApprovalNode.objects.filter(pk__in=[nodes[o].pk for o in wanted]).update(
             status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK, skipped_by=user, decided_at=now)
     return first
@@ -182,6 +217,14 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
     manual = [n for n in nodes if (n.get("kind") or NodeKind.APPROVAL) not in AUTOMATIC_KINDS]
     finals = [n for n in manual if n.get("node_type") == NodeType.FINAL]
     required = (finals or manual or [None])[-1]
+    # 驳回时转到哪一站(`on_fail`,模板里按模板内 id):目标那一行带上来源,客户端据此锁住、来源都勾掉时解锁。
+    by_id = {str(n["id"]): n for n in nodes if n.get("id")}
+    sources = {}
+    for node in nodes:
+        target = by_id.get(str(node.get("on_fail") or ""))
+        if target is not None and target is not node:
+            sources.setdefault(target["node_order"], []).append(
+                {"key": str(node["node_order"]), "node_name": node["node_name"]})
     stations = []
     for node in nodes:
         if (node.get("kind") or NodeKind.APPROVAL) == NodeKind.END:
@@ -198,6 +241,7 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
                 users[0]["display_name"] if who.get("user_count") == 1 else None),
             "approver_role": who.get("role"),
             "is_required": node is required,
+            "jump_target_of": sources.get(node["node_order"], []),
         })
     foreign = []
     cross = open_cross_for(judgment)
@@ -395,6 +439,9 @@ def _apply_pick(workflow, segment, user, skip_ids, reason, now, *, default):
     required = sorted(i for i in skip_ids if nodes[i].is_required)
     if required:
         raise SegmentRefusedError("The final review cannot be skipped", "final_required", node_ids=required)
+    skipped = {nodes[i].pk for i in skip_ids} | {
+        n.pk for n in nodes.values() if n.status == NodeStatus.SKIPPED and n.skip_kind != SkipKind.AT_PICK}
+    _refuse_skipped_jump_targets(list(nodes.values()), skipped, {nodes[i].pk for i in skip_ids})
     # 改选:先把上一次选掉的全部放回,再按这一次的选。
     segment.nodes.filter(status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK).update(
         status=NodeStatus.PENDING, skip_kind=None, skipped_by=None, skip_reason="", decided_at=None)
@@ -514,6 +561,11 @@ def adjust(workflow_id, user, *, restore_node_ids, skip_node_ids, reason, versio
         required = sorted(i for i in skip if nodes[i].is_required)
         if required:
             raise SegmentRefusedError("The final review cannot be skipped", "final_required", node_ids=required)
+        # 加回一个来源而它的目标还跳过着:拒,不顺手加回目标(2026-10-19)。客户端勾回来源时自己把目标一并加回。
+        everyone = list(segment.nodes.all())
+        skipped = {n.pk for n in everyone if n.status == NodeStatus.SKIPPED and str(n.pk) not in restore} | {
+            nodes[i].pk for i in skip}
+        _refuse_skipped_jump_targets(everyone, skipped, {n.pk for n in nodes.values()})
 
         ApprovalNode.objects.filter(pk__in=restore).update(
             status=NodeStatus.PENDING, skip_kind=None, skipped_by=None, skip_reason="", decided_at=None)

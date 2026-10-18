@@ -1,5 +1,6 @@
-import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "../api/workflow";
+import type { ApprovalNode, ApprovalWorkflow, JumpSource, WorkflowSegment } from "../api/workflow";
 import { civilizationLabel, realmLabel } from "../config/civilizations";
+import { courtLabel } from "./courts";
 
 /**
  * 第四十三批:审批流程按域分段的几条读法,选站底页、加减站底页、流程详情左栏共用 —— 官员台与官员 App 都用。
@@ -25,6 +26,34 @@ export const segmentRealm = (
   t: (key: string) => string,
   s: Pick<WorkflowSegment, "tenant_code" | "realm_name"> | null | undefined,
 ): string => (s ? civilizationLabel(t, s.tenant_code, s.realm_name) : "");
+
+/**
+ * 驳回时会转到这一站的站里,这次还要走的(没被勾掉的)。有一个,这一站就锁着、像终审一样(后端 400
+ * `jump_target_required`,2026-10-19);来源都勾掉了才解锁。`skipped` 与来源的 `key` 是同一种值(站序或节点 id)。
+ */
+export const runningJumpSources = (sources: readonly JumpSource[] | undefined, skipped: ReadonlySet<string>): JumpSource[] =>
+  (sources ?? []).filter((s) => !skipped.has(s.key));
+
+/**
+ * 勾选变了之后对齐:还有来源要走的目标不能留在跳过里 —— 勾回来源时把它的目标一并勾回(目标自己也可能是来源,
+ * 所以算到不再变)。选站与加减站都经过它,所以送回后端的永远是后端会收的组合。
+ */
+export function settleJumpTargets(
+  rows: readonly { key: string; jumpSources?: readonly JumpSource[] }[],
+  skipped: ReadonlySet<string>,
+): Set<string> {
+  const next = new Set(skipped);
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const row of rows) {
+      if (next.has(row.key) && runningJumpSources(row.jumpSources, next).length > 0) {
+        next.delete(row.key);
+        changed = true;
+      }
+    }
+  }
+  return next;
+}
 
 /** 段序号 → ①②③(Design 的分段头与外域行都用它)。 */
 export const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
@@ -85,13 +114,16 @@ export function gateView(segment: Pick<WorkflowSegment, "tenant_code" | "no_pick
 
 /**
  * 「待我选站」一行的发起殿(Design O-1「中国 · 酆都第十殿发起」):冥界名接审判所在的殿(`court`);没有殿时只写冥界名。
- * `realm` 是租户代码;认不出文明时退回服务端的 `hall`(租户展示名)。官员台与官员 App 同用。
+ * `realm` 是租户代码;认不出文明时退回服务端的 `hall`(租户展示名)。殿名按界面语言(`courtLabel`:en 写 Tenth Court)。
+ * 官员台与官员 App 同用。
  */
 export function pickHall(
   t: (key: string, vars?: Record<string, string>) => string,
   row: { realm?: string; hall?: string; court?: string },
+  locale?: string,
 ): string {
   const realm = realmLabel(t, row.realm, row.hall ?? "");
   if (!row.court) return realm;
-  return realm ? t("workflow.pick_group.hall", { realm, court: row.court }) : row.court;
+  const court = courtLabel(t, row.court, locale);
+  return realm ? t("workflow.pick_group.hall", { realm, court }) : court;
 }

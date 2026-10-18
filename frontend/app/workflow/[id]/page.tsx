@@ -17,6 +17,7 @@ import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
@@ -89,7 +90,7 @@ const VERDICT_GLYPH: Record<string, string> = {
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
   const myTenant = useTenant().user?.tenant?.code ?? null;
@@ -207,7 +208,7 @@ export default function WorkflowDetailPage() {
   // 模板时有;没有当前节点(已结束)就不写步数。
   const stepIndex = currentNode ? sortedNodes.findIndex((n) => n.id === currentNode.id) : -1;
   // 殿名:当前节点的殿(A1「酆都 · 第三殿」);已结束、没有当前节点就写规制司。
-  const hall = useHall(currentNode?.court_code || t("plaque.office.rules"));
+  const hall = useHall(courtLabel(t, currentNode?.court_code, locale) || t("plaque.office.rules"));
   usePlaque({
     title: t("plaque.workflow_instance"),
     hall,
@@ -415,7 +416,7 @@ export default function WorkflowDetailPage() {
                       <span className="min-w-0">
                         <span className="block text-sm break-words">{node.node_name}</span>
                         <span className="block text-xs font-normal text-[oklch(var(--color-ink-muted))]">
-                          <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={node.court_code} />
+                          <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={courtLabel(t, node.court_code, locale)} />
                           {" · "}
                           <span title={node.status}>
                             {nodeStatusLabel}
@@ -467,7 +468,7 @@ export default function WorkflowDetailPage() {
                     {currentNode.node_name}
                   </h2>
                   <p className="text-xs text-[oklch(var(--color-ink-muted))]">
-                    <DomainText value={currentNode.court_code} /> · <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} />
+                    <DomainText value={courtLabel(t, currentNode.court_code, locale)} /> · <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} />
                     {" · "}
                     {t("workflow.detail.order")} <span className="font-mono">{currentNode.node_order}</span>
                   </p>

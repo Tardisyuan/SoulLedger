@@ -3,6 +3,7 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { RoleName } from "@/src/components/users/RoleName";
 import { type FlowNode, type TemplatePreviewData } from "@/src/components/workflow/page/types";
 import { Landmark } from "lucide-react";
@@ -23,7 +24,7 @@ export function TemplateDetailModal({
   onClose: () => void;
   template: TemplatePreviewData | null;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <BaseModal
@@ -63,7 +64,7 @@ export function TemplateDetailModal({
                     {node.court_code && (
                   <span className="inline-flex items-center gap-1">
                     <Landmark aria-hidden="true" className="w-3.5 h-3.5" />
-                    {node.court_code}
+                    {courtLabel(t, node.court_code, locale)}
                   </span>
                 )}
                     <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>

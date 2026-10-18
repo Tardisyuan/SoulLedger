@@ -253,7 +253,7 @@ const FEEDBACK_TAGS: Record<string, string> = {
 
 /** `onOpen` absent: a view-only row (no ›, nothing to press). */
 function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight: boolean; gone?: ReadonlySet<string>; onOpen?: (item: ItemRef) => void }) {
-  const { t, enumLabel } = useI18n();
+  const { t, enumLabel, locale } = useI18n();
   const tagKey = item.feedback_tag ? FEEDBACK_TAGS[item.feedback_tag] : undefined;
   const tag = tagKey ? t("soul_inbox.feedback.label", { category: t(tagKey) }) : null;
   // 受刑计划变更: which kind of request (加项 / 减项 · 重开审判), in the desk's words.
@@ -261,7 +261,7 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
   const request = requestKind ? t(`sentence_plan.request_kinds.${requestKind}`) : null;
   // S4: every line here is a label, an identifier or a time -- one line each, long-press for the whole.
   // 待我选站 (O-1): who convened it and where this realm stands, then 「已在门口等 · N 天」 or 「前面还有 N 站」 -- no time.
-  const pick = item.kind === "pick" ? pickRowLines(item as TodoItemExtra, t, (civ) => enumLabel("souls.civilizations", civ).label ?? "") : null;
+  const pick = item.kind === "pick" ? pickRowLines(item as TodoItemExtra, t, (civ) => enumLabel("souls.civilizations", civ).label ?? "", locale) : null;
   const lines = pick
     ? [{ one: pick.meta }, { one: pick.wait }]
     : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));

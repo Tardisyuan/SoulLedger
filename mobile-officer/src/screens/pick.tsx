@@ -4,9 +4,21 @@
  * 规则在后端(`apps/workflow/segments.py`),读法在 core(`domain/workflowSegments`,官员台同一份):这里只画。
  * App 只看、只批当前站、只选本域那一段;加减站、再提醒、按默认流程走都在电脑上(Design 回复 O-3:「在电脑上继续」)。
  */
-import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "@soulledger/core/api/workflow";
+import type { ApprovalNode, ApprovalWorkflow, JumpSource, WorkflowSegment } from "@soulledger/core/api/workflow";
 import { workflowApi } from "@soulledger/core/api/workflow";
-import { circled, gateView, segmentNodes, segmentRealm, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
+import { courtLabel } from "@soulledger/core/domain/courts";
+import {
+  circled,
+  gateView,
+  runningJumpSources,
+  segmentNodes,
+  segmentRealm,
+  segmentRefusalOf,
+  settleJumpTargets,
+  staleOf,
+  stationNo,
+  type StaleSegment,
+} from "@soulledger/core/domain/workflowSegments";
 import { useCallback, useState } from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
 
@@ -35,6 +47,7 @@ export function skipNodeIds(nodes: Pick<ApprovalNode, "id" | "is_required">[], s
 
 /**
  * O-2 选站:本域这一段的勾选列表。默认全选;终审勾灰、点不动,理由写在站名下;「确认」不再二次弹窗。
+ * 别的站驳回时会转到的站也勾灰(2026-10-19),理由写来源;来源都取消时当场解锁,勾回来源时它一并勾回。
  * 确认后回到待办,提示「已选站 · 轮到本域时通知你」。带着这一段的 `version` 提交,别人刚改过就 409
  * `segment_changed`:拦下(W-5d),「看现在的选择」换成库里现在的样子再确认,不覆盖。
  * 这一段已经开始(或不是我能选的):只剩流程详情,选站在 App 上不再有入口。
@@ -79,12 +92,13 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
   const skippable = nodes.filter((n) => !n.is_required);
   const skipCount = skippable.filter((n) => skipped.has(n.id)).length;
   const before = (data.segments ?? []).filter((s) => s.order < segment.order);
+  const rows = nodes.map((n) => ({ key: n.id, jumpSources: n.jump_target_of }));
   const toggle = (nodeId: string) =>
     setSkipped((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) next.delete(nodeId);
       else next.add(nodeId);
-      return next;
+      return settleJumpTargets(rows, next);
     });
   const confirm = () => {
     setBusy(true);
@@ -141,9 +155,18 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
           </View>
         ) : null}
         <View accessibilityRole="list" accessibilityLabel={t("workflow.pick.title")}>
-          {nodes.map((n) => (
-            <StationRow key={n.id} node={n} on={!!n.is_required || !skipped.has(n.id)} onToggle={() => toggle(n.id)} />
-          ))}
+          {nodes.map((n) => {
+            const sources = n.is_required ? [] : runningJumpSources(n.jump_target_of, skipped);
+            return (
+              <StationRow
+                key={n.id}
+                node={n}
+                sources={sources}
+                on={!!n.is_required || sources.length > 0 || !skipped.has(n.id)}
+                onToggle={() => toggle(n.id)}
+              />
+            );
+          })}
         </View>
         {skipCount > 0 && skipCount === skippable.length ? (
           // W-1b: 只剩终审 —— 提示,不拦。
@@ -175,13 +198,20 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
   );
 }
 
-/** 一站,整行可点。终审:勾灰(不是透明 —— iOS 上 `opacity: 0` 的视图收不到触摸,这里也不需要它)、点不动、理由在下。 */
-function StationRow({ node, on, onToggle }: { node: ApprovalNode; on: boolean; onToggle: () => void }) {
-  const { t, enumLabel } = useI18n();
+/**
+ * 一站,整行可点。终审:勾灰(不是透明 —— iOS 上 `opacity: 0` 的视图收不到触摸,这里也不需要它)、点不动、理由在下。
+ * `sources`:驳回时会转到这一站、这次还要走的站;有就同终审一样锁着,理由写它们。
+ */
+function StationRow({ node, sources, on, onToggle }: { node: ApprovalNode; sources: readonly JumpSource[]; on: boolean; onToggle: () => void }) {
+  const { t, enumLabel, locale } = useI18n();
   const theme = useTheme();
-  const locked = !!node.is_required;
+  const locked = !!node.is_required || sources.length > 0;
   const who = node.approver_role ? enumLabel("users.roles", node.approver_role).label : null;
-  const sub = locked ? t("workflow.pick.final_reason") : [node.court_code, who].filter(Boolean).join(" · ");
+  const sub = node.is_required
+    ? t("workflow.pick.final_reason")
+    : sources.length > 0
+      ? t("workflow.pick.jump_target_reason", { source: sources.map((s) => s.node_name).join("、") })
+      : [courtLabel(t, node.court_code, locale), who].filter(Boolean).join(" · ");
   const label = locked ? `${stationNo(node)} · ${node.node_name} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${node.node_name}`;
   return (
     <Pressable
@@ -210,7 +240,11 @@ function StationRow({ node, on, onToggle }: { node: ApprovalNode; on: boolean; o
           {label}
         </Txt>
         {sub ? (
-          <Txt variant="caption" tone="muted" testID={locked ? `pick-final-reason-${node.id}` : undefined}>
+          <Txt
+            variant="caption"
+            tone="muted"
+            testID={node.is_required ? `pick-final-reason-${node.id}` : locked ? `pick-jump-reason-${node.id}` : undefined}
+          >
             {sub}
           </Txt>
         ) : null}

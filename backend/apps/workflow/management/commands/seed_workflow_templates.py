@@ -17,7 +17,7 @@ of 2026-10-19:
 * an appeal's final FAIL ends the flow (the appeal fails);
 * the Greek 分区审判 FAIL goes to Minos (``on_fail``), Gorgias 524a.
 
-Stations, courts, types and actors are ``WORKFLOW_TEMPLATES``'. European and Greek ROUTINE have no
+Stations, courts, types and actors are ``WORKFLOW_TEMPLATES``' (courts respelled by ``COURT_SPELLING``). European and Greek ROUTINE have no
 entry there (they fell to the one-node generic flow); theirs are the frontend presets
 ``EUROPEAN_ROUTINE`` / ``GREEK_ROUTINE`` (``packages/core/src/config/workflow-templates.ts``), types
 mapped as ``workflow-node-types.ts`` maps them, ``actor`` set because the cast has each person.
@@ -65,6 +65,12 @@ PRESET_FLOWS = {
 }
 
 
+#: One spelling per court across the rows this command writes (2026-10-19): ``WORKFLOW_TEMPLATES`` spells the
+#: European appeal's court ``Heaven`` while the 末日审判 preset says 天堂 — the same court. The rows take the
+#: presets' 天堂; screens show either spelling in the reader's language (``courtLabel`` in packages/core).
+COURT_SPELLING = {"Heaven": "天堂"}
+
+
 def _back(*pairs):
     return {order: ("reject_to", target) for order, target in pairs}
 
@@ -94,6 +100,7 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
     for position, raw in enumerate(source["nodes"], start=1):
         node = normalize_template_node(raw, position)
         node["node_type"] = str(node["node_type"])
+        node["court_code"] = COURT_SPELLING.get(node.get("court_code") or "", node.get("court_code") or "")
         node["id"] = f"n{node['node_order']}"
         nodes.append(node)
     for order, (field, target) in FAIL_ROUTES[key].items():

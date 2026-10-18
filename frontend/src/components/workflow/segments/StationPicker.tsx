@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import { circled, segmentRealm } from "@soulledger/core/domain/workflowSegments";
+import type { JumpSource } from "@soulledger/core/api";
+import { circled, runningJumpSources, segmentRealm, settleJumpTargets } from "@soulledger/core/domain/workflowSegments";
 
 /** 一站:勾上 = 要走。`key` 是送回后端的那个值(生成之前是站序,生成之后是节点 id)。 */
 export interface PickRow {
@@ -16,6 +17,8 @@ export interface PickRow {
   who: ReactNode;
   /** 终审:勾灰、点不动,理由写在站名下(Design W-1a)。 */
   required: boolean;
+  /** 驳回时会转到这一站的站(`jump_target_of`):其中还勾着的在,这一站就像终审一样锁着,理由写来源。 */
+  jumpSources?: readonly JumpSource[];
 }
 
 /** 外域一行(W-1a 下半):只读,只写「由该域判官选站 · 默认流程 N 站」。 */
@@ -32,6 +35,7 @@ export interface ForeignRow {
  *
  * 默认全选,表头不放「全选」;有取消时计数旁出现「全部恢复」。终审行勾灰,理由直接写在站名下。
  * 取消到只剩终审时列表上方出提示条(W-1b),不拦也不二次确认 —— 那是判官的权限;勾回任一站就消失。
+ * 别的站驳回时会转到的站也锁着(2026-10-19),理由写「X驳回时会转到这里」;来源都取消时当场解锁,勾回来源时它一并勾回。
  * 只画,不发请求:`skipped` 由调用方持有(结案弹层 / 发起弹层 / 选站底页各自送回后端)。
  */
 export function StationPicker({
@@ -56,11 +60,12 @@ export function StationPicker({
   const skipCount = skippable.filter((r) => skipped.has(r.key)).length;
   const onlyFinal = !!final && skippable.length > 0 && skipCount === skippable.length;
 
+  const sourcesOf = (row: PickRow) => runningJumpSources(row.jumpSources, skipped);
   const toggle = (key: string) => {
     const next = new Set(skipped);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    onChange(next);
+    onChange(settleJumpTargets(rows, next));
   };
 
   return (
@@ -97,33 +102,40 @@ export function StationPicker({
         </div>
         <ul>
           {rows.map((row) => {
-            const on = row.required || !skipped.has(row.key);
+            const sources = row.required ? [] : sourcesOf(row);
+            const locked = row.required || sources.length > 0;
+            const on = locked || !skipped.has(row.key);
             return (
               <li
                 key={row.key}
                 data-station={row.key}
                 data-required={row.required ? "" : undefined}
+                data-jump-target={sources.length > 0 ? "" : undefined}
                 className="border-b last:border-b-0 border-[oklch(var(--color-line))]"
               >
                 <label
                   className={`grid grid-cols-[24px_minmax(0,1fr)_minmax(0,6rem)_minmax(0,7rem)] items-start gap-x-2 px-3 py-2 text-sm ${
-                    row.required ? "cursor-default" : "cursor-pointer hover:bg-[oklch(var(--color-surface-2))]"
+                    locked ? "cursor-default" : "cursor-pointer hover:bg-[oklch(var(--color-surface-2))]"
                   } ${on ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}`}
                 >
                   <input
                     type="checkbox"
                     checked={on}
-                    disabled={row.required}
-                    onChange={() => { if (!row.required) toggle(row.key); }}
+                    disabled={locked}
+                    onChange={() => { if (!locked) toggle(row.key); }}
                     className="mt-1 h-4 w-4 accent-[oklch(var(--color-accent))]"
                   />
                   <span className="min-w-0">
                     <span className={`break-words ${on ? "" : "line-through"}`}>{row.label}</span>
-                    {row.required && (
+                    {locked && (
                       <>
                         {" "}
                         <Badge tone="neutral">{t("workflow.pick.final_badge")}</Badge>
-                        <span className="block text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.pick.final_reason")}</span>
+                        <span className="block text-xs text-[oklch(var(--color-ink-muted))]">
+                          {row.required
+                            ? t("workflow.pick.final_reason")
+                            : t("workflow.pick.jump_target_reason", { source: sources.map((s) => s.node_name).join("、") })}
+                        </span>
                       </>
                     )}
                   </span>
