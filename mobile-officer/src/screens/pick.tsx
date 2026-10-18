@@ -373,7 +373,7 @@ function GateBlock({ workflow, segment, myTenant, onPick }: { workflow: Approval
     view === "foreign"
       ? [`◌ ${t("workflow.gate.foreign_title")}`, t("workflow.gate.foreign_body", { soul: workflow.soul_name ?? "", realm: segmentRealm(t, previous) })]
       : view === "no_picker"
-        ? // U+FE0E: iOS draws a bare ⚠ as a colour emoji (same reason `translate()` marks ↗).
+        ? // U+FE0E: iOS draws a bare ⚠ as a colour emoji (same reason `translate()` marks the north-east arrow).
           [`⚠︎ ${t("workflow.gate.no_picker_title", { realm })}`, t("workflow.gate.no_picker_body", { realm })]
         : [
             `◌ ${t("workflow.gate.waiting_title", { realm, n: String(segment.gate_days ?? 1) })}`,
