@@ -5,10 +5,9 @@ import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "@soulledge
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
-import { circled } from "./StationPicker";
 import { PickStationsSheet } from "./PickStationsSheet";
 import { AdjustStationsSheet } from "./AdjustStationsSheet";
-import { adjustableSegment, segmentNodes, stationNo } from "./segmentModel";
+import { adjustableSegment, circled, segmentNodes, stationNo } from "@soulledger/core/domain/workflowSegments";
 
 /** 两种跳过同一个符号 ⤼,文字区分(Design W-3a)。 */
 const SKIP_KEY: Record<string, string> = {

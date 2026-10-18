@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { circled } from "@soulledger/core/domain/workflowSegments";
 
 /** 一站:勾上 = 要走。`key` 是送回后端的那个值(生成之前是站序,生成之后是节点 id)。 */
 export interface PickRow {
@@ -23,9 +24,6 @@ export interface ForeignRow {
   realm_name: string;
   default_node_count: number;
 }
-
-/** 段序号 → ①②③(Design 的分段头与外域行都用它)。 */
-export const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
 
 /**
  * 选站列表(第四十三批 W-1a / W-1b,W-2 同一个列表)。

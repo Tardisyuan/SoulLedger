@@ -13,7 +13,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { StationPicker, type PickRow } from "./StationPicker";
 import { StaleSegmentNotice } from "./StaleSegmentNotice";
-import { segmentNodes, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "./segmentModel";
+import { segmentNodes, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 
 /** 现在库里的选择:这一段里已被跳过的站。 */
 const skippedOf = (workflow: ApprovalWorkflow | undefined, order: number) =>

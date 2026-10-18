@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
-import type { StaleSegment } from "./segmentModel";
+import type { StaleSegment } from "@soulledger/core/domain/workflowSegments";
 
 /**
  * W-5d:确认时那一段刚被别人改过(409 `segment_changed`)。先拦下,不覆盖 ——

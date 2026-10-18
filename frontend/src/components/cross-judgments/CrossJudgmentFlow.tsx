@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
-import { circled } from "@/src/components/workflow/segments/StationPicker";
+import { circled } from "@soulledger/core/domain/workflowSegments";
 
 const MUTED = "text-xs text-[oklch(var(--color-ink-muted))]";
 
