@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { officerAppApi } from "@soulledger/core/api";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
+import { pickHall } from "@soulledger/core/domain/workflowSegments";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
@@ -52,7 +53,8 @@ export function PickNodesGroup() {
                   {t("workflow.pick_group.row_meta", {
                     // 发起殿的租户代码 → 文明名(「中国」),同跨域审判页;认不得时留空,不印代码。
                     realm: resolveEnumDisplay(t, "souls.civilizations", TENANT_CODE_TO_CIVILIZATION[row.realm ?? ""]).label ?? "",
-                    hall: row.hall ?? "",
+                    // 冥界名 + 审判所在的殿(「酆都第十殿」);不印库里的英文展示名。
+                    hall: pickHall(t, row),
                     order: String(row.segment_order ?? ""),
                   })}
                 </span>

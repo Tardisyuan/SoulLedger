@@ -662,12 +662,21 @@ def _realm(tenant):
     return tenant.display_name or tenant.code
 
 
+def _realm_params(tenant):
+    """通知里的域:`realm_civ` 让 `messages.render` 按收件人的语言换成文明名(中国 / 埃及 …,同客户端的分段头);
+    `realm` 是租户展示名(库里的英文),只给认不出文明的租户作退路。"""
+    from apps.souls.models import TENANT_CIVILIZATION
+
+    civ = TENANT_CIVILIZATION.get(tenant.code)
+    return {"realm": _realm(tenant), **({"realm_civ": str(civ)} if civ else {})}
+
+
 def notify_pick_tasks(workflow_id):
     """流程发起:每个外域同时收到「选站」待办(`workflow_pick_nodes`)。"""
     workflow = ApprovalWorkflow._base_manager.select_related("soul", "tenant").get(pk=workflow_id)
     for segment in workflow.segments.filter(state=SegmentState.AWAITING_PICK).select_related("tenant"):
         _tell(pick_recipients(segment.tenant_id), "workflow_pick_nodes",
-              {"soul": workflow.soul.name, "realm": _realm(workflow.tenant), "order": segment.order}, workflow)
+              {"soul": workflow.soul.name, **_realm_params(workflow.tenant), "order": segment.order}, workflow)
 
 
 def notify_segment(workflow_id, segment_id):
@@ -678,11 +687,11 @@ def notify_segment(workflow_id, segment_id):
         return
     if segment.gate_reached_at is None:
         _tell(pick_recipients(segment.tenant_id), "workflow_pick_nodes",
-              {"soul": workflow.soul.name, "realm": _realm(workflow.tenant), "order": segment.order}, workflow)
+              {"soul": workflow.soul.name, **_realm_params(workflow.tenant), "order": segment.order}, workflow)
         return
     before = workflow.segments.filter(order__lt=segment.order).select_related("tenant").order_by("-order").first()
     _tell(pick_recipients(segment.tenant_id), "workflow_pick_waiting",
-          {"soul": workflow.soul.name, "realm": _realm(before.tenant if before else workflow.tenant)}, workflow)
+          {"soul": workflow.soul.name, **_realm_params(before.tenant if before else workflow.tenant)}, workflow)
 
 
 def notify_waiting(workflow_id, segment_id):
@@ -719,7 +728,7 @@ def remind_due(tenant, now=None):
                     overdue_notified_at=now):
                 workflow = segment.workflow
                 _tell(hall_admins(workflow.tenant_id), "workflow_pick_overdue",
-                      {"soul": workflow.soul.name, "realm": _realm(segment.tenant), "n": gate_days(segment, now)},
+                      {"soul": workflow.soul.name, **_realm_params(segment.tenant), "n": gate_days(segment, now)},
                       workflow, push=False)
                 counts["overdue"] += 1
     return counts
@@ -875,7 +884,7 @@ def pick_tasks(scope, now=None):
     rows = (WorkflowSegment.objects.filter(
         tenant=tenant, state=SegmentState.AWAITING_PICK,
         workflow__status__in=(ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS),
-    ).select_related("workflow__soul", "workflow__tenant").prefetch_related("nodes")
+    ).select_related("workflow__soul", "workflow__tenant", "workflow__judgment").prefetch_related("nodes")
         .order_by(F("gate_reached_at").asc(nulls_last=True), "created_at"))
     out = []
     for segment in rows:

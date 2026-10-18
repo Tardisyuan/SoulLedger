@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import { circled } from "@soulledger/core/domain/workflowSegments";
+import { circled, segmentRealm } from "@soulledger/core/domain/workflowSegments";
 
 /** 一站:勾上 = 要走。`key` 是送回后端的那个值(生成之前是站序,生成之后是节点 id)。 */
 export interface PickRow {
@@ -21,6 +21,8 @@ export interface PickRow {
 /** 外域一行(W-1a 下半):只读,只写「由该域判官选站 · 默认流程 N 站」。 */
 export interface ForeignRow {
   order: number;
+  /** 读文明名(`segmentRealm`);`realm_name` 是租户展示名,只作退路。 */
+  tenant_code: string;
   realm_name: string;
   default_node_count: number;
 }
@@ -145,7 +147,7 @@ export function StationPicker({
               >
                 <span className="text-[oklch(var(--color-ink))]">
                   <span aria-hidden="true">{circled(f.order)} </span>
-                  {f.realm_name}
+                  {segmentRealm(t, f)}
                 </span>
                 <span className="text-xs">{t("workflow.pick.foreign_by_realm")}</span>
                 <span className="ml-auto text-xs">{t("workflow.pick.foreign_default", { n: String(f.default_node_count) })}</span>

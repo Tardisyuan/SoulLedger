@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
-import { circled } from "@soulledger/core/domain/workflowSegments";
+import { circled, segmentRealm } from "@soulledger/core/domain/workflowSegments";
 
 const MUTED = "text-xs text-[oklch(var(--color-ink-muted))]";
 
@@ -21,6 +21,11 @@ export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment 
   const mine = user?.tenant?.code ?? null;
   const flow = judgment.workflow ?? null;
 
+  // 域名读文明名(`segmentRealm`):`at` / `at_gate` 按段序找到那一段,`pending_realms` 由段的状态重算 ——
+  // 服务端那几个名字是租户展示名(库里的英文),只在认不出文明时用。
+  const segmentAt = (order: number) => flow?.segments.find((s) => s.order === order);
+  const realmAt = (order: number, fallback: string) => segmentRealm(t, segmentAt(order) ?? { tenant_code: "", realm_name: fallback });
+  const pending = (flow?.segments ?? []).filter((s) => s.state === "AWAITING_PICK").map((s) => segmentRealm(t, s));
   const roleOf = (code: string) => judgment.participants.find((p) => p.participant_tenant_code === code)?.role;
   const realmState = (s: WorkflowSegment) =>
     s.state === "AWAITING_PICK"
@@ -40,18 +45,18 @@ export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment 
               {flow.at
                 ? t("crossJudgments.flow.at", {
                     order: circled(flow.at.segment),
-                    realm: flow.at.realm_name,
+                    realm: realmAt(flow.at.segment, flow.at.realm_name),
                     node: flow.at.node_name,
                     hall: flow.at.hall,
                   })
                 : flow.at_gate
-                  ? t("workflow.gate.waiting_title", { realm: flow.at_gate.realm_name, n: String(flow.at_gate.days ?? 1) })
+                  ? t("workflow.gate.waiting_title", { realm: realmAt(flow.at_gate.segment, flow.at_gate.realm_name), n: String(flow.at_gate.days ?? 1) })
                   : <DomainEnum namespace="workflow.status" value={flow.status} />}
             </p>
             <p className={MUTED}>
               {t("crossJudgments.flow.progress", { fixed: String(flow.fixed), done: String(flow.done) })}
-              {flow.pending_realms.length > 0
-                ? ` · ${t("crossJudgments.flow.pending_realms", { realms: flow.pending_realms.join("、") })}`
+              {pending.length > 0
+                ? ` · ${t("crossJudgments.flow.pending_realms", { realms: pending.join("、") })}`
                 : ""}
             </p>
             <Link href={`/workflow/${flow.id}`} className="self-start text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
@@ -78,7 +83,7 @@ export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment 
                 >
                   <span className="font-medium text-[oklch(var(--color-ink))]">
                     <span aria-hidden="true">{circled(s.order)} </span>
-                    {s.realm_name}
+                    {segmentRealm(t, s)}
                     {s.tenant_code === mine ? ` · ${t("workflow.segment.local")}` : ""}
                   </span>
                   {role ? (

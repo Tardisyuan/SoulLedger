@@ -13,7 +13,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { StationPicker, type PickRow } from "./StationPicker";
 import { StaleSegmentNotice } from "./StaleSegmentNotice";
-import { segmentNodes, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
+import { segmentNodes, segmentRealm, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 
 /** 现在库里的选择:这一段里已被跳过的站。 */
 const skippedOf = (workflow: ApprovalWorkflow | undefined, order: number) =>
@@ -92,7 +92,7 @@ export function PickStationsSheet({
       isOpen={isOpen}
       onClose={() => !pick.isPending && onClose()}
       wide
-      title={segment ? `${segment.realm_name} · ${t("workflow.pick_group.action")}` : t("workflow.pick_group.action")}
+      title={segment ? `${segmentRealm(t, segment)} · ${t("workflow.pick_group.action")}` : t("workflow.pick_group.action")}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={pick.isPending}>
@@ -134,7 +134,7 @@ export function PickStationsSheet({
               before.length > 0
                 ? t("workflow.pick.position", {
                     order: String(order),
-                    prev: before.map((s) => s.realm_name).join("、"),
+                    prev: before.map((s) => segmentRealm(t, s)).join("、"),
                     n: String(before.reduce((sum, s) => sum + s.go, 0)),
                   })
                 : null

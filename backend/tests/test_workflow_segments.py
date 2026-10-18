@@ -167,6 +167,23 @@ def test_concluding_with_an_open_bench_generates_a_workflow_with_one_segment_per
     assert told == {"b43_eg_judge", "b43_eu_judge"}
 
 
+def test_pick_notifications_name_the_convener_by_its_civilization_per_language(
+        w, django_capture_on_commit_callbacks):
+    """`{{realm}}` 原来填租户展示名(库里是「Chinese Afterlife」),中文句子里露英文。现在带 `realm_civ`,按语言渲染。"""
+    from apps.notifications import messages
+
+    with django_capture_on_commit_callbacks(execute=True):
+        merged(w, [w.eg])
+    note = UserNotification.objects.get(params__kind="workflow_pick_nodes", user=w.eg_judge)
+    assert note.params["realm_civ"] == "CHINESE"
+    assert "中国发起" in note.message and w.cn.display_name not in note.message
+    _title, en = messages.render("en", "workflow_pick_nodes", note.params)
+    assert "from Chinese;" in en and w.cn.display_name not in en
+    # 认不出文明时退回展示名。
+    _title, odd = messages.render("zh-Hans", "workflow_pick_nodes", {**note.params, "realm_civ": "ATLANTEAN"})
+    assert note.params["realm"] in odd
+
+
 def test_the_flow_waits_at_an_unpicked_realm_and_goes_on_when_that_realm_picks(w):
     _soul, _case, _cj, wf = merged(w, [w.eg])
     _run_local(w, wf)
@@ -497,6 +514,8 @@ def test_the_pick_task_lands_in_the_realms_todo(w):
     assert item["target"] == {"kind": "pick", "id": str(wf.pk)}
     assert (item["segment_order"], item["go"], item["total"], item["realm"]) == (2, 3, 3, "CN_DIYU")
     assert item["gate_days"] is None and item["stations_ahead"] == 3
+    # 发起殿的名字由客户端按 `realm` 读冥界名,接上审判所在的殿;`hall`(租户展示名,库里的英文)只作退路。
+    assert item["court"] == "第一殿"
     # 本域没有选站待办;别的域也没有。
     assert officer_client(w.cn_judge).get(TODO).data["pick_nodes"]["count"] == 0
     assert officer_client(w.eu_judge).get(TODO).data["pick_nodes"]["count"] == 0

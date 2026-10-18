@@ -8,6 +8,8 @@
  *   别人刚改过(409 `segment_changed`)时拦下、写谁几点改的,不报错误 toast、不覆盖。
  * - 审批页「待我选站」:在门口的一行写「已在门口等 · N 天」并加粗,没到门口的写前面还有几站;空组不画。
  * - 历史句子:加回 / 跳过为空时去掉那一半句,不写「无」。
+ * - 域按 `tenant_code` 读:分段与门口写文明名(埃及),「待我选站」的发起殿写冥界名 + 殿(酆都第十殿);不印服务端的
+ *   `realm_name` / `hall` —— 那是租户展示名,库里的英文(2026-10-19 模拟器上「埃及 · Egyptian Afterlife发起」)。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -72,7 +74,7 @@ function Picker({ onChange = () => {} }: { onChange?: (_next: Set<string>) => vo
         onChange(next);
         setSkipped(next);
       }}
-      foreign={[{ order: 2, realm_name: "杜阿特", default_node_count: 4 }]}
+      foreign={[{ order: 2, tenant_code: "EG_DUAT", realm_name: "Egyptian Afterlife", default_node_count: 4 }]}
     />
   );
 }
@@ -100,7 +102,8 @@ describe("选站列表(W-1a / W-1b)", () => {
   it("外域只读:只写由该域判官选站与默认站数,不列它的站", () => {
     render(<Picker />);
     const foreign = screen.getByTestId("picker-foreign");
-    expect(foreign).toHaveTextContent("杜阿特");
+    expect(foreign).toHaveTextContent("埃及");
+    expect(foreign).not.toHaveTextContent("Egyptian Afterlife");
     expect(foreign).toHaveTextContent(tZh("workflow.pick.foreign_by_realm"));
     expect(foreign).toHaveTextContent(tZh("workflow.pick.foreign_default", { n: "4" }));
     expect(within(foreign).queryByRole("checkbox")).toBeNull();
@@ -132,7 +135,8 @@ const segment = (over: Partial<WorkflowSegment> = {}): WorkflowSegment => ({
   order: 2,
   is_local: false,
   tenant_code: "EG_DUAT",
-  realm_name: "杜阿特",
+  // 服务端给的是租户展示名(库里的英文);界面应读 `tenant_code` 的冥界名。
+  realm_name: "Egyptian Afterlife",
   civilization: "EGYPTIAN",
   name: "称心流程",
   state: "AWAITING_PICK",
@@ -152,7 +156,7 @@ const segment = (over: Partial<WorkflowSegment> = {}): WorkflowSegment => ({
   ...over,
 });
 
-const local = segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "酆都", state: "DONE", at_gate: false, gate_days: null });
+const local = segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "Chinese Afterlife", state: "DONE", at_gate: false, gate_days: null });
 
 const workflowWith = (segments: WorkflowSegment[], nodes: ApprovalNode[] = [], over: Partial<ApprovalWorkflow> = {}) =>
   ({ id: "wf-1", soul: "s-1", soul_name: "王守仁", status: "IN_PROGRESS", segments, nodes, current_node: null, ...over }) as unknown as ApprovalWorkflow;
@@ -162,10 +166,11 @@ describe("门口那一块(W-5a/b/c)", () => {
     const seg = segment({ picked_by_name: "某判官" });
     wrap(<WorkflowGateBanner workflow={workflowWith([local, seg])} segment={seg} myTenant="CN_DIYU" />);
     const banner = screen.getByTestId("gate-banner");
-    expect(banner).toHaveTextContent(tZh("workflow.gate.waiting_title", { realm: "杜阿特", n: "2" }));
-    expect(banner).toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "杜阿特" }));
-    expect(banner).not.toHaveTextContent(tZh("workflow.gate.overdue_body", { realm: "杜阿特" }));
+    expect(banner).toHaveTextContent(tZh("workflow.gate.waiting_title", { realm: "埃及", n: "2" }));
+    expect(banner).toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "埃及" }));
+    expect(banner).not.toHaveTextContent(tZh("workflow.gate.overdue_body", { realm: "埃及" }));
     expect(banner).not.toHaveTextContent("某判官");
+    expect(banner).not.toHaveTextContent("Egyptian Afterlife");
     expect(screen.getByRole("button", { name: tZh("workflow.gate.remind_again") })).toBeEnabled();
     expect(screen.queryByRole("button", { name: tZh("workflow.gate.use_default") })).toBeNull();
   });
@@ -174,8 +179,8 @@ describe("门口那一块(W-5a/b/c)", () => {
     const seg = segment({ gate_days: 4, can_use_default: true });
     workflowApi.useDefault.mockResolvedValue({ data: workflowWith([local, { ...seg, state: "PICKED", at_gate: false }]) });
     wrap(<WorkflowGateBanner workflow={workflowWith([local, seg])} segment={seg} myTenant="CN_DIYU" />);
-    expect(screen.getByTestId("gate-banner")).toHaveTextContent(tZh("workflow.gate.overdue_body", { realm: "杜阿特" }));
-    expect(screen.getByTestId("gate-banner")).not.toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "杜阿特" }));
+    expect(screen.getByTestId("gate-banner")).toHaveTextContent(tZh("workflow.gate.overdue_body", { realm: "埃及" }));
+    expect(screen.getByTestId("gate-banner")).not.toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "埃及" }));
     fireEvent.click(screen.getByRole("button", { name: tZh("workflow.gate.use_default") }));
     const confirm = (await screen.findAllByRole("button", { name: tZh("workflow.gate.use_default") })).at(-1)!;
     expect(confirm).toBeDisabled();
@@ -196,7 +201,7 @@ describe("门口那一块(W-5a/b/c)", () => {
   it("该域没有能选站的人:只写那一句,不给「再提醒一次」", () => {
     const seg = segment({ no_picker: true, can_use_default: true });
     wrap(<WorkflowGateBanner workflow={workflowWith([local, seg])} segment={seg} myTenant="CN_DIYU" />);
-    expect(screen.getByTestId("gate-banner")).toHaveTextContent(tZh("workflow.gate.no_picker_title", { realm: "杜阿特" }));
+    expect(screen.getByTestId("gate-banner")).toHaveTextContent(tZh("workflow.gate.no_picker_title", { realm: "埃及" }));
     expect(screen.queryByRole("button", { name: tZh("workflow.gate.remind_again") })).toBeNull();
     expect(screen.getByRole("button", { name: tZh("workflow.gate.use_default") })).toBeInTheDocument();
   });
@@ -206,8 +211,9 @@ describe("门口那一块(W-5a/b/c)", () => {
     wrap(<WorkflowGateBanner workflow={workflowWith([local, seg])} segment={seg} myTenant="EG_DUAT" />);
     const banner = screen.getByTestId("gate-banner");
     expect(banner).toHaveTextContent(tZh("workflow.gate.foreign_title"));
-    expect(banner).toHaveTextContent(tZh("workflow.gate.foreign_body", { soul: "王守仁", realm: "酆都" }));
-    expect(banner).not.toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "杜阿特" }));
+    expect(banner).toHaveTextContent(tZh("workflow.gate.foreign_body", { soul: "王守仁", realm: "中国" }));
+    expect(banner).not.toHaveTextContent("Chinese Afterlife");
+    expect(banner).not.toHaveTextContent(tZh("workflow.gate.waiting_body", { realm: "埃及" }));
     expect(screen.getByRole("button", { name: tZh("workflow.pick_group.action") })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: tZh("workflow.gate.remind_again") })).toBeNull();
   });
@@ -245,7 +251,7 @@ const ADJUST_NODES = [
   node(6, { status: "SKIPPED", skip_kind: "CANCELLED" }),
   node(7, { node_type: "FINAL", is_required: true }),
 ];
-const running = segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "酆都", state: "RUNNING", version: 3, at_gate: false });
+const running = segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "Chinese Afterlife", state: "RUNNING", version: 3, at_gate: false });
 const adjustWorkflow = () => workflowWith([running], ADJUST_NODES, { current_node: "n3" });
 
 function renderAdjust() {
@@ -335,7 +341,8 @@ const pickItem = (over: Record<string, unknown>) => ({
   go: 4,
   total: 4,
   realm: "CN_DIYU",
-  hall: "酆都第十殿",
+  hall: "Chinese Afterlife",
+  court: "第十殿",
   gate_days: null,
   stations_ahead: null,
   ...over,
@@ -364,10 +371,30 @@ describe("审批页「待我选站」(W-2)", () => {
     expect(rows[0]).toHaveTextContent(tZh("workflow.pick_group.row_title", { soul: "王守仁", n: "4" }));
     expect(rows[0]).toHaveTextContent(tZh("workflow.pick_group.row_meta", { realm: tZh("souls.civilizations.CHINESE"), hall: "酆都第十殿", order: "2" }));
     expect(rows[0]).not.toHaveTextContent("CN_DIYU");
+    expect(rows[0]).not.toHaveTextContent("Chinese Afterlife");
     expect(rows[1]).not.toHaveAttribute("data-at-gate");
     expect(rows[1]).toHaveTextContent(tZh("workflow.pick_group.ahead", { n: "6" }));
     expect(rows[1]).not.toHaveTextContent(tZh("workflow.pick_group.at_gate", { n: "2" }));
     expect(within(group).getAllByRole("button", { name: tZh("workflow.pick_group.action") })).toHaveLength(2);
+  });
+
+  it("流程没有审判(没有殿)时只写冥界名;认不出文明时才用服务端的展示名", async () => {
+    officerAppApi.todo.mockResolvedValue({
+      data: {
+        pick_nodes: {
+          count: 2,
+          items: [
+            pickItem({ court: "" }),
+            pickItem({ id: "wf-2", target: { kind: "pick", id: "wf-2" }, realm: "XX_NOWHERE", hall: "Nowhere Hall", court: "" }),
+          ],
+        },
+      },
+    });
+    wrap(<PickNodesGroup />);
+    const rows = (await screen.findByTestId("pick-nodes-group")).querySelectorAll("li");
+    expect(rows[0]).toHaveTextContent(tZh("workflow.pick_group.row_meta", { realm: tZh("souls.civilizations.CHINESE"), hall: "酆都", order: "2" }));
+    expect(rows[0]).not.toHaveTextContent("Chinese Afterlife");
+    expect(rows[1]).toHaveTextContent("Nowhere Hall");
   });
 
   it("没有要选的就不画这一组", async () => {

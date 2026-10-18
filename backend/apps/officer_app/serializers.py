@@ -29,7 +29,8 @@ class TodoItemSerializer(serializers.Serializer):
     go = serializers.IntegerField(required=False, help_text="仅选站:本域这一段要走的站数。")
     total = serializers.IntegerField(required=False, help_text="仅选站:本域这一段的站数(默认流程)。")
     realm = serializers.CharField(required=False, help_text="仅选站:发起殿的租户代码。")
-    hall = serializers.CharField(required=False, help_text="仅选站:发起殿的显示名。")
+    hall = serializers.CharField(required=False, help_text="仅选站:发起殿的显示名(库里的英文;客户端按 `realm` 读冥界名,认不出文明才用它)。")
+    court = serializers.CharField(required=False, help_text="仅选站:流程所出审判的殿(`judgment.court`,如「第十殿」);没有审判时空串。")
     gate_days = serializers.IntegerField(required=False, allow_null=True,
                                          help_text="仅选站:流程已在门口等的第几天;还没到门口时 null。")
     stations_ahead = serializers.IntegerField(required=False, allow_null=True,

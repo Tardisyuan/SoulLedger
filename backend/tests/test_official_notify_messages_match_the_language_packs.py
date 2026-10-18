@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from apps.notifications.messages import KIND_BY_TYPE, MESSAGES, SYSTEM_KINDS, VARIANTS
+from apps.notifications.messages import CIVILIZATION_NAMES, KIND_BY_TYPE, MESSAGES, SYSTEM_KINDS, VARIANTS
 from apps.notifications.models import NotificationType
 
 #: 主语是官员账号而不是灵魂的通知种类。
@@ -32,6 +32,8 @@ PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
 def test_backend_copy_equals_the_language_pack(locale):
     pack = json.loads((PACKS / f"{locale}.json").read_text(encoding="utf-8"))
     assert pack["official_notify"] == MESSAGES[locale]
+    # 选站通知里的 `{{realm}}` 按语言换成文明名(`render` 读 `realm_civ`),那份名字也是语言包的副本。
+    assert pack["souls"]["civilizations"] == CIVILIZATION_NAMES[locale]
 
 
 def test_every_localized_type_is_a_real_type_with_text_in_every_locale():

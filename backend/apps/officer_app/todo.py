@@ -142,13 +142,15 @@ FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown"
 
 
 def _pick_items(scope):
-    """「待我选站」:soul 作标题;本域要走 / 默认站数、发起殿、本域排第几、在门口第几天或前面还有几站。"""
+    """「待我选站」:soul 作标题;本域要走 / 默认站数、发起殿、本域排第几、在门口第几天或前面还有几站。
+    `hall` 是租户展示名(库里的英文),只作退路;客户端按 `realm`(租户代码)读冥界名,再接 `court`(审判所在的殿)。"""
     from apps.workflow.segments import pick_tasks
 
     return [
         _item("pick", row["workflow"].pk, row["workflow"].soul.name, row["segment"].created_at,
               segment_order=row["segment"].order, go=row["go"], total=row["total"],
               realm=row["workflow"].tenant.code, hall=row["workflow"].tenant.display_name,
+              court=row["workflow"].judgment.court if row["workflow"].judgment_id else "",
               gate_days=row["gate_days"], stations_ahead=row["stations_ahead"])
         for row in pick_tasks(scope)
     ]

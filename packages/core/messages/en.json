@@ -1396,6 +1396,7 @@
       "hint": "Approval flows from other realms — pick before this realm's turn",
       "row_title": "{{soul}} · {{n}} stations here",
       "row_meta": "{{realm}} · from {{hall}} · this realm no. {{order}}",
+      "hall": "{{realm}} {{court}}",
       "at_gate": "The flow is waiting · {{n}} days",
       "ahead": "{{n}} stations ahead",
       "action": "Pick"

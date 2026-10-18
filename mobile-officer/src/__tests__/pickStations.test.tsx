@@ -1,5 +1,7 @@
 /**
  * 第四十三批 O-1 ~ O-4:待办里的「待我选站」一组、选站页(终审锁定、确认送什么、别人刚改过)、流程详情的分段与门口。
+ * 服务端的 `hall` / `realm_name` 是租户展示名(库里的英文),夹具照实给英文:界面按租户代码读文明名与冥界名,
+ * 一处都不能露出来(2026-10-19 模拟器上「埃及 · Egyptian Afterlife发起」「前面:Egyptian Afterlife 3 站」)。
  */
 import type { LoginUser } from "@soulledger/core/api/auth";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
@@ -35,7 +37,8 @@ const pickRow = (id: string, extra: object) => ({
   go: 4,
   total: 4,
   realm: "CN_DIYU",
-  hall: "酆都第十殿",
+  hall: "Chinese Afterlife",
+  court: "第十殿",
   ...extra,
 });
 
@@ -77,8 +80,8 @@ const WORKFLOW = {
   awaiting_segment: 2,
   can_adjust: false,
   segments: [
-    segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "中国", civilization: "CHINESE", state: "DONE", go: 8, total: 10, default_node_count: 10, version: 1 }),
-    segment({ order: 2, tenant_code: "EG_DUAT", realm_name: "埃及", state: "AWAITING_PICK", go: 4, total: 4, default_node_count: 4, version: 5, at_gate: true, gate_days: 2, can_pick: true }),
+    segment({ order: 1, is_local: true, tenant_code: "CN_DIYU", realm_name: "Chinese Afterlife", civilization: "CHINESE", state: "DONE", go: 8, total: 10, default_node_count: 10, version: 1 }),
+    segment({ order: 2, tenant_code: "EG_DUAT", realm_name: "Egyptian Afterlife", state: "AWAITING_PICK", go: 4, total: 4, default_node_count: 4, version: 5, at_gate: true, gate_days: 2, can_pick: true }),
   ],
   nodes: [
     node("c1", -9, "初审", { segment_order: 1, status: "APPROVED", order_in_segment: 1, node_order: 1 }),
@@ -101,7 +104,7 @@ describe("O-1 · 待我选站 in the to-do list", () => {
     cooldowns: group([]),
     rebirths: group([]),
     letters: group([]),
-    pick_nodes: group([pickRow("wf-1", { gate_days: 2, stations_ahead: null }), pickRow("wf-2", { gate_days: null, stations_ahead: 6, hall: "酆都第三殿", segment_order: 3 })]),
+    pick_nodes: group([pickRow("wf-1", { gate_days: 2, stations_ahead: null }), pickRow("wf-2", { gate_days: null, stations_ahead: 6, court: "第三殿", segment_order: 3 })]),
   };
 
   it("is its own group above 审批节点, each row the soul and this realm's stations, who convened it, and the wait", async () => {
@@ -121,9 +124,11 @@ describe("O-1 · 待我选站 in the to-do list", () => {
     expect(within(gated).queryByText(/前面还有/)).toBeNull();
     // A pick row has no time line and never prints the tenant code.
     expect(within(gated).queryByText(/CN_DIYU/)).toBeNull();
+    expect(within(gated).queryByText(/Afterlife/)).toBeNull();
 
     const ahead = screen.getByTestId("todo-row-pick-wf-2");
     expect(within(ahead).getByText("前面还有 6 站")).toBeTruthy();
+    expect(within(ahead).getByText("中国 · 酆都第三殿发起 · 本域排第 3")).toBeTruthy();
     expect(within(ahead).queryByText(/门口/)).toBeNull();
 
     fireEvent.press(gated);
@@ -157,6 +162,7 @@ describe("O-2 · the pick page", () => {
     await openPick();
     expect(mockGet).toHaveBeenCalledWith("wf-1");
     expect(screen.getByTestId("pick-position").props.children).toBe("本域排第 2 · 前面:中国 8 站");
+    expect(screen.queryByText(/Afterlife/)).toBeNull();
     expect(screen.getByTestId("pick-at-gate").props.children).toBe("流程已在门口等 · 2 天");
     for (const id of ["n1", "n2", "n3", "n4"]) expect(screen.getByTestId(`pick-station-${id}`).props.accessibilityState.checked).toBe(true);
     // The other realm's station is not on this page.
@@ -264,6 +270,7 @@ describe("O-3 / O-4 · the workflow's segments in an approval detail", () => {
   it("the convening realm sees 等待外域选站 with the realm and the day, never a name, and no pick button", async () => {
     await openApproval();
     expect(screen.getByTestId("segment-gate-title").props.children).toBe("◌ 等待外域选站 · 埃及 · 第 2 天");
+    expect(screen.queryByText(/Afterlife/)).toBeNull();
     expect(screen.getByTestId("segment-gate-body").props.children).toBe("本域已走完。已提醒埃及判官，选好后自动继续。");
     expect(screen.queryByTestId("segment-gate-pick")).toBeNull();
     // A done realm keeps only its head until it is opened.
