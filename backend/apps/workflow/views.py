@@ -25,6 +25,7 @@ from apps.workflow.serializers import (
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
     ApproverPreviewSerializer,
+    FlowPreviewSerializer,
     WorkflowAdjustSerializer,
     WorkflowCaseTypeSerializer,
     WorkflowNodeActionSerializer,
@@ -236,6 +237,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'escalate': ['workflow.escalate'],
         'approve_node': ['workflow.approve'],
         'stats': ['workflow.read'],
+        # W-1 选站列表(生成之前):只读模板与审批人名,同 `approver-preview`。
+        'flow_preview': ['workflow.read'],
         'create_from_judgment': ['workflow.create'],
         'start': ['workflow.create'],
         # The choices for `start`, so the same people who may start.
@@ -320,6 +323,85 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             if c in valid
         ]
         return Response(WorkflowCaseTypeSerializer(rows, many=True).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("soul", str, required=False, description="手动发起:灵魂 id(与 case_type 或 template 同给)"),
+            OpenApiParameter("case_type", str, required=False),
+            OpenApiParameter("template", str, required=False, description="选定的模板;不给按案件类型取默认"),
+            OpenApiParameter("judgment", str, required=False,
+                             description="结案时:审判 id(案件类型按审判取);手动发起时:关联的审判"),
+        ],
+        responses={200: FlowPreviewSerializer, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["get"], url_path="flow-preview", pagination_class=None)
+    def flow_preview(self, request):
+        """W-1 选站列表(第四十三批):流程生成之前,本域默认流程的各站与按跨域审判顺序接在后面的外域。
+        模板解析与 `start` / 结案生成同一套(`_resolve_template` / 同样校验的选定模板),所以列出的站序就是
+        `skip_node_orders` 认的那些。灵魂与审判按同一个租户划界:别的殿的是 404。"""
+        import uuid
+
+        from apps.judgment.models import Judgment
+        from apps.souls.models import Soul
+
+        def param_uuid(name):
+            value = request.query_params.get(name, "")
+            if not value:
+                return None
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                return False
+
+        soul_id, judgment_id, template_id = param_uuid("soul"), param_uuid("judgment"), param_uuid("template")
+        if False in (soul_id, judgment_id, template_id):
+            return Response({"code": "not_found", "error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        judgment = None
+        if judgment_id:
+            judgment = (scope_to_tenant(Judgment.objects.select_related("soul", "tenant"), request)
+                        .filter(pk=judgment_id).first())
+            if judgment is None:
+                return Response({"code": "judgment_not_found", "error": "Judgment not found"},
+                                status=status.HTTP_404_NOT_FOUND)
+        if soul_id:
+            soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=soul_id).first()
+            if soul is None:
+                return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+            if judgment is not None and judgment.soul_id != soul.pk:
+                return Response({"code": "judgment_not_found", "error": "Judgment not found for this soul"},
+                                status=status.HTTP_404_NOT_FOUND)
+            tenant = soul.tenant
+        elif judgment is not None:
+            soul, tenant = judgment.soul, judgment.tenant
+        else:
+            return Response({"code": "soul_or_judgment", "error": "Give soul or judgment"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        case_type = request.query_params.get("case_type") or None
+        if template_id:
+            db_template = (
+                WorkflowTemplate.objects.filter(pk=template_id, tenant=tenant, is_active=True,
+                                                civilization=soul.civilization)
+                .exclude(nodes_json=[])
+                .first()
+            )
+            if db_template is None:
+                return Response({"code": "template_not_found", "error": "No such template for this soul"},
+                                status=status.HTTP_404_NOT_FOUND)
+            template, _priority = WorkflowService.stored_template(db_template)
+            case_type = db_template.case_type
+        else:
+            if case_type is None:
+                if soul_id:
+                    return Response({"code": "case_type_required", "error": "Give case_type or template"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                case_type = WorkflowService.judgment_case_type(soul.civilization)
+            invalid = WorkflowService.validate_civilization_case_type(soul.civilization, case_type)
+            if invalid:
+                return Response({"code": "invalid_case_type", "error": invalid}, status=status.HTTP_400_BAD_REQUEST)
+            template, _priority = WorkflowService._resolve_template(soul.civilization, case_type, tenant)
+        body = segments.flow_preview(soul, case_type, tenant, template, judgment)
+        return Response(FlowPreviewSerializer(body).data)
 
     @extend_schema(
         request=WorkflowStartSerializer,

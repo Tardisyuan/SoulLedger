@@ -9440,6 +9440,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/flow-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description W-1 选站列表(第四十三批):流程生成之前,本域默认流程的各站与按跨域审判顺序接在后面的外域。
+         *     模板解析与 `start` / 结案生成同一套(`_resolve_template` / 同样校验的选定模板),所以列出的站序就是
+         *     `skip_node_orders` 认的那些。灵魂与审判按同一个租户划界:别的殿的是 404。
+         */
+        get: operations["v1_workflows_flow_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/start/": {
         parameters: {
             query?: never;
@@ -11771,6 +11792,33 @@ export interface components {
          * @enum {string}
          */
         FeedbackTagEnum: "account" | "record" | "app" | "other";
+        /**
+         * @description `GET /workflows/flow-preview/` (W-1): the stations of this realm's default flow before the workflow is
+         *     generated, and the other realms that will follow (`segments.flow_preview`).
+         */
+        FlowPreview: {
+            name: string;
+            stations: components["schemas"]["FlowPreviewStation"][];
+            foreign: components["schemas"]["FlowPreviewForeign"][];
+        };
+        FlowPreviewForeign: {
+            order: number;
+            tenant_code: string;
+            realm_name: string;
+            default_node_count: number;
+        };
+        FlowPreviewStation: {
+            /** @description 站序;勾掉的站以它送进 `skip_node_orders`。 */
+            node_order: number;
+            node_name: string;
+            court_code: string;
+            /** @description 具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。 */
+            approver: string | null;
+            /** @description 按角色派时的角色成员(客户端翻译)。 */
+            approver_role: string | null;
+            /** @description 终审:不能跳过。 */
+            is_required: boolean;
+        };
         Follow: {
             /** Format: uuid */
             readonly id: string;
@@ -36347,6 +36395,53 @@ export interface operations {
                 };
             };
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_workflows_flow_preview_retrieve: {
+        parameters: {
+            query?: {
+                case_type?: string;
+                /** @description 结案时:审判 id(案件类型按审判取);手动发起时:关联的审判 */
+                judgment?: string;
+                /** @description 手动发起:灵魂 id(与 case_type 或 template 同给) */
+                soul?: string;
+                /** @description 选定的模板;不给按案件类型取默认 */
+                template?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
