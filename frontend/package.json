@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "start:e2e": "PORT=3333 next start",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint . --max-warnings 0 --cache --cache-location \"../node_modules/.cache/eslint-frontend-$(shasum eslint.design-guard-baseline.json | cut -c1-12)/\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",

@@ -32,8 +32,8 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile node_modules/.cache/tsc.tsbuildinfo",
+    "lint": "eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint/",
     "test": "vitest run",
     "schema:generate": "openapi-typescript openapi/schema.yml -o src/api/generated/schema.ts"
   },

@@ -7,6 +7,11 @@ const path = require("path");
 const reactDir = path.dirname(require.resolve("react/package.json", { paths: [__dirname] }));
 
 module.exports = {
+  // Half the cores, not jest"s default of cores-1: seven workers filled all
+  // eight cores of the dev machine and pushed its 16 GB into swap (2026-10-19).
+  // JEST_WORKERS overrides; `-w` on the command line still wins over both.
+  maxWorkers: process.env.JEST_WORKERS || "50%",
+  workerIdleMemoryLimit: "1GB",
   preset: "jest-expo",
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.test.ts", "**/*.test.tsx"],
