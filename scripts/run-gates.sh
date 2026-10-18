@@ -53,6 +53,18 @@
 
 set -u
 
+# YIELD TO THE PERSON AT THE KEYBOARD (macOS). Re-run under the `utility` QoS
+# clamp and nice 10: the gates still use every core while the machine is idle,
+# and step aside when something in the foreground wants one. Before this a jest
+# run alone took all eight cores and the desktop stuttered (2026-10-19).
+# Not `background` (-b): that pins to the efficiency cores and throttles I/O, and
+# timing-sensitive tests then fail for the wrong reason. GATES_QOS=none opts out;
+# no taskpolicy (Linux, CI) runs as before. Children inherit both settings.
+if [ -z "${GATES_QOS_APPLIED:-}" ] && [ "${GATES_QOS:-utility}" != none ] && command -v taskpolicy >/dev/null 2>&1; then
+    export GATES_QOS_APPLIED=1
+    exec taskpolicy -c "${GATES_QOS:-utility}" nice -n 10 bash "${BASH_SOURCE[0]}" "$@"
+fi
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREPUSH=0; MODE=auto; BASE=""
 while [ $# -gt 0 ]; do
@@ -323,6 +335,26 @@ MIGRATION_FILES
 RUN_MIGRATION=0
 [ "$RUN_BACKEND" = 1 ] && [ "$TOUCHES_MIGRATION" -gt 0 ] && RUN_MIGRATION=1
 
+# THE TWO SUITE-ABOUT-THE-SUITE TESTS RUN ONLY WHEN WHAT THEY GUARD CHANGED.
+#
+# Each starts a second pytest: test_collection_scope.py collects the whole suite
+# again in a subprocess (it is a `*` line in reads-outside-backend.txt, so it ran
+# on every push of any kind), and test_audit_assertions_are_not_vacuous.py runs
+# a nested pytest on a freshly migrated database. What they guard is the
+# collection and plugin setup — pytest.ini, the conftests, the two plugins it
+# loads, apps/*/tests.py existing at all — plus what the nested probe imports
+# (apps/audit, apps/tenants), the settings, and the pytest version. Same
+# fail-closed extras as the round trips: the files themselves, an unknown root
+# file, and an explicit full run (--full, GATES_FULL=1, a push to main).
+META_TESTS='backend/tests/test_collection_scope.py
+backend/tests/test_audit_assertions_are_not_vacuous.py'
+META_PATH_RE='^(pytest\.ini$|conftest\.py$|backend/.*conftest\.py$|backend/requirements\.lock$|backend/config/|backend/apps/(audit|tenants)/|backend/apps/core/lock_join_guard\.py$|backend/apps/[^/]+/tests\.py$|backend/tests/test_collection_scope\.py$|backend/tests/test_audit_assertions_are_not_vacuous\.py$)'
+TOUCHES_META=$(echo "$CHANGED" | grep -cE "$META_PATH_RE" || true)
+[ -n "$UNKNOWN_ROOT" ] && TOUCHES_META=$((TOUCHES_META + 1))
+{ [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; } && TOUCHES_META=$((TOUCHES_META + 1))
+RUN_META=0
+[ "$TOUCHES_META" -gt 0 ] && RUN_META=1
+
 # ── JEST: FULL OR SELECTIVE ──────────────────────────────────────────────────
 #
 # --findRelatedTests follows imports. Each rule below names a change it cannot
@@ -365,6 +397,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify-mobile: mobile=$RUN_MOBILE"
     echo "classify-officer: officer=$RUN_OFFICER"
     echo "classify-migration: migration=$RUN_MIGRATION"
+    echo "classify-meta: meta=$RUN_META"
     echo "classify-jest: full=$([ -n "$FULL_F" ] && echo 1 || echo 0)"
     printf '%s' "$FULL_F" | sed 's/^/  full because: /'
     echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
@@ -462,7 +495,8 @@ if [ "$RUN_FRONTEND" = 1 ]; then
         ALWAYS=$(grep -vE '^[[:space:]]*(#|$)' "$ALWAYS_LIST" | sed "s|^|$ROOT/frontend/|")
         JEST_PATHS=$(printf '%s\n%s\n' "$RELATED" "$ALWAYS" | grep -v '^$' | sort -u)
         n() { [ -n "$1" ] && echo "$1" | wc -l | tr -d ' ' || echo 0; }
-        echo "    affected: $(n "$JEST_PATHS") of $(npx jest --listTests 2>/dev/null | grep -c '^/') test files ($(n "$RELATED") related to the change, $(n "$ALWAYS") always-run)"
+        # No "of <total>": counting it started a second jest just to list files.
+        echo "    affected: $(n "$JEST_PATHS") test files ($(n "$RELATED") related to the change, $(n "$ALWAYS") always-run)"
     else
         echo "    FULL, because:"; printf '%s' "$FULL_F" | sed 's/^/      /'
     fi
@@ -789,13 +823,26 @@ PROBE_PY
     fi
     PYTEST_LOG=$(mktemp -t prepush-pytest)
     PYTEST_PATHS=""
+    META_IGNORE=""
+    if [ "$RUN_META" = 0 ]; then
+        META_IGNORE=$(echo "$META_TESTS" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
+        echo "    (without the 2 suite-about-the-suite tests: nothing they guard changed)"
+    fi
     if [ "$RUN_BACKEND" = 0 ]; then
+        # Readers are listed relative to backend/; drop the meta tests here too, and
+        # if nothing is left run nothing — an empty path list would mean "the whole suite".
         PYTEST_PATHS="$BACKEND_READERS"
-        echo "    (only the $(echo "$PYTEST_PATHS" | wc -l | tr -d ' ') test files that read what changed — backend/tests/reads-outside-backend.txt)"
+        [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+        echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
+    fi
+    if [ "$RUN_BACKEND" = 0 ] && [ -z "$PYTEST_PATHS" ]; then
+        echo "    nothing to run"
+        [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
+        echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"; exit 0
     fi
     # shellcheck disable=SC2086
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
-        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
+        ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     T0=$(date +%s); NEXT=30
     while kill -0 "$PYTEST_PID" 2>/dev/null; do

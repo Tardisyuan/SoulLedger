@@ -324,9 +324,11 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 同一时刻只跑一个重门禁,后来的每分钟打印一次在等谁。几个会话同时跑门禁时每个慢 2–3 倍
 # (2026-09-29:空闲 19 分钟的 SQLite 全量,负载 50 下 38 分钟才到 77%)。GATE_LOCK=0 跳过。
 # 自己跑的全量脚本也应先 `. scripts/gate-lock.sh; gate_lock "<说明>"`。
-# **只锁吃 CPU 的门禁**(SQLite pytest、jest、playwright、build、tsc),**真 PG 那条不拿锁**:
-# 它慢在和 115 的网络往返,本机几乎空闲 —— 2026-09-30 一次真 PG 全量拿着锁两小时,负载只有 2.7,
-# 别的会话全在排队。脚本里只把 CPU 那段包在锁里;SQLite 与 PG 并行跑时 PG 那半在锁外。
+# **所有重门禁都拿锁,真 PG 那条也拿(2026-10-19 起)。** 此前它不拿,理由是「慢在和 115 的网络往返、
+# 本机几乎空闲」;2026-09-30 的实测推翻了这一点:往返 0.57ms、Pi 负载 0.09,同一套件本机空闲时
+# 17 分钟、被别的门禁挤着时 35 分钟 —— 吃 CPU 的是本机的测试客户端,`-n 4` 就是四个。
+# 门禁脚本整段在 `taskpolicy -c utility` + `nice 10` 下跑(`run-gates.sh` 开头,`GATES_QOS=none` 关掉):
+# 机器空闲时照样用满,前台有操作时让路。jest 三份配置的 worker 上限是核数一半(`JEST_WORKERS` 覆盖)。
 # 手动复现钩子那条:在上面的命令后加 `--no-cov -m "not migration" -n 4`。
 # 整套推送门禁(含选择性 jest)一条命令:`scripts/run-gates.sh`,见上面那节。
 cd backend && DATABASE_URL="sqlite:///:memory:" .venv/bin/python manage.py makemigrations --check --dry-run
@@ -407,7 +409,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 # (评议区拿到非数组响应把整个审判页打成 500)—— jest 与 pytest 全绿。
 
 # 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
-# (这条不拿 gate lock,理由见上面「只锁吃 CPU 的门禁」。)
+# 先拿门禁锁(上面「所有重门禁都拿锁」):在仓库根 `. scripts/gate-lock.sh; gate_lock "real PG"`,同一个 shell 里再跑下面这条。
 # 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建测试库
 # 再删掉,不碰真库。`--create-db` 是必需的:陈旧的 test_soulledger 会造成上千条
 # 「环境错误」,那正是这条路径当初被判成不可用的原因。

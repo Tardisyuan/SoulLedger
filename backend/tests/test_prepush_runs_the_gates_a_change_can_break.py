@@ -532,6 +532,75 @@ class TestMigrationRoundTripsRunOnlyWhenRelevant:
         assert "test_migration_roundtrip.py" in marked_files
 
 
+def _classify_meta(hook, changed: list[str], **extra) -> int:
+    env = {k: v for k, v in os.environ.items() if k not in ("SKIP_PREPUSH", "GATES_FULL")}
+    env.update(PREPUSH_CHANGED="\n".join(changed), PREPUSH_CLASSIFY_ONLY="1", **extra)
+    proc = subprocess.run(
+        ["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^classify-meta: meta=(\d)$", proc.stdout, re.M)
+    assert m, f"no classify-meta line in hook output:\n{proc.stdout}"
+    return int(m.group(1))
+
+
+class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
+    """test_collection_scope.py and test_audit_assertions_are_not_vacuous.py each
+    start a second pytest. They are skipped unless what they guard changed."""
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["pytest.ini"],
+            ["conftest.py"],
+            ["backend/tests/conftest.py"],
+            ["backend/apps/social/tests/conftest.py"],
+            ["backend/requirements.lock"],
+            ["backend/config/settings.py"],
+            ["backend/apps/audit/oncommit_guard.py"],
+            ["backend/apps/audit/models.py"],
+            ["backend/apps/tenants/models.py"],
+            ["backend/apps/core/lock_join_guard.py"],
+            ["backend/apps/souls/tests.py"],
+            ["backend/tests/test_collection_scope.py"],
+            ["backend/tests/test_audit_assertions_are_not_vacuous.py"],
+            ["tsconfig.base.json"],
+            ["backend/apps/souls/views.py", "pytest.ini"],
+        ],
+    )
+    def test_a_change_they_guard_runs_them(self, hook, changed):
+        assert _classify_meta(hook, changed) == 1
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["backend/apps/souls/views.py"],
+            ["backend/apps/souls/models.py"],
+            ["backend/tests/test_auth_account.py"],
+            ["frontend/app/page.tsx"],
+            ["README.md"],
+        ],
+    )
+    def test_a_change_they_cannot_see_skips_them(self, hook, changed):
+        """The inverse: without it, a rule that always says 1 passes the test above."""
+        assert _classify_meta(hook, changed) == 0
+
+    @pytest.mark.parametrize("extra", [{"GATES_FULL": "1"}, {"PREPUSH_TO_MAIN": "1"}])
+    def test_a_full_run_runs_them(self, hook, extra):
+        assert _classify_meta(hook, ["backend/apps/souls/views.py"], **extra) == 1
+
+    def test_the_names_the_rule_skips_are_real_files(self):
+        """A renamed test would be silently 'ignored' by a path that no longer exists,
+        and run on every push again — or worse, the rule would name nothing."""
+        body = RUNNER.read_text(encoding="utf-8")
+        block = re.search(r"META_TESTS='([^']*)'", body)
+        assert block, "META_TESTS not found in run-gates.sh"
+        names = block.group(1).split()
+        assert len(names) == 2
+        for name in names:
+            assert (REPO_ROOT / name).is_file(), name
+
+
 @pytest.fixture
 def fake_backend(tmp_path):
     """PYTHON_BIN whose `-m pytest` prints its argv and SECRET_KEY and passes;
@@ -582,6 +651,29 @@ class TestWhatPytestIsInvokedWith:
         )
         assert "-m" not in args and "not migration" not in args, args
         assert "--no-cov" in args
+
+    def test_an_ordinary_backend_change_leaves_out_the_suite_about_the_suite(
+        self, hook, checkouts, fake_backend
+    ):
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "--ignore=tests/test_collection_scope.py" in args, args
+        assert "--ignore=tests/test_audit_assertions_are_not_vacuous.py" in args, args
+
+    def test_a_change_outside_backend_drops_them_from_the_readers_too(
+        self, hook, checkouts, fake_backend
+    ):
+        """test_collection_scope.py is a `*` reader: it used to run on every push.
+        (A docs change: the throwaway checkout has no frontend/ for jest to run in.)"""
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["docs/notes.md"])
+        assert "tests/test_collection_scope.py" not in args, args
+        assert any(a.startswith("tests/") for a in args), f"no reader ran at all: {args}"
+
+    def test_a_pytest_config_change_keeps_them(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["pytest.ini"])
+        assert not [a for a in args if a.startswith("--ignore=")], args
 
     def test_pytest_gets_the_long_test_key_even_over_backend_env(
         self, hook, checkouts, fake_backend
