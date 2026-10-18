@@ -156,7 +156,7 @@
 |---|---|
 | `migrate_actors_to_users` | 给每个 Actor 建 User,**默认密码写死 `soul123456`**(`authentication/management/commands/migrate_actors_to_users.py:38,151`)。生产跑了就是一批已知密码的账号 |
 | `seed_field_permissions` | 文件头写的是「seed **example** FieldPermission rules」,按 `ADMIN/JUDGE/GUARDIAN/VIEWER` 建角色。这是示例数据,会不会和运维在权限矩阵里的配置打架:**未核实**。生产不跑,除非先读完它 |
-| `seed_workflow_templates` | 用 `update_or_create`(`seed_workflow_templates.py:21`),**重跑会把管理员改过的模板覆盖回内置定义**;而且「用第一个租户」。首次空库可以跑,有数据后不要 |
+| `seed_workflow_templates` | 2026-10-19 起按殿建正式模板(带退回规则),默认只建缺的;已有且不同的行要 `--update` 才发布成新版本(旧版留在历史里),有未发布草稿的行不动 |
 | `seed_tenants` | `get_or_create`,幂等;但与 `seed_mythology` 里建租户重复(`actors/mythology/seeding.py:175`)。二选一即可,用 `seed_mythology` |
 | `init_organizations` | 组织架构初始数据。是否幂等:**未核实** |
 | `fix_actor_civilization`、`consolidate_eu_pantheon`(含 Norse purge)、`backfill_*` | 数据修复/回填命令,针对已有历史数据的一次性修复;全新库不需要。**别在生产盲跑** |

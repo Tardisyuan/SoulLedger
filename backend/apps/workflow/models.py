@@ -43,6 +43,10 @@ TERMINAL_WORKFLOW_STATUSES = frozenset({
 #: N nodes decides at most `(MAX_REJECT_RETURNS + 1) * N` times and then ends.
 #: The FAIL that would exceed it ends the workflow REJECTED with
 #: `end_reason = "RETURN_LIMIT"`, so the record says why it stopped.
+#:
+#: Counted PER SEGMENT when the workflow has segments (2026-10-19, 退回规则 rule 4): a realm that spent its
+#: three returns does not leave the next realm none. Workflows without segments count per workflow, as before.
+#: See `_returns_spent`.
 MAX_REJECT_RETURNS = 3
 
 
@@ -241,8 +245,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         related_name="workflows",
     )
 
-    # How many times 驳回到 has sent this workflow back. Capped at
-    # MAX_REJECT_RETURNS; see there.
+    # How many times 驳回到 has sent this workflow back, in all its segments; it
+    # numbers the return rounds. The cap (MAX_REJECT_RETURNS) applies to it only
+    # on a workflow without segments; with segments it is per segment, see there.
     return_count = models.PositiveIntegerField(default=0)
     # Why a terminal workflow ended when the node's own verdict does not say.
     # Blank for every ordinary ending; "RETURN_LIMIT" when a FAIL would have
@@ -447,7 +452,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             #
             # * `is not None` — the field is optional and null is the default.
             # * `status == PENDING` — a decided node returns to PENDING only
-            #   through 驳回到 (`_return_to`), and that is capped per workflow
+            #   through 驳回到 (`_return_to`), and that is capped per segment
             #   (MAX_REJECT_RETURNS). So between two returns an edge pointing
             #   backwards is followed at most once per node and then falls
             #   through to the order-based path below, and the number of
@@ -479,9 +484,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 and self._return_to(node.reject_to, node, now)
             ):
                 pass
-            elif self._routable(node.on_fail):
-                self._skip_jumped(node, node.on_fail, now)
-                self._enter(node.on_fail, now)
+            elif (jump := self._fail_target(node)) is not None:
+                self._skip_jumped(node, jump, now)
+                self._enter(jump, now)
             else:
                 # A refusal ends the workflow. It used to mark the node
                 # REJECTED and then advance **unconditionally**, which is why
@@ -688,13 +693,58 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
 
         segments.on_workflow_finished(self, status, end_reason)
 
+    def _fail_target(self, node: "ApprovalNode") -> "ApprovalNode | None":
+        """Where `on_fail` jumps, or None (the FAIL then ends the flow REJECTED).
+
+        Only inside `node`'s own segment. A target a person skipped (at pick, or later) is not landed on: the jump
+        goes to the next PENDING node after it in the segment, and with none the FAIL ends the flow — the Greek
+        flow's 分区审判 → Minos with Minos picked away (2026-10-19)."""
+        target = node.on_fail
+        if target is None or target.workflow_id != self.id or target.segment_id != node.segment_id:
+            return None
+        if target.status == NodeStatus.SKIPPED:
+            target = (self.nodes.filter(segment_id=node.segment_id, status=NodeStatus.PENDING,
+                                        node_order__gt=max(target.node_order, node.node_order))
+                      .order_by("node_order").first())
+        return target if self._routable(target) else None
+
+    def _return_target(self, target: "ApprovalNode", failed: "ApprovalNode") -> "ApprovalNode | None":
+        """Where 驳回到 lands, or None for "no target" (2026-10-19, 退回规则 rules 5 and 6).
+
+        Never across segments: a target in another realm's segment is no target. A SKIPPED target (picked away, or
+        skipped later) gives way to the nearest earlier node of the same segment that is not SKIPPED; with none,
+        no target — the FAIL then falls through to `on_fail` / REJECTED, as a FAIL on a first station does."""
+        if (target.workflow_id != self.id or target.segment_id != failed.segment_id
+                or target.node_order >= failed.node_order):
+            return None
+        if target.status != NodeStatus.SKIPPED:
+            return target
+        return (self.nodes.filter(segment_id=failed.segment_id, node_order__lt=target.node_order)
+                .exclude(status=NodeStatus.SKIPPED).order_by("-node_order").first())
+
+    def _returns_spent(self, failed: "ApprovalNode") -> int:
+        """Returns already taken where `failed` stands: in its segment, or in the whole workflow without segments.
+
+        Derived, not stored: every return writes one `decision_history` entry carrying its `round` on each node it
+        re-opens — always at least the refused node, which is in the segment — and `return_count` keeps numbering
+        rounds across the workflow, so a segment's returns are the distinct rounds its nodes record. Timeout entries
+        carry no `round` and do not count."""
+        if failed.segment_id is None:
+            return self.return_count
+        rounds = set()
+        for history in self.nodes.filter(segment_id=failed.segment_id).values_list("decision_history", flat=True):
+            rounds.update(e["round"] for e in history or [] if isinstance(e, dict) and "round" in e)
+        return len(rounds)
+
     def _return_to(self, target: "ApprovalNode", failed: "ApprovalNode", now) -> bool:
         """驳回到: re-open `target`..`failed` and make `target` current.
 
-        Returns False — and changes nothing — when `target` is not an earlier
-        node of this workflow; the caller then treats the FAIL as if no target
-        were set. Returns True when it acted, which includes ending the flow
-        REJECTED because the cap is spent (MAX_REJECT_RETURNS).
+        Returns False — and changes nothing — when `_return_target` finds no
+        target (not an earlier node of this workflow's same segment, or a
+        skipped one with nothing before it); the caller then treats the FAIL as
+        if no target were set. Returns True when it acted, which includes ending
+        the flow REJECTED because the cap is spent (MAX_REJECT_RETURNS, per
+        segment — `_returns_spent`).
 
         Only nodes that were decided are re-opened. A node inside the range the
         flow jumped over (an `on_pass` edge past it) is SKIPPED, or PENDING in a
@@ -702,9 +752,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         `decision_history`, so the record of who decided what before the return
         survives the return.
         """
-        if target.workflow_id != self.id or target.node_order >= failed.node_order:
+        target = self._return_target(target, failed)
+        if target is None:
             return False
-        if self.return_count >= MAX_REJECT_RETURNS:
+        if self._returns_spent(failed) >= MAX_REJECT_RETURNS:
             self._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason="RETURN_LIMIT")
             return True
 
@@ -716,6 +767,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             ApprovalNode.objects.select_for_update(of=("self",))
             .filter(
                 workflow=self,
+                segment_id=failed.segment_id,
                 node_order__gte=target.node_order,
                 node_order__lte=failed.node_order,
             )
@@ -1179,7 +1231,7 @@ class ApprovalNode(AuditUserFields, models.Model):
     #
     # CYCLES. `complete_node` only follows an edge to a node that is still
     # `PENDING`, and a decided node returns to PENDING only through 驳回到
-    # (`reject_to`, below), which is capped per workflow at MAX_REJECT_RETURNS.
+    # (`reject_to`, below), which is capped per segment at MAX_REJECT_RETURNS.
     # So at run time a cycle walks each node at most once per return and then
     # falls through to the order-based path — bounded, for cycles nobody drew
     # on purpose too. The PUBLISH validator (`validation.py`) additionally
