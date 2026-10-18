@@ -441,7 +441,14 @@ class JudgmentConcludeSerializer(serializers.Serializer):
     # filed without typing a note came back 400 "This field may not be blank",
     # from an endpoint whose own default for the field is "".
     notes = serializers.CharField(required=False, allow_blank=True, default="")
-    create_workflow = serializers.BooleanField(default=False)
+    # Absent = no workflow, except while a cross-realm judgment is open on the case (第四十三批): then the
+    # conclusion generates one and the bench is merged into it; an explicit false is refused (400
+    # `workflow_required`). Null rather than a False default so "not said" and "said no" stay apart.
+    create_workflow = serializers.BooleanField(required=False, allow_null=True, default=None)
+    # W-1: the station orders of this realm's flow the judge unticked; the final review is refused (400
+    # `final_required`). Only read when a workflow is generated.
+    skip_node_orders = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), required=False, default=list, max_length=100)
     # The grounds, filed with the verdict. Optional — a judgment concluded
     # without citing anything is still a judgment, and requiring articles here
     # would break every existing caller and every existing test. What it must

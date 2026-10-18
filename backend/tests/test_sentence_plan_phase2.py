@@ -97,8 +97,10 @@ def test_the_judgment_detail_names_the_bench_hung_on_it(cn):
 
 
 @pytest.mark.parametrize("convened", [False, True])
-def test_an_unfinished_bench_refuses_the_conclusion_with_409_and_writes_nothing(cn, eg, convened):
-    """Q17:挂着的联审 PROPOSED / ACTIVE → 409 `cross_judgment_open`;裁决、处置、计划、灵魂状态都不动。"""
+def test_an_unfinished_bench_refuses_a_conclusion_without_a_workflow_and_writes_nothing(cn, eg, convened):
+    """Q17,第四十三批改:挂着的联审 PROPOSED / ACTIVE 时结案必须生成审批流程(联审并入流程);请求明说
+    `create_workflow: false` → 400 `workflow_required`;裁决、处置、计划、灵魂状态都不动。
+    不说就强制生成流程,见 tests/test_workflow_segments.py。"""
     soul, case = plan.open_case(cn)
     cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
     cj.judgment = case
@@ -111,10 +113,11 @@ def test_an_unfinished_bench_refuses_the_conclusion_with_409_and_writes_nothing(
         CrossTenantJudgmentService.activate(cj)
     judge = plan.officer("cn_judge", "JUDGE", cn)
 
-    response = officer_client(judge).post(f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "PASSED"}, format="json")
+    response = officer_client(judge).post(f"/api/v1/judgment/{case.pk}/conclude/",
+                                          {"verdict": "PASSED", "create_workflow": False}, format="json")
 
-    assert response.status_code == 409, response.data
-    assert response.data["code"] == "cross_judgment_open"
+    assert response.status_code == 400, response.data
+    assert response.data["code"] == "workflow_required"
     case.refresh_from_db()
     soul.refresh_from_db()
     assert case.verdict is None and case.is_final is False

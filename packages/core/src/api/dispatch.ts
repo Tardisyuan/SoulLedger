@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { components } from "./generated/schema";
 import type { PaginatedResponse } from "./users";
+import type { CrossJudgmentWorkflowSummary } from "./workflow";
 
 export interface DispatchRecord {
   id: string;
@@ -96,6 +97,10 @@ export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
   ended_by_name?: string | null;
   /** 这位请求者能不能结束 / 取消(召集人或发起殿的管理员,且还在进行)。 */
   can_end?: boolean;
+  /** 第四十三批 W-4:原审判结案时生成的审批流程的进度;还没生成为 null。 */
+  workflow?: CrossJudgmentWorkflowSummary | null;
+  /** 审批流程已生成:各域顺序锁定,`order` / 入席答 409 `order_locked`。 */
+  order_locked?: boolean;
 }
 
 export interface CrossTenantJudgmentParticipant {

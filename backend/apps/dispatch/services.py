@@ -68,6 +68,23 @@ class ResidenceReturnBlockedError(Exception):
         )
 
 
+class OrderLockedError(ValueError):
+    """跨域审判的各域顺序在审批流程生成之后锁定(第四十三批):流程按这个顺序建了各域的段。入席也一并锁定 ——
+    新入席的域在流程里没有段。"""
+
+    code = "order_locked"
+
+    def __init__(self):
+        super().__init__("The approval flow has been generated; the realm order is fixed")
+
+
+def _assert_order_open(cross):
+    from apps.workflow.models import ApprovalWorkflow
+
+    if cross.judgment_id is not None and ApprovalWorkflow.objects.filter(judgment_id=cross.judgment_id).exists():
+        raise OrderLockedError()
+
+
 class TargetHallClosedError(ValueError):
     """目标殿关了调拨(`Tenant.dispatch_enabled=False`)。
 
@@ -777,6 +794,7 @@ class CrossTenantJudgmentService:
         """
         if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
+        _assert_order_open(judgment)
         if participant_actor is not None and not CrossTenantJudgmentService.seatable_actors(
                 participant_tenant, role).filter(pk=participant_actor.pk).exists():
             raise ValueError(f"That actor cannot hold a {role} seat for {participant_tenant.code}")
@@ -876,6 +894,7 @@ class CrossTenantJudgmentService:
             raise ValueError("This cross-tenant judgment is not attached to a judgment; it has no sentence nodes")
         if locked.status != JudgmentStatus.PROPOSED:
             raise ValueError("The order can only be changed before the bench is convened")
+        _assert_order_open(locked)
         seats = {
             str(p.pk): p for p in locked.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
         }
@@ -1031,7 +1050,7 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic
-    def conclude(judgment, conclusion_type, conclude_by, note=""):
+    def conclude(judgment, conclusion_type, conclude_by, note="", check=True):
         """
         Conclude a cross-tenant judgment.
 
@@ -1040,12 +1059,17 @@ class CrossTenantJudgmentService:
             conclusion_type: PASS or FAIL
             conclude_by: User concluding the judgment
             note: 结束说明(网页弹层必填;原审判页显示)
+            check: 跑参与方的站的校验。审批流程被驳回而结束(FAIL,第四十三批)时不跑:否决用不到那些站。
 
         Returns:
             CrossTenantJudgment: Updated judgment
+
+        PASS 而原审判已经结案(审批流程并入的跨域审判,第四十三批):参与方的站在这里追加进灵魂的受刑计划
+        (`sentence_plan.requests.append_cross_stops`)。原审判还没结案的(存量那种先结联审、后结原审判)照旧在原审判
+        结案时抄。
         """
         CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
-        errors = CrossTenantJudgmentService.check_bench_sentences(judgment)
+        errors = CrossTenantJudgmentService.check_bench_sentences(judgment) if check else []
         if errors:
             raise ValueError("; ".join(errors))
         if not judgment.transition_to(
@@ -1053,6 +1077,14 @@ class CrossTenantJudgmentService:
             conclusion_note=note or "", ended_by=_decider(conclude_by),
         ):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
+
+        if conclusion_type == "PASS":
+            from apps.sentence_plan.requests import PlanChangeRefusedError, append_cross_stops
+
+            try:
+                append_cross_stops(judgment)
+            except PlanChangeRefusedError as exc:
+                raise ValueError(str(exc)) from exc
 
         params = {"title": judgment.title}
         if conclusion_type == "FAIL":
@@ -1086,11 +1118,18 @@ class CrossTenantJudgmentService:
         席上已填的各站(`sentence_*`)原样保留;`submit_sentence` 只收 PROPOSED / ACTIVE,
         所以之后只能看。原审判结案时 `SentencePlanService.check_cross_judgment` 把 CANCELLED
         当作没挂(不挡、不抄节点)。理由必填,由调用方校验。
+
+        并入了审批流程的(第四十三批):还没走的外域段全部跳过、撤回选站待办;流程正在某个外域段里时那一段也跳过、
+        流程随即结束(`apps/workflow/segments.py::on_cross_cancelled`)。同一事务,先锁流程行(与审批同一锁序)。
         """
+        from apps.workflow import segments
+
+        workflow = segments.lock_workflow_of(judgment)
         if not judgment.transition_to(
             JudgmentStatus.CANCELLED, cancel_reason=reason, ended_by=_decider(cancelled_by),
         ):
             raise ValueError(f"Cannot cancel judgment in status: {judgment.status}")
+        segments.on_cross_cancelled(workflow, judgment, cancelled_by, reason)
         CrossTenantJudgmentService._notify_participants(
             judgment, {"title": judgment.title, "reason": reason, "kind": "cross_judgment_cancelled"},
         )

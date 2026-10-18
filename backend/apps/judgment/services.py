@@ -173,13 +173,14 @@ class JudgmentConclusionService:
         judgment,
         verdict: str,
         notes: str = "",
-        create_workflow: bool = False,
+        create_workflow: bool | None = None,
         statute_ids=None,
         plan_changes=None,
         destination_realm_id=None,
         term_years=None,
         eternal=None,
         by=None,
+        skip_node_orders=(),
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -199,8 +200,13 @@ class JudgmentConclusionService:
         producing a verdict whose stated grounds silently failed to land; and
         the citations are written while the judgment is still amendable, which
         is the only window `StatuteCitationService.assert_amendable` allows.
+
+        `create_workflow` is None when the caller did not say (第四十三批). An ORIGINAL judgment with a cross-realm
+        judgment still open (PROPOSED / ACTIVE) concludes WITH an approval workflow, which merges that bench; an
+        explicit False is refused (400 `workflow_required`). `skip_node_orders` are the stations of this realm's
+        flow the judge unticked (W-1); the final review cannot be one of them.
         """
-        from apps.sentence_plan.services import SentencePlanService
+        from apps.sentence_plan.services import CrossJudgmentOpenError, SentencePlanService
 
         with transaction.atomic():
             # Step -2: the row lock, and who may conclude a claimed case. Only
@@ -212,8 +218,21 @@ class JudgmentConclusionService:
 
             # Step -1 (Q17): an attached cross-tenant judgment must have ended —
             # its PASS nodes are copied into the plan below. Raises before
-            # anything is written.
-            cross = SentencePlanService.check_cross_judgment(judgment)
+            # anything is written. 第四十三批: one that has NOT ended no longer blocks an original judgment; the
+            # approval workflow is generated and merges it (rule 8), and its stops join the plan when it ends PASS.
+            from apps.judgment.models import JudgmentKind
+
+            open_cross = (SentencePlanService.open_cross_judgment(judgment)
+                          if judgment.kind == JudgmentKind.ORIGINAL else None)
+            if open_cross is not None:
+                if create_workflow is False:
+                    raise CrossJudgmentOpenError(
+                        "A cross-realm judgment is open on this case; it is concluded through the approval "
+                        "workflow, so the conclusion must generate one", code="workflow_required", status=400)
+                create_workflow = True
+                cross = None
+            else:
+                cross = SentencePlanService.check_cross_judgment(judgment)
 
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
             # Validated — and the chosen realm row locked for its capacity —
@@ -254,7 +273,6 @@ class JudgmentConclusionService:
             # disposition, no soul state move — the soul is already DISPOSED,
             # which is why this used to be unconcludable (design doc G1).
             # Same transaction: a refusal below rolls the verdict back with it.
-            from apps.judgment.models import JudgmentKind
             from apps.sentence_plan import requests as plan_requests
 
             if judgment.kind != JudgmentKind.ORIGINAL:
@@ -282,12 +300,12 @@ class JudgmentConclusionService:
             # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).
             # Same transaction: a plan without its conclusion, or the reverse,
             # is the half-written record the saga exists to prevent.
-            SentencePlanService.create_from_conclusion(judgment, disposition, cross)
+            SentencePlanService.create_from_conclusion(judgment, disposition, cross, open_cross=open_cross)
 
             # Step 3: Optionally create workflow (cross-context: judgment → workflow)
             if create_workflow:
                 from apps.workflow.services import WorkflowService
-                WorkflowService.create_from_judgment(judgment)
+                WorkflowService.create_from_judgment(judgment, skip_node_orders=skip_node_orders, picked_by=by)
 
             # Step 4: Transition soul state (cross-context: judgment → souls)
             # Checked, not dropped. A soul that cannot move to DISPOSED
