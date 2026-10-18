@@ -10,7 +10,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { PickStationsSheet } from "./PickStationsSheet";
-import { gateView, segmentRefusalOf } from "@soulledger/core/domain/workflowSegments";
+import { gateView, segmentRealm, segmentRefusalOf } from "@soulledger/core/domain/workflowSegments";
 
 /**
  * 流程停在一个外域段门口、等那个域选站时,中栏的那一块(第四十三批 W-5a/b/c,外域那边是 W-2 的「流程在等本域选站」)。
@@ -29,7 +29,7 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
   const [defaultOpen, setDefaultOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [picking, setPicking] = useState(false);
-  const realm = segment.realm_name;
+  const realm = segmentRealm(t, segment);
   const previous = (workflow.segments ?? []).filter((s) => s.order < segment.order).at(-1);
 
   const remind = useMutation({
@@ -77,7 +77,7 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
             {t("workflow.gate.foreign_title")}
           </h2>
           <p className="text-sm text-[oklch(var(--color-ink-muted))]">
-            {t("workflow.gate.foreign_body", { soul: workflow.soul_name ?? "", realm: previous?.realm_name ?? "" })}
+            {t("workflow.gate.foreign_body", { soul: workflow.soul_name ?? "", realm: segmentRealm(t, previous) })}
           </p>
           {segment.can_pick && (
             <Button type="button" variant="primary" className="self-start" onClick={() => setPicking(true)}>

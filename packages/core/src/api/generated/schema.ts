@@ -18308,8 +18308,10 @@ export interface components {
             total?: number;
             /** @description 仅选站:发起殿的租户代码。 */
             realm?: string;
-            /** @description 仅选站:发起殿的显示名。 */
+            /** @description 仅选站:发起殿的显示名(库里的英文;客户端按 `realm` 读冥界名,认不出文明才用它)。 */
             hall?: string;
+            /** @description 仅选站:流程所出审判的殿(`judgment.court`,如「第十殿」);没有审判时空串。 */
+            court?: string;
             /** @description 仅选站:流程已在门口等的第几天;还没到门口时 null。 */
             gate_days?: number | null;
             /** @description 仅选站:轮到本域之前还有几站;已在门口时 null。 */

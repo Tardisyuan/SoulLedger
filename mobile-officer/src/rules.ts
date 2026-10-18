@@ -15,7 +15,8 @@ import {
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox";
 import { workflowApi } from "@soulledger/core/api/workflow";
-import { CIVILIZATION_SHORT_CODES, TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
+import { TENANT_CODE_TO_CIVILIZATION, realmLabel } from "@soulledger/core/config/civilizations";
+import { pickHall } from "@soulledger/core/domain/workflowSegments";
 
 export const TODO_KINDS: readonly TodoKind[] = ["pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
 
@@ -58,15 +59,16 @@ export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: s
 /**
  * 「待我选站」一行标题下的两行(O-1):「{发起域} · {殿}发起 · 本域排第 N」,再一行「流程已在门口等 · N 天」或
  * 「前面还有 N 站」。`realm` 是发起殿的租户代码,读成文明名(「中国」);认不得时留空,不印代码(同官员台)。
+ * 殿名是冥界名接审判所在的殿(`pickHall`:「酆都第十殿」),不是库里的英文展示名。
  */
 export function pickRowLines(
-  row: { realm?: string; hall?: string; segment_order?: number; gate_days?: number | null; stations_ahead?: number | null },
+  row: { realm?: string; hall?: string; court?: string; segment_order?: number; gate_days?: number | null; stations_ahead?: number | null },
   t: (key: string, vars?: Record<string, string>) => string,
   civilization: (code: string | undefined) => string,
 ): { meta: string; wait: string; atGate: boolean } {
   const atGate = row.gate_days != null;
   return {
-    meta: t("workflow.pick_group.row_meta", { realm: civilization(TENANT_CODE_TO_CIVILIZATION[row.realm ?? ""]), hall: row.hall ?? "", order: String(row.segment_order ?? "") }),
+    meta: t("workflow.pick_group.row_meta", { realm: civilization(TENANT_CODE_TO_CIVILIZATION[row.realm ?? ""]), hall: pickHall(t, row), order: String(row.segment_order ?? "") }),
     wait: atGate ? t("workflow.pick_group.at_gate", { n: String(row.gate_days) }) : t("workflow.pick_group.ahead", { n: String(row.stations_ahead ?? 0) }),
     atGate,
   };
@@ -499,9 +501,7 @@ export function hallLabel(
   t: (key: string) => string,
   tenant: { code?: string | null; display_name?: string | null } | null | undefined,
 ): string | undefined {
-  const civ = tenant?.code?.split("_")[0].toLowerCase();
-  if (civ && Object.values(CIVILIZATION_SHORT_CODES).includes(civ)) return t(`plaque.realm.${civ}`);
-  return tenant?.display_name ?? undefined;
+  return realmLabel(t, tenant?.code, tenant?.display_name ?? "") || undefined;
 }
 
 // ── 审判详情的操作区(Design 第三十四批 O-09) ─────────────────────────────

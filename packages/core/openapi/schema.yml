@@ -39722,7 +39722,10 @@ components:
           description: 仅选站:发起殿的租户代码。
         hall:
           type: string
-          description: 仅选站:发起殿的显示名。
+          description: 仅选站:发起殿的显示名(库里的英文;客户端按 `realm` 读冥界名,认不出文明才用它)。
+        court:
+          type: string
+          description: 仅选站:流程所出审判的殿(`judgment.court`,如「第十殿」);没有审判时空串。
         gate_days:
           type: integer
           nullable: true

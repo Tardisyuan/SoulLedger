@@ -256,11 +256,25 @@ def kind_for(notification_type, params):
     return variant if variant in VARIANTS.get(kind, ()) else kind
 
 
+#: 文明名,语言包 `souls.civilizations` 的副本(同上,`tests/test_official_notify_messages_match_the_language_packs.py`
+#: 钉住逐字一致)。第四十三批的选站通知带 `realm_civ`(CHINESE / EGYPTIAN …),渲染时按语言换掉 `{{realm}}`
+#: (「中国发起的审批流程」,同客户端的分段头与门口那句)—— 那里原来填的是租户展示名,库里是英文
+#: (「Egyptian Afterlife」),中文句子里直接露出来。认不出文明时仍用 `realm`。
+CIVILIZATION_NAMES = {
+    "zh-Hans": {"CHINESE": "中国", "EUROPEAN": "欧洲", "EGYPTIAN": "埃及", "GREEK": "希腊"},
+    "en": {"CHINESE": "Chinese", "EUROPEAN": "European", "EGYPTIAN": "Egyptian", "GREEK": "Greek"},
+    "egy": {"CHINESE": "Sherer", "EUROPEAN": "Europa", "EGYPTIAN": "Kemet", "GREEK": "Haunebut"},
+}
+
+
 def render(locale, kind, params):
     # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `official_notify.<kind>`):读作 zh-Hans,
     # 与前端「egy 缺键读 zh-Hans」同一条规则。
     entry = MESSAGES[locale].get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
     title, body = entry["title"], entry["body"]
+    if params.get("realm_civ"):
+        names = CIVILIZATION_NAMES.get(locale, CIVILIZATION_NAMES[DEFAULT_LOCALE])
+        params = {**params, "realm": names.get(params["realm_civ"], params.get("realm", ""))}
     # Titles are filled too: `workflow_pick_overdue` (第四十三批) is the first title that names something.
     for name, value in params.items():
         title = title.replace("{{" + name + "}}", str(value))

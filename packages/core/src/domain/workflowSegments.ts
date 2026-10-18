@@ -1,4 +1,5 @@
 import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "../api/workflow";
+import { civilizationLabel, realmLabel } from "../config/civilizations";
 
 /**
  * 第四十三批:审批流程按域分段的几条读法,选站底页、加减站底页、流程详情左栏共用 —— 官员台与官员 App 都用。
@@ -15,6 +16,15 @@ export function segmentNodes(workflow: Pick<ApprovalWorkflow, "nodes">, order: n
 /** 选站 / 加减站能动的跳过:选站时跳过、中途跳过(`RESTORABLE_SKIPS`)。引擎按路由跳过的与取消跳过的不能加回。 */
 export const isRestorable = (n: ApprovalNode) =>
   n.status === "SKIPPED" && (n.skip_kind === "AT_PICK" || n.skip_kind === "LATER");
+
+/**
+ * 一段的域名:文明名(`civilizationLabel`:中国 / 埃及 …,Design「等待外域选站 · 埃及 · 第 2 天」),认不出文明才用
+ * 服务端的 `realm_name` —— 那是租户展示名,库里的英文(「Egyptian Afterlife」),中文界面里不该露出来(2026-10-19)。
+ */
+export const segmentRealm = (
+  t: (key: string) => string,
+  s: Pick<WorkflowSegment, "tenant_code" | "realm_name"> | null | undefined,
+): string => (s ? civilizationLabel(t, s.tenant_code, s.realm_name) : "");
 
 /** 段序号 → ①②③(Design 的分段头与外域行都用它)。 */
 export const circled = (n: number) => (n >= 1 && n <= 20 ? String.fromCodePoint(0x2460 + n - 1) : `${n}.`);
@@ -71,4 +81,17 @@ export function gateView(segment: Pick<WorkflowSegment, "tenant_code" | "no_pick
   if (myTenant !== null && segment.tenant_code === myTenant) return "foreign";
   if (segment.no_picker) return "no_picker";
   return (segment.gate_days ?? 0) > OVERDUE_DAYS ? "overdue" : "waiting";
+}
+
+/**
+ * 「待我选站」一行的发起殿(Design O-1「中国 · 酆都第十殿发起」):冥界名接审判所在的殿(`court`);没有殿时只写冥界名。
+ * `realm` 是租户代码;认不出文明时退回服务端的 `hall`(租户展示名)。官员台与官员 App 同用。
+ */
+export function pickHall(
+  t: (key: string, vars?: Record<string, string>) => string,
+  row: { realm?: string; hall?: string; court?: string },
+): string {
+  const realm = realmLabel(t, row.realm, row.hall ?? "");
+  if (!row.court) return realm;
+  return realm ? t("workflow.pick_group.hall", { realm, court: row.court }) : row.court;
 }

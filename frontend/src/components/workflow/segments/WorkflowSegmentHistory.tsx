@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApprovalWorkflow, WorkflowHistoryEntry } from "@soulledger/core/api";
+import { civilizationLabel } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 type Translate = (key: string, params?: Record<string, string>) => string;
@@ -36,7 +37,8 @@ export function WorkflowSegmentHistory({ workflow }: { workflow: ApprovalWorkflo
   const { t, formatDateTime } = useI18n();
   const entries = workflow.history ?? [];
   if (entries.length === 0) return null;
-  const realmOf = (code: string) => workflow.segments?.find((s) => s.tenant_code === code)?.realm_name ?? "";
+  // `entry.realm` 是租户代码 → 文明名(同 `segmentRealm`);认不出文明才用那一段的 `realm_name`(租户展示名)。
+  const realmOf = (code: string) => civilizationLabel(t, code, workflow.segments?.find((s) => s.tenant_code === code)?.realm_name ?? "");
   return (
     <ol data-testid="segment-history">
       {entries.map((entry, i) => (

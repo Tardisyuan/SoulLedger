@@ -6,6 +6,7 @@
   "workflow.pick.cross_forced",
   "workflow.pick.load_error",
   "workflow.pick_group.action",
+  "workflow.pick_group.hall",
   "dashboard.todo.go_pick",
   "workflow.history.picked_all",
   "workflow.history.adjusted_added",

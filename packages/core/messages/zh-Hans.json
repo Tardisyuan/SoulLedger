@@ -1396,6 +1396,7 @@
       "hint": "其他域发起的审批流程，轮到本域那一段之前要选好",
       "row_title": "{{soul}} · 本域 {{n}} 站",
       "row_meta": "{{realm}} · {{hall}}发起 · 本域排第 {{order}}",
+      "hall": "{{realm}}{{court}}",
       "at_gate": "流程已在门口等 · {{n}} 天",
       "ahead": "前面还有 {{n}} 站",
       "action": "选站"

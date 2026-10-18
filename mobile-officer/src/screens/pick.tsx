@@ -6,7 +6,7 @@
  */
 import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "@soulledger/core/api/workflow";
 import { workflowApi } from "@soulledger/core/api/workflow";
-import { circled, gateView, segmentNodes, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
+import { circled, gateView, segmentNodes, segmentRealm, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 import { useCallback, useState } from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
 
@@ -113,7 +113,7 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
             <Txt variant="caption" tone="muted" testID="pick-position">
               {t("workflow.pick.position", {
                 order: String(segment.order),
-                prev: before.map((s) => s.realm_name).join("、"),
+                prev: before.map((s) => segmentRealm(t, s)).join("、"),
                 n: String(before.reduce((sum, s) => sum + s.go, 0)),
               })}
             </Txt>
@@ -275,7 +275,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
         const mine = myTenant !== null && s.tenant_code === myTenant;
         const folded = s.state === "DONE" && !open.has(s.order);
         const pickable = !!onPick && s.can_pick && (s.state === "AWAITING_PICK" || s.state === "PICKED");
-        const head = `${circled(s.order)} ${s.realm_name}${mine ? ` · ${t("workflow.segment.local")}` : ""}`;
+        const head = `${circled(s.order)} ${segmentRealm(t, s)}${mine ? ` · ${t("workflow.segment.local")}` : ""}`;
         return (
           <View key={s.order} testID={`segment-${s.order}`}>
             <Pressable
@@ -365,13 +365,13 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
 function GateBlock({ workflow, segment, myTenant, onPick }: { workflow: ApprovalWorkflow; segment: WorkflowSegment; myTenant: string | null; onPick?: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const realm = segment.realm_name;
+  const realm = segmentRealm(t, segment);
   const earlier = (workflow.segments ?? []).filter((s) => s.order < segment.order).sort((a, b) => a.order - b.order);
   const previous = earlier[earlier.length - 1];
   const view = gateView(segment, myTenant);
   const [title, body] =
     view === "foreign"
-      ? [`◌ ${t("workflow.gate.foreign_title")}`, t("workflow.gate.foreign_body", { soul: workflow.soul_name ?? "", realm: previous?.realm_name ?? "" })]
+      ? [`◌ ${t("workflow.gate.foreign_title")}`, t("workflow.gate.foreign_body", { soul: workflow.soul_name ?? "", realm: segmentRealm(t, previous) })]
       : view === "no_picker"
         ? // U+FE0E: iOS draws a bare ⚠ as a colour emoji (same reason `translate()` marks ↗).
           [`⚠︎ ${t("workflow.gate.no_picker_title", { realm })}`, t("workflow.gate.no_picker_body", { realm })]

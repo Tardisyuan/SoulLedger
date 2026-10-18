@@ -97,6 +97,28 @@ export function getCivilizationFromTenantCode(code: string): string {
 }
 
 /**
+ * 一个域的名字:文明的冥界名(`plaque.realm.<civ>`:酆都 / 彼岸 / 杜阿特 / 哈迪斯),civ 是租户代码的前缀
+ * (`EG_DUAT` → eg)。认不出文明才用 `fallback`(通常是服务端给的租户展示名)。
+ * 租户展示名是库里的英文(「Egyptian Afterlife」),直接印出来就是中文界面里的英文(第四十三批,2026-10-19)。
+ * 官员 App 的 `hallLabel` 与「待我选站」一行的殿名(`pickHall`)从这里读。
+ */
+export function realmLabel(t: (key: string) => string, tenantCode: string | null | undefined, fallback = ""): string {
+  const civ = tenantCode?.split("_")[0].toLowerCase();
+  return civ && Object.values(CIVILIZATION_SHORT_CODES).includes(civ) ? t(`plaque.realm.${civ}`) : fallback;
+}
+
+/**
+ * 一个域按文明叫(`souls.civilizations.<CIV>`:中国 / 埃及 …),第四十三批的分段头、门口那句、「前面:中国 8 站」、
+ * 跨域审判进度都这样写(Design O-3 / W-5「等待外域选站 · 埃及 · 第 2 天」)。前缀规则同 `realmLabel`;
+ * 认不出文明才用 `fallback`(服务端的租户展示名)。
+ */
+export function civilizationLabel(t: (key: string) => string, tenantCode: string | null | undefined, fallback = ""): string {
+  const prefix = tenantCode?.split("_")[0].toLowerCase();
+  const civ = Object.keys(CIVILIZATION_SHORT_CODES).find((c) => CIVILIZATION_SHORT_CODES[c] === prefix);
+  return civ ? t(`souls.civilizations.${civ}`) : fallback;
+}
+
+/**
  * The four cosmologies as single glyphs, for the two places that group by
  * civilization (`/organizations`, `/actors`).
  *

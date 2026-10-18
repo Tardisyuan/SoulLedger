@@ -22,7 +22,8 @@ export type TodoFacts = components["schemas"]["TodoFacts"] & { cross_civilizatio
 /**
  * Per-kind row fields. A `pick` row (待我选站, 第四十三批): `title` is the soul, `target.id` the workflow; this
  * realm's `segment_order`, its stations to run / all (`go` / `total`), the convening hall (`realm` code, `hall`
- * name), and `gate_days` when the flow already waits at this realm's gate, else `stations_ahead`.
+ * name -- the database's English, a fallback only; `court` the judgment's court), and `gate_days` when the flow
+ * already waits at this realm's gate, else `stations_ahead`. Read the hall through `pickHall`.
  */
 export type TodoItemExtra = {
   request_kind?: string;
@@ -31,6 +32,7 @@ export type TodoItemExtra = {
   total?: number;
   realm?: string;
   hall?: string;
+  court?: string;
   gate_days?: number | null;
   stations_ahead?: number | null;
 };

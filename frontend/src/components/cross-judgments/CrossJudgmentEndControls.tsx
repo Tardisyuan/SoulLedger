@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@soulledger/core/api";
+import { segmentRealm } from "@soulledger/core/domain/workflowSegments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -62,10 +63,10 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
   const flowRunning = !!flow && (flow.status === "IN_PROGRESS" || flow.status === "PENDING");
   const inForeign = flowRunning && flow.at && flow.at.segment > 1 ? flow.at : null;
   const unstarted = flowRunning
-    ? flow.segments.filter((s) => s.order > 1 && (s.state === "AWAITING_PICK" || s.state === "PICKED")).map((s) => s.realm_name)
+    ? flow.segments.filter((s) => s.order > 1 && (s.state === "AWAITING_PICK" || s.state === "PICKED")).map((s) => segmentRealm(t, s))
     : [];
   const cancelBody = inForeign
-    ? t("crossJudgments.cancel_flow_body_in_realm", { realm: inForeign.realm_name })
+    ? t("crossJudgments.cancel_flow_body_in_realm", { realm: segmentRealm(t, flow?.segments.find((s) => s.order === inForeign.segment) ?? { tenant_code: "", realm_name: inForeign.realm_name }) })
     : unstarted.length > 0
       ? t("crossJudgments.cancel_flow_body", { realms: unstarted.join("、") })
       : t("crossJudgments.cancel_body");

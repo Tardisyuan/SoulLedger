@@ -7,7 +7,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PickStationsSheet } from "./PickStationsSheet";
 import { AdjustStationsSheet } from "./AdjustStationsSheet";
-import { adjustableSegment, circled, segmentNodes, stationNo } from "@soulledger/core/domain/workflowSegments";
+import { adjustableSegment, circled, segmentNodes, segmentRealm, stationNo } from "@soulledger/core/domain/workflowSegments";
 
 /** 两种跳过同一个符号 ⤼,文字区分(Design W-3a)。 */
 const SKIP_KEY: Record<string, string> = {
@@ -70,13 +70,13 @@ export function WorkflowSegmentList({ workflow, myTenant }: { workflow: Approval
         const nodes = segmentNodes(workflow, s.order);
         const pickable = s.can_pick && (s.state === "AWAITING_PICK" || s.state === "PICKED");
         return (
-          <section key={s.order} data-segment={s.order} aria-label={s.realm_name}>
+          <section key={s.order} data-segment={s.order} aria-label={segmentRealm(t, s)}>
             <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-line))]">
               <span className="text-sm font-medium text-[oklch(var(--color-ink))]">
                 <span aria-hidden="true">{circled(s.order)} </span>
                 {/* 「本域」是读的人自己的域(外域判官看到的第 1 段不是他的本域)。 */}
                 {s.tenant_code === myTenant ? `${t("workflow.segment.local")} · ` : ""}
-                {s.realm_name}
+                {segmentRealm(t, s)}
               </span>
               <span className="ml-auto text-xs text-[oklch(var(--color-ink-muted))]">{segmentMeta(s)}</span>
               {s.at_gate && <span className="w-full text-xs font-medium text-[oklch(var(--color-ink))]">{t("workflow.gate.stopped_here")}</span>}
@@ -86,7 +86,7 @@ export function WorkflowSegmentList({ workflow, myTenant }: { workflow: Approval
                 <span aria-hidden="true">◌</span>
                 <span className="min-w-0 flex-1">
                   {s.at_gate && s.gate_days != null
-                    ? t("workflow.gate.waiting_title", { realm: s.realm_name, n: String(s.gate_days) })
+                    ? t("workflow.gate.waiting_title", { realm: segmentRealm(t, s), n: String(s.gate_days) })
                     : t("workflow.node_state.awaiting_pick", { n: String(s.default_node_count) })}
                 </span>
                 {pickable && (
