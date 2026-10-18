@@ -2696,6 +2696,7 @@
     "ended": "已结束 · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "已取消 · 理由：{{reason}}",
     "end_error": "没能结束，请重试",
+    "end_workflow_running": "审批流程还在进行，跨域审判会随流程结束；要提前结束请取消",
     "cancel_error": "没能取消，请重试",
     "order": {
       "title": "各域顺序",

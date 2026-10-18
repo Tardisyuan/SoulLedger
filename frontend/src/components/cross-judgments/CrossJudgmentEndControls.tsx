@@ -37,7 +37,11 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
       setEnding(false);
       done();
     },
-    onError: () => showToast(t("crossJudgments.end_error"), "error"),
+    // 挂着的审批流程还在走:409 `workflow_running`,审判随流程结束,要提前收场用「取消」(2026-10-18)。
+    onError: (err: unknown) => {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      showToast(t(code === "workflow_running" ? "crossJudgments.end_workflow_running" : "crossJudgments.end_error"), "error");
+    },
   });
   const cancel = useMutation({
     mutationFn: () => crossTenantJudgmentsApi.cancel(judgment.id, reason.trim()),
