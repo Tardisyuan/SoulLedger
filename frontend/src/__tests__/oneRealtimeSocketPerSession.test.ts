@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * One realtime socket per session, and one module that opens it.
  *
  * WHAT WENT WRONG. `app/layout.tsx` mounted `WebSocketProvider` and, inside

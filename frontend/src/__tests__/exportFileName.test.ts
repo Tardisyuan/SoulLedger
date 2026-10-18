@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { exportFileName } from "@/src/lib/exportFileName";
 
 describe("exportFileName", () => {

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Lore locks for src/config/workflow-templates.ts.
  *
  * These presets carry mythological facts, and every one of the errors below

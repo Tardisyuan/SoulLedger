@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * `app/globals.css` is the authority for colour; `lib/chart-colors.ts` mirrors
  * it as literals because Recharts cannot read custom properties. This holds the
  * mirror to the stylesheet in BOTH themes and in BOTH directions:

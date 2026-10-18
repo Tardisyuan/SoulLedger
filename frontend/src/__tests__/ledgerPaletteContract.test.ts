@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * 色板 = SoulLedger 规范 v2「朱印」(Claude Design,2026-09-29 定稿;design-cache/v2/
  * spec-final.dc.html §一「Web · 四文明共用」、§二 状态色、§三 文明皮)。
  * v1「账簿 × 卷宗」那张表在这次改版里整张换掉,这份测试随之换成 v2 的表。

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * The operator who asked their OS to reduce motion gets what they asked for.
  *
  * WHAT WENT UNCAUGHT. Measured 2026-09-01: the stylesheet shipped **159
