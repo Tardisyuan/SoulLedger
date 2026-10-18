@@ -419,7 +419,25 @@ def _cancel_proposed_dispatch():
             lambda: DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED, "STATE_CHANGED")
 
 
+def _cross_conclude_appends_stops():
+    """第四十三批:并入审批流程的跨域审判以 PASS 结束(原审判已结案),参与方的站追加进受刑计划 ——
+    SENTENCE_PLAN_AMENDED 与审判的 CONCLUDED 同一事务(`CrossTenantJudgmentService.conclude` → `append_cross_stops`)。"""
+    from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
+    from apps.dispatch.services import CrossTenantJudgmentService
+    from tests.test_workflow_segments import World, _template, merged
+
+    w = World()
+    w.cn, w.eg = _cn(), plan.tenant("EG_DUAT")
+    _template(w.cn, "CHINESE")
+    _template(w.eg, "EGYPTIAN")
+    _soul, _case, cj, _wf = merged(w, [w.eg])
+    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None),
+            lambda: CrossTenantJudgment.all_objects.get(pk=cj.pk).status == JudgmentStatus.CONCLUDED,
+            "SENTENCE_PLAN_AMENDED")
+
+
 PATHS = {
+    "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
