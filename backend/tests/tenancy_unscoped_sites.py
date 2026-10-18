@@ -256,5 +256,6 @@ SITES = [
     ('apps/workflow/tasks.py', 'pick_reminders_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant'),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'Judgment.all_objects', 1, 'PK', "the bench's own judgment by its judgment_id (the convening hall's)"),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'SentencePlan.all_objects', 1, 'PK', "the plan that judgment opened (origin_judgment_id); the plan's tenant is that judgment's home hall"),
+    ('apps/sentence_plan/requests.py', '_finished_plan', 'SentencePlan.all_objects', 1, 'PK', "the finished plan that judgment opened (origin_judgment_id), reopened when its cross-realm judgment concludes PASS; the plan's tenant is that judgment's home hall"),
     ('apps/sentence_plan/services.py', 'SentencePlanService.open_cross_judgment', 'CrossTenantJudgment._base_manager', 1, 'CROSS', 'joint judgment attached to one judgment, still open'),
 ]
