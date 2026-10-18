@@ -132,10 +132,14 @@ export function useJudgmentQueue(options?: { at?: string }) {
       inFlight.current.add(id);
       setHolding((prev) => [...prev, id]);
       try {
+        // W unticked = say nothing, never `false`: with a cross-realm judgment still open on the case the server
+        // must generate the workflow (and merges the bench into it), and an explicit false is answered 400
+        // `workflow_required` (第四十三批). Unsaid, it generates one with every station — the full page's step-2
+        // default — and otherwise none, as before.
         await judgmentApi.conclude(id, {
           verdict: input.verdict,
           notes: input.notes ?? "",
-          create_workflow: input.createWorkflow ?? false,
+          ...(input.createWorkflow ? { create_workflow: true } : {}),
         });
         setDecided((prev) => [...prev, id]); // once per case: the in-flight guard, then the server refuses a re-conclude
         qc.invalidateQueries({ queryKey: judgmentKeys.all });
