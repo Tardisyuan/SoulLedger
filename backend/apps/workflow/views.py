@@ -544,6 +544,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
+        if not workflow.is_current(node):
+            # Only the stop the flow stands on (2026-10-18); a later stop waits its turn. After the identity
+            # check: someone who is not this stop's approver is told so first.
+            return Response({"error": "This is not the current step.", "code": "not_current"},
+                            status=status.HTTP_409_CONFLICT)
 
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")

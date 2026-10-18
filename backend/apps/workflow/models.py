@@ -276,6 +276,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         nodes = self.nodes.filter(status=NodeStatus.PENDING).order_by("node_order").first()
         return nodes
 
+    def is_current(self, node: "ApprovalNode") -> bool:
+        """Whether `node` is the stop the flow stands on (the first PENDING one when no pointer was ever set)."""
+        current = self.current_node_id or getattr(self.get_next_node(), "pk", None)
+        return node.pk == current
+
     def get_current_node(self) -> "ApprovalNode | None":
         """Get the currently active node."""
         if self.current_node:
@@ -332,6 +337,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # Somebody decided it between the view's check and this lock.
                 # Returning False rather than overwriting is the whole point:
                 # the second caller has to learn its decision was not recorded.
+                return False
+            if not self.is_current(node):
+                # Only the stop the flow stands on is decided (2026-10-18). Deciding a later one by id let a
+                # judge designated further down approve ahead of the flow, which then still stood on the
+                # earlier stop; tests/test_workflow_pointer_never_goes_back.py.
                 return False
 
             # A node that declares which verdicts it accepts has that
@@ -693,6 +703,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         if next_node is None:
             return False
         from django.utils import timezone
+
+        # The stop moved past is SKIPPED, not left PENDING: the order-based default in `_pass_successor`
+        # ("the first PENDING node") handed it straight back once the new stop was decided, and the flow walked
+        # backwards (2026-10-18, tests/test_workflow_pointer_never_goes_back.py). Same as `_skip_jumped`.
+        if self.current_node_id:
+            self.nodes.filter(pk=self.current_node_id, status=NodeStatus.PENDING).update(
+                status=NodeStatus.SKIPPED, decided_at=timezone.now()
+            )
 
         # `_make_current`, not `_enter`: advance moves the pointer and decides
         # nothing, so it does not run an automatic node either — pointing it at
