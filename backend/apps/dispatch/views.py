@@ -48,6 +48,7 @@ from apps.dispatch.services import (
     DispatchService,
     OrderLockedError,
     ResidenceReturnBlockedError,
+    WorkflowRunningError,
 )
 from apps.perm.filters import DataScopeFilter
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -1014,6 +1015,9 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
                 judgment, conclusion_type, request.user, note=serializer.validated_data.get("note", ""),
             )
             return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
+        except WorkflowRunningError as e:
+            # 2026-10-18:挂着的审批流程还在走,审判随流程结束;要提前收场用「取消」。
+            return Response({"error": str(e), "code": e.code}, status=status.HTTP_409_CONFLICT)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

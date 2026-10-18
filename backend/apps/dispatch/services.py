@@ -69,13 +69,25 @@ class ResidenceReturnBlockedError(Exception):
 
 
 class OrderLockedError(ValueError):
-    """跨域审判的各域顺序在审批流程生成之后锁定(第四十三批):流程按这个顺序建了各域的段。入席也一并锁定 ——
-    新入席的域在流程里没有段。"""
+    """跨域审判的各域顺序在审批流程生成之后锁定(第四十三批):流程按这个顺序建了各域的段。
+    入席例外(2026-10-18 用户决定):流程还在走时可以入席,新域接在最后一段之后(`add_participant`);
+    流程结束了(或还没开始走)就不能。"""
 
     code = "order_locked"
 
     def __init__(self):
         super().__init__("The approval flow has been generated; the realm order is fixed")
+
+
+class WorkflowRunningError(ValueError):
+    """审批流程还在走时召集人不能手动结束跨域审判(2026-10-18 用户决定):流程走完 / 被驳回时审判随之结束
+    (`segments.on_workflow_finished`)。取消照旧可以。"""
+
+    code = "workflow_running"
+
+    def __init__(self):
+        super().__init__("The approval flow is still running; the cross-realm judgment ends when it does. "
+                         "Cancel it to stop early.")
 
 
 def _assert_order_open(cross):
@@ -791,14 +803,28 @@ class CrossTenantJudgmentService:
         participant flipped PROPOSED -> ACTIVE and the second was refused by
         the check below, so a "joint" judgment held one participant at most.
         The initiator convenes the bench explicitly through `activate`.
+
+        审批流程已生成(第四十三批):流程还在走(IN_PROGRESS)时可以入席(2026-10-18 用户决定),那个域按自己的
+        默认流程接在最后一段之后、收到选站待办(`segments.append_foreign`);席位序号必须排在现有各席之后 ——
+        排进中间就是重排,仍然 409 `order_locked`。审判此时已开庭(ACTIVE)也收。流程结束了 / 还没走:409。
+        先锁流程行(锁序 流程 → 跨域审判,同 `cancel`),入席与流程走完互斥。
         """
-        if judgment.status != JudgmentStatus.PROPOSED:
+        from apps.workflow import segments
+        from apps.workflow.models import ApprovalWorkflowStatus
+
+        workflow = segments.lock_workflow_of(judgment)
+        running = workflow is not None and workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
+        if judgment.status != JudgmentStatus.PROPOSED and not (running and judgment.status == JudgmentStatus.ACTIVE):
             raise ValueError("Can only add participants to proposed judgments")
-        _assert_order_open(judgment)
+        if workflow is not None and not (running and workflow.segments.exists()):
+            raise OrderLockedError()
         if participant_actor is not None and not CrossTenantJudgmentService.seatable_actors(
                 participant_tenant, role).filter(pk=participant_actor.pk).exists():
             raise ValueError(f"That actor cannot hold a {role} seat for {participant_tenant.code}")
         CrossTenantJudgmentService._check_node_order(judgment, participant_tenant, role, node_order)
+        if running and node_order is not None and judgment.participants.filter(
+                is_deleted=False, node_order__gt=node_order).exists():
+            raise OrderLockedError()
 
         participant = CrossTenantJudgmentParticipant.objects.create(
             judgment=judgment,
@@ -808,6 +834,8 @@ class CrossTenantJudgmentService:
             tenant=participant_tenant,
             node_order=node_order,
         )
+        if running:
+            segments.append_foreign(workflow, participant_tenant)
 
         # Notify initiating tenant, through the bus so the row lands in the
         # model the notification API actually serves.
@@ -1050,7 +1078,7 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic
-    def conclude(judgment, conclusion_type, conclude_by, note="", check=True):
+    def conclude(judgment, conclusion_type, conclude_by, note="", check=True, by_workflow=False):
         """
         Conclude a cross-tenant judgment.
 
@@ -1060,14 +1088,25 @@ class CrossTenantJudgmentService:
             conclude_by: User concluding the judgment
             note: 结束说明(网页弹层必填;原审判页显示)
             check: 跑参与方的站的校验。审批流程被驳回而结束(FAIL,第四十三批)时不跑:否决用不到那些站。
+            by_workflow: 由流程走完 / 被驳回结束(`segments.on_workflow_finished`,调用方已锁流程行)。
 
         Returns:
             CrossTenantJudgment: Updated judgment
+
+        挂着的审批流程还在走时,召集人手动结束被拒(`WorkflowRunningError`,409 `workflow_running`;2026-10-18
+        用户决定)。只有流程自己那条路(`by_workflow=True`)能结。没有流程的(存量)照旧。
 
         PASS 而原审判已经结案(审批流程并入的跨域审判,第四十三批):参与方的站在这里追加进灵魂的受刑计划
         (`sentence_plan.requests.append_cross_stops`)。原审判还没结案的(存量那种先结联审、后结原审判)照旧在原审判
         结案时抄。
         """
+        if not by_workflow:
+            from apps.workflow import segments
+            from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
+
+            workflow = segments.lock_workflow_of(judgment)  # 锁序 流程 → 跨域审判,同 `cancel`
+            if workflow is not None and workflow.status not in TERMINAL_WORKFLOW_STATUSES:
+                raise WorkflowRunningError()
         CrossTenantJudgment._base_manager.select_for_update(of=("self",)).get(pk=judgment.pk)
         errors = CrossTenantJudgmentService.check_bench_sentences(judgment) if check else []
         if errors:
