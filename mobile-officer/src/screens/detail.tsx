@@ -26,6 +26,7 @@ import { JudgmentActionBar } from "./judgmentActions";
 import { EvidenceText, JudgmentCase } from "./judgmentCase";
 import { SoulDetail, SoulLink } from "./soulDetail";
 import { TodoFactsView } from "./todoFacts";
+import { PickStations, WorkflowSegmentsFor } from "./pick";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -33,7 +34,8 @@ export type DetailTarget =
   | { type: "judgment"; id: string }
   | { type: "soul"; id: string };
 
-type Over = Exclude<DetailTarget, { type: "todo" }>;
+/** Opened over the detail: a soul, a judgment, or 改选 from a workflow's segments (O-3), keyed by the workflow. */
+type Over = Exclude<DetailTarget, { type: "todo" }> | { type: "pick"; id: string };
 
 export function Detail({
   target,
@@ -76,6 +78,9 @@ export function Detail({
   }, [top]);
   const openSoul = (id: string) => push({ type: "soul", id });
   const openJudgment = (id: string) => push({ type: "judgment", id });
+  const openPick = (id: string) => push({ type: "pick", id });
+  // A pick made from over the detail: back to it, which loads its segments again (a new key), and the list behind reloads.
+  const [picked, setPicked] = useState(0);
   return (
     <View testID="detail" style={{ flex: 1, backgroundColor: theme.s0 }}>
       <Pressable
@@ -92,7 +97,10 @@ export function Detail({
       <View style={top ? { display: "none" } : { flex: 1 }}>
         {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
         {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
-        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
+        {target.type === "todo" && target.kind === "pick" ? <PickStations id={target.id} onDone={() => { onSettled(); onBack(); }} /> : null}
+        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" ? (
+          <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} />
+        ) : null}
         {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} /> : null}
         {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
       </View>
@@ -100,6 +108,17 @@ export function Detail({
       <GoneContext.Provider value={over}>
       {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
       {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} /> : null}
+      {top?.type === "pick" ? (
+        <PickStations
+          key={`over-${stack.length}`}
+          id={top.id}
+          onDone={() => {
+            setStack((s) => s.slice(0, -1));
+            setPicked((n) => n + 1);
+            onSettled();
+          }}
+        />
+      ) : null}
       </GoneContext.Provider>
     </View>
   );
@@ -155,7 +174,20 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
   );
 }
 
-function TodoDetail({ kind: askedKind, id: askedId, onSettled, onOpenSoul }: { kind: TodoKind; id: string; onSettled: () => void; onOpenSoul?: (id: string) => void }) {
+function TodoDetail({
+  kind: askedKind,
+  id: askedId,
+  onSettled,
+  onOpenSoul,
+  onOpenPick,
+}: {
+  kind: TodoKind;
+  id: string;
+  onSettled: () => void;
+  onOpenSoul?: (id: string) => void;
+  /** 选站 / 改选 from the workflow's segments (O-3), keyed by the workflow. */
+  onOpenPick?: (workflowId: string) => void;
+}) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -254,6 +286,12 @@ function TodoDetail({ kind: askedKind, id: askedId, onSettled, onOpenSoul }: { k
               ))}
             </View>
           ) : null}
+        </View>
+        {/* O-3: a workflow merged with a cross-realm judgment, by realm; nothing for one without segments. */}
+        {kind === "approval" && data.workflow_id ? (
+          <WorkflowSegmentsFor workflowId={data.workflow_id} onPick={onOpenPick ? () => onOpenPick(data.workflow_id!) : undefined} />
+        ) : null}
+        <View style={{ padding: space[5] }}>
           <ContinueOnDesk target={{ kind, id }} />
         </View>
       </Screen>
