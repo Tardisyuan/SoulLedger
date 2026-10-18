@@ -96,6 +96,11 @@ jest.mock("@soulledger/core/api", () => ({
     claim: jest.fn().mockResolvedValue({ data: {} }),
     reassign: jest.fn().mockResolvedValue({ data: {} }),
     assignableOfficers: jest.fn().mockResolvedValue({ data: [] }),
+    // 第四十三批:控制台取一次详情,看原审判挂没挂着跨域审判。
+    get: jest.fn().mockResolvedValue({ data: { cross_judgment_id: null } }),
+  },
+  crossTenantJudgmentsApi: {
+    get: jest.fn().mockResolvedValue({ data: { id: "cj-1", status: "ACTIVE" } }),
   },
 }));
 
@@ -140,6 +145,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 const mockNext = judgmentApi.next as jest.Mock;
 const mockConclude = judgmentApi.conclude as jest.Mock;
+const mockGetJudgment = judgmentApi.get as jest.Mock;
 
 function renderConsole() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -892,5 +898,28 @@ describe("useHall", () => {
     expect(renderHook(() => useHall("")).result.current).toBeUndefined();
     currentUser = mockUser;
     expect(renderHook(() => useHall("规制司")).result.current).toBe("规制司");
+  });
+});
+
+
+describe("a case with an open cross-realm judgment (batch 43)", () => {
+  it("shows W ticked and locked, with the reason, and still sends no create_workflow", async () => {
+    mockGetJudgment.mockResolvedValueOnce({ data: { cross_judgment_id: "cj-1" } });
+    renderConsole();
+    await waitFor(() => expect(screen.getByTestId("queue-cross-forced")).toBeInTheDocument());
+    expect(screen.getByText("workflow.pick.cross_forced")).toBeInTheDocument();
+    const box = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+  });
+
+  it("a case without one: W is free and no reason line", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getAllByText("第一位待判者").length).toBeGreaterThan(0));
+    await waitFor(() => expect(mockGetJudgment).toHaveBeenCalled());
+    expect(screen.queryByTestId("queue-cross-forced")).not.toBeInTheDocument();
+    const box = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
+    expect(box).not.toBeChecked();
+    expect(box).not.toBeDisabled();
   });
 });
