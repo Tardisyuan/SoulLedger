@@ -140,8 +140,9 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # Ask the state machine for the move rather than assigning it.
         # DISPOSED → REINCARNATING is legal and goes through as before; every
         # other starting state is now refused instead of being written, and
-        # SETTLED and LOST are absorbing precisely so that nothing can walk a
-        # closed case back open.
+        # SETTLED and LOST never lead to rebirth, so nothing can walk a closed
+        # case back open here (SETTLED's one exit is back to DISPOSED, for a
+        # reopened sentence plan only).
         if soul.current_state != SoulState.REINCARNATING:
             moved = soul.transition_to(
                 SoulState.REINCARNATING,

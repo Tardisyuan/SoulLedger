@@ -4,7 +4,7 @@
 2. 流程还在走时可以入席:新域按自己的默认流程接在最后一段之后、收到选站待办;前一段走完停在它门口。
    重排、排进中间、流程结束之后再入席:409 `order_locked`。
 3. 跨域审判 PASS 时受刑计划已经刑满:计划重开、追加外站,灵魂经 `transition_to` 回到 DISPOSED 并被调往外站。
-   灵魂已经过了不能回头的那一步(已转世等)就照旧只记 warning、不追加。
+   在等转世(REINCARNATING)与已入终局(SETTLED)的都重开;已经过了不能回头的那一步(已转世等)就照旧只记 warning、不追加。
 
 夹具与 tests/test_workflow_segments.py 相同(每个域一份三站模板,用户都不是 ADMIN)。
 """
@@ -225,3 +225,34 @@ def test_the_reopen_edge_is_not_offered_by_the_manual_transition(w):
                                           {"new_state": SoulState.DISPOSED, "reason": "x"}, format="json")
     assert response.status_code == 400, response.data
     assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.REINCARNATING
+
+
+def test_a_settled_soul_whose_plan_finished_is_reopened_too(w):
+    """SETTLED is not past the point of no return for this (2026-10-18 user decision): the plan was unfinished."""
+    soul, _case, cj, wf = merged(w, [w.eg])
+    p = SentencePlan.all_objects.get(soul=soul)
+    plan.serve(soul, p, 1)
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.SETTLED)  # a terminal cosmology's ending
+
+    _run_local(w, wf)
+    _run_realm(w.eg_judge, wf, 2)
+
+    assert (_cj(cj).status, _cj(cj).conclusion_type) == (JudgmentStatus.CONCLUDED, "PASS")
+    p.refresh_from_db()
+    assert (p.status, p.completed_at) == (SentencePlanStatus.ACTIVE, None)
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
+    assert [(n.order, n.tenant_code, n.status) for n in p.nodes.order_by("order")] == [
+        (1, "CN_DIYU", "COMPLETED"), (2, "EG_DUAT", "DISPATCHING")]
+    assert SoulEvent.all_objects.filter(soul_id=soul.pk, event_type="STATE_CHANGED", payload__old_state="SETTLED",
+                                        payload__new_state="DISPOSED").count() == 1
+
+
+def test_the_settled_reopen_edge_is_not_offered_by_the_manual_transition(w):
+    soul, _case, _bench, _wf = merged(w, [w.eg])
+    plan.serve(soul, SentencePlan.all_objects.get(soul=soul), 1)
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.SETTLED)
+    admin = plan.officer("b43f_admin_settled", "ADMIN", w.cn)
+    response = officer_client(admin).post(f"/api/v1/souls/{soul.pk}/transition/",
+                                          {"new_state": SoulState.DISPOSED, "reason": "x"}, format="json")
+    assert response.status_code == 400, response.data
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.SETTLED

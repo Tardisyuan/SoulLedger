@@ -306,9 +306,10 @@ def append_cross_stops(cross):
 
     只在原审判**已经结案**时追加:还没结案的是存量那种先结联审、后结原审判的,参与方的站在原审判结案时
     由 `SentencePlanService.create_from_conclusion` 抄。同一场联审已经抄过 / 追加过(有本审判加的外站)就什么都不做。
-    计划已经刑满(COMPLETED)而灵魂只是在等转世(REINCARNATING,本世没有审批中 / 已批准的转生申请):重新打开计划、
-    灵魂经 `Soul.transition_to` 回到 DISPOSED,追加之后由 `advance` 调往第一个外站(2026-10-18 用户决定)。
-    其余结束了的(撤销 = 赦免、终局 SETTLED、已转世、转生已批 / 审批中)或没有建计划的:记 warning、不追加。
+    计划已经刑满(COMPLETED)而灵魂只是在等转世(REINCARNATING,本世没有审批中 / 已批准的转生申请)或已入终局
+    (SETTLED):重新打开计划、灵魂经 `Soul.transition_to` 回到 DISPOSED,追加之后由 `advance` 调往第一个外站
+    (2026-10-18 用户决定;SETTLED 那一半同日后补)。
+    其余结束了的(撤销 = 赦免、已转世、失踪、转生已批 / 审批中)或没有建计划的:记 warning、不追加。
     """
     import logging
 
@@ -340,7 +341,7 @@ def append_cross_stops(cross):
                  .select_related("participant_tenant").order_by("node_order"))
     if not seats:
         return []
-    if reopen and not _reopen(soul, plan, judgment):
+    if reopen and not _reopen(soul, plan, nodes, judgment):
         logging.getLogger(__name__).warning(
             "sentence_plan: cross judgment %s concluded PASS but plan %s is %s and soul %s is %s; no stops added",
             cross.pk, plan.pk, plan.status, soul.pk, soul.current_state)
@@ -371,14 +372,19 @@ def _finished_plan(judgment):
     ).select_related("soul").order_by("-completed_at").first()
 
 
-def _reopen(soul, plan, judgment):
-    """在灵魂与计划的行锁下重开:灵魂必须在 REINCARNATING(刑满、等转世),且本世没有审批中或已批准的转生申请 ——
-    那之后(转生已批、已转世 ALIVE、终局 SETTLED、LOST)都不再回头。返回是否重开了;没重开时什么都没写。
+def _reopen(soul, plan, nodes, judgment):
+    """在灵魂与计划的行锁下重开:灵魂必须在 REINCARNATING(刑满、等转世)或 SETTLED(终局:那里没有下一世,
+    但计划没走完就不算结案),且本世没有审批中或已批准的转生申请 —— 那之后(转生已批、已转世 ALIVE、LOST)
+    都不再回头。原属地永久刑期收尾的(有 ETERNAL 节点,也是 SETTLED)不重开:永久之后不能再有站(Q5)。
+    返回是否重开了;没重开时什么都没写。
     状态经 `transition_to`(STATE_CHANGED 事件同一事务),不直接写 `current_state`。"""
     from apps.soul_accounts.models import OPEN_APPLICATION_STATUSES, RebirthApplicationStatus
     from apps.souls.models import SoulState
 
-    if plan.status != SentencePlanStatus.COMPLETED or soul.current_state != SoulState.REINCARNATING:
+    if plan.status != SentencePlanStatus.COMPLETED or soul.current_state not in (
+            SoulState.REINCARNATING, SoulState.SETTLED):
+        return False
+    if any(n.status == SentenceNodeStatus.ETERNAL for n in nodes):
         return False
     if soul.rebirth_applications.filter(
             cycle=soul.life_index,
