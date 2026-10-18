@@ -66,7 +66,7 @@ export function StationPicker({
   return (
     <div data-testid="station-picker" className="flex flex-col gap-3 text-left">
       <div>
-        <h3 className="text-md font-medium text-[oklch(var(--color-ink))]">{t("workflow.pick.title")}</h3>
+        <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("workflow.pick.title")}</h3>
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">
           {t("workflow.pick.subtitle", { flow: flowName, n: String(rows.length) })}
         </p>
@@ -114,7 +114,7 @@ export function StationPicker({
                     type="checkbox"
                     checked={on}
                     disabled={row.required}
-                    onChange={() => toggle(row.key)}
+                    onChange={() => { if (!row.required) toggle(row.key); }}
                     className="mt-1 h-4 w-4 accent-[oklch(var(--color-accent))]"
                   />
                   <span className="min-w-0">
@@ -127,8 +127,8 @@ export function StationPicker({
                       </>
                     )}
                   </span>
-                  <span className="min-w-0 truncate text-xs">{row.hall}</span>
-                  <span className="min-w-0 truncate text-xs">{row.who}</span>
+                  <span className="min-w-0 truncate text-xs" title={typeof row.hall === "string" ? row.hall : undefined}>{row.hall}</span>
+                  <span className="min-w-0 truncate text-xs" title={typeof row.who === "string" ? row.who : undefined}>{row.who}</span>
                 </label>
               </li>
             );
