@@ -512,7 +512,6 @@ const eslintConfig = [
         ecmaFeatures: { jsx: true },
         ecmaVersion: "latest",
         sourceType: "module",
-        project: "./tsconfig.json",
       },
       globals: SHARED_GLOBALS,
     },

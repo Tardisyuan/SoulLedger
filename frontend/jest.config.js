@@ -38,6 +38,11 @@ const coreCoverageDir = path.resolve(__dirname, '..', 'packages/core/src') + pat
 // new tests for it.
 /** @type {import('jest').Config} */
 module.exports = {
+  // Half the cores, not jest's default of cores-1: seven workers filled all
+  // eight cores of the dev machine and pushed its 16 GB into swap (2026-10-19).
+  // JEST_WORKERS overrides; `-w` on the command line still wins over both.
+  maxWorkers: process.env.JEST_WORKERS || '50%',
+  workerIdleMemoryLimit: '1GB',
   rootDir: path.resolve(__dirname, '..'),
   roots: ['<rootDir>/frontend'],
   // Without this, `--coverage` writes to the new rootDir's default
