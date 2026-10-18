@@ -234,6 +234,8 @@ const COLLECTED_FILES = [
   "StartWorkflowDialog.test.tsx",
   // 2026-10-18 第四十三批 W-1 ~ W-5:选站列表、门口那一块、加减站与 segment_changed、审批页「待我选站」、记录句子。
   "workflowSegments.test.tsx",
+  // 2026-10-19 殿名按界面语言(courtLabel):同一个殿的中英写法一个键,egy 写英文,认不出的原样。
+  "courtLabel.test.ts",
   "workflowTitle.test.ts",
   "workflowRoutingRoundTrip.test.ts",
   "a11yEngineBaseline.test.tsx",

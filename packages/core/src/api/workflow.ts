@@ -115,6 +115,7 @@ export type WorkflowSkipKind = "AT_PICK" | "LATER" | "CANCELLED";
 export type WorkflowSegmentRefusal =
   | "segment_changed"
   | "final_required"
+  | "jump_target_required"
   | "unknown_node"
   | "not_allowed"
   | "not_foreign"
@@ -145,6 +146,18 @@ export interface FlowPreviewStation {
   approver_role: string | null;
   /** The final review: it cannot be skipped. */
   is_required: boolean;
+  /** Stations whose rejection jumps here (`on_fail`); `key` is their `node_order` as a string. */
+  jump_target_of?: JumpSource[];
+}
+
+/**
+ * A station whose rejection jumps to this one (`JumpSourceSerializer`, 2026-10-19). `key` is what the client sends
+ * back for that station: its `node_order` before the flow exists (flow preview), its node id after. While any of
+ * them still runs this station cannot be skipped (400 `jump_target_required`).
+ */
+export interface JumpSource {
+  key: string;
+  node_name: string;
 }
 
 export interface FlowPreview {
@@ -233,6 +246,8 @@ export interface ApprovalNode {
   skip_reason?: string;
   /** The segment's final review: no pick or adjust may skip it. */
   is_required?: boolean;
+  /** Stations of this segment whose rejection jumps here (`on_fail`); `key` is their node id. */
+  jump_target_of?: JumpSource[];
 }
 
 /** What a node does (`NodeKind`, backend/apps/workflow/models.py). Absent reads as APPROVAL. */

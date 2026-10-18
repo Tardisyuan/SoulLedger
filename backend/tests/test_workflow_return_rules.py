@@ -165,23 +165,18 @@ def test_a_return_to_a_skipped_station_with_nothing_before_it_ends_the_flow(db):
     assert wf.return_count == 0
 
 
-def test_an_on_fail_jump_to_a_skipped_station_goes_to_the_next_one(db):
+def test_an_on_fail_jump_to_a_skipped_station_is_no_target_and_ends_the_flow(db):
+    # Pick and adjust refuse this state (`jump_target_required`); it arises only when the template changed after
+    # the flow started. The user ruled out falling through to the next station (2026-10-19).
     wf, (a,) = _build(4)
-    _route(a[0], on_fail=a[2])
-    _skip(a[2])
-    _decide(wf, a[0], "FAILED")
-    assert wf.current_node_id == a[3].pk
-    assert _status(a[1]) == NodeStatus.SKIPPED  # jumped over
-    assert _status(a[2]) == NodeStatus.SKIPPED
-
-
-def test_an_on_fail_jump_with_nothing_after_the_skipped_target_ends_the_flow(db):
-    wf, (a,) = _build(3)
     _route(a[0], on_fail=a[2])
     _skip(a[2])
     _decide(wf, a[0], "FAILED")
     assert wf.status == ApprovalWorkflowStatus.REJECTED
     assert wf.current_node is None
+    # Absence: nothing after the skipped target was entered or jumped over.
+    assert _status(a[3]) == NodeStatus.PENDING
+    assert _status(a[1]) == NodeStatus.PENDING
 
 
 def test_the_publish_validator_refuses_a_forward_reject_to(db):
@@ -243,6 +238,10 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     assert _edges(_row(eu, "APPEAL"), "reject_to") == {}
     assert _edges(_row(eu, "CANONIZATION"), "reject_to") == {"n2": "n1", "n3": "n2"}
     assert _edges(_row(eu, "PURGATORY_REVIEW"), "reject_to") == {"n2": "n1", "n3": "n2"}
+    # One spelling for the one European court (2026-10-19): the appeal row says 天堂 like the 末日审判 row.
+    for case_type in ("ROUTINE", "APPEAL"):
+        assert {n["court_code"] for n in _row(eu, case_type).nodes_json} == {"天堂"}
+    assert not any(n["court_code"] == "Heaven" for r in WorkflowTemplate.objects.all() for n in r.nodes_json)
     greek = _row(gr, "ROUTINE")
     assert _edges(greek, "on_fail") == {"n1": "n3", "n2": "n3"}
     assert _edges(greek, "reject_to") == {}

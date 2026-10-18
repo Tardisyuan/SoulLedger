@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { Badge } from "@/src/components/ui/Badge";
 import { nodeTypeFor } from "@soulledger/core/config/workflow-node-types";
 import { type WorkflowTemplate as PresetTemplate } from "@soulledger/core/config/workflow-templates";
@@ -135,7 +136,7 @@ export function TemplatePreview({
   /** 这份模板能做的事。见文件头：按结果分流的按钮不进组件。 */
   actions?: ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <>
@@ -171,7 +172,7 @@ export function TemplatePreview({
               </span>
               <span className="text-sm text-[oklch(var(--color-ink))]">{node.name}</span>
               <span className="text-[oklch(var(--color-ink-subtle))]">·</span>
-              <span className="text-xs text-[oklch(var(--color-ink-muted))]">{node.court}</span>
+              <span className="text-xs text-[oklch(var(--color-ink-muted))]">{courtLabel(t, node.court, locale)}</span>
               <span className="text-[oklch(var(--color-ink-subtle))]">·</span>
               <span className="text-xs text-[oklch(var(--color-ink-muted))]">
                 <DomainEnum namespace="workflow.node_type" value={node.nodeType} />
