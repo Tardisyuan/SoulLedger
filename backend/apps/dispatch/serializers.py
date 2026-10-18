@@ -380,8 +380,8 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
     # `can_end`:这位请求者能不能结束 / 取消(`CrossTenantJudgmentService.can_end`),页面据此给入口。
     ended_by_name = serializers.SerializerMethodField()
     can_end = serializers.SerializerMethodField()
-    # 第四十三批 W-4:原审判结案时生成的审批流程(顶部那一条进度);有了它「各域顺序」就锁定(`order` / 入席答 409
-    # `order_locked`)。没挂审判、或还没生成流程时 null / false。
+    # 第四十三批 W-4:原审判结案时生成的审批流程(顶部那一条进度);有了它「各域顺序」就锁定(`order` 答 409
+    # `order_locked`;入席只在流程还在走时收,新域排最后,2026-10-18)。没挂审判、或还没生成流程时 null / false。
     workflow = serializers.SerializerMethodField()
     order_locked = serializers.SerializerMethodField()
 

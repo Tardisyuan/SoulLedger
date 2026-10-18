@@ -99,7 +99,7 @@ export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
   can_end?: boolean;
   /** 第四十三批 W-4:原审判结案时生成的审批流程的进度;还没生成为 null。 */
   workflow?: CrossJudgmentWorkflowSummary | null;
-  /** 审批流程已生成:各域顺序锁定,`order` / 入席答 409 `order_locked`。 */
+  /** 审批流程已生成:各域顺序锁定,`order` 答 409 `order_locked`;流程还在走时仍可入席(排最后),走完了入席也答 409。 */
   order_locked?: boolean;
 }
 

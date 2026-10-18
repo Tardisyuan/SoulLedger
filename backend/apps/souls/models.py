@@ -509,7 +509,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 SoulState.SETTLED,
                 SoulState.LOST,
             ],
-            SoulState.REINCARNATING: [SoulState.ALIVE],
+            # Back to DISPOSED only when a finished sentence plan is reopened (2026-10-18 user decision): a
+            # cross-realm judgment concluded PASS after the plan completed adds its stops to that plan
+            # (apps/sentence_plan/requests.py::append_cross_stops). Not reachable through
+            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there).
+            SoulState.REINCARNATING: [SoulState.ALIVE, SoulState.DISPOSED],
             # SETTLED is absorbing, and deliberately does not keep LOST
             # reachable the way DISPOSED does. LOST means the disposition was
             # never carried through and the soul went missing on the way to

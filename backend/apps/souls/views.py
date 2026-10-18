@@ -592,7 +592,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        if not soul.can_transition_to(new_state):
+        # REINCARNATING -> DISPOSED exists for one writer: reopening a finished sentence plan
+        # (apps/sentence_plan/requests.py::append_cross_stops). By hand it would leave a soul DISPOSED
+        # with no plan to serve, so it is not offered here.
+        reopen_only = soul.current_state == SoulState.REINCARNATING and new_state == SoulState.DISPOSED
+        if reopen_only or not soul.can_transition_to(new_state):
             return Response(
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
                 status=status.HTTP_400_BAD_REQUEST,
