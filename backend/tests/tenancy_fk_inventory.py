@@ -83,6 +83,7 @@ EDGES = {
     'workflow.ApprovalWorkflow.judgment->judgment.Judgment': ('S->S', 'same hall by convention; nothing in the database checks that the two rows share a tenant'),
     'workflow.ApprovalWorkflow.original_workflow->workflow.ApprovalWorkflow': ('S->S', 'self reference (appeal); same hall'),
     'workflow.ApprovalWorkflow.soul->souls.Soul': ('S->S', 'may cross: residence moves soul.tenant while this row keeps the tenant it was written under'),
+    'workflow.WorkflowSegment.workflow->workflow.ApprovalWorkflow': ('S->S', "crosses by design: a participating realm's segment of the convening hall's workflow (第四十三批)"),
     'authentication.User.rbac_role->perm.Role': ('S->U', 'global role table (Role has no tenant column)'),
     'chat.Conversation.account_a->soul_accounts.SoulAccount': ('S->U', 'soul-account side of a direct room; account has no tenant column (via soul.home_tenant)'),
     'chat.Conversation.account_b->soul_accounts.SoulAccount': ('S->U', 'soul-account side of a direct room; account has no tenant column (via soul.home_tenant)'),
@@ -111,6 +112,7 @@ EDGES = {
     'soul_push.PushPreference.soul->souls.Soul': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
     'workflow.ApprovalNode.approver_actor->actors.Actor': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
     'workflow.ApprovalNode.realm->realms.Realm': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
+    'workflow.ApprovalNode.segment->workflow.WorkflowSegment': ('U->S', "the realm's segment the node belongs to; same workflow (第四十三批)"),
     'workflow.ApprovalNode.workflow->workflow.ApprovalWorkflow': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
     'workflow.WorkflowTemplateVersion.template->workflow.WorkflowTemplate': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
     'authentication.MfaRecoveryCode.mfa->authentication.OfficerMfa': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
@@ -199,6 +201,7 @@ EDGES = {
     'souls.SoulRecord.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
     'workflow.ApprovalWorkflow.tenant->tenants.Tenant': ('tenantcol', 'ownership column: the row belongs to this tenant'),
     'workflow.WorkflowTemplate.tenant->tenants.Tenant': ('tenantcol', 'templates are per hall'),
+    'workflow.WorkflowSegment.tenant->tenants.Tenant': ('tenantcol', 'the realm that runs, picks and adjusts this segment; for order > 1 another hall than the workflow'),
     'judgment.CaseAttachment.uploader->authentication.User': ('user-other', 'global identity: who uploaded the file'),
     'judgment.JudgmentComment.author->authentication.User': ('user-other', 'global identity: who wrote the comment'),
     'dispatch.CrossTenantJudgment.ended_by->authentication.User': ('user-other', 'global identity: who ended or cancelled the joint bench'),
@@ -255,8 +258,10 @@ EDGES = {
     'souls.Soul.archived_by->authentication.User': ('user-other', 'global identity: officer who archived it'),
     'souls.SoulRecord.date_warning_acknowledged_by->authentication.User': ('user-other', 'global identity: officer who acknowledged the date warning'),
     'workflow.ApprovalNode.approver->authentication.User': ('user-other', 'global identity: officer assigned to the approval node'),
+    'workflow.ApprovalNode.skipped_by->authentication.User': ('user-other', 'global identity: officer who skipped the station at pick or adjust'),
     'workflow.WorkflowTemplateVersion.published_by->authentication.User': ('user-other', 'global identity: officer who published it'),
     'workflow.WorkflowTemplateVersion.saved_by->authentication.User': ('user-other', 'global identity: officer who saved the draft'),
+    'workflow.WorkflowSegment.picked_by->authentication.User': ('user-other', "global identity: officer who picked the segment's stations"),
 }
 
 AUDIT_USER_MODELS = [

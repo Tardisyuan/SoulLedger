@@ -109,6 +109,27 @@ class NodeKind(models.TextChoices):
 AUTOMATIC_KINDS = frozenset({NodeKind.NOTIFY, NodeKind.END})
 
 
+class SkipKind(models.TextChoices):
+    """Why a SKIPPED node was skipped by a person (第四十三批). Null on a node the engine skipped by routing
+    (`_skip_jumped`, `_finish`, `advance_to_next`) — those are not choices anybody made about the station."""
+    AT_PICK = "AT_PICK", "选站时跳过"
+    LATER = "LATER", "中途跳过"
+    CANCELLED = "CANCELLED", "跨域审判取消"
+
+
+#: Skips a later pick / adjust may undo. CANCELLED is final.
+RESTORABLE_SKIPS = frozenset({SkipKind.AT_PICK, SkipKind.LATER})
+
+
+class SegmentState(models.TextChoices):
+    """What was decided about a segment's stations. Whether it is running or done is not stored: it is read off
+    the nodes and the pointer (`apps/workflow/segments.py::phase`), so it cannot disagree with them."""
+    LOCAL_PICKED = "LOCAL_PICKED", "本域(生成时选站)"
+    AWAITING_PICK = "AWAITING_PICK", "等待外域选站"
+    PICKED = "PICKED", "外域已选站"
+    SKIPPED = "SKIPPED", "跨域审判取消,整段跳过"
+
+
 class NodeType(models.TextChoices):
     TRIAL = "TRIAL", "审判"
     EVALUATION = "EVALUATION", "评估"
@@ -276,16 +297,25 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         nodes = self.nodes.filter(status=NodeStatus.PENDING).order_by("node_order").first()
         return nodes
 
+    def _fallback_current(self) -> "ApprovalNode | None":
+        """The first PENDING node, as the stop when no pointer is set — unless it belongs to a segment still
+        waiting for its realm to pick (第四十三批): then the flow stands at that segment's gate, on no node."""
+        node = self.get_next_node()
+        if node is not None and node.segment_id is not None and WorkflowSegment.objects.filter(
+                pk=node.segment_id, state=SegmentState.AWAITING_PICK).exists():
+            return None
+        return node
+
     def is_current(self, node: "ApprovalNode") -> bool:
         """Whether `node` is the stop the flow stands on (the first PENDING one when no pointer was ever set)."""
-        current = self.current_node_id or getattr(self.get_next_node(), "pk", None)
+        current = self.current_node_id or getattr(self._fallback_current(), "pk", None)
         return node.pk == current
 
     def get_current_node(self) -> "ApprovalNode | None":
         """Get the currently active node."""
         if self.current_node:
             return self.current_node
-        return self.get_next_node()
+        return self._fallback_current()
 
     def complete_node(self, node_id: uuid.UUID, verdict: str, notes: str = "", user=None) -> bool:
         """Mark a node as completed and advance to next."""
@@ -555,7 +585,15 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         """
         from django.db import transaction
 
-        while node.kind in AUTOMATIC_KINDS:
+        while True:
+            # 第四十三批: a node of a realm's segment that realm has not picked yet is not entered. The flow
+            # stops at the segment's gate (no current node) until the pick resumes it (`segments.resume`).
+            gate = self._unpicked_segment(node)
+            if gate is not None:
+                self._stop_at_gate(gate, now)
+                return
+            if node.kind not in AUTOMATIC_KINDS:
+                break
             node.status = NodeStatus.TRAVERSED
             node.decided_at = now
             # No verdict: nobody decided. TRAVERSED is the whole record, and
@@ -565,8 +603,16 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             node.verdict = ""
             node.save(update_fields=["status", "decided_at", "verdict"])
             if node.kind == NodeKind.END:
-                self._finish(ApprovalWorkflowStatus.COMPLETED, now)
-                return
+                # 结束 ends its own segment; the realms after it still run (第四十三批). With no later segment —
+                # every workflow before segments — it completes the workflow, as it always did.
+                later = self._next_segment_entry(node)
+                if later is None:
+                    self._finish(ApprovalWorkflowStatus.COMPLETED, now)
+                    return
+                self.nodes.filter(status=NodeStatus.PENDING, segment_id=node.segment_id).update(
+                    status=NodeStatus.SKIPPED, decided_at=now)
+                node = later
+                continue
             notified = node
             transaction.on_commit(lambda n=notified: self._send_notify_node(n))
             successor = self._pass_successor(node)
@@ -597,6 +643,35 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         node.activated_at = now
         node.timed_out_at = None
 
+    # ── Segments (第四十三批): one per realm, run one after another ─────────
+
+    def _unpicked_segment(self, node: "ApprovalNode") -> "WorkflowSegment | None":
+        if node.segment_id is None:
+            return None
+        return WorkflowSegment.objects.filter(pk=node.segment_id, state=SegmentState.AWAITING_PICK).first()
+
+    def _next_segment_entry(self, node: "ApprovalNode") -> "ApprovalNode | None":
+        """The first PENDING node of a later segment than `node`'s; None without segments."""
+        if node.segment_id is None:
+            return None
+        order = WorkflowSegment.objects.filter(pk=node.segment_id).values_list("order", flat=True).first()
+        return (self.nodes.filter(status=NodeStatus.PENDING, segment__order__gt=order)
+                .order_by("node_order").first())
+
+    def _stop_at_gate(self, segment: "WorkflowSegment", now) -> None:
+        """Stand at `segment`'s gate: no current node, still IN_PROGRESS. The realm is told once on arrival
+        (after commit); the daily reminder is `segments.remind_due`."""
+        from django.db import transaction
+
+        self.current_node = None
+        self.status = ApprovalWorkflowStatus.IN_PROGRESS
+        if segment.gate_reached_at is None:
+            WorkflowSegment.objects.filter(pk=segment.pk).update(gate_reached_at=now, last_reminded_at=now)
+            segment.gate_reached_at = segment.last_reminded_at = now
+            from apps.workflow import segments
+
+            transaction.on_commit(lambda: segments.notify_waiting(self.pk, segment.pk))
+
     def _finish(self, status: str, now, end_reason: str = "") -> None:
         # A completed flow's untouched nodes were routed past (a branch not
         # taken, a node behind a 结束): SKIPPED. A REJECTED flow's stay PENDING —
@@ -607,6 +682,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         self.status = status
         self.completed_at = now
         self.end_reason = end_reason
+        # A flow that merged a cross-realm judgment ends it: COMPLETED = PASS, REJECTED = FAIL (第四十三批 rule 7).
+        # Same transaction; raises `segments.CrossConclusionRefused` when the bench cannot conclude yet.
+        from apps.workflow import segments
+
+        segments.on_workflow_finished(self, status, end_reason)
 
     def _return_to(self, target: "ApprovalNode", failed: "ApprovalNode", now) -> bool:
         """驳回到: re-open `target`..`failed` and make `target` current.
@@ -696,6 +776,8 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         Excluding the current node is the whole fix. The node we are standing
         on is not somewhere to advance *to*.
         """
+        if self.current_node_id is None and self._fallback_current() is None:
+            return False  # nothing left, or standing at a gate: only the realm's pick moves it on
         candidates = self.nodes.filter(status=NodeStatus.PENDING)
         if self.current_node_id:
             candidates = candidates.exclude(id=self.current_node_id)
@@ -715,7 +797,12 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         # `_make_current`, not `_enter`: advance moves the pointer and decides
         # nothing, so it does not run an automatic node either — pointing it at
         # 结束 must not complete a flow whose current step nobody decided.
-        self._make_current(next_node, timezone.now())
+        # A stop in a segment its realm has not picked is not pointed at either: the flow waits at the gate.
+        gate = self._unpicked_segment(next_node)
+        if gate is not None:
+            self._stop_at_gate(gate, timezone.now())
+        else:
+            self._make_current(next_node, timezone.now())
         self.save(update_fields=["current_node", "status"])
         return True
 
@@ -953,6 +1040,44 @@ class WorkflowTemplateVersion(models.Model):
         return f"{self.template_id} v{self.number} ({self.status})"
 
 
+class WorkflowSegment(models.Model):
+    """One realm's run of stations in a workflow (第四十三批). Order 1 is the workflow's own realm; a workflow
+    that merged a cross-realm judgment has one more per participating realm, built from that realm's default
+    flow and run after the one before it. Workflows built before segments have none and run as they always did.
+
+    `tenant` is the realm that runs (and picks, and adjusts) this segment — for order > 1 another tenant than
+    the workflow's. That is the explicit membership `segments.foreign_workflows` grants read access by.
+    `version` goes up on every pick / adjust / default pick; a write carrying an older one is refused
+    (`segment_changed`) so two people cannot silently overwrite each other's choice.
+    """
+    workflow = models.ForeignKey(ApprovalWorkflow, on_delete=models.CASCADE, related_name="segments")
+    order = models.PositiveSmallIntegerField()
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="workflow_segments")
+    civilization = models.CharField(max_length=30)
+    name = models.CharField(max_length=255, help_text="该域默认流程的名字")
+    state = models.CharField(max_length=20, choices=SegmentState.choices)
+    picked_by = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    picked_at = models.DateTimeField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    # When the flow first stood at this segment's gate unpicked; reminders count days from it.
+    gate_reached_at = models.DateTimeField(null=True, blank=True)
+    last_reminded_at = models.DateTimeField(null=True, blank=True)
+    # The convening hall's one 3-day overdue notice (`workflow_pick_overdue`).
+    overdue_notified_at = models.DateTimeField(null=True, blank=True)
+    default_node_count = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["workflow", "order"]
+        constraints = [
+            models.UniqueConstraint(fields=["workflow", "order"], name="uniq_wf_segment_order"),
+        ]
+
+    def __str__(self):
+        return f"{self.workflow_id} #{self.order} ({self.state})"
+
+
 class ApprovalNode(AuditUserFields, models.Model):
     """
     Individual approval node within a workflow.
@@ -1135,6 +1260,17 @@ class ApprovalNode(AuditUserFields, models.Model):
     # [{user_id, user_name, added_by_id, added_at, signed_at}]
     cosigners_json = models.JSONField(default=list, blank=True)
 
+    # ── 选站 / 加减站 (0026, 第四十三批) ─────────────────────────────────
+    # Null `segment` = a workflow built before segments. `is_required` = the segment's final review (or a
+    # 结束): no pick or adjust may skip it; only cancelling the cross-realm judgment mid-segment does.
+    segment = models.ForeignKey(
+        WorkflowSegment, on_delete=models.CASCADE, null=True, blank=True, related_name="nodes")
+    skip_kind = models.CharField(max_length=12, choices=SkipKind.choices, null=True, blank=True)
+    skipped_by = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    skip_reason = models.TextField(blank=True, default="")
+    is_required = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1241,6 +1377,12 @@ class ApprovalNode(AuditUserFields, models.Model):
 
         # 通知 / 结束 are run by the engine and decided by nobody.
         if self.kind in AUTOMATIC_KINDS:
+            return False
+        # A segment's stations are decided by its own realm's officers (第四十三批). Without this, a JUDGE of
+        # another realm who can read the workflow would satisfy a ROLE node of this one. A tenantless (global)
+        # account belongs to no realm and still has to match the node's actor / role below.
+        user_tenant_id = getattr(user, "tenant_id", None)
+        if self.segment_id is not None and user_tenant_id is not None and user_tenant_id != self.segment.tenant_id:
             return False
         # 加签: a co-signer who has not signed yet may act on the node.
         if self.cosigners_json:
