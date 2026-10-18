@@ -290,7 +290,9 @@ class TestSettledIsTerminal:
     """SETTLED is where souls whose cosmology has no next life stop.
 
     See SoulState.SETTLED and Soul.can_transition_to for why nothing — not
-    even LOST — leads out of it.
+    even LOST — leads out of it, except back to DISPOSED when a finished
+    sentence plan is reopened (2026-10-18 user decision; covered in
+    tests/test_workflow_segments_followup.py).
     """
 
     @pytest.fixture(autouse=True)
@@ -310,10 +312,10 @@ class TestSettledIsTerminal:
         assert soul.can_transition_to(SoulState.REINCARNATING)
         assert soul.can_transition_to(SoulState.LOST)
 
-    def test_nothing_leaves_settled(self):
+    def test_nothing_leaves_settled_but_the_plan_reopen(self):
         soul = self._soul(SoulState.SETTLED)
         for state in SoulState.values:
-            assert not soul.can_transition_to(state), state
+            assert soul.can_transition_to(state) is (state == SoulState.DISPOSED), state
 
     def test_settled_is_not_reachable_from_anywhere_but_disposed(self):
         for state in SoulState.values:
@@ -333,9 +335,10 @@ class TestSettledIsTerminal:
 
 @pytest.mark.django_db
 class TestCorrectSettlement:
-    """SETTLED has no forward transitions (TestSettledIsTerminal above), so
-    undoing it can never be transition_to — it's a separate ADMIN-only,
-    reason-required correction. See Soul.correct_settlement."""
+    """SETTLED's one transition belongs to reopening a finished sentence plan
+    (TestSettledIsTerminal above), so undoing a mistaken settlement is not
+    transition_to — it's a separate ADMIN-only, reason-required correction.
+    See Soul.correct_settlement."""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
@@ -412,12 +415,17 @@ class TestCorrectSettlement:
         soul.refresh_from_db()
         assert soul.current_state == SoulState.SETTLED
 
-    def test_correction_does_not_reopen_settled_via_transition_to(self):
+    def test_correction_does_not_reopen_settled_via_the_transition_endpoint(self):
         """The escape hatch is the dedicated method, not a loosened state
-        machine — can_transition_to(SETTLED, ...) must stay exactly as
-        locked down as TestSettledIsTerminal asserts."""
+        machine — SETTLED -> DISPOSED exists only for reopening a plan, and
+        `POST /souls/{id}/transition/` refuses it."""
         soul = self._settled_soul()
-        assert soul.can_transition_to(SoulState.DISPOSED) is False
+        resp = self.admin_client.post(
+            f"{BASE}/{soul.pk}/transition/", {"new_state": SoulState.DISPOSED, "reason": "x"}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.SETTLED
 
 
 @pytest.mark.django_db
