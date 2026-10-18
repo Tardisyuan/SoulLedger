@@ -151,9 +151,6 @@ def cross_of(workflow):
 def add_foreign(workflow, cross):
     """每个参与域一段,接在本域之后。顺序:`node_order`(入席时定的「各域顺序」),没有序号的(顾问)按入席先后排后面。
     同一个域入席两次只算一段;发起方自己的顾问席不另起一段。"""
-    from apps.souls.models import TENANT_CIVILIZATION
-    from apps.workflow.services import WorkflowService
-
     seats = (cross.participants.filter(is_deleted=False).select_related("participant_tenant")
              .order_by(F("node_order").asc(nulls_last=True), "joined_at", "pk"))
     seen = {workflow.tenant_id}
@@ -164,17 +161,39 @@ def add_foreign(workflow, cross):
             continue
         seen.add(realm.pk)
         order += 1
-        civilization = TENANT_CIVILIZATION.get(realm.code, realm.code)
-        template, _priority = WorkflowService._resolve_template(
-            civilization, case_type_for(civilization, workflow.case_type), realm)
-        segment = WorkflowSegment.objects.create(
-            workflow=workflow, order=order, tenant=realm, civilization=civilization, name=template["name"],
-            state=SegmentState.AWAITING_PICK, default_node_count=len(template["nodes"]),
-        )
-        offset = max(workflow.nodes.values_list("node_order", flat=True), default=0)
-        WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False,
-                                      order_offset=offset, tenant_id=realm.pk)
-        mark_required(segment)
+        _foreign_segment(workflow, realm, order)
+
+
+def _foreign_segment(workflow, realm, order):
+    """一个外域段:那个域的默认流程,节点接在流程现有各站之后,等那个域选站。"""
+    from apps.souls.models import TENANT_CIVILIZATION
+    from apps.workflow.services import WorkflowService
+
+    civilization = TENANT_CIVILIZATION.get(realm.code, realm.code)
+    template, _priority = WorkflowService._resolve_template(
+        civilization, case_type_for(civilization, workflow.case_type), realm)
+    segment = WorkflowSegment.objects.create(
+        workflow=workflow, order=order, tenant=realm, civilization=civilization, name=template["name"],
+        state=SegmentState.AWAITING_PICK, default_node_count=len(template["nodes"]),
+    )
+    offset = max(workflow.nodes.values_list("node_order", flat=True), default=0)
+    WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False,
+                                  order_offset=offset, tenant_id=realm.pk)
+    mark_required(segment)
+    return segment
+
+
+def append_foreign(workflow, realm):
+    """流程进行中新入席的域(2026-10-18 用户决定):接在最后一段之后(序号 = 最大 + 1),节点序号也排在所有站之后,
+    所以前一段的最后一站通过时 `_pass_successor` 取到的「第一个 PENDING」就是这一段的第一站,`_enter` 停在它门口
+    (`_unpicked_segment`),不会越过它结束流程。调用方已锁流程行(`lock_workflow_of`),与流程走完互斥。
+    该域已有一段(同一域入席两次)或就是本域:不另起一段,返回 None。选站待办提交之后发给这一个域。"""
+    if realm.pk == workflow.tenant_id or workflow.segments.filter(tenant=realm).exists():
+        return None
+    order = max(workflow.segments.values_list("order", flat=True), default=1) + 1
+    segment = _foreign_segment(workflow, realm, order)
+    transaction.on_commit(lambda: notify_segment(workflow.pk, segment.pk))
+    return segment
 
 
 # ── 谁 ──────────────────────────────────────────────────────────────────
@@ -511,7 +530,8 @@ def on_workflow_finished(workflow, status, end_reason=""):
     try:
         if cross.status == JudgmentStatus.PROPOSED:
             CrossTenantJudgmentService.activate(cross)
-        CrossTenantJudgmentService.conclude(cross, "PASS" if passed else "FAIL", None, check=passed)
+        CrossTenantJudgmentService.conclude(cross, "PASS" if passed else "FAIL", None, check=passed,
+                                            by_workflow=True)
     except ValueError as exc:
         raise CrossConclusionRefusedError(str(exc)) from exc
 

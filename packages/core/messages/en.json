@@ -2696,6 +2696,7 @@
     "ended": "Ended · {{conclusion}} · {{date}} · {{name}}",
     "cancelled": "Cancelled · Reason: {{reason}}",
     "end_error": "Couldn't end it. Try again.",
+    "end_workflow_running": "The approval flow is still running; the judgment ends with it. To stop early, cancel it.",
     "cancel_error": "Couldn't cancel it. Try again.",
     "order": {
       "title": "Realm order",
