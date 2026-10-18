@@ -324,6 +324,74 @@ class WaitingOnCosignerSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class WorkflowSegmentSerializer(serializers.Serializer):
+    """One realm's segment of a workflow (第四十三批), as `segments.segment_row` builds it. `state` is derived:
+    AWAITING_PICK / PICKED (not started) / RUNNING / DONE / SKIPPED. `go` / `total` = stations to run / all.
+    `picked_by_name` is null for another realm's segment (外域人员信息不外露). `can_*` are for the requester."""
+
+    order = serializers.IntegerField()
+    is_local = serializers.BooleanField()
+    tenant_code = serializers.CharField()
+    realm_name = serializers.CharField()
+    civilization = serializers.CharField()
+    name = serializers.CharField()
+    state = serializers.CharField()
+    go = serializers.IntegerField()
+    total = serializers.IntegerField()
+    default_node_count = serializers.IntegerField()
+    version = serializers.IntegerField()
+    picked_at = serializers.DateTimeField(allow_null=True)
+    picked_by_name = serializers.CharField(allow_null=True)
+    at_gate = serializers.BooleanField(help_text="流程正停在这一段门口等它选站。")
+    gate_days = serializers.IntegerField(allow_null=True, help_text="在门口第几天(到达那天是第 1 天)。")
+    no_picker = serializers.BooleanField(help_text="该域没有能选站的判官(待办已转给殿管理员)。")
+    current_order_in_segment = serializers.IntegerField(allow_null=True)
+    can_pick = serializers.BooleanField()
+    can_use_default = serializers.BooleanField()
+    can_remind = serializers.BooleanField()
+
+
+class WorkflowHistoryEntrySerializer(serializers.Serializer):
+    """「选站」「加减站」记录(审计行)。`actor` 只对同一个域的人给。"""
+
+    kind = serializers.CharField(help_text="picked / adjusted / default")
+    segment = serializers.IntegerField(allow_null=True)
+    realm = serializers.CharField(help_text="该段所属域的租户代码")
+    actor = serializers.CharField(allow_null=True)
+    at = serializers.DateTimeField()
+    restored = serializers.ListField(child=serializers.CharField())
+    skipped = serializers.ListField(child=serializers.CharField())
+    reason = serializers.CharField(allow_blank=True)
+
+
+class CrossFlowAtSerializer(serializers.Serializer):
+    segment = serializers.IntegerField()
+    realm_name = serializers.CharField()
+    node_name = serializers.CharField()
+    hall = serializers.CharField(allow_blank=True)
+
+
+class CrossFlowGateSerializer(serializers.Serializer):
+    segment = serializers.IntegerField()
+    realm_name = serializers.CharField()
+    days = serializers.IntegerField(allow_null=True)
+
+
+class CrossJudgmentWorkflowSummarySerializer(serializers.Serializer):
+    """跨域审判页顶部那一条(W-4),`segments.cross_summary` 构造。`fixed` = 已选站的段里要走的站数,
+    `done` = 已通过 / 经过 / 越级的站数。"""
+
+    id = serializers.CharField()
+    number = serializers.CharField()
+    status = serializers.CharField()
+    at = CrossFlowAtSerializer(allow_null=True)
+    at_gate = CrossFlowGateSerializer(allow_null=True)
+    fixed = serializers.IntegerField()
+    done = serializers.IntegerField()
+    pending_realms = serializers.ListField(child=serializers.CharField())
+    segments = WorkflowSegmentSerializer(many=True)
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -382,6 +450,37 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     # still owed when that holds back the requester's approval.
     cosigners = serializers.SerializerMethodField()
     waiting_on_cosigner = serializers.SerializerMethodField()
+    # 第四十三批: which realm's segment (its order, 1 = this realm) and the station's number inside it.
+    segment_order = serializers.IntegerField(source="segment.order", read_only=True, allow_null=True, default=None)
+    order_in_segment = serializers.SerializerMethodField()
+
+    def get_order_in_segment(self, node) -> int | None:
+        if node.segment_id is None:
+            return None
+        cache = self.context.setdefault("_order_in_segment", {})
+        if node.segment_id not in cache:
+            ids = ApprovalNode.objects.filter(segment_id=node.segment_id).order_by("node_order", "pk").values_list(
+                "pk", flat=True)
+            cache[node.segment_id] = {pk: i for i, pk in enumerate(ids, start=1)}
+        return cache[node.segment_id].get(node.pk)
+
+    def to_representation(self, node):
+        """Another realm's stations show the realm, not its people (第四十三批, Design W-5c):
+        the approver, signers and co-signers of a node in a segment the reader's realm does not run are blanked."""
+        data = super().to_representation(node)
+        if node.segment_id is None:
+            return data
+        from apps.workflow.segments import viewer_tenant_id
+
+        viewer = viewer_tenant_id(self.context.get("request"), node.workflow)
+        if viewer is None or viewer == node.segment.tenant_id:
+            return data
+        data.update(approver=None, approver_username=None, approver_display_name=None, cosigners=[],
+                    waiting_on_cosigner=None)
+        data["signatures_json"] = [{**sig, "user_id": None, "user_name": None} for sig in data.get("signatures_json") or []]
+        data["decision_history"] = [{**entry, "approver_id": None, "approver_name": None}
+                                    if "approver_name" in entry else entry for entry in data.get("decision_history") or []]
+        return data
 
     @extend_schema_field(CosignerRowSerializer(many=True))
     def get_cosigners(self, node):
@@ -436,6 +535,11 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "threshold",
             "signatures_json",
             "branches_json",
+            "segment_order",
+            "order_in_segment",
+            "skip_kind",
+            "skip_reason",
+            "is_required",
         ]
         read_only_fields = [
             "id",
@@ -463,6 +567,10 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "threshold",
             "signatures_json",
             "branches_json",
+            # 选站 / 加减站 write these, through `apps/workflow/segments.py` only.
+            "skip_kind",
+            "skip_reason",
+            "is_required",
         ]
 
     def validate_workflow(self, value):
@@ -568,6 +676,48 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     validate_judgment = tenant_scoped("judgment")
     validate_original_workflow = tenant_scoped("original_workflow")
 
+    # 第四十三批: one row per realm's segment (empty for a workflow built before segments); the segment the flow
+    # stands at the gate of, waiting for that realm to pick; the 选站 / 加减站 records; whether the requester may
+    # change stations now; and the cross-realm judgment this workflow merged, if any.
+    segments = serializers.SerializerMethodField()
+    awaiting_segment = serializers.SerializerMethodField()
+    history = serializers.SerializerMethodField()
+    can_adjust = serializers.SerializerMethodField()
+    cross_judgment_id = serializers.SerializerMethodField()
+
+    @extend_schema_field(WorkflowSegmentSerializer(many=True))
+    def get_segments(self, obj):
+        from apps.workflow import segments
+
+        return segments.segment_rows(obj, self.context.get("request"))
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_awaiting_segment(self, obj):
+        from apps.workflow import segments
+
+        gate = next((s for s in obj.segments.all() if segments.at_gate(s, obj)), None)
+        return gate.order if gate else None
+
+    @extend_schema_field(WorkflowHistoryEntrySerializer(many=True))
+    def get_history(self, obj):
+        from apps.workflow import segments
+
+        return segments.history(obj, self.context.get("request"))
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_adjust(self, obj):
+        from apps.workflow import segments
+
+        request = self.context.get("request")
+        return request is not None and segments.can_adjust_any(obj, request)
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_cross_judgment_id(self, obj):
+        from apps.workflow import segments
+
+        cross = segments.cross_of(obj) if obj.segments.filter(order__gt=1).exists() else None
+        return str(cross.pk) if cross else None
+
     class Meta:
         model = ApprovalWorkflow
         fields = [
@@ -597,6 +747,11 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "return_count",
             "end_reason",
             "tenant",
+            "segments",
+            "awaiting_segment",
+            "history",
+            "can_adjust",
+            "cross_judgment_id",
         ]
         read_only_fields = [
             "id",
@@ -761,6 +916,10 @@ class WorkflowStartSerializer(serializers.Serializer):
     priority = serializers.IntegerField(required=False, min_value=0, max_value=2)
     reason = serializers.CharField(max_length=1000)  # trimmed by CharField; blank is refused
     judgment = serializers.UUIDField(required=False)
+    # 第四十三批 W-1: the template's station orders (`node_order`) the judge unticked. The final review is
+    # refused (400 `final_required`); an order the template does not have, 400 `unknown_node`.
+    skip_node_orders = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False,
+                                             default=list, max_length=100)
 
     def validate(self, attrs):
         if bool(attrs.get("case_type")) == bool(attrs.get("template")):
@@ -768,6 +927,35 @@ class WorkflowStartSerializer(serializers.Serializer):
                 {"case_type": "Give exactly one of case_type or template."}, code="case_type_or_template"
             )
         return attrs
+
+
+class WorkflowPickSerializer(serializers.Serializer):
+    """`POST /workflows/{id}/segments/{order}/pick/`: the stations of that segment to skip (the rest run).
+    `version` is the segment's as the picker loaded it."""
+
+    skip_node_ids = serializers.ListField(child=serializers.UUIDField(), default=list, max_length=100)
+    version = serializers.IntegerField(min_value=1)
+    reason = serializers.CharField(max_length=1000, required=False, allow_blank=True, default="")
+
+
+class WorkflowAdjustSerializer(serializers.Serializer):
+    """`POST /workflows/{id}/adjust/` (加减站): stations of ONE segment to restore / to skip. Reason required."""
+
+    restore_node_ids = serializers.ListField(child=serializers.UUIDField(), default=list, max_length=100)
+    skip_node_ids = serializers.ListField(child=serializers.UUIDField(), default=list, max_length=100)
+    reason = serializers.CharField(max_length=1000)
+    version = serializers.IntegerField(min_value=1)
+
+
+class WorkflowReasonSerializer(serializers.Serializer):
+    """`POST /workflows/{id}/segments/{order}/use-default/`."""
+
+    reason = serializers.CharField(max_length=1000)
+
+
+class WorkflowRemindSerializer(serializers.Serializer):
+    order = serializers.IntegerField()
+    reminded_at = serializers.DateTimeField()
 
 
 class WorkflowCaseTypeSerializer(serializers.Serializer):
