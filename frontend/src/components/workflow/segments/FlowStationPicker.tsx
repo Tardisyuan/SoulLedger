@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Button } from "@/src/components/ui/Button";
@@ -24,7 +25,7 @@ export function FlowStationPicker({
   skipped: ReadonlySet<string>;
   onChange: (next: Set<string>) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const preview = useQuery({
     queryKey: ["workflows", "flow-preview", params],
     queryFn: async () => (await workflowApi.flowPreview(params)).data,
@@ -43,9 +44,10 @@ export function FlowStationPicker({
   const rows: PickRow[] = preview.data.stations.map((s, i) => ({
     key: String(s.node_order),
     label: `${i + 1} · ${s.node_name}`,
-    hall: s.court_code,
+    hall: courtLabel(t, s.court_code, locale),
     who: s.approver ?? (s.approver_role ? <DomainEnum namespace="users.roles" value={s.approver_role} /> : null),
     required: s.is_required,
+    jumpSources: s.jump_target_of,
   }));
   return (
     <StationPicker flowName={preview.data.name} rows={rows} skipped={skipped} onChange={onChange} foreign={preview.data.foreign} />

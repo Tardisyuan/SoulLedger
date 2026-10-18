@@ -7,6 +7,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PickStationsSheet } from "./PickStationsSheet";
 import { AdjustStationsSheet } from "./AdjustStationsSheet";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { adjustableSegment, circled, segmentNodes, segmentRealm, stationNo } from "@soulledger/core/domain/workflowSegments";
 
 /** 两种跳过同一个符号 ⤼,文字区分(Design W-3a)。 */
@@ -39,7 +40,7 @@ function nodeState(node: ApprovalNode, isCurrent: boolean, t: (key: string, p?: 
  * 本域能选站的段给「选站」/「改选」。
  */
 export function WorkflowSegmentList({ workflow, myTenant }: { workflow: ApprovalWorkflow; myTenant: string | null }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [adjusting, setAdjusting] = useState(false);
   const [picking, setPicking] = useState<number | null>(null);
   const segments = [...(workflow.segments ?? [])].sort((a, b) => a.order - b.order);
@@ -121,7 +122,7 @@ export function WorkflowSegmentList({ workflow, myTenant }: { workflow: Approval
                         {node.court_code ? (
                           <span className="text-xs font-normal">
                             {" · "}
-                            <DomainText value={node.court_code} />
+                            <DomainText value={courtLabel(t, node.court_code, locale)} />
                           </span>
                         ) : null}
                         {state.skipped && node.skip_reason ? (

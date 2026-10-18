@@ -581,3 +581,89 @@ def test_a_manual_start_needs_a_case_type_or_template(w):
     res = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk)})
     assert res.status_code == 400
     assert res.json()["code"] == "case_type_required"
+
+
+# ── 驳回时会转到的站不能跳过(2026-10-19)───────────────────────────────────
+#
+# 初审驳回转到合议(`on_fail`,同希腊的分区审判 → Minos)。只要初审还要走,合议就锁着,像终审一样;
+# 初审一并跳过时合议才能跳过。加减站加回初审而合议还跳过着:拒(不顺手加回合议)。
+
+JUMPY = [("初审", "TRIAL", "n3"), ("复核", "EVALUATION", None), ("合议", "EVALUATION", None), ("终审", "FINAL", None)]
+
+
+def _jumpy(tenant):
+    WorkflowTemplate.objects.filter(tenant=tenant).update(nodes_json=[
+        {"id": f"n{i}", "node_name": name, "node_type": kind, "court_code": tenant.code, "approver_type": "ROLE",
+         "approver_role": "JUDGE", "node_order": i, **({"on_fail": jump} if jump else {})}
+        for i, (name, kind, jump) in enumerate(JUMPY, start=1)
+    ])
+
+
+def _start(w, skip_orders):
+    soul, _case = plan.open_case(w.cn)
+    return soul, officer_client(w.cn_mod).post(f"{WF}start/", {
+        "soul": str(soul.pk), "case_type": "ROUTINE", "reason": "复核", "skip_node_orders": skip_orders}, format="json")
+
+
+def test_a_jump_target_cannot_be_skipped_at_generation_while_its_source_runs(w):
+    _jumpy(w.cn)
+    soul, response = _start(w, [3])
+    assert response.status_code == 400 and response.data["code"] == "jump_target_required", response.data
+    assert [(t["node_order"], t["node_name"], t["sources"]) for t in response.data["jump_targets"]] == [
+        (3, "合议", ["初审"])]
+    assert not ApprovalWorkflow.objects.filter(soul=soul).exists()
+
+
+def test_skipping_the_source_with_its_jump_target_is_allowed(w):
+    _jumpy(w.cn)
+    _soul, response = _start(w, [1, 3])
+    assert response.status_code == 201, response.data
+    nodes = _nodes(ApprovalWorkflow.objects.get(pk=response.data["id"]), 1)
+    assert [n.status for n in nodes] == [NodeStatus.SKIPPED, NodeStatus.PENDING, NodeStatus.SKIPPED, NodeStatus.PENDING]
+
+
+def test_a_foreign_pick_cannot_skip_a_jump_target_while_its_source_runs(w):
+    _jumpy(w.eg)
+    _soul, _case, _cj, wf = merged(w, [w.eg])
+    first, _second, third, _final = _nodes(wf, 2)
+    refused = _pick(w.eg_judge, wf, 2, skip=[third])
+    assert refused.status_code == 400 and refused.data["code"] == "jump_target_required", refused.data
+    assert refused.data["jump_targets"][0]["sources"] == ["初审"]
+    assert _seg(wf, 2).state == SegmentState.AWAITING_PICK
+    third.refresh_from_db()
+    assert third.status == NodeStatus.PENDING
+
+    assert _pick(w.eg_judge, wf, 2, skip=[first, third]).status_code == 200
+    third.refresh_from_db()
+    assert third.status == NodeStatus.SKIPPED
+
+
+def test_adjust_refuses_to_skip_a_jump_target_or_restore_its_source_alone(w):
+    _jumpy(w.eg)
+    _soul, _case, _cj, wf = merged(w, [w.eg])
+    first, _second, third, _final = _nodes(wf, 2)
+    assert _pick(w.eg_judge, wf, 2, skip=[first, third]).status_code == 200
+
+    alone = _adjust(w.eg_mod, wf, restore=[first])
+    assert alone.status_code == 400 and alone.data["code"] == "jump_target_required", alone.data
+    first.refresh_from_db()
+    assert first.status == NodeStatus.SKIPPED  # nothing written
+
+    assert _adjust(w.eg_mod, wf, restore=[first, third]).status_code == 200
+    target = _adjust(w.eg_mod, wf, skip=[third])
+    assert target.status_code == 400 and target.data["code"] == "jump_target_required", target.data
+    assert _adjust(w.eg_mod, wf, skip=[first, third]).status_code == 200
+
+
+def test_the_preview_and_the_detail_name_the_stations_that_jump_to_a_target(w):
+    _jumpy(w.cn)
+    soul, _case = plan.open_case(w.cn)
+    preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
+    assert [s["jump_target_of"] for s in preview["stations"]] == [[], [], [{"key": "1", "node_name": "初审"}], []]
+
+    _soul, response = _start(w, [])
+    wf = ApprovalWorkflow.objects.get(pk=response.data["id"])
+    first = _nodes(wf, 1)[0]
+    detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
+    rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
+    assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审"}], 4: []}
