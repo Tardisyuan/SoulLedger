@@ -1385,7 +1385,11 @@
       "repick": "Setep Wehem",
       "stale_title": "Aat Pen Khemen Seth",
       "stale_body": "{{by}} · {{time}}: Khemen Aat Pen. Maa Setep Emu, Er Khet Smen.",
-      "stale_view": "Maa Setep Emu"
+      "stale_view": "Maa Setep Emu",
+      "next": "Nemet Ky",
+      "back": "Er Hat",
+      "cross_forced": "Wedja Ta Ky Em Iri: Em Khetem, Iri Wat Hesy. Ta Ky: Mi Hesb Em Khet.",
+      "load_error": "Nen Ini Sekhet. Wehem Iri."
     },
     "pick_group": {
       "title": "Nen Setep Djer · Sekhet",
@@ -1393,13 +1397,16 @@
       "row_title": "{{soul}} · Ta Pen Sekhet {{n}}",
       "row_meta": "{{realm}} · {{hall}} Per Tepy Iri · Ta Pen Hesb {{order}}",
       "at_gate": "Wat Hesy Em Smen · Hru {{n}}",
-      "ahead": "Sekhet {{n}} Tepy"
+      "ahead": "Sekhet {{n}} Tepy",
+      "action": "Setep Sekhet",
+      "hall": "{{court}} {{realm}}"
     },
     "segment": {
       "local": "Ta Pen",
       "count": "Sekhet {{go}} / {{total}}",
       "not_picked": "Nen Setep Sekhet Djer",
-      "done": "Shem Seth"
+      "done": "Shem Seth",
+      "error": "Nen Sau. Wehem Iri."
     },
     "node_state": {
       "skipped_at_pick": "Iri Tepy · Setep Sekhet",
@@ -1409,7 +1416,11 @@
     "legend": "✓ Sesen Seth · ✕ Khesef Seth · ◇ Em Tepy · · Nen Wedja Djer · ⤼ Iri Tepy · ◌ Em Smen · Setep Sekhet",
     "history": {
       "picked": "{{actor}} · {{realm}}: Setep Sekhet. Iri Tepy: {{nodes}}",
-      "adjusted": "{{actor}}: Redi Wehem {{added}} · Iri Tepy {{skipped}}. Khet: {{reason}}"
+      "adjusted": "{{actor}}: Redi Wehem {{added}} · Iri Tepy {{skipped}}. Khet: {{reason}}",
+      "picked_all": "{{actor}} · {{realm}}: Setep Sekhet. Sekhet Neb: Shem",
+      "adjusted_added": "{{actor}}: Redi Wehem {{added}}. Khet: {{reason}}",
+      "adjusted_skipped": "{{actor}}: Iri Tepy {{skipped}}. Khet: {{reason}}",
+      "default": "{{actor}}: Shem Mi Wat Hesy Tepy En {{realm}}. Khet: {{reason}}"
     },
     "adjust": {
       "open": "Redi Wehem · Iri Tepy",
@@ -1435,7 +1446,10 @@
       "use_default_confirm": "Setep Sekhet Neb En {{realm}}, Shem. Khet Em Tepy, Sesh Em Medew Maa; Sedjem {{realm}}.",
       "no_picker_title": "{{realm}}: Nen Sab Wedja Er Setep Sekhet",
       "foreign_title": "Wat Hesy Em Smen · Ta Pen Setep Sekhet",
-      "foreign_body": "{{soul}} · {{realm}}: Shem Seth. Setep Sekhet Ta Pen, Er Khet Shem."
+      "foreign_body": "{{soul}} · {{realm}}: Shem Seth. Setep Sekhet Ta Pen, Er Khet Shem.",
+      "stopped_here": "Em Smen",
+      "no_picker_body": "Setep Sekhet: Hab Er Sab Hery Ta Ky. Nen Sab Hery: Shem Mi Wat Hesy Tepy.",
+      "remind_too_soon": "Sedjem Sab Seth Em Unut Wa. Wehem Iri Er Khet."
     }
   },
   "dashboard": {
@@ -1479,7 +1493,8 @@
       "reports": "Nen Wedja Djer · Sedjem",
       "sentence_requests": "Dbh Wetep",
       "unassigned_letters": "Sesh · Nen Redi Djer",
-      "pick_nodes": "Nen Setep Djer · Wat Hesy Ta Ky"
+      "pick_nodes": "Nen Setep Djer · Wat Hesy Ta Ky",
+      "go_pick": "Setep Sekhet →"
     },
     "civ_share": "Redu",
     "civ_empty": "Nen Sesh Djer · Sesh",
@@ -2713,7 +2728,8 @@
     },
     "cancel_flow_body": "Aat Ta Ky Nen Shem Djer ({{realms}}): Iri Tepy Neb. Wat Hesy Khetem Er Khet Ta Pen. Shem Seth: Nen Khemen.",
     "cancel_flow_body_in_realm": "Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Emu. Shem Seth: Nen Khemen.",
-    "cancel_flow_note": "Setep Sekhet Ta Ky: Sehen Neb · Sedjem Sab."
+    "cancel_flow_note": "Setep Sekhet Ta Ky: Sehen Neb · Sedjem Sab.",
+    "workflow_running": "Wat Hesy Em Iri: Shem Seth Er Khesef Seth — Wedja Ta Ky Khetem Djes-Ef. Khetem Er Tepy: Sehen Wedja Ta Ky."
   },
   "users": {
     "title": "Iri Netjeru",
@@ -3799,7 +3815,8 @@
       "soul_accounts_prune_data_exports": "Khetem Redi Per Djama Mut",
       "authentication_prune_expired_push_registrations": "Khetem Sesh Sedjem Em Aq Mut",
       "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…)",
-      "officer_app_check_receipts": "Sedjem Sab: Ini Sesh Hab"
+      "officer_app_check_receipts": "Sedjem Sab: Ini Sesh Hab",
+      "workflow_pick_reminders_for_tenant": "Sedjem Sab Ta Ky: Setep Sekhet"
     },
     "status": {
       "PENDING": "Em Smen",
