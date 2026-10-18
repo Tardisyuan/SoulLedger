@@ -239,6 +239,14 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 - **推只改门禁脚本的提交,现在会跑后端**:这些脚本唯一的测试是
   `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`,它读脚本而不 import。
   此前这样的推送什么都不跑。
+- **两条「测套件本身」的元测试按改动选择(2026-10-19 起)**:`test_collection_scope.py`(子进程里把整套
+  再收集一遍,而它是 `*` 读者,此前**任何推送**都跑)与 `test_audit_assertions_are_not_vacuous.py`
+  (嵌套 pytest + 新迁移的库)。只在改到 `pytest.ini`、任一 conftest、`requirements.lock`、`backend/config/`、
+  `apps/audit/`、`apps/tenants/`、`lock_join_guard.py`、某个 `apps/*/tests.py`、这两个文件本身,
+  不认识的根文件,或 `--full` / `GATES_FULL=1` / 推 main 时才跑;其余推送用 `--ignore` 去掉,输出里写明。
+  规则是 `run-gates.sh` 的 `META_PATH_RE`,`classify-meta` 一行;
+  `TestSuiteAboutTheSuiteRunsOnlyWhenRelevant` 守着,四种变异(规则漏 pytest.ini、恒为 1、丢 `--ignore`、
+  读者清单不过滤)各自变红。它们守的东西多了一类,就往 `META_PATH_RE` 里补。
 - **读别区文件的测试,别区改了也跑(2026-10-02 起)**。此前区域只按改动文件所在目录决定:
   A1 工作流改版只改了 `frontend/`,弄红了 `backend/tests/test_workflow_preset_case_types.py`
   (它解析 `WorkflowEditor.tsx`),所有 frontend-only 推送都绿着过去,直到后来一个分支碰巧改了 `backend/`。
@@ -344,6 +352,14 @@ cd frontend && npm run lint
 # 本地提交被挡、CI 却是绿的。真踩过一次:一条 `no-unused-vars` warning 让
 # pre-commit 拒了提交,而在那之前刚跑的 `npm run lint` 退出码是 0。
 # `packages/core` 的 lint 脚本同时收紧。收紧当天两个 workspace 的 warning 数都是 0。
+# 2026-10-19 起四个 workspace 的 lint 都带 `--cache`(缓存在 `node_modules/.cache/`),
+# core / mobile / 官员端的 typecheck 带 `--incremental`。前端的 eslint 缓存目录名带
+# `eslint.design-guard-baseline.json` 的哈希:配置在加载时读这份文件,eslint 自己的缓存键看不见它。
+# 前端 eslint 不再设 `parserOptions.project` —— 没有任何规则用类型信息,它只是又建了一遍 TS 程序
+# (实测冷启动 10 s → 6 s,有缓存 1 s)。将来加了要类型信息的规则,eslint 会直接报错,不会静默失效。
+# jest 三份配置的 worker 上限是核数一半(`maxWorkers: JEST_WORKERS || '50%'`)加
+# `workerIdleMemoryLimit: '1GB'`:默认的「核数 − 1」在这台 8 核 16 GB 的机器上开 7 个 jsdom worker,
+# 吃满 CPU 并把内存压进交换区。临时要全速:`JEST_WORKERS=7`,或命令行 `-w`。
 cd frontend && npm run build
 # `test:coverage`, NOT `npm test`. `npm test` is bare `jest`, and
 # `jest.config.js` sets `coverageThreshold` without `collectCoverage` — so the
@@ -387,7 +403,13 @@ npm run --workspace mobile typecheck
 npm run --workspace mobile lint
 npm run --workspace mobile test      # jest + jest-expo
 
-# E2E —— **三个 project,不是一个,而且要先 build**。
+# E2E —— **先 build;本地按改动挑 project,合进 main 之前三个全跑**(2026-10-19 用户决定):
+#   日常改动          只跑 chromium
+#   改了布局或样式     chromium + mobile-chrome(393px 窄屏,下面那条真缺陷只有它抓得到)
+#   合进 main 之前     chromium + firefox + mobile-chrome,三个全跑
+# 本地默认 2 个 worker(`playwright.config.ts`,`PW_WORKERS=4` 临时调高;CI 仍是 1):
+# 默认的「核数一半」是 4 套浏览器加 `next start`,会把这台机器吃满。CI 的 matrix 仍是三个都跑。
+# 下面是这条规矩之前的理由 —— 三个 project 为什么都存在:
 # `playwright.config.ts:55-59` 定义 chromium / firefox / mobile-chrome,而
 # `.github/workflows/ci.yml` 的 matrix 三个都跑。这份文件此前只给了 chromium,
 # 于是「跑过 E2E」在本地和在 CI 是两件不同的事 —— 393px 下工作流工具栏的按钮
@@ -431,10 +453,15 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
   .venv/bin/python -m pytest -q --no-cov --create-db -n 4 -m "not migration"
 # 2026-10-09 起(用户决定):**4 进程并行，迁移往返只在改了迁移时跑。**
-# 这条慢在和 115 的网络来回，不在本机 CPU:串行全量 53 分钟(6384 passed),
+# 串行全量 53 分钟(6384 passed),
 # 卡在 76% 附近的是迁移往返与 transaction=True 的并发测试。
 # `-n 4 -m "not migration"` 实测 13.5 分钟(`d51b7d2e`:6360 passed / 7 skipped / exit 0,
 # 跑完 115 残留 NONE)。每个 worker 在 115 上建自己的库(`test_soulledger_gw0_<后缀>`)。
+# **2026-10-19 起这些库从一个模板克隆**(根 `conftest.py` + `backend/config/testdb.py`):xdist 主进程先建
+# `test_soulledger_tpl_<后缀>` 并完整迁移一次,worker 用 `CREATE DATABASE … TEMPLATE` 建自己的库,迁移无事可做;
+# 会话结束(或建模板失败时当场)`DROP DATABASE … WITH (FORCE)`。此前四个 worker 各自重放约 389 个迁移。
+# 只对 PostgreSQL 且带 `-n` 时生效;SQLite、`-n 0`、`--reuse-db`、`--nomigrations` 走原路径。
+# 查残留时 `like 'test_soulledger%'` 同样匹配 `_tpl_`。
 # 改到迁移、`tests/migration_roundtrip.py`、conftest 或 `pytest.ini` 时，去掉 `-m "not migration"`
 # 跑全量(规则同 pre-push 的 SQLite 那条)。
 # 多库守卫(G3/G7,opt-in,2026-10-09):第二个别名 `tenant_shadow` + 测试路由,只在这个 settings 下存在,
