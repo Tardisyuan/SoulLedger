@@ -75,5 +75,9 @@ export function courtLabel(
 ): string {
   const slug = courtSlug(court);
   if (!slug) return isCivilizationOption(court) ? t(`souls.civilizations.${court}`) : court ?? "";
-  return locale === "egy" ? COURTS[slug].en : t(`workflow.court.${slug}`);
+  if (locale === "egy") return COURTS[slug].en;
+  // A bundle without the key (or a test double that echoes keys) shows the stored text, never the key.
+  const key = `workflow.court.${slug}`;
+  const label = t(key);
+  return label && label !== key ? label : court ?? "";
 }
