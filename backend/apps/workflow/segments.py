@@ -134,6 +134,16 @@ def _unskippable(keys, fixed, sources):
     return locked
 
 
+def station_count(raw_nodes):
+    """「默认流程 N 站」的 N:模板里的人工节点。自动节点(结束、通知 —— 按出身地域分流那一步)不是一站(第四十五批)。"""
+    return sum(1 for n in raw_nodes if (n.get("kind") or NodeKind.APPROVAL) not in AUTOMATIC_KINDS)
+
+
+def jump_via(target_key, on_fail_key):
+    """来源怎样转到目标(第四十五批 W-6):`on_fail` 是驳回转来,其余是条件分支。客户端按它写两种理由。"""
+    return "on_fail" if on_fail_key is not None and str(on_fail_key) == str(target_key) else "branch"
+
+
 def nothing_to_pick(nodes):
     """这一段没有一站能跳过(Design 第四十五批):每一站都是终审、自动节点,或锁着的驳回 / 分支目标。希腊常规流程就是这样。
     `nodes` 是这一段的 ApprovalNode(`mark_required` 之后)。"""
@@ -175,7 +185,7 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
     segment = WorkflowSegment.objects.create(
         workflow=workflow, order=1, tenant_id=workflow.tenant_id, civilization=civilization,
         name=template["name"], state=SegmentState.LOCAL_PICKED, picked_by=user, picked_at=now,
-        default_node_count=len(template["nodes"]),
+        default_node_count=station_count(template["nodes"]),
     )
     first = WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False)
     mark_required(segment)
@@ -251,16 +261,7 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
     required = (finals or manual or [None])[-1]
     # 驳回时转到哪一站(`on_fail`)与条件分支的目标(模板里按模板内 id):目标那一行带上来源,客户端据此锁住、
     # 来源都勾掉时解锁。来源是自动节点(按来处分流)时它不在列表里、勾不掉,目标就一直锁着 —— 与 `jump_sources` 同。
-    by_id = {str(n["id"]): n for n in nodes if n.get("id")}
-    sources = {}
-    for node in nodes:
-        ids = [node.get("on_fail"), *(b.get("target") for b in node.get("branches") or [] if isinstance(b, dict))]
-        seen = []
-        for target in (by_id.get(str(i)) for i in ids if i):
-            if target is not None and target is not node and not any(t is target for t in seen):
-                seen.append(target)
-                sources.setdefault(target["node_order"], []).append(
-                    {"key": str(node["node_order"]), "node_name": node["node_name"]})
+    sources = _template_sources(nodes)
     stations = []
     for node in nodes:
         # 自动节点(结束、通知)不是一站:不能选,也不列。
@@ -280,21 +281,51 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
             "is_required": node is required,
             "jump_target_of": sources.get(node["node_order"], []),
         })
-    # 没有一站能跳过(第四十五批):客户端跳过选站这一步。与 `nothing_to_pick` 同一条规则,按模板算。
-    fixed = {n["node_order"] for n in nodes if (n.get("kind") or NodeKind.APPROVAL) in AUTOMATIC_KINDS}
-    if required is not None:
-        fixed.add(required["node_order"])
-    locked = _unskippable([n["node_order"] for n in nodes], fixed,
-                          {order: [int(s["key"]) for s in srcs] for order, srcs in sources.items()})
     foreign = []
     cross = open_cross_for(judgment)
     if cross is not None and tenant is not None:
         for order, (realm, _civilization, realm_template) in enumerate(
                 foreign_realms(cross, tenant.pk, case_type), start=2):
             foreign.append({"order": order, "tenant_code": realm.code, "realm_name": _realm(realm),
-                            "default_node_count": len(realm_template["nodes"])})
+                            "default_node_count": station_count(realm_template["nodes"]),
+                            # 那一段建好就是 PICKED(`_foreign_segment`):客户端写「全部必须走」,不写「由该域判官选站」。
+                            "nothing_to_pick": _template_nothing_to_pick(realm_template)})
     return {"name": template["name"], "stations": stations, "foreign": foreign,
-            "nothing_to_pick": all(s["node_order"] in locked for s in stations)}
+            "nothing_to_pick": _template_nothing_to_pick(template)}
+
+
+def _template_sources(nodes):
+    """{target node_order: [{key, node_name, via}]}:模板(已 `normalize_template_node`)里驳回 / 条件分支的来源,按模板内 id。"""
+    by_id = {str(n["id"]): n for n in nodes if n.get("id")}
+    sources = {}
+    for node in nodes:
+        ids = [node.get("on_fail"), *(b.get("target") for b in node.get("branches") or [] if isinstance(b, dict))]
+        seen = []
+        for target_id in (i for i in ids if i):
+            target = by_id.get(str(target_id))
+            if target is not None and target is not node and not any(t is target for t in seen):
+                seen.append(target)
+                sources.setdefault(target["node_order"], []).append(
+                    {"key": str(node["node_order"]), "node_name": node["node_name"],
+                     "via": jump_via(target_id, node.get("on_fail"))})
+    return sources
+
+
+def _template_nothing_to_pick(template):
+    """没有一站能跳过(第四十五批):客户端跳过选站这一步。与 `nothing_to_pick` 同一条规则,按模板算。"""
+    from apps.workflow.node_shape import normalize_template_node
+
+    nodes = [normalize_template_node(raw, i) for i, raw in enumerate(template["nodes"], start=1)]
+    manual = [n for n in nodes if (n.get("kind") or NodeKind.APPROVAL) not in AUTOMATIC_KINDS]
+    finals = [n for n in manual if n.get("node_type") == NodeType.FINAL]
+    fixed = {n["node_order"] for n in nodes if (n.get("kind") or NodeKind.APPROVAL) in AUTOMATIC_KINDS}
+    required = (finals or manual or [None])[-1]
+    if required is not None:
+        fixed.add(required["node_order"])
+    sources = _template_sources(nodes)
+    locked = _unskippable([n["node_order"] for n in nodes], fixed,
+                          {order: [int(s["key"]) for s in srcs] for order, srcs in sources.items()})
+    return all(n["node_order"] in locked for n in manual)
 
 
 def add_foreign(workflow, cross):
@@ -315,7 +346,7 @@ def _foreign_segment(workflow, realm, order):
         civilization, case_type_for(civilization, workflow.case_type), realm)
     segment = WorkflowSegment.objects.create(
         workflow=workflow, order=order, tenant=realm, civilization=civilization, name=template["name"],
-        state=SegmentState.AWAITING_PICK, default_node_count=len(template["nodes"]),
+        state=SegmentState.AWAITING_PICK, default_node_count=station_count(template["nodes"]),
     )
     offset = max(workflow.nodes.values_list("node_order", flat=True), default=0)
     WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False,

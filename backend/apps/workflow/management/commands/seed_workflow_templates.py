@@ -62,7 +62,7 @@ PRESET_FLOWS = {
     (GR, CaseType.ROUTINE): {
         "name": "希腊冥界流程",
         "nodes": [
-            {"name": "岔路口 · 按来处分流", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 1,
+            {"name": "按出身地域分流", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 1,
              "kind": "NOTIFY", "on_pass": "n4", "branches": [
                  {"id": "europe", "when": [{"fact": "origin_region", "op": "in", "value": ["EUROPE"]}],
                   "target": "n2"},

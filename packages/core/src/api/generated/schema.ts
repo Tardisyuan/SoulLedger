@@ -11809,6 +11809,8 @@ export interface components {
             tenant_code: string;
             realm_name: string;
             default_node_count: number;
+            /** @description 那个域的默认流程没有一站能跳过:那一段建好就是 PICKED,不等选站(第四十五批)。 */
+            nothing_to_pick: boolean;
         };
         FlowPreviewStation: {
             /** @description 站序;勾掉的站以它送进 `skip_node_orders`。 */
@@ -12590,6 +12592,13 @@ export interface components {
         JumpSource: {
             key: string;
             node_name: string;
+            /**
+             * @description on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。
+             *
+             *     * `on_fail` - on_fail
+             *     * `branch` - branch
+             */
+            via: components["schemas"]["ViaEnum"];
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -18909,6 +18918,12 @@ export interface components {
          * @enum {string}
          */
         VerdictEnum: "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
+        /**
+         * @description * `on_fail` - on_fail
+         *     * `branch` - branch
+         * @enum {string}
+         */
+        ViaEnum: "on_fail" | "branch";
         /**
          * @description * `PUBLIC` - Public
          *     * `TENANT` - Tenant Only

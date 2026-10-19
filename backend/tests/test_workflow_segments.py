@@ -659,14 +659,15 @@ def test_the_preview_and_the_detail_name_the_stations_that_jump_to_a_target(w):
     _jumpy(w.cn)
     soul, _case = plan.open_case(w.cn)
     preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
-    assert [s["jump_target_of"] for s in preview["stations"]] == [[], [], [{"key": "1", "node_name": "初审"}], []]
+    assert [s["jump_target_of"] for s in preview["stations"]] == [
+        [], [], [{"key": "1", "node_name": "初审", "via": "on_fail"}], []]
 
     _soul, response = _start(w, [])
     wf = ApprovalWorkflow.objects.get(pk=response.data["id"])
     first = _nodes(wf, 1)[0]
     detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
     rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
-    assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审"}], 4: []}
+    assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审", "via": "on_fail"}], 4: []}
 
 
 # ── 没有可选的站(Design 第四十五批)────────────────────────────────────────
@@ -728,3 +729,35 @@ def test_a_foreign_realm_with_nothing_to_pick_is_picked_from_the_start_and_never
     assert wf.current_node_id == final.pk
     assert ApprovalNode.objects.get(pk=route.pk).status == NodeStatus.TRAVERSED
     assert _seg(wf, 2).gate_reached_at is None
+
+
+# ── 锁住的理由分两种(Design 第四十五批 W-6)────────────────────────────────
+#
+# 来源经条件分支转来(按出身地域分流的去处)写 `via: "branch"`,驳回转来写 `via: "on_fail"`;客户端据此写
+# 「分流的去处」或「X驳回时会转到这里」。预览(按站序)与详情(按节点 id)两处一样。
+
+def test_jump_sources_say_whether_they_come_by_a_branch_or_by_a_rejection(w):
+    _routed(w.cn)
+    soul, _case = plan.open_case(w.cn)
+    preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
+    assert {s["node_order"]: s["jump_target_of"] for s in preview["stations"]} == {
+        2: [{"key": "1", "node_name": "分流", "via": "branch"}],
+        3: [{"key": "2", "node_name": "分区", "via": "on_fail"}],
+    }
+
+    _soul, started = _start(w, [])
+    wf = ApprovalWorkflow.objects.get(pk=started.data["id"])
+    route, division, _final, _end = _nodes(wf, 1)
+    detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
+    rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
+    assert rows[2] == [{"key": str(route.pk), "node_name": "分流", "via": "branch"}]
+    assert rows[3] == [{"key": str(division.pk), "node_name": "分区", "via": "on_fail"}]
+    assert rows[1] == []  # absence: the routing step is nobody's target
+
+
+def test_the_routing_step_is_not_counted_and_a_locked_foreign_realm_says_so(w):
+    _routed(w.eg)
+    _soul, case = _open_cross(w, [w.eg, w.eu])
+    body = officer_client(w.cn_judge).get(PREVIEW, {"judgment": str(case.pk)}).json()
+    assert [(f["tenant_code"], f["default_node_count"], f["nothing_to_pick"]) for f in body["foreign"]] == [
+        (w.eg.code, 2, True), (w.eu.code, 3, False)]

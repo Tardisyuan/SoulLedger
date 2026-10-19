@@ -25929,8 +25929,12 @@ components:
           type: string
         default_node_count:
           type: integer
+        nothing_to_pick:
+          type: boolean
+          description: 那个域的默认流程没有一站能跳过:那一段建好就是 PICKED,不等选站(第四十五批)。
       required:
       - default_node_count
+      - nothing_to_pick
       - order
       - realm_name
       - tenant_code
@@ -27734,9 +27738,18 @@ components:
           type: string
         node_name:
           type: string
+        via:
+          allOf:
+          - $ref: '#/components/schemas/ViaEnum'
+          description: |-
+            on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。
+
+            * `on_fail` - on_fail
+            * `branch` - branch
       required:
       - key
       - node_name
+      - via
     KarmaBucket:
       type: object
       description: |-
@@ -40977,6 +40990,14 @@ components:
         * `FAILED` - Failed / Condemned
         * `PURGATORY` - Purgatory / Intermediate
         * `RETRY` - Retry / Appeal
+    ViaEnum:
+      enum:
+      - on_fail
+      - branch
+      type: string
+      description: |-
+        * `on_fail` - on_fail
+        * `branch` - branch
     VisibilityEnum:
       enum:
       - PUBLIC
