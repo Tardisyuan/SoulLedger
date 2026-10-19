@@ -1,5 +1,5 @@
-"""退回规则(2026-10-19): returns counted and confined per segment, skipped targets, the Greek on_fail
-jump, and the formal templates `seed_workflow_templates` writes.
+"""退回规则(2026-10-19): returns counted and confined per segment, skipped targets, the Greek flow (Gorgias 524a:
+routed by `origin_region` to one judge, Minos only in doubt), and the formal templates `seed_workflow_templates` writes.
 
 The engine tests build the workflow by hand — two segments of plain nodes — because what they pin is
 `ApprovalWorkflow.complete_node`'s routing, not how a cross-realm judgment produces segments
@@ -25,6 +25,7 @@ from apps.workflow.models import (
     WorkflowSegment,
     WorkflowTemplate,
 )
+from apps.workflow.segments import SegmentRefusedError, flow_preview
 from apps.workflow.services import WorkflowService
 from tests import sentence_plan_support as plan
 
@@ -242,13 +243,28 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     for case_type in ("ROUTINE", "APPEAL"):
         assert {n["court_code"] for n in _row(eu, case_type).nodes_json} == {"天堂"}
     assert not any(n["court_code"] == "Heaven" for r in WorkflowTemplate.objects.all() for n in r.nodes_json)
-    greek = _row(gr, "ROUTINE")
-    assert _edges(greek, "on_fail") == {"n1": "n3", "n2": "n3"}
-    # The default pass path is written out so the editor draws it (only rows with an on_fail jump).
-    assert _edges(greek, "on_pass") == {"n1": "n2", "n2": "n3"}
+    # The default pass path is written out so the editor draws it (only linear rows with an on_fail jump).
     assert _edges(ten, "on_pass") == {}
+
+
+def test_the_greek_seed_row_routes_by_origin_and_ends_after_one_judge(halls):
+    _seed()
+    greek = _row(halls["GR_HADES"], "ROUTINE")
+    assert [(n["id"], n.get("kind", "APPROVAL"), n.get("actor")) for n in greek.nodes_json] == [
+        ("n1", "NOTIFY", None), ("n2", "APPROVAL", "Aeacus"), ("n3", "APPROVAL", "Rhadamanthus"),
+        ("n4", "APPROVAL", "Minos"), ("n5", "END", None)]
+    assert [n["node_type"] for n in greek.nodes_json][:4] == ["TRIAL", "TRIAL", "TRIAL", "FINAL"]
+    assert _edges(greek, "on_pass") == {"n1": "n4", "n2": "n5", "n3": "n5", "n4": "n5"}
+    assert _edges(greek, "on_fail") == {"n2": "n4", "n3": "n4"}  # in doubt → Minos; Minos's FAIL ends the flow
     assert _edges(greek, "reject_to") == {}
-    assert [n["node_type"] for n in greek.nodes_json] == ["TRIAL", "TRIAL", "FINAL"]
+    branches = greek.nodes_json[0]["branches"]
+    assert [(b["target"], b["when"]) for b in branches] == [
+        ("n2", [{"fact": "origin_region", "op": "in", "value": ["EUROPE"]}]),
+        ("n3", [{"fact": "origin_region", "op": "in", "value": ["ASIA"]}]),
+    ]
+    # Absence: no other node branches, and the routing step names nobody.
+    assert [n["id"] for n in greek.nodes_json if n.get("branches")] == ["n1"]
+    assert greek.nodes_json[0]["approver_type"] == "SYSTEM"
 
 
 def test_the_seed_tells_the_editor_who_approves_each_station(halls):
@@ -286,8 +302,8 @@ def test_the_seed_overwrites_a_changed_row_only_with_update(halls):
     assert row.versions.count() == 2
 
 
-def _judged(tenant):
-    soul = Soul.objects.create(name="正式模板魂", tenant=tenant)
+def _judged(tenant, **soul_fields):
+    soul = Soul.objects.create(name="正式模板魂", tenant=tenant, **soul_fields)
     judgment = Judgment.objects.create(
         soul=soul, civilization=soul.civilization, court="—", verdict="PASSED", is_final=True, tenant=tenant)
     return WorkflowService.create_from_judgment(judgment)
@@ -307,13 +323,107 @@ def test_the_ten_court_flow_from_the_seeded_row_returns_to_court_one_on_a_final_
     assert wf.return_count == 1
 
 
-def test_the_greek_division_fail_goes_to_minos_and_skips_rhadamanthus(halls):
+def _greek(halls, region=""):
     _seed()
-    wf = _judged(halls["GR_HADES"])
-    aeacus, rhadamanthus, minos = wf.nodes.order_by("node_order")
+    wf = _judged(halls["GR_HADES"], origin_region=region)
+    return wf, list(wf.nodes.order_by("node_order"))
+
+
+def test_a_european_soul_goes_to_aeacus_and_his_pass_completes_the_flow(halls):
+    wf, (route, aeacus, rhadamanthus, minos, end) = _greek(halls, "EUROPE")
+    assert _status(route) == NodeStatus.TRAVERSED
+    assert wf.current_node_id == aeacus.pk
+    _decide(wf, aeacus, "PASSED")
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert _status(end) == NodeStatus.TRAVERSED
+    # Never both: neither the other judge nor Minos was reached.
+    assert _status(rhadamanthus) == NodeStatus.SKIPPED
+    assert _status(minos) == NodeStatus.SKIPPED
+    assert ApprovalNode.objects.get(pk=minos.pk).decided_at is not None and not ApprovalNode.objects.get(
+        pk=minos.pk).verdict
+
+
+def test_an_asian_soul_goes_to_rhadamanthus(halls):
+    wf, (_route, aeacus, rhadamanthus, minos, _end) = _greek(halls, "ASIA")
+    assert wf.current_node_id == rhadamanthus.pk
+    _decide(wf, rhadamanthus, "PASSED")
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert (_status(aeacus), _status(minos)) == (NodeStatus.SKIPPED, NodeStatus.SKIPPED)
+
+
+def test_a_soul_of_unknown_origin_goes_straight_to_minos(halls):
+    wf, (_route, aeacus, rhadamanthus, minos, _end) = _greek(halls)
+    assert wf.current_node_id == minos.pk
+    _decide(wf, minos, "PASSED")
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert (_status(aeacus), _status(rhadamanthus)) == (NodeStatus.SKIPPED, NodeStatus.SKIPPED)
+
+
+def test_a_judge_in_doubt_hands_the_soul_to_minos_whose_pass_completes(halls):
+    wf, (_route, aeacus, rhadamanthus, minos, _end) = _greek(halls, "EUROPE")
     _decide(wf, aeacus, "FAILED")
     assert wf.status == ApprovalWorkflowStatus.IN_PROGRESS
     assert wf.current_node_id == minos.pk
-    assert _status(rhadamanthus) == NodeStatus.SKIPPED
+    assert _status(rhadamanthus) == NodeStatus.PENDING  # not reached, not decided
     _decide(wf, minos, "PASSED")
     assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert _status(rhadamanthus) == NodeStatus.SKIPPED
+
+
+def test_minos_fail_ends_the_flow_rejected(halls):
+    wf, (_route, _aeacus, rhadamanthus, minos, end) = _greek(halls, "ASIA")
+    _decide(wf, rhadamanthus, "FAILED")
+    assert wf.current_node_id == minos.pk
+    _decide(wf, minos, "FAILED")
+    assert wf.status == ApprovalWorkflowStatus.REJECTED
+    assert wf.return_count == 0
+    assert _status(end) == NodeStatus.PENDING  # the refusal ended it, not the 结束
+
+
+def test_a_skipped_branch_target_ends_the_flow_rejected_instead_of_falling_to_minos(halls):
+    # Pick refuses this (below); it can only happen when a station is skipped some other way.
+    _seed()
+    soul = Soul.objects.create(name="跳过魂", tenant=halls["GR_HADES"], origin_region="EUROPE")
+    judgment = Judgment.objects.create(
+        soul=soul, civilization=soul.civilization, court="—", verdict="PASSED", is_final=True, tenant=soul.tenant)
+    wf = ApprovalWorkflow.objects.create(
+        workflow_name="跳过", soul=soul, judgment=judgment, tenant=soul.tenant,
+        status=ApprovalWorkflowStatus.PENDING)
+    template = WorkflowService._resolve_template("GREEK", "ROUTINE", soul.tenant)[0]
+    route = WorkflowService._create_nodes(wf, template, "GREEK", enter=False)
+    aeacus = wf.nodes.get(node_order=2)
+    _skip(aeacus, SkipKind.LATER)
+    from django.utils import timezone
+
+    wf._enter(route, timezone.now())
+    wf.save()
+    wf.refresh_from_db()
+    assert wf.status == ApprovalWorkflowStatus.REJECTED
+    assert wf.current_node is None
+    assert _status(wf.nodes.get(node_order=4)) == NodeStatus.PENDING  # Minos was not entered
+
+
+def test_picking_cannot_skip_a_branch_target_or_the_routing_step(halls):
+    _seed()
+    gr = halls["GR_HADES"]
+    for orders, code in (([2], "jump_target_required"), ([3], "jump_target_required"), ([1], "final_required"),
+                         ([4], "final_required")):
+        soul = Soul.objects.create(name=f"选站魂{orders}", tenant=gr, origin_region="ASIA")
+        judgment = Judgment.objects.create(
+            soul=soul, civilization=soul.civilization, court="—", verdict="PASSED", is_final=True, tenant=gr)
+        with pytest.raises(SegmentRefusedError) as refused:
+            WorkflowService.create_from_judgment(judgment, skip_node_orders=orders)
+        assert refused.value.code == code, orders
+        assert not ApprovalWorkflow.objects.filter(soul=soul).exists()
+
+
+def test_the_greek_preview_lists_the_three_judges_all_locked_and_nothing_to_pick(halls):
+    _seed()
+    soul = Soul.objects.create(name="预览魂", tenant=halls["GR_HADES"])
+    template = WorkflowService._resolve_template("GREEK", "ROUTINE", soul.tenant)
+    preview = flow_preview(soul, "ROUTINE", soul.tenant, template[0])
+    # The routing step and the 结束 are not stations.
+    assert [s["node_order"] for s in preview["stations"]] == [2, 3, 4]
+    assert [s["is_required"] for s in preview["stations"]] == [False, False, True]
+    assert [[j["key"] for j in s["jump_target_of"]] for s in preview["stations"]] == [["1"], ["1"], ["2", "3"]]
+    assert preview["nothing_to_pick"] is True
