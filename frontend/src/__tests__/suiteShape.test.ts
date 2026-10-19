@@ -240,6 +240,8 @@ const COLLECTED_FILES = [
   "workflowSegments.test.tsx",
   // 2026-10-19 第四十五批:出身地域的表单 / 详情、编辑器自动分流、流程详情没走到的站、选站的分流理由。
   "originRegionBatch45.test.tsx",
+  // 2026-10-19 第四十六批:补录出身地域的入口(soul.update)、预览表、无可更新、完成页先给跳过的行、文件级错误。
+  "soulRegionBackfill.test.tsx",
   // 2026-10-19 殿名按界面语言(courtLabel):同一个殿的中英写法一个键,egy 写英文,认不出的原样。
   "courtLabel.test.ts",
   "workflowTitle.test.ts",

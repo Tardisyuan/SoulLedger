@@ -97,7 +97,9 @@ def _parse_date(text):
     return triple
 
 
-def _read(data: bytes):
+def _read(data: bytes, columns=COLUMNS, required=REQUIRED_COLUMNS):
+    """-> (header, [(line_no, cells)]). Shared with `apps/souls/region_update.py`, which passes `columns=None`:
+    any other column is allowed there (and ignored), so an exported file can go back with one column edited."""
     if len(data) > MAX_BYTES:
         raise ImportFileError("file_too_large", max_bytes=MAX_BYTES)
     try:
@@ -118,10 +120,10 @@ def _read(data: bytes):
         header = [h.strip().lower() for h in header]
         if len(set(header)) != len(header):
             raise ImportFileError("duplicate_columns")
-        unknown = [h for h in header if h not in COLUMNS]
+        unknown = [h for h in header if h not in columns] if columns is not None else []
         if unknown:
             raise ImportFileError("unknown_columns", columns=unknown)
-        missing = [c for c in REQUIRED_COLUMNS if c not in header]
+        missing = [c for c in required if c not in header]
         if missing:
             raise ImportFileError("missing_columns", columns=missing)
         rows = []

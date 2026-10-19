@@ -634,6 +634,37 @@
         "unknown": "导入失败"
       }
     },
+    "region_backfill": {
+      "button": "补录出身地域",
+      "title": "补录出身地域 · {{step}}/3",
+      "intro": "按名单批量改已有灵魂的出身地域。只改本殿的灵魂，不新建。",
+      "id_hint": "soul_id 是导出文件第一列的灵魂 ID，每个灵魂都有。也可以整份改用灵魂编号(soul_code)，但一份文件只能用一种。",
+      "values_hint": "出身地域填 {{europe}} / {{asia}};留空 = {{unknown}}。",
+      "col_name": "灵魂",
+      "col_change": "原值 → 新值",
+      "status": {
+        "update": "将更新",
+        "same": "无变化",
+        "not_found": "找不到",
+        "bad_value": "取值不对",
+        "duplicate": "文件内重复 · 第 {{row}} 行"
+      },
+      "summary": "共 {{total}} 行 · 将更新 {{update}} · 无变化 {{same}} · 跳过 {{skip}}",
+      "skip_note": "找不到、取值不对、重复的行会跳过，不影响其余行。",
+      "to_unknown": "{{n}} 行会改回「{{unknown}}」",
+      "back": "上一步",
+      "commit": "更新 {{n}} 个灵魂",
+      "committing": "正在更新…",
+      "nothing_title": "没有要更新的行",
+      "nothing_body": "每一行都无变化，或被跳过。改好文件再选一次。",
+      "done": "已更新 {{updated}} 个，无变化 {{same}} 个，跳过 {{skipped}} 行",
+      "download_skipped": "下载跳过的行",
+      "skipped_file_note": "跳过的行和模板同样两列，另加一列「原因」;改好就能直接再传。",
+      "file_codes": {
+        "mixed_id_columns": "soul_code 和 soul_id 只能用一种"
+      },
+      "failed": "更新失败，没有改动任何灵魂。请重试。"
+    },
     "origin_region": {
       "label": "出身地域",
       "EUROPE": "欧洲",
