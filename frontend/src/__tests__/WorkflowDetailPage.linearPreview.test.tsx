@@ -149,6 +149,39 @@ describe("待我处理 bar", () => {
   });
 });
 
+describe("flat node list (a workflow with no segments) · 这次没走到", () => {
+  const rows = () => Array.from(document.querySelectorAll<HTMLElement>("ol > li"));
+  const notReached = () => rows().filter((r) => r.dataset.nodeState === "not-reached");
+
+  it("marks a station still PENDING when the workflow ended, and one the engine routed past", async () => {
+    const base = payload("REJECTED", null);
+    const nodes = [node("n1", 1, "初审", "REJECTED"), node("n2", 2, "复核", "SKIPPED"), node("n3", 3, "终审")];
+    workflowApi.get.mockResolvedValue({ data: { ...base.data, nodes } });
+    renderPage();
+    await preview();
+    expect(notReached().map((r) => r.textContent)).toEqual([
+      expect.stringContaining("复核"),
+      expect.stringContaining("终审"),
+    ]);
+    for (const row of notReached()) {
+      expect(row).toHaveTextContent(tZh("workflow.node_state.not_reached"));
+      expect(row).toHaveTextContent("–");
+      expect(row).not.toHaveTextContent(tZh("workflow.status.SKIPPED"));
+    }
+    expect(rows()[0]).not.toHaveAttribute("data-node-state");
+  });
+
+  it("marks nothing while the workflow runs, and not a station someone skipped", async () => {
+    const base = payload("IN_PROGRESS", "n3");
+    const skipped = { ...node("n2", 2, "复核", "SKIPPED"), skip_kind: "LATER" };
+    const nodes = [node("n1", 1, "初审", "APPROVED"), skipped, node("n3", 3, "终审")];
+    workflowApi.get.mockResolvedValue({ data: { ...base.data, nodes } });
+    renderPage();
+    await preview();
+    expect(notReached()).toHaveLength(0);
+  });
+});
+
 describe("workflow info card · 案号", () => {
   it("prints the judgment's case number whole and copyable; a workflow with no judgment is 不适用, not 未记录", async () => {
     const base = payload("IN_PROGRESS", "n2");

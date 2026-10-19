@@ -265,14 +265,19 @@ const SKIP_KEY: Record<string, string> = {
   LATER: "workflow.node_state.skipped_later",
 };
 
-/** 一站的字形与文字:当前 ◇、待走 ·、已通过 ✓、已驳回 ✕、跳过 ⤼(划线)。状态名走 `enumLabel`,不印原值。 */
-export function nodeLook(node: ApprovalNode, isCurrent: boolean, t: T, statusLabel: (raw: string) => string): { glyph: string; text: string; skipped: boolean } {
+/**
+ * 一站的字形与文字:当前 ◇、待走 ·、已通过 ✓、已驳回 ✕、跳过 ⤼(划线)。状态名走 `enumLabel`,不印原值。
+ * 这次没走到(引擎按路由越过、或流程结束时还没到)写 –,灰、不划线 —— 与网页 `WorkflowSegmentList` 同一条规则。
+ */
+export function nodeLook(node: ApprovalNode, isCurrent: boolean, t: T, statusLabel: (raw: string) => string, finished = false): { glyph: string; text: string; skipped: boolean; notReached?: boolean } {
   if (isCurrent) return { glyph: "◇", text: t("workflow.detail.current"), skipped: false };
+  const notReached = { glyph: "–", text: t("workflow.node_state.not_reached"), skipped: false, notReached: true };
   if (node.status === "SKIPPED") {
-    const key = SKIP_KEY[node.skip_kind ?? ""];
+    if (!node.skip_kind) return notReached;
+    const key = SKIP_KEY[node.skip_kind];
     return { glyph: "⤼", text: key ? t(key) : statusLabel(node.status), skipped: true };
   }
-  if (node.status === "PENDING") return { glyph: "·", text: t("workflow.detail.not_reached"), skipped: false };
+  if (node.status === "PENDING") return finished ? notReached : { glyph: "·", text: t("workflow.detail.not_reached"), skipped: false };
   const refused = node.status === "REJECTED" || node.verdict === "FAILED" || node.verdict === "REJECTED";
   return { glyph: refused ? "✕" : "✓", text: statusLabel(node.status), skipped: false };
 }
@@ -346,7 +351,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
               <>
                 {segmentNodes(workflow, s.order).map((node) => {
                   const isCurrent = running && workflow.current_node === node.id;
-                  const look = nodeLook(node, isCurrent, t, statusLabel);
+                  const look = nodeLook(node, isCurrent, t, statusLabel, !running);
                   const right = node.is_required ? `${look.text} · ${t("workflow.pick.final_badge")}` : look.text;
                   return (
                     <View
@@ -358,11 +363,11 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
                         isCurrent ? { borderLeftWidth: 3, borderLeftColor: theme.plaqueFill, paddingLeft: space[5] - 3 } : null,
                       ]}
                     >
-                      <Txt variant="body" tone={look.skipped ? "subtle" : "ink"} style={styles.glyph}>{look.glyph}</Txt>
-                      <Txt variant={isCurrent ? "bodyLg" : "body"} tone={look.skipped ? "subtle" : "ink"} style={[{ flex: 1 }, look.skipped ? styles.struck : null]}>
+                      <Txt variant="body" tone={look.skipped || look.notReached ? "subtle" : "ink"} style={styles.glyph}>{look.glyph}</Txt>
+                      <Txt variant={isCurrent ? "bodyLg" : "body"} tone={look.skipped || look.notReached ? "subtle" : "ink"} style={[{ flex: 1 }, look.skipped ? styles.struck : null]}>
                         {`${stationNo(node)} ${node.node_name}`}
                       </Txt>
-                      <Txt variant="caption" tone={look.skipped ? "subtle" : "muted"} testID={`segment-node-state-${node.id}`}>{right}</Txt>
+                      <Txt variant="caption" tone={look.skipped || look.notReached ? "subtle" : "muted"} testID={`segment-node-state-${node.id}`}>{right}</Txt>
                     </View>
                   );
                 })}

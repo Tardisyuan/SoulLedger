@@ -389,8 +389,13 @@ export default function WorkflowDetailPage() {
               <ol>
                 {sortedNodes.map((node) => {
                   const isCurrent = workflow.current_node === node.id && workflow.status !== "COMPLETED";
-                  const isPast = node.status !== "PENDING";
-                  const nodeStatusLabel = statusLabel(node.status);
+                  // 这次没走到(与分段列表同一条规则):引擎按路由越过的(SKIPPED 而没有 skip_kind),
+                  // 或流程已结束时还 PENDING 的。写 –,灰,不当作「已通过 / 已跳过」。
+                  const notReached =
+                    (node.status === "SKIPPED" && !node.skip_kind) ||
+                    (node.status === "PENDING" && (workflow.status === "COMPLETED" || workflow.status === "REJECTED"));
+                  const isPast = node.status !== "PENDING" && !notReached;
+                  const nodeStatusLabel = notReached ? t("workflow.node_state.not_reached") : statusLabel(node.status);
                   return (
                     <li
                       key={node.id}
@@ -402,6 +407,7 @@ export default function WorkflowDetailPage() {
                             ? "text-[oklch(var(--color-ink-muted))]"
                             : "text-[oklch(var(--color-ink-subtle))]"
                       }`}
+                      data-node-state={notReached ? "not-reached" : undefined}
                     >
                       {isCurrent && waitingOnMe && (
                         <span
@@ -411,7 +417,7 @@ export default function WorkflowDetailPage() {
                         />
                       )}
                       <span aria-hidden="true" className="text-center">
-                        {isPast ? VERDICT_GLYPH[node.verdict ?? ""] ?? STATUS_GLYPH[node.status] ?? "?" : isCurrent ? "◐" : "·"}
+                        {notReached ? "–" : isPast ? VERDICT_GLYPH[node.verdict ?? ""] ?? STATUS_GLYPH[node.status] ?? "?" : isCurrent ? "◐" : "·"}
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm break-words">{node.node_name}</span>
@@ -424,7 +430,9 @@ export default function WorkflowDetailPage() {
                         </span>
                       </span>
                       <span className="font-mono text-xs">
-                        {isPast ? (
+                        {notReached ? (
+                          ""
+                        ) : isPast ? (
                           node.decided_at ? formatDateTime(node.decided_at) : ""
                         ) : isCurrent ? (
                           node.kind === "COUNTERSIGN" && node.required_verdicts ? (
