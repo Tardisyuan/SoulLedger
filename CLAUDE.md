@@ -325,6 +325,17 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 #   SECRET_KEY          钩子给 pytest 的永远是上面那个 ≥32 字节的测试 key,不读 .env 的。
 #   -n 4                装了 pytest-xdist(requirements-dev.txt)就用 4 进程。实测 4:21 对串行 5:43;
 #                       -n 6 不更快(每个 worker 先花约 36 秒建自己的测试库)。PYTEST_WORKERS=0 退回串行。
+#   SQLite 模板库      2026-10-19 起 worker 不再各自迁移:第一次在 `<git common dir>/soulledger-sqlite-templates/`
+#                       建一份迁移好的库(文件名带输入哈希),之后各 worker 用 sqlite `backup` 拷进自己的内存库。
+#                       实测同一组 31 条测试:用模板 4 s,真迁移 42–49 s。逻辑在 `backend/config/sqlite_template.py`。
+#                       输入哈希 = `backend/apps/` 全部非测试文件 + `backend/config/` + `requirements.lock`
+#                       + 影响迁移的设置 + Python/Django/SQLite 版本 —— 故意放宽:迁移 import 的代码和
+#                       `post_migrate` 接收器都在 apps/ 里,逐个列会漏。代价是后端代码一改就重建一次。
+#                       **真迁移并核对**:`--full` / `GATES_FULL=1` / 推 main(run-gates 导出
+#                       `SOULLEDGER_SQLITE_TEMPLATE=0`),或这次运行含 `migration` 测试。核对把真迁移的库和同一
+#                       哈希下的模板逐表比(结构 + 全部行,时间戳屏蔽),不一致就删掉模板并让所有用库的测试
+#                       报 `TemplateDriftError` —— 那说明哈希漏了某个输入,把它补进哈希。
+#                       手动关:`SOULLEDGER_SQLITE_TEMPLATE=0`。模板坏了直接删那个目录,下次重建。
 #                       参数化里别放 uuid4() 这类每次不同的值而不给 ids —— 各 worker 收集到的用例名
 #                       不同,xdist 整个拒跑(2026-09-29 撞到三处)。
 # 钩子跑 pytest 时每 30 秒打一行进度(百分比 · 用时 · 已失败数),失败时保留完整日志。
@@ -451,7 +462,12 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
   REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
-  .venv/bin/python -m pytest -q --no-cov --create-db -n 4 -m "not migration"
+  .venv/bin/python -m pytest -q --no-cov --create-db -n 4 -m "not migration" \
+  -o faulthandler_timeout=600 -o faulthandler_exit_on_timeout=true
+# 最后一行是挂死探测(2026-10-19 起):2026-10-19 一次真 PG 停在 96% 五个半小时 —— gw0 在 115 上
+# `idle in transaction`(一条 INSERT souls_soulrecord),另一个 worker 卡在 Python 线程锁上,四个 worker CPU 全 0,
+# 没有任何输出;`-q` 不打印正在跑的测试名,也就查不出是哪条。重跑没有复现(偶发)。带上这两项,
+# 单条测试超过 10 分钟就打印全部线程的栈并退出那个 worker,整轮照样跑完,栈留在日志里。
 # 2026-10-09 起(用户决定):**4 进程并行，迁移往返只在改了迁移时跑。**
 # 串行全量 53 分钟(6384 passed),
 # 卡在 76% 附近的是迁移往返与 transaction=True 的并发测试。
@@ -462,6 +478,8 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 会话结束(或建模板失败时当场)`DROP DATABASE … WITH (FORCE)`。此前四个 worker 各自重放约 389 个迁移。
 # 只对 PostgreSQL 且带 `-n` 时生效;SQLite、`-n 0`、`--reuse-db`、`--nomigrations` 走原路径。
 # 查残留时 `like 'test_soulledger%'` 同样匹配 `_tpl_`。
+# 实测(2026-10-19,`6a10df06`):7654 passed / 15 skipped / exit 0,**950 s**(10-10 那次各自迁移是约 18 分钟,
+# 测试还少一千多条);跑完 `_tpl_` 已删,本轮无残留。被 Ctrl-C 打断时模板同样被删,只留下当时那个 worker 的库。
 # 改到迁移、`tests/migration_roundtrip.py`、conftest 或 `pytest.ini` 时，去掉 `-m "not migration"`
 # 跑全量(规则同 pre-push 的 SQLite 那条)。
 # 多库守卫(G3/G7,opt-in,2026-10-09):第二个别名 `tenant_shadow` + 测试路由,只在这个 settings 下存在,
