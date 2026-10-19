@@ -351,7 +351,11 @@ backend/tests/test_audit_assertions_are_not_vacuous.py'
 META_PATH_RE='^(pytest\.ini$|conftest\.py$|backend/.*conftest\.py$|backend/requirements\.lock$|backend/config/|backend/apps/(audit|tenants)/|backend/apps/core/lock_join_guard\.py$|backend/apps/[^/]+/tests\.py$|backend/tests/test_collection_scope\.py$|backend/tests/test_audit_assertions_are_not_vacuous\.py$)'
 TOUCHES_META=$(echo "$CHANGED" | grep -cE "$META_PATH_RE" || true)
 [ -n "$UNKNOWN_ROOT" ] && TOUCHES_META=$((TOUCHES_META + 1))
-{ [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; } && TOUCHES_META=$((TOUCHES_META + 1))
+# An explicit full run, read here because PREPUSH_TO_MAIN is unset further down;
+# the SQLite template switch before pytest uses the same flag.
+FULL_RUN=0
+{ [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; } && FULL_RUN=1
+TOUCHES_META=$((TOUCHES_META + FULL_RUN))
 RUN_META=0
 [ "$TOUCHES_META" -gt 0 ] && RUN_META=1
 
@@ -824,7 +828,7 @@ PROBE_PY
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
     # loading the cached SQLite template, and checks that template against what it
     # migrated — backend/config/sqlite_template.py. Other runs reuse the template.
-    if [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; then
+    if [ "$FULL_RUN" = 1 ]; then
         export SOULLEDGER_SQLITE_TEMPLATE=0
         echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
     fi
