@@ -161,6 +161,8 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   // Minos · 终裁：524a「to Minos I will give the privilege of the final
   // decision」，字面上的最终裁定。
   终裁: "FINAL",
+  // 结束 · 各走其路：希腊流程的终点（kind END），与 seed_workflow_templates 记的 FINAL 一致。
+  结束: "FINAL",
   // Minos · 判定圈层：《地狱篇》V.4-15「Judges, and sends according as he
   // girds him」——他**判**并且发送。步骤名沿用了更早的「分类」说法，但节点做
   // 的事是裁断；本预设第二步是收监（执行），所以这是唯一也是最后一次裁断。

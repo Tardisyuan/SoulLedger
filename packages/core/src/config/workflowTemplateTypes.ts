@@ -86,4 +86,18 @@ export interface WorkflowTemplate {
    */
   priority: number;
   nodes: WorkflowNodeTemplate[];
+  /**
+   * 不按 order 直走的预设才写：节点 id → 它的去向（与后端 `on_pass` / `on_fail` /
+   * `branches` 同义）。单独成表而不写进节点字面量，是因为上面那三份 pytest 按
+   * 「一行一个 `{ id, name, court, type, order }`」去读节点。没写的预设按 order 直走。
+   */
+  routes?: Record<string, WorkflowNodeRoute>;
+}
+
+export interface WorkflowNodeRoute {
+  /** 缺省是 APPROVAL。NOTIFY 无人审批、即刻按分支走；END 是终点。 */
+  kind?: "NOTIFY" | "END";
+  onPass?: string;
+  onFail?: string;
+  branches?: { id: string; when: { fact: string; op: string; value: string[] }[]; target: string }[];
 }

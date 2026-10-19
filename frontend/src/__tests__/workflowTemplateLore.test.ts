@@ -161,7 +161,11 @@ describe("Greek template follows Gorgias 524a", () => {
     // "to Minos I will give the privilege of the final decision" — Gorgias
     // 524a. The preset had him at 初审 and Rhadamanthus at 终审, which is the
     // passage exactly inverted.
-    const orders = greek.nodes.map((node) => node.order);
+    // The 结束 node (kind END) is where the roads part, not a judgment, so
+    // "last" is among the stations someone decides at.
+    const orders = greek.nodes
+      .filter((node) => greek.routes?.[node.id]?.kind !== "END")
+      .map((node) => node.order);
     expect(orderOf(greek, "Minos")).toBe(Math.max(...orders));
   });
 
@@ -175,6 +179,23 @@ describe("Greek template follows Gorgias 524a", () => {
     }
     for (const actor of ["Aeacus", "Rhadamanthus"]) {
       expect(nodesNaming(greek, actor)[0].type).toBe("分区审判");
+    }
+  });
+
+  it("sends each soul to one judge by origin, and only doubt to Minos", () => {
+    // Same graph as the Greek row seed_workflow_templates writes (v4): Europe →
+    // Aeacus, Asia → Rhadamanthus, 不详 → Minos; a PASS ends, a FAIL goes to Minos.
+    const id = (actor: string) => nodesNaming(greek, actor)[0].id;
+    const fork = greek.routes?.n1;
+    expect(fork?.kind).toBe("NOTIFY");
+    expect(fork?.branches?.map((b) => [b.when[0].value, b.target])).toEqual([
+      [["EUROPE"], id("Aeacus")],
+      [["ASIA"], id("Rhadamanthus")],
+    ]);
+    expect(fork?.onPass).toBe(id("Minos"));
+    for (const actor of ["Aeacus", "Rhadamanthus"]) {
+      expect(greek.routes?.[id(actor)]?.onFail).toBe(id("Minos"));
+      expect(greek.routes?.[id(actor)]?.onPass).not.toBe(id("Minos"));
     }
   });
 

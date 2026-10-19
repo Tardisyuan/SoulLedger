@@ -8,7 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
-import { WORKFLOW_TEMPLATES, type TemplateKey } from "@soulledger/core/config/workflow-templates";
+import { WORKFLOW_TEMPLATES, presetRouting, type TemplateKey } from "@soulledger/core/config/workflow-templates";
 import { nodeTypeFor } from "@soulledger/core/config/workflow-node-types";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -397,6 +397,8 @@ function WorkflowPageContent() {
                                       // WorkflowTemplateNodeSerializer 的 ChoiceField
                                       // 只收五个 NodeType 成员 → 400。
                                       node_type: nodeTypeFor(n.type),
+                                      // 不按 order 直走的预设（希腊）带上去向，否则编辑器画成直线。
+                                      ...presetRouting(currentTemplate, n.id),
                                     })),
                                   });
                                   setTab("editor");

@@ -24,8 +24,7 @@ Stations, courts, types and actors are ``WORKFLOW_TEMPLATES``' (courts respelled
 entry there (they fell to the one-node generic flow); theirs are the frontend presets
 ``EUROPEAN_ROUTINE`` / ``GREEK_ROUTINE`` (``packages/core/src/config/workflow-templates.ts``), types
 mapped as ``workflow-node-types.ts`` maps them, ``actor`` set because the cast has each person. The Greek
-row is no longer the preset's shape since 2026-10-19: the preset is a three-station list, the row a graph (a
-routing step, the three judges and a 结束).
+preset carries the same graph (its ``routes``: a routing step, the three judges and a 结束).
 
 Matched on (tenant, civilization, case_type, name). Create-only by default, like ``seed_mythology``:
 an existing row that differs is reported and left alone; ``--update`` publishes the seed as a new
