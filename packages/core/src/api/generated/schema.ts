@@ -18088,6 +18088,10 @@ export interface components {
             clears_value: boolean;
             /** @description For `duplicate_in_file`: the row of the first occurrence, which is the one used. */
             duplicate_of: number | null;
+            /** @description The soul_id / soul_code cell as written. */
+            identifier: string;
+            /** @description Only for `ok` / `unchanged` (a soul of this hall); null otherwise — never another hall's. */
+            soul_name: string | null;
         };
         /**
          * @description * `ok` - ok
