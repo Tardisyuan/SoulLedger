@@ -256,3 +256,26 @@ def test_the_settled_reopen_edge_is_not_offered_by_the_manual_transition(w):
                                           {"new_state": SoulState.DISPOSED, "reason": "x"}, format="json")
     assert response.status_code == 400, response.data
     assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.SETTLED
+
+
+def test_a_soul_that_served_an_eternal_home_sentence_is_not_reopened(w, caplog):
+    """Nothing comes after an eternal sentence (Q5), so a PASS bench adds no stops even to a SETTLED soul."""
+    from apps.sentence_plan.models import SentenceNodeStatus
+
+    soul, _case, cj, wf = merged(w, [w.eg])
+    p = SentencePlan.all_objects.get(soul=soul)
+    plan.serve(soul, p, 1)
+    p.nodes.filter(order=1).update(status=SentenceNodeStatus.ETERNAL)
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.SETTLED)
+
+    _run_local(w, wf)
+    _run_realm(w.eg_judge, wf, 2)
+
+    assert (_cj(cj).status, _cj(cj).conclusion_type) == (JudgmentStatus.CONCLUDED, "PASS")
+    p.refresh_from_db()
+    assert p.status == SentencePlanStatus.COMPLETED
+    assert [(n.order, n.status) for n in p.nodes.order_by("order")] == [(1, SentenceNodeStatus.ETERNAL)]
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.SETTLED
+    assert not SoulEvent.all_objects.filter(soul_id=soul.pk, event_type="STATE_CHANGED", payload__old_state="SETTLED").exists()
+    assert not SoulEvent.all_objects.filter(soul_id=soul.pk, event_type="SENTENCE_PLAN_AMENDED").exists()
+    assert "no stops added" in caplog.text
