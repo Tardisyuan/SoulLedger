@@ -1,8 +1,8 @@
 // Workflow templates by civilization and case type. Before renaming a node, moving
 // a court, renumbering an order, or REFLOWING/REINDENTING this file, read the header
 // of ./workflowTemplateTypes.ts: sources, and 3 backend tests that parse this raw text.
-import type { WorkflowNodeTemplate, WorkflowTemplate } from "./workflowTemplateTypes";
-export type { WorkflowNodeTemplate, WorkflowTemplate };
+import type { WorkflowNodeRoute, WorkflowNodeTemplate, WorkflowTemplate } from "./workflowTemplateTypes";
+export type { WorkflowNodeRoute, WorkflowNodeTemplate, WorkflowTemplate };
 
 export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   // ========== 中国地府 ==========
@@ -251,14 +251,33 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // and those from Europe, Aeacus; and to Minos I will give the privilege
       // of the final decision」（仅在另二人存疑时）。所以 Aeacus 与
       // Rhadamanthus 是**按亡魂来处并列分区**，不是一审二审；Minos 在最后。
-      // order 1/2 只是本 schema 无法表达并列，不表示 Aeacus 先于 Rhadamanthus。
+      // 并列由下面的 routes 表达（2026-10-19 起与 seed_workflow_templates 的 v4 同形）：
+      // n1 无人审批，按灵魂的出身地域分流 —— 欧洲 → Aeacus，亚洲 → Rhadamanthus，
+      // 不详 → 直接交 Minos；Aeacus 或 Rhadamanthus 通过即各走其路，存疑（否决）才交 Minos。
+      // order 2/3 不表示 Aeacus 先于 Rhadamanthus。
       //
       // 注意：这三位在《神曲》里不是一套 —— 但丁只借了 Minos，且把他放在
       // 第二圈入口（Inf. V.4-15）。不要把本模板的节点再挪进但丁九圈。
-      { id: "n1", name: "Aeacus · 分区审判（欧洲亡魂）", court: "岔路口草地", type: "分区审判", order: 1 },
-      { id: "n2", name: "Rhadamanthus · 分区审判（亚洲亡魂）", court: "岔路口草地", type: "分区审判", order: 2 },
-      { id: "n3", name: "Minos · 终裁（另二人存疑时）", court: "岔路口草地", type: "终裁", order: 3 },
+      { id: "n1", name: "按出身地域分流", court: "岔路口草地", type: "分流", order: 1 },
+      { id: "n2", name: "Aeacus · 分区审判（欧洲亡魂）", court: "岔路口草地", type: "分区审判", order: 2 },
+      { id: "n3", name: "Rhadamanthus · 分区审判（亚洲亡魂）", court: "岔路口草地", type: "分区审判", order: 3 },
+      { id: "n4", name: "Minos · 终裁（另二人存疑时）", court: "岔路口草地", type: "终裁", order: 4 },
+      { id: "n5", name: "结束 · 各走其路", court: "岔路口草地", type: "结束", order: 5 },
     ],
+    routes: {
+      n1: {
+        kind: "NOTIFY",
+        onPass: "n4",
+        branches: [
+          { id: "europe", when: [{ fact: "origin_region", op: "in", value: ["EUROPE"] }], target: "n2" },
+          { id: "asia", when: [{ fact: "origin_region", op: "in", value: ["ASIA"] }], target: "n3" },
+        ],
+      },
+      n2: { onPass: "n5", onFail: "n4" },
+      n3: { onPass: "n5", onFail: "n4" },
+      n4: { onPass: "n5" },
+      n5: { kind: "END" },
+    },
   },
   // 北欧分流流程 (Odin/Freya/Hel) used to sit here. Norse is out of this
   // system: destination there follows the manner of death, not a verdict, so
@@ -456,6 +475,18 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
 
 export type TemplateKey = keyof typeof WORKFLOW_TEMPLATES;
 
+/** 一个预设节点的去向，拼成后端模板节点的字段名；没有 routes 的预设返回空对象（按 order 直走）。 */
+export function presetRouting(template: WorkflowTemplate, nodeId: string) {
+  const r = template.routes?.[nodeId];
+  if (!r) return {};
+  return {
+    ...(r.kind && { kind: r.kind }),
+    ...(r.onPass && { on_pass: r.onPass }),
+    ...(r.onFail && { on_fail: r.onFail }),
+    ...(r.branches && { branches: r.branches }),
+  };
+}
+
 /**
  * 名字解析不到任何 Actor 的节点，以及每一个这样的节点的理由。
  *
@@ -495,5 +526,8 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   "紧急受理": "受理动作。中国 / 欧洲 / 埃及三套紧急流程共用这个节点名，理由相同。",
   "申诉受理": "受理动作。原来这里写的是「Gabriel · 受理」，见欧洲一节顶部为什么传信天使不受理亡魂案件。",
   // ── 埃及 ──────────────────────────────────────────────
+  // ── 希腊 ──────────────────────────────────────────────
+  "按出身地域分流": "自动分流，无人审批：按灵魂的出身地域交给 Aeacus 或 Rhadamanthus。",
+  "结束 · 各走其路": "终点，不是谁的裁断。",
   "42审判者 · 否定告白": "四十二判官确实是四十二行真实的 Actor（powers_json.assessor_index 1-42），但一个外键装不下一整席，而否定告白是向他们全体一次说完的（BD 125）。后端同一节点（「四十二神官 · 罪行核实」）记的是同一条理由。",
 };

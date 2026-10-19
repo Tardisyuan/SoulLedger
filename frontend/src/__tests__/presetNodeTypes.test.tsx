@@ -100,7 +100,7 @@ describe("preset step names map onto NodeType", () => {
     // 图版 III–IV;docs/lore-verification/verify-egyptian.md §3.3)。两套同文明同
     // case_type,`.first()` 只取得到一套,另一套在界面上可见而永远路由不到。
     toHaveLength(16);
-    expect(allNodes).toHaveLength(53)  // 56 − EGYPTIAN_AFTERLIFE 的三个节点;
+    expect(allNodes).toHaveLength(55)  // 56 − EGYPTIAN_AFTERLIFE 的三个节点 + 希腊的分流与结束(2026-10-19);
     expect(stepNames.length).toBeGreaterThan(0);
   });
 

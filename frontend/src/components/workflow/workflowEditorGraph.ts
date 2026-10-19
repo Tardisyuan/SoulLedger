@@ -401,9 +401,12 @@ export function presetTemplateToFlow(
         courtCode: n.court_code || n.courtCode || "",
         approverRole: n.approver_role || n.approverRole || "",
         approverType: n.approver_type || n.approverType || "ROLE",
+        // kind / 驳回目标；去向写在 on_pass / on_fail / branches 时由 edgesFor 画，
+        // 都没写就和以前一样按顺序连（edgesFor 自己退回 chain）。
+        ...extendedData(n as Partial<TemplateNode>),
       },
     };
   });
-  const edges = chain(rows);
+  const edges = edgesFor(rows as TemplateNode[]);
   return { nodes: layoutNodes(nodes, edges), edges };
 }
