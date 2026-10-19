@@ -130,6 +130,32 @@ def django_db_modify_db_settings(django_db_modify_db_settings, request):
     workerinput = getattr(request.config, "workerinput", {})
     suffix_postgres_test_databases(settings.DATABASES, workerinput.get(_SUFFIX_KEY) or run_suffix())
     use_templates(settings.DATABASES, workerinput.get(_TEMPLATES_KEY) or {})
+    _use_sqlite_template(request)
+
+
+def _use_sqlite_template(request):
+    """SQLite only: load a cached migrated database instead of migrating (backend/config/sqlite_template.py).
+
+    Migration round-trip tests in the run switch it to 'verify' (migrate for real
+    and check the cached template) rather than trust a clone with them.
+    """
+    import os
+    from pathlib import Path
+
+    from config import sqlite_template
+
+    config = request.config
+    run_mode = sqlite_template.mode(
+        os.environ,
+        reuse_db=bool(config.getoption("reuse_db", False)),
+        nomigrations=bool(config.getoption("nomigrations", False)),
+        has_migration_tests=any(item.get_closest_marker("migration") for item in request.session.items),
+    )
+    backend_dir = Path(sqlite_template.__file__).resolve().parent.parent
+    directory = sqlite_template.template_dir(backend_dir) if run_mode != "off" else None
+    if directory is None:
+        return
+    request.addfinalizer(sqlite_template.install(run_mode=run_mode, directory=directory, backend_dir=backend_dir))
 
 
 _SUFFIX_KEY = "soulledger_db_suffix"

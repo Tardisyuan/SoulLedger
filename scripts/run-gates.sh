@@ -821,6 +821,13 @@ PROBE_PY
         XDIST="-n ${PYTEST_WORKERS:-4}"
         echo "    (pytest-xdist: $XDIST)"
     fi
+    # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
+    # loading the cached SQLite template, and checks that template against what it
+    # migrated — backend/config/sqlite_template.py. Other runs reuse the template.
+    if [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; then
+        export SOULLEDGER_SQLITE_TEMPLATE=0
+        echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
+    fi
     PYTEST_LOG=$(mktemp -t prepush-pytest)
     PYTEST_PATHS=""
     META_IGNORE=""
