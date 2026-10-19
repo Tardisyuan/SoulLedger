@@ -15,7 +15,7 @@ export type OriginRegionMember = (typeof ORIGIN_REGIONS)[number];
 /** egy 还没有词的成员 → 英文。 */
 export const ORIGIN_REGION_EGY_EN: Readonly<Partial<Record<OriginRegionMember, string>>> = {
   ASIA: "Asia",
-  UNKNOWN: "Unknown",
+  // UNKNOWN has Design's egy (Nen Rekh, batch 45) — only ASIA is still missing.
 };
 
 /** 存的值("" / EUROPE / ASIA,或条件里的 UNKNOWN)→ 成员;认不出的、空的都是 UNKNOWN。 */
