@@ -84,6 +84,8 @@ test.describe("Critical path: login and create a soul", () => {
       civilization: "EGYPTIAN",
       birth_date: "1901-05-06",
       origin_location: null,
+      // 出身地域(batch 45): the form defaults to 不详, sent as "".
+      origin_region: "",
     });
 
     await expect(page.getByText("灵魂创建成功")).toBeVisible();
