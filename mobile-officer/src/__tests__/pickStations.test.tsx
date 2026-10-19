@@ -9,6 +9,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-
 
 import { pickRowLines } from "../rules";
 import { Detail } from "../screens/detail";
+import { nodeLook } from "../screens/pick";
 import { TodoTab } from "../screens/todo";
 import { ToastProvider, translate } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
@@ -422,5 +423,28 @@ describe("courtLabel in the officer app", () => {
     expect(pickRowLines(row, en, () => "China", "en").meta).toContain("Tenth Court");
     expect(pickRowLines(row, en, () => "China", "en").meta).not.toContain("第十殿");
     expect(pickRowLines(row, zh, () => "中国", "zh-Hans").meta).toContain("酆都第十殿");
+  });
+});
+
+describe("nodeLook · 这次没走到", () => {
+  const zh = (k: string, v?: Record<string, string>) => translate("zh-Hans", k, v);
+  const label = (raw: string) => raw;
+  const notReached = zh("workflow.node_state.not_reached");
+
+  it("a station the engine routed past (SKIPPED, no skip_kind) is –, grey, not struck", () => {
+    const look = nodeLook(node("n2", 2, "称心", { status: "SKIPPED" }) as never, false, zh, label);
+    expect(look).toEqual({ glyph: "–", text: notReached, skipped: false, notReached: true });
+  });
+
+  it("a station still PENDING is – only once the workflow has ended", () => {
+    const pending = node("n3", 3, "终审") as never;
+    expect(nodeLook(pending, false, zh, label, true).glyph).toBe("–");
+    expect(nodeLook(pending, false, zh, label, false).glyph).toBe("·");
+  });
+
+  it("a station someone skipped stays ⤼ and struck", () => {
+    const look = nodeLook(node("n2", 2, "称心", { status: "SKIPPED", skip_kind: "LATER" }) as never, false, zh, label, true);
+    expect(look.glyph).toBe("⤼");
+    expect(look.skipped).toBe(true);
   });
 });
