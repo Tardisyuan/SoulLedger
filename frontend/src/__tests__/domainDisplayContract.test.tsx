@@ -84,6 +84,8 @@ const ENUM_FIELDS = [
   // Added 2026-10-18 by the meta-test: `ApprovalNode.skip_kind`
   // (AT_PICK / LATER / CANCELLED, batch 43 station picking).
   "skip_kind",
+  // Added 2026-10-19 by the meta-test: `Soul.origin_region` (EUROPE / ASIA), batch 45.
+  "origin_region",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),
