@@ -192,7 +192,7 @@ export function SoulRegionBackfillDialog({ isOpen, onClose }: { isOpen: boolean;
     const nothing = preview.changed_count === 0;
     const rows = onlyProblems ? preview.rows.filter((r) => SKIPPED.has(r.status)) : preview.rows;
     return (
-      <Modal isOpen={isOpen} onClose={close} title={title} wide dismissOnOutsideClick={false}
+      <Modal isOpen={isOpen} onClose={close} title={title} extraWide dismissOnOutsideClick={false}
         footer={
           <div className="flex flex-wrap items-center justify-end gap-3">
             {commitFailed && (
@@ -241,13 +241,14 @@ export function SoulRegionBackfillDialog({ isOpen, onClose }: { isOpen: boolean;
             </div>
           )}
           <div className="max-h-[50dvh] overflow-auto border border-[oklch(var(--color-line))]">
-            <table className="w-full border-collapse text-left text-sm">
+            {/* min-w: on a phone the four columns scroll inside this box instead of piling onto each other. */}
+            <table className="w-full min-w-[600px] border-collapse text-left text-sm">
               <thead className="sticky top-0 bg-[oklch(var(--color-surface-1))] text-xs text-[oklch(var(--color-ink-muted))]">
                 <tr>
                   <th scope="col" className="w-14 px-2 py-2 font-normal">{t("souls.import.col_row")}</th>
                   <th scope="col" className="px-2 py-2 font-normal">{t("souls.region_backfill.col_name")}</th>
-                  <th scope="col" className="px-2 py-2 font-normal">{t("souls.region_backfill.col_change")}</th>
-                  <th scope="col" className="px-2 py-2 font-normal">{t("souls.import.col_status")}</th>
+                  <th scope="col" className="w-[180px] px-2 py-2 font-normal">{t("souls.region_backfill.col_change")}</th>
+                  <th scope="col" className="w-[140px] px-2 py-2 font-normal">{t("souls.import.col_status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -330,10 +331,13 @@ function RegionRow({ row, t, label }: { row: SoulRegionUpdateRow; t: T; label: (
     >
       <td className="px-2 font-mono text-sm">{row.row}</td>
       <td className="max-w-0 px-2">
+        {/* Chip keeps its width; the name takes the rest and truncates (it vanished when the chip could shrink). */}
         <span className="flex min-w-0 items-center gap-2">
-          {row.identifier ? <IdentifierChip id={row.identifier} variant="inline" /> : <MissingValue kind="unrecorded" />}
+          <span className="shrink-0">
+            {row.identifier ? <IdentifierChip id={row.identifier} variant="inline" /> : <MissingValue kind="unrecorded" />}
+          </span>
           {row.soul_name ? (
-            <span className="truncate" title={row.soul_name}>{row.soul_name}</span>
+            <span className="min-w-0 flex-1 truncate" title={row.soul_name}>{row.soul_name}</span>
           ) : (
             <MissingValue kind="unrecorded" />
           )}

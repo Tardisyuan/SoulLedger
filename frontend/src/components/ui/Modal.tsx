@@ -34,6 +34,8 @@ interface BaseModalProps {
   dismissOnOutsideClick?: boolean;
   /** 640 wide on sm+ instead of 440 (A11 缩短冷却详情); below sm it is the bottom sheet either way. */
   wide?: boolean;
+  /** 880 wide on sm+ — a four-column preview table (第四十六批 补录出身地域 W-3). Wins over `wide`. */
+  extraWide?: boolean;
   /** Replaces the title's `text-lg` (A11: 缩短冷却详情 uses `font-title text-xl`). */
   titleClassName?: string;
 }
@@ -59,7 +61,7 @@ interface BaseModalProps {
  * `onOpenChange`, and the animation hooks move from headlessui's `transition`
  * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
  */
-export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true, wide = false, titleClassName = "text-lg" }: BaseModalProps) {
+export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true, wide = false, extraWide = false, titleClassName = "text-lg" }: BaseModalProps) {
   const { t } = useI18n();
   return (
     <Dialog.Root
@@ -93,7 +95,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
           <Dialog.Popup
             data-motion="fade"
-            className={`flex max-h-[calc(100dvh-2rem)] w-full ${wide ? "sm:max-w-[640px]" : "sm:max-w-[440px]"} flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3`}
+            className={`flex max-h-[calc(100dvh-2rem)] w-full ${extraWide ? "sm:max-w-[880px]" : wide ? "sm:max-w-[640px]" : "sm:max-w-[440px]"} flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3`}
           >
             {/* Header */}
             {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
