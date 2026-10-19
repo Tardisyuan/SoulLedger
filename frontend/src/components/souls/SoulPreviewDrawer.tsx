@@ -12,6 +12,7 @@ import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/compon
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { formatHistoricalDate } from "@/lib/utils";
+import { OriginRegionText } from "@/src/components/souls/OriginRegion";
 
 interface SoulPreviewDrawerProps {
   /** The list row being previewed; null = closed. */
@@ -89,7 +90,7 @@ export function SoulPreviewDrawer({ soul, onClose, onNext, onPrev, finalFocus }:
             </Row>
             {isLoading ? (
               // Same rows, same heights as the loaded state, so nothing jumps.
-              [0, 1, 2, 3, 4, 5].map((i) => (
+              [0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <Row key={i} label={" "}>
                   <Skeleton className="h-5 w-2/3" />
                 </Row>
@@ -104,6 +105,9 @@ export function SoulPreviewDrawer({ soul, onClose, onNext, onPrev, finalFocus }:
                 </Row>
                 <Row label={t("souls.form.location_label")}>
                   <DomainText value={data.origin_location || null} />
+                </Row>
+                <Row label={t("souls.origin_region.label")}>
+                  <OriginRegionText value={data.origin_region} />
                 </Row>
                 <Row label={t("souls.detail.merit")}>{score(data.merit_score)}</Row>
                 <Row label={t("souls.detail.demerit")}>{score(data.demerit_score)}</Row>

@@ -631,6 +631,10 @@
         "unknown": "Nen Ini Seth",
         "bad_encoding_gbk": "Nen Menkh · Nen UTF-8 (Mi GBK): Em Excel, Sau Mi «CSV UTF-8»"
       }
+    },
+    "origin_region": {
+      "label": "Ta En Mesut",
+      "EUROPE": "Europa"
     }
   },
   "common": {
@@ -1122,7 +1126,8 @@
         "fact": {
           "balance": "Sepy",
           "civilization": "Taui",
-          "verdict": "Wedja"
+          "verdict": "Wedja",
+          "origin_region": "Ta En Mesut"
         },
         "op": {
           "lt": "<",
@@ -1389,7 +1394,8 @@
       "next": "Nemet Ky",
       "back": "Er Hat",
       "cross_forced": "Wedja Ta Ky Em Iri: Em Khetem, Iri Wat Hesy. Ta Ky: Mi Hesb Em Khet.",
-      "load_error": "Nen Ini Sekhet. Wehem Iri."
+      "load_error": "Nen Ini Sekhet. Wehem Iri.",
+      "jump_target_reason": "{{source}} Khesef Er Sekhet Pen: Nen Iri Tepy."
     },
     "pick_group": {
       "title": "Nen Setep Djer · Sekhet",
@@ -1420,7 +1426,8 @@
       "picked_all": "{{actor}} · {{realm}}: Setep Sekhet. Sekhet Neb: Shem",
       "adjusted_added": "{{actor}}: Redi Wehem {{added}}. Khet: {{reason}}",
       "adjusted_skipped": "{{actor}}: Iri Tepy {{skipped}}. Khet: {{reason}}",
-      "default": "{{actor}}: Shem Mi Wat Hesy Tepy En {{realm}}. Khet: {{reason}}"
+      "default": "{{actor}}: Shem Mi Wat Hesy Tepy En {{realm}}. Khet: {{reason}}",
+      "auto_routed": "{{node}} → {{region}} → {{target}}"
     },
     "adjust": {
       "open": "Redi Wehem · Iri Tepy",
@@ -1704,7 +1711,7 @@
       "field_birth_name": "Ren En Mesut",
       "field_birth": "Mesut",
       "field_death": "Mut",
-      "field_origin": "Ta En Mesut",
+      "field_origin": "Nut",
       "key_verdicts": "Iri Wedja, Aq Er Sep Khery",
       "key_defer": "Sedjer Sep Pen Em Hru Pen",
       "key_workflow": "Khemen «Iri Wat Wedja»",

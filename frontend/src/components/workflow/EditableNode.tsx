@@ -13,7 +13,7 @@ import {
 } from "@xyflow/react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
+import { AUTO_ROUTE_GLYPH, KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
 
 /**
  * A workflow node on the canvas — design C · 03 「画布节点 FlowNode」.
@@ -49,6 +49,8 @@ type CardData = {
   role?: NodeRole;
   ordinal?: number;
   issueCount?: number;
+  /** 自动分流(`isAutoRoute`,第四十五批):「▷◇ 自动 · 无审批人」+ ⇉。 */
+  autoRoute?: boolean;
   [key: string]: unknown;
 };
 
@@ -89,16 +91,24 @@ function EditableNodeComponent({
       <Handle type="target" position={Position.Top} className={PORT} />
       {/* 第一行:角色字形 + 角色名(由连线推导),右侧等宽小字 */}
       <div className="flex justify-between gap-2 text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
-        <span className="whitespace-nowrap">
-          <span aria-hidden="true">{ROLE_GLYPH[role]}</span> {t(`workflow.editor.role.${role}`)}
-        </span>
+        {data.autoRoute ? (
+          // Design W-3:它总有分支,所以带 ◇;在入口时前面还有 ▷。没有审批人,写明「自动」。
+          <span className="whitespace-nowrap" data-auto-route="">
+            <span aria-hidden="true">{role === "branch" ? ROLE_GLYPH.branch : `${ROLE_GLYPH[role]}${ROLE_GLYPH.branch}`}</span>{" "}
+            {t("workflow.editor.auto_route.badge")}
+          </span>
+        ) : (
+          <span className="whitespace-nowrap">
+            <span aria-hidden="true">{ROLE_GLYPH[role]}</span> {t(`workflow.editor.role.${role}`)}
+          </span>
+        )}
         {meta && <span className="font-mono truncate" title={meta}>{meta}</span>}
       </div>
       {/* 第二行:类型字形 + 名称;有问题时右端 `!` */}
       <div className="mt-0.5 flex justify-between gap-2 text-sm font-medium">
         <span className="truncate" title={data.label}>
-          <span aria-hidden="true" title={t(`workflow.editor.kind.${kind}`)}>
-            {KIND_GLYPH[kind]}
+          <span aria-hidden="true" title={data.autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.kind.${kind}`)}>
+            {data.autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kind]}
           </span>{" "}
           {data.label}
         </span>
@@ -163,7 +173,15 @@ export const nodeTypes: NodeTypes = {
  * also has a FAIL edge (`data.labelled`, computed in the editor). A plain
  * chain carries no words.
  */
-type RouteData = { branch?: Branch; labelled?: boolean; conditionText?: string; isDefault?: boolean; active?: boolean };
+type RouteData = {
+  branch?: Branch;
+  labelled?: boolean;
+  conditionText?: string;
+  isDefault?: boolean;
+  active?: boolean;
+  /** 自动分流的出口:地域名(欧洲 / 亚洲 / 不详),实线,不写「是 / 否 · 默认」(第四十五批)。 */
+  regionText?: string;
+};
 
 /**
  * 方向箭头:一个**内联**的 `<polygon>`,尖端落在目标端口上,填充取边自己的 stroke。
@@ -204,7 +222,7 @@ function RouteEdgeComponent({
   const y = (labelY + targetY) / 2;
   // The exit the inspector's 出口 tab is on: 2 px ink, label inverted (v3 A1).
   const stroke = route.active ? "oklch(var(--color-ink))" : style?.stroke;
-  const conditional = !fail && (route.conditionText !== undefined || route.isDefault);
+  const conditional = !fail && route.regionText === undefined && (route.conditionText !== undefined || route.isDefault);
 
   return (
     <>
@@ -235,11 +253,13 @@ function RouteEdgeComponent({
           >
             {fail
               ? t("workflow.editor.branch.fail")
-              : route.conditionText
-                ? `${t("workflow.editor.condition.yes")} · ${route.conditionText}`
-                : route.isDefault
-                  ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
-                  : t("workflow.editor.branch.pass")}
+              : route.regionText !== undefined
+                ? route.regionText
+                : route.conditionText
+                  ? `${t("workflow.editor.condition.yes")} · ${route.conditionText}`
+                  : route.isDefault
+                    ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
+                    : t("workflow.editor.branch.pass")}
           </span>
         </EdgeLabelRenderer>
       )}

@@ -9750,6 +9750,11 @@ export interface components {
             readonly threshold: number | null;
             readonly signatures_json: unknown;
             readonly branches_json: unknown;
+            /**
+             * Format: uuid
+             * @description 通过后跳转到的节点；为空则按 node_order 取下一个 PENDING
+             */
+            readonly on_pass: string | null;
             readonly segment_order: number | null;
             readonly order_in_segment: number | null;
             readonly skip_kind: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;
@@ -14820,6 +14825,11 @@ export interface components {
             readonly threshold?: number | null;
             readonly signatures_json?: unknown;
             readonly branches_json?: unknown;
+            /**
+             * Format: uuid
+             * @description 通过后跳转到的节点；为空则按 node_order 取下一个 PENDING
+             */
+            readonly on_pass?: string | null;
             readonly segment_order?: number | null;
             readonly order_in_segment?: number | null;
             readonly skip_kind?: (components["schemas"]["SkipKindEnum"] | components["schemas"]["NullEnum"]) | null;

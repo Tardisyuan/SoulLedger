@@ -1,5 +1,4 @@
 [
-  "workflow.pick.jump_target_reason",
   "workflow.court.heaven",
   "workflow.court.heaven_gate",
   "workflow.court.diocese",
@@ -46,8 +45,17 @@
   "workflow.refusal.moved_on",
   "crossJudgments.join_locked",
   "souls.import.row_codes.invalid_origin_region",
-  "workflow.editor.condition.fact.origin_region",
-  "workflow.editor.condition.region.EUROPE",
-  "workflow.editor.condition.region.ASIA",
-  "workflow.editor.condition.region.UNKNOWN"
+  "souls.origin_region.ASIA",
+  "souls.origin_region.UNKNOWN",
+  "souls.form.origin_region_hint_greek",
+  "workflow.editor.auto_route.default_name",
+  "workflow.editor.auto_route.badge",
+  "workflow.editor.auto_route.kind",
+  "workflow.editor.auto_route.exits_hint",
+  "workflow.editor.auto_route.no_target",
+  "workflow.editor.issue.auto_route_exit_missing",
+  "workflow.node_state.auto_done",
+  "workflow.node_state.not_reached",
+  "workflow.pick.route_target_reason",
+  "workflow.pick.foreign_all_required"
 ]

@@ -5,7 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import type { JumpSource } from "@soulledger/core/api";
-import { circled, runningJumpSources, segmentRealm, settleJumpTargets } from "@soulledger/core/domain/workflowSegments";
+import { circled, jumpReason, runningJumpSources, segmentRealm, settleJumpTargets } from "@soulledger/core/domain/workflowSegments";
 
 /** 一站:勾上 = 要走。`key` 是送回后端的那个值(生成之前是站序,生成之后是节点 id)。 */
 export interface PickRow {
@@ -28,6 +28,8 @@ export interface ForeignRow {
   tenant_code: string;
   realm_name: string;
   default_node_count: number;
+  /** 那个域没有可选的站(第四十五批):写「全部必须走」,不写「由该域判官选站」。 */
+  nothing_to_pick?: boolean;
 }
 
 /**
@@ -132,9 +134,7 @@ export function StationPicker({
                         {" "}
                         <Badge tone="neutral">{t("workflow.pick.final_badge")}</Badge>
                         <span className="block text-xs text-[oklch(var(--color-ink-muted))]">
-                          {row.required
-                            ? t("workflow.pick.final_reason")
-                            : t("workflow.pick.jump_target_reason", { source: sources.map((s) => s.node_name).join("、") })}
+                          {row.required ? t("workflow.pick.final_reason") : jumpReason(t, sources)}
                         </span>
                       </>
                     )}
@@ -161,7 +161,9 @@ export function StationPicker({
                   <span aria-hidden="true">{circled(f.order)} </span>
                   {segmentRealm(t, f)}
                 </span>
-                <span className="text-xs">{t("workflow.pick.foreign_by_realm")}</span>
+                <span className="text-xs" data-foreign-all-required={f.nothing_to_pick ? "" : undefined}>
+                  {f.nothing_to_pick ? t("workflow.pick.foreign_all_required") : t("workflow.pick.foreign_by_realm")}
+                </span>
                 <span className="ml-auto text-xs">{t("workflow.pick.foreign_default", { n: String(f.default_node_count) })}</span>
               </li>
             ))}

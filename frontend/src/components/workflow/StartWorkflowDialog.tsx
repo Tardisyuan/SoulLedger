@@ -15,7 +15,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { cn } from "@/lib/utils";
-import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
+import { FlowStationPicker, useFlowPreview } from "@/src/components/workflow/segments/FlowStationPicker";
 import { segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
 
 const REASON_MAX = 1000;
@@ -208,6 +208,15 @@ export function StartWorkflowDialog({
     },
   });
 
+  // 第 2 步选站的预览;本域没有一站能跳过(第四十五批 `nothing_to_pick`)时直接「发起」,不进第 2 步。
+  const previewParams = {
+    soul: soulId,
+    ...(template ? { template } : { case_type: caseType }),
+    ...(judgment ? { judgment } : {}),
+  };
+  const preview = useFlowPreview(previewParams, isOpen && Boolean(soulId) && Boolean(caseType));
+  const noPick = preview.data?.nothing_to_pick === true;
+
   /** 改了出错的那一格,提示条就消失。 */
   const touched = (field: Field) => {
     if (refusal?.field === field) setRefusal(null);
@@ -249,7 +258,7 @@ export function StartWorkflowDialog({
             </Button>
           )}
           <Button type="submit" form={FORM_ID} variant="primary" loading={start.isPending} disabled={!soulId || !caseType}>
-            {step === 1 ? t("workflow.pick.next") : t("workflow.start.submit")}
+            {step === 1 && !noPick ? t("workflow.pick.next") : t("workflow.start.submit")}
           </Button>
         </div>
       }
@@ -266,7 +275,7 @@ export function StartWorkflowDialog({
             setStep(1);
             return;
           }
-          if (step === 1) {
+          if (step === 1 && !noPick) {
             setRefusal(null);
             setStep(2);
             return;
@@ -276,11 +285,7 @@ export function StartWorkflowDialog({
       >
         {step === 2 ? (
           <FlowStationPicker
-            params={{
-              soul: soulId,
-              ...(template ? { template } : { case_type: caseType }),
-              ...(judgment ? { judgment } : {}),
-            }}
+            params={previewParams}
             skipped={skipOrders}
             onChange={setSkipOrders}
           />

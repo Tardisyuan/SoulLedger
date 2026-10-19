@@ -6,10 +6,12 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import type { TemplateSigner, WorkflowNodeKind } from "@soulledger/core/api";
 import {
+  AUTO_ROUTE_GLYPH,
   FLOW_ISSUE_CODES,
   KIND_GLYPH,
   ROLE_GLYPH,
   branchOf,
+  isAutoRoute,
   kindOf,
   whenOf,
   type Branch,
@@ -18,6 +20,7 @@ import {
 } from "@/src/components/workflow/workflowValidation";
 import { whenText } from "@/src/components/workflow/workflowConditions";
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 
 /**
  * The three panes around the canvas in design C · 03: 节点库 (left), 属性 +
@@ -162,11 +165,12 @@ function nodeRef(nodes: readonly Node[], id: string, t: TFunc): string {
   return `N${idx + 1}「${nodeName(nodes[idx], t)}」`;
 }
 
-export function issueText(issue: FlowIssue, nodes: readonly Node[], t: TFunc): string {
+export function issueText(issue: FlowIssue, nodes: readonly Node[], t: TFunc, locale?: string): string {
   return t(`workflow.editor.issue.${issue.code}`, {
     node: nodeRef(nodes, issue.nodeId, t),
     branch: issue.branch ? t(`workflow.editor.branch.${issue.branch}`) : "",
     count: String(issue.count ?? 0),
+    region: issue.region ? originRegionLabel(t, issue.region, locale) : "",
   });
 }
 
@@ -248,6 +252,8 @@ export function WorkflowInspector({
   const idx = nodes.findIndex((n) => n.id === selectedId);
   const node = idx >= 0 ? nodes[idx] : undefined;
   const role = node ? roles.get(node.id) ?? "step" : "step";
+  // 自动分流(第四十五批):字形 ⇉,没有审批人;出口只在「出口」页签与表单里按地域改,这里不再列一遍。
+  const autoRoute = node ? isAutoRoute(node, edges) : false;
   const field = (label: string, value: string, mono = false) => (
     <>
       <dt className="py-1 text-xs text-[oklch(var(--color-ink-muted))]">{label}</dt>
@@ -296,12 +302,13 @@ export function WorkflowInspector({
             <>
               <div>
                 <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
-                  <span aria-hidden="true">{KIND_GLYPH[kindOf(node)]} </span>
+                  <span aria-hidden="true">{autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kindOf(node)]} </span>
                   {nodeName(node, t)}
                 </h2>
                 <p className="text-xs text-[oklch(var(--color-ink-muted))]">
                   <span aria-hidden="true">{ROLE_GLYPH[role]} </span>
-                  {t(`workflow.editor.role.${role}`)} · <span className="font-mono">N{idx + 1}</span>
+                  {autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.role.${role}`)} ·{" "}
+                  <span className="font-mono">N{idx + 1}</span>
                 </p>
               </div>
               {nodeForm?.(node)}
@@ -324,7 +331,7 @@ export function WorkflowInspector({
                     {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
                   </>
                 )}
-                {field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
+                {!autoRoute && field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
                 {kindOf(node) !== "END" &&
                   kindOf(node) !== "NOTIFY" &&
                   field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
@@ -363,7 +370,7 @@ export function WorkflowInspector({
                           !
                         </span>
                         <span className="flex flex-col min-w-0">
-                          <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{issueText(issue, nodes, t)}</span>
+                          <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{issueText(issue, nodes, t, locale)}</span>
                           <span className="font-mono text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">
                             {issue.code}
                           </span>

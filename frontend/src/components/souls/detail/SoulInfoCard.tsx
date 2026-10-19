@@ -4,6 +4,7 @@ import type { Soul } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OriginRegionText } from "@/src/components/souls/OriginRegion";
 
 /** 一行:标签在上、值在下,行线在上(v3 `.soul-biography dl>div`)。 */
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
@@ -11,7 +12,7 @@ const DT = "text-2xs text-[oklch(var(--color-ink-subtle))]";
 const DD = "mt-1 min-w-0 text-sm text-[oklch(var(--color-ink))] break-words";
 
 /**
- * 身份(v3 灵魂详情左栏「IDENTITY / 身份」):文明、生、卒、籍贯、本名,然后生平描述。
+ * 身份(v3 灵魂详情左栏「IDENTITY / 身份」):文明、生、卒、籍贯、出身地域、本名,然后生平描述。
  *
  * ID 不在这里:IDENTIFIER_POLICY(src/lib/domainDisplay.ts)规定 UUID 全站只在页头
  * 出现一次、可复制 —— 那个 chip 在页头的 eyebrow 里。
@@ -84,6 +85,13 @@ export function SoulInfoCard({
               <dt className={DT}>{t("souls.detail.location_label")}</dt>
               <dd className={DD}>
                 <DomainText value={soul?.origin_location} />
+              </dd>
+            </div>
+            {/* 出身地域(第四十五批):籍贯旁边;「不详」是一个词,不是「—」。 */}
+            <div className={ROW}>
+              <dt className={DT}>{t("souls.origin_region.label")}</dt>
+              <dd className={DD} data-testid="soul-origin-region">
+                <OriginRegionText value={soul?.origin_region} />
               </dd>
             </div>
             <div className={ROW}>

@@ -372,7 +372,8 @@
       "updating": "Saving...",
       "location_edit_label": "Origin Location",
       "state_label": "Current State",
-      "edit_title": "Edit Soul"
+      "edit_title": "Edit Soul",
+      "origin_region_hint_greek": "In the Greek hall this decides who tries the soul: Europe goes to Aeacus, Asia to Rhadamanthus, unknown straight to Minos."
     },
     "detail": {
       "loading": "Loading soul data...",
@@ -632,6 +633,12 @@
         "no_tenant": "Your account has no civilization",
         "unknown": "Import failed"
       }
+    },
+    "origin_region": {
+      "label": "Region of origin",
+      "EUROPE": "Europe",
+      "ASIA": "Asia",
+      "UNKNOWN": "Unknown"
     }
   },
   "common": {
@@ -1050,7 +1057,8 @@
         "condition_overlap": "{{node}} has two conditions that can both hold",
         "unreachable": "{{node}} cannot be reached from the start",
         "no_exit": "{{node}} has no way out to an end node",
-        "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node"
+        "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node",
+        "auto_route_exit_missing": "{{node}} has no exit for {{region}}"
       },
       "palette": "Nodes · drag onto the canvas",
       "inspector": "Properties",
@@ -1124,12 +1132,7 @@
           "balance": "Balance",
           "civilization": "Civilization",
           "verdict": "Verdict",
-          "origin_region": "Origin"
-        },
-        "region": {
-          "EUROPE": "Europe",
-          "ASIA": "Asia",
-          "UNKNOWN": "Unknown"
+          "origin_region": "Region of origin"
         },
         "op": {
           "lt": "less than",
@@ -1202,6 +1205,13 @@
         "in": "Zoom in",
         "reset": "Zoom to 100%",
         "fit": "Fit to canvas"
+      },
+      "auto_route": {
+        "default_name": "Route by region of origin",
+        "badge": "Automatic · no approver",
+        "kind": "Auto-route",
+        "exits_hint": "Taken automatically by the soul's region of origin; only the destinations can change here.",
+        "no_target": "Not connected"
       }
     },
     "templates": "Workflow Templates",
@@ -1397,7 +1407,9 @@
       "next": "Next",
       "back": "Back",
       "cross_forced": "A cross-realm judgment is open on this case: concluding generates an approval flow, with the other realms following in order.",
-      "load_error": "Couldn't load the stations — try again"
+      "load_error": "Couldn't load the stations — try again",
+      "route_target_reason": "{{source}} routes cases here by region of origin, so this station can't be skipped",
+      "foreign_all_required": "All required · nothing to pick"
     },
     "pick_group": {
       "title": "Stations to pick",
@@ -1456,16 +1468,19 @@
     "node_state": {
       "skipped_at_pick": "Skipped at setup",
       "skipped_later": "Skipped later",
-      "awaiting_pick": "Waiting for the realm to pick · default {{n}}"
+      "awaiting_pick": "Waiting for the realm to pick · default {{n}}",
+      "auto_done": "Automatic · {{region}}",
+      "not_reached": "Not reached this time"
     },
-    "legend": "✓ Approved · ✕ Rejected · ◇ Current · · To go · ⤼ Skipped · ◌ Waiting for a realm to pick",
+    "legend": "✓ Approved · ✕ Rejected · ◇ Current · · To go · ⤼ Skipped · ◌ Waiting for a realm to pick · – Not reached this time",
     "history": {
       "picked": "{{actor}} picked stations for {{realm}}; skipped: {{nodes}}",
       "adjusted": "{{actor}} changed stations: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}",
       "picked_all": "{{actor}} picked stations for {{realm}}; all to go",
       "adjusted_added": "{{actor}} changed stations: restored {{added}}. Reason: {{reason}}",
       "adjusted_skipped": "{{actor}} changed stations: skipped {{skipped}}. Reason: {{reason}}",
-      "default": "{{actor}} went with the default flow for {{realm}}. Reason: {{reason}}"
+      "default": "{{actor}} went with the default flow for {{realm}}. Reason: {{reason}}",
+      "auto_routed": "{{node}} → {{region}} → {{target}}"
     },
     "adjust": {
       "open": "Change stations",

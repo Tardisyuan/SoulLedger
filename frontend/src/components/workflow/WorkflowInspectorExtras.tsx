@@ -19,7 +19,8 @@ import {
   valueText,
   whenText,
 } from "@/src/components/workflow/workflowConditions";
-import { branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
+import { autoRouteExits, branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
+import { originRegionLabel, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
 
 /**
  * The inspector's three data-bearing sections, kept out of
@@ -454,6 +455,93 @@ export function VersionHistorySection({
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/**
+ * 自动分流的检查器(Design 第四十五批 W-3):三条出口 欧洲 / 亚洲 / 不详,固定次序,只改去处。没有审批人、超时、
+ * 驳回出口 —— 它是自动走的一步。不详是 `on_pass`,但不写「默认」。去处选「未连」就删掉那条线(问题页签会说缺了哪条)。
+ * `nameFieldId` 给了就在上面放名称框(节点页签);出口页签不放。
+ */
+export function AutoRouteSection({
+  t,
+  locale,
+  node,
+  nodes,
+  edges,
+  onTarget,
+  onName,
+  nameFieldId,
+}: {
+  t: TFunc;
+  locale?: string;
+  node: Node;
+  nodes: readonly Node[];
+  edges: readonly Edge[];
+  /** Absent in the read-only view. `""` disconnects the exit. */
+  onTarget?: (source: string, region: OriginRegionMember, target: string) => void;
+  onName?: (label: string) => void;
+  nameFieldId?: string;
+}) {
+  const ref = (id: string) => {
+    const idx = nodes.findIndex((n) => n.id === id);
+    const label = idx >= 0 && typeof nodes[idx].data.label === "string" ? nodes[idx].data.label : "";
+    return `N${idx + 1}「${label || t("workflow.editor.unnamed")}」`;
+  };
+  const targets = nodes.filter((n) => n.id !== node.id);
+  return (
+    <section aria-label={t("workflow.editor.auto_route.kind")} data-testid="auto-route-section" className="flex flex-col gap-3">
+      {nameFieldId && onName && (
+        <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3">
+          <label htmlFor={nameFieldId} className="pt-3 text-xs text-[oklch(var(--color-ink-muted))]">
+            {t("workflow.editor.field.name")}
+          </label>
+          <input
+            id={nameFieldId}
+            type="text"
+            className={`${CONTROL} min-w-0 font-medium`}
+            value={typeof node.data.label === "string" ? node.data.label : ""}
+            onChange={(e) => onName(e.target.value)}
+          />
+        </div>
+      )}
+      <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.auto_route.exits_hint")}</p>
+      <dl className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-2">
+        {autoRouteExits(node.id, edges).map(({ region, edge }) => {
+          const selectId = `${node.id}-exit-${region}`;
+          return (
+            <div key={region} className="contents" data-exit={region}>
+              <dt className="pt-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                <label htmlFor={onTarget ? selectId : undefined} title={region}>
+                  {originRegionLabel(t, region, locale)}
+                </label>
+              </dt>
+              <dd className="min-w-0">
+                {onTarget ? (
+                  <select
+                    id={selectId}
+                    className={`${CONTROL} w-full`}
+                    value={edge?.target ?? ""}
+                    onChange={(e) => onTarget(node.id, region, e.target.value)}
+                  >
+                    <option value="">{t("workflow.editor.auto_route.no_target")}</option>
+                    {targets.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {ref(n.id)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="block py-2 text-sm text-[oklch(var(--color-ink))]">
+                    → {edge ? ref(edge.target) : t("workflow.editor.auto_route.no_target")}
+                  </span>
+                )}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
     </section>
   );
 }

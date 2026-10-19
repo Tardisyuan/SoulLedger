@@ -12,6 +12,7 @@ import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { reincarnationApi, type Reincarnation } from "@soulledger/core/api/reincarnation";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
+import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -205,20 +206,22 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   );
 }
 
-function Fact({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+function Fact({ label, value, wide, testID }: { label: string; value: string; wide?: boolean; testID?: string }) {
   return (
     <View style={{ width: wide ? "100%" : "47%", gap: space[1] }}>
       <Txt variant="caption" tone="muted">{label}</Txt>
-      <Txt variant="body">{value}</Txt>
+      <Txt variant="body" testID={testID}>{value}</Txt>
     </View>
   );
 }
 
 function IdentityTab({ soul }: { soul: Soul }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <View testID="soul-identity" style={{ padding: GUTTER, flexDirection: "row", flexWrap: "wrap", gap: space[4] }}>
       <Fact label={t("souls.detail.birth")} value={[dateText(soul.birth_date), soul.origin_location].filter(Boolean).join(" · ")} />
+      {/* 出身地域(Design O-1):籍贯旁边,只读。「不详」是一个词,不是「—」。 */}
+      <Fact testID="soul-origin-region" label={t("souls.origin_region.label")} value={originRegionLabel(t, soul.origin_region, locale)} />
       <Fact label={t("souls.detail.death")} value={dateText(soul.death_date)} />
       {soul.birth_name && soul.birth_name !== soul.name ? <Fact label={t("officer_app.soul.birth_name")} value={soul.birth_name} /> : null}
       {soul.description ? <Fact wide label={t("souls.detail.profile.description")} value={soul.description} /> : null}

@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { ConditionClause, TemplateSigner, WorkflowNodeKind } from "@soulledger/core/api";
 import { clauseError, overlaps, region } from "@/src/components/workflow/workflowConditions";
+import { ORIGIN_REGIONS, branchRegion, isAutoRouteBranches, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
 
 /**
  * What the canvas can say about a flow before it is saved or published — the
@@ -86,6 +87,33 @@ export const KIND_GLYPH: Record<WorkflowNodeKind, string> = {
   END: "■",
 };
 
+/**
+ * 「自动分流」(Design 第四十五批 W-3):一个通知节点,出口按出身地域。不是一种新的节点 —— 存的仍是 NOTIFY 加分支 ——
+ * 只是画法与检查器不同:三条实线出口 欧洲 / 亚洲 / 不详,不详是 `on_pass`(不写「默认」),只能改去处。
+ */
+export function isAutoRoute(node: Pick<Node, "id" | "data">, edges: readonly Edge[]): boolean {
+  return isAutoRouteBranches(
+    kindOf(node),
+    edges.filter((e) => e.source === node.id).map((e) => ({ when: whenOf(e) })),
+  );
+}
+
+/** 分流节点的一条出口是哪个地域:无条件的 PASS 边是不详;只认「出身地域 ∈ {R}」的分支。 */
+export function exitRegion(edge: Pick<Edge, "sourceHandle" | "data">): OriginRegionMember | null {
+  if (branchOf(edge) !== "pass") return null;
+  const when = whenOf(edge);
+  return when === undefined ? "UNKNOWN" : branchRegion(when);
+}
+
+/** 分流节点的三条出口,固定次序 欧洲 / 亚洲 / 不详;没连的是 undefined。 */
+export function autoRouteExits(nodeId: string, edges: readonly Edge[]): { region: OriginRegionMember; edge: Edge | undefined }[] {
+  const out = edges.filter((e) => e.source === nodeId);
+  return ORIGIN_REGIONS.map((r) => ({ region: r, edge: out.find((e) => exitRegion(e) === r) }));
+}
+
+/** 自动分流卡片第二行的字形(Design 第四十五批 W-3),代替通知的 ✉。 */
+export const AUTO_ROUTE_GLYPH = "⇉";
+
 export function isGraph(nodes: readonly Node[], edges: readonly Edge[]): boolean {
   return nodes.some((n) => kindOf(n) === "END") || edges.some((e) => whenOf(e) !== undefined);
 }
@@ -121,7 +149,8 @@ export type FlowIssueCode =
   | "condition_overlap"
   | "unreachable"
   | "no_exit"
-  | "no_end";
+  | "no_end"
+  | "auto_route_exit_missing";
 
 /**
  * Every check `validateFlow` can report, in one list — the inspector's 问题 tab
@@ -146,6 +175,7 @@ export const FLOW_ISSUE_CODES: readonly FlowIssueCode[] = [
   "unreachable",
   "no_exit",
   "no_end",
+  "auto_route_exit_missing",
 ];
 
 export const SAVE_BLOCKING: ReadonlySet<FlowIssueCode> = new Set(["name_empty", "self_route", "duplicate_route"]);
@@ -159,6 +189,8 @@ export interface FlowIssue {
   count?: number;
   /** The conditional edge an issue is about (condition_* only). */
   edgeId?: string;
+  /** The exit a 自动分流 step lacks (auto_route_exit_missing only). */
+  region?: OriginRegionMember;
 }
 
 function str(value: unknown): string {
@@ -208,6 +240,12 @@ export function validateFlow(nodes: readonly Node[], edges: readonly Edge[]): Fl
         issues.push({ nodeId: n.id, code: "threshold_out_of_range" });
     }
     if (kind === "END" && (outgoing.length > 0 || rejectTo)) issues.push({ nodeId: n.id, code: "end_has_exit" });
+    // 自动分流的三条出口缺一不可(Design 第四十五批):缺了,那个地域的灵魂就没有去处。只在编辑器里查,后端不查。
+    if (isAutoRoute(n, edges)) {
+      for (const { region: r, edge } of autoRouteExits(n.id, edges)) {
+        if (!edge) issues.push({ nodeId: n.id, code: "auto_route_exit_missing", region: r });
+      }
+    }
 
     const boxes: { edgeId: string; box: NonNullable<ReturnType<typeof region>> }[] = [];
     for (const e of outgoing) {
