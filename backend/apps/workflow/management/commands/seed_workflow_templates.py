@@ -15,12 +15,17 @@ of 2026-10-19:
 * 埃及称重 has no returns at all — the heart is weighed once (verify-egyptian.md §2) — and neither
   have 末日审判 or 天堂申诉: every FAIL there ends the flow;
 * an appeal's final FAIL ends the flow (the appeal fails);
-* the Greek 分区审判 FAIL goes to Minos (``on_fail``), Gorgias 524a.
+* the Greek flow is Gorgias 524a as the user read it on 2026-10-19: one judge or the other, never both. An
+  automatic 通知 step routes on the soul's ``origin_region`` (Europe → Aeacus, Asia → Rhadamanthus, 不详 →
+  Minos directly); Aeacus's or Rhadamanthus's PASS ends the flow (the soul takes its road), a FAIL (in doubt)
+  goes to Minos (``on_fail``); Minos's PASS completes, his FAIL ends the flow REJECTED.
 
 Stations, courts, types and actors are ``WORKFLOW_TEMPLATES``' (courts respelled by ``COURT_SPELLING``). European and Greek ROUTINE have no
 entry there (they fell to the one-node generic flow); theirs are the frontend presets
 ``EUROPEAN_ROUTINE`` / ``GREEK_ROUTINE`` (``packages/core/src/config/workflow-templates.ts``), types
-mapped as ``workflow-node-types.ts`` maps them, ``actor`` set because the cast has each person.
+mapped as ``workflow-node-types.ts`` maps them, ``actor`` set because the cast has each person. The Greek
+row is no longer the preset's shape since 2026-10-19: the preset is a three-station list, the row a graph (a
+routing step, the three judges and a 结束).
 
 Matched on (tenant, civilization, case_type, name). Create-only by default, like ``seed_mythology``:
 an existing row that differs is reported and left alone; ``--update`` publishes the seed as a new
@@ -51,15 +56,26 @@ PRESET_FLOWS = {
             {"name": "Christ · 公审判", "court": "天堂", "type": NodeType.FINAL, "order": 3, "actor": "Christ"},
         ],
     },
+    # Gorgias 524a (2026-10-19): one judge or the other, by where the dead came from; Minos only in doubt.
+    # n1 is 通知 with nobody designated: the engine runs it at once and takes the branch `origin_region` selects
+    # (`ApprovalWorkflow._enter` → `_pass_successor`), else `on_pass` — Minos, for a soul whose region is 不详.
     (GR, CaseType.ROUTINE): {
         "name": "希腊冥界流程",
         "nodes": [
-            {"name": "Aeacus · 分区审判（欧洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 1,
-             "actor": "Aeacus"},
-            {"name": "Rhadamanthus · 分区审判（亚洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 2,
-             "actor": "Rhadamanthus"},
-            {"name": "Minos · 终裁（另二人存疑时）", "court": "岔路口草地", "type": NodeType.FINAL, "order": 3,
-             "actor": "Minos"},
+            {"name": "岔路口 · 按来处分流", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 1,
+             "kind": "NOTIFY", "on_pass": "n4", "branches": [
+                 {"id": "europe", "when": [{"fact": "origin_region", "op": "in", "value": ["EUROPE"]}],
+                  "target": "n2"},
+                 {"id": "asia", "when": [{"fact": "origin_region", "op": "in", "value": ["ASIA"]}],
+                  "target": "n3"},
+             ]},
+            {"name": "Aeacus · 分区审判（欧洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 2,
+             "actor": "Aeacus", "on_pass": "n5"},
+            {"name": "Rhadamanthus · 分区审判（亚洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 3,
+             "actor": "Rhadamanthus", "on_pass": "n5"},
+            {"name": "Minos · 终裁（另二人存疑时）", "court": "岔路口草地", "type": NodeType.FINAL, "order": 4,
+             "actor": "Minos", "on_pass": "n5"},
+            {"name": "结束 · 各走其路", "court": "岔路口草地", "type": NodeType.FINAL, "order": 5, "kind": "END"},
         ],
     },
 }
@@ -88,7 +104,7 @@ FAIL_ROUTES = {
     (EU, CaseType.APPEAL): {},
     (EU, CaseType.CANONIZATION): _back((2, 1), (3, 2)),
     (EU, CaseType.PURGATORY_REVIEW): _back((2, 1), (3, 2)),
-    (GR, CaseType.ROUTINE): {1: ("on_fail", 3), 2: ("on_fail", 3)},
+    (GR, CaseType.ROUTINE): {2: ("on_fail", 4), 3: ("on_fail", 4)},
 }
 
 
@@ -111,7 +127,8 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
     # Once a row carries an `on_fail` jump the editor draws only the edges written down, so the pass path the
     # engine takes by default (next station) disappeared and Rhadamanthus showed as an unreached 分支 (seen on
     # 115, 2026-10-19). Write that default out; the engine walks exactly the same way.
-    if any(n.get("on_fail") for n in nodes):
+    # A graph (a 结束 or a branch) writes every edge itself; filling in "next station" there would be wrong.
+    if any(n.get("on_fail") for n in nodes) and not any(n.get("kind") == "END" or n.get("branches") for n in nodes):
         for here, after in zip(nodes, nodes[1:], strict=False):
             here.setdefault("on_pass", after["id"])
     return source["name"], nodes

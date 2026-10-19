@@ -610,6 +610,7 @@
         "too_many_cells": "More cells than headers",
         "invalid_civilization": "Not a known civilization",
         "civilization_mismatch": "Not your civilization",
+        "invalid_origin_region": "Must be EUROPE, ASIA or blank",
         "invalid_date": "Invalid date",
         "death_before_birth": "Death is before birth",
         "implausible_lifespan": "Implausible lifespan",
@@ -1122,7 +1123,13 @@
         "fact": {
           "balance": "Balance",
           "civilization": "Civilization",
-          "verdict": "Verdict"
+          "verdict": "Verdict",
+          "origin_region": "Origin"
+        },
+        "region": {
+          "EUROPE": "Europe",
+          "ASIA": "Asia",
+          "UNKNOWN": "Unknown"
         },
         "op": {
           "lt": "less than",

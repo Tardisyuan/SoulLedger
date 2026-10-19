@@ -112,6 +112,9 @@ class NodeKind(models.TextChoices):
 #: Kinds the engine passes through without waiting for anybody.
 AUTOMATIC_KINDS = frozenset({NodeKind.NOTIFY, NodeKind.END})
 
+#: `_pass_successor`'s answer when the branch the case selects leads to a SKIPPED station: the flow ends REJECTED.
+BRANCH_SKIPPED = object()
+
 
 class SkipKind(models.TextChoices):
     """Why a SKIPPED node was skipped by a person (第四十三批). Null on a node the engine skipped by routing
@@ -531,7 +534,13 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         A branch whose conditions hold but whose target is no longer PENDING
         is not taken, and neither is any later branch: conditions select one
         branch, and falling through to the *next* matching one would take a
-        branch the author wrote for a different case. The default applies.
+        branch the author wrote for a different case. The default applies —
+        except for a SKIPPED target: `BRANCH_SKIPPED`, and the caller ends the
+        flow REJECTED. The default there is a station chosen for the other
+        cases (the Greek flow's default is Minos, who tries only the doubtful),
+        and pick / adjust lock a branch target while its source runs
+        (`segments.jump_sources`), so this is only a template changed after
+        the flow started (2026-10-19, the same ruling as `_fail_target`).
         """
         if node.branches_json:
             from apps.workflow.conditions import case_facts, matches
@@ -542,6 +551,8 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                     target = self.nodes.filter(pk=branch.get("target")).first()
                     if self._routable(target):
                         return target
+                    if target is not None and target.workflow_id == self.id and target.status == NodeStatus.SKIPPED:
+                        return BRANCH_SKIPPED
                     break
         if self._routable(node.on_pass):
             return node.on_pass
@@ -549,7 +560,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
 
     def _advance_from(self, node: "ApprovalNode", now) -> None:
         successor = self._pass_successor(node)
-        if successor is None:
+        if successor is BRANCH_SKIPPED:
+            self._finish(ApprovalWorkflowStatus.REJECTED, now)
+        elif successor is None:
             self._finish(ApprovalWorkflowStatus.COMPLETED, now)
         else:
             self._skip_jumped(node, successor, now)
@@ -621,6 +634,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             notified = node
             transaction.on_commit(lambda n=notified: self._send_notify_node(n))
             successor = self._pass_successor(node)
+            if successor is BRANCH_SKIPPED:
+                self._finish(ApprovalWorkflowStatus.REJECTED, now)
+                return
             if successor is None:
                 self._finish(ApprovalWorkflowStatus.COMPLETED, now)
                 return

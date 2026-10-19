@@ -53,6 +53,7 @@ export {
   type SoulImportCommitResult,
   type SoulImportFileError,
   type SoulInput,
+  type SoulOriginRegion,
   type Soul,
   type SoulListItem,
   type SoulRecord,

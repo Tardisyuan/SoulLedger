@@ -10,6 +10,8 @@ comparisons spelled out in ``_holds`` below, over the facts in ``FACTS``.
     balance       integer  lt lte gt gte eq         an integer   (功过余额 = merit − demerit)
     civilization  enum     in not_in                a list of Civilization members
     verdict       enum     in not_in                a list of judgment Verdict members
+    origin_region enum     in not_in                a list of EUROPE / ASIA / UNKNOWN
+                                                    (Soul.origin_region; blank reads as UNKNOWN)
 
 Because the set is this small, the questions the publish validator has to ask —
 "can this branch ever be taken?" and "can two branches both be taken?" — have
@@ -39,11 +41,22 @@ def _verdicts() -> tuple[str, ...]:
     return tuple(Verdict.values)
 
 
+def _origin_regions() -> tuple[str, ...]:
+    from apps.souls.models import Soul
+
+    return (*Soul.OriginRegion.values, UNKNOWN_REGION)
+
+
+#: What `origin_region` reads for a soul whose region is blank (不详). A member like the other two, so a branch
+#: can name it and `not_in` stays exact: blank is not "no fact", it is the recorded answer 「不详」.
+UNKNOWN_REGION = "UNKNOWN"
+
 #: fact -> (kind, allowed values for an enum fact)
 FACTS = {
     "balance": ("number", None),
     "civilization": ("enum", _civilizations),
     "verdict": ("enum", _verdicts),
+    "origin_region": ("enum", _origin_regions),
 }
 
 
@@ -78,6 +91,7 @@ def case_facts(workflow) -> dict:
         "balance": soul.karmic_balance,
         "civilization": soul.civilization,
         "verdict": judgment.verdict if judgment is not None else None,
+        "origin_region": soul.origin_region or UNKNOWN_REGION,
     }
 
 

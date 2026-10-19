@@ -610,6 +610,7 @@
         "too_many_cells": "列数多于表头",
         "invalid_civilization": "不是已知的文明",
         "civilization_mismatch": "不是本文明",
+        "invalid_origin_region": "只能是 EUROPE、ASIA 或留空",
         "invalid_date": "日期格式不对",
         "death_before_birth": "死亡早于出生",
         "implausible_lifespan": "寿命不合理",
@@ -1122,7 +1123,13 @@
         "fact": {
           "balance": "余额",
           "civilization": "文明",
-          "verdict": "判决"
+          "verdict": "判决",
+          "origin_region": "来处"
+        },
+        "region": {
+          "EUROPE": "欧洲",
+          "ASIA": "亚洲",
+          "UNKNOWN": "不详"
         },
         "op": {
           "lt": "小于",

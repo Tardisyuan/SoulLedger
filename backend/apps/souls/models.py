@@ -181,6 +181,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
     origin_location = models.CharField(max_length=255, blank=True)
+
+    #: Which judge of the Greek meadow tries this soul (2026-10-19): Gorgias 524a gives Rhadamanthus the dead
+    #: of Asia and Aeacus those of Europe, Minos only when they are in doubt. A recorded fact, not inferred from
+    #: `origin_location` — that is free text. Blank is 不详, and the Greek flow then goes straight to Minos
+    #: (`apps/workflow/conditions.py` reads blank as UNKNOWN).
+    class OriginRegion(models.TextChoices):
+        EUROPE = "EUROPE", "欧洲"
+        ASIA = "ASIA", "亚洲"
+
+    origin_region = models.CharField(max_length=8, choices=OriginRegion.choices, blank=True, default="")
     birth_name = models.CharField(max_length=255, blank=True)  # name at birth
     description = models.TextField(blank=True)
 
