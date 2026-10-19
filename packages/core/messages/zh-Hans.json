@@ -1435,7 +1435,9 @@
       "city_god_system": "城隍体系",
       "wrongful_death_city": "枉死城",
       "jiuhua": "九华山",
-      "avici": "阿鼻地狱"
+      "avici": "阿鼻地狱",
+      "rebirth_application": "转生申请",
+      "reopened_judgment": "重开审判"
     },
     "segment": {
       "local": "本域",
@@ -1486,6 +1488,17 @@
       "foreign_body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。",
       "stopped_here": "停在这里",
       "remind_too_soon": "一小时内已经提醒过，稍后再试"
+    },
+    "refusal": {
+      "jump_target_required": "{{station}}是{{source}}驳回时转去的站，不能跳过；要跳过它，先把{{source}}一并跳过",
+      "final_required": "终审必须走，不能跳过",
+      "segment_changed": "这一段刚被别人改过，请重新打开再选",
+      "workflow_required": "这个案子有跨域审判在进行，落判时必须生成审批流程",
+      "not_allowed": "你没有权限做这一步",
+      "too_early": "在门口满 {{days}} 天，或那个域没有能选站的判官时，才能按默认流程走",
+      "unknown_node": "流程里已经没有这一站，请刷新后再试",
+      "reason_required": "请填写理由",
+      "moved_on": "流程已经往前走了，请刷新后再试"
     }
   },
   "dashboard": {
@@ -2765,7 +2778,8 @@
     "cancel_flow_body": "审批流程里还没走的外域段({{realms}})全部标为跳过，流程走完本域后结束。已走过的站不变。",
     "cancel_flow_body_in_realm": "正在走的{{realm}}段，当前站和之后的站都标为跳过，流程随即结束。已走过的站不变。",
     "cancel_flow_note": "外域已发出的「选站」待办一并撤回，并通知各域。",
-    "workflow_running": "审批流程还在走：流程走完或被驳回时，跨域审判随之结束。要提前停下，请取消跨域审判。"
+    "workflow_running": "审批流程还在走：流程走完或被驳回时，跨域审判随之结束。要提前停下，请取消跨域审判。",
+    "join_locked": "审批流程不在走，不能入席；流程在走时，新的域只能排在最后"
   },
   "users": {
     "title": "用户管理",

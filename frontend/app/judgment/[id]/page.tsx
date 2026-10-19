@@ -70,6 +70,7 @@ import {
 import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
 import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
+import { segmentRefusalOf, segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
 import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import {
   EMPTY_PLACEMENT,
@@ -298,6 +299,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       }
       if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
         showToast(t(`sentence_plan.errors.${code}`), "error");
+        return;
+      }
+      // 第四十三批的选站拒绝(终审 / 驳回目标 / 跨域审判要流程):译好的一句,不是后端的英文。
+      const segmentRefusal = segmentRefusalText(t, segmentRefusalOf(err));
+      if (segmentRefusal) {
+        showToast(segmentRefusal, "error");
         return;
       }
       showToast(e?.response?.data?.error || t("judgment.detail.conclude_error"), "error");

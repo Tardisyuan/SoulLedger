@@ -74,6 +74,47 @@ export function segmentRefusalOf(error: unknown): SegmentRefusal {
   return { status: r?.status, code: typeof data.code === "string" ? data.code : "", data };
 }
 
+/** 这些码说的都是「流程在你打开之后往前走了」:一句「请刷新」。 */
+const MOVED_ON = new Set([
+  "segment_closed",
+  "segment_started",
+  "segment_done",
+  "not_picked",
+  "not_awaiting",
+  "node_locked",
+  "node_changed",
+  "workflow_closed",
+]);
+
+/**
+ * 拒绝码 → 语言包里的一句(2026-10-19):后端的 `error` 是英文,只给日志看,不上屏。驳回目标(`jump_target_required`)
+ * 写出是哪一站、从哪些站转来(响应的 `jump_targets`)。认不出的码给 null,调用方退回自己的兜底(「没能保存」)。
+ * 官员台(选站 / 加减站 / 门口 / 生成流程 / 落判)与官员 App 的选站同用。
+ */
+export function segmentRefusalText(
+  t: (key: string, vars?: Record<string, string>) => string,
+  refusal: SegmentRefusal,
+): string | null {
+  const { code, data } = refusal;
+  if (code === "jump_target_required") {
+    const targets = Array.isArray(data.jump_targets) ? (data.jump_targets as { node_name?: unknown; sources?: unknown }[]) : [];
+    const lines = targets.map((r) =>
+      t("workflow.refusal.jump_target_required", {
+        station: typeof r.node_name === "string" ? r.node_name : "",
+        source: Array.isArray(r.sources) ? r.sources.filter((s) => typeof s === "string").join("、") : "",
+      }),
+    );
+    return lines.length > 0 ? lines.join(" ") : null;
+  }
+  if (code === "remind_too_soon") return t("workflow.gate.remind_too_soon");
+  if (code === "too_early") return t("workflow.refusal.too_early", { days: String(OVERDUE_DAYS) });
+  if (MOVED_ON.has(code)) return t("workflow.refusal.moved_on");
+  if (["final_required", "segment_changed", "workflow_required", "not_allowed", "unknown_node", "reason_required"].includes(code)) {
+    return t(`workflow.refusal.${code}`);
+  }
+  return null;
+}
+
 /** W-5d「这一段刚被改过」:谁、几点(后端随 409 `segment_changed` 带回;没有时只写标题)。 */
 export interface StaleSegment {
   by: string;
