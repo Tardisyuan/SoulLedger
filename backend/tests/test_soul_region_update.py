@@ -187,6 +187,16 @@ def test_an_export_shaped_file_with_extra_columns_works(world, django_capture_on
     assert (w["a"].origin_region, w["a"].name) == ("EUROPE", "Achilles")
 
 
+@pytest.mark.parametrize("reason_column", ["跳过原因", "reason", "Medu Sni"])
+def test_the_skipped_rows_file_goes_back_as_downloaded(world, reason_column):
+    """The dialog's 「下载跳过的行」 file heads its third column in the reader's language (batch 47); re-uploaded
+    as-is, that column is ignored like any other extra one."""
+    body = f"soul_id,origin_region,{reason_column}\n{world['a'].pk},EUROPE,不存在\n"
+    preview = _post(world["client"], PREVIEW, body)
+    assert preview.status_code == 200, preview.data
+    assert _statuses(preview) == ["ok"]
+
+
 # ── another hall ──────────────────────────────────────────────────────────
 
 def test_another_halls_soul_is_not_found_and_not_leaked(world):
