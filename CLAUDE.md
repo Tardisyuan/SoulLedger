@@ -219,6 +219,12 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   `src/__tests__/jestAlwaysRunList.test.ts` 用同一条正则扫测试源码,少一条、多一条都红。
   2026-09-30 验过:加一个 `readFileSync` 的一次性测试 → 红;清单里塞一个不存在的文件 → 红。
   新写了读文件的测试,把它加进清单(守卫会点名)。
+- **同一份代码已全量通过，推送就不再跑(2026-10-19 用户决定)**:`scripts/run-gates.sh --full` 在**干净的工作区**
+  (已跟踪文件与 HEAD 一致，`backend/` `frontend/` `packages/` `mobile*` `scripts/` 下没有未跟踪文件)跑通后，
+  把 HEAD 的树哈希记进 `<git common dir>/soulledger-gates-passed`;推送时被推的提交树哈希在里面，钩子打印
+  「already passed」直接放行。改了任何一个字节就是另一棵树，照旧全跑。推到 main 跑的正是 `--full` 那一套，
+  所以两者等价;真 PostgreSQL 与 E2E 本来就不在钩子里，不受影响。守卫:`test_prepush_runs_the_gates_a_change_can_break.py`
+  的 `TestATreeThatAlreadyPassedFull`(去掉放行那行会红，已验)。
 - **什么强制全跑**(输出里逐条写明是哪条规则、哪个文件):`--full`、`GATES_FULL=1`、
   **推到 `refs/heads/main`**、语言包(`packages/core/messages/**`)、`frontend/` 或 `packages/core/`
   下的 JSON / MD / YAML、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
