@@ -247,6 +247,31 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     expect(judgmentApi.conclude.mock.calls[0][1]).toMatchObject({ create_workflow: true, skip_node_orders: [1] });
   });
 
+  it("勾上审批流而本域无站可选(nothing_to_pick):没有「下一步」,确认层直接「落判并发起」,不画选站,不带 skip_node_orders", async () => {
+    workflowApi.flowPreview.mockResolvedValue({
+      data: {
+        name: "希腊冥界流程",
+        nothing_to_pick: true,
+        stations: [{ node_order: 4, node_name: "Minos", court_code: "", approver: "Minos", approver_role: null, is_required: true }],
+        foreign: [],
+      },
+    });
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "1" });
+    fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }));
+    await waitFor(() => expect(workflowApi.flowPreview).toHaveBeenCalledWith({ judgment: ID }));
+    fireEvent.click(toConfirm());
+    const layer = await screen.findByTestId("confirm-layer");
+    const go = await within(layer).findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") });
+    expect(within(layer).queryByRole("button", { name: tZh("workflow.pick.next") })).toBeNull();
+    expect(within(layer).queryByTestId("station-picker")).toBeNull();
+    fireEvent.click(go);
+    await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
+    expect(judgmentApi.conclude.mock.calls[0][1]).toMatchObject({ create_workflow: true });
+    expect(judgmentApi.conclude.mock.calls[0][1]).not.toHaveProperty("skip_node_orders");
+  });
+
   it("⌘⏎ 与落判按钮同一道门:没有 judgment.execute 就不落判", async () => {
     // (「未选裁决」这一半已不存在:没选过的案子预选待定,见「v3 · 当前这一判」。)
     mockUser = { ...mockUser, permissions: ["judgment.read"] };
