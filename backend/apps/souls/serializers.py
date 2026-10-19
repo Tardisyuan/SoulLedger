@@ -814,6 +814,46 @@ class SoulImportCommitSerializer(serializers.Serializer):
     batch_id = serializers.UUIDField(help_text="Filter the list with `?import_batch=` to see this batch.")
 
 
+class SoulRegionUpdateRowSerializer(serializers.Serializer):
+    row = serializers.IntegerField(help_text="Line number in the file; the header is line 1.")
+    status = serializers.ChoiceField(
+        choices=["ok", "unchanged", "missing_identifier", "not_found", "duplicate_in_file", "invalid_origin_region"],
+        help_text="`not_found` also covers another hall's soul — deliberately indistinguishable.",
+    )
+    values = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    old = serializers.CharField(allow_null=True, allow_blank=True, help_text="Stored value; blank is unknown.")
+    new = serializers.CharField(allow_null=True, allow_blank=True, help_text="Value the row sets; blank is unknown.")
+    clears_value = serializers.BooleanField(help_text="An `ok` row that turns a recorded EUROPE / ASIA into unknown.")
+    duplicate_of = serializers.IntegerField(
+        allow_null=True, help_text="For `duplicate_in_file`: the row of the first occurrence, which is the one used."
+    )
+    identifier = serializers.CharField(allow_blank=True, help_text="The soul_id / soul_code cell as written.")
+    soul_name = serializers.CharField(
+        allow_null=True,
+        help_text="Whenever the identifier names a soul of this hall (also `invalid_origin_region` / "
+        "`duplicate_in_file`); null for `not_found` / `missing_identifier` — never another hall's.",
+    )
+
+
+class SoulRegionUpdatePreviewSerializer(serializers.Serializer):
+    """200 of `…/region-update/preview/`. Rows not `ok` / `unchanged` are the ones commit will skip."""
+    total = serializers.IntegerField()
+    changed_count = serializers.IntegerField()
+    unchanged_count = serializers.IntegerField()
+    skipped_count = serializers.IntegerField()
+    clears_count = serializers.IntegerField(help_text="Rows that clear a recorded value; included in changed_count.")
+    max_rows = serializers.IntegerField()
+    rows = SoulRegionUpdateRowSerializer(many=True)
+
+
+class SoulRegionUpdateCommitSerializer(serializers.Serializer):
+    """200 of `…/region-update/commit/`. `rows` holds only the skipped rows, with their status."""
+    updated = serializers.IntegerField()
+    unchanged = serializers.IntegerField()
+    skipped = serializers.IntegerField()
+    rows = SoulRegionUpdateRowSerializer(many=True)
+
+
 class SoulImportFileErrorSerializer(serializers.Serializer):
     """400: the file as a whole is unusable. Nothing was read or written."""
     code = serializers.CharField()

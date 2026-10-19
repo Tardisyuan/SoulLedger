@@ -8704,6 +8704,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/region-update/commit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Apply the file: re-validated under row locks, only changed rows written, rows in error skipped.
+         *
+         *     `rows` lists the skipped rows with their status (user decision 2026-10-19: skip, don't refuse the
+         *     file). Each changed soul gets its ordinary UPDATE audit row; one BATCH_UPDATE row names the file.
+         *     Re-running the same file changes nothing and writes no audit row.
+         */
+        post: operations["v1_souls_region_update_commit_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/souls/region-update/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
+         *
+         *     Columns: exactly one of `soul_id` (UUID; the export's `Soul ID` heading counts) / `soul_code`, and
+         *     `origin_region` (`EUROPE` / `ASIA` / `UNKNOWN`, `Europe` / `Asia` / `Unknown`, `欧洲` / `亚洲` / `不详`,
+         *     any case, blank = unknown — `region_update.REGION_SPELLINGS`). Any other column is ignored. Same size
+         *     and row limits as the import. A soul of another hall is `not_found`. Rows whose status is not `ok` /
+         *     `unchanged` are the ones commit will skip (`skipped_count`).
+         */
+        post: operations["v1_souls_region_update_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -17997,6 +18045,64 @@ export interface components {
         SoulRefreshRequest: {
             refresh: string;
         };
+        /** @description 200 of `…/region-update/commit/`. `rows` holds only the skipped rows, with their status. */
+        SoulRegionUpdateCommit: {
+            updated: number;
+            unchanged: number;
+            skipped: number;
+            rows: components["schemas"]["SoulRegionUpdateRow"][];
+        };
+        /** @description 200 of `…/region-update/preview/`. Rows not `ok` / `unchanged` are the ones commit will skip. */
+        SoulRegionUpdatePreview: {
+            total: number;
+            changed_count: number;
+            unchanged_count: number;
+            skipped_count: number;
+            /** @description Rows that clear a recorded value; included in changed_count. */
+            clears_count: number;
+            max_rows: number;
+            rows: components["schemas"]["SoulRegionUpdateRow"][];
+        };
+        SoulRegionUpdateRow: {
+            /** @description Line number in the file; the header is line 1. */
+            row: number;
+            /**
+             * @description `not_found` also covers another hall's soul — deliberately indistinguishable.
+             *
+             *     * `ok` - ok
+             *     * `unchanged` - unchanged
+             *     * `missing_identifier` - missing_identifier
+             *     * `not_found` - not_found
+             *     * `duplicate_in_file` - duplicate_in_file
+             *     * `invalid_origin_region` - invalid_origin_region
+             */
+            status: components["schemas"]["SoulRegionUpdateRowStatusEnum"];
+            values: {
+                [key: string]: string;
+            };
+            /** @description Stored value; blank is unknown. */
+            old: string | null;
+            /** @description Value the row sets; blank is unknown. */
+            new: string | null;
+            /** @description An `ok` row that turns a recorded EUROPE / ASIA into unknown. */
+            clears_value: boolean;
+            /** @description For `duplicate_in_file`: the row of the first occurrence, which is the one used. */
+            duplicate_of: number | null;
+            /** @description The soul_id / soul_code cell as written. */
+            identifier: string;
+            /** @description Whenever the identifier names a soul of this hall (also `invalid_origin_region` / `duplicate_in_file`); null for `not_found` / `missing_identifier` — never another hall's. */
+            soul_name: string | null;
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `unchanged` - unchanged
+         *     * `missing_identifier` - missing_identifier
+         *     * `not_found` - not_found
+         *     * `duplicate_in_file` - duplicate_in_file
+         *     * `invalid_origin_region` - invalid_origin_region
+         * @enum {string}
+         */
+        SoulRegionUpdateRowStatusEnum: "ok" | "unchanged" | "missing_identifier" | "not_found" | "duplicate_in_file" | "invalid_origin_region";
         /** @description 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。 */
         SoulRelationCard: {
             user_id: number;
@@ -35029,6 +35135,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+        };
+    };
+    v1_souls_region_update_commit_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRegionUpdateCommit"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+        };
+    };
+    v1_souls_region_update_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRegionUpdatePreview"];
                 };
             };
             400: {

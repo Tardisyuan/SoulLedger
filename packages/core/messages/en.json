@@ -634,6 +634,37 @@
         "unknown": "Import failed"
       }
     },
+    "region_backfill": {
+      "button": "Fill in regions of origin",
+      "title": "Fill in regions of origin · {{step}}/3",
+      "intro": "Updates the region of origin of existing souls from a list. Only this hall's souls; nothing is created.",
+      "id_hint": "soul_id is the soul ID in the first column of an export; every soul has one. You can use soul codes (soul_code) instead, but only one kind per file.",
+      "values_hint": "Region of origin: {{europe}} or {{asia}}; leave blank for {{unknown}}.",
+      "col_name": "Soul",
+      "col_change": "Before → after",
+      "status": {
+        "update": "Will update",
+        "same": "No change",
+        "not_found": "Not found",
+        "bad_value": "Not a valid value",
+        "duplicate": "Duplicate of row {{row}}"
+      },
+      "summary": "{{total}} rows · {{update}} to update · {{same}} unchanged · {{skip}} skipped",
+      "skip_note": "Rows that aren't found, have an invalid value or repeat are skipped; the rest still go through.",
+      "to_unknown": "{{n}} rows go back to \"{{unknown}}\"",
+      "back": "Back",
+      "commit": "Update {{n}} souls",
+      "committing": "Updating…",
+      "nothing_title": "Nothing to update",
+      "nothing_body": "Every row is unchanged or skipped. Fix the file and choose it again.",
+      "done": "Updated {{updated}} · {{same}} unchanged · {{skipped}} rows skipped",
+      "download_skipped": "Download skipped rows",
+      "skipped_file_note": "Same two columns as the template, plus a \"reason\" column; fix it and upload it again.",
+      "file_codes": {
+        "mixed_id_columns": "Use either soul_code or soul_id, not both"
+      },
+      "failed": "Update failed; no soul was changed. Try again."
+    },
     "origin_region": {
       "label": "Region of origin",
       "EUROPE": "Europe",

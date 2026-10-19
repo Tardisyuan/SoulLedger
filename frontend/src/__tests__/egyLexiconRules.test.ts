@@ -301,6 +301,9 @@ const TECHNICAL: Record<string, string[]> = {
   "shortcuts.single_keys_hint": ["J", "K"],
   // 第三十五批:用户导入模板说明里的 CSV 列名与角色值是文件里要照写的字面值,egy 不译(Design)。
   "users.import.template_notes": ["username", "password", "role", "VIEWER", "email", "display_name"],
+  // 第四十六批:补录出身地域的标识列名,文件里照写的字面值。
+  "souls.region_backfill.id_hint": ["soul_id", "soul_code"],
+  "souls.region_backfill.file_codes.mixed_id_columns": ["soul_code", "soul_id"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */

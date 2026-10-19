@@ -19071,6 +19071,72 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulImportFileError'
           description: ''
+  /api/v1/souls/region-update/commit/:
+    post:
+      operationId: v1_souls_region_update_commit_create
+      description: |-
+        Apply the file: re-validated under row locks, only changed rows written, rows in error skipped.
+
+        `rows` lists the skipped rows with their status (user decision 2026-10-19: skip, don't refuse the
+        file). Each changed soul gets its ordinary UPDATE audit row; one BATCH_UPDATE row names the file.
+        Re-running the same file changes nothing and writes no audit row.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRegionUpdateCommit'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
+          description: ''
+  /api/v1/souls/region-update/preview/:
+    post:
+      operationId: v1_souls_region_update_preview_create
+      description: |-
+        Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
+
+        Columns: exactly one of `soul_id` (UUID; the export's `Soul ID` heading counts) / `soul_code`, and
+        `origin_region` (`EUROPE` / `ASIA` / `UNKNOWN`, `Europe` / `Asia` / `Unknown`, `欧洲` / `亚洲` / `不详`,
+        any case, blank = unknown — `region_update.REGION_SPELLINGS`). Any other column is ignored. Same size
+        and row limits as the import. A soul of another hall is `not_found`. Rows whose status is not `ok` /
+        `unchanged` are the ones commit will skip (`skipped_count`).
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRegionUpdatePreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
+          description: ''
   /api/v1/tenants/:
     get:
       operationId: v1_tenants_list
@@ -39013,6 +39079,129 @@ components:
           type: string
       required:
       - refresh
+    SoulRegionUpdateCommit:
+      type: object
+      description: 200 of `…/region-update/commit/`. `rows` holds only the skipped
+        rows, with their status.
+      properties:
+        updated:
+          type: integer
+        unchanged:
+          type: integer
+        skipped:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulRegionUpdateRow'
+      required:
+      - rows
+      - skipped
+      - unchanged
+      - updated
+    SoulRegionUpdatePreview:
+      type: object
+      description: 200 of `…/region-update/preview/`. Rows not `ok` / `unchanged`
+        are the ones commit will skip.
+      properties:
+        total:
+          type: integer
+        changed_count:
+          type: integer
+        unchanged_count:
+          type: integer
+        skipped_count:
+          type: integer
+        clears_count:
+          type: integer
+          description: Rows that clear a recorded value; included in changed_count.
+        max_rows:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulRegionUpdateRow'
+      required:
+      - changed_count
+      - clears_count
+      - max_rows
+      - rows
+      - skipped_count
+      - total
+      - unchanged_count
+    SoulRegionUpdateRow:
+      type: object
+      properties:
+        row:
+          type: integer
+          description: Line number in the file; the header is line 1.
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SoulRegionUpdateRowStatusEnum'
+          description: |-
+            `not_found` also covers another hall's soul — deliberately indistinguishable.
+
+            * `ok` - ok
+            * `unchanged` - unchanged
+            * `missing_identifier` - missing_identifier
+            * `not_found` - not_found
+            * `duplicate_in_file` - duplicate_in_file
+            * `invalid_origin_region` - invalid_origin_region
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        old:
+          type: string
+          nullable: true
+          description: Stored value; blank is unknown.
+        new:
+          type: string
+          nullable: true
+          description: Value the row sets; blank is unknown.
+        clears_value:
+          type: boolean
+          description: An `ok` row that turns a recorded EUROPE / ASIA into unknown.
+        duplicate_of:
+          type: integer
+          nullable: true
+          description: 'For `duplicate_in_file`: the row of the first occurrence,
+            which is the one used.'
+        identifier:
+          type: string
+          description: The soul_id / soul_code cell as written.
+        soul_name:
+          type: string
+          nullable: true
+          description: Whenever the identifier names a soul of this hall (also `invalid_origin_region`
+            / `duplicate_in_file`); null for `not_found` / `missing_identifier` —
+            never another hall's.
+      required:
+      - clears_value
+      - duplicate_of
+      - identifier
+      - new
+      - old
+      - row
+      - soul_name
+      - status
+      - values
+    SoulRegionUpdateRowStatusEnum:
+      enum:
+      - ok
+      - unchanged
+      - missing_identifier
+      - not_found
+      - duplicate_in_file
+      - invalid_origin_region
+      type: string
+      description: |-
+        * `ok` - ok
+        * `unchanged` - unchanged
+        * `missing_identifier` - missing_identifier
+        * `not_found` - not_found
+        * `duplicate_in_file` - duplicate_in_file
+        * `invalid_origin_region` - invalid_origin_region
     SoulRelationCard:
       type: object
       description: 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。
