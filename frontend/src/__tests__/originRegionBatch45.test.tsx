@@ -202,6 +202,9 @@ describe("埃及文:亚洲没有词,退回英文", () => {
     expect(originRegionLabel(tZh, "ASIA", "egy")).toBe("Asia");
     expect(originRegionLabel(tZh, "ASIA", "zh-Hans")).toBe("亚洲");
     expect(egyPendingKeys).toContain("souls.origin_region.ASIA");
+    // 不详 has Design's egy (Nen Rekh): only the member egy lacks falls back to English.
+    expect(egyPendingKeys).not.toContain("souls.origin_region.UNKNOWN");
+    expect(ORIGIN_REGION_EGY_EN).not.toHaveProperty("UNKNOWN");
     // 代码里的英文与 en.json 同值,改了一边另一边要跟。
     for (const [member, word] of Object.entries(ORIGIN_REGION_EGY_EN)) {
       expect((en.souls.origin_region as Record<string, string>)[member]).toBe(word);
