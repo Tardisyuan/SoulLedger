@@ -16,6 +16,7 @@ import { SelectField, TextAreaField, type SelectOption } from "@/src/components/
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { cn } from "@/lib/utils";
 import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
+import { segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
 
 const REASON_MAX = 1000;
 const FORM_ID = "start-workflow-form";
@@ -61,6 +62,9 @@ export function startWorkflowRefusal(error: unknown, t: Translate, civilization?
     }
     if (code === "judgment_has_workflow") return { message: t("workflow.start.errors.judgment_taken"), field: "judgment" };
   }
+  // 选站被拒(终审 / 驳回目标,第四十三批):说是哪一站,而不是笼统的「没能生成」。
+  const segment = segmentRefusalText(t, { status: r?.status, code, data });
+  if (segment) return { message: segment, field: null };
   return failed;
 }
 

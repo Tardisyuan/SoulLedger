@@ -12,7 +12,7 @@ import { Button } from "@/src/components/ui/Button";
 import { DomainText } from "@/src/components/ui/DomainValue";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { StaleSegmentNotice } from "./StaleSegmentNotice";
-import { isRestorable, runningJumpSources, segmentNodes, segmentRefusalOf, settleJumpTargets, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
+import { isRestorable, runningJumpSources, segmentNodes, segmentRefusalOf, segmentRefusalText, settleJumpTargets, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 import { courtLabel } from "@soulledger/core/domain/courts";
 
 const REASON_MAX = 1000;
@@ -90,7 +90,7 @@ export function AdjustStationsSheet({
         setStale(changedBy);
         return;
       }
-      showToast(typeof refusal.data.error === "string" ? refusal.data.error : t("workflow.segment.error"), "error");
+      showToast(segmentRefusalText(t, refusal) ?? t("workflow.segment.error"), "error");
     },
   });
 

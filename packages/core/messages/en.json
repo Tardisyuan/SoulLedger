@@ -1435,7 +1435,9 @@
       "city_god_system": "City God system",
       "wrongful_death_city": "City of Wrongful Death",
       "jiuhua": "Mount Jiuhua",
-      "avici": "Avici Hell"
+      "avici": "Avici Hell",
+      "rebirth_application": "Rebirth application",
+      "reopened_judgment": "Reopened judgment"
     },
     "segment": {
       "local": "This realm",
@@ -1486,6 +1488,17 @@
       "foreign_body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks.",
       "stopped_here": "Stopped here",
       "remind_too_soon": "Already reminded within the hour — try again later"
+    },
+    "refusal": {
+      "jump_target_required": "{{station}} receives rejected cases from {{source}}, so it can't be skipped unless {{source}} is skipped too",
+      "final_required": "The final review can't be skipped",
+      "segment_changed": "Someone just changed this segment; reopen it and pick again",
+      "workflow_required": "A cross-realm judgment is open on this case, so the ruling must generate an approval flow",
+      "not_allowed": "You can't do this step",
+      "too_early": "Allowed after {{days}} days at the gate, or when the realm has no judge to pick",
+      "unknown_node": "That station is no longer in this flow; refresh and try again",
+      "reason_required": "Please give a reason",
+      "moved_on": "The flow has moved on; refresh and try again"
     }
   },
   "dashboard": {
@@ -2765,7 +2778,8 @@
     "cancel_flow_body": "Unstarted realm segments in the approval flow ({{realms}}) are all marked skipped; the flow ends after this realm. Stations already passed stay as they are.",
     "cancel_flow_body_in_realm": "In the {{realm}} segment now running, the current and later stations are marked skipped and the flow ends now. Stations already passed stay as they are.",
     "cancel_flow_note": "Open \"pick stations\" tasks for other realms are withdrawn and each realm is told.",
-    "workflow_running": "The approval flow is still running: this judgment ends when the flow finishes or is rejected. To stop early, cancel the cross-realm judgment."
+    "workflow_running": "The approval flow is still running: this judgment ends when the flow finishes or is rejected. To stop early, cancel the cross-realm judgment.",
+    "join_locked": "The approval flow isn't running, so no new seat; while it runs, a new realm can only go last"
   },
   "users": {
     "title": "User Management",

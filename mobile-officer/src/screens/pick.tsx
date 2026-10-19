@@ -14,6 +14,7 @@ import {
   segmentNodes,
   segmentRealm,
   segmentRefusalOf,
+  segmentRefusalText,
   settleJumpTargets,
   staleOf,
   stationNo,
@@ -65,7 +66,8 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [stale, setStale] = useState<StaleSegment | null>(null);
-  const [failed, setFailed] = useState(false);
+  /** 被拒的那一句(译好的,后端的 `error` 是英文);null = 没被拒。 */
+  const [failed, setFailed] = useState<string | null>(null);
 
   // 勾选从库里来(改选时就是上一次的选择);库里的版本一变(「看现在的选择」重取到别人的改动)就重新从库里来。
   const [seeded, setSeeded] = useState<number | null>(null);
@@ -102,7 +104,7 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
     });
   const confirm = () => {
     setBusy(true);
-    setFailed(false);
+    setFailed(null);
     workflowApi
       .pickSegment(id, segment.order, { skip_node_ids: skipNodeIds(nodes, skipped), version: segment.version })
       .then(() => {
@@ -110,9 +112,10 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
         onDone();
       })
       .catch((e: unknown) => {
-        const changed = staleOf(segmentRefusalOf(e));
+        const refusal = segmentRefusalOf(e);
+        const changed = staleOf(refusal);
         if (changed) setStale(changed);
-        else setFailed(true);
+        else setFailed(segmentRefusalText(t, refusal) ?? t("workflow.segment.error"));
       })
       .finally(() => setBusy(false));
   };
@@ -182,7 +185,7 @@ export function PickStations({ id, onDone }: { id: string; onDone: () => void })
           </Txt>
           {skipCount > 0 ? <SmallButton testID="pick-restore-all" title={t("workflow.pick.restore_all")} onPress={() => setSkipped(new Set())} /> : null}
         </View>
-        {failed ? <Notice tone="neg" testID="pick-failed">{t("workflow.segment.error")}</Notice> : null}
+        {failed ? <Notice tone="neg" testID="pick-failed">{failed}</Notice> : null}
         {offline ? <Txt variant="caption" tone="muted" testID="pick-offline">{`◇ ${t("officer_app.offline.no_decide")}`}</Txt> : null}
         <ActionButton
           testID="pick-confirm"

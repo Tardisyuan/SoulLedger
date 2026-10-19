@@ -73,6 +73,18 @@ describe("courtLabel", () => {
     }
   });
 
+  it("courts written by code outside the templates are known: 转生申请, 重开审判, and the no-template fallback's civilization code", () => {
+    // backend/apps/soul_accounts/rebirth.py, sentence_plan/requests.py, workflow/services.py `_generic_template` (2026-10-19).
+    expect(courtLabel(tZh, "转生申请", "zh-Hans")).toBe("转生申请");
+    expect(courtLabel(tEn, "转生申请", "en")).toBe("Rebirth application");
+    expect(courtLabel(tEn, "转生申请", "en")).not.toMatch(/[一-鿿]/);
+    expect(courtLabel(tEgy, "转生申请", "egy")).toBe("Rebirth application");
+    expect(courtLabel(tEn, "重开审判", "en")).toBe("Reopened judgment");
+    expect(courtLabel(tZh, "CHINESE", "zh-Hans")).toBe("中国");
+    expect(courtLabel(tEn, "EGYPTIAN", "en")).toBe("Egyptian");
+    expect(courtLabel(tZh, "EGYPTIAN", "zh-Hans")).not.toContain("EGYPTIAN");
+  });
+
   it("the 待我选站 hall puts the court in the UI language", () => {
     const row = { realm: "CN_DIYU", hall: "Chinese Afterlife", court: "第十殿" };
     expect(pickHall(tZh, row, "zh-Hans")).toBe("酆都第十殿");
