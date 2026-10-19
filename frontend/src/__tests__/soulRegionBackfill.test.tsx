@@ -253,10 +253,10 @@ describe("完成", () => {
 });
 
 describe("文件", () => {
-  it("跳过的行沿用文件里那一种标识列,另加 reason 一列", () => {
+  it("跳过的行沿用文件里那一种标识列,另加一列原因(列名按界面语言)", () => {
     const code = row({ status: "not_found", values: { soul_code: "ABC2345678", origin_region: "亚洲" }, identifier: "ABC2345678", soul_name: null });
     const csv = skippedRowsCsv(t, [code]);
-    expect(csv.split("\n")[0]).toBe("﻿soul_code,origin_region,reason");
+    expect(csv.split("\n")[0]).toBe("﻿soul_code,origin_region,souls.region_backfill.skipped_reason_column");
     expect(csv).not.toContain("soul_id");
   });
 

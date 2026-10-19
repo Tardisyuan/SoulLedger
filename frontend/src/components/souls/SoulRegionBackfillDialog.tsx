@@ -64,13 +64,17 @@ export function regionFileErrorText(t: T, e: SoulImportFileError): string {
 
 const csvCell = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
-/** 跳过的行:和模板同样两列(标识列照文件里用的那一种),另加一列原因;改好能直接再传(后端忽略多余列)。 */
+/**
+ * 跳过的行:和模板同样两列(标识列照文件里用的那一种),另加一列原因;改好能直接再传(后端忽略多余列)。
+ * 前两列是上传格式的列名，不翻译;第三列按界面语言(第四十七批:跳过原因 / reason / Medu Sni)。
+ */
 export function skippedRowsCsv(t: T, rows: readonly SoulRegionUpdateRow[]): string {
   const idColumn = Object.keys(rows[0]?.values ?? {}).find((k) => k !== "origin_region") ?? "soul_id";
   const lines = rows.map((r) =>
     [r.values[idColumn] ?? "", r.values["origin_region"] ?? "", regionRowResult(t, r)].map(csvCell).join(","),
   );
-  return `﻿${idColumn},origin_region,reason\n${lines.map((l) => `${l}\n`).join("")}`;
+  const reasonColumn = csvCell(t("souls.region_backfill.skipped_reason_column"));
+  return `﻿${idColumn},origin_region,${reasonColumn}\n${lines.map((l) => `${l}\n`).join("")}`;
 }
 
 export function SoulRegionBackfillDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
