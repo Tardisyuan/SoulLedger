@@ -823,21 +823,29 @@ class SoulRegionUpdateRowSerializer(serializers.Serializer):
     values = serializers.DictField(child=serializers.CharField(allow_blank=True))
     old = serializers.CharField(allow_null=True, allow_blank=True, help_text="Stored value; blank is unknown.")
     new = serializers.CharField(allow_null=True, allow_blank=True, help_text="Value the row sets; blank is unknown.")
+    clears_value = serializers.BooleanField(help_text="An `ok` row that turns a recorded EUROPE / ASIA into unknown.")
+    duplicate_of = serializers.IntegerField(
+        allow_null=True, help_text="For `duplicate_in_file`: the row of the first occurrence, which is the one used."
+    )
 
 
 class SoulRegionUpdatePreviewSerializer(serializers.Serializer):
-    """200 of `…/region-update/preview/` and 422 of `…/region-update/commit/` (rows in error; nothing written)."""
+    """200 of `…/region-update/preview/`. Rows not `ok` / `unchanged` are the ones commit will skip."""
     total = serializers.IntegerField()
     changed_count = serializers.IntegerField()
     unchanged_count = serializers.IntegerField()
-    error_count = serializers.IntegerField()
+    skipped_count = serializers.IntegerField()
+    clears_count = serializers.IntegerField(help_text="Rows that clear a recorded value; included in changed_count.")
     max_rows = serializers.IntegerField()
     rows = SoulRegionUpdateRowSerializer(many=True)
 
 
 class SoulRegionUpdateCommitSerializer(serializers.Serializer):
+    """200 of `…/region-update/commit/`. `rows` holds only the skipped rows, with their status."""
     updated = serializers.IntegerField()
     unchanged = serializers.IntegerField()
+    skipped = serializers.IntegerField()
+    rows = SoulRegionUpdateRowSerializer(many=True)
 
 
 class SoulImportFileErrorSerializer(serializers.Serializer):

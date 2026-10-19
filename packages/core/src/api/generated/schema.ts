@@ -8714,11 +8714,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Apply the file: re-validated under row locks, all or nothing, only changed rows written.
+         * @description Apply the file: re-validated under row locks, only changed rows written, rows in error skipped.
          *
-         *     422 with the preview body when any row is in error (nothing written). Each changed soul gets its
-         *     ordinary UPDATE audit row; one BATCH_UPDATE row names the file. Re-running the same file changes
-         *     nothing and writes no audit row.
+         *     `rows` lists the skipped rows with their status (user decision 2026-10-19: skip, don't refuse the
+         *     file). Each changed soul gets its ordinary UPDATE audit row; one BATCH_UPDATE row names the file.
+         *     Re-running the same file changes nothing and writes no audit row.
          */
         post: operations["v1_souls_region_update_commit_create"];
         delete?: never;
@@ -8739,8 +8739,11 @@ export interface paths {
         /**
          * @description Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
          *
-         *     Columns: exactly one of `soul_id` (UUID) / `soul_code`, and `origin_region` (`EUROPE` / `ASIA` / blank
-         *     for unknown; any case). Same size and row limits as the import. A soul of another hall is `not_found`.
+         *     Columns: exactly one of `soul_id` (UUID; the export's `Soul ID` heading counts) / `soul_code`, and
+         *     `origin_region` (`EUROPE` / `ASIA` / `UNKNOWN`, `Europe` / `Asia` / `Unknown`, `欧洲` / `亚洲` / `不详`,
+         *     any case, blank = unknown — `region_update.REGION_SPELLINGS`). Any other column is ignored. Same size
+         *     and row limits as the import. A soul of another hall is `not_found`. Rows whose status is not `ok` /
+         *     `unchanged` are the ones commit will skip (`skipped_count`).
          */
         post: operations["v1_souls_region_update_preview_create"];
         delete?: never;
@@ -18042,16 +18045,21 @@ export interface components {
         SoulRefreshRequest: {
             refresh: string;
         };
+        /** @description 200 of `…/region-update/commit/`. `rows` holds only the skipped rows, with their status. */
         SoulRegionUpdateCommit: {
             updated: number;
             unchanged: number;
+            skipped: number;
+            rows: components["schemas"]["SoulRegionUpdateRow"][];
         };
-        /** @description 200 of `…/region-update/preview/` and 422 of `…/region-update/commit/` (rows in error; nothing written). */
+        /** @description 200 of `…/region-update/preview/`. Rows not `ok` / `unchanged` are the ones commit will skip. */
         SoulRegionUpdatePreview: {
             total: number;
             changed_count: number;
             unchanged_count: number;
-            error_count: number;
+            skipped_count: number;
+            /** @description Rows that clear a recorded value; included in changed_count. */
+            clears_count: number;
             max_rows: number;
             rows: components["schemas"]["SoulRegionUpdateRow"][];
         };
@@ -18076,6 +18084,10 @@ export interface components {
             old: string | null;
             /** @description Value the row sets; blank is unknown. */
             new: string | null;
+            /** @description An `ok` row that turns a recorded EUROPE / ASIA into unknown. */
+            clears_value: boolean;
+            /** @description For `duplicate_in_file`: the row of the first occurrence, which is the one used. */
+            duplicate_of: number | null;
         };
         /**
          * @description * `ok` - ok
@@ -35158,14 +35170,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulImportFileError"];
-                };
-            };
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SoulRegionUpdatePreview"];
                 };
             };
         };
