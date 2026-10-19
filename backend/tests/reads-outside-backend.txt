@@ -50,6 +50,7 @@ tests/test_reads_outside_backend_list.py                         frontend packag
 tests/test_realm_path_fields.py                                  packages
 tests/test_realm_seed_egy_names_match_the_language_pack.py       packages
 tests/test_seed_entrypoint.py                                    docker-compose.yml scripts
+tests/test_soul_csv_import.py                                    packages
 tests/test_soul_data_export.py                                   config
 tests/test_soul_feedback.py                                      config
 tests/test_soul_push_messages_match_the_language_packs.py        frontend packages

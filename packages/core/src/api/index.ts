@@ -46,6 +46,7 @@ export {
   soulImportFileErrorOf,
   soulImportRowsRefusalOf,
   SOUL_IMPORT_COLUMNS,
+  SOUL_FILE_MAX_ROWS,
   SOUL_IMPORT_ROW_CODES,
   SOUL_IMPORT_FILE_CODES,
   type SoulRegionUpdatePreview,
