@@ -667,3 +667,64 @@ def test_the_preview_and_the_detail_name_the_stations_that_jump_to_a_target(w):
     detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
     rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
     assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审"}], 4: []}
+
+
+# ── 没有可选的站(Design 第四十五批)────────────────────────────────────────
+#
+# 每一站都锁着(终审、自动节点、来源是自动节点的分支目标)时没有什么可选:本域的预览说 `nothing_to_pick`,
+# 外域段建好就是 PICKED —— 不发选站待办,流程也不在它门口停。形状同希腊常规流程(按来处分流 → 一位判官 → 结束)。
+
+def _routed(tenant):
+    """n1 通知按来处分流:EUROPE → n2;其余 → n3(终审)。n2、n3 通过 → n4 结束;n2 驳回 → n3。"""
+    base = {"court_code": tenant.code, "approver_type": "ROLE", "approver_role": "JUDGE"}
+    WorkflowTemplate.objects.filter(tenant=tenant).update(nodes_json=[
+        {**base, "id": "n1", "node_name": "分流", "node_type": "TRIAL", "node_order": 1, "kind": "NOTIFY",
+         "approver_type": "SYSTEM", "on_pass": "n3", "branches": [
+             {"id": "eu", "when": [{"fact": "origin_region", "op": "in", "value": ["EUROPE"]}], "target": "n2"}]},
+        {**base, "id": "n2", "node_name": "分区", "node_type": "TRIAL", "node_order": 2, "on_pass": "n4",
+         "on_fail": "n3"},
+        {**base, "id": "n3", "node_name": "终裁", "node_type": "FINAL", "node_order": 3, "on_pass": "n4"},
+        {**base, "id": "n4", "node_name": "结束", "node_type": "FINAL", "node_order": 4, "kind": "END",
+         "approver_type": "SYSTEM"},
+    ])
+
+
+def test_a_local_flow_with_every_station_locked_previews_nothing_to_pick(w):
+    soul, _case = plan.open_case(w.cn)
+    plain = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
+    assert plain["nothing_to_pick"] is False  # absence: an ordinary flow still has stations to pick
+
+    _routed(w.cn)
+    preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
+    assert [s["node_order"] for s in preview["stations"]] == [2, 3]  # no routing step, no 结束
+    assert preview["nothing_to_pick"] is True
+    # Generation takes no skips: the branch target and the routing step are refused; none at all is fine.
+    for orders, code in (([2], "jump_target_required"), ([1], "final_required")):
+        _soul, refused = _start(w, orders)
+        assert refused.status_code == 400 and refused.data["code"] == code, refused.data
+    _soul, started = _start(w, [])
+    assert started.status_code == 201, started.data
+    wf = ApprovalWorkflow.objects.get(pk=started.data["id"])
+    assert _seg(wf, 1).state == SegmentState.LOCAL_PICKED
+    assert wf.current_node.node_name == "终裁"  # region 不详 → the default
+
+
+def test_a_foreign_realm_with_nothing_to_pick_is_picked_from_the_start_and_never_gated(
+        w, django_capture_on_commit_callbacks):
+    _routed(w.eg)
+    with django_capture_on_commit_callbacks(execute=True):
+        _soul, _case, _cj, wf = merged(w, [w.eg, w.eu])
+    seg = _seg(wf, 2)
+    assert (seg.state, seg.picked_by_id, seg.picked_at) == (SegmentState.PICKED, None, None)
+    assert _seg(wf, 3).state == SegmentState.AWAITING_PICK  # an ordinary realm still picks
+    told = {n.user.username for n in UserNotification.objects.filter(params__kind="workflow_pick_nodes")}
+    assert told == {"b43_eu_judge"}
+    assert officer_client(w.eg_judge).get(TODO).data["pick_nodes"]["count"] == 0
+
+    _run_local(w, wf)
+    wf.refresh_from_db()
+    # Not stopped at its gate: the routing step ran and the flow stands on that realm's final.
+    route, _division, final, _end = _nodes(wf, 2)
+    assert wf.current_node_id == final.pk
+    assert ApprovalNode.objects.get(pk=route.pk).status == NodeStatus.TRAVERSED
+    assert _seg(wf, 2).gate_reached_at is None

@@ -6,8 +6,9 @@
 节点在生成时就按那个域的默认流程建好、等那个域的人选站(AWAITING_PICK)。各段依次走,不并行:流程走到一个还没选站的段,
 停在门口(`ApprovalWorkflow._stop_at_gate`:没有当前节点、仍是 IN_PROGRESS),那个域选好后从该段第一站继续(`_resume`)。
 
-**驳回时会转到的站(别的站的 `on_fail` 目标)也锁着**,只要还有一个来源要走(`jump_target_required`);来源一并
-跳过时才能跳过它(2026-10-19)。
+**驳回时会转到的站(别的站的 `on_fail` 目标)与条件分支的目标也锁着**,只要还有一个来源要走
+(`jump_target_required`);来源一并跳过时才能跳过它(2026-10-19)。来源是自动节点(希腊流程按来处分流那一步)时
+它不能跳过,目标就一直锁着。
 
 **每段的终审(`is_required`)必须走**:选站、加减站都不能跳过它;唯一的例外是流程走到某个外域段中间时取消跨域审判,
 那一段的当前站与之后的站(含终审)一并跳过(`on_cross_cancelled`)。
@@ -90,25 +91,56 @@ def case_type_for(civilization, case_type):
 
 
 def mark_required(segment):
-    """这一段的终审:最后一个 FINAL 类型的人工节点,没有就最后一个人工节点。结束节点也不能被选掉。"""
+    """这一段的终审:最后一个 FINAL 类型的人工节点,没有就最后一个人工节点。自动节点(结束、通知 —— 希腊流程
+    按来处分流的那一步就是通知)也不能被选掉:它们不是一站,没有人审。"""
     nodes = list(segment.nodes.order_by("node_order"))
     manual = [n for n in nodes if n.kind not in AUTOMATIC_KINDS]
     finals = [n for n in manual if n.node_type == NodeType.FINAL]
-    required = {n.pk for n in nodes if n.kind == NodeKind.END}
+    required = {n.pk for n in nodes if n.kind in AUTOMATIC_KINDS}
     if finals or manual:
         required.add((finals or manual)[-1].pk)
     ApprovalNode.objects.filter(pk__in=required).update(is_required=True)
 
 
 def jump_sources(nodes):
-    """{target pk: [source nodes]}:`on_fail` 边,只算同一段里的(引擎只走这种,`ApprovalWorkflow._fail_target`)。"""
-    by_pk = {n.pk: n for n in nodes}
+    """{target pk: [source nodes]}:`on_fail` 边与条件分支的目标,只算同一段里的(引擎只走这种,
+    `ApprovalWorkflow._fail_target`)。分支目标与驳回目标同一条规则(2026-10-19 用户决定):来源还要走,
+    目标就不能跳过 —— 条件选中的站被跳过时流程以驳回结束(`BRANCH_SKIPPED`),不落到默认那一站。"""
+    by_pk = {str(n.pk): n for n in nodes}
     out = {}
     for node in sorted(nodes, key=lambda n: n.node_order):
-        target = by_pk.get(node.on_fail_id)
-        if target is not None and target.pk != node.pk and target.segment_id == node.segment_id:
+        ids = [node.on_fail_id, *(b.get("target") for b in node.branches_json or [] if isinstance(b, dict))]
+        targets = []
+        for target in (by_pk.get(str(i)) for i in ids if i):
+            if (target is not None and target.pk != node.pk and target.segment_id == node.segment_id
+                    and target not in targets):
+                targets.append(target)
+        for target in targets:
             out.setdefault(target.pk, []).append(node)
     return out
+
+
+def _unskippable(keys, fixed, sources):
+    """The keys that can never be skipped: `fixed` (终审、自动节点), and — to a fixed point — every target with a
+    source among them (a source that cannot be unticked keeps its target locked for good)."""
+    locked = set(fixed)
+    changed = True
+    while changed:
+        changed = False
+        for key in keys:
+            if key not in locked and any(s in locked for s in sources.get(key, ())):
+                locked.add(key)
+                changed = True
+    return locked
+
+
+def nothing_to_pick(nodes):
+    """这一段没有一站能跳过(Design 第四十五批):每一站都是终审、自动节点,或锁着的驳回 / 分支目标。希腊常规流程就是这样。
+    `nodes` 是这一段的 ApprovalNode(`mark_required` 之后)。"""
+    keys = [n.pk for n in nodes]
+    fixed = {n.pk for n in nodes if n.is_required or n.kind in AUTOMATIC_KINDS}
+    sources = {target: [s.pk for s in srcs] for target, srcs in jump_sources(nodes).items()}
+    return set(keys) <= _unskippable(keys, fixed, sources)
 
 
 def _refuse_skipped_jump_targets(nodes, skipped, changed):
@@ -208,7 +240,7 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
     """W-1 选站列表,在流程生成之前:本域默认流程的各站(站序 = `skip_node_orders` 认的 `node_order`、名、殿、
     审批人、是否必须走),以及按跨域审判顺序接在后面的外域段(只给域名与默认站数,外域的站由那个域自己选)。
     模板由调用方按 `start_workflow` 同一套解析好传进来;审批人经 `preview.preview_node`(与 `_create_nodes` 同一个
-    解析器);「必须走」与 `mark_required` 同一条规则。结束节点不列:它不能选,也不是一站。"""
+    解析器);「必须走」与 `mark_required` 同一条规则。自动节点(结束、通知)不列:它们不能选,也不是一站。"""
     from apps.workflow.node_shape import normalize_template_node
     from apps.workflow.preview import preview_node
 
@@ -217,17 +249,22 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
     manual = [n for n in nodes if (n.get("kind") or NodeKind.APPROVAL) not in AUTOMATIC_KINDS]
     finals = [n for n in manual if n.get("node_type") == NodeType.FINAL]
     required = (finals or manual or [None])[-1]
-    # 驳回时转到哪一站(`on_fail`,模板里按模板内 id):目标那一行带上来源,客户端据此锁住、来源都勾掉时解锁。
+    # 驳回时转到哪一站(`on_fail`)与条件分支的目标(模板里按模板内 id):目标那一行带上来源,客户端据此锁住、
+    # 来源都勾掉时解锁。来源是自动节点(按来处分流)时它不在列表里、勾不掉,目标就一直锁着 —— 与 `jump_sources` 同。
     by_id = {str(n["id"]): n for n in nodes if n.get("id")}
     sources = {}
     for node in nodes:
-        target = by_id.get(str(node.get("on_fail") or ""))
-        if target is not None and target is not node:
-            sources.setdefault(target["node_order"], []).append(
-                {"key": str(node["node_order"]), "node_name": node["node_name"]})
+        ids = [node.get("on_fail"), *(b.get("target") for b in node.get("branches") or [] if isinstance(b, dict))]
+        seen = []
+        for target in (by_id.get(str(i)) for i in ids if i):
+            if target is not None and target is not node and not any(t is target for t in seen):
+                seen.append(target)
+                sources.setdefault(target["node_order"], []).append(
+                    {"key": str(node["node_order"]), "node_name": node["node_name"]})
     stations = []
     for node in nodes:
-        if (node.get("kind") or NodeKind.APPROVAL) == NodeKind.END:
+        # 自动节点(结束、通知)不是一站:不能选,也不列。
+        if (node.get("kind") or NodeKind.APPROVAL) in AUTOMATIC_KINDS:
             continue
         who = preview_node(node, civilization, tenant) if tenant is not None else {}
         actor = who.get("actor")
@@ -243,6 +280,12 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
             "is_required": node is required,
             "jump_target_of": sources.get(node["node_order"], []),
         })
+    # 没有一站能跳过(第四十五批):客户端跳过选站这一步。与 `nothing_to_pick` 同一条规则,按模板算。
+    fixed = {n["node_order"] for n in nodes if (n.get("kind") or NodeKind.APPROVAL) in AUTOMATIC_KINDS}
+    if required is not None:
+        fixed.add(required["node_order"])
+    locked = _unskippable([n["node_order"] for n in nodes], fixed,
+                          {order: [int(s["key"]) for s in srcs] for order, srcs in sources.items()})
     foreign = []
     cross = open_cross_for(judgment)
     if cross is not None and tenant is not None:
@@ -250,7 +293,8 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
                 foreign_realms(cross, tenant.pk, case_type), start=2):
             foreign.append({"order": order, "tenant_code": realm.code, "realm_name": _realm(realm),
                             "default_node_count": len(realm_template["nodes"])})
-    return {"name": template["name"], "stations": stations, "foreign": foreign}
+    return {"name": template["name"], "stations": stations, "foreign": foreign,
+            "nothing_to_pick": all(s["node_order"] in locked for s in stations)}
 
 
 def add_foreign(workflow, cross):
@@ -277,6 +321,12 @@ def _foreign_segment(workflow, realm, order):
     WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False,
                                   order_offset=offset, tenant_id=realm.pk)
     mark_required(segment)
+    # 没有可选的站(Design 第四十五批):建好就是 PICKED,不发选站待办(`notify_pick_tasks` / `notify_segment` 只认
+    # AWAITING_PICK),流程也不在门口停(`_unpicked_segment` 同)。picked_by / picked_at 留空:没有人选过,也没有可选的,
+    # 「谁在何时选的」写任何值都是假记录;段的状态本身已经说明它不用等。
+    if nothing_to_pick(list(segment.nodes.all())):
+        segment.state = SegmentState.PICKED
+        segment.save(update_fields=["state"])
     return segment
 
 
