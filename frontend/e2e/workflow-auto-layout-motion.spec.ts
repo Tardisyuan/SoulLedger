@@ -1,5 +1,5 @@
 import { type Page } from "@playwright/test";
-import { test, expect, setupAuthenticatedPage, type ApiMock } from "./fixtures";
+import { test, expect, selectPreset, setupAuthenticatedPage, type ApiMock } from "./fixtures";
 
 /**
  * The auto-layout transition, in a real browser, because jsdom cannot see it.
@@ -69,7 +69,7 @@ async function openPresetInEditor(page: Page) {
  */
 async function openSmallPresetInEditor(page: Page) {
   await page.goto("/workflow");
-  await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+  await selectPreset(page, /申诉审判流程/);
   await page.getByRole("button", { name: "编辑", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(4);
 }
