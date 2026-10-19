@@ -33,15 +33,14 @@ export function WorkflowNodeHistory({
   verdictGlyphs: Record<string, string>;
 }) {
   const { t, locale, formatDateTime } = useI18n();
-  // 自动分流那一步(第四十五批 W-5):没有判决可写,记成「按出身地域分流 → 欧洲 → Aeacus」。
+  // 自动分流那一步(第四十五批 W-5):没有判决可写,记成「按出身地域分流：欧洲 → 初审 · Aeacus」。
   const autoRouted = (node: ApprovalNode) => {
     if (!isAutoRouteBranches(node.kind, node.branches_json)) return null;
     const routed = routedRegion(node, nodes, currentNode);
     return routed
       ? t("workflow.history.auto_routed", {
-          node: node.node_name,
           region: originRegionLabel(t, routed.region, locale),
-          target: routed.target?.node_name ?? "",
+          node: routed.target?.node_name ?? "",
         })
       : null;
   };

@@ -373,7 +373,7 @@
       "location_edit_label": "起源地点",
       "state_label": "当前状态",
       "edit_title": "编辑灵魂",
-      "origin_region_hint_greek": "希腊殿按出身地域分派主审：欧洲归 Aeacus，亚洲归 Rhadamanthus，不详直接交 Minos。"
+      "origin_region_hint_greek": "希腊冥府按这一项定由谁主审；「不详」直接交终审。"
     },
     "detail": {
       "loading": "加载灵魂数据中...",
@@ -1058,7 +1058,7 @@
         "unreachable": "{{node}} 从起点走不到",
         "no_exit": "{{node}} 没有出口,走不到结束",
         "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点",
-        "auto_route_exit_missing": "{{node}} 缺少「{{region}}」出口"
+        "auto_route_exit_missing": "{{node}}：「{{region}}」出口没有去向"
       },
       "palette": "节点 · 拖入画布",
       "inspector": "属性",
@@ -1210,7 +1210,7 @@
         "default_name": "按出身地域分流",
         "badge": "自动 · 无审批人",
         "kind": "自动分流",
-        "exits_hint": "按灵魂的出身地域自动走其中一条，这里只改去处。",
+        "exits_hint": "三条出口按出身地域固定，只能改各自去向。",
         "no_target": "未连"
       }
     },
@@ -1408,8 +1408,8 @@
       "back": "上一步",
       "cross_forced": "这一案挂着跨域审判：结案要生成审批流程，外域按顺序接在后面。",
       "load_error": "没能取到这次的站，请重试",
-      "route_target_reason": "{{source}}的分流去处，这一站不能跳过",
-      "foreign_all_required": "全部必须走 · 不用选站"
+      "route_target_reason": "自动分流可能把审判交到这一站，不能跳过。",
+      "foreign_all_required": "都必须走 · 不用选站"
     },
     "pick_group": {
       "title": "待我选站",
@@ -1480,7 +1480,7 @@
       "adjusted_added": "{{actor}} 加减站：加回 {{added}}。理由:{{reason}}",
       "adjusted_skipped": "{{actor}} 加减站：跳过 {{skipped}}。理由:{{reason}}",
       "default": "{{actor}} 替{{realm}}按默认流程走。理由:{{reason}}",
-      "auto_routed": "{{node}} → {{region}} → {{target}}"
+      "auto_routed": "按出身地域分流：{{region}} → {{node}}"
     },
     "adjust": {
       "open": "加减站",

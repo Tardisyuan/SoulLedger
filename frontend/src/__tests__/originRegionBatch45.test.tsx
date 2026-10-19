@@ -266,7 +266,8 @@ describe("编辑器:自动分流(W-3)", () => {
       expect(text).not.toContain(`${tZh("workflow.editor.condition.yes")} ·`);
     }
     // 分区判官的驳回线照旧写「否决」,不受影响。
-    expect(document.querySelector('[data-source="n2"]')?.textContent).toContain(tZh("workflow.editor.branch.fail"));
+    const fromN2 = [...document.querySelectorAll('[data-source="n2"]')].map((e) => e.textContent ?? "");
+    expect(fromN2.some((text) => text.includes(tZh("workflow.editor.branch.fail")))).toBe(true);
   });
 
   it("检查器只改三条出口的去处:没有审批人预览、超时与驳回;断一条就在问题里点名", async () => {
@@ -405,7 +406,7 @@ describe("流程详情:分流一步与没走到的站(W-5)", () => {
     wrap(<WorkflowNodeHistory nodes={ROUTED_NODES} verdictColors={{}} verdictGlyphs={{}} currentNode={null} />);
     const line = document.querySelector("[data-auto-routed]")!;
     expect(line).toHaveTextContent(
-      tZh("workflow.history.auto_routed", { node: "按出身地域分流", region: "亚洲", target: "Rhadamanthus" })
+      tZh("workflow.history.auto_routed", { region: "亚洲", node: "Rhadamanthus" })
     );
     expect(line.querySelector("[data-missing]")).toBeNull();
   });

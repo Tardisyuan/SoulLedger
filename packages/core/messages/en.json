@@ -373,7 +373,7 @@
       "location_edit_label": "Origin Location",
       "state_label": "Current State",
       "edit_title": "Edit Soul",
-      "origin_region_hint_greek": "In the Greek hall this decides who tries the soul: Europe goes to Aeacus, Asia to Rhadamanthus, unknown straight to Minos."
+      "origin_region_hint_greek": "The Greek Underworld uses this to choose the presiding judge; \"Unknown\" goes straight to the final review."
     },
     "detail": {
       "loading": "Loading soul data...",
@@ -1058,7 +1058,7 @@
         "unreachable": "{{node}} cannot be reached from the start",
         "no_exit": "{{node}} has no way out to an end node",
         "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node",
-        "auto_route_exit_missing": "{{node}} has no exit for {{region}}"
+        "auto_route_exit_missing": "{{node}}: the \"{{region}}\" exit has no target"
       },
       "palette": "Nodes · drag onto the canvas",
       "inspector": "Properties",
@@ -1209,8 +1209,8 @@
       "auto_route": {
         "default_name": "Route by region of origin",
         "badge": "Automatic · no approver",
-        "kind": "Auto-route",
-        "exits_hint": "Taken automatically by the soul's region of origin; only the destinations can change here.",
+        "kind": "Automatic routing",
+        "exits_hint": "The three exits are fixed by region of origin; only their targets can change.",
         "no_target": "Not connected"
       }
     },
@@ -1408,7 +1408,7 @@
       "back": "Back",
       "cross_forced": "A cross-realm judgment is open on this case: concluding generates an approval flow, with the other realms following in order.",
       "load_error": "Couldn't load the stations — try again",
-      "route_target_reason": "A destination of {{source}}, so this station can't be skipped",
+      "route_target_reason": "Automatic routing may send the case here, so it can't be skipped.",
       "foreign_all_required": "All required · nothing to pick"
     },
     "pick_group": {
@@ -1470,9 +1470,9 @@
       "skipped_later": "Skipped later",
       "awaiting_pick": "Waiting for the realm to pick · default {{n}}",
       "auto_done": "Automatic · {{region}}",
-      "not_reached": "Not reached this time"
+      "not_reached": "Not reached"
     },
-    "legend": "✓ Approved · ✕ Rejected · ◇ Current · · To go · ⤼ Skipped · ◌ Waiting for a realm to pick · – Not reached this time",
+    "legend": "✓ Approved · ✕ Rejected · ◇ Current · · To go · ⤼ Skipped · ◌ Waiting for a realm to pick · – Not reached",
     "history": {
       "picked": "{{actor}} picked stations for {{realm}}; skipped: {{nodes}}",
       "adjusted": "{{actor}} changed stations: restored {{added}}, skipped {{skipped}}. Reason: {{reason}}",
@@ -1480,7 +1480,7 @@
       "adjusted_added": "{{actor}} changed stations: restored {{added}}. Reason: {{reason}}",
       "adjusted_skipped": "{{actor}} changed stations: skipped {{skipped}}. Reason: {{reason}}",
       "default": "{{actor}} went with the default flow for {{realm}}. Reason: {{reason}}",
-      "auto_routed": "{{node}} → {{region}} → {{target}}"
+      "auto_routed": "Routed by region of origin: {{region}} → {{node}}"
     },
     "adjust": {
       "open": "Change stations",

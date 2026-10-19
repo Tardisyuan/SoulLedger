@@ -369,7 +369,8 @@
       "updating": "Em Khemen Seth...",
       "location_edit_label": "Nut",
       "state_label": "Kheperu Tepy",
-      "edit_title": "Khemen Ba"
+      "edit_title": "Khemen Ba",
+      "origin_region_hint_greek": "Haunebut: Sab Wedja Mi Ta En Mesut. Nen Rekh: Wedja Pehwy Emu."
     },
     "detail": {
       "loading": "Em Ini Sesh Ba...",
@@ -634,7 +635,8 @@
     },
     "origin_region": {
       "label": "Ta En Mesut",
-      "EUROPE": "Europa"
+      "EUROPE": "Europa",
+      "UNKNOWN": "Nen Rekh"
     }
   },
   "common": {
@@ -1053,7 +1055,8 @@
         "condition_overlap": "{{node}}: Setep Wa Hena Setep Ky — Kheper Hena",
         "unreachable": "{{node}}: Nen Wat Er Sekhet Pen",
         "no_exit": "{{node}}: Nen Wat Er Pehwy",
-        "no_end": "{{node}}: Nen Sekhet Pehwy"
+        "no_end": "{{node}}: Nen Sekhet Pehwy",
+        "auto_route_exit_missing": "{{node}} «{{region}}»: Nen Sekhet Er"
       },
       "palette": "Sekhet Neb",
       "inspector": "Mekher Sekhet",
@@ -1200,6 +1203,12 @@
         "in": "Maa Weret",
         "reset": "Maa 100%",
         "fit": "Maa Neb"
+      },
+      "auto_route": {
+        "kind": "Wat Djes-Ef",
+        "default_name": "Wat Djes-Ef Mi Ta En Mesut",
+        "badge": "Djes-Ef · Nen Sab Wedja",
+        "exits_hint": "Wat 3: Smen Mi Ta En Mesut. Khemen Sekhet Er Wa."
       }
     },
     "templates": "Pet-Sesh Wat",
@@ -1395,7 +1404,9 @@
       "back": "Er Hat",
       "cross_forced": "Wedja Ta Ky Em Iri: Em Khetem, Iri Wat Hesy. Ta Ky: Mi Hesb Em Khet.",
       "load_error": "Nen Ini Sekhet. Wehem Iri.",
-      "jump_target_reason": "{{source}} Khesef Er Sekhet Pen: Nen Iri Tepy."
+      "jump_target_reason": "{{source}} Khesef Er Sekhet Pen: Nen Iri Tepy.",
+      "route_target_reason": "Wat Djes-Ef Er Sekhet Pen: Nen Iri Tepy.",
+      "foreign_all_required": "Em Tepy Neb · Nen Setep Sekhet"
     },
     "pick_group": {
       "title": "Nen Setep Djer · Sekhet",
@@ -1417,9 +1428,11 @@
     "node_state": {
       "skipped_at_pick": "Iri Tepy · Setep Sekhet",
       "skipped_later": "Iri Tepy · Em Khet",
-      "awaiting_pick": "Em Smen · Ta Ky Setep Sekhet · Tepy {{n}}"
+      "awaiting_pick": "Em Smen · Ta Ky Setep Sekhet · Tepy {{n}}",
+      "auto_done": "Djes-Ef · {{region}}",
+      "not_reached": "Nen Shem"
     },
-    "legend": "✓ Sesen Seth · ✕ Khesef Seth · ◇ Em Tepy · · Nen Wedja Djer · ⤼ Iri Tepy · ◌ Em Smen · Setep Sekhet",
+    "legend": "✓ Sesen Seth · ✕ Khesef Seth · ◇ Em Tepy · · Nen Wedja Djer · ⤼ Iri Tepy · ◌ Em Smen · Setep Sekhet · – Nen Shem",
     "history": {
       "picked": "{{actor}} · {{realm}}: Setep Sekhet. Iri Tepy: {{nodes}}",
       "adjusted": "{{actor}}: Redi Wehem {{added}} · Iri Tepy {{skipped}}. Khet: {{reason}}",
@@ -1427,7 +1440,7 @@
       "adjusted_added": "{{actor}}: Redi Wehem {{added}}. Khet: {{reason}}",
       "adjusted_skipped": "{{actor}}: Iri Tepy {{skipped}}. Khet: {{reason}}",
       "default": "{{actor}}: Shem Mi Wat Hesy Tepy En {{realm}}. Khet: {{reason}}",
-      "auto_routed": "{{node}} → {{region}} → {{target}}"
+      "auto_routed": "Wat Djes-Ef Mi Ta En Mesut: {{region}} → {{node}}"
     },
     "adjust": {
       "open": "Redi Wehem · Iri Tepy",
