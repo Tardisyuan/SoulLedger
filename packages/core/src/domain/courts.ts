@@ -6,10 +6,15 @@
  * 十殿写 第一殿 … 同一个殿的每一种写法都对到一个键 `workflow.court.<slug>`;认不出的原样显示。
  * 写法来自 `backend/apps/workflow/templates.py` 的 `WORKFLOW_TEMPLATES`、`config/workflow-templates.ts` 的预设、
  * `seed_workflow_templates`。不改库里的数据:旧写法靠这张表认。
+ * 模板之外由代码写进库的:转生申请的节点(`soul_accounts/rebirth.py`)、重开审判的 `court`
+ * (`sentence_plan/requests.py`);没有模板时的单节点兜底流程把文明代码(`CHINESE` …)当殿名写
+ * (`WorkflowService._generic_template`),那个按 `souls.civilizations` 显示。
  *
  * 埃及文:语言包里缺的键退回 zh-Hans(`t()` 的规则),不是 en —— 所以这些键列在 `egyPendingKeys.json`,
  * 而 egy 由这里直接给英文(`EN`,与 en.json 同值,`courtLabel.test.ts` 对着两边核)。
  */
+
+import { isCivilizationOption } from "../config/civilizations";
 
 /** slug → 英文名(egy 用)与库里出现过的写法。 */
 const COURTS: Record<string, { en: string; spellings: readonly string[] }> = {
@@ -46,6 +51,8 @@ const COURTS: Record<string, { en: string; spellings: readonly string[] }> = {
   wrongful_death_city: { en: "City of Wrongful Death", spellings: ["枉死城", "City of Wrongful Death"] },
   jiuhua: { en: "Mount Jiuhua", spellings: ["九华山", "Mount Jiuhua"] },
   avici: { en: "Avici Hell", spellings: ["阿鼻地狱", "Avici Hell"] },
+  rebirth_application: { en: "Rebirth application", spellings: ["转生申请", "Rebirth application"] },
+  reopened_judgment: { en: "Reopened judgment", spellings: ["重开审判", "Reopened judgment"] },
 };
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -67,6 +74,6 @@ export function courtLabel(
   locale?: string,
 ): string {
   const slug = courtSlug(court);
-  if (!slug) return court ?? "";
+  if (!slug) return isCivilizationOption(court) ? t(`souls.civilizations.${court}`) : court ?? "";
   return locale === "egy" ? COURTS[slug].en : t(`workflow.court.${slug}`);
 }

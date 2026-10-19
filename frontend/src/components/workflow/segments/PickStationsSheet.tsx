@@ -14,7 +14,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { StationPicker, type PickRow } from "./StationPicker";
 import { StaleSegmentNotice } from "./StaleSegmentNotice";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { segmentNodes, segmentRealm, segmentRefusalOf, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
+import { segmentNodes, segmentRealm, segmentRefusalOf, segmentRefusalText, staleOf, stationNo, type StaleSegment } from "@soulledger/core/domain/workflowSegments";
 
 /** 现在库里的选择:这一段里已被跳过的站。 */
 const skippedOf = (workflow: ApprovalWorkflow | undefined, order: number) =>
@@ -73,7 +73,7 @@ export function PickStationsSheet({
         setStale(changed);
         return;
       }
-      showToast(typeof refusal.data.error === "string" ? refusal.data.error : t("workflow.segment.error"), "error");
+      showToast(segmentRefusalText(t, refusal) ?? t("workflow.segment.error"), "error");
     },
   });
 

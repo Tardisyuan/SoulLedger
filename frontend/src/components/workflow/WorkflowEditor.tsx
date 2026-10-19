@@ -294,7 +294,7 @@ export default function WorkflowEditor({
   onClose?: () => void;
   onSave?: (template: WorkflowTemplateInput) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -1375,6 +1375,7 @@ export default function WorkflowEditor({
   const inspector = (
     <WorkflowInspector
       t={t}
+      locale={locale}
       nodes={nodes}
       edges={edges}
       roles={roles}
@@ -1451,6 +1452,7 @@ export default function WorkflowEditor({
         {versionBadge}
         <WorkflowReadOnlyList
           t={t}
+          locale={locale}
           nodes={nodes}
           edges={edges}
           roles={roles}

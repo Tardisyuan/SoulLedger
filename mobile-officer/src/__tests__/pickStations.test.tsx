@@ -245,7 +245,29 @@ describe("O-2 · the pick page", () => {
     const { onBack } = await openPick();
     await act(async () => fireEvent.press(screen.getByTestId("pick-confirm")));
     expect(await screen.findByTestId("pick-failed")).toBeTruthy();
+    expect(screen.getByText("终审必须走，不能跳过")).toBeTruthy();
+    expect(screen.queryByText("x")).toBeNull();
     expect(screen.queryByTestId("pick-stale")).toBeNull();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("jump_target_required: says in Chinese which station and from where, never the server's English", async () => {
+    const english = "Rejected cases are handed to this station, so it cannot be skipped: 称心 ← 入审";
+    mockPick.mockRejectedValue(
+      httpError(400, {
+        code: "jump_target_required",
+        error: english,
+        jump_targets: [{ node_id: "n3", node_order: 13, node_name: "称心", sources: ["入审"] }],
+      }),
+    );
+    const { onBack } = await openPick();
+    fireEvent.press(screen.getByTestId("pick-station-n3"));
+    await act(async () => fireEvent.press(screen.getByTestId("pick-confirm")));
+    expect(await screen.findByTestId("pick-failed")).toBeTruthy();
+    expect(screen.getByText("称心是入审驳回时转去的站，不能跳过；要跳过它，先把入审一并跳过")).toBeTruthy();
+    expect(screen.queryByText(english)).toBeNull();
+    expect(screen.queryByText(/Rejected cases|cannot be skipped/)).toBeNull();
+    expect(screen.queryByText("没能保存，请重试")).toBeNull();
     expect(onBack).not.toHaveBeenCalled();
   });
 });

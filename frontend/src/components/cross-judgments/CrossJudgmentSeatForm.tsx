@@ -22,8 +22,10 @@ function actorName(a: SeatableActor, locale: string): string {
 
 const ROLES = ["CO_JUDGE", "CHAIRMAN", "ADVISOR"] as const;
 
-function errorText(error: unknown): string | null {
+function errorText(error: unknown, t: (key: string) => string): string | null {
   const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  // 第四十三批:流程不在走时不能入席,在走时只能排最后(409 `order_locked`);后端那句是英文,不上屏。
+  if (data?.code === "order_locked") return t("crossJudgments.join_locked");
   const first = data?.error ?? Object.values(data ?? {})[0];
   const text = Array.isArray(first) ? first[0] : first;
   return typeof text === "string" ? text : null;
@@ -84,7 +86,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
       showToast(t("sentence_plan.cross.seated"), "success");
       queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
     },
-    onError: (error) => showToast(errorText(error) ?? t("sentence_plan.cross.seat_error"), "error"),
+    onError: (error) => showToast(errorText(error, t) ?? t("sentence_plan.cross.seat_error"), "error"),
   });
 
   if (!isInitiator || available.length === 0) {

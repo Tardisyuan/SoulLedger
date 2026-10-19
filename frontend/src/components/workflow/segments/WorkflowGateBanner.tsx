@@ -10,7 +10,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { PickStationsSheet } from "./PickStationsSheet";
-import { gateView, segmentRealm, segmentRefusalOf } from "@soulledger/core/domain/workflowSegments";
+import { gateView, segmentRealm, segmentRefusalOf, segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
 
 /**
  * 流程停在一个外域段门口、等那个域选站时,中栏的那一块(第四十三批 W-5a/b/c,外域那边是 W-2 的「流程在等本域选站」)。
@@ -45,7 +45,7 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
         showToast(t("workflow.gate.remind_too_soon"), "error");
         return;
       }
-      showToast(typeof refusal.data.error === "string" ? refusal.data.error : t("workflow.segment.error"), "error");
+      showToast(segmentRefusalText(t, refusal) ?? t("workflow.segment.error"), "error");
     },
   });
   const goDefault = useMutation({
@@ -56,7 +56,7 @@ export function WorkflowGateBanner({ workflow, segment, myTenant }: { workflow: 
     },
     onError: (error) => {
       const refusal = segmentRefusalOf(error);
-      showToast(typeof refusal.data.error === "string" ? refusal.data.error : t("workflow.segment.error"), "error");
+      showToast(segmentRefusalText(t, refusal) ?? t("workflow.segment.error"), "error");
     },
   });
 
