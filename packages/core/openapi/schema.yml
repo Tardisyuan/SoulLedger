@@ -19046,8 +19046,8 @@ paths:
         Validate a soul CSV row by row. WRITES NOTHING.
 
         Columns: name, civilization (required); birth_date, death_date, origin_location,
-        birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
-        BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+        birth_name, description, origin_region (`EUROPE` / `ASIA` / blank). Dates are `YYYY`, `YYYY-MM` or
+        `YYYY-MM-DD`, negative for BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
       tags:
       - v1
       requestBody:
@@ -25910,9 +25910,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlowPreviewForeign'
+        nothing_to_pick:
+          type: boolean
+          description: 没有一站能跳过(终审、自动节点、锁着的驳回 / 分支目标):客户端跳过选站这一步(第四十五批)。
       required:
       - foreign
       - name
+      - nothing_to_pick
       - stations
     FlowPreviewForeign:
       type: object
@@ -28933,6 +28937,10 @@ components:
           readOnly: true
         origin_location:
           type: string
+        origin_region:
+          oneOf:
+          - $ref: '#/components/schemas/OriginRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         merit_score:
           type: integer
         demerit_score:
@@ -28964,6 +28972,7 @@ components:
       - merit_score
       - name
       - origin_location
+      - origin_region
       - soul_code
       - tenant
       - welcomed_civilizations
@@ -30764,6 +30773,14 @@ components:
         * `DEATH_SYNC` - 死亡同步自动开通
         * `OFFICER` - 官员手动开通
         * `BACKFILL` - 存量补齐
+    OriginRegionEnum:
+      enum:
+      - EUROPE
+      - ASIA
+      type: string
+      description: |-
+        * `EUROPE` - 欧洲
+        * `ASIA` - 亚洲
     PaginatedActorListList:
       type: object
       required:
@@ -33645,6 +33662,10 @@ components:
         origin_location:
           type: string
           maxLength: 255
+        origin_region:
+          oneOf:
+          - $ref: '#/components/schemas/OriginRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         birth_name:
           type: string
           maxLength: 255
@@ -37508,6 +37529,10 @@ components:
         origin_location:
           type: string
           maxLength: 255
+        origin_region:
+          oneOf:
+          - $ref: '#/components/schemas/OriginRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         birth_name:
           type: string
           maxLength: 255

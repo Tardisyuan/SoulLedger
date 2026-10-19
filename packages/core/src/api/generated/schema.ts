@@ -8694,8 +8694,8 @@ export interface paths {
          * @description Validate a soul CSV row by row. WRITES NOTHING.
          *
          *     Columns: name, civilization (required); birth_date, death_date, origin_location,
-         *     birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
-         *     BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+         *     birth_name, description, origin_region (`EUROPE` / `ASIA` / blank). Dates are `YYYY`, `YYYY-MM` or
+         *     `YYYY-MM-DD`, negative for BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
          */
         post: operations["v1_souls_import_preview_create"];
         delete?: never;
@@ -11801,6 +11801,8 @@ export interface components {
             name: string;
             stations: components["schemas"]["FlowPreviewStation"][];
             foreign: components["schemas"]["FlowPreviewForeign"][];
+            /** @description 没有一站能跳过(终审、自动节点、锁着的驳回 / 分支目标):客户端跳过选站这一步(第四十五批)。 */
+            nothing_to_pick: boolean;
         };
         FlowPreviewForeign: {
             order: number;
@@ -13123,6 +13125,7 @@ export interface components {
                 day: number | null;
             } | null;
             origin_location: string;
+            origin_region: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             merit_score: number;
             demerit_score: number;
             readonly account: components["schemas"]["MeAccount"];
@@ -13918,6 +13921,12 @@ export interface components {
          * @enum {string}
          */
         OriginEnum: "DEATH_SYNC" | "OFFICER" | "BACKFILL";
+        /**
+         * @description * `EUROPE` - 欧洲
+         *     * `ASIA` - 亚洲
+         * @enum {string}
+         */
+        OriginRegionEnum: "EUROPE" | "ASIA";
         PaginatedActorListList: {
             /** @example 123 */
             count: number;
@@ -15492,6 +15501,7 @@ export interface components {
                 day: number | null;
             } | null;
             origin_location?: string;
+            origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
             description?: string;
             readonly merit_score?: number | null;
@@ -17337,6 +17347,7 @@ export interface components {
                 day: number | null;
             } | null;
             origin_location?: string;
+            origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
             description?: string;
             readonly merit_score: number | null;
