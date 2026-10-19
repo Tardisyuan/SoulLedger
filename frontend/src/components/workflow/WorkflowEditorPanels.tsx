@@ -17,6 +17,7 @@ import {
   type NodeRole,
 } from "@/src/components/workflow/workflowValidation";
 import { whenText } from "@/src/components/workflow/workflowConditions";
+import { courtLabel } from "@soulledger/core/domain/courts";
 
 /**
  * The three panes around the canvas in design C · 03: 节点库 (left), 属性 +
@@ -208,6 +209,7 @@ export type InspectorTab = (typeof INSPECTOR_TABS)[number];
  */
 export function WorkflowInspector({
   t,
+  locale,
   nodes,
   edges,
   roles,
@@ -223,6 +225,8 @@ export function WorkflowInspector({
   version,
 }: {
   t: TFunc;
+  /** 殿名按界面语言(`courtLabel`;库里中英混写)。 */
+  locale?: string;
   nodes: readonly Node[];
   edges: readonly Edge[];
   roles: ReadonlyMap<string, NodeRole>;
@@ -310,7 +314,7 @@ export function WorkflowInspector({
                     {field(t("workflow.editor.node_name"), nodeName(node, t))}
                     {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
                     {field(t("workflow.editor.node_type"), String(node.data.nodeType ?? ""), true)}
-                    {field(t("workflow.editor.court_code"), String(node.data.courtCode ?? ""))}
+                    {field(t("workflow.editor.court_code"), courtLabel(t, typeof node.data.courtCode === "string" ? node.data.courtCode : "", locale))}
                     {field(
                       t("workflow.editor.approver_type"),
                       node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
@@ -486,6 +490,7 @@ export function WorkflowLinearPreview({
  */
 export function WorkflowReadOnlyList({
   t,
+  locale,
   nodes,
   edges,
   roles,
@@ -494,6 +499,8 @@ export function WorkflowReadOnlyList({
   onSelect,
 }: {
   t: TFunc;
+  /** 殿名按界面语言(`courtLabel`;库里中英混写)。 */
+  locale?: string;
   nodes: readonly Node[];
   edges: readonly Edge[];
   roles: ReadonlyMap<string, NodeRole>;
@@ -514,7 +521,7 @@ export function WorkflowReadOnlyList({
             const bad = issueNodes.has(n.id);
             const signers = Array.isArray(n.data.signers) ? n.data.signers.length : 0;
             const right = [
-              typeof n.data.courtCode === "string" ? n.data.courtCode : "",
+              typeof n.data.courtCode === "string" ? courtLabel(t, n.data.courtCode, locale) : "",
               kind === "COUNTERSIGN" && signers > 0
                 ? `${typeof n.data.threshold === "number" ? n.data.threshold : signers}/${signers}`
                 : "",

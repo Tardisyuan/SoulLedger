@@ -20,6 +20,9 @@ import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowG
 import { AdjustStationsSheet } from "@/src/components/workflow/segments/AdjustStationsSheet";
 import { PickNodesGroup } from "@/src/components/workflow/segments/PickNodesGroup";
 import { historyLine } from "@/src/components/workflow/segments/WorkflowSegmentHistory";
+import { WorkflowInspector, WorkflowReadOnlyList } from "@/src/components/workflow/WorkflowEditorPanels";
+import type { NodeRole } from "@/src/components/workflow/workflowValidation";
+import type { Node as FlowNode } from "@xyflow/react";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -524,6 +527,33 @@ describe("驳回时会转到的站不能跳过", () => {
     );
   });
 
+  it("服务端拒了(400 jump_target_required):提示写中文、写是哪一站从哪一站转来,不上后端那句英文", async () => {
+    const english = "Rejected cases are handed to this station, so it cannot be skipped: 站5 ← 站4";
+    workflowApi.adjust.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          code: "jump_target_required",
+          error: english,
+          jump_targets: [{ node_id: "n5", node_order: 5, node_name: "站5", sources: ["站4"] }],
+        },
+      },
+    });
+    const { onClose, save } = renderAdjust();
+    fireEvent.click(within(screen.getByTestId("adjust-stations")).getByRole("checkbox", { name: /站5/ }));
+    fireEvent.change(screen.getByLabelText(tZh("workflow.adjust.reason"), { exact: false }), { target: { value: "x" } });
+    fireEvent.click(save());
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
+    const [text, tone] = mockShowToast.mock.calls[0];
+    expect(tone).toBe("error");
+    expect(text).toBe(tZh("workflow.refusal.jump_target_required", { station: "站5", source: "站4" }));
+    expect(text).toContain("站5");
+    expect(text).toContain("站4");
+    expect(text).not.toContain(english);
+    expect(text).not.toMatch(/[A-Za-z]{3,}/);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("殿名按界面语言:中文界面写 天堂 / 第十殿,不写库里的 Heaven", () => {
     const wf = workflowWith([running], JUMP_NODES, { current_node: "n1" });
     wrap(<AdjustStationsSheet workflow={wf} segment={running} isOpen onClose={() => {}} />);
@@ -532,5 +562,60 @@ describe("驳回时会转到的站不能跳过", () => {
     expect(list).toHaveTextContent("第十殿");
     expect(list).not.toHaveTextContent("Heaven");
     expect(list).not.toHaveTextContent("Tenth Court");
+  });
+});
+
+// ── 模板编辑器的只读预览(2026-10-19)────────────────────────────────────────
+// 窄屏只读视图的流程列表与右侧属性里的殿名,按界面语言(`courtLabel`):库里存的 Heaven 在中文界面写 天堂。
+
+describe("模板编辑器只读预览的殿名", () => {
+  const PREVIEW_NODES: FlowNode[] = [
+    { id: "p1", position: { x: 0, y: 0 }, data: { label: "升天审", courtCode: "Heaven", kind: "APPROVAL", nodeType: "TRIAL" } },
+    { id: "p2", position: { x: 0, y: 100 }, data: { label: "终审", courtCode: "Tenth Court", kind: "APPROVAL", nodeType: "FINAL" } },
+  ];
+  const roles = new Map<string, NodeRole>([
+    ["p1", "entry"],
+    ["p2", "end"],
+  ]);
+
+  it("流程列表写 天堂 / 第十殿,不写库里的 Heaven", () => {
+    render(
+      <WorkflowReadOnlyList
+        t={tZh}
+        locale="zh-Hans"
+        nodes={PREVIEW_NODES}
+        edges={[]}
+        roles={roles}
+        issueNodes={new Set()}
+        selectedId={null}
+        onSelect={() => {}}
+      />
+    );
+    const list = screen.getByRole("region", { name: tZh("workflow.editor.preview") });
+    expect(list).toHaveTextContent("天堂");
+    expect(list).toHaveTextContent("第十殿");
+    expect(list).not.toHaveTextContent("Heaven");
+    expect(list).not.toHaveTextContent("Tenth Court");
+  });
+
+  it("右侧属性(只读)里的殿名同样写 天堂", () => {
+    render(
+      <WorkflowInspector
+        t={tZh}
+        locale="zh-Hans"
+        nodes={PREVIEW_NODES}
+        edges={[]}
+        roles={roles}
+        issues={[]}
+        selectedId="p1"
+        onSelect={() => {}}
+        validationId="v"
+        tab="node"
+        onTab={() => {}}
+      />
+    );
+    const panel = screen.getByRole("tabpanel");
+    expect(panel).toHaveTextContent("天堂");
+    expect(panel).not.toHaveTextContent("Heaven");
   });
 });

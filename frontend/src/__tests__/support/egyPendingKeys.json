@@ -32,5 +32,17 @@
   "workflow.court.city_god_system",
   "workflow.court.wrongful_death_city",
   "workflow.court.jiuhua",
-  "workflow.court.avici"
+  "workflow.court.avici",
+  "workflow.court.rebirth_application",
+  "workflow.court.reopened_judgment",
+  "workflow.refusal.jump_target_required",
+  "workflow.refusal.final_required",
+  "workflow.refusal.segment_changed",
+  "workflow.refusal.workflow_required",
+  "workflow.refusal.not_allowed",
+  "workflow.refusal.too_early",
+  "workflow.refusal.unknown_node",
+  "workflow.refusal.reason_required",
+  "workflow.refusal.moved_on",
+  "crossJudgments.join_locked"
 ]
