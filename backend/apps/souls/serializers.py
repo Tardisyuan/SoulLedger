@@ -830,7 +830,8 @@ class SoulRegionUpdateRowSerializer(serializers.Serializer):
     identifier = serializers.CharField(allow_blank=True, help_text="The soul_id / soul_code cell as written.")
     soul_name = serializers.CharField(
         allow_null=True,
-        help_text="Only for `ok` / `unchanged` (a soul of this hall); null otherwise — never another hall's.",
+        help_text="Whenever the identifier names a soul of this hall (also `invalid_origin_region` / "
+        "`duplicate_in_file`); null for `not_found` / `missing_identifier` — never another hall's.",
     )
 
 

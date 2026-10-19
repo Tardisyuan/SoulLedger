@@ -96,14 +96,17 @@ def test_preview_shows_each_status_and_writes_nothing(world):
     assert (first["row"], first["old"], first["new"], first["clears_value"]) == (2, "", "EUROPE", False)
     assert first["duplicate_of"] is None
     assert (dup["row"], dup["duplicate_of"], dup["old"], dup["new"]) == (7, 2, None, None)
-    # identifier echoes the cell; the name only where a soul of this hall was found and used
+    bad = r.data["rows"][4]
+    assert (bad["old"], bad["new"], bad["values"]["origin_region"]) == ("EUROPE", None, "AFRICA")
+    # identifier echoes the cell; the name wherever the identifier names a soul of this hall — the bad
+    # value and the duplicate included (it is the hall's own soul), never not_found / missing_identifier
     assert [(x["identifier"], x["soul_name"]) for x in r.data["rows"]] == [
         (str(w["a"].pk), "Achilles"),
         (str(w["b"].pk), "Memnon"),
         ("00000000-0000-0000-0000-000000000000", None),
         ("", None),
-        (str(w["c"].pk), None),
-        (str(w["a"].pk), None),
+        (str(w["c"].pk), "Odysseus"),
+        (str(w["a"].pk), "Achilles"),
     ]
     counts = [r.data[k] for k in ("total", "changed_count", "unchanged_count", "skipped_count", "clears_count")]
     assert counts == [6, 1, 1, 4, 0]
@@ -149,11 +152,16 @@ def test_soul_code_identifies_a_soul_and_is_normalised(world):
     assert (r.data["rows"][0]["identifier"], r.data["rows"][0]["soul_name"]) == ("abc2345678", "Achilles")
 
 
-def test_header_must_name_exactly_one_identifier_column(world):
-    for header in ("origin_region", "soul_id,soul_code,origin_region", "Soul ID,soul_id,origin_region"):
-        r = _post(world["client"], PREVIEW, header + "\n" + "x," * header.count(",") + "ASIA\n")
-        assert r.status_code == 400
-        assert (r.data["code"], r.data["columns"]) == ("identifier_column", ["soul_id", "soul_code"])
+@pytest.mark.parametrize("header, code", [
+    ("origin_region", "missing_id_column"),
+    ("name,origin_region", "missing_id_column"),
+    ("soul_id,soul_code,origin_region", "mixed_id_columns"),
+    ("Soul ID,soul_id,origin_region", "mixed_id_columns"),
+])
+def test_header_must_name_exactly_one_identifier_column(world, header, code):
+    r = _post(world["client"], PREVIEW, header + "\n" + "x," * header.count(",") + "ASIA\n")
+    assert r.status_code == 400
+    assert (r.data["code"], r.data["columns"]) == (code, ["soul_id", "soul_code"])
 
 
 def test_missing_origin_region_column_is_refused(world):

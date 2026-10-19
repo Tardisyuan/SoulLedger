@@ -18090,7 +18090,7 @@ export interface components {
             duplicate_of: number | null;
             /** @description The soul_id / soul_code cell as written. */
             identifier: string;
-            /** @description Only for `ok` / `unchanged` (a soul of this hall); null otherwise — never another hall's. */
+            /** @description Whenever the identifier names a soul of this hall (also `invalid_origin_region` / `duplicate_in_file`); null for `not_found` / `missing_identifier` — never another hall's. */
             soul_name: string | null;
         };
         /**
