@@ -19,7 +19,7 @@ import {
   valueText,
   whenText,
 } from "@/src/components/workflow/workflowConditions";
-import { autoRouteExits, branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
+import { AUTO_ROUTE_GLYPH, autoRouteExits, branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
 import { originRegionLabel, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
 
 /**
@@ -490,6 +490,7 @@ export function AutoRouteSection({
     return `N${idx + 1}「${label || t("workflow.editor.unnamed")}」`;
   };
   const targets = nodes.filter((n) => n.id !== node.id);
+  const unconnected = autoRouteExits(node.id, edges).filter((x) => !x.edge).length;
   return (
     <section aria-label={t("workflow.editor.auto_route.kind")} data-testid="auto-route-section" className="flex flex-col gap-3">
       {nameFieldId && onName && (
@@ -504,6 +505,17 @@ export function AutoRouteSection({
             value={typeof node.data.label === "string" ? node.data.label : ""}
             onChange={(e) => onName(e.target.value)}
           />
+        </div>
+      )}
+      {/* 第四十七批 W-1:类型只读 —— 三条固定出口和通过 / 不通过对不上,互转会丢出口。 */}
+      {nameFieldId && (
+        <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 items-baseline" data-testid="auto-route-kind">
+          <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.field.kind")}</span>
+          <span className="text-sm text-[oklch(var(--color-ink))]">
+            <span aria-hidden="true">{AUTO_ROUTE_GLYPH} </span>
+            {t("workflow.editor.kind.AUTO_ROUTE")}{" "}
+            <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.kind_locked")}</span>
+          </span>
         </div>
       )}
       <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.auto_route.exits_hint")}</p>
@@ -521,7 +533,7 @@ export function AutoRouteSection({
                 {onTarget ? (
                   <select
                     id={selectId}
-                    className={`${CONTROL} w-full`}
+                    className={`${CONTROL} w-full ${edge ? "" : "border-[oklch(var(--color-danger))]! text-[oklch(var(--color-danger))]"}`}
                     value={edge?.target ?? ""}
                     onChange={(e) => onTarget(node.id, region, e.target.value)}
                   >
@@ -542,6 +554,11 @@ export function AutoRouteSection({
           );
         })}
       </dl>
+      {onTarget && unconnected > 0 && (
+        <p className="text-xs text-[oklch(var(--color-danger))]" data-testid="auto-route-unconnected">
+          {t("workflow.editor.auto_route.unconnected_count", { n: String(unconnected) })}
+        </p>
+      )}
     </section>
   );
 }

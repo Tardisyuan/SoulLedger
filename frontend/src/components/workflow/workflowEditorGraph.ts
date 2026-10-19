@@ -1,5 +1,6 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node } from "@xyflow/react";
+import { isAutoRouteBranches } from "@soulledger/core/domain/originRegion";
 import type {
   TemplateBranch,
   TemplateSigner,
@@ -65,6 +66,8 @@ export function extendedData(n: Partial<TemplateNode>): Record<string, unknown> 
     timeoutAction: n.timeout_action ?? "",
     timeoutRole: n.timeout_role ?? "",
     rejectTo: n.reject_to ?? null,
+    // 存下的自动分流:按地域的分支在,哪怕去处还空着(第四十七批,`getTemplateNodes` 照样存它们)。
+    ...(isAutoRouteBranches(n.kind, n.branches) && { autoRoute: true }),
   };
 }
 

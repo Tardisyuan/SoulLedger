@@ -77,14 +77,16 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import {
   SAVE_BLOCKING,
+  autoRouteExits,
   branchOf,
+  kindOf,
   exitRegion,
   isAutoRoute,
   nodeRoles,
   validateFlow,
   whenOf,
 } from "@/src/components/workflow/workflowValidation";
-import { originRegionLabel, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
+import { branchRegion, originRegionLabel, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
 import { defaultClause, whenText } from "@/src/components/workflow/workflowConditions";
 import {
   ApproverPreviewSection,
@@ -522,6 +524,19 @@ export default function WorkflowEditor({
     }
   }, [initialTemplateData, templateId, setNodes, setEdges]);
 
+  /**
+   * 自动分流还没连的出口照样存成分支,去处留空(第四十七批):草稿收空去处,发布时校验拦下;
+   * 读回时靠这两条按地域的分支认出它 —— 三条都没连时它没有一条边。不详是 `on_pass`,没连就是 null。
+   */
+  const autoRouteBranches = (n: Node, branches: TemplateBranch[]): TemplateBranch[] => {
+    if (n.data.autoRoute !== true || n.data.kind !== "NOTIFY") return branches;
+    const missing = (["EUROPE", "ASIA"] as const).filter((r) => !branches.some((b) => branchRegion(b.when) === r));
+    return [
+      ...branches,
+      ...missing.map((r) => ({ id: r.toLowerCase(), when: [{ fact: "origin_region", op: "in", value: [r] }], target: "" }) as TemplateBranch),
+    ];
+  };
+
   // Convert React Flow nodes to template nodes
   const getTemplateNodes = useCallback((): TemplateNode[] => {
     /**
@@ -571,7 +586,7 @@ export default function WorkflowEditor({
       // omitting the key would leave whatever was stored before.
       on_pass: routing.get(n.id)?.on_pass ?? null,
       on_fail: routing.get(n.id)?.on_fail ?? null,
-      branches: routing.get(n.id)?.branches ?? [],
+      branches: autoRouteBranches(n, routing.get(n.id)?.branches ?? []),
       // 驳回到 / 超时 / 会签 (0020, 0021). `|| null` on the timeout action: the
       // serializer's ChoiceField takes null for "none", and "" is what the
       // form holds.
@@ -676,41 +691,42 @@ export default function WorkflowEditor({
   const addNode = useCallback((kind: PaletteType = "APPROVAL", position?: { x: number; y: number }) => {
     stopLayoutTravel();
     const newId = `node-${Date.now()}`;
+    // 自动分流(第四十七批 W-1):存的是 NOTIFY,`autoRoute` 让三条出口都没连时也认得它;默认名照第四十五批。
+    const autoRoute = kind === "AUTO_ROUTE";
     const newNode: Node = {
       id: newId,
       type: "editableNode",
       position: position ?? appendPosition(nodes),
       data: {
         id: newId,
-        label: `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
+        label: autoRoute ? t("workflow.editor.auto_route.default_name") : `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
         nodeType: kind === "END" ? "FINAL" : "TRIAL",
         courtCode: "",
         approverRole: "",
-        approverType: "ROLE",
-        ...extendedData({ kind }),
+        approverType: autoRoute ? "SYSTEM" : "ROLE",
+        ...extendedData({ kind: autoRoute ? "NOTIFY" : kind }),
+        ...(autoRoute && { autoRoute: true }),
       },
     };
 
-    // If there are existing nodes, create an edge from the last one
-    const newEdges: Edge[] =
-      nodes.length > 0
-        ? [
-            {
-              id: `e${nodes[nodes.length - 1].id}-${newId}`,
-              source: nodes[nodes.length - 1].id,
-              target: newId,
-              ...edgeArrow(),
-            },
-          ]
-        : [];
+    // An edge from the last node that can have one: 结束 has no way out (`end_has_exit`), so a node
+    // appended after it is fed by the last non-结束 node (第四十七批 W-1; it used to wire 结束 itself).
+    // When that node already has a plain 通过 edge (it led to 结束), that edge is re-pointed at the new
+    // node rather than doubled: two 通过 edges from one node is `duplicate_route`, which blocks a save.
+    const from = [...nodes].reverse().find((n) => kindOf(n) !== "END");
+    const plainPass = from && edges.find((e) => e.source === from.id && branchOf(e) === "pass" && whenOf(e) === undefined);
+    const link: Edge | null = from ? { id: `e${from.id}-${newId}`, source: from.id, target: newId, ...edgeArrow() } : null;
 
     setNodes((nds) => [...nds, newNode]);
-    setEdges((eds) => [...eds, ...newEdges]);
+    setEdges((eds) =>
+      !link ? eds : plainPass ? eds.map((e) => (e.id === plainPass.id ? { ...e, id: link.id, target: newId } : e)) : [...eds, link]
+    );
+    return newId;
     // `t` names the new node ("新节点 3"). Its identity changes only when the
     // locale changes or a lazy message bundle lands (see I18nContext's `t`,
     // memoised on `[locale, loadedBundles]`), and this is a click handler, not
     // an effect — a fresh identity re-renders one button and nothing else.
-  }, [nodes, setNodes, setEdges, t, stopLayoutTravel]);
+  }, [nodes, edges, setNodes, setEdges, t, stopLayoutTravel]);
 
   /**
    * Bring the new layout back on screen — BUT ONLY IF IT WOULD NOT BE.
@@ -1099,9 +1115,13 @@ export default function WorkflowEditor({
           ordinal: idx + 1,
           issueCount: issues.filter((i) => i.nodeId === n.id).length,
           autoRoute: isAutoRoute(n, edges),
+          // 没连的出口(第四十七批 W-1):卡片下画短桩 +「欧洲 · 未连」。
+          unconnected: isAutoRoute(n, edges)
+            ? autoRouteExits(n.id, edges).filter((x) => !x.edge).map((x) => originRegionLabel(t, x.region, locale))
+            : undefined,
         },
       })),
-    [nodes, edges, roles, issues]
+    [nodes, edges, roles, issues, t, locale]
   );
 
   /**
@@ -1248,9 +1268,10 @@ export default function WorkflowEditor({
       if (!(PALETTE_TYPES as readonly string[]).includes(type)) return;
       event.preventDefault();
       const at = flowRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      addNode(type as PaletteType, at ? { x: Math.round(at.x), y: Math.round(at.y) } : undefined);
+      const id = addNode(type as PaletteType, at ? { x: Math.round(at.x), y: Math.round(at.y) } : undefined);
+      if (type === "AUTO_ROUTE") handleNodeEdit(id);
     },
-    [addNode]
+    [addNode, handleNodeEdit]
   );
 
   /** 驳回到's choices for the selected node: the nodes before it, by order. */
@@ -1280,6 +1301,16 @@ export default function WorkflowEditor({
   // Handle connection changes
   const onConnect = useCallback(
     (connection: Connection) => {
+      // 自动分流只有一个通过端口:从它拖出的线依次接上还没连的出口,欧洲 → 亚洲 → 不详(第四十七批 W-1,
+      // 卡片下的短桩也按这个次序从左到右)。三条都连了就照常加一条,由校验去报重复。
+      const source = nodes.find((n) => n.id === connection.source);
+      if (source && connection.target && connection.sourceHandle !== "fail" && isAutoRoute(source, edges)) {
+        const open = autoRouteExits(source.id, edges).find((x) => !x.edge);
+        if (open) {
+          setAutoRouteTarget(source.id, open.region, connection.target);
+          return;
+        }
+      }
       stopLayoutTravel();
       setEdges((eds) =>
         addEdge(
@@ -1291,7 +1322,7 @@ export default function WorkflowEditor({
         )
       );
     },
-    [setEdges, stopLayoutTravel]
+    [setEdges, stopLayoutTravel, nodes, edges, setAutoRouteTarget]
   );
 
   // Handle node changes
@@ -1721,7 +1752,14 @@ export default function WorkflowEditor({
        */}
       {/* v3 A1: palette 176 · canvas · inspector 360 (was 320, 用户 10-02). */}
       <div className="flex-1 min-h-0 grid grid-cols-[176px_minmax(0,1fr)_360px]">
-      <WorkflowPalette t={t} onAdd={(type) => addNode(type)}>
+      <WorkflowPalette
+        t={t}
+        onAdd={(type) => {
+          const id = addNode(type);
+          // W-1:新建的自动分流选中,名称框聚焦(默认名可直接改)。
+          if (type === "AUTO_ROUTE") handleNodeEdit(id);
+        }}
+      >
         {/* The keyboard half of the hint, and the only place `E` is visible.
             It reuses `workflow.editor.edit_node` — once the modal title —
             rather than introducing a fourth string in three bundles, one of

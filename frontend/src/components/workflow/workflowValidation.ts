@@ -92,6 +92,8 @@ export const KIND_GLYPH: Record<WorkflowNodeKind, string> = {
  * 只是画法与检查器不同:三条实线出口 欧洲 / 亚洲 / 不详,不详是 `on_pass`(不写「默认」),只能改去处。
  */
 export function isAutoRoute(node: Pick<Node, "id" | "data">, edges: readonly Edge[]): boolean {
+  // `data.autoRoute`:节点库新建的(第四十七批),或读回时带着按地域的分支 —— 三条出口都没连时它没有一条边可认。
+  if (node.data.autoRoute === true && kindOf(node) === "NOTIFY") return true;
   return isAutoRouteBranches(
     kindOf(node),
     edges.filter((e) => e.source === node.id).map((e) => ({ when: whenOf(e) })),
@@ -127,6 +129,8 @@ export function nodeRoles(nodes: readonly Node[], edges: readonly Edge[]): Map<s
     if (kindOf(n) === "END") role = "end";
     else if (idx === 0) role = "entry";
     else if (outgoing.some((e) => branchOf(e) === "fail" || whenOf(e) !== undefined)) role = "branch";
+    // 自动分流总是分支(第四十七批):三条出口都没连时它没有一条边可认。
+    else if (n.data.autoRoute === true && kindOf(n) === "NOTIFY") role = "branch";
     else if (!hasEndKind && idx === nodes.length - 1 && !outgoing.some((e) => branchOf(e) === "pass")) role = "end";
     out.set(n.id, role);
   });

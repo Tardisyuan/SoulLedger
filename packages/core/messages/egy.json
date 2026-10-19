@@ -616,7 +616,8 @@
         "implausible_lifespan": "Ankh Nen Maat",
         "duplicate_in_file": "Sen Medu · Sesh",
         "duplicate_existing": "Sen Medu · Medjat",
-        "invalid_characters": "Nen Menkh · Sesh Nen Smen"
+        "invalid_characters": "Nen Menkh · Sesh Nen Smen",
+        "invalid_origin_region": "EUROPE / ASIA / Nen Sesh: Setep Wa"
       },
       "file_codes": {
         "file_too_large": "Nen Menkh · Sesh Er Pehwy",
@@ -662,7 +663,8 @@
       "file_codes": {
         "mixed_id_columns": "soul_code / soul_id: Setep Wa"
       },
-      "failed": "Nen Iri Mawy; Ba Nen Khemen. Wehem Iri."
+      "failed": "Nen Iri Mawy; Ba Nen Khemen. Wehem Iri.",
+      "skipped_reason_column": "Medu Sni"
     },
     "origin_region": {
       "label": "Ta En Mesut",
@@ -1124,7 +1126,8 @@
         "APPROVAL": "Wedja",
         "COUNTERSIGN": "Sesen Hena",
         "NOTIFY": "Sedjem Sab",
-        "END": "Pehwy"
+        "END": "Pehwy",
+        "AUTO_ROUTE": "Wat Djes-Ef"
       },
       "signers": "Netjer Sesen",
       "signers_summary": "{{who}} · Sesen {{k}} / {{n}}",
@@ -1239,8 +1242,14 @@
         "kind": "Wat Djes-Ef",
         "default_name": "Wat Djes-Ef Mi Ta En Mesut",
         "badge": "Djes-Ef · Nen Sab Wedja",
-        "exits_hint": "Wat 3: Smen Mi Ta En Mesut. Khemen Sekhet Er Wa."
-      }
+        "exits_hint": "Wat 3: Smen Mi Ta En Mesut. Khemen Sekhet Er Wa.",
+        "unconnected_count": "Wat {{n}} Nen Senb · Nen Per",
+        "no_target": "Nen Senb"
+      },
+      "palette_hint": {
+        "AUTO_ROUTE": "Nen Sab Wedja · Wat 3: Smen Mi Ta En Mesut"
+      },
+      "kind_locked": "Nen Khemen"
     },
     "templates": "Pet-Sesh Wat",
     "select_template": "Setep Pet-Sesh Er Khemen",
@@ -1501,6 +1510,50 @@
       "stopped_here": "Em Smen",
       "no_picker_body": "Setep Sekhet: Hab Er Sab Hery Ta Ky. Nen Sab Hery: Shem Mi Wat Hesy Tepy.",
       "remind_too_soon": "Sedjem Sab Seth Em Unut Wa. Wehem Iri Er Khet."
+    },
+    "court": {
+      "heaven": "Pet",
+      "heaven_gate": "Sebkhet Pet",
+      "diocese": "Wesekhet Kristos",
+      "archdiocese": "Wesekhet Kristos Hery",
+      "vatican": "Wesekhet Kristos Pehwy",
+      "confessional": "Per Medu Ib",
+      "purgatory": "Ta Hesmen",
+      "two_truths": "Weret Maaty",
+      "duat": "Duat",
+      "egypt": "Kemet",
+      "crossroads": "Leimon",
+      "second_circle_gate": "Sebkhet Duat 2",
+      "ninth_circle": "Duat 9",
+      "court_1": "Wesekhet 1",
+      "court_2": "Wesekhet 2",
+      "court_3": "Wesekhet 3",
+      "court_4": "Wesekhet 4",
+      "court_5": "Wesekhet 5",
+      "court_6": "Wesekhet 6",
+      "court_7": "Wesekhet 7",
+      "court_8": "Wesekhet 8",
+      "court_9": "Wesekhet 9",
+      "court_10": "Wesekhet 10",
+      "ten_courts": "Wesekhet 1 Er 10",
+      "inspection": "Wesekhet Maa",
+      "original_court": "Wesekhet Tepy",
+      "court_above": "Wesekhet Hery",
+      "fengdu": "Duat Sherer",
+      "wrongful_death_city": "Nut Mut Nen Maat",
+      "rebirth_application": "Dbh Wehem Mesut",
+      "reopened_judgment": "Wedja Wehem"
+    },
+    "refusal": {
+      "jump_target_required": "{{source}} Khesef Er {{station}}: Nen Iri Tepy. Iri Tepy {{source}} Hena.",
+      "final_required": "Wedja Pehwy: Em Tepy · Nen Iri Tepy",
+      "segment_changed": "Ky Khemen Aat Wat Pen. Wehem Wen, Setep Wehem.",
+      "workflow_required": "Wedja Taui Ky Em Iri: Djed Wedja → Iri Wat Hesy Em Tepy.",
+      "not_allowed": "Nen Was-Ek Er Iri Aha Pen.",
+      "too_early": "Wat Smen Tepy: Er Khet Hru {{days}} Em Sebkhet, Er Nen Sab Setep Sekhet Em Ta Ky.",
+      "unknown_node": "Nen Gem Sekhet Pen Em Wat. Wehem Maa, Wehem Iri.",
+      "reason_required": "Sesh Khet Em Tepy",
+      "moved_on": "Wat Shem Seth. Wehem Maa, Wehem Iri."
     }
   },
   "dashboard": {
@@ -2780,7 +2833,8 @@
     "cancel_flow_body": "Aat Ta Ky Nen Shem Djer ({{realms}}): Iri Tepy Neb. Wat Hesy Khetem Er Khet Ta Pen. Shem Seth: Nen Khemen.",
     "cancel_flow_body_in_realm": "Aat {{realm}} Em Iri: Sekhet Tepy Hena Em Khet: Iri Tepy. Wat Hesy Khetem Emu. Shem Seth: Nen Khemen.",
     "cancel_flow_note": "Setep Sekhet Ta Ky: Sehen Neb · Sedjem Sab.",
-    "workflow_running": "Wat Hesy Em Iri: Shem Seth Er Khesef Seth — Wedja Ta Ky Khetem Djes-Ef. Khetem Er Tepy: Sehen Wedja Ta Ky."
+    "workflow_running": "Wat Hesy Em Iri: Shem Seth Er Khesef Seth — Wedja Ta Ky Khetem Djes-Ef. Khetem Er Tepy: Sehen Wedja Ta Ky.",
+    "join_locked": "Wat Hesy Nen Em Iri: Nen Redi Taui. Wat Hesy Em Iri: Taui Mawy Em Pehwy Wa."
   },
   "users": {
     "title": "Iri Netjeru",
