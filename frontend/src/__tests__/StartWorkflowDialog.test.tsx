@@ -405,3 +405,35 @@ describe("StartWorkflowDialog — 第 2 步选站(第四十三批 W-1a)", () => 
     expect(reasonBox().value).toBe("复核");
   });
 });
+
+// 第四十五批:本域的流程没有一站能跳过(希腊常规流程,`nothing_to_pick`)时不进选站那一步 ——
+// 第 1 步的按钮直接是「发起」,没有「下一步」,点了就发,请求里没有 skip_node_orders。
+describe("StartWorkflowDialog — 没有可选的站", () => {
+  it("nothing_to_pick:没有「下一步」,第 1 步直接发起,不画选站列表", async () => {
+    mockPreview.mockResolvedValue({
+      data: {
+        name: "希腊冥界流程",
+        nothing_to_pick: true,
+        stations: [{ node_order: 4, node_name: "Minos", court_code: "", approver: "Minos", approver_role: null, is_required: true }],
+        foreign: [],
+      },
+    });
+    renderDialog();
+    await pickCaseType();
+    fireEvent.change(reasonBox(), { target: { value: "复核" } });
+    const go = await screen.findByRole("button", { name: "workflow.start.submit" });
+    expect(screen.queryByRole("button", { name: "workflow.pick.next" })).toBeNull();
+    fireEvent.click(go);
+    await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
+    expect(mockStart.mock.calls[0][0]).not.toHaveProperty("skip_node_orders");
+    expect(screen.queryByTestId("station-picker")).toBeNull();
+  });
+
+  it("有可选的站时照旧两步(对照)", async () => {
+    renderDialog();
+    await pickCaseType();
+    fireEvent.change(reasonBox(), { target: { value: "复核" } });
+    expect(await screen.findByRole("button", { name: "workflow.pick.next" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "workflow.start.submit" })).toBeNull();
+  });
+});

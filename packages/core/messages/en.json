@@ -1408,7 +1408,7 @@
       "back": "Back",
       "cross_forced": "A cross-realm judgment is open on this case: concluding generates an approval flow, with the other realms following in order.",
       "load_error": "Couldn't load the stations — try again",
-      "route_target_reason": "{{source}} routes cases here by region of origin, so this station can't be skipped",
+      "route_target_reason": "A destination of {{source}}, so this station can't be skipped",
       "foreign_all_required": "All required · nothing to pick"
     },
     "pick_group": {
