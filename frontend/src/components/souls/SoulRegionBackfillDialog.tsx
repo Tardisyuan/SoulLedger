@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useSoulRegionUpdateCommit, useSoulRegionUpdatePreview } from "@soulledger/core/hooks/useSouls";
 import {
+  SOUL_FILE_MAX_ROWS,
   SOUL_IMPORT_FILE_CODES,
   soulImportFileErrorOf,
   type SoulImportFileError,
@@ -287,7 +288,7 @@ export function SoulRegionBackfillDialog({ isOpen, onClose }: { isOpen: boolean;
           <Button type="button" variant="secondary" onClick={() => input.current?.click()} disabled={busy}>
             {t("souls.import.choose_file")}
           </Button>
-          <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.import.hint_max", { max: "1000" })}</span>
+          <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.import.hint_max", { max: String(SOUL_FILE_MAX_ROWS) })}</span>
           {file && <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{file.name}</span>}
         </div>
         {busy && <p role="status" className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.import.checking")}</p>}

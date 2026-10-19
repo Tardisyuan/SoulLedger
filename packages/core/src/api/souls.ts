@@ -255,6 +255,13 @@ export type SoulImportCommitResult = Schemas["SoulImportCommit"];
 /** 400 body: the file as a whole is unusable (`code`, plus `columns` / `max_rows` / `max_bytes` where they apply). */
 export type SoulImportFileError = Schemas["SoulImportFileError"];
 
+/**
+ * Most data rows one import or 出身地域补录 file may carry: `MAX_ROWS` in backend/apps/souls/importer.py
+ * (both endpoints read it). The dialogs say it before any file is sent, so they cannot take it from a
+ * response; backend/tests/test_soul_csv_import.py holds the two equal.
+ */
+export const SOUL_FILE_MAX_ROWS = 1000;
+
 /** Columns of the import file, in template order. `name` and `civilization` are required. */
 export const SOUL_IMPORT_COLUMNS = [
   "name",

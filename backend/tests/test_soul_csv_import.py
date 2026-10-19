@@ -340,3 +340,15 @@ def test_row_numbers_are_physical_lines_even_when_a_field_has_newlines(world):
     body = HEADER + _row(description="一行\n两行\n三行") + _row(name="")
     r = _post(world["client"], PREVIEW, body)
     assert [row["row"] for row in r.data["rows"]] == [2, 5]
+
+
+def test_the_dialogs_state_the_same_row_limit_the_backend_enforces():
+    """The import and 出身地域补录 dialogs print「最多 N 行」before any file is sent, from
+    `SOUL_FILE_MAX_ROWS` in packages/core; the endpoints refuse past `importer.MAX_ROWS`."""
+    import re
+    from pathlib import Path
+
+    souls_ts = Path(__file__).resolve().parents[2] / "packages" / "core" / "src" / "api" / "souls.ts"
+    found = re.search(r"^export const SOUL_FILE_MAX_ROWS = (\d+);$", souls_ts.read_text(), re.MULTILINE)
+    assert found, f"SOUL_FILE_MAX_ROWS not found in {souls_ts}"
+    assert int(found.group(1)) == importer.MAX_ROWS

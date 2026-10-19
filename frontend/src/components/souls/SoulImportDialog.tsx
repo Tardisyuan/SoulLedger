@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSoulImportCommit, useSoulImportPreview } from "@soulledger/core/hooks/useSouls";
 import {
   SOUL_IMPORT_COLUMNS,
+  SOUL_FILE_MAX_ROWS,
   SOUL_IMPORT_FILE_CODES,
   SOUL_IMPORT_ROW_CODES,
   soulImportFileErrorOf,
@@ -197,7 +198,7 @@ export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
         </div>
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">
           {t("souls.import.hint_required", { columns: "name, civilization" })}{" "}
-          {t("souls.import.hint_max", { max: String(preview?.max_rows ?? 1000) })}
+          {t("souls.import.hint_max", { max: String(preview?.max_rows ?? SOUL_FILE_MAX_ROWS) })}
         </p>
 
         {busy && <p role="status" className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.import.checking")}</p>}
