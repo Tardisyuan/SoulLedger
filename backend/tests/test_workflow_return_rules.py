@@ -248,6 +248,18 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     assert [n["node_type"] for n in greek.nodes_json] == ["TRIAL", "TRIAL", "FINAL"]
 
 
+def test_the_seed_tells_the_editor_who_approves_each_station(halls):
+    # The editor's 审批人 select reads `approver_type` and showed 职能角色 with no role for every seeded
+    # station (seen on 115, 2026-10-19). A named actor is 指定人员, a station naming nobody is 系统自动.
+    _seed()
+    for row in WorkflowTemplate.objects.all():
+        for n in row.nodes_json:
+            assert n["approver_type"] == ("ACTOR" if n.get("actor") else "SYSTEM"), (row.name, n["node_name"])
+    ten = _row(halls["CN_DIYU"], "ROUTINE").nodes_json
+    assert ten[9]["approver_type"] == "ACTOR" and ten[9]["actor"] == "转轮王"
+    assert _row(halls["CN_DIYU"], "APPEAL").nodes_json[3]["approver_type"] == "SYSTEM"  # 酆都大帝 has no Actor row
+
+
 def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
     cn = halls["CN_DIYU"]
     mine = WorkflowTemplate.objects.create(

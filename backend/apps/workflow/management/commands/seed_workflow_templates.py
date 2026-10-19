@@ -102,6 +102,9 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
         node["node_type"] = str(node["node_type"])
         node["court_code"] = COURT_SPELLING.get(node.get("court_code") or "", node.get("court_code") or "")
         node["id"] = f"n{node['node_order']}"
+        # The editor's 审批人 select reads `approver_type` and shows 职能角色 when it is absent. The backend
+        # resolves `actor` first whatever this says, so this only makes the editor show what will happen.
+        node["approver_type"] = "ACTOR" if node.get("actor") else "SYSTEM"
         nodes.append(node)
     for order, (field, target) in FAIL_ROUTES[key].items():
         nodes[order - 1][field] = f"n{target}"
