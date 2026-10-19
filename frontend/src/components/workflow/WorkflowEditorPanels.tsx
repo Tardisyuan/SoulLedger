@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import type { Edge, Node } from "@xyflow/react";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
@@ -49,7 +50,8 @@ const LABEL = "text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
  * edge (see the inspector's 出口 · 条件) — both are derived, as the card's
  * glyph already shows.
  */
-export const PALETTE_TYPES = ["APPROVAL", "COUNTERSIGN", "NOTIFY", "END"] as const;
+// AUTO_ROUTE(第四十七批 W-1):不是一种 kind —— 放下的是 NOTIFY 加 `data.autoRoute`,三条出口未连。排在结束之前。
+export const PALETTE_TYPES = ["APPROVAL", "COUNTERSIGN", "NOTIFY", "AUTO_ROUTE", "END"] as const;
 export type PaletteType = (typeof PALETTE_TYPES)[number];
 
 /** The MIME type a palette drag carries, so a drop of anything else is ignored. */
@@ -77,6 +79,8 @@ export function WorkflowPalette({
 }) {
   const [active, setActive] = useState(0);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  // 两个编辑器可能同时挂着(见 WorkflowEditor 的 formId),提示的 id 不能写死。
+  const hintId = useId();
   const move = (to: number) => {
     const next = (to + PALETTE_TYPES.length) % PALETTE_TYPES.length;
     setActive(next);
@@ -118,13 +122,25 @@ export function WorkflowPalette({
                   e.dataTransfer.effectAllowed = "copy";
                 }}
                 onClick={() => onAdd(type)}
-                className="w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
+                aria-describedby={type === "AUTO_ROUTE" ? hintId : undefined}
+                className="peer w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
               >
                 <span aria-hidden="true" className="w-4 text-center">
-                  {KIND_GLYPH[type]}
+                  {type === "AUTO_ROUTE" ? AUTO_ROUTE_GLYPH : KIND_GLYPH[type]}
                 </span>
                 <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
               </button>
+              {/* W-2:只在悬停 / 键盘聚焦时出现 —— 它是唯一不需要审批人的节点。画在按钮下方而不是右侧浮层:
+                  这一栏是滚动容器,浮出去会被裁掉。 */}
+              {type === "AUTO_ROUTE" && (
+                <p
+                  id={hintId}
+                  role="tooltip"
+                  className="hidden peer-hover:block peer-focus-visible:block mt-1 px-2 py-1 text-xs text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))]"
+                >
+                  {t("workflow.editor.palette_hint.AUTO_ROUTE")}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -357,13 +373,25 @@ export function WorkflowInspector({
                 <ul className="mt-3 flex flex-col">
                   {issues.map((issue) => (
                     <li
-                      key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}`}
+                      key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}-${issue.region ?? ""}`}
                       className="border-b border-[oklch(var(--color-line))]"
                     >
                       <button
                         type="button"
                         aria-current={issue.nodeId !== "" && issue.nodeId === selectedId ? "true" : undefined}
-                        onClick={() => issue.nodeId && onSelect(issue.nodeId)}
+                        onClick={() => {
+                          if (!issue.nodeId) return;
+                          // 第四十七批 W-3:自动分流缺出口的那一行,选中节点并把焦点放到那条出口的下拉(在 节点 页签)。
+                          if (issue.code === "auto_route_exit_missing" && issue.region) {
+                            flushSync(() => {
+                              onSelect(issue.nodeId);
+                              onTab("node");
+                            });
+                            document.getElementById(`${issue.nodeId}-exit-${issue.region}`)?.focus();
+                            return;
+                          }
+                          onSelect(issue.nodeId);
+                        }}
                         className="w-full flex gap-2 px-2 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] aria-[current=true]:bg-[oklch(var(--color-ink)/0.07)]"
                       >
                         <span aria-hidden="true" className="font-semibold text-[oklch(var(--color-danger))]">

@@ -51,6 +51,8 @@ type CardData = {
   issueCount?: number;
   /** 自动分流(`isAutoRoute`,第四十五批):「▷◇ 自动 · 无审批人」+ ⇉。 */
   autoRoute?: boolean;
+  /** 自动分流没连的出口,地域名(第四十七批 W-1)。 */
+  unconnected?: string[];
   [key: string]: unknown;
 };
 
@@ -118,6 +120,21 @@ function EditableNodeComponent({
           </span>
         )}
       </div>
+      {/* 第四十七批 W-1:没连的出口画成短桩 + 空心方端点,标签虚线框写「欧洲 · 未连」,「未连」用 danger 色。
+          从下方的通过端口拖到节点即连上(连上的那条按地域归位,见 setAutoRouteTarget);也可在检查器里选。 */}
+      {data.autoRoute && (data.unconnected ?? []).length > 0 && (
+        <ul data-unconnected-exits="" className="absolute left-0 right-0 top-full mt-3 flex justify-center gap-1">
+          {(data.unconnected ?? []).map((region) => (
+            <li key={region} className="flex flex-col items-center">
+              <span aria-hidden="true" className="w-px h-2 bg-[oklch(var(--color-ink-muted))]" />
+              <span aria-hidden="true" className="w-3 h-3 border border-[oklch(var(--color-ink-muted))] bg-[oklch(var(--color-canvas))]" />
+              <span className="mt-1 px-1 whitespace-nowrap border border-dashed border-[oklch(var(--color-line-strong))] text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
+                {region} · <span className="text-[oklch(var(--color-danger))]">{t("workflow.editor.auto_route.no_target")}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       {/* TWO source handles, not one, and the ids are the routing.
           A single handle could only ever say "next"; the engine distinguishes
           where a flow goes when this node PASSES from where it goes when it is

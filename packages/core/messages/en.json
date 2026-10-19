@@ -663,7 +663,8 @@
       "file_codes": {
         "mixed_id_columns": "Use either soul_code or soul_id, not both"
       },
-      "failed": "Update failed; no soul was changed. Try again."
+      "failed": "Update failed; no soul was changed. Try again.",
+      "skipped_reason_column": "reason"
     },
     "origin_region": {
       "label": "Region of origin",
@@ -1126,7 +1127,8 @@
         "APPROVAL": "Approval",
         "COUNTERSIGN": "Countersign",
         "NOTIFY": "Notify",
-        "END": "End"
+        "END": "End",
+        "AUTO_ROUTE": "Automatic routing"
       },
       "signers": "Signers",
       "signers_summary": "{{who}} · {{k}} of {{n}} to pass",
@@ -1242,8 +1244,13 @@
         "badge": "Automatic · no approver",
         "kind": "Automatic routing",
         "exits_hint": "The three exits are fixed by region of origin; only their targets can change.",
-        "no_target": "Not connected"
-      }
+        "no_target": "Not connected",
+        "unconnected_count": "Exits not connected: {{n}} · connect them to publish"
+      },
+      "palette_hint": {
+        "AUTO_ROUTE": "No approver; takes one of three exits by region of origin"
+      },
+      "kind_locked": "Can't be changed"
     },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",

@@ -663,7 +663,8 @@
       "file_codes": {
         "mixed_id_columns": "soul_code 和 soul_id 只能用一种"
       },
-      "failed": "更新失败，没有改动任何灵魂。请重试。"
+      "failed": "更新失败，没有改动任何灵魂。请重试。",
+      "skipped_reason_column": "跳过原因"
     },
     "origin_region": {
       "label": "出身地域",
@@ -1126,7 +1127,8 @@
         "APPROVAL": "审批",
         "COUNTERSIGN": "会签",
         "NOTIFY": "通知",
-        "END": "结束"
+        "END": "结束",
+        "AUTO_ROUTE": "自动分流"
       },
       "signers": "会签人",
       "signers_summary": "{{who}} · {{k}}/{{n}} 同意即通过",
@@ -1242,8 +1244,13 @@
         "badge": "自动 · 无审批人",
         "kind": "自动分流",
         "exits_hint": "三条出口按出身地域固定，只能改各自去向。",
-        "no_target": "未连"
-      }
+        "no_target": "未连",
+        "unconnected_count": "{{n}} 条出口未连 · 连好才能发布"
+      },
+      "palette_hint": {
+        "AUTO_ROUTE": "无人审批，按出身地域走三条出口之一"
+      },
+      "kind_locked": "不可改"
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
