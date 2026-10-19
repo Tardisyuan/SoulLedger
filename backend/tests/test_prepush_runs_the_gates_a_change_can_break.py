@@ -226,6 +226,8 @@ _STRIPPED = (
     # The hook's own hand-off to run-gates.sh. These tests run inside a push, and
     # a push to main must not make every "selective" assertion here read full.
     "PREPUSH_RANGE", "PREPUSH_TO_MAIN", "GATES_FULL",
+    # Exported by a full run to the pytest that runs these very tests.
+    "SOULLEDGER_SQLITE_TEMPLATE",
 )
 
 
@@ -613,7 +615,7 @@ def fake_backend(tmp_path):
         "  manage.py) exit 0 ;;\n"
         # One line: the hook keeps only pytest's last four.
         '  -m) if [ "$2" = pytest ]; then shift 2; '
-        'echo "PYTEST SECRET_KEY=$SECRET_KEY ARGS=$(printf \'[%s]\' "$@")"; exit 0; fi ;;\n'
+        'echo "PYTEST TEMPLATE=${SOULLEDGER_SQLITE_TEMPLATE:-unset} SECRET_KEY=$SECRET_KEY ARGS=$(printf \'[%s]\' "$@")"; exit 0; fi ;;\n'
         "esac\n"
         'exec python3 "$@"\n'
     )
@@ -629,12 +631,35 @@ def _pytest_line(hook, cwd, python, changed):
         REDIS_URL=os.environ.get("REDIS_URL", ""),
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    m = re.search(r"^PYTEST SECRET_KEY=(\S*) ARGS=(.*)$", proc.stdout, re.M)
+    m = re.search(r"^PYTEST TEMPLATE=\S* SECRET_KEY=(\S*) ARGS=(.*)$", proc.stdout, re.M)
     assert m, f"pytest was never invoked:\n{proc.stdout}"
     return re.findall(r"\[([^\]]*)\]", m.group(2)), m.group(1)
 
 
+def _template_switch(hook, cwd, python, changed, **extra):
+    proc = _run(
+        hook, cwd, changed, PYTHON_BIN=python, RUFF_BIN=shutil.which("true"),
+        REDIS_URL=os.environ.get("REDIS_URL", ""), **extra,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^PYTEST TEMPLATE=(\S*) ", proc.stdout, re.M)
+    assert m, f"pytest was never invoked:\n{proc.stdout}"
+    return m.group(1)
+
+
 class TestWhatPytestIsInvokedWith:
+    def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
+
+    @pytest.mark.parametrize("extra", [{"GATES_FULL": "1"}, {"PREPUSH_TO_MAIN": "1"}])
+    def test_a_full_run_migrates_for_real_and_checks_the_template(
+        self, hook, checkouts, fake_backend, extra
+    ):
+        """PREPUSH_TO_MAIN is unset before pytest starts; the switch must have read it first."""
+        main, _ = checkouts
+        assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"], **extra) == "0"
+
     def test_an_ordinary_backend_change_skips_the_round_trips_and_coverage(
         self, hook, checkouts, fake_backend
     ):
