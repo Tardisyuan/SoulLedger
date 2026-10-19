@@ -8704,6 +8704,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/region-update/commit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Apply the file: re-validated under row locks, all or nothing, only changed rows written.
+         *
+         *     422 with the preview body when any row is in error (nothing written). Each changed soul gets its
+         *     ordinary UPDATE audit row; one BATCH_UPDATE row names the file. Re-running the same file changes
+         *     nothing and writes no audit row.
+         */
+        post: operations["v1_souls_region_update_commit_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/souls/region-update/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
+         *
+         *     Columns: exactly one of `soul_id` (UUID) / `soul_code`, and `origin_region` (`EUROPE` / `ASIA` / blank
+         *     for unknown; any case). Same size and row limits as the import. A soul of another hall is `not_found`.
+         */
+        post: operations["v1_souls_region_update_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -17997,6 +18042,51 @@ export interface components {
         SoulRefreshRequest: {
             refresh: string;
         };
+        SoulRegionUpdateCommit: {
+            updated: number;
+            unchanged: number;
+        };
+        /** @description 200 of `…/region-update/preview/` and 422 of `…/region-update/commit/` (rows in error; nothing written). */
+        SoulRegionUpdatePreview: {
+            total: number;
+            changed_count: number;
+            unchanged_count: number;
+            error_count: number;
+            max_rows: number;
+            rows: components["schemas"]["SoulRegionUpdateRow"][];
+        };
+        SoulRegionUpdateRow: {
+            /** @description Line number in the file; the header is line 1. */
+            row: number;
+            /**
+             * @description `not_found` also covers another hall's soul — deliberately indistinguishable.
+             *
+             *     * `ok` - ok
+             *     * `unchanged` - unchanged
+             *     * `missing_identifier` - missing_identifier
+             *     * `not_found` - not_found
+             *     * `duplicate_in_file` - duplicate_in_file
+             *     * `invalid_origin_region` - invalid_origin_region
+             */
+            status: components["schemas"]["SoulRegionUpdateRowStatusEnum"];
+            values: {
+                [key: string]: string;
+            };
+            /** @description Stored value; blank is unknown. */
+            old: string | null;
+            /** @description Value the row sets; blank is unknown. */
+            new: string | null;
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `unchanged` - unchanged
+         *     * `missing_identifier` - missing_identifier
+         *     * `not_found` - not_found
+         *     * `duplicate_in_file` - duplicate_in_file
+         *     * `invalid_origin_region` - invalid_origin_region
+         * @enum {string}
+         */
+        SoulRegionUpdateRowStatusEnum: "ok" | "unchanged" | "missing_identifier" | "not_found" | "duplicate_in_file" | "invalid_origin_region";
         /** @description 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。 */
         SoulRelationCard: {
             user_id: number;
@@ -35029,6 +35119,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+        };
+    };
+    v1_souls_region_update_commit_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRegionUpdateCommit"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRegionUpdatePreview"];
+                };
+            };
+        };
+    };
+    v1_souls_region_update_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRegionUpdatePreview"];
                 };
             };
             400: {

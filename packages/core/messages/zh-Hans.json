@@ -634,6 +634,19 @@
         "unknown": "导入失败"
       }
     },
+    "region_update": {
+      "statuses": {
+        "ok": "将更新",
+        "unchanged": "无变化",
+        "missing_identifier": "缺灵魂标识",
+        "not_found": "找不到这个灵魂",
+        "duplicate_in_file": "与文件中前面的行重复",
+        "invalid_origin_region": "只能是 EUROPE、ASIA 或留空"
+      },
+      "file_codes": {
+        "identifier_column": "须有且只有一列灵魂标识：{{columns}}"
+      }
+    },
     "origin_region": {
       "label": "出身地域",
       "EUROPE": "欧洲",

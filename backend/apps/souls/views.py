@@ -24,7 +24,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
 from apps.realms.serializers import SoulPathEntrySerializer
-from apps.souls import importer
+from apps.souls import importer, region_update
 from apps.souls.dates import (
     ERROR,
     check_record_date,
@@ -46,6 +46,8 @@ from apps.souls.serializers import (
     SoulImportUploadSerializer,
     SoulListSerializer,
     SoulRecordSerializer,
+    SoulRegionUpdateCommitSerializer,
+    SoulRegionUpdatePreviewSerializer,
     SoulSerializer,
     SoulTransitionSerializer,
 )
@@ -114,6 +116,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # CSV 导入:预览不写库,但问的是「我能不能建」,与提交同一个码名。
         'import_preview': ['soul.create'],
         'import_commit': ['soul.create'],
+        # 批量回填出身地域:改已有灵魂的一个字段,与表单编辑同一个码名(预览同提交)。
+        'region_update_preview': ['soul.update'],
+        'region_update_commit': ['soul.update'],
         'correct_settlement': ['soul.correct_settlement'],
     }
     # `reincarnations` because life_index counts them, and the date checks on
@@ -451,6 +456,89 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         except importer.ImportConflictError as conflict:
             return Response(importer.summarize(conflict.results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         return Response({"created": len(results), "batch_id": batch}, status=status.HTTP_201_CREATED)
+
+    def _region_upload(self, request):
+        """Upload -> (bytes, the souls this caller may edit). Same boundary checks as `_import_rows`."""
+        from apps.perm.filters import DataScopeFilter
+
+        upload = SoulImportUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        if getattr(request, "tenant", None) is None:
+            raise _ImportRefusedError({"code": "no_tenant"})
+        # The caller's own hall only — ADMIN included (admin_bypass=False): the file is applied to the hall
+        # the request is in, never across halls. Archived souls are left out, as the edit form leaves them out.
+        souls = scope_to_tenant(Soul.objects.filter(is_archived=False), request, admin_bypass=False)
+        souls = DataScopeFilter.filter_queryset(request, souls, Soul)
+        return upload.validated_data["file"].read(importer.MAX_BYTES + 1), souls
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={200: SoulRegionUpdatePreviewSerializer, 400: SoulImportFileErrorSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="region-update/preview", pagination_class=None, filter_backends=[])
+    def region_update_preview(self, request):
+        """Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
+
+        Columns: exactly one of `soul_id` (UUID) / `soul_code`, and `origin_region` (`EUROPE` / `ASIA` / blank
+        for unknown; any case). Same size and row limits as the import. A soul of another hall is `not_found`.
+        """
+        try:
+            data, souls = self._region_upload(request)
+            rows = region_update.validate_csv(data, souls)
+        except _ImportRefusedError as refused:
+            return refused.response()
+        except importer.ImportFileError as exc:
+            return _ImportRefusedError({"code": exc.code, **exc.detail}).response()
+        return Response(region_update.summarize(rows))
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={
+            200: SoulRegionUpdateCommitSerializer,
+            400: SoulImportFileErrorSerializer,
+            422: SoulRegionUpdatePreviewSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="region-update/commit", pagination_class=None, filter_backends=[])
+    def region_update_commit(self, request):
+        """Apply the file: re-validated under row locks, all or nothing, only changed rows written.
+
+        422 with the preview body when any row is in error (nothing written). Each changed soul gets its
+        ordinary UPDATE audit row; one BATCH_UPDATE row names the file. Re-running the same file changes
+        nothing and writes no audit row.
+        """
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.core.client_ip import get_client_ip
+
+        try:
+            data, souls = self._region_upload(request)
+            with transaction.atomic():
+                rows = region_update.apply(data, souls)
+                if region_update.has_errors(rows):
+                    return Response(region_update.summarize(rows), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                summary = region_update.summarize(rows)
+                updated, unchanged = summary["changed_count"], summary["unchanged_count"]
+                if updated:
+                    AuditLog.objects.create(
+                        tenant=request.tenant,
+                        user=request.user,
+                        action=AuditAction.BATCH_UPDATE,
+                        resource="soul",
+                        changes={
+                            "field": "origin_region",
+                            "updated": updated,
+                            "unchanged": unchanged,
+                            "filename": request.data["file"].name[:200],
+                        },
+                        ip_address=get_client_ip(request) or "",
+                        user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                        description=f"CSV origin_region update of {updated} souls",
+                    )
+        except _ImportRefusedError as refused:
+            return refused.response()
+        except importer.ImportFileError as exc:
+            return _ImportRefusedError({"code": exc.code, **exc.detail}).response()
+        return Response({"updated": updated, "unchanged": unchanged})
 
     @staticmethod
     def _batch_not_found(ids):
