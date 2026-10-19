@@ -1,6 +1,6 @@
 /**
  * 殿名(节点的 `court_code`、审判的 `court`)按界面语言显示(2026-10-19 用户决定):中文界面写中文,英文界面写英文,
- * 埃及文界面写英文(用户说埃及文不必考虑)。
+ * 埃及文界面写 Design 的埃及文(第四十七批起全部有词;此前退回英文)。
  *
  * 库里存的是自由文本,中英混写:内置模板写 Heaven / Diocese / Hall of Two Truths,前端预设写 天堂 / 两真之殿,
  * 十殿写 第一殿 … 同一个殿的每一种写法都对到一个键 `workflow.court.<slug>`;认不出的原样显示。
@@ -10,13 +10,12 @@
  * (`sentence_plan/requests.py`);没有模板时的单节点兜底流程把文明代码(`CHINESE` …)当殿名写
  * (`WorkflowService._generic_template`),那个按 `souls.civilizations` 显示。
  *
- * 埃及文:语言包里缺的键退回 zh-Hans(`t()` 的规则),不是 en —— 所以这些键列在 `egyPendingKeys.json`,
- * 而 egy 由这里直接给英文(`EN`,与 en.json 同值,`courtLabel.test.ts` 对着两边核)。
+ * 埃及文:第四十七批起每个 slug 都有 egy 词,和别的语言一样走 `t()`。`en` 列只给测试对 en.json。
  */
 
 import { isCivilizationOption } from "../config/civilizations";
 
-/** slug → 英文名(egy 用)与库里出现过的写法。 */
+/** slug → 英文名(测试对 en.json 用)与库里出现过的写法。 */
 const COURTS: Record<string, { en: string; spellings: readonly string[] }> = {
   heaven: { en: "Heaven", spellings: ["天堂", "Heaven"] },
   heaven_gate: { en: "Gate of Heaven", spellings: ["天堂之门", "Heaven Gate", "Gate of Heaven"] },
@@ -64,18 +63,17 @@ const BY_SPELLING = new Map<string, string>(
 /** 一个写法对到的 slug;认不出时 null。 */
 export const courtSlug = (court: string | null | undefined): string | null => (court ? BY_SPELLING.get(norm(court)) ?? null : null);
 
-/** 测试用:每个 slug 与它给 egy 的英文名。 */
+/** 测试用:每个 slug 的英文名。 */
 export const COURT_EN: Readonly<Record<string, string>> = Object.fromEntries(Object.entries(COURTS).map(([slug, c]) => [slug, c.en]));
 
-/** 殿名按界面语言:认得的翻译,认不出的原样,空的给 ""。`locale` 是 egy 时给英文。 */
+/** 殿名按界面语言(`t` 已是那种语言的):认得的翻译,认不出的原样,空的给 ""。 */
 export function courtLabel(
   t: (key: string, vars?: Record<string, string>) => string,
   court: string | null | undefined,
-  locale?: string,
+  _locale?: string,
 ): string {
   const slug = courtSlug(court);
   if (!slug) return isCivilizationOption(court) ? t(`souls.civilizations.${court}`) : court ?? "";
-  if (locale === "egy") return COURTS[slug].en;
   // A bundle without the key (or a test double that echoes keys) shows the stored text, never the key.
   const key = `workflow.court.${slug}`;
   const label = t(key);

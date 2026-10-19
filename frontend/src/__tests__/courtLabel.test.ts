@@ -1,6 +1,6 @@
 /**
  * 殿名按界面语言(2026-10-19 用户决定):库里中英混写的同一个殿对到一个键 `workflow.court.<slug>`,
- * 中文界面写中文、英文界面写英文、埃及文界面写英文;认不出的原样显示。
+ * 中文界面写中文、英文界面写英文、埃及文界面写埃及文(第四十七批起);认不出的原样显示。
  */
 import en from "@soulledger/core/messages/en.json";
 import zhHans from "@soulledger/core/messages/zh-Hans.json";
@@ -49,19 +49,22 @@ describe("courtLabel", () => {
     expect(courtLabel(tZh, null, "zh-Hans")).toBe("");
   });
 
-  it("egy shows the English, not the Chinese the bundle fallback would give", () => {
-    expect(courtLabel(tEgy, "天堂", "egy")).toBe("Heaven");
-    expect(courtLabel(tEgy, "第十殿", "egy")).toBe("Tenth Court");
+  it("egy shows Design's words (batch 47), never the Chinese the bundle fallback would give", () => {
+    expect(courtLabel(tEgy, "天堂", "egy")).toBe("Pet");
+    expect(courtLabel(tEgy, "第十殿", "egy")).toBe("Wesekhet 10");
+    // 十殿 and 第十殿 must not read alike in one station list.
+    expect(courtLabel(tEgy, "十殿", "egy")).toBe("Wesekhet 1 Er 10");
   });
 
-  it("every preset court is known, and every slug has zh and en words; egy waits on the pending list", () => {
+  it("every preset court is known, and every slug has zh, en and egy words", () => {
     const courts = Object.values(WORKFLOW_TEMPLATES).flatMap((tpl) => tpl.nodes.map((n) => n.court));
     expect(courts.length).toBeGreaterThan(30);
     expect(courts.filter((c) => c && courtSlug(c) === null)).toEqual([]);
     for (const [slug, english] of Object.entries(COURT_EN)) {
       expect(lookup(zhHans as Bundle, `workflow.court.${slug}`)).toBeTruthy();
       expect(lookup(en as Bundle, `workflow.court.${slug}`)).toBe(english);
-      expect(egyPendingKeys).toContain(`workflow.court.${slug}`);
+      expect(lookup(egy as Bundle, `workflow.court.${slug}`)).toBeTruthy();
+      expect(egyPendingKeys).not.toContain(`workflow.court.${slug}`);
     }
     expect(Object.keys((zhHans as { workflow: { court: object } }).workflow.court).sort()).toEqual(Object.keys(COURT_EN).sort());
   });
@@ -78,7 +81,7 @@ describe("courtLabel", () => {
     expect(courtLabel(tZh, "转生申请", "zh-Hans")).toBe("转生申请");
     expect(courtLabel(tEn, "转生申请", "en")).toBe("Rebirth application");
     expect(courtLabel(tEn, "转生申请", "en")).not.toMatch(/[一-鿿]/);
-    expect(courtLabel(tEgy, "转生申请", "egy")).toBe("Rebirth application");
+    expect(courtLabel(tEgy, "转生申请", "egy")).toBe("Dbh Wehem Mesut");
     expect(courtLabel(tEn, "重开审判", "en")).toBe("Reopened judgment");
     expect(courtLabel(tZh, "CHINESE", "zh-Hans")).toBe("中国");
     expect(courtLabel(tEn, "EGYPTIAN", "en")).toBe("Egyptian");

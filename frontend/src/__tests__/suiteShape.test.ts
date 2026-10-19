@@ -253,6 +253,7 @@ const COLLECTED_FILES = [
   "arrowNotDoubled.test.ts",
   "assistAdmin.test.tsx",
   "auditGrouping.test.ts",
+  "autoRouteBatch47.test.tsx",
   "breadcrumbSegmentLabels.test.ts",
   "chartColourContract.test.ts",
   "civilizationCopyCoverage.test.ts",
