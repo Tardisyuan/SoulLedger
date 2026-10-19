@@ -729,6 +729,8 @@ describe("§4.6 source contract", () => {
         // `verdictLabel`, `ledgerLabel`. The bare word `label` is a generic
         // prop on stat cards and carries no enum.
         if (!/\{\s*\w+Label\s*(\(|\})/.test(code)) return;
+        // An import list (`import { courtLabel } from …`) is not a render.
+        if (/^\s*import\b/.test(code)) return;
         // Not a render at all.
         if (/(missingReason|aria-label)\s*[=:]/.test(code)) return;
         if (/\w+=\{/.test(code) && !/title=\{/.test(code)) return; // prop assignment, e.g. ledgerLabel={ledgerLabel}

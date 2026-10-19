@@ -54,7 +54,7 @@ export function AdjustStationsSheet({
   const { past, current, after, editable } = adjustRows(workflow, segment.order);
   // 能走的来源只有当前站与之后的站;之前的已经决定了,不再驳回到哪。
   const live = new Set([...after.map((n) => n.id), ...(current ? [current.id] : [])]);
-  const rows = after.map((n) => ({ key: n.id, jumpSources: (n.jump_target_of ?? []).filter((s) => live.has(s.key)) }));
+  const rows = after.map(({ id, jump_target_of }) => ({ key: id, jumpSources: (jump_target_of ?? []).filter((s) => live.has(s.key)) }));
   const skippedNow = (on: ReadonlySet<string>) => new Set(after.filter((n) => !on.has(n.id)).map((n) => n.id));
   /** 要走的站(勾上的)。从库里来;库里的版本一变就重新从库里来(在渲染里对齐,不跟着重取覆盖正在勾的)。 */
   const [going, setGoing] = useState<Set<string>>(new Set());
