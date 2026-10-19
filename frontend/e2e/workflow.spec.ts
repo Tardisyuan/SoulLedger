@@ -1,5 +1,5 @@
 import { type Page } from "@playwright/test";
-import { test, expect, domainEnum, setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
+import { test, expect, domainEnum, selectPreset, setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
 
 /**
  * Text locators here must be filtered to the visible match.
@@ -229,7 +229,7 @@ test.describe("Workflow editor selection", () => {
    */
   test("moving the selection from one card to another selects the second", async ({ page }) => {
     await page.goto("/workflow");
-    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await selectPreset(page, /申诉审判流程/);
     await page.getByRole("button", { name: "编辑", exact: true }).click();
     const cards = page.locator(".react-flow__node");
     await expect(cards).toHaveCount(4);
@@ -289,7 +289,7 @@ test.describe("Workflow editor keyboard access", () => {
 
   async function openAppealPresetInEditor(page: Page) {
     await page.goto("/workflow");
-    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await selectPreset(page, /申诉审判流程/);
     await page.getByRole("button", { name: "编辑", exact: true }).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(4);
   }
@@ -500,7 +500,7 @@ test.describe("Workflow editor below 1024 px", () => {
   test("shows the notice, the preview and properties, and offers no canvas or save", async ({ page }) => {
     await page.setViewportSize({ width: 393, height: 851 });
     await page.goto("/workflow");
-    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await selectPreset(page, /申诉审判流程/);
     await page.getByRole("button", { name: "编辑", exact: true }).click();
 
     await expect(seen(page, "窄屏只读。要改节点或连线，请在 1024 以上打开。")).toBeVisible();
