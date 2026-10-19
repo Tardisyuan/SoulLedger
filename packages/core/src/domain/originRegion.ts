@@ -5,18 +5,11 @@ import type { ApprovalNode, ConditionClause } from "../api/workflow";
  * (`apps/workflow/conditions.py`)。希腊常规流程第一步按它自动分流:欧洲 → Aeacus,亚洲 → Rhadamanthus,不详 → Minos。
  *
  * 文案一律走 `souls.origin_region.*`(Design:表单、详情、编辑器出口线与条件值同一组词)。
- * 埃及文:Design 没给词的键(`egyPendingKeys.json`)由 `t()` 退回 zh-Hans;这里改为退回英文(与 en.json 同值,
- * `originRegionBatch45.test.tsx` 对着两边核),同 `courts.ts` 的做法。
+ * 埃及文:亚洲借词 Asia(第四十七批，用户定),此前退回英文。
  */
 
 export const ORIGIN_REGIONS = ["EUROPE", "ASIA", "UNKNOWN"] as const;
 export type OriginRegionMember = (typeof ORIGIN_REGIONS)[number];
-
-/** egy 还没有词的成员 → 英文。 */
-export const ORIGIN_REGION_EGY_EN: Readonly<Partial<Record<OriginRegionMember, string>>> = {
-  ASIA: "Asia",
-  // UNKNOWN has Design's egy (Nen Rekh, batch 45) — only ASIA is still missing.
-};
 
 /** 存的值("" / EUROPE / ASIA,或条件里的 UNKNOWN)→ 成员;认不出的、空的都是 UNKNOWN。 */
 export function originRegionMember(value: string | null | undefined): OriginRegionMember {
@@ -27,12 +20,9 @@ export function originRegionMember(value: string | null | undefined): OriginRegi
 export function originRegionLabel(
   t: (key: string, params?: Record<string, string>) => string,
   value: string | null | undefined,
-  locale?: string,
+  _locale?: string,
 ): string {
-  const member = originRegionMember(value);
-  const en = ORIGIN_REGION_EGY_EN[member];
-  if (locale === "egy" && en) return en;
-  return t(`souls.origin_region.${member}`);
+  return t(`souls.origin_region.${originRegionMember(value)}`);
 }
 
 /** 一条分支只认「出身地域 ∈ {R}」这一种写法时的 R;别的条件给 null。 */

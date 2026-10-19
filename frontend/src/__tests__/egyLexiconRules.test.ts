@@ -536,6 +536,8 @@ const PROPER_NAMES = [
   "Limbo", "Malebolge", "Acheron", "Lethe", "Dante", "Culpa", "Poena", "Superbia", "Invidia", "Ira", "Acedia",
   "Avaritia", "Gula", "Luxuria", "Haeresis", "Violentia", "Proditio", "Paradiso Terrestre", "Leimon", "Kristos",
   "Haunebut", "Gorgias", "Kemet", "Wepwawet", "Europa",
+  // 第四十七批(用户定):城隍 / 九华山照中国地名用拼音的先例;亚洲照 Europa 借词。
+  "Chenghuang", "Jiuhua", "Asia",
   // 第十一节:梵语借词,和 Kristos 同类(阿修罗道 Wat Asura)。
   "Asura",
   // 第十二节:成都(如:成都)。

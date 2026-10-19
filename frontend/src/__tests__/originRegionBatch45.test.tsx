@@ -10,7 +10,7 @@
  *   历史写「按出身地域分流 → 亚洲 → Rhadamanthus」。
  * - W-6 选站:分流那一步不列;两位分区判官锁成必须走,理由是「分流到这里」,不是「驳回时会转到这里」;
  *   外域全部锁着时写「全部必须走」。
- * - 埃及文:亚洲没有词,退回英文(与 en.json 同值)。
+ * - 埃及文:亚洲借词 Asia(第四十七批)。
  *
  * 文案都用真的 zh-Hans 语言包(`tZh`),断言的是读者看到的字。
  */
@@ -19,8 +19,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import type { ApprovalNode, ApprovalWorkflow, ConditionClause, Soul, WorkflowSegment } from "@soulledger/core/api";
-import en from "@soulledger/core/messages/en.json";
-import { ORIGIN_REGION_EGY_EN, originRegionLabel } from "@soulledger/core/domain/originRegion";
+import egy from "@soulledger/core/messages/egy.json";
+import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { tZh } from "./support/zhBundle";
 import egyPendingKeys from "./support/egyPendingKeys.json";
 
@@ -197,18 +197,13 @@ describe("灵魂详情:出身地域(W-2)", () => {
   });
 });
 
-describe("埃及文:亚洲没有词,退回英文", () => {
-  it("egy 的 ASIA 读 en 的 Asia;那个键在待补清单里,egy 包里没有", () => {
-    expect(originRegionLabel(tZh, "ASIA", "egy")).toBe("Asia");
+describe("埃及文:亚洲借词 Asia(第四十七批)", () => {
+  it("egy 的 ASIA 读 egy 包里的 Asia;待补清单里没有它", () => {
+    const tEgyPack = (key: string) =>
+      key.split(".").reduce<unknown>((n, p) => (n && typeof n === "object" ? (n as Record<string, unknown>)[p] : undefined), egy) as string;
+    expect(originRegionLabel(tEgyPack, "ASIA", "egy")).toBe("Asia");
     expect(originRegionLabel(tZh, "ASIA", "zh-Hans")).toBe("亚洲");
-    expect(egyPendingKeys).toContain("souls.origin_region.ASIA");
-    // 不详 has Design's egy (Nen Rekh): only the member egy lacks falls back to English.
-    expect(egyPendingKeys).not.toContain("souls.origin_region.UNKNOWN");
-    expect(ORIGIN_REGION_EGY_EN).not.toHaveProperty("UNKNOWN");
-    // 代码里的英文与 en.json 同值,改了一边另一边要跟。
-    for (const [member, word] of Object.entries(ORIGIN_REGION_EGY_EN)) {
-      expect((en.souls.origin_region as Record<string, string>)[member]).toBe(word);
-    }
+    expect(egyPendingKeys).not.toContain("souls.origin_region.ASIA");
   });
 });
 

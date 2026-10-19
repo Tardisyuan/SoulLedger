@@ -409,8 +409,8 @@ describe("courtLabel in the officer app", () => {
     expect(courtLabel(en, "第十殿", "en")).toBe("Tenth Court");
     expect(courtLabel(en, "第十殿", "en")).not.toContain("殿");
     expect(courtLabel(zh, "Heaven", "zh-Hans")).not.toContain("Heaven");
-    // egy has no court words: it shows the English, not the Chinese the bundle fallback would give.
-    expect(courtLabel((k, v) => translate("egy", k, v), "天堂", "egy")).toBe("Heaven");
+    // egy has Design's court words since batch 47 — not the Chinese the bundle fallback would give.
+    expect(courtLabel((k, v) => translate("egy", k, v), "天堂", "egy")).toBe("Pet");
   });
 
   it("an unknown court is shown as stored", () => {

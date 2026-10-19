@@ -669,7 +669,8 @@
     "origin_region": {
       "label": "Ta En Mesut",
       "EUROPE": "Europa",
-      "UNKNOWN": "Nen Rekh"
+      "UNKNOWN": "Nen Rekh",
+      "ASIA": "Asia"
     }
   },
   "common": {
@@ -1542,7 +1543,11 @@
       "fengdu": "Duat Sherer",
       "wrongful_death_city": "Nut Mut Nen Maat",
       "rebirth_application": "Dbh Wehem Mesut",
-      "reopened_judgment": "Wedja Wehem"
+      "reopened_judgment": "Wedja Wehem",
+      "city_god": "Chenghuang",
+      "city_god_system": "Wesekhet Chenghuang",
+      "jiuhua": "Jiuhua",
+      "avici": "Duat Pehwy"
     },
     "refusal": {
       "jump_target_required": "{{source}} Khesef Er {{station}}: Nen Iri Tepy. Iri Tepy {{source}} Hena.",
