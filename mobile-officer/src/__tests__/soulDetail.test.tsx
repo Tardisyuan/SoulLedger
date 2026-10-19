@@ -5,6 +5,9 @@
 import type { LoginUser } from "@soulledger/core/api/auth";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
+import { platform } from "@soulledger/core/platform";
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
+
 import { Detail } from "../screens/detail";
 import { karmaView, planStops, signed, soulTabs } from "../soulView";
 import { OFFICER, renderOfficer } from "./harness";
@@ -319,5 +322,41 @@ describe("soul-name links", () => {
     renderOfficer(<Detail target={{ type: "todo", kind: "approval", id: "wf-1" }} onBack={() => {}} onSettled={() => {}} />);
     expect(await screen.findByText("周阿满 · QU33Q9FW5F")).toBeTruthy();
     expect(screen.queryByTestId("facts-soul-link")).toBeNull();
+  });
+});
+
+// 第四十五批 O-1:身份页签里「籍贯」旁边是出身地域,只读。「不详」是一个词,不是「—」;
+// 埃及文里亚洲没有词(egyPendingKeys),退回英文 Asia,不退回中文「亚洲」。
+describe("出身地域 (Design 第四十五批 O-1)", () => {
+  it("shows the region beside the birthplace, read-only", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, origin_region: "EUROPE" } });
+    await openSoul();
+    const identity = await screen.findByTestId("soul-identity");
+    expect(within(identity).getByText("出身地域")).toBeTruthy();
+    expect(screen.getByTestId("soul-origin-region").props.children).toBe("欧洲");
+    expect(within(identity).queryByText("亚洲")).toBeNull();
+    // Read-only: nothing in the identity tab is pressable.
+    expect(within(identity).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("a blank region reads 不详 as a word, not a dash", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, origin_region: "" } });
+    await openSoul();
+    await screen.findByTestId("soul-identity");
+    expect(screen.getByTestId("soul-origin-region").props.children).toBe("不详");
+    expect(screen.getByTestId("soul-origin-region").props.children).not.toBe("—");
+  });
+
+  it("in egy, ASIA falls back to the English Asia, not the Chinese", async () => {
+    platform().persistent.set(LOCALE_COOKIE, "egy");
+    try {
+      mockSoul.mockResolvedValue({ data: { ...SOUL, origin_region: "ASIA" } });
+      await openSoul();
+      await screen.findByTestId("soul-identity");
+      expect(screen.getByTestId("soul-origin-region").props.children).toBe("Asia");
+      expect(screen.queryByText("亚洲")).toBeNull();
+    } finally {
+      platform().persistent.set(LOCALE_COOKIE, "zh-Hans");
+    }
   });
 });

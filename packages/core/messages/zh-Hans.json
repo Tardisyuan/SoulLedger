@@ -1408,7 +1408,7 @@
       "back": "上一步",
       "cross_forced": "这一案挂着跨域审判：结案要生成审批流程，外域按顺序接在后面。",
       "load_error": "没能取到这次的站，请重试",
-      "route_target_reason": "{{source}}按出身地域分流到这里，这一站不能跳过",
+      "route_target_reason": "{{source}}的分流去处，这一站不能跳过",
       "foreign_all_required": "全部必须走 · 不用选站"
     },
     "pick_group": {
