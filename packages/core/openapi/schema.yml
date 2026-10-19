@@ -19071,6 +19071,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulImportFileError'
           description: ''
+  /api/v1/souls/region-update/commit/:
+    post:
+      operationId: v1_souls_region_update_commit_create
+      description: |-
+        Apply the file: re-validated under row locks, all or nothing, only changed rows written.
+
+        422 with the preview body when any row is in error (nothing written). Each changed soul gets its
+        ordinary UPDATE audit row; one BATCH_UPDATE row names the file. Re-running the same file changes
+        nothing and writes no audit row.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRegionUpdateCommit'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRegionUpdatePreview'
+          description: ''
+  /api/v1/souls/region-update/preview/:
+    post:
+      operationId: v1_souls_region_update_preview_create
+      description: |-
+        Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
+
+        Columns: exactly one of `soul_id` (UUID) / `soul_code`, and `origin_region` (`EUROPE` / `ASIA` / blank
+        for unknown; any case). Same size and row limits as the import. A soul of another hall is `not_found`.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRegionUpdatePreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
+          description: ''
   /api/v1/tenants/:
     get:
       operationId: v1_tenants_list
@@ -39013,6 +39082,94 @@ components:
           type: string
       required:
       - refresh
+    SoulRegionUpdateCommit:
+      type: object
+      properties:
+        updated:
+          type: integer
+        unchanged:
+          type: integer
+      required:
+      - unchanged
+      - updated
+    SoulRegionUpdatePreview:
+      type: object
+      description: 200 of `…/region-update/preview/` and 422 of `…/region-update/commit/`
+        (rows in error; nothing written).
+      properties:
+        total:
+          type: integer
+        changed_count:
+          type: integer
+        unchanged_count:
+          type: integer
+        error_count:
+          type: integer
+        max_rows:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulRegionUpdateRow'
+      required:
+      - changed_count
+      - error_count
+      - max_rows
+      - rows
+      - total
+      - unchanged_count
+    SoulRegionUpdateRow:
+      type: object
+      properties:
+        row:
+          type: integer
+          description: Line number in the file; the header is line 1.
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SoulRegionUpdateRowStatusEnum'
+          description: |-
+            `not_found` also covers another hall's soul — deliberately indistinguishable.
+
+            * `ok` - ok
+            * `unchanged` - unchanged
+            * `missing_identifier` - missing_identifier
+            * `not_found` - not_found
+            * `duplicate_in_file` - duplicate_in_file
+            * `invalid_origin_region` - invalid_origin_region
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        old:
+          type: string
+          nullable: true
+          description: Stored value; blank is unknown.
+        new:
+          type: string
+          nullable: true
+          description: Value the row sets; blank is unknown.
+      required:
+      - new
+      - old
+      - row
+      - status
+      - values
+    SoulRegionUpdateRowStatusEnum:
+      enum:
+      - ok
+      - unchanged
+      - missing_identifier
+      - not_found
+      - duplicate_in_file
+      - invalid_origin_region
+      type: string
+      description: |-
+        * `ok` - ok
+        * `unchanged` - unchanged
+        * `missing_identifier` - missing_identifier
+        * `not_found` - not_found
+        * `duplicate_in_file` - duplicate_in_file
+        * `invalid_origin_region` - invalid_origin_region
     SoulRelationCard:
       type: object
       description: 关注 / 被关注列表的一行:行尾按钮(回关 / 已关注 / 互相关注)要两个方向。

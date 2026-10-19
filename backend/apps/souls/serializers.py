@@ -814,6 +814,32 @@ class SoulImportCommitSerializer(serializers.Serializer):
     batch_id = serializers.UUIDField(help_text="Filter the list with `?import_batch=` to see this batch.")
 
 
+class SoulRegionUpdateRowSerializer(serializers.Serializer):
+    row = serializers.IntegerField(help_text="Line number in the file; the header is line 1.")
+    status = serializers.ChoiceField(
+        choices=["ok", "unchanged", "missing_identifier", "not_found", "duplicate_in_file", "invalid_origin_region"],
+        help_text="`not_found` also covers another hall's soul — deliberately indistinguishable.",
+    )
+    values = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    old = serializers.CharField(allow_null=True, allow_blank=True, help_text="Stored value; blank is unknown.")
+    new = serializers.CharField(allow_null=True, allow_blank=True, help_text="Value the row sets; blank is unknown.")
+
+
+class SoulRegionUpdatePreviewSerializer(serializers.Serializer):
+    """200 of `…/region-update/preview/` and 422 of `…/region-update/commit/` (rows in error; nothing written)."""
+    total = serializers.IntegerField()
+    changed_count = serializers.IntegerField()
+    unchanged_count = serializers.IntegerField()
+    error_count = serializers.IntegerField()
+    max_rows = serializers.IntegerField()
+    rows = SoulRegionUpdateRowSerializer(many=True)
+
+
+class SoulRegionUpdateCommitSerializer(serializers.Serializer):
+    updated = serializers.IntegerField()
+    unchanged = serializers.IntegerField()
+
+
 class SoulImportFileErrorSerializer(serializers.Serializer):
     """400: the file as a whole is unusable. Nothing was read or written."""
     code = serializers.CharField()

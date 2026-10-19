@@ -634,6 +634,19 @@
         "unknown": "Import failed"
       }
     },
+    "region_update": {
+      "statuses": {
+        "ok": "Will update",
+        "unchanged": "No change",
+        "missing_identifier": "No soul identifier",
+        "not_found": "Soul not found",
+        "duplicate_in_file": "Duplicate of an earlier row",
+        "invalid_origin_region": "Must be EUROPE, ASIA or blank"
+      },
+      "file_codes": {
+        "identifier_column": "Exactly one soul identifier column is needed: {{columns}}"
+      }
+    },
     "origin_region": {
       "label": "Region of origin",
       "EUROPE": "Europe",
