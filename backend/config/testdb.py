@@ -1,4 +1,6 @@
-"""Per-run PostgreSQL test database name. Used only by the root conftest.py.
+"""Per-run PostgreSQL test database name, and the run's resilience to a dropped
+database connection. Used by the root conftest.py; also loaded as a pytest
+plugin from pytest.ini (`-p config.testdb`) for the two hooks at the bottom.
 
 pytest-django names the test database `test_<NAME>` and suffixes it only for
 xdist workers / tox. So two sessions running `pytest --create-db` against the
@@ -13,9 +15,12 @@ runs never meet.
 name, or with `--reuse-db`, which a random suffix would defeat). Leftovers
 still match `datname like 'test_soulledger%'`.
 """
+import contextlib
 import os
 import re
 import secrets
+
+import pytest
 
 ENV_VAR = "SOULLEDGER_TEST_DB_SUFFIX"
 _SAFE = re.compile(r"[a-z0-9_]{1,20}")
@@ -89,3 +94,132 @@ def use_templates(databases: dict, templates: dict) -> None:
     for alias, name in templates.items():
         if alias in databases:
             databases[alias].setdefault("TEST", {})["TEMPLATE"] = name
+
+
+# --- A dropped connection costs one test, not the rest of the worker ---------
+#
+# 2026-10-19, real PostgreSQL, `-n 4`: gw2's connection to 115 died mid-test
+# (`OperationalError: could not receive data from server: Operation timed out`)
+# and every later test on gw2 failed with `InterfaceError: connection already
+# closed` -- 150 failures and errors from one drop. Django replaces a dead
+# connection by itself only when the error surfaces while it rolls back the
+# outermost atomic block (it closes and reconnects there). Anywhere else -- a
+# transactional test's flush, the next test's atomic.__enter__ -- it keeps the
+# dead psycopg2 object, and ensure_connection() never reconnects a non-None one.
+#
+# So: when any phase of a test raised a connection-level error, close every
+# connection after its teardown (pytest-django's per-test atomics are exited by
+# then) and the next test's setup connects afresh to the same worker database.
+# The failing test still fails; nothing is retried or rewritten.
+
+KEEPALIVES = {
+    # libpq: probe an idle link after 30 s, every 10 s, give up after 3 misses,
+    # so a dead link becomes an error in about a minute instead of the OS default
+    # (two hours on macOS). connect_timeout: a reconnect to an unreachable box
+    # fails in 10 s instead of hanging. Test runs only; settings.py is untouched.
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+    "connect_timeout": 10,
+}
+
+_CONNECTION_LOST = (
+    "connection already closed",
+    "could not receive data",
+    "server closed the connection",
+    "operation timed out",
+    "terminating connection",
+)
+
+
+def add_keepalives(databases: dict) -> None:
+    """Add KEEPALIVES to each PostgreSQL alias's OPTIONS, in place; options already set win.
+    SQLite is skipped: sqlite3.connect() rejects these keywords."""
+    for db in databases.values():
+        if "postgresql" in db.get("ENGINE", ""):
+            options = db.setdefault("OPTIONS", {})
+            for key, value in KEEPALIVES.items():
+                options.setdefault(key, value)
+
+
+def is_connection_lost(exc) -> bool:
+    """InterfaceError / OperationalError (Django's or psycopg2's) whose message
+    says the link is gone, anywhere along the cause/context chain."""
+    from django.db import InterfaceError, OperationalError
+
+    kinds = (InterfaceError, OperationalError)
+    with contextlib.suppress(ImportError):
+        import psycopg2
+
+        kinds += (psycopg2.InterfaceError, psycopg2.OperationalError)
+    seen = set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        if isinstance(exc, kinds) and any(s in str(exc).lower() for s in _CONNECTION_LOST):
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
+def _close_all_connections() -> None:
+    from django.db import connections
+
+    for conn in connections.all(initialized_only=True):
+        # An exception out of a pytest hook ends the whole session; never let one out.
+        with contextlib.suppress(Exception):
+            conn.close()
+
+
+def close_connections() -> None:
+    """This thread's connections, and those of asgiref's one ORM thread, where
+    async tests run their queries (see the root conftest's django_db_setup)."""
+    from asgiref.sync import SyncToAsync
+
+    _close_all_connections()
+    with contextlib.suppress(Exception):
+        SyncToAsync.single_thread_executor.submit(_close_all_connections).result(timeout=10)
+
+
+_connection_lost = pytest.StashKey[bool]()
+
+
+def pytest_configure(config):
+    from django.conf import settings
+
+    add_keepalives(settings.DATABASES)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_makereport(item, call):
+    """Note a connection-level error in setup, call or teardown; after teardown,
+    close the connections. Returns None: the report and the failure stand."""
+    if call.excinfo is not None and is_connection_lost(call.excinfo.value):
+        item.stash[_connection_lost] = True
+    if call.when == "teardown" and item.stash.get(_connection_lost, False):
+        close_connections()
+
+
+# --- Teardown: a worker database must not outlive its run --------------------
+
+_DISPOSABLE = re.compile(r"test_soulledger_[a-z0-9_]+")
+
+
+def is_disposable_test_db(name) -> bool:
+    return bool(_DISPOSABLE.fullmatch(name or ""))
+
+
+def terminate_other_sessions(cursor, name: str) -> None:
+    """Terminate every other session on test database `name`, waiting up to 5 s each (PG 14+).
+
+    After the 2026-10-19 drop the server still held gw2's session as idle, and
+    pytest-django's plain `DROP DATABASE` (no FORCE) refused, leaving the database
+    on 115. Refuses any name that is not `test_soulledger_...`.
+    """
+    if not is_disposable_test_db(name):
+        raise ValueError(f"refusing to terminate sessions on {name!r}: not a test_soulledger_ database")
+    cursor.execute(
+        "SELECT pg_terminate_backend(pid, 5000) FROM pg_stat_activity "
+        "WHERE datname = %s AND pid <> pg_backend_pid()",
+        [name],
+    )
