@@ -22,7 +22,7 @@ from apps.soul_accounts.models import (
 )
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
-from apps.souls.models import Civilization
+from apps.souls.models import Civilization, Soul
 from apps.tenants.models import VISIT_SETTINGS
 
 # ── 灵魂端 ───────────────────────────────────────────────────────────────
@@ -246,6 +246,7 @@ class MeProfileSerializer(serializers.Serializer):
     birth_date = HistoricalDateField(prefix="birth", read_only=True)
     death_date = HistoricalDateField(prefix="death", read_only=True)
     origin_location = serializers.CharField()
+    origin_region = serializers.ChoiceField(choices=Soul.OriginRegion.choices, allow_blank=True)
     merit_score = serializers.IntegerField()
     demerit_score = serializers.IntegerField()
     account = serializers.SerializerMethodField()

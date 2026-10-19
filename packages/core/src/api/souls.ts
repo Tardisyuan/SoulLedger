@@ -9,6 +9,9 @@ import type { ArchiveFields } from "./archive";
 
 type Schemas = components["schemas"];
 
+/** `Soul.OriginRegion` (backend/apps/souls/models.py); "" is 不详. */
+export type SoulOriginRegion = "EUROPE" | "ASIA" | "";
+
 export interface SoulInput {
   name: string;
   // Derived, not re-listed. This union was written out by hand when
@@ -21,6 +24,8 @@ export interface SoulInput {
   civilization: CivilizationOption;
   birth_date: string | null;
   origin_location: string;
+  /** Gorgias 524a: which Greek judge tries the soul. "" = 不详. */
+  origin_region?: SoulOriginRegion;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
@@ -116,6 +121,7 @@ export interface Soul extends SoulBase, ArchiveFields {
   soul_code?: string | null;
   birth_name?: string;
   origin_location: string;
+  origin_region?: SoulOriginRegion;
   description: string;
   tenant?: number;
   update_time?: string;
@@ -258,6 +264,7 @@ export const SOUL_IMPORT_COLUMNS = [
   "origin_location",
   "birth_name",
   "description",
+  "origin_region",
 ] as const;
 
 /** Row-level `code`s (importer.py): the web has a message for each. */
@@ -267,6 +274,7 @@ export const SOUL_IMPORT_ROW_CODES = [
   "too_many_cells",
   "invalid_civilization",
   "civilization_mismatch",
+  "invalid_origin_region",
   "invalid_characters",
   "invalid_date",
   "death_before_birth",

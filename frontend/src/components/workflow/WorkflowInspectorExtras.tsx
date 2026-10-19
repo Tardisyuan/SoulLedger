@@ -16,6 +16,7 @@ import {
   FACT_KEYS,
   defaultClause,
   opsFor,
+  valueText,
   whenText,
 } from "@/src/components/workflow/workflowConditions";
 import { branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
@@ -180,7 +181,7 @@ function ClauseRow({
                     onChange({ ...clause, value: on ? cur.filter((x) => x !== v) : [...cur, v] });
                   }}
                 />
-                {clause.fact === "civilization" ? t(`workflow.civilizations.${v}`) : t(`judgment.verdicts.${v.toLowerCase()}`)}
+                {valueText(clause.fact, v, t)}
               </label>
             );
           })}

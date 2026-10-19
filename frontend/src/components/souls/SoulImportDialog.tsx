@@ -37,7 +37,7 @@ const SHOWN = ["name", "civilization", "birth_date", "death_date"] as const;
 
 /** 模板:表头加一行示例。前置 BOM,Excel 才会按 UTF-8 打开。文明取当前账号自己的 —— 填别的会被后端拒绝。 */
 export function soulImportTemplate(civilization: string): string {
-  return `﻿${SOUL_IMPORT_COLUMNS.join(",")}\nExample Soul,${civilization},-612,-560-03-15,Luoyang,,\n`;
+  return `﻿${SOUL_IMPORT_COLUMNS.join(",")}\nExample Soul,${civilization},-612,-560-03-15,Luoyang,,,\n`;
 }
 
 export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

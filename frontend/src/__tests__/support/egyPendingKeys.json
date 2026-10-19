@@ -44,5 +44,10 @@
   "workflow.refusal.unknown_node",
   "workflow.refusal.reason_required",
   "workflow.refusal.moved_on",
-  "crossJudgments.join_locked"
+  "crossJudgments.join_locked",
+  "souls.import.row_codes.invalid_origin_region",
+  "workflow.editor.condition.fact.origin_region",
+  "workflow.editor.condition.region.EUROPE",
+  "workflow.editor.condition.region.ASIA",
+  "workflow.editor.condition.region.UNKNOWN"
 ]
