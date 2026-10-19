@@ -479,8 +479,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     def region_update_preview(self, request):
         """Check a CSV that sets `origin_region` on existing souls, row by row. WRITES NOTHING.
 
-        Columns: exactly one of `soul_id` (UUID) / `soul_code`, and `origin_region` (`EUROPE` / `ASIA` / blank
-        for unknown; any case). Same size and row limits as the import. A soul of another hall is `not_found`.
+        Columns: exactly one of `soul_id` (UUID; the export's `Soul ID` heading counts) / `soul_code`, and
+        `origin_region` (`EUROPE` / `ASIA` / `UNKNOWN`, `Europe` / `Asia` / `Unknown`, `欧洲` / `亚洲` / `不详`,
+        any case, blank = unknown — `region_update.REGION_SPELLINGS`). Any other column is ignored. Same size
+        and row limits as the import. A soul of another hall is `not_found`. Rows whose status is not `ok` /
+        `unchanged` are the ones commit will skip (`skipped_count`).
         """
         try:
             data, souls = self._region_upload(request)
@@ -496,16 +499,15 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         responses={
             200: SoulRegionUpdateCommitSerializer,
             400: SoulImportFileErrorSerializer,
-            422: SoulRegionUpdatePreviewSerializer,
         },
     )
     @action(detail=False, methods=["post"], url_path="region-update/commit", pagination_class=None, filter_backends=[])
     def region_update_commit(self, request):
-        """Apply the file: re-validated under row locks, all or nothing, only changed rows written.
+        """Apply the file: re-validated under row locks, only changed rows written, rows in error skipped.
 
-        422 with the preview body when any row is in error (nothing written). Each changed soul gets its
-        ordinary UPDATE audit row; one BATCH_UPDATE row names the file. Re-running the same file changes
-        nothing and writes no audit row.
+        `rows` lists the skipped rows with their status (user decision 2026-10-19: skip, don't refuse the
+        file). Each changed soul gets its ordinary UPDATE audit row; one BATCH_UPDATE row names the file.
+        Re-running the same file changes nothing and writes no audit row.
         """
         from apps.audit.models import AuditAction, AuditLog
         from apps.core.client_ip import get_client_ip
@@ -514,10 +516,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             data, souls = self._region_upload(request)
             with transaction.atomic():
                 rows = region_update.apply(data, souls)
-                if region_update.has_errors(rows):
-                    return Response(region_update.summarize(rows), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
                 summary = region_update.summarize(rows)
                 updated, unchanged = summary["changed_count"], summary["unchanged_count"]
+                skipped = [r.as_dict() for r in rows if r.status in region_update.ERRORS]
                 if updated:
                     AuditLog.objects.create(
                         tenant=request.tenant,
@@ -528,6 +529,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                             "field": "origin_region",
                             "updated": updated,
                             "unchanged": unchanged,
+                            "skipped": len(skipped),
                             "filename": request.data["file"].name[:200],
                         },
                         ip_address=get_client_ip(request) or "",
@@ -538,7 +540,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             return refused.response()
         except importer.ImportFileError as exc:
             return _ImportRefusedError({"code": exc.code, **exc.detail}).response()
-        return Response({"updated": updated, "unchanged": unchanged})
+        return Response({"updated": updated, "unchanged": unchanged, "skipped": len(skipped), "rows": skipped})
 
     @staticmethod
     def _batch_not_found(ids):
