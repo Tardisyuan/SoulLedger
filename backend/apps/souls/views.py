@@ -397,8 +397,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """Validate a soul CSV row by row. WRITES NOTHING.
 
         Columns: name, civilization (required); birth_date, death_date, origin_location,
-        birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
-        BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+        birth_name, description, origin_region (`EUROPE` / `ASIA` / blank). Dates are `YYYY`, `YYYY-MM` or
+        `YYYY-MM-DD`, negative for BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
         """
         try:
             results, _tenant = self._import_rows(request)

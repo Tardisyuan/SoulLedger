@@ -516,6 +516,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     home_tenant = SoulHomeTenantSerializer(read_only=True)
     home_civilization = serializers.CharField(read_only=True)
     is_residing = serializers.BooleanField(read_only=True)
+    # Which Greek judge tries the soul (Gorgias 524a; `Soul.origin_region`). Blank = 不详.
+    origin_region = serializers.ChoiceField(choices=Soul.OriginRegion.choices, allow_blank=True, required=False)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -542,7 +544,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         fields = [
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
-            "birth_date", "death_date", "origin_location", "birth_name",
+            "birth_date", "death_date", "origin_location", "origin_region", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
