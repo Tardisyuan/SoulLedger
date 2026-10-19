@@ -199,11 +199,11 @@ describe("WorkflowEditor", () => {
     expect(toolbar).toContainElement(screen.getByRole("button", { name: /workflow\.editor\.issues|Checks/ }));
   });
 
-  it("names the 16 checks the inspector counts exactly as the bundle's issue keys", () => {
+  it("names the 17 checks the inspector counts exactly as the bundle's issue keys", () => {
     const { FLOW_ISSUE_CODES } = jest.requireActual("@/src/components/workflow/workflowValidation");
     const zh = jest.requireActual("@soulledger/core/messages/zh-Hans.json");
     expect([...FLOW_ISSUE_CODES].sort()).toEqual(Object.keys(zh.workflow.editor.issue).sort());
-    expect(FLOW_ISSUE_CODES).toHaveLength(16);
+    expect(FLOW_ISSUE_CODES).toHaveLength(17); // 17th: auto_route_exit_missing (batch 45)
   });
 
   it("renders the ReactFlow canvas", () => {
