@@ -14,14 +14,27 @@ import { usePathname } from "next/navigation";
  * 不会重播。v3 写的是「导航触发」,不分段,所以 pathname 一变就换到另一个动画名
  * (`page-enter-again`,值逐字相同)—— 换名会让浏览器重播动画,而不用 `key` 重挂页面:
  * 页面状态与焦点都留着。只换查询串(筛选、分页)pathname 不变,不重播。
+ *
+ * 外层在动画进行时 `overflow-y: clip`(2026-10-19)。动画从 translateY(8px) 起,transform 也算可滚动区域,
+ * 于是整屏高的页面(登录页 `md:h-dvh`)在那 240ms 里文档高出视口最多 8px:经典滚动条闪一下,
+ * `e2e/home.spec.ts` 量到 641 / 640(chromium 约五次红两次)。clip 不建滚动容器,sticky 照旧;
+ * 动画结束(只认这一层自己的 animationend,子元素的会冒泡上来)就去掉,平时不裁任何东西。
  */
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [last, setLast] = useState({ pathname, again: false });
-  if (last.pathname !== pathname) setLast({ pathname, again: !last.again });
+  const [last, setLast] = useState({ pathname, again: false, entering: true });
+  if (last.pathname !== pathname) setLast({ pathname, again: !last.again, entering: true });
   return (
-    <div data-motion="fade" className={last.again ? "animate-page-enter-again" : "animate-page-enter"}>
-      {children}
+    <div data-page-enter-clip={last.entering ? "" : undefined} className={last.entering ? "overflow-y-clip" : undefined}>
+      <div
+        data-motion="fade"
+        className={last.again ? "animate-page-enter-again" : "animate-page-enter"}
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget) setLast((l) => ({ ...l, entering: false }));
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }

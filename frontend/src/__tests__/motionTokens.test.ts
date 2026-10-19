@@ -6,7 +6,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, renderHook } from "@testing-library/react";
+import { fireEvent, render, renderHook } from "@testing-library/react";
 
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
@@ -200,7 +200,7 @@ describe("app/template: the page-enter animation replays on every pathname chang
   it("swaps the animation name when the pathname changes inside one segment, and only then", () => {
     mockPathname.mockReturnValue("/souls");
     const { container, rerender } = render(page(createElement("p", null, "x")));
-    const wrapper = () => container.firstElementChild as HTMLElement;
+    const wrapper = () => container.querySelector("[data-motion]") as HTMLElement;
     expect(wrapper().getAttribute("data-motion")).toBe("fade");
     expect(wrapper().className).toBe("animate-page-enter");
 
@@ -226,5 +226,29 @@ describe("app/template: the page-enter animation replays on every pathname chang
     rerender(page(createElement("input", { "aria-label": "kept" })));
     expect(container.querySelector("input")).toBe(input);
     expect(document.activeElement).toBe(input);
+  });
+});
+
+describe("app/template: the 8px entry offset never lengthens the document", () => {
+  // translateY(8px) counts toward scrollable overflow: a one-screen page (login, `md:h-dvh`) was 8px
+  // taller than the window for the 240ms of the animation (e2e/home.spec.ts saw 641 / 640).
+  it("clips vertically while the page enters, stops on its own animationend only, and clips again on the next page", () => {
+    mockPathname.mockReturnValue("/login");
+    const { container, rerender } = render(page(createElement("p", { className: "animate-row-enter" }, "x")));
+    const outer = () => container.firstElementChild as HTMLElement;
+    const animated = () => container.querySelector("[data-motion]") as HTMLElement;
+    expect(outer().className).toBe("overflow-y-clip");
+
+    // A child's animation bubbles up: not the end of the page's.
+    fireEvent.animationEnd(container.querySelector("p")!);
+    expect(outer().className).toBe("overflow-y-clip");
+
+    fireEvent.animationEnd(animated());
+    expect(outer().className).toBe("");
+    expect(outer()).not.toHaveAttribute("data-page-enter-clip");
+
+    mockPathname.mockReturnValue("/dashboard");
+    rerender(page(createElement("p", null, "x")));
+    expect(outer().className).toBe("overflow-y-clip");
   });
 });
