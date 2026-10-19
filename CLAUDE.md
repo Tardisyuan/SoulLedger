@@ -585,6 +585,15 @@ executor 因 `conn_max_age` 一直握着一条连接,DROP 失败,而 pytest-djan
 warning —— exit 0、汇总行照打,残留照留。修法是根 `conftest.py` 的 `django_db_setup`
 包装(会话结束前关掉那条连接),加 `pytest.ini` 把那条 warning 升成 error。
 
+**断一次连接只赔一条测试(2026-10-19)。** 那天真 PG `-n 4` 时 gw2 到 115 的连接断了
+(`could not receive data from server: Operation timed out`,服务端什么都没记，还把会话当 idle 握着),
+Django 留着那个死连接,gw2 之后每条测试都是 `InterfaceError: connection already closed`,**一次断线 150 条红**,
+收尾时 DROP 又被那个 idle 会话挡住,gw2 的库留在了 115。现在 `config/testdb.py`(由 `pytest.ini` 的
+`-p config.testdb` 挂上):某条测试任一阶段抛连接级错误，它照样红，收尾后关掉连接，下一条重新连;
+真 PG 的连接带 TCP keepalive(30 s 起探、10 s 一次、3 次不回即断)和 `connect_timeout=10`,只在测试里加;
+根 `conftest.py` 的 `django_db_setup` 收尾先终止本次测试库上残留的会话再交给 pytest-django DROP
+(只碰 `test_soulledger_` 开头的库)。守卫:`tests/test_dropped_connection_costs_one_test.py`。
+
 **SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
 Two shipped bugs surfaced the first time this code met a real PostgreSQL
 (2026-08-27), with 2665 tests green throughout:

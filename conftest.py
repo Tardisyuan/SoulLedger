@@ -243,7 +243,7 @@ def pytest_sessionfinish(session):
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_db_setup):
+def django_db_setup(django_db_setup, django_db_blocker):
     """Close the database connection that `database_sync_to_async` left open,
     before pytest-django drops the test database.
 
@@ -257,12 +257,27 @@ def django_db_setup(django_db_setup):
     PostgreSQL box. Reproduced 2026-09-26 with one test,
     `tests/test_workflow_events.py::TestWorkflowEventService::test_log_workflow_created`.
     This teardown runs before pytest-django's, because it overrides that fixture.
+
+    Then, on PostgreSQL, terminate any other session still on this run's test
+    database: pytest-django's DROP has no FORCE, and after the 2026-10-19 drop
+    the server held the dead client's session as idle, so the worker database
+    stayed on 115. Only `test_soulledger_...` names are touched (config/testdb.py).
     """
     yield
     from asgiref.sync import SyncToAsync
     from django.db import connections
 
+    from config.testdb import is_disposable_test_db, postgres_aliases, terminate_other_sessions
+
     SyncToAsync.single_thread_executor.submit(connections.close_all).result()
+    connections.close_all()
+    with django_db_blocker.unblock():
+        for alias in postgres_aliases({a: connections[a].settings_dict for a in connections}):
+            creation = connections[alias].creation
+            name = connections[alias].settings_dict["NAME"]
+            if is_disposable_test_db(name):
+                with creation._nodb_cursor() as cursor:
+                    terminate_other_sessions(cursor, name)
 
 
 @pytest.fixture(autouse=True)
