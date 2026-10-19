@@ -56,11 +56,11 @@ ERRORS = ("missing_identifier", "not_found", "duplicate_in_file", "invalid_origi
 class RegionRow:
     row: int  # line number in the file (the header is line 1)
     values: dict
+    identifier: str  # the soul_id / soul_code cell as the file wrote it (trimmed)
     status: str = OK
     old: str | None = None  # "" is 不详
     new: str | None = None
-    soul: Soul | None = None
-
+    soul: Soul | None = None  # set only for ok / unchanged rows, i.e. a soul of the caller's own hall
     duplicate_of: int | None = None  # for duplicate_in_file: the row of the first occurrence, which wins
 
     @property
@@ -71,7 +71,9 @@ class RegionRow:
     def as_dict(self):
         return {
             "row": self.row, "status": self.status, "values": self.values, "old": self.old, "new": self.new,
-            "clears_value": self.clears_value, "duplicate_of": self.duplicate_of,
+            "clears_value": self.clears_value, "duplicate_of": self.duplicate_of, "identifier": self.identifier,
+            # Only from `soul`, which only ever holds this hall's soul: no other row can carry a name.
+            "soul_name": self.soul.name if self.soul is not None else None,
         }
 
 
@@ -106,7 +108,7 @@ def validate_csv(data: bytes, souls) -> list[RegionRow]:
         for col, cell in zip(header, cells, strict=False):
             if col in values:  # every other column is ignored
                 values[col] = cell.strip()
-        rows.append(RegionRow(row=line_no, values=values))
+        rows.append(RegionRow(row=line_no, values=values, identifier=values[id_column]))
         keys.append(_key(id_column, values[id_column]))
 
     wanted = {k for k in keys if k is not None}

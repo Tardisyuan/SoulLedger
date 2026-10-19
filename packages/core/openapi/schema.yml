@@ -39167,12 +39167,22 @@ components:
           nullable: true
           description: 'For `duplicate_in_file`: the row of the first occurrence,
             which is the one used.'
+        identifier:
+          type: string
+          description: The soul_id / soul_code cell as written.
+        soul_name:
+          type: string
+          nullable: true
+          description: Only for `ok` / `unchanged` (a soul of this hall); null otherwise
+            — never another hall's.
       required:
       - clears_value
       - duplicate_of
+      - identifier
       - new
       - old
       - row
+      - soul_name
       - status
       - values
     SoulRegionUpdateRowStatusEnum:

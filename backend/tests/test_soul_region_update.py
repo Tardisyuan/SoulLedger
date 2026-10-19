@@ -96,6 +96,15 @@ def test_preview_shows_each_status_and_writes_nothing(world):
     assert (first["row"], first["old"], first["new"], first["clears_value"]) == (2, "", "EUROPE", False)
     assert first["duplicate_of"] is None
     assert (dup["row"], dup["duplicate_of"], dup["old"], dup["new"]) == (7, 2, None, None)
+    # identifier echoes the cell; the name only where a soul of this hall was found and used
+    assert [(x["identifier"], x["soul_name"]) for x in r.data["rows"]] == [
+        (str(w["a"].pk), "Achilles"),
+        (str(w["b"].pk), "Memnon"),
+        ("00000000-0000-0000-0000-000000000000", None),
+        ("", None),
+        (str(w["c"].pk), None),
+        (str(w["a"].pk), None),
+    ]
     counts = [r.data[k] for k in ("total", "changed_count", "unchanged_count", "skipped_count", "clears_count")]
     assert counts == [6, 1, 1, 4, 0]
     assert r.data["max_rows"] == importer.MAX_ROWS
@@ -137,6 +146,7 @@ def test_soul_code_identifies_a_soul_and_is_normalised(world):
     Soul.all_objects.filter(pk=world["a"].pk).update(soul_code="ABC2345678")
     r = _post(world["client"], PREVIEW, _csv((" abc2345678 ", "亚洲"), header="soul_code,origin_region"))
     assert _statuses(r) == ["ok"]
+    assert (r.data["rows"][0]["identifier"], r.data["rows"][0]["soul_name"]) == ("abc2345678", "Achilles")
 
 
 def test_header_must_name_exactly_one_identifier_column(world):
@@ -180,6 +190,8 @@ def test_another_halls_soul_is_not_found_and_not_leaked(world):
     assert a["status"] == b["status"] == "not_found"
     assert (a["old"], a["new"]) == (b["old"], b["new"]) == (None, None)
     assert foreign.name not in r.content.decode()
+    assert (a["identifier"], a["soul_name"]) == (str(foreign.pk), None)
+    assert (b["identifier"], b["soul_name"]) == (unknown, None)
     r = _post(world["client"], COMMIT, _csv((foreign.pk, "ASIA")))
     assert (r.status_code, r.data["updated"], r.data["skipped"]) == (200, 0, 1)
     assert r.data["rows"][0]["status"] == "not_found"

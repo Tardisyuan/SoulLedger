@@ -827,6 +827,11 @@ class SoulRegionUpdateRowSerializer(serializers.Serializer):
     duplicate_of = serializers.IntegerField(
         allow_null=True, help_text="For `duplicate_in_file`: the row of the first occurrence, which is the one used."
     )
+    identifier = serializers.CharField(allow_blank=True, help_text="The soul_id / soul_code cell as written.")
+    soul_name = serializers.CharField(
+        allow_null=True,
+        help_text="Only for `ok` / `unchanged` (a soul of this hall); null otherwise — never another hall's.",
+    )
 
 
 class SoulRegionUpdatePreviewSerializer(serializers.Serializer):
