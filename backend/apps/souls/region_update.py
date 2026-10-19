@@ -61,6 +61,9 @@ class RegionRow:
     old: str | None = None  # "" is 不详
     new: str | None = None
     soul: Soul | None = None  # set only for ok / unchanged rows, i.e. a soul of the caller's own hall
+    #: Name of the soul the identifier names, whenever it is one of this hall's (so also for
+    #: `invalid_origin_region` / `duplicate_in_file`); None for `not_found` / `missing_identifier`.
+    soul_name: str | None = None
     duplicate_of: int | None = None  # for duplicate_in_file: the row of the first occurrence, which wins
 
     @property
@@ -72,8 +75,8 @@ class RegionRow:
         return {
             "row": self.row, "status": self.status, "values": self.values, "old": self.old, "new": self.new,
             "clears_value": self.clears_value, "duplicate_of": self.duplicate_of, "identifier": self.identifier,
-            # Only from `soul`, which only ever holds this hall's soul: no other row can carry a name.
-            "soul_name": self.soul.name if self.soul is not None else None,
+            # Only from `found` (this hall's souls): a `not_found` row can never carry a name.
+            "soul_name": self.soul_name,
         }
 
 
@@ -91,14 +94,17 @@ def _key(id_column, text):
 def validate_csv(data: bytes, souls) -> list[RegionRow]:
     """One RegionRow per data row, judged against `souls` (the caller's scoped queryset).
 
-    Raises ImportFileError for file-level problems, with the importer's codes plus `identifier_column`
-    (the header has neither or both of `soul_id` / `soul_code`).
+    Raises ImportFileError for file-level problems, with the importer's codes plus `missing_id_column`
+    (neither `soul_id` nor `soul_code`) and `mixed_id_columns` (more than one: both, or `soul_id` and
+    `Soul ID` together).
     """
     header, raw_rows = _read(data, columns=None, required=("origin_region",))
     header = [ALIASES.get(h, h) for h in header]
     id_columns = [h for h in header if h in ID_COLUMNS]
-    if len(id_columns) != 1:  # neither, both, or `soul_id` and `Soul ID` together
-        raise ImportFileError("identifier_column", columns=list(ID_COLUMNS))
+    if not id_columns:
+        raise ImportFileError("missing_id_column", columns=list(ID_COLUMNS))
+    if len(id_columns) > 1:  # both, or `soul_id` and `Soul ID` together
+        raise ImportFileError("mixed_id_columns", columns=list(ID_COLUMNS))
     id_column = id_columns[0]
     field = "soul_code" if id_column == "soul_code" else "pk"
 
@@ -116,6 +122,8 @@ def validate_csv(data: bytes, souls) -> list[RegionRow]:
     first_row = {}  # key -> row number of its first occurrence; that row wins, later ones are duplicates
     for r, key in zip(rows, keys, strict=True):
         region = REGION_SPELLINGS.get(r.values["origin_region"].casefold())
+        if key in found:
+            r.soul_name = found[key].name
         if not r.values[id_column]:
             r.status = "missing_identifier"
         elif key in first_row:
@@ -124,6 +132,7 @@ def validate_csv(data: bytes, souls) -> list[RegionRow]:
             r.status = "not_found"  # no such soul, or not this hall's: deliberately the same answer
         elif region is None:
             r.status = "invalid_origin_region"
+            r.old = found[key].origin_region  # shown as 「原值 → 「the cell」」 (Design W-3)
         else:
             r.soul = found[key]
             r.old, r.new = r.soul.origin_region, region

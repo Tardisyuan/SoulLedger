@@ -39173,8 +39173,9 @@ components:
         soul_name:
           type: string
           nullable: true
-          description: Only for `ok` / `unchanged` (a soul of this hall); null otherwise
-            — never another hall's.
+          description: Whenever the identifier names a soul of this hall (also `invalid_origin_region`
+            / `duplicate_in_file`); null for `not_found` / `missing_identifier` —
+            never another hall's.
       required:
       - clears_value
       - duplicate_of
