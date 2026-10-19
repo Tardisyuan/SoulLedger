@@ -148,6 +148,25 @@ else
     CHANGED="$( { git diff --name-only --no-renames "$BASE"; git ls-files --others --exclude-standard; } | sort -u)"
     RANGE="$(git rev-parse --short "$BASE")..(working tree)"
 fi
+# A TREE THAT ALREADY PASSED `--full` IS NOT RUN AGAIN (2026-10-19, user decision).
+# A push to main runs the full set, which is exactly what `scripts/run-gates.sh --full`
+# runs; doing it twice for the same files cost ~22 minutes a push. A full run that
+# passes on a clean checkout records HEAD's tree in this file (see record_full_pass
+# at the end); a push whose pushed commit has that very tree is let through. Any
+# change at all — one byte in any tracked file — is a different tree and runs as before.
+# The real-PostgreSQL run and E2E were never part of this script; they are unaffected.
+# GATES_STAMP_FILE is the test seam.
+STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
+PUSHED_SHA=""
+case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
+if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_SHA" ] && [ -f "$STAMP" ] \
+    && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null)"; then
+    HIT="$(grep -m1 "^$PUSHED_TREE	" "$STAMP" || true)"
+    if [ -n "$HIT" ]; then
+        echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` (${HIT#*	}) — not running it again"
+        exit 0
+    fi
+fi
 # Consumed: nothing below (pytest included) should inherit the hand-off.
 unset PREPUSH_CHANGED PREPUSH_RANGE
 [ -z "$CHANGED" ] && { echo "$P: no file changes in $RANGE"; exit 0; }
@@ -877,4 +896,25 @@ PROBE_PY
     cd "$ROOT" || exit 1
 fi
 
+# Record the pass (see "A TREE THAT ALREADY PASSED" near the top). Only a full run
+# outside the hook, and only when what was tested IS HEAD's tree: tracked files
+# match HEAD, and no untracked file sits where a gate could have read it — an
+# untracked test or migration ran here but would not be in the pushed commit.
+record_full_pass() {
+    [ "$PREPUSH" = 0 ] && [ "$FULL_RUN" = 1 ] || return 0
+    cd "$ROOT" || return 0
+    if ! git diff --quiet HEAD --; then
+        echo "$P: not recording this pass — tracked files differ from HEAD"; return 0
+    fi
+    local stray
+    stray="$(git ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
+    if [ -n "$stray" ]; then
+        echo "$P: not recording this pass — untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 0
+    fi
+    local tree; tree="$(git rev-parse HEAD^{tree})"
+    printf '%s\t%s, %s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$STAMP"
+    tail -n 50 "$STAMP" >"$STAMP.tmp" && mv "$STAMP.tmp" "$STAMP"
+    echo "$P: recorded a full pass for tree ${tree:0:10} — a push of this exact tree will not re-run the gates"
+}
+record_full_pass
 echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"

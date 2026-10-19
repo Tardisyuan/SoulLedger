@@ -1005,3 +1005,39 @@ class TestTheOfficerAppIsGated:
         named = set(re.findall(r"--workspace[ =]([^\s\"']+)", runner))
         assert named, "the runner names no workspace at all"
         assert named <= dirs | names, sorted(named - dirs - names)
+
+
+class TestATreeThatAlreadyPassedFull:
+    """A push of a tree `run-gates.sh --full` already passed is let through (2026-10-19, user decision).
+
+    The push to main runs the full set; running it again right after a full pass of the very same
+    files cost ~22 minutes a push. Only an exact tree match skips — the second case is the guard.
+    """
+
+    def _push(self, hook, wt: Path, stamp: Path) -> subprocess.CompletedProcess:
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, env=_clean_env(),
+                             capture_output=True, text=True, check=True).stdout.strip()
+        return _run(hook, wt, ["backend/x.py"], PREPUSH_RANGE=f"{'0' * 40}..{sha}",
+                    GATES_STAMP_FILE=str(stamp), PREPUSH_CLASSIFY_ONLY="1")
+
+    def _tree(self, wt: Path) -> str:
+        return subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=wt, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    def test_the_same_tree_is_not_run_again(self, hook, checkouts, tmp_path):
+        _, wt = checkouts
+        stamp = tmp_path / "passed"
+        stamp.write_text(f"{self._tree(wt)}\t2026-10-19 12:00, abc1234\n")
+        proc = self._push(hook, wt, stamp)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "already passed" in proc.stdout, proc.stdout
+        assert "classify:" not in proc.stdout, "the gates were classified (would have run) for a tree that passed"
+
+    def test_a_different_tree_runs_as_before(self, hook, checkouts, tmp_path):
+        _, wt = checkouts
+        stamp = tmp_path / "passed"
+        stamp.write_text(f"{'f' * 40}\t2026-10-19 12:00, abc1234\n")
+        proc = self._push(hook, wt, stamp)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "already passed" not in proc.stdout
+        assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
