@@ -398,6 +398,9 @@ class JumpSourceSerializer(serializers.Serializer):
 
     key = serializers.CharField()
     node_name = serializers.CharField()
+    via = serializers.ChoiceField(
+        choices=["on_fail", "branch"],
+        help_text="on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。")
 
 
 class ApprovalNodeSerializer(serializers.ModelSerializer):
@@ -485,7 +488,10 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             from apps.workflow.segments import jump_sources
 
             cache[node.segment_id] = jump_sources(list(ApprovalNode.objects.filter(segment_id=node.segment_id)))
-        return [{"key": str(s.pk), "node_name": s.node_name} for s in cache[node.segment_id].get(node.pk, [])]
+        from apps.workflow.segments import jump_via
+
+        return [{"key": str(s.pk), "node_name": s.node_name, "via": jump_via(node.pk, s.on_fail_id)}
+                for s in cache[node.segment_id].get(node.pk, [])]
 
     def to_representation(self, node):
         """Another realm's stations show the realm, not its people (第四十三批, Design W-5c):
@@ -998,6 +1004,8 @@ class FlowPreviewForeignSerializer(serializers.Serializer):
     tenant_code = serializers.CharField()
     realm_name = serializers.CharField()
     default_node_count = serializers.IntegerField()
+    nothing_to_pick = serializers.BooleanField(
+        help_text="那个域的默认流程没有一站能跳过:那一段建好就是 PICKED,不等选站(第四十五批)。")
 
 
 class FlowPreviewSerializer(serializers.Serializer):
