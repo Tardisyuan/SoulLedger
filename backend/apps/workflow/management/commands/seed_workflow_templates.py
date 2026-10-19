@@ -108,6 +108,12 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
         nodes.append(node)
     for order, (field, target) in FAIL_ROUTES[key].items():
         nodes[order - 1][field] = f"n{target}"
+    # Once a row carries an `on_fail` jump the editor draws only the edges written down, so the pass path the
+    # engine takes by default (next station) disappeared and Rhadamanthus showed as an unreached 分支 (seen on
+    # 115, 2026-10-19). Write that default out; the engine walks exactly the same way.
+    if any(n.get("on_fail") for n in nodes):
+        for here, after in zip(nodes, nodes[1:], strict=False):
+            here.setdefault("on_pass", after["id"])
     return source["name"], nodes
 
 

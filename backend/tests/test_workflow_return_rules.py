@@ -244,6 +244,9 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     assert not any(n["court_code"] == "Heaven" for r in WorkflowTemplate.objects.all() for n in r.nodes_json)
     greek = _row(gr, "ROUTINE")
     assert _edges(greek, "on_fail") == {"n1": "n3", "n2": "n3"}
+    # The default pass path is written out so the editor draws it (only rows with an on_fail jump).
+    assert _edges(greek, "on_pass") == {"n1": "n2", "n2": "n3"}
+    assert _edges(ten, "on_pass") == {}
     assert _edges(greek, "reject_to") == {}
     assert [n["node_type"] for n in greek.nodes_json] == ["TRIAL", "TRIAL", "FINAL"]
 
