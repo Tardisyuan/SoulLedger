@@ -246,6 +246,22 @@ export function useSoulImportCommit() {
   });
 }
 
+/** 补录出身地域第一步:只校验、不写库;400 同导入,由调用方用 `soulImportFileErrorOf(error)` 读出。 */
+export function useSoulRegionUpdatePreview() {
+  return useMutation({ mutationFn: (data: FormData) => soulsApi.regionUpdatePreview(data).then((r) => r.data) });
+}
+
+/** 补录出身地域第二步:写有变化的行、跳过出错的行。失败由对话框自己说(留在第 2 步),这里不报提示。 */
+export function useSoulRegionUpdateCommit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => soulsApi.regionUpdateCommit(data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+    },
+  });
+}
+
 // NOTE: Judgment hooks (useJudgments, useConcludeJudgment) are in useJudgments.ts
 // NOTE: Disposition hooks (useDispositions, useExecuteDisposition) are in useDispositions.ts
 // NOTE: Reincarnation hooks (useReborn) are in useReincarnation.ts

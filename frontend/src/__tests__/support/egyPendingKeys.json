@@ -46,12 +46,5 @@
   "crossJudgments.join_locked",
   "souls.import.row_codes.invalid_origin_region",
   "souls.origin_region.ASIA",
-  "workflow.editor.auto_route.no_target",
-  "souls.region_update.statuses.ok",
-  "souls.region_update.statuses.unchanged",
-  "souls.region_update.statuses.missing_identifier",
-  "souls.region_update.statuses.not_found",
-  "souls.region_update.statuses.duplicate_in_file",
-  "souls.region_update.statuses.invalid_origin_region",
-  "souls.region_update.file_codes.identifier_column"
+  "workflow.editor.auto_route.no_target"
 ]

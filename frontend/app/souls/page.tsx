@@ -29,6 +29,7 @@ import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
 import { SoulImportDialog } from "@/src/components/souls/SoulImportDialog";
+import { SoulRegionBackfillDialog } from "@/src/components/souls/SoulRegionBackfillDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
@@ -127,6 +128,7 @@ function SoulsList({
   }, [stateFilter, civilizationFilter, balanceMin, balanceMax, ordering]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isRegionOpen, setIsRegionOpen] = useState(false);
   const [batch, setBatch] = useState(initialBatch);
   const [problemsOnly, setProblemsOnly] = useState(false);
   // 「显示已归档」:同处置页的开关(后端 `show_archived`)。不记在浏览器里 —— 归档的灵魂只在要找它时才看。
@@ -282,6 +284,14 @@ function SoulsList({
           <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
             {t("souls.import.button")}
           </Button>
+        </RequirePermission>
+        {/* 补录出身地域(第四十六批):紧挨「导入」,自己的弹层;改已有灵魂,所以是 soul.update。 */}
+        <RequirePermission permissions="soul.update">
+          <Button type="button" variant="secondary" onClick={() => setIsRegionOpen(true)}>
+            {t("souls.region_backfill.button")}
+          </Button>
+        </RequirePermission>
+        <RequirePermission permissions="soul.create">
           {buttonOn("souls.create") && (
             <Button type="button" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               + {t("souls.create")}
@@ -551,6 +561,8 @@ function SoulsList({
       />
 
       <SoulImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+      {/* 打开时才挂:它的两个 hook 不该在列表页每次加载时都跑。 */}
+      {isRegionOpen && <SoulRegionBackfillDialog isOpen onClose={() => setIsRegionOpen(false)} />}
 
       <SoulCreateModal
         isOpen={isCreateModalOpen}

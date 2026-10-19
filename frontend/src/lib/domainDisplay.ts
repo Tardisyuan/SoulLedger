@@ -235,6 +235,17 @@ export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] 
       "play because there is no name it displaces.",
     registered: "2026-09-29",
   },
+  {
+    file: "src/components/souls/SoulRegionBackfillDialog.tsx",
+    site: "补录出身地域 preview table: the 灵魂 column, one <IdentifierChip variant=\"inline\"> per row before the soul name",
+    reason:
+      "The table checks a file the user wrote, and the file names each soul only by its soul_id / soul_code " +
+      "(apps/souls/region_update.py). The identifier is the row's own content: for a not_found row it is the only " +
+      "thing left to correct, and the user copies it back into the spreadsheet to find the line (Design batch 46 " +
+      "W-3). Clauses 1-2 are waived for that column; clause 3 holds (inline chip, whole value on the clipboard); " +
+      "clause 4 holds — the soul's name follows the chip whenever this hall has the soul.",
+    registered: "2026-10-19",
+  },
 ];
 
 /** Characters of a UUID shown before the copy affordance. */

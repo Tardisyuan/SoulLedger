@@ -633,6 +633,37 @@
         "bad_encoding_gbk": "Nen Menkh · Nen UTF-8 (Mi GBK): Em Excel, Sau Mi «CSV UTF-8»"
       }
     },
+    "region_backfill": {
+      "button": "Sesh Ta En Mesut",
+      "title": "Sesh Ta En Mesut · {{step}}/3",
+      "intro": "Khemen Ta En Mesut Em Ba Wenen Seth. Ba Wesekhet Pen Wa; Nen Iri Ba.",
+      "id_hint": "soul_id: Medu Ba Em Bek Seth; Ba Neb. Mi Ren Hesb Ba (soul_code): Setep Wa Em Sesh.",
+      "values_hint": "Ta En Mesut: {{europe}} / {{asia}} · Nen Sesh: {{unknown}}",
+      "col_name": "Ba",
+      "col_change": "Tepy → Mawy",
+      "status": {
+        "update": "Er Iri Mawy",
+        "same": "Mi Tepy",
+        "not_found": "Nen Gem Ba",
+        "bad_value": "Nen Setep",
+        "duplicate": "Sen Medu · Khet {{row}}"
+      },
+      "summary": "Khet {{total}} · Er Iri Mawy {{update}} · Mi Tepy {{same}} · Er Sni {{skip}}",
+      "skip_note": "Nen Gem, Nen Setep, Sen Medu: Er Sni. Khet Ky: Iri.",
+      "to_unknown": "Khet {{n}} → {{unknown}}",
+      "back": "Er Hat",
+      "commit": "Iri Mawy Ba {{n}}",
+      "committing": "Em Iri Mawy…",
+      "nothing_title": "Nen Khet Er Iri Mawy",
+      "nothing_body": "Khet Neb: Mi Tepy Er Sni. Khemen Sesh, Setep Wehem.",
+      "done": "Iri Mawy Seth {{updated}} · Mi Tepy {{same}} · Sni Seth {{skipped}}",
+      "download_skipped": "Redi Per Khet Sni",
+      "skipped_file_note": "Mi Pet-Sesh, Hena Khet. Khemen, Ini Wehem.",
+      "file_codes": {
+        "mixed_id_columns": "soul_code / soul_id: Setep Wa"
+      },
+      "failed": "Nen Iri Mawy; Ba Nen Khemen. Wehem Iri."
+    },
     "origin_region": {
       "label": "Ta En Mesut",
       "EUROPE": "Europa",

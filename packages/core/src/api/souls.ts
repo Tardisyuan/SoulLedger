@@ -298,6 +298,14 @@ export const SOUL_IMPORT_FILE_CODES = [
   "no_tenant",
 ] as const;
 
+// ── origin_region backfill (backend/apps/souls/region_update.py) ──────────────
+
+/** 200 of POST /souls/region-update/preview/. Rows not `ok` / `unchanged` are the ones commit skips. */
+export type SoulRegionUpdatePreview = Schemas["SoulRegionUpdatePreview"];
+export type SoulRegionUpdateRow = Schemas["SoulRegionUpdateRow"];
+/** 200 of …/region-update/commit/: counts, and `rows` = the skipped rows only. */
+export type SoulRegionUpdateCommitResult = Schemas["SoulRegionUpdateCommit"];
+
 /** The 400 file-level refusal in an axios error, or `null` for any other failure. */
 export function soulImportFileErrorOf(error: unknown): SoulImportFileError | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 400) return null;
@@ -356,6 +364,16 @@ export const soulsApi = {
     }),
   importCommit: (data: FormData) =>
     api.post<SoulImportCommitResult>("/souls/import/commit/", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  // origin_region backfill, two steps. `soul.update`. Preview writes nothing; commit re-validates and
+  // writes the changed rows, skipping rows in error (not all or nothing over rows, but one transaction).
+  regionUpdatePreview: (data: FormData) =>
+    api.post<SoulRegionUpdatePreview>("/souls/region-update/preview/", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  regionUpdateCommit: (data: FormData) =>
+    api.post<SoulRegionUpdateCommitResult>("/souls/region-update/commit/", data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
