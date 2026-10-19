@@ -75,10 +75,20 @@ import {
 } from "@/src/components/workflow/WorkflowEditorPanels";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { SAVE_BLOCKING, branchOf, nodeRoles, validateFlow, whenOf } from "@/src/components/workflow/workflowValidation";
+import {
+  SAVE_BLOCKING,
+  branchOf,
+  exitRegion,
+  isAutoRoute,
+  nodeRoles,
+  validateFlow,
+  whenOf,
+} from "@/src/components/workflow/workflowValidation";
+import { originRegionLabel, type OriginRegionMember } from "@soulledger/core/domain/originRegion";
 import { defaultClause, whenText } from "@/src/components/workflow/workflowConditions";
 import {
   ApproverPreviewSection,
+  AutoRouteSection,
   ExitConditionsSection,
   VersionHistorySection,
 } from "@/src/components/workflow/WorkflowInspectorExtras";
@@ -1088,9 +1098,10 @@ export default function WorkflowEditor({
           role: roles.get(n.id),
           ordinal: idx + 1,
           issueCount: issues.filter((i) => i.nodeId === n.id).length,
+          autoRoute: isAutoRoute(n, edges),
         },
       })),
-    [nodes, roles, issues]
+    [nodes, edges, roles, issues]
   );
 
   /**
@@ -1104,8 +1115,11 @@ export default function WorkflowEditor({
     // A node with a condition on any PASS edge: its conditional edges read
     // 「是 · 余额 < 0」 and its unconditional PASS edge 「否 · 默认」.
     const conditional = new Set(edges.filter((e) => whenOf(e) !== undefined).map((e) => e.source));
+    // 自动分流的出口只写地域名(欧洲 / 亚洲 / 不详),不写「是 · 条件」「否 · 默认」(Design 第四十五批 W-3)。
+    const autoRoutes = new Set(nodes.filter((n) => isAutoRoute(n, edges)).map((n) => n.id));
     return edges.map((e) => {
       const when = whenOf(e);
+      const region = autoRoutes.has(e.source) ? exitRegion(e) : null;
       return {
         ...e,
         data: {
@@ -1114,11 +1128,12 @@ export default function WorkflowEditor({
           labelled: branching.has(e.source) || conditional.has(e.source),
           conditionText: when?.length ? whenText(when, t) : undefined,
           isDefault: when === undefined && branchOf(e) === "pass" && conditional.has(e.source),
+          regionText: region ? originRegionLabel(t, region, locale) : undefined,
           active: inspectorTab === "exits" && e.id === activeEdgeId,
         },
       };
     });
-  }, [edges, t, inspectorTab, activeEdgeId]);
+  }, [nodes, edges, t, locale, inspectorTab, activeEdgeId]);
 
   /** Set or clear the condition on one PASS edge (the inspector's 出口 · 条件). */
   const setEdgeWhen = useCallback(
@@ -1162,6 +1177,35 @@ export default function WorkflowEditor({
         const next = [...eds];
         [next[a], next[b]] = [next[b], next[a]];
         return next;
+      });
+    },
+    [setEdges, stopLayoutTravel]
+  );
+
+  /**
+   * 自动分流的一条出口改去处(第四十五批 W-3)。欧洲 / 亚洲是「出身地域 ∈ {R}」的分支,不详是无条件的 PASS 边
+   * (`on_pass`);`target` 为空就删掉那条线。
+   */
+  const setAutoRouteTarget = useCallback(
+    (source: string, region: OriginRegionMember, target: string) => {
+      stopLayoutTravel();
+      setEdges((eds) => {
+        const at = eds.findIndex((e) => e.source === source && exitRegion(e) === region);
+        if (!target) return at < 0 ? eds : eds.filter((_, i) => i !== at);
+        if (at >= 0) return eds.map((e, i) => (i === at ? { ...e, target } : e));
+        const branchId = region.toLowerCase();
+        const edge: Edge =
+          region === "UNKNOWN"
+            ? ({ id: `e${source}-pass-${target}`, source, sourceHandle: "pass", target, ...edgeArrow() } as Edge)
+            : ({
+                id: `e${source}-branch-${branchId}-${target}`,
+                source,
+                sourceHandle: "pass",
+                target,
+                data: { when: [{ fact: "origin_region", op: "in", value: [region] }], branchId },
+                ...edgeArrow(),
+              } as Edge);
+        return [...eds, edge];
       });
     },
     [setEdges, stopLayoutTravel]
@@ -1385,14 +1429,27 @@ export default function WorkflowEditor({
       nodeForm={
         wide
           ? (node) => (
-              <NodeEditForm node={node} formId={formId} onChange={updateNodeData} rejectOptions={rejectOptions} t={t} />
+              isAutoRoute(node, edges) ? (
+                <AutoRouteSection
+                  t={t}
+                  locale={locale}
+                  node={node}
+                  nodes={nodes}
+                  edges={edges}
+                  onTarget={setAutoRouteTarget}
+                  onName={(label) => updateNodeData(node.id, { label })}
+                  nameFieldId={nodeNameFieldId(formId)}
+                />
+              ) : (
+                <NodeEditForm node={node} formId={formId} onChange={updateNodeData} rejectOptions={rejectOptions} t={t} />
+              )
             )
           : undefined
       }
       validationId={validationId}
       tab={inspectorTab}
       onTab={setInspectorTab}
-      nodeExtras={(node) => (
+      nodeExtras={(node) => isAutoRoute(node, edges) ? null : (
         <ApproverPreviewSection
           t={t}
           templateId={templateId ?? createdIdRef.current ?? undefined}
@@ -1401,7 +1458,9 @@ export default function WorkflowEditor({
           saved={savedAsShown(node)}
         />
       )}
-      exits={(node) => (
+      exits={(node) => isAutoRoute(node, edges) ? (
+        <AutoRouteSection t={t} locale={locale} node={node} nodes={nodes} edges={edges} onTarget={wide ? setAutoRouteTarget : undefined} />
+      ) : (
         <ExitConditionsSection
           t={t}
           node={node}

@@ -7,7 +7,8 @@ import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useUpdateSoul } from "@soulledger/core/hooks/useSouls";
-import type { Soul } from "@soulledger/core/api";
+import type { Soul, SoulOriginRegion } from "@soulledger/core/api";
+import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { type HistoricalDate } from "@/lib/utils";
@@ -36,10 +37,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const birthDateId = `${formId}-birth-date`;
   const locationId = `${formId}-location`;
   const stateId = `${formId}-state`;
+  const regionId = `${formId}-origin-region`;
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
+  const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
 
   // SETTLED is terminal to an operator — its one way out (back to DISPOSED
@@ -65,6 +68,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       setName(soul.name || "");
       setBirthDate(historicalDateToInputValue(soul.birth_date));
       setOriginLocation(soul.origin_location || "");
+      setOriginRegion(soul.origin_region ?? "");
       setCurrentState(soul.current_state || "ALIVE");
     }
   }, [isOpen, soul]);
@@ -76,6 +80,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       name: name.trim(),
       birth_date: birthDate || null,
       origin_location: originLocation || undefined,
+      origin_region: originRegion,
       current_state: currentState,
     };
 
@@ -197,15 +202,25 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
           disabled={updateMutation.isPending}
         />
 
-        <TextField
-          id={locationId}
-          label={t("souls.form.location_edit_label")}
-          type="text"
-          value={originLocation}
-          onChange={(e) => setOriginLocation(e.target.value)}
-          disabled={updateMutation.isPending}
-          placeholder={t("souls.form.location_placeholder")}
-        />
+        {/* 籍贯与出身地域同一行(Design W-1);文明在这里改不了,说明跟着灵魂自己的文明。 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <TextField
+            id={locationId}
+            label={t("souls.form.location_edit_label")}
+            type="text"
+            value={originLocation}
+            onChange={(e) => setOriginLocation(e.target.value)}
+            disabled={updateMutation.isPending}
+            placeholder={t("souls.form.location_placeholder")}
+          />
+          <OriginRegionField
+            id={regionId}
+            value={originRegion}
+            onChange={setOriginRegion}
+            disabled={updateMutation.isPending}
+            civilization={soul.civilization}
+          />
+        </div>
 
         {/* SETTLED replaces the pick-list rather than joining it — see the
             `isSettled` note above. The option set is still built two ways, it

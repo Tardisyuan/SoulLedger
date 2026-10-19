@@ -272,6 +272,7 @@ export const SOUL_DETAIL = {
   date_problems: SOULS[0].date_problems,
   birth_name: "孟氏",
   origin_location: "钱塘",
+  origin_region: "",
   description: "首位在忘川边留下姓名的魂。",
   tenant: 1,
 };

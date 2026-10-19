@@ -158,13 +158,22 @@ export interface FlowPreviewStation {
 export interface JumpSource {
   key: string;
   node_name: string;
+  /** 第四十五批:`branch` = 条件分支的去处(按出身地域分流),`on_fail` = 驳回转来。老后端没有时按驳回读。 */
+  via?: "on_fail" | "branch";
 }
 
 export interface FlowPreview {
   name: string;
   stations: FlowPreviewStation[];
   /** Realms that follow in cross-realm judgment order; their own judges pick their stations. */
-  foreign: { order: number; tenant_code: string; realm_name: string; default_node_count: number }[];
+  foreign: {
+    order: number;
+    tenant_code: string;
+    realm_name: string;
+    default_node_count: number;
+    /** That realm's default flow has nothing to skip: its segment starts PICKED (第四十五批). */
+    nothing_to_pick?: boolean;
+  }[];
   /** No station can be skipped (final, automatic, or a locked jump / branch target): skip the picking step. */
   nothing_to_pick?: boolean;
 }
@@ -250,6 +259,10 @@ export interface ApprovalNode {
   is_required?: boolean;
   /** Stations of this segment whose rejection jumps here (`on_fail`); `key` is their node id. */
   jump_target_of?: JumpSource[];
+  /** Condition branches (instantiated: `target` is a node id) — the 自动分流 step routes by them (第四十五批). */
+  branches_json?: TemplateBranch[];
+  /** Where a pass goes by default (a node id); the 自动分流 step's 不详 exit. */
+  on_pass?: string | null;
 }
 
 /** What a node does (`NodeKind`, backend/apps/workflow/models.py). Absent reads as APPROVAL. */

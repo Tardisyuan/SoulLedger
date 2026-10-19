@@ -21407,6 +21407,12 @@ components:
           readOnly: true
         branches_json:
           readOnly: true
+        on_pass:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 通过后跳转到的节点；为空则按 node_order 取下一个 PENDING
         segment_order:
           type: integer
           readOnly: true
@@ -21448,6 +21454,7 @@ components:
       - kind
       - node_name
       - node_order
+      - on_pass
       - order_in_segment
       - reject_to
       - segment_order
@@ -32222,6 +32229,12 @@ components:
           readOnly: true
         branches_json:
           readOnly: true
+        on_pass:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: 通过后跳转到的节点；为空则按 node_order 取下一个 PENDING
         segment_order:
           type: integer
           readOnly: true

@@ -449,7 +449,7 @@ export default function WorkflowDetailPage() {
           {activeTab === "history" && (
             <div className="px-3">
               <WorkflowSegmentHistory workflow={workflow} />
-              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} />
+              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} currentNode={workflow.current_node} />
             </div>
           )}
         </section>

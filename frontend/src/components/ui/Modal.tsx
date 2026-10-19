@@ -14,6 +14,8 @@ import {
 } from "@soulledger/core/config/civilizations";
 import { soulCreateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
+import type { SoulOriginRegion } from "@soulledger/core/api";
+import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 
 // ── BaseModal ─────────────────────────────────────
 
@@ -157,8 +159,10 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const civilizationId = `${formId}-civilization`;
   const birthDateId = `${formId}-birth-date`;
   const locationId = `${formId}-location`;
+  const regionId = `${formId}-origin-region`;
 
   const [name, setName] = useState("");
+  const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [civilization, setCivilization] = useState<CivilizationOption>("CHINESE");
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
@@ -171,6 +175,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       setCivilization("CHINESE");
       setBirthDate("");
       setOriginLocation("");
+      setOriginRegion("");
     }
   }, [isOpen]);
 
@@ -182,6 +187,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       civilization,
       birth_date: birthDate || null,
       origin_location: originLocation || null,
+      origin_region: originRegion,
     };
 
     const result = validate(formData);
@@ -307,15 +313,25 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           onChange={(e) => setBirthDate(e.target.value)}
           disabled={loading}
         />
-        <TextField
-          id={locationId}
-          label={t("souls.form.location_label")}
-          type="text"
-          value={originLocation}
-          onChange={(e) => setOriginLocation(e.target.value)}
-          disabled={loading}
-          placeholder={t("souls.form.location_placeholder")}
-        />
+        {/* 籍贯(自由文本)与出身地域(归类)同一行(Design W-1)。 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <TextField
+            id={locationId}
+            label={t("souls.form.location_label")}
+            type="text"
+            value={originLocation}
+            onChange={(e) => setOriginLocation(e.target.value)}
+            disabled={loading}
+            placeholder={t("souls.form.location_placeholder")}
+          />
+          <OriginRegionField
+            id={regionId}
+            value={originRegion}
+            onChange={setOriginRegion}
+            disabled={loading}
+            civilization={civilization}
+          />
+        </div>
       </form>
     </BaseModal>
   );

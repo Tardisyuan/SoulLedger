@@ -10,6 +10,7 @@ import { courtLabel } from "@soulledger/core/domain/courts";
 import {
   circled,
   gateView,
+  jumpReason,
   runningJumpSources,
   segmentNodes,
   segmentRealm,
@@ -213,7 +214,7 @@ function StationRow({ node, sources, on, onToggle }: { node: ApprovalNode; sourc
   const sub = node.is_required
     ? t("workflow.pick.final_reason")
     : sources.length > 0
-      ? t("workflow.pick.jump_target_reason", { source: sources.map((s) => s.node_name).join("、") })
+      ? jumpReason(t, sources)
       : [courtLabel(t, node.court_code, locale), who].filter(Boolean).join(" · ");
   const label = locked ? `${stationNo(node)} · ${node.node_name} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${node.node_name}`;
   return (

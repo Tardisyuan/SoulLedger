@@ -69,7 +69,7 @@ import {
 } from "@/src/components/sentence-plan/PlanChangesEditor";
 import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
-import { FlowStationPicker } from "@/src/components/workflow/segments/FlowStationPicker";
+import { FlowStationPicker, useFlowPreview } from "@/src/components/workflow/segments/FlowStationPicker";
 import { segmentRefusalOf, segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
 import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import {
@@ -256,6 +256,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   /** W-1a 选站:确认层第 2 步里取消勾选的站(站序)。确认层的步数也在这里(⌘⏎ 按步走)。 */
   const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
   const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
+  /* 第四十五批:本域的流程没有一站能跳过(希腊常规流程)时不进选站那一步 ——「结案」还是「结案」,没有「下一步」。
+     与第 2 步的选站列表同一个 query。没取到之前照旧走两步。 */
+  const flowPreview = useFlowPreview({ judgment: id }, withWorkflow && !!judgment && !judgment.is_final);
+  const noPick = flowPreview.data?.nothing_to_pick === true;
   /** 提交时才被 409 `cross_judgment_open` 挡下(并发):确认层里换成同一句话。 */
   const [crossRefused, setCrossRefused] = useState(false);
 
@@ -460,7 +464,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       ),
       "mod+Enter": () => {
         if (!canExecute || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
-        if (confirming && withWorkflow && confirmStep === 1) setConfirmStep(2);
+        if (confirming && withWorkflow && !noPick && confirmStep === 1) setConfirmStep(2);
         else if (confirming) handleConclude();
         else openConfirm();
       },
@@ -1216,7 +1220,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         step={confirmStep}
         onStep={setConfirmStep}
         stations={
-          withWorkflow && !isFinal ? (
+          withWorkflow && !isFinal && !noPick ? (
             <FlowStationPicker params={{ judgment: id }} skipped={skipOrders} onChange={setSkipOrders} />
           ) : undefined
         }

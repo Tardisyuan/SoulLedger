@@ -372,7 +372,8 @@
       "updating": "更新中...",
       "location_edit_label": "起源地点",
       "state_label": "当前状态",
-      "edit_title": "编辑灵魂"
+      "edit_title": "编辑灵魂",
+      "origin_region_hint_greek": "希腊殿按出身地域分派主审：欧洲归 Aeacus，亚洲归 Rhadamanthus，不详直接交 Minos。"
     },
     "detail": {
       "loading": "加载灵魂数据中...",
@@ -632,6 +633,12 @@
         "no_tenant": "当前账号没有所属文明",
         "unknown": "导入失败"
       }
+    },
+    "origin_region": {
+      "label": "出身地域",
+      "EUROPE": "欧洲",
+      "ASIA": "亚洲",
+      "UNKNOWN": "不详"
     }
   },
   "common": {
@@ -1050,7 +1057,8 @@
         "condition_overlap": "{{node}} 有两条条件会同时成立",
         "unreachable": "{{node}} 从起点走不到",
         "no_exit": "{{node}} 没有出口,走不到结束",
-        "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点"
+        "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点",
+        "auto_route_exit_missing": "{{node}} 缺少「{{region}}」出口"
       },
       "palette": "节点 · 拖入画布",
       "inspector": "属性",
@@ -1124,12 +1132,7 @@
           "balance": "余额",
           "civilization": "文明",
           "verdict": "判决",
-          "origin_region": "来处"
-        },
-        "region": {
-          "EUROPE": "欧洲",
-          "ASIA": "亚洲",
-          "UNKNOWN": "不详"
+          "origin_region": "出身地域"
         },
         "op": {
           "lt": "小于",
@@ -1202,6 +1205,13 @@
         "in": "放大",
         "reset": "缩放到 100%",
         "fit": "适配画布"
+      },
+      "auto_route": {
+        "default_name": "按出身地域分流",
+        "badge": "自动 · 无审批人",
+        "kind": "自动分流",
+        "exits_hint": "按灵魂的出身地域自动走其中一条，这里只改去处。",
+        "no_target": "未连"
       }
     },
     "templates": "流程模板",
@@ -1397,7 +1407,9 @@
       "next": "下一步",
       "back": "上一步",
       "cross_forced": "这一案挂着跨域审判：结案要生成审批流程，外域按顺序接在后面。",
-      "load_error": "没能取到这次的站，请重试"
+      "load_error": "没能取到这次的站，请重试",
+      "route_target_reason": "{{source}}按出身地域分流到这里，这一站不能跳过",
+      "foreign_all_required": "全部必须走 · 不用选站"
     },
     "pick_group": {
       "title": "待我选站",
@@ -1456,16 +1468,19 @@
     "node_state": {
       "skipped_at_pick": "选站时跳过",
       "skipped_later": "中途跳过",
-      "awaiting_pick": "等待外域选站 · 默认 {{n}} 站"
+      "awaiting_pick": "等待外域选站 · 默认 {{n}} 站",
+      "auto_done": "自动 · {{region}}",
+      "not_reached": "这次没走到"
     },
-    "legend": "✓ 已通过 · ✕ 已驳回 · ◇ 当前 · · 待走 · ⤼ 已跳过 · ◌ 等待外域选站",
+    "legend": "✓ 已通过 · ✕ 已驳回 · ◇ 当前 · · 待走 · ⤼ 已跳过 · ◌ 等待外域选站 · – 这次没走到",
     "history": {
       "picked": "{{actor}} 为{{realm}}选站，跳过:{{nodes}}",
       "adjusted": "{{actor}} 加减站：加回 {{added}},跳过 {{skipped}}。理由:{{reason}}",
       "picked_all": "{{actor}} 为{{realm}}选站，全部要走",
       "adjusted_added": "{{actor}} 加减站：加回 {{added}}。理由:{{reason}}",
       "adjusted_skipped": "{{actor}} 加减站：跳过 {{skipped}}。理由:{{reason}}",
-      "default": "{{actor}} 替{{realm}}按默认流程走。理由:{{reason}}"
+      "default": "{{actor}} 替{{realm}}按默认流程走。理由:{{reason}}",
+      "auto_routed": "{{node}} → {{region}} → {{target}}"
     },
     "adjust": {
       "open": "加减站",

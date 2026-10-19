@@ -35,6 +35,23 @@ export const runningJumpSources = (sources: readonly JumpSource[] | undefined, s
   (sources ?? []).filter((s) => !skipped.has(s.key));
 
 /**
+ * 锁住的理由(第四十五批 W-6):分流的去处(`via: "branch"`)写「X按出身地域分流到这里」,驳回转来的照旧写
+ * 「X驳回时会转到这里」;两种来源都有时各写一句。老后端没有 `via` 时按驳回读。
+ */
+export function jumpReason(t: (key: string, p?: Record<string, string>) => string, sources: readonly JumpSource[]): string {
+  const names = (via: "branch" | "on_fail") =>
+    sources.filter((s) => (s.via ?? "on_fail") === via).map((s) => s.node_name).join("、");
+  const branch = names("branch");
+  const fail = names("on_fail");
+  return [
+    branch && t("workflow.pick.route_target_reason", { source: branch }),
+    fail && t("workflow.pick.jump_target_reason", { source: fail }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/**
  * 勾选变了之后对齐:还有来源要走的目标不能留在跳过里 —— 勾回来源时把它的目标一并勾回(目标自己也可能是来源,
  * 所以算到不再变)。选站与加减站都经过它,所以送回后端的永远是后端会收的组合。
  */

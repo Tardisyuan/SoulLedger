@@ -564,6 +564,8 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "threshold",
             "signatures_json",
             "branches_json",
+            # 第四十五批 W-5:分流走了默认那条(不详)时,流程详情要写它去了哪一站。
+            "on_pass",
             "segment_order",
             "order_in_segment",
             "skip_kind",
@@ -597,6 +599,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "threshold",
             "signatures_json",
             "branches_json",
+            "on_pass",
             # 选站 / 加减站 write these, through `apps/workflow/segments.py` only.
             "skip_kind",
             "skip_reason",

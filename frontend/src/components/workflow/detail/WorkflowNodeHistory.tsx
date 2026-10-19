@@ -1,6 +1,7 @@
 "use client";
 
 import { type ApprovalNode } from "@soulledger/core/api";
+import { isAutoRouteBranches, originRegionLabel, routedRegion } from "@soulledger/core/domain/originRegion";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";
@@ -23,12 +24,27 @@ export function WorkflowNodeHistory({
   nodes,
   verdictColors,
   verdictGlyphs,
+  currentNode,
 }: {
   nodes: ApprovalNode[];
+  /** 分流去处正在审时它还是 PENDING:靠当前站认出走的是哪条。 */
+  currentNode?: string | null;
   verdictColors: Record<string, string>;
   verdictGlyphs: Record<string, string>;
 }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
+  // 自动分流那一步(第四十五批 W-5):没有判决可写,记成「按出身地域分流 → 欧洲 → Aeacus」。
+  const autoRouted = (node: ApprovalNode) => {
+    if (!isAutoRouteBranches(node.kind, node.branches_json)) return null;
+    const routed = routedRegion(node, nodes, currentNode);
+    return routed
+      ? t("workflow.history.auto_routed", {
+          node: node.node_name,
+          region: originRegionLabel(t, routed.region, locale),
+          target: routed.target?.node_name ?? "",
+        })
+      : null;
+  };
 
   return (
     <ol>
@@ -39,7 +55,14 @@ export function WorkflowNodeHistory({
           const bTime = b.decided_at ? new Date(b.decided_at).getTime() : 0;
           return aTime - bTime;
         })
-        .map((node) => (
+        .map((node) => autoRouted(node) !== null ? (
+          <li key={node.id} data-auto-routed="" className="py-3 border-b border-[oklch(var(--color-rule))]">
+            <p className="text-sm text-[oklch(var(--color-ink))] break-words">{autoRouted(node)}</p>
+            <div className="text-xs text-[oklch(var(--color-ink-muted))]">
+              {t("workflow.detail.decided_at")}: <DomainText className="font-mono" value={node.decided_at ? formatDateTime(node.decided_at) : null} />
+            </div>
+          </li>
+        ) : (
           <li key={node.id} className="py-3 border-b border-[oklch(var(--color-rule))]">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{node.node_name}</span>

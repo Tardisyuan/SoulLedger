@@ -53,12 +53,15 @@ export const soulCreateSchema = z.object({
   }),
   birth_date: z.string().optional().nullable(),
   origin_location: z.string().max(200, '地点最多200位').optional().nullable(),
+  // 出身地域(第四十五批):"" 是不详。与 `SoulOriginRegion` 同三个值。
+  origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
 })
 
 export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   birth_date: z.string().optional().nullable(),
   origin_location: z.string().max(200, '地点最多200位').optional(),
+  origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   // Includes SETTLED even though nothing lets an operator pick it (it is the
   // terminal state the backend assigns when a terminal disposition executes,
   // never a manual transition target): this schema validates the edit form,

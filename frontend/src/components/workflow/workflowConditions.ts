@@ -1,5 +1,6 @@
 import type { ConditionClause, ConditionFact, ConditionOp } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { ORIGIN_REGIONS, originRegionLabel } from "@soulledger/core/domain/originRegion";
 
 /**
  * The client half of `backend/apps/workflow/conditions.py`: the same four
@@ -23,13 +24,12 @@ export const ENUM_OPS: readonly ConditionOp[] = ["in", "not_in"];
  */
 export const VERDICTS = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
 
-/** `origin_region` (conditions.py): `Soul.OriginRegion` plus UNKNOWN, which a blank region reads as. */
-export const ORIGIN_REGIONS = ["EUROPE", "ASIA", "UNKNOWN"] as const;
 
 export const FACTS: Record<ConditionFact, { kind: "number" } | { kind: "enum"; values: readonly string[] }> = {
   balance: { kind: "number" },
   civilization: { kind: "enum", values: CIVILIZATION_OPTIONS },
   verdict: { kind: "enum", values: VERDICTS },
+  // `Soul.OriginRegion` plus UNKNOWN, which a blank region reads as (conditions.py).
   origin_region: { kind: "enum", values: ORIGIN_REGIONS },
 };
 
@@ -133,7 +133,8 @@ type TFunc = (key: string, params?: Record<string, string>) => string;
 /** How one member of an enum fact reads: a civilization, a region or a verdict. */
 export function valueText(fact: ConditionFact, v: string, t: TFunc): string {
   if (fact === "civilization") return t(`workflow.civilizations.${v}`);
-  if (fact === "origin_region") return t(`workflow.editor.condition.region.${v}`);
+  // Design 第四十五批:条件值与出口线、表单、详情同一组词(`souls.origin_region.*`)。
+  if (fact === "origin_region") return originRegionLabel(t, v);
   return t(`judgment.verdicts.${v.toLowerCase()}`);
 }
 
