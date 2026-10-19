@@ -165,6 +165,8 @@ export interface FlowPreview {
   stations: FlowPreviewStation[];
   /** Realms that follow in cross-realm judgment order; their own judges pick their stations. */
   foreign: { order: number; tenant_code: string; realm_name: string; default_node_count: number }[];
+  /** No station can be skipped (final, automatic, or a locked jump / branch target): skip the picking step. */
+  nothing_to_pick?: boolean;
 }
 
 /** CrossJudgmentWorkflowSummarySerializer — the progress line on the cross-realm judgment page (W-4). */
@@ -259,10 +261,11 @@ export type WorkflowTimeoutAction = "ESCALATE" | "AUTO_REJECT" | "NOTIFY";
 /**
  * A condition clause (`apps/workflow/conditions.py`): a whitelisted case fact
  * compared to a constant. Declarative — nothing is parsed or evaluated as code.
- * `balance` takes an integer and lt/lte/gt/gte/eq; `civilization` and `verdict`
- * take a non-empty list of members and in/not_in.
+ * `balance` takes an integer and lt/lte/gt/gte/eq; `civilization`, `verdict` and
+ * `origin_region` (EUROPE / ASIA / UNKNOWN — a blank `Soul.origin_region` reads
+ * as UNKNOWN) take a non-empty list of members and in/not_in.
  */
-export type ConditionFact = "balance" | "civilization" | "verdict";
+export type ConditionFact = "balance" | "civilization" | "verdict" | "origin_region";
 export type ConditionOp = "lt" | "lte" | "gt" | "gte" | "eq" | "in" | "not_in";
 export interface ConditionClause {
   fact: ConditionFact;

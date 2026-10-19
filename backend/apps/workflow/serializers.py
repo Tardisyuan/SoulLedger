@@ -1007,6 +1007,8 @@ class FlowPreviewSerializer(serializers.Serializer):
     name = serializers.CharField()
     stations = FlowPreviewStationSerializer(many=True)
     foreign = FlowPreviewForeignSerializer(many=True)
+    nothing_to_pick = serializers.BooleanField(
+        help_text="没有一站能跳过(终审、自动节点、锁着的驳回 / 分支目标):客户端跳过选站这一步(第四十五批)。")
 
 
 class WorkflowCaseTypeSerializer(serializers.Serializer):

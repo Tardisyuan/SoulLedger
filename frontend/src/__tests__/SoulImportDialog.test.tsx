@@ -193,7 +193,7 @@ it("the template is a BOM, the header and one example row in the caller's own ci
   const [content, filename] = mockSave.mock.calls[0] as [string, string];
   expect(filename).toBe("souls_import_template.csv");
   expect(content).toBe(soulImportTemplate("EGYPTIAN"));
-  expect(content.startsWith("﻿name,civilization,birth_date,death_date,origin_location,birth_name,description\n")).toBe(true);
+  expect(content.startsWith("﻿name,civilization,birth_date,death_date,origin_location,birth_name,description,origin_region\n")).toBe(true);
   expect(content.trim().split("\n")).toHaveLength(2);
   expect(content.split("\n")[1]).toContain(",EGYPTIAN,");
 });

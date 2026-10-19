@@ -39,7 +39,7 @@ MAX_ROWS = 1000
 MAX_BYTES = 2 * 1024 * 1024
 
 REQUIRED_COLUMNS = ("name", "civilization")
-OPTIONAL_COLUMNS = ("birth_date", "death_date", "origin_location", "birth_name", "description")
+OPTIONAL_COLUMNS = ("birth_date", "death_date", "origin_location", "birth_name", "description", "origin_region")
 COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
 #: Matches Soul.name / origin_location / birth_name (max_length=255). `description`
 #: is a TextField with no database limit; this one is ours.
@@ -176,6 +176,10 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
                 # hall, never stored from the file), so every row would fail with no way to fix the file.
                 res.add("civilization", "civilization_mismatch")
 
+        region = values["origin_region"].upper()
+        if region and region not in Soul.OriginRegion.values:
+            res.add("origin_region", "invalid_origin_region")
+
         dates = {}
         date_bad = False
         for col in ("birth_date", "death_date"):
@@ -195,6 +199,7 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
             res.parsed = {
                 "name": values["name"],
                 "origin_location": values["origin_location"],
+                "origin_region": region,
                 "birth_name": values["birth_name"],
                 "description": values["description"],
                 "birth_year": by, "birth_month": bm, "birth_day": bd,
