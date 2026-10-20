@@ -334,7 +334,9 @@ def test_the_global_concurrency_cap_refuses_with_429(cn_tenant, settings):
 # ── 留存 ─────────────────────────────────────────────────────────────────
 
 
-def test_purge_removes_expired_messages_deleted_and_retired_conversations(cn_tenant):
+def test_purge_removes_expired_messages_and_deleted_conversations_but_keeps_retired_ones(cn_tenant):
+    """A retired account's conversations stay (user 2026-10-20: keep the data for later reading); its messages
+    still expire with everyone else's."""
     _enable(cn_tenant)
     kept_account, client = ready_soul(cn_tenant, name="留")
     retired_account, retired_client = ready_soul(cn_tenant, name="去")
@@ -349,10 +351,12 @@ def test_purge_removes_expired_messages_deleted_and_retired_conversations(cn_ten
 
     result = service.purge_history()
 
+    retired_conversation = AssistConversation.all_objects.get(account=retired_account)
     assert set(AssistConversation.all_objects.values_list("pk", flat=True)) == {
-        AssistConversation.objects.get(pk=kept).pk}
+        AssistConversation.objects.get(pk=kept).pk, retired_conversation.pk}
     assert AssistMessage.objects.filter(conversation_id=kept).count() == 2
-    assert result["conversations"] == 3
+    assert AssistMessage.objects.filter(conversation_id=retired_conversation.pk).count() == 2
+    assert result["conversations"] == 2
     assert service.purge_history() == {"messages": 0, "conversations": 0}  # 幂等
 
 

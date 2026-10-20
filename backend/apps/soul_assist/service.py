@@ -436,17 +436,18 @@ def _audit(user, tenant, conversation, action, description, request, changes):
 
 
 def purge_history(now=None) -> dict:
-    """真删:超过留存期的消息(两端同一个留存期)、本人已删除的会话、已停用账号(转世后的前世账号)
-    与已停用官员的会话,以及删空了的会话。登记在 apps/scheduler/registry.py;beat 未部署前用
-    `manage.py purge_assist_history`(§4.2)。"""
+    """真删:超过留存期的消息(两端同一个留存期)、本人已删除的会话、已停用官员的会话,以及删空了的会话。
+    登记在 apps/scheduler/registry.py;beat 未部署前用 `manage.py purge_assist_history`(§4.2)。
+
+    已注销的灵魂账号(转世后的前世账号、被阿米特吞噬的账号)**不因注销而删**(用户 2026-10-20:数据保留，
+    以免后期查阅);它们的消息照样按留存期过期，过期删空后的会话照样删。"""
     now = now or timezone.now()
     cutoff = now - timedelta(days=RETENTION_DAYS)
     old = AssistMessage.objects.filter(created_at__lt=cutoff).delete()[0]
     gone = AssistConversation.all_objects.filter(is_deleted=True)
-    retired = AssistConversation.all_objects.filter(account__retired_at__isnull=False)
     deactivated = AssistConversation.all_objects.filter(user__is_active=False)
     empty = AssistConversation.all_objects.filter(messages__isnull=True)
     conversations = 0
-    for qs in (gone, retired, deactivated, empty):
+    for qs in (gone, deactivated, empty):
         conversations += qs.delete()[1].get("soul_assist.AssistConversation", 0)
     return {"messages": old, "conversations": conversations}
