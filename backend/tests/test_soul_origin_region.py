@@ -99,9 +99,12 @@ def test_the_soul_api_reads_the_region(db):
 def test_the_csv_import_takes_the_region_and_refuses_anything_else(db):
     tenant = plan.tenant("GR_HADES")
     data = ("name,civilization,origin_region\n"
-            "欧魂,GREEK,europe\n亚魂,GREEK,ASIA\n未详魂,GREEK,\n火星魂,GREEK,MARS\n").encode()
+            "欧魂,GREEK,europe\n亚魂,GREEK,ASIA\n未详魂,GREEK,\n火星魂,GREEK,MARS\n"
+            "欧魂二,GREEK,欧洲\n亚魂二,GREEK,亚洲\n未详魂二,GREEK,UNKNOWN\n未详魂三,GREEK,不详\n").encode()
     results = importer.validate_csv(data, tenant)
-    assert [r.parsed["origin_region"] if r.parsed else None for r in results] == ["EUROPE", "ASIA", "", None]
+    # The same spellings the 出身地域补录 takes (one table, user 2026-10-20).
+    assert [r.parsed["origin_region"] if r.parsed else None for r in results] == [
+        "EUROPE", "ASIA", "", None, "EUROPE", "ASIA", "", ""]
     assert results[3].errors == [{"field": "origin_region", "code": "invalid_origin_region"}]
     # Absence: a file without the column still imports, region blank.
     plain = importer.validate_csv("name,civilization\n旧魂,GREEK\n".encode(), tenant)
