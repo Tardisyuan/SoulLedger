@@ -95,7 +95,7 @@ class Provider(Protocol):
 - `AssistConversation(account, screen, created_at, last_active_at, is_deleted…)`、`AssistMessage(conversation, role, content, tool_calls JSON, tokens JSON, created_at)`。
 - 所有查询从 `self.account` 出发;按账号而不是按灵魂:新一世看不见前世的会话,与书信一致(`apps/chat/views.py` `MeChatConversationsView`)。
 - 灵魂删除自己的会话走**软删除**,写法同删朋友圈帖子(`apps/social/soul_circle.py:288-291`),删除动作记审计;不进回收站。
-- 清理:Celery 任务 `purge_assist_history` 真删三类数据:消息超过 30 天的、已软删除的、账号已停用(`retired_at` 非空,即转世后的旧账号)的。另提供 `manage.py purge_assist_history`。**celery beat 尚未部署**,在那之前用 cron 跑该命令 —— 列入上线清单,不跑就不清理。
+- 清理:Celery 任务 `purge_assist_history` 真删:消息超过 30 天的、本人已删除的会话、已停用官员的会话、删空了的会话。**已注销的灵魂账号(转世后的前世账号、被阿米特吞噬的账号)不因注销而删**(用户 2026-10-20:数据保留，以免后期查阅);它们的消息照样按 30 天过期，过期删空后的会话照样删。另提供 `manage.py purge_assist_history`。**celery beat 尚未部署**,在那之前用 cron 跑该命令 —— 列入上线清单,不跑就不清理。
 - 送给模型的历史只含 `user` / `assistant` 正文,**不回放旧的工具调用结果**。
 
 ### 4.3 接口
@@ -337,7 +337,7 @@ npm run schema:generate --workspace @soulledger/core
 
 **测试分两层,不混用:**
 
-- **离线(CI 与 pre-push,`FakeProvider`)只测管道:** 工具签名不收 id(改签名即红);换成另一个租户的账号拿不到原账号数据;会话隔离(别人的会话 404);停用账号的会话被清理;开关关闭 503;超额 429;超时 503;审计里没有问题原文(断言缺席);工具循环不超过 3 轮;两个适配器的格式翻译。
+- **离线(CI 与 pre-push,`FakeProvider`)只测管道:** 工具签名不收 id(改签名即红);换成另一个租户的账号拿不到原账号数据;会话隔离(别人的会话 404);已注销账号的会话不因注销而删(只按留存期过期);开关关闭 503;超额 429;超时 503;审计里没有问题原文(断言缺席);工具循环不超过 3 轮;两个适配器的格式翻译。
 - **模型行为只能用真实 key 评测**(阶段 1.5)。`FakeProvider` 调哪个工具是脚本写死的,拿它断言「埃及灵魂问转生会调 `rebirth`」测的是脚本,不是模型。
 
 ## 9. 两轮讨论的分歧与裁定
