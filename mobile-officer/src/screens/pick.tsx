@@ -7,6 +7,7 @@
 import type { ApprovalNode, ApprovalWorkflow, JumpSource, WorkflowSegment } from "@soulledger/core/api/workflow";
 import { workflowApi } from "@soulledger/core/api/workflow";
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { isAutoRouteBranches, originRegionLabel, routedRegion } from "@soulledger/core/domain/originRegion";
 import {
   circled,
   gateView,
@@ -269,8 +270,10 @@ const SKIP_KEY: Record<string, string> = {
  * 一站的字形与文字:当前 ◇、待走 ·、已通过 ✓、已驳回 ✕、跳过 ⤼(划线)。状态名走 `enumLabel`,不印原值。
  * 这次没走到(引擎按路由越过、或流程结束时还没到)写 –,灰、不划线 —— 与网页 `WorkflowSegmentList` 同一条规则。
  */
-export function nodeLook(node: ApprovalNode, isCurrent: boolean, t: T, statusLabel: (raw: string) => string, finished = false): { glyph: string; text: string; skipped: boolean; notReached?: boolean } {
+export function nodeLook(node: ApprovalNode, isCurrent: boolean, t: T, statusLabel: (raw: string) => string, finished = false, routed: string | null = null): { glyph: string; text: string; skipped: boolean; notReached?: boolean } {
   if (isCurrent) return { glyph: "◇", text: t("workflow.detail.current"), skipped: false };
+  // 自动分流已经过(第四十五批 W-5,与网页 `WorkflowSegmentList` 同一写法):「⇉ 自动 · 亚洲」。
+  if (routed !== null) return { glyph: "⇉", text: t("workflow.node_state.auto_done", { region: routed }), skipped: false };
   const notReached = { glyph: "–", text: t("workflow.node_state.not_reached"), skipped: false, notReached: true };
   if (node.status === "SKIPPED") {
     if (!node.skip_kind) return notReached;
@@ -296,7 +299,7 @@ export function WorkflowSegmentsFor({ workflowId, onPick }: { workflowId: string
  * `onPick`:本域那一段还能选(没选或改选)时的入口。
  */
 export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkflow; onPick?: () => void }) {
-  const { t, enumLabel } = useI18n();
+  const { t, enumLabel, locale } = useI18n();
   const theme = useTheme();
   const myTenant = useMyTenant();
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
@@ -351,7 +354,10 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
               <>
                 {segmentNodes(workflow, s.order).map((node) => {
                   const isCurrent = running && workflow.current_node === node.id;
-                  const look = nodeLook(node, isCurrent, t, statusLabel, !running);
+                  const routed = isAutoRouteBranches(node.kind, node.branches_json)
+                    ? routedRegion(node, workflow.nodes ?? [], workflow.current_node)
+                    : null;
+                  const look = nodeLook(node, isCurrent, t, statusLabel, !running, routed ? originRegionLabel(t, routed.region, locale) : null);
                   const right = node.is_required ? `${look.text} · ${t("workflow.pick.final_badge")}` : look.text;
                   return (
                     <View

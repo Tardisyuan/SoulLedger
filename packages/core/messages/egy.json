@@ -4116,7 +4116,10 @@
         "reborn": "Ba-Ek Ankh Mawy: Aq Mawy",
         "reborn_body": "Ren Hesb Ba Wenen. Aq Em Sekhem Tepy Ankh Pen.",
         "bio_changed": "Aq Em {{bio}}: Khetem Seth",
-        "bio_changed_body": "{{bio}} Em Medjat Pen Mawy: Khetem. Sesh Sekhem, Wen Mawy."
+        "bio_changed_body": "{{bio}} Em Medjat Pen Mawy: Khetem. Sesh Sekhem, Wen Mawy.",
+        "devoured": "Wat-Ek Pehwy: Ammit",
+        "devoured_body": "Weret Maaty: Wedja Pehwy. Nen Ankh Mawy, Nen Aq Mawy. Aq Pen Nen Wenen Djer; Sesh Smen.",
+        "devoured_ack": "Rekh"
       }
     },
     "change_password": {

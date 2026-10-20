@@ -448,3 +448,14 @@ describe("nodeLook · 这次没走到", () => {
     expect(look.skipped).toBe(true);
   });
 });
+
+describe("nodeLook · 自动分流已经过", () => {
+  const zh = (k: string, v?: Record<string, string>) => translate("zh-Hans", k, v);
+  it("an auto-route step that has routed reads ⇉ 自动 · <region>, like the web list", () => {
+    const look = nodeLook(node("n1", 1, "按出身地域分流", { status: "TRAVERSED" }) as never, false, zh, (r) => r, false, "亚洲");
+    expect(look).toEqual({ glyph: "⇉", text: zh("workflow.node_state.auto_done", { region: "亚洲" }), skipped: false });
+  });
+  it("any other step is unchanged", () => {
+    expect(nodeLook(node("n2", 2, "Aeacus", { status: "APPROVED" }) as never, false, zh, (r) => r).glyph).toBe("✓");
+  });
+});

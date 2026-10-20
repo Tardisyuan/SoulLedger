@@ -1,5 +1,5 @@
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
-import { soulDeviceLoginFailure, soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
+import { soulDeviceLoginFailure, soulErrorCode, soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
 import { SOUL_CODE_LENGTH, formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +12,7 @@ import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
 import { useSession, type MfaChallenge } from "../session";
 import { clearCredential, bioEnabled, forgetAccount, isColdStart, readCredential, rememberedAccount, revokeCredential, spendAutoPrompt } from "../deviceLogin";
-import { LAPSE_KEYS, canSubmitLogin, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
+import { LAPSE_KEYS, canSubmitLogin, isFinalLapse, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
 import { forgetDevice } from "../mfa";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { SoulCodeField, SoulCodeText } from "../soulCodeView";
@@ -154,7 +154,7 @@ export function LoginScreen() {
   /** The phone's credential is no good: forget it and say why; the number stays, the password box takes over. */
   const lapseTo = (why: Lapse, forCode: string) => {
     clearCredential();
-    if (why === "reborn") forgetDevice(forCode);
+    if (why === "reborn" || why === "devoured") forgetDevice(forCode);
     setBioActive(false);
     setBioFailed(false);
     setWantPassword(false);
@@ -180,10 +180,24 @@ export function LoginScreen() {
     try {
       await enter(signIn(code, password));
     } catch (e) {
+      // 第四十九批:the password was right and the heart has gone to Ammit -- the same notice as the 面容 path.
+      if (soulErrorCode(e) === "account_devoured") return lapseTo("devoured", code);
       setError(soulErrorMessage(e));
       setBusy(false);
     }
   };
+
+  /** 「知道了」 on the final notice: nothing of this account stays on the phone; the page is blank next time. */
+  const acknowledgeFinal = () => {
+    forgetAccount();
+    setAccount(null);
+    setBioActive(false);
+    setSoulCode("");
+    setPassword("");
+    setLapse(null);
+    setError(null);
+  };
+  const final = isFinalLapse(lapse);
 
   const signInWithBio = async () => {
     if (!account || busy) return;
@@ -322,6 +336,11 @@ export function LoginScreen() {
             <LapsedNotice lapse={lapse} bio={bio.word} />
           </View>
         ) : null}
+        {/* 第四十九批:no way on from here -- no number, password, 面容, 忘记密码; one quiet 「知道了」. */}
+        {final ? (
+          <Button testID="login-devoured-ack" kind="secondary" style={styles.submit} title={t("soul_app.login.lapsed.devoured_ack")} onPress={acknowledgeFinal} />
+        ) : (
+        <>
         {bioFailed ? (
           <Txt testID="login-bio-failed" accessibilityRole="alert" style={[styles.gapTop, styles.noticeTitle]}>
             {t(bioFailed === "locked" ? "soul_app.bio.locked" : "soul_app.bio.failed", { bio: bio.word })}
@@ -402,15 +421,19 @@ export function LoginScreen() {
           </Pressable>
         ) : null}
         {known ? <View style={styles.leftLink}>{forgot}</View> : null}
+        </>
+        )}
       </View>
       <View style={styles.fill} />
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
         {/* 第二十八批 S5: the sign-in group of the help page, reachable signed out. */}
-        <Pressable testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
-          <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
-            {t("soul_app.help.login_trouble")}
-          </Txt>
-        </Pressable>
+        {final ? <View /> : (
+          <Pressable testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
+            <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+              {t("soul_app.help.login_trouble")}
+            </Txt>
+          </Pressable>
+        )}
         <LanguageSwitch />
       </View>
       <SwitchAccountSheet

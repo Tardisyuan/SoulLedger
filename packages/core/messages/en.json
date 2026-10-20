@@ -4133,7 +4133,10 @@
         "reborn": "You have been reborn — this is a new life's account",
         "reborn_body": "Your number stays the same. Sign in with this life's initial password.",
         "bio_changed": "{{bio}} sign-in is off",
-        "bio_changed_body": "The {{bio}} on this phone changed, so we turned it off. Enter your password to turn it back on."
+        "bio_changed_body": "The {{bio}} on this phone changed, so we turned it off. Enter your password to turn it back on.",
+        "devoured": "Your heart has gone to Ammit",
+        "devoured_body": "The Hall of Two Truths has given its final judgment: there is no next life and no new account. This account can no longer sign in; the letters and records you left are kept.",
+        "devoured_ack": "I understand"
       }
     },
     "change_password": {
