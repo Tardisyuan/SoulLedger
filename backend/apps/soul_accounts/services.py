@@ -390,7 +390,17 @@ def authenticate(soul_code, password):
     soul = Soul.objects.filter(soul_code=normalize_soul_code(soul_code)).first()
     account = current_account_of(soul) if soul is not None else None
     if account is None or not account.user.is_active:
-        User().set_password(password)
+        # 被阿米特吞噬的灵魂没有本世账号了。**只有密码对时**才说出原因(第四十九批):编号加错密码照旧是
+        # 「编号或密码错误」,不向试编号的人泄露这个灵魂的结局。
+        devoured = (
+            SoulAccount.objects.select_related("user")
+            .filter(soul=soul, retired_reason=DeviceLoginRevokeReason.ACCOUNT_ANNIHILATED).order_by("-cycle").first()
+            if account is None and soul is not None else None
+        )
+        if devoured is not None and devoured.user.check_password(password):
+            raise SoulAccountError("这一世的账号已注销：心已交予阿米特。", "account_devoured", 401)
+        if devoured is None:
+            User().set_password(password)
         raise bad
     if not account.user.check_password(password):
         raise bad
@@ -517,7 +527,8 @@ def _retire_account(soul, cycle, *, reason, keep_email, note):
     if account is None:
         return None
     account.retired_at = timezone.now()
-    account.save(update_fields=["retired_at"])
+    account.retired_reason = str(reason)
+    account.save(update_fields=["retired_at", "retired_reason"])
     account.user.is_active = False
     if keep_email:
         account.user.save(update_fields=["is_active"])

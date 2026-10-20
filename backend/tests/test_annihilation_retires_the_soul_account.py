@@ -10,7 +10,9 @@ from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.events.models import SoulEvent
 from apps.realms.models import Realm
+from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import DeviceLoginRevokeReason, SoulAccount, SoulDeviceLogin
+from apps.soul_accounts.services import SoulAccountError
 from apps.souls.models import SoulState
 from apps.tenants.models import Tenant
 from tests.soul_account_support import ready_soul
@@ -59,3 +61,19 @@ def test_another_destination_does_not_retire_the_account(eg):
     account = _executed(tenant, aaru, "aaru")
     assert account.retired_at is None and account.user.is_active is True
     assert not SoulEvent.all_objects.filter(soul_id=account.soul_id, event_type="SOUL_ACCOUNT_RETIRED").exists()
+
+
+def test_the_right_password_is_told_the_account_is_gone_and_a_wrong_one_learns_nothing(eg):
+    """第四十九批:密码对 → `account_devoured`;密码错 → 照旧「编号或密码错误」,不泄露这个灵魂的结局。"""
+    tenant, annihilation, _ = eg
+    account = _executed(tenant, annihilation, "pw")
+    account.user.set_password("right-pass-123")
+    account.user.save(update_fields=["password"])
+    assert account.retired_reason == DeviceLoginRevokeReason.ACCOUNT_ANNIHILATED
+    code = account.soul.soul_code
+    with pytest.raises(SoulAccountError) as right:
+        svc.authenticate(code, "right-pass-123")
+    assert (right.value.code, right.value.status) == ("account_devoured", 401)
+    with pytest.raises(SoulAccountError) as wrong:
+        svc.authenticate(code, "wrong-pass-123")
+    assert wrong.value.code == "invalid_credentials"
