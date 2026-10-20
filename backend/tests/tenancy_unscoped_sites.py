@@ -216,7 +216,7 @@ SITES = [
     ('apps/soul_assist/eval_identities.py', '_make_soul', 'SentencePlan.all_objects', 1, 'CLI', 'evaluation fixture builder: creates a plan for a soul it just made'),
     ('apps/soul_assist/eval_identities.py', '_tenant', 'Tenant.objects', 2, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/soul_assist/officer_tools.py', 'enabled_hall_ids', 'Tenant.objects', 1, 'CROSS', 'ADMIN assistant reads across halls that switched the assistant on (doc 1.3 item 12)'),
-    ('apps/soul_assist/service.py', 'purge_history', 'AssistConversation.all_objects', 4, 'CLI', 'retention purge across all tenants (conversations of deleted/retired/deactivated users or empty)'),
+    ('apps/soul_assist/service.py', 'purge_history', 'AssistConversation.all_objects', 3, 'CLI', 'retention purge across all tenants (conversations deleted by their owner, of deactivated officers, or empty)'),
     ('apps/soul_assist/usage.py', 'report', 'Tenant.objects', 1, 'CROSS', 'ADMIN usage report: maps tenant pks in the grouped usage rows to codes'),
     ('apps/soul_push/services.py', '_stale_approval', 'DispatchRecord._base_manager', 1, 'PK', 'dispatch looked up by the pk carried in the push dedupe key'),
     ('apps/souls/admin.py', 'SoulAdmin.save_model', 'Soul.all_objects', 1, 'PK', 'Django admin (superuser); reads the old email of the row being saved'),

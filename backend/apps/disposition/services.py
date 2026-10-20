@@ -826,6 +826,12 @@ class DispositionService:
             disposition.term_start_month = today.month
             disposition.term_start_day = today.day
         disposition.save()
+        # 被阿米特吞噬:这一世的灵魂账号在同一事务里永久注销,数据保留(用户 2026-10-20)。
+        # 三条执行分支都经过这里,所以接在这一处。
+        if disposition.destination_realm_id and disposition.destination_realm.realm_code == DispositionService.EG_ANNIHILATION:
+            from apps.soul_accounts.services import retire_account_annihilated
+
+            retire_account_annihilated(disposition.soul)
 
     @staticmethod
     def _leave_served_realm(disposition, soul, node=None):

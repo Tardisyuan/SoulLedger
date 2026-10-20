@@ -5,6 +5,7 @@
     当前 --soul 改密--> 当前(must_change_password=False)
     当前 --官员重置--> 当前(must_change_password=True, 新的 72h)
     当前 --转世完成--> 停用(retired_at 写上,User.is_active=False)   ← 终态
+    当前 --被阿米特吞噬--> 停用(同上,但登录邮箱保留:没有下一世要用它)   ← 终态
 
 状态机(初始凭据,见 models.CredentialStatus):
     QUEUED --提交后发送成功--> SENT
@@ -489,39 +490,62 @@ def _revoke_refresh_tokens(user):
 def retire_account_for_rebirth(soul, ended_cycle):
     """转世完成时调用,**在转世的同一事务里**。本世账号停用,永不可再登录。
     没有账号(这一世从没开过号)就什么也不做。"""
+    return _retire_account(
+        soul, ended_cycle, reason=DeviceLoginRevokeReason.ACCOUNT_REINCARNATED, keep_email=False,
+        note=f"转世完成,第 {ended_cycle} 世灵魂账号停用",
+    )
+
+
+def retire_account_annihilated(soul):
+    """被阿米特吞噬(处置去处 `EG_ANNIHILATION`)执行时调用,**在执行的同一事务里**(用户 2026-10-20 定)。
+
+    吞噬是第二次死亡:没有下一世,没有申诉,受刑计划停在永久那一站,重开审判拒(`plan_held`)——
+    所以这一世的账号永久注销,与转世同一套。**数据全部保留**(用户:以免后期查阅):账号行、书信
+    (Matrix 停用时 `erase: false`)、朋友圈、审判与事件都不动;与转世唯一的不同是**登录邮箱不清**——
+    转世清它是为了让下一世的账号用,这里没有下一世。"""
+    return _retire_account(
+        soul, soul.life_index, reason=DeviceLoginRevokeReason.ACCOUNT_ANNIHILATED, keep_email=True,
+        note=f"被阿米特吞噬,第 {soul.life_index} 世灵魂账号注销",
+    )
+
+
+def _retire_account(soul, cycle, *, reason, keep_email, note):
     account = (
         SoulAccount.objects.select_for_update(of=("self",)).select_related("user")
-        .filter(soul=soul, cycle=ended_cycle, retired_at__isnull=True).first()
+        .filter(soul=soul, cycle=cycle, retired_at__isnull=True).first()
     )
     if account is None:
         return None
     account.retired_at = timezone.now()
     account.save(update_fields=["retired_at"])
     account.user.is_active = False
-    # 停用的账号不再占着登录邮箱:下一世的账号要用它,邮箱重置也只该找到可登录的那个。
-    account.user.email = ""
-    account.user.save(update_fields=["is_active", "email"])
+    if keep_email:
+        account.user.save(update_fields=["is_active"])
+    else:
+        # 停用的账号不再占着登录邮箱:下一世的账号要用它,邮箱重置也只该找到可登录的那个。
+        account.user.email = ""
+        account.user.save(update_fields=["is_active", "email"])
     _void_open_credentials(account)
     from apps.authentication.passwords import end_sessions
 
-    end_sessions(account.user)  # 推送设备在下面按「转世停用」原因单独停用
-    # 两步验证跟着「这一世的账号」:密钥、恢复码、记住的设备一起作废;新一世的账号默认没有。
+    end_sessions(account.user)  # 推送设备在下面单独停用
+    # 两步验证跟着「这一世的账号」:密钥、恢复码、记住的设备一起作废。
     from apps.soul_accounts import mfa
 
     had_mfa = mfa.void_all(account)
-    # 面容/指纹登录的凭据标原因而不是删:登录页要告诉灵魂「你已转生」(`device_login.find` 跨世找得到)。
+    # 面容/指纹登录的凭据标原因而不是删:登录页要告诉灵魂为什么(`device_login.find` 跨世找得到)。
     from apps.soul_accounts import device_login
 
-    device_login.revoke_all(account, DeviceLoginRevokeReason.ACCOUNT_REINCARNATED)
+    device_login.revoke_all(account, reason)
     # 同一事务里停用推送设备:停用的账号不再收到任何推送,回滚则一起回滚。
     from apps.soul_push.services import invalidate_account_devices
 
     invalidate_account_devices(account)
-    audit("UPDATE", soul, f"转世完成,第 {ended_cycle} 世灵魂账号停用", resource_id=account.pk,
-          changes={"mfa_voided": True} if had_mfa else None)
+    audit("UPDATE", soul, note, resource_id=account.pk, changes={"mfa_voided": True} if had_mfa else None)
     from apps.events.services import EventService
 
-    EventService.log(soul, "SOUL_ACCOUNT_RETIRED", {"account_id": str(account.pk), "cycle": ended_cycle})
+    EventService.log(soul, "SOUL_ACCOUNT_RETIRED", {"account_id": str(account.pk), "cycle": cycle,
+                                                    "reason": str(reason)})
     return account
 
 

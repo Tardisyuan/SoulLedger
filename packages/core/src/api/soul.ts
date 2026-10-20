@@ -561,7 +561,7 @@ export function soulMfaFailure(error: unknown): SoulMfaFailure {
   };
 }
 
-/** A refused `deviceLogin`, by the body's stable `code`. `network`: no response. `reason`: `password_changed` / `password_reset_by_officer` / `account_reincarnated` / `turned_off`. */
+/** A refused `deviceLogin`, by the body's stable `code`. `network`: no response. `reason`: `password_changed` / `password_reset_by_officer` / `account_reincarnated` / `account_annihilated` / `turned_off`. */
 export type SoulDeviceLoginFailure =
   | { code: "revoked"; reason: string | null }
   | { code: "invalid" | "rate_limited" | "network" | "other" };

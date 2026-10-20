@@ -286,6 +286,7 @@ class DeviceLoginRevokeReason(models.TextChoices):
     PASSWORD_CHANGED = "password_changed", "密码已在别处修改"
     PASSWORD_RESET_BY_OFFICER = "password_reset_by_officer", "官员重置了密码"
     ACCOUNT_REINCARNATED = "account_reincarnated", "转生换了新账号"
+    ACCOUNT_ANNIHILATED = "account_annihilated", "被阿米特吞噬"
     TURNED_OFF = "turned_off", "在这部手机上关闭"
 
 
