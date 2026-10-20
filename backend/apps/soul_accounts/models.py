@@ -50,6 +50,9 @@ class SoulAccount(models.Model):
     # 由灵魂自己设,不过期。
     initial_password_expires_at = models.DateTimeField(null=True, blank=True)
     retired_at = models.DateTimeField(null=True, blank=True)
+    #: 为什么注销(`DeviceLoginRevokeReason` 的值:转世 / 被阿米特吞噬);没注销为空。密码登录用它告诉
+    #: 被吞噬的灵魂「这个账号不能再登录」,而不是「编号或密码错误」(第四十九批，只在密码对时)。
+    retired_reason = models.CharField(max_length=30, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     # App 的欢迎过场(设计「灵魂簿 App · 文明气质」1b)已为哪些文明播过:`Civilization` 值,
     # 按最近一次播放排序,末项 = 上一次欢迎进入的文明。存在服务端,换设备、重装都不再重播。
