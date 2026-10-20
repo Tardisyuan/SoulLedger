@@ -197,3 +197,14 @@ it("the template is a BOM, the header and one example row in the caller's own ci
   expect(content.trim().split("\n")).toHaveLength(2);
   expect(content.split("\n")[1]).toContain(",EGYPTIAN,");
 });
+
+it("a bad origin_region names the words that can be written, in the reader's language (batch 48)", () => {
+  const BAD_REGION: Row = { row: 5, status: "error", values: values("李长吉"), errors: [{ field: "origin_region", code: "invalid_origin_region" }] };
+  choose({ rows: [BAD_REGION, DUP] });
+  const row = screen.getByText("李长吉").closest("tr") as HTMLElement;
+  expect(row.textContent).toContain(
+    "souls.import.row_codes.invalid_origin_region:souls.origin_region.EUROPE,souls.origin_region.ASIA,souls.origin_region.UNKNOWN",
+  );
+  // the other codes take no words
+  expect(screen.getByText("souls.import.row_codes.duplicate_existing")).toBeInTheDocument();
+});

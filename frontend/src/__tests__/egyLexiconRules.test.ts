@@ -91,7 +91,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "EUROPE", "ASIA"]); // EUROPE / ASIA: 导入文件 origin_region 列的取值(第四十七批);VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER"]); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -304,8 +304,6 @@ const TECHNICAL: Record<string, string[]> = {
   // 第四十六批:补录出身地域的标识列名,文件里照写的字面值。
   "souls.region_backfill.id_hint": ["soul_id", "soul_code"],
   "souls.region_backfill.file_codes.mixed_id_columns": ["soul_code", "soul_id"],
-  // 第四十七批:导入文件 origin_region 列只收的两个取值,文件里照写的字面值。
-  "souls.import.row_codes.invalid_origin_region": ["EUROPE", "ASIA"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
