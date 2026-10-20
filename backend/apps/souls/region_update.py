@@ -31,7 +31,7 @@ from dataclasses import dataclass
 
 from django.db import transaction
 
-from apps.souls.importer import MAX_ROWS, ImportFileError, _read
+from apps.souls.importer import MAX_ROWS, REGION_SPELLINGS, ImportFileError, _read
 from apps.souls.models import Soul
 
 ID_COLUMNS = ("soul_id", "soul_code")
@@ -40,14 +40,6 @@ ALIASES = {"soul id": "soul_id"}
 
 OK = "ok"
 UNCHANGED = "unchanged"
-#: What a cell may say, after trimming and case-folding -> the stored value ("" is 不详; blank means 不详 too).
-#: Codes, English and Chinese (Design batch 46); anything else is `invalid_origin_region`.
-REGION_SPELLINGS = {
-    "": "",
-    "europe": Soul.OriginRegion.EUROPE.value, "欧洲": Soul.OriginRegion.EUROPE.value,
-    "asia": Soul.OriginRegion.ASIA.value, "亚洲": Soul.OriginRegion.ASIA.value,
-    "unknown": "", "不详": "",
-}
 #: Row statuses that apply skips.
 ERRORS = ("missing_identifier", "not_found", "duplicate_in_file", "invalid_origin_region")
 

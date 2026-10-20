@@ -38,6 +38,16 @@ MAX_ROWS = 1000
 #: Largest upload accepted, in bytes (MAX_ROWS rows of ordinary text is well under it).
 MAX_BYTES = 2 * 1024 * 1024
 
+#: What an `origin_region` cell may say, after trimming and case-folding -> the stored value ("" is 不详;
+#: blank means 不详 too). Codes, English and Chinese (Design batch 46). The import and the 出身地域补录
+#: (`region_update`) read this one table (user 2026-10-20); anything else is `invalid_origin_region`.
+REGION_SPELLINGS = {
+    "": "",
+    "europe": Soul.OriginRegion.EUROPE.value, "欧洲": Soul.OriginRegion.EUROPE.value,
+    "asia": Soul.OriginRegion.ASIA.value, "亚洲": Soul.OriginRegion.ASIA.value,
+    "unknown": "", "不详": "",
+}
+
 REQUIRED_COLUMNS = ("name", "civilization")
 OPTIONAL_COLUMNS = ("birth_date", "death_date", "origin_location", "birth_name", "description", "origin_region")
 COLUMNS = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
@@ -178,8 +188,8 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
                 # hall, never stored from the file), so every row would fail with no way to fix the file.
                 res.add("civilization", "civilization_mismatch")
 
-        region = values["origin_region"].upper()
-        if region and region not in Soul.OriginRegion.values:
+        region = REGION_SPELLINGS.get(values["origin_region"].casefold())
+        if region is None:
             res.add("origin_region", "invalid_origin_region")
 
         dates = {}
