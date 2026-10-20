@@ -41,7 +41,7 @@ export const INVALID_BANNER_MS = 4000;
 
 // ── 失效 ─────────────────────────────────────────────────────────────────
 
-export type Lapse = "pw_changed" | "reset" | "reborn" | "bio_changed";
+export type Lapse = "pw_changed" | "reset" | "reborn" | "devoured" | "bio_changed";
 
 /**
  * `device_login_revoked`'s reason → the notice. `turned_off` (this phone's credential was closed from somewhere
@@ -55,6 +55,8 @@ export function lapseOfReason(reason: string | null): Lapse {
       return "reset";
     case "account_reincarnated":
       return "reborn";
+    case "account_annihilated":
+      return "devoured";
     default:
       return "bio_changed";
   }
@@ -64,8 +66,15 @@ export const LAPSE_KEYS: Record<Lapse, { title: string; body: string }> = {
   pw_changed: { title: "soul_app.login.lapsed.pw_changed", body: "soul_app.login.lapsed.pw_changed_body" },
   reset: { title: "soul_app.login.lapsed.reset", body: "soul_app.login.lapsed.reset_body" },
   reborn: { title: "soul_app.login.lapsed.reborn", body: "soul_app.login.lapsed.reborn_body" },
+  devoured: { title: "soul_app.login.lapsed.devoured", body: "soul_app.login.lapsed.devoured_body" },
   bio_changed: { title: "soul_app.login.lapsed.bio_changed", body: "soul_app.login.lapsed.bio_changed_body" },
 };
+
+/**
+ * 第四十九批:the heart has gone to Ammit (`account_annihilated` / the password sign-in's `account_devoured`). The
+ * only lapse with no way on -- no next life, no new account -- so the page shows the notice and 「知道了」 alone.
+ */
+export const isFinalLapse = (lapse: Lapse | null) => lapse === "devoured";
 
 // ── the system prompt ────────────────────────────────────────────────────
 

@@ -787,6 +787,46 @@ describe("E · when the credential stops working", () => {
     expect(deviceTokenFor(CODE)).toBe("device-token-30d");
   });
 
+  /** 第四十九批:the heart has gone to Ammit -- the notice and 「知道了」, and nothing that would sign in. */
+  function expectFinal() {
+    expect(text("login-lapsed-title")).toBe("你的心已交予阿米特");
+    expect(text("login-lapsed-body")).toBe(
+      "两真之殿已作最后的判决：没有下一世，也没有新的账号。这个账号不能再登录，你留下的书信和记录都会保存。",
+    );
+    for (const id of ["login-password", "login-submit", "login-bio", "login-use-password", "login-switch", "login-trouble", "login-error"]) {
+      expect(screen.queryByTestId(id)).toBeNull();
+    }
+    expect(screen.queryByText("忘记密码？")).toBeNull();
+    expect(screen.getByTestId("login-devoured-ack")).toHaveTextContent("知道了");
+  }
+
+  it("devoured (面容): the notice and 知道了 alone; 知道了 forgets the account and the page is blank", async () => {
+    remembered({ bio: true });
+    rememberDevice(CODE, "device-token-30d");
+    stubApi({ "/soul-auth/device-login/": refusal("device_login_revoked", "account_annihilated") });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-bio"));
+    await screen.findByTestId("login-lapsed");
+    expectFinal();
+    expect(persistentStore.get(BIO_KEY)).toBeNull();
+    expect(deviceTokenFor(CODE)).toBeUndefined();
+    fireEvent.press(screen.getByTestId("login-devoured-ack"));
+    expect(rememberedAccount()).toBeNull();
+    expect(screen.queryByTestId("login-lapsed")).toBeNull();
+    expect(screen.queryByTestId("login-known")).toBeNull();
+    expect(screen.getByTestId("login-password")).toBeTruthy();
+  });
+
+  it("devoured (password): the server's account_devoured shows the same notice, not 编号或密码错误", async () => {
+    stubApi({ "/soul-auth/login/": refusal("account_devoured") });
+    await renderApp();
+    typeCode("QU33Q9FW5F");
+    typePassword("right-pass");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    await screen.findByTestId("login-lapsed");
+    expectFinal();
+  });
+
   it("a credential the server does not know is the biometric notice", async () => {
     remembered({ bio: true });
     stubApi({ "/soul-auth/device-login/": refusal("device_login_invalid") });

@@ -49,6 +49,7 @@ describe("lapseOfReason: the server's reason picks one of the four notices", () 
     ["password_changed", "pw_changed"],
     ["password_reset_by_officer", "reset"],
     ["account_reincarnated", "reborn"],
+    ["account_annihilated", "devoured"],
     // closed from elsewhere, or a reason this App has not heard of: the phone's own, the biometric one
     ["turned_off", "bio_changed"],
     ["something_new", "bio_changed"],
