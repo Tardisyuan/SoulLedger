@@ -113,6 +113,9 @@ export function autoRouteExits(nodeId: string, edges: readonly Edge[]): { region
   return ORIGIN_REGIONS.map((r) => ({ region: r, edge: out.find((e) => exitRegion(e) === r) }));
 }
 
+/** 自动分流没连的出口短桩上那个端点的连接点 id:`exit-EUROPE` …(第四十七批)。 */
+export const EXIT_HANDLE_PREFIX = "exit-";
+
 /** 自动分流卡片第二行的字形(Design 第四十五批 W-3),代替通知的 ✉。 */
 export const AUTO_ROUTE_GLYPH = "⇉";
 

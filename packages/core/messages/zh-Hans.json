@@ -1250,7 +1250,10 @@
       "palette_hint": {
         "AUTO_ROUTE": "无人审批，按出身地域走三条出口之一"
       },
-      "kind_locked": "不可改"
+      "kind_locked": "不可改",
+      "legend": {
+        "unconnected_exit": "□ 端点 = 出口未连 · 从端点拖到节点即连上 · 也可在右侧下拉里选"
+      }
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
