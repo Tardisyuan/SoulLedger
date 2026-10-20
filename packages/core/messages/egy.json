@@ -1250,7 +1250,10 @@
       "palette_hint": {
         "AUTO_ROUTE": "Nen Sab Wedja · Wat 3: Smen Mi Ta En Mesut"
       },
-      "kind_locked": "Nen Khemen"
+      "kind_locked": "Nen Khemen",
+      "legend": {
+        "unconnected_exit": "□ = Wat Nen Senb · Nehem Er Sekhet: Senb · Er Setep Sekhet Er"
+      }
     },
     "templates": "Pet-Sesh Wat",
     "select_template": "Setep Pet-Sesh Er Khemen",

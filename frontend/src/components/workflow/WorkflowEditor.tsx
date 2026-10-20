@@ -76,6 +76,7 @@ import {
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import {
+  EXIT_HANDLE_PREFIX,
   SAVE_BLOCKING,
   autoRouteExits,
   branchOf,
@@ -1103,6 +1104,10 @@ export default function WorkflowEditor({
   // The card's display-only fields ride in `data` here and nowhere else, for
   // the same reason as the a11y fields: `getTemplateNodes` reads `nodes`, not
   // this array, so nothing below reaches the save payload.
+  const hasUnconnectedExit = useMemo(
+    () => nodes.some((n) => isAutoRoute(n, edges) && autoRouteExits(n.id, edges).some((x) => !x.edge)),
+    [nodes, edges]
+  );
   const a11yNodes = useMemo<Node[]>(
     () =>
       nodes.map((n, idx) => ({
@@ -1117,7 +1122,9 @@ export default function WorkflowEditor({
           autoRoute: isAutoRoute(n, edges),
           // 没连的出口(第四十七批 W-1):卡片下画短桩 +「欧洲 · 未连」。
           unconnected: isAutoRoute(n, edges)
-            ? autoRouteExits(n.id, edges).filter((x) => !x.edge).map((x) => originRegionLabel(t, x.region, locale))
+            ? autoRouteExits(n.id, edges)
+                .filter((x) => !x.edge)
+                .map((x) => ({ region: x.region, label: originRegionLabel(t, x.region, locale) }))
             : undefined,
         },
       })),
@@ -1304,6 +1311,14 @@ export default function WorkflowEditor({
       // 自动分流只有一个通过端口:从它拖出的线依次接上还没连的出口,欧洲 → 亚洲 → 不详(第四十七批 W-1,
       // 卡片下的短桩也按这个次序从左到右)。三条都连了就照常加一条,由校验去报重复。
       const source = nodes.find((n) => n.id === connection.source);
+      // 从短桩的端点拖出(第四十七批图例:「从端点拖到节点即连上」):接的就是那一条。
+      const stub = connection.sourceHandle?.startsWith(EXIT_HANDLE_PREFIX)
+        ? (connection.sourceHandle.slice(EXIT_HANDLE_PREFIX.length) as OriginRegionMember)
+        : null;
+      if (source && connection.target && stub) {
+        setAutoRouteTarget(source.id, stub, connection.target);
+        return;
+      }
       if (source && connection.target && connection.sourceHandle !== "fail" && isAutoRoute(source, edges)) {
         const open = autoRouteExits(source.id, edges).find((x) => !x.edge);
         if (open) {
@@ -1775,6 +1790,12 @@ export default function WorkflowEditor({
         {" · "}
         <kbd className="font-mono text-xs px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
         {t("workflow.editor.edit_node")}
+        {/* 第四十七批:画布上有没连的出口短桩时,说明端点怎么用。 */}
+        {hasUnconnectedExit && (
+          <span className="block mt-2" data-testid="legend-unconnected-exit">
+            {t("workflow.editor.legend.unconnected_exit")}
+          </span>
+        )}
       </WorkflowPalette>
       <div
         ref={canvasRef}

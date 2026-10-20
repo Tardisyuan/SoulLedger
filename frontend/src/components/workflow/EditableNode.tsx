@@ -13,7 +13,7 @@ import {
 } from "@xyflow/react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { courtLabel } from "@soulledger/core/domain/courts";
-import { AUTO_ROUTE_GLYPH, KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
+import { AUTO_ROUTE_GLYPH, EXIT_HANDLE_PREFIX, KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/components/workflow/workflowValidation";
 
 /**
  * A workflow node on the canvas — design C · 03 「画布节点 FlowNode」.
@@ -51,8 +51,8 @@ type CardData = {
   issueCount?: number;
   /** 自动分流(`isAutoRoute`,第四十五批):「▷◇ 自动 · 无审批人」+ ⇉。 */
   autoRoute?: boolean;
-  /** 自动分流没连的出口,地域名(第四十七批 W-1)。 */
-  unconnected?: string[];
+  /** 自动分流没连的出口(第四十七批 W-1):地域码与显示名。 */
+  unconnected?: { region: string; label: string }[];
   [key: string]: unknown;
 };
 
@@ -124,12 +124,19 @@ function EditableNodeComponent({
           从下方的通过端口拖到节点即连上(连上的那条按地域归位,见 setAutoRouteTarget);也可在检查器里选。 */}
       {data.autoRoute && (data.unconnected ?? []).length > 0 && (
         <ul data-unconnected-exits="" className="absolute left-0 right-0 top-full mt-3 flex justify-center gap-1">
-          {(data.unconnected ?? []).map((region) => (
+          {(data.unconnected ?? []).map(({ region, label }) => (
             <li key={region} className="flex flex-col items-center">
               <span aria-hidden="true" className="w-px h-2 bg-[oklch(var(--color-ink-muted))]" />
-              <span aria-hidden="true" className="w-3 h-3 border border-[oklch(var(--color-ink-muted))] bg-[oklch(var(--color-canvas))]" />
+              {/* 空心端点就是这条出口的连接点:从它拖到节点,接上的就是这一条。 */}
+              <Handle
+                id={`${EXIT_HANDLE_PREFIX}${region}`}
+                type="source"
+                position={Position.Bottom}
+                title={label}
+                className="relative! inset-auto! transform-none! w-3! h-3! min-w-0! min-h-0! rounded-none! border! border-[oklch(var(--color-ink-muted))]! bg-[oklch(var(--color-canvas))]!"
+              />
               <span className="mt-1 px-1 whitespace-nowrap border border-dashed border-[oklch(var(--color-line-strong))] text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
-                {region} · <span className="text-[oklch(var(--color-danger))]">{t("workflow.editor.auto_route.no_target")}</span>
+                {label} · <span className="text-[oklch(var(--color-danger))]">{t("workflow.editor.auto_route.no_target")}</span>
               </span>
             </li>
           ))}

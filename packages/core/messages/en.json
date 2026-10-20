@@ -1250,7 +1250,10 @@
       "palette_hint": {
         "AUTO_ROUTE": "No approver; takes one of three exits by region of origin"
       },
-      "kind_locked": "Can't be changed"
+      "kind_locked": "Can't be changed",
+      "legend": {
+        "unconnected_exit": "□ Open end = exit not connected · drag from it to a node to connect · or pick a target on the right"
+      }
     },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",

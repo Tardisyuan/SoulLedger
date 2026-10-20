@@ -171,6 +171,23 @@ describe("新建自动分流(W-1)", () => {
     expect(newCard().querySelector("[data-unconnected-exits]")!.textContent).toBe(`不详 · ${tZh("workflow.editor.auto_route.no_target")}`);
   });
 
+  it("从某个短桩的端点拖出,接上的就是那一条;有没连的出口时节点库下面写出端点图例,全连上就不写", async () => {
+    await openEditor();
+    expect(screen.queryByTestId("legend-unconnected-exit")).toBeNull();
+    addAutoRoute();
+    expect(screen.getByTestId("legend-unconnected-exit")).toHaveTextContent(tZh("workflow.editor.legend.unconnected_exit"));
+    const id = newCard().getAttribute("data-testid")!.replace("card-", "");
+    act(() => mockOnConnect!({ source: id, sourceHandle: "exit-ASIA", target: "n2", targetHandle: null }));
+    const section = await screen.findByTestId("auto-route-section");
+    expect((within(section).getByLabelText("亚洲") as HTMLSelectElement).value).toBe("n2");
+    expect((within(section).getByLabelText("欧洲") as HTMLSelectElement).value).toBe("");
+    act(() => mockOnConnect!({ source: id, sourceHandle: "exit-UNKNOWN", target: "n1", targetHandle: null }));
+    act(() => mockOnConnect!({ source: id, sourceHandle: "exit-EUROPE", target: "n1", targetHandle: null }));
+    expect((within(section).getByLabelText("不详") as HTMLSelectElement).value).toBe("n1");
+    expect(newCard().querySelector("[data-unconnected-exits]")).toBeNull();
+    expect(screen.queryByTestId("legend-unconnected-exit")).toBeNull();
+  });
+
   it("存草稿:没连的出口照样存成按地域的分支,去处留空;读回仍是自动分流,三个短桩都在", async () => {
     await openEditor();
     addAutoRoute();
