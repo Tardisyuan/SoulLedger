@@ -611,7 +611,7 @@
         "too_many_cells": "列数多于表头",
         "invalid_civilization": "不是已知的文明",
         "civilization_mismatch": "不是本文明",
-        "invalid_origin_region": "只能是 EUROPE、ASIA 或留空",
+        "invalid_origin_region": "取值不对：出身地域填 {{europe}} / {{asia}}；留空 = {{unknown}}",
         "invalid_date": "日期格式不对",
         "death_before_birth": "死亡早于出生",
         "implausible_lifespan": "寿命不合理",

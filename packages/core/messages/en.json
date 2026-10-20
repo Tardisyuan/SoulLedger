@@ -611,7 +611,7 @@
         "too_many_cells": "More cells than headers",
         "invalid_civilization": "Not a known civilization",
         "civilization_mismatch": "Not your civilization",
-        "invalid_origin_region": "Must be EUROPE, ASIA or blank",
+        "invalid_origin_region": "Not a valid value. Region of origin: {{europe}} or {{asia}}; leave blank for {{unknown}}",
         "invalid_date": "Invalid date",
         "death_before_birth": "Death is before birth",
         "implausible_lifespan": "Implausible lifespan",

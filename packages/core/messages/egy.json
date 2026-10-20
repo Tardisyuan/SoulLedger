@@ -617,7 +617,7 @@
         "duplicate_in_file": "Sen Medu · Sesh",
         "duplicate_existing": "Sen Medu · Medjat",
         "invalid_characters": "Nen Menkh · Sesh Nen Smen",
-        "invalid_origin_region": "EUROPE / ASIA / Nen Sesh: Setep Wa"
+        "invalid_origin_region": "Nen Setep · Ta En Mesut: {{europe}} / {{asia}} · Nen Sesh: {{unknown}}"
       },
       "file_codes": {
         "file_too_large": "Nen Menkh · Sesh Er Pehwy",

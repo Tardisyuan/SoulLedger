@@ -15,6 +15,7 @@ import {
   type SoulImportRow,
 } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { saveBlob } from "@/src/lib/saveBlob";
@@ -42,7 +43,7 @@ export function soulImportTemplate(civilization: string): string {
 }
 
 export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useTenant();
   const previewMutation = useSoulImportPreview();
   const commitMutation = useSoulImportCommit();
@@ -110,6 +111,12 @@ export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
   const codeText = (code: string, group: "row_codes" | "file_codes", params?: Record<string, string>) => {
     const known: readonly string[] = group === "row_codes" ? SOUL_IMPORT_ROW_CODES : SOUL_IMPORT_FILE_CODES;
     return t(`souls.import.${group}.${known.includes(code) ? code : "unknown"}`, params);
+  };
+  // invalid_origin_region 写出能填的词(第四十八批,与补录的 values_hint 同一说法)。
+  const regionWords = {
+    europe: originRegionLabel(t, "EUROPE", locale),
+    asia: originRegionLabel(t, "ASIA", locale),
+    unknown: originRegionLabel(t, "", locale),
   };
   const fileErrorText = (e: SoulImportFileError) =>
     codeText(e.code, "file_codes", {
@@ -244,7 +251,7 @@ export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
                     </tr>
                   )}
                   {rows.map((r) => (
-                    <PreviewRow key={r.row} row={r} text={(code) => codeText(code, "row_codes")} t={t} />
+                    <PreviewRow key={r.row} row={r} text={(code) => codeText(code, "row_codes", code === "invalid_origin_region" ? regionWords : undefined)} t={t} />
                   ))}
                 </tbody>
               </table>
