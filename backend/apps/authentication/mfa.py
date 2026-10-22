@@ -24,7 +24,7 @@ import time
 from datetime import timedelta
 from urllib.parse import quote
 
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import PBKDF2PasswordHasher, get_hasher, identify_hasher, make_password
 from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import Token
@@ -47,6 +47,12 @@ MFA_LOCK_SECONDS = 900
 RECOVERY_CODE_COUNT = 10
 #: 不含 0/O/1/I/L 的小写字母数字:手抄不会错。
 RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
+
+#: PBKDF2 rounds for a recovery code, not the 1,000,000 a password gets. A wrong code is checked against every
+#: unused one (10) under the row lock: 0.84 s idle, 18 s under load (2026-10-23). The rounds are there to slow
+#: an offline guess at a human-chosen password; a recovery code is ~40 random bits. Old hashes keep their own
+#: count (the encoded string carries it) until the codes are regenerated.
+RECOVERY_CODE_ITERATIONS = 100_000
 
 PENDING_TOKEN_LIFETIME = timedelta(minutes=5)
 DEVICE_COOKIE = "soulledger_mfa_device"
@@ -186,8 +192,24 @@ def new_recovery_codes() -> list[tuple[str, str]]:
     out = []
     for _ in range(RECOVERY_CODE_COUNT):
         raw = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(8))
-        out.append((f"{raw[:4]}-{raw[4:]}", make_password(raw)))
+        out.append((f"{raw[:4]}-{raw[4:]}", _hash_recovery_code(raw)))
     return out
+
+
+def _hash_recovery_code(raw: str) -> str:
+    hasher = get_hasher()
+    if isinstance(hasher, PBKDF2PasswordHasher):
+        return hasher.encode(raw, hasher.salt(), iterations=RECOVERY_CODE_ITERATIONS)
+    return make_password(raw)
+
+
+def _check_recovery_code(raw: str, encoded: str) -> bool:
+    """`hasher.verify`, not `check_password`: on a wrong guess against a hash with fewer rounds than the default,
+    `check_password` runs `harden_runtime` -- the missing 900,000 rounds -- so a wrong code cost as much as before."""
+    try:
+        return identify_hasher(encoded).verify(raw, encoded)
+    except ValueError:
+        return False
 
 
 def _issue_recovery_codes(mfa) -> list[str]:
@@ -307,7 +329,7 @@ def _verify_locked(mfa, *, code, recovery_code, request) -> dict:
     if recovery_code is not None:
         raw = normalize_code(recovery_code).lower()
         for row in mfa.recovery_codes.filter(used_at__isnull=True):
-            if check_password(raw, row.code_hash):
+            if _check_recovery_code(raw, row.code_hash):
                 row.used_at = now
                 row.save(update_fields=["used_at"])
                 mfa.last_used_at, mfa.last_used_method, mfa.failed_attempts = now, "recovery", 0

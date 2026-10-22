@@ -5,9 +5,11 @@
 """
 import time
 from datetime import timedelta
+from unittest import mock
 
 import pytest
-from django.contrib.auth.hashers import get_hasher
+from django.contrib.auth.hashers import PBKDF2PasswordHasher, get_hasher
+from django.test import override_settings
 from django.utils import timezone
 
 from apps.audit.models import AuditLog
@@ -279,6 +281,26 @@ class TestLoginSecondStep:
 
 
 # ── 恢复码 ───────────────────────────────────────────────────────────────────
+
+
+class TestRecoveryCodeHashCost:
+    """The suite runs on MD5 (root conftest); this pins what production's PBKDF2 does with a recovery code."""
+
+    @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.PBKDF2PasswordHasher"])
+    def test_recovery_codes_use_fewer_rounds_than_passwords_and_still_verify(self):
+        from django.contrib.auth.hashers import check_password, make_password
+
+        from apps.authentication.mfa import RECOVERY_CODE_ITERATIONS, new_recovery_codes
+
+        shown, hashed = new_recovery_codes()[0]
+        assert hashed.split("$")[:2] == ["pbkdf2_sha256", str(RECOVERY_CODE_ITERATIONS)]
+        assert int(make_password("x").split("$")[1]) > RECOVERY_CODE_ITERATIONS
+        assert check_password(shown.replace("-", ""), hashed)
+        assert mfa._check_recovery_code(shown.replace("-", ""), hashed)
+        # A wrong code must not pay the default's rounds back (check_password's harden_runtime).
+        with mock.patch.object(PBKDF2PasswordHasher, "harden_runtime", side_effect=AssertionError("hardened")):
+            assert not mfa._check_recovery_code("zzzzzzzz", hashed)
+        assert not mfa._check_recovery_code("zzzzzzzz", "not-a-hash")
 
 
 @pytest.mark.django_db
