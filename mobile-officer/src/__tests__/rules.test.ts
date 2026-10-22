@@ -189,6 +189,10 @@ describe("login", () => {
     expect(loginFailureKey(http(429, { code: "login_locked" }), "login")).toBe("officer_app.login.reasons.locked");
     expect(loginFailureKey(new Error("x"), "login")).toBe("officer_app.login.reasons.network");
     expect(loginFailureKey(http(401, { code: "wrong" }), "mfa")).toBe("officer_app.mfa.reasons.wrong");
+    // A recovery code that is wrong says so (as the soul app and the web), not 「动态码不对」.
+    expect(loginFailureKey(http(401, { code: "wrong" }), "mfa", true)).toBe("mfa.verify.error_recovery_wrong");
+    expect(loginFailureKey(http(400), "mfa", true)).toBe("mfa.verify.error_recovery_wrong");
+    expect(loginFailureKey(http(429, { code: "locked" }), "mfa", true)).toBe("officer_app.mfa.reasons.locked");
     expect(loginFailureKey(http(401, { code: "expired" }), "mfa")).toBe("officer_app.mfa.reasons.expired");
     expect(loginFailureKey(http(429, { code: "locked" }), "mfa")).toBe("officer_app.mfa.reasons.locked");
   });

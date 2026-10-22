@@ -216,14 +216,16 @@ export function hallChoiceOf(error: unknown): { halls: { code: string; display_n
 }
 
 /** Why a login or a two-step verification was refused, as an i18n key under `officer_app`. */
-export function loginFailureKey(error: unknown, step: "login" | "mfa"): string {
+/** `recovery`: the second step was a recovery code -- a wrong one says so, not 「动态码不对」 (as the soul app and the web). */
+export function loginFailureKey(error: unknown, step: "login" | "mfa", recovery = false): string {
   const response = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
   if (!response) return `officer_app.${step}.reasons.network`;
   const code = response.data?.code;
   if (response.status === 429 || code === "login_locked" || code === "locked") return `officer_app.${step}.reasons.locked`;
   if (step === "mfa" && code === "expired") return "officer_app.mfa.reasons.expired";
-  if (step === "mfa" && code === "wrong") return "officer_app.mfa.reasons.wrong";
-  if (response.status === 401 || response.status === 400) return `officer_app.${step}.reasons.${step === "login" ? "bad_credentials" : "wrong"}`;
+  const wrong = recovery ? "mfa.verify.error_recovery_wrong" : "officer_app.mfa.reasons.wrong";
+  if (step === "mfa" && code === "wrong") return wrong;
+  if (response.status === 401 || response.status === 400) return step === "login" ? "officer_app.login.reasons.bad_credentials" : wrong;
   return `officer_app.${step}.reasons.other`;
 }
 

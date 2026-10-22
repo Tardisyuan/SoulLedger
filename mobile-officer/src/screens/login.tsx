@@ -29,11 +29,11 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  const run = (work: Promise<unknown>, kind: "login" | "mfa") => {
+  const run = (work: Promise<unknown>, kind: "login" | "mfa", recovery = false) => {
     setBusy(true);
     setFailure(null);
     return work
-      .catch((e: unknown) => setFailure(t(loginFailureKey(e, kind))))
+      .catch((e: unknown) => setFailure(t(loginFailureKey(e, kind, recovery))))
       .finally(() => setBusy(false));
   };
 
@@ -55,7 +55,8 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
         ...(step.recovery ? { recoveryCode: code.trim() } : { code: code.trim() }),
         remember,
       }),
-      "mfa"
+      "mfa",
+      step.recovery
     );
   };
 
