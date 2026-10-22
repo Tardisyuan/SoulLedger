@@ -68,6 +68,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   mockedList.mockReset().mockResolvedValue(page([event()]));
   mockedActors.mockReset().mockResolvedValue({ data: ["cui", "meng"] });
 });
@@ -170,5 +171,35 @@ describe("EventTypeFilter", () => {
     await waitFor(() => expect(screen.queryByRole("option", { name: tZh("souls.events.STATE_CHANGED") })).toBeNull());
     fireEvent.click(screen.getByRole("option", { name: tZh("souls.events.WORKFLOW_CREATED") }));
     expect(onChange).toHaveBeenCalledWith("WORKFLOW_CREATED");
+  });
+});
+
+describe("SoulEventsPage remembered filters (2026-10-23)", () => {
+  const KEY = "soulledger.events.filters";
+
+  it("stored filters come back on mount and reach the query; 全部 is remembered as all", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ actor: "meng", datePreset: "all", includeSystem: "1" }));
+    renderPage();
+    await waitFor(() => expect(mockedList.mock.calls.at(-1)[0].actor).toBe("meng"));
+    const params = mockedList.mock.calls.at(-1)[0];
+    expect(params).not.toHaveProperty("start_date");
+    expect(params).not.toHaveProperty("exclude_system");
+    expect((screen.getByRole("checkbox", { name: tZh("events.include_system") }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("ticking 含系统事件 is stored; the soul search is not", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("checkbox", { name: tZh("events.include_system") }));
+    fireEvent.change(screen.getByRole("searchbox", { name: tZh("events.search_soul") }), { target: { value: "周" } });
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY) ?? "{}").includeSystem).toBe("1"));
+    expect(localStorage.getItem(KEY)).not.toContain("周");
+  });
+
+  it("offers the column menu, with the soul column pinned", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: tZh("list.columns.button", { shown: "5", total: "5" }) }));
+    expect(await screen.findByText(tZh("list.columns.pinned"))).toBeInTheDocument();
   });
 });

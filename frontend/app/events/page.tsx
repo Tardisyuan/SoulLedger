@@ -9,7 +9,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
-import { DataGrid, type DataGridColumn } from "@/components/ui/data-grid";
+import { ColumnMenu, DataGrid, useColumnVisibility, type DataGridColumn } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
@@ -19,6 +19,7 @@ import { isSystemActor } from "@/lib/events/event_registry";
 import { makeSystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { LIFECYCLE_ANCHOR } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { EventTypeFilter } from "@/src/components/events/EventTypeFilter";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import {
   buildEventRows,
   eventDetail,
@@ -45,6 +46,10 @@ export default function SoulEventsPage() {
   );
 }
 
+const EVENTS_FILTERS_KEY = "soulledger.events.filters";
+const EVENTS_FILTER_FIELDS = ["eventType", "actor", "datePreset", "includeSystem"] as const;
+const EVENTS_COLUMNS_KEY = "soulledger.events.columns";
+
 function SoulEventsContent() {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
@@ -57,6 +62,19 @@ function SoulEventsContent() {
   const [datePreset, setDatePreset] = useState<DatePreset>("7d");
   // 系统事件默认收起,和灵魂详情页的「含系统事件」一致。
   const [includeSystem, setIncludeSystem] = useState(false);
+  // 本浏览器记住筛选(与其他列表页同一套)。日期「全部」是空串，空串不存，所以记成 `all`;灵魂搜索不记。
+  useRememberedFilters(
+    EVENTS_FILTERS_KEY,
+    EVENTS_FILTER_FIELDS,
+    { eventType, actor, datePreset: datePreset || "all", includeSystem: includeSystem ? "1" : "" },
+    (saved) => {
+      if (saved.eventType) setEventType(saved.eventType);
+      if (saved.actor) setActor(saved.actor);
+      if (saved.datePreset === "7d" || saved.datePreset === "30d") setDatePreset(saved.datePreset);
+      if (saved.datePreset === "all") setDatePreset("");
+      if (saved.includeSystem === "1") setIncludeSystem(true);
+    }
+  );
 
   // 灵魂搜索走服务器(`search`),停手 300ms 再发,同灵魂列表。
   useEffect(() => {
@@ -151,6 +169,9 @@ function SoulEventsContent() {
     },
   ];
 
+  // 列菜单(与审计页同一个 `ColumnMenu`):灵魂列钉住，其余可隐藏，本浏览器记住。
+  const columnVis = useColumnVisibility(EVENTS_COLUMNS_KEY, columns);
+
   const title = (
     <>
       {t("nav.soul_events")}
@@ -203,12 +224,22 @@ function SoulEventsContent() {
             />
             {t("events.include_system")}
           </label>
+          <ColumnMenu
+            className="ml-auto"
+            columns={columns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+            visibility={columnVis}
+            buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+            pinnedLabel={t("list.columns.pinned")}
+            hintLabel={t("list.columns.hint")}
+            resetLabel={t("list.columns.reset")}
+          />
         </>
       }
     >
       <DataGrid<SoulEventRow>
         caption={t("nav.soul_events")}
         columns={columns}
+        hiddenColumns={columnVis.hidden}
         data={rows}
         isLoading={isLoading}
         isError={isError}
