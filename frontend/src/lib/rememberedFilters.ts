@@ -46,14 +46,20 @@ export function useRememberedFilters<K extends string>(
   restore: (saved: Partial<Record<K, string>>) => void,
   skip = false
 ): void {
-  const ready = useRef(false);
+  // The values as first rendered, until they first change; then "" (no JSON string equals it). Writing the
+  // first-render values would store the defaults over what was saved: under React StrictMode (dev) effects
+  // run twice before the restore's setState lands, and a default such as the events page's 「近 7 天」 then
+  // replaced a stored 「近 30 天」 (seen 2026-10-23). A "ready" flag let that second write through.
+  const pristine = useRef<string | null>(null);
   const serialized = JSON.stringify(values);
   useEffect(() => {
-    if (ready.current) writeFilters(key, JSON.parse(serialized) as Record<string, string>);
+    if (pristine.current === null || serialized === pristine.current) return;
+    pristine.current = "";
+    writeFilters(key, JSON.parse(serialized) as Record<string, string>);
   }, [key, serialized]);
   useEffect(() => {
     if (!skip) restore(readFilters(key, fields));
-    ready.current = true;
+    if (pristine.current === null) pristine.current = serialized;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载(或地址是否带筛选改变)时读一次
   }, [key, skip]);
 }
