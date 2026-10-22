@@ -302,7 +302,7 @@ class OfficerMfa(models.Model):
 
 
 class MfaRecoveryCode(models.Model):
-    """恢复码:像密码一样只存哈希(`make_password`),一次一用。"""
+    """恢复码:只存哈希,一次一用。用的是密码哈希器，但 PBKDF2 只跑 10 万轮(`mfa.RECOVERY_CODE_ITERATIONS`)。"""
 
     mfa = models.ForeignKey(OfficerMfa, on_delete=models.CASCADE, related_name="recovery_codes")
     code_hash = models.CharField(max_length=128)

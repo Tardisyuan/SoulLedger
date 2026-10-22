@@ -167,8 +167,9 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 书信里传了没发出的图(apps/chat/images.py::purge_all_stale):上传超过 24 小时的行与文件。
     # GLOBAL:ChatImage 没有租户列(租户经会话),账号再不上传就没人顺手清了。每天一次,阈值以天计。
     JobSpec("chat.cleanup_unsent_images", GLOBAL, "20 3 * * *", max_runtime=1800),
-    # 助手会话留存(apps/soul_assist/service.py::purge_history):超过 30 天的消息、灵魂删掉的会话、
-    # 前世账号的会话真删。GLOBAL:会话挂在账号上,账号没有租户列。每天一次,留存以天计。
+    # 助手会话留存(apps/soul_assist/service.py::purge_history):超过 30 天的消息、本人删掉的会话、
+    # 停用官员的会话、删空的会话真删;已注销的灵魂账号不因注销而删(用户 2026-10-20)。
+    # GLOBAL:会话挂在账号上,账号没有租户列。每天一次,留存以天计。
     JobSpec("soul_assist.purge_history", GLOBAL, "30 4 * * *", max_runtime=1800),
     # ---- this app's own maintenance --------------------------------------------
     # Every 5 minutes: the finest-grained job above is 5-minutely, so a stuck
