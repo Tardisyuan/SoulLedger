@@ -12,9 +12,6 @@ import { menuGlossParts } from "@/src/lib/menuI18n";
 /**
  * 页头里那一条面包屑。原先长在 AppLayout.tsx 里，随文件一起越过 500 行的上限
  * 之后搬到这里；代码逐字未改。
- *
- * AppLayout.tsx 仍然 `export { Breadcrumb } from "./Breadcrumb"` 转发一次 ——
- * 那不是搬家没搬干净，理由写在那一行上面。
  */
 /** 形如 42 或 uuid 的路径段，面包屑里显示为「详情」而不是原始 id。 */
 /** Routes named by their full path; the audit sub-pages take their tab's name (2026-10-17). */
