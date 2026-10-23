@@ -447,8 +447,6 @@ export function LoginScreen() {
   );
 }
 
-export const MIN_PASSWORD_LENGTH = 8;
-
 type PasswordField = "old" | "new" | "confirm";
 
 /** Which field a failure belongs to; anything else is shown above the button. */
