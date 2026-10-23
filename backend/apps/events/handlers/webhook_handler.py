@@ -33,7 +33,8 @@ class WebhookHandler(DomainEventHandler):
         - Skips tenants without webhook_configs
 
     Security:
-        - HMAC-SHA256 signature in X-SoulLedger-Signature header
+        - HMAC-SHA256 signature in X-SoulLedger-Signature (body only) and X-SoulLedger-Signature-V2
+          (over "<X-SoulLedger-Timestamp>." + body, for replay protection)
     """
 
     def should_handle(self, envelope: EventEnvelope) -> bool:

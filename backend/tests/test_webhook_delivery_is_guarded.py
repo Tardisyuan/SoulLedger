@@ -155,6 +155,9 @@ def test_a_delivery_is_signed_with_the_configured_secret(wired):
     ).hexdigest()
     with_empty = "sha256=" + hmac.new(b"", body, hashlib.sha256).hexdigest()
 
+    ts = sent[0]["headers"]["X-SoulLedger-Timestamp"]
+    v2 = "sha256=" + hmac.new(b"the-real-secret", ts.encode() + b"." + body, hashlib.sha256).hexdigest()
+    assert sent[0]["headers"]["X-SoulLedger-Signature-V2"] == v2, "V2 签名应覆盖时间戳 + 正文(防重放)"
     assert header == with_real, (
         f"签名与 `signing_secret` 对不上。得到 {header},应为 {with_real}。"
     )
