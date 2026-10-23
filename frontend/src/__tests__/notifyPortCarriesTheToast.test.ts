@@ -1,6 +1,6 @@
 /**
  * The `notify` port: that a message **key** reaches a real, translated toast on
- * web, and that the six hooks actually go through it.
+ * web, and that the five hooks actually go through it.
  *
  * WHAT THIS IS GUARDING AGAINST, specifically. The redirection is invisible
  * from outside — the same banner appears either way, so every page test stays
@@ -17,7 +17,7 @@
  *      something, not just declared, and the host really is the translator;
  *   2. a hook drives it with a probe adapter installed and no toast module
  *      mocked at all — so the redirection is real at run time;
- *   3. the six hook files are pinned by name and may not name `useToast` —
+ *   3. the five hook files are pinned by name and may not name `useToast` —
  *      so a regression in the five this file does not exercise still fails.
  */
 import { render, renderHook, waitFor } from "@testing-library/react";
@@ -237,7 +237,7 @@ describe("a hook drives the port, not the context", () => {
   });
 });
 
-describe("all six hooks, pinned by name", () => {
+describe("all five hooks, pinned by name", () => {
   // The list, not a scan for offenders: a scan is clean when it scans nothing.
   // These are six of the seven files commit 750ea1a recorded as blocked on
   // ToastContext.
@@ -249,11 +249,12 @@ describe("all six hooks, pinned by name", () => {
   // behind (it depended on `useTenant`) — and it is gone now: it had no
   // consumer, and the provider it exported held a second socket to the same
   // endpoint as `WebSocketProvider` (FL-01, `oneRealtimeSocketPerSession.test.ts`).
+  // Six became five on 2026-10-23: `useReincarnation.ts` (`useReborn`) had no
+  // caller — the soul page calls `reincarnationApi.reborn` itself — and was deleted.
   const HOOKS = [
     "packages/core/src/hooks/useDispositions.ts",
     "packages/core/src/hooks/useJudgmentQueue.ts",
     "packages/core/src/hooks/useJudgments.ts",
-    "packages/core/src/hooks/useReincarnation.ts",
     "packages/core/src/hooks/useSocial.ts",
     "packages/core/src/hooks/useSouls.ts",
   ];
@@ -266,8 +267,8 @@ describe("all six hooks, pinned by name", () => {
     source: readFileSync(path.join(ROOT, file), "utf8"),
   }));
 
-  it("reads six real files", () => {
-    expect(sources).toHaveLength(6);
+  it("reads five real files", () => {
+    expect(sources).toHaveLength(5);
     expect(sources.every(({ source }) => source.length > 200)).toBe(true);
   });
 
@@ -313,7 +314,7 @@ describe("all six hooks, pinned by name", () => {
     // `frontend/`. Under jest's `moduleNameMapper` such an import would even
     // work, so nothing else here would report it.
     const moved = sources.filter(({ file }) => file.startsWith("packages/core/"));
-    expect(moved).toHaveLength(6);
+    expect(moved).toHaveLength(5);
     const offenders = moved.filter(({ source }) => /from "@\//.test(source));
     expect(offenders.map(({ file }) => file)).toEqual([]);
   });
