@@ -12,7 +12,6 @@ import {
   type AssistAdminEvalSide,
   type AssistAdminHall,
   type AssistAdminPlatformId,
-  type AssistAdminTryRequest,
 } from "../api/assist-admin";
 import { assistAdminKeys } from "../query_keys";
 
@@ -114,11 +113,6 @@ export function useAssistUsage(month: string | undefined, enabled = true) {
 
 export function useEvalCases(enabled = true) {
   return useQuery({ queryKey: [...assistAdminKeys.all, "eval-cases"], queryFn: assistAdminApi.evalCases, enabled });
-}
-
-/** 试问: a mutation, never retried — every call is a paid request. */
-export function useAssistTry() {
-  return useMutation({ mutationFn: (body: AssistAdminTryRequest) => assistAdminApi.tryQuestion(body) });
 }
 
 /** The corpus ships with the code, so it does not change under a running page. */

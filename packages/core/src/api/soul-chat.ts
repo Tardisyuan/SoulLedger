@@ -90,14 +90,6 @@ export function soulChatErrorMessage(error: unknown): SoulErrorMessage {
   return { key: `soul_app.chat.errors.${code === "self_conversation" ? "self" : code}` };
 }
 
-/** Copy key for a failed image request: its own code first, then the chat's, then the general copy. */
-export function soulChatImageErrorMessage(error: unknown): SoulErrorMessage {
-  const code = soulChatImageErrorCode(error);
-  if (code === "too_many_pending" || code === "images_unavailable") return { key: `soul_app.chat.image.errors.${code}` };
-  if (code !== null) return { key: `soul_app.circle.media.errors.${code}` };
-  return soulChatErrorMessage(error);
-}
-
 export const soulChatApi = {
   /** A short-lived Matrix login token (./matrix `matrixLogin`). 503 `chat_not_configured`: this deployment has no chat. */
   session: () => soulHttp.get<SoulChatSession>("/me/chat/session/").then((r) => r.data),
