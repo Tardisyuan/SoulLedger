@@ -127,3 +127,34 @@ describe("nothing owed", () => {
     expect(submitButton()).toBeEnabled();
   });
 });
+
+// 2026-10-23: `required_verdicts` is a list, not a number; the progress showed 「1 / PASSED,FAILED」, or 「1 / 」 for `[]`.
+describe("会签 progress and the verdicts a node accepts", () => {
+  const SIGNED = [{ signer: 7, user_name: "甲", verdict: "PASSED", passed: true, at: "2026-10-09T00:00:00Z" }];
+
+  it("counts passing signatures against the threshold, never the verdict list", async () => {
+    workflowApi.get.mockResolvedValue(workflow({ kind: "COUNTERSIGN", signers_json: [7, 8, 9], threshold: 2, required_verdicts: ["PASSED", "FAILED"], signatures_json: SIGNED }));
+    renderPage();
+    expect(await screen.findByText("1 / 2")).toBeTruthy();
+    expect(screen.queryByText(/PASSED/)).toBeNull();
+  });
+
+  it("a null threshold is all the signers, and [] verdicts still show a number", async () => {
+    workflowApi.get.mockResolvedValue(workflow({ kind: "COUNTERSIGN", signers_json: [7, 8, 9], threshold: null, required_verdicts: [], signatures_json: SIGNED }));
+    renderPage();
+    expect(await screen.findByText("1 / 3")).toBeTruthy();
+  });
+
+  it("offers only the verdicts the node lists; [] offers all five", async () => {
+    workflowApi.get.mockResolvedValue(workflow({ required_verdicts: ["CONFIRMED", "REJECTED"] }));
+    const { unmount } = renderPage();
+    expect(await screen.findByLabelText(tZh("workflow.verdicts.confirmed"))).toBeTruthy();
+    expect(screen.getByLabelText(tZh("workflow.verdicts.rejected"))).toBeTruthy();
+    expect(screen.queryByLabelText(tZh("workflow.verdicts.passed"))).toBeNull();
+    expect(screen.queryByLabelText(tZh("workflow.verdicts.skipped"))).toBeNull();
+    unmount();
+    workflowApi.get.mockResolvedValue(workflow({ required_verdicts: [] }));
+    renderPage();
+    expect(await screen.findByLabelText(tZh("workflow.verdicts.skipped"))).toBeTruthy();
+  });
+});

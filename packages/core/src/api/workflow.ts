@@ -209,7 +209,9 @@ export interface ApprovalNode {
   approver_actor?: string | null;
   approver_role?: string;
   realm?: string | null;
-  required_verdicts?: number;
+  /** The verdicts this node accepts; `[]` = no constraint. WAS `number` -- the backend has always sent a list
+   *  (JSONField), so the countersign progress printed 「1 / PASSED,FAILED」, or 「1 / 」 for `[]` (2026-10-23). */
+  required_verdicts?: string[];
   evidence_json?: Record<string, unknown> | null;
   /**
    * The deciding user's **integer primary key**, or null.
@@ -241,6 +243,9 @@ export interface ApprovalNode {
   /** Decisions a 驳回到 re-opened, and timeout events, oldest first. */
   decision_history?: Record<string, unknown>[];
   signatures_json?: { signer: number; user_name: string; verdict: string; passed: boolean; at: string }[];
+  /** 会签: the signers (user ids) and how many passing signatures close the node; `threshold` null = all of them. */
+  signers_json?: unknown[];
+  threshold?: number | null;
   /** 加签: the colleagues the designated approver added to this node, and whether each has signed. */
   cosigners?: { user_id: number; name: string; signed: boolean }[];
   /**
