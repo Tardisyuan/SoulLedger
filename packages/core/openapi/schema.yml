@@ -13074,23 +13074,6 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/v1/perm/role-permissions/init/:
-    post:
-      operationId: v1_perm_role_permissions_init_create
-      description: |-
-        POST /api/v1/perm/role-permissions/init/
-        根据 ROLE_PERMISSIONS 字典为所有角色分配权限（仅 ADMIN）
-      tags:
-      - v1
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InitRolePermissionsResult'
-          description: ''
   /api/v1/perm/roles/:
     get:
       operationId: v1_perm_roles_list
@@ -26507,30 +26490,6 @@ components:
       - draft
       - draft_saved_at
       - last_read_at
-    InitRolePermissionsResult:
-      type: object
-      description: |-
-        200 body of `init_role_permissions`.
-
-        `roles` maps a role name to a human sentence — "Assigned 7 permissions" or
-        "Role not found". It is a per-role status string and not a count; the view
-        builds it that way and a client cannot parse a number out of it safely.
-      properties:
-        message:
-          type: string
-        permissions_added:
-          type: integer
-        permissions_total:
-          type: integer
-        roles:
-          type: object
-          additionalProperties:
-            type: string
-      required:
-      - message
-      - permissions_added
-      - permissions_total
-      - roles
     InitRolesResult:
       type: object
       description: 200 body of `init_roles`. `total` is every Role row, not the count

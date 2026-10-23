@@ -11,9 +11,10 @@ What is pinned, and why each line is here rather than assumed:
   and the update of the same row carry no `_signing_secret` key at all.
 * URL validation refuses the scheme and the address classes the delivery
   task would refuse at send time (`_validate_webhook_url`), so a row that
-  can never deliver is never written. Valid cases use TEST-NET-3 literals
-  (`203.0.113.0/24`) — an IP literal needs no DNS, and it is not in the
-  blocklist.
+  can never deliver is never written. Valid cases use public IP literals
+  (`8.8.8.8` …) — an IP literal needs no DNS, and nothing here sends. They
+  were TEST-NET-3 (`203.0.113.0/24`) until 2026-10-23, when the validator
+  moved to `ip.is_global`, which is False for documentation ranges.
 * `events` is checked against `EventType` — the enum the handler compares
   against verbatim — so a misspelt name is a 400, not a silent nothing.
 * Disabling is a PATCH that keeps the row and its deliveries; there is no
@@ -38,7 +39,7 @@ from tests.test_death_sync import _api_key_client, _jwt_client
 ADMIN_URL = "/api/v1/death-sync/admin-webhooks/"
 DELIVERIES_URL = "/api/v1/death-sync/webhook-deliveries/"
 SELF_SERVICE_URL = "/api/v1/death-sync/webhooks/"
-PUBLIC_URL = "https://203.0.113.10/hook"
+PUBLIC_URL = "https://8.8.8.8/hook"
 
 
 def _key(tenant, name="Key", **extra):
@@ -160,7 +161,7 @@ class TestCreate:
     @pytest.mark.parametrize(
         "url",
         [
-            "ftp://203.0.113.10/hook",
+            "ftp://8.8.8.8/hook",
             "https://127.0.0.1/hook",
             "https://10.0.0.5/hook",
             "https://[::1]/hook",
@@ -198,12 +199,12 @@ class TestUpdateAndDisable:
         )
         resp = users["admin"].patch(
             f"{ADMIN_URL}{hook.id}/",
-            {"url": "https://203.0.113.11/v2", "events": ["SOUL_CREATED", "STATE_CHANGED"], "is_active": False},
+            {"url": "https://8.8.4.4/v2", "events": ["SOUL_CREATED", "STATE_CHANGED"], "is_active": False},
             format="json",
         )
         assert resp.status_code == status.HTTP_200_OK, resp.data
         hook.refresh_from_db()
-        assert hook.url == "https://203.0.113.11/v2"
+        assert hook.url == "https://8.8.4.4/v2"
         assert hook.events == ["SOUL_CREATED", "STATE_CHANGED"]
         assert hook.is_active is False
         assert hook.signing_secret == "whsec_fixture"
@@ -280,7 +281,7 @@ class TestTenantScoping:
 class TestDeliveries:
     def test_newest_first_paginated_filterable_and_without_the_payload(self, users, cn_tenant, cn_key):
         a = _webhook(cn_tenant, cn_key[0])
-        b = _webhook(cn_tenant, cn_key[0], url="https://203.0.113.12/b")
+        b = _webhook(cn_tenant, cn_key[0], url="https://1.1.1.1/b")
         rows = []
         for i in range(25):
             rows.append(EventWebhookDelivery.objects.create(

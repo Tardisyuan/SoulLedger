@@ -14,24 +14,32 @@ role-codename grants -- JUDGE lost `soul.read`, `soul.die` and
 0017_seed_roles_and_grants names this failure mode in its own docstring and
 deliberately refuses to seed the whole catalogue because of it.
 
-That endpoint is gone (2026-08-30). `POST /perm/role-permissions/init/` seeds
-rows *and* grants and is the only entry point now.
+That endpoint is gone (2026-08-30), and so is its successor
+`POST /perm/role-permissions/init/` (2026-10-23): it deleted every role's
+grants before re-creating them from the dict, which wiped the admin's matrix
+edits along with any `conditions` / `data_scope` on them. The one way to seed
+missing codenames now is `manage.py sync_permissions`, which creates only the
+rows that do not exist and grants them to the dict's holders.
 
 **Deleting an endpoint is not the same as removing a class of defect**, which
 is why this file did not shrink to a 404 assertion. The property that matters
-is "no admin action leaves a codename seeded-but-ungranted", and it is
-asserted here against the surviving endpoint, through `check_permission`
-rather than through row counts -- the row count was never the thing that
-broke. The old endpoint reported 38 rows created and that number was true.
+is "seeding leaves no codename seeded-but-ungranted", and it is asserted here
+against the command, through `check_permission` rather than through row
+counts -- the row count was never the thing that broke. The old endpoint
+reported 38 rows created and that number was true.
 """
+from io import StringIO
+
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.urls import NoReverseMatch, reverse
-from rest_framework.test import APIClient
 
 from apps.perm.checker import check_permission
+from apps.perm.management.commands.sync_permissions import missing_permissions
 from apps.perm.models import (
     DEFAULT_PERMISSIONS,
+    DEFAULT_ROLES,
     ROLE_PERMISSIONS,
     Permission,
     Role,
@@ -43,25 +51,19 @@ User = get_user_model()
 _ALL_CODENAMES = sorted({c for c, _, _ in DEFAULT_PERMISSIONS})
 
 
-def _jwt_client(user, tenant):
-    client = APIClient()
-    from rest_framework_simplejwt.tokens import RefreshToken
-
-    token = RefreshToken.for_user(user)
-    token["tenant_code"] = tenant.code
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-    return client
-
-
 @pytest.fixture
-def admin_client(db):
-    tenant = Tenant.objects.get_or_create(
+def tenant(db):
+    # Every built-in role gets a Role row first, the way `roles/init/` leaves
+    # it: sync_permissions grants only to roles that have one.
+    for name, display in DEFAULT_ROLES:
+        Role.revive_or_create(name, display_name=display)
+    return Tenant.objects.get_or_create(
         code="PI_T", defaults={"display_name": "Perm Init"}
     )[0]
-    admin = User.objects.create_user(
-        username="pi_admin", password="x", role="ADMIN", tenant=tenant
-    )
-    return _jwt_client(admin, tenant), tenant
+
+
+def _sync():
+    call_command("sync_permissions", stdout=StringIO())
 
 
 def _probe_user(role_name, tenant):
@@ -69,7 +71,7 @@ def _probe_user(role_name, tenant):
 
     A fresh user per reading hit a UNIQUE constraint the second time round,
     and reusing one is the more honest measurement anyway: the before/after
-    comparison should differ in exactly one thing, the endpoint call.
+    comparison should differ in exactly one thing, the command run.
     """
     user, _ = User.objects.get_or_create(
         username=f"probe_{role_name.lower()}",
@@ -88,19 +90,18 @@ def _effective(role_name, tenant):
     }
 
 
-def test_the_endpoint_that_could_only_do_half_the_job_is_gone():
+@pytest.mark.parametrize("name", ["perm:init", "perm:init-role-permissions"])
+def test_the_endpoints_that_rebuilt_grants_are_gone(name):
     with pytest.raises(NoReverseMatch):
-        reverse("perm:init")
+        reverse(name)
 
 
 @pytest.mark.django_db
-def test_the_seeding_endpoint_revokes_nothing(admin_client):
-    """The surviving entry point, held to the property the other one broke."""
-    client, tenant = admin_client
+def test_seeding_revokes_nothing(tenant):
+    """The surviving entry point, held to the property the endpoints broke."""
     before = {role: _effective(role, tenant) for role in ROLE_PERMISSIONS}
 
-    resp = client.post("/api/v1/perm/role-permissions/init/", {}, format="json")
-    assert resp.status_code == 200, resp.data
+    _sync()
 
     lost = {}
     for role, had in before.items():
@@ -112,34 +113,34 @@ def test_the_seeding_endpoint_revokes_nothing(admin_client):
         f"seeding revoked grants: {lost}. Creating a Permission row moves that "
         f"codename from the ROLE_PERMISSIONS fallback to the database branch "
         f"of check_permission; without the matching RolePermission rows that "
-        f"reads as denied, and the response still says success."
+        f"reads as denied, and the command still says success."
     )
 
 
 @pytest.mark.django_db
-def test_the_seeding_endpoint_actually_seeds(admin_client):
-    """Positive control. An endpoint that does nothing also revokes nothing."""
-    client, _ = admin_client
+def test_seeding_actually_seeds(tenant):
+    """Positive control. A command that does nothing also revokes nothing."""
     assert Permission.objects.count() < len(DEFAULT_PERMISSIONS), (
         "the catalogue is already complete before the call -- this test would "
-        "pass without the endpoint doing anything"
+        "pass without the command doing anything"
     )
-    resp = client.post("/api/v1/perm/role-permissions/init/", {}, format="json")
-    assert resp.status_code == 200
+    _sync()
     seeded = set(Permission.objects.values_list("codename", flat=True))
     assert set(_ALL_CODENAMES) <= seeded, sorted(set(_ALL_CODENAMES) - seeded)
 
 
 @pytest.mark.django_db
-def test_no_codename_is_ever_left_seeded_but_ungranted(admin_client):
-    """The property itself, independent of which endpoint produced the state.
+def test_no_codename_seeded_by_the_command_is_left_ungranted(tenant):
+    """The property itself, measured on what the command created.
 
     A row with no grant behind it denies a role that ROLE_PERMISSIONS says
-    should hold it. Checking this directly means a future endpoint that
-    reintroduces the half-job is caught by its effect, not by its name.
+    should hold it. Rows that existed before the call belong to the admin
+    (their grants are the matrix) and are deliberately out of scope here;
+    `apps/perm/test_sync_permissions.py` pins that they are left alone.
     """
-    client, tenant = admin_client
-    client.post("/api/v1/perm/role-permissions/init/", {}, format="json")
+    created = {codename for codename, _, _, _ in missing_permissions()}
+    assert created, "nothing to seed -- this test would pass vacuously"
+    _sync()
 
     orphaned = []
     for role_name, codenames in ROLE_PERMISSIONS.items():
@@ -151,11 +152,7 @@ def test_no_codename_is_ever_left_seeded_but_ungranted(admin_client):
                 "permission__codename", flat=True
             )
         )
-        for codename in codenames:
-            if not Permission.objects.filter(codename=codename).exists():
-                continue  # not seeded: the dict branch still answers for it
-            if codename not in granted:
-                orphaned.append(f"{role_name}:{codename}")
+        orphaned += [f"{role_name}:{c}" for c in codenames if c in created and c not in granted]
 
     assert orphaned == [], (
         f"{len(orphaned)} codename(s) are seeded as Permission rows without the "

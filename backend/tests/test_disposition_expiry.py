@@ -13,7 +13,7 @@ from django.utils import timezone
 from apps.audit.models import AuditLog
 from apps.disposition.expiry import expire_for_tenant, term_end, term_has_ended
 from apps.disposition.models import Disposition
-from apps.disposition.tasks import expire_due_dispositions, expire_due_dispositions_for_tenant
+from apps.disposition.tasks import expire_due_dispositions_for_tenant
 from apps.events.models import SoulEvent
 from apps.scheduler import registry
 from apps.souls.models import Soul, SoulState
@@ -183,7 +183,7 @@ class TestExpireForTenant:
 
 
 # ---------------------------------------------------------------------------
-# The celery tasks: fan-out and tenant context
+# The celery task: tenant context
 # ---------------------------------------------------------------------------
 
 def _due_today(tenant, name):
@@ -194,15 +194,6 @@ def _due_today(tenant, name):
 
 @pytest.mark.django_db
 class TestTasks:
-    @patch("apps.disposition.tasks.expire_due_dispositions_for_tenant.delay")
-    def test_fan_out_dispatches_one_subtask_per_active_tenant(self, mock_delay, tenant, other_tenant):
-        inactive = Tenant.objects.create(code="EXP_OFF", display_name="Off", is_active=False)
-        result = expire_due_dispositions()
-        dispatched = {call.kwargs["tenant_id"] for call in mock_delay.call_args_list}
-        assert {str(tenant.pk), str(other_tenant.pk)} <= dispatched
-        assert str(inactive.pk) not in dispatched
-        assert result["tenants_dispatched"] == len(dispatched)
-
     def test_the_contextvar_is_this_tenant_during_the_run_and_cleared_after(self, tenant, other_tenant):
         seen = []
 

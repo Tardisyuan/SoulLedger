@@ -7,7 +7,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.death_sync.models import ExternalApiKey, WebhookConfig
-from apps.death_sync.signing import is_timestamp_fresh, sign_payload, verify_signature
 from apps.tenants.models import Tenant
 
 
@@ -34,37 +33,6 @@ def api_key(cn_tenant):
         # webhook CRUD needs the capability it is exercising.
         can_manage_webhooks=True,
     )
-
-
-# ── Signing Tests ────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestSigning:
-    def test_sign_payload(self):
-        payload = b'{"test": true}'
-        secret = "my_secret"
-        timestamp = "1234567890"
-        sig = sign_payload(payload, secret, timestamp)
-        assert len(sig) == 64  # SHA-256 hex digest
-
-    def test_verify_signature_valid(self):
-        payload = b'{"test": true}'
-        secret = "my_secret"
-        timestamp = "1234567890"
-        sig = sign_payload(payload, secret, timestamp)
-        assert verify_signature(payload, secret, timestamp, f"sha256={sig}") is True
-
-    def test_verify_signature_invalid(self):
-        payload = b'{"test": true}'
-        assert verify_signature(payload, "secret", "123", "sha256=invalid") is False
-
-    def test_is_timestamp_fresh(self):
-        import time
-        assert is_timestamp_fresh(str(int(time.time())), max_age_seconds=300) is True
-        assert is_timestamp_fresh("1000000000", max_age_seconds=300) is False
-
-    def test_is_timestamp_fresh_invalid(self):
-        assert is_timestamp_fresh("not_a_number") is False
 
 
 # ── Webhook Config Tests ────────────────────────────────────────────

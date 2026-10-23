@@ -687,30 +687,6 @@ class TestEventService:
         assert event.payload["realm"] is None
         assert event.payload["is_eternal"] is True
 
-    def test_log_reincarnation_triggered(self, soul):
-        mock_reincarnation = MagicMock()
-        mock_reincarnation.soul = soul
-        mock_reincarnation.id = uuid.uuid4()
-        mock_reincarnation.new_identity = "New Identity"
-        EventService.log_reincarnation_triggered(mock_reincarnation)
-        event = SoulEvent.objects.filter(
-            soul=soul, event_type="REINCARNATION_TRIGGERED"
-        ).first()
-        assert event is not None
-
-    def test_log_reincarnation_triggered_no_new_identity(self, soul):
-        mock_reincarnation = MagicMock()
-        mock_reincarnation.soul = soul
-        mock_reincarnation.id = uuid.uuid4()
-        # No new_identity attribute
-        del mock_reincarnation.new_identity
-        EventService.log_reincarnation_triggered(mock_reincarnation)
-        event = SoulEvent.objects.filter(
-            soul=soul, event_type="REINCARNATION_TRIGGERED"
-        ).first()
-        assert event is not None
-        assert event.payload["new_identity"] is None
-
     def test_log_base_method(self, soul):
         """Test the base log method directly."""
         EventService.log(soul, "CUSTOM_EVENT", {"key": "value"}, actor="test_actor")

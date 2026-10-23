@@ -93,11 +93,6 @@ def status_of(account) -> dict:
     }
 
 
-def lock_remaining(account) -> int:
-    mfa = get_mfa(account)
-    return core._lock_remaining(mfa) if mfa is not None else 0
-
-
 # ── 设备令牌 ───────────────────────────────────────────────────────────────
 
 

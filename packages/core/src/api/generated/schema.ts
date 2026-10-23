@@ -5945,26 +5945,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/perm/role-permissions/init/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description POST /api/v1/perm/role-permissions/init/
-         *     根据 ROLE_PERMISSIONS 字典为所有角色分配权限（仅 ADMIN）
-         */
-        post: operations["v1_perm_role_permissions_init_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/perm/roles/": {
         parameters: {
             query?: never;
@@ -12086,21 +12066,6 @@ export interface components {
             draft: string;
             /** Format: date-time */
             draft_saved_at: string | null;
-        };
-        /**
-         * @description 200 body of `init_role_permissions`.
-         *
-         *     `roles` maps a role name to a human sentence — "Assigned 7 permissions" or
-         *     "Role not found". It is a per-role status string and not a count; the view
-         *     builds it that way and a client cannot parse a number out of it safely.
-         */
-        InitRolePermissionsResult: {
-            message: string;
-            permissions_added: number;
-            permissions_total: number;
-            roles: {
-                [key: string]: string;
-            };
         };
         /** @description 200 body of `init_roles`. `total` is every Role row, not the count created. */
         InitRolesResult: {
@@ -30448,25 +30413,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-        };
-    };
-    v1_perm_role_permissions_init_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InitRolePermissionsResult"];
                 };
             };
         };

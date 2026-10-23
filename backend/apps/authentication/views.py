@@ -1225,7 +1225,7 @@ def set_new_password(request):
     # Set new password — through the same path as a soul changing its initial
     # password, so the reset also ends the initial-password lifecycle: not
     # forced to change it again, and an initial password that had already
-    # lapsed no longer makes `soul_accounts.services.login` refuse the new one.
+    # lapsed no longer makes `soul_accounts.services.authenticate` refuse the new one.
     # 「其他设备上的登录已全部退出」: every refresh token this account holds is
     # blacklisted there. An access token already issued lives out its lifetime
     # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.

@@ -1,7 +1,7 @@
 """邮箱重置结束初始密码的生命周期(2026-09-26 Android 实测缺陷)。
 
 此前 `set_new_password` 只 `set_password`:重置后灵魂仍被要求「修改初始密码」;
-而初始密码已过期时,`services.login` 以 `initial_password_expired` 拒绝**新**密码,
+而初始密码已过期时,`services.authenticate` 以 `initial_password_expired` 拒绝**新**密码,
 灵魂无法经邮箱自救。
 """
 from datetime import timedelta

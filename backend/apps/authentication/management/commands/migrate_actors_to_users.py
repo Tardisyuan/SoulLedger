@@ -167,10 +167,3 @@ class Command(BaseCommand):
         user.actor = actor
         user.is_active = actor.is_active
         user.save()
-
-    def print_summary(self):
-        """打印迁移汇总"""
-        self.stdout.write("\n=== Actor -> User 迁移汇总 ===")
-        self.stdout.write(f"总 Actor 数: {Actor.objects.count()}")
-        self.stdout.write(f"总 User 数: {User.objects.count()}")
-        self.stdout.write(f"已关联 User 的 Actor 数: {Actor.objects.filter(users__isnull=False).count()}")
