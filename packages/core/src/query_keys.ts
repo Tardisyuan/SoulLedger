@@ -231,18 +231,6 @@ export const sentencePlanKeys = {
   detail: (id: string) => ["sentence-plans", "detail", id] as const,
 };
 
-/** The soul's own push history (`/me/notifications/`), one key per page. */
-export const soulNotificationKeys = {
-  all: ["soul-notifications"] as const,
-  page: (page: number) => ["soul-notifications", "page", page] as const,
-};
-
-/** Soul chat, soul side. Opening a conversation invalidates the list. */
-export const soulChatKeys = {
-  all: ["soul-chat"] as const,
-  conversations: () => ["soul-chat", "conversations"] as const,
-};
-
 export const socialKeys = {
   all: ["social"] as const,
   posts: {

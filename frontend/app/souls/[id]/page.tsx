@@ -383,8 +383,7 @@ export default function SoulDetailPage() {
         new_identity: `${soul?.name} (rebirth)`,
         rebirth_form: rebirthForm,
       });
-      // 同上:`useReborn` 只 invalidate `["souls"]`,而转生会写出一条新的
-      // 处置执行记录,所以这里用三族全标脏的那一个。
+      // 转生会写出一条新的处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
       // Same as `handleDie` above: silent success, loud failure. Reincarnation
       // additionally ticks the `generation` badge, which moved with no word.
