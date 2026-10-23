@@ -206,7 +206,6 @@ export function PermissionMatrixTable({
   roleNames: string[];
   roleMeta: Record<string, Role>;
   categories: { category: string; perms: Permission[] }[];
-  allPerms?: Permission[];
   isSaving: boolean;
   isVisible: (perm: Permission) => boolean;
   onToggle: (role: string, permId: number) => void;

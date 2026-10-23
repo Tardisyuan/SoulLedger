@@ -3660,8 +3660,6 @@
     "arrange_reincarnation": "Arrange rebirth"
   },
   "reincarnation": {
-    "reborn_success": "Reincarnation started",
-    "reborn_error": "Failed to start reincarnation",
     "form_label": "Rebirth form",
     "forms": {
       "DIVINE": "Deva",

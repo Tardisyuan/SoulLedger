@@ -32,7 +32,6 @@ export type AssistAdminEvalResult = Schemas["EvalResult"];
 export type AssistAdminUsage = Schemas["Usage"];
 export type AssistAdminEvalCase = Schemas["EvalCase"];
 export type AssistAdminTryRequest = Schemas["TryRequest"];
-export type AssistAdminTryResult = Schemas["TryResult"];
 export type AssistAdminCorpus = Schemas["Corpus"];
 export type AssistAdminCorpusEntry = Schemas["CorpusEntry"];
 export type AssistAdminEmbedding = Schemas["EmbeddingConfig"];
@@ -110,7 +109,6 @@ export const assistAdminApi = {
   evalRuns: () => api.get<AssistAdminEvalRun[]>(`${BASE}/eval/runs/`).then((r) => r.data),
   evalRun: (id: number) => api.get<AssistAdminEvalRunDetail>(`${BASE}/eval/runs/${id}/`).then((r) => r.data),
   /** 试问 (plan §3.3): one real, paid question as the eval identity; not counted in usage. Tool names only. */
-  tryQuestion: (body: AssistAdminTryRequest) => api.post<AssistAdminTryResult>(`${BASE}/try/`, body).then((r) => r.data),
   /** 试问, answered as it is written (§13); `done` carries the try result plus `provider_role` / `fallback_reason`. */
   tryStream: (fetch: AssistStreamFetch, body: AssistAdminTryRequest, controller: AssistStreamAbort, onEvent: (event: AssistTryStreamEvent) => void) =>
     streamAssist<AssistTryStreamEvent>({ fetch, path: `${BASE}/try/`, body, controller, onEvent, refresh: () => api.get(`${BASE}/config/`) }),
