@@ -34,6 +34,30 @@ import { setUnauthorizedHandler } from "./platform";
 import { PUSH_TOKEN_KEY, hasRegisteredDevice, unregisterDevice } from "./push";
 import { clearVoiceNumbers } from "./voiceCache";
 
+
+/**
+ * A sign-out the server never heard (offline): its refresh token is kept and the logout is sent again at the next
+ * start. The server ends this device's session on logout (2026-10-23), which is what stops the lock-screen pushes;
+ * until then the phone kept getting the previous soul's notifications. Only a lost request is kept: an answer of any
+ * kind (the token already dead included) is final. ponytail: one retry per start, no backoff.
+ */
+export const PENDING_LOGOUT_KEY = "soulledger.pendingLogout";
+
+function keepPendingLogout(error: unknown, refresh: string): void {
+  if (!(error as { response?: unknown })?.response) platform().secure.set(PENDING_LOGOUT_KEY, refresh);
+}
+
+export function retryPendingLogout(): void {
+  const refresh = platform().secure.get(PENDING_LOGOUT_KEY);
+  if (!refresh) return;
+  soulApi.logout(refresh).then(
+    () => platform().secure.remove(PENDING_LOGOUT_KEY),
+    (e: unknown) => {
+      if ((e as { response?: unknown })?.response) platform().secure.remove(PENDING_LOGOUT_KEY);
+    }
+  );
+}
+
 export type SessionState =
   | { status: "booting" }
   | { status: "unreachable"; error: SoulErrorMessage }
@@ -159,6 +183,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // A stored refresh token from a previous run: ask the server whether it still holds.
   useEffect(() => {
+    retryPendingLogout();
     if (getRefreshToken()) void enter();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once
   }, []);
@@ -268,7 +293,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setState({ status: "signedOut" });
     const end = () => {
       if (getRefreshToken() === refresh) clearSoulTokens();
-      if (refresh) soulApi.logout(refresh).catch(() => {});
+      if (refresh) soulApi.logout(refresh).catch((e: unknown) => keepPendingLogout(e, refresh));
     };
     if (hasRegisteredDevice()) void unregisterDevice().finally(end);
     else end();

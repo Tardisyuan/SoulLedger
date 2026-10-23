@@ -189,6 +189,18 @@ def revoke(session) -> None:
     _close_sockets(session.user_id)
 
 
+def sign_out(token) -> None:
+    """退出登录(这台设备自己按「退出」):会话标为已退出、它的推送登记停用。刷新令牌由调用方拉黑;
+    「30 天内不再询问」**不**作废(登出不清它,见 `MfaRememberedDevice`)。2026-10-23 前退出只拉黑令牌,
+    会话要等过期才算结束 —— App 离线退出、注销推送的请求发不出去时，这台手机一直收到上一个人的推送。"""
+    session = session_of(token)
+    if session is None or session.revoked_at is not None:
+        return
+    _end_push([session.pk])
+    session.revoked_at = timezone.now()
+    session.save(update_fields=["revoked_at"])
+
+
 def revoke_others(user, keep) -> int:
     """除 `keep`(当前这台)外全部退出,含没有 `sid` 的老令牌。返回刚标记的行数。"""
     count = revoke_all(user, keep=keep)

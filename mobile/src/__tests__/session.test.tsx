@@ -14,7 +14,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
-import { SessionProvider } from "../session";
+import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
 import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
 import { PROFILE, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
@@ -269,6 +269,27 @@ describe("a stored session", () => {
     await screen.findByTestId("login-submit");
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
     await waitFor(() => expect(calls.some((c) => c.url === "/soul-auth/logout/")).toBe(true));
+  });
+
+  it("a sign-out the server never heard is sent again at the next start (2026-10-23)", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/soul-auth/logout/": "offline",
+      "/me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, locale: "zh-Hans" } },
+    });
+    const first = renderApp();
+    fireEvent.press(await screen.findByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("logout"));
+    fireEvent.press(await screen.findByTestId("logout-confirm"));
+    await screen.findByTestId("login-submit");
+    await waitFor(() => expect(secure.get(PENDING_LOGOUT_KEY)).toBe("R"));
+    first.unmount();
+    const calls = stubApi({ "/soul-auth/logout/": { status: 204 } });
+    renderApp();
+    await waitFor(() => expect(secure.get(PENDING_LOGOUT_KEY) || null).toBeNull());
+    expect(calls.filter((c) => c.url === "/soul-auth/logout/")).toHaveLength(1);
   });
 
   it("sign-out takes this soul's unsent letters off the device", async () => {

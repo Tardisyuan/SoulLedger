@@ -94,8 +94,8 @@ export function registeredToken(): string | undefined {
 export async function unregisterDevice(): Promise<void> {
   const token = platform().persistent.get(PUSH_TOKEN_KEY);
   if (!token) return;
-  // Ask first, forget after: a token wiped before the request leaves a failed one nothing to retry from
-  // (the server still stops it by itself once this device's sign-in session ends).
+  // A failed request is not retried (the token is forgotten either way). What stops the pushes is the logout that
+  // follows: since 2026-10-23 it ends this device's sign-in session on the server, and that ends its registration.
   await officerAppApi.unregisterPush(token).catch(() => {});
   platform().persistent.remove(PUSH_TOKEN_KEY);
 }

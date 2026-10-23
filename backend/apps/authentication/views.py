@@ -804,8 +804,11 @@ def logout_view(request):
     try:
         refresh_token = request.data.get("refresh")
         if refresh_token:
+            from . import signin_sessions
+
             token = RefreshToken(refresh_token)
             token.blacklist()
+            signin_sessions.sign_out(token)
         return Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
     except Exception:
         return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)

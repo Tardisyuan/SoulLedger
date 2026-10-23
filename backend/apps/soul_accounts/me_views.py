@@ -203,7 +203,11 @@ class SoulLogoutView(APIView):
     @extend_schema(request=SoulRefreshRequestSerializer, responses={204: None})
     def post(self, request):
         try:
-            SoulRefreshToken(request.data.get("refresh", "")).blacklist()
+            from apps.authentication import signin_sessions
+
+            token = SoulRefreshToken(request.data.get("refresh", ""))
+            token.blacklist()
+            signin_sessions.sign_out(token)
         except TokenError:
             pass  # 已失效的令牌不需要再作废;不把「令牌有效与否」当作一个可探测的回答
         return Response(status=status.HTTP_204_NO_CONTENT)
