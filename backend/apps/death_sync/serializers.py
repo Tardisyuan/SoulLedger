@@ -87,12 +87,6 @@ class WebhookConfigSerializer(serializers.ModelSerializer):
         read_only_fields = ['create_time']
 
 
-class HealthSerializer(serializers.Serializer):
-    """Serializer for health check response."""
-    api_key = serializers.DictField()
-    system = serializers.DictField()
-
-
 # ── Doc-only response shapes ─────────────────────────────────────────────
 
 

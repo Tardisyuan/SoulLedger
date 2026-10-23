@@ -43,8 +43,8 @@ import { VerdictBadge as DomainVerdictBadge } from "@/src/components/ui/StatusBa
  *
  * 执行中段「按期满近 → 远」由服务端排(`ordering=term_end`,跨页也对):期满日在 SQL 里按
  * 序列化器 `term_end` 同一条规则算,永久与没有期满日的排最后。稿子里的「下次自动期满检查 ·
- * 今日 24:00」没有画:期满任务
- * (`disposition.expire_due`)没有排进任何调度,下次何时跑没有可读的来源。
+ * 今日 24:00」没有画:期满任务(`disposition.expire_due_for_tenant`,由定时任务按租户登记)
+ * 下次何时跑,本页没有可读的来源。
  */
 
 const SECTIONS: readonly DispositionSection[] = ["pending", "executing", "expired"];

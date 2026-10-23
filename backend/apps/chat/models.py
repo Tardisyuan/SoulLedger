@@ -160,14 +160,6 @@ class Conversation(models.Model):
     def __str__(self):
         return f"{self.kind} {self.room_id}"
 
-    def other_soul_id(self, soul_id):
-        """DIRECT 会话里的另一方。不是参与方时返回 None。"""
-        if self.soul_a_id == soul_id:
-            return self.soul_b_id
-        if self.soul_b_id == soul_id:
-            return self.soul_a_id
-        return None
-
     def has_account(self, account_id):
         return account_id is not None and account_id in (self.account_a_id, self.account_b_id)
 

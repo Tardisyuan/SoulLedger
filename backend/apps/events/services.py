@@ -118,13 +118,6 @@ class EventService:
             )
         EventService.log(soul, "KARMA_RECALCULATED", payload, actor)
 
-    @staticmethod
-    def log_reincarnation_triggered(reincarnation, actor: str = "system") -> None:
-        EventService.log(reincarnation.soul, "REINCARNATION_TRIGGERED", {
-            "reincarnation_id": str(reincarnation.id),
-            "new_identity": reincarnation.new_identity if hasattr(reincarnation, "new_identity") else None,
-        }, actor)
-
     # ------------------------------------------------------------------
     # Workflow events (M12 Phase 2)
     # ------------------------------------------------------------------
@@ -230,18 +223,6 @@ class EventService:
             notification_type="WORKFLOW_ASSIGNED",
             **WorkflowService.notice_target(workflow),
             params=params,
-        )
-
-    @staticmethod
-    def notify_judgment_completed(user, judgment, actor: str = "system") -> None:
-        """Publish a judgment-completed notification via EventBus."""
-        EventService.notify_user(
-            user=user,
-            title=f"Judgment Completed: {judgment.verdict}",
-            message=f"Judgment has concluded with verdict: {judgment.verdict}.",
-            notification_type="JUDGMENT_COMPLETED",
-            related_resource="judgment",
-            related_id=str(judgment.id),
         )
 
 

@@ -26,14 +26,6 @@ class PermissionCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
 
-class RolePermissionSerializer(serializers.ModelSerializer):
-    permission = PermissionSerializer(read_only=True)
-
-    class Meta:
-        model = RolePermission
-        fields = ["id", "role", "permission"]
-
-
 class RolePermissionAssignSerializer(serializers.Serializer):
     role = serializers.CharField(max_length=20)
     permission_ids = serializers.ListField(
