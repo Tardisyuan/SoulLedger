@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@soulledger/core/api";
-import { passwordReasonKeys } from "@soulledger/core/api/auth";
+import { passwordReasonKeys, splitCommonReasons } from "@soulledger/core/api/auth";
 import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -92,13 +92,16 @@ export default function ProfilePage() {
     onError: (err: unknown) => {
       const response = (err as { response?: { status?: number; data?: { old_password?: unknown } } })?.response;
       const data = response?.data;
-      const refused = passwordReasonKeys(data).length > 0;
+      const reasons = passwordReasonKeys(data);
+      const { common, rest } = splitCommonReasons(reasons);
       const old = Array.isArray(data?.old_password) && data.old_password.length ? t("profile.password_old_wrong") : null;
       if (response?.status === 429) showToast(t("profile.password_locked"), "error");
-      else if (!refused && !old) showToast(t("profile.password_change_failed"), "error");
+      else if (!reasons.length && !old) showToast(t("profile.password_change_failed"), "error");
       setOldPasswordError(old);
-      // 服务器说「太常见 / 太像」:清单上的 ◇ 换成报错(password_rules.common_*),不再列 Django 的各条原因。
-      if (refused) rules.reject();
+      // 服务器说「太常见 / 太像」:清单上的 ◇ 换成报错(password_rules.common_*)。其余原因(最近用过、管理员太短、
+      // 全是数字)各说各的 —— 2026-10-23 前它们也一律被说成「太常见」。
+      if (common) rules.reject();
+      if (rest.length) showToast(rest.map((key) => t(key)).join("；"), "error");
     },
   });
 

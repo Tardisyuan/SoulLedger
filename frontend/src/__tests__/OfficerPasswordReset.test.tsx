@@ -212,6 +212,17 @@ describe("/reset-password", () => {
     expect(screen.getByTestId("officer-reset-password-form")).toBeInTheDocument();
   });
 
+  it("a reused password says so, not 'too common' (2026-10-23)", async () => {
+    confirm.mockRejectedValue({
+      response: { status: 400, data: { code: "weak_password", error: "x", new_password: [{ code: "password_reused", message: "x" }] } },
+    });
+    open("?uid=MQ&token=t");
+    await screen.findByTestId("officer-reset-password-form");
+    fill("N0t-Guessable!2026", "N0t-Guessable!2026");
+    expect(await screen.findByText("profile.password_reason_reused")).toBeInTheDocument();
+    expect(screen.queryByTestId("password-rules-common")).not.toBeInTheDocument();
+  });
+
   it("typing never turns a rule into '!'; leaving the box does; fixing it ticks at once; a clean form submits", async () => {
     confirm.mockResolvedValue({ data: { detail: "ok" } });
     open("?uid=MQ&token=t");
