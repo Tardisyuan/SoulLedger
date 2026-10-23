@@ -7,7 +7,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { notificationKeys } from "@soulledger/core/query_keys";
-import { notificationsApi, type Notification, type PaginatedResponse } from "@soulledger/core/api";
+import { notificationsApi, type Notification } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";

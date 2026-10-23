@@ -86,33 +86,6 @@ export async function* parseAssistStream<E extends { event: string } = AssistStr
   yield* parser.end();
 }
 
-/** What a chat bubble needs, folded from the events. */
-export interface AssistStreamState {
-  conversationId: string | null;
-  /** The text so far; on `done`, the stored answer (the server's copy wins). */
-  text: string;
-  done: AssistStreamDone | null;
-  /** `kind: "interrupted"` keeps `text` — it was stored as a partial answer. */
-  error: AssistStreamError | null;
-}
-
-export const INITIAL_ASSIST_STREAM_STATE: AssistStreamState = { conversationId: null, text: "", done: null, error: null };
-
-export function reduceAssistStream(state: AssistStreamState, event: AssistStreamEvent): AssistStreamState {
-  switch (event.event) {
-    case "meta":
-      return { ...state, conversationId: event.conversation_id };
-    case "delta":
-      return { ...state, text: state.text + event.text };
-    case "done":
-      return { ...state, conversationId: event.conversation_id, text: event.answer.content, done: event };
-    case "error":
-      return { ...state, conversationId: event.conversation_id ?? state.conversationId, error: event };
-    default:
-      return state;
-  }
-}
-
 /**
  * A refusal before the stream started (not enabled, throttled, busy, unknown
  * conversation, a field error): the same status and JSON body the

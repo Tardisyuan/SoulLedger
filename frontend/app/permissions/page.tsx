@@ -141,7 +141,6 @@ export default function PermissionsPage() {
   }, [permsQuery.data]);
 
   const rolePermsLoaded = roleNames.length > 0 && rolePermQueries.every((q) => !!q.data);
-  const rolePermsLoading = rolePermQueries.some((q) => q.isLoading);
   const rolePermsError = rolePermQueries.some((q) => q.isError);
   const matrixReady = !!permsQuery.data && rolePermsLoaded;
 
@@ -420,7 +419,6 @@ export default function PermissionsPage() {
                 roleNames={roleNames}
                 roleMeta={roleMeta}
                 categories={categories}
-                checked={checked}
                 isSaving={isSaving}
                 isVisible={(p) => matchesFilter(p) && (!onlyDifferences || rowHasDifference(p))}
                 onToggle={toggleCell}

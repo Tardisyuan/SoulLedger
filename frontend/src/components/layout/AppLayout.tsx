@@ -361,11 +361,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </LazyMotion>
   );
 }
-
-// `Breadcrumb` 的实现搬到了 ./Breadcrumb.tsx（本文件当时是 751 行，超过仓库
-// 500 行的上限）。这一行是**转发**，不是搬家没搬干净：
-// src/__tests__/AppLayout.test.tsx 用
-// `require("@/src/components/layout/AppLayout")` 取 Breadcrumb，而测试文件不在
-// 这次拆分的改动范围里。入口留在原处、实现搬走，测试一行都不用改。
-// 要删掉这一行，先去改那条 require。
-export { Breadcrumb } from "./Breadcrumb";

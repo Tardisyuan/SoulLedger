@@ -20,7 +20,7 @@
   realms.py:16-29` records a split considered at 826 lines and **refused**, because
   "a mechanical split turns twenty true sentences into twenty possibly-false ones,
   silently." Compare `d80ac68`, which split sixteen files for the line count and left
-  behind a permanent `Breadcrumb` re-export shim, four stale `AppLayout.tsx:418`
+  behind a `Breadcrumb` re-export shim (removed 2026-10-23), four stale `AppLayout.tsx:418`
   references (fixed in `29e82df`), and a "42 tests" record that now equals no file and
   no sum. `domainDisplayContract.test.tsx` was back over the ceiling nine days later.
   A split needs a defect to justify it, not a number.

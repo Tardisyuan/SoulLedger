@@ -152,9 +152,8 @@ describe("Breadcrumb", () => {
     }),
   }));
 
-  // Requiring after the mocks are registered so AppLayout picks them up.
-   
-  const { Breadcrumb } = require("@/src/components/layout/AppLayout");
+  // Requiring after the mocks are registered so Breadcrumb picks them up.
+  const { Breadcrumb } = require("@/src/components/layout/Breadcrumb");
 
   const menus: SidebarMenu[] = [
     {

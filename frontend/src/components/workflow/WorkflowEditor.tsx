@@ -36,7 +36,6 @@ import {
   Connection,
   addEdge,
   NodeChange,
-  EdgeChange,
   BackgroundVariant,
   type ReactFlowInstance,
 } from "@xyflow/react";

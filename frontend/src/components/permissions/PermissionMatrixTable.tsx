@@ -7,7 +7,6 @@ import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { GrantMap } from "./matrixDiff";
 import type { CellFailure } from "./useMatrixCells";
 import { ROW_HOVER } from "@/components/ui/data-table";
 
@@ -195,7 +194,6 @@ export function PermissionMatrixTable({
   roleNames,
   roleMeta,
   categories,
-  checked,
   isSaving,
   isVisible,
   onToggle,
@@ -209,7 +207,6 @@ export function PermissionMatrixTable({
   roleMeta: Record<string, Role>;
   categories: { category: string; perms: Permission[] }[];
   allPerms?: Permission[];
-  checked: GrantMap | null;
   isSaving: boolean;
   isVisible: (perm: Permission) => boolean;
   onToggle: (role: string, permId: number) => void;

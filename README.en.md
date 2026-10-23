@@ -573,7 +573,7 @@ backend/
   tests/            Cross-app pytest suite (half the backend tests live in apps/*/)
 packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits "dom"
   src/api/          One typed client per backend app
-  src/hooks/        Data hooks (useSouls, useJudgments, useSoulChat …), shared by web and app
+  src/hooks/        Data hooks (useSouls, useJudgments, useSocial …), shared by web and app
   src/platform/     Host-capability ports; the web impl is in frontend/lib/platform/web.ts
   src/config/       Domain config: the four-cosmology maps, civilizationSigil,
                     workflow-templates

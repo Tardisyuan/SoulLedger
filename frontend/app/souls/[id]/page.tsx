@@ -6,7 +6,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import type { ToastType } from "@/src/components/ui/Toast";
 import {
   soulsApi,
   judgmentApi,
@@ -97,7 +96,7 @@ export default function SoulDetailPage() {
   // a prop, which bought nothing: every one of them already called `useI18n()`
   // for `t`. It now lives on the context beside `t`, where "what happens when a
   // key is missing" is answered once for the app instead of once per page.
-  const { t, tf, formatDate, locale } = useI18n();
+  const { t, tf, locale } = useI18n();
   const { showToast } = useToast();
   const { tenantCode } = useTenant();
   const [actionLoading, setActionLoading] = useState("");
@@ -383,8 +382,7 @@ export default function SoulDetailPage() {
         new_identity: `${soul?.name} (rebirth)`,
         rebirth_form: rebirthForm,
       });
-      // 同上:`useReborn` 只 invalidate `["souls"]`,而转生会写出一条新的
-      // 处置执行记录,所以这里用三族全标脏的那一个。
+      // 转生会写出一条新的处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
       // Same as `handleDie` above: silent success, loud failure. Reincarnation
       // additionally ticks the `generation` badge, which moved with no word.

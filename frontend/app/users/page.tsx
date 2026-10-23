@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
+import { usersApi, permApi, PAGE_SIZE, type User } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -22,7 +22,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { DataTable, parseOrdering, type DataTableColumn, type SortState } from "@/components/ui/data-table";
+import { DataTable, parseOrdering, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
