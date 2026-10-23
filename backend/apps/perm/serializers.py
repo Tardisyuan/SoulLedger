@@ -316,20 +316,6 @@ class InitRolesResultSerializer(serializers.Serializer):
     total = serializers.IntegerField()
 
 
-class InitRolePermissionsResultSerializer(serializers.Serializer):
-    """200 body of `init_role_permissions`.
-
-    `roles` maps a role name to a human sentence — "Assigned 7 permissions" or
-    "Role not found". It is a per-role status string and not a count; the view
-    builds it that way and a client cannot parse a number out of it safely.
-    """
-
-    message = serializers.CharField()
-    permissions_added = serializers.IntegerField()
-    permissions_total = serializers.IntegerField()
-    roles = serializers.DictField(child=serializers.CharField())
-
-
 # ── Export / import payload ──────────────────────────────────────────────
 
 
