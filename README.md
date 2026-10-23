@@ -332,7 +332,7 @@ bash scripts/install-hooks.sh  # 装 git 钩子，见「测试、门禁与 CI」
 | `workflows/`、`nodes/`、`workflow/templates/` | 审批流程引擎 |
 | `perm/`、`menus/`、`organizations/`、`tenants/` | RBAC、导航、组织架构、租户（殿的设置 `tenants/{code}/settings/`，仅 ADMIN） |
 | `audit-logs/`、`events/`、`notifications/` | 审计轨迹、事件日志、通知 |
-| `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook；密钥管理 `death-sync/api-keys/`） |
+| `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook；密钥管理 `death-sync/api-keys/`）；对接说明见 [`docs/INTEGRATION.md`](docs/INTEGRATION.md) |
 | `social/`、`social-moderation/` | 帖子、评论、表态、关注、资料，以及内容处置 |
 | `sentence-plans/` | 受刑计划与加减项请求 |
 | `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
@@ -562,6 +562,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
   `埃及冥界/` 曾是同一批文件的逐字节镜像，**2026-08-15 已去重**（`b2645e3`）：19 份
   副本删除，三个目录各只留一份把旧文件名映射到 `docs/` 的 README。
 - **工程文档**：架构、规约、API 说明、里程碑，以及一批带日期的评审/审计报告。
+- **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)**：给外部系统的对接说明 —— 外部死亡登记接口与 webhook(请求头、V2 签名校验、重试、地址限制)。
 - **[`docs/design-handoff/`](docs/design-handoff/)**：发给外部设计师的设计简报包，含
   29 张实际界面全页截图、设计 token 清单与多语言表格样本。`ADDENDUM.md` 记录了打包
   之后发生的变化，应与 `BRIEF.md` 一起读。该包已被外部引用，请视为冻结内容。

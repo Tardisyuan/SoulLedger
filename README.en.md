@@ -352,7 +352,7 @@ tenant header. The boundary between the three is written up at the top of
 | `workflows/`, `nodes/`, `workflow/templates/` | Approval workflow engine |
 | `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants (court settings at `tenants/{code}/settings/`, ADMIN only) |
 | `audit-logs/`, `events/`, `notifications/` | Audit trail, event log, notifications |
-| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks; key management at `death-sync/api-keys/`) |
+| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks; key management at `death-sync/api-keys/`); integration guide in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) |
 | `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
 | `sentence-plans/` | Sentence plans and their amendment requests |
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
@@ -613,6 +613,8 @@ folder. The short version:
   `docs/`.
 - **Engineering docs.** Architecture, conventions, API notes, milestones, and a
   set of dated review/audit reports.
+- **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)** — the guide for external systems (in Chinese): the
+  death-registration API and webhooks (headers, V2 signature check, retries, address rules).
 - **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
   to an external designer, with 29 full-page screenshots of the live UI, a design
   token inventory, and localized table samples. `ADDENDUM.md` records what changed
