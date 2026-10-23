@@ -419,13 +419,6 @@ def complete_login(account, *, request=None, method="password", trust_hash=""):
     return issue_tokens(account, session)
 
 
-def login(soul_code, password):
-    """返回 `(account, tokens)`;失败抛 SoulAccountError(status 401)。不看两步验证 ——
-    视图在 `authenticate` 与 `complete_login` 之间插第二步。"""
-    account = authenticate(soul_code, password)
-    return account, complete_login(account)
-
-
 def change_password(account, old_password, new_password, push_token="", device_credential="", keep_session=None):
     from django.contrib.auth.password_validation import validate_password
 

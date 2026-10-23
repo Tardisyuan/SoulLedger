@@ -248,13 +248,13 @@ class PermissionAPITest(TestCase):
     # answering success. `total` counted rows, and the row count was never the
     # thing that broke.
     #
-    # The endpoint was removed on 2026-08-30;
-    # `POST /perm/role-permissions/init/` (test_init_role_permissions, now in
-    # tests/test_perm_api.py)
-    # seeds rows *and* grants and is the only entry point. The property that
-    # matters -- no admin action leaves a codename seeded-but-ungranted -- is
-    # asserted in tests/test_perm_init_does_not_revoke.py, against effective
-    # permissions rather than row counts.
+    # The endpoint was removed on 2026-08-30, and its successor
+    # `POST /perm/role-permissions/init/` on 2026-10-23 (it wiped every role's
+    # grants before rebuilding them). Seeding is `manage.py sync_permissions`.
+    # The property that matters -- seeding leaves no codename
+    # seeded-but-ungranted -- is asserted in
+    # tests/test_perm_init_does_not_revoke.py, against effective permissions
+    # rather than row counts.
 
     def test_init_roles(self):
         self.client.force_authenticate(user=self.admin)

@@ -23,14 +23,6 @@ from django.utils import timezone
 from rest_framework import serializers
 
 
-class ArchivedQuerySet(models.QuerySet):
-    def not_archived(self):
-        return self.filter(is_archived=False)
-
-    def archived(self):
-        return self.filter(is_archived=True)
-
-
 class ArchivableMixin(models.Model):
     """
     Adds archive capability to judgment-adjacent models (Soul, Judgment,

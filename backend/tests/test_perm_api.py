@@ -178,20 +178,6 @@ class TestRolePermissionAPI:
         assert response.data["assigned_count"] == 1
         assert RolePermission.objects.filter(role=viewer, permission=other).exists()
 
-    def test_init_role_permissions(self, api_client, admin_user, cn_tenant):
-        """POST /api/v1/perm/role-permissions/init/ initializes default permissions.
-
-        Merged: the per-role report is present (``apps/perm/tests.py``).
-        """
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(admin_user)
-        if admin_user.tenant:
-            token["tenant_code"] = admin_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
-        response = api_client.post("/api/v1/perm/role-permissions/init/")
-        assert response.status_code == 200
-        assert "roles" in response.json()
-
 
 @pytest.mark.django_db
 class TestPermissionExportImport:

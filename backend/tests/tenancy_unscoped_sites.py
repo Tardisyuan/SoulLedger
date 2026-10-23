@@ -97,7 +97,6 @@ SITES = [
     ('apps/disposition/services.py', 'DispositionService._deepest_cited_circle', 'Statute.all_objects', 1, 'FILTERED', 'Statute looked up by code AND the soul tenant_id (Statute.code is unique per (tenant, code))'),
     ('apps/disposition/services.py', 'DispositionService._execute_during_residence', 'Soul.all_objects', 1, 'LOCK', 'soul lock during residence; re-checks disposition.tenant_id == locked.tenant_id under the lock'),
     ('apps/disposition/services.py', 'DispositionService._execute_plan_node', 'Soul.all_objects', 1, 'LOCK', 'soul lock; re-checks disposition.tenant_id == locked.tenant_id under the lock'),
-    ('apps/disposition/tasks.py', 'expire_due_dispositions', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/disposition/tasks.py', 'expire_due_dispositions_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),
     ('apps/events/handlers/audit_handler.py', 'AuditHandler.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/events/handlers/webhook_handler.py', 'WebhookHandler._record_deliveries', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),

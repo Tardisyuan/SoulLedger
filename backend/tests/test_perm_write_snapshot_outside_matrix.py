@@ -1592,11 +1592,12 @@ def test_snapshot_covers_every_write_endpoint_it_claims_to():
 # notification.* is seeded by any migration.
 #
 # So every one of the 135 cases above is the DICT path, top to bottom. Dev and
-# production are not migrate-only: `POST /perm/role-permissions/init/` creates
+# production are not migrate-only: `manage.py sync_permissions` creates
 # Permission rows from DEFAULT_PERMISSIONS that no migration owns, and there the
-# DB decides and the dict is never consulted. (The other one, `POST /perm/init/`,
-# was deleted on 2026-08-30 — it revoked every configured grant on the way to
-# re-seeding. `role-permissions/init/` is additive and still stands.) Pinning only the dict would pin the path production does
+# DB decides and the dict is never consulted. (`POST /perm/init/` was deleted on
+# 2026-08-30 and `POST /perm/role-permissions/init/` on 2026-10-23 — the first
+# revoked every configured grant on the way to re-seeding, the second deleted
+# every role's grants before rebuilding them from the dict.) Pinning only the dict would pin the path production does
 # not run on — the same gap tranche 1 left and tranche 2 closed for the enforced
 # families, running in the same direction here.
 #

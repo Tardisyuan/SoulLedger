@@ -13,7 +13,6 @@ urlpatterns = [
     path("permissions/<int:pk>/", views.update_delete_permission, name="detail"),
     path("role-permissions/", views.get_role_permissions, name="role-permissions"),
     path("role-permissions/assign/", views.assign_role_permissions, name="assign"),
-    path("role-permissions/init/", views.init_role_permissions, name="init-role-permissions"),
     path("role-permissions/changes/", views.apply_matrix_changes, name="matrix-changes"),
     path("role-permissions/impact/", views.matrix_impact, name="matrix-impact"),
     path("roles/", views.list_roles, name="list-roles"),
@@ -32,8 +31,9 @@ urlpatterns = [
     # Permission rows without the matching RolePermission grants, and
     # `check_permission` treats the database as authoritative the moment a
     # row exists -- so "initialising permissions" revoked 69 grants and
-    # answered 200. `role-permissions/init/` below does the whole job and
-    # is the only entry point now. See
+    # answered 200. `role-permissions/init/` went too (2026-10-23): it
+    # deleted every role's grants before rebuilding them from the dict.
+    # Seeding missing codenames is `manage.py sync_permissions` now. See
     # tests/test_perm_init_does_not_revoke.py.
     path("export/", views.export_permissions, name="export"),
     path("import/", views.import_permissions, name="import"),

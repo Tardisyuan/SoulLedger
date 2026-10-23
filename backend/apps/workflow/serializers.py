@@ -1034,12 +1034,6 @@ class WorkflowCaseTypeSerializer(serializers.Serializer):
     builtin = serializers.BooleanField()
 
 
-class WorkflowAdvanceSerializer(serializers.Serializer):
-    """Serializer for manually advancing workflow."""
-
-    pass
-
-
 class WorkflowStatsSerializer(serializers.Serializer):
     """The dict `WorkflowService.get_workflow_stats` builds.
 

@@ -1,28 +1,16 @@
 """
 Celery tasks for Disposition app.
 
-Same shape as `ledger.recalculate_*` and `judgment.auto_conclude_stale*`: the
-scheduler registers the per-tenant subtask once per active tenant
-(apps/scheduler/registry.py), and the fan-out parent exists for an on-demand
-run over every tenant. The per-tenant body sets the tenant contextvar for the
-duration of the run so apps.audit.signals attributes the UPDATE rows the
-expiry writes to this tenant — Celery has no TenantMiddleware.
+The scheduler registers the per-tenant subtask once per active tenant
+(apps/scheduler/registry.py). An on-demand run over every tenant is
+`manage.py expire_dispositions`; the fan-out task `disposition.expire_due` was
+never scheduled and was removed on 2026-10-23. The per-tenant body sets the
+tenant contextvar for the duration of the run so apps.audit.signals attributes
+the UPDATE rows the expiry writes to this tenant — Celery has no
+TenantMiddleware.
 """
 from celery import shared_task
 from django.utils import timezone
-
-
-@shared_task(name="disposition.expire_due")
-def expire_due_dispositions():
-    """Fan out one expiry subtask per active tenant. Not scheduled itself —
-    the registry schedules the per-tenant subtask; see module docstring."""
-    from apps.tenants.models import Tenant
-
-    tenant_ids = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
-    for tenant_id in tenant_ids:
-        expire_due_dispositions_for_tenant.delay(tenant_id=str(tenant_id))
-
-    return {"tenants_dispatched": len(tenant_ids), "timestamp": timezone.now().isoformat()}
 
 
 @shared_task(name="disposition.expire_due_for_tenant")
