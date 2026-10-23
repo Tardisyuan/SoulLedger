@@ -148,6 +148,3 @@ export const CIVILIZATION_ICONS: Record<string, string> = {
   // Hades, Aeacus, Rhadamanthus and Plato's Minos are GREEK since realms/0018.
   GREEK: "🏛",
 };
-
-/** Drawn when a record's civilization is not one of the four. */
-export const CIVILIZATION_ICON_FALLBACK = "🌍";
