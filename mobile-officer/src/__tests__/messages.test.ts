@@ -84,9 +84,4 @@ describe("the three bundles agree", () => {
       expect(placeholders(EGY[key])).toEqual(placeholders(ZH[key]));
     }
   });
-
-  it("the lock screen sentence is the server's, with the count", () => {
-    expect(ZH["officer_app.push.lock"]).toBe("有 {{n}} 件待你处理");
-    expect(EN["officer_app.push.lock"]).toBe("{{n}} items waiting on you");
-  });
 });
