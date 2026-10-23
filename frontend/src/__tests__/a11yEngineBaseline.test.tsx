@@ -706,7 +706,6 @@ const SUBJECTS: Subject[] = [
         roleNames={MATRIX_ROLES}
         roleMeta={MATRIX_ROLE_META}
         categories={[{ category: "ledger", perms: MATRIX_PERMS }]}
-        allPerms={MATRIX_PERMS}
         isSaving={false}
         isVisible={() => true}
         onToggle={() => {}}

@@ -3660,8 +3660,6 @@
     "arrange_reincarnation": "安排轮回"
   },
   "reincarnation": {
-    "reborn_success": "轮回已启动",
-    "reborn_error": "启动轮回失败",
     "form_label": "轮回形态",
     "forms": {
       "DIVINE": "天道",
