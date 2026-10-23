@@ -13,25 +13,6 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 
-# SSRF: private/loopback IP ranges to block
-_BLOCKED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),      # loopback IPv4
-    ipaddress.ip_network("::1/128"),           # loopback IPv6
-    ipaddress.ip_network("10.0.0.0/8"),        # private class A
-    ipaddress.ip_network("172.16.0.0/12"),     # private class B
-    ipaddress.ip_network("192.168.0.0/16"),    # private class C
-    ipaddress.ip_network("169.254.0.0/16"),    # link-local
-    ipaddress.ip_network("::ffff:0:0/96"),     # IPv4-mapped IPv6
-    # The four below were missing. Verified 2026-08-29 by running the list
-    # above against probe addresses: each of these was ALLOWED.
-    ipaddress.ip_network("0.0.0.0/8"),         # "this network" -- 0.0.0.0 routes
-                                               # to localhost on Linux, so this
-                                               # was a loopback bypass
-    ipaddress.ip_network("fc00::/7"),          # IPv6 unique local (fd00::/8 etc.)
-    ipaddress.ip_network("100.64.0.0/10"),     # CGNAT / carrier-grade NAT
-    ipaddress.ip_network("192.0.0.0/24"),      # IETF protocol assignments
-]
-
 
 def _validate_webhook_url(url):
     """
@@ -59,8 +40,11 @@ def _validate_webhook_url(url):
 
     for _family, _, _, _, sockaddr in resolved:
         ip = ipaddress.ip_address(sockaddr[0])
-        for network in _BLOCKED_NETWORKS:
-            if ip in network:
-                raise ValueError(
-                    f"Webhook URL resolves to a private/loopback IP: {ip}"
-                )
+        # An allowlist of "publicly routable" rather than a hand-kept blocklist:
+        # the old table missed 0.0.0.0/8, fc00::/7, CGNAT and 192.0.0.0/24 until
+        # 2026-08-29, and IPv6 link-local and multicast after that. `is_global`
+        # is False for all of those; multicast is the one global range left.
+        if not ip.is_global or ip.is_multicast or getattr(ip, "ipv4_mapped", None):
+            raise ValueError(
+                f"Webhook URL resolves to a private/loopback IP: {ip}"
+            )

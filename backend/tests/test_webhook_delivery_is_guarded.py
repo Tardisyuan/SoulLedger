@@ -23,7 +23,9 @@ carrying `{"soul_id": ..., "verdict": "GUILTY"}`.
 
 **The SSRF blocklist had four holes.** Running the list against probes:
 `0.0.0.0` (routes to localhost on Linux), `fd00::1` (IPv6 ULA), `100.64.1.1`
-(CGNAT) and `192.0.0.1` were all ALLOWED.
+(CGNAT) and `192.0.0.1` were all ALLOWED. After those were added the list still
+missed IPv6 link-local (`fe80::/10`) and multicast; since 2026-10-23 the check
+is `ip.is_global` (plus multicast and IPv4-mapped) instead of a hand-kept list.
 
 **Redirects were followed.** `requests.post` defaults to following them and
 `_validate_webhook_url` only ever saw the URL we were handed, so a public host
@@ -40,7 +42,7 @@ from unittest.mock import patch
 import pytest
 from django.db import transaction
 
-from apps.death_sync.webhook_service import _BLOCKED_NETWORKS, _validate_webhook_url
+from apps.death_sync.webhook_service import _validate_webhook_url
 
 
 class _Envelope:
@@ -209,31 +211,28 @@ def test_a_webhook_without_a_secret_records_nothing(wired):
         "::1",
         "100.64.1.1",    # CGNAT
         "192.0.0.1",     # IETF protocol assignments
+        "fe80::1",       # IPv6 link-local -- allowed by the old list
+        "ff02::1",       # IPv6 multicast -- allowed by the old list
+        "224.0.0.1",     # IPv4 multicast -- allowed by the old list
+        "::ffff:127.0.0.1",  # IPv4-mapped loopback
     ],
 )
-def test_the_blocklist_covers_every_address_that_should_never_be_reached(address):
-    """Four of these were ALLOWED before: 0.0.0.0, fd00::1, 100.64.1.1, 192.0.0.1.
+def test_the_validator_refuses_every_address_that_should_never_be_reached(address):
+    """0.0.0.0, fd00::1, 100.64.1.1 and 192.0.0.1 were ALLOWED before 2026-08-29;
+    fe80::1, ff02::1 and 224.0.0.1 until 2026-10-23.
 
-    Asserted against the network list directly rather than through
-    `_validate_webhook_url`, which would need DNS.
+    IP literals: getaddrinfo answers them without DNS.
     """
-    import ipaddress
-
-    ip = ipaddress.ip_address(address)
-    assert any(ip in net for net in _BLOCKED_NETWORKS), (
-        f"{address} is not covered by any blocked network"
-    )
+    host = f"[{address}]" if ":" in address else address
+    with pytest.raises(ValueError, match="private/loopback"):
+        _validate_webhook_url(f"https://{host}/hook")
 
 
-def test_a_publicly_routable_address_is_still_allowed():
-    """Negative control -- a blocklist that blocks everything is an outage."""
-    import ipaddress
-
-    for public in ("8.8.8.8", "203.0.113.9", "2001:4860:4860::8888"):
-        ip = ipaddress.ip_address(public)
-        assert not any(ip in net for net in _BLOCKED_NETWORKS), (
-            f"{public} is blocked; the list has stopped distinguishing"
-        )
+@pytest.mark.parametrize("public", ["8.8.8.8", "2001:4860:4860::8888"])
+def test_a_publicly_routable_address_is_still_allowed(public):
+    """Negative control -- a guard that refuses everything is an outage."""
+    host = f"[{public}]" if ":" in public else public
+    _validate_webhook_url(f"https://{host}/hook")
 
 
 def test_the_url_validator_rejects_a_loopback_target():
