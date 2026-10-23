@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 
 import requests
 from celery import shared_task
@@ -26,6 +27,19 @@ def attempt_ceiling(webhook) -> int:
 
 def _sign(secret: str, payload: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def signature_headers(secret: str, payload: bytes, now: float | None = None) -> dict:
+    """`X-SoulLedger-Signature` signs the body alone, so a captured delivery verifies forever and can be replayed.
+    `-V2` signs `"<timestamp>." + body` with the same secret; a receiver checks it and refuses a timestamp older
+    than a few minutes (and may dedupe on `X-SoulLedger-Delivery`). The old header stays for receivers already
+    built on it (2026-10-23)."""
+    ts = str(int(now if now is not None else time.time()))
+    return {
+        "X-SoulLedger-Signature": _sign(secret, payload),
+        "X-SoulLedger-Timestamp": ts,
+        "X-SoulLedger-Signature-V2": _sign(secret, f"{ts}.".encode() + payload),
+    }
 
 
 @shared_task(name="events.deliver_webhook", bind=True, max_retries=MAX_ATTEMPTS)
@@ -82,7 +96,7 @@ def deliver_event_webhook(self, delivery_id):
                 "Content-Type": "application/json",
                 "X-SoulLedger-Domain": delivery.domain,
                 "X-SoulLedger-Event": delivery.event_type,
-                "X-SoulLedger-Signature": _sign(secret, payload),
+                **signature_headers(secret, payload),
                 "X-SoulLedger-Delivery": str(delivery.id),
             },
             timeout=timeout,
