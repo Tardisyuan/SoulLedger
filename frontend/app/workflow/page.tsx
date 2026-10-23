@@ -3,11 +3,11 @@
 import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@soulledger/core/api";
+import { workflowApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
-import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { WORKFLOW_TEMPLATES, presetRouting, type TemplateKey } from "@soulledger/core/config/workflow-templates";
 import { nodeTypeFor } from "@soulledger/core/config/workflow-node-types";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -48,7 +48,6 @@ function WorkflowPageContent() {
   const { showToast } = useToast();
 
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
-  const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [editingTemplateData, setEditingTemplateData] = useState<TemplatePreviewData | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TemplatePreviewData | null>(null);
@@ -98,7 +97,6 @@ function WorkflowPageContent() {
     onError: () => showToast(t("workflow.delete_error"), "error"),
   });
 
-  const selectedCivilization = selectedTemplate.split("_")[0];
   const currentTemplate = WORKFLOW_TEMPLATES[selectedTemplate];
 
   // Group templates by civilization

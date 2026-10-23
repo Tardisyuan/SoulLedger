@@ -6,7 +6,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import type { ToastType } from "@/src/components/ui/Toast";
 import {
   soulsApi,
   judgmentApi,
@@ -97,7 +96,7 @@ export default function SoulDetailPage() {
   // a prop, which bought nothing: every one of them already called `useI18n()`
   // for `t`. It now lives on the context beside `t`, where "what happens when a
   // key is missing" is answered once for the app instead of once per page.
-  const { t, tf, formatDate, locale } = useI18n();
+  const { t, tf, locale } = useI18n();
   const { showToast } = useToast();
   const { tenantCode } = useTenant();
   const [actionLoading, setActionLoading] = useState("");

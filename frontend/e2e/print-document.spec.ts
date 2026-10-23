@@ -7,7 +7,7 @@
  *   · 评议全部印出来,并带「评议 · N」标题(屏幕上只露最近 3 条,「展开其余」在纸上没有);
  *   · 页脚:判词印案号;灵魂档案印这一世账号的灵魂编号,没有账号就印灵魂名,永不印 UUID。
  */
-import { expect, test, OPENED_JUDGMENT, SOULS, SOUL_ACCOUNT, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, OPENED_JUDGMENT, SOULS, setupAuthenticatedPage } from "./fixtures";
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const comments = Array.from({ length: 5 }, (_, i) => ({
