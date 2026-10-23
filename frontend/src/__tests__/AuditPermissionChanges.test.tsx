@@ -130,6 +130,8 @@ it("a create has no before: field names only, hollow dot", async () => {
   expect(within(entry).queryByText(/另 \d+ 项/)).toBeNull();
 });
 
+// Renders up to 500 rows: 0.5 s alone, but over 5 s inside the full jest run on a loaded machine (2026-10-23, the
+// pre-push run timed out at load ~19). The longer timeout is for that load, not for a slow page.
 it("「显示更多」 raises the limit 50 → 200 → 500; at 500 rows it says cap_reached instead", async () => {
   auditApi.timeline.mockImplementation(async ({ limit }: { limit: number }) => ({ data: many(limit) }));
   renderRoute();
@@ -140,7 +142,7 @@ it("「显示更多」 raises the limit 50 → 200 → 500; at 500 rows it says 
   await waitFor(() => expect(lastParams()).toEqual({ limit: 500 }));
   expect(await screen.findByText(tZh("audit.timeline.cap_reached"))).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: tZh("audit.timeline.show_more") })).toBeNull();
-});
+}, 20_000);
 
 it("fewer rows than the limit: no 「显示更多」 and no cap note", async () => {
   auditApi.timeline.mockResolvedValue({ data: many(12) });
