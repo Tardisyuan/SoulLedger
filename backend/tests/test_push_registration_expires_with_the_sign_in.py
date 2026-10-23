@@ -169,3 +169,39 @@ def test_register_endpoint_stores_the_sid_of_the_request_token(cn_tenant, push_o
     resp = client.post("/api/v1/me/push-tokens/", {"token": TOKEN_A, "platform": "IOS"}, format="json")
     assert resp.status_code == 201
     assert PushDevice.objects.get(token=TOKEN_A).session_id == session.pk
+
+
+def test_soul_logout_ends_the_session_and_its_registration(cn_tenant, push_on):  # noqa: F811
+    """退出登录在服务端结束这台设备的会话(2026-10-23 前只拉黑令牌):App 离线退出时注销推送的请求发不出去，
+    下次联网补发 logout 即可停推,不必再靠已经不在的 access token 去注销。"""
+    from rest_framework.test import APIClient
+
+    from apps.soul_accounts import services as svc
+
+    account, _client = ready_soul(cn_tenant, name="亡魂庚")
+    session = _session(account.user)
+    device, _ = services.register_device(account, TOKEN_A, "IOS", session=session)
+    refresh = svc.issue_tokens(account, session)["refresh"]
+    assert APIClient().post("/api/v1/soul-auth/logout/", {"refresh": refresh}, format="json").status_code == 204
+    device.refresh_from_db()
+    session.refresh_from_db()
+    assert device.is_active is False and session.revoked_at is not None
+
+
+def test_officer_logout_ends_the_session_and_its_registration(officer):
+    from rest_framework.test import APIClient
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from apps.authentication import signin_sessions
+
+    user, _ = officer
+    session = _session(user)
+    device, _ = push.register_device(user, "ExponentPushToken[officer0000000000000lo]", "IOS", session=session)
+    refresh = RefreshToken.for_user(user)
+    signin_sessions.attach(refresh, session)
+    client = APIClient()
+    client.force_authenticate(user)
+    assert client.post("/api/v1/auth/logout/", {"refresh": str(refresh)}, format="json").status_code == 200
+    device.refresh_from_db()
+    session.refresh_from_db()
+    assert device.is_active is False and session.revoked_at is not None
