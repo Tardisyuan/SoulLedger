@@ -15,7 +15,7 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DataTable, ROW_LINK, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK, parseOrdering } from "@/components/ui/data-table";
 import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PAGE_SIZE, soulsApi, type SoulListItem } from "@soulledger/core/api";

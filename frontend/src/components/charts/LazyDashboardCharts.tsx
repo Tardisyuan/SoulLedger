@@ -86,16 +86,6 @@ const CHART_AXIS = {
   tickLine: { stroke: "oklch(var(--color-hairline))" },
 } as const;
 
-const CHART_TOOLTIP = {
-  contentStyle: {
-    background: "oklch(var(--color-surface-1))",
-    border: "1px solid oklch(var(--color-ink))",
-    borderRadius: 0,
-    color: "oklch(var(--color-ink))",
-  },
-  labelStyle: { color: "oklch(var(--color-ink-muted))" },
-} as const;
-
 
 // ── Recharts base types ──────────────────────────────────────────
 interface ChartDataPoint {
@@ -335,7 +325,6 @@ const LazyLifespanBarChart = dynamic(
       const {
         BarChart,
         Bar,
-        Cell,
         XAxis,
         YAxis,
         CartesianGrid,

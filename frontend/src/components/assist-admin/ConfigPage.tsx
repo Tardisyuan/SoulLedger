@@ -70,7 +70,7 @@ export function AssistAdminConfigPage() {
 }
 
 function ConfigForm({ config }: { config: AssistAdminConfig }) {
-  const { t, formatDateTime } = useI18n();
+  const { t } = useI18n();
   const [draft, setDraftState] = useState<Draft>({});
   const [testedFp, setTestedFp] = useState<string | null>(null);
   const [replacingKey, setReplacingKey] = useState(false);

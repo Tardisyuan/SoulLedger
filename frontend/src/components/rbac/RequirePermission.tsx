@@ -16,7 +16,7 @@ export function RequirePermission({
   children,
   fallback = null,
 }: RequirePermissionProps) {
-  const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermissions();
+  const { hasAnyPermission, hasAllPermissions } = usePermissions();
 
   const permArray = Array.isArray(permissions) ? permissions : [permissions];
 

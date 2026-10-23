@@ -12,7 +12,6 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { useClaimJudgment, useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
 import type { Judgment } from "@soulledger/core/api";

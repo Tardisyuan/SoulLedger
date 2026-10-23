@@ -707,7 +707,6 @@ const SUBJECTS: Subject[] = [
         roleMeta={MATRIX_ROLE_META}
         categories={[{ category: "ledger", perms: MATRIX_PERMS }]}
         allPerms={MATRIX_PERMS}
-        checked={{ ADMIN: new Set([1]), JUDGE: new Set<number>() }}
         isSaving={false}
         isVisible={() => true}
         onToggle={() => {}}

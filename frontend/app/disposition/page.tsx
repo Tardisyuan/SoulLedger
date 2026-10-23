@@ -12,7 +12,7 @@ import type { DispositionListParams, DispositionSection } from "@soulledger/core
 import { dispositionKeys } from "@soulledger/core/query_keys";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/src/components/ui/Pagination";
-import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
+import { DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";

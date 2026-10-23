@@ -405,8 +405,7 @@ export function buildActionRow(title: string, hint: string): ActionRow {
 
 export function buildCycleBandRows(
   soul: Soul,
-  reincarnations: Reincarnation[],
-  cycleLabel: (n: number) => string
+  reincarnations: Reincarnation[]
 ): CycleBandRow[] {
   if (reincarnations.length === 0) return [];
   const sorted = [...reincarnations].sort((a, b) => toSortMs(a.reincarnated_at) - toSortMs(b.reincarnated_at));

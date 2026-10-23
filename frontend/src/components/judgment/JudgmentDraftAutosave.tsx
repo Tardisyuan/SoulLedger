@@ -7,7 +7,6 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useSaveJudgmentDraft } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 import { placementDraftFields, type Placement } from "@/src/components/judgment/JudgmentPlacement";
