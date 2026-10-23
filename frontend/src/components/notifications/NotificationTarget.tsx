@@ -50,14 +50,16 @@ export const NAVIGABLE: Record<string, (n: NotificationRef, id: string) => Notif
   death_sync: () => ({ kind: "href", href: "/death-sync", label: "notifications.open_death_sync" }),
   scheduler: () => ({ kind: "href", href: "/scheduler", label: "notifications.open_scheduler" }),
   assistant_config: () => ({ kind: "href", href: "/admin/assistant", label: "notifications.open_assistant" }),
+  // 转生申请的审批流程(`WorkflowService.notice_target`)把通知挂在申请上,收件人是审批官员;灵魂那一份(`rebirth.py`)不上 Web。
+  // 2026-10-23 前它在 NOT_NAVIGABLE 里,理由「只发给灵魂」—— 官员在 Web 上收到审批通知却没有按钮。
+  rebirth_application: () => ({ kind: "href", href: "/rebirth-applications", label: "notifications.open_workflow" }),
 };
 
 /** 后端会发、但 Web 上故意不给按钮的,各写一句为什么。 */
 export const NOT_NAVIGABLE: Record<string, string> = {
   // 重设密码求助有自己的「去用户页」(看 `request_context`,只给能管用户的人);代登录通知的 id 是代登录的人,不是可去的页。
   user: "password help has its own request_context row; impersonation points at the actor",
-  // 这两类只发给灵魂本人的账号(`apps/soul_accounts/rebirth.py`),灵魂不用 Web。
-  rebirth_application: "sent to the soul's own account only; souls do not use the Web",
+  // 只发给灵魂本人的账号(`apps/soul_accounts/`),灵魂不用 Web。`notificationTarget.test` 核对它真的只从那里发。
   cooldown_shortening: "sent to the soul's own account only; souls do not use the Web",
 };
 

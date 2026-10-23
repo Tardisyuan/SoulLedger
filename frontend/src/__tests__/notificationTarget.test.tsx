@@ -34,19 +34,24 @@ function pyFiles(dir: string, out: string[] = []): string[] {
 // 关键字参数 `related_resource="x"`,或字典里的 `"related_resource": "x"`(WorkflowService.notice_target 就是这样写的)。
 const ASSIGNMENT = /"?related_resource"?\s*[=:]\s*"([^"]+)"(?:\s+if\s+[^,)]+?\s+else\s+"([^"]+)")?/g;
 
-function emitted(): Map<string, string> {
-  const where = new Map<string, string>();
+/** value → every backend file that writes it. */
+function emitters(): Map<string, string[]> {
+  const where = new Map<string, string[]>();
   for (const file of pyFiles(APPS)) {
     for (const m of readFileSync(file, "utf8").matchAll(ASSIGNMENT)) {
       for (const value of [m[1], m[2]]) {
-        if (value && !where.has(value)) where.set(value, path.relative(APPS, file));
+        if (!value) continue;
+        const rel = path.relative(APPS, file);
+        const files = where.get(value) ?? [];
+        if (!files.includes(rel)) where.set(value, [...files, rel]);
       }
     }
   }
   return where;
 }
 
-const EMITTED = emitted();
+const EMITTERS = emitters();
+const EMITTED = new Map([...EMITTERS].map(([v, files]) => [v, files[0]]));
 
 describe("every related_resource the backend writes is decided here", () => {
   it("found the backend's emitters (the scan is looking at something)", () => {
@@ -59,6 +64,15 @@ describe("every related_resource the backend writes is decided here", () => {
   it("maps each one, or says why it does not", () => {
     const undecided = [...EMITTED.keys()].filter((v) => !(v in NAVIGABLE) && !(v in NOT_NAVIGABLE));
     expect(undecided.map((v) => `${v} (${EMITTED.get(v)})`)).toEqual([]);
+  });
+
+  it("a value skipped as 「the soul's own account only」 is written only by soul_accounts", () => {
+    // rebirth_application sat here with that reason while WorkflowService.notice_target also wrote it to the
+    // approving officers, who got no button on the Web (2026-10-23).
+    const soulOnly = Object.entries(NOT_NAVIGABLE).filter(([, why]) => why.includes("soul's own account only")).map(([v]) => v);
+    expect(soulOnly.length).toBeGreaterThan(0);
+    const leaks = soulOnly.flatMap((v) => (EMITTERS.get(v) ?? []).filter((f) => !f.startsWith(`soul_accounts${path.sep}`)).map((f) => `${v} (${f})`));
+    expect(leaks).toEqual([]);
   });
 
   it("lists nothing the backend no longer writes, and nothing in both tables", () => {
@@ -78,6 +92,7 @@ describe("notificationTarget", () => {
     expect(href("workflow", "w1", "WORKFLOW_ASSIGNED")).toBe("/workflow/w1");
     expect(href("CrossTenantJudgment", "x1", "CROSS_JUDGMENT_INVITED")).toBe("/cross-judgments/x1");
     expect(href("judgment", "j1", "JUDGMENT_COMPLETED")).toBe("/judgment/j1");
+    expect(href("rebirth_application", "r1", "WORKFLOW_ASSIGNED")).toBe("/rebirth-applications");
     expect(href("DispatchRecord", "d1", "DISPATCH_RETURN_BLOCKED")).toBe("/dispatch/d1");
     expect(href("soul", "s1")).toBe("/souls/s1");
     expect(href("soul_inbox", "c1", "SOUL_INBOX_ASSIGNED")).toBe("/soul-inbox?c=c1");
@@ -93,7 +108,7 @@ describe("notificationTarget", () => {
     expect(href("workflow", null)).toBeNull();
     expect(href("CrossTenantJudgment", "")).toBeNull();
     expect(href("DispatchRecord", "d1", "SYSTEM")).toBeNull();
-    expect(href("rebirth_application", "a1")).toBeNull();
+    expect(href("cooldown_shortening", "c1")).toBeNull();
     expect(href("user", "u1", "PASSWORD_HELP_REQUESTED")).toBeNull();
     expect(notificationTarget({ related_resource: null, related_id: null })).toBeNull();
   });
