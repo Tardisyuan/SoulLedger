@@ -356,6 +356,16 @@ const PASSWORD_REASON_KEYS: Record<string, string> = {
   password_reused: "profile.password_reason_reused",
 };
 
+/**
+ * "Too common" and "too like your name" are the two refusals only the server can make; the password checklist says them
+ * as one block (Design 第二十三批 §三), so they are split off the reasons that are shown one line each (reused, too short
+ * for an ADMIN, all digits). Moved from the officer app 2026-10-23: the web said every refusal was 「太常见」.
+ */
+export function splitCommonReasons(keys: string[]): { common: boolean; rest: string[] } {
+  const isCommon = (key: string) => key === "profile.password_reason_common" || key === "profile.password_reason_similar";
+  return { common: keys.some(isCommon), rest: keys.filter((key) => !isCommon(key)) };
+}
+
 export function passwordReasonKeys(body: unknown): string[] {
   const list = (body as { new_password?: unknown } | null | undefined)?.new_password;
   if (!Array.isArray(list)) return [];

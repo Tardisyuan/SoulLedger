@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authApi, type OfficerResetRefusal } from "@soulledger/core/api";
+import { passwordReasonKeys, splitCommonReasons } from "@soulledger/core/api/auth";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { LoginShell } from "@/src/components/auth/LoginShell";
 import { PasswordRuleFields, usePasswordRules } from "@/src/components/auth/PasswordRules";
@@ -62,8 +63,11 @@ export default function ResetPasswordPage() {
       if (response?.data?.code === "reset_link_invalid") {
         setPhase("invalid");
       } else if (response?.data?.code === "weak_password") {
-        // 清单上的 ◇ 换成 password_rules.common_*;Django 的英文句子与逐条原因都不再显示。
-        rules.reject();
+        // 「太常见 / 太像」:清单上的 ◇ 换成 password_rules.common_*。其余原因(最近用过、管理员太短…)逐条说,
+        // 不再一律当「太常见」(2026-10-23);Django 的英文句子仍不显示。
+        const { common, rest } = splitCommonReasons(passwordReasonKeys(response.data));
+        if (common || !rest.length) rules.reject();
+        if (rest.length) setError(rest.map((key) => t(key)).join("；"));
       } else {
         setError(t(response?.status === 429 ? "auth.rate_limited" : "auth.forgot_failed"));
       }

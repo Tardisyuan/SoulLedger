@@ -429,14 +429,8 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   };
 }
 
-/**
- * "Too common" and "too like your name" are the two refusals only the server can make; the password checklist says them
- * as one block (Design 第二十三批 §三), so they are split off the reasons that are shown one line each.
- */
-export function splitCommonReasons(keys: string[]): { common: boolean; rest: string[] } {
-  const isCommon = (key: string) => key === "profile.password_reason_common" || key === "profile.password_reason_similar";
-  return { common: keys.some(isCommon), rest: keys.filter((key) => !isCommon(key)) };
-}
+/** In core since 2026-10-23 (the web needs the same split); re-exported for the screens that import it from here. */
+export { splitCommonReasons } from "@soulledger/core/api/auth";
 
 /**
  * What a refused `officer-reset/confirm/` is, by its `code` (the server's sentence is never shown): `invalid`

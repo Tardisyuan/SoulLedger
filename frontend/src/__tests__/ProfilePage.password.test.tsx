@@ -71,6 +71,15 @@ it("a 'too common' refusal replaces the reasons and the old sentence with the ch
   expect(mockToast).not.toHaveBeenCalled();
 });
 
+it("a refusal that is not 'too common' says its own reason and leaves the checklist alone (2026-10-23)", async () => {
+  (authApi.changePassword as jest.Mock).mockRejectedValue({
+    response: { status: 400, data: { new_password: [{ code: "password_reused", message: "You used this password recently." }] } },
+  });
+  await openForm();
+  await waitFor(() => expect(mockToast).toHaveBeenCalledWith("profile.password_reason_reused", "error"));
+  expect(screen.queryByTestId("password-rules-common")).not.toBeInTheDocument();
+});
+
 it("is all unmarked on arrival and typing never shows '!'", async () => {
   const { newInput } = await openForm("abc", "", false);
   expect(["min_length", "not_digits", "not_current"].map(state)).toEqual(["idle", "ok", "ok"]);
