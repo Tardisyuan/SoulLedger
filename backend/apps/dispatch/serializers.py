@@ -284,11 +284,6 @@ class DispatchRecordListSerializer(serializers.ModelSerializer):
 # The real propose path is `DispatchService.propose`, called from
 # `DispatchRecordViewSet.create`.
 
-class DispatchApproveSerializer(serializers.Serializer):
-    """Serializer for approving a dispatch."""
-    pass
-
-
 class DispatchRejectSerializer(serializers.Serializer):
     """Serializer for rejecting a dispatch."""
     reason = serializers.CharField(max_length=1000, required=False, default="")
@@ -302,11 +297,6 @@ class DispatchCancelSerializer(serializers.Serializer):
 class DispatchReturnSerializer(serializers.Serializer):
     """手动结束暂居。理由必填:这是一次越过「处置执行完毕」的决定,审计里要说得清为什么。"""
     reason = serializers.CharField(max_length=1000)
-
-
-class DispatchExecuteSerializer(serializers.Serializer):
-    """Serializer for executing a dispatch."""
-    pass
 
 
 class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
@@ -543,12 +533,6 @@ class CrossTenantJudgmentListSerializer(serializers.ModelSerializer):
             "concluded_at",
             "conclusion_type",
         ]
-
-
-class CrossTenantJudgmentCreateSerializer(serializers.Serializer):
-    """Serializer for creating a cross-tenant judgment."""
-    title = serializers.CharField(max_length=200)
-    description = serializers.CharField(max_length=5000)
 
 
 class CrossTenantJudgmentParticipateSerializer(serializers.Serializer):

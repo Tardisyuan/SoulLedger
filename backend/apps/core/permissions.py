@@ -228,22 +228,6 @@ class HasValidApiKey(permissions.BasePermission):
         return getattr(request, "api_key", None) is not None
 
 
-def admin_required(view_func):
-    """
-    Decorator for function-based views that requires ADMIN role.
-    Use for @api_view decorated endpoints that need admin check.
-    """
-    def wrapper(request, *args, **kwargs):
-        if getattr(request, 'user', None) is None:
-            from rest_framework.exceptions import NotAuthenticated
-            raise NotAuthenticated()
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Admin access required")
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
 def user_has_permission(user, codename):
     """
     Check if a user has a specific permission codename.

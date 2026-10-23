@@ -93,11 +93,6 @@ class DomainEventHandlerRegistry:
         """
         self._domain_handlers[domain].append(handler)
 
-    def unregister_domain(self, domain: str, handler: DomainEventHandler) -> None:
-        """Remove a previously registered domain handler."""
-        handlers = self._domain_handlers.get(domain, [])
-        self._domain_handlers[domain] = [h for h in handlers if h is not handler]
-
     def register_global(self, handler: DomainEventHandler) -> None:
         """
         Register a handler that receives ALL events.
@@ -105,10 +100,6 @@ class DomainEventHandlerRegistry:
         Used for cross-cutting concerns (metrics, logging, tracing).
         """
         self._global_handlers.append(handler)
-
-    def unregister_global(self, handler: DomainEventHandler) -> None:
-        """Remove a previously registered global handler."""
-        self._global_handlers = [h for h in self._global_handlers if h is not handler]
 
     # ------------------------------------------------------------------
     # Lookup
