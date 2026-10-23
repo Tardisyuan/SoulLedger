@@ -435,8 +435,8 @@ export default function WorkflowDetailPage() {
                         ) : isPast ? (
                           node.decided_at ? formatDateTime(node.decided_at) : ""
                         ) : isCurrent ? (
-                          node.kind === "COUNTERSIGN" && node.required_verdicts ? (
-                            `${(node.signatures_json ?? []).filter((s) => s.passed).length} / ${node.required_verdicts}`
+                          node.kind === "COUNTERSIGN" && (node.signers_json ?? []).length ? (
+                            `${(node.signatures_json ?? []).filter((s) => s.passed).length} / ${node.threshold ?? (node.signers_json ?? []).length}`
                           ) : (
                             t("workflow.detail.current")
                           )
@@ -535,7 +535,10 @@ export default function WorkflowDetailPage() {
                     { key: "CONFIRMED", label: t("workflow.verdicts.confirmed") },
                     { key: "REJECTED", label: t("workflow.verdicts.rejected") },
                     { key: "SKIPPED", label: t("workflow.verdicts.skipped") },
-                  ].map((opt) => {
+                  ]
+                    // A node that lists the verdicts it accepts gets only those; the server refuses the rest (400).
+                    .filter((opt) => !currentNode?.required_verdicts?.length || currentNode.required_verdicts.includes(opt.key))
+                    .map((opt) => {
                     const on = selectedVerdict === opt.key;
                     return (
                       <label
