@@ -7,7 +7,7 @@ import { judgmentApi, PAGE_SIZE } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
-import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { DomainText } from "@/src/components/ui/DomainValue";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 
 /**

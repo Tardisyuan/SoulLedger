@@ -12,9 +12,7 @@ import {
   refusalBody,
   streamAssist,
   type AssistStreamFetch,
-  INITIAL_ASSIST_STREAM_STATE,
   parseAssistStream,
-  reduceAssistStream,
   type AssistStreamEvent,
 } from "../assist-stream";
 
@@ -41,9 +39,11 @@ describe("parseAssistStream", () => {
     const events: AssistStreamEvent[] = [];
     for await (const event of parseAssistStream(chunks(BODY, size))) events.push(event);
     expect(events.map((e) => e.event)).toEqual(["meta", "delta", "delta", "done"]);
-    const state = events.reduce(reduceAssistStream, INITIAL_ASSIST_STREAM_STATE);
-    expect(state).toMatchObject({ conversationId: CONVERSATION, text: "可以申诉。\n第二行", error: null });
-    expect(state.done?.usage.output_tokens).toBe(4);
+    expect(events[3]).toMatchObject({
+      conversation_id: CONVERSATION,
+      answer: { content: "可以申诉。\n第二行" },
+      usage: { output_tokens: 4 },
+    });
   });
 
   it("returns nothing for a half-received event and completes it on the next push", () => {
@@ -52,17 +52,6 @@ describe("parseAssistStream", () => {
     expect(parser.push(whole.slice(0, 10))).toEqual([]);
     expect(parser.push(whole.slice(10))).toEqual([{ event: "delta", text: "好" }]);
     expect(parser.end()).toEqual([]);
-  });
-
-  it("keeps an interrupted partial answer and reports the error", () => {
-    const state = [
-      { event: "meta", conversation_id: CONVERSATION },
-      { event: "delta", text: "一半" },
-      { event: "error", kind: "interrupted", text_sent: true, detail: "…", conversation_id: CONVERSATION, message_id: 3 },
-    ].reduce((s, e) => reduceAssistStream(s, e as AssistStreamEvent), INITIAL_ASSIST_STREAM_STATE);
-    expect(state.text).toBe("一半");
-    expect(state.error).toMatchObject({ kind: "interrupted", message_id: 3 });
-    expect(state.done).toBeNull();
   });
 
   it("tolerates CRLF line ends and a body that ends without the blank line", () => {

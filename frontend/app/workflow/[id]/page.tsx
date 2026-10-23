@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   workflowApi,
   requiresReasonForSoul,
   REJECTION_REASON_FOR_SOUL_MAX,
-  type ApprovalWorkflow,
-  type ApprovalNode,
 } from "@soulledger/core/api";
 import { workflowKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -89,7 +87,6 @@ const VERDICT_GLYPH: Record<string, string> = {
 
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();

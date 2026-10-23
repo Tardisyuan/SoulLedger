@@ -20,7 +20,7 @@ import { ActionsMenu, type OverflowMenuItem } from './ActionsMenu'
  */
 export type DataGridColumnType = 'identifier' | 'text' | 'enum' | 'numeric' | 'timestamp' | 'actions'
 
-interface BaseColumnDef<T> {
+interface BaseColumnDef {
   key: string
   header: ReactNode
   sortable?: boolean
@@ -45,14 +45,14 @@ interface BaseColumnDef<T> {
   missingReason?: string
 }
 
-export interface IdentifierColumnDef<T> extends BaseColumnDef<T> {
+export interface IdentifierColumnDef<T> extends BaseColumnDef {
   type: 'identifier'
   value: (row: T) => string | null | undefined
   /** Empty-state label. Defaults to an em dash at ink-tertiary. */
   emptyLabel?: string
 }
 
-export interface TextColumnDef<T> extends BaseColumnDef<T> {
+export interface TextColumnDef<T> extends BaseColumnDef {
   type: 'text'
   value: (row: T) => ReactNode
   emptyLabel?: string
@@ -67,13 +67,13 @@ export interface EnumValue {
   title?: string
 }
 
-export interface EnumColumnDef<T> extends BaseColumnDef<T> {
+export interface EnumColumnDef<T> extends BaseColumnDef {
   type: 'enum'
   /** An enum always has a value — §1's empty rule is "never empty", so this returns EnumValue, not EnumValue | null. */
   value: (row: T) => EnumValue
 }
 
-export interface NumericColumnDef<T> extends BaseColumnDef<T> {
+export interface NumericColumnDef<T> extends BaseColumnDef {
   type: 'numeric'
   value: (row: T) => number | null | undefined
   format?: (n: number) => string
@@ -81,7 +81,7 @@ export interface NumericColumnDef<T> extends BaseColumnDef<T> {
   tone?: (n: number) => 'success' | 'error' | 'neutral'
 }
 
-export interface TimestampColumnDef<T> extends BaseColumnDef<T> {
+export interface TimestampColumnDef<T> extends BaseColumnDef {
   type: 'timestamp'
   value: (row: T) => string | number | Date | null | undefined
   /** Locale-aware formatter — pass `formatDateTime` from useI18n(). */
@@ -106,7 +106,7 @@ export interface ActionItem<T> {
   hidden?: boolean
 }
 
-export interface ActionsColumnDef<T> extends BaseColumnDef<T> {
+export interface ActionsColumnDef<T> extends BaseColumnDef {
   type: 'actions'
   /** One verb rendered inline before the overflow trigger. */
   primary?: (row: T) => { label: ReactNode; onSelect: () => void; disabled?: boolean } | null

@@ -341,7 +341,7 @@ describe("computeFutureStages", () => {
 
 describe("buildCycleBandRows", () => {
   it("returns nothing for a soul that has never reincarnated", () => {
-    expect(buildCycleBandRows(soul(), [], (n) => `life ${n}`)).toEqual([]);
+    expect(buildCycleBandRows(soul(), [])).toEqual([]);
   });
 
   it("builds one band per life, using birth_name for life 1 and new_identity for later lives", () => {
@@ -358,7 +358,7 @@ describe("buildCycleBandRows", () => {
       notes: "",
       reincarnated_at: "2020-04-01T00:00:00Z",
     };
-    const rows = buildCycleBandRows(s, [reinc], (n) => `life ${n}`);
+    const rows = buildCycleBandRows(s, [reinc]);
     expect(rows).toHaveLength(2);
     expect(rows[0].cycleNumber).toBe(1);
     expect(rows[0].name).toBe("崔明远");

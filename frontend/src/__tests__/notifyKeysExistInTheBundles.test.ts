@@ -224,7 +224,7 @@ describe("every key `notify` is given is a key the bundles have", () => {
     // hooks directory, or a regex that stopped matching all present the same
     // way as a clean codebase: an empty offenders list.
     expect(SOURCE_FILES.length).toBeGreaterThan(100);
-    // 26 in the six hooks today. A floor rather than a pin, because the number
+    // 40 across the hooks on 2026-10-23 (26 in the original six). A floor rather than a pin, because the number
     // moves whenever a mutation gains or loses a toast — but it must not
     // collapse.
     expect(CALL_SITES.length).toBeGreaterThanOrEqual(24);
@@ -232,7 +232,7 @@ describe("every key `notify` is given is a key the bundles have", () => {
 
   it("found the call sites in the files they are actually in", () => {
     // Names the subject rather than counting it. If `notify` moved out of these
-    // six files without this list being updated, the count above could still
+    // files without this list being updated, the count above could still
     // clear its floor on call sites somewhere else entirely.
     const files = [...new Set(CALL_SITES.map((c) => c.file))].sort();
     expect(files).toEqual([
@@ -240,7 +240,6 @@ describe("every key `notify` is given is a key the bundles have", () => {
       "packages/core/src/hooks/useJudgmentQueue.ts",
       "packages/core/src/hooks/useJudgments.ts",
       "packages/core/src/hooks/useOrganizations.ts",
-      "packages/core/src/hooks/useReincarnation.ts",
       "packages/core/src/hooks/useSocial.ts",
       "packages/core/src/hooks/useSouls.ts",
     ]);

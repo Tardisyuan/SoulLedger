@@ -539,12 +539,21 @@ const eslintConfig = [
       // `error` 仍然是对的,理由换成一句更简单的:一个 hook 的依赖数组错了不是
       // 风格问题,是那个 effect 会拿着旧值跑。全仓当前违规数为 0。
       "react-hooks/exhaustive-deps": "error",
-      // 这一块是**产品代码**,两条 `no-unused-vars` 在这里是 `off`。
+      // 这一块是**产品代码**(含 e2e/)。核心的 `no-unused-vars` 仍是 `off`:它不认
+      // TS 的类型位置,只会误报;由 `@typescript-eslint/no-unused-vars` 接手。
       //
-      // (`warn` 那一档在下面的测试文件块里。它原本记着「`npm run lint` 仍然按
-      // 退出码判定通过」—— **那半句 2026-09-05 起是假的**,理由见那一块。)
+      // 后者此前也是 `off`,于是 2026-10-23 的审计在产品代码里数出约 70 个从不
+      // 使用的 import / 局部变量(IconPicker 一个文件就 40 个 lucide 图标),
+      // 当天清到 0 后打开为 `error`,不让它们再长回来。`_` 前缀是有意不用的标记。
+      // `caughtErrors: "none"`:`catch (e)` 不读 e 不算死代码,与 tsc 的
+      // `--noUnusedLocals` 同一个口径。
+      //
+      // (测试文件那一档在下面的测试文件块里。)
       "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
       "react/react-in-jsx-scope": "off",
       // 产品代码里 `any` 是 error:它关掉的正是 tsc 在这里唯一能做的检查。
       // 测试文件(下面那一块)不受这条约束。

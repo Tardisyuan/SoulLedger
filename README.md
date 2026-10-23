@@ -531,7 +531,7 @@ backend/
   tests/            跨应用 pytest 套件（后端测试还有一半在 apps/*/ 里）
 packages/core/      平台无关层。**不含 DOM** —— 它的 tsconfig 没有 "dom"
   src/api/          每个后端应用一个类型安全客户端
-  src/hooks/        数据 hook（useSouls、useJudgments、useSoulChat …），web 与 App 共用
+  src/hooks/        数据 hook（useSouls、useJudgments、useSocial …），web 与 App 共用
   src/platform/     宿主能力端口；web 实现在 frontend/lib/platform/web.ts
   src/config/       领域配置：四文明映射、civilizationSigil、workflow-templates
   messages/         i18n：zh-Hans、en、egy

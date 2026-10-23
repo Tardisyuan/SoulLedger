@@ -189,7 +189,7 @@ export function SoulLifecycleTimeline({
       );
     }
 
-    out.push(...buildCycleBandRows(soul, reincarnations, (n) => tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(n) })));
+    out.push(...buildCycleBandRows(soul, reincarnations));
 
     return sortRows(out);
     // `t`, `tf` and `stageLabels` are every string this builder produces, and

@@ -5,7 +5,6 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useToast } from "@/src/contexts/ToastContext";
 import { useUpdateSoul } from "@soulledger/core/hooks/useSouls";
 import type { Soul, SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
@@ -24,7 +23,6 @@ const STATE_OPTION_VALUES = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "L
 
 export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) {
   const { t } = useI18n();
-  const { showToast } = useToast();
   const updateMutation = useUpdateSoul();
   const { validate, getError, clearFieldError } = useFormValidation(soulUpdateSchema);
 

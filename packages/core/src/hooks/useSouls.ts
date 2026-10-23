@@ -264,4 +264,3 @@ export function useSoulRegionUpdateCommit() {
 
 // NOTE: Judgment hooks (useJudgments, useConcludeJudgment) are in useJudgments.ts
 // NOTE: Disposition hooks (useDispositions, useExecuteDisposition) are in useDispositions.ts
-// NOTE: Reincarnation hooks (useReborn) are in useReincarnation.ts
