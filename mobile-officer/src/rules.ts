@@ -215,6 +215,9 @@ export function hallChoiceOf(error: unknown): { halls: { code: string; display_n
   return { halls: response.data.halls as { code: string; display_name: string }[] };
 }
 
+/** The two-step verification's own sign-in ran out: the screen goes back to the password. */
+export const MFA_TIMED_OUT = "officer_app.mfa.reasons.expired";
+
 /** Why a login or a two-step verification was refused, as an i18n key under `officer_app`. */
 /** `recovery`: the second step was a recovery code -- a wrong one says so, not 「动态码不对」 (as the soul app and the web). */
 export function loginFailureKey(error: unknown, step: "login" | "mfa", recovery = false): string {
@@ -222,9 +225,11 @@ export function loginFailureKey(error: unknown, step: "login" | "mfa", recovery 
   if (!response) return `officer_app.${step}.reasons.network`;
   const code = response.data?.code;
   if (response.status === 429 || code === "login_locked" || code === "locked") return `officer_app.${step}.reasons.locked`;
-  if (step === "mfa" && code === "expired") return "officer_app.mfa.reasons.expired";
+  // `pending_invalid`: this sign-in timed out (the pending token, 5 minutes) -- start again. `expired` is only a stale
+  // code (60-120 s old) and reads as a wrong one, as on the soul app (`mobile/src/mfa.ts`); the two were swapped here.
+  if (step === "mfa" && code === "pending_invalid") return MFA_TIMED_OUT;
   const wrong = recovery ? "mfa.verify.error_recovery_wrong" : "officer_app.mfa.reasons.wrong";
-  if (step === "mfa" && code === "wrong") return wrong;
+  if (step === "mfa" && (code === "wrong" || code === "expired")) return wrong;
   if (response.status === 401 || response.status === 400) return step === "login" ? "officer_app.login.reasons.bad_credentials" : wrong;
   return `officer_app.${step}.reasons.other`;
 }
@@ -414,6 +419,8 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   if (!response) return { network: true, old: [], next: [], other: [] };
   const lines = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? [v] : []);
   const body = (response.data && typeof response.data === "object" ? response.data : {}) as Record<string, unknown>;
+  // Too many wrong old passwords: the server's sentence is Chinese only, so it is said by key (as the web's profile).
+  if (statusOf(error) === 429 || body.code === "login_locked") return { network: false, old: ["profile.password_locked"], next: [], other: [] };
   return {
     network: false,
     old: lines(body.old_password).length ? ["profile.password_old_wrong"] : [],

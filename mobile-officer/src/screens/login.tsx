@@ -8,7 +8,7 @@ import { View } from "react-native";
 
 import { OFFICER_BRAND } from "../brand";
 import { ActionButton, Row } from "../kit";
-import { loginFailureKey } from "../rules";
+import { MFA_TIMED_OUT, loginFailureKey } from "../rules";
 import { ForgotPassword } from "./account";
 import { useSession, type Hall } from "../session";
 import { BrandMark, Button, Input, Notice, Screen, Txt, space, useI18n } from "../shared";
@@ -33,7 +33,15 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
     setBusy(true);
     setFailure(null);
     return work
-      .catch((e: unknown) => setFailure(t(loginFailureKey(e, kind, recovery))))
+      .catch((e: unknown) => {
+        const key = loginFailureKey(e, kind, recovery);
+        setFailure(t(key));
+        // The pending sign-in ran out: no code will pass any more, so back to the password.
+        if (key === MFA_TIMED_OUT) {
+          setCode("");
+          setStep({ name: "credentials" });
+        }
+      })
       .finally(() => setBusy(false));
   };
 

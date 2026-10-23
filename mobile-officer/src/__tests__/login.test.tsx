@@ -118,6 +118,28 @@ it("can switch to a recovery code, and says so when the code is wrong", async ()
   expect(await screen.findByTestId("login-failure")).toBeTruthy();
 });
 
+it("a timed-out sign-in goes back to the password; a stale code stays on the code step", async () => {
+  mockOfficerLogin.mockResolvedValue({ data: { mfa_required: true, pending_token: "P", username: "yama" } });
+  mockVerify.mockRejectedValueOnce(httpError(401, { code: "expired" })).mockRejectedValueOnce(httpError(401, { code: "pending_invalid" }));
+  renderLogin();
+  fill();
+  fireEvent.press(screen.getByTestId("login-submit"));
+  await screen.findByTestId("login-mfa");
+  fireEvent.changeText(screen.getByTestId("mfa-code"), "123456");
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("mfa-submit"));
+  });
+  expect(await screen.findByText("动态码不对")).toBeTruthy();
+  expect(screen.getByTestId("login-mfa")).toBeTruthy();
+  fireEvent.changeText(screen.getByTestId("mfa-code"), "654321");
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("mfa-submit"));
+  });
+  expect(await screen.findByText("这次登录已超时，请重新登录")).toBeTruthy();
+  expect(screen.queryByTestId("login-mfa")).toBeNull();
+  expect(screen.getByTestId("login-username")).toBeTruthy();
+});
+
 it("says the password was wrong and stays on the form", async () => {
   mockOfficerLogin.mockRejectedValue(httpError(401, { code: "invalid" }));
   renderLogin();
