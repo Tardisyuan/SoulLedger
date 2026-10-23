@@ -23,6 +23,7 @@ import {
   loginFailureKey,
   reasonMissing,
   passVerdictsOf,
+  passwordFailure,
   reassignCandidates,
   rebirthCross,
   submitDecision,
@@ -177,6 +178,14 @@ describe("where a tapped push lands", () => {
   });
 });
 
+describe("passwordFailure", () => {
+  it("too many wrong old passwords is said by key, never the server's Chinese sentence", () => {
+    const locked = passwordFailure(http(429, { code: "login_locked", error: "尝试次数过多" }));
+    expect(locked).toEqual({ network: false, old: ["profile.password_locked"], next: [], other: [] });
+    expect(passwordFailure(http(400, { old_password: ["wrong"] })).old).toEqual(["profile.password_old_wrong"]);
+  });
+});
+
 describe("login", () => {
   it("409 hall_required carries the halls; nothing else does", () => {
     const halls = [{ code: "CN", display_name: "地府" }];
@@ -193,7 +202,10 @@ describe("login", () => {
     expect(loginFailureKey(http(401, { code: "wrong" }), "mfa", true)).toBe("mfa.verify.error_recovery_wrong");
     expect(loginFailureKey(http(400), "mfa", true)).toBe("mfa.verify.error_recovery_wrong");
     expect(loginFailureKey(http(429, { code: "locked" }), "mfa", true)).toBe("officer_app.mfa.reasons.locked");
-    expect(loginFailureKey(http(401, { code: "expired" }), "mfa")).toBe("officer_app.mfa.reasons.expired");
+    // `expired` is a stale code (reads as wrong); `pending_invalid` is the sign-in timing out (2026-10-23: they were swapped).
+    expect(loginFailureKey(http(401, { code: "expired" }), "mfa")).toBe("officer_app.mfa.reasons.wrong");
+    expect(loginFailureKey(http(401, { code: "pending_invalid" }), "mfa")).toBe("officer_app.mfa.reasons.expired");
+    expect(loginFailureKey(http(401, { code: "pending_invalid" }), "mfa", true)).toBe("officer_app.mfa.reasons.expired");
     expect(loginFailureKey(http(429, { code: "locked" }), "mfa")).toBe("officer_app.mfa.reasons.locked");
   });
 });
