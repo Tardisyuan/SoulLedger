@@ -25,9 +25,7 @@ from apps.perm.matrix import (
 from apps.perm.services import get_role_permission_codenames
 
 from .models import (
-    DEFAULT_PERMISSIONS,
     DEFAULT_ROLES,
-    ROLE_PERMISSIONS,
     FieldPermission,
     Permission,
     Role,
@@ -35,7 +33,6 @@ from .models import (
     RowLevelDataScope,
 )
 from .serializers import (
-    InitRolePermissionsResultSerializer,
     InitRolesResultSerializer,
     MatrixChangesRequestSerializer,
     MatrixChangesResultSerializer,
@@ -750,56 +747,6 @@ def init_roles(request):
     return Response({
         "message": f"Initialized {created_count} roles",
         "total": Role.objects.count(),
-    })
-
-
-@extend_schema(request=None, responses={200: InitRolePermissionsResultSerializer})
-@api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
-def init_role_permissions(request):
-    """
-    POST /api/v1/perm/role-permissions/init/
-    根据 ROLE_PERMISSIONS 字典为所有角色分配权限（仅 ADMIN）
-    """
-
-    # First ensure all permissions exist
-    perm_count_before = Permission.objects.count()
-    for codename, name, category in DEFAULT_PERMISSIONS:
-        Permission.revive_or_create(codename, name=name, category=category)
-
-    # Clean up phantom permissions (test entries)
-    Permission.objects.filter(codename__startswith='test.').delete()
-
-    perm_count_after = Permission.objects.count()
-
-    # Assign permissions to roles based on ROLE_PERMISSIONS
-    results = {}
-    for role_name, perm_codenames in ROLE_PERMISSIONS.items():
-        role = Role.objects.filter(name=role_name).first()
-        if not role:
-            results[role_name] = "Role not found"
-            continue
-
-        # Get permission objects
-        perms = Permission.objects.filter(codename__in=perm_codenames)
-        perm_ids = list(perms.values_list('id', flat=True))
-
-        # Remove existing and create new
-        RolePermission.objects.filter(role=role).delete()
-        to_create = [RolePermission(role=role, permission_id=pid) for pid in perm_ids]
-        created = RolePermission.objects.bulk_create(to_create)
-
-        results[role_name] = f"Assigned {len(created)} permissions"
-
-    # Seeds Permission rows and bulk_creates grants — neither reaches the
-    # invalidation signal. See assign_role_permissions.
-    invalidate_all_permissions()
-
-    return Response({
-        "message": "Role permissions initialized",
-        "permissions_added": perm_count_after - perm_count_before,
-        "permissions_total": perm_count_after,
-        "roles": results,
     })
 
 
