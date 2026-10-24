@@ -21,6 +21,7 @@ import { useRef } from "react";
  * write, so offering it here would only manufacture 400s.
  */
 
+import { quotaIsFull, type RebirthQuotaUsage } from "@soulledger/core/api/reincarnation";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 /** 三善道, best to worst. */
@@ -60,9 +61,14 @@ interface RebirthFormSelectProps {
   value: RebirthFormValue;
   onChange: (form: RebirthFormValue) => void;
   disabled?: boolean;
+  /**
+   * 本月配额(第五十一批 Q-3):满了的道仍然列出、仍然可选 —— 灰字,下面一行「已满 · 已用 / 上限」;
+   * 选了它,办转世的按钮由调用方置灰并说明。没给就不标。
+   */
+  quota?: readonly RebirthQuotaUsage[];
 }
 
-export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSelectProps) {
+export function RebirthFormSelect({ value, onChange, disabled, quota }: RebirthFormSelectProps) {
   // `tf` (translate, or show this literal) came down as a prop from the soul
   // detail page through SoulActionsCard; it is on the i18n context now. This is
   // the one of the four that did not already call `useI18n`. The six form
@@ -73,7 +79,7 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
   // `tf(` literals — the glob in the previous version of this very comment is
   // what its regex-based comment stripper choked on, hiding the two group
   // calls from the scan.
-  const { tf } = useI18n();
+  const { t, tf } = useI18n();
   const groups = [
     {
       key: "good" as const,
@@ -168,6 +174,8 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
             {group.forms.map((form) => {
               const selected = form === value;
               const index = flat.indexOf(form);
+              const usage = quota?.find((r) => r.rebirth_form === form);
+              const full = quotaIsFull(usage);
               return (
                 <button
                   key={form}
@@ -184,11 +192,17 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
                   disabled={disabled}
                   onKeyDown={(event) => onKeyDown(event, index)}
                   onClick={() => onChange(form)}
+                  data-quota-full={full ? "true" : undefined}
                   className={`px-2 py-2 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
-                  }`}
+                  } ${full && !selected ? "text-[oklch(var(--color-ink-subtle))]" : ""}`}
                 >
                   {tf(`reincarnation.forms.${form}`, form)}
+                  {full && usage ? (
+                    <span className="block font-mono text-2xs font-normal tabular-nums">
+                      {`${t("rebirths.quota.full_badge")} · ${t("rebirths.quota.used_of", { used: String(usage.used), limit: String(usage.limit) })}`}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
