@@ -42,6 +42,8 @@ urlpatterns = [
     path("officer-reset/confirm/", officer_reset_views.officer_reset_confirm, name="officer-reset-confirm"),
     path("email/send-verification/", officer_reset_views.email_send_verification, name="email-send-verification"),
     path("email/verify/", officer_reset_views.email_verify, name="email-verify"),
+    # 邮件邀请官员(2026-10-25):点链接自己设密码。见 officer_invite.py。
+    path("officer-invite/accept/", officer_reset_views.officer_invite_accept, name="officer-invite-accept"),
     # 两步验证(A12)。见 mfa_views.py 的模块注释。
     path("mfa/verify/", mfa_views.verify_view, name="mfa-verify"),
     path("mfa/status/", mfa_views.status_view, name="mfa-status"),

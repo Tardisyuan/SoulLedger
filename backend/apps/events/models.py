@@ -114,6 +114,10 @@ class EventType(models.TextChoices):
     CITY_GOD_SENT_ON = "CITY_GOD_SENT_ON"
     CITY_GOD_RETURNED = "CITY_GOD_RETURNED"
 
+    # 孟婆汤(2026-10-25,只在地府;apps/reincarnation/services.py::drink_soup)。地府的灵魂转世前必须饮过,
+    # 记在灵魂的时间线上,与记下饮汤的那一笔同一事务。payload 只有时间,不带经办官员。
+    MENGPO_SOUP_TAKEN = "MENGPO_SOUP_TAKEN"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

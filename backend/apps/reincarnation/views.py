@@ -11,6 +11,8 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import (
+    DrinkSoupResultSerializer,
+    DrinkSoupSerializer,
     RebirthQuotaUsageSerializer,
     RebirthRequestSerializer,
     ReincarnationSerializer,
@@ -96,6 +98,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'partial_update': ['reincarnation.manage'],
         'destroy': ['reincarnation.manage'],
         'quota': ['reincarnation.read'],
+        'drink_soup': ['reincarnation.manage'],
     }
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]
@@ -165,6 +168,23 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # Refresh reincarnation record
         reincarnation.refresh_from_db()
         return Response(ReincarnationSerializer(reincarnation).data)
+
+    @extend_schema(request=DrinkSoupSerializer, responses={200: DrinkSoupResultSerializer})
+    @action(detail=False, methods=["post"], url_path="drink-soup")
+    def drink_soup(self, request):
+        """POST /reincarnation/drink-soup/ {soul_id} — 记下这一世已饮孟婆汤(地府,候转世的灵魂;2026-10-25)。
+        地府的灵魂没饮过,`complete` / `reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。"""
+        from apps.core.tenant import scope_to_tenant
+        from apps.reincarnation.services import drink_soup
+        from apps.souls.models import Soul
+
+        body = DrinkSoupSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=body.validated_data["soul_id"]).first()
+        if soul is None:
+            return Response({"error": "NOT_FOUND", "message": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+        soul = drink_soup(soul)
+        return Response({"soul_id": str(soul.pk), "soup_taken_at": soul.soup_taken_at})
 
     @extend_schema(responses=RebirthQuotaUsageSerializer(many=True))
     @action(detail=False, methods=["get"])

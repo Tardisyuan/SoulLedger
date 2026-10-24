@@ -1,10 +1,12 @@
 """
 URL configuration for judgment app.
 """
+from django.urls import path
 from rest_framework import routers
 
 from apps.judgment.appeal_views import JudgmentAppealViewSet
 from apps.judgment.city_god_views import CityGodCaseViewSet, CityGodViewSet
+from apps.judgment.handover_views import HandoverCommitView, HandoverPreviewView
 from apps.judgment.views import JudgmentViewSet, StatuteViewSet
 
 router = routers.DefaultRouter()
@@ -21,4 +23,9 @@ router.register("appeals", JudgmentAppealViewSet, basename="judgment-appeal")
 router.register("city-gods", CityGodViewSet, basename="city-god")
 router.register("city-god-cases", CityGodCaseViewSet, basename="city-god-case")
 router.register("", JudgmentViewSet, basename="judgment")
-urlpatterns = router.urls
+# 交接在路由之前:空前缀的详情路由会把 `handover/` 当成一件审判的 pk。
+urlpatterns = [
+    path("handover/preview/", HandoverPreviewView.as_view(), name="judgment-handover-preview"),
+    path("handover/", HandoverCommitView.as_view(), name="judgment-handover"),
+    *router.urls,
+]

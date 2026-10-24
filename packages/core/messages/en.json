@@ -330,7 +330,8 @@
       "JUDGMENT_APPEAL_DECIDED": "Appeal decided",
       "CITY_GOD_RECEIVED": "Received by the City God",
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
-      "CITY_GOD_RETURNED": "Returned by the City God for correction"
+      "CITY_GOD_RETURNED": "Returned by the City God for correction",
+      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -5504,6 +5505,10 @@
     "workflow_pick_withdrawn": {
       "title": "Pick-stations task withdrawn",
       "body": "The cross-realm judgment \"{{title}}\" was cancelled; no need to pick stations for {{soul}}."
+    },
+    "officer_handover_received": {
+      "title": "Work handed over to you",
+      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} city gods, {{letters}} letters."
     }
   },
   "social_moderation": {
