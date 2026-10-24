@@ -164,6 +164,10 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     )
     notes = models.TextField(blank=True)
     is_final = models.BooleanField(default=False)
+    #: 横死(2026-10-24):the soul died before its recorded fated date (Soul.fated_death_*). It waits in 枉死城;
+    #: `held_until` is that date, and the judgment cannot be claimed before it.
+    untimely = models.BooleanField(default=False)
+    held_until = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     concluded_at = models.DateTimeField(null=True, blank=True)
     # 结案那一刻采信后的业力净值(功 − 过,剔除本案不采信的记录,与 `get_ledger_summary`

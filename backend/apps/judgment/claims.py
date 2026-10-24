@@ -121,6 +121,11 @@ def _clear_reassign_request(judgment: Judgment) -> list[str]:
 
 def _apply_claim(judgment: Judgment, user) -> None:
     _assert_pending(judgment)
+    if judgment.held_until and judgment.held_until > timezone.localdate():
+        raise ClaimRefusedError(
+            "This soul died before its fated date and waits in 枉死城 until then.", "held_until_fated_date",
+            held_until=judgment.held_until.isoformat(),
+        )
     if judgment.claimed_by_id == user.pk:
         return  # 幂等:重复认领自己的案子不写、不改 claimed_at
     if judgment.claimed_by_id is not None:

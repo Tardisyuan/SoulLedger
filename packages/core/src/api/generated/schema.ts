@@ -12176,6 +12176,9 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly concluded_at: string | null;
+            readonly untimely: boolean;
+            /** Format: date */
+            readonly held_until: string | null;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -12422,6 +12425,9 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly concluded_at: string | null;
+            readonly untimely: boolean;
+            /** Format: date */
+            readonly held_until: string | null;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -15291,6 +15297,9 @@ export interface components {
             readonly created_at?: string;
             /** Format: date-time */
             readonly concluded_at?: string | null;
+            readonly untimely?: boolean;
+            /** Format: date */
+            readonly held_until?: string | null;
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;
@@ -15560,6 +15569,12 @@ export interface components {
             } | null;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             death_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            fated_death_date?: {
                 year: number;
                 month: number | null;
                 day: number | null;
@@ -17415,6 +17430,12 @@ export interface components {
             } | null;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             death_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            fated_death_date?: {
                 year: number;
                 month: number | null;
                 day: number | null;
