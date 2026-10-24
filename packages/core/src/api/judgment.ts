@@ -97,7 +97,7 @@ export interface Judgment extends ArchiveFields {
   /**
    * 枉死(2026-10-24,只地府):灵魂死在阳寿(`Soul.fated_death_date`)之前。`Soul.die` 盖章,之后不变。
    * `held_until` 是阳寿那一天(ISO 日期):在那之前不能认领(409 `held_until_fated_date`),灵魂在枉死城。
-   * 过了那天 `held_until` 仍在,只是不再拦 —— 用 `isHeldUntilFatedDate` 判断「此刻是否候审」。
+   * 过了那天 `held_until` 仍在,只是不再拦 —— 用 `domain/dates.ts::isHeldUntilFatedDate` 判断「此刻是否候审」。
    */
   untimely?: boolean;
   held_until?: string | null;
@@ -233,20 +233,6 @@ export interface JudgmentClaimRefusal {
   missing?: string[];
   /** On `held_until_fated_date` (枉死城): the ISO date the case can first be claimed. */
   held_until?: string;
-}
-
-/** Local calendar date as `YYYY-MM-DD` — the shape `held_until` comes in. */
-function localIsoDate(now: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
-}
-
-/**
- * Held in 枉死城 right now: untimely and the fated date is still ahead. Same rule as the server's claim
- * guard (`held_until > localdate()`), so a held row never offers a claim the server would refuse.
- */
-export function isHeldUntilFatedDate(j: Pick<Judgment, "held_until">, now: Date = new Date()): boolean {
-  return !!j.held_until && j.held_until > localIsoDate(now);
 }
 
 /**

@@ -117,3 +117,28 @@ it("offers nothing to print on an open judgment", async () => {
   await screen.findByLabelText("judgment.detail.notes", {}, { timeout: 5000 });
   expect(screen.queryByRole("button", { name: "print.button" })).toBeNull();
 });
+
+// 身份带下的元信息(第五十一批 F-3):候审期间多一行「枉死 · 候至 · 在枉死城」,到期后只剩「枉死」;
+// 不是枉死的审判没有这一行。放在这里是因为这份文件已经把审判台整页立起来了。
+describe("枉死 in the identity band", () => {
+  it("held: 枉死 · 候至 · 在枉死城", async () => {
+    mockGet.mockResolvedValue({ data: { ...judgment(false), untimely: true, held_until: "2999-11-03" } });
+    renderPage();
+    const line = await screen.findByTestId("desk-untimely", {}, { timeout: 5000 });
+    expect(line).toHaveTextContent("judgment.untimely · judgment.held_until · judgment.in_city");
+  });
+
+  it("past the date: only 枉死", async () => {
+    mockGet.mockResolvedValue({ data: { ...judgment(false), untimely: true, held_until: "2000-01-01" } });
+    renderPage();
+    const line = await screen.findByTestId("desk-untimely", {}, { timeout: 5000 });
+    expect(line).toHaveTextContent(/^judgment\.untimely$/);
+  });
+
+  it("not untimely: no line", async () => {
+    mockGet.mockResolvedValue({ data: judgment(false) });
+    renderPage();
+    await screen.findByLabelText("judgment.detail.notes", {}, { timeout: 5000 });
+    expect(screen.queryByTestId("desk-untimely")).toBeNull();
+  });
+});
