@@ -113,6 +113,12 @@ export {
   type JudgmentBatchResult,
   type JudgmentClaimRefusal,
   type AssignableOfficer,
+  judgmentAppealsApi,
+  judgmentAppealKeys,
+  APPEAL_ERROR_CODES,
+  type JudgmentAppeal,
+  type JudgmentAppealStatus,
+  type JudgmentAppealDecidePayload,
 } from "./judgment";
 
 // Ledger

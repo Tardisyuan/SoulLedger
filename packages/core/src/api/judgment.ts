@@ -1,3 +1,4 @@
+import type { AppealCompensation } from "../domain/appeals";
 import type { ArchiveFields } from "./archive";
 import type { GenericAbortSignal } from "axios";
 import { api } from "./client";
@@ -233,6 +234,8 @@ export interface JudgmentClaimRefusal {
   missing?: string[];
   /** On `held_until_fated_date` (枉死城): the ISO date the case can first be claimed. */
   held_until?: string;
+  /** 申诉改判(`foreign_stops_choice_required`):联审带进来、还没开始的外地站的站序。 */
+  foreign_orders?: number[];
 }
 
 /**
@@ -679,3 +682,39 @@ export const judgmentApi = {
   /** Every court in the caller's scope (unfiltered, unpaginated) — the court filter's options. */
   courts: () => api.get<JudgmentCourt[]>("/judgment/courts/"),
 };
+
+// ── 申诉(第五十二批;backend/apps/judgment/appeal_views.py)──────────────────
+
+export type JudgmentAppealStatus = Schemas["JudgmentAppealStatusEnum"];
+export type JudgmentAppeal = Omit<Schemas["JudgmentAppeal"], "compensations"> & { compensations: AppealCompensation[] };
+export type JudgmentAppealDecidePayload = Schemas["JudgmentAppealDecide"];
+
+export const judgmentAppealKeys = {
+  all: ["judgment-appeals"] as const,
+  list: (params?: Record<string, string>) => [...judgmentAppealKeys.all, "list", params ?? null] as const,
+  detail: (id: string) => [...judgmentAppealKeys.all, "detail", id] as const,
+};
+
+/**
+ * 官员侧:本殿的申诉。`?status=PENDING` 是待复核队列。认领与决定的拒绝是 `JudgmentClaimRefusal` 形状,
+ * `code` 见 `APPEAL_ERROR_CODES`;`foreign_stops_choice_required` 另带 `foreign_orders`。
+ */
+export const judgmentAppealsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<JudgmentAppeal>>("/judgment/appeals/", { params }),
+  get: (id: string) => api.get<JudgmentAppeal>(`/judgment/appeals/${id}/`),
+  claim: (id: string) => api.post<JudgmentAppeal>(`/judgment/appeals/${id}/claim/`),
+  decide: (id: string, data: JudgmentAppealDecidePayload) =>
+    api.post<JudgmentAppeal>(`/judgment/appeals/${id}/decide/`, data),
+};
+
+/** 认领 / 决定被拒时有文案的 `code`(`appeals.error.<code>`)。 */
+export const APPEAL_ERROR_CODES = [
+  "plan_in_transit",
+  "plan_busy",
+  "already_claimed",
+  "original_judge",
+  "not_reviewer",
+  "appeal_closed",
+  "verdict_unchanged",
+] as const;

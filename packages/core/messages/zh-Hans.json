@@ -327,7 +327,7 @@
       "SENTENCE_PLAN_CANCELLED": "受刑计划取消",
       "JUDGMENT_APPEAL_FILED": "提出申诉",
       "JUDGMENT_APPEAL_WITHDRAWN": "撤回申诉",
-      "JUDGMENT_APPEAL_DECIDED": "申诉复核结论",
+      "JUDGMENT_APPEAL_DECIDED": "申诉已复核",
       "CITY_GOD_RECEIVED": "城隍收案",
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正"
@@ -688,6 +688,9 @@
       "EUROPE": "欧洲",
       "ASIA": "亚洲",
       "UNKNOWN": "不详"
+    },
+    "compensation": {
+      "tag": "↺ 改判"
     }
   },
   "common": {
@@ -3876,7 +3879,8 @@
       "moderation": "朋友圈审核",
       "recycle_bin": "回收站",
       "sentence_plans": "受刑计划",
-      "group_rebirth": "轮回"
+      "group_rebirth": "轮回",
+      "judgment_appeals": "申诉复核"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -5161,7 +5165,7 @@
     },
     "appeal_amended": {
       "title": "申诉复核:已改判",
-      "body": "你的申诉已复核，原判已改。打开灵魂簿查看。"
+      "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"
     },
     "disposition_executed": {
       "title": "处置已执行",
@@ -6858,6 +6862,9 @@
     "dispatch": {
       "approved_next": "已批准。接收方殿还要在电脑上执行一次，灵魂才会动身。",
       "awaiting_receiver": "◐ 等接收方执行"
+    },
+    "appeals": {
+      "desk_only": "复核在网页上进行"
     }
   },
   "print": {
@@ -6993,5 +7000,80 @@
     "soul_email_self": "允许灵魂自己改联系邮箱",
     "soul_email_on": "开：灵魂在 App 里输密码后自己改，验证码发到新邮箱，旧邮箱收到通知。",
     "soul_email_off": "关：App 里显示「要改联系邮箱，请到本殿，带上交付单」,由官员在灵魂账号里改。"
+  },
+  "appeals": {
+    "status": {
+      "PENDING": "待复核",
+      "IN_REVIEW": "复核中",
+      "UPHELD": "维持原判",
+      "AMENDED": "已改判",
+      "WITHDRAWN": "已撤回"
+    },
+    "round": "第 {{round}} 次申诉",
+    "deadline": "{{date}} 前可申诉",
+    "refusal": {
+      "appeal_open": "已有一份申诉在复核中",
+      "appeal_rounds_used": "两次申诉已用完",
+      "appeal_window_closed": "申诉期已于 {{date}} 截止",
+      "not_concluded": "这件审判还没结案，结案后才能申诉",
+      "not_appealable": "这件审判不能申诉",
+      "past_life_read_only": "前世的审判只能查看，不能申诉"
+    },
+    "file": "申诉",
+    "file_title": "对这件审判申诉",
+    "file_body": "由另一位判官复核。每件审判最多申诉两次，撤回也算一次。",
+    "reason_label": "理由",
+    "reason_required": "请写理由",
+    "evidence_label": "新证据 · 选填",
+    "submit": "提交申诉",
+    "submitted_toast": "申诉已提交",
+    "withdraw": "撤回",
+    "withdraw_title": "撤回这次申诉？",
+    "withdraw_body": "撤回也算一次。撤回后，这件审判还能申诉 {{left}} 次。",
+    "withdraw_body_last": "撤回也算一次。这是第二次，撤回后这件审判不能再申诉。",
+    "withdrawn_toast": "申诉已撤回",
+    "original_verdict": "原判",
+    "new_verdict": "新判",
+    "verdict_change": "{{from}} → {{to}}",
+    "decision_note": "复核意见",
+    "compensation": "改判补偿",
+    "compensation_row": "第 {{order}} 站 · 功德 {{weight}}",
+    "compensation_hint": "已经受过刑的每一站各记一笔功德，已计入功过簿。",
+    "decided_at": "{{date}} 复核",
+    "queue_title": "申诉复核",
+    "queue_empty": "没有待复核的申诉",
+    "col": {
+      "round": "轮次",
+      "filed_at": "提出时间",
+      "deadline": "距截止",
+      "reviewer": "复核人"
+    },
+    "claim": "认领复核",
+    "claimed_toast": "已认领，这份申诉由你复核",
+    "claim_disabled_original": "你作出了原判，这份申诉要由另一位官员复核",
+    "decide_action": "作出结论",
+    "decide_title": "复核结论 · {{case}}",
+    "uphold": "维持原判",
+    "amend": "改判",
+    "pick_verdict": "选新裁决",
+    "note_required": "请写复核意见，灵魂会看到",
+    "amend_impact": "改判后，受刑计划里还没执行的站改按新裁决；已经执行的每一站，给灵魂记一笔补偿功德。",
+    "decided_toast": "结论已发出，灵魂会收到通知",
+    "error": {
+      "plan_in_transit": "灵魂正在去下一站，或在外地、那一站还没执行。等那一站执行后再作结论。",
+      "plan_busy": "受刑计划正在重审、永久挂起，或有请求等原审判官决定，现在不能改判。",
+      "already_claimed": "这份申诉已由其他官员认领",
+      "original_judge": "你作出了原判，不能复核",
+      "not_reviewer": "只有认领的复核人能作出结论",
+      "appeal_closed": "这份申诉已有结论或已撤回",
+      "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。"
+    },
+    "decide": {
+      "foreign_title": "联审带来的外地站",
+      "foreign_hint": "这几站还没开始，是联审带进来的。改判不会替你处理它们：请选全部保留，还是全部撤掉。",
+      "foreign_keep": "全部保留",
+      "foreign_remove": "全部撤掉",
+      "foreign_required": "请决定这些外地站保留还是撤掉"
+    }
   }
 }

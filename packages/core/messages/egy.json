@@ -321,7 +321,10 @@
       "SENTENCE_REQUEST_CREATED": "Dbh Wetep Hab Seth",
       "SENTENCE_REQUEST_DECIDED": "Dbh Wetep Wedja Seth",
       "SENTENCE_PLAN_COMPLETED": "Sesh Wetep Khetem Seth",
-      "SENTENCE_PLAN_CANCELLED": "Sesh Wetep Sehen Seth"
+      "SENTENCE_PLAN_CANCELLED": "Sesh Wetep Sehen Seth",
+      "JUDGMENT_APPEAL_FILED": "Nehet Hab Seth",
+      "JUDGMENT_APPEAL_WITHDRAWN": "Nehet Sehen Seth",
+      "JUDGMENT_APPEAL_DECIDED": "Nehet Maa Seth"
     },
     "civilizations": {
       "CHINESE": "Sherer",
@@ -343,7 +346,8 @@
       "GREED": "Awn Ib",
       "BLASPHEMY": "Sebi Netjer",
       "MURDER": "Sma",
-      "OTHER": "Ky"
+      "OTHER": "Ky",
+      "COMPENSATION": "Nefer Wedja Khemen"
     },
     "dedication": {
       "body": "Iri Em Ankh Er Ba Pen; Sab Sesh. Nefer Wa · Ba Em Wedja Er Em Shepet Wa.",
@@ -681,6 +685,9 @@
       "EUROPE": "Europa",
       "UNKNOWN": "Nen Rekh",
       "ASIA": "Asia"
+    },
+    "compensation": {
+      "tag": "↺ Wedja Khemen"
     }
   },
   "common": {
@@ -3858,7 +3865,8 @@
       "moderation": "Maat Shemsu",
       "recycle_bin": "Per Khet Hedj",
       "group_rebirth": "Wehem Mesut",
-      "sentence_plans": "Shepet"
+      "sentence_plans": "Shepet",
+      "judgment_appeals": "Nehet"
     },
     "queue": "Sepu Wedja",
     "about": "Khet Medjat Ba",
@@ -5248,6 +5256,14 @@
     "reply": {
       "title": "{{name}}: Wesheb Er Wesheb-Ek",
       "body": "{{text}}"
+    },
+    "appeal_upheld": {
+      "title": "Nehet: Wedja Tepy Smen",
+      "body": "Nehet Maa Seth: Wedja Tepy Smen. Wen Medjat Ba Er Maa."
+    },
+    "appeal_amended": {
+      "title": "Nehet: Wedja Khemen Seth",
+      "body": "Nehet Maa Seth: Wedja Khemen Seth. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
@@ -6824,6 +6840,9 @@
     "dispatch": {
       "approved_next": "Hesy Seth. Wesekhet Shesep Iri Em Medjat Sab: Ba Nen Shem Djer.",
       "awaiting_receiver": "◐ Nen Iri Wesekhet Shesep Djer"
+    },
+    "appeals": {
+      "desk_only": "Maa Nehet: Em Medjat Sab"
     }
   },
   "print": {
@@ -6970,5 +6989,80 @@
     "soul_email_self": "Ba Khemen Wat Sesh Djes-Ef",
     "soul_email_on": "Wen: Ba Sesh Sekhem, Khemen Djes-Ef. Hesb Maa Er Wat Sesh Mawy; Wat Sesh Tepy: Sedjem.",
     "soul_email_off": "Khetem: Iyi Er Wesekhet Hena Djama Redi. Sab Khemen Em Aq En Ba."
+  },
+  "appeals": {
+    "status": {
+      "PENDING": "Nen Maa Djer",
+      "IN_REVIEW": "Em Maa",
+      "UPHELD": "Wedja Tepy Smen",
+      "AMENDED": "Wedja Khemen Seth",
+      "WITHDRAWN": "Sehen Seth"
+    },
+    "round": "Nehet {{round}}",
+    "deadline": "Nehet Wenen Er {{date}}",
+    "refusal": {
+      "appeal_open": "Nehet Em Maa",
+      "appeal_rounds_used": "Nehet 2 Iri Seth",
+      "appeal_window_closed": "Nehet Khetem: {{date}}",
+      "not_concluded": "Wedja Nen Khetem Djer: Nen Nehet",
+      "not_appealable": "Wedja Pen: Nen Nehet",
+      "past_life_read_only": "Ankh Tepyu: Maa Wa, Nen Nehet"
+    },
+    "file": "Nehet",
+    "file_title": "Nehet · Wedja Pen",
+    "file_body": "Sab Wedja Ky Maa. Wedja Wa: Nehet 2 Er Pehwy; Sehen: Sep Wa.",
+    "reason_label": "Khet",
+    "reason_required": "Sesh Khet Em Tepy",
+    "evidence_label": "Medu Maat Mawy · Nen Em Tepy",
+    "submit": "Hab Nehet",
+    "submitted_toast": "Nehet Hab Seth",
+    "withdraw": "Sehen",
+    "withdraw_title": "Sehen Nehet Pen?",
+    "withdraw_body": "Sehen: Sep Wa. Er Khet: Nehet {{left}} Khery.",
+    "withdraw_body_last": "Sehen: Sep Wa. Nehet 2: Er Khet Nen Nehet.",
+    "withdrawn_toast": "Nehet Sehen Seth",
+    "original_verdict": "Wedja Tepy",
+    "new_verdict": "Wedja Mawy",
+    "verdict_change": "{{from}} → {{to}}",
+    "decision_note": "Wesheb",
+    "compensation": "Nefer Wedja Khemen",
+    "compensation_row": "Sekhet {{order}} · Nefer {{weight}}",
+    "compensation_hint": "Sekhet Iri Seth Neb: Nefer Wa · Em Sesh Nefer Hena Isfet.",
+    "decided_at": "Maa Seth {{date}}",
+    "queue_title": "Nehet",
+    "queue_empty": "Nen Nehet Em Smen",
+    "col": {
+      "round": "Sep",
+      "filed_at": "Hru Hab",
+      "deadline": "Er Khetem",
+      "reviewer": "Sab Maa"
+    },
+    "claim": "Shesep Maa",
+    "claimed_toast": "Shesep Seth: Maa Nehet Pen",
+    "claim_disabled_original": "Sab Wedja Tepy: Nen Maa. Sab Ky Maa.",
+    "decide_action": "Djed Wedja",
+    "decide_title": "Djed Wedja · {{case}}",
+    "uphold": "Wedja Tepy Smen",
+    "amend": "Khemen Wedja",
+    "pick_verdict": "Setep Wedja Mawy",
+    "note_required": "Sesh Wesheb · Ba Maa",
+    "amend_impact": "Er Khet Khemen: Sekhet Nen Iri Djer → Mi Wedja Mawy. Sekhet Iri Seth Neb: Nefer Wa Er Ba.",
+    "decided_toast": "Djed Wedja Seth · Ba Sedjem",
+    "error": {
+      "plan_in_transit": "Ba Em Wat Er Sekhet Ky; Sekhet Nen Iri Djer. Djed Wedja Er Khet Iri.",
+      "plan_busy": "Shepet Nen Khemen Emu: Wedja Wehem, Sedjer, Er Dbh Em Smen Sab Wedja Tepy.",
+      "already_claimed": "Shesep Ky Seth",
+      "original_judge": "Sab Wedja Tepy: Nen Maa",
+      "not_reviewer": "Sab Shesep Wa: Djed Wedja",
+      "appeal_closed": "Nehet Khetem Er Sehen Seth",
+      "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen»."
+    },
+    "decide": {
+      "foreign_title": "Sekhet Em Taui Ky · Wedja Taui Ky",
+      "foreign_hint": "Sekhet Pen Nen Iri Djer, Iyi Em Wedja Taui Ky. Setep: Smen Neb Er Fekh Neb.",
+      "foreign_keep": "Smen Neb",
+      "foreign_remove": "Fekh Neb",
+      "foreign_required": "Setep: Smen Er Fekh"
+    }
   }
 }

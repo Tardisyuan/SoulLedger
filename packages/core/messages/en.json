@@ -346,7 +346,7 @@
       "WISDOM": "Wisdom",
       "PIETY": "Piety",
       "DEDICATION": "Dedication of merit",
-      "COMPENSATION": "Compensation for an amended verdict",
+      "COMPENSATION": "Compensation for a changed verdict",
       "CRUELTY": "Cruelty",
       "DECEPTION": "Deception",
       "COWARDICE": "Cowardice",
@@ -688,6 +688,9 @@
       "EUROPE": "Europe",
       "ASIA": "Asia",
       "UNKNOWN": "Unknown"
+    },
+    "compensation": {
+      "tag": "↺ Verdict changed"
     }
   },
   "common": {
@@ -3876,7 +3879,8 @@
       "moderation": "Circle Moderation",
       "recycle_bin": "Recycle Bin",
       "sentence_plans": "Sentence Plans",
-      "group_rebirth": "Reincarnation"
+      "group_rebirth": "Reincarnation",
+      "judgment_appeals": "Appeal reviews"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -5156,12 +5160,12 @@
       "body": "Your judgment has concluded. Open Soul Ledger to see it."
     },
     "appeal_upheld": {
-      "title": "Appeal reviewed: verdict upheld",
-      "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the review."
+      "title": "Appeal reviewed: the verdict stands",
+      "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the reviewer's note."
     },
     "appeal_amended": {
-      "title": "Appeal reviewed: verdict amended",
-      "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see it."
+      "title": "Appeal reviewed: the verdict was changed",
+      "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see the new verdict."
     },
     "disposition_executed": {
       "title": "Disposition carried out",
@@ -6858,6 +6862,9 @@
     "dispatch": {
       "approved_next": "Approved. The receiving hall still has to carry it out on a computer before the soul moves.",
       "awaiting_receiver": "◐ Waiting for receiving hall"
+    },
+    "appeals": {
+      "desk_only": "Reviews are done on the web"
     }
   },
   "print": {
@@ -6993,5 +7000,80 @@
     "soul_email_self": "Let souls change their own contact email",
     "soul_email_on": "On: souls change it in the app after entering their password. The code goes to the new address; the old one gets a notice.",
     "soul_email_off": "Off: the app says to come to the hall with the delivery slip; an officer changes it in the soul account."
+  },
+  "appeals": {
+    "status": {
+      "PENDING": "Awaiting review",
+      "IN_REVIEW": "Under review",
+      "UPHELD": "Verdict stands",
+      "AMENDED": "Verdict changed",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "round": "Appeal {{round}}",
+    "deadline": "You can appeal until {{date}}",
+    "refusal": {
+      "appeal_open": "An appeal is already being reviewed",
+      "appeal_rounds_used": "Both appeals have been used",
+      "appeal_window_closed": "The appeal period ended on {{date}}",
+      "not_concluded": "This judgment isn't concluded yet; you can appeal once it is",
+      "not_appealable": "This judgment can't be appealed",
+      "past_life_read_only": "Judgments from past lives are read-only"
+    },
+    "file": "Appeal",
+    "file_title": "Appeal this judgment",
+    "file_body": "Another judge reviews it. Each judgment can be appealed at most twice; a withdrawn appeal counts as one.",
+    "reason_label": "Why you're appealing",
+    "reason_required": "Please give a reason",
+    "evidence_label": "New evidence · optional",
+    "submit": "Submit appeal",
+    "submitted_toast": "Appeal submitted",
+    "withdraw": "Withdraw",
+    "withdraw_title": "Withdraw this appeal?",
+    "withdraw_body": "A withdrawn appeal still counts. After this you can appeal this judgment {{left}} more time.",
+    "withdraw_body_last": "A withdrawn appeal still counts. This is the second one; after this the judgment can't be appealed again.",
+    "withdrawn_toast": "Appeal withdrawn",
+    "original_verdict": "Original verdict",
+    "new_verdict": "New verdict",
+    "verdict_change": "{{from}} → {{to}}",
+    "decision_note": "Reviewer's note",
+    "compensation": "Compensation",
+    "compensation_row": "Station {{order}} · merit {{weight}}",
+    "compensation_hint": "Each station already served earns one merit entry, already added to your merits and demerits.",
+    "decided_at": "Reviewed {{date}}",
+    "queue_title": "Appeal reviews",
+    "queue_empty": "No appeals awaiting review",
+    "col": {
+      "round": "Round",
+      "filed_at": "Filed",
+      "deadline": "To deadline",
+      "reviewer": "Reviewer"
+    },
+    "claim": "Claim review",
+    "claimed_toast": "Claimed — you're reviewing this appeal",
+    "claim_disabled_original": "You made the original ruling; another officer must review this appeal",
+    "decide_action": "Decide",
+    "decide_title": "Appeal decision · {{case}}",
+    "uphold": "Uphold the verdict",
+    "amend": "Change the verdict",
+    "pick_verdict": "Choose the new verdict",
+    "note_required": "Write a note; the soul will read it",
+    "amend_impact": "After the change, stations not yet served follow the new verdict; each station already served earns the soul one compensation merit.",
+    "decided_toast": "Decision sent; the soul will be notified",
+    "error": {
+      "plan_in_transit": "The soul is on the way to, or away at, a station that hasn't been served yet. Decide once it has.",
+      "plan_busy": "The sentence plan is being retried, held indefinitely, or has a request awaiting the original judge; it can't be changed now.",
+      "already_claimed": "Another officer has already claimed this appeal",
+      "original_judge": "You made the original ruling and can't review it",
+      "not_reviewer": "Only the officer who claimed it can decide",
+      "appeal_closed": "This appeal has already been decided or withdrawn",
+      "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict."
+    },
+    "decide": {
+      "foreign_title": "Stations abroad from the cross-realm judgment",
+      "foreign_hint": "These stations haven't started and came from the cross-realm judgment. Changing the verdict doesn't decide them: keep them all, or remove them all.",
+      "foreign_keep": "Keep them all",
+      "foreign_remove": "Remove them all",
+      "foreign_required": "Choose whether to keep or remove these stations"
+    }
   }
 }
