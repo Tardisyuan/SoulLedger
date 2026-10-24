@@ -135,6 +135,11 @@ export const EVENT_LABELS: Record<string, string> = {
   JUDGMENT_APPEAL_WITHDRAWN: "Appeal withdrawn",
   JUDGMENT_APPEAL_DECIDED: "Appeal decided",
 
+  // City god events (城隍初审)
+  CITY_GOD_RECEIVED: "Received by the city god",
+  CITY_GOD_SENT_ON: "Sent on to the ten courts",
+  CITY_GOD_RETURNED: "Returned by the city god",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

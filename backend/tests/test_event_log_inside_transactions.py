@@ -145,6 +145,28 @@ def _die(event_type):
     return path
 
 
+def _city_god(action):
+    """城隍初审(apps/judgment/city_gods.py):收案(在 die 里)、解送、退回,各自的事件与它描述的那一笔同进退。"""
+    from apps.judgment import city_gods
+    from apps.judgment.models import CityGod
+
+    def path():
+        tenant = _cn()
+        god = CityGod.objects.get_or_create(tenant=tenant, name="杭州府城隍", defaults={"regions": ["杭州"]})[0]
+        soul = Soul.objects.create(name="城隍案", tenant=tenant, origin_location="杭州")
+        if action == "received":
+            return (lambda: Soul.all_objects.get(pk=soul.pk).die(),
+                    lambda: Judgment.all_objects.filter(soul=soul, city_god=god).exists(), "CITY_GOD_RECEIVED")
+        case = soul.die()
+        lead = plan.officer(f"lead_{soul.pk.hex[:8]}", "MODERATOR", tenant)
+        if action == "sent_on":
+            return (lambda: city_gods.send_on(case.pk, lead, "解送"),
+                    lambda: Judgment.all_objects.get(pk=case.pk).city_god_status == "SENT_ON", "CITY_GOD_SENT_ON")
+        return (lambda: city_gods.return_case(case.pk, lead, "补正"),
+                lambda: Judgment.all_objects.get(pk=case.pk).city_god_status == "RETURNED", "CITY_GOD_RETURNED")
+    return path
+
+
 def _expiry():
     tenant = _cn()
     soul = Soul.objects.create(name="期满", tenant=tenant, birth_year=1900, death_year=1950)
@@ -474,6 +496,9 @@ PATHS = {
     "transition_to/STATE_CHANGED": _transition_standalone,
     "die/STATE_CHANGED": _die("STATE_CHANGED"),
     "die/SOUL_ACCOUNT_CREATED": _die("SOUL_ACCOUNT_CREATED"),
+    "die+city_god/CITY_GOD_RECEIVED": _city_god("received"),
+    "city_god_send_on/CITY_GOD_SENT_ON": _city_god("sent_on"),
+    "city_god_return/CITY_GOD_RETURNED": _city_god("returned"),
     "expire_for_tenant/DISPOSITION_EXPIRED": _expiry,
     "soulrecord_create/KARMA_RECALCULATED": _karma,
     "soul_create/SOUL_CREATED": _soul_created,
