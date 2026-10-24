@@ -893,6 +893,8 @@ class UserImportResultSerializer(serializers.Serializer):
     """
 
     created = serializers.IntegerField(required=False)
+    # 其中不写密码、改发邀请信的行数(2026-10-25);预览里每行另有 `delivery`: password / invite。
+    invited = serializers.IntegerField(required=False)
     errors = serializers.ListField(child=serializers.CharField(), required=False)
     total = serializers.IntegerField(required=False)
     ok_count = serializers.IntegerField(required=False)
@@ -1041,3 +1043,14 @@ class UserPreferencesSerializer(serializers.Serializer):
             if unknown:
                 raise serializers.ValidationError({key: ["Unknown preference."] for key in unknown})
         return super().to_internal_value(data)
+
+
+class OfficerInviteSerializer(serializers.Serializer):
+    """`POST /users/invite/`(ADMIN):邀请一位官员。`tenant` 是殿的 code,只给没有殿的全局管理员用;
+    缺省是调用者自己的殿。`username` 缺省取邮箱 @ 前那段(重名时加数字)。"""
+
+    email = serializers.EmailField()
+    role = serializers.CharField(max_length=20)
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    display_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    tenant = serializers.CharField(max_length=50, required=False, allow_blank=True)

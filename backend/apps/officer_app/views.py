@@ -23,6 +23,7 @@ from apps.officer_app.serializers import (
     CosignRefusalSerializer,
     OfficerPushTokenSerializer,
     OfficerPushUnregisterSerializer,
+    OfficerStatsSerializer,
     SignerCandidateSerializer,
     TodoItemDetailSerializer,
     TodoSerializer,
@@ -69,6 +70,15 @@ class TodoView(OfficerAppBaseView):
         except ValueError:
             raise ValidationError({"offset": "not an integer"}) from None
         return Response(todo.build(request.user, request, kind=kind, offset=offset))
+
+
+class StatsView(OfficerAppBaseView):
+    @extend_schema(operation_id="officer_app_stats", responses=OfficerStatsSerializer)
+    def get(self, request):
+        """我的数:本月 / 累计结案、认领中、复核过的申诉(`apps/officer_app/stats.py`)。"""
+        from apps.officer_app import stats
+
+        return Response(stats.of(request.user))
 
 
 class TodoItemView(OfficerAppBaseView):

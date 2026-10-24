@@ -4,6 +4,7 @@ from apps.officer_app import views
 
 urlpatterns = [
     path("todo/", views.TodoView.as_view(), name="officer-app-todo"),
+    path("stats/", views.StatsView.as_view(), name="officer-app-stats"),
     path("items/<str:kind>/<uuid:item_id>/", views.TodoItemView.as_view(), name="officer-app-item"),
     path("items/<str:kind>/<uuid:item_id>/cosigners/", views.CosignView.as_view(), name="officer-app-cosign"),
     path("signer-candidates/", views.SignerCandidatesView.as_view(), name="officer-app-signer-candidates"),

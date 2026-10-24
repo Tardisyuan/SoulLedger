@@ -39,6 +39,7 @@ MESSAGES = {
         "judgment_released_for_you": {"title": "案件已被放回", "body": "{{by}} 替你放回了案件 {{soul}}，它回到了待认领。理由：{{reason}}"},
         "judgment_deferred_for_you": {"title": "案件已暂缓", "body": "{{by}} 暂缓了你手上的案件 {{soul}}。理由：{{reason}}"},
         "judgment_undeferred_for_you": {"title": "案件已取消暂缓", "body": "{{by}} 取消了你手上案件 {{soul}} 的暂缓。理由：{{reason}}"},
+        "officer_handover_received": {"title": "官员交接", "body": "{{by}} 把 {{from}} 手上的事交给了你：审判 {{judgments}} 件、申诉 {{appeals}} 件、城隍 {{city_gods}} 位、书信 {{letters}} 封。"},
         "death_sync_retry_failed": {"title": "死亡登记重试仍失败", "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"},
         "workflow_assigned": {"title": "审批待你处理", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」轮到你处理。"},
         "workflow_node_passed": {"title": "流程通知", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"},
@@ -101,6 +102,7 @@ MESSAGES = {
         "judgment_released_for_you": {"title": "Case released", "body": "{{by}} released your case of {{soul}}; it is unclaimed again. Reason: {{reason}}"},
         "judgment_deferred_for_you": {"title": "Case deferred", "body": "{{by}} deferred your case of {{soul}}. Reason: {{reason}}"},
         "judgment_undeferred_for_you": {"title": "Case no longer deferred", "body": "{{by}} lifted the deferral on your case of {{soul}}. Reason: {{reason}}"},
+        "officer_handover_received": {"title": "Work handed over to you", "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} city gods, {{letters}} letters."},
         "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
         "workflow_assigned": {"title": "Approval waiting on you", "body": "The approval flow {{workflow}} of soul {{soul}} is waiting on you."},
         "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
@@ -251,7 +253,9 @@ VARIANTS = {
                           "workflow_nodes_adjusted", "workflow_pick_withdrawn"},
     "cross_judgment_concluded": {"cross_judgment_concluded_fail", "cross_judgment_cancelled"},
     # 替别人做的四件事共用一个类型(JUDGMENT_CLAIM_CHANGED),各自一句(apps/judgment/claims.py::_tell_holder)。
-    "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you"},
+    "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you",
+                                 # 官员交接(apps/judgment/handover.py):给接手人的一条汇总。
+                                 "officer_handover_received"},
 }
 
 

@@ -67,6 +67,7 @@ from .serializers import (
     LoginResponseSerializer,
     LogoutRequestSerializer,
     MfaRequiredResponseSerializer,
+    OfficerInviteSerializer,
     OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
     PasswordResetRefusalSerializer,
@@ -164,6 +165,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         'export_csv': ['user.manage'],
         'import_csv': ['user.manage'],
         'reset_mfa': ['user.manage'],
+        'invite': ['user.manage'],
     }
 
     def get_serializer_class(self):
@@ -408,6 +410,33 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['role', 'extra_roles'])
         return Response(UserManagementSerializer(user).data)
 
+    @extend_schema(request=OfficerInviteSerializer, responses={201: UserManagementSerializer, 200: UserManagementSerializer,
+                                                                400: ErrorResponseSerializer})
+    @action(detail=False, methods=['post'])
+    def invite(self, request):
+        """邮件邀请官员(`officer_invite.py`):建一个还没有密码的账号,发 7 天有效的一次性设密码链接。
+        同一殿里对还没接受的邮箱再邀请一次 = 重发(200);新建 201。"""
+        from apps.tenants.models import Tenant
+
+        from . import officer_invite
+
+        body = OfficerInviteSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        tenant = getattr(request, 'tenant', None)
+        if data.get('tenant'):
+            tenant = Tenant.objects.filter(code=data['tenant']).first()
+        if tenant is None:
+            return Response({'error': 'No tenant found', 'code': 'no_tenant'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user, created = officer_invite.invite(
+                data['email'], data['role'], tenant, actor=request.user, username=data.get('username', ''),
+                display_name=data.get('display_name', ''), request=request)
+        except officer_invite.InviteRefusedError as exc:
+            return Response(exc.as_payload(), status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserManagementSerializer(user).data,
+                        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
     @extend_schema(
         responses={
             (200, "text/csv"): OpenApiResponse(
@@ -492,6 +521,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # dialog's preview step (batch 34 W-5), shaped like the soul import's.
         dry_run = str(request.query_params.get('dry_run') or request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
         created = 0
+        invited = 0
         errors = []
         rows = []
         seen_usernames, seen_emails = set(), set()
@@ -526,9 +556,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     email.lower() in seen_emails or email_already_registered(email)
                 ):
                     problems.append(('email', 'email_taken', f"email '{email}' already belongs to another account"))
-                if not problems and not password:
+                # 不写密码而写了邮箱:不设初始密码,发邀请信让本人设(2026-10-25,`officer_invite.py`)。
+                invite_row = not password and bool(email)
+                if not problems and not password and not email:
                     problems.append(('password', 'password_required', 'password is required'))
-                if not problems:
+                if not problems and invite_row and role == 'ADMIN':
+                    problems.append(('role', 'role_invalid', 'an ADMIN cannot be invited; give a password'))
+                if not problems and not invite_row:
                     try:
                         RoleMinimumLengthValidator().validate(password, User(username=username, role=role))
                     except ValidationError as exc:
@@ -537,7 +571,15 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     seen_usernames.add(username)
                     if email:
                         seen_emails.add(email.lower())
-                    if not dry_run:
+                    if not dry_run and invite_row:
+                        from . import officer_invite
+
+                        with transaction.atomic():
+                            invitee = officer_invite.create_invitee(
+                                email, role, tenant, username=username, display_name=display_name)
+                            officer_invite.send_after_commit(invitee)
+                        invited += 1
+                    elif not dry_run:
                         User.objects.create_user(
                             username=username,
                             email=email,
@@ -557,6 +599,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     'row': n,
                     'status': 'error' if problems else 'ok',
                     'values': {'username': username, 'display_name': display_name},
+                    'delivery': 'invite' if invite_row else 'password',
                     'errors': [{'field': f, 'code': c} for f, c, _m in problems],
                 })
 
@@ -569,7 +612,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 'rows': rows,
             })
         return Response({
-            'created': created,
+            'created': created + invited,
+            'invited': invited,
             'errors': errors[:50],
         })
 

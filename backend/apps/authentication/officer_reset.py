@@ -107,6 +107,12 @@ MESSAGES = {
             "note": "链接 1 小时内有效。验证后,忘记密码时可用此邮箱重置。如非本人操作,请忽略本邮件。",
             "text": "验证邮箱的链接(1 小时内有效):\n{{url}}\n如非本人操作,请忽略本邮件。",
         },
+        "invite": {
+            "title": "加入 SoulLedger",
+            "link_label": "设置密码链接",
+            "note": "管理员邀请你成为官员。链接 7 天内有效,只能用一次;设好密码后即可登录。如不认识发件方,请忽略本邮件。",
+            "text": "管理员邀请你成为 SoulLedger 官员。设置密码的链接(7 天内有效,只能用一次):\n{{url}}\n如不认识发件方,请忽略本邮件。",
+        },
         "changed": {
             "title": "密码已修改",
             "note": "你的 SoulLedger 密码刚刚被修改,所有设备上的登录已退出。如非本人操作,请立即联系管理员。",
@@ -125,6 +131,12 @@ MESSAGES = {
             "link_label": "Verification link",
             "note": "The link expires in 1 hour. Once verified, this address can reset your password. If you did not ask for this, ignore this email.",
             "text": "Link to verify your email (expires in 1 hour):\n{{url}}\nIf you did not ask for this, ignore this email.",
+        },
+        "invite": {
+            "title": "Join SoulLedger",
+            "link_label": "Set your password",
+            "note": "An administrator invited you as an officer. The link works once and expires in 7 days; set a password and sign in. If you do not know the sender, ignore this email.",
+            "text": "An administrator invited you as a SoulLedger officer. Link to set your password (works once, expires in 7 days):\n{{url}}\nIf you do not know the sender, ignore this email.",
         },
         "changed": {
             "title": "Your password was changed",

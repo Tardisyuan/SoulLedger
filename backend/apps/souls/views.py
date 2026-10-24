@@ -387,6 +387,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         tenant = getattr(request, "tenant", None)
         if tenant is None:
             raise _ImportRefusedError({"code": "no_tenant"})
+        if not tenant.is_active:
+            raise _ImportRefusedError({"code": "hall_inactive"})
         try:
             data = upload.validated_data["file"].read(importer.MAX_BYTES + 1)
             return importer.validate_csv(data, tenant), tenant

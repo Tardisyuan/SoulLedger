@@ -135,6 +135,13 @@ class DeathSyncService:
         # rolled back; a duplicate key is left to the caller.
         try:
             with transaction.atomic():
+                # 停用的殿不收新的死亡登记(2026-10-25 用户决定);数据都留着。重试同样被拒。
+                if not tenant.is_active:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "HALL_INACTIVE"
+                    request_record.error_message = "This hall is deactivated and accepts no new registrations"
+                    request_record.save()
+                    return request_record
                 soul = DeathSyncService.lookup_soul(tenant, lookup_data)
                 if soul is None:
                     request_record.status = DeathRegistrationStatus.FAILED
@@ -323,3 +330,37 @@ class DeathSyncService:
                     raise
             results.append(result)
         return results
+
+
+#: 外部系统能看到的进度阶段(2026-10-25 用户决定):粗粒度,没有裁决、批语、经办人。
+PROGRESS_STAGES = ("registered", "at_city_god", "judging", "sentenced", "reincarnated", "settled")
+
+
+def progress_of(registration) -> dict:
+    """一条死亡登记对应的灵魂**此刻**走到哪一步。只看灵魂状态与这条登记开的那件审判在不在城隍处。
+
+    reincarnated:灵魂已转入下一世(本世序号大于那件审判的世)—— 之后的事不再属于这条登记;
+    settled:终局(SETTLED);sentenced:已判、在受刑或候转世(DISPOSED / REINCARNATING);
+    at_city_god / judging:审判中,前者是还在城隍初审;其余(登记失败、没找到灵魂、LOST)都是 registered。
+    """
+    from apps.death_sync.models import DeathRegistrationStatus
+    from apps.judgment.models import AT_CITY_GOD
+
+    soul, judgment = registration.soul, registration.judgment
+    stage = "registered"
+    if registration.status == DeathRegistrationStatus.PROCESSED and soul is not None:
+        if judgment is not None and soul.life_index > judgment.cycle:
+            stage = "reincarnated"
+        elif soul.current_state == SoulState.SETTLED:
+            stage = "settled"
+        elif soul.current_state in (SoulState.DISPOSED, SoulState.REINCARNATING):
+            stage = "sentenced"
+        elif soul.current_state == SoulState.JUDGING:
+            stage = "at_city_god" if judgment is not None and judgment.city_god_status in AT_CITY_GOD else "judging"
+    return {
+        "registration_id": str(registration.pk),
+        "registration_status": registration.status,
+        "soul_id": str(soul.pk) if soul is not None else None,
+        "soul_state": soul.current_state if soul is not None else None,
+        "stage": stage,
+    }
