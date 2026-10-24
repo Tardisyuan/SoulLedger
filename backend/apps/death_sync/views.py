@@ -29,6 +29,7 @@ from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
     AdminWebhookConfigSerializer,
     DeathRegistrationCreateSerializer,
+    DeathRegistrationProgressSerializer,
     DeathRegistrationRequestSerializer,
     DeathRegistrationSummarySerializer,
     DeathSyncHealthSerializer,
@@ -288,6 +289,16 @@ class DeathRegistrationViewSet(
                 "judgment_id": str(result.judgment_id),
             },
         }, status=status.HTTP_201_CREATED)
+
+    @extend_schema(responses=DeathRegistrationProgressSerializer)
+    @action(detail=True, methods=["get"], permission_classes=[CanQueryStatus])
+    def progress(self, request, pk=None):
+        """GET /death-sync/register/{id}/progress/ — the soul's coarse progress for a registration **this key
+        created** (`get_queryset` scopes to the key; another key's id is a 404). Needs `can_query_status`.
+        Stage only: no verdict, no notes, no officer (`services.progress_of`)."""
+        from apps.death_sync.services import progress_of
+
+        return Response(progress_of(self.get_object()))
 
     @staticmethod
     def _get_client_ip(request):

@@ -197,3 +197,11 @@ class SignerCandidateSerializer(serializers.Serializer):
     name = serializers.CharField()
     username = serializers.CharField()
     role = serializers.CharField()
+
+
+class OfficerStatsSerializer(serializers.Serializer):
+    concluded_this_month = serializers.IntegerField()
+    concluded_total = serializers.IntegerField()
+    open_claims = serializers.IntegerField()
+    appeals_reviewed = serializers.IntegerField()
+    appeals_in_review = serializers.IntegerField()

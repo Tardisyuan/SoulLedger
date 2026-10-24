@@ -47,11 +47,11 @@ class EmailVerifySerializer(serializers.Serializer):
 
 
 class OfficerResetRefusalSerializer(serializers.Serializer):
-    """Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / weak_password."""
+    """Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / invite_link_invalid / weak_password."""
 
     error = serializers.CharField()
     code = serializers.ChoiceField(
-        choices=["rate_limited", "reset_link_invalid", "verify_link_invalid", "weak_password"]
+        choices=["rate_limited", "reset_link_invalid", "verify_link_invalid", "invite_link_invalid", "weak_password"]
     )
     retry_after = serializers.IntegerField(required=False)
     # `weak_password` only: one reason per validator, each with Django's stable code.
@@ -182,3 +182,30 @@ def email_verify(request):
     except ResetRefusedError as exc:
         return _refusal(exc)
     return Response({"detail": "邮箱已验证"})
+
+
+@extend_schema(
+    request=OfficerResetConfirmSerializer,
+    responses={200: DetailResponseSerializer, 400: OfficerResetRefusalSerializer, 429: OfficerResetRefusalSerializer},
+)
+@api_view(["POST"])
+@authentication_classes([])  # a stale token in the tab must not turn a public page into a 401
+@permission_classes([AllowAny])
+@throttle_classes([])
+def officer_invite_accept(request):
+    """POST /api/v1/auth/officer-invite/accept/ — 邀请信里的链接:uid + token + 自己定的密码(规则在 officer_invite.py)。
+    无效 / 过期 / 已用一律 400 `invite_link_invalid`。成功后用新密码登录。"""
+    from apps.core.throttling import AnonRateThrottle
+
+    from . import officer_invite
+
+    wait = _throttle_wait(request, [AnonRateThrottle()])
+    if wait is not None:
+        return _rate_limited(wait)
+    serializer = OfficerResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    try:
+        officer_invite.accept(**serializer.validated_data, request=request)
+    except ResetRefusedError as exc:
+        return _refusal(exc)
+    return Response({"detail": "密码已设置,请登录"})

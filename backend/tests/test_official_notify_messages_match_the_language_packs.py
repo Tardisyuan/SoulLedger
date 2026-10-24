@@ -10,7 +10,7 @@ from apps.notifications.models import NotificationType
 #: 主语是官员账号而不是灵魂的通知种类。
 ACCOUNT_KINDS = {"password_help_requested", "password_help_requested_moderator"}
 #: 主语是另一位官员(管理员代看,`{{by}}`)的种类。
-ACTOR_KINDS = {"impersonation_started"}
+ACTOR_KINDS = {"impersonation_started", "officer_handover_received"}
 #: 主语是一条死亡登记(灵魂可能根本没查到,负载又是加密的个人资料):点名它的来源编号。
 REGISTRATION_KINDS = {"death_sync_retry_failed"}
 #: 主语是一场跨域审判(它的标题)。

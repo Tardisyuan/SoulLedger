@@ -575,11 +575,12 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
+            "soup_taken_at",
             *ARCHIVE_FIELDS,
         ]
         read_only_fields = [
             *ARCHIVE_FIELDS, "id", "current_state", "merit_score", "demerit_score", "create_time", "update_time",
-            "inherited_merit", "inherited_demerit",
+            "inherited_merit", "inherited_demerit", "soup_taken_at",
         ]
 
     def validate(self, attrs):

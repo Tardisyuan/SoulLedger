@@ -286,6 +286,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     inherited_demerit = models.IntegerField(
         default=0, validators=[MinValueValidator(0)],
     )
+    #: 本世饮孟婆汤的时刻(2026-10-25,只在地府):地府的灵魂转世前必须有它(`complete_rebirth` 409 `soup_not_taken`)。
+    #: 每世一次:转世完成时清空。只经 `apps/reincarnation/services.py::drink_soup` 写。
+    soup_taken_at = models.DateTimeField(null=True, blank=True)
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -385,6 +388,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         if is_new and self.tenant_id is None:
             from django.core.exceptions import ValidationError
             raise ValidationError("Tenant is required when creating a Soul.")
+        # 停用的殿不收新灵魂(2026-10-25 用户决定):数据都留着,只是不再登记。
+        if is_new and not self.tenant.is_active:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("This hall is deactivated and accepts no new souls.", code="hall_inactive")
         if is_new and self.home_tenant_id is None:
             self.home_tenant_id = self.tenant_id
 
@@ -414,7 +421,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         """
         if self.tenant_id is None:
             return UNKNOWN_CIVILIZATION
-        return TENANT_CIVILIZATION.get(self.tenant.code, UNKNOWN_CIVILIZATION)
+        return self.tenant.civilization
 
     @property
     def home_civilization(self) -> str:
@@ -424,7 +431,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # 只有绕过 save() 的写法(bulk_create)会留下空值;那样的灵魂从未被调拨过,
             # 退回管辖文明,而不是把它判成「未知文明、没有转生」。
             return self.civilization
-        return TENANT_CIVILIZATION.get(self.home_tenant.code, UNKNOWN_CIVILIZATION)
+        return self.home_tenant.civilization
 
     @property
     def is_residing(self) -> bool:

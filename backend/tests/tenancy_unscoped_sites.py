@@ -31,6 +31,12 @@ A row whose site no longer exists must be deleted.
 TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 
 SITES = [
+    ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'global admin with no hall names one hall by its globally unique code for the invite (ADMIN only)'),
+    ('apps/judgment/handover.py', '_target_takes_appeal', 'Judgment.all_objects', 1, 'PK', 'the judgment of an appeal already filtered to the handover hall, by its FK'),
+    ('apps/judgment/handover.py', 'commit', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks the appeals whose pks come from a query filtered by the handover hall'),
+    ('apps/reincarnation/services.py', 'drink_soup', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
+    ('apps/tenants/serializers.py', 'TenantCreateSerializer.validate_code', 'Tenant.objects', 1, 'GLOBAL', 'uniqueness check of a new hall code (Tenant has no tenant column; ADMIN only)'),
+    ('apps/tenants/views.py', 'TenantViewSet.overview', 'Tenant.objects', 1, 'FANOUT', 'cross-hall overview for the global admin (ADMIN only): one row per hall'),
     ('apps/actors/management/commands/consolidate_eu_pantheon.py', 'Command.handle', 'Actor.all_objects', 1, 'CLI', 'operator cleanup command, filtered by the two tenant codes it merges'),
     ('apps/actors/management/commands/fix_actor_civilization.py', 'Command.handle', 'Actor.all_objects', 1, 'CLI', 'operator repair command; probes for a soft-deleted twin by name+civilization'),
     ('apps/actors/mythology/seeding.py', 'MythologySeeder._link_realm_parents', 'Realm.all_objects', 1, 'CLI', 'mythology seed command: idempotent upsert by civilization/code; tenant passed explicitly on create'),

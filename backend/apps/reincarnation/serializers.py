@@ -89,3 +89,12 @@ class ReincarnationSerializer(serializers.ModelSerializer):
             "rebirth_form", "cycle_count", "previous_realm", "new_identity",
             "notes", "reincarnated_at",
         ]
+
+
+class DrinkSoupSerializer(serializers.Serializer):
+    soul_id = serializers.UUIDField()
+
+
+class DrinkSoupResultSerializer(serializers.Serializer):
+    soul_id = serializers.UUIDField()
+    soup_taken_at = serializers.DateTimeField()
