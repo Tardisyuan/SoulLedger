@@ -327,7 +327,10 @@
       "SENTENCE_PLAN_CANCELLED": "Sentence plan cancelled",
       "JUDGMENT_APPEAL_FILED": "Appeal filed",
       "JUDGMENT_APPEAL_WITHDRAWN": "Appeal withdrawn",
-      "JUDGMENT_APPEAL_DECIDED": "Appeal decided"
+      "JUDGMENT_APPEAL_DECIDED": "Appeal decided",
+      "CITY_GOD_RECEIVED": "Received by the city god",
+      "CITY_GOD_SENT_ON": "Sent on to the ten courts",
+      "CITY_GOD_RETURNED": "Returned by the city god"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -5461,6 +5464,14 @@
     "assistant_reopened": {
       "title": "Assistant switched back on: new month",
       "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."
+    },
+    "city_god_case_received": {
+      "title": "New case for the city god",
+      "body": "The case of {{soul}} has been sent to {{city_god}} for preliminary review."
+    },
+    "city_god_case_returned": {
+      "title": "Case returned by the city god",
+      "body": "{{city_god}} returned the case of {{soul}} for missing information. By {{by}}. Note: {{reason}}"
     },
     "workflow_pick_nodes": {
       "title": "Pick this realm's stations",

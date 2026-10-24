@@ -3618,6 +3618,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/city-god-cases/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 在城隍处初审的案子(本殿)。 */
+        get: operations["v1_judgment_city_god_cases_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-god-cases/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 在城隍处初审的案子(本殿)。 */
+        get: operations["v1_judgment_city_god_cases_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-god-cases/{id}/return/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 退回补正(缺资料)。`note` 必填。只有 PENDING 的能退回;补好之后用 `send_on/` 解送。 */
+        post: operations["v1_judgment_city_god_cases_return_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-god-cases/{id}/send_on/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 解送十殿。`note` 可空。不在城隍处 → 409 `not_at_city_god`;不是名下官员 → 403 `not_city_god_officer`。 */
+        post: operations["v1_judgment_city_god_cases_send_on_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-god-cases/{id}/transfer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 改交本殿另一位城隍(状态回到 PENDING)。不是本殿的城隍 → 400 `invalid_city_god`。 */
+        post: operations["v1_judgment_city_god_cases_transfer_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-gods/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
+        get: operations["v1_judgment_city_gods_list"];
+        put?: never;
+        /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
+        post: operations["v1_judgment_city_gods_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/city-gods/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
+        get: operations["v1_judgment_city_gods_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
+        delete: operations["v1_judgment_city_gods_destroy"];
+        options?: never;
+        head?: never;
+        /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
+        patch: operations["v1_judgment_city_gods_partial_update"];
+        trace?: never;
+    };
     "/api/v1/judgment/courts/": {
         parameters: {
             query?: never;
@@ -10589,6 +10711,82 @@ export interface components {
          * @enum {string}
          */
         CitationSnapshotKindEnum: "CONCLUDED" | "BACKFILLED";
+        CityGod: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly tenant: number;
+            name: string;
+            regions?: string[];
+            is_default?: boolean;
+            officer_ids?: number[];
+            readonly officers: unknown[];
+            readonly open_case_count: number;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        CityGodCase: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly case_number: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_name: string;
+            readonly origin_location: string;
+            /** Format: uuid */
+            readonly city_god: string | null;
+            readonly city_god_name: string;
+            readonly city_god_status: components["schemas"]["CityGodStatusEnum"];
+            readonly city_god_note: string;
+            /** Format: date-time */
+            readonly sent_on_at: string | null;
+            readonly sent_on_by: number | null;
+            readonly sent_on_by_name: string | null;
+            readonly untimely: boolean;
+            /** Format: date */
+            readonly held_until: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly can_act: boolean;
+        };
+        /**
+         * @description 认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+         *
+         *     `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+         *     `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
+         *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+         */
+        CityGodCaseRefusal: {
+            error: string;
+            code: string;
+            claimed_by?: number | null;
+            claimed_by_name?: string;
+            /** Format: uuid */
+            id?: string;
+            missing?: string[];
+            /** Format: uuid */
+            city_god?: string;
+            city_god_status?: string;
+        };
+        CityGodReturn: {
+            note: string;
+        };
+        CityGodSendOn: {
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description * `PENDING` - 待初审
+         *     * `RETURNED` - 退回补正
+         *     * `SENT_ON` - 已解送
+         * @enum {string}
+         */
+        CityGodStatusEnum: "PENDING" | "RETURNED" | "SENT_ON";
+        CityGodTransfer: {
+            /** Format: uuid */
+            city_god: string;
+        };
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -11725,10 +11923,13 @@ export interface components {
          *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
          *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
          *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+         *     * `CITY_GOD_RECEIVED` - City God Received
+         *     * `CITY_GOD_SENT_ON` - City God Sent On
+         *     * `CITY_GOD_RETURNED` - City God Returned
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -12309,6 +12510,13 @@ export interface components {
             readonly reassign_reason: string;
             /** Format: date-time */
             readonly stale_since: string | null;
+            /** Format: uuid */
+            readonly city_god: string | null;
+            readonly city_god_name: string | null;
+            readonly city_god_status: components["schemas"]["CityGodStatusEnum"];
+            readonly city_god_note: string;
+            /** Format: date-time */
+            readonly sent_on_at: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -12613,6 +12821,13 @@ export interface components {
             readonly reassign_reason: string;
             /** Format: date-time */
             readonly stale_since: string | null;
+            /** Format: uuid */
+            readonly city_god: string | null;
+            readonly city_god_name: string | null;
+            readonly city_god_status: components["schemas"]["CityGodStatusEnum"];
+            readonly city_god_note: string;
+            /** Format: date-time */
+            readonly sent_on_at: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -14256,6 +14471,36 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["AuditLog"][];
         };
+        PaginatedCityGodCaseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CityGodCase"][];
+        };
+        PaginatedCityGodList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CityGod"][];
+        };
         PaginatedCommentListList: {
             /** @example 123 */
             count: number;
@@ -15188,6 +15433,21 @@ export interface components {
                 [key: string]: components["schemas"]["Price"];
             };
         };
+        PatchedCityGod: {
+            /** Format: uuid */
+            readonly id?: string;
+            readonly tenant?: number;
+            name?: string;
+            regions?: string[];
+            is_default?: boolean;
+            officer_ids?: number[];
+            readonly officers?: unknown[];
+            readonly open_case_count?: number;
+            /** Format: date-time */
+            readonly create_time?: string;
+            /** Format: date-time */
+            readonly update_time?: string;
+        };
         PatchedComment: {
             /** Format: uuid */
             readonly id?: string;
@@ -15546,6 +15806,13 @@ export interface components {
             readonly reassign_reason?: string;
             /** Format: date-time */
             readonly stale_since?: string | null;
+            /** Format: uuid */
+            readonly city_god?: string | null;
+            readonly city_god_name?: string | null;
+            readonly city_god_status?: components["schemas"]["CityGodStatusEnum"];
+            readonly city_god_note?: string;
+            /** Format: date-time */
+            readonly sent_on_at?: string | null;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -24749,9 +25016,12 @@ export interface operations {
                  *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
                  *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
                  *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+                 *     * `CITY_GOD_RECEIVED` - City God Received
+                 *     * `CITY_GOD_SENT_ON` - City God Sent On
+                 *     * `CITY_GOD_RETURNED` - City God Returned
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -24861,9 +25131,12 @@ export interface operations {
                  *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
                  *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
                  *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+                 *     * `CITY_GOD_RECEIVED` - City God Received
+                 *     * `CITY_GOD_SENT_ON` - City God Sent On
+                 *     * `CITY_GOD_RETURNED` - City God Returned
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -26121,6 +26394,378 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_god_cases_list: {
+        parameters: {
+            query?: {
+                /** @description Only this city god's cases. */
+                city_god?: string;
+                /** @description Only city gods the caller is assigned to. */
+                mine?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description PENDING / RETURNED / SENT_ON. Omitted: the cases still with a city god. */
+                status?: "PENDING" | "RETURNED" | "SENT_ON";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCityGodCaseList"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_god_cases_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCase"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_god_cases_return_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CityGodReturn"];
+                "application/x-www-form-urlencoded": components["schemas"]["CityGodReturn"];
+                "multipart/form-data": components["schemas"]["CityGodReturn"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCase"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_god_cases_send_on_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CityGodSendOn"];
+                "application/x-www-form-urlencoded": components["schemas"]["CityGodSendOn"];
+                "multipart/form-data": components["schemas"]["CityGodSendOn"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCase"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_god_cases_transfer_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CityGodTransfer"];
+                "application/x-www-form-urlencoded": components["schemas"]["CityGodTransfer"];
+                "multipart/form-data": components["schemas"]["CityGodTransfer"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCase"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGodCaseRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCityGodList"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CityGod"];
+                "application/x-www-form-urlencoded": components["schemas"]["CityGod"];
+                "multipart/form-data": components["schemas"]["CityGod"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGod"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this city god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGod"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this city god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this city god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCityGod"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCityGod"];
+                "multipart/form-data": components["schemas"]["PatchedCityGod"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityGod"];
                 };
             };
         };

@@ -4,6 +4,7 @@ URL configuration for judgment app.
 from rest_framework import routers
 
 from apps.judgment.appeal_views import JudgmentAppealViewSet
+from apps.judgment.city_god_views import CityGodCaseViewSet, CityGodViewSet
 from apps.judgment.views import JudgmentViewSet, StatuteViewSet
 
 router = routers.DefaultRouter()
@@ -17,5 +18,7 @@ router = routers.DefaultRouter()
 router.register("statutes", StatuteViewSet, basename="statute")
 # 同上:`appeals` 也在空前缀的审判之前。
 router.register("appeals", JudgmentAppealViewSet, basename="judgment-appeal")
+router.register("city-gods", CityGodViewSet, basename="city-god")
+router.register("city-god-cases", CityGodCaseViewSet, basename="city-god-case")
 router.register("", JudgmentViewSet, basename="judgment")
 urlpatterns = router.urls

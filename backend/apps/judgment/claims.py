@@ -22,7 +22,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from apps.judgment.models import Judgment
+from apps.judgment.models import AT_CITY_GOD, Judgment
 
 #: 一次批量最多多少件。与需求一致;超过的请求在序列化器上 400,不截断。
 BATCH_LIMIT = 100
@@ -60,6 +60,16 @@ def _assert_pending(judgment: Judgment) -> None:
     """
     if judgment.verdict is not None or judgment.is_final or judgment.is_deleted or judgment.is_archived:
         raise ClaimRefusedError("This judgment is no longer pending.", "not_pending")
+    _assert_sent_on(judgment)
+
+
+def _assert_sent_on(judgment: Judgment) -> None:
+    """还在城隍那里(初审未解送)的案子,十殿不能认领、改派、暂缓、结案(apps/judgment/city_gods.py)。"""
+    if judgment.city_god_status in AT_CITY_GOD:
+        raise ClaimRefusedError(
+            "This case is still with the city god (城隍初审) and reaches the ten courts once sent on.",
+            "at_city_god", city_god=str(judgment.city_god_id), city_god_status=judgment.city_god_status,
+        )
 
 
 def _holder(judgment: Judgment) -> dict:
@@ -92,6 +102,7 @@ def lock_for_conclude(pk, user) -> Judgment:
     已结案而得 `not_pending` —— 不会有「按旧认领人放行、按新认领人落判」。
     """
     judgment = _lock(pk)
+    _assert_sent_on(judgment)
     if (
         judgment.claimed_by_id not in (None, user.pk)
         and getattr(user, "role", None) not in CONCLUDE_OVERRIDE_ROLES

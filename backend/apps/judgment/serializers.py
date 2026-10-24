@@ -172,6 +172,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     demerit_score = serializers.IntegerField(source="soul.demerit_score", read_only=True)
     # 审判台「所在界域」:案子挂的那一站(`realm`),按请求语言给名字;没挂站是 null。
     realm_name = serializers.SerializerMethodField()
+    city_god_name = serializers.CharField(source="city_god.name", read_only=True, allow_null=True, default=None)
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -201,6 +202,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
             "reassign_requested_at", "reassign_requested_by", "reassign_requested_by_name", "reassign_reason",
             "stale_since",
+            # 城隍初审(apps/judgment/city_gods.py):全部只读,只经 `/judgment/city-god-cases/` 的动作写。
+            "city_god", "city_god_name", "city_god_status", "city_god_note", "sent_on_at",
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
@@ -218,6 +221,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "reassign_requested_at", "reassign_requested_by", "reassign_reason",
             "stale_since",
             "cycle", "judgment_method",
+            "city_god", "city_god_status", "city_god_note", "sent_on_at",
         ]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
