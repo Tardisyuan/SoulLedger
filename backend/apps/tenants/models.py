@@ -11,6 +11,10 @@ REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days"
 #: (`apps/soul_accounts/contact_email.py::self_service` 读,`TenantSettingsSerializer` 写)。
 SELF_SERVICE_SETTING = "soul_contact_email_self_service"
 
+#: `Tenant.settings` 里的转世月配额:{RebirthForm 值: 每月上限}。缺这个键或缺某一道 = 不限(2026-10-24 用户决定:
+#: 殿管理员在后台设,满了的灵魂留在 REINCARNATING 里候位)。读的是 `apps/reincarnation/services.py::quota_of`。
+REBIRTH_QUOTA_SETTING = "rebirth_monthly_quota"
+
 #: 「到殿办理」三项(书信没开时灵魂 App 帮助页显示):`settings` 键 → 最大长度。选填,去空格后为空 = 没填(不存键)。
 VISIT_SETTINGS = {"visit_address": 80, "visit_hours": 40, "visit_phone": 40}
 

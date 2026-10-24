@@ -6382,6 +6382,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reincarnation/quota/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description This hall's rebirth quota for the current month, per path: `limit` null = unlimited (2026-10-24). */
+        get: operations["v1_reincarnation_quota_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reincarnation/reborn/": {
         parameters: {
             query?: never;
@@ -14389,6 +14406,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["RealmList"][];
         };
+        PaginatedRebirthQuotaUsageList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["RebirthQuotaUsage"][];
+        };
         PaginatedReincarnationList: {
             /** @example 123 */
             count: number;
@@ -15656,6 +15688,9 @@ export interface components {
             visit_hours?: string;
             visit_phone?: string;
             soul_contact_email_self_service?: boolean;
+            rebirth_monthly_quota?: {
+                [key: string]: number | null;
+            };
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -16555,6 +16590,12 @@ export interface components {
             code: string;
             civilization: string;
             detail: string;
+        };
+        /** @description One row of `GET /reincarnation/quota/`: this month's count for a path against its limit (null = unlimited). */
+        RebirthQuotaUsage: {
+            rebirth_form: string;
+            limit: number | null;
+            used: number;
         };
         RebuildResult: {
             created: number;
@@ -31071,6 +31112,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Reincarnation"];
+                };
+            };
+        };
+    };
+    v1_reincarnation_quota_list: {
+        parameters: {
+            query?: {
+                cycle_count?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /**
+                 * @description * `DIVINE` - Deva (Heaven Path)
+                 *     * `HUMAN` - Human (Human Path)
+                 *     * `ASURA` - Asura (Demigod Path)
+                 *     * `ANIMAL` - Animal (Beast Path)
+                 *     * `HUNGRY_GHOST` - Hungry Ghost
+                 *     * `HELL_BEING` - Hell Being
+                 *     * `OTHER` - Other (Unclassified)
+                 */
+                rebirth_form?: "ANIMAL" | "ASURA" | "DIVINE" | "HELL_BEING" | "HUMAN" | "HUNGRY_GHOST" | "OTHER";
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedRebirthQuotaUsageList"];
                 };
             };
         };

@@ -13968,6 +13968,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/Reincarnation'
           description: ''
+  /api/v1/reincarnation/quota/:
+    get:
+      operationId: v1_reincarnation_quota_list
+      description: 'This hall''s rebirth quota for the current month, per path: `limit`
+        null = unlimited (2026-10-24).'
+      parameters:
+      - in: query
+        name: cycle_count
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: rebirth_form
+        schema:
+          type: string
+          enum:
+          - ANIMAL
+          - ASURA
+          - DIVINE
+          - HELL_BEING
+          - HUMAN
+          - HUNGRY_GHOST
+          - OTHER
+        description: |-
+          * `DIVINE` - Deva (Heaven Path)
+          * `HUMAN` - Human (Human Path)
+          * `ASURA` - Asura (Demigod Path)
+          * `ANIMAL` - Animal (Beast Path)
+          * `HUNGRY_GHOST` - Hungry Ghost
+          * `HELL_BEING` - Hell Being
+          * `OTHER` - Other (Unclassified)
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRebirthQuotaUsageList'
+          description: ''
   /api/v1/reincarnation/reborn/:
     post:
       operationId: v1_reincarnation_reborn_create
@@ -31507,6 +31571,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RealmList'
+    PaginatedRebirthQuotaUsageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RebirthQuotaUsage'
     PaginatedReincarnationList:
       type: object
       required:
@@ -33972,6 +34059,13 @@ components:
           maxLength: 40
         soul_contact_email_self_service:
           type: boolean
+        rebirth_monthly_quota:
+          type: object
+          additionalProperties:
+            type: integer
+            maximum: 100000
+            minimum: 0
+            nullable: true
     PatchedUser:
       type: object
       description: |-
@@ -35726,6 +35820,22 @@ components:
       - civilization
       - code
       - detail
+    RebirthQuotaUsage:
+      type: object
+      description: 'One row of `GET /reincarnation/quota/`: this month''s count for
+        a path against its limit (null = unlimited).'
+      properties:
+        rebirth_form:
+          type: string
+        limit:
+          type: integer
+          nullable: true
+        used:
+          type: integer
+      required:
+      - limit
+      - rebirth_form
+      - used
     RebuildResult:
       type: object
       properties:

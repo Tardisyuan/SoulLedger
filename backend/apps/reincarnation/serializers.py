@@ -66,6 +66,14 @@ class RebirthRequestSerializer(serializers.Serializer):
         return value
 
 
+class RebirthQuotaUsageSerializer(serializers.Serializer):
+    """One row of `GET /reincarnation/quota/`: this month's count for a path against its limit (null = unlimited)."""
+
+    rebirth_form = serializers.CharField()
+    limit = serializers.IntegerField(allow_null=True)
+    used = serializers.IntegerField()
+
+
 class ReincarnationSerializer(serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     # 转生登记簿(第四十批 W-c)的「灵魂」列写名字 + 编号。编号是灵魂的标识(没开过号的为空),不是账号数据。
