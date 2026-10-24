@@ -8005,7 +8005,7 @@ paths:
   /api/v1/judgment/appeals/:
     get:
       operationId: v1_judgment_appeals_list
-      description: 本殿的申诉。`?status=PENDING` 是待复核队列。
+      description: 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
       parameters:
       - name: ordering
         required: false
@@ -8041,6 +8041,15 @@ paths:
           * `UPHELD` - 维持原判
           * `AMENDED` - 改判
           * `WITHDRAWN` - 已撤回
+      - in: query
+        name: status__in
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       tags:
       - v1
       security:
@@ -8055,7 +8064,7 @@ paths:
   /api/v1/judgment/appeals/{id}/:
     get:
       operationId: v1_judgment_appeals_retrieve
-      description: 本殿的申诉。`?status=PENDING` 是待复核队列。
+      description: 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
       parameters:
       - in: path
         name: id
@@ -8683,6 +8692,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/city-gods/officer-choices/:
+    get:
+      operationId: v1_judgment_city_gods_officer_choices_list
+      description: |-
+        编辑抽屉里「名下官员」可选的人:本殿能办案的在职官员 —— 与 `officer_ids` 的校验、改派名单同一条规则
+        (`claims.is_assignable`)。没有租户的调用者(全局 ADMIN)答空表。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCityGodOfficerList'
           description: ''
   /api/v1/judgment/courts/:
     get:
@@ -13091,6 +13136,7 @@ paths:
           type: string
           enum:
           - approval
+          - city_god
           - cooldown
           - letter
           - pick
@@ -23767,7 +23813,8 @@ components:
           writeOnly: true
         officers:
           type: array
-          items: {}
+          items:
+            $ref: '#/components/schemas/CityGodOfficer'
           readOnly: true
         open_case_count:
           type: integer
@@ -23807,6 +23854,10 @@ components:
           readOnly: true
         origin_location:
           type: string
+          readOnly: true
+        matched_region:
+          type: string
+          nullable: true
           readOnly: true
         city_god:
           type: string
@@ -23848,6 +23899,27 @@ components:
           type: string
           format: date-time
           readOnly: true
+        registered_via:
+          allOf:
+          - $ref: '#/components/schemas/RegisteredViaEnum'
+          readOnly: true
+        returned_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        soul_birth_year:
+          type: integer
+          readOnly: true
+          nullable: true
+        soul_death_year:
+          type: integer
+          readOnly: true
+          nullable: true
+        soul_fated_death_year:
+          type: integer
+          readOnly: true
+          nullable: true
         can_act:
           type: boolean
           readOnly: true
@@ -23861,11 +23933,17 @@ components:
       - created_at
       - held_until
       - id
+      - matched_region
       - origin_location
+      - registered_via
+      - returned_at
       - sent_on_at
       - sent_on_by
       - sent_on_by_name
       - soul
+      - soul_birth_year
+      - soul_death_year
+      - soul_fated_death_year
       - soul_name
       - untimely
     CityGodCaseRefusal:
@@ -23902,6 +23980,16 @@ components:
       required:
       - code
       - error
+    CityGodOfficer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
     CityGodReturn:
       type: object
       properties:
@@ -27980,12 +28068,18 @@ components:
             type: integer
           description: 作出原判的官员:界面据此把他的「认领复核」置灰(服务端照样拒,403 `original_judge`)。
           readOnly: true
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
       required:
       - case_number
       - claimed_at
       - compensations
       - create_time
       - current_verdict
+      - deadline
       - decided_at
       - decision_note
       - evidence
@@ -31385,6 +31479,8 @@ components:
           $ref: '#/components/schemas/ChannelPrefs'
         letter_handoff:
           $ref: '#/components/schemas/ChannelPrefs'
+        city_god:
+          $ref: '#/components/schemas/ChannelPrefs'
     NotificationSettings:
       type: object
       properties:
@@ -31440,6 +31536,8 @@ components:
       - IMPERSONATION_STARTED
       - DEATH_SYNC_RETRY_FAILED
       - JUDGMENT_CLAIM_CHANGED
+      - CITY_GOD_CASE_RECEIVED
+      - CITY_GOD_CASE_RETURNED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -31472,6 +31570,8 @@ components:
         * `IMPERSONATION_STARTED` - Impersonation Started
         * `DEATH_SYNC_RETRY_FAILED` - Death Sync Retry Failed
         * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
+        * `CITY_GOD_CASE_RECEIVED` - City God Case Received
+        * `CITY_GOD_CASE_RETURNED` - City God Case Returned
     NullEnum:
       enum:
       - null
@@ -32314,6 +32414,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CityGod'
+    PaginatedCityGodOfficerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGodOfficer'
     PaginatedCommentListList:
       type: object
       required:
@@ -33906,7 +34029,8 @@ components:
           writeOnly: true
         officers:
           type: array
-          items: {}
+          items:
+            $ref: '#/components/schemas/CityGodOfficer'
           readOnly: true
         open_case_count:
           type: integer
@@ -37544,6 +37668,14 @@ components:
       required:
       - password
       - username
+    RegisteredViaEnum:
+      enum:
+      - OFFICER
+      - DEATH_SYNC
+      type: string
+      description: |-
+        * `OFFICER` - OFFICER
+        * `DEATH_SYNC` - DEATH_SYNC
     Reincarnation:
       type: object
       properties:
@@ -41376,8 +41508,13 @@ components:
           allOf:
           - $ref: '#/components/schemas/TodoGroup'
           description: 待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。
+        city_god:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。
       required:
       - approvals
+      - city_god
       - cooldowns
       - letters
       - pick_nodes
@@ -41524,6 +41661,18 @@ components:
           type: integer
           nullable: true
           description: 仅选站:轮到本域之前还有几站;已在门口时 null。
+        city_god_status:
+          type: string
+          description: 仅城隍初审:PENDING / RETURNED。
+        city_god_name:
+          type: string
+          description: 仅城隍初审:城隍名。
+        origin_location:
+          type: string
+          description: 仅城隍初审:出身地。
+        untimely:
+          type: boolean
+          description: 仅城隍初审:枉死。
       required:
       - created_at
       - id

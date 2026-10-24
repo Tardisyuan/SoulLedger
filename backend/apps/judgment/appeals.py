@@ -229,7 +229,8 @@ def _compensate(soul, judgment, appeal, executed):
                         f"{judgment.verdict}",
             weight=compensation_weight(disposition), evidence_source=EvidenceSource.REGISTRY,
             evidence_json={"appeal_id": str(appeal.pk), "judgment_id": str(judgment.pk),
-                           "disposition_id": str(disposition.pk), "node_id": str(node.pk) if node else None},
+                           "disposition_id": str(disposition.pk), "node_id": str(node.pk) if node else None,
+                           "station_order": node.order if node else None},
         ))
     return rows
 

@@ -7,7 +7,8 @@
   解送 / 退回要 `judgment.execute`,且是这位城隍名下的官员(或持 `judgment.assign`);改交要 `judgment.assign`。
 """
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from django.db.models import Case, Exists, IntegerField, OuterRef, Value, When
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -36,6 +37,12 @@ class CityGodOfficerSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+def _refusal(code, **facts):
+    """字段错误的形状:`{"<字段>": {"code": …, 事实…}}` —— 界面按 `code` 选 `cityGods.error.<code>`,
+    用事实填 `{{region}}` / `{{city_god}}`、把冲突的那枚标签描红(第五十三批 G-2)。"""
+    return {"code": code, **facts}
+
+
 class CityGodSerializer(serializers.ModelSerializer):
     regions = serializers.ListField(
         child=serializers.CharField(max_length=REGION_MAX_LENGTH, trim_whitespace=True, allow_blank=True),
@@ -54,7 +61,7 @@ class CityGodSerializer(serializers.ModelSerializer):
                   "create_time", "update_time")
         read_only_fields = ("id", "tenant", "create_time", "update_time")
 
-    @extend_schema(responses=CityGodOfficerSerializer(many=True))
+    @extend_schema_field(CityGodOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
         return [{"id": u.pk, "name": _name(u)} for u in obj.officers.order_by("username")]
 
@@ -70,7 +77,7 @@ class CityGodSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         if self._siblings().filter(name=value).exists():
-            raise serializers.ValidationError("Another city god of this hall has this name.", code="name_taken")
+            raise serializers.ValidationError(_refusal("name_taken", name=value))
         return value
 
     def validate_regions(self, value):
@@ -81,12 +88,13 @@ class CityGodSerializer(serializers.ModelSerializer):
             taken = sorted(r for r in (other.regions or ()) if str(r).casefold() in mine)
             if taken:
                 raise serializers.ValidationError(
-                    f"Already covered by {other.name}: {', '.join(taken)}.", code="region_taken")
+                    _refusal("region_taken", region=taken[0], regions=taken, city_god=other.name))
         return cleaned
 
     def validate_is_default(self, value):
-        if value and self._siblings().filter(is_default=True).exists():
-            raise serializers.ValidationError("This hall already has a default city god.", code="default_taken")
+        current = self._siblings().filter(is_default=True).first() if value else None
+        if current is not None:
+            raise serializers.ValidationError(_refusal("default_taken", city_god=current.name))
         return value
 
     def validate_officer_ids(self, value):
@@ -94,8 +102,7 @@ class CityGodSerializer(serializers.ModelSerializer):
         tenant = self._tenant()
         bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk))
         if bad:
-            raise serializers.ValidationError(f"Not officers of this hall who can work cases: {bad}.",
-                                              code="invalid_officer")
+            raise serializers.ValidationError(_refusal("invalid_officer", ids=bad))
         return value
 
 
@@ -105,7 +112,7 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
     extra_permissions = {action: ["judgment.assign"]
-                         for action in ("create", "update", "partial_update", "destroy")}
+                         for action in ("create", "update", "partial_update", "destroy", "officer_choices")}
     queryset = CityGod.objects.prefetch_related("officers").all()
     serializer_class = CityGodSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
@@ -140,12 +147,24 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
             raise serializers.ValidationError(
                 {"non_field_errors": ["Another city god of this hall took this name or the default."]}) from None
 
+    @extend_schema(responses=CityGodOfficerSerializer(many=True))
+    @action(detail=False, methods=["get"], url_path="officer-choices")
+    def officer_choices(self, request):
+        """编辑抽屉里「名下官员」可选的人:本殿能办案的在职官员 —— 与 `officer_ids` 的校验、改派名单同一条规则
+        (`claims.is_assignable`)。没有租户的调用者(全局 ADMIN)答空表。"""
+        tenant = self.get_serializer_context()["tenant"]
+        if tenant is None:
+            return Response([])
+        people = User.objects.filter(tenant=tenant, is_active=True).order_by("username")
+        return Response([{"id": u.pk, "name": _name(u)} for u in people if is_assignable(u, tenant.pk)])
+
     @extend_schema(responses={204: None, 409: JudgmentClaimRefusalSerializer})
     def destroy(self, request, *args, **kwargs):
         god = self.get_object()
-        if Judgment.objects.filter(city_god=god, city_god_status__in=AT_CITY_GOD).exists():
+        open_cases = Judgment.objects.filter(city_god=god, city_god_status__in=AT_CITY_GOD).count()
+        if open_cases:
             return Response({"error": "This city god still has cases awaiting review; send them on or transfer "
-                                      "them first.", "code": "city_god_has_open_cases"},
+                                      "them first.", "code": "city_god_has_open_cases", "count": open_cases},
                             status=status.HTTP_409_CONFLICT)
         god.soft_delete(user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -161,13 +180,43 @@ class CityGodCaseSerializer(serializers.ModelSerializer):
     sent_on_by_name = serializers.SerializerMethodField()
     #: 调用者能否解送 / 退回(名下官员或殿管理员);界面据此置灰,服务端照样查。
     can_act = serializers.SerializerMethodField()
+    #: 出身地里决定归属的那个地名(`city_gods.matched_region`);兜底收的为 null。
+    matched_region = serializers.SerializerMethodField()
+    #: 登记来源:死亡同步(`death_sync`)开的审判是 DEATH_SYNC,其余(官员登记)是 OFFICER。
+    registered_via = serializers.SerializerMethodField()
+    #: 退回补正的时刻(最近一次 CITY_GOD_RETURNED 事件);不在退回状态时为 null。批语在 `city_god_note`。
+    returned_at = serializers.SerializerMethodField()
+    #: 抽屉里的生卒与阳寿只写年(可能是公元前,`apps.souls.dates`);没有记的是 null。
+    soul_birth_year = serializers.IntegerField(source="soul.birth_year", read_only=True, allow_null=True)
+    soul_death_year = serializers.IntegerField(source="soul.death_year", read_only=True, allow_null=True)
+    soul_fated_death_year = serializers.IntegerField(source="soul.fated_death_year", read_only=True, allow_null=True)
 
     class Meta:
         model = Judgment
-        fields = ("id", "case_number", "soul", "soul_name", "origin_location", "city_god", "city_god_name",
-                  "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name", "untimely",
-                  "held_until", "created_at", "can_act")
+        fields = ("id", "case_number", "soul", "soul_name", "origin_location", "matched_region", "city_god",
+                  "city_god_name", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name",
+                  "untimely", "held_until", "created_at", "registered_via", "returned_at", "soul_birth_year", "soul_death_year",
+                  "soul_fated_death_year",
+                  "can_act")
         read_only_fields = fields
+
+    def get_matched_region(self, obj) -> str | None:
+        return city_gods.matched_region(obj)
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_returned_at(self, obj):
+        from apps.events.models import SoulEvent
+
+        if obj.city_god_status != CityGodStatus.RETURNED:
+            return None
+        at = (SoulEvent.objects.filter(soul_id=obj.soul_id, event_type="CITY_GOD_RETURNED",
+                                       payload__judgment_id=str(obj.pk))
+              .order_by("-create_time").values_list("create_time", flat=True).first())
+        return serializers.DateTimeField().to_representation(at)
+
+    @extend_schema_field(serializers.ChoiceField(choices=["OFFICER", "DEATH_SYNC"]))
+    def get_registered_via(self, obj):
+        return "DEATH_SYNC" if getattr(obj, "from_death_sync", False) else "OFFICER"
 
     def get_sent_on_by_name(self, obj) -> str | None:
         return _name(obj.sent_on_by)
@@ -210,7 +259,10 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
     serializer_class = CityGodCaseSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        from apps.death_sync.models import DeathRegistrationRequest
+
+        qs = super().get_queryset().annotate(
+            from_death_sync=Exists(DeathRegistrationRequest.objects.filter(judgment=OuterRef("pk"))))
         if self.action != "list":
             return qs
         params = self.request.query_params
@@ -221,7 +273,10 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
             qs = qs.filter(city_god_id=params["city_god"])
         if params.get("mine", "").lower() in ("1", "true", "yes"):
             qs = qs.filter(city_god__officers=self.request.user)
-        return qs.order_by("created_at", "id")
+        # 退回补正的排在待初审前面:它们等的是补资料,往往已经补好了(第五十三批 Q-1)。
+        returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
+                              output_field=IntegerField())
+        return qs.order_by(returned_first, "created_at", "id")
 
     @extend_schema(parameters=[
         OpenApiParameter("status", enum=CityGodStatus.values, required=False,

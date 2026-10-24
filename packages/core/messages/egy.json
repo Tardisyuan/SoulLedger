@@ -321,7 +321,13 @@
       "SENTENCE_REQUEST_CREATED": "Dbh Wetep Hab Seth",
       "SENTENCE_REQUEST_DECIDED": "Dbh Wetep Wedja Seth",
       "SENTENCE_PLAN_COMPLETED": "Sesh Wetep Khetem Seth",
-      "SENTENCE_PLAN_CANCELLED": "Sesh Wetep Sehen Seth"
+      "SENTENCE_PLAN_CANCELLED": "Sesh Wetep Sehen Seth",
+      "JUDGMENT_APPEAL_FILED": "Nehet Hab Seth",
+      "JUDGMENT_APPEAL_WITHDRAWN": "Nehet Sehen Seth",
+      "JUDGMENT_APPEAL_DECIDED": "Nehet Maa Seth",
+      "CITY_GOD_RECEIVED": "Chenghuang Shesep Sep",
+      "CITY_GOD_SENT_ON": "Chenghuang Hab Er Wesekhet 1 Er 10",
+      "CITY_GOD_RETURNED": "Chenghuang Khesef Er Khemen"
     },
     "civilizations": {
       "CHINESE": "Sherer",
@@ -343,7 +349,8 @@
       "GREED": "Awn Ib",
       "BLASPHEMY": "Sebi Netjer",
       "MURDER": "Sma",
-      "OTHER": "Ky"
+      "OTHER": "Ky",
+      "COMPENSATION": "Nefer Wedja Khemen"
     },
     "dedication": {
       "body": "Iri Em Ankh Er Ba Pen; Sab Sesh. Nefer Wa · Ba Em Wedja Er Em Shepet Wa.",
@@ -681,6 +688,9 @@
       "EUROPE": "Europa",
       "UNKNOWN": "Nen Rekh",
       "ASIA": "Asia"
+    },
+    "compensation": {
+      "tag": "↺ Wedja Khemen"
     }
   },
   "common": {
@@ -2165,7 +2175,11 @@
       "hint": "Nen Shem Hru 30",
       "filter_all": "Nen Shem · Neb",
       "filter_only": "Nen Shem Wa"
-    }
+    },
+    "error": {
+      "at_city_god": "Em Chenghuang · Maa Tepy: Nen Shesep Er Khet Hab"
+    },
+    "at_city_god": "Em Chenghuang"
   },
   "audit": {
     "title": "Medew Maa",
@@ -2332,14 +2346,16 @@
         "reassign": "Dbh Hab Ky",
         "password_help": "Dbh Sekhem",
         "dispatch": "Hab-Ba",
-        "letter_handoff": "Redi Sesh"
+        "letter_handoff": "Redi Sesh",
+        "city_god": "Chenghuang · Maa Tepy"
       },
       "notes": {
         "account_security": "Aq Em Ikhet Ky, Sekhem Khemen, Aq Sep Sen Khemen, Ky Maa Em Ba-Ek",
         "approval": "Wat Hesy Mawy: Nen Iri-Ek Djer",
         "approval_timeout": "Hena: Nen Khetem. Unut Khetem Khemen Ahet.",
         "password_help": "Sab Hery Wa",
-        "dispatch": "Iri, Hesy, Khesef, Sehen"
+        "dispatch": "Iri, Hesy, Khesef, Sehen",
+        "city_god": "Chenghuang Shesep Sep · Khesef Er Khemen"
       }
     },
     "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
@@ -3858,7 +3874,10 @@
       "moderation": "Maat Shemsu",
       "recycle_bin": "Per Khet Hedj",
       "group_rebirth": "Wehem Mesut",
-      "sentence_plans": "Shepet"
+      "sentence_plans": "Shepet",
+      "judgment_appeals": "Nehet",
+      "city_gods": "Chenghuang",
+      "city_god_cases": "Chenghuang · Maa Tepy"
     },
     "queue": "Sepu Wedja",
     "about": "Khet Medjat Ba",
@@ -5248,6 +5267,14 @@
     "reply": {
       "title": "{{name}}: Wesheb Er Wesheb-Ek",
       "body": "{{text}}"
+    },
+    "appeal_upheld": {
+      "title": "Nehet: Wedja Tepy Smen",
+      "body": "Nehet Maa Seth: Wedja Tepy Smen. Wen Medjat Ba Er Maa."
+    },
+    "appeal_amended": {
+      "title": "Nehet: Wedja Khemen Seth",
+      "body": "Nehet Maa Seth: Wedja Khemen Seth. Wen Medjat Ba Er Maa."
     }
   },
   "official_notify": {
@@ -5458,6 +5485,14 @@
     "workflow_pick_withdrawn": {
       "title": "Setep Sekhet Sehen Seth",
       "body": "Wedja Ta Ky «{{title}}» Sehen Seth. {{soul}}: Nen Setep Sekhet."
+    },
+    "city_god_case_received": {
+      "title": "Chenghuang: Sep Mawy · Nen Maa Djer",
+      "body": "{{soul}}: Sep Iyi Er {{city_god}} · Nen Maa Djer."
+    },
+    "city_god_case_returned": {
+      "title": "Chenghuang Khesef Er Khemen",
+      "body": "{{city_god}}: Sep {{soul}} Khesef Er Khemen. Sab: {{by}}. Khet: {{reason}}"
     }
   },
   "social_moderation": {
@@ -6462,7 +6497,8 @@
         "rebirths": "Dbh Wehem Mesut",
         "letters": "Sesh Er Wesheb",
         "unassigned_letters": "Sesh Nen Redi Djer",
-        "pick_nodes": "Nen Setep Djer · Sekhet"
+        "pick_nodes": "Nen Setep Djer · Sekhet",
+        "city_god": "Chenghuang · Maa Tepy"
       },
       "see_all": "Neb · {{n}}",
       "group_sentence_change": "Dbh Khemen Shepet",
@@ -6824,6 +6860,9 @@
     "dispatch": {
       "approved_next": "Hesy Seth. Wesekhet Shesep Iri Em Medjat Sab: Ba Nen Shem Djer.",
       "awaiting_receiver": "◐ Nen Iri Wesekhet Shesep Djer"
+    },
+    "appeals": {
+      "desk_only": "Maa Nehet: Em Medjat Sab"
     }
   },
   "print": {
@@ -6970,5 +7009,157 @@
     "soul_email_self": "Ba Khemen Wat Sesh Djes-Ef",
     "soul_email_on": "Wen: Ba Sesh Sekhem, Khemen Djes-Ef. Hesb Maa Er Wat Sesh Mawy; Wat Sesh Tepy: Sedjem.",
     "soul_email_off": "Khetem: Iyi Er Wesekhet Hena Djama Redi. Sab Khemen Em Aq En Ba."
+  },
+  "appeals": {
+    "status": {
+      "PENDING": "Nen Maa Djer",
+      "IN_REVIEW": "Em Maa",
+      "UPHELD": "Wedja Tepy Smen",
+      "AMENDED": "Wedja Khemen Seth",
+      "WITHDRAWN": "Sehen Seth"
+    },
+    "round": "Nehet {{round}}",
+    "deadline": "Nehet Wenen Er {{date}}",
+    "refusal": {
+      "appeal_open": "Nehet Em Maa",
+      "appeal_rounds_used": "Nehet 2 Iri Seth",
+      "appeal_window_closed": "Nehet Khetem: {{date}}",
+      "not_concluded": "Wedja Nen Khetem Djer: Nen Nehet",
+      "not_appealable": "Wedja Pen: Nen Nehet",
+      "past_life_read_only": "Ankh Tepyu: Maa Wa, Nen Nehet"
+    },
+    "file": "Nehet",
+    "file_title": "Nehet · Wedja Pen",
+    "file_body": "Sab Wedja Ky Maa. Wedja Wa: Nehet 2 Er Pehwy; Sehen: Sep Wa.",
+    "reason_label": "Khet",
+    "reason_required": "Sesh Khet Em Tepy",
+    "evidence_label": "Medu Maat Mawy · Nen Em Tepy",
+    "submit": "Hab Nehet",
+    "submitted_toast": "Nehet Hab Seth",
+    "withdraw": "Sehen",
+    "withdraw_title": "Sehen Nehet Pen?",
+    "withdraw_body": "Sehen: Sep Wa. Er Khet: Nehet {{left}} Khery.",
+    "withdraw_body_last": "Sehen: Sep Wa. Nehet 2: Er Khet Nen Nehet.",
+    "withdrawn_toast": "Nehet Sehen Seth",
+    "original_verdict": "Wedja Tepy",
+    "new_verdict": "Wedja Mawy",
+    "verdict_change": "{{from}} → {{to}}",
+    "decision_note": "Wesheb",
+    "compensation": "Nefer Wedja Khemen",
+    "compensation_row": "Sekhet {{order}} · Nefer {{weight}}",
+    "compensation_hint": "Sekhet Iri Seth Neb: Nefer Wa · Em Sesh Nefer Hena Isfet.",
+    "decided_at": "Maa Seth {{date}}",
+    "queue_title": "Nehet",
+    "queue_empty": "Nen Nehet Em Smen",
+    "col": {
+      "round": "Sep",
+      "filed_at": "Hru Hab",
+      "deadline": "Er Khetem",
+      "reviewer": "Sab Maa"
+    },
+    "claim": "Shesep Maa",
+    "claimed_toast": "Shesep Seth: Maa Nehet Pen",
+    "claim_disabled_original": "Sab Wedja Tepy: Nen Maa. Sab Ky Maa.",
+    "decide_action": "Djed Wedja",
+    "decide_title": "Djed Wedja · {{case}}",
+    "uphold": "Wedja Tepy Smen",
+    "amend": "Khemen Wedja",
+    "pick_verdict": "Setep Wedja Mawy",
+    "note_required": "Sesh Wesheb · Ba Maa",
+    "amend_impact": "Er Khet Khemen: Sekhet Nen Iri Djer → Mi Wedja Mawy. Sekhet Iri Seth Neb: Nefer Wa Er Ba.",
+    "decided_toast": "Djed Wedja Seth · Ba Sedjem",
+    "error": {
+      "plan_in_transit": "Ba Em Wat Er Sekhet Ky; Sekhet Nen Iri Djer. Djed Wedja Er Khet Iri.",
+      "plan_busy": "Shepet Nen Khemen Emu: Wedja Wehem, Sedjer, Er Dbh Em Smen Sab Wedja Tepy.",
+      "already_claimed": "Shesep Ky Seth",
+      "original_judge": "Sab Wedja Tepy: Nen Maa",
+      "not_reviewer": "Sab Shesep Wa: Djed Wedja",
+      "appeal_closed": "Nehet Khetem Er Sehen Seth",
+      "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen»."
+    },
+    "decide": {
+      "foreign_title": "Sekhet Em Taui Ky · Wedja Taui Ky",
+      "foreign_hint": "Sekhet Pen Nen Iri Djer, Iyi Em Wedja Taui Ky. Setep: Smen Neb Er Fekh Neb.",
+      "foreign_keep": "Smen Neb",
+      "foreign_remove": "Fekh Neb",
+      "foreign_required": "Setep: Smen Er Fekh"
+    }
+  },
+  "cityGods": {
+    "title": "Chenghuang",
+    "empty": "Nen Chenghuang Em Wesekhet Pen. Mut Sesh: Iyi Emu Er Wesekhet 1 Er 10.",
+    "explain": "Nut Ren Neb: Ren Pehwy Setep. Nen Gem: Chenghuang Smen Tepy. Nen Smen Tepy: Iyi Emu Er Wesekhet 1 Er 10.",
+    "name": "Ren",
+    "regions": "Ren Nut",
+    "regions_hint": "Ren Nut Wa · Redi.",
+    "is_default": "Chenghuang Smen Tepy Em Wesekhet Pen",
+    "default_badge": "Smen Tepy",
+    "default_hint": "Nen Gem Nut: Er Chenghuang Pen. Nen Smen Tepy: Iyi Emu Er Wesekhet 1 Er 10.",
+    "officers": "Sab",
+    "officers_hint": "Sab Wesekhet Pen Em Iri, Mi Hab Ky. Sab Hery: Iri Neb.",
+    "open_cases": "Sep {{count}} · Em Maa Tepy",
+    "create": "Iri Chenghuang",
+    "edit": "Khemen Seth",
+    "delete": "Fekh",
+    "delete_confirm": "Fekh {{name}}? Sab Fekh; Ren Nut: Smen Tepy Er Wesekhet 1 Er 10.",
+    "saved_toast": "Chenghuang Sau Seth",
+    "deleted_toast": "Chenghuang Fekh Seth",
+    "error": {
+      "region_taken": "«{{region}}» Em {{city_god}}: Ren Nut Wa · Chenghuang Wa",
+      "default_taken": "Smen Tepy: {{city_god}}. Fekh Tepy.",
+      "name_taken": "Chenghuang «{{name}}» Em Wesekhet Pen",
+      "invalid_officer": "Sab Pen: Nen Iri Em Wesekhet Pen",
+      "city_god_has_open_cases": "{{name}}: Sep {{count}} Nen Hab Djer. Hab Er Hab Ky Tepy.",
+      "city_gods_diyu_only": "Chenghuang: Duat Sherer Wa"
+    },
+    "no_officers": "Nen Sab: Sab Hery Wa Iri",
+    "default_regions": "Nen Gem Nut",
+    "default_current": "Smen Tepy: {{name}}",
+    "default_none": "Nen Smen Tepy Em Wesekhet Pen",
+    "go_to_queue": "Er Maa Tepy"
+  },
+  "cityGodCases": {
+    "title": "Chenghuang · Maa Tepy",
+    "empty": "Nen Sep Em Maa Tepy",
+    "only_mine": "Chenghuang Djes Wa",
+    "filter_city_god": "Chenghuang · Neb",
+    "status": {
+      "PENDING": "Nen Maa Djer",
+      "RETURNED": "Khesef Er Khemen",
+      "SENT_ON": "Hab Seth"
+    },
+    "origin_location": "Nut",
+    "untimely_badge": "Mut Nen Maat",
+    "source": {
+      "manual": "Sab Sesh",
+      "death_sync": "Senb Mut"
+    },
+    "send_on": "Hab Er Wesekhet 1 Er 10",
+    "send_on_note": "Khet · Nen Em Tepy",
+    "sent_on_toast": "Hab Seth: Sep Em Sepu Wedja",
+    "return": "Khesef Er Khemen",
+    "return_note": "Khet",
+    "return_note_required": "Sesh Khet Em Tepy",
+    "return_hint": "Sab Hery Sedjem. Er Khet Khemen: Chenghuang Pen Hab.",
+    "returned_toast": "Khesef Seth · Sab Hery Sedjem",
+    "transfer": "Hab Ky",
+    "transfer_pick": "Setep Chenghuang",
+    "transferred_toast": "Hab Ky Seth: {{city_god}} · Nen Maa Djer",
+    "cannot_act": "Nen Sab Chenghuang Pen",
+    "sent_on_line": "{{city_god}} · Maa Tepy · Hab {{date}}",
+    "returned_line": "{{city_god}} · Khesef Er Khemen · {{date}}",
+    "transferred_from": "Hab Ky Em {{city_god}}",
+    "error": {
+      "not_at_city_god": "Sep Nen Em Chenghuang Djer",
+      "not_city_god_officer": "Nen Sab Chenghuang Pen",
+      "invalid_city_god": "Setep Chenghuang Ky Em Wesekhet Pen",
+      "not_pending": "Iri Seth Em Ky · Wehem Maa Seth"
+    },
+    "tab_open": "Em Maa Tepy",
+    "registered_at": "Sesh",
+    "registered_via": "Sesh",
+    "life": "Mesut · Mut",
+    "go_to_review": "Er Maa Tepy →",
+    "transfer_on_web": "Hab Ky: Iri Em Medjat Sab"
   }
 }

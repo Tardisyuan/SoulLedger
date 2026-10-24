@@ -28,6 +28,7 @@ import { EvidenceText, JudgmentCase } from "./judgmentCase";
 import { SoulDetail, SoulLink } from "./soulDetail";
 import { TodoFactsView } from "./todoFacts";
 import { PickStations, WorkflowSegmentsFor } from "./pick";
+import { CityGodCase } from "./cityGod";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -99,7 +100,8 @@ export function Detail({
         {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
         {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
         {target.type === "todo" && target.kind === "pick" ? <PickStations id={target.id} onDone={() => { onSettled(); onBack(); }} /> : null}
-        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" ? (
+        {target.type === "todo" && target.kind === "city_god" ? <CityGodCase key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" ? (
           <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} />
         ) : null}
         {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} /> : null}
