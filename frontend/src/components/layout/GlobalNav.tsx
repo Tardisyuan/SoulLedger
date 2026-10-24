@@ -12,7 +12,8 @@ import { isMenuPathActive } from "@/src/lib/menuPath";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import type { UserRole } from "@soulledger/core/api";
+import { useQuery } from "@tanstack/react-query";
+import { judgmentAppealKeys, judgmentAppealsApi, type UserRole } from "@soulledger/core/api";
 
 /**
  * 全局导航(规范 v3 外框),取代 v2 的近黑立柱与 200px 弹出二级栏。
@@ -388,8 +389,28 @@ function ChildLink({ menu, current, onNavigate }: { menu: SidebarMenu; current: 
       {current ? <CurrentMark /> : null}
       <span aria-hidden="true" className="w-[3px] shrink-0" />
       <span title={fullTitle(label)} className="min-w-0 flex-1 truncate">{label.primary}</span>
+      {menu.path === APPEALS_PATH ? <AppealPendingCount /> : null}
     </Link>
   );
+}
+
+const APPEALS_PATH = "/judgment/appeals";
+
+/**
+ * 「申诉复核」后面的待复核数(第五十二批 W-1)。只在那一项画出来时才挂上 —— 看得见这条菜单的人才有
+ * `judgment.read`,别的人不发这一次请求。0 不画。
+ */
+function AppealPendingCount() {
+  const { data } = useQuery({
+    queryKey: [...judgmentAppealKeys.all, "pending-count"],
+    queryFn: () => judgmentAppealsApi.list({ status: "PENDING", page_size: "1" }).then((r) => r.data.count),
+    staleTime: 60_000,
+  });
+  return data ? (
+    <span data-testid="appeal-pending-count" className="shrink-0 font-mono text-2xs tabular-nums text-[oklch(var(--color-ink-muted))]">
+      {data}
+    </span>
+  ) : null;
 }
 
 /**
