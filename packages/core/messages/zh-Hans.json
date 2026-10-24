@@ -324,7 +324,10 @@
       "SENTENCE_REQUEST_CREATED": "受刑请求提交",
       "SENTENCE_REQUEST_DECIDED": "受刑请求裁定",
       "SENTENCE_PLAN_COMPLETED": "受刑计划服完",
-      "SENTENCE_PLAN_CANCELLED": "受刑计划取消"
+      "SENTENCE_PLAN_CANCELLED": "受刑计划取消",
+      "JUDGMENT_APPEAL_FILED": "提出申诉",
+      "JUDGMENT_APPEAL_WITHDRAWN": "撤回申诉",
+      "JUDGMENT_APPEAL_DECIDED": "申诉复核结论"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -340,6 +343,7 @@
       "WISDOM": "智慧",
       "PIETY": "虔敬",
       "DEDICATION": "超度回向",
+      "COMPENSATION": "改判补偿",
       "CRUELTY": "残暴",
       "DECEPTION": "欺诈",
       "COWARDICE": "怯懦",
@@ -5147,6 +5151,14 @@
     "judgment_result": {
       "title": "审判有了结论",
       "body": "你的审判有了结论,打开灵魂簿查看。"
+    },
+    "appeal_upheld": {
+      "title": "申诉复核:维持原判",
+      "body": "你的申诉已复核，维持原判。打开灵魂簿查看复核意见。"
+    },
+    "appeal_amended": {
+      "title": "申诉复核:已改判",
+      "body": "你的申诉已复核，原判已改。打开灵魂簿查看。"
     },
     "disposition_executed": {
       "title": "处置已执行",

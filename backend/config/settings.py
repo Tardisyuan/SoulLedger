@@ -634,6 +634,7 @@ SPECTACULAR_SETTINGS = {
         "ApprovalWorkflowStatusEnum": "apps.workflow.models.ApprovalWorkflowStatus.choices",
         "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
+        "JudgmentAppealStatusEnum": "apps.judgment.models.AppealStatus.choices",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
         "UserRoleEnum": "apps.authentication.models.UserRole.choices",
         "PasswordResetRefusalCodeEnum": "apps.authentication.serializers.PASSWORD_RESET_REFUSAL_CODES",

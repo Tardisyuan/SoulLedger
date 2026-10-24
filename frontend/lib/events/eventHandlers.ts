@@ -130,6 +130,11 @@ export const EVENT_LABELS: Record<string, string> = {
   SENTENCE_PLAN_COMPLETED: "Sentence plan completed",
   SENTENCE_PLAN_CANCELLED: "Sentence plan cancelled",
 
+  // Judgment appeal events (申诉)
+  JUDGMENT_APPEAL_FILED: "Appeal filed",
+  JUDGMENT_APPEAL_WITHDRAWN: "Appeal withdrawn",
+  JUDGMENT_APPEAL_DECIDED: "Appeal decided",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

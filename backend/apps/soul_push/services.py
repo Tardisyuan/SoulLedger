@@ -129,7 +129,17 @@ def rule_for(event_type, payload, account):
         return ("residence", RESIDENCE_ACTIONS[action], f"residence:{key}:{action}", {"screen": "Life"}) if key else None
     if event_type in SENTENCE_EVENTS:
         return _sentence_rule(event_type, payload)
+    if event_type == "JUDGMENT_APPEAL_DECIDED":
+        # 申诉结论(apps/judgment/appeals.py):维持 / 改判各一句,不说新裁决与理由。撤回是灵魂自己做的,不推。
+        appeal_id, kind = payload.get("appeal_id"), APPEAL_KINDS.get(payload.get("status"))
+        if not (appeal_id and kind):
+            return None
+        return ("judgment", kind, f"appeal:{appeal_id}:{payload['status']}",
+                {"screen": "Life", "judgment_id": str(payload.get("judgment_id"))})
     return None
+
+
+APPEAL_KINDS = {"UPHELD": "appeal_upheld", "AMENDED": "appeal_amended"}
 
 
 #: 受刑计划(docs/ARCHITECTURE-sentence-plan.md §5.2)。`SentencePlanService` 直接写 SoulEvent,
@@ -188,7 +198,7 @@ def _sentence_rule(event_type, payload):
 
 
 HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "COOLDOWN_SHORTENING_DECIDED", "JUDGMENT_CONCLUDED",
-                            "STATE_CHANGED", *SENTENCE_EVENTS})
+                            "STATE_CHANGED", "JUDGMENT_APPEAL_DECIDED", *SENTENCE_EVENTS})
 
 #: 种类 → 偏好类别。发送前(含补发)再核对一次偏好时用。
 KIND_CATEGORY = {
@@ -196,6 +206,7 @@ KIND_CATEGORY = {
     **{kind: "rebirth" for kind in COOLDOWN_SHORTENING_KINDS.values()},
     "judgment_result": "judgment",
     "disposition_executed": "judgment",
+    **{kind: "judgment" for kind in APPEAL_KINDS.values()},
     **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
     "sentence_waiting": "residence",
     "sentence_completed": "rebirth",

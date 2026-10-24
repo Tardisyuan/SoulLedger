@@ -240,6 +240,7 @@ CATEGORY_FUNGIBILITY = {
     "COURAGE": CONDUCT,
     "WISDOM": CONDUCT,
     "PIETY": RITUAL,       # 焚修門/教典門
+    "COMPENSATION": CONDUCT,  # 改判补偿 (2026-10-24): not a deed at all; the unattested catch-all pool
     "DEDICATION": RITUAL,  # 超度回向: merit a rite sends to the soul (2026-10-24); a rite, not money or life
     # Demerit categories
     "CRUELTY": LIFE,       # 不仁門: 役使人畜至於疲乏, 鞭笞
