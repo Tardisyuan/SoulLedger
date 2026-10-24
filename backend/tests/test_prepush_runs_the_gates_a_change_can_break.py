@@ -587,9 +587,12 @@ class TestSuiteAboutTheSuiteRunsOnlyWhenRelevant:
         """The inverse: without it, a rule that always says 1 passes the test above."""
         assert _classify_meta(hook, changed) == 0
 
-    @pytest.mark.parametrize("extra", [{"GATES_FULL": "1"}, {"PREPUSH_TO_MAIN": "1"}])
-    def test_a_full_run_runs_them(self, hook, extra):
-        assert _classify_meta(hook, ["backend/apps/souls/views.py"], **extra) == 1
+    def test_a_full_run_runs_them(self, hook):
+        assert _classify_meta(hook, ["backend/apps/souls/views.py"], GATES_FULL="1") == 1
+
+    def test_a_push_to_main_alone_does_not(self, hook):
+        """2026-10-24: a push to main is selective like any other."""
+        assert _classify_meta(hook, ["backend/apps/souls/views.py"], PREPUSH_TO_MAIN="1") == 0
 
     def test_the_names_the_rule_skips_are_real_files(self):
         """A renamed test would be silently 'ignored' by a path that no longer exists,
@@ -652,13 +655,13 @@ class TestWhatPytestIsInvokedWith:
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
 
-    @pytest.mark.parametrize("extra", [{"GATES_FULL": "1"}, {"PREPUSH_TO_MAIN": "1"}])
-    def test_a_full_run_migrates_for_real_and_checks_the_template(
-        self, hook, checkouts, fake_backend, extra
-    ):
-        """PREPUSH_TO_MAIN is unset before pytest starts; the switch must have read it first."""
+    def test_a_full_run_migrates_for_real_and_checks_the_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
-        assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"], **extra) == "0"
+        assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"], GATES_FULL="1") == "0"
+
+    def test_a_push_to_main_reuses_the_template(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"], PREPUSH_TO_MAIN="1") == "unset"
 
     def test_an_ordinary_backend_change_skips_the_round_trips_and_coverage(
         self, hook, checkouts, fake_backend
@@ -778,7 +781,7 @@ class TestJestSelection:
         )
         assert full == 1, out
         full, _ = _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="0", PREPUSH_TO_MAIN="1")
-        assert full == 1
+        assert full == 0  # 2026-10-24: main is selective too
 
     def test_the_runner_names_the_file_that_forced_it(self, hook):
         _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/messages/egy.json"])
@@ -807,14 +810,14 @@ class TestWhatTheHookHandsTheRunner:
         _git(wt, "add", "-A")
         _git(wt, "commit", "-q", "-m", "page")
 
-    def test_a_push_to_main_is_full(self, hook, checkouts):
+    def test_a_push_to_main_is_selective_too(self, hook, checkouts):
+        """2026-10-24 user decision: main no longer forces the full set (it cost ~15-20 min a push)."""
         _, wt = checkouts
         self._commit_a_frontend_file(wt)
         proc = _push(hook, wt, "refs/heads/main")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "classify: core=0 frontend=1 backend=0" in proc.stdout, proc.stdout
-        assert "classify-jest: full=1" in proc.stdout
-        assert "refs/heads/main" in proc.stdout
+        assert "classify-jest: full=0" in proc.stdout
 
     def test_a_push_to_a_feature_branch_is_selective(self, hook, checkouts):
         _, wt = checkouts

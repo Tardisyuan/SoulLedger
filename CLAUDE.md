@@ -222,11 +222,13 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 - **同一份代码已全量通过，推送就不再跑(2026-10-19 用户决定)**:`scripts/run-gates.sh --full` 在**干净的工作区**
   (已跟踪文件与 HEAD 一致，`backend/` `frontend/` `packages/` `mobile*` `scripts/` 下没有未跟踪文件)跑通后，
   把 HEAD 的树哈希记进 `<git common dir>/soulledger-gates-passed`;推送时被推的提交树哈希在里面，钩子打印
-  「already passed」直接放行。改了任何一个字节就是另一棵树，照旧全跑。推到 main 跑的正是 `--full` 那一套，
-  所以两者等价;真 PostgreSQL 与 E2E 本来就不在钩子里，不受影响。守卫:`test_prepush_runs_the_gates_a_change_can_break.py`
+  「already passed」直接放行。改了任何一个字节就是另一棵树，照旧按改动跑。(2026-10-24 前推到 main 跑的正是 `--full` 那一套，
+  所以两者等价。)真 PostgreSQL 与 E2E 本来就不在钩子里，不受影响。守卫:`test_prepush_runs_the_gates_a_change_can_break.py`
   的 `TestATreeThatAlreadyPassedFull`(去掉放行那行会红，已验)。
+- **推到 main 不再强制全跑(2026-10-24 用户决定)**:此前推 main 一律全量，每次 15–20 分钟、负载近 20,而这里的推送全是推 main。
+  现在 main 和任何分支一样按改动跑;要全量就 `scripts/run-gates.sh --full` 或 `GATES_FULL=1`。跨区漏网靠「读文件」清单兜底。
 - **什么强制全跑**(输出里逐条写明是哪条规则、哪个文件):`--full`、`GATES_FULL=1`、
-  **推到 `refs/heads/main`**、语言包(`packages/core/messages/**`)、`frontend/` 或 `packages/core/`
+  语言包(`packages/core/messages/**`)、`frontend/` 或 `packages/core/`
   下的 JSON / MD / YAML、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
   也包括 `jest.always-run.txt` 本身)、根上的 JS 依赖树(package*.json、.nvmrc)、删掉或改名的文件、
   不认识的根文件、以及门禁脚本本身(`run-gates.sh` / `install-hooks.sh`)。
@@ -249,7 +251,7 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   再收集一遍,而它是 `*` 读者,此前**任何推送**都跑)与 `test_audit_assertions_are_not_vacuous.py`
   (嵌套 pytest + 新迁移的库)。只在改到 `pytest.ini`、任一 conftest、`requirements.lock`、`backend/config/`、
   `apps/audit/`、`apps/tenants/`、`lock_join_guard.py`、某个 `apps/*/tests.py`、这两个文件本身,
-  不认识的根文件,或 `--full` / `GATES_FULL=1` / 推 main 时才跑;其余推送用 `--ignore` 去掉,输出里写明。
+  不认识的根文件,或 `--full` / `GATES_FULL=1` 时才跑;其余推送用 `--ignore` 去掉,输出里写明。
   规则是 `run-gates.sh` 的 `META_PATH_RE`,`classify-meta` 一行;
   `TestSuiteAboutTheSuiteRunsOnlyWhenRelevant` 守着,四种变异(规则漏 pytest.ini、恒为 1、丢 `--ignore`、
   读者清单不过滤)各自变红。它们守的东西多了一类,就往 `META_PATH_RE` 里补。
@@ -337,7 +339,7 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 #                       输入哈希 = `backend/apps/` 全部非测试文件 + `backend/config/` + `requirements.lock`
 #                       + 影响迁移的设置 + Python/Django/SQLite 版本 —— 故意放宽:迁移 import 的代码和
 #                       `post_migrate` 接收器都在 apps/ 里,逐个列会漏。代价是后端代码一改就重建一次。
-#                       **真迁移并核对**:`--full` / `GATES_FULL=1` / 推 main(run-gates 导出
+#                       **真迁移并核对**:`--full` / `GATES_FULL=1`(run-gates 导出
 #                       `SOULLEDGER_SQLITE_TEMPLATE=0`),或这次运行含 `migration` 测试。核对把真迁移的库和同一
 #                       哈希下的模板逐表比(结构 + 全部行,时间戳屏蔽),不一致就删掉模板并让所有用库的测试
 #                       报 `TemplateDriftError` —— 那说明哈希漏了某个输入,把它补进哈希。

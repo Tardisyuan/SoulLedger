@@ -373,7 +373,10 @@ TOUCHES_META=$(echo "$CHANGED" | grep -cE "$META_PATH_RE" || true)
 # An explicit full run, read here because PREPUSH_TO_MAIN is unset further down;
 # the SQLite template switch before pytest uses the same flag.
 FULL_RUN=0
-{ [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ] || [ "${PREPUSH_TO_MAIN:-0}" = 1 ]; } && FULL_RUN=1
+# A push to main is NOT a full run any more (2026-10-24, user decision): it ran the whole suite on every push,
+# ~15–20 minutes at load ~19 on this Mac, and the pushes here all go to main. Main gets the same selective
+# run as any branch; `--full` / GATES_FULL=1 are the way to ask for everything.
+{ [ "$MODE" = full ] || [ "${GATES_FULL:-}" = 1 ]; } && FULL_RUN=1
 TOUCHES_META=$((TOUCHES_META + FULL_RUN))
 RUN_META=0
 [ "$TOUCHES_META" -gt 0 ] && RUN_META=1
@@ -396,7 +399,6 @@ FULL_F=""
 full() { FULL_F="$FULL_F$1"$'\n'; }
 [ "$MODE" = full ] && full "--full"
 [ "${GATES_FULL:-}" = 1 ] && full "GATES_FULL=1"
-[ "${PREPUSH_TO_MAIN:-0}" = 1 ] && full "the push updates refs/heads/main"
 unset PREPUSH_TO_MAIN
 [ -n "$UNKNOWN_ROOT" ] && full "a root-level file this script does not recognise"
 while IFS=$'\t' read -r re name; do
