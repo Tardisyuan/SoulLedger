@@ -396,6 +396,41 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
   }
 }
 
+/**
+ * 第五十批 T-1 / 用户 2026-10-25:任一端是失踪(LOST)的状态变更是官员操作,默认的「全部」里就看得到,
+ * 不必勾「含系统事件」。标题「状态变更 · ▣ 已处置 → ◌ 失踪」,metadata 是原因与经办。
+ * 系统发起的其它状态变更照旧只在系统事件里。
+ */
+export function buildLostMoveMarkers(
+  events: SoulEvent[],
+  labels: SystemEventLabels & { glyph: (raw: string | null) => string; by: (name: string) => string }
+): MarkerRow[] {
+  return events
+    .filter((e) => {
+      const p = e.payload as Record<string, unknown>;
+      return e.event_type === "STATE_CHANGED" && (p.old_state === "LOST" || p.new_state === "LOST");
+    })
+    .map((e) => {
+      const p = e.payload as Record<string, unknown>;
+      const side = (v: unknown) => {
+        const raw = typeof v === "string" ? v : null;
+        return `${labels.glyph(raw)} ${labels.state(raw)}`;
+      };
+      const meta = [typeof p.reason === "string" ? p.reason : "", e.actor ? labels.by(e.actor) : ""].filter(Boolean);
+      return {
+        id: `lost-move-${e.id}`,
+        kind: "marker" as const,
+        category: "disposition" as const,
+        sortKey: toSortMs(e.create_time),
+        dateLabel: isoDateLabel(e.create_time),
+        glyph: "◌",
+        title: `${labels.eventType(e.event_type)} · ${side(p.old_state)} → ${side(p.new_state)}`,
+        metadata: meta.length ? meta.join(" · ") : undefined,
+        tone: "neutral" as const,
+      };
+    });
+}
+
 export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels): SystemGroupRow[] {
   return groupSystemEvents(events).map((g) => ({
     id: `system-${g.key}`,

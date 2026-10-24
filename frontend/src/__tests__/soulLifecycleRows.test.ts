@@ -19,6 +19,7 @@ import {
   buildCycleBandRows,
   filterRows,
   sortRows,
+  buildLostMoveMarkers,
   type SpineRow,
 } from "@/src/components/souls/soulLifecycleRows";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
@@ -402,5 +403,32 @@ describe("filterRows / sortRows", () => {
   it("sorts newest-first by sortKey", () => {
     const sorted = sortRows(rows).map((r) => r.id);
     expect(sorted).toEqual(["s1", "j1", "k1", "st1"]);
+  });
+});
+
+describe("lost / recall state changes (batch 50 T-1)", () => {
+  const ev = (id: string, payload: Record<string, unknown>, actor = "cui"): SoulEvent => ({
+    id, soul: "s1", event_type: "STATE_CHANGED", payload, actor, create_time: "2026-10-24T06:20:00Z",
+  });
+  const labels = {
+    eventType: (raw: string) => `ev:${raw}`,
+    state: (raw: string | null) => `st:${raw}`,
+    glyph: (raw: string | null) => `g:${raw}`,
+    by: (name: string) => `by:${name}`,
+  };
+
+  it("only moves with LOST on either end become markers, shown under 全部 without system events", () => {
+    const rows = buildLostMoveMarkers(
+      [
+        ev("a", { old_state: "DISPOSED", new_state: "LOST", reason: "押送途中走失" }),
+        ev("b", { old_state: "LOST", new_state: "DISPOSED", reason: "寻回" }),
+        ev("c", { old_state: "JUDGING", new_state: "DISPOSED", reason: "Judgment concluded" }, "system"),
+      ],
+      labels
+    );
+    expect(rows.map((r) => r.id)).toEqual(["lost-move-a", "lost-move-b"]);
+    expect(rows[0].title).toBe("ev:STATE_CHANGED · g:DISPOSED st:DISPOSED → g:LOST st:LOST");
+    expect(rows[0].metadata).toBe("押送途中走失 · by:cui");
+    expect(filterRows(rows, "all", false)).toHaveLength(2);
   });
 });

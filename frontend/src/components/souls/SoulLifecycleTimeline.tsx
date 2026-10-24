@@ -8,6 +8,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
+import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import type { Soul } from "@soulledger/core/api/souls";
 import type { SoulEvent } from "@soulledger/core/api/events";
 import type { Judgment } from "@soulledger/core/api/judgment";
@@ -22,6 +23,7 @@ import {
   buildDispositionMarkers,
   buildReincarnationMarkers,
   buildSystemRows,
+  buildLostMoveMarkers,
   computeFutureStages,
   buildFutureRows,
   buildActionRow,
@@ -174,6 +176,13 @@ export function SoulLifecycleTimeline({
       })
     );
 
+    out.push(
+      ...buildLostMoveMarkers(events, {
+        ...systemEventLabels,
+        glyph: soulStateGlyph,
+        by: (name) => t("souls.lost.by", { name }),
+      })
+    );
     if (includeSystemEvents) out.push(...buildSystemRows(events, systemEventLabels));
 
     const futureStages = computeFutureStages(soul.current_state).filter(
