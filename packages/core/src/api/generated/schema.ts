@@ -12388,6 +12388,7 @@ export interface components {
             outcome: components["schemas"]["OutcomeEnum"];
             verdict?: components["schemas"]["VerdictEnum"];
             note: string;
+            keep_foreign_stops?: boolean | null;
         };
         /**
          * @description * `PENDING` - 待复核

@@ -488,7 +488,7 @@ def conclude_reopened(judgment):
 # ── 申诉改判(apps/judgment/appeals.py,用户 2026-10-24 决定)───────────────
 
 
-def amend_for_appeal(soul, judgment, verdict):
+def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     """申诉改判:**未执行**的部分改按新裁决,**已执行**的交还调用方记补偿。返回已执行的 `[(节点或 None, 处置)]`。
 
     「执行」= 处置已执行(`Disposition.is_executed`,执行即开始服刑,2026-09-25 决定)。
@@ -558,8 +558,15 @@ def amend_for_appeal(soul, judgment, verdict):
                                          node_order=node.order)
         in_place = node
     touched = {plan.tenant.code}
+    # Foreign stops a joint judgment added and not yet started: the reviewing judge decides whether they stand
+    # (2026-10-24 user decision). Asked only when there are some.
+    foreign = [n for n in nodes if n.status == SentenceNodeStatus.PENDING and not n.is_home]
+    if foreign and keep_foreign is None:
+        raise PlanChangeRefusedError("Decide whether the not-yet-started foreign stops stay (keep_foreign_stops)",
+                                     "foreign_stops_choice_required", status=400,
+                                     foreign_orders=[n.order for n in foreign])
     for node in nodes:
-        if node.status == SentenceNodeStatus.PENDING:
+        if node.status == SentenceNodeStatus.PENDING and not (keep_foreign and not node.is_home):
             node.status = SentenceNodeStatus.REMOVED
             _save(node, "status")
             touched.add(node.tenant_code)
