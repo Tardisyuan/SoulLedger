@@ -11,13 +11,15 @@ import RebirthsPage from "@/app/rebirths/page";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  reincarnationApi: { list: jest.fn() },
+  reincarnationApi: { list: jest.fn(), quota: jest.fn() },
   menusApi: {
     all: jest.fn().mockResolvedValue({ data: [] }),
     list: jest.fn().mockResolvedValue({ data: { results: [] } }),
   },
 }));
-const mockedList = (jest.requireMock("@soulledger/core/api") as { reincarnationApi: { list: jest.Mock } }).reincarnationApi.list;
+const mockedApi = (jest.requireMock("@soulledger/core/api") as { reincarnationApi: { list: jest.Mock; quota: jest.Mock } }).reincarnationApi;
+const mockedList = mockedApi.list;
+const mockedQuota = mockedApi.quota;
 
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ isAdmin: false, tenantCode: "CN_DIYU", user: { role: "JUDGE", permissions: ["reincarnation.read"] } }),
@@ -61,6 +63,40 @@ function renderPage() {
 beforeEach(() => {
   mockedList.mockReset();
   mockedList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [row()] } });
+  mockedQuota.mockReset();
+  mockedQuota.mockResolvedValue({ data: [] });
+});
+
+describe("本月配额 (第五十一批 Q-2)", () => {
+  it("七格:满了的加「已满」并换 ink 框,不限的写「已办 · 不限」,0 上限算满", async () => {
+    mockedQuota.mockResolvedValue({
+      data: [
+        { rebirth_form: "DIVINE", limit: 20, used: 20 },
+        { rebirth_form: "HUMAN", limit: null, used: 412 },
+        { rebirth_form: "HUNGRY_GHOST", limit: 40, used: 31 },
+        { rebirth_form: "HELL_BEING", limit: 0, used: 0 },
+      ],
+    });
+    renderPage();
+    const strip = await screen.findByTestId("rebirth-quota-strip");
+    const cells = [...strip.querySelectorAll("[data-quota-cell]")];
+    expect(cells.map((c) => c.getAttribute("data-quota-cell"))).toEqual(["DIVINE", "HUMAN", "ASURA", "ANIMAL", "HUNGRY_GHOST", "HELL_BEING", "OTHER"]);
+    const cell = (form: string) => strip.querySelector(`[data-quota-cell="${form}"]`) as HTMLElement;
+    expect(cell("DIVINE")).toHaveAttribute("data-full", "true");
+    expect(cell("DIVINE")).toHaveTextContent(tZh("rebirths.quota.full_badge"));
+    expect(cell("HELL_BEING")).toHaveAttribute("data-full", "true");
+    expect(cell("HUMAN")).toHaveTextContent(tZh("rebirths.quota.used_unlimited", { used: "412" }));
+    expect(cell("HUMAN")).not.toHaveAttribute("data-full");
+    expect(cell("HUNGRY_GHOST")).toHaveTextContent(tZh("rebirths.quota.used_of", { used: "31", limit: "40" }));
+    expect(cell("HUNGRY_GHOST")).not.toHaveTextContent(tZh("rebirths.quota.full_badge"));
+  });
+
+  it("配额没拿到时不画这一行,表格照常", async () => {
+    mockedQuota.mockRejectedValue(new Error("boom"));
+    renderPage();
+    await screen.findByRole("link", { name: "周阿满" });
+    expect(screen.queryByTestId("rebirth-quota-strip")).toBeNull();
+  });
 });
 
 describe("转生登记簿", () => {

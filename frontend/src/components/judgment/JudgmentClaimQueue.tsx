@@ -33,6 +33,8 @@ import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/compon
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { Badge } from "@/src/components/ui/Badge";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
@@ -215,11 +217,20 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
     }),
   });
   const shownGroups = GROUPS.filter((g) => !mineOnly || g === "mine");
-  /** 本组本页的行;本次会话延后的排到本组末尾(稳定排序,其余次序不动)。 */
+  /**
+   * 本组本页的行;本次会话延后的排到本组末尾(稳定排序,其余次序不动)。
+   * 「待认领」里候在枉死城的(第五十一批 F-2)排在可认领的后面,按候至日期先后 —— 只在这一页之内排。
+   */
   const rowsOf = (group: JudgmentQueueGroup): Judgment[] => {
     const rows = groupQueries[GROUPS.indexOf(group)].data?.results ?? [];
     const later = (j: Judgment) => (sessionDeferred.includes(j.id) ? 1 : 0);
-    return [...rows].sort((a, b) => later(a) - later(b));
+    const heldUntil = (j: Judgment) => (group === "unclaimed" && isHeldUntilFatedDate(j) ? (j.held_until as string) : "");
+    return [...rows].sort((a, b) => {
+      const ha = heldUntil(a);
+      const hb = heldUntil(b);
+      if (ha !== hb) return !ha ? -1 : !hb ? 1 : ha < hb ? -1 : 1;
+      return later(a) - later(b);
+    });
   };
   const allRows = shownGroups.flatMap(rowsOf);
 
@@ -248,7 +259,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
       /* 同上。 */
     }
   };
-  const selectable = new Set(allRows.map((j) => j.id));
+  // 候审中的不能勾:批量认领自然跳过它们(不放一个点了必然被拒的动作)。
+  const selectable = new Set(allRows.filter((j) => !isHeldUntilFatedDate(j)).map((j) => j.id));
   const chosen = [...selected].filter((id) => selectable.has(id));
   /** 工具条「改派…」作用的案子:勾选的;没勾选时是焦点行。 */
   const reassignIds = rowReassign
@@ -367,7 +379,9 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
     },
     c: () => {
       if (!focusedRow || !canExecute || claim.isPending || release.isPending) return;
-      if (focusedRow.claimed_by == null) claimOne(focusedRow.id);
+      if (focusedRow.claimed_by == null) {
+        if (!isHeldUntilFatedDate(focusedRow)) claimOne(focusedRow.id);
+      }
       else if (focusedRow.claimed_by === user?.id) releaseOne(focusedRow.id);
     },
     s: () => {
@@ -601,6 +615,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                   const mine = j.claimed_by != null && j.claimed_by === user?.id;
                   const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
                   const laterThisSession = sessionDeferred.includes(j.id);
+                  const held = isHeldUntilFatedDate(j);
                   return (
                     <tr
                       key={j.id}
@@ -618,7 +633,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         <td className="w-6 px-1 relative z-10">
                           <input
                             type="checkbox"
-                            checked={isSel}
+                            checked={isSel && !held}
+                            disabled={held}
                             onChange={() => toggle(j.id)}
                             aria-label={t("judgment.claim.select_row", { name: j.soul_name || t(MISSING_LABEL_KEY.unrecorded) })}
                             className="h-3.5 w-3.5 max-sm:h-5 max-sm:w-5 accent-[oklch(var(--color-accent))]"
@@ -642,6 +658,13 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                           <DomainEnum namespace="souls.civilizations" value={j.civilization} />
                           {j.stale_since && <StaleBadge className="ml-2" />}
                         </span>
+                        {/* 枉死(第五十一批 F-2):方框徽标,ink 字 —— 审判的事实,不是警告;候审期间旁边写「候至 日期」。 */}
+                        {j.untimely && (
+                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="untimely-mark">
+                            <Badge tone="ink">{t("judgment.untimely")}</Badge>
+                            {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                          </span>
+                        )}
                       </td>
                       <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[j.court, j.judge_name].filter(Boolean).join(" · ") || undefined}>
                         {[j.court, j.judge_name].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
@@ -677,6 +700,11 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                                 </span>
                               )}
                             </span>
+                          </span>
+                        ) : canExecute && group !== "deferred" && held ? (
+                          /* 候审中:认领按钮换成一行灰字,到期后按钮回来。 */
+                          <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                            {t("judgment.claim.held_short")}
                           </span>
                         ) : canExecute && group !== "deferred" ? (
                           /* B9 行内动作:1px ink3 框、11 字,不是下划线链接。 */
@@ -729,7 +757,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         <ActionsMenu
                           menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
                           items={[
-                            ...(canExecute && j.claimed_by == null && group !== "deferred"
+                            ...(canExecute && j.claimed_by == null && group !== "deferred" && !held
                               ? [{ key: "claim", label: t("judgment.claim.claim"), onSelect: () => claimOne(j.id), disabled: claim.isPending }]
                               : []),
                             ...(canExecute && mine

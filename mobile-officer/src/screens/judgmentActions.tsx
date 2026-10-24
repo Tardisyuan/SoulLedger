@@ -8,6 +8,7 @@
  * 有人请求改派时主按钮就是「改派给…」;没有就只有 ⋯。改派的选人底页与转信同一个(`PeoplePickerSheet`)。
  */
 import { judgmentApi, type AssignableOfficer, type Judgment } from "@soulledger/core/api/judgment";
+import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 
@@ -160,7 +161,12 @@ export function JudgmentActionBar({
       ) : (
         <View style={{ flexDirection: "row", gap: space[3] }}>
           {more.length > 0 ? moreButton : null}
-          {state === "unclaimed" && canExecute ? (
+          {state === "unclaimed" && canExecute && isHeldUntilFatedDate(data) ? (
+            // 枉死城(第五十一批):候至阳寿那天,不放一个点了必然被拒的「认领」。
+            <Txt variant="caption" tone="muted" testID="judgment-claim-held" style={{ flex: 1 }}>
+              {`${t("judgment.held_until", { date: data.held_until as string })} · ${t("judgment.claim.held_short")}`}
+            </Txt>
+          ) : state === "unclaimed" && canExecute ? (
             <ActionButton testID="judgment-claim" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.queue.claim")} onPress={claim} style={{ flex: 1 }} />
           ) : state === "deferred" && canExecute ? (
             <ActionButton testID="judgment-undefer" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("judgment.claim.undefer")} onPress={undefer} style={{ flex: 1 }} />

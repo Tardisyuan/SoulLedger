@@ -268,6 +268,9 @@
     "state": "Kheperu",
     "balance": "Nefer Isfet",
     "death": "Ahet Mut",
+    "fated_death_date": "Hru Mut Smen",
+    "fated_death_help": "Hru Mut Smen Em Sesh. Mut Tepy Er Hru Pen: Mut Nen Maat · Ba Em Nut Mut Nen Maat Er Hru Pen; Nen Shesep. Nen Rekh: Nen Sesh.",
+    "fated_death_preview": "Mut Tepy Er Hru Mut Smen · Mut Nen Maat, Em Smen Er {{date}}",
     "action": "Aha Seth",
     "view": "Smen",
     "states": {
@@ -333,6 +336,7 @@
       "COURAGE": "Qen",
       "WISDOM": "Sia",
       "PIETY": "Dua Netjer",
+      "DEDICATION": "Redi Nefer",
       "CRUELTY": "Bin Ib",
       "DECEPTION": "Gereg",
       "COWARDICE": "Nen Qen",
@@ -340,6 +344,13 @@
       "BLASPHEMY": "Sebi Netjer",
       "MURDER": "Sma",
       "OTHER": "Ky"
+    },
+    "dedication": {
+      "body": "Iri Em Ankh Er Ba Pen; Sab Sesh. Nefer Wa · Ba Em Wedja Er Em Shepet Wa.",
+      "source_label": "Tepy · Ren Hena Iri",
+      "date_label": "Hru Iri",
+      "not_eligible": "Ba Em Wedja Er Em Shepet Wa. {{name}}: {{state}}.",
+      "tag": "Em Ankh"
     },
     "life_stages": {
       "CHILDHOOD": "Ankh Nedjes",
@@ -1941,6 +1952,9 @@
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
+    "untimely": "Mut Nen Maat",
+    "held_until": "Em Smen Er {{date}}",
+    "in_city": "Em Nut Mut Nen Maat",
     "desk": {
       "statute_search": "Shesep Medu",
       "statute_search_empty": "Nen Gem Medu",
@@ -2032,6 +2046,8 @@
         "permission_denied": "Nen Was",
         "generic": "Nen Iri"
       },
+      "held_short": "Shesep Er Khet Hru Pen",
+      "held": "Em Smen Er {{date}}: Ba Em Nut Mut Nen Maat; Nen Shesep Er Hru Pen.",
       "civilization_all": "Taui · Neb",
       "sort": "Hesb",
       "sort_oldest": "Hesb · Ahet Tepy",
@@ -3782,6 +3798,14 @@
       "cooldown_days": "Hru Ahet Qebeh Dbh Wehem Mesut",
       "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; 365 Er Pehwy; Nen Sesh: Tepy Hru 30",
       "cooldown_invalid": "Sesh Hesb, 0 Er 365",
+      "rebirth_quota_title": "Sep Wehem Mesut Er Pehwy · Abed",
+      "rebirth_quota_body": "Wat Neb · Abed Neb: Sep Wehem Mesut Er Pehwy. Nen Sesh: Nen Er Pehwy. Nen Aq: Ba Em Smen Er Abed Em Khet.",
+      "rebirth_quota_unlimited": "Nen Er Pehwy",
+      "rebirth_quota_limit_col": "Abed Neb · Er Pehwy",
+      "rebirth_quota_used_col": "Abed Pen · Iri Seth",
+      "rebirth_quota_zero": "0 = Nen Iri Abed Pen",
+      "rebirth_quota_invalid": "Sesh Hesb, 0 Er Neb",
+      "rebirth_quota_below_used": "Nen Iri Er Abed Em Khet",
       "dispatch_enabled": "Shesep Hab-Ba (Hemes)",
       "saved": "Smen Sau Seth",
       "save_failed": "Nen Sau Smen",
@@ -6923,7 +6947,14 @@
     "col_time": "Unut",
     "total": "Neb {{n}}",
     "empty": "Wehem Mesut Nen Iri Djer",
-    "all_forms": "Kheperu Neb"
+    "all_forms": "Kheperu Neb",
+    "quota": {
+      "title": "Wehem Mesut · Abed Pen · {{month}}",
+      "used_of": "{{used}} / {{limit}}",
+      "used_unlimited": "{{used}} · Nen Er Pehwy",
+      "full_badge": "Nen Aq",
+      "full": "{{form}} · Abed Pen: Nen Aq ({{used}} / {{limit}}). Ba Em Smen; Wehem Iri Er Abed Em Khet."
+    }
   },
   "hall_settings": {
     "visit": {

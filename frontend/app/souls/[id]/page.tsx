@@ -19,6 +19,8 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
+import { rebirthQuotaFullOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
+import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict } from "@soulledger/core/api";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
@@ -113,6 +115,8 @@ export default function SoulDetailPage() {
   // no matter what the six-path enum offered. HUMAN stays the default — 人道
   // is 苦乐参半 and the ordinary case — but it is now a default, not a fact.
   const [rebirthForm, setRebirthForm] = useState<RebirthFormValue>(DEFAULT_REBIRTH_FORM);
+  // 办转世被配额拒了(409 rebirth_quota_full):那句话留在操作卡里,换一道就清掉。
+  const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
@@ -375,6 +379,7 @@ export default function SoulDetailPage() {
 
   async function handleReincarnate(dispositionId: string) {
     setActionLoading("reincarnate");
+    setQuotaRefusal(null);
     try {
       await reincarnationApi.reborn({
         soul_id: soul?.id,
@@ -387,7 +392,15 @@ export default function SoulDetailPage() {
       // Same as `handleDie` above: silent success, loud failure. Reincarnation
       // additionally ticks the `generation` badge, which moved with no word.
       showToast(t("souls.detail.reincarnate_success"), "success");
+      void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
     } catch (e: unknown) {
+      // 这一道本月满了(并发时刚被用完):不弹 toast,同一句话出现在操作卡里,灵魂留在原处。
+      const full = rebirthQuotaFullOf(e);
+      if (full) {
+        setQuotaRefusal(full);
+        void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
+        return;
+      }
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");
     } finally {
@@ -451,6 +464,8 @@ export default function SoulDetailPage() {
   usePlaque({ title: t("plaque.soul"), hall, caseRef });
   // 菜单按钮配置(第四十批 W-b):编辑与删除另要配置允许。在下面的提前返回之前取(hook 顺序)。
   const buttonOn = useMenuButtonConfig();
+  // 本月转世配额(第五十一批 Q-3):只在真有转世可办时才问。
+  const rebirthQuota = useRebirthQuota(soul?.current_state === "DISPOSED" && dispositions.some((d) => !d.is_executed)).data;
 
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
@@ -655,7 +670,7 @@ export default function SoulDetailPage() {
       />
       <SoulLedgerBook
         records={ledger.records}
-        edit={soul && hasPermission("soul.update") ? { soulId: soul.id, civilization: soul.civilization } : undefined}
+        edit={soul && hasPermission("soul.update") ? { soulId: soul.id, civilization: soul.civilization, soulState: soul.current_state, soulName: soul.name } : undefined}
       />
     </div>
   ) : (
@@ -723,7 +738,12 @@ export default function SoulDetailPage() {
               dispositions={dispositions}
               reincarnations={reincarnations}
               rebirthForm={rebirthForm}
-              onRebirthFormChange={setRebirthForm}
+              onRebirthFormChange={(form) => {
+                setRebirthForm(form);
+                setQuotaRefusal(null);
+              }}
+              quotaRefusal={quotaRefusal}
+              quota={rebirthQuota}
               onDie={handleDie}
               onStartJudgment={handleStartJudgment}
               onReincarnate={handleReincarnate}

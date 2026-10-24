@@ -23,6 +23,9 @@ export interface SoulInput {
   // the same thing as no copy.
   civilization: CivilizationOption;
   birth_date: string | null;
+  /** 编辑弹层只在改过时才发这两个(`YYYY-MM-DD`,null = 清掉)。 */
+  death_date?: string | null;
+  fated_death_date?: string | null;
   origin_location: string;
   /** Gorgias 524a: which Greek judge tries the soul. "" = 不详. */
   origin_region?: SoulOriginRegion;
@@ -139,6 +142,11 @@ export interface Soul extends SoulBase, ArchiveFields {
   home_civilization?: string;
   /** True while the soul is dispatched away from its home tenant. */
   is_residing?: boolean;
+  /**
+   * 阳寿(2026-10-24,只地府):生死簿上注定的死期,官员登记。死亡早于它 = 枉死,审判候到这一天
+   * (`Judgment.untimely` / `held_until`)。null = 没登记。
+   */
+  fated_death_date?: HistoricalDate | null;
 }
 
 /**

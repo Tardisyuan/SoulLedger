@@ -9,6 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
 import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
 import { SoulRecordFormModal } from "@/src/components/souls/SoulRecordFormModal";
 
 /**
@@ -132,6 +133,19 @@ function clauseTitle(record: LedgerRecord, locale: string): string | undefined {
   return snap.title[locale === "zh-Hans" ? "zh" : locale] || snap.title.zh || snap.code;
 }
 
+/**
+ * 超度回向的小方标「⇠ 阳间」(第五十一批 D-2):这笔功德是阳间送进来的,不是本人生前所做。
+ * 字形 ⇠ = 从外面送进来;数值颜色与普通功德相同,不另造颜色。台账、时间线、功过总账共用。
+ */
+export function DedicationTag() {
+  const { t } = useI18n();
+  return (
+    <Badge tone="neutral" glyph="⇠" className="ml-2" data-dedication-tag="">
+      {t("souls.dedication.tag")}
+    </Badge>
+  );
+}
+
 /** 事目第二行有没有东西可写(次数 / 节点 / 人生阶段 / 证据来源)。两处共用,免得各自漏一项。 */
 export function hasRecordFacts(record: LedgerRecord): boolean {
   return record.occurrence_count != null || record.is_milestone || !!record.life_stage || !!record.evidence_source;
@@ -196,7 +210,7 @@ export interface SoulLedgerBookProps {
    * 有这三样才画「新增一条 / 修改」:灵魂 id、它的文明(只列该文明的律条)、调用方已判过的
    * `soul.update`(后端对 add_record / 改一条强制同一把码名)。审判台的证据行不传,只读。
    */
-  edit?: { soulId: string; civilization: string };
+  edit?: { soulId: string; civilization: string; soulState?: string; soulName?: string };
 }
 
 export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
@@ -211,6 +225,8 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
       soulId={edit.soulId}
       civilization={edit.civilization}
       record={form === "new" ? null : form}
+      soulState={edit.soulState}
+      soulName={edit.soulName}
     />
   ) : null;
   const addButton = edit ? (
@@ -307,7 +323,20 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
                       would turn the page into a signal lamp and cost the two
                       numerals the only job the colour has. */}
                   <BodyCell className="font-sans text-sm text-[oklch(var(--color-ink-muted))]">
-                    {record.description}
+                    {/* 超度回向:用自己的类别名加「⇠ 阳间」,第二行是来源(谁 · 何种法事)。 */}
+                    {record.category === "DEDICATION" ? (
+                      <>
+                        <span className="block text-[oklch(var(--color-ink))]">
+                          {t("souls.categories.DEDICATION")}
+                          <DedicationTag />
+                        </span>
+                        <span className="mt-0.5 block text-xs" data-dedication-source="">
+                          {record.evidence_note || record.description}
+                        </span>
+                      </>
+                    ) : (
+                      record.description
+                    )}
                     {/* 次数与重要节点在事目的第二行;条款在窄屏(< 768,没有条款列)也折进来。 */}
                     {(clause || hasFacts) && (
                       <span

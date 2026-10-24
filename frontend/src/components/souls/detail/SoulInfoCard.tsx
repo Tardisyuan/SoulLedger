@@ -5,6 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OriginRegionText } from "@/src/components/souls/OriginRegion";
+import { formatHistoricalDate } from "@/lib/utils";
 
 /** 一行:标签在上、值在下,行线在上(v3 `.soul-biography dl>div`)。 */
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
@@ -28,7 +29,9 @@ export function SoulInfoCard({
   birthDisplay: string | null;
   deathDisplay: string | null;
 }) {
-  const { t, tf } = useI18n();
+  const { t, tf, locale } = useI18n();
+  // 阳寿(第五十一批 F-3):生卒一栏的第三格,顺序同编辑弹层;没登记就没有这一格。
+  const fatedDisplay = formatHistoricalDate(soul?.fated_death_date, locale);
 
   return (
     <section aria-labelledby="soul-identity-title" data-testid="soul-identity" className="min-w-0 bg-[oklch(var(--color-surface-1))] p-6">
@@ -81,6 +84,12 @@ export function SoulInfoCard({
                 />
               </dd>
             </div>
+            {fatedDisplay && (
+              <div className={ROW} data-testid="soul-fated-death">
+                <dt className={DT}>{t("souls.fated_death_date")}</dt>
+                <dd className={`${DD} font-mono`}>{fatedDisplay}</dd>
+              </div>
+            )}
             <div className={ROW}>
               <dt className={DT}>{t("souls.detail.location_label")}</dt>
               <dd className={DD}>

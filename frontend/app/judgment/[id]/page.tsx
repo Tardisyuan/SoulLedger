@@ -57,6 +57,7 @@ import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { FROM_PARAM, sourceFrom, withFrom } from "@/src/lib/backSource";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
+import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -582,6 +583,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       {civilisation}
       <span aria-hidden="true" className="text-[oklch(var(--color-ink-tertiary))]">·</span>
       <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>
+      {/* 枉死(第五十一批 F-3):候审期间多一行「枉死 · 候至 日期 · 在枉死城」,到期后收成「枉死」。 */}
+      {judgment.untimely && (
+        <span data-testid="desk-untimely" className="basis-full text-[oklch(var(--color-ink))]">
+          {isHeldUntilFatedDate(judgment)
+            ? [t("judgment.untimely"), t("judgment.held_until", { date: judgment.held_until as string }), t("judgment.in_city")].join(" · ")
+            : t("judgment.untimely")}
+        </span>
+      )}
     </span>
   );
 

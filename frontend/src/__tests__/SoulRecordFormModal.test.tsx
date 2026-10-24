@@ -276,3 +276,61 @@ describe("台账里的入口", () => {
     expect(screen.getByText(tZh("ledger.book.form.add_title"))).toBeInTheDocument();
   });
 });
+
+describe("超度回向 (第五十一批 D-1 / D-2)", () => {
+  const category = () => label("ledger.journal.category") as HTMLSelectElement;
+  const dedicationOption = () => within(category()).getByRole("option", { name: tZh("souls.categories.DEDICATION") }) as HTMLOptionElement;
+
+  it("choosing it reshapes the form in place: merit locked, required source, rite date, the explanation; no 事目, no 证据来源", async () => {
+    soulsApi.addRecord.mockResolvedValue({ data: { statute_snapshot: null } });
+    wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" soulState="JUDGING" soulName="王守仁" />);
+    fireEvent.change(label("ledger.book.form.type"), { target: { value: "DEMERIT" } });
+    fireEvent.change(category(), { target: { value: "DEDICATION" } });
+
+    expect(label("ledger.book.form.type")).toBeDisabled();
+    expect((label("ledger.book.form.type") as HTMLSelectElement).value).toBe("MERIT");
+    expect(screen.getByTestId("dedication-body")).toHaveTextContent(tZh("souls.dedication.body"));
+    expect(screen.queryByLabelText(new RegExp(tZh("ledger.book.col_item")))).toBeNull();
+    expect(screen.queryByLabelText(new RegExp(tZh("ledger.book.form.evidence_source")))).toBeNull();
+    expect(yearInput().labels?.[0]).toHaveTextContent(tZh("souls.dedication.date_label"));
+
+    // 来源必填:空着不发。
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+    expect(await screen.findByText(tZh("common.field_required"))).toBeInTheDocument();
+
+    fireEvent.change(label("souls.dedication.source_label"), { target: { value: " 长子 王正亿 · 七七斋 " } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1]).toMatchObject({
+      record_type: "MERIT",
+      category: "DEDICATION",
+      description: "长子 王正亿 · 七七斋",
+      evidence_note: "长子 王正亿 · 七七斋",
+    });
+  });
+
+  it("a soul not being judged or serving a sentence: the option is greyed, not hidden, and the reason names the soul and its state", () => {
+    wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" soulState="REINCARNATING" soulName="海瑞" />);
+    expect(dedicationOption()).toBeDisabled();
+    expect(screen.getByText(tZh("souls.dedication.not_eligible", { name: "海瑞", state: tZh("souls.states.REINCARNATING") }))).toBeInTheDocument();
+  });
+
+  it("a soul under judgment: the option is open and no reason is shown", () => {
+    wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" soulState="DISPOSED" soulName="王守仁" />);
+    expect(dedicationOption()).not.toBeDisabled();
+    expect(screen.queryByText(/只能登给审判中或受刑中的灵魂/)).toBeNull();
+  });
+
+  it("the ledger row: its own category name, a ⇠ 阳间 tag, the source on the second line", () => {
+    const dedicated: LedgerRecord = {
+      ...RECORD, id: "r2", type: "MERIT", category: "DEDICATION", description: "长子 王正亿 · 七七斋",
+      statute_clause: "", statute_snapshot: null, occurrence_count: null, life_stage: "", evidence_source: "", evidence_note: "长子 王正亿 · 七七斋",
+    };
+    wrap(<SoulLedgerBook records={[dedicated, RECORD]} />);
+    const tags = document.querySelectorAll("[data-dedication-tag]");
+    expect(tags).toHaveLength(1);
+    expect(tags[0]).toHaveTextContent(tZh("souls.dedication.tag"));
+    expect(document.querySelector("[data-dedication-source]")).toHaveTextContent("长子 王正亿 · 七七斋");
+  });
+});

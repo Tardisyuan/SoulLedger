@@ -271,6 +271,9 @@
     "state": "State",
     "balance": "Balance",
     "death": "Death",
+    "fated_death_date": "Fated date of death",
+    "fated_death_help": "The date of death fixed in the ledger of life and death. If the recorded death comes earlier, the death is untimely: the judgment is marked Untimely and the soul waits in the City of Wrongful Death; the judgment can't be claimed before that date. Leave blank if unknown.",
+    "fated_death_preview": "Death before the fated date · this judgment will be marked Untimely, held until {{date}}",
     "action": "Action",
     "view": "View",
     "states": {
@@ -344,6 +347,13 @@
       "BLASPHEMY": "Blasphemy",
       "MURDER": "Murder",
       "OTHER": "Other"
+    },
+    "dedication": {
+      "body": "A rite the soul's living relatives held for it, entered by an officer. Counts as merit only; only for souls being judged or serving a sentence.",
+      "source_label": "Source (who, which rite)",
+      "date_label": "Date of the rite",
+      "not_eligible": "Only for souls being judged or serving a sentence. {{name}} is {{state}} now.",
+      "tag": "From the living"
     },
     "life_stages": {
       "CHILDHOOD": "Childhood",
@@ -1942,6 +1952,9 @@
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
+    "untimely": "Untimely death",
+    "held_until": "Held until {{date}}",
+    "in_city": "In the City of Wrongful Death",
     "desk": {
       "statute_search": "Search articles",
       "statute_search_empty": "No article matches",
@@ -2039,6 +2052,8 @@
         "permission_denied": "Permission denied",
         "generic": "The action did not go through"
       },
+      "held_short": "Can be claimed after that date",
+      "held": "This judgment is held until {{date}}: the soul is in the City of Wrongful Death and can't be claimed before then.",
       "civilization_all": "Civilization · all",
       "sort": "Sort",
       "sort_oldest": "Sort · longest waiting",
@@ -3794,6 +3809,14 @@
       "cooldown_days": "Rebirth application cooldown (days)",
       "cooldown_hint": "Days after the last final rejection before a soul may apply again; 0 to 365, empty uses the default of 30",
       "cooldown_invalid": "Enter a whole number from 0 to 365",
+      "rebirth_quota_title": "Rebirth quota",
+      "rebirth_quota_body": "The most rebirths each path may take in a month. Leave blank for no limit. When a path is full, souls wait among those awaiting rebirth until next month or until the limit is raised.",
+      "rebirth_quota_unlimited": "No limit",
+      "rebirth_quota_limit_col": "Monthly limit",
+      "rebirth_quota_used_col": "Done this month",
+      "rebirth_quota_zero": "0 = none this month",
+      "rebirth_quota_invalid": "Enter a whole number, 0 or more",
+      "rebirth_quota_below_used": "Lower than this month's count: this path takes no more this month",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
       "save_failed": "Could not save the settings",
@@ -6924,7 +6947,14 @@
     "col_time": "Time",
     "total": "{{n}} records",
     "empty": "No rebirths yet",
-    "all_forms": "All forms"
+    "all_forms": "All forms",
+    "quota": {
+      "title": "This month's quota · {{month}}",
+      "used_of": "{{used}} of {{limit}}",
+      "used_unlimited": "{{used}} · no limit",
+      "full_badge": "Full",
+      "full": "{{form}} is full this month ({{used}} of {{limit}}). The soul stays among those awaiting rebirth; try next month or once the limit is raised."
+    }
   },
   "hall_settings": {
     "visit": {

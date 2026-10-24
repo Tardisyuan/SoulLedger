@@ -96,6 +96,15 @@ describe("JudgmentActionBar", () => {
     await waitFor(() => expect(changed).toHaveBeenCalled());
   });
 
+  it("unclaimed but held in 枉死城: no 认领, a line saying when it can be claimed (第五十一批)", () => {
+    bar({ untimely: true, held_until: "2999-11-03" });
+    expect(screen.queryByTestId("judgment-claim")).toBeNull();
+    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("候至 2999-11-03 · 到期后可认领");
+    screen.unmount();
+    bar({ untimely: true, held_until: "2000-01-01" });
+    expect(screen.getByTestId("judgment-claim")).toBeTruthy();
+  });
+
   it("without judgment.execute: no 认领 / 恢复 / ⋯ (they would 403); 写评议 or 在电脑上继续 stands in", () => {
     const reader = { ...OFFICER, permissions: ["judgment.read"] };
     bar({}, {}, reader);

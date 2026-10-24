@@ -160,6 +160,18 @@ describe("身份栏", () => {
     wrap(<SoulInfoCard soul={{ ...SOUL, description: "" }} loading={false} birthDisplay={null} deathDisplay={null} />);
     expect(screen.getByTestId("soul-description").querySelector('[data-missing="unrecorded"]')).not.toBeNull();
   });
+
+  it("阳寿登记了就在生卒之后多一格;没登记就没有这一格(第五十一批 F-3)", () => {
+    const { unmount } = wrap(
+      <SoulInfoCard soul={{ ...SOUL, fated_death_date: { year: 1531, month: 6, day: 18 } }} loading={false} birthDisplay={null} deathDisplay={null} />
+    );
+    const cell = screen.getByTestId("soul-fated-death");
+    expect(cell).toHaveTextContent("阳寿");
+    expect(cell).toHaveTextContent("1531");
+    unmount();
+    wrap(<SoulInfoCard soul={{ ...SOUL, fated_death_date: null }} loading={false} birthDisplay={null} deathDisplay={null} />);
+    expect(screen.queryByTestId("soul-fated-death")).toBeNull();
+  });
 });
 
 describe("「全部审判」的每一行", () => {

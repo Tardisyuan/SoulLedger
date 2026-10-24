@@ -95,6 +95,13 @@ export interface Judgment extends ArchiveFields {
    */
   stale_since?: string | null;
   /**
+   * 枉死(2026-10-24,只地府):灵魂死在阳寿(`Soul.fated_death_date`)之前。`Soul.die` 盖章,之后不变。
+   * `held_until` 是阳寿那一天(ISO 日期):在那之前不能认领(409 `held_until_fated_date`),灵魂在枉死城。
+   * 过了那天 `held_until` 仍在,只是不再拦 —— 用 `domain/dates.ts::isHeldUntilFatedDate` 判断「此刻是否候审」。
+   */
+  untimely?: boolean;
+  held_until?: string | null;
+  /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
    * floor `SoulSerializer` keeps.
@@ -224,6 +231,8 @@ export interface JudgmentClaimRefusal {
   id?: string;
   /** On a batch 404: the ids outside the caller's scope. */
   missing?: string[];
+  /** On `held_until_fated_date` (枉死城): the ISO date the case can first be claimed. */
+  held_until?: string;
 }
 
 /**
