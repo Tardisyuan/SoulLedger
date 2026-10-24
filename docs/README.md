@@ -70,25 +70,22 @@ copies fork on the first correction — the problem raised in
 | [01_欧洲天堂地狱整体架构.md](01_欧洲天堂地狱整体架构.md) | 整体结构 |
 | [02_天使九级 hierarchy.md](02_天使九级%20hierarchy.md) | 九级天使 |
 | [03_七宗罪与地狱惩罚.md](03_七宗罪与地狱惩罚.md) | 七宗罪与但丁的圈层 |
-| [04_希腊冥界详解.md](04_希腊冥界详解.md) | 哈迪斯、塔尔塔罗斯、极乐岛 |
-| [05_北欧死后世界.md](05_北欧死后世界.md) | 瓦尔哈拉、海姆冥界、福尔克范格 |
 
-**希腊已经不在这一组里了。** 这一节的分档是研究阶段的分法；代码此后把希腊拆成了第四个
-文明——`Civilization.GREEK`，租户 `GR_HADES`，语料是柏拉图的两个神话（《高尔吉亚》12 条 +
-《理想国》厄尔 11 条）。所以 `04_希腊冥界详解.md` 虽然仍归档在这一节，它喂的是 `GREEK`
-而不是 `EUROPEAN`。**北欧也不在系统里了**：`EUROPEAN` 只剩基督教一支——北欧神话没有
-审判环节（去向取决于死法而非裁决），`backend/apps/actors/management/commands/
-consolidate_eu_pantheon.py` 记录了把它整个移出而不是降级的决定。`05_北欧死后世界.md`
-仍归档在这里，只作研究材料，不喂任何租户。
-*Greek is no longer in this group.* The filing here is the research-phase split; the
-code has since made Greek the fourth civilization — `Civilization.GREEK`, tenant
-`GR_HADES`, its corpus Plato's two myths (Gorgias 12 + Republic/Er 11). So
-`04_希腊冥界详解.md` still lives in this section but feeds `GREEK`, not `EUROPEAN`.
-**Norse is out of the system as well.** `EUROPEAN` is the Christian material only:
-Norse has no judgment step (destination follows the manner of death, not a verdict),
-and `backend/apps/actors/management/commands/consolidate_eu_pantheon.py` records the
-decision to remove it outright rather than demote it. `05_北欧死后世界.md` stays here as
-research material and feeds no tenant.
+`EUROPEAN` 只有基督教一支。北欧神话没有审判环节(去向取决于死法而非裁决),
+`backend/apps/actors/management/commands/consolidate_eu_pantheon.py` 记录了把它移出系统的决定;
+研究稿 `05_北欧死后世界.md` 已于 2026-10-24 删除(用户决定不做第五个文明)。
+*`EUROPEAN` is the Christian material only. Norse was removed from the system (no judgment step); its research
+draft was deleted on 2026-10-24.*
+
+### 希腊冥府 / Greek underworld (`GREEK`, `GR_HADES`)
+
+| 文件 | 内容 |
+|---|---|
+| [04_希腊冥界详解.md](04_希腊冥界详解.md) | 哈迪斯、塔尔塔罗斯、极乐岛 |
+
+研究阶段它归在欧洲一组,文件名的 `04_` 就是那时的编号;代码后来把希腊拆成第四个文明,
+语料是柏拉图的两个神话(《高尔吉亚》12 条 +《理想国》厄尔 11 条)。
+*Filed under Europe during research (hence the `04_` prefix); the code later made it the fourth civilization.*
 
 ### 埃及冥界 / Egyptian Duat
 
