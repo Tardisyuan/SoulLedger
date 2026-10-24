@@ -1,3 +1,4 @@
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { CITY_GOD_CASE_ERROR_CODES, type CityGodStatus } from "@soulledger/core/api";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 
@@ -13,7 +14,7 @@ export const CITY_GOD_STATUS_TONES: Record<CityGodStatus, BadgeTone> = {
  * `region` 是后端算好的 `matched_region`(按同一条规则取最后一次出现);兜底收的为 null,原样写。空出身地写「—」。
  */
 export function MatchedOrigin({ location, region }: { location: string; region: string | null | undefined }) {
-  if (!location.trim()) return <span aria-hidden="true">—</span>;
+  if (!location.trim()) return <MissingValue kind="unrecorded" />;
   const at = region ? location.toLowerCase().lastIndexOf(region.toLowerCase()) : -1;
   if (at < 0 || !region) return <>{location}</>;
   return (
