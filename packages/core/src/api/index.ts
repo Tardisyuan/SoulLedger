@@ -112,7 +112,6 @@ export {
   type JudgmentBatchPayload,
   type JudgmentBatchResult,
   type JudgmentClaimRefusal,
-  isHeldUntilFatedDate,
   type AssignableOfficer,
 } from "./judgment";
 

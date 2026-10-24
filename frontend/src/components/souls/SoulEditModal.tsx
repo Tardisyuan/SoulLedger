@@ -33,12 +33,16 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const formId = useId();
   const nameId = `${formId}-name`;
   const birthDateId = `${formId}-birth-date`;
+  const deathDateId = `${formId}-death-date`;
+  const fatedDateId = `${formId}-fated-death-date`;
   const locationId = `${formId}-location`;
   const stateId = `${formId}-state`;
   const regionId = `${formId}-origin-region`;
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [deathDate, setDeathDate] = useState("");
+  const [fatedDate, setFatedDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
@@ -50,6 +54,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   // disabled rather than removed: `currentState` still holds "SETTLED" and
   // round-trips on submit instead of silently reverting to the default.
   const isSettled = soul.current_state === "SETTLED";
+  // 阳寿(第五十一批 F-1):只有地府登记;别的文明连字段一起不画,也不发。
+  const hasFatedDate = soul.civilization === "CHINESE";
 
   // Convert HistoricalDate to HTML date input format (YYYY-MM-DD)
   const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
@@ -65,6 +71,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
     if (isOpen && soul) {
       setName(soul.name || "");
       setBirthDate(historicalDateToInputValue(soul.birth_date));
+      setDeathDate(historicalDateToInputValue(soul.death_date));
+      setFatedDate(historicalDateToInputValue(soul.fated_death_date));
       setOriginLocation(soul.origin_location || "");
       setOriginRegion(soul.origin_region ?? "");
       setCurrentState(soul.current_state || "ALIVE");
@@ -77,6 +85,11 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
     const formData = {
       name: name.trim(),
       birth_date: birthDate || null,
+      // 死亡与阳寿只在改过时才发:输入框装不下只有年份的日期(显示为空),原样不动就不该把它清掉。
+      ...(deathDate !== historicalDateToInputValue(soul.death_date) ? { death_date: deathDate || null } : {}),
+      ...(hasFatedDate && fatedDate !== historicalDateToInputValue(soul.fated_death_date)
+        ? { fated_death_date: fatedDate || null }
+        : {}),
       origin_location: originLocation || undefined,
       origin_region: originRegion,
       current_state: currentState,
@@ -191,14 +204,46 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
           placeholder={t("souls.form.name_placeholder")}
         />
 
-        <TextField
-          id={birthDateId}
-          label={t("souls.form.birth_date_label")}
-          type="date"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          disabled={updateMutation.isPending}
-        />
+        {/* 生卒一行(第五十一批 F-1):出生 / 死亡 / 阳寿,写法与校验相同;阳寿只在地府出现。 */}
+        <div className={`grid grid-cols-1 gap-3 items-start ${hasFatedDate ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <TextField
+            id={birthDateId}
+            label={t("souls.form.birth_date_label")}
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            disabled={updateMutation.isPending}
+          />
+          <TextField
+            id={deathDateId}
+            label={t("souls.death")}
+            type="date"
+            value={deathDate}
+            onChange={(e) => setDeathDate(e.target.value)}
+            disabled={updateMutation.isPending}
+          />
+          {hasFatedDate && (
+            <TextField
+              id={fatedDateId}
+              label={`${t("souls.fated_death_date")} · ${t("hall_settings.visit.optional")}`}
+              type="date"
+              value={fatedDate}
+              onChange={(e) => setFatedDate(e.target.value)}
+              disabled={updateMutation.isPending}
+            />
+          )}
+        </div>
+        {hasFatedDate && (
+          <div className="-mt-2 space-y-1 text-xs">
+            <p className="m-0 text-[oklch(var(--color-ink-muted))]">{t("souls.fated_death_help")}</p>
+            {/* 三个都填了、死亡早于阳寿:保存前就说这桩审判会候审。死亡晚于或等于阳寿时不说。 */}
+            {birthDate && deathDate && fatedDate && deathDate < fatedDate && (
+              <p data-testid="fated-death-preview" className="m-0 text-[oklch(var(--color-ink))]">
+                {t("souls.fated_death_preview", { date: fatedDate })}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* 籍贯与出身地域同一行(Design W-1);文明在这里改不了,说明跟着灵魂自己的文明。 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">

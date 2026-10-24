@@ -4,6 +4,7 @@
  * says so: 「◇ 待宣判 · 请在官员台」.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
+import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
@@ -81,7 +82,10 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
           emptyBody={t("officer_app.queue.empty_body")}
         />
       ) : (
-        data!.map((row) => (
+        data!.map((row) => {
+          // 枉死城(第五十一批):候审中的不放「认领」,换一行「到期后可认领」;徽标一直留着。
+          const held = isHeldUntilFatedDate(row);
+          return (
           <Row
             key={row.id}
             testID={`queue-row-${row.id}`}
@@ -94,11 +98,20 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
               ...(group === "mine" && !row.is_final ? [{ one: `◇ ${t("officer_app.queue.desk_only")}` }] : []),
               // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
               ...(row.stale_since ? [{ one: `◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}` }] : []),
+              ...(row.untimely
+                ? [{ one: [`▢ ${t("judgment.untimely")}`, ...(held ? [t("judgment.held_until", { date: row.held_until as string })] : [])].join(" · ") }]
+                : []),
             ].filter(Boolean)}
             onPress={() => onOpen(row.id)}
             gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
             right={
-              group === "unclaimed" && canClaim ? (
+              group === "unclaimed" && canClaim && held ? (
+                <View style={{ width: 88 }}>
+                  <Txt variant="caption" tone="muted" testID={`queue-held-${row.id}`}>
+                    {t("judgment.claim.held_short")}
+                  </Txt>
+                </View>
+              ) : group === "unclaimed" && canClaim ? (
                 <View style={{ width: 88 }}>
                   <ActionButton
                     testID={`queue-claim-${row.id}`}
@@ -113,7 +126,8 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
               ) : undefined
             }
           />
-        ))
+          );
+        })
       )}
       <MoreRow more={more} state={moreState} />
     </Screen>

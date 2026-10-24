@@ -887,3 +887,53 @@ describe("已结案 column menu", () => {
     expect(screen.queryByText("第五殿 · 阎罗王")).toBeNull();
   });
 });
+
+describe("枉死城 (第五十一批 F-2)", () => {
+  const unclaimed = GROUP_ROWS.unclaimed;
+  beforeEach(() => {
+    GROUP_ROWS.unclaimed = [
+      row("h2", "王守仁", { untimely: true, held_until: "2999-11-03" }),
+      row("h1", "李阿九", { untimely: true, held_until: "2999-02-01" }),
+      row("ok", "海瑞"),
+      row("past", "严嵩", { untimely: true, held_until: "2000-01-01" }),
+    ];
+  });
+  afterEach(() => {
+    GROUP_ROWS.unclaimed = unclaimed;
+  });
+
+  it("候审的行:徽标「枉死」+「候至 日期」,没有认领按钮,勾不了,排在可认领的后面、按候至先后", async () => {
+    renderPage();
+    await screen.findByText("王守仁");
+    const names = within(screen.getByTestId("queue-group-unclaimed")).getAllByRole("link").map((a) => a.textContent);
+    expect(names).toEqual(["海瑞", "严嵩", "李阿九", "王守仁"]);
+
+    const held = rowOf("王守仁");
+    expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.untimely"));
+    expect(within(held).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.held_until", { date: "2999-11-03" }));
+    expect(within(held).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
+    expect(within(held).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
+    expect(within(held).getByRole("checkbox")).toBeDisabled();
+  });
+
+  it("到期之后:「候至」消失、认领回来,「枉死」徽标留着", async () => {
+    renderPage();
+    await screen.findByText("严嵩");
+    const past = rowOf("严嵩");
+    expect(within(past).getByTestId("untimely-mark")).toHaveTextContent(tZh("judgment.untimely"));
+    expect(within(past).getByTestId("untimely-mark")).not.toHaveTextContent("2000-01-01");
+    expect(within(past).getByRole("button", { name: tZh("judgment.claim.claim") })).toBeInTheDocument();
+    expect(within(past).getByRole("checkbox")).toBeEnabled();
+    // 不是枉死的行没有徽标。
+    expect(within(rowOf("海瑞")).queryByTestId("untimely-mark")).toBeNull();
+  });
+
+  it("绕过队列被 409 held_until_fated_date 拒绝时,toast 说候到哪天", async () => {
+    GROUP_ROWS.unclaimed = [row("past", "严嵩", { untimely: true, held_until: "2000-01-01" })];
+    judgmentApi.claim.mockRejectedValueOnce({ response: { status: 409, data: { code: "held_until_fated_date", held_until: "2026-11-03" } } });
+    renderPage();
+    await screen.findByText("严嵩");
+    fireEvent.click(within(rowOf("严嵩")).getByRole("button", { name: tZh("judgment.claim.claim") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.held", { date: "2026-11-03" }), "error"));
+  });
+});

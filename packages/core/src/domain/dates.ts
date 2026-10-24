@@ -142,3 +142,18 @@ export function formatHistoricalDate(
   // Just year
   return yearStr;
 }
+
+/** Local calendar date as `YYYY-MM-DD` — the shape `Judgment.held_until` comes in. */
+function localIsoDate(now: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+/**
+ * Held in 枉死城 right now (第五十一批): the judgment is untimely and its fated date is still ahead. The same
+ * rule as the server's claim guard (`held_until > localdate()`), so a held row never offers a claim the server
+ * would refuse. Here rather than beside `judgmentApi` so screens whose tests stub that module keep the real rule.
+ */
+export function isHeldUntilFatedDate(j: { held_until?: string | null }, now: Date = new Date()): boolean {
+  return !!j.held_until && j.held_until > localIsoDate(now);
+}
