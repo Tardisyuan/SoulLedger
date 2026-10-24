@@ -110,6 +110,8 @@ const COLLECTED_FILES = [
   "brandTokensMatchIcon.test.ts",
   "draftSavedFlash.test.tsx",
   "judgmentFullCaseMotion.test.ts",
+  // 2026-10-24 第五十二批 审判申诉:距截止、被拒的读法、时间线三种事件。
+  "judgmentAppeals.test.ts",
   "listExportButtons.test.tsx",
   "loginStatutes.test.ts",
   "RealmsPage.test.tsx",

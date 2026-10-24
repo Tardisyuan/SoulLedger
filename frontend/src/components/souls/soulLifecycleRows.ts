@@ -305,6 +305,15 @@ export interface SystemEventLabels {
   eventType: (raw: string) => string;
   /** `souls.states.<STATE>`; null when the payload carried no state at all. */
   state: (raw: string | null) => string;
+  /**
+   * 申诉三件事的后半行(第五十二批 W-4):轮次、结论、新判。可选:手写的 labels(测试)没有它时只写事件名。
+   * 行内不写复核人。
+   */
+  appeal?: {
+    round: (round: number) => string;
+    status: (raw: string | null) => string;
+    newVerdict: (raw: string | null) => string;
+  };
 }
 
 /**
@@ -319,7 +328,16 @@ export function makeSystemEventLabels(t: Translate): SystemEventLabels {
     // for a state means the payload recorded no such side to the transition.
     return resolved.label ?? t("common.value.unrecorded");
   };
-  return { eventType: via("souls.events"), state: via("souls.states") };
+  const verdict = via("judgment.verdicts");
+  return {
+    eventType: via("souls.events"),
+    state: via("souls.states"),
+    appeal: {
+      round: (round) => t("appeals.round", { round: String(round) }),
+      status: via("appeals.status"),
+      newVerdict: (raw) => `${t("appeals.new_verdict")} ${verdict(raw)}`,
+    },
+  };
 }
 
 /** Defect fix: render the event's actual payload, not the bare event_type
@@ -345,6 +363,19 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
     case "KARMA_RECALCULATED": {
       const delta = typeof p.delta === "number" ? p.delta : null;
       return delta === null ? event : `${event} · Δ${delta >= 0 ? "+" : ""}${delta}`;
+    }
+    case "JUDGMENT_APPEAL_FILED":
+    case "JUDGMENT_APPEAL_WITHDRAWN":
+    case "JUDGMENT_APPEAL_DECIDED": {
+      // 「提出申诉 · 第 1 次申诉」;结论那行再写结果,改判再写新判(事件里没有原判,不猜)。
+      const a = labels.appeal;
+      if (!a || typeof p.round !== "number") return event;
+      const parts = [event, a.round(p.round)];
+      if (e.event_type === "JUDGMENT_APPEAL_DECIDED") {
+        parts.push(a.status(typeof p.status === "string" ? p.status : null));
+        if (p.status === "AMENDED" && typeof p.new_verdict === "string") parts.push(a.newVerdict(p.new_verdict));
+      }
+      return parts.join(" · ");
     }
     default:
       return event;

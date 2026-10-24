@@ -22,6 +22,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/judgment": "breadcrumb.menu.judgment",
   "/corpus": "breadcrumb.menu.corpus",
   "/cross-judgments": "breadcrumb.menu.cross_judgments",
+  // 第五十二批:申诉复核。菜单行要后端补一条迁移(path /judgment/appeals,灵魂业务组,order 31,judgment.read)。
+  "/judgment/appeals": "breadcrumb.menu.judgment_appeals",
   // `/ledger`, not `/karma`. Migration 0011 moved the menu's path when the
   // backend app was renamed, and this key was not followed — so the ledger
   // breadcrumb has been falling back to its Chinese name alone in en and egy
