@@ -255,6 +255,9 @@ class JudgmentConclusionService:
             judgment.notes = notes
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
+            # 落判的人:申诉复核排除他(apps/judgment/appeals.py)。进程内调用(by=None)不记。
+            if getattr(by, "pk", None) is not None:
+                judgment.concluded_by = by
             # 草稿随结案作废:裁决与发落已经写进结案本身。判词草稿就是 `notes`,
             # 上面已被定稿覆盖;`draft_saved_at` / `draft_version` 是历史,不清。
             judgment.draft_verdict = None

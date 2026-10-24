@@ -244,6 +244,16 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                 )
             }, code="statute_other_civilization")
 
+    def validate_category(self, value):
+        """改判补偿 is written only by an amended appeal (apps/judgment/appeals.py), never by hand, and a
+        compensation row cannot be re-categorised into an ordinary deed either."""
+        from apps.souls.record_models import RecordCategory
+
+        current = getattr(self.instance, "category", None)
+        if RecordCategory.COMPENSATION in (value, current) and value != current:
+            raise serializers.ValidationError("Compensation records are written by an amended appeal only.")
+        return value
+
     def validate_statute_clause(self, value):
         """A citation must resolve, or it is worse than a blank.
 
