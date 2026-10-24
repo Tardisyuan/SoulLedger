@@ -3496,6 +3496,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/appeals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列。 */
+        get: operations["v1_judgment_appeals_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/appeals/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列。 */
+        get: operations["v1_judgment_appeals_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/appeals/{id}/claim/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 认领复核。作出原判的官员 → 403 `original_judge`;别人已认领 → 409 `already_claimed`。 */
+        post: operations["v1_judgment_appeals_claim_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/appeals/{id}/decide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 维持(UPHELD)或改判(AMENDED + verdict)。`note` 必填,灵魂看得到。 */
+        post: operations["v1_judgment_appeals_decide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/assignable-officers/": {
         parameters: {
             query?: never;
@@ -4291,6 +4359,38 @@ export interface paths {
         get: operations["v1_me_export_file"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/judgment-appeals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_judgment_appeals_retrieve"];
+        put?: never;
+        post: operations["v1_me_judgment_appeals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/judgment-appeals/{appeal_id}/withdraw/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_judgment_appeals_withdraw_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11622,10 +11722,13 @@ export interface components {
          *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
          *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
          *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+         *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+         *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+         *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -12241,6 +12344,60 @@ export interface components {
             readonly archived_by_name: string | null;
             readonly archive_reason: string;
         };
+        /** @description 官员看的:多了灵魂、复核人、认领时间,与原判的判词。 */
+        JudgmentAppeal: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly judgment: string;
+            readonly case_number: string;
+            readonly round: number;
+            readonly reason: string;
+            readonly evidence: string;
+            readonly status: components["schemas"]["JudgmentAppealStatusEnum"];
+            readonly original_verdict: components["schemas"]["VerdictEnum"];
+            readonly new_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly current_verdict: string;
+            /** Format: date-time */
+            readonly judgment_concluded_at: string;
+            readonly decision_note: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
+            readonly compensations: unknown[];
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_name: string;
+            readonly reviewer: number | null;
+            readonly reviewer_name: string | null;
+            /** Format: date-time */
+            readonly claimed_at: string | null;
+            readonly judgment_notes: string;
+            /** @description 作出原判的官员:界面据此把他的「认领复核」置灰(服务端照样拒,403 `original_judge`)。 */
+            readonly original_officer_ids: number[];
+        };
+        JudgmentAppealCreate: {
+            /** Format: uuid */
+            judgment: string;
+            reason: string;
+            /** @default  */
+            evidence: string;
+        };
+        JudgmentAppealDecide: {
+            outcome: components["schemas"]["OutcomeEnum"];
+            verdict?: components["schemas"]["VerdictEnum"];
+            note: string;
+        };
+        /**
+         * @description * `PENDING` - 待复核
+         *     * `IN_REVIEW` - 复核中
+         *     * `UPHELD` - 维持原判
+         *     * `AMENDED` - 改判
+         *     * `WITHDRAWN` - 已撤回
+         * @enum {string}
+         */
+        JudgmentAppealStatusEnum: "PENDING" | "IN_REVIEW" | "UPHELD" | "AMENDED" | "WITHDRAWN";
         /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
         JudgmentBatch: {
             operation: components["schemas"]["OperationEnum"];
@@ -13076,6 +13233,19 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        MeAppealableJudgment: {
+            /** Format: uuid */
+            judgment_id: string;
+            case_number: string;
+            verdict: string;
+            /** Format: date-time */
+            concluded_at: string;
+            /** Format: date-time */
+            deadline: string;
+            rounds_used: number;
+            can_appeal: boolean;
+            refusal_code: string | null;
+        };
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
             /** Format: uuid */
@@ -13142,6 +13312,33 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             concluded_at: string | null;
+        };
+        /** @description 灵魂看的:不带复核人是谁(与事件、推送一样不说判官)。 */
+        MeJudgmentAppeal: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly judgment: string;
+            readonly case_number: string;
+            readonly round: number;
+            readonly reason: string;
+            readonly evidence: string;
+            readonly status: components["schemas"]["JudgmentAppealStatusEnum"];
+            readonly original_verdict: components["schemas"]["VerdictEnum"];
+            readonly new_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly current_verdict: string;
+            /** Format: date-time */
+            readonly judgment_concluded_at: string;
+            readonly decision_note: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
+            readonly compensations: unknown[];
+        };
+        MeJudgmentAppealList: {
+            judgments: components["schemas"]["MeAppealableJudgment"][];
+            results: components["schemas"]["MeJudgmentAppeal"][];
         };
         MeLife: {
             cycle: number;
@@ -13977,6 +14174,12 @@ export interface components {
          * @enum {string}
          */
         OriginRegionEnum: "EUROPE" | "ASIA";
+        /**
+         * @description * `UPHELD` - UPHELD
+         *     * `AMENDED` - AMENDED
+         * @enum {string}
+         */
+        OutcomeEnum: "UPHELD" | "AMENDED";
         PaginatedActorListList: {
             /** @example 123 */
             count: number;
@@ -14206,6 +14409,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["InitialCredential"][];
+        };
+        PaginatedJudgmentAppealList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["JudgmentAppeal"][];
         };
         PaginatedJudgmentList: {
             /** @example 123 */
@@ -15620,6 +15838,7 @@ export interface components {
              *     * `WISDOM` - Wisdom / Knowledge
              *     * `PIETY` - Piety / Devotion
              *     * `DEDICATION` - Dedication of merit
+             *     * `COMPENSATION` - Compensation for an amended verdict
              *     * `CRUELTY` - Cruelty / Violence
              *     * `DECEPTION` - Deception / Lying
              *     * `COWARDICE` - Cowardice
@@ -17996,6 +18215,7 @@ export interface components {
              *     * `WISDOM` - Wisdom / Knowledge
              *     * `PIETY` - Piety / Devotion
              *     * `DEDICATION` - Dedication of merit
+             *     * `COMPENSATION` - Compensation for an amended verdict
              *     * `CRUELTY` - Cruelty / Violence
              *     * `DECEPTION` - Deception / Lying
              *     * `COWARDICE` - Cowardice
@@ -18062,6 +18282,7 @@ export interface components {
          *     * `WISDOM` - Wisdom / Knowledge
          *     * `PIETY` - Piety / Devotion
          *     * `DEDICATION` - Dedication of merit
+         *     * `COMPENSATION` - Compensation for an amended verdict
          *     * `CRUELTY` - Cruelty / Violence
          *     * `DECEPTION` - Deception / Lying
          *     * `COWARDICE` - Cowardice
@@ -18071,7 +18292,7 @@ export interface components {
          *     * `OTHER` - Other
          * @enum {string}
          */
-        SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "DEDICATION" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
+        SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "DEDICATION" | "COMPENSATION" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
         SoulRefreshRequest: {
             refresh: string;
         };
@@ -24524,9 +24745,12 @@ export interface operations {
                  *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
                  *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
                  *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+                 *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+                 *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+                 *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -24633,9 +24857,12 @@ export interface operations {
                  *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
                  *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
                  *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+                 *     * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+                 *     * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+                 *     * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -25621,6 +25848,168 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_appeals_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `PENDING` - 待复核
+                 *     * `IN_REVIEW` - 复核中
+                 *     * `UPHELD` - 维持原判
+                 *     * `AMENDED` - 改判
+                 *     * `WITHDRAWN` - 已撤回
+                 */
+                status?: "AMENDED" | "IN_REVIEW" | "PENDING" | "UPHELD" | "WITHDRAWN";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedJudgmentAppealList"];
+                };
+            };
+        };
+    };
+    v1_judgment_appeals_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this judgment appeal. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAppeal"];
+                };
+            };
+        };
+    };
+    v1_judgment_appeals_claim_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this judgment appeal. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAppeal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_appeals_decide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this judgment appeal. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentAppealDecide"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentAppealDecide"];
+                "multipart/form-data": components["schemas"]["JudgmentAppealDecide"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentAppeal"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27101,6 +27490,119 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_me_judgment_appeals_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeJudgmentAppealList"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_judgment_appeals_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentAppealCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentAppealCreate"];
+                "multipart/form-data": components["schemas"]["JudgmentAppealCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeJudgmentAppeal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_judgment_appeals_withdraw_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appeal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeJudgmentAppeal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
             };
         };
     };

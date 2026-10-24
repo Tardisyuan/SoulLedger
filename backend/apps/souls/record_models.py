@@ -52,6 +52,9 @@ class RecordCategory(models.TextChoices):
     # 超度回向 (2026-10-24): merit the living dedicate to the soul through a rite, entered by an officer.
     # MERIT only, and only while the soul is being judged or serving its sentence (SoulRecordSerializer).
     DEDICATION = "DEDICATION", "Dedication of merit"
+    # 改判补偿 (2026-10-24): merit the system records when an appeal amends a verdict and part of the old
+    # sentence had already been executed (apps/judgment/appeals.py). Never written through the API.
+    COMPENSATION = "COMPENSATION", "Compensation for an amended verdict"
     # Demerit categories
     CRUELTY = "CRUELTY", "Cruelty / Violence"
     DECEPTION = "DECEPTION", "Deception / Lying"
