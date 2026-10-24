@@ -709,7 +709,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # being asked to reincarnate -- produced a 200 carrying a serialized
         # soul that had not moved. An interface that answers "done" to a
         # request it declined is worse than one that declines loudly.
-        if not soul.transition_to(new_state, reason):
+        # 经办人记进 STATE_CHANGED 的 actor:账页与失踪横条的「经办」读它。
+        if not soul.transition_to(new_state, reason, actor=request.user.username):
             soul.refresh_from_db()
             return Response(
                 {

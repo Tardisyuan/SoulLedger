@@ -14,6 +14,8 @@ export function SoulHeaderActions({
   onCorrectSettlement,
   onRecalculate,
   onStartWorkflow,
+  onMarkLost,
+  onRecall,
   isOverflowMenuOpen,
   setIsOverflowMenuOpen,
 }: {
@@ -27,6 +29,10 @@ export function SoulHeaderActions({
   onRecalculate?: () => void;
   /** 「发起审批…」(W-11):只在持有 `workflow.create` 时给;没给就没有这一项。 */
   onStartWorkflow?: () => void;
+  /** 「标记失踪」(第五十批 L-1):只在 DISPOSED 且持有 `soul.transition` 时给。排在删除之前,中间一条分隔线。 */
+  onMarkLost?: () => void;
+  /** 「召回」(L-3):只在 LOST 且持有 `soul.transition` 时给;操作区的主按钮。 */
+  onRecall?: () => void;
   /* The open/closed flag stays owned by the page. It used to live there while
      this markup was inlined, and a menu left open across a data reload kept
      its state; hoisting the state in here would have quietly closed it. */
@@ -84,9 +90,10 @@ export function SoulHeaderActions({
   const hasRecalculate = Boolean(onRecalculate);
   const hasStartWorkflow = Boolean(onStartWorkflow);
   const hasCorrect = Boolean(onCorrectSettlement);
+  const hasMarkLost = Boolean(onMarkLost);
   const enabled = useMemo(
-    () => [hasRecalculate, hasStartWorkflow, canDelete, hasCorrect],
-    [hasRecalculate, hasStartWorkflow, canDelete, hasCorrect]
+    () => [hasRecalculate, hasStartWorkflow, hasMarkLost, canDelete, hasCorrect],
+    [hasRecalculate, hasStartWorkflow, hasMarkLost, canDelete, hasCorrect]
   );
   const { containerRef: menuRef, itemRefs } = useRovingPopupKeys({
     open: isOverflowMenuOpen,
@@ -99,11 +106,19 @@ export function SoulHeaderActions({
     ...(onRecalculate ? ["ledger.manage"] : []),
     ...(onStartWorkflow ? ["workflow.create"] : []),
     ...(onCorrectSettlement ? ["soul.correct_settlement"] : []),
+    ...(onMarkLost ? ["soul.transition"] : []),
   ];
   const itemClass = "w-full text-left px-3 py-1 text-sm hover:bg-[oklch(var(--color-surface-2))] transition-colors";
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
+      {onRecall && (
+        <RequirePermission permissions="soul.transition">
+          <Button type="button" variant="primary" onClick={onRecall}>
+            {t("souls.lost.recall")}
+          </Button>
+        </RequirePermission>
+      )}
       {onEdit && (
         <RequirePermission permissions="soul.update">
           <Button type="button" variant="secondary" onClick={onEdit}>
@@ -169,9 +184,26 @@ export function SoulHeaderActions({
                     {t("workflow.start.menu")}
                   </button>
                 ) : null}
+                {onMarkLost ? (
+                  <>
+                    <button
+                      ref={(el) => { itemRefs.current[2] = el; }}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        close(true);
+                        onMarkLost();
+                      }}
+                      className={`${itemClass} text-[oklch(var(--color-ink))]`}
+                    >
+                      {t("souls.lost.mark")}
+                    </button>
+                    <div role="separator" className="my-1 border-t border-[oklch(var(--color-hairline))]" />
+                  </>
+                ) : null}
                 {canDelete ? (
                   <button
-                    ref={(el) => { itemRefs.current[2] = el; }}
+                    ref={(el) => { itemRefs.current[3] = el; }}
                     type="button"
                     role="menuitem"
                     onClick={() => {
@@ -187,7 +219,7 @@ export function SoulHeaderActions({
                 ) : null}
                 {onCorrectSettlement ? (
                   <button
-                    ref={(el) => { itemRefs.current[3] = el; }}
+                    ref={(el) => { itemRefs.current[4] = el; }}
                     type="button"
                     role="menuitem"
                     onClick={() => {

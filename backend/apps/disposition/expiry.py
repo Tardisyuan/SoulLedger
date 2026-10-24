@@ -8,6 +8,8 @@
 * `is_eternal` —— 永久刑。
 * `sentence_years` 为 null —— 没有记录刑期(模型注释:null 不是「永久」,也不是 0)。
 * 没执行过(`is_executed=False`)—— 没在服刑。
+* 灵魂失踪(`LOST`)中 —— 失踪期间刑期不走(用户 2026-10-25 决定)。召回时把失踪的天数记进
+  `lost_days`,期满日顺延这么多天(`hold_term_while_lost`、`term_end` 的 `lost_days`)。
 
 起算日(`effective_term_start`):记了 `term_start_*` 就用它;**没记而已执行的,从执行那天
 (`executed_at` 的本地日期)算**(产品负责人 2026-09-25 决定)。执行时 `DispositionService`
@@ -44,7 +46,7 @@ def effective_term_start(term_start, executed_at):
     return (day.year, day.month, day.day)
 
 
-def term_end(term_start, sentence_years):
+def term_end(term_start, sentence_years, lost_days=0):
     """刑期走完的那一天,`(year, month, day)`;算不出来时 None。
 
     年份跨过公元前 / 公元交界时多加一年:没有公元 0 年,所以 1 BCE 起算的 1 年刑
@@ -59,12 +61,19 @@ def term_end(term_start, sentence_years):
     end_year = year + sentence_years
     if year < 0 <= end_year:
         end_year += 1
+    if lost_days and end_year >= 1:
+        month = month or 12
+        last = calendar.monthrange(end_year, month)[1]
+        day = day or last
+        # 2 月 29 日起算、期满年不是闰年:多出的一天顺到 3 月 1 日,与 `term_has_ended` 的比较一致。
+        end = datetime.date(end_year, month, min(day, last)) + datetime.timedelta(days=lost_days + max(day - last, 0))
+        return (end.year, end.month, end.day)
     return (end_year, month, day)
 
 
-def term_has_ended(term_start, sentence_years, today: datetime.date) -> bool:
+def term_has_ended(term_start, sentence_years, today: datetime.date, lost_days=0) -> bool:
     """`today` 这一天,刑期是否已经走完。见模块 docstring 的边界规则。"""
-    end = term_end(term_start, sentence_years)
+    end = term_end(term_start, sentence_years, lost_days)
     if end is None:
         return False
     end_year, end_month, end_day = end
@@ -93,6 +102,8 @@ def term_end_sort_key():
     跨公元交界多加一年,与 `term_end` 相同。负年份也保序:同年内月日单调,跨年差 10000。
 
     算不出期满日(永久、`sentence_years` 为空、既无起算日也未执行)的行取 `NO_TERM_END`。
+    ponytail: 不含 `lost_days` 的顺延(整数键上加天数不成立);召回过的灵魂排序可能早几天,
+    要精确时把期满日落成一列。
     先转 bigint 再算:PostgreSQL 上 `integer * 10000` 会溢出(刑期可以是上万年)。
     """
     big = BigIntegerField()
@@ -131,7 +142,7 @@ def reopen_if_term_extended(disposition, today: datetime.date | None = None) -> 
     )
     if term_end(start, disposition.sentence_years) is None:
         return False
-    if term_has_ended(start, disposition.sentence_years, today or timezone.localdate()):
+    if term_has_ended(start, disposition.sentence_years, today or timezone.localdate(), disposition.lost_days):
         return False
     disposition.expired_at = None
     return True
@@ -143,9 +154,12 @@ def candidates(tenant_id, today: datetime.date):
     粗筛条件是「起算年 + 刑期 ≤ 今年 + 1」:那个 +1 容纳跨公元交界多出的一年
     (以及 `executed_at` 的 UTC 年与本地年在元旦前后差的那一年),所以它是精确集合的
     超集,不会漏;多选进来的由 Python 那一步排掉。起算年缺时取执行年,见
-    `effective_term_start`。
+    `effective_term_start`。`lost_days` 只会把期满日往后推,所以粗筛照旧是超集。
+
+    失踪中的灵魂不选:失踪期间刑期不走。
     """
     from apps.disposition.models import Disposition
+    from apps.souls.models import SoulState
 
     return (
         Disposition.objects.filter(
@@ -156,6 +170,7 @@ def candidates(tenant_id, today: datetime.date):
             sentence_years__isnull=False,
         )
         .filter(Q(term_start_year__isnull=False) | Q(executed_at__isnull=False))
+        .exclude(soul__current_state=SoulState.LOST)
         .alias(term_end_year=Coalesce(F("term_start_year"), ExtractYear("executed_at")) + F("sentence_years"))
         .filter(term_end_year__lte=today.year + 1)
         .order_by("pk")
@@ -182,10 +197,11 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
 
     due = [
         pk
-        for pk, y, m, d, executed_at, years in candidates(tenant.pk, today).values_list(
-            "pk", "term_start_year", "term_start_month", "term_start_day", "executed_at", "sentence_years"
+        for pk, y, m, d, executed_at, years, lost_days in candidates(tenant.pk, today).values_list(
+            "pk", "term_start_year", "term_start_month", "term_start_day", "executed_at", "sentence_years",
+            "lost_days",
         ).iterator(chunk_size=EXPIRY_CHUNK)
-        if term_has_ended(effective_term_start((y, m, d), executed_at), years, today)
+        if term_has_ended(effective_term_start((y, m, d), executed_at), years, today, lost_days)
     ]
 
     expired = 0
@@ -214,3 +230,29 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
             failed.append(str(pk))
 
     return {"tenant": tenant.code, "expired": expired, "failed": failed, "today": today.isoformat()}
+
+
+def hold_term_while_lost(soul, old_state, new_state, now=None) -> None:
+    """失踪与召回时刑期的停与走(用户 2026-10-25 决定)。由 `Soul.transition_to` 在同一事务里调。
+
+    标记失踪(→ LOST):这一世在服、未期满的处置记下 `lost_since`。召回(LOST →):把
+    失踪起到今天的天数(本地日期相减)加进 `lost_days`,清掉 `lost_since`。此前就已失踪、
+    没有 `lost_since` 的存量行召回时不顺延 —— 不知道从哪天算起,不猜。
+    """
+    from apps.disposition.models import Disposition
+    from apps.souls.models import SoulState
+
+    if SoulState.LOST not in (old_state, new_state) or old_state == new_state:
+        return
+    now = now or timezone.now()
+    running = Disposition.objects.filter(
+        soul_id=soul.pk, tenant_id=soul.tenant_id, is_executed=True, expired_at__isnull=True
+    )
+    if new_state == SoulState.LOST:
+        running.update(lost_since=now)
+        return
+    today = timezone.localdate(now)
+    for row in running.filter(lost_since__isnull=False).select_for_update():
+        row.lost_days += max((today - timezone.localdate(row.lost_since)).days, 0)
+        row.lost_since = None
+        row.save(update_fields=["lost_days", "lost_since"])

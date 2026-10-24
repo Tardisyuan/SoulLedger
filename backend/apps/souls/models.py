@@ -565,7 +565,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         }
         return new_state in valid_transitions.get(self.current_state, [])
 
-    def transition_to(self, new_state: str, reason: str = "", *, account_origin: str = "OFFICER", **kwargs) -> bool:
+    def transition_to(
+        self, new_state: str, reason: str = "", *, account_origin: str = "OFFICER", actor: str = "system", **kwargs
+    ) -> bool:
         """
         Attempt state transition with pessimistic locking to prevent race conditions.
         Returns True if successful.
@@ -701,7 +703,12 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # Inside the transaction: the event row is part of the transition's record, and a failed insert
             # must roll the transition back. (It used to be written after the lock was released; the bus only
             # writes a row, it makes no external call.)
-            log_soul_state_change(locked_soul, old_state, new_state, reason)
+            # 失踪期间刑期不走,召回后顺延(2026-10-25),与状态变化同一个事务。
+            from apps.disposition.expiry import hold_term_while_lost
+
+            hold_term_while_lost(locked_soul, old_state, new_state)
+
+            log_soul_state_change(locked_soul, old_state, new_state, reason, actor)
 
         # Sync back to self instance. Copy the raw year/month/day (not via
         # the birth_date/death_date properties) so a BCE death date isn't

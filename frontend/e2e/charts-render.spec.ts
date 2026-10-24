@@ -62,7 +62,7 @@ const STATS_WITH_MARKS = {
     { state: "DISPOSED", label: "已处置", count: 5 },
     { state: "REINCARNATING", label: "轮回中", count: 1 },
     // 零值刻意保留:它不该产生 path,而这正是「数量对齐非零项」的原因。
-    { state: "LOST", label: "迷失", count: 0 },
+    { state: "LOST", label: "失踪", count: 0 },
   ],
   tenants: [
     {
