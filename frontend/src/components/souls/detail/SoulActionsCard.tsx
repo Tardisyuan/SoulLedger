@@ -1,6 +1,7 @@
 "use client";
 
 import type { Disposition, Reincarnation, Soul } from "@soulledger/core/api";
+import { quotaIsFull, type RebirthQuotaFull, type RebirthQuotaUsage } from "@soulledger/core/api/reincarnation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -19,6 +20,8 @@ export function SoulActionsCard({
   onDie,
   onStartJudgment,
   onReincarnate,
+  quota,
+  quotaRefusal,
 }: {
   soul: Soul | null;
   loading: boolean;
@@ -30,8 +33,21 @@ export function SoulActionsCard({
   onDie: () => void;
   onStartJudgment: () => void;
   onReincarnate: (dispositionId: string) => void;
+  /** 办转世被 409 `rebirth_quota_full` 拒了(并发时配额刚被别人用完):同一句话留在这里,不弹 toast。 */
+  quotaRefusal?: RebirthQuotaFull | null;
+  /** 本月配额(`/reincarnation/quota/`,页面在有转世可办时才取);没有就不标、不拦。 */
+  quota?: readonly RebirthQuotaUsage[];
 }) {
   const { t } = useI18n();
+  // 本月配额(第五十一批 Q-3):满了的道照样能选,选了它按钮置灰,下面写拒绝那句话 ——
+  // 不放一个点了必然被拒的按钮。灵魂留在原处(待转世)。
+  const chosen = quota?.find((r) => r.rebirth_form === rebirthForm);
+  const full =
+    quotaRefusal && quotaRefusal.rebirth_form === rebirthForm
+      ? quotaRefusal
+      : chosen && quotaIsFull(chosen)
+        ? { rebirth_form: chosen.rebirth_form, used: chosen.used, limit: chosen.limit as number }
+        : null;
 
   return (
     <section aria-labelledby="soul-actions-title" data-print-hide="" className="min-w-0 space-y-4 bg-[oklch(var(--color-surface-1))] p-6">
@@ -81,7 +97,17 @@ export function SoulActionsCard({
                     value={rebirthForm}
                     onChange={onRebirthFormChange}
                     disabled={!!actionLoading}
+                    quota={quota}
                   />
+                  {full && (
+                    <p role="status" data-testid="rebirth-quota-full" className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">
+                      {t("rebirths.quota.full", {
+                        form: t(`reincarnation.forms.${full.rebirth_form}`),
+                        used: String(full.used),
+                        limit: String(full.limit),
+                      })}
+                    </p>
+                  )}
                 </div>
               )}
               {dispositions.filter(d => !d.is_executed).map((disp) => (
@@ -92,7 +118,7 @@ export function SoulActionsCard({
                   size="lg"
                   className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading}
+                  disabled={!!actionLoading || !!full}
                 >
                   {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                 </Button>

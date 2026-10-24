@@ -98,6 +98,7 @@ jest.mock("@soulledger/core/api/ledger", () => ({
 }));
 
 const mockReborn = jest.fn();
+const mockQuota = jest.fn();
 const mockDispositionList = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
@@ -110,6 +111,7 @@ jest.mock("@soulledger/core/api", () => ({
   reincarnationApi: {
     list: jest.fn().mockResolvedValue({ data: { results: [] } }),
     reborn: (...args: unknown[]) => mockReborn(...args),
+    quota: (...args: unknown[]) => mockQuota(...args),
   },
   eventsApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
@@ -149,6 +151,7 @@ beforeEach(() => {
   mockSoulsGet.mockResolvedValue({ data: disposedSoul });
   mockDispositionList.mockResolvedValue({ data: { results: [pendingDisposition] } });
   mockReborn.mockResolvedValue({ data: {} });
+  mockQuota.mockResolvedValue({ data: [] });
 });
 
 describe("SoulDetailPage — rebirth form selection", () => {
@@ -187,5 +190,34 @@ describe("SoulDetailPage — rebirth form selection", () => {
     await waitFor(() => {
       expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("SoulDetailPage — monthly rebirth quota (第五十一批 Q-3)", () => {
+  it("a full path stays selectable, but its rebirth button is greyed with the refusal said beneath", async () => {
+    mockQuota.mockResolvedValue({ data: [{ rebirth_form: "HUMAN", limit: 20, used: 20 }] });
+    renderPage();
+
+    expect(await screen.findByTestId("rebirth-quota-full")).toHaveTextContent("rebirths.quota.full");
+    expect(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ })).toBeDisabled();
+    // 换一道没满的:句子消失,按钮回来。
+    fireEvent.click(screen.getByRole("radio", { name: "ANIMAL" }));
+    expect(screen.queryByTestId("rebirth-quota-full")).toBeNull();
+    expect(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ })).toBeEnabled();
+  });
+
+  it("a 409 rebirth_quota_full (taken meanwhile) leaves the sentence in the card, not a toast", async () => {
+    mockReborn.mockRejectedValue({
+      response: { status: 409, data: { code: "rebirth_quota_full", rebirth_form: "HUMAN", limit: 20, used: 20 } },
+    });
+    renderPage();
+
+    await screen.findByRole("radio", { name: "HUMAN" });
+    expect(screen.queryByTestId("rebirth-quota-full")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
+
+    expect(await screen.findByTestId("rebirth-quota-full")).toHaveTextContent("rebirths.quota.full");
+    expect(mockReborn).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ })).toBeDisabled();
   });
 });

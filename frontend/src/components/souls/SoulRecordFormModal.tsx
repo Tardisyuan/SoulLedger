@@ -21,6 +21,10 @@ import { useI18n } from "@/src/contexts/I18nContext";
  *
  * 事件日期是年 / 月 / 日三个数字框(年可为负 = 公元前,月日可空),与后端
  * `event_year / event_month / event_day` 一一对应;只在被动过时才随修改发出。
+ *
+ * 超度回向(第五十一批 D-1):不另开入口,类别选它弹层就地变形 —— 功过锁成功德;「证据来源」
+ * 换成必填的「来源(谁 · 何种法事)」(写进 `evidence_note`,也作事目);日期改称「法事日期」;
+ * 加一句说明。灵魂不在审判中 / 受刑中(后端只收 JUDGING / DISPOSED)时这一项置灰、写原因,不隐藏。
  */
 
 const RECORD_TYPES = ["MERIT", "DEMERIT"] as const;
@@ -30,6 +34,8 @@ const CATEGORIES = [
 ] as const;
 const LIFE_STAGES = ["CHILDHOOD", "YOUTH", "ADULTHOOD", "OLD_AGE"] as const;
 const EVIDENCE_SOURCES = ["REGISTRY", "WITNESS", "SELF_ACCOUNT", "OTHER"] as const;
+/** 超度回向只登给这两种状态的灵魂(`SoulRecordSerializer._check_dedication`)。 */
+const DEDICATION_STATES = ["JUDGING", "DISPOSED"];
 
 type FieldKey =
   | "category" | "description" | "weight" | "event_date" | "occurrence_count" | "statute"
@@ -84,9 +90,12 @@ export interface SoulRecordFormModalProps {
   civilization: string;
   /** 有 = 修改这一条;没有 = 新增。 */
   record?: LedgerRecord | null;
+  /** 灵魂此刻的状态与名字:超度回向只登给审判中 / 受刑中的灵魂,不符合时置灰并说是谁、现在是什么状态。没给就不拦。 */
+  soulState?: string;
+  soulName?: string;
 }
 
-export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, record }: SoulRecordFormModalProps) {
+export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, record, soulState, soulName }: SoulRecordFormModalProps) {
   const { t, locale } = useI18n();
   const formId = useId();
   const add = useAddSoulRecord();
@@ -128,8 +137,12 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     setStatuteId(record?.statute_snapshot?.statute_id ?? "");
     setClause(record ? clauseText(record.statute_clause) : "");
     setEvidenceSource(record?.evidence_source ?? "");
-    setEvidenceNote(record?.evidence_note ?? "");
+    // 超度回向的来源就是事目;旧记录没写 evidence_note 时从事目取。
+    setEvidenceNote(record?.evidence_note || (record?.category === "DEDICATION" ? record.description : ""));
   }, [isOpen, record]);
+
+  const dedication = category === "DEDICATION";
+  const dedicationAllowed = !soulState || DEDICATION_STATES.includes(soulState);
 
   const own = (statutes.data ?? []).filter((s) => s.civilization === civilization);
   const chosen = own.find((s) => s.id === statuteId);
@@ -160,7 +173,9 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     e.preventDefault();
     const next: Errors = {};
     const weightNumber = Number(weight);
-    if (!description.trim()) next.description = t("common.field_required");
+    if (dedication) {
+      if (!evidenceNote.trim()) next.evidence_note = t("common.field_required");
+    } else if (!description.trim()) next.description = t("common.field_required");
     if (!Number.isInteger(weightNumber) || weightNumber < 1 || weightNumber > 100) next.weight = t("ledger.book.form.weight_range");
     const code = chosen?.code ?? (statuteId ? record?.statute_snapshot?.code : undefined);
     const [y, m, d] = [dateYear.trim(), dateMonth.trim(), dateDay.trim()];
@@ -177,9 +192,9 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     if (Object.keys(next).length > 0) return;
 
     const data = {
-      record_type: recordType,
+      record_type: dedication ? "MERIT" : recordType,
       category,
-      description: description.trim(),
+      description: dedication ? evidenceNote.trim() : description.trim(),
       weight: weightNumber,
       occurrence_count: count.trim() ? Number(count) : null,
       statute_clause: clause && code ? `${code}:${clause}` : "",
@@ -257,9 +272,9 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label={t("ledger.book.form.type")}
-            value={recordType}
+            value={dedication ? "MERIT" : recordType}
             onChange={(e) => setRecordType(e.target.value)}
-            disabled={pending}
+            disabled={pending || dedication}
             options={RECORD_TYPES.map((v) => ({
               value: v,
               label: t(v === "MERIT" ? "ledger.book.col_merit" : "ledger.book.col_demerit"),
@@ -268,21 +283,50 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
           <SelectField
             label={t("ledger.journal.category")}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              if (e.target.value === "DEDICATION") setRecordType("MERIT");
+            }}
             disabled={pending}
             error={errors.category}
-            options={CATEGORIES.map((v) => ({ value: v, label: t(`souls.categories.${v}`) }))}
+            description={
+              dedicationAllowed
+                ? undefined
+                : t("souls.dedication.not_eligible", { name: soulName ?? "", state: t(`souls.states.${soulState}`) })
+            }
+            options={CATEGORIES.map((v) => ({
+              value: v,
+              label: t(`souls.categories.${v}`),
+              disabled: v === "DEDICATION" && !dedicationAllowed && record?.category !== "DEDICATION",
+            }))}
           />
         </div>
-        <TextAreaField
-          label={t("ledger.book.col_item")}
-          required
-          rows={2}
-          value={description}
-          onChange={(e) => { setDescription(e.target.value); clear("description"); }}
-          disabled={pending}
-          error={errors.description}
-        />
+        {dedication ? (
+          <p data-testid="dedication-body" className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">
+            {t("souls.dedication.body")}
+          </p>
+        ) : (
+          <TextAreaField
+            label={t("ledger.book.col_item")}
+            required
+            rows={2}
+            value={description}
+            onChange={(e) => { setDescription(e.target.value); clear("description"); }}
+            disabled={pending}
+            error={errors.description}
+          />
+        )}
+        {dedication && (
+          <TextAreaField
+            label={t("souls.dedication.source_label")}
+            required
+            rows={2}
+            value={evidenceNote}
+            onChange={(e) => { setEvidenceNote(e.target.value); clear("evidence_note"); }}
+            disabled={pending}
+            error={errors.evidence_note}
+          />
+        )}
         <div className="grid gap-4 md:grid-cols-2">
           <TextField
             label={t("ledger.figure_scale_weight")}
@@ -308,7 +352,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
         {/* 年可为负(公元前,-612 = 公元前 612 年);月、日可空,但日须有月、月须有年(后端同此规则)。 */}
         <div className="grid grid-cols-3 gap-4">
           <TextField
-            label={`${t("ledger.book.col_date")} · ${t("ledger.book.form.date_year")}`}
+            label={`${t(dedication ? "souls.dedication.date_label" : "ledger.book.col_date")} · ${t("ledger.book.form.date_year")}`}
             type="number"
             step={1}
             placeholder="-612"
@@ -366,6 +410,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
           disabled={pending}
           error={errors.occurrence_count}
         />
+        {!dedication && (
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label={t("ledger.book.form.evidence_source")}
@@ -384,6 +429,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             error={errors.evidence_note}
           />
         </div>
+        )}
       </form>
     </BaseModal>
   );

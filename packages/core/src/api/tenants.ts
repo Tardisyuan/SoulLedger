@@ -30,6 +30,8 @@ export const REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days";
 export const SOUL_EMAIL_SELF_SERVICE_SETTING = "soul_contact_email_self_service";
 /** 「到殿办理」三项的键名与最大长度 —— 与 `apps/tenants/models.py::VISIT_SETTINGS` 同一份。 */
 export const VISIT_SETTING_LIMITS = { visit_address: 80, visit_hours: 40, visit_phone: 40 } as const;
+/** `settings` 里转世月配额的键名({道: 每月上限},缺这一道 = 不限)—— 与 `apps/tenants/models.py::REBIRTH_QUOTA_SETTING` 同一个字符串。 */
+export const REBIRTH_QUOTA_SETTING = "rebirth_monthly_quota";
 /** `settings` 里「要求开启两步验证的角色」的键名 —— 与 `apps/authentication/mfa.py::MFA_REQUIRED_ROLES_SETTING` 同一个字符串。 */
 export const MFA_REQUIRED_ROLES_SETTING = "mfa_required_roles";
 
@@ -55,6 +57,8 @@ export interface TenantSettingsPatch {
   visit_hours?: string;
   visit_phone?: string;
   soul_contact_email_self_service?: boolean;
+  /** 转世月配额 {道: 上限}:`null` = 去掉那一道的上限(不限),0 = 本月不办这一道。后端按道合并,没列的道不动。 */
+  rebirth_monthly_quota?: Record<string, number | null>;
 }
 
 export const tenantsApi = {

@@ -175,6 +175,26 @@ describe("the other tabs have the same four states", () => {
     expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
   });
 
+  it("judgments: held in 枉死城 — the mark and 候至, no 认领 but 到期后可认领; past the date the button is back", async () => {
+    mockList.mockResolvedValue({
+      data: {
+        results: [
+          { id: "j7", case_number: "CN-7", soul_name: "王守仁", court: "十殿", is_final: false, untimely: true, held_until: "2999-11-03" },
+          { id: "j8", case_number: "CN-8", soul_name: "严嵩", court: "十殿", is_final: false, untimely: true, held_until: "2000-01-01" },
+        ],
+      },
+    });
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
+    const held = await screen.findByTestId("queue-row-j7");
+    expect(within(held).getByText("▢ 枉死 · 候至 2999-11-03")).toBeTruthy();
+    expect(screen.getByTestId("queue-held-j7")).toHaveTextContent("到期后可认领");
+    expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
+    const past = screen.getByTestId("queue-row-j8");
+    expect(within(past).getByText("▢ 枉死")).toBeTruthy();
+    expect(screen.getByTestId("queue-claim-j8")).toBeTruthy();
+  });
+
   it("「加载更多」 that fails says so under the list, and 重试 asks again", async () => {
     let fail = true;
     mockList.mockImplementation(async (params: { page?: string }) => {

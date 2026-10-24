@@ -91,3 +91,52 @@ describe("SoulEditModal", () => {
     expect(data.current_state).toBe("SETTLED");
   });
 });
+
+describe("SoulEditModal · 阳寿 (第五十一批 F-1)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const diyuSoul: Soul = {
+    ...aliveSoul,
+    id: "soul-3",
+    civilization: "CHINESE",
+    current_state: "JUDGING",
+    birth_date: { year: 1472, month: 10, day: 31 },
+    death_date: { year: 1529, month: 1, day: 9 },
+    fated_death_date: null,
+  };
+  const fatedBox = () => screen.getByLabelText("souls.fated_death_date · hall_settings.visit.optional");
+
+  it("地府: the fated date sits in the life-dates row, with its explanation", () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={diyuSoul} onUpdated={jest.fn()} />);
+    expect(fatedBox()).toHaveAttribute("type", "date");
+    expect(screen.getByText("souls.fated_death_help")).toBeInTheDocument();
+  });
+
+  it("other civilizations: neither the field nor its explanation, and nothing is sent", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={aliveSoul} onUpdated={jest.fn()} />);
+    expect(screen.queryByLabelText(/souls\.fated_death_date/)).toBeNull();
+    expect(screen.queryByText("souls.fated_death_help")).toBeNull();
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].data).not.toHaveProperty("fated_death_date");
+  });
+
+  it("death before the fated date: the preview line appears before saving; on or after it, it does not", () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={diyuSoul} onUpdated={jest.fn()} />);
+    expect(screen.queryByTestId("fated-death-preview")).toBeNull();
+    fireEvent.change(fatedBox(), { target: { value: "1531-06-18" } });
+    expect(screen.getByTestId("fated-death-preview")).toHaveTextContent("souls.fated_death_preview");
+    fireEvent.change(fatedBox(), { target: { value: "1529-01-09" } });
+    expect(screen.queryByTestId("fated-death-preview")).toBeNull();
+  });
+
+  it("sends the fated date only when it changed, and an untouched death date not at all", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={diyuSoul} onUpdated={jest.fn()} />);
+    fireEvent.change(fatedBox(), { target: { value: "1531-06-18" } });
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    const { data } = mockMutate.mock.calls[0][0];
+    expect(data.fated_death_date).toBe("1531-06-18");
+    expect(data).not.toHaveProperty("death_date");
+  });
+});

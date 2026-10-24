@@ -23,6 +23,7 @@ import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/ledgerJournal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
 
 /**
  * 功过总账 —— 规范 v2 补足 B10:按月日记账,页首四柱,**不分页**。
@@ -336,6 +337,8 @@ function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }
       </span>
       <span className="[grid-area:c] max-md:hidden text-xs text-[oklch(var(--color-ink-muted))] truncate" title={category}>
         {category}
+        {/* 超度回向(第五十一批 D-2):「⇠ 阳间」—— 这笔功德不是本人生前所做。 */}
+        {row.category === "DEDICATION" && <DedicationTag />}
       </span>
       <span className="[grid-area:m] text-xs text-[oklch(var(--color-ink-muted))] truncate" title={summary}>
         <span className="md:hidden font-mono">

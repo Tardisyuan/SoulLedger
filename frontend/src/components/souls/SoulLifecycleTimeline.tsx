@@ -6,6 +6,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
+import { DedicationTag } from "@/src/components/souls/SoulLedgerBook";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
 import type { Soul } from "@soulledger/core/api/souls";
 import type { SoulEvent } from "@soulledger/core/api/events";
@@ -287,6 +288,8 @@ export function SoulLifecycleTimeline({
                   <div className="text-sm text-[oklch(var(--color-ink))] truncate" title={row.title}>
                     {row.isMilestone && <span className="text-[oklch(var(--color-accent-ink))]">★ </span>}
                     {row.title}
+                    {/* 超度回向:同台账的写法,标题后一枚「⇠ 阳间」(第五十一批 D-2)。 */}
+                    {row.category_code === "DEDICATION" && <DedicationTag />}
                   </div>
                   <div className="text-xs text-[oklch(var(--color-ink-muted))] truncate" title={detail}>
                     {detail}
