@@ -183,6 +183,7 @@ export const NOTIFICATION_CATEGORIES = [
   "password_help",
   "dispatch",
   "letter_handoff",
+  "city_god",
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 export type NotificationChannel = "site" | "mail";

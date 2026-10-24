@@ -47,6 +47,7 @@ import type {
   SetNewPasswordRequest,
 } from "./auth";
 import type { components } from "./generated/schema";
+import type { AppealCompensation } from "../domain/appeals";
 
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
@@ -82,6 +83,12 @@ export type MeLife = Schemas["MeLife"];
 export type MeRecord = Schemas["MeRecord"];
 export type MeJudgment = Schemas["MeJudgment"];
 export type MeDisposition = Schemas["MeDisposition"];
+/** 审判申诉(第五十二批):本世已结案的审判能不能申诉,与灵魂自己的各轮。 */
+export type MeAppealableJudgment = Schemas["MeAppealableJudgment"];
+export type MeJudgmentAppeal = Omit<Schemas["MeJudgmentAppeal"], "compensations"> & {
+  compensations: AppealCompensation[];
+};
+export type MeJudgmentAppealList = { judgments: MeAppealableJudgment[]; results: MeJudgmentAppeal[] };
 export type MeReincarnation = Schemas["MeReincarnation"];
 /** 「我的受刑」:本人本世的计划,节点状态已按画布 1a 合并成灵魂看的几档(REMOVED 不出现)。 */
 export type MeSentencePlan = Schemas["MeSentencePlan"];
@@ -318,6 +325,14 @@ export const soulApi = {
   life: () => soulHttp.get<MeLife>("/me/life/").then((r) => r.data),
   pastLives: () => soulHttp.get<MeLife[]>("/me/past-lives/").then((r) => r.data),
   sentencePlan: () => soulHttp.get<MeSentencePlan>("/me/sentence-plan/").then((r) => r.data),
+  /** 审判申诉(第五十二批):本世已结案的审判(`can_appeal` / `refusal_code` / `deadline`)与各轮申诉。 */
+  judgmentAppeals: () => soulHttp.get<MeJudgmentAppealList>("/me/judgment-appeals/").then((r) => r.data),
+  /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable`。 */
+  fileJudgmentAppeal: (judgment: string, reason: string, evidence = "") =>
+    soulHttp.post<MeJudgmentAppeal>("/me/judgment-appeals/", { judgment, reason, evidence }).then((r) => r.data),
+  /** 待复核、复核中都可以撤回;撤回也算一次。409 `appeal_closed`。 */
+  withdrawJudgmentAppeal: (id: string) =>
+    soulHttp.post<MeJudgmentAppeal>(`/me/judgment-appeals/${id}/withdraw/`).then((r) => r.data),
   applications: () =>
     soulHttp.get<MeRebirthApplicationList>("/me/rebirth-applications/").then((r) => r.data),
   application: (id: string) =>
@@ -374,6 +389,20 @@ export const soulApi = {
  * (the appeal's, once there has been one). An appeal clears it; the first
  * rejection is kept apart in `first_rejection_reason` / `first_decided_at`.
  */
+/** 申诉被拒的原因 → `appeals.refusal.<code>`(列表的 `refusal_code` 与提交的 409 / 403 共用);别的 code 返回 null。 */
+export const APPEAL_REFUSAL_CODES = [
+  "appeal_open",
+  "appeal_rounds_used",
+  "appeal_window_closed",
+  "not_concluded",
+  "not_appealable",
+  "past_life_read_only",
+] as const;
+
+export function appealRefusalKey(code: string | null | undefined): string | null {
+  return code && (APPEAL_REFUSAL_CODES as readonly string[]).includes(code) ? `appeals.refusal.${code}` : null;
+}
+
 export function rejectionReasonOf(application: MeRebirthApplication): string {
   return application.rejection_reason ?? "";
 }

@@ -70,7 +70,7 @@ def test_the_city_gods_officers_are_told_after_commit(assigned, cn_tenant, djang
     with django_capture_on_commit_callbacks(execute=True):
         _dead(cn_tenant, "杭州")
     note = UserNotification.objects.get(user=assigned["clerk"])
-    assert note.params["kind"] == "city_god_case_received" and "杭州府城隍" in note.message
+    assert note.notification_type == "CITY_GOD_CASE_RECEIVED" and "杭州府城隍" in note.message
     assert not UserNotification.objects.filter(user=assigned["judge"]).exists()
 
 
@@ -141,7 +141,7 @@ def test_return_needs_a_note_tells_the_admins_and_can_still_be_sent_on(assigned,
     with django_capture_on_commit_callbacks(execute=True):
         returned = clerk.post(f"{CASES}{judgment.pk}/return/", {"note": "生辰不详"}, format="json")
     assert returned.status_code == 200 and returned.data["city_god_status"] == "RETURNED"
-    assert UserNotification.objects.get(user=assigned["lead"]).params["kind"] == "city_god_case_returned"
+    assert UserNotification.objects.get(user=assigned["lead"]).notification_type == "CITY_GOD_CASE_RETURNED"
     assert SoulEvent.objects.filter(soul=judgment.soul, event_type="CITY_GOD_RETURNED").count() == 1
     assert clerk.post(f"{CASES}{judgment.pk}/return/", {"note": "再退"}, format="json").status_code == 409
     with pytest.raises(ClaimRefusedError):
@@ -173,7 +173,8 @@ def test_a_hall_admin_manages_city_gods_and_assigns_officers(hall, cn_tenant):
     assert created.status_code == 201, created.data
     assert created.data["regions"] == ["临安"] and created.data["officers"][0]["id"] == hall["clerk"].pk
     taken = lead.post(GODS, {"name": "别的", "regions": ["杭州"]}, format="json")
-    assert taken.status_code == 400 and "regions" in taken.data
+    assert taken.status_code == 400 and taken.data["regions"]["code"] == "region_taken"
+    assert (taken.data["regions"]["region"], taken.data["regions"]["city_god"]) == ("杭州", "杭州府城隍")
     assert officer_client(hall["judge"]).post(GODS, {"name": "x"}, format="json").status_code == 403
     assert officer_client(hall["judge"]).get(GODS).data["count"] == 3
     judgment = _dead(cn_tenant, "杭州")
@@ -196,3 +197,72 @@ def test_city_gods_are_per_hall_and_only_in_diyu(hall, cn_tenant, eu_tenant):
                                              format="json")
     assert bad.status_code == 400 and "officer_ids" in bad.data
     assert not Judgment.objects.filter(city_god__tenant=eu_tenant).exists()
+
+
+# ── 第五十三批:Design 要的几处 ────────────────────────────────────────
+
+
+def test_a_case_names_the_region_that_decided_it_and_how_it_was_registered(assigned, cn_tenant):
+    clerk = officer_client(assigned["clerk"])
+    judgment = _dead(cn_tenant, "浙江省杭州市")
+    row = clerk.get(f"{CASES}{judgment.pk}/").data
+    assert (row["matched_region"], row["registered_via"]) == ("杭州", "OFFICER")
+    CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)
+    assert clerk.get(f"{CASES}{_dead(cn_tenant, '四川').pk}/").data["matched_region"] is None
+
+
+def test_the_editor_offers_the_halls_case_officers_to_admins_only(hall, cn_tenant, eu_tenant):
+    sp.officer("eu_judge", "JUDGE", eu_tenant)
+    choices = officer_client(hall["lead"]).get(f"{GODS}officer-choices/")
+    assert choices.status_code == 200
+    ids = {o["id"] for o in choices.data}
+    assert {hall["clerk"].pk, hall["judge"].pk} <= ids and all(claims.is_assignable(sp_user, cn_tenant.pk)
+                                                               for sp_user in _users(ids))
+    assert officer_client(hall["judge"]).get(f"{GODS}officer-choices/").status_code == 403
+
+
+def _users(ids):
+    from apps.authentication.models import User
+
+    return User.objects.filter(pk__in=ids)
+
+
+def test_a_returned_case_is_listed_first_and_cannot_be_returned_again(assigned, cn_tenant):
+    first, second = _dead(cn_tenant, "杭州"), _dead(cn_tenant, "杭州")
+    city_gods.return_case(second.pk, assigned["clerk"], "生辰不详")
+    ids = [r["id"] for r in officer_client(assigned["clerk"]).get(CASES).data["results"]]
+    assert ids == [str(second.pk), str(first.pk)]
+    detail = officer_client(assigned["clerk"]).get(f"{CASES}{second.pk}/").data
+    assert detail["returned_at"] and detail["city_god_note"] == "生辰不详"
+    assert officer_client(assigned["clerk"]).get(f"{CASES}{first.pk}/").data["returned_at"] is None
+    with pytest.raises(city_gods.CityGodRefusedError):
+        city_gods.return_case(second.pk, assigned["clerk"], "再退")
+
+
+def test_a_city_god_without_officers_tells_the_hall_admins(hall, cn_tenant, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        _dead(cn_tenant, "杭州")
+    note = UserNotification.objects.get(user=hall["lead"])
+    assert note.notification_type == "CITY_GOD_CASE_RECEIVED"
+    assert not UserNotification.objects.filter(user=hall["clerk"]).exists()
+
+
+def test_city_god_notices_can_be_switched_off(assigned, cn_tenant, django_capture_on_commit_callbacks):
+    assigned["clerk"].preferences = {"notifications": {"city_god": {"site": False}}}
+    assigned["clerk"].save(update_fields=["preferences"])
+    with django_capture_on_commit_callbacks(execute=True):
+        _dead(cn_tenant, "杭州")
+    assert not UserNotification.objects.filter(user=assigned["clerk"]).exists()
+
+
+def test_the_officer_todo_has_a_city_god_group_for_its_officers_only(assigned, cn_tenant):
+    from apps.officer_app import todo
+
+    first, second = _dead(cn_tenant, "杭州"), _dead(cn_tenant, "杭州")
+    city_gods.return_case(second.pk, assigned["clerk"], "生辰不详")
+    group = todo.build(assigned["clerk"])["city_god"]
+    assert group["count"] == 2 and [i["id"] for i in group["items"]] == [str(second.pk), str(first.pk)]
+    assert group["items"][0]["city_god_status"] == "RETURNED"
+    assert todo.build(assigned["lead"])["city_god"]["count"] == 0
+    city_gods.send_on(first.pk, assigned["clerk"])
+    assert todo.build(assigned["clerk"])["city_god"]["count"] == 1

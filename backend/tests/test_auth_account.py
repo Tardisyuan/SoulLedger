@@ -31,7 +31,7 @@ PREFS = "/api/v1/auth/profile/preferences/"
 #: A fresh account's notification table: site on, mail off, the two locked categories on both.
 DEFAULT_NOTIFICATIONS = {
     c: {"site": True, "mail": c in ("account_security", "password_help")}
-    for c in ("account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff")
+    for c in ("account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff", "city_god")
 }
 
 DEFAULT_REFRESH = timedelta(days=7)

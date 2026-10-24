@@ -993,6 +993,7 @@ class NotificationPrefsSerializer(_StrictSerializer):
     password_help = ChannelPrefsSerializer(required=False)
     dispatch = ChannelPrefsSerializer(required=False)
     letter_handoff = ChannelPrefsSerializer(required=False)
+    city_god = ChannelPrefsSerializer(required=False)
 
     def validate(self, attrs):
         from apps.notifications.categories import LOCKED

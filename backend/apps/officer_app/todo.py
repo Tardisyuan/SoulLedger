@@ -17,6 +17,10 @@
   (`apps/workflow/segments.py::pick_tasks`)。给本域能选站的判官;一个都没有时给殿管理员。流程已在门口等的排最前。
   条目的 target 是 `{"kind": "pick", "id": <流程 id>}`;选站本身在网页上做,没有单条详情。计入 `total()`。
   审批节点那一组也包括外域段里轮到我的站(`_workflows` 经 `segments.foreign_workflows` 放宽)。
+* 城隍初审(`city_god`,第五十三批 M-1):我名下城隍还在初审的案子(退回补正的在前,再按收案先后),
+  要 `judgment.execute`(与解送 / 退回同一个码名)。只给名下官员 —— 殿管理员也能办,但不进他们的待办(否则全殿的
+  案子都塞给每一位管理员),他们在网页队列里办。条目的 target 是 `{"kind": "city_god", "id": <审判 id>}`;
+  App 读 `judgment/city-god-cases/<id>/` 并复用那里的 `send_on` / `return`,没有单条详情。计入 `total()`。
 * 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
   「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
   所以这里的数与官员台翻到底的条数是同一个数。最早来信的在前(先来先回)。只读我们库里的列与 `last_from`,
@@ -49,7 +53,8 @@ from apps.workflow.models import (
 )
 
 LIST_LIMIT = 10
-KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter", "pick")
+KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter", "pick",
+         "city_god")
 
 
 def scope_of(user, request=None):
@@ -138,7 +143,25 @@ def _group(items, offset=0):
 # 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
 FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
             "rebirth": "rebirths", "letter": "letters", "sentence_change": "sentence_changes",
-            "unassigned_letter": "unassigned_letters", "pick": "pick_nodes"}
+            "unassigned_letter": "unassigned_letters", "pick": "pick_nodes", "city_god": "city_god"}
+
+
+def _city_god_items(scope):
+    """「城隍初审」:我名下城隍的待初审 + 退回补正,退回补正的在前。"""
+    from django.db.models import Case, IntegerField, Value, When
+
+    from apps.judgment.models import AT_CITY_GOD, CityGodStatus, Judgment
+
+    if not check_permission(scope.user, "judgment.execute"):
+        return []
+    returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
+                          output_field=IntegerField())
+    qs = (scope_to_tenant(Judgment.objects.all(), scope)
+          .filter(city_god__officers=scope.user, city_god_status__in=AT_CITY_GOD, verdict__isnull=True, is_final=False)
+          .select_related("soul", "city_god").order_by(returned_first, "created_at"))
+    return [_item("city_god", j.pk, j.soul.name, j.created_at, city_god_status=j.city_god_status,
+                  city_god_name=j.city_god.name, origin_location=j.soul.origin_location, untimely=j.untimely)
+            for j in qs]
 
 
 def _pick_items(scope):
@@ -202,7 +225,7 @@ def build(user, request=None, kind=None, offset=0):
                       for c in _letters(scope, unassigned=True)]
     groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
               "rebirths": rebirths, "letters": letters, "sentence_changes": sentence_changes,
-              "unassigned_letters": unassigned, "pick_nodes": _pick_items(scope)}
+              "unassigned_letters": unassigned, "pick_nodes": _pick_items(scope), "city_god": _city_god_items(scope)}
     if kind:
         return _group(groups[FIELD_OF[kind]], offset)
     return {field: _group(items) for field, items in groups.items()}

@@ -100,7 +100,8 @@ def _locale(user):
 #: 推送落到的条目 → 个人中心「通知」表的类别。按「站内」那一格(推送是站内通知的手机形态)。
 #: 没有 `target` 的推送(只有计数)不属于任何一类,照发。
 CATEGORY_OF_TARGET = {"approval": "approval", "rebirth": "approval", "cooldown": "approval",
-                      "reassignment": "dispatch", "letter": "letter_handoff", "pick": "approval"}
+                      "reassignment": "dispatch", "letter": "letter_handoff", "pick": "approval",
+                      "city_god": "city_god"}
 
 
 def send_to_user(user, sender=None, target=None):

@@ -3503,7 +3503,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列。 */
+        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
         get: operations["v1_judgment_appeals_list"];
         put?: never;
         post?: never;
@@ -3520,7 +3520,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列。 */
+        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
         get: operations["v1_judgment_appeals_retrieve"];
         put?: never;
         post?: never;
@@ -3738,6 +3738,26 @@ export interface paths {
         head?: never;
         /** @description 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。 */
         patch: operations["v1_judgment_city_gods_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/judgment/city-gods/officer-choices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 编辑抽屉里「名下官员」可选的人:本殿能办案的在职官员 —— 与 `officer_ids` 的校验、改派名单同一条规则
+         *     (`claims.is_assignable`)。没有租户的调用者(全局 ADMIN)答空表。
+         */
+        get: operations["v1_judgment_city_gods_officer_choices_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/judgment/courts/": {
@@ -10719,7 +10739,7 @@ export interface components {
             regions?: string[];
             is_default?: boolean;
             officer_ids?: number[];
-            readonly officers: unknown[];
+            readonly officers: components["schemas"]["CityGodOfficer"][];
             readonly open_case_count: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -10734,6 +10754,7 @@ export interface components {
             readonly soul: string;
             readonly soul_name: string;
             readonly origin_location: string;
+            readonly matched_region: string | null;
             /** Format: uuid */
             readonly city_god: string | null;
             readonly city_god_name: string;
@@ -10748,6 +10769,12 @@ export interface components {
             readonly held_until: string | null;
             /** Format: date-time */
             readonly created_at: string;
+            readonly registered_via: components["schemas"]["RegisteredViaEnum"];
+            /** Format: date-time */
+            readonly returned_at: string | null;
+            readonly soul_birth_year: number | null;
+            readonly soul_death_year: number | null;
+            readonly soul_fated_death_year: number | null;
             readonly can_act: boolean;
         };
         /**
@@ -10768,6 +10795,10 @@ export interface components {
             /** Format: uuid */
             city_god?: string;
             city_god_status?: string;
+        };
+        CityGodOfficer: {
+            id: number;
+            name: string;
         };
         CityGodReturn: {
             note: string;
@@ -12584,6 +12615,8 @@ export interface components {
             readonly judgment_notes: string;
             /** @description 作出原判的官员:界面据此把他的「认领复核」置灰(服务端照样拒,403 `original_judge`)。 */
             readonly original_officer_ids: number[];
+            /** Format: date-time */
+            readonly deadline: string | null;
         };
         JudgmentAppealCreate: {
             /** Format: uuid */
@@ -14053,6 +14086,7 @@ export interface components {
             password_help?: components["schemas"]["ChannelPrefs"];
             dispatch?: components["schemas"]["ChannelPrefs"];
             letter_handoff?: components["schemas"]["ChannelPrefs"];
+            city_god?: components["schemas"]["ChannelPrefs"];
         };
         NotificationSettings: {
             /** @description 转生申请:提交确认、申诉确认、结果 */
@@ -14100,9 +14134,11 @@ export interface components {
          *     * `IMPERSONATION_STARTED` - Impersonation Started
          *     * `DEATH_SYNC_RETRY_FAILED` - Death Sync Retry Failed
          *     * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
+         *     * `CITY_GOD_CASE_RECEIVED` - City God Case Received
+         *     * `CITY_GOD_CASE_RETURNED` - City God Case Returned
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED" | "CITY_GOD_CASE_RECEIVED" | "CITY_GOD_CASE_RETURNED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerAssistAsk: {
@@ -14500,6 +14536,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["CityGod"][];
+        };
+        PaginatedCityGodOfficerList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CityGodOfficer"][];
         };
         PaginatedCommentListList: {
             /** @example 123 */
@@ -15441,7 +15492,7 @@ export interface components {
             regions?: string[];
             is_default?: boolean;
             officer_ids?: number[];
-            readonly officers?: unknown[];
+            readonly officers?: components["schemas"]["CityGodOfficer"][];
             readonly open_case_count?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -17247,6 +17298,12 @@ export interface components {
             first_name?: string;
             last_name?: string;
         };
+        /**
+         * @description * `OFFICER` - OFFICER
+         *     * `DEATH_SYNC` - DEATH_SYNC
+         * @enum {string}
+         */
+        RegisteredViaEnum: "OFFICER" | "DEATH_SYNC";
         Reincarnation: {
             /** Format: uuid */
             readonly id: string;
@@ -18909,6 +18966,8 @@ export interface components {
             unassigned_letters: components["schemas"]["TodoGroup"];
             /** @description 待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。 */
             pick_nodes: components["schemas"]["TodoGroup"];
+            /** @description 城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。 */
+            city_god: components["schemas"]["TodoGroup"];
         };
         /** @description O-01:批准前要看清的申请内容。按类给字段,没有的不出现。 */
         TodoFacts: {
@@ -18983,6 +19042,14 @@ export interface components {
             gate_days?: number | null;
             /** @description 仅选站:轮到本域之前还有几站;已在门口时 null。 */
             stations_ahead?: number | null;
+            /** @description 仅城隍初审:PENDING / RETURNED。 */
+            city_god_status?: string;
+            /** @description 仅城隍初审:城隍名。 */
+            city_god_name?: string;
+            /** @description 仅城隍初审:出身地。 */
+            origin_location?: string;
+            /** @description 仅城隍初审:枉死。 */
+            untimely?: boolean;
         };
         /**
          * @description `state`:actionable / already_handled / deadline_passed / permission_changed
@@ -26156,6 +26223,8 @@ export interface operations {
                  *     * `WITHDRAWN` - 已撤回
                  */
                 status?: "AMENDED" | "IN_REVIEW" | "PENDING" | "UPHELD" | "WITHDRAWN";
+                /** @description Multiple values may be separated by commas. */
+                status__in?: string[];
             };
             header?: never;
             path?: never;
@@ -26766,6 +26835,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CityGod"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_officer_choices_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCityGodOfficerList"];
                 };
             };
         };
@@ -31109,7 +31204,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 只要这一组(加载更多) */
-                kind?: "approval" | "cooldown" | "letter" | "pick" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
+                kind?: "approval" | "city_god" | "cooldown" | "letter" | "pick" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
                 /** @description 与 kind 同用:从第几条起,默认 0 */
                 offset?: number;
             };

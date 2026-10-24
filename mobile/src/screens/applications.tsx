@@ -72,6 +72,8 @@ export type AppStackParams = {
   /** 受刑 1c. `landing`: opened from a tapped sentence push — the stations it names are marked 「新」 once. */
   Sentence: { landing?: SentenceLanding } | undefined;
   NewApplication: undefined;
+  /** 审判申诉的表单(第五十二批 A-2),从本世 › 审判那件卡片的「申诉 ›」进。 */
+  JudgmentAppeal: { judgment: string; caseNumber: string; verdict: string; deadline: string };
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
   Settings: undefined;

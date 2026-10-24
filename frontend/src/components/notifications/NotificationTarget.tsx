@@ -28,7 +28,13 @@ type NotificationRef = Pick<Notification, "related_resource" | "related_id" | "n
 /** related_resource → 目标。拿到 `null` 表示这条通知没有可去的页(缺 id、或类型不对)。 */
 export const NAVIGABLE: Record<string, (n: NotificationRef, id: string) => NotificationTarget | null> = {
   workflow: (_n, id) => (id ? { kind: "href", href: `/workflow/${id}`, label: "notifications.open_workflow" } : null),
-  judgment: (_n, id) => (id ? { kind: "href", href: `/judgment/${id}`, label: "notifications.open_case" } : null),
+  // 城隍收案 / 退回补正(第五十三批):落到初审队列并打开那件案子的抽屉(`?case=`)。
+  judgment: (n, id) =>
+    id
+      ? n.notification_type?.startsWith("CITY_GOD_CASE_")
+        ? { kind: "href", href: `/city-god-cases?case=${encodeURIComponent(id)}`, label: "notifications.open_case" }
+        : { kind: "href", href: `/judgment/${id}`, label: "notifications.open_case" }
+      : null,
   // 只认调度类通知:同一个资源名将来若挂到别的通知上,不该被当成「打开移交」。
   DispatchRecord: (n, id) =>
     id && n.notification_type?.startsWith("DISPATCH_")

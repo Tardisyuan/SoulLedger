@@ -42,6 +42,7 @@ const TABLE = {
   password_help: cell(true, true),
   dispatch: cell(true, false),
   letter_handoff: cell(true, false),
+  city_god: cell(true, false),
 };
 const PREFS = { default_view: null, onboarded: false, notifications: TABLE, email_locale: null };
 const withCell = (category: keyof typeof TABLE, value: { site: boolean; mail: boolean }) => ({
@@ -77,7 +78,7 @@ it("renders the table with the section titled 通知 and no old 邮件通知 swi
   await waitFor(() => expect(toggle).not.toBeDisabled());
   expect(screen.getByRole("heading", { name: /profile\.notifications\.title/ })).toBeInTheDocument();
   const table = screen.getByRole("table", { name: "profile.notifications.title" });
-  expect(within(table).getAllByRole("row")).toHaveLength(1 + 7); // header + seven categories (admin)
+  expect(within(table).getAllByRole("row")).toHaveLength(1 + 8); // header + eight categories (admin)
   // absence: neither the old switch nor its heading/note remain
   expect(screen.queryByRole("switch", { name: "profile.email_notifications" })).toBeNull();
   expect(screen.queryByText("profile.email_notifications")).toBeNull();
@@ -100,7 +101,7 @@ it("locked cells are disabled, checked and say 必收; the others are live switc
   }
   // approval_timeout's mail column is switchable, and so is every other cell
   expect(screen.getByRole("switch", { name: label("approval_timeout", "mail") })).not.toBeDisabled();
-  expect(screen.getAllByRole("switch").filter((el) => !(el as HTMLButtonElement).disabled)).toHaveLength(7 * 2 - 5);
+  expect(screen.getAllByRole("switch").filter((el) => !(el as HTMLButtonElement).disabled)).toHaveLength(8 * 2 - 5);
 });
 
 it("turning a mail cell on PATCHes only that cell plus the UI language; turning it off sends only the cell", async () => {
@@ -142,7 +143,7 @@ it("password help is shown to administrators only", async () => {
   renderPage({ username: "u", email: "u@example.com", role: "MODERATOR" });
   await screen.findByRole("switch", { name: label("approval", "mail") });
   const table = screen.getByRole("table", { name: "profile.notifications.title" });
-  expect(within(table).getAllByRole("row")).toHaveLength(1 + 6);
+  expect(within(table).getAllByRole("row")).toHaveLength(1 + 7);
   expect(screen.queryByText("profile.notifications.categories.password_help")).toBeNull();
 });
 

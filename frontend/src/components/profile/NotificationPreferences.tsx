@@ -22,6 +22,7 @@ const WITH_NOTE: readonly NotificationCategory[] = [
   "approval_timeout",
   "password_help",
   "dispatch",
+  "city_god",
 ];
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_80px_80px] items-center gap-3";

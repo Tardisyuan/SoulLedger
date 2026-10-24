@@ -327,7 +327,7 @@
       "SENTENCE_PLAN_CANCELLED": "受刑计划取消",
       "JUDGMENT_APPEAL_FILED": "提出申诉",
       "JUDGMENT_APPEAL_WITHDRAWN": "撤回申诉",
-      "JUDGMENT_APPEAL_DECIDED": "申诉复核结论",
+      "JUDGMENT_APPEAL_DECIDED": "申诉已复核",
       "CITY_GOD_RECEIVED": "城隍收案",
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正"
@@ -688,6 +688,9 @@
       "EUROPE": "欧洲",
       "ASIA": "亚洲",
       "UNKNOWN": "不详"
+    },
+    "compensation": {
+      "tag": "↺ 改判"
     }
   },
   "common": {
@@ -2172,7 +2175,11 @@
     "case_number": "案号",
     "close_blocked_title": "还有一场跨域审判没结束，暂时不能结案",
     "close_blocked_body": "{{name}} · {{date}} 召集 · 已入席 {{joined}} / {{total}}。召集人结束或取消后，这里就能结案。",
-    "close_blocked_link": "去跨域审判 ›"
+    "close_blocked_link": "去跨域审判 ›",
+    "error": {
+      "at_city_god": "城隍初审中，解送后才能认领、结案"
+    },
+    "at_city_god": "城隍初审中"
   },
   "audit": {
     "title": "审计日志",
@@ -2343,14 +2350,16 @@
         "reassign": "改派请求",
         "password_help": "密码求助",
         "dispatch": "移交",
-        "letter_handoff": "书信交接"
+        "letter_handoff": "书信交接",
+        "city_god": "城隍初审"
       },
       "notes": {
         "account_security": "别处登录、密码已改、两步验证变更、有人以你的身份查看",
         "approval": "有新的审批轮到你",
         "approval_timeout": "站内不能关，超时影响时限",
         "password_help": "只有管理员收",
-        "dispatch": "提出、批准、驳回、取消"
+        "dispatch": "提出、批准、驳回、取消",
+        "city_god": "收案待初审、退回补正"
       }
     },
     "email_notifications_no_address": "账号没有邮箱，开启后也不会发送。",
@@ -3876,7 +3885,10 @@
       "moderation": "朋友圈审核",
       "recycle_bin": "回收站",
       "sentence_plans": "受刑计划",
-      "group_rebirth": "轮回"
+      "group_rebirth": "轮回",
+      "judgment_appeals": "申诉复核",
+      "city_gods": "城隍",
+      "city_god_cases": "城隍初审"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -5161,7 +5173,7 @@
     },
     "appeal_amended": {
       "title": "申诉复核:已改判",
-      "body": "你的申诉已复核，原判已改。打开灵魂簿查看。"
+      "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"
     },
     "disposition_executed": {
       "title": "处置已执行",
@@ -5471,7 +5483,7 @@
     },
     "city_god_case_returned": {
       "title": "城隍退回补正",
-      "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需补正资料。经办：{{by}}。批语：{{reason}}"
+      "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"
     },
     "workflow_pick_nodes": {
       "title": "请为本域选站",
@@ -6492,7 +6504,8 @@
         "rebirths": "转生申请",
         "letters": "待回书信",
         "unassigned_letters": "未分配的书信",
-        "pick_nodes": "待我选站"
+        "pick_nodes": "待我选站",
+        "city_god": "城隍初审"
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。",
@@ -6858,6 +6871,9 @@
     "dispatch": {
       "approved_next": "已批准。接收方殿还要在电脑上执行一次，灵魂才会动身。",
       "awaiting_receiver": "◐ 等接收方执行"
+    },
+    "appeals": {
+      "desk_only": "复核在网页上进行"
     }
   },
   "print": {
@@ -6993,5 +7009,157 @@
     "soul_email_self": "允许灵魂自己改联系邮箱",
     "soul_email_on": "开：灵魂在 App 里输密码后自己改，验证码发到新邮箱，旧邮箱收到通知。",
     "soul_email_off": "关：App 里显示「要改联系邮箱，请到本殿，带上交付单」,由官员在灵魂账号里改。"
+  },
+  "appeals": {
+    "status": {
+      "PENDING": "待复核",
+      "IN_REVIEW": "复核中",
+      "UPHELD": "维持原判",
+      "AMENDED": "已改判",
+      "WITHDRAWN": "已撤回"
+    },
+    "round": "第 {{round}} 次申诉",
+    "deadline": "{{date}} 前可申诉",
+    "refusal": {
+      "appeal_open": "已有一份申诉在复核中",
+      "appeal_rounds_used": "两次申诉已用完",
+      "appeal_window_closed": "申诉期已于 {{date}} 截止",
+      "not_concluded": "这件审判还没结案，结案后才能申诉",
+      "not_appealable": "这件审判不能申诉",
+      "past_life_read_only": "前世的审判只能查看，不能申诉"
+    },
+    "file": "申诉",
+    "file_title": "对这件审判申诉",
+    "file_body": "由另一位判官复核。每件审判最多申诉两次，撤回也算一次。",
+    "reason_label": "理由",
+    "reason_required": "请写理由",
+    "evidence_label": "新证据 · 选填",
+    "submit": "提交申诉",
+    "submitted_toast": "申诉已提交",
+    "withdraw": "撤回",
+    "withdraw_title": "撤回这次申诉？",
+    "withdraw_body": "撤回也算一次。撤回后，这件审判还能申诉 {{left}} 次。",
+    "withdraw_body_last": "撤回也算一次。这是第二次，撤回后这件审判不能再申诉。",
+    "withdrawn_toast": "申诉已撤回",
+    "original_verdict": "原判",
+    "new_verdict": "新判",
+    "verdict_change": "{{from}} → {{to}}",
+    "decision_note": "复核意见",
+    "compensation": "改判补偿",
+    "compensation_row": "第 {{order}} 站 · 功德 {{weight}}",
+    "compensation_hint": "已经受过刑的每一站各记一笔功德，已计入功过簿。",
+    "decided_at": "{{date}} 复核",
+    "queue_title": "申诉复核",
+    "queue_empty": "没有待复核的申诉",
+    "col": {
+      "round": "轮次",
+      "filed_at": "提出时间",
+      "deadline": "距截止",
+      "reviewer": "复核人"
+    },
+    "claim": "认领复核",
+    "claimed_toast": "已认领，这份申诉由你复核",
+    "claim_disabled_original": "你作出了原判，这份申诉要由另一位官员复核",
+    "decide_action": "作出结论",
+    "decide_title": "复核结论 · {{case}}",
+    "uphold": "维持原判",
+    "amend": "改判",
+    "pick_verdict": "选新裁决",
+    "note_required": "请写复核意见，灵魂会看到",
+    "amend_impact": "改判后，受刑计划里还没执行的站改按新裁决；已经执行的每一站，给灵魂记一笔补偿功德。",
+    "decided_toast": "结论已发出，灵魂会收到通知",
+    "error": {
+      "plan_in_transit": "灵魂正在去下一站，或在外地、那一站还没执行。等那一站执行后再作结论。",
+      "plan_busy": "受刑计划正在重审、永久挂起，或有请求等原审判官决定，现在不能改判。",
+      "already_claimed": "这份申诉已由其他官员认领",
+      "original_judge": "你作出了原判，不能复核",
+      "not_reviewer": "只有认领的复核人能作出结论",
+      "appeal_closed": "这份申诉已有结论或已撤回",
+      "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。"
+    },
+    "decide": {
+      "foreign_title": "联审带来的外地站",
+      "foreign_hint": "这几站还没开始，是联审带进来的。改判不会替你处理它们：请选全部保留，还是全部撤掉。",
+      "foreign_keep": "全部保留",
+      "foreign_remove": "全部撤掉",
+      "foreign_required": "请决定这些外地站保留还是撤掉"
+    }
+  },
+  "cityGods": {
+    "title": "城隍",
+    "empty": "本殿还没有设城隍。没设城隍时，死亡登记直接进十殿。",
+    "explain": "出身地写了好几处地名时，交给写在最后的那个；一个都没写中，交兜底城隍；没有兜底，直接进十殿。",
+    "name": "名字",
+    "regions": "管的地名",
+    "regions_hint": "一个地名一个，回车加入；只写地名本身，例如「临安」，不写「县」「府」也可以。",
+    "is_default": "设为本殿兜底城隍",
+    "default_badge": "兜底",
+    "default_hint": "出身地没写中任何一位时交给它；本殿不设兜底，这些案子直接进十殿。",
+    "officers": "名下官员",
+    "officers_hint": "本殿能办案的官员，和改派弹层同一份名单。殿管理员不在名下也能办。",
+    "open_cases": "{{count}} 件在初审",
+    "create": "新建城隍",
+    "edit": "编辑",
+    "delete": "删除",
+    "delete_confirm": "删除{{name}}？名下官员的分工会一起去掉；它管的地名以后交兜底或直接进十殿。",
+    "saved_toast": "城隍已保存",
+    "deleted_toast": "城隍已删除",
+    "error": {
+      "region_taken": "「{{region}}」已归{{city_god}}管，一个地名只能属于一位城隍",
+      "default_taken": "本殿的兜底城隍已是{{city_god}}，先取消它再设这一位",
+      "name_taken": "本殿已有一位叫「{{name}}」的城隍",
+      "invalid_officer": "这位官员不在本殿能办案的名单里",
+      "city_god_has_open_cases": "{{name}}名下还有 {{count}} 件没解送，先解送或改交再删",
+      "city_gods_diyu_only": "只有地府的殿能设城隍"
+    },
+    "no_officers": "名下没有官员：这位城隍的案子只有殿管理员能办",
+    "default_regions": "没写中任何一位的案子",
+    "default_current": "现在的兜底城隍：{{name}}",
+    "default_none": "本殿现在没有兜底城隍",
+    "go_to_queue": "去初审队列"
+  },
+  "cityGodCases": {
+    "title": "城隍初审",
+    "empty": "没有在初审的案子",
+    "only_mine": "只看我的城隍",
+    "filter_city_god": "城隍 · 全部",
+    "status": {
+      "PENDING": "待初审",
+      "RETURNED": "退回补正",
+      "SENT_ON": "已解送"
+    },
+    "origin_location": "出身地",
+    "untimely_badge": "枉死",
+    "source": {
+      "manual": "官员登记",
+      "death_sync": "死亡同步"
+    },
+    "send_on": "解送十殿",
+    "send_on_note": "批语 · 选填",
+    "sent_on_toast": "已解送，案子进了十殿的队列",
+    "return": "退回补正",
+    "return_note": "补正什么",
+    "return_note_required": "请写明要补正什么",
+    "return_hint": "会通知本殿管理员。补好之后，由同一位城隍解送。",
+    "returned_toast": "已退回，本殿管理员会收到通知",
+    "transfer": "改交",
+    "transfer_pick": "交给哪一位城隍",
+    "transferred_toast": "已改交{{city_god}}，回到待初审",
+    "cannot_act": "你不在这位城隍名下",
+    "sent_on_line": "{{city_god}} 初审 · {{date}} 解送",
+    "returned_line": "{{city_god}} 退回补正 · {{date}}",
+    "transferred_from": "由{{city_god}}改交",
+    "error": {
+      "not_at_city_god": "这件案子已经不在城隍处",
+      "not_city_god_officer": "你不在这位城隍名下，不能办",
+      "invalid_city_god": "请选本殿的另一位城隍",
+      "not_pending": "这件案子刚有人处理过，已刷新"
+    },
+    "tab_open": "在初审",
+    "registered_at": "登记时间",
+    "registered_via": "登记来源",
+    "life": "生卒",
+    "go_to_review": "去初审 →",
+    "transfer_on_web": "改交在网页上办"
   }
 }

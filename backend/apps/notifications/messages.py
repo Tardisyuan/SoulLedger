@@ -66,7 +66,7 @@ MESSAGES = {
         "assistant_cap_closed": {"title": "助手已自动关闭:本月花费到达上限", "body": "本月估算花费 {{spent}} 已到上限 {{cap}},助手总开关已自动关闭。次月 1 日早上 8 点(北京时间)会自动重开;也可以到「助手管理」页调高上限后手动打开。"},
         "assistant_reopened": {"title": "助手已自动重开:新的一个月", "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"},
         "city_god_case_received": {"title": "城隍收案待初审", "body": "灵魂「{{soul}}」的案子已交到{{city_god}}，等待初审。"},
-        "city_god_case_returned": {"title": "城隍退回补正", "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需补正资料。经办：{{by}}。批语：{{reason}}"},
+        "city_god_case_returned": {"title": "城隍退回补正", "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"},
     },
     "en": {
         "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
@@ -127,8 +127,8 @@ MESSAGES = {
         "assistant_cap_warning": {"title": "Assistant spend at 80% of this month's cap", "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."},
         "assistant_cap_closed": {"title": "Assistant switched off: monthly cap reached", "body": "Estimated spend this month, {{spent}}, has reached the cap of {{cap}}, and the assistant master switch is off. It switches back on by itself on the 1st at 8:00 Beijing time, or raise the cap on the Assistant admin page and switch it on by hand."},
         "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
-        "city_god_case_received": {"title": "New case for the city god", "body": "The case of {{soul}} has been sent to {{city_god}} for preliminary review."},
-        "city_god_case_returned": {"title": "Case returned by the city god", "body": "{{city_god}} returned the case of {{soul}} for missing information. By {{by}}. Note: {{reason}}"},
+        "city_god_case_received": {"title": "New case for first review", "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."},
+        "city_god_case_returned": {"title": "Case returned for correction", "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"},
     },
     "egy": {
         "password_help_requested": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
@@ -183,6 +183,8 @@ MESSAGES = {
         "rebirth_status_appealing": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Em Nehet."},
         "rebirth_status_appeal_rejected": {"title": "Dbh Wehem Mesut · Kheperu Mawy", "body": "Dbh Wehem Mesut-Ek: Nehet Khesef Seth."},
         "soul_account_provisioning_failed": {"title": "Aq Ba Nen Iri", "body": "{{soul}}: Sesh Mut Seth; Aq Ba Nen Iri. Iri {{command}}: Aq Ba Iri."},
+        "city_god_case_received": {"title": "Chenghuang: Sep Mawy · Nen Maa Djer", "body": "{{soul}}: Sep Iyi Er {{city_god}} · Nen Maa Djer."},
+        "city_god_case_returned": {"title": "Chenghuang Khesef Er Khemen", "body": "{{city_god}}: Sep {{soul}} Khesef Er Khemen. Sab: {{by}}. Khet: {{reason}}"},
     },
 }
 
@@ -211,6 +213,9 @@ KIND_BY_TYPE = {
     "WORKFLOW_ASSIGNED": "workflow_assigned",
     "JUDGMENT_CONCLUDED": "cross_judgment_concluded",
     "JUDGMENT_CLAIM_CHANGED": "judgment_reassigned_away",
+    # 城隍初审:收案(给这位城隍名下的官员,没有就给本殿管理员)与退回补正(给本殿管理员),`apps/judgment/city_gods.py`。
+    "CITY_GOD_CASE_RECEIVED": "city_god_case_received",
+    "CITY_GOD_CASE_RETURNED": "city_god_case_returned",
 }
 
 #: `SYSTEM` 类型没有自己的文案键(它是各种运维消息的兜底类型);发送方把下面之一写进 `params["kind"]`
@@ -223,8 +228,6 @@ SYSTEM_KINDS = {
     "cooldown_decided_approved", "cooldown_decided_rejected",
     # 助手花费上限的三种提醒(`apps/soul_assist/usage.py`)。
     "assistant_cap_warning", "assistant_cap_closed", "assistant_reopened",
-    # 城隍初审:收案(给这位城隍名下的官员)与退回补正(给本殿管理员),`apps/judgment/city_gods.py`。
-    "city_god_case_received", "city_god_case_returned",
 }
 
 

@@ -18,7 +18,7 @@ import { workflowApi } from "@soulledger/core/api/workflow";
 import { TENANT_CODE_TO_CIVILIZATION, realmLabel } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
 
-export const TODO_KINDS: readonly TodoKind[] = ["pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
+export const TODO_KINDS: readonly TodoKind[] = ["city_god", "pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
 
 /** Kinds that are only read on the phone (Design 第四十批 O-f): no detail, the group's bar says 「在电脑上处理」. */
 export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
@@ -47,6 +47,8 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
  * flow. Its rows open the pick page (`screens/pick.tsx`), keyed by the workflow.
  */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
+  // 城隍初审(第五十三批 M-1):只给名下官员,退回补正的在前(后端排)。案子先过城隍再到十殿,所以排第一。
+  { field: "city_god", kind: "city_god", label: "officer_app.todo.groups.city_god" },
   { field: "pick_nodes", kind: "pick", label: "officer_app.todo.groups.pick_nodes" },
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },
   { field: "reassignments", kind: "reassignment", label: "officer_app.todo.groups.reassignments" },
@@ -465,6 +467,8 @@ export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: str
       return `/workflow/${target.id}`;
     case "reassignment":
       return `/dispatch/${target.id}`;
+    case "city_god":
+      return `/city-god-cases?case=${target.id}`;
     case "cooldown":
     case "rebirth":
       return "/rebirth-applications";

@@ -4,7 +4,7 @@
   码名沿用审判那一族:看是 `judgment.read`,认领与决定是 `judgment.execute`(与结案同一个)。
 * 灵魂:`/api/v1/me/judgment-appeals/` —— 本人本世可申诉的审判、提出、撤回。只从 `self.account` 出发。
 """
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -24,6 +24,11 @@ class AppealCompensationSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     weight = serializers.IntegerField()
     description = serializers.CharField()
+    #: 受刑计划里的第几站;原处置(不在计划里)为 null。
+    order = serializers.SerializerMethodField()
+
+    def get_order(self, obj) -> int | None:
+        return (obj.evidence_json or {}).get("station_order")
 
 
 class _AppealBase(serializers.ModelSerializer):
@@ -50,12 +55,18 @@ class JudgmentAppealSerializer(_AppealBase):
     reviewer_name = serializers.SerializerMethodField()
     judgment_notes = serializers.CharField(source="judgment.notes", read_only=True)
     original_officer_ids = serializers.SerializerMethodField()
+    #: 申诉期截止(`appeals.deadline`:第二次申诉从第一次的结论算)。
+    deadline = serializers.SerializerMethodField()
 
     class Meta:
         model = JudgmentAppeal
         fields = (*_AppealBase.FIELDS, "soul", "soul_name", "reviewer", "reviewer_name", "claimed_at",
-                  "judgment_notes", "original_officer_ids")
+                  "judgment_notes", "original_officer_ids", "deadline")
         read_only_fields = fields
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_deadline(self, obj):
+        return serializers.DateTimeField().to_representation(appeals.deadline(obj.judgment))
 
     def get_reviewer_name(self, obj) -> str | None:
         return (obj.reviewer.display_name or obj.reviewer.username) if obj.reviewer_id else None
@@ -119,14 +130,14 @@ _REFUSALS = {403: JudgmentClaimRefusalSerializer, 404: JudgmentClaimRefusalSeria
 
 class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin,
                             mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """本殿的申诉。`?status=PENDING` 是待复核队列。"""
+    """本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
     extra_permissions = {"claim": ["judgment.execute"], "decide": ["judgment.execute"]}
     queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer").all()
     serializer_class = JudgmentAppealSerializer
-    filterset_fields = ["status"]
+    filterset_fields = {"status": ["exact", "in"]}
 
     def _answer(self, run):
         appeal = self.get_object()  # 别的殿的申诉在这里就是 404
