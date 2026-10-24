@@ -60,6 +60,8 @@ export const soulCreateSchema = z.object({
 export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   birth_date: z.string().optional().nullable(),
+  death_date: z.string().optional().nullable(),
+  fated_death_date: z.string().optional().nullable(),
   origin_location: z.string().max(200, '地点最多200位').optional(),
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   // Includes SETTLED even though nothing lets an operator pick it (it is the
