@@ -101,6 +101,9 @@ class JudgmentAppealDecideSerializer(serializers.Serializer):
     outcome = serializers.ChoiceField(choices=[AppealStatus.UPHELD, AppealStatus.AMENDED])
     verdict = serializers.ChoiceField(choices=Verdict.choices, required=False)
     note = serializers.CharField(max_length=2000, trim_whitespace=True)
+    #: 改判时联审带进来、还没开始的外地站:撤掉(false)还是保留(true)。有这样的站时必填(2026-10-24 用户决定:
+    #: 由复审判官在改判时决定),没有时忽略。
+    keep_foreign_stops = serializers.BooleanField(required=False, allow_null=True, default=None)
 
     def validate(self, attrs):
         if attrs["outcome"] == AppealStatus.AMENDED and not attrs.get("verdict"):
@@ -147,7 +150,7 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         body = JudgmentAppealDecideSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        return self._answer(lambda pk: appeals.decide(pk, request.user, outcome=data["outcome"], note=data["note"],
+        return self._answer(lambda pk: appeals.decide(pk, request.user, outcome=data["outcome"], note=data["note"], keep_foreign_stops=data.get("keep_foreign_stops"),
                                                       verdict=data.get("verdict")))
 
 

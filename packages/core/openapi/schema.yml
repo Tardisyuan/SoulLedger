@@ -27389,6 +27389,9 @@ components:
         note:
           type: string
           maxLength: 2000
+        keep_foreign_stops:
+          type: boolean
+          nullable: true
       required:
       - note
       - outcome

@@ -81,6 +81,15 @@ def test_the_window_closes_thirty_days_after_the_conclusion(case):
     assert _file(case).status_code == 201
 
 
+def test_the_second_window_runs_from_the_first_appeals_decision(case):
+    """2026-10-24: the second appeal's 30 days start when the first one is decided, not at the conclusion."""
+    assert _file(case).status_code == 201
+    assert _claim_and_decide(case, "UPHELD").status_code == 200
+    judgment = case["judgment"]
+    Judgment.all_objects.filter(pk=judgment.pk).update(concluded_at=timezone.now() - timedelta(days=60))
+    assert _file(case).status_code == 201
+
+
 def test_at_most_two_rounds_and_a_withdrawn_one_counts(case):
     for expected_round in (1, 2):
         filed = _file(case)
@@ -183,8 +192,13 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
     assert filed.status_code == 201, filed.data
     reviewer = officer_client(sp.officer("reviewer", "JUDGE", cn_tenant))
     assert reviewer.post(f"{HALL}{filed.data['id']}/claim/").status_code == 200
+    # A not-yet-started foreign stop: the reviewing judge must say whether it stays (2026-10-24).
+    asked = reviewer.post(f"{HALL}{filed.data['id']}/decide/",
+                          {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
+    assert asked.status_code == 400 and asked.data["code"] == "foreign_stops_choice_required", asked.data
     response = reviewer.post(f"{HALL}{filed.data['id']}/decide/",
-                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改"}, format="json")
+                             {"outcome": "AMENDED", "verdict": "PASSED", "note": "改", "keep_foreign_stops": False},
+                             format="json")
     assert response.status_code == 200, response.data
     assert len(response.data["compensations"]) == 1
     compensation = SoulRecord.objects.get(soul=soul, category=RecordCategory.COMPENSATION)

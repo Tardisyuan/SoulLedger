@@ -32,7 +32,13 @@ class AppealRefusedError(ClaimRefusedError):
 
 
 def deadline(judgment):
-    return judgment.concluded_at + timedelta(days=APPEAL_WINDOW_DAYS) if judgment.concluded_at else None
+    """30 days from the judgment's conclusion — or, for a second appeal, from the first appeal's decision
+    (2026-10-24 user decision: a slow review must not eat the second chance)."""
+    if not judgment.concluded_at:
+        return None
+    last = (JudgmentAppeal.all_objects.filter(judgment_id=judgment.pk, is_deleted=False, decided_at__isnull=False)
+            .order_by("-decided_at").values_list("decided_at", flat=True).first())
+    return max(judgment.concluded_at, last or judgment.concluded_at) + timedelta(days=APPEAL_WINDOW_DAYS)
 
 
 def original_officers(judgment):
@@ -145,7 +151,7 @@ def claim(appeal_id, user):
     return appeal
 
 
-def decide(appeal_id, user, *, outcome, note, verdict=None):
+def decide(appeal_id, user, *, outcome, note, verdict=None, keep_foreign_stops=None):
     """维持或改判。只有认领了它的复核人能决定(403 `not_reviewer`)。
 
     锁序:灵魂 → 申诉 → 计划 → 节点 → 处置 → 审判。改判的事务里:审判换成新裁决、计划改按新裁决、
@@ -175,7 +181,7 @@ def decide(appeal_id, user, *, outcome, note, verdict=None):
                 raise AppealRefusedError("The new verdict is the one already given; uphold instead.",
                                          "verdict_unchanged", status=400)
             try:
-                executed = plan_requests.amend_for_appeal(soul, judgment, verdict)
+                executed = plan_requests.amend_for_appeal(soul, judgment, verdict, keep_foreign=keep_foreign_stops)
             except plan_requests.PlanChangeRefusedError as exc:
                 raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
             judgment = _lock_judgment(appeal.judgment_id)
@@ -194,12 +200,20 @@ def decide(appeal_id, user, *, outcome, note, verdict=None):
     return appeal
 
 
+#: 已执行刑期折补偿:每多少年折 1 点功德,按处置所在的文明(2026-10-24 用户决定按文明分别折算)。
+#: 刑期的量级差得多:地府、炼狱以十年、百年计,希腊厄尔神话是千年一轮,埃及的处置多不记年数。
+#: 取值是起点，不是考据结论;改这张表即可。永久刑期一律记上限 100(SoulRecord.weight 是 1–100)。
+YEARS_PER_COMPENSATION_POINT = {"CHINESE": 10, "EUROPEAN": 10, "GREEK": 100, "EGYPTIAN": 1}
+
+
 def compensation_weight(disposition):
-    # ponytail: 1 点功德 / 已执行的 1 年刑期,永久刑期与没记刑期的按上限 / 下限(SoulRecord.weight 是 1–100)。
-    # 补偿该怎么折算是产品问题;要分文明折算时换掉这一个函数。
+    from apps.souls.models import TENANT_CIVILIZATION
+
     if disposition.is_eternal:
         return 100
-    return min(100, max(1, disposition.sentence_years or 1))
+    civ = TENANT_CIVILIZATION.get(getattr(disposition.tenant, "code", ""), None)
+    per_point = YEARS_PER_COMPENSATION_POINT.get(getattr(civ, "value", civ), 1)
+    return min(100, max(1, round((disposition.sentence_years or 0) / per_point)))
 
 
 def _compensate(soul, judgment, appeal, executed):
