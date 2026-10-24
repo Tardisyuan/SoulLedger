@@ -110,6 +110,7 @@ SITES = [
     ('apps/judgment/claims.py', '_lock_many', 'Judgment.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/judgment/appeals.py', '_lock_appeal', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks one appeal by pk; the officer view reached it through get_object() (tenant-scoped), the soul path checked soul ownership first'),
     ('apps/judgment/appeals.py', '_lock_judgment', 'Judgment.all_objects', 1, 'LOCK', "locks the appealed judgment by pk after the caller checked it is the soul's own (file) or the appeal's (decide)"),
+    ('apps/judgment/appeals.py', 'deadline', 'JudgmentAppeal.all_objects', 1, 'PK', 'the latest decided appeal of one judgment the caller already holds (the second window starts there)'),
     ('apps/judgment/appeals.py', 'appeal_refusal', 'JudgmentAppeal.all_objects', 1, 'PK', 'rounds and open appeals of one judgment the caller already holds'),
     ('apps/judgment/appeals.py', 'claim', 'Judgment.all_objects', 1, 'PK', "the appeal's own judgment by its FK, to read who decided it"),
     ('apps/judgment/appeals.py', 'decide', 'Judgment.all_objects', 1, 'PK', "the appeal's own judgment by its FK"),

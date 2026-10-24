@@ -52,6 +52,8 @@ UNIQUE_KEYS = {
     'disposition.Disposition:judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.EvidenceAdmission:unique_admission_judgment_record': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.JudgmentCitation:unique_citation_judgment_statute': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'judgment.JudgmentAppeal:unique_appeal_round': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'judgment.JudgmentAppeal:unique_open_appeal_per_judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'menus.MenuButton:unique_menubutton_menu_code': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'notifications.NotificationEmail:notification': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'perm.FieldPermission:unique_together(role,model_name,field_name)': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
