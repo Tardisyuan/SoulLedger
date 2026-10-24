@@ -494,14 +494,18 @@ EUROPEAN_REALMS = [
 #   * Styx and Cocytus are named in Aeneid 6 (6.295-297, 6.323) but nothing is
 #     ferried across them or sentenced beside them in this system, so a row for
 #     either would be a name with no traffic.
-#   * Lethe is the live one and is deliberately left for a separate change.
+#   * Lethe gets no row of its own: it is a memory-reset mechanism on the
+#     rebirth path, not a place anyone is ferried to or sentenced beside.
 #     Virgil has souls drink it before returning to bodies (6.713-715) and
 #     Republic X has the same act at the river Ameles on the plain of Lethe
 #     (621a-b) — so both halves of the basis agree, and Greek souls in this
-#     system *are* rebirth-capable. But every Greek realm carries
-#     `memory_reset_mechanism="NONE"`, and changing that is a statement about
-#     the rebirth path rather than about the map. Recorded here so the next
-#     reader finds a decision rather than an oversight.
+#     system *are* rebirth-capable. That is recorded on the realms instead:
+#     the two destinations, GR_ISLES_OF_THE_BLESSED and GR_TARTARUS, carry
+#     `memory_reset_mechanism="LETHE"`, while EU_PLATO_MEADOW and GR_ACHERON
+#     carry "NONE" because nobody is sentenced to either (see the comment
+#     above GR_ISLES_OF_THE_BLESSED). An earlier version of this note said
+#     every Greek realm carried NONE; that stopped being true when the two
+#     destinations took LETHE.
 #
 # CODES. The meadow keeps `EU_PLATO_MEADOW`. Its code records where the row was
 # first written, not what it now belongs to, and renaming a `realm_code` is not
