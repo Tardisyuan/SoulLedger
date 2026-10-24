@@ -431,4 +431,13 @@ describe("lost / recall state changes (batch 50 T-1)", () => {
     expect(rows[0].metadata).toBe("押送途中走失 · by:cui");
     expect(filterRows(rows, "all", false)).toHaveLength(2);
   });
+  it("with 含系统事件 ticked, a lost / recall move is not drawn a second time as a system row", () => {
+    const events = [
+      ev("a", { old_state: "DISPOSED", new_state: "LOST", reason: "走失" }),
+      ev("c", { old_state: "JUDGING", new_state: "DISPOSED" }, "system"),
+    ];
+    const system = buildSystemRows(events, labels);
+    expect(system.map((r) => r.id)).toEqual(["system-c"]);
+    expect(system.flatMap((r) => r.items.map((i) => i.id))).not.toContain("a");
+  });
 });

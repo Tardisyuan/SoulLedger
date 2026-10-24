@@ -401,15 +401,17 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
  * 不必勾「含系统事件」。标题「状态变更 · ▣ 已处置 → ◌ 失踪」,metadata 是原因与经办。
  * 系统发起的其它状态变更照旧只在系统事件里。
  */
+function isLostMove(e: SoulEvent): boolean {
+  const p = e.payload as Record<string, unknown>;
+  return e.event_type === "STATE_CHANGED" && (p.old_state === "LOST" || p.new_state === "LOST");
+}
+
 export function buildLostMoveMarkers(
   events: SoulEvent[],
   labels: SystemEventLabels & { glyph: (raw: string | null) => string; by: (name: string) => string }
 ): MarkerRow[] {
   return events
-    .filter((e) => {
-      const p = e.payload as Record<string, unknown>;
-      return e.event_type === "STATE_CHANGED" && (p.old_state === "LOST" || p.new_state === "LOST");
-    })
+    .filter(isLostMove)
     .map((e) => {
       const p = e.payload as Record<string, unknown>;
       const side = (v: unknown) => {
@@ -432,7 +434,8 @@ export function buildLostMoveMarkers(
 }
 
 export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels): SystemGroupRow[] {
-  return groupSystemEvents(events).map((g) => ({
+  // 失踪的进出已经是一条官员行(buildLostMoveMarkers),系统事件里不再重复一次。
+  return groupSystemEvents(events.filter((e) => !isLostMove(e))).map((g) => ({
     id: `system-${g.key}`,
     kind: "system",
     category: "system",

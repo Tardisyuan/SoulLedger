@@ -360,3 +360,26 @@ describe("出身地域 (Design 第四十五批 O-1)", () => {
     }
   });
 });
+
+describe("lost banner (第五十批 M-1)", () => {
+  it("draws the latest → 失踪 change under the header, read-only, only while LOST", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, current_state: "LOST" } });
+    mockEvents.mockResolvedValue(
+      page([
+        { ...event(1), payload: { old_state: "DISPOSED", new_state: "LOST", reason: "押送途中走失" }, actor: "陆判", create_time: "2026-10-20T02:00:00Z" },
+        { ...event(2), payload: { old_state: "DISPOSED", new_state: "LOST", reason: "旧的一次" }, actor: "旧人", create_time: "2026-09-01T02:00:00Z" },
+      ]),
+    );
+    await openSoul();
+    const banner = await screen.findByTestId("soul-lost-banner");
+    expect(within(banner).getByText(/陆判/)).toBeTruthy();
+    expect(within(banner).getByText("押送途中走失")).toBeTruthy();
+    expect(within(banner).queryByText("旧的一次")).toBeNull();
+    expect(within(banner).queryByRole("button")).toBeNull();
+  });
+
+  it("is absent when the soul is not LOST", async () => {
+    await openSoul();
+    expect(screen.queryByTestId("soul-lost-banner")).toBeNull();
+  });
+});

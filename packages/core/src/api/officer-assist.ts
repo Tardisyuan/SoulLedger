@@ -34,7 +34,7 @@ export const ASSIST_TIMEOUT_MS = 25_000;
  * holds the list equal to the backend tuple.
  */
 const SCREEN_SET: Record<OfficerAssistScreen, true> = {
-  about: true, actors: true, admin: true, audit: true, corpus: true, "cross-judgments": true, dashboard: true,
+  about: true, actors: true, admin: true, audit: true, "city-god-cases": true, "city-gods": true, corpus: true, "cross-judgments": true, dashboard: true,
   "death-sync": true, dispatch: true, disposition: true, events: true, judgment: true, ledger: true, menus: true,
   moderation: true, notifications: true, organizations: true, permissions: true, profile: true,
   realms: true, "rebirth-applications": true, rebirths: true, "recycle-bin": true, scheduler: true,
