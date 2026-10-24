@@ -26764,6 +26764,14 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        untimely:
+          type: boolean
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -26935,6 +26943,7 @@ components:
       - draft_verdict
       - draft_version
       - evidence_count
+      - held_until
       - id
       - is_archived
       - is_final
@@ -26951,6 +26960,7 @@ components:
       - soul
       - soul_name
       - stale_since
+      - untimely
       - verdict
       - workflow
     JudgmentBatch:
@@ -27336,6 +27346,14 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        untimely:
+          type: boolean
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -27524,6 +27542,7 @@ components:
       - draft_version
       - evidence_admissions
       - evidence_count
+      - held_until
       - id
       - is_archived
       - is_final
@@ -27540,6 +27559,7 @@ components:
       - soul
       - soul_name
       - stale_since
+      - untimely
       - verdict
       - workflow
     JudgmentDraft:
@@ -33241,6 +33261,14 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        untimely:
+          type: boolean
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -33778,6 +33806,26 @@ components:
           - month
           - day
         death_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+        fated_death_date:
           type: object
           nullable: true
           description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
@@ -37668,6 +37716,26 @@ components:
           - month
           - day
         death_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+        fated_death_date:
           type: object
           nullable: true
           description: A possibly-BCE date. `year` is signed (negative = BCE); `month`

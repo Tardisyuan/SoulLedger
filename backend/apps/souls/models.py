@@ -180,6 +180,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     death_day = models.SmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
+    # 阳寿 / 生死簿 (2026-10-24, 地府 only): the date this life was allotted to end, entered by an officer.
+    # A death registered before it is untimely (横死): the soul waits in 枉死城 and its judgment cannot be
+    # claimed until this date (Soul.die). Empty = not recorded, judged as usual.
+    fated_death_year = models.IntegerField(null=True, blank=True)
+    fated_death_month = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    fated_death_day = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
+    )
     origin_location = models.CharField(max_length=255, blank=True)
 
     #: Which judge of the Greek meadow tries this soul (2026-10-19): Gorgias 524a gives Rhadamanthus the dead
@@ -779,10 +789,19 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 Civilization.EGYPTIAN: JudgmentMethod.HEART_WEIGHING,
                 Civilization.GREEK: JudgmentMethod.STANDARD,
             }
+            # 阳寿: dying before the recorded fated date is untimely; the judgment is held until that date
+            # (枉死城) and cannot be claimed before it (apps/judgment/claims.py).
+            self.refresh_from_db(fields=["death_year", "death_month", "death_day",
+                                         "fated_death_year", "fated_death_month", "fated_death_day"])
+            fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
+            died = to_legacy_date(self.death_year, self.death_month, self.death_day)
+            untimely = bool(self.civilization == Civilization.CHINESE and fated and died and died < fated)
             judgment = Judgment.objects.create(
                 soul=self,
                 civilization=self.civilization,
                 tenant=self.tenant,
                 judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
+                untimely=untimely,
+                held_until=fated if untimely else None,
             )
             return judgment

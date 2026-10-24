@@ -506,6 +506,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     # "YYYY-MM-DD" strings on write for backward compatibility.
     birth_date = HistoricalDateField(prefix="birth")
     death_date = HistoricalDateField(prefix="death")
+    # 阳寿 (2026-10-24): the fated date of death an officer records; see Soul.fated_death_year.
+    fated_death_date = HistoricalDateField(prefix="fated_death", required=False)
     # Soul.civilization is a property derived from the tenant code. The list
     # serializer has always exposed it; the detail serializer did not, so
     # clients that read a soul then POST a judgment (which requires
@@ -544,7 +546,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         fields = [
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
-            "birth_date", "death_date", "origin_location", "origin_region", "birth_name",
+            "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
