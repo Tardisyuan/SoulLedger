@@ -25,7 +25,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 
 const RECORD_TYPES = ["MERIT", "DEMERIT"] as const;
 const CATEGORIES = [
-  "CHARITY", "COMPASSION", "HONESTY", "COURAGE", "WISDOM", "PIETY",
+  "CHARITY", "COMPASSION", "HONESTY", "COURAGE", "WISDOM", "PIETY", "DEDICATION",
   "CRUELTY", "DECEPTION", "COWARDICE", "GREED", "BLASPHEMY", "MURDER", "OTHER",
 ] as const;
 const LIFE_STAGES = ["CHILDHOOD", "YOUTH", "ADULTHOOD", "OLD_AGE"] as const;

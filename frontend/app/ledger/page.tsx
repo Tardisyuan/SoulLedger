@@ -45,7 +45,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  */
 
 const RECORD_CATEGORIES = [
-  "CHARITY", "COMPASSION", "HONESTY", "COURAGE", "WISDOM", "PIETY",
+  "CHARITY", "COMPASSION", "HONESTY", "COURAGE", "WISDOM", "PIETY", "DEDICATION",
   "CRUELTY", "DECEPTION", "COWARDICE", "GREED", "BLASPHEMY", "MURDER", "OTHER",
 ] as const;
 

@@ -398,6 +398,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         if soul is not None:
             self._check_against_soul(attrs, soul)
             self._check_statute_against_soul(attrs, soul)
+            self._check_dedication(attrs, soul)
         self._check_granularity_pair(attrs)
         return attrs
 
@@ -448,7 +449,21 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         if soul is not None:
             self._check_against_soul(self.validated_data, soul)
             self._check_statute_against_soul(self.validated_data, soul)
+            self._check_dedication(self.validated_data, soul)
         return super().save(**kwargs)
+
+    @staticmethod
+    def _check_dedication(attrs, soul) -> None:
+        """超度回向 is merit the living send to a soul still under judgment or sentence (2026-10-24)."""
+        from apps.souls.record_models import RecordCategory, RecordType
+
+        if attrs.get("category") != RecordCategory.DEDICATION:
+            return
+        if attrs.get("record_type", RecordType.MERIT) != RecordType.MERIT:
+            raise serializers.ValidationError({"record_type": "A dedication is merit."})
+        if soul.current_state not in (SoulState.JUDGING, SoulState.DISPOSED):
+            raise serializers.ValidationError(
+                {"category": "A dedication reaches only a soul under judgment or serving its sentence."})
 
     def _check_against_soul(self, attrs, soul) -> None:
         if not _touches_dates(attrs, self.instance, "event"):

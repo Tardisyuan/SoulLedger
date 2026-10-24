@@ -15619,6 +15619,7 @@ export interface components {
              *     * `COURAGE` - Courage / Bravery
              *     * `WISDOM` - Wisdom / Knowledge
              *     * `PIETY` - Piety / Devotion
+             *     * `DEDICATION` - Dedication of merit
              *     * `CRUELTY` - Cruelty / Violence
              *     * `DECEPTION` - Deception / Lying
              *     * `COWARDICE` - Cowardice
@@ -17994,6 +17995,7 @@ export interface components {
              *     * `COURAGE` - Courage / Bravery
              *     * `WISDOM` - Wisdom / Knowledge
              *     * `PIETY` - Piety / Devotion
+             *     * `DEDICATION` - Dedication of merit
              *     * `CRUELTY` - Cruelty / Violence
              *     * `DECEPTION` - Deception / Lying
              *     * `COWARDICE` - Cowardice
@@ -18059,6 +18061,7 @@ export interface components {
          *     * `COURAGE` - Courage / Bravery
          *     * `WISDOM` - Wisdom / Knowledge
          *     * `PIETY` - Piety / Devotion
+         *     * `DEDICATION` - Dedication of merit
          *     * `CRUELTY` - Cruelty / Violence
          *     * `DECEPTION` - Deception / Lying
          *     * `COWARDICE` - Cowardice
@@ -18068,7 +18071,7 @@ export interface components {
          *     * `OTHER` - Other
          * @enum {string}
          */
-        SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
+        SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "DEDICATION" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
         SoulRefreshRequest: {
             refresh: string;
         };
