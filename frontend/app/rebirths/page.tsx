@@ -21,6 +21,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { SIX_PATHS } from "@/src/components/souls/RebirthFormSelect";
 import { rebirthAnchor } from "@/src/components/souls/detail/SoulLedgerSections";
+import { RebirthQuotaStrip } from "@/src/components/souls/RebirthQuota";
 
 /*
  * 转生登记簿(第四十批 W-c):全殿的转生记录,时间倒序(`Reincarnation.Meta.ordering`)。
@@ -66,6 +67,8 @@ function RebirthsContent() {
       }
       subtitle={data ? t("rebirths.total", { n: String(count) }) : undefined}
     >
+      {/* 本月配额(第五十一批 Q-2):表格上方一行,每道一格。 */}
+      <RebirthQuotaStrip />
       <div className="flex flex-wrap items-center gap-3 pb-3">
         <FilterChipSelect
           label={t("rebirths.col_form")}

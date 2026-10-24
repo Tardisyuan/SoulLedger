@@ -213,3 +213,23 @@ describe("六道 picker:radiogroup 的键盘契约", () => {
     expect(heading!.textContent).toBe(group.getAttribute("aria-label"));
   });
 });
+
+describe("本月配额 (第五十一批 Q-3)", () => {
+  it("满了的道仍然列出、仍然能选,只标「已满 · 已用 / 上限」;没满的、不限的不标", () => {
+    const { onChange } = renderSelect({
+      quota: [
+        { rebirth_form: "DIVINE", limit: 20, used: 20 },
+        { rebirth_form: "HUMAN", limit: null, used: 412 },
+        { rebirth_form: "HUNGRY_GHOST", limit: 40, used: 31 },
+      ],
+    });
+    const divine = screen.getByRole("radio", { name: /^DIVINE/ });
+    expect(divine).toHaveAttribute("data-quota-full", "true");
+    expect(divine).toHaveTextContent("rebirths.quota.full_badge");
+    expect(divine).not.toBeDisabled();
+    fireEvent.click(divine);
+    expect(onChange).toHaveBeenCalledWith("DIVINE");
+    expect(screen.getByRole("radio", { name: "HUMAN" })).not.toHaveAttribute("data-quota-full");
+    expect(screen.getByRole("radio", { name: "HUNGRY_GHOST" })).not.toHaveAttribute("data-quota-full");
+  });
+});

@@ -6,7 +6,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
-import { TenantSettingsDialog, parseCooldownDays, tenantSettingsErrors } from "@/src/components/tenants/TenantSettingsDialog";
+import { TenantSettingsDialog, parseCooldownDays, parseQuotaLimit, tenantSettingsErrors } from "@/src/components/tenants/TenantSettingsDialog";
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
@@ -202,5 +202,56 @@ describe("到殿办理 / 灵魂账号 (第四十一批 H-a)", () => {
   it("a tenant with no such key starts with the switch on", () => {
     renderDialog(tenant());
     expect(screen.getByLabelText("hall_settings.soul_email_self")).toBeChecked();
+  });
+});
+
+describe("转世配额 (第五十一批 Q-1)", () => {
+  const limitBox = (form: string) => screen.getByLabelText(`reincarnation.forms.${form} · tenants.settings.rebirth_quota_limit_col`);
+
+  it("seven rows — the six paths, then 未归类 — seeded from the hall's stored limits, blank = no limit", () => {
+    renderDialog(tenant({ settings: { rebirth_monthly_quota: { DIVINE: 20, HELL_BEING: 0 } } }));
+    const rows = [...document.querySelectorAll("[data-quota-form]")].map((r) => r.getAttribute("data-quota-form"));
+    expect(rows).toEqual(["DIVINE", "HUMAN", "ASURA", "ANIMAL", "HUNGRY_GHOST", "HELL_BEING", "OTHER"]);
+    expect(limitBox("DIVINE")).toHaveValue("20");
+    expect(limitBox("HUMAN")).toHaveValue("");
+    expect(limitBox("HUMAN")).toHaveAttribute("placeholder", "tenants.settings.rebirth_quota_unlimited");
+    // 0 是「本月不办这一道」:说一句,不当错误。
+    expect(screen.getByText("tenants.settings.rebirth_quota_zero")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("sends only the paths that changed: a number, or null for a cleared one", async () => {
+    update.mockResolvedValue({ data: tenant() });
+    renderDialog(tenant({ settings: { rebirth_monthly_quota: { DIVINE: 20, ASURA: 5 } } }));
+    fireEvent.change(limitBox("DIVINE"), { target: { value: "" } });
+    fireEvent.change(limitBox("OTHER"), { target: { value: "0" } });
+    save();
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update.mock.calls[0][1].rebirth_monthly_quota).toEqual({ DIVINE: null, OTHER: 0 });
+  });
+
+  it("nothing touched: the field is not in the request at all", async () => {
+    update.mockResolvedValue({ data: tenant() });
+    renderDialog(tenant({ settings: { rebirth_monthly_quota: { DIVINE: 20 } } }));
+    save();
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update.mock.calls[0][1]).not.toHaveProperty("rebirth_monthly_quota");
+  });
+
+  it("a negative or fractional limit never reaches the API", async () => {
+    expect(parseQuotaLimit("-3")).toBeUndefined();
+    expect(parseQuotaLimit("1.5")).toBeUndefined();
+    expect(parseQuotaLimit("0")).toBe(0);
+    expect(parseQuotaLimit(" ")).toBeNull();
+    renderDialog(tenant());
+    fireEvent.change(limitBox("HUNGRY_GHOST"), { target: { value: "-3" } });
+    save();
+    expect(await screen.findByRole("alert")).toHaveTextContent("tenants.settings.rebirth_quota_invalid");
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("the Egyptian hall has no rebirth, so no quota section", () => {
+    renderDialog(tenant({ code: "EG_DUAT", civilization: "EGYPTIAN" }));
+    expect(screen.queryByTestId("tenant-rebirth-quota")).toBeNull();
   });
 });
