@@ -281,7 +281,7 @@
       "JUDGING": "审判中",
       "DISPOSED": "已处置",
       "REINCARNATING": "轮回中",
-      "LOST": "迷失",
+      "LOST": "失踪",
       "SETTLED": "已终结"
     },
     "events": {
@@ -691,6 +691,23 @@
     },
     "compensation": {
       "tag": "↺ 改判"
+    },
+    "lost": {
+      "mark": "标记失踪",
+      "mark_title": "把{{name}}标记为失踪？",
+      "mark_body": "用于押送途中走失的灵魂。状态从「已处置」改为「失踪」；找到后可以召回，回到「已处置」继续押送。失踪期间处置期限暂停，召回后顺延。原因会记进灵魂账页和审计日志。",
+      "mark_confirm": "标记失踪",
+      "recall": "召回",
+      "recall_title": "召回{{name}}？",
+      "recall_body": "状态从「失踪」改回「已处置」，按原来的处置继续押送。原因会记进灵魂账页和审计日志。",
+      "recall_confirm": "召回",
+      "reason_label": "原因",
+      "reason_required": "请写明原因",
+      "reason_hint": "必填，最多 500 字",
+      "marked_toast": "已标记为失踪",
+      "recalled_toast": "已召回，回到「已处置」",
+      "since": "{{date}} 起失踪",
+      "by": "经办：{{name}}"
     }
   },
   "common": {
@@ -4428,7 +4445,7 @@
       "JUDGING": "审判中",
       "DISPOSED": "已处置",
       "REINCARNATING": "轮回中",
-      "LOST": "丢失",
+      "LOST": "失踪",
       "SETTLED": "已结算"
     },
     "homecoming": {
