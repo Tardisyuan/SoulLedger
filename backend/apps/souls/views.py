@@ -686,6 +686,14 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # sentence plan (apps/sentence_plan/requests.py::append_cross_stops). By hand they would leave a
         # soul DISPOSED with no plan to serve, so they are not offered here (a mistaken settlement is
         # `correct_settlement`).
+        # Marking a soul missing, or recalling it, says why (2026-10-24): the reason is the only record of what
+        # happened in transit.
+        lost_move = new_state == SoulState.LOST or soul.current_state == SoulState.LOST
+        if lost_move and not reason.strip():
+            return Response(
+                {"error": "A reason is required to mark a soul lost or to recall it", "code": "reason_required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         reopen_only = (soul.current_state in (SoulState.REINCARNATING, SoulState.SETTLED)
                        and new_state == SoulState.DISPOSED)
         if reopen_only or not soul.can_transition_to(new_state):

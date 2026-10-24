@@ -148,6 +148,20 @@ class TestSoulTransitionAction:
         }, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_lost_needs_a_reason_and_can_be_recalled_to_disposed(self):
+        """2026-10-24: LOST had a way in and no way out. Marked from DISPOSED (missing in transit) and recalled back
+        to DISPOSED, both with a written reason; anything else from LOST is still refused."""
+        soul = Soul.objects.create(name="Lost Soul", tenant=self.tenant, current_state=SoulState.DISPOSED)
+        url = f"{BASE}/{soul.pk}/transition/"
+        resp = self.client.post(url, {"new_state": SoulState.LOST}, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST and resp.data["code"] == "reason_required"
+        assert self.client.post(url, {"new_state": SoulState.LOST, "reason": "押送途中走失"}, format="json").status_code == 200
+        assert self.client.post(url, {"new_state": SoulState.DISPOSED}, format="json").data["code"] == "reason_required"
+        assert self.client.post(url, {"new_state": SoulState.ALIVE, "reason": "x"}, format="json").status_code == 400
+        assert self.client.post(url, {"new_state": SoulState.DISPOSED, "reason": "城隍寻回"}, format="json").status_code == 200
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+
     def test_transition_judging_to_disposed(self):
         soul = Soul.objects.create(name="J2D", tenant=self.tenant, current_state=SoulState.JUDGING)
         resp = self.client.post(f"{BASE}/{soul.pk}/transition/", {
