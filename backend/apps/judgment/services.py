@@ -212,9 +212,12 @@ class JudgmentConclusionService:
             # Step -2: the row lock, and who may conclude a claimed case. Only
             # when a caller is named — the API always names one; in-process
             # callers (seeders, test helpers) act as the system, not as an officer.
+            from apps.judgment.claims import _lock, assert_concludable, lock_for_conclude
+
             if by is not None:
-                from apps.judgment.claims import lock_for_conclude
                 lock_for_conclude(judgment.pk, by)
+            else:
+                assert_concludable(_lock(judgment.pk))
 
             # Step -1 (Q17): an attached cross-tenant judgment must have ended —
             # its PASS nodes are copied into the plan below. Raises before
