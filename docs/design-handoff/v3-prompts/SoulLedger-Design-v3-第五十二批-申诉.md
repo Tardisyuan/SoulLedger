@@ -100,3 +100,9 @@
   (含 `judgment_notes`、`original_officer_ids`、`reviewer_name`、`compensations`)
 - `POST /api/v1/judgment/appeals/{id}/claim/`
 - `POST /api/v1/judgment/appeals/{id}/decide/` `{outcome: UPHELD|AMENDED, verdict?, note}`
+
+## 补充(2026-10-24,用户决定后)
+
+- **改判时的外地站**:改判的灵魂若有联审带进来、还没开始的外地站，复审判官在改判弹层里必须选「保留」或「撤掉」(后端字段 `keep_foreign_stops`,没选时答 400 `foreign_stops_choice_required`)。请画这个选择(列出是哪几站)。文案键:`appeals.decide.foreign_title`、`appeals.decide.foreign_keep`、`appeals.decide.foreign_remove`、`appeals.decide.foreign_required`。
+- **第二次申诉的期限**从第一次申诉出结论那天起算 30 天(灵魂端截止日照接口返回的 `deadline` 显示即可)。
+- **补偿**按文明分别折算(地府、欧洲每 10 年 1 点，希腊每 100 年 1 点，埃及每年 1 点，永久 100);界面只显示点数，不必解释折算。
