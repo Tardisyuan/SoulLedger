@@ -2113,6 +2113,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/MfaRefusal'
           description: ''
+  /api/v1/auth/officer-invite/accept/:
+    post:
+      operationId: v1_auth_officer_invite_accept_create
+      description: |-
+        POST /api/v1/auth/officer-invite/accept/ — 邀请信里的链接:uid + token + 自己定的密码(规则在 officer_invite.py)。
+        无效 / 过期 / 已用一律 400 `invite_link_invalid`。成功后用新密码登录。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
   /api/v1/auth/officer-login/:
     post:
       operationId: v1_auth_officer_login_create
@@ -4107,6 +4148,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationRequest'
+          description: ''
+  /api/v1/death-sync/register/{id}/progress/:
+    get:
+      operationId: v1_death_sync_register_progress_retrieve
+      description: |-
+        GET /death-sync/register/{id}/progress/ — the soul's coarse progress for a registration **this key
+        created** (`get_queryset` scopes to the key; another key's id is a 404). Needs `can_query_status`.
+        Stage only: no verdict, no notes, no officer (`services.progress_of`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Death Registration Request.
+        required: true
+      tags:
+      - v1
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationProgress'
           description: ''
   /api/v1/death-sync/registrations/:
     get:
@@ -6306,6 +6373,7 @@ paths:
           - JUDGMENT_CONCLUDED
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
+          - MENGPO_SOUP_TAKEN
           - NOTIFICATION_CREATED
           - POST_CREATED
           - POST_DELETED
@@ -6397,6 +6465,7 @@ paths:
           * `CITY_GOD_RECEIVED` - City God Received
           * `CITY_GOD_SENT_ON` - City God Sent On
           * `CITY_GOD_RETURNED` - City God Returned
+          * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6526,6 +6595,7 @@ paths:
           - JUDGMENT_CONCLUDED
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
+          - MENGPO_SOUP_TAKEN
           - NOTIFICATION_CREATED
           - POST_CREATED
           - POST_DELETED
@@ -6617,6 +6687,7 @@ paths:
           * `CITY_GOD_RECEIVED` - City God Received
           * `CITY_GOD_SENT_ON` - City God Sent On
           * `CITY_GOD_RETURNED` - City God Returned
+          * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -8775,6 +8846,58 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/v1/judgment/handover/:
+    post:
+      operationId: judgment_handover_commit
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoverResult'
+          description: ''
+  /api/v1/judgment/handover/preview/:
+    post:
+      operationId: judgment_handover_preview
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoverPreview'
           description: ''
   /api/v1/judgment/next/:
     get:
@@ -13123,6 +13246,21 @@ paths:
                 items:
                   $ref: '#/components/schemas/SignerCandidate'
           description: ''
+  /api/v1/officer-app/stats/:
+    get:
+      operationId: officer_app_stats
+      description: 我的数:本月 / 累计结案、认领中、复核过的申诉(`apps/officer_app/stats.py`)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerStats'
+          description: ''
   /api/v1/officer-app/todo/:
     get:
       operationId: officer_app_todo
@@ -14705,6 +14843,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reincarnation'
+          description: ''
+  /api/v1/reincarnation/drink-soup/:
+    post:
+      operationId: v1_reincarnation_drink_soup_create
+      description: |-
+        POST /reincarnation/drink-soup/ {soul_id} — 记下这一世已饮孟婆汤(地府,候转世的灵魂;2026-10-25)。
+        地府的灵魂没饮过,`complete` / `reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrinkSoup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DrinkSoup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DrinkSoup'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrinkSoupResult'
           description: ''
   /api/v1/reincarnation/quota/:
     get:
@@ -19926,8 +20093,10 @@ paths:
     get:
       operationId: v1_tenants_list
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
-        Non-ADMIN users see only their own tenant.
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
+        (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
+        A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
+        registrations (`DeathSyncService._process`). Non-ADMIN users see only their own tenant.
       parameters:
       - name: ordering
         required: false
@@ -19958,12 +20127,82 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedTenantList'
           description: ''
+    post:
+      operationId: v1_tenants_create
+      description: 建殿(ADMIN)。审计一条 CREATE(由审计信号写)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
   /api/v1/tenants/{code}/:
     get:
       operationId: v1_tenants_retrieve
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
-        Non-ADMIN users see only their own tenant.
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
+        (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
+        A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
+        registrations (`DeathSyncService._process`). Non-ADMIN users see only their own tenant.
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{code}/activate/:
+    post:
+      operationId: v1_tenants_activate_create
+      description: 重新启用。
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{code}/deactivate/:
+    post:
+      operationId: v1_tenants_deactivate_create
+      description: 停用殿(不删):数据保留,不再收新灵魂与死亡登记。已停用再停用不写。
       parameters:
       - in: path
         name: code
@@ -20083,6 +20322,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/overview/:
+    get:
+      operationId: v1_tenants_overview_list
+      description: 跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHallOverviewList'
           description: ''
   /api/v1/users/:
     get:
@@ -20628,6 +20901,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserImportResult'
+          description: ''
+  /api/v1/users/invite/:
+    post:
+      operationId: v1_users_invite_create
+      description: |-
+        邮件邀请官员(`officer_invite.py`):建一个还没有密码的账号,发 7 天有效的一次性设密码链接。
+        同一殿里对还没接受的邮箱再邀请一次 = 重发(200);新建 201。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerInvite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerInvite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerInvite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/v1/workflow/templates/:
     get:
@@ -25104,6 +25418,30 @@ components:
       required:
       - password
       - username
+    DeathRegistrationProgress:
+      type: object
+      description: '`GET /death-sync/register/{id}/progress/`:只有阶段,没有裁决与批语(`services.progress_of`)。'
+      properties:
+        registration_id:
+          type: string
+          format: uuid
+        registration_status:
+          type: string
+        soul_id:
+          type: string
+          format: uuid
+          nullable: true
+        soul_state:
+          type: string
+          nullable: true
+        stage:
+          $ref: '#/components/schemas/StageEnum'
+      required:
+      - registration_id
+      - registration_status
+      - soul_id
+      - soul_state
+      - stage
     DeathRegistrationRequest:
       type: object
       description: Serializer for DeathRegistrationRequest (read-only for listing).
@@ -25721,6 +26059,26 @@ components:
         * `pending` - 待执行
         * `executing` - 执行中
         * `expired` - 期满
+    DrinkSoup:
+      type: object
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+      required:
+      - soul_id
+    DrinkSoupResult:
+      type: object
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        soup_taken_at:
+          type: string
+          format: date-time
+      required:
+      - soul_id
+      - soup_taken_at
     EffortEnum:
       enum:
       - low
@@ -26073,6 +26431,8 @@ components:
       - actors
       - admin
       - audit
+      - city-god-cases
+      - city-gods
       - corpus
       - cross-judgments
       - dashboard
@@ -26116,6 +26476,8 @@ components:
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit
+        * `city-god-cases` - city-god-cases
+        * `city-gods` - city-gods
         * `corpus` - corpus
         * `cross-judgments` - cross-judgments
         * `dashboard` - dashboard
@@ -26186,7 +26548,7 @@ components:
         problems:
           type: array
           items:
-            $ref: '#/components/schemas/ProblemsEnum'
+            $ref: '#/components/schemas/EvalPreviewProblemsEnum'
         confirm_token:
           type: string
           nullable: true
@@ -26227,6 +26589,22 @@ components:
       - model
       - output_tokens
       - provider
+    EvalPreviewProblemsEnum:
+      enum:
+      - unpriced_model
+      - no_cases
+      - too_many_asks
+      - over_spend_cap
+      - no_eval_soul
+      - no_eval_officer
+      type: string
+      description: |-
+        * `unpriced_model` - unpriced_model
+        * `no_cases` - no_cases
+        * `too_many_asks` - too_many_asks
+        * `over_spend_cap` - over_spend_cap
+        * `no_eval_soul` - no_eval_soul
+        * `no_eval_officer` - no_eval_officer
     EvalPreviewRequest:
       type: object
       properties:
@@ -26508,6 +26886,7 @@ components:
       - CITY_GOD_RECEIVED
       - CITY_GOD_SENT_ON
       - CITY_GOD_RETURNED
+      - MENGPO_SOUP_TAKEN
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -26566,6 +26945,7 @@ components:
         * `CITY_GOD_RECEIVED` - City God Received
         * `CITY_GOD_SENT_ON` - City God Sent On
         * `CITY_GOD_RETURNED` - City God Returned
+        * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -27238,6 +27618,48 @@ components:
       - code
       - detail
       - halls
+    HallOverview:
+      type: object
+      description: 'Doc-only: one row of `GET /tenants/overview/`. The shape is built
+        in `apps/tenants/overview.py`.'
+      properties:
+        code:
+          type: string
+        hall_names:
+          type: object
+          additionalProperties:
+            type: string
+        civilization:
+          type: string
+        is_active:
+          type: boolean
+        todo:
+          type: object
+          additionalProperties:
+            type: integer
+          description: approvals / dispatch_proposals / cooldowns / letters_awaiting
+            / total
+        judgments:
+          type: object
+          additionalProperties:
+            type: integer
+          description: at_city_god / held / claimed / unclaimed(互不相交)
+        rebirth_quota:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        open_appeals:
+          type: integer
+      required:
+      - civilization
+      - code
+      - hall_names
+      - is_active
+      - judgments
+      - open_appeals
+      - rebirth_quota
+      - todo
     HandledBy:
       type: object
       properties:
@@ -27301,6 +27723,70 @@ components:
       - post
       - reason
       - type
+    HandoverPreview:
+      type: object
+      properties:
+        judgments:
+          type: integer
+        appeals:
+          type: integer
+        appeals_returned_to_pool:
+          type: integer
+          description: 接手人是原判官员的申诉:退回待复核
+        city_gods:
+          type: array
+          items:
+            type: string
+        letters:
+          type: integer
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/HandoverPreviewProblemsEnum'
+      required:
+      - appeals
+      - appeals_returned_to_pool
+      - city_gods
+      - judgments
+      - letters
+      - problems
+    HandoverPreviewProblemsEnum:
+      enum:
+      - target_cannot_judge
+      - target_cannot_reply
+      type: string
+      description: |-
+        * `target_cannot_judge` - target_cannot_judge
+        * `target_cannot_reply` - target_cannot_reply
+    HandoverRequest:
+      type: object
+      properties:
+        to:
+          type: integer
+        from:
+          type: integer
+      required:
+      - from
+      - to
+    HandoverResult:
+      type: object
+      properties:
+        judgments:
+          type: integer
+        appeals:
+          type: integer
+        appeals_returned_to_pool:
+          type: integer
+        city_gods:
+          type: integer
+        letters:
+          type: integer
+      required:
+      - appeals
+      - appeals_returned_to_pool
+      - city_gods
+      - judgments
+      - letters
     ImpersonateEndResponse:
       type: object
       properties:
@@ -31853,6 +32339,30 @@ components:
       - tenant
       - tenant_name
       - unread
+    OfficerInvite:
+      type: object
+      description: |-
+        `POST /users/invite/`(ADMIN):邀请一位官员。`tenant` 是殿的 code,只给没有殿的全局管理员用;
+        缺省是调用者自己的殿。`username` 缺省取邮箱 @ 前那段(重名时加数字)。
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          maxLength: 20
+        username:
+          type: string
+          maxLength: 150
+        display_name:
+          type: string
+          maxLength: 100
+        tenant:
+          type: string
+          maxLength: 50
+      required:
+      - email
+      - role
     OfficerPushToken:
       type: object
       properties:
@@ -32024,7 +32534,7 @@ components:
     OfficerResetRefusal:
       type: object
       description: 'Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid
-        / weak_password.'
+        / invite_link_invalid / weak_password.'
       properties:
         error:
           type: string
@@ -32044,12 +32554,14 @@ components:
       - rate_limited
       - reset_link_invalid
       - verify_link_invalid
+      - invite_link_invalid
       - weak_password
       type: string
       description: |-
         * `rate_limited` - rate_limited
         * `reset_link_invalid` - reset_link_invalid
         * `verify_link_invalid` - verify_link_invalid
+        * `invite_link_invalid` - invite_link_invalid
         * `weak_password` - weak_password
     OfficerResetRequest:
       type: object
@@ -32065,6 +32577,8 @@ components:
       - actors
       - admin
       - audit
+      - city-god-cases
+      - city-gods
       - corpus
       - cross-judgments
       - dashboard
@@ -32102,6 +32616,8 @@ components:
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit
+        * `city-god-cases` - city-god-cases
+        * `city-gods` - city-gods
         * `corpus` - corpus
         * `cross-judgments` - cross-judgments
         * `dashboard` - dashboard
@@ -32133,6 +32649,25 @@ components:
         * `welcome` - welcome
         * `workflow` - workflow
         * `other` - other
+    OfficerStats:
+      type: object
+      properties:
+        concluded_this_month:
+          type: integer
+        concluded_total:
+          type: integer
+        open_claims:
+          type: integer
+        appeals_reviewed:
+          type: integer
+        appeals_in_review:
+          type: integer
+      required:
+      - appeals_in_review
+      - appeals_reviewed
+      - concluded_this_month
+      - concluded_total
+      - open_claims
     OfficerTokenObtainPair:
       type: object
       description: |-
@@ -32635,6 +33170,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Follow'
+    PaginatedHallOverviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HallOverview'
     PaginatedHandledContentList:
       type: object
       required:
@@ -35397,6 +35955,11 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        soup_taken_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -36500,22 +37063,6 @@ components:
       description: |-
         * `litellm` - litellm
         * `manual` - manual
-    ProblemsEnum:
-      enum:
-      - unpriced_model
-      - no_cases
-      - too_many_asks
-      - over_spend_cap
-      - no_eval_soul
-      - no_eval_officer
-      type: string
-      description: |-
-        * `unpriced_model` - unpriced_model
-        * `no_cases` - no_cases
-        * `too_many_asks` - too_many_asks
-        * `over_spend_cap` - over_spend_cap
-        * `no_eval_soul` - no_eval_soul
-        * `no_eval_officer` - no_eval_officer
     ProviderEnum:
       enum:
       - anthropic
@@ -39317,6 +39864,11 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        soup_taken_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -39355,6 +39907,7 @@ components:
       - name
       - records
       - soul_code
+      - soup_taken_at
       - tenant
       - tenant_code
       - update_time
@@ -41065,6 +41618,22 @@ components:
       - realm_code
       - realm_name
       - realm_type
+    StageEnum:
+      enum:
+      - registered
+      - at_city_god
+      - judging
+      - sentenced
+      - reincarnated
+      - settled
+      type: string
+      description: |-
+        * `registered` - registered
+        * `at_city_god` - at_city_god
+        * `judging` - judging
+        * `sentenced` - sentenced
+        * `reincarnated` - reincarnated
+        * `settled` - settled
     Statute:
       type: object
       description: |-
@@ -41415,6 +41984,41 @@ components:
       - id
       - letters_on
       - seal_glyphs
+    TenantCreate:
+      type: object
+      description: |-
+        `POST /tenants/`(全局管理员建殿,2026-10-25)。code 建后不可改;文明必填。
+
+        四个种子殿的 code 在 `TENANT_CIVILIZATION` 里写死了文明:用这样的 code 建殿时,文明必须与那张表一致。
+      properties:
+        code:
+          type: string
+          description: 大写字母开头,只含大写字母、数字、下划线。
+          maxLength: 50
+          pattern: ^[A-Z][A-Z0-9_]{1,49}$
+        display_name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
+        hall_name:
+          type: string
+          description: 殿司展示名(简体中文)
+          maxLength: 60
+        hall_name_en:
+          type: string
+          description: 殿司展示名(English)
+          maxLength: 80
+        hall_name_egy:
+          type: string
+          description: 殿司展示名(egy)
+          maxLength: 80
+      required:
+      - civilization
+      - code
+      - display_name
     TenantMfaRoleRow:
       type: object
       description: One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全).
@@ -42406,6 +43010,8 @@ components:
         optional here and the client picks by mode.
       properties:
         created:
+          type: integer
+        invited:
           type: integer
         errors:
           type: array

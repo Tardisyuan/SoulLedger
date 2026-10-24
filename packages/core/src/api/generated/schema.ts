@@ -999,6 +999,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/officer-invite/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/auth/officer-invite/accept/ — 邀请信里的链接:uid + token + 自己定的密码(规则在 officer_invite.py)。
+         *     无效 / 过期 / 已用一律 400 `invite_link_invalid`。成功后用新密码登录。
+         */
+        post: operations["v1_auth_officer_invite_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/officer-login/": {
         parameters: {
             query?: never;
@@ -1984,6 +2004,27 @@ export interface paths {
          *     editing its own record.
          */
         get: operations["v1_death_sync_register_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/register/{id}/progress/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /death-sync/register/{id}/progress/ — the soul's coarse progress for a registration **this key
+         *     created** (`get_queryset` scopes to the key; another key's id is a 404). Needs `can_query_status`.
+         *     Stage only: no verdict, no notes, no officer (`services.progress_of`).
+         */
+        get: operations["v1_death_sync_register_progress_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3797,6 +3838,38 @@ export interface paths {
         get: operations["v1_judgment_export_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/handover/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["judgment_handover_commit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/handover/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["judgment_handover_preview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5786,6 +5859,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/officer-app/stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的数:本月 / 累计结案、认领中、复核过的申诉(`apps/officer_app/stats.py`)。 */
+        get: operations["officer_app_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/officer-app/todo/": {
         parameters: {
             query?: never;
@@ -6618,6 +6708,26 @@ export interface paths {
          *     Body: { "new_identity": "...", "rebirth_form": "HUMAN", "notes": "..." }
          */
         post: operations["v1_reincarnation_complete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reincarnation/drink-soup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /reincarnation/drink-soup/ {soul_id} — 记下这一世已饮孟婆汤(地府,候转世的灵魂;2026-10-25)。
+         *     地府的灵魂没饮过,`complete` / `reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。
+         */
+        post: operations["v1_reincarnation_drink_soup_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8999,12 +9109,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
-         *     Non-ADMIN users see only their own tenant.
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
+         *     (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
+         *     A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
+         *     registrations (`DeathSyncService._process`). Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_list"];
         put?: never;
-        post?: never;
+        /** @description 建殿(ADMIN)。审计一条 CREATE(由审计信号写)。 */
+        post: operations["v1_tenants_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9019,12 +9132,48 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
-         *     Non-ADMIN users see only their own tenant.
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
+         *     (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
+         *     A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
+         *     registrations (`DeathSyncService._process`). Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{code}/activate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 重新启用。 */
+        post: operations["v1_tenants_activate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{code}/deactivate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 停用殿(不删):数据保留,不再收新灵魂与死亡登记。已停用再停用不写。 */
+        post: operations["v1_tenants_deactivate_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9080,6 +9229,23 @@ export interface paths {
         head?: never;
         /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。 */
         patch: operations["v1_tenants_settings_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/tenants/overview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。 */
+        get: operations["v1_tenants_overview_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/users/": {
@@ -9371,6 +9537,26 @@ export interface paths {
         put?: never;
         /** @description 从CSV文件批量导入用户 */
         post: operations["v1_users_import_csv_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/invite/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 邮件邀请官员(`officer_invite.py`):建一个还没有密码的账号,发 7 天有效的一次性设密码链接。
+         *     同一殿里对还没接受的邮箱再邀请一次 = 重发(200);新建 201。
+         */
+        post: operations["v1_users_invite_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11297,6 +11483,16 @@ export interface components {
             username: string;
             password: string;
         };
+        /** @description `GET /death-sync/register/{id}/progress/`:只有阶段,没有裁决与批语(`services.progress_of`)。 */
+        DeathRegistrationProgress: {
+            /** Format: uuid */
+            registration_id: string;
+            registration_status: string;
+            /** Format: uuid */
+            soul_id: string | null;
+            soul_state: string | null;
+            stage: components["schemas"]["StageEnum"];
+        };
         /** @description Serializer for DeathRegistrationRequest (read-only for listing). */
         DeathRegistrationRequest: {
             /** Format: uuid */
@@ -11575,6 +11771,16 @@ export interface components {
          * @enum {string}
          */
         DispositionSectionEnum: "pending" | "executing" | "expired";
+        DrinkSoup: {
+            /** Format: uuid */
+            soul_id: string;
+        };
+        DrinkSoupResult: {
+            /** Format: uuid */
+            soul_id: string;
+            /** Format: date-time */
+            soup_taken_at: string;
+        };
         /**
          * @description * `` -
          *     * `low` - low
@@ -11746,6 +11952,8 @@ export interface components {
          *     * `actors` - actors
          *     * `admin` - admin
          *     * `audit` - audit
+         *     * `city-god-cases` - city-god-cases
+         *     * `city-gods` - city-gods
          *     * `corpus` - corpus
          *     * `cross-judgments` - cross-judgments
          *     * `dashboard` - dashboard
@@ -11778,7 +11986,7 @@ export interface components {
          *     * `workflow` - workflow
          * @enum {string}
          */
-        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
         EvalIdentities: {
             /** Format: uuid */
             eval_soul_account: string;
@@ -11795,7 +12003,7 @@ export interface components {
             /** Format: double */
             spend_cap: number;
             candidates: components["schemas"]["EvalPreviewCandidate"][];
-            problems: components["schemas"]["ProblemsEnum"][];
+            problems: components["schemas"]["EvalPreviewProblemsEnum"][];
             /** @description problems 为空时才有;开始运行要带它 */
             confirm_token: string | null;
         };
@@ -11812,6 +12020,16 @@ export interface components {
              */
             estimated_cost: number | null;
         };
+        /**
+         * @description * `unpriced_model` - unpriced_model
+         *     * `no_cases` - no_cases
+         *     * `too_many_asks` - too_many_asks
+         *     * `over_spend_cap` - over_spend_cap
+         *     * `no_eval_soul` - no_eval_soul
+         *     * `no_eval_officer` - no_eval_officer
+         * @enum {string}
+         */
+        EvalPreviewProblemsEnum: "unpriced_model" | "no_cases" | "too_many_asks" | "over_spend_cap" | "no_eval_soul" | "no_eval_officer";
         EvalPreviewRequest: {
             side: components["schemas"]["EvalPreviewRequestSideEnum"];
             candidates: components["schemas"]["Candidate"][];
@@ -11957,10 +12175,11 @@ export interface components {
          *     * `CITY_GOD_RECEIVED` - City God Received
          *     * `CITY_GOD_SENT_ON` - City God Sent On
          *     * `CITY_GOD_RETURNED` - City God Returned
+         *     * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -12291,6 +12510,27 @@ export interface components {
             detail: string;
             halls: components["schemas"]["LoginHall"][];
         };
+        /** @description Doc-only: one row of `GET /tenants/overview/`. The shape is built in `apps/tenants/overview.py`. */
+        HallOverview: {
+            code: string;
+            hall_names: {
+                [key: string]: string;
+            };
+            civilization: string;
+            is_active: boolean;
+            /** @description approvals / dispatch_proposals / cooldowns / letters_awaiting / total */
+            todo: {
+                [key: string]: number;
+            };
+            /** @description at_city_god / held / claimed / unclaimed(互不相交) */
+            judgments: {
+                [key: string]: number;
+            };
+            rebirth_quota: {
+                [key: string]: unknown;
+            }[];
+            open_appeals: number;
+        };
         HandledBy: {
             id: number | null;
             name: string;
@@ -12319,6 +12559,32 @@ export interface components {
             handled_at: string | null;
             /** @description 帖子的图片张数(与举报队列同一条规则);评论为 0。 */
             media_count: number;
+        };
+        HandoverPreview: {
+            judgments: number;
+            appeals: number;
+            /** @description 接手人是原判官员的申诉:退回待复核 */
+            appeals_returned_to_pool: number;
+            city_gods: string[];
+            letters: number;
+            problems: components["schemas"]["HandoverPreviewProblemsEnum"][];
+        };
+        /**
+         * @description * `target_cannot_judge` - target_cannot_judge
+         *     * `target_cannot_reply` - target_cannot_reply
+         * @enum {string}
+         */
+        HandoverPreviewProblemsEnum: "target_cannot_judge" | "target_cannot_reply";
+        HandoverRequest: {
+            to: number;
+            from: number;
+        };
+        HandoverResult: {
+            judgments: number;
+            appeals: number;
+            appeals_returned_to_pool: number;
+            city_gods: number;
+            letters: number;
         };
         ImpersonateEndResponse: {
             ended: boolean;
@@ -14244,6 +14510,18 @@ export interface components {
             /** Format: date-time */
             readonly closed_at: string | null;
         };
+        /**
+         * @description `POST /users/invite/`(ADMIN):邀请一位官员。`tenant` 是殿的 code,只给没有殿的全局管理员用;
+         *     缺省是调用者自己的殿。`username` 缺省取邮箱 @ 前那段(重名时加数字)。
+         */
+        OfficerInvite: {
+            /** Format: email */
+            email: string;
+            role: string;
+            username?: string;
+            display_name?: string;
+            tenant?: string;
+        };
         OfficerPushToken: {
             token: string;
             platform: components["schemas"]["PushPlatformEnum"];
@@ -14300,7 +14578,7 @@ export interface components {
             token: string;
             new_password: string;
         };
-        /** @description Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / weak_password. */
+        /** @description Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / invite_link_invalid / weak_password. */
         OfficerResetRefusal: {
             error: string;
             code: components["schemas"]["OfficerResetRefusalCodeEnum"];
@@ -14311,10 +14589,11 @@ export interface components {
          * @description * `rate_limited` - rate_limited
          *     * `reset_link_invalid` - reset_link_invalid
          *     * `verify_link_invalid` - verify_link_invalid
+         *     * `invite_link_invalid` - invite_link_invalid
          *     * `weak_password` - weak_password
          * @enum {string}
          */
-        OfficerResetRefusalCodeEnum: "rate_limited" | "reset_link_invalid" | "verify_link_invalid" | "weak_password";
+        OfficerResetRefusalCodeEnum: "rate_limited" | "reset_link_invalid" | "verify_link_invalid" | "invite_link_invalid" | "weak_password";
         OfficerResetRequest: {
             identifier: string;
         };
@@ -14323,6 +14602,8 @@ export interface components {
          *     * `actors` - actors
          *     * `admin` - admin
          *     * `audit` - audit
+         *     * `city-god-cases` - city-god-cases
+         *     * `city-gods` - city-gods
          *     * `corpus` - corpus
          *     * `cross-judgments` - cross-judgments
          *     * `dashboard` - dashboard
@@ -14356,7 +14637,14 @@ export interface components {
          *     * `other` - other
          * @enum {string}
          */
-        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        OfficerStats: {
+            concluded_this_month: number;
+            concluded_total: number;
+            open_claims: number;
+            appeals_reviewed: number;
+            appeals_in_review: number;
+        };
         /**
          * @description Officer-app login: username + password, **no hall chosen** (2026-10-09).
          *
@@ -14676,6 +14964,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Follow"][];
+        };
+        PaginatedHallOverviewList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["HallOverview"][];
         };
         PaginatedHandledContentList: {
             /** @example 123 */
@@ -16133,6 +16436,8 @@ export interface components {
             readonly inherited_merit?: number;
             readonly inherited_demerit?: number;
             readonly is_eval_identity?: boolean;
+            /** Format: date-time */
+            readonly soup_taken_at?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -16687,16 +16992,6 @@ export interface components {
          * @enum {string}
          */
         PriceSourceEnum: "litellm" | "manual";
-        /**
-         * @description * `unpriced_model` - unpriced_model
-         *     * `no_cases` - no_cases
-         *     * `too_many_asks` - too_many_asks
-         *     * `over_spend_cap` - over_spend_cap
-         *     * `no_eval_soul` - no_eval_soul
-         *     * `no_eval_officer` - no_eval_officer
-         * @enum {string}
-         */
-        ProblemsEnum: "unpriced_model" | "no_cases" | "too_many_asks" | "over_spend_cap" | "no_eval_soul" | "no_eval_officer";
         /**
          * @description * `anthropic` - anthropic
          *     * `openai_compatible` - openai_compatible
@@ -18002,6 +18297,8 @@ export interface components {
             readonly inherited_merit: number;
             readonly inherited_demerit: number;
             readonly is_eval_identity: boolean;
+            /** Format: date-time */
+            readonly soup_taken_at: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -18776,6 +19073,16 @@ export interface components {
             held: number;
         };
         /**
+         * @description * `registered` - registered
+         *     * `at_city_god` - at_city_god
+         *     * `judging` - judging
+         *     * `sentenced` - sentenced
+         *     * `reincarnated` - reincarnated
+         *     * `settled` - settled
+         * @enum {string}
+         */
+        StageEnum: "registered" | "at_city_god" | "judging" | "sentenced" | "reincarnated" | "settled";
+        /**
          * @description One citable article.
          *
          *     `display_text` is where a *derived* article becomes readable: for the
@@ -18919,6 +19226,24 @@ export interface components {
             readonly letters_on: boolean;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        /**
+         * @description `POST /tenants/`(全局管理员建殿,2026-10-25)。code 建后不可改;文明必填。
+         *
+         *     四个种子殿的 code 在 `TENANT_CIVILIZATION` 里写死了文明:用这样的 code 建殿时,文明必须与那张表一致。
+         */
+        TenantCreate: {
+            /** @description 大写字母开头,只含大写字母、数字、下划线。 */
+            code: string;
+            display_name: string;
+            description?: string;
+            civilization: components["schemas"]["CivilizationEnum"];
+            /** @description 殿司展示名(简体中文) */
+            hall_name?: string;
+            /** @description 殿司展示名(English) */
+            hall_name_en?: string;
+            /** @description 殿司展示名(egy) */
+            hall_name_egy?: string;
         };
         /** @description One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全). */
         TenantMfaRoleRow: {
@@ -19419,6 +19744,7 @@ export interface components {
          */
         UserImportResult: {
             created?: number;
+            invited?: number;
             errors?: string[];
             total?: number;
             ok_count?: number;
@@ -21871,6 +22197,47 @@ export interface operations {
             };
         };
     };
+    v1_auth_officer_invite_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerResetConfirm"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerResetConfirm"];
+                "multipart/form-data": components["schemas"]["OfficerResetConfirm"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+        };
+    };
     v1_auth_officer_login_create: {
         parameters: {
             query?: never;
@@ -23454,6 +23821,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationRequest"];
+                };
+            };
+        };
+    };
+    v1_death_sync_register_progress_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Death Registration Request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeathRegistrationProgress"];
                 };
             };
         };
@@ -25086,9 +25475,10 @@ export interface operations {
                  *     * `CITY_GOD_RECEIVED` - City God Received
                  *     * `CITY_GOD_SENT_ON` - City God Sent On
                  *     * `CITY_GOD_RETURNED` - City God Returned
+                 *     * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -25201,9 +25591,10 @@ export interface operations {
                  *     * `CITY_GOD_RECEIVED` - City God Received
                  *     * `CITY_GOD_SENT_ON` - City God Sent On
                  *     * `CITY_GOD_RETURNED` - City God Returned
+                 *     * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -26909,6 +27300,56 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    judgment_handover_commit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoverRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["HandoverRequest"];
+                "multipart/form-data": components["schemas"]["HandoverRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverResult"];
+                };
+            };
+        };
+    };
+    judgment_handover_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoverRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["HandoverRequest"];
+                "multipart/form-data": components["schemas"]["HandoverRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverPreview"];
                 };
             };
         };
@@ -31200,6 +31641,25 @@ export interface operations {
             };
         };
     };
+    officer_app_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerStats"];
+                };
+            };
+        };
+    };
     officer_app_todo: {
         parameters: {
             query?: {
@@ -32379,6 +32839,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Reincarnation"];
+                };
+            };
+        };
+    };
+    v1_reincarnation_drink_soup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DrinkSoup"];
+                "application/x-www-form-urlencoded": components["schemas"]["DrinkSoup"];
+                "multipart/form-data": components["schemas"]["DrinkSoup"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrinkSoupResult"];
                 };
             };
         };
@@ -36527,7 +37012,74 @@ export interface operations {
             };
         };
     };
+    v1_tenants_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["TenantCreate"];
+                "multipart/form-data": components["schemas"]["TenantCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
     v1_tenants_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_activate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_deactivate_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -36626,6 +37178,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_overview_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHallOverviewList"];
                 };
             };
         };
@@ -37051,6 +37629,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserImportResult"];
+                };
+            };
+        };
+    };
+    v1_users_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerInvite"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerInvite"];
+                "multipart/form-data": components["schemas"]["OfficerInvite"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserManagement"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserManagement"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
