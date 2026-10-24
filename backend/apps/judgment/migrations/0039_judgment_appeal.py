@@ -188,10 +188,12 @@ class Migration(migrations.Migration):
                 ],
                 "constraints": [
                     models.UniqueConstraint(
-                        fields=("judgment", "round"), name="unique_appeal_round"
+                        condition=models.Q(("is_deleted", False)),
+                        fields=("judgment", "round"),
+                        name="unique_appeal_round",
                     ),
                     models.UniqueConstraint(
-                        condition=models.Q(("status__in", ["PENDING", "IN_REVIEW"])),
+                        condition=models.Q(("is_deleted", False), ("status__in", ["PENDING", "IN_REVIEW"])),
                         fields=("judgment",),
                         name="unique_open_appeal_per_judgment",
                     ),

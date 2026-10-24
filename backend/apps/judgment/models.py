@@ -1070,10 +1070,12 @@ class JudgmentAppeal(AuditUserFields, models.Model):
     class Meta:
         ordering = ["-create_time"]
         constraints = [
-            models.UniqueConstraint(fields=["judgment", "round"], name="unique_appeal_round"),
+            # Live rows only: a soft-deleted appeal must not hold its round or block a new one.
+            models.UniqueConstraint(fields=["judgment", "round"], condition=models.Q(is_deleted=False),
+                                    name="unique_appeal_round"),
             models.UniqueConstraint(
                 fields=["judgment"],
-                condition=models.Q(status__in=["PENDING", "IN_REVIEW"]),
+                condition=models.Q(status__in=["PENDING", "IN_REVIEW"], is_deleted=False),
                 name="unique_open_appeal_per_judgment",
             ),
             models.CheckConstraint(condition=models.Q(round__gte=1, round__lte=APPEAL_MAX_ROUNDS),
