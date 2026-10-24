@@ -271,6 +271,9 @@
     "state": "状态",
     "balance": "功过",
     "death": "死亡时间",
+    "fated_death_date": "阳寿（应死日期）",
+    "fated_death_help": "生死簿上注定的死期。登记的死亡早于这一天，即判为横死：审判标「枉死」，灵魂先入枉死城，到这一天才能认领。不知道就留空。",
+    "fated_death_preview": "死亡早于阳寿 · 这桩审判会标「枉死」，候至 {{date}}",
     "action": "操作",
     "view": "查看",
     "states": {
@@ -344,6 +347,13 @@
       "BLASPHEMY": "亵渎",
       "MURDER": "杀业",
       "OTHER": "其他"
+    },
+    "dedication": {
+      "body": "阳间亲属为这个灵魂做的法事，由官员代登。只计功德；只对审判中、受刑中的灵魂有效。",
+      "source_label": "来源（谁 · 何种法事）",
+      "date_label": "法事日期",
+      "not_eligible": "只能登给审判中或受刑中的灵魂。{{name}}现在是「{{state}}」。",
+      "tag": "阳间"
     },
     "life_stages": {
       "CHILDHOOD": "童年",
@@ -1942,6 +1952,9 @@
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
+    "untimely": "枉死",
+    "held_until": "候至 {{date}}",
+    "in_city": "在枉死城",
     "desk": {
       "statute_search": "检索律条",
       "statute_search_empty": "没有匹配的律条",
@@ -2039,6 +2052,8 @@
         "permission_denied": "没有权限",
         "generic": "操作未能完成"
       },
+      "held_short": "到期后可认领",
+      "held": "这桩审判候至 {{date}}：灵魂在枉死城，到那天才能认领。",
       "civilization_all": "文明 · 全部",
       "sort": "排序",
       "sort_oldest": "排序 · 等待最久",
@@ -3794,6 +3809,14 @@
       "cooldown_days": "转生申请冷却天数",
       "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;0 到 365,留空用默认 30 天",
       "cooldown_invalid": "请填 0 到 365 之间的整数",
+      "rebirth_quota_title": "转世配额",
+      "rebirth_quota_body": "每道每月最多办几次转世。留空 = 不限。某道满了，灵魂留在「待转世」里候位，下月或调高后再办。",
+      "rebirth_quota_unlimited": "不限",
+      "rebirth_quota_limit_col": "每月上限",
+      "rebirth_quota_used_col": "本月已办",
+      "rebirth_quota_zero": "0 = 本月不办这一道",
+      "rebirth_quota_invalid": "填 0 或更大的整数",
+      "rebirth_quota_below_used": "调低后本月不再办这一道",
       "dispatch_enabled": "可接收调拨(暂居)",
       "saved": "设置已保存",
       "save_failed": "没能保存设置",
@@ -6924,7 +6947,14 @@
     "col_time": "时间",
     "total": "共 {{n}} 条",
     "empty": "还没有转生记录",
-    "all_forms": "全部形态"
+    "all_forms": "全部形态",
+    "quota": {
+      "title": "本月配额 · {{month}}",
+      "used_of": "{{used}} / {{limit}}",
+      "used_unlimited": "{{used}} · 不限",
+      "full_badge": "已满",
+      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在待转世里候位，下月或调高配额后再办。"
+    }
   },
   "hall_settings": {
     "visit": {
