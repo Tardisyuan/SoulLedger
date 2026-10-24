@@ -19,7 +19,7 @@ import {
   type MeJudgmentAppeal,
   type MeJudgmentAppealList,
 } from "@soulledger/core/api/soul";
-import { appealsLeftAfterWithdraw, compensationOrder } from "@soulledger/core/domain/appeals";
+import { appealsLeftAfterWithdraw } from "@soulledger/core/domain/appeals";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -123,7 +123,7 @@ function Round({
             {t("appeals.compensation")}
           </Txt>
           {round.compensations.map((c) => {
-            const order = compensationOrder(c);
+            const order = c.order;
             return (
               <Txt key={c.id} variant="value" tone="muted">
                 {order === null ? `${c.description} · +${c.weight}` : t("appeals.compensation_row", { order: String(order), weight: String(c.weight) })}

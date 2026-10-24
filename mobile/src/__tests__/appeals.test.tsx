@@ -88,7 +88,7 @@ it("a landed decision opens the latest round: 原判 → 新判, the reviewer's 
     new_verdict: "PASSED",
     decision_note: "原判漏看了证据",
     decided_at: "2026-10-20T00:00:00Z",
-    compensations: [{ id: "c1", weight: 3, description: "申诉改判补偿:CN-2026-0007 第 1 站(CN),原判 FAILED → PASSED" }],
+    compensations: [{ id: "c1", weight: 3, order: 1, description: "申诉改判补偿:CN-2026-0007 第 1 站(CN),原判 FAILED → PASSED" }],
   });
   wrap(<AppealLine row={row({ rounds_used: 1 })} rounds={[amended]} focused onChanged={() => {}} />);
   expect(screen.getByTestId("appeal-change-a1").props.children).toBe("不过 → 通过");

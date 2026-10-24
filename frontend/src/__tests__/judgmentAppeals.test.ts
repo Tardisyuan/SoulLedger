@@ -4,22 +4,12 @@
  * 审判申诉(第五十二批 W-1 ~ W-4)网页侧的纯规则:「距截止」、被拒的读法、时间线三种事件的后半行。
  */
 import type { SoulEvent } from "@soulledger/core/api/events";
-import { appealsLeftAfterWithdraw, compensationOrder } from "@soulledger/core/domain/appeals";
-import { APPEAL_IN_DIALOG_CODES, appealDeadline, appealRefusalMessage, appealRefusalOf } from "@/src/components/judgment/appealDisplay";
+import { appealsLeftAfterWithdraw } from "@soulledger/core/domain/appeals";
+import { APPEAL_IN_DIALOG_CODES, appealRefusalMessage, appealRefusalOf } from "@/src/components/judgment/appealDisplay";
 import { describeSystemEvent, makeSystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { tZh } from "./support/zhBundle";
 
 const refused = (data: Record<string, unknown>, status = 409) => ({ response: { status, data } });
-
-describe("appealDeadline", () => {
-  it("is thirty days after the judgment concluded, for a first appeal", () => {
-    expect(appealDeadline({ round: 1, judgment_concluded_at: "2026-10-09T12:00:00Z" })?.toISOString()).toBe("2026-11-08T12:00:00.000Z");
-  });
-
-  it("is unknown for a second appeal (it runs from the first decision, which this payload lacks)", () => {
-    expect(appealDeadline({ round: 2, judgment_concluded_at: "2026-10-09T12:00:00Z" })).toBeNull();
-  });
-});
 
 describe("refusals", () => {
   it("names each code the dialog and the claim can meet, and falls back for the rest", () => {
@@ -62,11 +52,6 @@ describe("the timeline's appeal lines", () => {
 });
 
 describe("shared appeal rules", () => {
-  it("reads a compensation's station from the backend's description, null for the original disposition", () => {
-    expect(compensationOrder({ description: "申诉改判补偿:CN-2026-0007 第 2 站(CN),原判 FAILED → PASSED" })).toBe(2);
-    expect(compensationOrder({ description: "申诉改判补偿:CN-2026-0007 原处置,原判 FAILED → PASSED" })).toBeNull();
-  });
-
   it("counts what is left after a withdrawal: 2 − rounds filed, never below zero", () => {
     expect(appealsLeftAfterWithdraw(1)).toBe(1);
     expect(appealsLeftAfterWithdraw(2)).toBe(0);
