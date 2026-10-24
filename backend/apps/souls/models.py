@@ -541,7 +541,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # Letting an administrative mistake re-open a cosmologically closed
             # case is exactly the lie this state exists to stop telling.
             SoulState.SETTLED: [SoulState.DISPOSED],
-            SoulState.LOST: [],
+            # Recalled: found again, back in transit to the realm its disposition named (2026-10-24 user
+            # decision: a minimal way in and out, no pursuit workflow). Both moves need a written reason
+            # (apps/souls/views.py::transition); the STATE_CHANGED event and the audit row keep it.
+            SoulState.LOST: [SoulState.DISPOSED],
         }
         return new_state in valid_transitions.get(self.current_state, [])
 
