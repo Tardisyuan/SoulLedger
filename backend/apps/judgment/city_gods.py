@@ -34,11 +34,10 @@ class CityGodRefusedError(ClaimRefusedError):
 # ── 收案 ────────────────────────────────────────────────────────────────
 
 
-def match(tenant_id, location):
-    """出身地 `location` 归本殿哪位城隍;都不匹配时是兜底城隍;本殿没有兜底时是 None。"""
-    gods = list(CityGod.objects.filter(tenant_id=tenant_id).order_by("name"))
+def _best(gods, location):
+    """(城隍, 命中的那个地名):在出身地里结束得最靠后的,再取更长的;一个都没命中是 (None, None)。"""
     place = (location or "").strip().casefold()
-    best, best_key = None, None
+    best, best_region, best_key = None, None, None
     for god in gods:
         for region in god.regions or ():
             needle = str(region).strip().casefold()
@@ -47,8 +46,23 @@ def match(tenant_id, location):
                 continue
             key = (at + len(needle), len(needle))
             if best_key is None or key > best_key:
-                best, best_key = god, key
+                best, best_region, best_key = god, str(region).strip(), key
+    return best, best_region
+
+
+def match(tenant_id, location):
+    """出身地 `location` 归本殿哪位城隍;都不匹配时是兜底城隍;本殿没有兜底时是 None。"""
+    gods = list(CityGod.objects.filter(tenant_id=tenant_id).order_by("name"))
+    best, _ = _best(gods, location)
     return best or next((god for god in gods if god.is_default), None)
+
+
+def matched_region(judgment):
+    """决定归属的那个地名(按这件案子现在的城隍算):兜底收的、改交到没写中的城隍时为 None。
+    界面据此把出身地里的那一段标出来(第五十三批「要你们确认」1)。"""
+    if judgment.city_god_id is None:
+        return None
+    return _best([judgment.city_god], judgment.soul.origin_location)[1]
 
 
 def initial_fields(soul) -> dict:
@@ -63,17 +77,18 @@ def initial_fields(soul) -> dict:
     return {"city_god": god, "city_god_status": CityGodStatus.PENDING}
 
 
-def received(judgment, transferred_from=None) -> None:
-    """记一笔 CITY_GOD_RECEIVED(在调用方的事务里),提交后通知这位城隍名下的官员。没交城隍的不做事。"""
+def received(judgment, transferred_from=None, transferred_from_name="") -> None:
+    """记一笔 CITY_GOD_RECEIVED(在调用方的事务里),提交后通知这位城隍名下的官员;名下没有官员时通知本殿管理员
+    (只有他们能办,2026-10-24 用户决定)。没交城隍的不做事。"""
     if judgment.city_god_id is None or judgment.city_god_status != CityGodStatus.PENDING:
         return
-    extra = {"transferred_from": str(transferred_from)} if transferred_from else {}
+    extra = ({"transferred_from": str(transferred_from), "transferred_from_name": transferred_from_name}
+             if transferred_from else {})
     _event(judgment, "CITY_GOD_RECEIVED", **extra)
     god = judgment.city_god
-    _notify_after_commit(
-        list(god.officers.filter(is_active=True).values_list("pk", flat=True)),
-        "city_god_case_received", judgment, city_god=god.name,
-    )
+    officers = list(god.officers.filter(is_active=True).values_list("pk", flat=True))
+    _notify_after_commit(officers or _hall_admins(judgment.tenant_id), "CITY_GOD_CASE_RECEIVED", judgment,
+                         city_god=god.name)
 
 
 # ── 初审 ────────────────────────────────────────────────────────────────
@@ -141,7 +156,7 @@ def return_case(pk, user, note: str) -> Judgment:
         judgment.city_god_note = note
         _save(judgment, "city_god_status", "city_god_note")
         _event(judgment, "CITY_GOD_RETURNED")
-        _notify_after_commit(_hall_admins(judgment.tenant_id, exclude=user.pk), "city_god_case_returned", judgment,
+        _notify_after_commit(_hall_admins(judgment.tenant_id, exclude=user.pk), "CITY_GOD_CASE_RETURNED", judgment,
                              city_god=judgment.city_god.name, by=user.display_name or user.username, reason=note)
     return judgment
 
@@ -155,11 +170,11 @@ def transfer(pk, user, target: CityGod) -> Judgment:
             raise CityGodRefusedError("No such city god in this case's hall.", "invalid_city_god", status=400)
         if target.pk == judgment.city_god_id:
             return judgment
-        previous = judgment.city_god_id
+        previous, previous_name = judgment.city_god_id, judgment.city_god.name
         judgment.city_god = target
         judgment.city_god_status = CityGodStatus.PENDING
         _save(judgment, "city_god", "city_god_status")
-        received(judgment, transferred_from=previous)
+        received(judgment, transferred_from=previous, transferred_from_name=previous_name)
     return judgment
 
 
@@ -186,10 +201,11 @@ def _hall_admins(tenant_id, exclude=None) -> list:
     return mine or list(people.filter(role="ADMIN", tenant__isnull=True).values_list("pk", flat=True))
 
 
-def _notify_after_commit(user_ids, kind, judgment, **params) -> None:
+def _notify_after_commit(user_ids, notification_type, judgment, **params) -> None:
+    """两种通知各有自己的类型(个人中心「城隍初审」一类,可关);文案键见 `messages.KIND_BY_TYPE`。"""
     if not user_ids:
         return
-    params = {"soul": judgment.soul.name, "kind": kind, **params}
+    params = {"soul": judgment.soul.name, **params}
     judgment_id = str(judgment.pk)
 
     def send():
@@ -197,9 +213,9 @@ def _notify_after_commit(user_ids, kind, judgment, **params) -> None:
         from apps.events.services import EventService
         from apps.notifications import messages
 
-        title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
+        title, body = messages.render(messages.DEFAULT_LOCALE, messages.KIND_BY_TYPE[notification_type], params)
         for user in User.objects.filter(pk__in=user_ids, is_active=True):
-            EventService.notify_user(user, title=title, message=body, notification_type="SYSTEM",
+            EventService.notify_user(user, title=title, message=body, notification_type=notification_type,
                                      related_resource="judgment", related_id=judgment_id, params=params)
 
     transaction.on_commit(send)

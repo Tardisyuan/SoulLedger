@@ -1,9 +1,1 @@
-[
-  "official_notify.city_god_case_received.body",
-  "official_notify.city_god_case_received.title",
-  "official_notify.city_god_case_returned.body",
-  "official_notify.city_god_case_returned.title",
-  "souls.events.CITY_GOD_RECEIVED",
-  "souls.events.CITY_GOD_RETURNED",
-  "souls.events.CITY_GOD_SENT_ON"
-]
+[]

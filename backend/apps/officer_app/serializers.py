@@ -35,6 +35,11 @@ class TodoItemSerializer(serializers.Serializer):
                                          help_text="仅选站:流程已在门口等的第几天;还没到门口时 null。")
     stations_ahead = serializers.IntegerField(required=False, allow_null=True,
                                               help_text="仅选站:轮到本域之前还有几站;已在门口时 null。")
+    # 仅「城隍初审」(kind = city_god,第五十三批):`title` 是灵魂名,`id` 是审判。
+    city_god_status = serializers.CharField(required=False, help_text="仅城隍初审:PENDING / RETURNED。")
+    city_god_name = serializers.CharField(required=False, help_text="仅城隍初审:城隍名。")
+    origin_location = serializers.CharField(required=False, allow_blank=True, help_text="仅城隍初审:出身地。")
+    untimely = serializers.BooleanField(required=False, help_text="仅城隍初审:枉死。")
 
 
 class TodoGroupSerializer(serializers.Serializer):
@@ -54,6 +59,8 @@ class TodoSerializer(serializers.Serializer):
         help_text="未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。")
     pick_nodes = TodoGroupSerializer(
         help_text="待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。")
+    city_god = TodoGroupSerializer(
+        help_text="城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。")
 
 
 class FactHallSerializer(serializers.Serializer):

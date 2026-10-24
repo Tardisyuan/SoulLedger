@@ -1,7 +1,7 @@
 """官员通知的类别:个人中心「通知」表(类别 × 站内 / 邮件)的唯一权威。
 
 **每个 `NotificationType` 都必须在 `CATEGORY_BY_TYPE` 里有一行**(`tests/test_notification_categories.py`
-钉住):值是下面七个类别之一,或 `None` —— 「不进这张表,照旧送达」(受刑计划、联审、系统消息等
+钉住):值是下面八个类别之一,或 `None` —— 「不进这张表,照旧送达」(受刑计划、联审、系统消息等
 结论 / 运维类;表里没有它们的行,也就没有地方关)。新增类型时必须在这里作出选择,不会无声地落进默认值。
 
 偏好存在 `User.preferences["notifications"][类别]["site" | "mail"]`(`mail_since` 是内部字段:该格从关到开的时刻,
@@ -13,6 +13,7 @@ from django.utils import timezone
 
 CATEGORIES = (
     "account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff",
+    "city_god",
 )
 CHANNELS = ("site", "mail")
 
@@ -56,6 +57,9 @@ CATEGORY_BY_TYPE = {
     "DEATH_SYNC_RETRY_FAILED": None,
     # 案子被管理员替你放回 / 改派 / 暂缓:关系到自己手上的活,不进可关的表。
     "JUDGMENT_CLAIM_CHANGED": None,
+    # 城隍初审的收案 / 退回补正(第五十三批,用户决定可关)。
+    "CITY_GOD_CASE_RECEIVED": "city_god",
+    "CITY_GOD_CASE_RETURNED": "city_god",
 }
 
 #: 发送方可以在 `params["category"]` 里改选的类别(只限这里列的,与 `messages.VARIANTS` 同一个做法):

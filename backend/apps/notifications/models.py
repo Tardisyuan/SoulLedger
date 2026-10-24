@@ -54,6 +54,9 @@ class NotificationType(models.TextChoices):
     DEATH_SYNC_RETRY_FAILED = "DEATH_SYNC_RETRY_FAILED", "Death Sync Retry Failed"
     # 管理员替别人放回 / 改派 / 暂缓 / 取消暂缓 → 原认领人(apps/judgment/claims.py::_tell_holder)。
     JUDGMENT_CLAIM_CHANGED = "JUDGMENT_CLAIM_CHANGED", "Judgment Claim Changed"
+    # 城隍初审(apps/judgment/city_gods.py):收案 → 名下官员(没有就是本殿管理员);退回补正 → 本殿管理员。
+    CITY_GOD_CASE_RECEIVED = "CITY_GOD_CASE_RECEIVED", "City God Case Received"
+    CITY_GOD_CASE_RETURNED = "CITY_GOD_CASE_RETURNED", "City God Case Returned"
 
 
 class UserNotification(AuditUserFields, models.Model):

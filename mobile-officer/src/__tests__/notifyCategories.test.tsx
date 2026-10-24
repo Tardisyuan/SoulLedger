@@ -13,7 +13,7 @@ jest.mock("@soulledger/core/api/auth", () => ({
 }));
 
 const ALL_ON = Object.fromEntries(
-  ["account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff"].map((c) => [c, { site: true, mail: false }])
+  ["account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff", "city_god"].map((c) => [c, { site: true, mail: false }])
 );
 
 describe("rules", () => {
