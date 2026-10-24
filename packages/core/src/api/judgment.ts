@@ -734,6 +734,7 @@ export type CityGod = Schemas["CityGod"];
 export type CityGodWrite = Schemas["PatchedCityGod"];
 export type CityGodCase = Schemas["CityGodCase"];
 export type CityGodStatus = Schemas["CityGodStatusEnum"];
+export type CityGodOfficer = Schemas["CityGodOfficer"];
 
 /** 两种状态还在城隍处:十殿不能动它。 */
 export const AT_CITY_GOD: readonly CityGodStatus[] = ["PENDING", "RETURNED"];
@@ -751,6 +752,8 @@ export const cityGodsApi = {
   create: (data: CityGodWrite) => api.post<CityGod>("/judgment/city-gods/", data),
   update: (id: string, data: CityGodWrite) => api.patch<CityGod>(`/judgment/city-gods/${id}/`, data),
   remove: (id: string) => api.delete<void>(`/judgment/city-gods/${id}/`),
+  /** 「名下官员」可选的人(本殿能办案的在职官员,与改派同一条规则)。要 `judgment.assign`。 */
+  officerChoices: () => api.get<CityGodOfficer[]>("/judgment/city-gods/officer-choices/"),
 };
 
 /**

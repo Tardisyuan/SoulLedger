@@ -8693,6 +8693,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/city-gods/officer-choices/:
+    get:
+      operationId: v1_judgment_city_gods_officer_choices_list
+      description: |-
+        编辑抽屉里「名下官员」可选的人:本殿能办案的在职官员 —— 与 `officer_ids` 的校验、改派名单同一条规则
+        (`claims.is_assignable`)。没有租户的调用者(全局 ADMIN)答空表。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCityGodOfficerList'
+          description: ''
   /api/v1/judgment/courts/:
     get:
       operationId: v1_judgment_courts_list
@@ -23867,6 +23903,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/RegisteredViaEnum'
           readOnly: true
+        returned_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
         soul_birth_year:
           type: integer
           readOnly: true
@@ -23895,6 +23936,7 @@ components:
       - matched_region
       - origin_location
       - registered_via
+      - returned_at
       - sent_on_at
       - sent_on_by
       - sent_on_by_name
@@ -32372,6 +32414,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CityGod'
+    PaginatedCityGodOfficerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGodOfficer'
     PaginatedCommentListList:
       type: object
       required:
