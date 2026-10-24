@@ -240,6 +240,7 @@ CATEGORY_FUNGIBILITY = {
     "COURAGE": CONDUCT,
     "WISDOM": CONDUCT,
     "PIETY": RITUAL,       # 焚修門/教典門
+    "DEDICATION": RITUAL,  # 超度回向: merit a rite sends to the soul (2026-10-24); a rite, not money or life
     # Demerit categories
     "CRUELTY": LIFE,       # 不仁門: 役使人畜至於疲乏, 鞭笞
     "DECEPTION": SPEECH,   # 言約失信, 隱真出偽

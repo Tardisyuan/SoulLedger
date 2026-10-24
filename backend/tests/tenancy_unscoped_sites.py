@@ -143,6 +143,7 @@ SITES = [
     ('apps/realms/path.py', 'SoulPathService._open_entry', 'SoulPathEntry.all_objects', 1, 'LOCK', 'locks the open path entry of one soul by soul_id'),
     ('apps/realms/path.py', 'SoulPathService.enter', 'SoulPathEntry.all_objects', 2, 'PK', 'path entries of one soul'),
     ('apps/realms/path.py', 'entry_realm_for', 'Realm.all_objects', 1, 'FILTERED', 'explicit tenant_id=soul.tenant_id'),
+    ('apps/reincarnation/services.py', 'ReincarnationService.complete_rebirth', 'Tenant.objects', 1, 'LOCK', 'locks the soul\'s own hall row by pk for the rebirth quota count (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/reincarnation/services.py', 'ReincarnationService.complete_rebirth', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/scheduler/realtime.py', '_tenant_code', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/scheduler/realtime.py', 'emit_jobs_rebuilt', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
