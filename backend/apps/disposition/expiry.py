@@ -28,6 +28,7 @@ import logging
 from django.db import transaction
 from django.db.models import BigIntegerField, Case, F, Q, Value, When
 from django.db.models.functions import Cast, Coalesce, ExtractDay, ExtractMonth, ExtractYear
+from django.db.models.lookups import GreaterThanOrEqual
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -91,20 +92,43 @@ def term_has_ended(term_start, sentence_years, today: datetime.date, lost_days=0
 NO_TERM_END = 2**62
 
 
+#: 年份先加这么多再算日序:整数除法在两边都是「向零截断」,保证被除数非负才等于向下取整。
+#: 400 的倍数,不改格里历周期;够到公元前四百万年。
+_YEAR_SHIFT = 400 * 10_000
+
+
+def _day_number(year, month, day):
+    """`(年, 月, 日)` 三个 bigint 表达式 → 连续的日序(儒略日数的写法,整数运算)。
+
+    对 `day` 是线性的,所以 `day = 0` 是上个月最后一天、`day` 超出当月天数顺到下个月 ——
+    与 `term_end` 里 2 月 29 日顺到 3 月 1 日同一个结果。`month = 13` 等于下一年 1 月。
+    """
+    big = BigIntegerField()
+    a = (Value(14, output_field=big) - month) / Value(12, output_field=big)
+    y = year + Value(_YEAR_SHIFT, output_field=big) - a
+    m = month + Value(12, output_field=big) * a - Value(3, output_field=big)
+    return (
+        day
+        + (Value(153, output_field=big) * m + Value(2, output_field=big)) / Value(5, output_field=big)
+        + Value(365, output_field=big) * y
+        + y / Value(4, output_field=big)
+        - y / Value(100, output_field=big)
+        + y / Value(400, output_field=big)
+    )
+
+
 def term_end_sort_key():
-    """期满日的 SQL 排序键:`年 * 10000 + 月 * 100 + 日`,一个整数,升序即期满近 → 远。
+    """期满日的 SQL 排序键:期满那一天的日序(一个整数),升序即期满近 → 远。
 
     与 `effective_term_start` + `term_end` 同一条规则,在 SQL 里再写一遍 —— 列表按它排序
     分页,Python 一侧排不了分页之外的行。起算日:`term_start_year` 有值就用 `term_start_*`
     三列,否则用 `executed_at` 的本地日期(`Extract*` 与 `timezone.localdate` 取的是同一个
-    当前时区)。缺月取 12、缺日取 31,与 `term_has_ended` 缺精度时取最晚一天同向
-    (31 不是那个月真实的最后一天,但作为排序键它不小于该月任何一天,顺序不变)。
-    跨公元交界多加一年,与 `term_end` 相同。负年份也保序:同年内月日单调,跨年差 10000。
+    当前时区)。缺月取 12 月 31 日,缺日取那个月最后一天(下个月的第 0 天),与
+    `term_has_ended` 缺精度时取最晚一天相同。跨公元交界多加一年,与 `term_end` 相同。
+    失踪顺延的 `lost_days` 加在日序上,只在期满年是公元后时加 —— 与 `term_end` 一致。
 
     算不出期满日(永久、`sentence_years` 为空、既无起算日也未执行)的行取 `NO_TERM_END`。
-    ponytail: 不含 `lost_days` 的顺延(整数键上加天数不成立);召回过的灵魂排序可能早几天,
-    要精确时把期满日落成一列。
-    先转 bigint 再算:PostgreSQL 上 `integer * 10000` 会溢出(刑期可以是上万年)。
+    先转 bigint 再算:PostgreSQL 上 `integer` 会溢出(刑期可以是上万年)。
     """
     big = BigIntegerField()
     has_start = Q(term_start_year__isnull=False)
@@ -115,8 +139,13 @@ def term_end_sort_key():
     # 公元前起算、期满在公元后(`year < 0 <= year + years`)多一年。`executed_at` 不会是公元前。
     crosses_era = When(term_start_year__lt=0, term_start_year__gte=-F("sentence_years"), then=Value(1))
     end_year = start_year + years + Case(crosses_era, default=Value(0), output_field=big)
-    key = end_year * 10000 + Coalesce(start_month, Value(12), output_field=big) * 100 + Coalesce(
-        start_day, Value(31), output_field=big
+    # 缺日:下个月的第 0 天;缺月:12 月 31 日(13 月第 0 天)。
+    month = Coalesce(start_month, Value(12), output_field=big)
+    month_for_day = Case(When(Q(term_start_year__isnull=False, term_start_day__isnull=True), then=month + Value(1)), default=month, output_field=big)
+    day = Coalesce(start_day, Value(0), output_field=big)
+    lost = Case(When(Q(lost_days__gt=0), then=Cast("lost_days", big)), default=Value(0), output_field=big)
+    key = _day_number(end_year, month_for_day, day) + Case(
+        When(GreaterThanOrEqual(end_year, Value(1)), then=lost), default=Value(0), output_field=big
     )
     return Case(
         When(is_eternal=True, then=Value(NO_TERM_END)),

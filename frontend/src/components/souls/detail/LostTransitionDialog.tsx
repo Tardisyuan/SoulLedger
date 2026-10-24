@@ -141,21 +141,8 @@ export function LostTransitionDialog({
   );
 }
 
-/** 最近一条「→ 失踪」的状态变更;没有就 null(失踪早于事件记录,或事件还没加载)。 */
-export function latestLostEvent(events: SoulEvent[]): SoulEvent | null {
-  return (
-    [...events]
-      .filter((e) => e.event_type === "STATE_CHANGED" && (e.payload as { new_state?: unknown }).new_state === "LOST")
-      .sort((a, b) => new Date(b.create_time).getTime() - new Date(a.create_time).getTime())[0] ?? null
-  );
-}
-
-const pad = (n: number) => String(n).padStart(2, "0");
-/** 「10-24 14:20」,本地时间。 */
-export function lostSinceLabel(iso: string): string {
-  const d = new Date(iso);
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+export { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
+import { lostSinceLabel } from "@soulledger/core/domain/lost";
 
 /**
  * 第五十批 L-3:失踪时身份带下面的浅底块 ——「◌ 10-24 14:20 起失踪 · 经办：崔判官」,下一行是原因(宋体)。

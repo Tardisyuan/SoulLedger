@@ -234,10 +234,13 @@ def serving(cn_tenant, eu_tenant):
         # 不加那一年就是公元 5 年,会排到下面公元 6 年 1 月那一行之前
         "bce": _serving(cn_tenant, "bce", start=(-5, 6, 1), years=10, order=5),
         "ce": _serving(cn_tenant, "ce", start=(1, 1, 1), years=5, order=8),
+        # 与 a 同一天起算同样十年,中途失踪 200 天:期满顺延到 2011-01-01,排到 year_only(2010-12-31)之后
+        "held": _serving(cn_tenant, "held", start=(2000, 6, 15), years=10, order=9),
         # 永久与没记刑期:没有期满日,排最后,彼此按建档先后
         "eternal": _serving(cn_tenant, "eternal", start=(1990, 1, 1), years=1, eternal=True, order=6),
         "no_years": _serving(cn_tenant, "no_years", start=(1990, 1, 1), years=None, order=7),
     }
+    Disposition.all_objects.filter(pk=made["held"].pk).update(lost_days=200)
     # 别的租户、期满更早的一行:不在这里出现。
     _serving(eu_tenant, "foreign", start=(1000, 1, 1), years=1, order=0)
     return made
@@ -245,7 +248,7 @@ def serving(cn_tenant, eu_tenant):
 
 @pytest.mark.django_db
 class TestOrderingByTermEnd:
-    EXPECTED = ["ce", "bce", "null_start", "tie", "a", "year_only", "eternal", "no_years"]
+    EXPECTED = ["ce", "bce", "null_start", "tie", "a", "year_only", "held", "eternal", "no_years"]
 
     @staticmethod
     def _names(body):
@@ -272,4 +275,4 @@ class TestOrderingByTermEnd:
 
     def test_other_orderings_are_untouched(self, judge, serving):
         body = judge.get(URL, {"section": "executing", "ordering": "-created_at"}).json()
-        assert self._names(body) == ["ce", "no_years", "eternal", "bce", "year_only", "null_start", "a", "tie"]
+        assert self._names(body) == ["held", "ce", "no_years", "eternal", "bce", "year_only", "null_start", "a", "tie"]

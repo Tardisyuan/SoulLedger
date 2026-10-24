@@ -14,6 +14,7 @@ import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
 import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
+import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
@@ -86,6 +87,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
         <View>
           <RefreshFailed data={data} error={error} onRetry={reload} />
           <SoulHeader soul={soul} code={code} />
+          {soul.current_state === "LOST" ? <LostBanner soulId={id} /> : null}
         </View>
         {/* The sticky wrapper is ScrollView's own (a column); the row lives one level down, or iOS stacks the tabs. */}
         <View style={{ backgroundColor: theme.s1 }}>
@@ -441,6 +443,24 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
           <MoreRow more={r.more} state={r.moreState} />
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** 第五十批 M-1:失踪时页头下的浅底块(起始时间 · 经办，下一行原因),只读;数据是最近一条「→ 失踪」的状态变更。 */
+function LostBanner({ soulId }: { soulId: string }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const load = useCallback(() => eventsApi.list({ soul: soulId }).then((r) => r.data), [soulId]);
+  const { data } = useRemote(load);
+  const event = data ? latestLostEvent(data.results) : null;
+  if (!event) return null;
+  const reason = (event.payload as { reason?: unknown } | null)?.reason;
+  const head = `◌ ${t("souls.lost.since", { date: lostSinceLabel(event.create_time) })}${event.actor ? ` · ${t("souls.lost.by", { name: event.actor })}` : ""}`;
+  return (
+    <View testID="soul-lost-banner" style={{ marginHorizontal: GUTTER, marginTop: space[3], padding: space[3], backgroundColor: theme.s2, gap: space[1] }}>
+      <Txt variant="caption">{head}</Txt>
+      {typeof reason === "string" && reason ? <Txt variant="body">{reason}</Txt> : null}
     </View>
   );
 }
