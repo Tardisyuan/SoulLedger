@@ -12,11 +12,11 @@ import { installMobilePlatform } from "../platform";
 import { AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { stubApi } from "./stubApi";
 
-const navigate = jest.fn();
-const goBack = jest.fn();
+const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate, goBack, addListener: () => () => {}, dispatch: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, addListener: () => () => {}, dispatch: jest.fn() }),
   useRoute: () => ({
     params: { judgment: "11111111-1111-1111-1111-111111111111", caseNumber: "CN-2026-0007", verdict: "FAILED", deadline: "2026-11-08T12:00:00Z" },
   }),
@@ -34,8 +34,8 @@ function wrap(children: ReactNode) {
 
 beforeEach(() => {
   installMobilePlatform();
-  navigate.mockClear();
-  goBack.mockClear();
+  mockNavigate.mockClear();
+  mockGoBack.mockClear();
 });
 
 const J = "11111111-1111-1111-1111-111111111111";
@@ -73,7 +73,7 @@ it("an appealable judgment shows its deadline as a day and an 「申诉 ›」 t
   wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
   expect(screen.getByTestId(`appeal-deadline-${J}`).props.children).toBe("2026-11-08 前可申诉");
   fireEvent.press(screen.getByTestId(`appeal-file-${J}`));
-  expect(navigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, caseNumber: "CN-2026-0007" }));
+  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, caseNumber: "CN-2026-0007" }));
 });
 
 it("a refused one says why in one grey line and offers no button", () => {
@@ -119,7 +119,7 @@ it("the form refuses an empty reason locally, then sends the reason and goes bac
   await screen.findByTestId("appeal-submit");
   await new Promise((r) => setTimeout(r, 0));
   expect(calls[0]?.body).toEqual({ judgment: J, reason: "证据有误", evidence: "" });
-  expect(goBack).toHaveBeenCalled();
+  expect(mockGoBack).toHaveBeenCalled();
 });
 
 it("roundsOf lists one judgment's rounds, newest first", () => {
