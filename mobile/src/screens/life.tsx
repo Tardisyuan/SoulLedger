@@ -1,4 +1,4 @@
-import { soulApi, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
+import { soulApi, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
@@ -65,6 +65,7 @@ import {
   useTheme,
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
+import { AppealLine, roundsOf } from "./appeals";
 import { useCurrentHall } from "./letters";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
@@ -117,6 +118,14 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
         <View style={styles.shrink}>
           <EnumValue namespace="souls.categories" value={record.category} tone="ink" variant="bodyLg" />
         </View>
+        {/* 第五十二批 A-5:改判补偿用自己的类别名,后面一枚小方标「↺ 改判」(同网页超度回向的「⇠ 阳间」形制)。 */}
+        {record.category === "COMPENSATION" ? (
+          <View testID={`compensation-tag-${record.id}`} style={[styles.milestone, { borderColor: t.inkSubtle }]}>
+            <Txt variant="label" tone="muted" style={styles.milestoneText}>
+              {tr("souls.compensation.tag")}
+            </Txt>
+          </View>
+        ) : null}
         {record.is_milestone && !stack ? milestone : null}
         <View style={styles.fill} />
         <OneLine variant="value" tone="muted">{`${demerit ? "−" : "+"}${record.weight}`}</OneLine>
@@ -166,8 +175,11 @@ export function LifeSections({
   sentence,
   numbered,
   focus,
+  appeals,
 }: {
   life: MeLife;
+  /** 第五十二批:本世审判的申诉(只有当前这一世传;前世只能看,不画申诉行)。 */
+  appeals?: { data: MeJudgmentAppealList | null; reload: () => unknown };
   /** The row a tapped push points at (第四十批 S-e): a judgment or a disposition, washed for two seconds. */
   focus?: LifeFocus;
   /** v3: the current life's rows carry their ledger number (01–04 here; 05 受刑, 06 前世 are the caller's). */
@@ -222,6 +234,14 @@ export function LifeSections({
                 </DataRow>
                 <DataRow label={tr("soul_app.life.final")}>{tr(j.is_final ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}</DataRow>
               </DataRows>
+              {appeals?.data && !sealed ? (
+                <AppealLine
+                  row={appeals.data.judgments.find((a) => a.judgment_id === j.id)}
+                  rounds={roundsOf(appeals.data, j.id)}
+                  focused={focus?.judgment === j.id}
+                  onChanged={() => void appeals.reload()}
+                />
+              ) : null}
             </LandingWash>
           ))
         ) : (
@@ -687,8 +707,11 @@ export function MyLifeScreen() {
     }, [landing, focus, navigation])
   );
   const life = useRemote(soulApi.life);
+  // 第五十二批:申诉行。失败就不画(审判卡片照旧),下次回到这页再取。
+  const appeals = useRemote(soulApi.judgmentAppeals);
   const residence = useResidence();
   useReloadOnRefocus(life.reload);
+  useReloadOnRefocus(appeals.reload);
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   const scroll = useScrollToLanding(landing);
@@ -716,6 +739,7 @@ export function MyLifeScreen() {
 
   const refresh = () => {
     void life.reload();
+    void appeals.reload();
     setRefreshes((n) => n + 1);
     refreshProfile().catch(() => {});
   };
@@ -760,6 +784,7 @@ export function MyLifeScreen() {
               lex={residence.home}
               numbered
               focus={focus}
+              appeals={appeals}
               open={open}
               onToggle={toggle}
               onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}

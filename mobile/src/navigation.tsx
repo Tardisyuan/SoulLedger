@@ -56,6 +56,7 @@ import { AboutScreen } from "./screens/about";
 import { DataExportScreen } from "./screens/dataExport";
 import { HelpScreen } from "./screens/help";
 import { FeedbackScreen } from "./screens/writeToHall";
+import { JudgmentAppealScreen } from "./screens/appeals";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
@@ -440,6 +441,13 @@ export function RootNavigator() {
               component={NewApplicationScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.applications.new")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="JudgmentAppeal"
+              component={JudgmentAppealScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("appeals.file_title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen
