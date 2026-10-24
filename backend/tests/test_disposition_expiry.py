@@ -316,3 +316,50 @@ class TestTermExtendedAfterExpiry:
         assert response.status_code == 200, response.data
         assert response.data["expired_at"] is None
         assert response.data["section"] == "executing"
+
+
+# ---------------------------------------------------------------------------
+# 失踪期间刑期不走,召回后顺延(用户 2026-10-25 决定)
+# ---------------------------------------------------------------------------
+
+class TestLostDaysPushTheEnd:
+    def test_lost_days_move_the_end_later(self):
+        assert term_end((2000, 6, 15), 10, 3) == (2010, 6, 18)
+        assert term_has_ended((2000, 6, 15), 10, D(2010, 6, 17), 3) is False
+        assert term_has_ended((2000, 6, 15), 10, D(2010, 6, 18), 3) is True
+
+    def test_missing_precision_resolves_to_the_latest_day_first(self):
+        assert term_end((2000, None, None), 10, 1) == (2011, 1, 1)
+        assert term_end((2000, 2, 29), 1, 1) == (2001, 3, 2)
+
+
+@pytest.mark.django_db
+class TestLostSoulsHoldTheirTerm:
+    def test_expiry_skips_a_lost_soul(self, tenant):
+        row = _disposition(tenant, "lost")
+        Soul.objects.filter(pk=row.soul_id).update(current_state=SoulState.LOST)
+
+        assert expire_for_tenant(tenant, today=BOUNDARY)["expired"] == 0
+        row.refresh_from_db()
+        assert row.expired_at is None
+
+    def test_recall_extends_the_term_by_the_days_spent_lost(self, tenant):
+        row = _disposition(tenant, "recalled")
+        soul = row.soul
+        Soul.objects.filter(pk=soul.pk).update(current_state=SoulState.DISPOSED)
+        soul.refresh_from_db()
+
+        marked = timezone.now() - datetime.timedelta(days=5)
+        with patch("django.utils.timezone.now", return_value=marked):
+            assert soul.transition_to(SoulState.LOST, "押送途中走失") is True
+        row.refresh_from_db()
+        assert row.lost_since is not None and row.lost_days == 0
+
+        assert soul.transition_to(SoulState.DISPOSED, "在奈何桥边寻回") is True
+        row.refresh_from_db()
+        assert row.lost_since is None
+        assert row.lost_days == 5
+
+        # 原本 BOUNDARY 当天期满;顺延 5 天后,第 4 天未满、第 5 天满。
+        assert expire_for_tenant(tenant, today=BOUNDARY + datetime.timedelta(days=4))["expired"] == 0
+        assert expire_for_tenant(tenant, today=BOUNDARY + datetime.timedelta(days=5))["expired"] == 1

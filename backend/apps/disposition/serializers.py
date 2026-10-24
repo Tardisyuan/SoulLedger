@@ -63,6 +63,7 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
                 (obj.term_start_year, obj.term_start_month, obj.term_start_day), obj.executed_at,
             ),
             obj.sentence_years,
+            obj.lost_days,
         )
         return to_representation(*end) if end else None
 
