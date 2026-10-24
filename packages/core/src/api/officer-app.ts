@@ -35,6 +35,11 @@ export type TodoItemExtra = {
   court?: string;
   gate_days?: number | null;
   stations_ahead?: number | null;
+  /** 城隍初审(kind = city_god):PENDING / RETURNED、城隍名、出身地、枉死。 */
+  city_god_status?: string;
+  city_god_name?: string;
+  origin_location?: string;
+  untimely?: boolean;
 };
 export type FactHistory = components["schemas"]["FactHistory"];
 export type FactAttachment = components["schemas"]["FactAttachment"];
@@ -47,8 +52,10 @@ export type Cosigner = components["schemas"]["Cosigner"];
  * the thread is read and answered through `soulInboxApi`. `sentence_change` (受刑计划变更请求) is view-only and
  * has no `item()` detail either: it is decided on the desk. `pick` (待我选站, 第四十三批) has no `item()` detail:
  * its id is the workflow's, read through `workflowApi.get` and picked through `workflowApi.pickSegment`.
+ * `city_god` (城隍初审, 第五十三批) has no `item()` detail: its id is the judgment's, read through
+ * `cityGodCasesApi.get` and decided through `sendOn` / `returnCase`.
  */
-export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change" | "pick";
+export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change" | "pick" | "city_god";
 
 /**
  * Why a decision (approve / reject) did not go through. `code` on the error body of
