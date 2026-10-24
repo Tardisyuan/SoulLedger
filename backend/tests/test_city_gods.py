@@ -70,7 +70,7 @@ def test_the_city_gods_officers_are_told_after_commit(assigned, cn_tenant, djang
     with django_capture_on_commit_callbacks(execute=True):
         _dead(cn_tenant, "杭州")
     note = UserNotification.objects.get(user=assigned["clerk"])
-    assert note.params["kind"] == "city_god_case_received" and "杭州府城隍" in note.message
+    assert note.notification_type == "CITY_GOD_CASE_RECEIVED" and "杭州府城隍" in note.message
     assert not UserNotification.objects.filter(user=assigned["judge"]).exists()
 
 
@@ -141,7 +141,7 @@ def test_return_needs_a_note_tells_the_admins_and_can_still_be_sent_on(assigned,
     with django_capture_on_commit_callbacks(execute=True):
         returned = clerk.post(f"{CASES}{judgment.pk}/return/", {"note": "生辰不详"}, format="json")
     assert returned.status_code == 200 and returned.data["city_god_status"] == "RETURNED"
-    assert UserNotification.objects.get(user=assigned["lead"]).params["kind"] == "city_god_case_returned"
+    assert UserNotification.objects.get(user=assigned["lead"]).notification_type == "CITY_GOD_CASE_RETURNED"
     assert SoulEvent.objects.filter(soul=judgment.soul, event_type="CITY_GOD_RETURNED").count() == 1
     assert clerk.post(f"{CASES}{judgment.pk}/return/", {"note": "再退"}, format="json").status_code == 409
     with pytest.raises(ClaimRefusedError):
@@ -196,3 +196,53 @@ def test_city_gods_are_per_hall_and_only_in_diyu(hall, cn_tenant, eu_tenant):
                                              format="json")
     assert bad.status_code == 400 and "officer_ids" in bad.data
     assert not Judgment.objects.filter(city_god__tenant=eu_tenant).exists()
+
+
+# ── 第五十三批:Design 要的几处 ────────────────────────────────────────
+
+
+def test_a_case_names_the_region_that_decided_it_and_how_it_was_registered(assigned, cn_tenant):
+    clerk = officer_client(assigned["clerk"])
+    judgment = _dead(cn_tenant, "浙江省杭州市")
+    row = clerk.get(f"{CASES}{judgment.pk}/").data
+    assert (row["matched_region"], row["registered_via"]) == ("杭州", "OFFICER")
+    CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)
+    assert clerk.get(f"{CASES}{_dead(cn_tenant, '四川').pk}/").data["matched_region"] is None
+
+
+def test_a_returned_case_is_listed_first_and_cannot_be_returned_again(assigned, cn_tenant):
+    first, second = _dead(cn_tenant, "杭州"), _dead(cn_tenant, "杭州")
+    city_gods.return_case(second.pk, assigned["clerk"], "生辰不详")
+    ids = [r["id"] for r in officer_client(assigned["clerk"]).get(CASES).data["results"]]
+    assert ids == [str(second.pk), str(first.pk)]
+    with pytest.raises(city_gods.CityGodRefusedError):
+        city_gods.return_case(second.pk, assigned["clerk"], "再退")
+
+
+def test_a_city_god_without_officers_tells_the_hall_admins(hall, cn_tenant, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        _dead(cn_tenant, "杭州")
+    note = UserNotification.objects.get(user=hall["lead"])
+    assert note.notification_type == "CITY_GOD_CASE_RECEIVED"
+    assert not UserNotification.objects.filter(user=hall["clerk"]).exists()
+
+
+def test_city_god_notices_can_be_switched_off(assigned, cn_tenant, django_capture_on_commit_callbacks):
+    assigned["clerk"].preferences = {"notifications": {"city_god": {"site": False}}}
+    assigned["clerk"].save(update_fields=["preferences"])
+    with django_capture_on_commit_callbacks(execute=True):
+        _dead(cn_tenant, "杭州")
+    assert not UserNotification.objects.filter(user=assigned["clerk"]).exists()
+
+
+def test_the_officer_todo_has_a_city_god_group_for_its_officers_only(assigned, cn_tenant):
+    from apps.officer_app import todo
+
+    first, second = _dead(cn_tenant, "杭州"), _dead(cn_tenant, "杭州")
+    city_gods.return_case(second.pk, assigned["clerk"], "生辰不详")
+    group = todo.build(assigned["clerk"])["city_god"]
+    assert group["count"] == 2 and [i["id"] for i in group["items"]] == [str(second.pk), str(first.pk)]
+    assert group["items"][0]["city_god_status"] == "RETURNED"
+    assert todo.build(assigned["lead"])["city_god"]["count"] == 0
+    city_gods.send_on(first.pk, assigned["clerk"])
+    assert todo.build(assigned["clerk"])["city_god"]["count"] == 1

@@ -7,7 +7,8 @@
   解送 / 退回要 `judgment.execute`,且是这位城隍名下的官员(或持 `judgment.assign`);改交要 `judgment.assign`。
 """
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from django.db.models import Case, Exists, IntegerField, OuterRef, Value, When
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -54,7 +55,7 @@ class CityGodSerializer(serializers.ModelSerializer):
                   "create_time", "update_time")
         read_only_fields = ("id", "tenant", "create_time", "update_time")
 
-    @extend_schema(responses=CityGodOfficerSerializer(many=True))
+    @extend_schema_field(CityGodOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
         return [{"id": u.pk, "name": _name(u)} for u in obj.officers.order_by("username")]
 
@@ -161,13 +162,30 @@ class CityGodCaseSerializer(serializers.ModelSerializer):
     sent_on_by_name = serializers.SerializerMethodField()
     #: 调用者能否解送 / 退回(名下官员或殿管理员);界面据此置灰,服务端照样查。
     can_act = serializers.SerializerMethodField()
+    #: 出身地里决定归属的那个地名(`city_gods.matched_region`);兜底收的为 null。
+    matched_region = serializers.SerializerMethodField()
+    #: 登记来源:死亡同步(`death_sync`)开的审判是 DEATH_SYNC,其余(官员登记)是 OFFICER。
+    registered_via = serializers.SerializerMethodField()
+    #: 抽屉里的生卒与阳寿只写年(可能是公元前,`apps.souls.dates`);没有记的是 null。
+    soul_birth_year = serializers.IntegerField(source="soul.birth_year", read_only=True, allow_null=True)
+    soul_death_year = serializers.IntegerField(source="soul.death_year", read_only=True, allow_null=True)
+    soul_fated_death_year = serializers.IntegerField(source="soul.fated_death_year", read_only=True, allow_null=True)
 
     class Meta:
         model = Judgment
-        fields = ("id", "case_number", "soul", "soul_name", "origin_location", "city_god", "city_god_name",
-                  "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name", "untimely",
-                  "held_until", "created_at", "can_act")
+        fields = ("id", "case_number", "soul", "soul_name", "origin_location", "matched_region", "city_god",
+                  "city_god_name", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name",
+                  "untimely", "held_until", "created_at", "registered_via", "soul_birth_year", "soul_death_year",
+                  "soul_fated_death_year",
+                  "can_act")
         read_only_fields = fields
+
+    def get_matched_region(self, obj) -> str | None:
+        return city_gods.matched_region(obj)
+
+    @extend_schema_field(serializers.ChoiceField(choices=["OFFICER", "DEATH_SYNC"]))
+    def get_registered_via(self, obj):
+        return "DEATH_SYNC" if getattr(obj, "from_death_sync", False) else "OFFICER"
 
     def get_sent_on_by_name(self, obj) -> str | None:
         return _name(obj.sent_on_by)
@@ -210,7 +228,10 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
     serializer_class = CityGodCaseSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        from apps.death_sync.models import DeathRegistrationRequest
+
+        qs = super().get_queryset().annotate(
+            from_death_sync=Exists(DeathRegistrationRequest.objects.filter(judgment=OuterRef("pk"))))
         if self.action != "list":
             return qs
         params = self.request.query_params
@@ -221,7 +242,10 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
             qs = qs.filter(city_god_id=params["city_god"])
         if params.get("mine", "").lower() in ("1", "true", "yes"):
             qs = qs.filter(city_god__officers=self.request.user)
-        return qs.order_by("created_at", "id")
+        # 退回补正的排在待初审前面:它们等的是补资料,往往已经补好了(第五十三批 Q-1)。
+        returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
+                              output_field=IntegerField())
+        return qs.order_by(returned_first, "created_at", "id")
 
     @extend_schema(parameters=[
         OpenApiParameter("status", enum=CityGodStatus.values, required=False,

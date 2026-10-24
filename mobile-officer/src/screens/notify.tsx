@@ -15,7 +15,7 @@ import { Notice, SmallButton, SwitchMark, Txt, space, useI18n, useRemote, useToa
 import { AccountFrame } from "./account";
 
 /** 这几行带一句说明,同网页。 */
-const WITH_NOTE: readonly NotificationCategory[] = ["account_security", "approval", "approval_timeout", "password_help", "dispatch"];
+const WITH_NOTE: readonly NotificationCategory[] = ["account_security", "approval", "approval_timeout", "password_help", "dispatch", "city_god"];
 
 export function NotifyScreen({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();

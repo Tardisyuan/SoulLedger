@@ -122,6 +122,15 @@ export interface Judgment extends ArchiveFields {
   demerit_score?: number;
   /** 案子所挂界域(`realm_id`)按请求语言的名字;没挂是 null。 */
   realm_name?: string | null;
+  /**
+   * 城隍初审(第五十三批,只在地府):`city_god_status` 空 = 没经过城隍。PENDING / RETURNED 时十殿不能认领、
+   * 改派、暂缓、结案(409 `at_city_god`);SENT_ON 时案卷顶上写解送记录。
+   */
+  city_god?: string | null;
+  city_god_name?: string | null;
+  city_god_status?: "" | CityGodStatus;
+  city_god_note?: string;
+  sent_on_at?: string | null;
 }
 
 type Schemas = components["schemas"];
@@ -717,4 +726,51 @@ export const APPEAL_ERROR_CODES = [
   "not_reviewer",
   "appeal_closed",
   "verdict_unchanged",
+] as const;
+
+// ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────
+
+export type CityGod = Schemas["CityGod"];
+export type CityGodWrite = Schemas["PatchedCityGod"];
+export type CityGodCase = Schemas["CityGodCase"];
+export type CityGodStatus = Schemas["CityGodStatusEnum"];
+
+/** 两种状态还在城隍处:十殿不能动它。 */
+export const AT_CITY_GOD: readonly CityGodStatus[] = ["PENDING", "RETURNED"];
+
+export const cityGodKeys = {
+  all: ["city-gods"] as const,
+  gods: () => [...cityGodKeys.all, "gods"] as const,
+  cases: (params?: Record<string, string>) => [...cityGodKeys.all, "cases", params ?? null] as const,
+  case: (id: string) => [...cityGodKeys.all, "case", id] as const,
+};
+
+/** 本殿的城隍。看是 `judgment.read`,增改删 `judgment.assign`;只有地府能建(400 `city_gods_diyu_only`)。 */
+export const cityGodsApi = {
+  list: () => api.get<PaginatedResponse<CityGod>>("/judgment/city-gods/", { params: { page_size: "100" } }),
+  create: (data: CityGodWrite) => api.post<CityGod>("/judgment/city-gods/", data),
+  update: (id: string, data: CityGodWrite) => api.patch<CityGod>(`/judgment/city-gods/${id}/`, data),
+  remove: (id: string) => api.delete<void>(`/judgment/city-gods/${id}/`),
+};
+
+/**
+ * 在城隍处初审的案子。默认只列还在城隍处的(退回补正的在前);`status=SENT_ON` 看已解送的,`city_god=<id>`、
+ * `mine=true` 筛。拒绝是 `JudgmentClaimRefusal` 形状,`code` 见 `CITY_GOD_CASE_ERROR_CODES`。
+ */
+export const cityGodCasesApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<CityGodCase>>("/judgment/city-god-cases/", { params }),
+  get: (id: string) => api.get<CityGodCase>(`/judgment/city-god-cases/${id}/`),
+  sendOn: (id: string, note = "") => api.post<CityGodCase>(`/judgment/city-god-cases/${id}/send_on/`, { note }),
+  returnCase: (id: string, note: string) => api.post<CityGodCase>(`/judgment/city-god-cases/${id}/return/`, { note }),
+  transfer: (id: string, cityGod: string) =>
+    api.post<CityGodCase>(`/judgment/city-god-cases/${id}/transfer/`, { city_god: cityGod }),
+};
+
+/** 初审动作被拒时有文案的 `code`(`cityGodCases.error.<code>`)。 */
+export const CITY_GOD_CASE_ERROR_CODES = [
+  "not_at_city_god",
+  "not_city_god_officer",
+  "invalid_city_god",
+  "not_pending",
 ] as const;

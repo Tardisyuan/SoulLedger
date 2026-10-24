@@ -201,6 +201,10 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
                              format="json")
     assert response.status_code == 200, response.data
     assert len(response.data["compensations"]) == 1
+    assert response.data["compensations"][0]["order"] == 1 and response.data["deadline"]
+    closed = reviewer.get(HALL, {"status__in": "UPHELD,AMENDED"}).data
+    assert [a["id"] for a in closed["results"]] == [filed.data["id"]]
+    assert reviewer.get(HALL, {"status__in": "PENDING,WITHDRAWN"}).data["count"] == 0
     compensation = SoulRecord.objects.get(soul=soul, category=RecordCategory.COMPENSATION)
     assert compensation.record_type == "MERIT"
     assert compensation.evidence_json["appeal_id"] == filed.data["id"]

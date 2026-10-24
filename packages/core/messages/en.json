@@ -328,9 +328,9 @@
       "JUDGMENT_APPEAL_FILED": "Appeal filed",
       "JUDGMENT_APPEAL_WITHDRAWN": "Appeal withdrawn",
       "JUDGMENT_APPEAL_DECIDED": "Appeal decided",
-      "CITY_GOD_RECEIVED": "Received by the city god",
-      "CITY_GOD_SENT_ON": "Sent on to the ten courts",
-      "CITY_GOD_RETURNED": "Returned by the city god"
+      "CITY_GOD_RECEIVED": "Received by the City God",
+      "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
+      "CITY_GOD_RETURNED": "Returned by the City God for correction"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -2175,7 +2175,11 @@
     "case_number": "Case no.",
     "close_blocked_title": "A cross-realm judgment is still open, so this can't be closed yet",
     "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it's ended or cancelled, you can close here.",
-    "close_blocked_link": "Go to cross-realm judgment ›"
+    "close_blocked_link": "Go to cross-realm judgment ›",
+    "error": {
+      "at_city_god": "With the City God for first review; it can be claimed and concluded once sent on"
+    },
+    "at_city_god": "With the City God"
   },
   "audit": {
     "title": "Audit Log",
@@ -2346,14 +2350,16 @@
         "reassign": "Reassignment requests",
         "password_help": "Password help",
         "dispatch": "Dispatches",
-        "letter_handoff": "Letter handoffs"
+        "letter_handoff": "Letter handoffs",
+        "city_god": "City God review"
       },
       "notes": {
         "account_security": "Sign-in elsewhere, password changed, two-step changes, someone viewing as you",
         "approval": "A new approval is waiting on you",
         "approval_timeout": "In-app can't be turned off: a timeout affects the deadline",
         "password_help": "Only administrators receive these",
-        "dispatch": "Proposed, approved, rejected, cancelled"
+        "dispatch": "Proposed, approved, rejected, cancelled",
+        "city_god": "A case for first review, or one returned for correction"
       }
     },
     "email_notifications_no_address": "This account has no email address, so nothing is sent even when on.",
@@ -3880,7 +3886,9 @@
       "recycle_bin": "Recycle Bin",
       "sentence_plans": "Sentence Plans",
       "group_rebirth": "Reincarnation",
-      "judgment_appeals": "Appeal reviews"
+      "judgment_appeals": "Appeal reviews",
+      "city_gods": "City Gods",
+      "city_god_cases": "City God review"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -5470,12 +5478,12 @@
       "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."
     },
     "city_god_case_received": {
-      "title": "New case for the city god",
-      "body": "The case of {{soul}} has been sent to {{city_god}} for preliminary review."
+      "title": "New case for first review",
+      "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."
     },
     "city_god_case_returned": {
-      "title": "Case returned by the city god",
-      "body": "{{city_god}} returned the case of {{soul}} for missing information. By {{by}}. Note: {{reason}}"
+      "title": "Case returned for correction",
+      "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
     },
     "workflow_pick_nodes": {
       "title": "Pick this realm's stations",
@@ -6496,7 +6504,8 @@
         "rebirths": "Rebirth applications",
         "letters": "Letters to answer",
         "unassigned_letters": "Unassigned letters",
-        "pick_nodes": "Stations to pick"
+        "pick_nodes": "Stations to pick",
+        "city_god": "City God review"
       },
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to you.",
@@ -7075,5 +7084,82 @@
       "foreign_remove": "Remove them all",
       "foreign_required": "Choose whether to keep or remove these stations"
     }
+  },
+  "cityGods": {
+    "title": "City Gods",
+    "empty": "No City Gods in this hall yet. Without one, registered deaths go straight to the Ten Courts.",
+    "explain": "If the place of origin names several places, the last one named decides. If none matches, the default City God takes it; with no default, the case goes straight to the Ten Courts.",
+    "name": "Name",
+    "regions": "Places",
+    "regions_hint": "One place per entry; press Enter to add. The bare name is enough, e.g. Lin'an.",
+    "is_default": "Make this the hall's default City God",
+    "default_badge": "Default",
+    "default_hint": "Takes cases whose place of origin matches no one. Without a default, those cases go straight to the Ten Courts.",
+    "officers": "Officers",
+    "officers_hint": "Officers of this hall who can take cases, the same list as for reassigning. Hall administrators can act without being listed.",
+    "open_cases": "{{count}} in first review",
+    "create": "New City God",
+    "edit": "Edit",
+    "delete": "Delete",
+    "delete_confirm": "Delete {{name}}? Its officers are unassigned, and its places go to the default or straight to the Ten Courts.",
+    "saved_toast": "City God saved",
+    "deleted_toast": "City God deleted",
+    "error": {
+      "region_taken": "{{region}} already belongs to {{city_god}}; a place can belong to one City God only",
+      "default_taken": "{{city_god}} is already this hall's default; turn that off first",
+      "name_taken": "This hall already has a City God named {{name}}",
+      "invalid_officer": "This officer can't take cases in this hall",
+      "city_god_has_open_cases": "{{name}} still has {{count}} cases not sent on; send them on or move them first",
+      "city_gods_diyu_only": "Only halls of the Chinese Diyu can have City Gods"
+    },
+    "no_officers": "No officers: only hall administrators can act on this City God's cases",
+    "default_regions": "Cases whose place matches no one",
+    "default_current": "Current default: {{name}}",
+    "default_none": "This hall has no default City God now",
+    "go_to_queue": "Open the review queue"
+  },
+  "cityGodCases": {
+    "title": "City God review",
+    "empty": "No cases in first review",
+    "only_mine": "My City Gods only",
+    "filter_city_god": "City God · all",
+    "status": {
+      "PENDING": "Awaiting review",
+      "RETURNED": "Returned for correction",
+      "SENT_ON": "Sent on"
+    },
+    "origin_location": "Place of origin",
+    "untimely_badge": "Untimely death",
+    "source": {
+      "manual": "Registered by an officer",
+      "death_sync": "Death sync"
+    },
+    "send_on": "Send on to the Ten Courts",
+    "send_on_note": "Note · optional",
+    "sent_on_toast": "Sent on; the case is now in the Ten Courts' queue",
+    "return": "Return for correction",
+    "return_note": "What needs correcting",
+    "return_note_required": "Say what needs correcting",
+    "return_hint": "The hall administrators will be notified. Once it's fixed, the same City God sends it on.",
+    "returned_toast": "Returned; the hall administrators have been notified",
+    "transfer": "Move to another City God",
+    "transfer_pick": "Which City God takes it",
+    "transferred_toast": "Moved to {{city_god}}; back to awaiting review",
+    "cannot_act": "You aren't one of this City God's officers",
+    "sent_on_line": "First review by {{city_god}} · sent on {{date}}",
+    "returned_line": "Returned by {{city_god}} for correction · {{date}}",
+    "transferred_from": "moved from {{city_god}}",
+    "error": {
+      "not_at_city_god": "This case is no longer with a City God",
+      "not_city_god_officer": "You aren't one of this City God's officers",
+      "invalid_city_god": "Pick another City God of this hall",
+      "not_pending": "Someone just acted on this case; it has been refreshed"
+    },
+    "tab_open": "In first review",
+    "registered_at": "Registered",
+    "registered_via": "Registered via",
+    "life": "Born – died",
+    "go_to_review": "Go to first review →",
+    "transfer_on_web": "Moving to another City God is done on the web"
   }
 }

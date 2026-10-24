@@ -279,3 +279,17 @@ def test_the_rebirth_group_holds_dispositions_and_the_register(cn_tenant):
     assert register.parent.parent is None and register.parent.menu_type == "DIRECTORY"
     for role in ("ADMIN", "JUDGE", "GUARDIAN", "VIEWER"):
         assert {"处置", "转生登记簿"} <= _seen_by(role, cn_tenant), role
+
+
+def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tenant):
+    """menus/0026:申诉复核、城隍初审(灵魂业务)与城隍(系统设置),都是 `judgment.read`。"""
+    seeded_menus()
+    rows = {m.path: m for m in Menu.objects.filter(path__in=("/judgment/appeals", "/city-god-cases", "/city-gods"),
+                                                      is_deleted=False)}
+    assert {p: (r.name, r.parent.name, r.permission, r.order) for p, r in rows.items()} == {
+        "/judgment/appeals": ("申诉复核", "灵魂业务", "judgment.read", 31),
+        "/city-god-cases": ("城隍初审", "灵魂业务", "judgment.read", 18),
+        "/city-gods": ("城隍", "系统设置", "judgment.read", 25),
+    }
+    assert {"申诉复核", "城隍初审", "城隍"} <= _seen_by("JUDGE", cn_tenant)
+    assert not {"申诉复核", "城隍初审", "城隍"} & _seen_by("VIEWER", cn_tenant)
