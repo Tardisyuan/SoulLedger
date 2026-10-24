@@ -33941,6 +33941,7 @@ components:
             * `COURAGE` - Courage / Bravery
             * `WISDOM` - Wisdom / Knowledge
             * `PIETY` - Piety / Devotion
+            * `DEDICATION` - Dedication of merit
             * `CRUELTY` - Cruelty / Violence
             * `DECEPTION` - Deception / Lying
             * `COWARDICE` - Cowardice
@@ -39059,6 +39060,7 @@ components:
             * `COURAGE` - Courage / Bravery
             * `WISDOM` - Wisdom / Knowledge
             * `PIETY` - Piety / Devotion
+            * `DEDICATION` - Dedication of merit
             * `CRUELTY` - Cruelty / Violence
             * `DECEPTION` - Deception / Lying
             * `COWARDICE` - Cowardice
@@ -39187,6 +39189,7 @@ components:
       - COURAGE
       - WISDOM
       - PIETY
+      - DEDICATION
       - CRUELTY
       - DECEPTION
       - COWARDICE
@@ -39202,6 +39205,7 @@ components:
         * `COURAGE` - Courage / Bravery
         * `WISDOM` - Wisdom / Knowledge
         * `PIETY` - Piety / Devotion
+        * `DEDICATION` - Dedication of merit
         * `CRUELTY` - Cruelty / Violence
         * `DECEPTION` - Deception / Lying
         * `COWARDICE` - Cowardice
