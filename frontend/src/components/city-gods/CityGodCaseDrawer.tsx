@@ -1,5 +1,6 @@
 "use client";
 
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cityGodCasesApi, cityGodKeys, type CityGod, type CityGodCase } from "@soulledger/core/api";
@@ -149,7 +150,7 @@ export function CityGodCaseDrawer({ caseId, gods, canTransfer, onClose }: Props)
             </div>
             <div className={ROW}>
               <span className={KEY}>{t("souls.fated_death_date")}</span>
-              <span className="font-mono tabular-nums">{c.soul_fated_death_year ?? "—"}</span>
+              <span className="font-mono tabular-nums">{c.soul_fated_death_year ?? <MissingValue kind="unrecorded" />}</span>
             </div>
             <div className={ROW}>
               <span className={KEY}>{t("cityGodCases.registered_via")}</span>
@@ -161,7 +162,7 @@ export function CityGodCaseDrawer({ caseId, gods, canTransfer, onClose }: Props)
           {c.city_god_status === "RETURNED" && (
             <div data-testid="city-god-returned" className="space-y-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
               <p className="text-[oklch(var(--color-ink-muted))]">
-                {t("cityGodCases.returned_line", { city_god: c.city_god_name, date: c.returned_at ? formatDateTime(c.returned_at) : "—" })}
+                {t("cityGodCases.returned_line", { city_god: c.city_god_name, date: c.returned_at ? formatDateTime(c.returned_at) : "" })}
               </p>
               {c.city_god_note && <p className="text-[oklch(var(--color-ink))]">{c.city_god_note}</p>}
             </div>

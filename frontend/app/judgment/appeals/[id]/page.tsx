@@ -15,6 +15,8 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { PageSection } from "@/components/ui/page-section";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { QueryError } from "@/src/components/ui/PageError";
+import { MissingValue } from "@/src/components/ui/DomainValue";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Button } from "@/src/components/ui/Button";
 import { StatusBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
@@ -58,7 +60,7 @@ function Decision({ appeal }: { appeal: JudgmentAppeal }) {
       {appeal.decided_at && (
         <Row label={t("appeals.col.reviewer")}>
           <span className="text-sm">
-            {appeal.reviewer_name ?? "—"} · {t("appeals.decided_at", { date: formatDate(appeal.decided_at) })}
+            {appeal.reviewer_name ?? <MissingValue kind="unrecorded" />} · {t("appeals.decided_at", { date: formatDate(appeal.decided_at) })}
           </span>
         </Row>
       )}
@@ -102,6 +104,9 @@ function AppealReviewContent({ id }: { id: string }) {
   });
 
   if (query.isLoading) return <ListSkeleton count={3} />;
+  // A deleted or other-hall appeal answers 404: say it is not there, not that the request failed.
+  if ((query.error as { response?: { status?: number } } | null)?.response?.status === 404)
+    return <EmptyState title={t("notifications.open_failed")} />;
   if (query.isError || !query.data) return <QueryError onRetry={() => query.refetch()} />;
   const appeal = query.data;
   const original = !!user && appeal.original_officer_ids.includes(user.id);
@@ -112,7 +117,7 @@ function AppealReviewContent({ id }: { id: string }) {
       variant="page"
       title={t("appeals.decide_title", { case: appeal.case_number })}
       backLink={
-        <Link href="/judgment/appeals" className="text-sm text-[oklch(var(--color-ink-muted))] hover:underline">
+        <Link href="/judgment/appeals" className="text-sm text-[oklch(var(--color-ink-muted))] underline underline-offset-2">
           ← {t("appeals.queue_title")}
         </Link>
       }
@@ -142,7 +147,7 @@ function AppealReviewContent({ id }: { id: string }) {
         <StatusBadge namespace="appeals.status" value={appeal.status} tone={APPEAL_STATUS_TONES[appeal.status]} />
         <span>{t("appeals.round", { round: String(appeal.round) })}</span>
         <span className={LABEL}>·</span>
-        <Link href={`/souls/${appeal.soul}`} className="hover:underline">{appeal.soul_name}</Link>
+        <Link href={`/souls/${appeal.soul}`} className="underline underline-offset-2">{appeal.soul_name}</Link>
         {appeal.status === "IN_REVIEW" && appeal.reviewer_name && (
           <span className={LABEL}>
             {t("appeals.col.reviewer")} {appeal.reviewer_name}
@@ -152,7 +157,7 @@ function AppealReviewContent({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2" data-testid="appeal-split">
         <PageSection title={t("appeals.original_verdict")}>
           <Row label={t("judgment.case_number")}>
-            <Link href={`/judgment/${appeal.judgment}`} className="hover:underline">
+            <Link href={`/judgment/${appeal.judgment}`} className="underline underline-offset-2">
               <CaseNumber value={appeal.case_number} variant="inline" />
             </Link>
           </Row>
@@ -160,7 +165,7 @@ function AppealReviewContent({ id }: { id: string }) {
             <VerdictBadge verdict={appeal.original_verdict} />
           </Row>
           <Row label={t("souls.detail.ledger.verdict_words")}>
-            <p className={PROSE}>{appeal.judgment_notes || "—"}</p>
+            <p className={PROSE}>{appeal.judgment_notes || <MissingValue kind="unrecorded" />}</p>
           </Row>
         </PageSection>
         <PageSection title={t("appeals.file")}>
@@ -172,7 +177,7 @@ function AppealReviewContent({ id }: { id: string }) {
           </Row>
           {/* 「新证据 · 选填」是灵魂表单上的标签;官员这边只要前半句。 */}
           <Row label={t("appeals.evidence_label").split(" · ")[0]}>
-            <p className={PROSE}>{appeal.evidence || "—"}</p>
+            <p className={PROSE}>{appeal.evidence || <MissingValue kind="unrecorded" />}</p>
           </Row>
         </PageSection>
       </div>

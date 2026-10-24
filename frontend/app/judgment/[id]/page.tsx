@@ -32,7 +32,8 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { AT_CITY_GOD, reincarnationApi, type CityGodStatus, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
+import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
+import { isAtCityGod } from "@soulledger/core/domain/cityGods";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import {
   CitationChips,
@@ -387,7 +388,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const canExecute = hasPermission("judgment.execute");
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
-  const atCityGod = AT_CITY_GOD.includes(judgment?.city_god_status as CityGodStatus);
+  const atCityGod = isAtCityGod(judgment?.city_god_status);
   const buttonOn = useMenuButtonConfig();
   const archiveMutation = useArchiveJudgment();
   const unarchiveMutation = useUnarchiveJudgment();

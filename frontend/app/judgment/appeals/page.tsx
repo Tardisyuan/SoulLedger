@@ -1,5 +1,6 @@
 "use client";
 
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -114,8 +115,8 @@ function AppealQueueContent() {
               <td className="px-3 py-2 text-sm whitespace-nowrap text-[oklch(var(--color-ink))]">{a.soul_name}</td>
               <td className="px-3 py-2 text-sm whitespace-nowrap">{t("appeals.round", { round: String(a.round) })}</td>
               <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">{formatDateTime(a.create_time)}</td>
-              <td className={MUTED} data-appeal-deadline="">{a.deadline ? formatDate(a.deadline) : "—"}</td>
-              {tab === "IN_REVIEW" && <td className="px-3 py-2 text-sm whitespace-nowrap">{a.reviewer_name ?? "—"}</td>}
+              <td className={MUTED} data-appeal-deadline="">{a.deadline ? formatDate(a.deadline) : <MissingValue kind="unrecorded" />}</td>
+              {tab === "IN_REVIEW" && <td className="px-3 py-2 text-sm whitespace-nowrap">{a.reviewer_name ?? <MissingValue kind="unrecorded" />}</td>}
               {tab === "CLOSED" && (
                 <td className="px-3 py-2 whitespace-nowrap">
                   <StatusBadge namespace="appeals.status" value={a.status} tone={APPEAL_STATUS_TONES[a.status]} />

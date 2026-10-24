@@ -1,5 +1,6 @@
 "use client";
 
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cityGodKeys, cityGodsApi, type CityGod } from "@soulledger/core/api";
@@ -76,7 +77,7 @@ function CityGodsContent() {
               {g.is_default && <Badge tone="neutral" className="ml-2">{t("cityGods.default_badge")}</Badge>}
             </td>
             <td className="px-3 py-2 text-sm">
-              {g.regions?.length ? g.regions.join(" · ") : g.is_default ? <span className={MUTED}>{t("cityGods.default_regions")}</span> : "—"}
+              {g.regions?.length ? g.regions.join(" · ") : g.is_default ? <span className={MUTED}>{t("cityGods.default_regions")}</span> : <MissingValue kind="unrecorded" />}
             </td>
             <td className="px-3 py-2 text-sm">
               {g.officers.length ? g.officers.map((o) => o.name).join(" · ") : <span className={MUTED}>{t("cityGods.no_officers")}</span>}

@@ -736,8 +736,8 @@ export type CityGodCase = Schemas["CityGodCase"];
 export type CityGodStatus = Schemas["CityGodStatusEnum"];
 export type CityGodOfficer = Schemas["CityGodOfficer"];
 
-/** 两种状态还在城隍处:十殿不能动它。 */
-export const AT_CITY_GOD: readonly CityGodStatus[] = ["PENDING", "RETURNED"];
+/** 两种状态还在城隍处:十殿不能动它。定义在 domain/cityGods.ts(见那里的说明)。 */
+export { AT_CITY_GOD } from "../domain/cityGods";
 
 export const cityGodKeys = {
   all: ["city-gods"] as const,

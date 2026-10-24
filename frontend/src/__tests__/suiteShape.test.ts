@@ -382,6 +382,7 @@ const COLLECTED_FILES = [
   "loadingScreensFitAPhone.test.ts",
   "passwordRulesMatchBackend.test.ts",
   "rememberedFilters.test.tsx",
+  "cityGodDisplay.test.tsx",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves
