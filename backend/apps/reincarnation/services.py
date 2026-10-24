@@ -1,9 +1,49 @@
 """
 Reincarnation service — executes rebirth cycles.
 """
+from rest_framework.exceptions import APIException
+
 from apps.disposition.models import Disposition
 from apps.ledger.services import LedgerService
 from apps.souls.models import Soul, SoulState
+
+
+class RebirthQuotaFull(APIException):
+    """This month's quota for the path is used up: the soul stays REINCARNATING (that is the waiting line) until
+    next month or until a hall admin raises the quota. 409, with the numbers, so a client can say so."""
+
+    status_code = 409
+    default_code = "rebirth_quota_full"
+
+    def __init__(self, form: str, limit: int, used: int):
+        super().__init__({"code": "rebirth_quota_full", "rebirth_form": form, "limit": limit, "used": used,
+                          "detail": f"This month's quota for {form} is full ({used}/{limit})"})
+
+
+def _month_start():
+    from django.utils import timezone
+
+    return timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def quota_of(tenant) -> dict:
+    """{form: limit} for the forms that have a limit; a form missing here is unlimited."""
+    from apps.tenants.models import REBIRTH_QUOTA_SETTING
+
+    raw = (getattr(tenant, "settings", None) or {}).get(REBIRTH_QUOTA_SETTING) or {}
+    return {k: v for k, v in raw.items() if isinstance(v, int) and v >= 0}
+
+
+def quota_usage(tenant) -> dict:
+    """{form: {"limit": int | None, "used": int}} for this calendar month, every form listed."""
+    from django.db.models import Count
+
+    from apps.reincarnation.models import RebirthForm, Reincarnation
+
+    limits = quota_of(tenant)
+    used = dict(Reincarnation.objects.filter(tenant=tenant, reincarnated_at__gte=_month_start())
+                .values_list("rebirth_form").annotate(n=Count("id")).values_list("rebirth_form", "n"))
+    return {form: {"limit": limits.get(form), "used": used.get(form, 0)} for form in RebirthForm.values}
 
 
 class RebirthRefusedError(Exception):
@@ -150,6 +190,19 @@ class ReincarnationService:
             # that too, which is why it wraps the whole block and not just the
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+
+            # Monthly quota per path (2026-10-24). The hall row is locked first so two rebirths in one hall cannot
+            # both take the last place; a full path refuses and the soul stays REINCARNATING, waiting.
+            if soul.tenant_id is not None:
+                from apps.tenants.models import Tenant
+
+                hall = Tenant.objects.select_for_update().get(pk=soul.tenant_id)
+                limit = quota_of(hall).get(rebirth_form)
+                if limit is not None:
+                    used = Reincarnation.objects.filter(tenant=hall, rebirth_form=rebirth_form,
+                                                        reincarnated_at__gte=_month_start()).count()
+                    if used >= limit:
+                        raise RebirthQuotaFull(rebirth_form, limit, used)
 
             # Read the carry-over BEFORE the Reincarnation row exists. The
             # ledger reads `soul.current_life_records()`, keyed on

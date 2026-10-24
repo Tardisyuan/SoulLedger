@@ -1,6 +1,7 @@
 """
 REST views for Reincarnation app.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import (
+    RebirthQuotaUsageSerializer,
     RebirthRequestSerializer,
     ReincarnationSerializer,
 )
@@ -93,6 +95,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'update': ['reincarnation.manage'],
         'partial_update': ['reincarnation.manage'],
         'destroy': ['reincarnation.manage'],
+        'quota': ['reincarnation.read'],
     }
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]
@@ -162,6 +165,17 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # Refresh reincarnation record
         reincarnation.refresh_from_db()
         return Response(ReincarnationSerializer(reincarnation).data)
+
+    @extend_schema(responses=RebirthQuotaUsageSerializer(many=True))
+    @action(detail=False, methods=["get"])
+    def quota(self, request):
+        """This hall's rebirth quota for the current month, per path: `limit` null = unlimited (2026-10-24)."""
+        from apps.reincarnation.services import quota_usage
+
+        tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
+        if tenant is None:
+            return Response([])
+        return Response([{"rebirth_form": form, **row} for form, row in quota_usage(tenant).items()])
 
     @action(detail=False, methods=["post"])
     def reborn(self, request):

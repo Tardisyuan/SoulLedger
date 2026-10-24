@@ -90,11 +90,23 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
     visit_phone = serializers.CharField(max_length=VISIT_SETTINGS["visit_phone"], required=False, allow_blank=True)
     # 灵魂能不能自己改联系邮箱(缺省 = 开)。只管**开始**一次改动,在途的照常完成(contact_email.py)。
     soul_contact_email_self_service = serializers.BooleanField(required=False)
+    # 转世月配额(2026-10-24):{道: 每月上限};某道给 null = 去掉那一道的上限(不限)。只收已知的道。
+    rebirth_monthly_quota = serializers.DictField(
+        child=serializers.IntegerField(min_value=0, max_value=100000, allow_null=True), required=False)
 
     class Meta:
         model = Tenant
         fields = ["description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
-                  "soul_rebirth_cooldown_days", "mfa_required_roles", *VISIT_SETTINGS, SELF_SERVICE_SETTING]
+                  "soul_rebirth_cooldown_days", "mfa_required_roles", *VISIT_SETTINGS, SELF_SERVICE_SETTING,
+                  "rebirth_monthly_quota"]
+
+    def validate_rebirth_monthly_quota(self, value):
+        from apps.reincarnation.models import RebirthForm
+
+        unknown = [k for k in value if k not in RebirthForm.values]
+        if unknown:
+            raise serializers.ValidationError(f"unknown rebirth form(s): {', '.join(unknown)}")
+        return value
 
     def validate_mfa_required_roles(self, value):
         from apps.authentication.models import is_assignable_role
@@ -116,6 +128,19 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
                 if value:
                     merged[key] = value
                 instance.settings = merged
+        if "rebirth_monthly_quota" in validated_data:
+            from apps.tenants.models import REBIRTH_QUOTA_SETTING
+
+            current = dict((instance.settings or {}).get(REBIRTH_QUOTA_SETTING) or {})
+            for form, limit in validated_data.pop("rebirth_monthly_quota").items():
+                if limit is None:
+                    current.pop(form, None)
+                else:
+                    current[form] = limit
+            merged = {k: v for k, v in (instance.settings or {}).items() if k != REBIRTH_QUOTA_SETTING}
+            if current:
+                merged[REBIRTH_QUOTA_SETTING] = current
+            instance.settings = merged
         if SELF_SERVICE_SETTING in validated_data:
             instance.settings = {**(instance.settings or {}), SELF_SERVICE_SETTING: validated_data.pop(SELF_SERVICE_SETTING)}
         if "soul_rebirth_cooldown_days" in validated_data:
