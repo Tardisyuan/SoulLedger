@@ -42,6 +42,11 @@ module.exports = {
   // eight cores of the dev machine and pushed its 16 GB into swap (2026-10-19).
   // JEST_WORKERS overrides; `-w` on the command line still wins over both.
   maxWorkers: process.env.JEST_WORKERS || '50%',
+  // 15 s, not jest's 5 s (2026-10-24): two different render-heavy tests (the audit timeline's 500 rows, the soul
+  // detail inheritance panel) passed alone in 0.5 s and timed out inside the full pre-push run at load ~19, a
+  // different one each push. The budget is for a loaded machine, not for slow tests; a test that needs it alone
+  // is still a problem.
+  testTimeout: 15000,
   workerIdleMemoryLimit: '1GB',
   rootDir: path.resolve(__dirname, '..'),
   roots: ['<rootDir>/frontend'],
