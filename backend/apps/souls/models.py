@@ -763,6 +763,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             if not result:
                 return None
 
+            from apps.judgment import city_gods
             from apps.judgment.models import Judgment, JudgmentMethod
 
             # ALL FOUR NAMED, and GREEK's entry changes no behaviour — the
@@ -791,7 +792,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             }
             # 阳寿: dying before the recorded fated date is untimely; the judgment is held until that date
             # (枉死城) and cannot be claimed before it (apps/judgment/claims.py).
-            self.refresh_from_db(fields=["death_year", "death_month", "death_day",
+            self.refresh_from_db(fields=["death_year", "death_month", "death_day", "origin_location",
                                          "fated_death_year", "fated_death_month", "fated_death_day"])
             fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
             died = to_legacy_date(self.death_year, self.death_month, self.death_day)
@@ -803,5 +804,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
                 untimely=untimely,
                 held_until=fated if untimely else None,
+                # 城隍初审(地府):按出身地交给本殿的城隍,解送之后才进十殿(apps/judgment/city_gods.py)。
+                **city_gods.initial_fields(self),
             )
+            city_gods.received(judgment)
             return judgment

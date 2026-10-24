@@ -6285,6 +6285,9 @@ paths:
         schema:
           type: string
           enum:
+          - CITY_GOD_RECEIVED
+          - CITY_GOD_RETURNED
+          - CITY_GOD_SENT_ON
           - COMMENT_CREATED
           - COMMENT_DELETED
           - COOLDOWN_SHORTENING_DECIDED
@@ -6391,6 +6394,9 @@ paths:
           * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
           * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
           * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+          * `CITY_GOD_RECEIVED` - City God Received
+          * `CITY_GOD_SENT_ON` - City God Sent On
+          * `CITY_GOD_RETURNED` - City God Returned
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6499,6 +6505,9 @@ paths:
         schema:
           type: string
           enum:
+          - CITY_GOD_RECEIVED
+          - CITY_GOD_RETURNED
+          - CITY_GOD_SENT_ON
           - COMMENT_CREATED
           - COMMENT_DELETED
           - COOLDOWN_SHORTENING_DECIDED
@@ -6605,6 +6614,9 @@ paths:
           * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
           * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
           * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+          * `CITY_GOD_RECEIVED` - City God Received
+          * `CITY_GOD_SENT_ON` - City God Sent On
+          * `CITY_GOD_RETURNED` - City God Returned
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -8267,6 +8279,405 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/city-god-cases/:
+    get:
+      operationId: v1_judgment_city_god_cases_list
+      description: 在城隍处初审的案子(本殿)。
+      parameters:
+      - in: query
+        name: city_god
+        schema:
+          type: string
+        description: Only this city god's cases.
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: Only city gods the caller is assigned to.
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - RETURNED
+          - SENT_ON
+        description: 'PENDING / RETURNED / SENT_ON. Omitted: the cases still with
+          a city god.'
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCityGodCaseList'
+          description: ''
+  /api/v1/judgment/city-god-cases/{id}/:
+    get:
+      operationId: v1_judgment_city_god_cases_retrieve
+      description: 在城隍处初审的案子(本殿)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCase'
+          description: ''
+  /api/v1/judgment/city-god-cases/{id}/return/:
+    post:
+      operationId: v1_judgment_city_god_cases_return_create
+      description: 退回补正(缺资料)。`note` 必填。只有 PENDING 的能退回;补好之后用 `send_on/` 解送。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityGodReturn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CityGodReturn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CityGodReturn'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCase'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+  /api/v1/judgment/city-god-cases/{id}/send_on/:
+    post:
+      operationId: v1_judgment_city_god_cases_send_on_create
+      description: 解送十殿。`note` 可空。不在城隍处 → 409 `not_at_city_god`;不是名下官员 → 403 `not_city_god_officer`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityGodSendOn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CityGodSendOn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CityGodSendOn'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCase'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+  /api/v1/judgment/city-god-cases/{id}/transfer/:
+    post:
+      operationId: v1_judgment_city_god_cases_transfer_create
+      description: 改交本殿另一位城隍(状态回到 PENDING)。不是本殿的城隍 → 400 `invalid_city_god`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityGodTransfer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CityGodTransfer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CityGodTransfer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCase'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGodCaseRefusal'
+          description: ''
+  /api/v1/judgment/city-gods/:
+    get:
+      operationId: v1_judgment_city_gods_list
+      description: 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCityGodList'
+          description: ''
+    post:
+      operationId: v1_judgment_city_gods_create
+      description: 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityGod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CityGod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CityGod'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGod'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/city-gods/{id}/:
+    get:
+      operationId: v1_judgment_city_gods_retrieve
+      description: 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this city god.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGod'
+          description: ''
+    patch:
+      operationId: v1_judgment_city_gods_partial_update
+      description: 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this city god.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCityGod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCityGod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCityGod'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityGod'
+          description: ''
+    delete:
+      operationId: v1_judgment_city_gods_destroy
+      description: 本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this city god.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
         '409':
           content:
             application/json:
@@ -23327,6 +23738,203 @@ components:
       description: |-
         * `CONCLUDED` - Concluded
         * `BACKFILLED` - Backfilled
+    CityGod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        regions:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 100
+        is_default:
+          type: boolean
+        officer_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        officers:
+          type: array
+          items: {}
+          readOnly: true
+        open_case_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - create_time
+      - id
+      - name
+      - officers
+      - open_case_count
+      - tenant
+      - update_time
+    CityGodCase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        origin_location:
+          type: string
+          readOnly: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+        city_god_status:
+          allOf:
+          - $ref: '#/components/schemas/CityGodStatusEnum'
+          readOnly: true
+        city_god_note:
+          type: string
+          readOnly: true
+        sent_on_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        sent_on_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        sent_on_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        untimely:
+          type: boolean
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        can_act:
+          type: boolean
+          readOnly: true
+      required:
+      - can_act
+      - case_number
+      - city_god
+      - city_god_name
+      - city_god_note
+      - city_god_status
+      - created_at
+      - held_until
+      - id
+      - origin_location
+      - sent_on_at
+      - sent_on_by
+      - sent_on_by_name
+      - soul
+      - soul_name
+      - untimely
+    CityGodCaseRefusal:
+      type: object
+      description: |-
+        认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+
+        `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+        `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
+        指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        claimed_by:
+          type: integer
+          nullable: true
+        claimed_by_name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        missing:
+          type: array
+          items:
+            type: string
+            format: uuid
+        city_god:
+          type: string
+          format: uuid
+        city_god_status:
+          type: string
+      required:
+      - code
+      - error
+    CityGodReturn:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - note
+    CityGodSendOn:
+      type: object
+      properties:
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+    CityGodStatusEnum:
+      enum:
+      - PENDING
+      - RETURNED
+      - SENT_ON
+      type: string
+      description: |-
+        * `PENDING` - 待初审
+        * `RETURNED` - 退回补正
+        * `SENT_ON` - 已解送
+    CityGodTransfer:
+      type: object
+      properties:
+        city_god:
+          type: string
+          format: uuid
+      required:
+      - city_god
     CivilizationEnum:
       enum:
       - CHINESE
@@ -25809,6 +26417,9 @@ components:
       - JUDGMENT_APPEAL_FILED
       - JUDGMENT_APPEAL_WITHDRAWN
       - JUDGMENT_APPEAL_DECIDED
+      - CITY_GOD_RECEIVED
+      - CITY_GOD_SENT_ON
+      - CITY_GOD_RETURNED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -25864,6 +26475,9 @@ components:
         * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
         * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
         * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
+        * `CITY_GOD_RECEIVED` - City God Received
+        * `CITY_GOD_SENT_ON` - City God Sent On
+        * `CITY_GOD_RETURNED` - City God Returned
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -27144,6 +27758,27 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        city_god_status:
+          allOf:
+          - $ref: '#/components/schemas/CityGodStatusEnum'
+          readOnly: true
+        city_god_note:
+          type: string
+          readOnly: true
+        sent_on_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         karmic_balance:
           type: integer
           nullable: true
@@ -27211,6 +27846,10 @@ components:
       - archived_by_name
       - case_number
       - citations
+      - city_god
+      - city_god_name
+      - city_god_note
+      - city_god_status
       - civilization
       - claimed_at
       - claimed_by
@@ -27244,6 +27883,7 @@ components:
       - reassign_requested_at
       - reassign_requested_by
       - reassign_requested_by_name
+      - sent_on_at
       - soul
       - soul_name
       - stale_since
@@ -27885,6 +28525,27 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        city_god_status:
+          allOf:
+          - $ref: '#/components/schemas/CityGodStatusEnum'
+          readOnly: true
+        city_god_note:
+          type: string
+          readOnly: true
+        sent_on_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         karmic_balance:
           type: integer
           nullable: true
@@ -27967,6 +28628,10 @@ components:
       - archived_by_name
       - case_number
       - citations
+      - city_god
+      - city_god_name
+      - city_god_note
+      - city_god_status
       - civilization
       - claimed_at
       - claimed_by
@@ -28002,6 +28667,7 @@ components:
       - reassign_requested_at
       - reassign_requested_by
       - reassign_requested_by_name
+      - sent_on_at
       - soul
       - soul_name
       - stale_since
@@ -31602,6 +32268,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLog'
+    PaginatedCityGodCaseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGodCase'
+    PaginatedCityGodList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGod'
     PaginatedCommentListList:
       type: object
       required:
@@ -33165,6 +33877,48 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/Price'
           description: 备用的价目表(模型名 → 每百万 token 价),与主用的分开
+    PatchedCityGod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        regions:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 100
+        is_default:
+          type: boolean
+        officer_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        officers:
+          type: array
+          items: {}
+          readOnly: true
+        open_case_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedComment:
       type: object
       properties:
@@ -33950,6 +34704,27 @@ components:
           type: string
           readOnly: true
         stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        city_god_status:
+          allOf:
+          - $ref: '#/components/schemas/CityGodStatusEnum'
+          readOnly: true
+        city_god_note:
+          type: string
+          readOnly: true
+        sent_on_at:
           type: string
           format: date-time
           readOnly: true

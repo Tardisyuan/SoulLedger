@@ -106,6 +106,14 @@ class EventType(models.TextChoices):
     JUDGMENT_APPEAL_WITHDRAWN = "JUDGMENT_APPEAL_WITHDRAWN"
     JUDGMENT_APPEAL_DECIDED = "JUDGMENT_APPEAL_DECIDED"
 
+    # City god events (城隍初审,2026-10-24;apps/judgment/city_gods.py)
+    #
+    # 记在灵魂自己的时间线上,与那一笔写入同一事务。RECEIVED = 交到某位城隍(收案或改交),
+    # SENT_ON = 解送十殿,RETURNED = 退回补正。payload 带城隍名,不带批语与经办官员。不推送给灵魂。
+    CITY_GOD_RECEIVED = "CITY_GOD_RECEIVED"
+    CITY_GOD_SENT_ON = "CITY_GOD_SENT_ON"
+    CITY_GOD_RETURNED = "CITY_GOD_RETURNED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

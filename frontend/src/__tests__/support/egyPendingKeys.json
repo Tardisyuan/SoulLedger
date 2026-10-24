@@ -1,9 +1,16 @@
 [
+  "official_notify.city_god_case_received.body",
+  "official_notify.city_god_case_received.title",
+  "official_notify.city_god_case_returned.body",
+  "official_notify.city_god_case_returned.title",
   "soul_push.appeal_amended.body",
   "soul_push.appeal_amended.title",
   "soul_push.appeal_upheld.body",
   "soul_push.appeal_upheld.title",
   "souls.categories.COMPENSATION",
+  "souls.events.CITY_GOD_RECEIVED",
+  "souls.events.CITY_GOD_RETURNED",
+  "souls.events.CITY_GOD_SENT_ON",
   "souls.events.JUDGMENT_APPEAL_DECIDED",
   "souls.events.JUDGMENT_APPEAL_FILED",
   "souls.events.JUDGMENT_APPEAL_WITHDRAWN"

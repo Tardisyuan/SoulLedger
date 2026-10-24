@@ -158,6 +158,9 @@ RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
 #: 模型挂在灵魂上、**不纳入**暂居只读例外的视图,各自的理由。
 #: 新增一个挂在灵魂上的视图,必须进两张表之一 —— 见 test_every_soul_linked_viewset_is_classified。
 NOT_RESIDENCE_READABLE: dict[str, str] = {
+    "CityGodCaseViewSet": (
+        "城隍初审是灵魂原属那一殿(地府)收案的第一站,发生在任何调拨之前;暂居地没有要初审的东西。"
+    ),
     "JudgmentAppealViewSet": (
         "申诉复核是原判那一殿的事:申诉挂在原判上，原判的殿就是灵魂的原属殿;暂居地没有要复核的东西。"
     ),

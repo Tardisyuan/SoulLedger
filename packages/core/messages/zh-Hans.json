@@ -327,7 +327,10 @@
       "SENTENCE_PLAN_CANCELLED": "受刑计划取消",
       "JUDGMENT_APPEAL_FILED": "提出申诉",
       "JUDGMENT_APPEAL_WITHDRAWN": "撤回申诉",
-      "JUDGMENT_APPEAL_DECIDED": "申诉复核结论"
+      "JUDGMENT_APPEAL_DECIDED": "申诉复核结论",
+      "CITY_GOD_RECEIVED": "城隍收案",
+      "CITY_GOD_SENT_ON": "城隍解送十殿",
+      "CITY_GOD_RETURNED": "城隍退回补正"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -5461,6 +5464,14 @@
     "assistant_reopened": {
       "title": "助手已自动重开:新的一个月",
       "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"
+    },
+    "city_god_case_received": {
+      "title": "城隍收案待初审",
+      "body": "灵魂「{{soul}}」的案子已交到{{city_god}}，等待初审。"
+    },
+    "city_god_case_returned": {
+      "title": "城隍退回补正",
+      "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需补正资料。经办：{{by}}。批语：{{reason}}"
     },
     "workflow_pick_nodes": {
       "title": "请为本域选站",
