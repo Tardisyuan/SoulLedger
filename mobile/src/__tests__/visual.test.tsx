@@ -94,7 +94,7 @@ describe("the unrecognized-value badge", () => {
 describe("soul-state badges", () => {
   it.each([
     ["ALIVE", "在世", "○", "solid"],
-    ["LOST", "丢失", "◌", "dashed"],
+    ["LOST", "失踪", "◌", "dashed"],
     ["SETTLED", "已结算", "≡", "solid"],
   ])("%s is named (%s) with its own glyph %s — not the unknown badge", (state, label, glyph, border) => {
     wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value={state} />);
