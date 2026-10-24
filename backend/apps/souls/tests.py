@@ -161,6 +161,9 @@ class TestSoulTransitionAction:
         assert self.client.post(url, {"new_state": SoulState.DISPOSED, "reason": "城隍寻回"}, format="json").status_code == 200
         soul.refresh_from_db()
         assert soul.current_state == SoulState.DISPOSED
+        # 失踪横条与账页的「经办」读 STATE_CHANGED 的 actor(第五十批)。
+        actors = set(soul.events.filter(event_type="STATE_CHANGED").values_list("actor", flat=True))
+        assert actors == {"trans_admin"}
 
     def test_transition_judging_to_disposed(self):
         soul = Soul.objects.create(name="J2D", tenant=self.tenant, current_state=SoulState.JUDGING)

@@ -38,6 +38,7 @@ import { useMorePages } from "@/src/components/souls/detail/useMorePages";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
+import { LostBanner, LostTransitionDialog, latestLostEvent } from "@/src/components/souls/detail/LostTransitionDialog";
 import { StartWorkflowDialog } from "@/src/components/workflow/StartWorkflowDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
@@ -105,6 +106,7 @@ export default function SoulDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCorrectSettlementOpen, setIsCorrectSettlementOpen] = useState(false);
+  const [lostDialog, setLostDialog] = useState<"mark" | "recall" | null>(null);
   // 「发起审批…」(W-11):⋯ 菜单里,持 `workflow.create` 才有;弹层里灵魂已填好且锁定。
   const [isStartWorkflowOpen, setIsStartWorkflowOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
@@ -624,6 +626,8 @@ export default function SoulDetailPage() {
   // 更正结案:后端按码名 `soul.correct_settlement`(默认只有 ADMIN 持有)+ 只收 SETTLED;
   // 两条都不满足就连菜单项都没有,而不是点了再吃 400 / 403。
   const canCorrectSettlement = Boolean(soul && soul.current_state === "SETTLED" && hasPermission("soul.correct_settlement"));
+  // 标记失踪 / 召回(第五十批):`soul.transition`,没有就不出现(不置灰)。
+  const canTransition = hasPermission("soul.transition");
   // 已归档的详情只读:编辑、删除、状态动作都不显示,取消归档只在顶部横条里。
   const archived = Boolean(soul?.is_archived);
   const headerActions = !loading && soul && !readOnlyAway && !archived ? (
@@ -632,6 +636,8 @@ export default function SoulDetailPage() {
       onEdit={buttonOn("souls.edit") ? () => setIsEditModalOpen(true) : undefined}
       onDelete={buttonOn("souls.delete") ? handleDeleteConfirm : undefined}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
+      onMarkLost={soul.current_state === "DISPOSED" && canTransition ? () => setLostDialog("mark") : undefined}
+      onRecall={soul.current_state === "LOST" && canTransition ? () => setLostDialog("recall") : undefined}
       onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
       onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
@@ -712,6 +718,8 @@ export default function SoulDetailPage() {
           pending={unarchiveSoulMutation.isPending}
         />
       )}
+
+      {soul && !loading && soul.current_state === "LOST" && <LostBanner event={latestLostEvent(events)} />}
 
       {/* 日期问题 —— 没有就什么都不画。放在最前:坏日期动摇下面每一份读数与每一条记录。 */}
       {!loading && soul && (
@@ -844,6 +852,17 @@ export default function SoulDetailPage() {
           isOpen={isCorrectSettlementOpen}
           onClose={() => setIsCorrectSettlementOpen(false)}
           onCorrected={refreshSoulViews}
+        />
+      )}
+
+      {soul && lostDialog && (
+        <LostTransitionDialog
+          mode={lostDialog}
+          soulId={soul.id}
+          soulName={soul.name}
+          isOpen
+          onClose={() => setLostDialog(null)}
+          onDone={refreshSoulViews}
         />
       )}
 

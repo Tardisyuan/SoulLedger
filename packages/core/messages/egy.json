@@ -691,6 +691,23 @@
     },
     "compensation": {
       "tag": "↺ Wedja Khemen"
+    },
+    "lost": {
+      "mark": "Sesh Nen Gem",
+      "mark_title": "Sesh {{name}} Nen Gem?",
+      "mark_body": "Ba Nen Gem Em Wat. Kheperu: Wetep Seth → Nen Gem. Gem: Wehem Iyi Er Wetep Seth. Nen Gem: Renpet Khetem Smen; Wehem Iyi: Er Khet. Khet: Sesh Em Medjat Sesh Ba Hena Medew Maa.",
+      "mark_confirm": "Sesh Nen Gem",
+      "recall": "Wehem Iyi",
+      "recall_title": "Wehem Iyi {{name}}?",
+      "recall_body": "Kheperu: Nen Gem → Wetep Seth. Wetep Pen Smen. Khet: Sesh Em Medjat Sesh Ba Hena Medew Maa.",
+      "recall_confirm": "Wehem Iyi",
+      "reason_label": "Khet",
+      "reason_required": "Sesh Khet Em Tepy",
+      "reason_hint": "Sesen · Sesh 500 Er Pehwy",
+      "marked_toast": "Sesh Nen Gem Seth",
+      "recalled_toast": "Wehem Iyi Seth · Wetep Seth",
+      "since": "Nen Gem Er {{date}}",
+      "by": "Sab: {{name}}"
     }
   },
   "common": {

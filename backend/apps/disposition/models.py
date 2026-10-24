@@ -152,6 +152,10 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     # `DispositionSerializer.update`(PATCH /disposition/{id}/),它调
     # `expiry.reopen_if_term_extended`。
     expired_at = models.DateTimeField(null=True, blank=True)
+    # 失踪期间刑期不走(用户 2026-10-25 决定)。`lost_since`:灵魂被标记失踪的那一刻,召回时清空;
+    # `lost_days`:历次失踪累计的天数,期满日顺延这么多天。只由 `expiry.hold_term_while_lost` 写。
+    lost_since = models.DateTimeField(null=True, blank=True)
+    lost_days = models.PositiveIntegerField(default=0)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

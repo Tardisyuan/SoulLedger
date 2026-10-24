@@ -692,6 +692,23 @@
     },
     "compensation": {
       "tag": "↺ Verdict changed"
+    },
+    "lost": {
+      "mark": "Mark as lost",
+      "mark_title": "Mark {{name}} as lost?",
+      "mark_body": "For a soul that went missing on the way to its disposition. Its state changes from Disposed to Lost. Once it is found it can be recalled to Disposed, and the escort carries on. While it is lost the disposition term is paused, and on recall it is extended by the time lost. The reason goes into the soul ledger page and the audit log.",
+      "mark_confirm": "Mark as lost",
+      "recall": "Recall",
+      "recall_title": "Recall {{name}}?",
+      "recall_body": "Its state changes from Lost back to Disposed, and the escort carries on under the same disposition. The reason goes into the soul ledger page and the audit log.",
+      "recall_confirm": "Recall",
+      "reason_label": "Reason",
+      "reason_required": "A reason is required",
+      "reason_hint": "Required, up to 500 characters",
+      "marked_toast": "Marked as lost",
+      "recalled_toast": "Recalled; back to Disposed",
+      "since": "Lost since {{date}}",
+      "by": "By {{name}}"
     }
   },
   "common": {
