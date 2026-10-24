@@ -116,3 +116,9 @@
 - `POST …/{id}/transfer/` `{city_god}`
 - 拒绝:403 `not_city_god_officer`,409 `not_at_city_god` / `not_pending`,400 `invalid_city_god`
 - 审判的认领 / 改派 / 暂缓 / 结案:409 `at_city_god`(带 `city_god`、`city_god_status`)
+
+## 补充(2026-10-24,用户决定后)
+
+- **官员 App 要加**:「待我处理」里新加一组「城隍待初审」,城隍名下的官员在 App 里能看到并解送 / 退回。请画这一组在待办里的样子，以及 App 里的解送 / 退回操作(批语输入)。
+- **城隍的两种通知(收案、退回)要能关**:新增一个通知类别「城隍」,和其他业务类别一样可按站内 / 邮件开关。请给类别名与说明的三语文案(键:`notifications.categories.city_god`、`notifications.categories.city_god_body`),以及设置页里它排在哪里。
+- 旧案不补走城隍：只有新登记的死亡经城隍。

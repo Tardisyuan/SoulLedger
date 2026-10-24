@@ -72,6 +72,18 @@ def _assert_sent_on(judgment: Judgment) -> None:
         )
 
 
+def assert_concludable(judgment: Judgment) -> None:
+    """Every conclude path, an officer's or an in-process one (2026-10-24 user decision): a case still with the
+    city god, or an untimely death still held in 枉死城, cannot be concluded. Before this only claiming checked
+    `held_until`, and a workflow-driven conclude (by=None) checked neither."""
+    _assert_sent_on(judgment)
+    if judgment.held_until and judgment.held_until > timezone.localdate():
+        raise ClaimRefusedError(
+            "This soul died before its fated date and waits in 枉死城 until then.", "held_until_fated_date",
+            held_until=judgment.held_until.isoformat(),
+        )
+
+
 def _holder(judgment: Judgment) -> dict:
     return {"claimed_by": judgment.claimed_by_id}
 
@@ -102,7 +114,7 @@ def lock_for_conclude(pk, user) -> Judgment:
     已结案而得 `not_pending` —— 不会有「按旧认领人放行、按新认领人落判」。
     """
     judgment = _lock(pk)
-    _assert_sent_on(judgment)
+    assert_concludable(judgment)
     if (
         judgment.claimed_by_id not in (None, user.pk)
         and getattr(user, "role", None) not in CONCLUDE_OVERRIDE_ROLES
