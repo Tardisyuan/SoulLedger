@@ -42,6 +42,18 @@ function normalizeMenus(items: SidebarMenu[]): SidebarMenu[] {
   return prune(items.filter((m) => m.parent == null));
 }
 
+/** 只有地府有城隍(第五十三批):别的文明的殿不出现这两项。接口照样只在地府能建城隍,这里只是不摆一扇进去是空的门。 */
+const DIYU_ONLY_PATHS = new Set(["/city-gods", "/city-god-cases"]);
+
+export function hideOutsideDiyu(menus: SidebarMenu[], civilization: string | undefined): SidebarMenu[] {
+  if (!civilization || civilization === "CHINESE") return menus;
+  const keep = (nodes: SidebarMenu[]): SidebarMenu[] =>
+    nodes
+      .filter((m) => !DIYU_ONLY_PATHS.has(m.path ?? ""))
+      .map((m) => (m.children ? { ...m, children: keep(m.children as SidebarMenu[]) } : m));
+  return keep(menus);
+}
+
 /**
  * 侧边栏菜单树 —— AppLayout（侧边栏本身 + 面包屑）和需要展示"译名 + 中文原名"
  * 对照的页面标题（见 src/lib/menuI18n.ts、src/components/layout/MenuGloss.tsx）
@@ -61,6 +73,7 @@ export function useSidebarMenus() {
       const res = await menusApi.list();
       return normalizeMenus(res.data.results);
     },
+    select: (menus) => hideOutsideDiyu(menus, user?.tenant?.civilization),
     staleTime: 5 * 60 * 1000,
     enabled: !!user, // Only fetch when user is logged in
   });

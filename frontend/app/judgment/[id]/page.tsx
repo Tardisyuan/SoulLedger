@@ -32,7 +32,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
+import { AT_CITY_GOD, reincarnationApi, type CityGodStatus, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import {
   CitationChips,
@@ -386,6 +386,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+  // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
+  const atCityGod = AT_CITY_GOD.includes(judgment?.city_god_status as CityGodStatus);
   const buttonOn = useMenuButtonConfig();
   const archiveMutation = useArchiveJudgment();
   const unarchiveMutation = useUnarchiveJudgment();
@@ -464,7 +466,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         VERDICTS.map((member, i) => [String(i + 1), () => { if (!confirming) chooseVerdict(member); }])
       ),
       "mod+Enter": () => {
-        if (!canExecute || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
+        if (!canExecute || atCityGod || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
         if (confirming && withWorkflow && !noPick && confirmStep === 1) setConfirmStep(2);
         else if (confirming) handleConclude();
         else openConfirm();
@@ -591,6 +593,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             : t("judgment.untimely")}
         </span>
       )}
+      {atCityGod && (
+        <span data-testid="desk-at-city-god" className="basis-full flex flex-wrap items-center gap-2 text-[oklch(var(--color-ink))]">
+          <Badge tone="warning">{t("judgment.at_city_god")}</Badge>
+          {judgment.city_god_name} · <DomainEnum namespace="cityGodCases.status" value={judgment.city_god_status} />
+        </span>
+      )}
+      {judgment.city_god_status === "SENT_ON" && judgment.sent_on_at && (
+        <span data-testid="desk-sent-on" className="basis-full text-[oklch(var(--color-ink-muted))]">
+          <span aria-hidden="true">▷ </span>
+          {t("cityGodCases.sent_on_line", { city_god: judgment.city_god_name ?? "", date: formatDateTime(judgment.sent_on_at) })}
+          {judgment.city_god_note && <span className="block pl-4 text-[oklch(var(--color-ink))]">{judgment.city_god_note}</span>}
+        </span>
+      )}
     </span>
   );
 
@@ -701,7 +716,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   return (
     <>
-    {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute} />}
+    {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute && !atCityGod} />}
     {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
     <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
     <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")} note={hasAttachments ? t("case.attachments.print_footer") : undefined}>
@@ -1059,12 +1074,20 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   size="lg"
                   className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
                   onClick={openConfirm}
-                  disabled={!selectedVerdict || crossBlocked}
+                  disabled={!selectedVerdict || crossBlocked || atCityGod}
                 >
                   {t("judgment.desk.to_confirm")}
                   <Kbd>⌘⏎</Kbd>
                 </Button>
               </RequirePermission>
+              {atCityGod && (
+                <p data-testid="desk-at-city-god-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  {t("judgment.error.at_city_god")}{" "}
+                  <Link href={`/city-god-cases?city_god=${judgment.city_god ?? ""}`} className="underline underline-offset-2">
+                    {t("cityGodCases.go_to_review")}
+                  </Link>
+                </p>
+              )}
               <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
             </div>
           )}

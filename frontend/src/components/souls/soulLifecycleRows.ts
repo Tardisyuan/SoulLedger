@@ -314,6 +314,8 @@ export interface SystemEventLabels {
     status: (raw: string | null) => string;
     newVerdict: (raw: string | null) => string;
   };
+  /** 城隍收案带 `transferred_from_name` 时的半句「由某某改交」(第五十三批 T-1)。可选,同 `appeal`。 */
+  transferredFrom?: (cityGod: string) => string;
 }
 
 /**
@@ -337,6 +339,7 @@ export function makeSystemEventLabels(t: Translate): SystemEventLabels {
       status: via("appeals.status"),
       newVerdict: (raw) => `${t("appeals.new_verdict")} ${verdict(raw)}`,
     },
+    transferredFrom: (cityGod) => t("cityGodCases.transferred_from", { city_god: cityGod }),
   };
 }
 
@@ -374,6 +377,17 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
       if (e.event_type === "JUDGMENT_APPEAL_DECIDED") {
         parts.push(a.status(typeof p.status === "string" ? p.status : null));
         if (p.status === "AMENDED" && typeof p.new_verdict === "string") parts.push(a.newVerdict(p.new_verdict));
+      }
+      return parts.join(" · ");
+    }
+    case "CITY_GOD_RECEIVED":
+    case "CITY_GOD_SENT_ON":
+    case "CITY_GOD_RETURNED": {
+      // 「城隍收案 · 杭州府城隍」;改交来的再写「· 由酆都城隍改交」。行内只写城隍名,经办人与批语不在事件里。
+      if (typeof p.city_god_name !== "string" || !p.city_god_name) return event;
+      const parts = [event, p.city_god_name];
+      if (typeof p.transferred_from_name === "string" && p.transferred_from_name && labels.transferredFrom) {
+        parts.push(labels.transferredFrom(p.transferred_from_name));
       }
       return parts.join(" · ");
     }

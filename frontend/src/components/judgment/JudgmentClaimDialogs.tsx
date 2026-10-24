@@ -40,6 +40,8 @@ export function claimRefusalMessage(err: unknown, t: T): string {
   const code = e?.response?.data?.code;
   // 枉死城(第五十一批 F-3):候至阳寿那天,绕过队列直接认领时服务端 409 并带上日期。
   if (code === "held_until_fated_date" && e.response?.data?.held_until) return t("judgment.claim.held", { date: e.response.data.held_until });
+  // 城隍初审中(第五十三批):解送之前十殿不能认领、改派、暂缓、结案。
+  if (code === "at_city_god") return t("judgment.error.at_city_god");
   if (code &&(REFUSAL_CODES as readonly string[]).includes(code)) return t(`judgment.claim.refused.${code}`);
   if (e?.response?.status === 403) return t("judgment.claim.refused.permission_denied");
   return t("judgment.claim.refused.generic");
