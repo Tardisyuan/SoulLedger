@@ -353,3 +353,10 @@ def pytest_collection_modifyitems(config, items):
                 "A transactional test truncates the rows data migrations seed, so later plain tests "
                 "lose them. Something reordered tests after pytest-django; see conftest.py."
             )
+
+
+
+@pytest.fixture(autouse=True)
+def _soup_not_required_by_default(settings):
+    """孟婆汤(2026-10-25)只在专门的测试里打开(`settings.MENGPO_SOUP_REQUIRED = True`);其余转世测试不必先饮汤。"""
+    settings.MENGPO_SOUP_REQUIRED = False

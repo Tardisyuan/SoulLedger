@@ -113,6 +113,8 @@ class TestMengpoSoup:
         return Soul.objects.create(name="待转", birth_date="1900-01-01", current_state=state, tenant=tenant)
 
     def test_cn_needs_soup_then_rebirth_clears_it(self, cn_tenant, admin_user):
+        from django.conf import settings as dj
+        dj.MENGPO_SOUP_REQUIRED = True
         from apps.reincarnation.services import ReincarnationService, SoupNotTaken, drink_soup
         soul = self._soul(cn_tenant)
         with pytest.raises(SoupNotTaken):
