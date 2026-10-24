@@ -262,9 +262,20 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
   // S4: every line here is a label, an identifier or a time -- one line each, long-press for the whole.
   // 待我选站 (O-1): who convened it and where this realm stands, then 「已在门口等 · N 天」 or 「前面还有 N 站」 -- no time.
   const pick = item.kind === "pick" ? pickRowLines(item as TodoItemExtra, t, (civ) => enumLabel("souls.civilizations", civ).label ?? "", locale) : null;
+  // 城隍初审(第五十三批 M-1):状态(枉死照样带上)/ 城隍 · 出身地。
+  const extra = item as TodoItemExtra;
+  const cityGod =
+    item.kind === "city_god"
+      ? [
+          [t(`cityGodCases.status.${extra.city_god_status ?? "PENDING"}`), extra.untimely ? t("cityGodCases.untimely_badge") : null].filter(Boolean).join(" · "),
+          [extra.city_god_name, extra.origin_location].filter(Boolean).join(" · "),
+        ]
+      : null;
   const lines = pick
     ? [{ one: pick.meta }, { one: pick.wait }]
-    : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
+    : cityGod
+      ? cityGod.filter(Boolean).map((one) => ({ one }))
+      : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
