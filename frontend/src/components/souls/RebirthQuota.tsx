@@ -47,7 +47,7 @@ export function RebirthQuotaStrip() {
   const byForm = new Map(data.map((r) => [r.rebirth_form, r]));
   return (
     <section aria-labelledby="rebirth-quota-title" data-testid="rebirth-quota-strip" className="pb-4">
-      <h2 id="rebirth-quota-title" className="mb-2 text-xs text-[oklch(var(--color-ink-muted))]">
+      <h2 id="rebirth-quota-title" className="mb-2 text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
         {t("rebirths.quota.title", { month: currentMonth() })}
       </h2>
       <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4 lg:grid-cols-7">
@@ -62,7 +62,7 @@ export function RebirthQuotaStrip() {
               className={`min-w-0 border px-3 py-2 ${full ? "border-[oklch(var(--color-ink))]" : "border-[oklch(var(--color-line))]"}`}
             >
               <span className="flex items-center justify-between gap-2 text-xs text-[oklch(var(--color-ink))]">
-                <span className="truncate">{t(`reincarnation.forms.${form}`)}</span>
+                <span className="truncate" title={t(`reincarnation.forms.${form}`)}>{t(`reincarnation.forms.${form}`)}</span>
                 {full ? <Badge tone="ink">{t("rebirths.quota.full_badge")}</Badge> : null}
               </span>
               <span className="mt-1 block font-mono text-sm tabular-nums text-[oklch(var(--color-ink))]">{quotaUsedText(row, t)}</span>
