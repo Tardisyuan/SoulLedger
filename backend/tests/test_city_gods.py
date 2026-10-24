@@ -173,7 +173,8 @@ def test_a_hall_admin_manages_city_gods_and_assigns_officers(hall, cn_tenant):
     assert created.status_code == 201, created.data
     assert created.data["regions"] == ["临安"] and created.data["officers"][0]["id"] == hall["clerk"].pk
     taken = lead.post(GODS, {"name": "别的", "regions": ["杭州"]}, format="json")
-    assert taken.status_code == 400 and "regions" in taken.data
+    assert taken.status_code == 400 and taken.data["regions"]["code"] == "region_taken"
+    assert (taken.data["regions"]["region"], taken.data["regions"]["city_god"]) == ("杭州", "杭州府城隍")
     assert officer_client(hall["judge"]).post(GODS, {"name": "x"}, format="json").status_code == 403
     assert officer_client(hall["judge"]).get(GODS).data["count"] == 3
     judgment = _dead(cn_tenant, "杭州")
@@ -210,11 +211,30 @@ def test_a_case_names_the_region_that_decided_it_and_how_it_was_registered(assig
     assert clerk.get(f"{CASES}{_dead(cn_tenant, '四川').pk}/").data["matched_region"] is None
 
 
+def test_the_editor_offers_the_halls_case_officers_to_admins_only(hall, cn_tenant, eu_tenant):
+    sp.officer("eu_judge", "JUDGE", eu_tenant)
+    choices = officer_client(hall["lead"]).get(f"{GODS}officer-choices/")
+    assert choices.status_code == 200
+    ids = {o["id"] for o in choices.data}
+    assert {hall["clerk"].pk, hall["judge"].pk} <= ids and all(claims.is_assignable(sp_user, cn_tenant.pk)
+                                                               for sp_user in _users(ids))
+    assert officer_client(hall["judge"]).get(f"{GODS}officer-choices/").status_code == 403
+
+
+def _users(ids):
+    from apps.authentication.models import User
+
+    return User.objects.filter(pk__in=ids)
+
+
 def test_a_returned_case_is_listed_first_and_cannot_be_returned_again(assigned, cn_tenant):
     first, second = _dead(cn_tenant, "杭州"), _dead(cn_tenant, "杭州")
     city_gods.return_case(second.pk, assigned["clerk"], "生辰不详")
     ids = [r["id"] for r in officer_client(assigned["clerk"]).get(CASES).data["results"]]
     assert ids == [str(second.pk), str(first.pk)]
+    detail = officer_client(assigned["clerk"]).get(f"{CASES}{second.pk}/").data
+    assert detail["returned_at"] and detail["city_god_note"] == "生辰不详"
+    assert officer_client(assigned["clerk"]).get(f"{CASES}{first.pk}/").data["returned_at"] is None
     with pytest.raises(city_gods.CityGodRefusedError):
         city_gods.return_case(second.pk, assigned["clerk"], "再退")
 

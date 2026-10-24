@@ -3740,6 +3740,26 @@ export interface paths {
         patch: operations["v1_judgment_city_gods_partial_update"];
         trace?: never;
     };
+    "/api/v1/judgment/city-gods/officer-choices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 编辑抽屉里「名下官员」可选的人:本殿能办案的在职官员 —— 与 `officer_ids` 的校验、改派名单同一条规则
+         *     (`claims.is_assignable`)。没有租户的调用者(全局 ADMIN)答空表。
+         */
+        get: operations["v1_judgment_city_gods_officer_choices_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/courts/": {
         parameters: {
             query?: never;
@@ -10750,6 +10770,8 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
             readonly registered_via: components["schemas"]["RegisteredViaEnum"];
+            /** Format: date-time */
+            readonly returned_at: string | null;
             readonly soul_birth_year: number | null;
             readonly soul_death_year: number | null;
             readonly soul_fated_death_year: number | null;
@@ -14514,6 +14536,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["CityGod"][];
+        };
+        PaginatedCityGodOfficerList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CityGodOfficer"][];
         };
         PaginatedCommentListList: {
             /** @example 123 */
@@ -26798,6 +26835,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CityGod"];
+                };
+            };
+        };
+    };
+    v1_judgment_city_gods_officer_choices_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCityGodOfficerList"];
                 };
             };
         };
