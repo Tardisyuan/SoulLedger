@@ -22,6 +22,8 @@ MESSAGES = {
         "cooldown_shortening_approved": {"title": "缩短冷却申请已批准", "body": "你的缩短冷却申请已批准,打开灵魂簿查看新的冷却截止。"},
         "cooldown_shortening_rejected": {"title": "缩短冷却申请被驳回", "body": "你的缩短冷却申请被驳回,打开灵魂簿查看理由。"},
         "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开灵魂簿查看。"},
+        "appeal_upheld": {"title": "申诉复核:维持原判", "body": "你的申诉已复核，维持原判。打开灵魂簿查看复核意见。"},
+        "appeal_amended": {"title": "申诉复核:已改判", "body": "你的申诉已复核，原判已改。打开灵魂簿查看。"},
         "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开灵魂簿查看。"},
         "residence_approved": {"title": "即将暂居", "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
@@ -77,6 +79,14 @@ MESSAGES = {
         "judgment_result": {
             "title": "Judgment concluded",
             "body": "Your judgment has concluded. Open Soul Ledger to see it.",
+        },
+        "appeal_upheld": {
+            "title": "Appeal reviewed: verdict upheld",
+            "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the review.",
+        },
+        "appeal_amended": {
+            "title": "Appeal reviewed: verdict amended",
+            "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see it.",
         },
         "disposition_executed": {
             "title": "Disposition carried out",

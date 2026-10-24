@@ -3,6 +3,7 @@ URL configuration for judgment app.
 """
 from rest_framework import routers
 
+from apps.judgment.appeal_views import JudgmentAppealViewSet
 from apps.judgment.views import JudgmentViewSet, StatuteViewSet
 
 router = routers.DefaultRouter()
@@ -14,5 +15,7 @@ router = routers.DefaultRouter()
 # 'statutes'", i.e. a 404 that looks like missing data rather than a routing
 # mistake.
 router.register("statutes", StatuteViewSet, basename="statute")
+# 同上:`appeals` 也在空前缀的审判之前。
+router.register("appeals", JudgmentAppealViewSet, basename="judgment-appeal")
 router.register("", JudgmentViewSet, basename="judgment")
 urlpatterns = router.urls

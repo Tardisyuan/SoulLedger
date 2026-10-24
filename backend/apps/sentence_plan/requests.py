@@ -485,6 +485,102 @@ def conclude_reopened(judgment):
     plan_amended(soul, plan, {home_code}, judgment_id=judgment.pk, added=[new_node])
 
 
+# ── 申诉改判(apps/judgment/appeals.py,用户 2026-10-24 决定)───────────────
+
+
+def amend_for_appeal(soul, judgment, verdict):
+    """申诉改判:**未执行**的部分改按新裁决,**已执行**的交还调用方记补偿。返回已执行的 `[(节点或 None, 处置)]`。
+
+    「执行」= 处置已执行(`Disposition.is_executed`,执行即开始服刑,2026-09-25 决定)。
+    * 原属地正受着的节点(ACTIVE)而处置还没执行 → 就地改:节点与处置换成新裁决路由的 realm;
+    * 未开始的节点(PENDING,含联审抄来的外地站)→ REMOVED —— 它们是按原判排的;
+    * 没有就地可改的节点(原属那一站已执行)→ 追加一个原属节点,内容按新裁决路由,与重开审判结案同形;
+    * 外地站正在调拨或已到而处置未执行 → 409 `plan_in_transit`,等那一站执行完再决定;
+    * 计划在重审 / 永久挂起 / 有待决请求 → 409 `plan_busy`;
+    * 计划已结束 → 只返回已执行的部分(灵魂可能已转生,不再开新的一站)。
+    没有计划的(早于受刑计划的结案)看审判自己的处置:未执行就地改,已执行记补偿。
+    调用方持有灵魂行锁与事务;计划上的锁序照旧(计划 → 节点 → 处置)。
+    """
+    from apps.disposition.models import Disposition
+    from apps.realms.models import Realm
+
+    realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
+    realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
+    content = {
+        "realm_code": realm.realm_code if realm else "", "is_eternal": realm.is_eternal if realm else False,
+        "memory_reset": (realm.memory_reset_mechanism if realm else None) or "NONE", "sentence_years": None,
+    }
+
+    def reroute(disposition):
+        from apps.realms.path import SoulPathService
+
+        disposition.destination_realm = realm
+        disposition.is_eternal = content["is_eternal"]
+        disposition.memory_reset = content["memory_reset"]
+        disposition.sentence_years = None
+        disposition.save(update_fields=["destination_realm", "is_eternal", "memory_reset", "sentence_years",
+                                        "update_time", "update_user", "version"])
+        SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
+
+    found = (SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
+             .order_by("-create_time").values_list("pk", flat=True).first())
+    if found is None:
+        own = Disposition.all_objects.select_for_update(of=("self",)).filter(judgment_id=judgment.pk).first()
+        if own is None:
+            return []
+        if own.is_executed:
+            return [(None, own)]
+        reroute(own)
+        return []
+
+    plan = _lock_plan(found)
+    nodes = _lock_nodes(plan)
+    dispositions = {
+        d.pk: d for d in Disposition.all_objects.select_for_update(of=("self",))
+        .filter(pk__in=[n.disposition_id for n in nodes if n.disposition_id])
+    }
+    executed = [(n, dispositions[n.disposition_id]) for n in nodes
+                if n.disposition_id in dispositions and dispositions[n.disposition_id].is_executed]
+    if plan.status not in IN_PROGRESS_PLAN_STATUSES:
+        return executed
+    if plan.status != SentencePlanStatus.ACTIVE or SentencePlanRequest.all_objects.filter(
+            plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING).exists():
+        raise PlanChangeRefusedError("The sentence plan is in retrial, held, or awaiting a request; decide later",
+                                     "plan_busy", status=409, plan_status=plan.status)
+    done = {n.pk for n, _ in executed}
+    in_place = None
+    for node in nodes:
+        if node.status not in OCCUPYING_NODE_STATUSES or node.pk in done:
+            continue
+        if not (node.is_home and node.status == SentenceNodeStatus.ACTIVE):
+            raise PlanChangeRefusedError("The soul is on its way to, or at, a stop whose sentence has not been "
+                                         "executed yet; decide once it has", "plan_in_transit", status=409,
+                                         node_order=node.order)
+        in_place = node
+    touched = {plan.tenant.code}
+    for node in nodes:
+        if node.status == SentenceNodeStatus.PENDING:
+            node.status = SentenceNodeStatus.REMOVED
+            _save(node, "status")
+            touched.add(node.tenant_code)
+    added = []
+    if in_place is not None:
+        reroute(dispositions[in_place.disposition_id])
+        for field, value in content.items():
+            setattr(in_place, field, value)
+        in_place.reason = f"申诉改判:{verdict}"
+        _save(in_place, *content, "reason")
+    else:
+        live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
+        added.append(SentenceNode.objects.create(
+            plan=plan, order=max(n.order for n in live) + 1, tenant_code=plan.tenant.code, is_home=True,
+            status=SentenceNodeStatus.PENDING, added_by_judgment_id=judgment.pk, reason=f"申诉改判:{verdict}",
+            **content,
+        ))
+    plan_amended(soul, plan, touched, judgment_id=judgment.pk, added=added)
+    return executed
+
+
 # ── 撤销(Q11)──────────────────────────────────────────────────────────
 
 
@@ -625,5 +721,5 @@ def retry_dispatch(plan, node_id, *, user):
 
 __all__ = [
     "PlanChangeRefusedError", "SentencePlan", "cancel", "retry_dispatch", "conclude_reopened", "decide", "file_request",
-    "normalize_changes", "request_from_amendment", "withdraw",
+    "normalize_changes", "request_from_amendment", "withdraw", "amend_for_appeal",
 ]

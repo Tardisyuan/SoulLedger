@@ -324,7 +324,10 @@
       "SENTENCE_REQUEST_CREATED": "Sentence request submitted",
       "SENTENCE_REQUEST_DECIDED": "Sentence request decided",
       "SENTENCE_PLAN_COMPLETED": "Sentence plan completed",
-      "SENTENCE_PLAN_CANCELLED": "Sentence plan cancelled"
+      "SENTENCE_PLAN_CANCELLED": "Sentence plan cancelled",
+      "JUDGMENT_APPEAL_FILED": "Appeal filed",
+      "JUDGMENT_APPEAL_WITHDRAWN": "Appeal withdrawn",
+      "JUDGMENT_APPEAL_DECIDED": "Appeal decided"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -340,6 +343,7 @@
       "WISDOM": "Wisdom",
       "PIETY": "Piety",
       "DEDICATION": "Dedication of merit",
+      "COMPENSATION": "Compensation for an amended verdict",
       "CRUELTY": "Cruelty",
       "DECEPTION": "Deception",
       "COWARDICE": "Cowardice",
@@ -5147,6 +5151,14 @@
     "judgment_result": {
       "title": "Judgment concluded",
       "body": "Your judgment has concluded. Open Soul Ledger to see it."
+    },
+    "appeal_upheld": {
+      "title": "Appeal reviewed: verdict upheld",
+      "body": "Your appeal has been reviewed and the verdict stands. Open Soul Ledger to read the review."
+    },
+    "appeal_amended": {
+      "title": "Appeal reviewed: verdict amended",
+      "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see it."
     },
     "disposition_executed": {
       "title": "Disposition carried out",

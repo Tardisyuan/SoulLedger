@@ -98,6 +98,14 @@ class EventType(models.TextChoices):
     SENTENCE_PLAN_COMPLETED = "SENTENCE_PLAN_COMPLETED"
     SENTENCE_PLAN_CANCELLED = "SENTENCE_PLAN_CANCELLED"
 
+    # Judgment appeal events (申诉,2026-10-24;apps/judgment/appeals.py)
+    #
+    # 记在灵魂自己的时间线上,与申诉那一笔写入同一事务。DECIDED 推给灵魂(维持 / 改判各一句);
+    # payload 不带理由、证据与复核人。
+    JUDGMENT_APPEAL_FILED = "JUDGMENT_APPEAL_FILED"
+    JUDGMENT_APPEAL_WITHDRAWN = "JUDGMENT_APPEAL_WITHDRAWN"
+    JUDGMENT_APPEAL_DECIDED = "JUDGMENT_APPEAL_DECIDED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

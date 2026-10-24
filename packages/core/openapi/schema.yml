@@ -6297,6 +6297,9 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - JUDGMENT_APPEAL_DECIDED
+          - JUDGMENT_APPEAL_FILED
+          - JUDGMENT_APPEAL_WITHDRAWN
           - JUDGMENT_CONCLUDED
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
@@ -6385,6 +6388,9 @@ paths:
           * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
           * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
           * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+          * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+          * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+          * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6505,6 +6511,9 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - JUDGMENT_APPEAL_DECIDED
+          - JUDGMENT_APPEAL_FILED
+          - JUDGMENT_APPEAL_WITHDRAWN
           - JUDGMENT_CONCLUDED
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
@@ -6593,6 +6602,9 @@ paths:
           * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
           * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
           * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+          * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+          * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+          * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7967,6 +7979,179 @@ paths:
                 $ref: '#/components/schemas/Judgment'
           description: ''
         '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/appeals/:
+    get:
+      operationId: v1_judgment_appeals_list
+      description: 本殿的申诉。`?status=PENDING` 是待复核队列。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - AMENDED
+          - IN_REVIEW
+          - PENDING
+          - UPHELD
+          - WITHDRAWN
+        description: |-
+          * `PENDING` - 待复核
+          * `IN_REVIEW` - 复核中
+          * `UPHELD` - 维持原判
+          * `AMENDED` - 改判
+          * `WITHDRAWN` - 已撤回
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJudgmentAppealList'
+          description: ''
+  /api/v1/judgment/appeals/{id}/:
+    get:
+      operationId: v1_judgment_appeals_retrieve
+      description: 本殿的申诉。`?status=PENDING` 是待复核队列。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this judgment appeal.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAppeal'
+          description: ''
+  /api/v1/judgment/appeals/{id}/claim/:
+    post:
+      operationId: v1_judgment_appeals_claim_create
+      description: 认领复核。作出原判的官员 → 403 `original_judge`;别人已认领 → 409 `already_claimed`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this judgment appeal.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAppeal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+  /api/v1/judgment/appeals/{id}/decide/:
+    post:
+      operationId: v1_judgment_appeals_decide_create
+      description: 维持(UPHELD)或改判(AMENDED + verdict)。`note` 必填,灵魂看得到。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this judgment appeal.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealDecide'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealDecide'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealDecide'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentAppeal'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '404':
           content:
             application/json:
               schema:
@@ -9557,6 +9742,102 @@ paths:
           description: 导出的 zip。
         '404':
           description: 签名无效或过期、不是调用者自己的、文件已过期。
+  /api/v1/me/judgment-appeals/:
+    get:
+      operationId: v1_me_judgment_appeals_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeJudgmentAppealList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+    post:
+      operationId: v1_me_judgment_appeals_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentAppealCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeJudgmentAppeal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/judgment-appeals/{appeal_id}/withdraw/:
+    post:
+      operationId: v1_me_judgment_appeals_withdraw_create
+      parameters:
+      - in: path
+        name: appeal_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeJudgmentAppeal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/me/life/:
     get:
       operationId: v1_me_life_retrieve
@@ -25525,6 +25806,9 @@ components:
       - SENTENCE_REQUEST_DECIDED
       - SENTENCE_PLAN_COMPLETED
       - SENTENCE_PLAN_CANCELLED
+      - JUDGMENT_APPEAL_FILED
+      - JUDGMENT_APPEAL_WITHDRAWN
+      - JUDGMENT_APPEAL_DECIDED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -25577,6 +25861,9 @@ components:
         * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+        * `JUDGMENT_APPEAL_FILED` - Judgment Appeal Filed
+        * `JUDGMENT_APPEAL_WITHDRAWN` - Judgment Appeal Withdrawn
+        * `JUDGMENT_APPEAL_DECIDED` - Judgment Appeal Decided
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -26963,6 +27250,162 @@ components:
       - untimely
       - verdict
       - workflow
+    JudgmentAppeal:
+      type: object
+      description: 官员看的:多了灵魂、复核人、认领时间,与原判的判词。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        judgment:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        round:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        evidence:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentAppealStatusEnum'
+          readOnly: true
+        original_verdict:
+          allOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          readOnly: true
+        new_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        current_verdict:
+          type: string
+          readOnly: true
+        judgment_concluded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decision_note:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        compensations:
+          type: array
+          items: {}
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        reviewer:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewer_name:
+          type: string
+          nullable: true
+          readOnly: true
+        claimed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        judgment_notes:
+          type: string
+          readOnly: true
+        original_officer_ids:
+          type: array
+          items:
+            type: integer
+          description: 作出原判的官员:界面据此把他的「认领复核」置灰(服务端照样拒,403 `original_judge`)。
+          readOnly: true
+      required:
+      - case_number
+      - claimed_at
+      - compensations
+      - create_time
+      - current_verdict
+      - decided_at
+      - decision_note
+      - evidence
+      - id
+      - judgment
+      - judgment_concluded_at
+      - judgment_notes
+      - new_verdict
+      - original_officer_ids
+      - original_verdict
+      - reason
+      - reviewer
+      - reviewer_name
+      - round
+      - soul
+      - soul_name
+      - status
+    JudgmentAppealCreate:
+      type: object
+      properties:
+        judgment:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 2000
+        evidence:
+          type: string
+          default: ''
+          maxLength: 4000
+      required:
+      - judgment
+      - reason
+    JudgmentAppealDecide:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+        verdict:
+          $ref: '#/components/schemas/VerdictEnum'
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - note
+      - outcome
+    JudgmentAppealStatusEnum:
+      enum:
+      - PENDING
+      - IN_REVIEW
+      - UPHELD
+      - AMENDED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `PENDING` - 待复核
+        * `IN_REVIEW` - 复核中
+        * `UPHELD` - 维持原判
+        * `AMENDED` - 改判
+        * `WITHDRAWN` - 已撤回
     JudgmentBatch:
       type: object
       description: '`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。'
@@ -28788,6 +29231,38 @@ components:
       required:
       - created_at
       - cycle
+    MeAppealableJudgment:
+      type: object
+      properties:
+        judgment_id:
+          type: string
+          format: uuid
+        case_number:
+          type: string
+        verdict:
+          type: string
+        concluded_at:
+          type: string
+          format: date-time
+        deadline:
+          type: string
+          format: date-time
+        rounds_used:
+          type: integer
+        can_appeal:
+          type: boolean
+        refusal_code:
+          type: string
+          nullable: true
+      required:
+      - can_appeal
+      - case_number
+      - concluded_at
+      - deadline
+      - judgment_id
+      - refusal_code
+      - rounds_used
+      - verdict
     MeCooldownShortening:
       type: object
       description: 灵魂看自己的那份:没有 decided_by。
@@ -28968,6 +29443,97 @@ components:
       - judge
       - judgment_method
       - verdict
+    MeJudgmentAppeal:
+      type: object
+      description: 灵魂看的:不带复核人是谁(与事件、推送一样不说判官)。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        judgment:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        round:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        evidence:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentAppealStatusEnum'
+          readOnly: true
+        original_verdict:
+          allOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          readOnly: true
+        new_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        current_verdict:
+          type: string
+          readOnly: true
+        judgment_concluded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decision_note:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        compensations:
+          type: array
+          items: {}
+          readOnly: true
+      required:
+      - case_number
+      - compensations
+      - create_time
+      - current_verdict
+      - decided_at
+      - decision_note
+      - evidence
+      - id
+      - judgment
+      - judgment_concluded_at
+      - new_verdict
+      - original_verdict
+      - reason
+      - round
+      - status
+    MeJudgmentAppealList:
+      type: object
+      properties:
+        judgments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeAppealableJudgment'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeJudgmentAppeal'
+      required:
+      - judgments
+      - results
     MeLife:
       type: object
       properties:
@@ -30910,6 +31476,14 @@ components:
       description: |-
         * `EUROPE` - 欧洲
         * `ASIA` - 亚洲
+    OutcomeEnum:
+      enum:
+      - UPHELD
+      - AMENDED
+      type: string
+      description: |-
+        * `UPHELD` - UPHELD
+        * `AMENDED` - AMENDED
     PaginatedActorListList:
       type: object
       required:
@@ -31269,6 +31843,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/InitialCredential'
+    PaginatedJudgmentAppealList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentAppeal'
     PaginatedJudgmentList:
       type: object
       required:
@@ -33942,6 +34539,7 @@ components:
             * `WISDOM` - Wisdom / Knowledge
             * `PIETY` - Piety / Devotion
             * `DEDICATION` - Dedication of merit
+            * `COMPENSATION` - Compensation for an amended verdict
             * `CRUELTY` - Cruelty / Violence
             * `DECEPTION` - Deception / Lying
             * `COWARDICE` - Cowardice
@@ -39061,6 +39659,7 @@ components:
             * `WISDOM` - Wisdom / Knowledge
             * `PIETY` - Piety / Devotion
             * `DEDICATION` - Dedication of merit
+            * `COMPENSATION` - Compensation for an amended verdict
             * `CRUELTY` - Cruelty / Violence
             * `DECEPTION` - Deception / Lying
             * `COWARDICE` - Cowardice
@@ -39190,6 +39789,7 @@ components:
       - WISDOM
       - PIETY
       - DEDICATION
+      - COMPENSATION
       - CRUELTY
       - DECEPTION
       - COWARDICE
@@ -39206,6 +39806,7 @@ components:
         * `WISDOM` - Wisdom / Knowledge
         * `PIETY` - Piety / Devotion
         * `DEDICATION` - Dedication of merit
+        * `COMPENSATION` - Compensation for an amended verdict
         * `CRUELTY` - Cruelty / Violence
         * `DECEPTION` - Deception / Lying
         * `COWARDICE` - Cowardice

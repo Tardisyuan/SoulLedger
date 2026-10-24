@@ -263,6 +263,15 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     # `save()`(结案、认领 / 释放 / 改派 / 暂缓、PATCH、草稿)都算有了进展,在下面的
     # `save()` 里清掉;下一次是否再标,看 `update_time` 是否又过了 30 天。
     stale_since = models.DateTimeField(null=True, blank=True)
+    # 落判的官员(结案请求的 `by`)。申诉复核要排除他(apps/judgment/appeals.py);只看 `claimed_by` 不够 ——
+    # 无人认领的案子谁都能结,ADMIN / 殿主也能结别人认领的。null = 这一列之前结的案,或进程内结案。
+    concluded_by = models.ForeignKey(
+        "authentication.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="concluded_judgments",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -1005,3 +1014,72 @@ class CaseAttachment(models.Model):
 
     def __str__(self):
         return f"{self.judgment_id} attachment {self.name}"
+
+
+# ---------------------------------------------------------------------------
+# 申诉(灵魂对已结案审判的异议,用户 2026-10-24 决定)
+# ---------------------------------------------------------------------------
+
+
+#: 结案后多少天内可以申诉;每件审判最多申诉几次(撤回的也算一次)。
+APPEAL_WINDOW_DAYS = 30
+APPEAL_MAX_ROUNDS = 2
+
+
+class AppealStatus(models.TextChoices):
+    PENDING = "PENDING", "待复核"
+    IN_REVIEW = "IN_REVIEW", "复核中"
+    UPHELD = "UPHELD", "维持原判"
+    AMENDED = "AMENDED", "改判"
+    WITHDRAWN = "WITHDRAWN", "已撤回"
+
+
+#: 还没有结论的申诉:一件审判同一时刻至多一份(部分唯一约束)。
+OPEN_APPEAL_STATUSES = (AppealStatus.PENDING, AppealStatus.IN_REVIEW)
+
+
+class JudgmentAppeal(AuditUserFields, models.Model):
+    """灵魂对一件已结案审判的申诉。写入只经 `apps/judgment/appeals.py`。
+
+    复核人(`reviewer`)不能是作出原判的官员 —— 结案人(`Judgment.concluded_by`)或认领人。
+    `original_verdict` 是提出时的裁决;改判后 `Judgment.verdict` 换成 `new_verdict`,原判只留在这里。
+    `tenant` = 审判的租户(原审所在的殿),复核也在那里。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="appeals")
+    soul = models.ForeignKey(Soul, on_delete=models.CASCADE, related_name="judgment_appeals")
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="judgment_appeals", null=True)
+    round = models.PositiveSmallIntegerField()
+    reason = models.TextField()
+    #: 新证据:灵魂写的文字。不收附件(案卷附件只给官员上传)。
+    evidence = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=10, choices=AppealStatus.choices, default=AppealStatus.PENDING)
+    original_verdict = models.CharField(max_length=20, choices=Verdict.choices)
+    new_verdict = models.CharField(max_length=20, choices=Verdict.choices, null=True, blank=True)
+    reviewer = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_appeals",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.TextField(blank=True, default="")
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    class Meta:
+        ordering = ["-create_time"]
+        constraints = [
+            models.UniqueConstraint(fields=["judgment", "round"], name="unique_appeal_round"),
+            models.UniqueConstraint(
+                fields=["judgment"],
+                condition=models.Q(status__in=["PENDING", "IN_REVIEW"]),
+                name="unique_open_appeal_per_judgment",
+            ),
+            models.CheckConstraint(condition=models.Q(round__gte=1, round__lte=APPEAL_MAX_ROUNDS),
+                                   name="appeal_round_in_range"),
+        ]
+        indexes = [models.Index(fields=["tenant", "status"])]
+
+    def __str__(self):
+        return f"Appeal {self.round} on {self.judgment_id} ({self.status})"
