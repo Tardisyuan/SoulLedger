@@ -4,7 +4,6 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentAppealKeys, judgmentAppealsApi, type JudgmentAppeal } from "@soulledger/core/api";
-import { compensationOrder } from "@soulledger/core/domain/appeals";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -67,7 +66,7 @@ function Decision({ appeal }: { appeal: JudgmentAppeal }) {
         <Row label={t("appeals.compensation")}>
           <ul className="font-mono text-xs space-y-0.5">
             {appeal.compensations.map((c) => {
-              const order = compensationOrder(c);
+              const order = c.order;
               return (
                 <li key={c.id}>
                   {order === null ? `${c.description} · +${c.weight}` : t("appeals.compensation_row", { order: String(order), weight: String(c.weight) })}

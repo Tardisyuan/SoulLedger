@@ -11,12 +11,8 @@ export interface AppealCompensation {
   weight: number;
   /** 后端写的「申诉改判补偿:{案号} 第 N 站(租户),原判 X → Y」。 */
   description: string;
-}
-
-/** 补偿那一笔的站序:接口不单给,从后端写的说明里取「第 N 站」;原处置(不在计划里)没有站序 → null。 */
-export function compensationOrder(c: Pick<AppealCompensation, "description">): number | null {
-  const m = /第\s*(\d+)\s*站/.exec(c.description);
-  return m ? Number(m[1]) : null;
+  /** 受刑计划里的第几站;原处置(不在计划里)为 null。 */
+  order: number | null;
 }
 
 /**
