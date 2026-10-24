@@ -95,6 +95,8 @@ UNIQUE_KEYS = {
     'workflow.WorkflowSegment:uniq_wf_segment_order': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'actors.Actor:unique_actor_tenant_civ_name': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'chat.Conversation:chat_one_open_inbox_per_soul_and_hall': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
+    'judgment.CityGod:unique_city_god_name_per_hall': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
+    'judgment.CityGod:one_default_city_god_per_hall': ('PER_TENANT', 'one default city god per hall (tenant is the key); NOT global'),
     'judgment.Statute:unique_statute_tenant_code': ('PER_TENANT', 'statute code is unique PER TENANT only, yet some code lookups ignore the tenant (see tenancy_unscoped_sites CODE rows)'),
     'ledger.BalanceSnapshot:uniq_balance_snapshot_tenant_month': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
     'ledger.SoulCensusSnapshot:uniq_census_snapshot_tenant_day': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),

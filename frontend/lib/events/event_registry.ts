@@ -104,6 +104,10 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     JUDGMENT_APPEAL_FILED: handleSoulEvent,
     JUDGMENT_APPEAL_WITHDRAWN: handleSoulEvent,
     JUDGMENT_APPEAL_DECIDED: handleSoulEvent,
+    // 城隍初审(backend/apps/judgment/city_gods.py):收案 / 解送 / 退回,落在灵魂时间线上。
+    CITY_GOD_RECEIVED: handleSoulEvent,
+    CITY_GOD_SENT_ON: handleSoulEvent,
+    CITY_GOD_RETURNED: handleSoulEvent,
   },
 
   // Workflow domain
@@ -272,6 +276,10 @@ export const BACKEND_EVENT_TYPES = [
   "JUDGMENT_APPEAL_FILED",
   "JUDGMENT_APPEAL_WITHDRAWN",
   "JUDGMENT_APPEAL_DECIDED",
+  // City god preliminary review (城隍初审)
+  "CITY_GOD_RECEIVED",
+  "CITY_GOD_SENT_ON",
+  "CITY_GOD_RETURNED",
   // Scheduler (only the failure is an EventType; see REALTIME_ONLY below)
   "SCHEDULER_RUN_FAILED",
 ] as const;
@@ -286,7 +294,8 @@ type BackendEventType = (typeof BACKEND_EVENT_TYPES)[number];
 export const SOUL_EVENT_GROUPS = {
   lifecycle: [
     "SOUL_CREATED", "STATE_CHANGED", "KARMA_RECALCULATED", "SETTLEMENT_CORRECTED", "RECORD_ADDED",
-    "JUDGMENT_INITIATED", "JUDGMENT_CONCLUDED", "JUDGMENT_APPEAL_FILED", "JUDGMENT_APPEAL_WITHDRAWN",
+    "JUDGMENT_INITIATED", "CITY_GOD_RECEIVED", "CITY_GOD_RETURNED", "CITY_GOD_SENT_ON",
+    "JUDGMENT_CONCLUDED", "JUDGMENT_APPEAL_FILED", "JUDGMENT_APPEAL_WITHDRAWN",
     "JUDGMENT_APPEAL_DECIDED", "DISPOSITION_CREATED", "DISPOSITION_EXPIRED",
     "REINCARNATION_TRIGGERED", "REINCARNATION_COMPLETED",
   ],

@@ -28,6 +28,16 @@ class JudgmentMethod(models.TextChoices):
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 
 
+class CityGodStatus(models.TextChoices):
+    PENDING = "PENDING", "待初审"
+    RETURNED = "RETURNED", "退回补正"
+    SENT_ON = "SENT_ON", "已解送"
+
+
+#: 案子还在城隍那里:十殿不能认领、改派、结案,十殿的队列不列它。
+AT_CITY_GOD = (CityGodStatus.PENDING, CityGodStatus.RETURNED)
+
+
 def open_judgments(soul):
     """这个灵魂**未结案**的审判,不分租户。
 
@@ -271,6 +281,19 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="concluded_judgments",
+    )
+    # 城隍初审(2026-10-24 用户决定,只在地府):登记的死亡先交出身地对应的城隍初审,解送之后才进十殿的队列。
+    # 写入只经 `apps/judgment/city_gods.py`。`city_god_status` 空 = 没有初审这一站(别的文明、没有匹配的城隍、
+    # 官员手开的案子),与过去一样直接进十殿。PENDING / RETURNED 时十殿不能认领、改派、结案,队列里也看不到。
+    city_god = models.ForeignKey(
+        "judgment.CityGod", null=True, blank=True, on_delete=models.PROTECT, related_name="judgments",
+    )
+    city_god_status = models.CharField(max_length=10, choices=CityGodStatus.choices, blank=True, default="")
+    #: 最近一次初审动作(解送 / 退回)的批语。
+    city_god_note = models.TextField(blank=True, default="")
+    sent_on_at = models.DateTimeField(null=True, blank=True)
+    sent_on_by = models.ForeignKey(
+        "authentication.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="sent_on_judgments",
     )
 
     class Meta:
@@ -1085,3 +1108,39 @@ class JudgmentAppeal(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"Appeal {self.round} on {self.judgment_id} ({self.status})"
+
+
+class CityGod(AuditUserFields, models.Model):
+    """一位城隍(2026-10-24 用户决定,只在地府):登记与拘拿的前站。一殿可以有多位,各管几处出身地。
+
+    `regions` 是地名(「杭州」「浙江」「临安县」),与灵魂的出身地(`Soul.origin_location`,自由文本)按
+    「包含」匹配,规则在 `apps/judgment/city_gods.py::match`。不用 `Soul.origin_region`:那一列只有
+    EUROPE / ASIA 两个值,是希腊冥界分判官用的(Gorgias 524a),地府的灵魂几乎全是 ASIA,分不出城隍。
+    `is_default` = 本殿的兜底城隍:出身地没有匹配任何一位时交给它;本殿没有兜底时直接进十殿。
+    `officers` = 分在这位城隍名下的官员(初审由他们办;殿管理员 `judgment.assign` 也能办)。
+
+    不复用 `org.Organization`:官员只能属于一个组织(`User.organization` 是单个外键,数据范围也读它),
+    分到城隍名下不能把他从所在的殿挪走;组织树也没有地名这一列。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="city_gods")
+    name = models.CharField(max_length=100)
+    regions = models.JSONField(default=list, blank=True)
+    is_default = models.BooleanField(default=False)
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods")
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "name"], condition=models.Q(is_deleted=False),
+                                    name="unique_city_god_name_per_hall"),
+            models.UniqueConstraint(fields=["tenant"], condition=models.Q(is_default=True, is_deleted=False),
+                                    name="one_default_city_god_per_hall"),
+        ]
+
+    def __str__(self):
+        return self.name

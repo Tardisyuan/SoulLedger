@@ -1,0 +1,266 @@
+"""城隍的两组接口(规则在 `apps/judgment/city_gods.py`):
+
+* `/api/v1/judgment/city-gods/` —— 本殿的城隍:名字、管的出身地、兜底、名下官员。看是 `judgment.read`,
+  增改删是 `judgment.assign`(殿管理员、殿主;分派别人的工作,与改派同一个码名)。只有地府能建。
+* `/api/v1/judgment/city-god-cases/` —— 在城隍处初审的案子。默认只列还在城隍处的(PENDING / RETURNED),
+  `?status=SENT_ON` 看已解送的,`?city_god=<id>` 只看一位,`?mine=true` 只看我被分到的城隍。
+  解送 / 退回要 `judgment.execute`,且是这位城隍名下的官员(或持 `judgment.assign`);改交要 `judgment.assign`。
+"""
+from django.db import IntegrityError, transaction
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import mixins, serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from apps.authentication.models import User
+from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.judgment import city_gods
+from apps.judgment.claims import is_assignable
+from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodStatus, Judgment
+from apps.judgment.serializers import JudgmentClaimRefusalSerializer
+
+REGION_MAX_LENGTH = 50
+REGIONS_MAX = 100
+
+
+def _name(user):
+    return (user.display_name or user.username) if user else None
+
+
+# ── 城隍 ────────────────────────────────────────────────────────────────
+
+
+class CityGodOfficerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class CityGodSerializer(serializers.ModelSerializer):
+    regions = serializers.ListField(
+        child=serializers.CharField(max_length=REGION_MAX_LENGTH, trim_whitespace=True, allow_blank=True),
+        max_length=REGIONS_MAX, required=False,
+    )
+    #: 写:名下官员的 id 全量(替换)。读:`officers` 带名字。
+    officer_ids = serializers.PrimaryKeyRelatedField(
+        source="officers", many=True, queryset=User.objects.all(), required=False, write_only=True,
+    )
+    officers = serializers.SerializerMethodField()
+    open_case_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CityGod
+        fields = ("id", "tenant", "name", "regions", "is_default", "officer_ids", "officers", "open_case_count",
+                  "create_time", "update_time")
+        read_only_fields = ("id", "tenant", "create_time", "update_time")
+
+    @extend_schema(responses=CityGodOfficerSerializer(many=True))
+    def get_officers(self, obj) -> list:
+        return [{"id": u.pk, "name": _name(u)} for u in obj.officers.order_by("username")]
+
+    def get_open_case_count(self, obj) -> int:
+        return Judgment.objects.filter(city_god=obj, city_god_status__in=AT_CITY_GOD).count()
+
+    def _tenant(self):
+        return self.instance.tenant if self.instance else self.context["tenant"]
+
+    def _siblings(self):
+        others = CityGod.objects.filter(tenant=self._tenant())
+        return others.exclude(pk=self.instance.pk) if self.instance else others
+
+    def validate_name(self, value):
+        if self._siblings().filter(name=value).exists():
+            raise serializers.ValidationError("Another city god of this hall has this name.", code="name_taken")
+        return value
+
+    def validate_regions(self, value):
+        """去空、去重;同一殿里一个地名只能属于一位城隍(匹配因此没有平局)。"""
+        cleaned = list(dict.fromkeys(r for r in value if r))
+        mine = {r.casefold() for r in cleaned}
+        for other in self._siblings():
+            taken = sorted(r for r in (other.regions or ()) if str(r).casefold() in mine)
+            if taken:
+                raise serializers.ValidationError(
+                    f"Already covered by {other.name}: {', '.join(taken)}.", code="region_taken")
+        return cleaned
+
+    def validate_is_default(self, value):
+        if value and self._siblings().filter(is_default=True).exists():
+            raise serializers.ValidationError("This hall already has a default city god.", code="default_taken")
+        return value
+
+    def validate_officer_ids(self, value):
+        """与改派同一条规则(`claims.is_assignable`):本殿、在职、能办案。"""
+        tenant = self._tenant()
+        bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk))
+        if bad:
+            raise serializers.ValidationError(f"Not officers of this hall who can work cases: {bad}.",
+                                              code="invalid_officer")
+        return value
+
+
+class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+    """本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。"""
+
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "judgment"
+    extra_permissions = {action: ["judgment.assign"]
+                         for action in ("create", "update", "partial_update", "destroy")}
+    queryset = CityGod.objects.prefetch_related("officers").all()
+    serializer_class = CityGodSerializer
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(),
+                "tenant": getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)}
+
+    @extend_schema(responses={201: CityGodSerializer, 400: JudgmentClaimRefusalSerializer})
+    def create(self, request, *args, **kwargs):
+        from apps.souls.models import TENANT_CIVILIZATION, Civilization
+
+        tenant = self.get_serializer_context()["tenant"]
+        if tenant is None or TENANT_CIVILIZATION.get(tenant.code) != Civilization.CHINESE:
+            return Response({"error": "City gods belong to 地府 (CN_DIYU) only.", "code": "city_gods_diyu_only"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        self._save(serializer, tenant=serializer.context["tenant"])
+
+    def perform_update(self, serializer):
+        self._save(serializer)
+
+    @staticmethod
+    def _save(serializer, **extra):
+        # 两个请求同时抢同一个名字 / 兜底:部分唯一约束挡住,答 400 而不是 500。
+        try:
+            with transaction.atomic():
+                serializer.save(**extra)
+        except IntegrityError:
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Another city god of this hall took this name or the default."]}) from None
+
+    @extend_schema(responses={204: None, 409: JudgmentClaimRefusalSerializer})
+    def destroy(self, request, *args, **kwargs):
+        god = self.get_object()
+        if Judgment.objects.filter(city_god=god, city_god_status__in=AT_CITY_GOD).exists():
+            return Response({"error": "This city god still has cases awaiting review; send them on or transfer "
+                                      "them first.", "code": "city_god_has_open_cases"},
+                            status=status.HTTP_409_CONFLICT)
+        god.soft_delete(user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── 初审的案子 ──────────────────────────────────────────────────────────
+
+
+class CityGodCaseSerializer(serializers.ModelSerializer):
+    soul_name = serializers.CharField(source="soul.name", read_only=True)
+    origin_location = serializers.CharField(source="soul.origin_location", read_only=True)
+    city_god_name = serializers.CharField(source="city_god.name", read_only=True)
+    sent_on_by_name = serializers.SerializerMethodField()
+    #: 调用者能否解送 / 退回(名下官员或殿管理员);界面据此置灰,服务端照样查。
+    can_act = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Judgment
+        fields = ("id", "case_number", "soul", "soul_name", "origin_location", "city_god", "city_god_name",
+                  "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name", "untimely",
+                  "held_until", "created_at", "can_act")
+        read_only_fields = fields
+
+    def get_sent_on_by_name(self, obj) -> str | None:
+        return _name(obj.sent_on_by)
+
+    def get_can_act(self, obj) -> bool:
+        request = self.context.get("request")
+        return bool(request and obj.city_god_status in AT_CITY_GOD and city_gods.may_act(request.user, obj))
+
+
+class CityGodSendOnSerializer(serializers.Serializer):
+    note = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="", trim_whitespace=True)
+
+
+class CityGodReturnSerializer(serializers.Serializer):
+    note = serializers.CharField(max_length=2000, trim_whitespace=True)
+
+
+class CityGodTransferSerializer(serializers.Serializer):
+    city_god = serializers.UUIDField()
+
+
+class CityGodCaseRefusalSerializer(JudgmentClaimRefusalSerializer):
+    city_god = serializers.UUIDField(required=False)
+    city_god_status = serializers.CharField(required=False)
+
+
+_REFUSALS = {400: CityGodCaseRefusalSerializer, 403: CityGodCaseRefusalSerializer,
+             404: CityGodCaseRefusalSerializer, 409: CityGodCaseRefusalSerializer}
+
+
+class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin,
+                         mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """在城隍处初审的案子(本殿)。"""
+
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "judgment"
+    extra_permissions = {"send_on": ["judgment.execute"], "return_case": ["judgment.execute"],
+                         "transfer": ["judgment.assign"]}
+    queryset = Judgment.objects.filter(city_god__isnull=False).select_related("soul", "city_god", "sent_on_by")
+    serializer_class = CityGodCaseSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action != "list":
+            return qs
+        params = self.request.query_params
+        wanted = params.get("status")
+        qs = qs.filter(city_god_status=wanted) if wanted in CityGodStatus.values else qs.filter(
+            city_god_status__in=AT_CITY_GOD)
+        if params.get("city_god"):
+            qs = qs.filter(city_god_id=params["city_god"])
+        if params.get("mine", "").lower() in ("1", "true", "yes"):
+            qs = qs.filter(city_god__officers=self.request.user)
+        return qs.order_by("created_at", "id")
+
+    @extend_schema(parameters=[
+        OpenApiParameter("status", enum=CityGodStatus.values, required=False,
+                         description="PENDING / RETURNED / SENT_ON. Omitted: the cases still with a city god."),
+        OpenApiParameter("city_god", str, required=False, description="Only this city god's cases."),
+        OpenApiParameter("mine", bool, required=False, description="Only city gods the caller is assigned to."),
+    ])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def _answer(self, run):
+        judgment = self.get_object()  # 别的殿的案子在这里就是 404
+        try:
+            run(judgment.pk)
+        except city_gods.CityGodRefusedError as exc:
+            return Response(exc.as_payload(), status=exc.status)
+        return Response(self.get_serializer(self.get_queryset().get(pk=judgment.pk)).data)
+
+    @extend_schema(request=CityGodSendOnSerializer, responses={200: CityGodCaseSerializer, **_REFUSALS})
+    @action(detail=True, methods=["post"])
+    def send_on(self, request, pk=None):
+        """解送十殿。`note` 可空。不在城隍处 → 409 `not_at_city_god`;不是名下官员 → 403 `not_city_god_officer`。"""
+        body = CityGodSendOnSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        return self._answer(lambda pk: city_gods.send_on(pk, request.user, body.validated_data["note"]))
+
+    @extend_schema(request=CityGodReturnSerializer, responses={200: CityGodCaseSerializer, **_REFUSALS})
+    @action(detail=True, methods=["post"], url_path="return")
+    def return_case(self, request, pk=None):
+        """退回补正(缺资料)。`note` 必填。只有 PENDING 的能退回;补好之后用 `send_on/` 解送。"""
+        body = CityGodReturnSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        return self._answer(lambda pk: city_gods.return_case(pk, request.user, body.validated_data["note"]))
+
+    @extend_schema(request=CityGodTransferSerializer, responses={200: CityGodCaseSerializer, **_REFUSALS})
+    @action(detail=True, methods=["post"])
+    def transfer(self, request, pk=None):
+        """改交本殿另一位城隍(状态回到 PENDING)。不是本殿的城隍 → 400 `invalid_city_god`。"""
+        body = CityGodTransferSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        target = CityGod.all_objects.filter(pk=body.validated_data["city_god"]).first()
+        return self._answer(lambda pk: city_gods.transfer(pk, request.user, target))
