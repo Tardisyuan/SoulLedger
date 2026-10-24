@@ -235,3 +235,14 @@ class EventWebhookDeliverySerializer(serializers.ModelSerializer):
             "create_time", "update_time",
         ]
         read_only_fields = fields
+
+
+class DeathRegistrationProgressSerializer(serializers.Serializer):
+    """`GET /death-sync/register/{id}/progress/`:只有阶段,没有裁决与批语(`services.progress_of`)。"""
+
+    registration_id = serializers.UUIDField()
+    registration_status = serializers.CharField()
+    soul_id = serializers.UUIDField(allow_null=True)
+    soul_state = serializers.CharField(allow_null=True)
+    stage = serializers.ChoiceField(choices=["registered", "at_city_god", "judging", "sentenced", "reincarnated",
+                                             "settled"])

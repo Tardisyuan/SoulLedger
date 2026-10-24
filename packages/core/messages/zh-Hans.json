@@ -330,7 +330,8 @@
       "JUDGMENT_APPEAL_DECIDED": "申诉已复核",
       "CITY_GOD_RECEIVED": "城隍收案",
       "CITY_GOD_SENT_ON": "城隍解送十殿",
-      "CITY_GOD_RETURNED": "城隍退回补正"
+      "CITY_GOD_RETURNED": "城隍退回补正",
+      "MENGPO_SOUP_TAKEN": "饮孟婆汤"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -5504,6 +5505,10 @@
     "workflow_pick_withdrawn": {
       "title": "选站待办已撤回",
       "body": "跨域审判「{{title}}」已取消,{{soul}}的选站不用再做。"
+    },
+    "officer_handover_received": {
+      "title": "官员交接",
+      "body": "{{by}} 把 {{from}} 手上的事交给了你：审判 {{judgments}} 件、申诉 {{appeals}} 件、城隍 {{city_gods}} 位、书信 {{letters}} 封。"
     }
   },
   "social_moderation": {

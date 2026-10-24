@@ -178,3 +178,45 @@ class TenantSealGlyphsSerializer(serializers.ModelSerializer):
 
     def validate_seal_glyphs(self, value):
         return validate_seal_glyphs(self.instance.civilization, value)
+
+
+class TenantCreateSerializer(serializers.ModelSerializer):
+    """`POST /tenants/`(全局管理员建殿,2026-10-25)。code 建后不可改;文明必填。
+
+    四个种子殿的 code 在 `TENANT_CIVILIZATION` 里写死了文明:用这样的 code 建殿时,文明必须与那张表一致。"""
+
+    code = serializers.RegexField(r"^[A-Z][A-Z0-9_]{1,49}$", max_length=50,
+                                  help_text="大写字母开头,只含大写字母、数字、下划线。")
+    civilization = serializers.ChoiceField(choices=Civilization.choices, source="declared_civilization")
+
+    class Meta:
+        model = Tenant
+        fields = ["code", "display_name", "description", "civilization", "hall_name", "hall_name_en", "hall_name_egy"]
+
+    def validate_code(self, value):
+        if Tenant.objects.filter(code=value).exists():
+            raise serializers.ValidationError("A hall with this code already exists.", code="code_taken")
+        return value
+
+    def validate(self, attrs):
+        from apps.souls.models import TENANT_CIVILIZATION
+
+        fixed = TENANT_CIVILIZATION.get(attrs["code"])
+        if fixed is not None and fixed != attrs["declared_civilization"]:
+            raise serializers.ValidationError({"civilization": f"{attrs['code']} is a {fixed} hall."})
+        return attrs
+
+
+class HallOverviewSerializer(serializers.Serializer):
+    """Doc-only: one row of `GET /tenants/overview/`. The shape is built in `apps/tenants/overview.py`."""
+
+    code = serializers.CharField()
+    hall_names = serializers.DictField(child=serializers.CharField())
+    civilization = serializers.CharField()
+    is_active = serializers.BooleanField()
+    todo = serializers.DictField(child=serializers.IntegerField(),
+                                 help_text="approvals / dispatch_proposals / cooldowns / letters_awaiting / total")
+    judgments = serializers.DictField(child=serializers.IntegerField(),
+                                      help_text="at_city_god / held / claimed / unclaimed(互不相交)")
+    rebirth_quota = serializers.ListField(child=serializers.DictField())
+    open_appeals = serializers.IntegerField()

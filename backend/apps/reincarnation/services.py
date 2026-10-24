@@ -20,6 +20,54 @@ class RebirthQuotaFull(APIException):
                           "detail": f"This month's quota for {form} is full ({used}/{limit})"})
 
 
+class SoupNotTaken(APIException):
+    """地府的灵魂还没饮孟婆汤(2026-10-25):转世拒绝,灵魂留在 REINCARNATING,饮过之后再转。"""
+
+    status_code = 409
+    default_code = "soup_not_taken"
+
+    def __init__(self):
+        super().__init__({"code": "soup_not_taken",
+                          "detail": "A soul of Diyu must drink the soup of Meng Po before rebirth."})
+
+
+class SoupRefused(APIException):
+    """此刻不能记饮汤:不是地府的灵魂(`not_diyu`),或不在候转世(`not_reincarnating`),或本世已饮过(`soup_already_taken`)。"""
+
+    status_code = 409
+    default_code = "soup_refused"
+
+    def __init__(self, code, detail):
+        super().__init__({"code": code, "detail": detail})
+
+
+def needs_soup(soul) -> bool:
+    from apps.souls.models import Civilization
+
+    return soul.civilization == Civilization.CHINESE
+
+
+def drink_soup(soul):
+    """记下本世饮孟婆汤(灵魂行锁下)。地府、REINCARNATING、本世未饮,三者都满足才写;事件同一事务。"""
+    from django.db import transaction
+    from django.utils import timezone
+
+    from apps.events.services import EventService
+
+    with transaction.atomic():
+        soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+        if not needs_soup(soul):
+            raise SoupRefused("not_diyu", "Only a soul of Diyu drinks the soup of Meng Po.")
+        if soul.current_state != SoulState.REINCARNATING:
+            raise SoupRefused("not_reincarnating", f"The soul is {soul.current_state}, not waiting for rebirth.")
+        if soul.soup_taken_at is not None:
+            raise SoupRefused("soup_already_taken", "The soul has already drunk the soup in this life.")
+        soul.soup_taken_at = timezone.now()
+        soul.save(update_fields=["soup_taken_at"])
+        EventService.log(soul, "MENGPO_SOUP_TAKEN", {"taken_at": soul.soup_taken_at.isoformat()})
+    return soul
+
+
 def _month_start():
     from django.utils import timezone
 
@@ -191,6 +239,10 @@ class ReincarnationService:
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
 
+            # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
+            if needs_soup(soul) and soul.soup_taken_at is None:
+                raise SoupNotTaken()
+
             # Monthly quota per path (2026-10-24). The hall row is locked first so two rebirths in one hall cannot
             # both take the last place; a full path refuses and the soul stays REINCARNATING, waiting.
             if soul.tenant_id is not None:
@@ -265,6 +317,7 @@ class ReincarnationService:
             soul.birth_name = soul.birth_name or new_identity
             soul.death_date = None
             soul.origin_location = ""
+            soul.soup_taken_at = None  # 每世一次:下一世转世前要再饮
             soul.save()
             # The cached summary describes the life that just ended.
             LedgerService._invalidate_cache(soul)

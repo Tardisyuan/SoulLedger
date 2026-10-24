@@ -10,7 +10,7 @@
 - 每个请求带请求头:`Authorization: ApiKey <key>`
 - 每个 Key 有三项能力,按需开:
   - `can_register_death` —— 调登记接口(默认开)
-  - `can_query_status` —— 调 `health/`(默认开)
+  - `can_query_status` —— 调 `health/` 与登记进度 `register/{id}/progress/`(默认开)
   - `can_manage_webhooks` —— 用 Key 自己管理 webhook(默认关)
 - 可设过期时间与 IP 白名单(`allowed_ips`);过期、停用、来源 IP 不在白名单都返回 401。
 - 限流按 Key 计:默认每分钟 60 次、每小时 1000 次(管理员可改)。超出返回 429。
@@ -70,6 +70,29 @@
 | `INVALID_TRANSITION` | 400 / 批量项 | 状态机拒绝这次转换 |
 | `VALIDATION_ERROR` | 批量项 | 该条字段不合法 |
 | `INTERNAL_ERROR` | 400 / 批量项 | 服务端处理出错;管理员可在后台重试这条 |
+| `HALL_INACTIVE` | 400 / 批量项 | 这个殿已停用,不再收新的死亡登记(已有数据照常可查) |
+
+### 查询登记进度
+
+`GET /api/v1/death-sync/register/<registration_id>/progress/`(要 `can_query_status`)
+
+只能查**本 Key 自己提交**的登记;别的 Key 的登记与不存在的一样答 404。只给粗粒度阶段,不含裁决、批语与经办官员:
+
+```json
+{ "registration_id": "…", "registration_status": "PROCESSED", "soul_id": "…", "soul_state": "JUDGING",
+  "stage": "at_city_god" }
+```
+
+| stage | 含义 |
+|---|---|
+| `registered` | 已收到登记(含登记失败、尚未开审) |
+| `at_city_god` | 在城隍初审(只地府有这一站) |
+| `judging` | 审判中 |
+| `sentenced` | 已判,受刑或候转世 |
+| `reincarnated` | 已转入下一世(此后的事不再属于这条登记) |
+| `settled` | 终局,不再转世 |
+
+`GET /api/v1/death-sync/register/` 与 `register/<id>/` 仍返回本 Key 的登记记录本身(含处理状态与错误码)。
 
 ## 三、webhook(我们推给你)
 

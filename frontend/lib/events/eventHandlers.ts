@@ -140,6 +140,9 @@ export const EVENT_LABELS: Record<string, string> = {
   CITY_GOD_SENT_ON: "Sent on to the ten courts",
   CITY_GOD_RETURNED: "Returned by the city god",
 
+  // Mengpo soup (孟婆汤)
+  MENGPO_SOUP_TAKEN: "Drank the soup of forgetting",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

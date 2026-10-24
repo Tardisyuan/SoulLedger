@@ -108,6 +108,8 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     CITY_GOD_RECEIVED: handleSoulEvent,
     CITY_GOD_SENT_ON: handleSoulEvent,
     CITY_GOD_RETURNED: handleSoulEvent,
+    // 孟婆汤(backend/apps/reincarnation/services.py::drink_soup):地府转世前饮汤,落在灵魂时间线上。
+    MENGPO_SOUP_TAKEN: handleSoulEvent,
   },
 
   // Workflow domain
@@ -280,6 +282,8 @@ export const BACKEND_EVENT_TYPES = [
   "CITY_GOD_RECEIVED",
   "CITY_GOD_SENT_ON",
   "CITY_GOD_RETURNED",
+  // Mengpo soup (孟婆汤, Diyu only)
+  "MENGPO_SOUP_TAKEN",
   // Scheduler (only the failure is an EventType; see REALTIME_ONLY below)
   "SCHEDULER_RUN_FAILED",
 ] as const;
@@ -297,7 +301,7 @@ export const SOUL_EVENT_GROUPS = {
     "JUDGMENT_INITIATED", "CITY_GOD_RECEIVED", "CITY_GOD_RETURNED", "CITY_GOD_SENT_ON",
     "JUDGMENT_CONCLUDED", "JUDGMENT_APPEAL_FILED", "JUDGMENT_APPEAL_WITHDRAWN",
     "JUDGMENT_APPEAL_DECIDED", "DISPOSITION_CREATED", "DISPOSITION_EXPIRED",
-    "REINCARNATION_TRIGGERED", "REINCARNATION_COMPLETED",
+    "REINCARNATION_TRIGGERED", "MENGPO_SOUP_TAKEN", "REINCARNATION_COMPLETED",
   ],
   workflow: ["WORKFLOW_CREATED", "WORKFLOW_ASSIGNED", "WORKFLOW_APPROVED", "WORKFLOW_REJECTED"],
   dispatch: ["DISPATCH_CREATED", "DISPATCH_APPROVED", "DISPATCH_REJECTED", "DISPATCH_EXECUTED", "DISPATCH_STATUS_CHANGED"],

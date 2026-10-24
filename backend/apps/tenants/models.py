@@ -43,6 +43,11 @@ class Tenant(AuditUserFields, models.Model):
     #: 空列表 = 前端用文明默认字(冥 / J / U+13184 / Μ)。每文明的字符集校验在
     #: `apps/tenants/serializers.py::validate_seal_glyphs`,超长或字符集不对是 400,从不截断。
     seal_glyphs = models.JSONField(default=list, blank=True)
+    #: 管理员新建的殿所属的文明(2026-10-25 用户决定:全局管理员建殿)。四个种子殿的文明仍由
+    #: `TENANT_CIVILIZATION`(按 code)给出,那张表优先;这一列只给不在表里的殿用。空 = 未知文明。
+    #: 路由(`CIVILIZATION_TENANT`)仍按「每个文明一个殿」反查种子殿 —— 新殿收灵魂、审判、转生,
+    #: 但跨文明调拨的默认目的地不会是它。
+    declared_civilization = models.CharField(max_length=20, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -56,9 +61,13 @@ class Tenant(AuditUserFields, models.Model):
     @property
     def civilization(self) -> str:
         """这个租户代表的文明,读 `TENANT_CIVILIZATION`(唯一一份映射);不在表里是 `UNKNOWN`。"""
-        from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION
+        from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
 
-        return TENANT_CIVILIZATION.get(self.code, UNKNOWN_CIVILIZATION)
+        if self.code in TENANT_CIVILIZATION:
+            return TENANT_CIVILIZATION[self.code]
+        if self.declared_civilization in Civilization.values:
+            return Civilization(self.declared_civilization)
+        return UNKNOWN_CIVILIZATION
 
     @property
     def hall_names(self):

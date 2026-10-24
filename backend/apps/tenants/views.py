@@ -1,5 +1,5 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -11,6 +11,8 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
 from apps.tenants.serializers import (
+    HallOverviewSerializer,
+    TenantCreateSerializer,
     TenantMfaRoleRowSerializer,
     TenantSealGlyphsSerializer,
     TenantSerializer,
@@ -49,9 +51,11 @@ def audit_hall_change(request, tenant, before, what):
     )
 
 
-class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
-    """Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
-    Non-ADMIN users see only their own tenant."""
+class TenantViewSet(CodenameViewSetMixin, mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
+    """Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
+    (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
+    A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
+    registrations (`DeathSyncService._process`). Non-ADMIN users see only their own tenant."""
 
     serializer_class = TenantSerializer
     permission_classes = [TenantPermission]
@@ -66,6 +70,56 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     # isolation that actually matters here.
     permission_codename = None
     lookup_field = "code"
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [TenantPermission(), IsAdminPermission()]
+        return super().get_permissions()
+
+    def get_serializer_class(self):
+        return TenantCreateSerializer if self.action == "create" else TenantSerializer
+
+    @extend_schema(request=TenantCreateSerializer, responses={201: TenantSerializer})
+    def create(self, request, *args, **kwargs):
+        """建殿(ADMIN)。审计一条 CREATE(由审计信号写)。"""
+        serializer = TenantCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tenant = serializer.save()
+        return Response(TenantSerializer(tenant).data, status=201)
+
+    def _set_active(self, request, active):
+        tenant = self.get_object()
+        if tenant.is_active != active:
+            with explicit_audit_for(tenant):
+                tenant.is_active = active
+                tenant.save(update_fields=["is_active"])
+            AuditLog.objects.create(
+                tenant=tenant, user=request.user, action="UPDATE", resource="tenant", resource_id=tenant.code,
+                description=f"hall {'activated' if active else 'deactivated'} {tenant.code}",
+                changes={"is_active": [not active, active]},
+                ip_address=get_client_ip(request), user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+            )
+        return Response(TenantSerializer(tenant).data)
+
+    @extend_schema(request=None, responses={200: TenantSerializer})
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    def deactivate(self, request, code=None):
+        """停用殿(不删):数据保留,不再收新灵魂与死亡登记。已停用再停用不写。"""
+        return self._set_active(request, False)
+
+    @extend_schema(request=None, responses={200: TenantSerializer})
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    def activate(self, request, code=None):
+        """重新启用。"""
+        return self._set_active(request, True)
+
+    @extend_schema(responses={200: HallOverviewSerializer(many=True)})
+    @action(detail=False, methods=["get"], permission_classes=[TenantPermission, IsAdminPermission])
+    def overview(self, request):
+        """跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。"""
+        from apps.tenants.overview import overview
+
+        return Response(overview(Tenant.objects.order_by("code")))
 
     def get_queryset(self):
         # field="pk": Tenant is the degenerate case — it has no `tenant` FK
