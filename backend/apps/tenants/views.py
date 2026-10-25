@@ -8,7 +8,7 @@ from apps.audit.signals import explicit_audit_for
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
 from apps.tenants.serializers import (
     HallOverviewSerializer,
@@ -51,7 +51,7 @@ def audit_hall_change(request, tenant, before, what):
     )
 
 
-class TenantViewSet(CodenameViewSetMixin, mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
+class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     """Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only), and
     (2026-10-25) create / `activate/` / `deactivate/` / `overview/` for the global role (ADMIN).
     A hall is never deleted: deactivating keeps every row and refuses new souls (`Soul.save`) and new death
