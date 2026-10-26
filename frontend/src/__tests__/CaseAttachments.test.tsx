@@ -305,6 +305,14 @@ test("the print list page carries name, size, uploader and time, is print-only, 
   expect(page.className).toMatch(/break-before-page/);
 });
 
+test("a failed fetch prints a failure line, not a missing page", async () => {
+  api.attachments.mockRejectedValue(new Error("down"));
+  renderIt(true, <CaseAttachmentsPrintList judgmentId="j-1" enabled />);
+  const page = await screen.findByTestId("attachments-print-failed");
+  expect(page).toHaveTextContent("case.attachments.print_failed");
+  expect(page.className).toMatch(/print:block/);
+});
+
 test("no print page when there is nothing to list, or the caller may not read", async () => {
   api.attachments.mockResolvedValue(list([]));
   const { unmount } = renderIt(true, <CaseAttachmentsPrintList judgmentId="j-1" enabled />);

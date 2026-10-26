@@ -12,7 +12,17 @@ import { formatBytes } from "./caseAttachmentRules";
  */
 export function CaseAttachmentsPrintList({ judgmentId, enabled }: { judgmentId: string; enabled: boolean }) {
   const { t, formatDateTime } = useI18n();
-  const items = useCaseAttachments(judgmentId, { enabled }).data?.items ?? [];
+  const query = useCaseAttachments(judgmentId, { enabled });
+  const items = query.data?.items ?? [];
+  // A failed fetch must not print as "no attachments": say so on the paper.
+  if (enabled && query.isError && !query.data) {
+    return (
+      <section data-testid="attachments-print-failed" className="hidden break-before-page print:block">
+        <h2 className="mb-3 text-lg">{t("case.attachments.print_title")}</h2>
+        <p className="text-sm">{t("case.attachments.print_failed")}</p>
+      </section>
+    );
+  }
   if (!enabled || items.length === 0) return null;
   return (
     <section data-testid="attachments-print-list" className="hidden break-before-page print:block">

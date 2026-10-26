@@ -75,6 +75,9 @@ export default function ForgotPasswordPage() {
             id="officer-reset-identifier"
             name="identifier"
             autoComplete="username"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             type="text"
             label={t("auth.forgot_email_label")}
             value={identifier}

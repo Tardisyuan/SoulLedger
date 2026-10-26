@@ -64,6 +64,54 @@ describe("BaseModal", () => {
     expect(screen.queryByLabelText("Close")).not.toBeInTheDocument();
   });
 
+  // A stray backdrop click must not throw away typed text (UX review 2026-10-27 #1).
+  describe("outside click", () => {
+    // The Viewport (parent of the popup) is what a user hits beside the card.
+    const outsideClick = () => {
+      const target = screen.getByRole("dialog").parentElement as HTMLElement;
+      fireEvent.pointerDown(target, { pointerType: "mouse" });
+      fireEvent.mouseDown(target);
+      fireEvent.pointerUp(target, { pointerType: "mouse" });
+      fireEvent.mouseUp(target);
+      fireEvent.click(target);
+    };
+
+    it("is ignored when the body holds a writable text field", () => {
+      const onClose = jest.fn();
+      render(
+        <BaseModal isOpen onClose={onClose} title="Form">
+          <textarea aria-label="note" defaultValue="typed" />
+        </BaseModal>
+      );
+      outsideClick();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("note")).toBeInTheDocument();
+    });
+
+    it("still closes a read-only dialog", () => {
+      const onClose = jest.fn();
+      render(
+        <BaseModal isOpen onClose={onClose} title="Info">
+          <p>read only</p>
+          <input type="checkbox" aria-label="c" />
+        </BaseModal>
+      );
+      outsideClick();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("Escape still closes a form dialog", () => {
+      const onClose = jest.fn();
+      render(
+        <BaseModal isOpen onClose={onClose} title="Form">
+          <input aria-label="name" />
+        </BaseModal>
+      );
+      fireEvent.keyDown(screen.getByLabelText("name"), { key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("renders title", () => {
     render(
       <BaseModal isOpen={true} onClose={() => {}} title="My Modal">

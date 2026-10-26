@@ -29,9 +29,11 @@ const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockGoBack = jest.fn();
 let mockParams: object | undefined;
+/** The `beforeRemove` listener the screen last registered (the navigator is mocked here). */
+let mockLeave: ((event: { preventDefault: () => void; data: { action: object } }) => void) | undefined;
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: mockGoBack, setOptions: mockSetOptions }),
+  useNavigation: () => ({ navigate: mockNavigate, popTo: mockPopTo, goBack: mockGoBack, setOptions: mockSetOptions, addListener: (_name: string, cb: typeof mockLeave) => { mockLeave = cb; return () => {}; }, dispatch: jest.fn() }),
   useRoute: () => ({ params: mockParams }),
   useFocusEffect: () => {},
 }));
@@ -345,6 +347,27 @@ describe("posting", () => {
     await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ content: "一九八三年那件事。", visibility: "FOLLOWERS", txn_id: expect.any(String) });
     expect(mockPopTo).toHaveBeenCalledWith("Tabs", { screen: "Circle", params: { pendingId: "new" } });
+  });
+
+  it("leaving with unsent text asks first; an empty draft and a sent post leave freely", async () => {
+    stubApi({
+      "/me/social/status/": STATUS,
+      "POST /me/social/feed/": { status: 201, data: post({ id: "new", moderation_status: "PENDING", is_mine: true }) },
+    });
+    wrap(<ComposePostScreen />);
+    await act(async () => {});
+    const leave = () => {
+      const preventDefault = jest.fn();
+      act(() => mockLeave?.({ preventDefault, data: { action: {} } }));
+      return preventDefault;
+    };
+    expect(leave()).not.toHaveBeenCalled();
+    fireEvent.changeText(screen.getByTestId("post-body"), "一句没发出去的话");
+    expect(leave()).toHaveBeenCalled();
+    expect(screen.getByTestId("post-discard")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("post-submit"));
+    await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
+    expect(leave()).not.toHaveBeenCalled();
   });
 
   it("muted: the send button's place holds the note, not a disabled button", async () => {

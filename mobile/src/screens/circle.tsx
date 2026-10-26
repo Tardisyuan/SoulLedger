@@ -64,6 +64,7 @@ import {
 } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
+import { useDiscardGuard } from "./discardGuard";
 import { Glyph, Tag } from "./letters";
 
 type Nav = NativeStackNavigationProp<AppStackParams>;
@@ -637,6 +638,7 @@ export function ComposePostScreen() {
   const toast = useToast();
   const writeTxn = useWriteTxn();
   const uploads = useSoulMediaUploads<PickedImage>(uploadBody);
+  const guard = useDiscardGuard(!!draft.trim() || uploads.items.length > 0, "post");
   // 一张失败的上传在它自己的格子里说,这里另报一次原因(大小、格式……)。
   const reported = useRef(new Set<string>());
   useEffect(() => {
@@ -681,6 +683,7 @@ export function ComposePostScreen() {
       const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds, txn);
       writeTxn.done();
       posted.current = true;
+      guard.release();
       uploads.clear();
       // 送审的由朋友圈顶上的「已发出,正在审核」横幅说;打码、隐藏没有别处说,这里补一条。
       if (post.screening !== "pending_review") tellScreening(toast, tr, post.screening);
@@ -694,6 +697,7 @@ export function ComposePostScreen() {
 
   return (
     <Screen edges={["left", "right", "bottom"]} testID="compose-post">
+      {guard.sheet}
       <View style={[styles.form, { paddingHorizontal: gutter }]}>
         <TextInput
           ref={input}
