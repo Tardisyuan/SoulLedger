@@ -2472,50 +2472,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
-  /api/v1/auth/register/:
-    post:
-      operationId: v1_auth_register_create
-      description: |-
-        POST /api/v1/auth/register/
-        Create a new user account.
-        Rate limited via DRF throttle (RegisterThrottle: 5/hour per IP).
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Register'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Register'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Register'
-        required: true
-      security:
-      - jwtAuth: []
-      - {}
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
   /api/v1/auth/reset-password/:
     post:
       operationId: v1_auth_reset_password_create
@@ -38240,35 +38196,6 @@ components:
           type: integer
       required:
       - restored
-    Register:
-      type: object
-      properties:
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          title: Email address
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 254
-          - type: string
-            maxLength: 0
-        password:
-          type: string
-          writeOnly: true
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-      required:
-      - password
-      - username
     RegisteredViaEnum:
       enum:
       - OFFICER

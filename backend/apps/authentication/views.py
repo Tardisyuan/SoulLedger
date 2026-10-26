@@ -73,7 +73,6 @@ from .serializers import (
     PasswordResetRefusalSerializer,
     PasswordResetResultSerializer,
     PublicCivilizationSerializer,
-    RegisterSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
     TokenRefreshSerializer,
@@ -464,8 +463,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             rows += 1
             writer.writerow([
                 # `csv_safe` on every free-text cell (apps/core/csv_safe.py).
-                # `username` is picked by whoever registers — `/auth/register/`
-                # is AllowAny — and `email` by whoever edits their own profile,
+                # `username` came from whoever created the account (the public
+                # `/auth/register/` is gone since 2026-10-27, but older rows remain) — and `email` by whoever edits their own profile,
                 # while this file is opened by an administrator on their own
                 # machine. The ledger export has neutralised formula cells
                 # since 2026-08-29; this one was written without that guard
@@ -856,45 +855,6 @@ def logout_view(request):
         return Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
     except Exception:
         return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@extend_schema(
-    request=RegisterSerializer,
-    responses={
-        # The created user is rendered by UserSerializer, not by the
-        # RegisterSerializer that validated the input — the two differ
-        # (no password out, tenant/organization refs in).
-        201: UserSerializer,
-        400: OpenApiTypes.OBJECT,
-        429: ErrorResponseSerializer,
-    },
-)
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def register_view(request):
-    """
-    POST /api/v1/auth/register/
-    Create a new user account.
-    Rate limited via DRF throttle (RegisterThrottle: 5/hour per IP).
-    """
-    from .throttles import RegisterThrottle
-
-    # DRF throttle check
-    throttle = RegisterThrottle()
-    if not throttle.allow_request(request, None):
-        return Response(
-            {"error": "Registration attempts too frequent, try again later"},
-            status=status.HTTP_429_TOO_MANY_REQUESTS,
-        )
-
-    serializer = RegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        return Response(
-            UserSerializer(user).data,
-            status=status.HTTP_201_CREATED,
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(

@@ -80,8 +80,7 @@ def list_permissions(request):
         # Two different 400s share this slot — a duplicate codename answers
         # {"error": ...} and a validation failure answers DRF's field-keyed
         # {"codename": [...]}. Documented as the former because it is the one
-        # this view writes itself; see OpenApiTypes.OBJECT on register_view
-        # for the other shape.
+        # this view writes itself.
         400: ErrorResponseSerializer,
     },
 )

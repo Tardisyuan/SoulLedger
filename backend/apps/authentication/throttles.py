@@ -15,12 +15,6 @@ class was a second, dead answer to a question already answered (BP-14).
 from apps.core.throttling import ClientIPRateThrottle
 
 
-class RegisterThrottle(ClientIPRateThrottle):
-    """Registration: 5 per hour per IP. Called by `register_view`."""
-
-    scope = "register"
-
-
 class PasswordResetThrottle(ClientIPRateThrottle):
     """Password-reset requests: 3 per 5 minutes per IP.
 

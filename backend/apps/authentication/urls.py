@@ -16,7 +16,6 @@ from .views import (
     password_help_request,
     preferences_view,
     profile_view,
-    register_view,
     reset_password_request,
     set_new_password,
 )
@@ -25,7 +24,6 @@ router = DefaultRouter()
 router.register(r"login-logs", LoginLogViewSet, basename="login-logs")
 
 urlpatterns = [
-    path("register/", register_view, name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("officer-login/", OfficerLoginView.as_view(), name="officer-login"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),

@@ -298,7 +298,6 @@ REST_FRAMEWORK = {
         # `throttle_classes` 的视图不受它影响。默认值依据:重页面一次加载 ≤ 10 个请求,
         # 正常官员持续 ≲ 60 次/分钟,取约 10 倍;用 API_USER_THROTTLE_RATE 调整。
         "user": os.getenv("API_USER_THROTTLE_RATE", "600/minute"),
-        "register": "5/hour",
         "password_reset": "3/5minute",
         # 「忘记密码」→ 通知本殿管理员(apps/authentication/views.py::password_help_request)。
         "password_help": "5/hour",

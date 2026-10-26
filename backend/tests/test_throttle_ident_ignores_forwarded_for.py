@@ -73,9 +73,9 @@ def test_the_default_throttles_key_one_client_to_one_bucket():
 
 
 def test_the_auth_endpoint_throttles_key_one_client_to_one_bucket():
-    from apps.authentication.throttles import PasswordResetThrottle, RegisterThrottle
+    from apps.authentication.throttles import PasswordResetThrottle
 
-    for cls in (RegisterThrottle, PasswordResetThrottle):
+    for cls in (PasswordResetThrottle,):
         keys = _keys(cls, ROTATING_XFF)
         assert len(keys) == 1, f"{cls.__name__} 按 XFF 分桶:{sorted(keys)}"
         assert REMOTE in next(iter(keys))
@@ -85,9 +85,9 @@ def test_an_authenticated_caller_does_not_escape_the_auth_endpoint_throttles():
     """`AnonRateThrottle.get_cache_key` returns None — *no limit* — for an
     authenticated request. Registration is AllowAny, so one account's token
     was a pass to register and to request resets without any IP limit."""
-    from apps.authentication.throttles import PasswordResetThrottle, RegisterThrottle
+    from apps.authentication.throttles import PasswordResetThrottle
 
-    for cls in (RegisterThrottle, PasswordResetThrottle):
+    for cls in (PasswordResetThrottle,):
         key = cls().get_cache_key(_request(user=_Authenticated()), None)
         assert key is not None, f"{cls.__name__} 对已登录请求不限流"
         assert REMOTE in key
