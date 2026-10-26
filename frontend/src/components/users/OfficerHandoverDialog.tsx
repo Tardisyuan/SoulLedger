@@ -163,7 +163,7 @@ export function OfficerHandoverDialog({ from, onClose }: { from: User; onClose: 
             loading={commit.isPending}
             onClick={() => commit.mutate()}
           >
-            {commit.isPending ? t("officerHandover.submitting") : t("officerHandover.submit_n", { n: total })}
+            {commit.isPending ? t("officerHandover.submitting") : t("officerHandover.submit_n", { n: String(total) })}
           </Button>
         </div>
       }
