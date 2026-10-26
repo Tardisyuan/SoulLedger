@@ -31,6 +31,7 @@ A row whose site no longer exists must be deleted.
 TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 
 SITES = [
+    ('apps/authentication/views.py', 'UserViewSet.import_csv', 'User.all_objects', 1, 'GLOBAL', 'existence probe of a username, which is unique across the whole table; nothing is read back'),
     ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'global admin with no hall names one hall by its globally unique code for the invite (ADMIN only)'),
     ('apps/judgment/handover.py', '_target_takes_appeal', 'Judgment.all_objects', 1, 'PK', 'the judgment of an appeal already filtered to the handover hall, by its FK'),
     ('apps/judgment/handover.py', 'commit', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks the appeals whose pks come from a query filtered by the handover hall'),
