@@ -75,7 +75,7 @@ class RoleSerializer(serializers.ModelSerializer):
     def get_is_builtin(self, obj) -> bool:
         return obj.is_builtin
 
-    # The three counts below read a value `list_roles` annotated or put in the
+    # The counts below read a value `list_roles` annotated or put in the
     # context when there is one, so the list is not three queries per row.
     def get_member_count(self, obj) -> int:
         annotated = getattr(obj, "member_count_annotated", None)
@@ -104,6 +104,9 @@ class RoleSerializer(serializers.ModelSerializer):
     # 20th SerializerMethodField in that state — the other 19 were found in
     # 0779d6b, and this one was hiding behind the error channel.
     def get_user_count(self, obj) -> int:
+        annotated = getattr(obj, "user_count_annotated", None)
+        if annotated is not None:
+            return annotated
         from apps.authentication.models import User
         return User.objects.filter(role=obj.name, is_active=True).count()
 
