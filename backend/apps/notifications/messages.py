@@ -162,6 +162,7 @@ MESSAGES = {
         "judgment_reassigned_away": {"title": "Sep Hab Ky Seth", "body": "{{by}}: Hab Ky Sep-Ek {{soul}} Er {{to}}. Khet: {{reason}}"},
         "judgment_released_for_you": {"title": "Sep Sehen Shesep Seth", "body": "{{by}}: Sehen Shesep Sep-Ek {{soul}} · Nen Shesep Djer. Khet: {{reason}}"},
         "judgment_undeferred_for_you": {"title": "Sedjer Fekh Seth", "body": "{{by}}: Sedjer Fekh · Sep-Ek {{soul}}. Khet: {{reason}}"},
+        "officer_handover_received": {"title": "Sep Redi Er Djes", "body": "{{by}}: Sep {{from}} Redi Er Djes · Wedja {{judgments}} · Nehet {{appeals}} · Chenghuang {{city_gods}} · Shemes {{letters}}"},
         "scheduled_task_failed": {"title": "Baku Ahet: Nen Iri", "body": "Baku Ahet «{{task}}»: Nen Iri. {{error}}"},
         "scheduled_task_overdue": {"title": "Baku Ahet: Ahet Sesh, Nen Iri", "body": "Baku Ahet «{{task}}»: Ahet {{expected_at}} Er Iri; Nen Sesh Iri Er Djer"},
         "workflow_assigned": {"title": "Wat Hesy · Er-Ek Emu", "body": "{{soul}} · Wat Hesy «{{workflow}}»: Er-Ek Emu."},

@@ -26463,6 +26463,7 @@ components:
       - dispatch
       - disposition
       - events
+      - halls
       - judgment
       - ledger
       - menus
@@ -26508,6 +26509,7 @@ components:
         * `dispatch` - dispatch
         * `disposition` - disposition
         * `events` - events
+        * `halls` - halls
         * `judgment` - judgment
         * `ledger` - ledger
         * `menus` - menus
@@ -32636,6 +32638,7 @@ components:
       - dispatch
       - disposition
       - events
+      - halls
       - judgment
       - ledger
       - menus
@@ -32675,6 +32678,7 @@ components:
         * `dispatch` - dispatch
         * `disposition` - disposition
         * `events` - events
+        * `halls` - halls
         * `judgment` - judgment
         * `ledger` - ledger
         * `menus` - menus

@@ -219,6 +219,7 @@ EDGES = {
     'authentication.PasswordHistory.user->authentication.User': ('user-other', 'global identity: the owning account (hashes of its earlier passwords)'),
     'authentication.Impersonation.actor->authentication.User': ('user-other', 'global identity: the administrator who views'),
     'authentication.Impersonation.target->authentication.User': ('user-other', 'global identity: the account being viewed'),
+    'authentication.Impersonation.hall->tenants.Tenant': ('tenantcol', 'the hall a global admin views read-only (batch 54); null for a person view'),
     'chat.Conversation.assignee->authentication.User': ('user-other', 'global identity: officer the conversation is assigned to'),
     'chat.InboxOfficerState.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'chat.InboxReplyTemplate.created_by->authentication.User': ('user-other', 'global identity: creator'),

@@ -9,7 +9,7 @@ export function HallViewExpired() {
   const { t } = useI18n();
   return (
     <div data-testid="hall-view-expired" className="mx-auto flex max-w-md flex-col items-start gap-3 px-4 py-8">
-      <h1 className="text-lg font-semibold">{t("halls.overview.expired_title")}</h1>
+      <h1 className="font-title text-lg">{t("halls.overview.expired_title")}</h1>
       <p className="text-sm">{t("halls.overview.expired_body")}</p>
       <Button type="button" variant="secondary" onClick={() => void leaveImpersonation()}>
         {t("halls.viewing.back")}
