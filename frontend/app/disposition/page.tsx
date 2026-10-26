@@ -108,7 +108,12 @@ export default function DispositionPage() {
       queryClient.invalidateQueries({ queryKey: ["dispositions"] });
       setShowExecuteModal(null);
     },
-    onError: () => showToast(t("disposition.execute_error"), "error"),
+    onError: (err: unknown) => {
+      // 埃及:称心流程没走完 / 被驳回 / 天平摇摆时不执行(409,apps/judgment/weighing.py),说清是哪一条。
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const weighing = code && ["weighing_in_progress", "weighing_rejected", "weighing_wavers"].includes(code);
+      showToast(weighing ? t(`judgment.weighing.errors.${code}`) : t("disposition.execute_error"), "error");
+    },
   });
 
   // 行尾 ⋯:有结案判决的处置可以「归档」(后端只收有结案判决的);已归档的行给「取消归档」。

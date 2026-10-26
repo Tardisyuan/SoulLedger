@@ -72,5 +72,8 @@
   "judgment.weighing.errors.verdict_contradicts_weighing",
   "judgment.weighing.errors.wavering_has_no_destination",
   "judgment.weighing.errors.wavering_with_open_cross",
-  "judgment.placement.errors.term_not_applicable"
+  "judgment.placement.errors.term_not_applicable",
+  "judgment.weighing.errors.weighing_in_progress",
+  "judgment.weighing.errors.weighing_rejected",
+  "judgment.weighing.errors.weighing_wavers"
 ]

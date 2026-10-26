@@ -145,6 +145,21 @@ def test_an_egyptian_case_cannot_be_concluded_without_the_weighing_flow(eg_tenan
     assert refused.value.code == "weighing_flow_required"
 
 
+def test_a_disposition_parked_at_the_duat_entry_does_not_execute_into_settled(eg_tenant):
+    """Written before the wavering rule: an undecided verdict parked at EG_DUAT_ENTRY (02 §5.3)."""
+    from apps.disposition.services import DispositionService
+    from apps.judgment.weighing import unfinished_flow
+
+    case = _case(eg_tenant)
+    Judgment.all_objects.filter(pk=case.pk).update(verdict="PURGATORY", is_final=True)
+    case.refresh_from_db()
+    disposition = DispositionService.create_from_judgment(case)
+    assert disposition.destination_realm.realm_code == "EG_DUAT_ENTRY"
+    assert unfinished_flow(disposition) == "weighing_wavers"
+    assert DispositionService.execute(disposition) is False
+    assert Soul.objects.get(pk=case.soul_id).current_state != SoulState.SETTLED
+
+
 def test_neither_egyptian_outcome_takes_a_term(eg_tenant):
     """02 §5.2 / 03 §五: the second death is not served; nor is the Field of Reeds."""
     from apps.disposition.destination import DestinationRefusedError

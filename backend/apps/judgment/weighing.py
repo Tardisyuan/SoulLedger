@@ -86,6 +86,12 @@ def unfinished_flow(disposition) -> str | None:
     case). A case concluded without a flow (before this rule, or a reopened one) is not held.
     """
     judgment = disposition.judgment
+    # A wavering scale sends the soul nowhere (02 §5.3): a disposition written before that rule, parked at
+    # the Duat entry by an undecided Egyptian verdict, must not execute into SETTLED at no station.
+    realm = disposition.destination_realm
+    if (judgment is not None and judgment.civilization == "EGYPTIAN"
+            and realm is not None and realm.realm_code == "EG_DUAT_ENTRY"):
+        return "weighing_wavers"
     if judgment is None or not applies(judgment):
         return None
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus

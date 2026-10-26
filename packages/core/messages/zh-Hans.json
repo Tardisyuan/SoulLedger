@@ -2215,7 +2215,10 @@
       "errors": {
         "verdict_contradicts_weighing": "裁决与天平不符：心不重于羽只能判通过，重于羽只能判不通过。",
         "wavering_has_no_destination": "天平摇摆时不发落：清空发落再结案，会另开一次称量。",
-        "wavering_with_open_cross": "这件案子挂着未结的联审，先结联审再重称。"
+        "wavering_with_open_cross": "这件案子挂着未结的联审，先结联审再重称。",
+        "weighing_in_progress": "称心流程还没走完：托特、神庭、荷鲁斯、奥西里斯（或阿米特）走完之后才执行。",
+        "weighing_rejected": "称心流程被驳回：这件案子要重开或申诉，不能直接执行。",
+        "weighing_wavers": "天平摇摆的旧处置不执行：另开一次称量。"
       }
     }
   },
