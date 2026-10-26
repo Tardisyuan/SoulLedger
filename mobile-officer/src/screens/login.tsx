@@ -85,7 +85,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
             {hint === "reset_done" && !failure ? (
               <Notice tone="neutral" testID="login-reset-done">{`${t("auth.reset_done")}\n${t("auth.reset_done_body")}`}</Notice>
             ) : null}
-            <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" />
+            <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} />
             <Input
               testID="login-password"
               label={t("officer_app.login.password")}
