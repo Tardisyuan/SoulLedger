@@ -230,8 +230,20 @@ export function LifeSections({
                   {j.judge ? (locale === "zh-Hans" ? j.judge.name_zh || j.judge.name : j.judge.name) : unrecorded}
                 </DataRow>
                 <DataRow label={tr("soul_app.life.verdict")}>
-                  {j.verdict ? <EnumValue namespace="judgment.verdicts" value={j.verdict} /> : tr("soul_app.life.verdict_pending")}
+                  {/* 埃及:裁决是天平的(docs/02 §5)。摇摆 = 另开一次称量,不读作「待定」。 */}
+                  {j.weighing_result === "WAVERING" ? (
+                    tr("judgment.weighing.result.WAVERING")
+                  ) : j.verdict ? (
+                    <EnumValue namespace="judgment.verdicts" value={j.verdict} />
+                  ) : (
+                    tr("soul_app.life.verdict_pending")
+                  )}
                 </DataRow>
+                {j.weighing_result && j.weighing_result !== "WAVERING" ? (
+                  <DataRow label={tr("judgment.weighing.title")} testID={`weighing-${j.id}`}>
+                    {tr(`judgment.weighing.result.${j.weighing_result}`)}
+                  </DataRow>
+                ) : null}
                 <DataRow label={tr("soul_app.life.final")}>{tr(j.is_final ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}</DataRow>
               </DataRows>
               {appeals?.data && !sealed ? (
