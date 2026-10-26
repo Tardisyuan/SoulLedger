@@ -71,7 +71,7 @@ def soul_plan(account):
     """本人本世(`account.cycle`)最新那份计划 —— 与转生资格(`rebirth.eligibility`)读的是同一份。"""
     from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
     from apps.realms.models import Realm
-    from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION
+    from apps.souls.models import UNKNOWN_CIVILIZATION
 
     soul = account.soul
     plan = (
@@ -82,12 +82,15 @@ def soul_plan(account):
         n for n in plan.nodes.filter(is_deleted=False).order_by("order") if n.status in SOUL_STATUS
     ]
     realms = {r.realm_code: r for r in Realm.all_objects.filter(realm_code__in={n.realm_code for n in nodes})}
+    from apps.tenants.models import Tenant
+
+    civs = {t.code: t.civilization for t in Tenant.objects.filter(code__in={n.tenant_code for n in nodes})}
     stations = []
     for n, node in enumerate(nodes, start=1):
         status = SOUL_STATUS[node.status]
         stations.append({
             "id": node.pk, "n": n, "status": status, "is_home": node.is_home,
-            "civilization": TENANT_CIVILIZATION.get(node.tenant_code, UNKNOWN_CIVILIZATION),
+            "civilization": civs.get(node.tenant_code, UNKNOWN_CIVILIZATION),
             "realm": realms.get(node.realm_code), "sentence_years": node.sentence_years,
             "is_eternal": node.is_eternal,
             "started_on": node.activated_at.date() if node.activated_at else None,

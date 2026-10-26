@@ -35,6 +35,8 @@ SITES = [
     ('apps/judgment/handover.py', '_target_takes_appeal', 'Judgment.all_objects', 1, 'PK', 'the judgment of an appeal already filtered to the handover hall, by its FK'),
     ('apps/judgment/handover.py', 'commit', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks the appeals whose pks come from a query filtered by the handover hall'),
     ('apps/reincarnation/services.py', 'drink_soup', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
+    ('apps/sentence_plan/requests.py', 'normalize_changes', 'Tenant.objects', 1, 'CODE', "the requesting hall by its globally unique code; only its civilization is read (Tenant has no tenant column)"),
+    ('apps/sentence_plan/soul_view.py', 'soul_plan', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),
     ('apps/tenants/serializers.py', 'TenantCreateSerializer.validate_code', 'Tenant.objects', 1, 'GLOBAL', 'uniqueness check of a new hall code (Tenant has no tenant column; ADMIN only)'),
     ('apps/tenants/views.py', 'TenantViewSet.overview', 'Tenant.objects', 1, 'FANOUT', 'cross-hall overview for the global admin (ADMIN only): one row per hall'),
     ('apps/ledger/views.py', 'LedgerOverviewStatsView.get', 'Tenant.objects', 1, 'FANOUT', 'lists active halls with no souls yet (ADMIN only); narrowed to the request hall when there is one, same scope as soul_qs'),

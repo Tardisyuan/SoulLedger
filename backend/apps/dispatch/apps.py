@@ -13,7 +13,6 @@ class DispatchConfig(AppConfig):
         from django.db.models import Q
 
         from apps.core.recycle_bin import register_bin_type
-        from apps.souls.models import TENANT_CIVILIZATION
 
         from .models import DispatchRecord, DispatchStatus
 
@@ -23,7 +22,7 @@ class DispatchConfig(AppConfig):
             return f"{soul} → {target}"
 
         def location(record):
-            civilization = TENANT_CIVILIZATION.get(record.source_tenant.code)
+            civilization = record.source_tenant.known_civilization
             return {"kind": "civilization", "value": civilization} if civilization else None
 
         register_bin_type(

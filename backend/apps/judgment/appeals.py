@@ -207,11 +207,9 @@ YEARS_PER_COMPENSATION_POINT = {"CHINESE": 10, "EUROPEAN": 10, "GREEK": 100, "EG
 
 
 def compensation_weight(disposition):
-    from apps.souls.models import TENANT_CIVILIZATION
-
     if disposition.is_eternal:
         return 100
-    civ = TENANT_CIVILIZATION.get(getattr(disposition.tenant, "code", ""), None)
+    civ = disposition.tenant.known_civilization if disposition.tenant_id else None
     per_point = YEARS_PER_COMPENSATION_POINT.get(getattr(civ, "value", civ), 1)
     return min(100, max(1, round((disposition.sentence_years or 0) / per_point)))
 

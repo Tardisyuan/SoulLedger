@@ -59,7 +59,7 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
     * REOPEN 不带改动(重开审判的结论才改计划,N1=(a))。
     """
     from apps.realms.models import Realm
-    from apps.souls.models import TENANT_CIVILIZATION
+    from apps.tenants.models import Tenant
 
     changes = changes or {}
     if not isinstance(changes, dict) or set(changes) - {"add", "remove"}:
@@ -75,7 +75,8 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
     if not add and not remove:
         raise PlanChangeRefusedError("An AMEND request must add or remove at least one node", "empty_changes")
 
-    civilization = TENANT_CIVILIZATION.get(from_tenant_code)
+    from_tenant = Tenant.objects.filter(code=from_tenant_code).first()
+    civilization = from_tenant.known_civilization if from_tenant else None
     added = []
     for item in add:
         if not isinstance(item, dict):
@@ -436,7 +437,6 @@ def _open_reopen_judgment(soul, plan, req):
     """
     from apps.core.tenant import RESIDENCE_WRITE_REOPEN, residence_writable
     from apps.judgment.models import Judgment, JudgmentKind, open_judgments
-    from apps.souls.models import TENANT_CIVILIZATION
 
     open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
     if open_ids:
@@ -446,7 +446,7 @@ def _open_reopen_judgment(soul, plan, req):
     if soul.is_residing and not residence_writable(soul, home, RESIDENCE_WRITE_REOPEN):
         raise PlanChangeRefusedError("Only the home tenant opens a reopened judgment", "not_home", status=403)
     Judgment.objects.create(
-        soul=soul, tenant=home, civilization=TENANT_CIVILIZATION.get(home.code, soul.civilization),
+        soul=soul, tenant=home, civilization=home.known_civilization or soul.civilization,
         court="重开审判", kind=JudgmentKind.REOPEN, amends_plan_id=plan.pk, notes="",
     )
     plan.status = SentencePlanStatus.RETRIAL

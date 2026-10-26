@@ -29,7 +29,7 @@ from django.db import transaction
 from django.db.models.functions import Lower
 
 from apps.souls.dates import check_soul_dates, validate_historical_date
-from apps.souls.models import TENANT_CIVILIZATION, Civilization, Soul
+from apps.souls.models import Civilization, Soul
 from apps.tenants.models import Tenant
 
 #: Most data rows one file may carry. A product limit, not a technical one: a larger
@@ -158,7 +158,7 @@ def _read(data: bytes, columns=COLUMNS, required=REQUIRED_COLUMNS):
 def validate_csv(data: bytes, tenant) -> list[RowResult]:
     """One RowResult per data row. Raises ImportFileError for file-level problems."""
     header, raw_rows = _read(data)
-    expected = TENANT_CIVILIZATION.get(tenant.code)
+    expected = tenant.known_civilization
     results = []
     for line_no, cells in raw_rows:
         values = {c: "" for c in COLUMNS}

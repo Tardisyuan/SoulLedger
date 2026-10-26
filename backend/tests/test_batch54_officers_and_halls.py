@@ -86,6 +86,8 @@ class TestHalls:
         assert res.status_code == 201, res.data
         hall = Tenant.objects.get(code="CN_SECOND")
         assert hall.civilization == "CHINESE"
+        # 新建的殿按 declared_civilization 认文明(此前城隍、申诉补偿、导入、流程分段只认四个种子殿的 code)。
+        assert hall.known_civilization == "CHINESE"
         assert admin_client.post("/api/v1/tenants/CN_SECOND/deactivate/").status_code == 200
         hall.refresh_from_db()
         assert not hall.is_active
