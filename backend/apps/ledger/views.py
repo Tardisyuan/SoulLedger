@@ -41,6 +41,14 @@ from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
 
+def _scoped_souls(request, tenant):
+    """This hall's souls, narrowed by the caller's row-level data scope — the same rows the souls
+    list shows, so a soul id copied from elsewhere does not open its ledger (security review 2026-10-27 #4)."""
+    from apps.perm.filters import DataScopeFilter
+
+    return DataScopeFilter.filter_queryset(request, Soul.objects.filter(tenant=tenant), Soul)
+
+
 def _format_death_date(soul: Soul) -> str:
     """CSV-friendly death date, preserving BCE years the legacy
     soul.death_date property can't represent. year-month-day / year-month
@@ -86,7 +94,7 @@ class LedgerBalanceView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -123,7 +131,7 @@ class LedgerRecalculateView(APIView):
     def post(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -152,7 +160,7 @@ class LedgerEffectiveView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -195,7 +203,7 @@ class LedgerInheritanceView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            soul = _scoped_souls(request, tenant).get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
