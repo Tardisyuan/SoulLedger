@@ -9231,6 +9231,26 @@ export interface paths {
         patch: operations["v1_tenants_settings_partial_update"];
         trace?: never;
     };
+    "/api/v1/tenants/{code}/view/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 全局管理员只读进入这一殿(停用的也行):签一张 30 分钟、只读、无刷新令牌的 access,`tenant_code` 是这一殿;
+         *     开始 / 结束各一条审计。结束走 `POST auth/impersonate/end/`。规则见 `apps/authentication/impersonation.py`。
+         */
+        post: operations["v1_tenants_view_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/overview/": {
         parameters: {
             query?: never;
@@ -12530,6 +12550,19 @@ export interface components {
                 [key: string]: unknown;
             }[];
             open_appeals: number;
+        };
+        /** @description `POST /tenants/{code}/view/` 的 201:进殿查看的只读令牌(无刷新令牌)。规则见 `apps/authentication/impersonation.py`。 */
+        HallViewStart: {
+            access: string;
+            impersonation_id: number;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            code: string;
+            hall_names: {
+                [key: string]: string;
+            };
         };
         HandledBy: {
             id: number | null;
@@ -37179,6 +37212,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_view_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HallViewStart"];
                 };
             };
         };

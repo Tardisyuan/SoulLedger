@@ -12,6 +12,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
 from apps.tenants.serializers import (
     HallOverviewSerializer,
+    HallViewStartSerializer,
     TenantCreateSerializer,
     TenantMfaRoleRowSerializer,
     TenantSealGlyphsSerializer,
@@ -120,6 +121,20 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
         from apps.tenants.overview import overview
 
         return Response(overview(Tenant.objects.order_by("code")))
+
+    @extend_schema(request=None, responses={201: HallViewStartSerializer})
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    def view(self, request, code=None):
+        """全局管理员只读进入这一殿(停用的也行):签一张 30 分钟、只读、无刷新令牌的 access,`tenant_code` 是这一殿;
+        开始 / 结束各一条审计。结束走 `POST auth/impersonate/end/`。规则见 `apps/authentication/impersonation.py`。"""
+        from apps.authentication import impersonation
+
+        tenant = self.get_object()
+        access, record = impersonation.start_hall(request.user, tenant, request)
+        return Response({
+            "access": access, "impersonation_id": record.pk, "started_at": record.started_at,
+            "expires_at": record.expires_at, "code": tenant.code, "hall_names": tenant.hall_names,
+        }, status=201)
 
     def get_queryset(self):
         # field="pk": Tenant is the degenerate case — it has no `tenant` FK
