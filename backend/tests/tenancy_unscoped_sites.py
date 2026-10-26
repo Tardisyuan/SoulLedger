@@ -170,7 +170,7 @@ SITES = [
     ('apps/reincarnation/services.py', 'ReincarnationService.complete_rebirth', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/scheduler/realtime.py', '_tenant_code', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/scheduler/realtime.py', 'emit_jobs_rebuilt', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
-    ('apps/scheduler/services.py', '_active_tenants', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
+    ('apps/scheduler/services.py', '_scheduled_tenants', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/sentence_plan/management/commands/backfill_sentence_plans.py', 'Command._build', 'DispatchRecord._base_manager', 1, 'CLI', "operator backfill over every tenant's souls; joins stay inside one soul"),
     ('apps/sentence_plan/management/commands/backfill_sentence_plans.py', 'Command._build', 'Disposition.all_objects', 2, 'CLI', "operator backfill over every tenant's souls; joins stay inside one soul"),
     ('apps/sentence_plan/management/commands/backfill_sentence_plans.py', 'Command.handle', 'Judgment.all_objects', 1, 'CLI', "operator backfill over every tenant's souls; joins stay inside one soul"),

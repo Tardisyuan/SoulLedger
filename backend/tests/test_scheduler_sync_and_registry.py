@@ -8,7 +8,7 @@ What is asserted, and why each one is a guard rather than a description:
   half of this right (enabled) by leaving the field out of `update_or_create`;
   a sync that "fixes" the cron back to default on every boot would silently
   undo every operator change at the next deploy.
-- Removes the old fan-out rows and the rows of a deactivated tenant.
+- Removes the old fan-out rows; a deactivated tenant KEEPS its rows (2026-10-27).
 - A new tenant gets its rows without the command (Tenant post_save).
 - Every registry task name is one a worker can run, with `tenant_id=` as a
   keyword the task accepts — beat dispatches to a *name*, and a stored
@@ -102,7 +102,7 @@ def test_old_fan_out_rows_are_removed_whatever_they_are_named(cn_tenant):
 
 
 @pytest.mark.django_db
-def test_a_deactivated_tenant_loses_its_rows_and_an_unknown_key_is_removed(cn_tenant, eu_tenant):
+def test_a_deactivated_tenant_keeps_its_rows_and_an_unknown_key_is_removed(cn_tenant, eu_tenant):
     sync_schedules()
     assert PeriodicTask.objects.filter(scheduled_job__tenant=eu_tenant).count() == len(TENANT_KEYS)
 
@@ -114,22 +114,24 @@ def test_a_deactivated_tenant_loses_its_rows_and_an_unknown_key_is_removed(cn_te
     Tenant.objects.filter(pk=eu_tenant.pk).update(is_active=False)  # bypasses the signal on purpose
     stats = sync_schedules()
 
-    assert not PeriodicTask.objects.filter(scheduled_job__tenant=eu_tenant).exists()
+    # Deactivation refuses new registrations only; sentences still expire, approvals still time out.
+    assert PeriodicTask.objects.filter(scheduled_job__tenant=eu_tenant).count() == len(TENANT_KEYS)
     assert not PeriodicTask.objects.filter(name="gone.from_registry@CN").exists()
-    assert stats["removed"] == len(TENANT_KEYS) + 1
+    assert stats["removed"] == 1
     # And the row the stray displaced is back.
     assert PeriodicTask.objects.filter(scheduled_job__tenant=cn_tenant).count() == len(TENANT_KEYS)
 
 
 @pytest.mark.django_db
-def test_a_new_tenant_is_registered_by_the_signal_and_deactivation_unregisters_it(db):
+def test_a_new_tenant_is_registered_by_the_signal_and_deactivation_keeps_it(db):
     tenant = Tenant.objects.create(code="SCHED_NEW", display_name="New")
     assert {j.job_key for j in ScheduledJob.objects.filter(tenant=tenant)} == TENANT_KEYS
 
     tenant.is_active = False
     tenant.save()
-    assert not ScheduledJob.objects.filter(tenant=tenant).exists()
-    assert not PeriodicTask.objects.filter(scheduled_job__tenant=tenant).exists()
+    jobs = ScheduledJob.objects.filter(tenant=tenant)
+    assert {j.job_key for j in jobs} == TENANT_KEYS
+    assert "disposition.expire_due_for_tenant" in {j.job_key for j in jobs}
 
 
 def test_every_registry_task_is_one_a_worker_can_run_with_the_kwargs_we_send():

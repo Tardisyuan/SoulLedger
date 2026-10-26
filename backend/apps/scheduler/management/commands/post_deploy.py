@@ -34,7 +34,7 @@ class Command(BaseCommand):
         from apps.ledger.models import BalanceSnapshot
         from apps.scheduler import beat_guard
         from apps.scheduler.models import ScheduledJob
-        from apps.scheduler.services import _active_tenants
+        from apps.scheduler.services import _scheduled_tenants
 
         dry = options["dry_run"]
         say = self.stdout.write
@@ -73,7 +73,7 @@ class Command(BaseCommand):
 
         # -- (c) snapshot only if some active tenant has none computed today
         today = timezone.now().date()
-        tenants = _active_tenants()
+        tenants = [t for t in _scheduled_tenants() if t.is_active]
         done = set(
             BalanceSnapshot.objects.filter(computed_at__date=today).values_list("tenant_id", flat=True)
         )

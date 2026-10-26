@@ -102,25 +102,27 @@ def _ensure_job(spec: registry.JobSpec, tenant, *, reset: bool, stats: Counter) 
     return name
 
 
-def _active_tenants():
+def _scheduled_tenants():
+    """Every hall, deactivated ones included (2026-10-27 user decision): deactivation only refuses new
+    registrations; the souls already serving there still reach their term's end, approvals still time out."""
     from apps.tenants.models import Tenant
 
-    return list(Tenant.objects.filter(is_active=True))
+    return list(Tenant.objects.all())
 
 
 @transaction.atomic
 def sync_schedules(*, reset: bool = False) -> dict:
-    """Idempotent: registry × active tenants → rows; everything else ours → gone.
+    """Idempotent: registry × tenants → rows; everything else ours → gone.
 
     Removes (a) ScheduledJob rows whose (key, tenant) is no longer wanted —
-    the key left the registry or the tenant was deactivated — together with
+    the key left the registry or the tenant was deleted — together with
     their PeriodicTask, and (b) any PeriodicTask whose `task` is one of the
     old fan-out parents (registry.LEGACY_TASKS), whatever it is named.
     PeriodicTask rows this app never owned (no ScheduledJob) are left alone.
     """
     stats: Counter = Counter()
     wanted: set[str] = set()
-    tenants = _active_tenants()
+    tenants = _scheduled_tenants()
     for spec in registry.REGISTRY:
         targets = tenants if spec.scope == registry.TENANT else [None]
         for tenant in targets:
@@ -143,15 +145,10 @@ def sync_schedules(*, reset: bool = False) -> dict:
 
 
 def sync_tenant(tenant) -> dict:
-    """Rows for exactly one tenant: created if it is active, removed if not."""
+    """Rows for exactly one tenant, active or not (see `_scheduled_tenants`)."""
     stats: Counter = Counter()
-    if tenant.is_active and not getattr(tenant, "is_deleted", False):
-        for spec in registry.tenant_specs():
-            _ensure_job(spec, tenant, reset=False, stats=stats)
-    else:
-        for job in ScheduledJob.objects.filter(tenant=tenant).select_related("periodic_task"):
-            job.periodic_task.delete()
-            stats["removed"] += 1
+    for spec in registry.tenant_specs():
+        _ensure_job(spec, tenant, reset=False, stats=stats)
     PeriodicTasks.update_changed()
     return dict(stats)
 
