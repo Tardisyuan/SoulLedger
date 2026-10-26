@@ -132,3 +132,48 @@ def test_the_session_dies_if_the_admin_loses_the_role(admin_user, eu_tenant):
     admin_user.role = "JUDGE"
     admin_user.save()
     assert viewing.get(SOULS).status_code == 403
+
+
+def _rows(response):
+    data = response.data
+    return data["results"] if isinstance(data, dict) else data
+
+
+def test_the_users_list_is_narrowed_to_that_hall(admin_user, eu_tenant, cn_tenant, django_user_model):
+    django_user_model.objects.create_user(username="cn_judge", password="x" * 16, role="JUDGE", tenant=cn_tenant)
+    django_user_model.objects.create_user(username="eu_judge", password="x" * 16, role="JUDGE", tenant=eu_tenant)
+    everyone = {row["username"] for row in _rows(officer_client(admin_user).get("/api/v1/users/"))}
+    assert {"cn_judge", "eu_judge"} <= everyone  # 对照:平时跨殿
+    viewing, _ = _entering(admin_user, eu_tenant)
+    response = viewing.get("/api/v1/users/")
+    assert response.status_code == 200
+    names = {row["username"] for row in _rows(response)}
+    assert "eu_judge" in names and "cn_judge" not in names and "admin" not in names
+
+
+def test_another_halls_soul_is_not_readable_by_id(admin_user, eu_tenant, souls):
+    theirs, mine = souls
+    viewing, _ = _entering(admin_user, eu_tenant)
+    assert viewing.get(f"{SOULS}{mine.pk}/").status_code == 200
+    assert viewing.get(f"{SOULS}{theirs.pk}/").status_code == 404
+
+
+def test_tenant_permission_treats_a_hall_view_as_hall_bound(admin_user, eu_tenant, cn_tenant):
+    """`TenantPermission` 的 ADMIN 旁路走 `is_tenant_exempt`:查看中只认这一殿。此前它直接比 `role == "ADMIN"`。"""
+    from types import SimpleNamespace
+
+    from apps.core.permissions import TenantPermission
+
+    perm, view = TenantPermission(), SimpleNamespace()
+    theirs = Soul.objects.create(name="别殿", tenant=cn_tenant)
+    mine = Soul.objects.create(name="本殿", tenant=eu_tenant)
+    plain = SimpleNamespace(user=admin_user, tenant=eu_tenant)
+    assert perm.has_permission(plain, view) and perm.has_object_permission(plain, view, theirs)  # 对照:平时跨殿
+
+    admin_user.hall_view = eu_tenant.pk
+    viewing = SimpleNamespace(user=admin_user, tenant=eu_tenant)
+    assert perm.has_permission(viewing, view)
+    assert perm.has_object_permission(viewing, view, mine)
+    assert not perm.has_object_permission(viewing, view, theirs)
+    assert not perm.has_permission(SimpleNamespace(user=admin_user, tenant=cn_tenant), view)
+    assert not perm.has_permission(SimpleNamespace(user=admin_user, tenant=None), view)

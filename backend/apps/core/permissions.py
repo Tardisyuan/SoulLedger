@@ -4,7 +4,7 @@ DRF permission classes for SoulLedger multi-tenant isolation.
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import permissions
 
-from apps.core.tenant import residence_read_allowed, residence_readable
+from apps.core.tenant import is_tenant_exempt, residence_read_allowed, residence_readable
 
 
 class CodenamePermission(permissions.BasePermission):
@@ -98,14 +98,21 @@ class TenantPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False  # Reject unauthenticated — let DRF's 401 take over
 
-        # SYS_ADMIN bypasses tenant filtering (global access)
-        if getattr(request.user, 'role', None) == 'ADMIN':
+        # SYS_ADMIN bypasses tenant filtering (global access) — except while
+        # viewing one hall (`hall_view`, apps/authentication/impersonation.py):
+        # then the request's tenant must be that hall, and object checks below
+        # compare against it like any hall-bound role.
+        if is_tenant_exempt(request.user):
             return True
 
         # Must have a tenant on the request (set by TenantMiddleware)
         tenant = getattr(request, 'tenant', None)
         if tenant is None:
             return False
+
+        hall_view = getattr(request.user, 'hall_view', None)
+        if hall_view:
+            return str(hall_view) == str(tenant.pk)
 
         # request.tenant comes from the access token's tenant_code claim
         # (apps.tenants.middleware, which runs before authentication and
@@ -127,8 +134,8 @@ class TenantPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # SYS_ADMIN bypasses
-        if getattr(request.user, 'role', None) == 'ADMIN':
+        # SYS_ADMIN bypasses (not while viewing one hall — see has_permission)
+        if is_tenant_exempt(request.user):
             return True
 
         tenant = getattr(request, 'tenant', None)
