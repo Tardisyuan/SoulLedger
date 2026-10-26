@@ -401,6 +401,24 @@ function EmailRow() {
   const email = useRemote(soulApi.contactEmail);
   useReloadOnRefocus(email.reload);
   const d = email.data;
+  // A failed fetch must not make the account-recovery row look like it does not exist.
+  if (!d && email.error)
+    return (
+      <Pressable
+        testID="email-load-failed"
+        accessibilityRole="button"
+        onPress={() => void email.reload()}
+        style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+      >
+        <View style={styles.fill}>
+          <Txt variant="bodyLg">{t("soul_app.settings.email")}</Txt>
+          <Txt variant="caption" tone="muted">
+            {t("soul_app.settings.row_load_failed")}
+          </Txt>
+        </View>
+        <Txt variant="body">{`${t("soul_app.common.retry")} ›`}</Txt>
+      </Pressable>
+    );
   if (!d) return null;
   const action = d.can_change ? t(d.email_masked ? "soul_app.settings.email_change" : "soul_app.settings.email_add") : null;
   const body = (
@@ -527,7 +545,7 @@ export function SettingsScreen() {
         <NavRow
           testID="open-mfa"
           label={t("officer_app.mfa.title")}
-          state={mfa.data ? t(mfa.data.enabled ? "soul_app.settings.mfa_on" : "soul_app.settings.mfa_off") : null}
+          state={mfa.data ? t(mfa.data.enabled ? "soul_app.settings.mfa_on" : "soul_app.settings.mfa_off") : mfa.error ? t("soul_app.settings.row_load_failed") : null}
           bold={mfa.data?.enabled === true}
           onPress={() => navigation.navigate("Mfa")}
         />
@@ -535,7 +553,7 @@ export function SettingsScreen() {
         <NavRow
           testID="open-sign-ins"
           label={t("soul_app.security.history")}
-          state={devices.data ? String(devices.data.length) : null}
+          state={devices.data ? String(devices.data.length) : devices.error ? t("soul_app.settings.row_load_failed") : null}
           onPress={() => navigation.navigate("SignIns")}
         />
         <EmailRow />

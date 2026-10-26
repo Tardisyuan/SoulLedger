@@ -3260,6 +3260,7 @@
       "preview_failed": "Could not open this attachment",
       "open_tab": "Open in new tab",
       "print_title": "List of attachments",
+      "print_failed": "The attachment list could not be loaded, so none are listed here. Retry on screen, then print again.",
       "print_footer": "Originals of the attachments are in the system",
       "col_name": "Name",
       "col_size": "Size",
@@ -4154,6 +4155,7 @@
     "app_name": "Soul Ledger",
     "update_required": {
       "title": "Update required",
+      "open_failed": "Could not open the store. Search for the update in the store, or open this link in a browser: {{url}}",
       "body": "This version can no longer be used. After you update, your letters and records will still be there.",
       "button": "Update",
       "version": "Version {{version}}"
@@ -4479,6 +4481,7 @@
       }
     },
     "settings": {
+      "row_load_failed": "Could not load",
       "title": "Settings",
       "language": "Language",
       "language_name": "English",

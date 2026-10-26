@@ -24,6 +24,7 @@ import { useI18n } from "../i18n";
 import { Button, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { compressWithSize, pickImages } from "./circleMedia";
+import { useDiscardGuard } from "./discardGuard";
 
 /** Design: 「最多 3 张」. */
 export const FEEDBACK_SHOT_MAX = 3;
@@ -111,6 +112,7 @@ export function FeedbackScreen() {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [sent, setSent] = useState<string[] | null>(null);
+  const guard = useDiscardGuard(!sent && (!!body.trim() || shots.length > 0), "feedback");
 
   const addShots = async () => {
     if (picking) return;
@@ -174,6 +176,7 @@ export function FeedbackScreen() {
   const unavailable = chat.availability === "not_configured";
   return (
     <Screen testID="feedback" belowHeader>
+      {guard.sheet}
       <View style={[styles.form, { paddingHorizontal: gutter }]}>
         {unavailable ? (
           <Notice tone="neutral" testID="feedback-not-configured">

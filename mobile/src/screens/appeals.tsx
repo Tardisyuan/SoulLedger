@@ -21,7 +21,7 @@ import {
 } from "@soulledger/core/api/soul";
 import { appealsLeftAfterWithdraw } from "@soulledger/core/domain/appeals";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
@@ -29,6 +29,7 @@ import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
+import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
 
 /** The server's bounds (`JudgmentAppealCreateSerializer`). */
@@ -250,20 +251,8 @@ export function JudgmentAppealScreen() {
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState<null | (() => void)>(null);
-  const done = useRef(false);
   const dirty = !!(reason.trim() || evidence.trim());
-
-  // Unsent words are not dropped by a back gesture: the same 「放弃修改?」 the web's post editor asks.
-  useEffect(
-    () =>
-      navigation.addListener("beforeRemove", (event) => {
-        if (done.current || !dirty) return;
-        event.preventDefault();
-        setLeaving(() => () => navigation.dispatch(event.data.action));
-      }),
-    [navigation, dirty]
-  );
+  const guard = useDiscardGuard(dirty, "appeal");
 
   const submit = async () => {
     if (busy) return;
@@ -272,7 +261,7 @@ export function JudgmentAppealScreen() {
     setError(null);
     try {
       await soulApi.fileJudgmentAppeal(params.judgment, reason.trim(), evidence.trim());
-      done.current = true;
+      guard.release();
       toast(t("appeals.submitted_toast"));
       navigation.goBack();
     } catch (e) {
@@ -322,27 +311,7 @@ export function JudgmentAppealScreen() {
         <Button testID="appeal-submit" title={t("appeals.submit")} busy={busy} onPress={() => void submit()} />
         <Button testID="appeal-cancel" kind="secondary" title={t("soul_app.common.cancel")} onPress={() => navigation.goBack()} />
       </View>
-      <MfaSheet testID="appeal-discard-sheet" open={!!leaving} onClose={() => setLeaving(null)} closeLabel={t("social.edit_keep")}>
-        <Txt variant="title" accessibilityRole="header">
-          {t("social.edit_discard_title")}
-        </Txt>
-        <Txt variant="bodyLg">{t("social.edit_discard_message")}</Txt>
-        <ButtonPair>
-          <Button testID="appeal-keep" kind="secondary" title={t("social.edit_keep")} onPress={() => setLeaving(null)} style={styles.fill} />
-          <Button
-            testID="appeal-discard"
-            kind="danger"
-            title={t("social.edit_discard_confirm")}
-            onPress={() => {
-              const go = leaving;
-              setLeaving(null);
-              done.current = true;
-              go?.();
-            }}
-            style={styles.fill}
-          />
-        </ButtonPair>
-      </MfaSheet>
+      {guard.sheet}
     </Screen>
   );
 }

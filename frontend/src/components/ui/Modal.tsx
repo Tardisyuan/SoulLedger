@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -30,6 +30,11 @@ interface BaseModalProps {
    * close button still do). For content that cannot be shown again — the
    * one-time password in `RevealCredentialDialog` — a stray click on the
    * backdrop would destroy it.
+   *
+   * Independent of this prop, a dialog whose body holds an editable text field
+   * (input / textarea) also ignores outside clicks: a stray tap beside a
+   * bottom sheet discarded typed text with no warning. Escape and the close
+   * button still close it.
    */
   dismissOnOutsideClick?: boolean;
   /** 640 wide on sm+ instead of 440 (A11 缩短冷却详情); below sm it is the bottom sheet either way. */
@@ -38,6 +43,16 @@ interface BaseModalProps {
   extraWide?: boolean;
   /** Replaces the title's `text-lg` (A11: 缩短冷却详情 uses `font-title text-xl`). */
   titleClassName?: string;
+}
+
+const NON_TEXT_INPUT = /^(checkbox|radio|button|submit|reset|hidden|file|image|range|color)$/;
+
+/** True when `root` holds an enabled, writable text field (input / textarea). */
+function hasEditableText(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  return Array.from(root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")).some(
+    (el) => !el.disabled && !el.readOnly && !(el instanceof HTMLInputElement && NON_TEXT_INPUT.test(el.type)),
+  );
 }
 
 /**
@@ -63,11 +78,19 @@ interface BaseModalProps {
  */
 export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true, wide = false, extraWide = false, titleClassName = "text-lg" }: BaseModalProps) {
   const { t } = useI18n();
+  const bodyRef = useRef<HTMLDivElement>(null);
   return (
     <Dialog.Root
       open={isOpen}
       disablePointerDismissal={!dismissOnOutsideClick}
-      onOpenChange={(open) => { if (!open) onClose(); }}
+      onOpenChange={(open, details) => {
+        if (open) return;
+        if (details?.reason === "outside-press" && hasEditableText(bodyRef.current)) {
+          details.cancel();
+          return;
+        }
+        onClose();
+      }}
     >
       <Dialog.Portal>
         {/* Backdrop */}
@@ -111,7 +134,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
 
             {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
              * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">{children}</div>
+            <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-4">{children}</div>
 
             {/* Footer */}
             {footer && (

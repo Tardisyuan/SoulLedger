@@ -3260,6 +3260,7 @@
       "preview_failed": "打不开这份附件",
       "open_tab": "在新窗口打开",
       "print_title": "附件清单",
+      "print_failed": "附件清单读取失败,本页未列出附件;请回到屏幕上重试后再打印。",
       "print_footer": "附件原件见系统",
       "col_name": "名称",
       "col_size": "大小",
@@ -4154,6 +4155,7 @@
     "app_name": "灵魂簿",
     "update_required": {
       "title": "需要更新",
+      "open_failed": "没能打开应用商店。请在应用商店里搜索更新,或在浏览器里打开:{{url}}",
       "body": "这一版已经不能用了。更新后，你的书信和档案都还在。",
       "button": "去更新",
       "version": "版本 {{version}}"
@@ -4479,6 +4481,7 @@
       }
     },
     "settings": {
+      "row_load_failed": "加载失败",
       "title": "设置",
       "language": "语言",
       "language_name": "中文",

@@ -371,6 +371,24 @@ describe("notification settings", () => {
     expect(screen.getByTestId("email-hint").props.children).toBe("忘记密码时，验证码发到这里。");
   });
 
+  it("a failed contact-email fetch keeps the row, says so, and a tap retries", async () => {
+    signedIn({
+      "GET /me/mfa/": { status: 500, data: {} },
+      "GET /me/sessions/": { status: 200, data: [] },
+      "GET /me/contact-email/": [
+        { status: 500, data: {} },
+        { status: 200, data: { email_masked: "zh***@lingyun.cn", can_change: true, mfa_enabled: false } },
+      ],
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("email-load-failed"));
+    expect((await screen.findByTestId("email-masked")).props.children).toBe("zh***@lingyun.cn");
+    expect(screen.queryByTestId("email-load-failed")).toBeNull();
+    expect(screen.getByTestId("open-mfa-state").props.children).toBe("加载失败");
+  });
+
   it("第四十批 S-b: a hall that does not allow it has no 更改, and says to come in with the slip", async () => {
     signedIn({
       "GET /me/mfa/": { status: 200, data: { enabled: false } },

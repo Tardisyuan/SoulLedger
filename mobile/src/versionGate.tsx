@@ -55,6 +55,7 @@ export function UpdateRequired({ app, storeUrl, min }: { app: VersionApp; storeU
   const { t } = useI18n();
   const theme = useTheme();
   const version = Constants.expoConfig?.version ?? "";
+  const [openFailed, setOpenFailed] = useState(false);
   return (
     <Screen testID="update-required" scroll={false} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.body}>
@@ -69,9 +70,17 @@ export function UpdateRequired({ app, storeUrl, min }: { app: VersionApp; storeU
           <Button
             testID="update-open-store"
             title={t("soul_app.update_required.button")}
-            onPress={() => void Linking.openURL(storeUrl).catch(() => {})}
+            onPress={() => {
+              setOpenFailed(false);
+              Linking.openURL(storeUrl).catch(() => setOpenFailed(true));
+            }}
             style={styles.button}
           />
+        ) : null}
+        {storeUrl && openFailed ? (
+          <Txt testID="update-open-failed" variant="caption" tone="muted" selectable style={styles.center} accessibilityLiveRegion="polite">
+            {t("soul_app.update_required.open_failed", { url: storeUrl })}
+          </Txt>
         ) : null}
       </View>
       <Txt testID="update-version" variant="caption" tone="subtle" style={styles.center}>
