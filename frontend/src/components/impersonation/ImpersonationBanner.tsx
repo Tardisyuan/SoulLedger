@@ -19,7 +19,7 @@ function mmss(ms: number): string {
 /**
  * 「以此人身份查看」时顶栏之上的固定警示条(Design 第二十八批 W6):不随页面滚动、不能收起、刷新换页都保留
  * (状态在 session 存储,见 core `impersonation.ts`)。◐ 只读 + 正在以谁(殿 · 角色)的身份查看 · 理由 +
- * 等宽倒计时 + 退出查看。到点自动退出并回到用户管理。
+ * 等宽倒计时 + 退出查看。到点自动退出并回到用户管理。进殿查看时同一条:「正在以全局管理员身份查看 X」+ 回到各殿概况。
  */
 export function ImpersonationBanner() {
   const { t, locale } = useI18n();
@@ -44,7 +44,10 @@ export function ImpersonationBanner() {
   const roleLabel = t(roleKey) === roleKey ? state.target.role : t(roleKey);
   const hall = state.target.hall?.[locale] || Object.values(state.target.hall ?? {})[0];
   const who = `${state.target.name}(${[hall, roleLabel].filter(Boolean).join(" · ")})`;
-  const text = `${t("admin.impersonate.banner", { name: who })} · ${t("admin.impersonate.reason_line", { reason: state.reason })}`;
+  // 进殿查看(第五十四批 O-2):没有「被看的人」与理由,只说看的是哪一殿;退出回到各殿概况。
+  const text = state.hallView
+    ? t("halls.viewing.banner", { name: hall || state.hallView.code })
+    : `${t("admin.impersonate.banner", { name: who })} · ${t("admin.impersonate.reason_line", { reason: state.reason })}`;
 
   return (
     <div
@@ -64,7 +67,7 @@ export function ImpersonationBanner() {
         {t("admin.impersonate.remaining", { time: mmss(remaining) })}
       </span>
       <Button type="button" size="sm" variant="secondary" data-testid="impersonation-exit" onClick={() => void leaveImpersonation()}>
-        {t("admin.impersonate.exit")}
+        {state.hallView ? t("halls.viewing.back") : t("admin.impersonate.exit")}
       </Button>
     </div>
   );

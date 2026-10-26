@@ -68,6 +68,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/moderation": "breadcrumb.menu.moderation",
   // backend/apps/menus/migrations/0022_add_recycle_bin_menu.py (egy: see egyPendingKeys.json)
   "/recycle-bin": "breadcrumb.menu.recycle_bin",
+  // backend/apps/menus/migrations/0027_add_global_group_and_halls_overview.py (egy: see egyPendingKeys.json)
+  "/halls": "breadcrumb.menu.halls",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {
@@ -78,6 +80,7 @@ const DIRECTORY_KEYS: Record<string, string> = {
   "社交": "breadcrumb.menu.group_social",
   "轮回": "breadcrumb.menu.group_rebirth",
   "系统设置": "breadcrumb.menu.group_settings",
+  "全局": "breadcrumb.menu.group_global",
 };
 
 type GlossableNode = Pick<SidebarMenu, "path" | "name" | "menu_type">;

@@ -3915,7 +3915,9 @@
       "group_rebirth": "Reincarnation",
       "judgment_appeals": "Appeal reviews",
       "city_gods": "City Gods",
-      "city_god_cases": "City God review"
+      "city_god_cases": "City God review",
+      "halls": "Halls at a glance",
+      "group_global": "Global"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -7305,6 +7307,69 @@
       "not_diyu": "Only souls of Diyu take Mengpo's soup",
       "not_reincarnating": "Only souls awaiting rebirth can take it",
       "soup_already_taken": "Already taken in this life"
+    }
+  },
+  "halls": {
+    "create": "New hall",
+    "create_title": "New hall",
+    "code": "Code",
+    "code_hint": "Starts with a capital letter; capitals, digits and underscores only, 2–50 characters. It can't be changed later.",
+    "code_taken": "A hall already uses this code",
+    "code_invalid": "That code isn't in the right form",
+    "civilization": "Civilization",
+    "civilization_pick": "Choose a civilization",
+    "civ_mismatch": "{{code}} is a hall of {{civ}}",
+    "name": "Name",
+    "hall_names": "What the hall is called",
+    "hall_names_hint": "Leave egy empty to use the default",
+    "description_optional": "Description · optional",
+    "submit": "Create",
+    "submitting": "Creating…",
+    "created_toast": "Created {{name}}",
+    "create_failed": "Couldn't create it. Try again.",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate",
+    "row_menu": "More actions",
+    "deactivate_title": "Deactivate {{name}}?",
+    "deactivate_body": "Everything is kept, and existing souls and cases carry on. Once it is deactivated:",
+    "deactivate_no_souls": "no new souls can be registered;",
+    "deactivate_no_deaths": "death registrations sent by outside systems are refused, and retrying won't change that.",
+    "deactivate_reversible": "You can reactivate it at any time. Halls can't be deleted.",
+    "deactivated_toast": "Deactivated {{name}}",
+    "activated_toast": "Reactivated {{name}}",
+    "action_failed": "That didn't go through. Try again.",
+    "overview": {
+      "title": "Halls at a glance",
+      "subtitle": "Counts only, no soul names. Deactivated halls are included.",
+      "sort_label": "Sort",
+      "sort_code": "By code",
+      "sort_todo": "Most to-do first",
+      "col_hall": "Hall",
+      "col_todo": "Hall to-do",
+      "col_judgments": "Open judgments · City God · Wangsi City · Claimed · Unclaimed",
+      "col_rebirth": "Rebirths this month",
+      "col_appeals": "Appeals to review",
+      "col_enter": "Enter",
+      "todo_approvals": "Approvals {{n}}",
+      "todo_dispatch": "Transfers in {{n}}",
+      "todo_cooldowns": "Cool-downs {{n}}",
+      "todo_letters": "Letters {{n}}",
+      "judgments_label": "Open judgments: at the City God {{at_city_god}} · in Wangsi City {{held}} · claimed {{claimed}} · unclaimed {{unclaimed}}",
+      "note": "Hall to-do is the hall's count, not any one officer's \"waiting on me\".",
+      "legend": "Bar, light to dark: at the City God · in Wangsi City · claimed. The lightest gap is unclaimed.",
+      "enter": "Enter →",
+      "enter_label": "Enter {{name}} to view",
+      "empty": "No halls yet",
+      "load_failed": "Couldn't load the halls",
+      "enter_failed": "Couldn't enter this hall. Try again."
+    },
+    "viewing": {
+      "banner": "Viewing {{name}} as global admin",
+      "back": "Back to all halls"
+    },
+    "audit": {
+      "view_start": "Viewed {{hall}} as global admin",
+      "view_end": "Viewed {{hall}} as global admin · {{minutes}} min · {{pages}} pages"
     }
   }
 }

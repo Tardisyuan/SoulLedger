@@ -220,3 +220,14 @@ class HallOverviewSerializer(serializers.Serializer):
                                       help_text="at_city_god / held / claimed / unclaimed(互不相交)")
     rebirth_quota = serializers.ListField(child=serializers.DictField())
     open_appeals = serializers.IntegerField()
+
+
+class HallViewStartSerializer(serializers.Serializer):
+    """`POST /tenants/{code}/view/` 的 201:进殿查看的只读令牌(无刷新令牌)。规则见 `apps/authentication/impersonation.py`。"""
+
+    access = serializers.CharField()
+    impersonation_id = serializers.IntegerField()
+    started_at = serializers.DateTimeField()
+    expires_at = serializers.DateTimeField()
+    code = serializers.CharField()
+    hall_names = serializers.DictField(child=serializers.CharField())

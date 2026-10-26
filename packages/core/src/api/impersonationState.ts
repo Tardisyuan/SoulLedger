@@ -23,6 +23,11 @@ export interface ImpersonationState {
   expiresAt: number;
   /** 管理员自己的 access 令牌,退出时放回。 */
   adminAccess: string | null;
+  /**
+   * 进殿查看(第五十四批 O-2):全局管理员只读进入这一殿。有值时 `target` 是管理员自己、`target.hall` 是这一殿的三语名,
+   * 横幅说「正在以全局管理员身份查看 X」,退出回到各殿概况。服务端规则同代看。
+   */
+  hallView?: { code: string };
 }
 
 const listeners = new Set<() => void>();
