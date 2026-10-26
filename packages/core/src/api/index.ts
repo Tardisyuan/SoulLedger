@@ -154,7 +154,7 @@ export {
 } from "./disposition";
 
 // Reincarnation
-export { reincarnationApi, rebirthQuotaFullOf, quotaIsFull, soupNotTakenOf, soupRefusalOf, type Reincarnation, type RebirthQuotaUsage, type RebirthQuotaFull } from "./reincarnation";
+export { reincarnationApi, rebirthQuotaFullOf, rebirthBlockedOf, quotaIsFull, soupNotTakenOf, soupRefusalOf, type Reincarnation, type RebirthQuotaUsage, type RebirthQuotaFull } from "./reincarnation";
 
 // Events
 export { eventsApi, type SoulEvent } from "./events";
