@@ -60,5 +60,6 @@
   "reincarnation.error.eternal_sentence",
   "reincarnation.error.rebirth_not_approved",
   "appeals.refusal.no_appeal_above_minos",
-  "souls.events.PURGATORY_ASCENDED"
+  "souls.events.PURGATORY_ASCENDED",
+  "souls.detail.rebirth_suggestion"
 ]

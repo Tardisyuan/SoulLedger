@@ -424,6 +424,7 @@
       "verdict_retry": "重审",
       "reincarnate": "轮回 →",
       "reincarnate_success": "轮回完成",
+      "rebirth_suggestion": "第十殿按结案时的功过建议：{{form}}",
       "being_reborn": "灵魂正在轮回中...",
       "previous_reincarnations": "次前世的轮回记录",
       "destination": "目的地",

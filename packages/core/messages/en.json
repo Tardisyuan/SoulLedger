@@ -424,6 +424,7 @@
       "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
       "reincarnate_success": "Reincarnation complete",
+      "rebirth_suggestion": "Suggested by the tenth court from the merit and demerit at conclusion: {{form}}",
       "being_reborn": "Soul is being reborn...",
       "previous_reincarnations": "previous reincarnation(s)",
       "destination": "Destination",

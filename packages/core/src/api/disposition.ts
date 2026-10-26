@@ -63,6 +63,8 @@ export interface Disposition extends ArchiveFields {
   soul_state?: Schemas["CurrentStateEnum"];
   /** 这份处置所属的那一世之后,灵魂是否已经转世。 */
   soul_reborn?: boolean;
+  /** 第十殿按结案时功过给的六道建议(docs/07 §四);地府以外为 null。官员可改。 */
+  suggested_rebirth_form?: Schemas["Disposition"]["suggested_rebirth_form"];
 }
 
 export const dispositionApi = {

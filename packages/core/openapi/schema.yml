@@ -26040,6 +26040,10 @@ components:
           description: The soul has been reborn since the life this disposition belongs
             to.
           readOnly: true
+        suggested_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -26074,6 +26078,7 @@ components:
       - soul_name
       - soul_reborn
       - soul_state
+      - suggested_rebirth_form
       - term_end
       - verdict
     DispositionSectionEnum:
@@ -35114,6 +35119,10 @@ components:
           type: boolean
           description: The soul has been reborn since the life this disposition belongs
             to.
+          readOnly: true
+        suggested_rebirth_form:
+          type: string
+          nullable: true
           readOnly: true
         is_archived:
           type: boolean

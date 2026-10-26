@@ -54,6 +54,21 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
         choices=DispositionSection.choices, read_only=True,
     )
 
+    # 第十殿的六道建议(用户 2026-10-27,docs/07 §四):地府的处置按结案时的功过快照给一条去向,转世时官员可改。
+    # 别的文明没有六道,为 null。
+    suggested_rebirth_form = serializers.SerializerMethodField()
+
+    def get_suggested_rebirth_form(self, obj) -> str | None:
+        from apps.reincarnation.models import suggested_rebirth_form
+        from apps.souls.models import Civilization
+
+        soul = obj.soul
+        if soul.civilization != Civilization.CHINESE:
+            return None
+        judgment = obj.judgment
+        balance = judgment.concluded_balance if judgment is not None else None
+        return suggested_rebirth_form(soul.karmic_balance if balance is None else balance)
+
     @extend_schema_field(HistoricalDateField(prefix="term_end"))
     def get_term_end(self, obj):
         if obj.is_eternal:
@@ -97,6 +112,7 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
             "expired_at", "term_end", "section", "verdict", "soul_state", "soul_reborn",
+            "suggested_rebirth_form",
             *ARCHIVE_FIELDS,
         ]
         # This serializer had no `read_only_fields` at all. Measured
