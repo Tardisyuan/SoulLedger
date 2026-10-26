@@ -13,7 +13,7 @@ import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
-export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name";
+export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
 export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
@@ -44,6 +44,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   return (
     <Screen testID="tab-me-screen" edges={["left", "right"]} scrollRef={scroll}>
       <View style={{ padding: space[5], gap: space[5] }}>
+        <Row testID="me-stats" minHeight={64} title={t("officer_app.stats.title")} lines={[{ one: t("officer_app.stats.scope") }]} onPress={() => onOpen("stats")} right={<Txt variant="nav">›</Txt>} />
+
         <Block label={t("officer_app.me.profile")}>
           <Row
             testID="me-name"

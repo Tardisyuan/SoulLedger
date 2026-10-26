@@ -21,6 +21,7 @@ import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
 import { NotifyScreen } from "./screens/notify";
+import { StatsScreen } from "./screens/stats";
 import { MeTab, type AccountScreen } from "./screens/me";
 import { MfaScreen } from "./screens/mfa";
 import { NoticesTab } from "./screens/notices";
@@ -191,6 +192,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <DisplayNameScreen onBack={() => setAccount(null)} />
         ) : account === "devices" ? (
           <DevicesScreen onBack={() => setAccount(null)} />
+        ) : account === "stats" ? (
+          <StatsScreen onBack={() => setAccount(null)} onOpenQueue={() => { setAccount(null); setTab("queue"); }} />
         ) : account === "notify" ? (
           <NotifyScreen onBack={() => setAccount(null)} />
         ) : detail ? (
