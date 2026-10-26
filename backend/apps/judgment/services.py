@@ -237,6 +237,29 @@ class JudgmentConclusionService:
             else:
                 cross = SentencePlanService.check_cross_judgment(judgment)
 
+            # Step -¾ (埃及): the scale gives the verdict (docs/02 §5; apps/judgment/weighing.py). Before the
+            # placement: a wavering scale sends the soul nowhere, so a destination with it is refused.
+            from apps.judgment import weighing
+
+            weighed = weighing.weigh(judgment, verdict) if weighing.applies(judgment) else None
+            wavering = weighed is not None and weighed[0] == weighing.WeighingResult.WAVERING
+            if wavering and (destination_realm_id is not None or term_years is not None or eternal is not None):
+                raise weighing.WeighingRefusedError(
+                    "The scale wavers: the case is weighed again and the soul is sent nowhere yet",
+                    "wavering_has_no_destination")
+            if wavering and open_cross is not None:
+                raise weighing.WeighingRefusedError(
+                    "A cross-realm judgment is open on this case; conclude it before weighing again",
+                    "wavering_with_open_cross", status=409)
+
+            # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
+            # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
+            if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:
+                if create_workflow is False:
+                    raise weighing.WeighingRefusedError(
+                        "An Egyptian case is concluded through the weighing flow", "weighing_flow_required")
+                create_workflow = True
+
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
             # Validated — and the chosen realm row locked for its capacity —
             # before anything is written. None of the three given = the
@@ -270,9 +293,19 @@ class JudgmentConclusionService:
             # The admitted balance, frozen with the verdict — the rulings are
             # frozen from here on too (`_assert_open`).
             judgment.concluded_balance = EvidenceAdmissionService.admitted_net(judgment)
+            if weighed is not None:
+                judgment.weighing_result, judgment.heart_weight = weighed
             judgment.save()
             # 引用条文当时的文字,与裁决同一事务落盘(apps/judgment/snapshot.py)。
             StatuteCitationService.snapshot(judgment, at=judgment.concluded_at)
+
+            # 天平摇摆(02 §5.3):托特记下,再称一次。不建处置、不动计划、不动灵魂状态 —— 灵魂留在审判中,
+            # 新的一件案子回到队列(用户 2026-10-27:不自动发落,不能落成 SETTLED 而不在任何一站)。
+            if wavering:
+                weighing.open_retrial(judgment)
+                from apps.events.services import EventService
+                EventService.log_judgment_concluded(judgment)
+                return True
 
             # An AMENDMENT (the stop's own case, situation 1) or a REOPEN (the
             # home judge's retrial) changes the sentence plan instead: no
@@ -433,6 +466,16 @@ class EvidenceAdmissionService:
         ):
             result["current_balance"] = result["balance"]
             result["balance"] = judgment.concluded_balance
+        # 埃及:天平此刻给的裁决(docs/02 §5)—— 审判台据此预选,`conclude/` 不收与它相反的裁决。
+        from apps.judgment import weighing
+
+        if weighing.applies(judgment):
+            reading = weighing.scale(judgment)
+            result["weighing"] = {
+                "heart_weight": reading["heart_weight"], "counterweight": reading["counterweight"],
+                "heavier_than_feather": reading["heavier_than_feather"],
+                "weighed_verdict": weighing.weighed_verdict(reading),
+            }
         return result
 
     @classmethod

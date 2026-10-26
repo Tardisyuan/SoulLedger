@@ -29,7 +29,7 @@ ACCOUNT_KEYS = {"cycle", "must_change_password", "initial_password_expires_at", 
 LIFE_KEYS = {"cycle", "records", "judgments", "dispositions", "rebirth_applications", "reincarnation"}
 RECORD_KEYS = {"id", "record_type", "category", "description", "weight", "event_date", "is_milestone",
                "recorded_at", "statute_snapshot", "life_stage"}
-JUDGMENT_KEYS = {"id", "court", "judge", "judgment_method", "verdict", "is_final", "created_at", "concluded_at"}
+JUDGMENT_KEYS = {"id", "court", "judge", "judgment_method", "verdict", "weighing_result", "is_final", "created_at", "concluded_at"}
 JUDGE_KEYS = {"name", "name_zh", "title"}
 DISPOSITION_KEYS = {"id", "judgment_id", "destination_realm", "memory_reset", "is_eternal", "sentence_years",
                     "term_start", "is_executed", "executed_at", "created_at"}

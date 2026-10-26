@@ -231,7 +231,7 @@ def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
     )
 
     workflow = _workflow_for(Civilization.EGYPTIAN, tenant)
-    first, second, third = _by_order(workflow)
+    first, second, third = _by_order(workflow)[:3]
 
     assert second.node_name == "四十二神官 · 否定告白"
     # Not the bench row: the default role (docs-others X-3, 2026-10-27).

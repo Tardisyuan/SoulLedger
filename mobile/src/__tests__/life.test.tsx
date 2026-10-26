@@ -242,6 +242,29 @@ describe("v3 civilization marks on 本世", () => {
   });
 });
 
+describe("an Egyptian verdict reads as the scale (docs/02 §5)", () => {
+  const judgment = (id: string, verdict: string, weighing_result: string | null) => ({
+    id, court: "两真之殿", judge: null, judgment_method: "HEART_WEIGHING", verdict, weighing_result,
+    is_final: true, created_at: "2026-10-27T00:00:00Z", concluded_at: "2026-10-27T00:00:00Z",
+  });
+
+  it("a wavering scale is a second weighing, not 待定; a weighed verdict carries the scale's words", async () => {
+    await open(life(1, { judgments: [judgment("j1", "PURGATORY", "WAVERING"), judgment("j2", "FAILED", "HEAVIER")] }));
+    fireEvent.press(screen.getByTestId("section-judgments-toggle"));
+    expect(screen.getByText("天平摇摆 · 再称")).toBeTruthy();
+    expect(screen.queryByText("待定")).toBeNull();
+    expect(screen.getByTestId("weighing-j2")).toBeTruthy();
+    expect(screen.getByText("重于羽")).toBeTruthy();
+    expect(screen.queryByTestId("weighing-j1")).toBeNull();
+    fireEvent(screen.getByTestId("section-judgments-body").parent!, "layout", {
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 120 } },
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.sectionGrow + 200));
+    });
+  });
+});
+
 describe("the ledger rows", () => {
   it("01–06, ＋ turned 45° when open, the body on the canvas behind a 3pt ink rule, growing in", async () => {
     await open();

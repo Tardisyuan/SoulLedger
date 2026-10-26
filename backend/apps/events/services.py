@@ -84,6 +84,8 @@ class EventService:
             "judgment_id": str(judgment.id),
             "verdict": judgment.verdict,
             "court": court_code,
+            **({"weighing_result": judgment.weighing_result, "heart_weight": judgment.heart_weight}
+               if getattr(judgment, "weighing_result", None) else {}),
         }, actor)
 
     @staticmethod

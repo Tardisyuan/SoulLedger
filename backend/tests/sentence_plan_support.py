@@ -64,8 +64,23 @@ def planned(home, stops=(), *, name="客魂", verdict=Verdict.PASSED):
     if stops:
         bench(case, stops)
     case.conclude(verdict, "")
+    walk_weighing(case)
     soul.refresh_from_db()
     return soul, SentencePlan.all_objects.get(soul=soul, origin_judgment_id=case.pk)
+
+
+def walk_weighing(case):
+    """埃及:处置等称心流程走完才执行(apps/judgment/weighing.py)。这里把每一站批过去。"""
+    from apps.workflow.models import ApprovalWorkflow
+
+    flow = ApprovalWorkflow.objects.filter(judgment=case).first()
+    if flow is None or case.judgment_method != "HEART_WEIGHING":
+        return
+    while True:
+        flow = ApprovalWorkflow.objects.get(pk=flow.pk)
+        if flow.current_node_id is None:
+            return
+        assert flow.complete_node(flow.current_node_id, "PASSED")
 
 
 def node(plan, order):

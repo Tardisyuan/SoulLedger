@@ -206,22 +206,14 @@ class EgyptianStandardRoutingTest(TestCase):
                         DispositionService.EG_DUAT_ENTRY,
                     )
 
-    def test_purgatory_and_retry_still_admit_on_a_light_heart(self):
-        """The positive side stays asymmetric on purpose: Egyptian judgment
-        is a threshold, so a decisively light heart is the weighing speaking
-        rather than an arithmetic tie-break, and admission is final without
-        being annihilating. See _route_egyptian for the reasoning."""
+    def test_net_merit_never_admits_to_aaru(self):
+        """Every Egyptian case is weighed (docs/01 §3.3; user 2026-10-27): the old STANDARD
+        branch admitted PURGATORY / RETRY to Aaru on karma ≥ 50, a rule no source has."""
         for verdict in (Verdict.PURGATORY, Verdict.RETRY):
             with self.subTest(verdict=verdict):
                 self.assertEqual(
                     DispositionService._route_egyptian(
-                        None, verdict, JudgmentMethod.STANDARD, 50
-                    ),
-                    DispositionService.EG_AARU,
-                )
-                self.assertEqual(
-                    DispositionService._route_egyptian(
-                        None, verdict, JudgmentMethod.STANDARD, 0
+                        None, verdict, JudgmentMethod.STANDARD, 500
                     ),
                     DispositionService.EG_DUAT_ENTRY,
                 )

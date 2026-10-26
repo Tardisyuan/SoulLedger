@@ -320,6 +320,8 @@ class MeJudgmentSerializer(serializers.Serializer):
     judge = MeJudgeSerializer(allow_null=True)
     judgment_method = serializers.CharField()
     verdict = serializers.CharField(allow_null=True)
+    # 埃及称心的结果(docs/02 §5):灵魂端按天平读裁决,摇摆即「再称」,不是「待定」。
+    weighing_result = serializers.CharField(allow_null=True)
     is_final = serializers.BooleanField()
     created_at = serializers.DateTimeField()
     concluded_at = serializers.DateTimeField(allow_null=True)

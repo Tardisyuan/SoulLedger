@@ -28,6 +28,19 @@ class JudgmentMethod(models.TextChoices):
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 
 
+class WeighingResult(models.TextChoices):
+    """What the scale said at an Egyptian conclusion (docs/02 §3.1, §5; 01 §3.3).
+
+    LIGHTER  = not heavier than the feather (02 §5.1: 心脏重量 ≤ 羽毛重量) → PASSED
+    HEAVIER  = heavier (02 §5.2) → FAILED, Ammit
+    WAVERING = 摇摆不定 (02 §5.3): Thoth records it, the case is weighed again —
+               no destination (user decision 2026-10-27).
+    """
+    LIGHTER = "LIGHTER", "未重于羽"
+    HEAVIER = "HEAVIER", "重于羽"
+    WAVERING = "WAVERING", "天平摇摆 · 再称"
+
+
 class CityGodStatus(models.TextChoices):
     PENDING = "PENDING", "待初审"
     RETURNED = "RETURNED", "退回补正"
@@ -186,6 +199,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     # 都按功 − 过排;审判台只在读法是余额(中国)时显示它。null = 这一列出现之前结的案,
     # 或结案时案子不属于灵魂当前这一世(没有可重算的底)。
     concluded_balance = models.IntegerField(null=True, blank=True)
+    # 埃及称心的结果,结案时冻结(托特记录,docs/02 §2.1、§5.1)。`heart_weight` 是采信后的
+    # 过 − 功(不低于 0,02 §3.2);羽重是常量 MAAT_FEATHER_WEIGHT。非称心的案子两列都是 null。
+    weighing_result = models.CharField(max_length=10, choices=WeighingResult.choices, null=True, blank=True)
+    heart_weight = models.IntegerField(null=True, blank=True)
+    # 天平摇摆而再称时,新开的那件案子指回这一件(apps/judgment/weighing.py)。
+    retrial_of = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -317,6 +336,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         # 与 SoulRecord.save 同一写法。
         if self._state.adding and self.cycle == 0 and self.soul_id is not None:
             self.cycle = self.soul.life_index
+        # 埃及的每一件案子都称心 —— 手开的、重开的、再称的,不只是死亡登记那一件(docs/01 §3.3、
+        # 02 §1.1;用户 2026-10-27)。此前只有 `Soul.die` 设 HEART_WEIGHING,其余默认 STANDARD,
+        # 按功德净值 ≥ 50 送芦苇原。
+        if self._state.adding and self.civilization == "EGYPTIAN":
+            self.judgment_method = JudgmentMethod.HEART_WEIGHING
         # 任何一次写入都是「有进展」,滞留标记随之清掉(见 `stale_since`)。只给了
         # `update_fields` 的写(认领那组)也要把这一列带上,否则清的只是内存里的值。
         if not self._state.adding and self.stale_since is not None:

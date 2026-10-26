@@ -117,9 +117,10 @@ def test_the_weighing_and_the_confession_are_evaluations_not_trials():
     one of them cannot make this pass by matching nothing.
     """
     nodes = WORKFLOW_TEMPLATES[WEIGHING]["nodes"]
-    assert [node["order"] for node in nodes] == [1, 2, 3]
+    # 2026-10-27: Thoth, the tribunal, Horus, Ammit and an end were added (docs/02 §2.1, §5.1–5.2).
+    assert [node["order"] for node in nodes] == [1, 2, 3, 4, 5, 6, 7, 8]
 
-    weighing, confession, verdict = nodes
+    weighing, confession, verdict = nodes[0], nodes[1], nodes[5]
     assert weighing["type"] == NodeType.EVALUATION, (
         f"{weighing['name']} is typed {weighing['type']}. Anubis operates the "
         f"balance — plate III's 「O weigher of righteousness」, BD 30B's 「him "
@@ -198,7 +199,12 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
     assert built == [
         ("阿努比斯 · 引导与称量", NodeType.EVALUATION),
         ("四十二神官 · 否定告白", NodeType.EVALUATION),
+        ("托特 · 记录并宣读", NodeType.EVALUATION),
+        ("神庭 · 确认", NodeType.EVALUATION),
+        ("荷鲁斯 · 引导", NodeType.EXECUTION),
         ("欧西里斯 · 终审", NodeType.FINAL),
+        ("阿米特 · 吞噬", NodeType.EXECUTION),
+        ("结束 · 称心毕", NodeType.FINAL),
     ]
 
     # …and the approver work `625f4d1` does off the label still happens: Anubis
@@ -206,7 +212,8 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
     # recorded as naming nobody, and Osiris resolves through his alias. A
     # rename that quietly turned the first node SYSTEM would pass the list
     # above and be a stuck workflow.
-    first, second, third = workflow.nodes.order_by("node_order")
+    nodes = list(workflow.nodes.order_by("node_order"))
+    first, second, third = nodes[0], nodes[1], nodes[5]
     assert (first.approver_type, first.approver_actor.name) == ("ACTOR", "Anubis")
     # The bench names no person; since 2026-10-27 (docs-others X-3) it carries the default role instead of SYSTEM.
     assert (second.approver_type, second.approver_actor_id, second.approver_role) == ("ROLE", None, "JUDGE")

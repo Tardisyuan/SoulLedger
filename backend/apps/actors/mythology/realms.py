@@ -785,7 +785,8 @@ EGYPTIAN_REALMS = [
      "wrong before.",
      "SPELL", False, None),
     ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Sekhet Aaru", RealmType.BLISS, 1,
-     "Egyptian paradise - eternal life in the Field of Reeds beyond Duat", "NONE", True, None),
+     "Egyptian paradise - eternal life in the Field of Reeds (inside or beyond the Duat is left "
+     "open: docs/01 §2.1)", "NONE", True, None),
     # EG_AM_TYAT IS GONE, AND IS NOT COMING BACK.
     #
     # The row read ("EG_AM_TYAT", "阿姆·特亚特", "芦苇之地边境", "Path of Amtyat",

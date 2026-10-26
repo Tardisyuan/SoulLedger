@@ -248,6 +248,7 @@ SITES = [
     ('apps/souls/importer.py', '_flag_duplicates', 'Soul.all_objects', 1, 'FILTERED', 'explicit tenant=tenant'),
     ('apps/souls/management/commands/check_soul_dates.py', 'Command.handle', 'Soul.all_objects', 2, 'CLI', 'operator audit command over every tenant; optional soft-deleted rows'),
     ('apps/souls/management/commands/check_soul_dates.py', 'Command.handle', 'SoulRecord._base_manager', 2, 'CLI', 'operator audit command over every tenant; optional soft-deleted rows'),
+    ('apps/souls/models.py', 'Soul._arrive_in_the_hall', 'Realm.all_objects', 1, 'FILTERED', "explicit tenant_id=self.tenant_id: the soul's own Hall of Two Truths"),
     ('apps/souls/models.py', 'Soul.transition_to', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/souls/record_models.py', 'SoulRecord._flush_karma_recalculations', 'Soul.all_objects', 1, 'PK', 'marks one soul by pk; the ids are the souls whose records this batch just created through the scoped path'),
     ('apps/souls/serializers.py', 'SoulRecordSerializer.validate_inferno_article', 'Statute.all_objects', 1, 'FILTERED', 'Statute looked up by code AND the soul tenant_id (Statute.code is unique per (tenant, code))'),
