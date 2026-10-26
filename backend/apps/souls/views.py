@@ -703,6 +703,16 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Only the hand-made moves are offered here (2026-10-27 user decision): death (ALIVE → JUDGING, gated on
+        # soul.die above) and missing / recalled (DISPOSED ⇄ LOST). JUDGING → DISPOSED, DISPOSED → REINCARNATING /
+        # SETTLED and REINCARNATING → ALIVE belong to concluding a judgment, a sentence plan and a rebirth; driven
+        # by hand they skip every gate those doors keep and leave a case nobody can close.
+        if not (new_state == SoulState.JUDGING or lost_move):
+            return Response(
+                {"error": f"{soul.current_state} → {new_state} is not a manual move; it happens through its own "
+                          "business action", "code": "transition_not_manual"},
+                status=status.HTTP_409_CONFLICT,
+            )
         # The return value used to be discarded. `can_transition_to` above runs
         # outside the row lock and `transition_to` re-decides inside it, so a
         # refusal there -- a concurrent transition, or now a terminal cosmology

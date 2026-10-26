@@ -19,7 +19,7 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { rebirthQuotaFullOf, soupNotTakenOf, soupRefusalOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
+import { rebirthBlockedOf, rebirthQuotaFullOf, soupNotTakenOf, soupRefusalOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict } from "@soulledger/core/api";
@@ -408,6 +408,11 @@ export default function SoulDetailPage() {
       if (full) {
         setQuotaRefusal(full);
         void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
+        return;
+      }
+      const blocked = rebirthBlockedOf(e);
+      if (blocked) {
+        showToast(t(`reincarnation.error.${blocked}`, { name: soul?.name ?? "" }), "error");
         return;
       }
       const err = e as { response?: { data?: { error?: string } }; message?: string };

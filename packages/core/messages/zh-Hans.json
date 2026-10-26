@@ -3731,7 +3731,10 @@
       "THREE_EVIL_PATHS": "三恶道"
     },
     "error": {
-      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂留在候转世。"
+      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂留在候转世。",
+      "plan_in_progress": "{{name}}的受刑计划还没走完，不能转世。",
+      "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
+      "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。"
     }
   },
   "social": {

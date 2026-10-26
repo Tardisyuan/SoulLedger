@@ -192,11 +192,16 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
             permission_classes=[TenantPermission, IsAdminPermission])
     def hall_settings(self, request, code=None):
         """殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。"""
-        tenant = self.get_object()
-        serializer = TenantSettingsSerializer(tenant, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        before = _snapshot(tenant)
-        with explicit_audit_for(tenant):
-            serializer.save()
-        audit_hall_change(request, tenant, before, "hall settings")
+        from django.db import transaction
+
+        # `settings` is one JSON column merged key by key: read it under the row lock, or two admins saving
+        # different keys at once lose the first one's key (2026-10-27).
+        with transaction.atomic():
+            tenant = Tenant.objects.select_for_update().get(pk=self.get_object().pk)
+            serializer = TenantSettingsSerializer(tenant, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            before = _snapshot(tenant)
+            with explicit_audit_for(tenant):
+                serializer.save()
+            audit_hall_change(request, tenant, before, "hall settings")
         return Response(TenantSerializer(tenant).data)
