@@ -7362,7 +7362,12 @@
       "enter_label": "Enter {{name}} to view",
       "empty": "No halls yet",
       "load_failed": "Couldn't load the halls",
-      "enter_failed": "Couldn't enter this hall. Try again."
+      "enter_failed": "Couldn't enter this hall. Try again.",
+      "read_only": "Read-only",
+      "until": "Valid until {{time}}",
+      "read_only_hint": "Administrator view is read-only; nothing can be changed here",
+      "expired_title": "This read-only view has expired",
+      "expired_body": "Each visit lasts 30 minutes and isn't extended. Go back to all halls and open it again."
     },
     "viewing": {
       "banner": "Viewing {{name}} as global admin",

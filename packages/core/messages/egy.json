@@ -7307,5 +7307,14 @@
       "not_reincarnating": "Ba Em Wehem Mesut Wa",
       "soup_already_taken": "Iri Seth Em Ankh Pen"
     }
+  },
+  "halls": {
+    "overview": {
+      "read_only": "Maa Wa",
+      "until": "Wenen Er {{time}}",
+      "read_only_hint": "Netjer Em Tepy · Maa Wa: Nen Khemen",
+      "expired_title": "Maa Wa: Mut",
+      "expired_body": "At 30, Nen Wehem. Wehem Er Wesekhet Neb, Wen Wehem."
+    }
   }
 }

@@ -3,6 +3,8 @@
  * 状态走真实的 core 模块与 jsdom 的 sessionStorage(刷新、换页都保留的那条路径)。
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { HallViewExpired } from "@/src/components/impersonation/HallViewExpired";
+import { useHallViewExpired } from "@/src/components/impersonation/hallViewExpiry";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { ImpersonationBanner } from "@/src/components/impersonation/ImpersonationBanner";
 import { leaveImpersonation } from "@/src/components/impersonation/wireImpersonation";
@@ -23,6 +25,12 @@ const COPY: Record<string, string> = {
   "admin.impersonate.locked": "查看中，不能操作",
   "halls.viewing.banner": "正在以全局管理员身份查看{{name}}",
   "halls.viewing.back": "回到各殿概况",
+  "halls.overview.read_only": "只读",
+  "halls.overview.until": "{{time}} 前有效",
+  "halls.overview.read_only_hint": "全局管理员只读查看，这里不能改动",
+  "halls.overview.expired_title": "只读查看已过期",
+  "halls.overview.expired_body": "每次进入有效 30 分钟，不续期。",
+  "soul_accounts.credentials.expired": "已过期",
 };
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -125,6 +133,53 @@ describe("进殿查看(第五十四批 O-2)", () => {
     expect(screen.getByTestId("impersonation-exit")).toHaveTextContent("回到各殿概况");
     fireEvent.click(screen.getByTestId("impersonation-exit"));
     expect(leaveImpersonation).toHaveBeenCalledTimes(1);
+  });
+
+  it("横条写到期钟点、不倒数;到点后钟点换成「已过期」,不自动退出", () => {
+    enterHall();
+    render(<ImpersonationBanner />);
+    const until = screen.getByTestId("impersonation-until");
+    expect(until).toHaveTextContent("前有效");
+    expect(until).toHaveTextContent(/\d{2}:\d{2}/);
+    expect(screen.queryByTestId("impersonation-countdown")).toBeNull();
+    expect(screen.getByTestId("impersonation-banner")).toHaveTextContent("只读");
+
+    act(() => void jest.advanceTimersByTime(61_000));
+    expect(until).toHaveTextContent("已过期");
+    expect(leaveImpersonation).not.toHaveBeenCalled();
+  });
+
+  it("到期页顶替内容,只留回到各殿概况", () => {
+    enterHall();
+    function Page() {
+      return useHallViewExpired() ? <HallViewExpired /> : <p>real content</p>;
+    }
+    render(<Page />);
+    expect(screen.getByText("real content")).toBeInTheDocument();
+    act(() => void jest.advanceTimersByTime(61_000));
+    expect(screen.queryByText("real content")).toBeNull();
+    const page = screen.getByTestId("hall-view-expired");
+    expect(page).toHaveTextContent("只读查看已过期");
+    expect(page.querySelectorAll("button")).toHaveLength(1);
+    fireEvent.click(screen.getByText("回到各殿概况"));
+    expect(leaveImpersonation).toHaveBeenCalledTimes(1);
+  });
+
+  it("原因只在第一处置灰的地方写一次", () => {
+    enterHall();
+    const { container } = render(
+      <>
+        <RequirePermission permissions="soul.create">
+          <button type="button">a</button>
+        </RequirePermission>
+        <RequirePermission permissions="soul.delete">
+          <button type="button">b</button>
+        </RequirePermission>
+      </>
+    );
+    expect(container.querySelectorAll("[data-viewing-lock]")).toHaveLength(2);
+    expect(screen.getAllByText("全局管理员只读查看，这里不能改动")).toHaveLength(1);
+    expect(container.querySelector("[data-viewing-lock]")).toHaveTextContent("全局管理员只读查看");
   });
 
   it("写类控件照样置灰", () => {

@@ -33,6 +33,8 @@ import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 import { ShortcutHelp } from "@/src/components/layout/ShortcutHelp";
 import { useSyncEmailLocale } from "@/src/components/layout/EmailLocaleSync";
 import { ImpersonationBanner, IMPERSONATION_BANNER_HEIGHT } from "@/src/components/impersonation/ImpersonationBanner";
+import { HallViewExpired } from "@/src/components/impersonation/HallViewExpired";
+import { useHallViewExpired } from "@/src/components/impersonation/hallViewExpiry";
 import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 
 /**
@@ -53,6 +55,7 @@ export const ASSIST_PANEL_WIDTH = 420;
 export const ASSIST_MIN_MAIN_WIDTH = 720;
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const hallViewExpired = useHallViewExpired();
   const { t, formatDateTime } = useI18n();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -338,7 +341,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-8']]:px-6" : ""
           }`}
         >
-          <PlaqueProvider value={setPlaque}>{children}</PlaqueProvider>
+          <PlaqueProvider value={setPlaque}>{hallViewExpired ? <HallViewExpired /> : children}</PlaqueProvider>
         </div>
       </main>
 
