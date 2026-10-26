@@ -545,7 +545,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     problems.append(('role', 'role_invalid', f"invalid role '{role}'"))
                 if not problems and (
                     username in seen_usernames
-                    or User.objects.filter(username=username, tenant=tenant).exists()
+                    # Usernames are unique across the whole table, other halls and soft-deleted officers included:
+                    # the preview must refuse what the commit would (2026-10-27).
+                    or User.all_objects.filter(username=username).exists()
                 ):
                     problems.append(('username', 'username_taken', f"username '{username}' already exists"))
                 # Same rule as every other write path (BP-04). A row earlier in

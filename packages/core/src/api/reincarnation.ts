@@ -47,6 +47,13 @@ export function soupNotTakenOf(error: unknown): boolean {
   return r?.status === 409 && r.data?.code === "soup_not_taken";
 }
 
+/** 409 `reborn` / `complete` answers when the business forbids the rebirth (2026-10-27); the soul stays where it was. */
+export function rebirthBlockedOf(error: unknown): "plan_in_progress" | "eternal_sentence" | "rebirth_not_approved" | null {
+  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  const c = r?.data?.code;
+  return r?.status === 409 && (c === "plan_in_progress" || c === "eternal_sentence" || c === "rebirth_not_approved") ? c : null;
+}
+
 /** The refusal code of `drinkSoup` (409: `not_diyu` / `not_reincarnating` / `soup_already_taken`), else null. */
 export function soupRefusalOf(error: unknown): "not_diyu" | "not_reincarnating" | "soup_already_taken" | null {
   const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;

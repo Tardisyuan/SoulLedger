@@ -41,10 +41,50 @@ class SoupRefused(APIException):
         super().__init__({"code": code, "detail": detail})
 
 
+class RebirthBlocked(APIException):
+    """转世被业务挡住(2026-10-27 用户决定),灵魂原地不动:
+    `plan_in_progress` —— 受刑计划还没走完(计划完成才是转世的正门,`SentencePlanService._complete`);
+    `eternal_sentence` —— 本世有未赦免的永久刑期(永久 = 不转生);
+    `rebirth_not_approved` —— 本世最近一份转生申请驳回了或还没决定。没有申请的灵魂官员照样可以办。"""
+
+    status_code = 409
+    default_code = "rebirth_blocked"
+
+    def __init__(self, code, detail):
+        super().__init__({"code": code, "error": detail, "detail": detail})
+
+
+def assert_may_be_reborn(soul, disposition=None):
+    """`reborn` / `complete` 在动灵魂状态之前问一次,`complete_rebirth` 在灵魂行锁下再问一次。"""
+    from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
+    from apps.sentence_plan.services import in_progress_plan
+    from apps.soul_accounts.models import RebirthApplicationStatus
+
+    if in_progress_plan(soul) is not None:
+        raise RebirthBlocked("plan_in_progress", "The soul's sentence plan is not finished.")
+    # 赦免(撤销计划 / 手动结束)把永久节点改成 ABORTED / CANCELLED / REMOVED,那份永久处置就不再挡。
+    pardoned = SentenceNode.all_objects.filter(
+        plan__soul_id=soul.pk, status__in=[SentenceNodeStatus.ABORTED, SentenceNodeStatus.CANCELLED, SentenceNodeStatus.REMOVED],
+        disposition_id__isnull=False,
+    ).values("disposition_id")
+    eternal = Disposition.all_objects.filter(soul_id=soul.pk, is_eternal=True).exclude(pk__in=pardoned)
+    last_rebirth = soul.reincarnations.order_by("-reincarnated_at").values_list("reincarnated_at", flat=True).first()
+    if last_rebirth is not None:
+        eternal = eternal.filter(create_time__gt=last_rebirth)
+    if (disposition is not None and disposition.is_eternal and not pardoned.filter(
+            disposition_id=disposition.pk).exists()) or eternal.exists():
+        raise RebirthBlocked("eternal_sentence", "An eternal sentence has no next life.")
+    latest = soul.rebirth_applications.filter(cycle=soul.life_index).order_by("-created_at").first()
+    if latest is not None and latest.status != RebirthApplicationStatus.APPROVED:
+        raise RebirthBlocked("rebirth_not_approved",
+                             f"The soul's rebirth application is {latest.status}, not approved.")
+
+
 def needs_soup(soul) -> bool:
+    """按**原属**文明(与转世资格 `assert_rebirth_capable` 同一个依据):暂居他乡的地府灵魂照样要饮。"""
     from apps.souls.models import Civilization
 
-    return soul.civilization == Civilization.CHINESE
+    return soul.home_civilization == Civilization.CHINESE
 
 
 def drink_soup(soul):
@@ -238,6 +278,7 @@ class ReincarnationService:
             # that too, which is why it wraps the whole block and not just the
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+            assert_may_be_reborn(soul, disposition)
 
             # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
             from django.conf import settings

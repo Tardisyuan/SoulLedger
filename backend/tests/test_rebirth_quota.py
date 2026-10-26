@@ -40,3 +40,24 @@ def test_the_admin_sets_and_clears_a_limit_through_the_hall_settings(cn_tenant, 
     cn_tenant.refresh_from_db()
     assert cn_tenant.settings["rebirth_monthly_quota"] == {"DIVINE": 0}
     assert client.patch(url, {"rebirth_monthly_quota": {"DRAGON": 1}}, format="json").status_code == 400
+
+
+def test_hall_settings_merge_onto_the_row_as_it_is_now_not_a_stale_copy(cn_tenant, admin_user, monkeypatch):
+    """Two admins save different keys at once (review #12): the second must not put back the first's old settings."""
+    from rest_framework.test import APIClient
+
+    from apps.tenants.models import Tenant
+    from apps.tenants.views import TenantViewSet
+
+    stale = Tenant.objects.get(pk=cn_tenant.pk)  # what the second admin's request read before the first saved
+    fresh = Tenant.objects.get(pk=cn_tenant.pk)
+    fresh.settings = {**(fresh.settings or {}), "rebirth_monthly_quota": {"HUMAN": 3}}
+    fresh.save(update_fields=["settings"])
+    monkeypatch.setattr(TenantViewSet, "get_object", lambda self: stale)
+    client = APIClient()
+    client.force_authenticate(admin_user)
+    res = client.patch(f"/api/v1/tenants/{cn_tenant.code}/settings/", {"soul_rebirth_cooldown_days": 7}, format="json")
+    assert res.status_code == 200, res.data
+    cn_tenant.refresh_from_db()
+    assert cn_tenant.settings["rebirth_monthly_quota"] == {"HUMAN": 3}
+    assert cn_tenant.settings["soul_rebirth_cooldown_days"] == 7

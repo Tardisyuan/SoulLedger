@@ -88,7 +88,7 @@
 | `registered` | 已收到登记(含登记失败、尚未开审) |
 | `at_city_god` | 在城隍初审(只地府有这一站) |
 | `judging` | 审判中 |
-| `sentenced` | 已判,受刑或候转世 |
+| `sentenced` | 已判,受刑、候转世,或押送途中失踪(`soul_state` 为 `LOST`) |
 | `reincarnated` | 已转入下一世(此后的事不再属于这条登记) |
 | `settled` | 终局,不再转世 |
 

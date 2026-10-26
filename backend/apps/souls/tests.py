@@ -165,14 +165,15 @@ class TestSoulTransitionAction:
         actors = set(soul.events.filter(event_type="STATE_CHANGED").values_list("actor", flat=True))
         assert actors == {"trans_admin"}
 
-    def test_transition_judging_to_disposed(self):
+    def test_transition_judging_to_disposed_is_not_manual(self):
+        """2026-10-27: concluding the judgment is the only way to DISPOSED; by hand it left a case nobody could close."""
         soul = Soul.objects.create(name="J2D", tenant=self.tenant, current_state=SoulState.JUDGING)
         resp = self.client.post(f"{BASE}/{soul.pk}/transition/", {
             "new_state": SoulState.DISPOSED
         }, format="json")
-        assert resp.status_code == status.HTTP_200_OK
+        assert (resp.status_code, resp.data["code"]) == (status.HTTP_409_CONFLICT, "transition_not_manual")
         soul.refresh_from_db()
-        assert soul.current_state == SoulState.DISPOSED
+        assert soul.current_state == SoulState.JUDGING
 
 
 @pytest.mark.django_db

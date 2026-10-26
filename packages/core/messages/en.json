@@ -3731,7 +3731,10 @@
       "THREE_EVIL_PATHS": "Three evil paths"
     },
     "error": {
-      "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth."
+      "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
+      "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
+      "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
+      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth."
     }
   },
   "social": {
