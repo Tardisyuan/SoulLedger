@@ -7086,7 +7086,8 @@
       "appeal_window_closed": "申诉期已于 {{date}} 截止",
       "not_concluded": "这件审判还没结案，结案后才能申诉",
       "not_appealable": "这件审判不能申诉",
-      "past_life_read_only": "前世的审判只能查看，不能申诉"
+      "past_life_read_only": "前世的审判只能查看，不能申诉",
+      "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",

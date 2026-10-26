@@ -327,7 +327,7 @@ export const soulApi = {
   sentencePlan: () => soulHttp.get<MeSentencePlan>("/me/sentence-plan/").then((r) => r.data),
   /** 审判申诉(第五十二批):本世已结案的审判(`can_appeal` / `refusal_code` / `deadline`)与各轮申诉。 */
   judgmentAppeals: () => soulHttp.get<MeJudgmentAppealList>("/me/judgment-appeals/").then((r) => r.data),
-  /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable`。 */
+  /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable` / `no_appeal_above_minos`(希腊)。 */
   fileJudgmentAppeal: (judgment: string, reason: string, evidence = "") =>
     soulHttp.post<MeJudgmentAppeal>("/me/judgment-appeals/", { judgment, reason, evidence }).then((r) => r.data),
   /** 待复核、复核中都可以撤回;撤回也算一次。409 `appeal_closed`。 */
@@ -397,6 +397,8 @@ export const APPEAL_REFUSAL_CODES = [
   "not_concluded",
   "not_appealable",
   "past_life_read_only",
+  // 希腊:米诺斯之上无可上诉(docs/02 希腊 §5.2,用户 2026-10-27)。
+  "no_appeal_above_minos",
 ] as const;
 
 export function appealRefusalKey(code: string | null | undefined): string | null {

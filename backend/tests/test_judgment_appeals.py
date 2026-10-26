@@ -114,6 +114,16 @@ def test_an_open_judgment_or_another_souls_judgment_is_refused(case, cn_tenant):
     assert not JudgmentAppeal.objects.exists()
 
 
+def test_a_greek_judgment_cannot_be_appealed(case):
+    # Minos's judgment is final (docs/02 希腊 §5.2; user 2026-10-27): no appeal entry, and filing is refused.
+    Judgment.objects.filter(pk=case["judgment"].pk).update(civilization="GREEK")
+    row = case["client"].get(MINE).data["judgments"][0]
+    assert (row["can_appeal"], row["refusal_code"]) == (False, "no_appeal_above_minos")
+    response = _file(case)
+    assert response.status_code == 409 and response.data["code"] == "no_appeal_above_minos"
+    assert not JudgmentAppeal.objects.exists()
+
+
 # ── 复核:另一位官员 ──────────────────────────────────────────────────────
 
 
