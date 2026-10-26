@@ -38,6 +38,8 @@ export interface User {
   is_eval_identity?: boolean;
   /** 两步验证列(A12):three states = enabled / required. List and retrieve only. */
   mfa?: UserMfaRef;
+  /** 邀请了、还没设密码(`officer_invite.is_pending`)。 */
+  invite_pending?: boolean;
 }
 
 export interface UserMfaRef {
@@ -105,6 +107,8 @@ export interface PaginatedResponse<T> {
 /** 200 body of POST /users/import_csv/. */
 export interface UserImportResult {
   created: number;
+  /** Of `created`, the rows that got an invite email instead of an initial password. */
+  invited: number;
   errors: string[];
 }
 
@@ -113,6 +117,8 @@ export interface UserImportRow {
   row: number;
   status: "ok" | "error";
   values: { username: string; display_name: string };
+  /** `invite` = email and no password (the person sets their own); `password` = initial password in the file. */
+  delivery: "invite" | "password";
   errors: { field: string; code: string }[];
 }
 
@@ -136,7 +142,61 @@ export function userImportFileErrorOf(error: unknown): UserImportFileError | nul
   return data && typeof data.code === "string" ? (data as UserImportFileError) : null;
 }
 
+/** POST /users/invite/ body. `tenant` = hall code, only for the global admin; blank username falls back to the email's local part. */
+export interface OfficerInviteInput {
+  email: string;
+  role: string;
+  username?: string;
+  display_name?: string;
+  tenant?: string;
+}
+
+/** 400 `{error, code, field?}` of the invite and handover routes; branch on `code`, place on `field`. */
+export interface OfficerRefusal {
+  code: string;
+  field?: string;
+}
+
+export function officerRefusalOf(error: unknown): OfficerRefusal | null {
+  if (!axios.isAxiosError(error) || !error.response) return null;
+  const data = error.response.data as (Partial<OfficerRefusal> & { problems?: string[] }) | undefined;
+  return data && typeof data.code === "string" ? (data as OfficerRefusal) : null;
+}
+
+/** 200 of POST /judgment/handover/preview/. `appeals` excludes `appeals_returned_to_pool`; `city_gods` are names. */
+export interface HandoverPreview {
+  judgments: number;
+  appeals: number;
+  appeals_returned_to_pool: number;
+  city_gods: string[];
+  letters: number;
+  problems: ("target_cannot_judge" | "target_cannot_reply")[];
+}
+
+/** 200 of POST /judgment/handover/: what actually moved. */
+export interface HandoverResult {
+  judgments: number;
+  appeals: number;
+  appeals_returned_to_pool: number;
+  city_gods: number;
+  letters: number;
+}
+
+/** 409 `handover_blocked` carries the same `problems` as the preview. */
+export function handoverProblemsOf(error: unknown): HandoverPreview["problems"] | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
+  const data = error.response.data as { problems?: HandoverPreview["problems"] } | undefined;
+  return Array.isArray(data?.problems) ? data.problems : null;
+}
+
+export const handoverApi = {
+  preview: (from: number, to: number) => api.post<HandoverPreview>("/judgment/handover/preview/", { from, to }),
+  commit: (from: number, to: number) => api.post<HandoverResult>("/judgment/handover/", { from, to }),
+};
+
 export const usersApi = {
+  /** `user.manage`. 201 = new, 200 = re-sent to a still-pending address. 400 `{code, field}`. */
+  invite: (data: OfficerInviteInput) => api.post<User>("/users/invite/", data),
   list: (params?: Record<string, string | number | undefined>) => api.get<PaginatedResponse<User>>("/users/", { params }),
   get: (id: string) => api.get<User>(`/users/${id}/`),
   create: (data: CreateUserInput) => api.post<User>("/users/", data),

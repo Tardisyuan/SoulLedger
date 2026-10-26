@@ -893,6 +893,7 @@ const H1_LOGIN = {
     "app/(auth)/forgot-password/page.tsx",
     "app/(auth)/reset-password/page.tsx",
     "app/(auth)/verify-email/page.tsx",
+    "app/(auth)/accept-invite/page.tsx",
   ],
   steps: "text-xl",
 };

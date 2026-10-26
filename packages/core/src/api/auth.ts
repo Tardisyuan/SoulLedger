@@ -279,6 +279,9 @@ export const authApi = {
   /** 400 `reset_link_invalid` / `weak_password`; 429 `rate_limited`. */
   confirmOfficerReset: (data: { uid: string; token: string; new_password: string }) =>
     api.post<{ detail: string }>("/auth/officer-reset/confirm/", data),
+  /** 邀请信的链接(`/accept-invite`):400 `invite_link_invalid` / `weak_password`(带 `reasons`); 429 `rate_limited`。 */
+  acceptOfficerInvite: (data: { uid: string; token: string; new_password: string }) =>
+    api.post<{ detail: string }>("/auth/officer-invite/accept/", data),
   /** 资料页「发送验证邮件」(每小时 5 封)。 */
   sendEmailVerification: () => api.post<{ detail: string }>("/auth/email/send-verification/"),
   /** 邮件链接落在 /verify-email,令牌本身就是凭据。 */

@@ -78,6 +78,8 @@ const PUBLIC_PATHS = [
   "/(auth)/forgot-password",
   "/(auth)/reset-password",
   "/(auth)/verify-email",
+  // 邀请信的链接(第五十四批):令牌是唯一凭据,收信人还没有密码。
+  "/(auth)/accept-invite",
 ];
 
 function isPublicPath(pathname: string): boolean {
