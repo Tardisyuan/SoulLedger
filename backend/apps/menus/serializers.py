@@ -50,7 +50,9 @@ class MenuTreeSerializer(serializers.ModelSerializer):
         """Filter buttons by user's role permissions."""
         from apps.core.permissions import user_has_permission
 
-        buttons = obj.buttons.filter(is_active=True).order_by("order")
+        # Filter in Python off the prefetched manager: `.filter()` / `.order_by()`
+        # on it would run one query per node and discard the prefetch.
+        buttons = sorted((b for b in obj.buttons.all() if b.is_active), key=lambda b: b.order)
         user = self.context.get('user')
 
         if not user or not user.is_authenticated:
