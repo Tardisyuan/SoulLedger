@@ -120,6 +120,8 @@ export type SoulListItem = SoulBase & {
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase, ArchiveFields {
+  /** 本世饮孟婆汤的时刻(只在中国/地府);没饮是 null。转世完成时清空。 */
+  soup_taken_at?: string | null;
   /** 灵魂编号(登录名);还没开过号是 null。不论调用者有没有账号权限都给。 */
   soul_code?: string | null;
   birth_name?: string;

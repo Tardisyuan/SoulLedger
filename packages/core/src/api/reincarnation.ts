@@ -41,6 +41,19 @@ export function rebirthQuotaFullOf(error: unknown): RebirthQuotaFull | null {
   return { code: "rebirth_quota_full", rebirth_form: d.rebirth_form, limit: Number(d.limit), used: Number(d.used) };
 }
 
+/** 409 `reborn` / `complete` answers for a soul of Diyu that has not drunk Mengpo's soup; the soul stays awaiting rebirth. */
+export function soupNotTakenOf(error: unknown): boolean {
+  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  return r?.status === 409 && r.data?.code === "soup_not_taken";
+}
+
+/** The refusal code of `drinkSoup` (409: `not_diyu` / `not_reincarnating` / `soup_already_taken`), else null. */
+export function soupRefusalOf(error: unknown): "not_diyu" | "not_reincarnating" | "soup_already_taken" | null {
+  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  const c = r?.data?.code;
+  return r?.status === 409 && (c === "not_diyu" || c === "not_reincarnating" || c === "soup_already_taken") ? c : null;
+}
+
 /** A path is full when it has a limit and this month's count has reached it (0 = full from the first day). */
 export const quotaIsFull = (row: Pick<RebirthQuotaUsage, "limit" | "used"> | undefined): boolean =>
   row != null && row.limit != null && row.used >= row.limit;
@@ -49,6 +62,8 @@ export const reincarnationApi = {
   /** 筛选只有后端已有的:`soul`、`rebirth_form`(单值)、`cycle_count`;`ordering` 可按 `reincarnated_at` / `cycle_count`。 */
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Reincarnation>>("/reincarnation/", { params }),
   reborn: (data: object) => api.post<Reincarnation>("/reincarnation/reborn/", data),
+  /** 登记这一世已饮孟婆汤。没有撤销:登记后只会在转世完成时清空。 */
+  drinkSoup: (soulId: string) => api.post<{ soul_id: string; soup_taken_at: string }>("/reincarnation/drink-soup/", { soul_id: soulId }),
   /** The caller's hall, this month, per path. */
   quota: () => api.get<RebirthQuotaUsage[]>("/reincarnation/quota/"),
 };

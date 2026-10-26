@@ -90,7 +90,17 @@ export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" 
   return code === "not_allowed" || code === "not_eligible" || code === "duplicate" ? code : null;
 }
 
+/** 我的数(`GET /officer-app/stats/`):只数调用者自己的。 */
+export type OfficerStats = {
+  concluded_this_month: number;
+  concluded_total: number;
+  open_claims: number;
+  appeals_reviewed: number;
+  appeals_in_review: number;
+};
+
 export const officerAppApi = {
+  stats: () => api.get<OfficerStats>("/officer-app/stats/"),
   todo: () => api.get<Todo>("/officer-app/todo/"),
   /** 加载更多: one group from item `offset` on (10 a page), `{ count, items }`. */
   todoGroup: (kind: TodoKind | "unassigned_letter", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
