@@ -163,6 +163,12 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 utility QoS + nice 10;Xcode 同时编译限 4 个任务(`IOS_JOBS` 覆盖,写进 `com.apple.dt.xcodebuild` 的 user default);
 ccache 由 `mobile/plugins/withBuildTuning.js` 打开(要 `brew install ccache`,已装);没设 Sentry DSN 的构建不编 Sentry 原生代码
 (各 App 的 `react-native.config.js`,实测官员 App 721 个编译单元里 Sentry 占 243)。DSN 要在构建时和打包时一起设。
+**编译缓存在这里不管用(2026-10-27 实测,Xcode 27.2 + RN 0.86.3,灵魂端 App,arm64,4 任务)**:
+ccache 已接上(Pods 里 CC/CXX 指向 `ccache-clang.sh`),一次全量后缓存仍只有约 1 MB;
+Xcode 自带的 `COMPILATION_CACHE_ENABLE_CACHING=YES`(并绕开 ccache 包装):冷 575 s、clean 后热 503 s,
+缓存目录 60 KB —— 也几乎没命中。原因没查清(疑为显式模块构建绕过了编译器包装)。**别再重复这组测试**;
+真正起作用的是下面的「少重编」、只编 arm64、限 4 任务、开发版不编 Sentry。还剩的一条路是 Expo 的
+第三方库预编译包(`EXPO_PRECOMPILED_MODULES_PATH`,要用 Expo 自己的工具链产出,实验性),尚未尝试。
 **只有改了原生依赖或 app.json plugins 才重编 —— 脚本自己判断**:用 `@expo/fingerprint` 算原生指纹(加 `react-native.config.js` 与 DSN 状态),和上次编成的一样就直接退出、提示只起 Metro;不一样才自动 prebuild + pod install + 编译(`FORCE=1` 强制)。上次的指纹在 `<git common dir>/soulledger-native-builds/`。实测 prebuild 前后指纹不变(生成的 ios/ 不计入)。改 JS 只要 Metro。编译完、负载回到 12 以下再开模拟器 —— 10-27 两件事挤在一起,负载 575、交换区 19/20 GB。
 
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
