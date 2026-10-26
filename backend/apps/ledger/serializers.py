@@ -84,8 +84,8 @@ class BalanceReadingSerializer(serializers.Serializer):
 
 
 class ThresholdReadingSerializer(serializers.Serializer):
-    """kind=THRESHOLD — the Egyptian weighing. No merit member: the scale
-    does not subtract, and `heart_weight` is the demerit total alone."""
+    """kind=THRESHOLD — the Egyptian weighing. `heart_weight` is demerit
+    lightened by merit, floored at 0 (docs/02 §3.2)."""
 
     kind = serializers.CharField()
     civilization = serializers.CharField()

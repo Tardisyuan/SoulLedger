@@ -73,30 +73,26 @@ class TestCivilizationReadings:
     # -- EGYPTIAN: a threshold, not a score --------------------------------
 
     def test_egyptian_reads_a_threshold_not_a_balance(self):
-        soul = self._soul(self.tenants[Civilization.EGYPTIAN], merits=(30,), demerits=(12,))
+        soul = self._soul(self.tenants[Civilization.EGYPTIAN], merits=(3,), demerits=(12,))
         reading = LedgerService.get_ledger_summary(soul)["reading"]
         assert reading["kind"] == "THRESHOLD"
         assert reading["civilization"] == "EGYPTIAN"
         assert "balance" not in reading
-        assert reading["heart_weight"] == 12
+        assert reading["heart_weight"] == 9
         assert reading["counterweight"] == MAAT_FEATHER_WEIGHT
         assert reading["heavier_than_feather"] is True
 
-    def test_merit_does_not_lighten_an_egyptian_heart(self):
-        """The bug this reading exists to stop, in one assertion.
-
-        A heart carrying 18 points of recorded wrongdoing netted to +6 against
-        24 points of merit, and +6 is on the passing side of any threshold
-        anyone would pick — a pass granted by an offsetting step the Egyptian
-        weighing does not have. These are the real numbers from the seeded soul
-        塞內布.
-        """
+    def test_merit_lightens_an_egyptian_heart(self):
+        """docs/02 §3.2: good deeds 减轻心脏. 塞內布's real numbers — 18 points of
+        wrongdoing against 24 of merit — leave a heart lighter than the feather;
+        the same wrongs with no merit do not."""
         soul = self._soul(self.tenants[Civilization.EGYPTIAN], merits=(24,), demerits=(18,))
-        summary = LedgerService.get_ledger_summary(soul)
+        reading = LedgerService.get_ledger_summary(soul)["reading"]
+        assert reading["heart_weight"] == 0  # floored, never negative
+        assert reading["heavier_than_feather"] is False
 
-        assert summary["karmic_balance"] == 6  # what the shared reading said
-        assert summary["reading"]["heart_weight"] == 18
-        assert summary["reading"]["heavier_than_feather"] is True
+        heavy = self._soul(self.tenants[Civilization.EGYPTIAN], demerits=(18,))
+        assert LedgerService.get_ledger_summary(heavy)["reading"]["heavier_than_feather"] is True
 
     def test_a_heart_with_no_recorded_wrongdoing_passes(self):
         soul = self._soul(self.tenants[Civilization.EGYPTIAN], merits=(5,))
