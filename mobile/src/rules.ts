@@ -5,7 +5,11 @@
  */
 import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
+import { daysLeft, termFraction } from "@soulledger/core/domain/term";
 import { civKeyOf, type CivKey } from "./theme";
+
+// One countdown for every screen (core/domain/term.ts); a mute still on screen passes `min` 1.
+export { daysLeft };
 
 // ── badges ──────────────────────────────────────────────────────────────
 
@@ -257,10 +261,7 @@ export function grouped(n: number): string {
  */
 export function termServed(startedOn: string | null | undefined, endsOn: string | null | undefined, now: number): number | null {
   if (!startedOn || !endsOn) return null;
-  const a = Date.parse(startedOn);
-  const b = Date.parse(endsOn);
-  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null;
-  return Math.min(1, Math.max(0, (now - a) / (b - a)));
+  return termFraction(Date.parse(startedOn), Date.parse(endsOn), now);
 }
 
 // ── layout ─────────────────────────────────────────────────────────────

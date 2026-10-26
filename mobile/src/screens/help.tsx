@@ -17,7 +17,7 @@ import { useI18n } from "../i18n";
 import { useSession } from "../session";
 import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
-import { useCurrentHall } from "./letters";
+import { useCurrentHall } from "../useCurrentHall";
 
 /** [id, question key, answer key]. Written out so the copy harvest and the bundles' parity tests see every key. */
 type Faq = readonly [string, string, string];

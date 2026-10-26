@@ -123,8 +123,3 @@ export function dayOf(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
-/** Whole days left on a mute, rounded up — "你被禁言 N 日" counts what is left, not what was given. */
-export function daysLeft(until: string, now: number): number {
-  return Math.max(1, Math.ceil((Date.parse(until) - now) / 86_400_000));
-}

@@ -22,7 +22,7 @@ import { Platform } from "react-native";
 import type { NavigationProp } from "@react-navigation/native";
 
 import type { AppStackParams, LifeFocus } from "./screens/applications";
-import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./screens/sentence";
+import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./sentenceKinds";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
 export const PUSH_TOKEN_KEY = "soul_push_token";

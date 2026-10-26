@@ -2,7 +2,8 @@
  * The writer behind Siri's spoken numbers (src/voiceCache.ts): what it hands the native module,
  * what it refuses, and that it never throws into the screen that fetched the number.
  */
-import { createVoiceCache, daysLeft, type VoiceNative } from "../voiceCache";
+import { daysLeft } from "../rules";
+import { createVoiceCache, type VoiceNative } from "../voiceCache";
 
 const fake = () => ({ setNumber: jest.fn(), clear: jest.fn() }) satisfies VoiceNative;
 

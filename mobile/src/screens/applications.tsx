@@ -18,9 +18,9 @@ import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { GoneScreen, useGone } from "../gone";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
+import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
-import { daysLeft, publishVoiceNumber } from "../voiceCache";
+import { publishVoiceNumber } from "../voiceCache";
 import { radius, space } from "../theme";
 import {
   Block,

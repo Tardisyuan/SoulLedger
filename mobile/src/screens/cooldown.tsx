@@ -4,10 +4,9 @@ import { Animated, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { daysLeft, formatStamp } from "../rules";
 import { radius, space } from "../theme";
 import { Button, Input, Interp, Notice, Txt, useReducedMotion, useTheme } from "../ui";
-import { daysLeft } from "../voiceCache";
 
 /** 6% ink over the page, as an 8-digit hex (the theme's ink is `#RRGGBB`): 0.06 × 255 ≈ 0x0F. */
 const WASH = "0F";

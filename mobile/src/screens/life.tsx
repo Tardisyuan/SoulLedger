@@ -66,7 +66,7 @@ import {
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
 import { AppealLine, roundsOf } from "./appeals";
-import { useCurrentHall } from "./letters";
+import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
