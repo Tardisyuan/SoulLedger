@@ -277,7 +277,7 @@ def test_the_seed_command_writes_the_canonical_shape(seeded):
     assert row.nodes_json[0]["actor"] == "秦广王"
 
     rendered = WorkflowTemplateSerializer(row).data["nodes"]
-    assert len(rendered) == 10
+    assert len(rendered) == 11  # ten courts + 结束 (C-1, 2026-10-27)
     assert rendered[0]["node_name"] == "秦广王 · 分流"
 
 

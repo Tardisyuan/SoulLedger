@@ -51,7 +51,7 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
         f"埃及 ROUTINE 落到了 {template['name']!r} —— 泛用兜底,不是两真之殿"
     )
     assert len(template["nodes"]) == 3
-    names = [n["name"] for n in template["nodes"]]
+    names = [n.get("node_name") or n["name"] for n in template["nodes"]]
     assert names == [
         "阿努比斯 · 引导与称量",
         "四十二神官 · 否定告白",
@@ -88,9 +88,8 @@ def test_the_other_civilizations_are_untouched():
     european, _ = WorkflowService._resolve_template(
         Civilization.EUROPEAN, CaseType.ROUTINE, None
     )
-    assert european["name"] == "EUROPEAN 审批流程", (
-        "欧洲 ROUTINE 的落点变了 —— 这次改动只该动埃及"
-    )
+    # 2026-10-27(docs-others X-2):欧洲 ROUTINE 不再落兜底,代码默认就是末日审判流程。
+    assert european["name"] == "末日审判流程", european["name"]
 
 
 def test_the_frontend_preset_still_declares_routine():

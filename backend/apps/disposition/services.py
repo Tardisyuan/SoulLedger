@@ -5,7 +5,6 @@ Routes to the correct realm based on civilization and verdict.
 from apps.disposition.models import Disposition, MemoryResetMechanism
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
-from apps.realms.models import Realm
 from apps.souls.models import Civilization, Soul
 
 
@@ -125,8 +124,10 @@ class DispositionService:
 
         With `judgment`, the ledger is read without that case's non-admitted
         evidence (see `_route_to_realm`)."""
+        from apps.realms.models import realm_by_code
+
         realm_code = cls._route_to_realm(soul, verdict, judgment_method, judgment=judgment)
-        return Realm.objects.filter(realm_code=realm_code).first()
+        return realm_by_code(realm_code, tenant_id=judgment.tenant_id if judgment is not None else soul.tenant_id)
 
     @classmethod
     def create_from_judgment(

@@ -331,7 +331,8 @@
       "CITY_GOD_RECEIVED": "Received by the City God",
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
       "CITY_GOD_RETURNED": "Returned by the City God for correction",
-      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting"
+      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting",
+      "PURGATORY_ASCENDED": "Rose from purgatory to heaven"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -423,6 +424,7 @@
       "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
       "reincarnate_success": "Reincarnation complete",
+      "rebirth_suggestion": "Suggested by the tenth court from the merit and demerit at conclusion: {{form}}",
       "being_reborn": "Soul is being reborn...",
       "previous_reincarnations": "previous reincarnation(s)",
       "destination": "Destination",
@@ -7089,7 +7091,8 @@
       "appeal_window_closed": "The appeal period ended on {{date}}",
       "not_concluded": "This judgment isn't concluded yet; you can appeal once it is",
       "not_appealable": "This judgment can't be appealed",
-      "past_life_read_only": "Judgments from past lives are read-only"
+      "past_life_read_only": "Judgments from past lives are read-only",
+      "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to"
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",

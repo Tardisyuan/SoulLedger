@@ -1108,7 +1108,8 @@ class TestServiceCreatedNodeApproverIdentity:
         before = Actor.objects.count()
         workflow = self._workflow()
         assert Actor.objects.count() == before
-        assert workflow.nodes.filter(approver_type="SYSTEM").count() == 8
+        # 8 uncast kings + the 结束 step (C-1, 2026-10-27).
+        assert workflow.nodes.filter(approver_type="SYSTEM").count() == 9
 
     def test_wrong_king_cannot_decide_first_court(self):
         """THE regression test, in the shape the live data actually has.

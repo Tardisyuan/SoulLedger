@@ -61,5 +61,8 @@
   "reincarnation.error.rebirth_not_approved",
   "case.attachments.print_failed",
   "soul_app.update_required.open_failed",
-  "soul_app.settings.row_load_failed"
+  "soul_app.settings.row_load_failed",
+  "appeals.refusal.no_appeal_above_minos",
+  "souls.events.PURGATORY_ASCENDED",
+  "souls.detail.rebirth_suggestion"
 ]

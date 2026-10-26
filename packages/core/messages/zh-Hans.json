@@ -331,7 +331,8 @@
       "CITY_GOD_RECEIVED": "城隍收案",
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正",
-      "MENGPO_SOUP_TAKEN": "饮孟婆汤"
+      "MENGPO_SOUP_TAKEN": "饮孟婆汤",
+      "PURGATORY_ASCENDED": "出炼狱，升天堂"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -423,6 +424,7 @@
       "verdict_retry": "重审",
       "reincarnate": "轮回 →",
       "reincarnate_success": "轮回完成",
+      "rebirth_suggestion": "第十殿按结案时的功过建议：{{form}}",
       "being_reborn": "灵魂正在轮回中...",
       "previous_reincarnations": "次前世的轮回记录",
       "destination": "目的地",
@@ -7089,7 +7091,8 @@
       "appeal_window_closed": "申诉期已于 {{date}} 截止",
       "not_concluded": "这件审判还没结案，结案后才能申诉",
       "not_appealable": "这件审判不能申诉",
-      "past_life_read_only": "前世的审判只能查看，不能申诉"
+      "past_life_read_only": "前世的审判只能查看，不能申诉",
+      "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",

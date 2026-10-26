@@ -949,7 +949,7 @@ class CrossTenantJudgmentService:
         `realm_code` 必须属于参与方的文明(不跨宇宙观,同 `StatuteCitationService.resolve`);
         `is_eternal` / `memory_reset` 抄自 realm,与 `DispositionService.create_from_judgment` 同一抄法。
         """
-        from apps.realms.models import Realm
+        from apps.realms.models import realm_by_code
 
         # 锁序 联审 → 参与方,与 `conclude` 相同:结束与填写并发时,要么填写在校验之前落地,
         # 要么看到 CONCLUDED 被拒 —— 不会有「校验通过之后才改」的节点内容。
@@ -962,7 +962,7 @@ class CrossTenantJudgmentService:
         if locked.role == ParticipantRole.ADVISOR:
             raise ValueError("An ADVISOR carries no sentence node")
         civilization = participant.participant_tenant.civilization  # 新建的殿也有文明(见 `eligible_realms`)
-        realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
+        realm = realm_by_code(realm_code, tenant_id=participant.participant_tenant_id)
         if realm is None or realm.civilization != civilization:
             raise ValueError(f"Realm {realm_code!r} is not a realm of {participant.participant_tenant.code}")
 

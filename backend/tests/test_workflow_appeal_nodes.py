@@ -311,7 +311,7 @@ def test_a_template_with_no_nodes_is_refused_rather_than_stored(seeded):
     [
         (
             Civilization.EUROPEAN,
-            [("申诉受理", "SYSTEM", None),
+            [("申诉受理", "ROLE", None),
              ("Michael · 引领呈上", "ACTOR", "Michael"),
              ("Christ · 终审", "ACTOR", "Christ")],
         ),
@@ -326,12 +326,12 @@ def test_a_template_with_no_nodes_is_refused_rather_than_stored(seeded):
 def test_the_new_appeal_nodes_designate_the_gods_the_cast_supplies(
     seeded, civilization, expected
 ):
-    """Every named step resolves to a seeded Actor; the unnamed one stays SYSTEM.
+    """Every named step resolves to a seeded Actor; the unnamed one takes the default role (X-3).
 
     Nodes that name somebody the cast cannot supply are created SYSTEM and are
     then approvable by nobody — a workflow with nodes that is stuck anyway,
     which would be a quieter version of the defect this file is about. 「申诉
-    受理」 is SYSTEM deliberately: it names an act, and is recorded as such in
+    受理」 names no person deliberately (it is the JUDGE role since 2026-10-27): it names an act, and is recorded as such in
     `TEMPLATE_NODES_WITHOUT_AN_APPROVER`.
     """
     tenant = _tenant(civilization)

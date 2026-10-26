@@ -6334,6 +6334,7 @@ paths:
           - POST_CREATED
           - POST_DELETED
           - POST_UPDATED
+          - PURGATORY_ASCENDED
           - REACTION_ADDED
           - REACTION_REMOVED
           - REBIRTH_APPLICATION_SUBMITTED
@@ -6422,6 +6423,7 @@ paths:
           * `CITY_GOD_SENT_ON` - City God Sent On
           * `CITY_GOD_RETURNED` - City God Returned
           * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
+          * `PURGATORY_ASCENDED` - Purgatory Ascended
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6556,6 +6558,7 @@ paths:
           - POST_CREATED
           - POST_DELETED
           - POST_UPDATED
+          - PURGATORY_ASCENDED
           - REACTION_ADDED
           - REACTION_REMOVED
           - REBIRTH_APPLICATION_SUBMITTED
@@ -6644,6 +6647,7 @@ paths:
           * `CITY_GOD_SENT_ON` - City God Sent On
           * `CITY_GOD_RETURNED` - City God Returned
           * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
+          * `PURGATORY_ASCENDED` - Purgatory Ascended
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -20085,7 +20089,7 @@ paths:
           description: ''
     post:
       operationId: v1_tenants_create
-      description: 建殿(ADMIN)。审计一条 CREATE(由审计信号写)。
+      description: 建殿(ADMIN)。审计一条 CREATE(由审计信号写)。按文明种下界域、神祇、条文与正式流程模板(官员仍由管理员添加)。
       tags:
       - v1
       requestBody:
@@ -25992,6 +25996,10 @@ components:
           description: The soul has been reborn since the life this disposition belongs
             to.
           readOnly: true
+        suggested_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -26026,6 +26034,7 @@ components:
       - soul_name
       - soul_reborn
       - soul_state
+      - suggested_rebirth_form
       - term_end
       - verdict
     DispositionSectionEnum:
@@ -26868,6 +26877,7 @@ components:
       - CITY_GOD_SENT_ON
       - CITY_GOD_RETURNED
       - MENGPO_SOUP_TAKEN
+      - PURGATORY_ASCENDED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -26927,6 +26937,7 @@ components:
         * `CITY_GOD_SENT_ON` - City God Sent On
         * `CITY_GOD_RETURNED` - City God Returned
         * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
+        * `PURGATORY_ASCENDED` - Purgatory Ascended
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -35064,6 +35075,10 @@ components:
           type: boolean
           description: The soul has been reborn since the life this disposition belongs
             to.
+          readOnly: true
+        suggested_rebirth_form:
+          type: string
+          nullable: true
           readOnly: true
         is_archived:
           type: boolean
