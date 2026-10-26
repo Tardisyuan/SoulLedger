@@ -343,6 +343,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         indexes = [
             models.Index(fields=["tenant", "current_state"]),
             models.Index(fields=["current_state"]),
+            # The default list order is `-create_time`, always inside one tenant;
+            # without this PostgreSQL sorts the tenant's rows on every page.
+            models.Index(fields=["tenant", "-create_time"], name="souls_soul_tenant_created_idx"),
+            models.Index(fields=["tenant", "name"], name="souls_soul_tenant_name_idx"),
         ]
         constraints = [
             # 参与算术或路由决策的字段,过去一个约束都没有。`full_clean()` 实跑:
