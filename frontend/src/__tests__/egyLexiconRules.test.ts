@@ -180,8 +180,10 @@ const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
  */
 const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
   // 第三十四批:重置密码窗口里的「确认重置」「重置失败」,中文省了「密码」,重置的就是密码。
-  // 第三十五批:导入模板说明里 password 列写的是英文列名,中文没有「密码」二字,说的就是密码。
-  "users.import.template_notes",
+  // (第三十五批的 users.import.template_notes 已撤:第五十四批改写后中文写出了「密码」。)
+  // 第五十四批:邀请落地页「再输一次」「两次输入的不一样」,说的是新密码。
+  "acceptInvite.confirm_password",
+  "acceptInvite.mismatch",
   "users.reset_password.confirm",
   "users.reset_password.failed",
   "soul_accounts.credentials.reason.voided",
@@ -303,8 +305,7 @@ const TECHNICAL: Record<string, string[]> = {
   "soul_app.login.bad_char_body": ["O", "I", "L"],
   // 第三十三批:单字母快捷键开关的说明,J / K 是键名。
   "shortcuts.single_keys_hint": ["J", "K"],
-  // 第三十五批:用户导入模板说明里的 CSV 列名与角色值是文件里要照写的字面值,egy 不译(Design)。
-  "users.import.template_notes": ["username", "password", "role", "VIEWER", "email", "display_name"],
+  // 第三十五批的 users.import.template_notes 列名放行已撤:第五十四批 Design 改写了这条,egy 不再照写列名。
   // 第四十六批:补录出身地域的标识列名,文件里照写的字面值。
   "souls.region_backfill.id_hint": ["soul_id", "soul_code"],
   "souls.region_backfill.file_codes.mixed_id_columns": ["soul_code", "soul_id"],

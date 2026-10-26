@@ -3,7 +3,7 @@
  * 邀请只能由管理员重发,所以失效页不给「再要一个链接」;预览一变就重取,按钮写总件数。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import AcceptInvitePage from "@/app/(auth)/accept-invite/page";
 import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
 import { OfficerDeactivateDialog } from "@/src/components/users/OfficerDeactivateDialog";
@@ -89,7 +89,7 @@ describe("OfficerHandoverDialog", () => {
     );
   const pickTarget = async () => {
     const select = (await screen.findAllByRole("combobox"))[1];
-    await screen.findByRole("option", { name: "bob" });
+    await within(select).findByRole("option", { name: "bob" });
     fireEvent.change(select, { target: { value: "2" } });
   };
 
@@ -102,7 +102,7 @@ describe("OfficerHandoverDialog", () => {
     expect(await screen.findByTestId("handover-preview")).toBeInTheDocument();
     expect(preview).toHaveBeenCalledWith(1, 2);
     expect(screen.getByTestId("handover-pool")).toHaveTextContent("officerHandover.returned_to_pool(1)");
-    expect(screen.getByTestId("handover-submit")).toHaveTextContent("officerHandover.submit 11");
+    expect(screen.getByTestId("handover-submit")).toHaveTextContent("officerHandover.submit_n(11)");
     expect(screen.getByTestId("handover-submit")).toBeEnabled();
   });
 
@@ -128,7 +128,9 @@ describe("OfficerHandoverDialog", () => {
     commit.mockResolvedValue({ data: { judgments: 2, appeals: 0, appeals_returned_to_pool: 1, city_gods: 0, letters: 0 } });
     renderDialog();
     await pickTarget();
-    fireEvent.click(await screen.findByTestId("handover-submit"));
+    // The button stays disabled until the preview is in.
+    await waitFor(() => expect(screen.getByTestId("handover-submit")).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId("handover-submit"));
     await waitFor(() => expect(screen.getByTestId("handover-result")).toBeInTheDocument());
     expect(screen.getByText("officerHandover.result_pool(1)")).toBeInTheDocument();
     // 3 previewed, 3 moved (2 + 1 to the pool): nothing fewer.

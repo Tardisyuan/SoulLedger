@@ -48,6 +48,8 @@ const COLLECTED_FILES = [
   // 2026-10-16 core 每个 xxxApi 方法的路径都在后端 OpenAPI 里。
   "apiEndpointContract.test.ts",
   // 2026-10-16 灵魂端客户端:失败分类与 401 换令牌。
+  "HallLifecycleDialogs.test.tsx",
+  "HallsOverviewPage.test.tsx",
   "soulClientErrors.test.ts",
   // 2026-10-16 官员端审批 / 加签被拒的读法。
   "officerDecisionErrors.test.ts",
@@ -55,6 +57,7 @@ const COLLECTED_FILES = [
   // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
   "ApiKeysPanel.test.tsx",
   // 2026-10-08 管理端 Webhook:/death-sync/webhooks。
+  "SoupBlock.test.tsx",
   "WebhooksPanel.test.tsx",
   "LoginLogPage.test.tsx",
   "AppLayout.test.tsx",
