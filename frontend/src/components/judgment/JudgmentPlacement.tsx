@@ -36,6 +36,7 @@ export const PLACEMENT_REFUSALS = [
   "term_conflict",
   "eternal_not_allowed",
   "destination_not_applicable",
+  "term_not_applicable",
 ] as const;
 
 /** 这份发落在 `verdict` 之下要加进结案请求的字段;为别的裁决选的发落一律不带。 */
@@ -83,6 +84,7 @@ export function JudgmentPlacement({
   onChange,
   refusal,
   savedAt,
+  noTerm = false,
 }: {
   judgmentId: string;
   verdict: string;
@@ -92,6 +94,8 @@ export function JudgmentPlacement({
   refusal?: string | null;
   /** The draft's `draft_saved_at`: 「已自动保存 HH:MM」 at the right of the header while there is a draft. */
   savedAt?: string | null;
+  /** 埃及:芦苇原与第二死都不服刑(docs/02 §5.2、03 §五),不给刑期一栏;服务端拒收 `term_not_applicable`。 */
+  noTerm?: boolean;
 }) {
   const { t, formatDateTime } = useI18n();
   const { data, isLoading, isError } = useJudgmentDestinations(judgmentId, (verdict || null) as JudgmentVerdict | null);
@@ -147,14 +151,14 @@ export function JudgmentPlacement({
             })),
           ]}
         />
-        <TextField
+        {!noTerm && <TextField
           label={t("judgment.placement.term")}
           inputMode="numeric"
           value={current.eternal ? "" : current.term}
           disabled={current.eternal}
           // 只收正整数:非数字剥掉,前导零与单独的 0 归空。
           onChange={(e) => set({ term: String(Number(e.target.value.replace(/\D/g, "")) || "") })}
-        />
+        />}
         {canBeEternal && (
           <label htmlFor={eternalId} className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink))] md:col-span-2">
             <input

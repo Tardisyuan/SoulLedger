@@ -164,6 +164,9 @@ const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RE
  */
 const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
 
+/** 埃及称心的结案拒绝(apps/judgment/weighing.py),各有一句译文 `judgment.weighing.errors.*`。 */
+const WEIGHING_REFUSALS = ["verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross"] as const;
+
 /*
  * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
  * 字形 + 文字。v3 把「选中」画成墨底反白(原型 `verdict-selector button.selected`):中性,不是第六处
@@ -254,7 +257,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const crossOpen = isCrossJudgmentOpen(cross);
   const crossForced = crossOpen && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
   const crossBlocked = crossOpen && !crossForced;
-  const withWorkflow = createWorkflow || crossForced;
+  /* 埃及:每件案子都称心(docs/02 §5,2026-10-27)。天平给的裁决是唯一能落的「通过 / 不通过」,「待定 / 重审」=
+     天平摇摆、另开一次称量、不发落;原审判的称心流程必走,走完才执行。服务端同样拒收。 */
+  const weighing = judgment?.admitted_balance?.weighing ?? null;
+  const weighedCase = judgment?.judgment_method === "HEART_WEIGHING" && judgment?.kind !== "AMENDMENT";
+  const weighingForced = weighedCase && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
+  const withWorkflow = createWorkflow || crossForced || weighingForced;
   /** W-1a 选站:确认层第 2 步里取消勾选的站(站序)。确认层的步数也在这里(⌘⏎ 按步走)。 */
   const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
   const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
@@ -307,6 +315,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         showToast(t(`sentence_plan.errors.${code}`), "error");
         return;
       }
+      if (code && (WEIGHING_REFUSALS as readonly string[]).includes(code)) {
+        showToast(t(`judgment.weighing.errors.${code}`), "error");
+        return;
+      }
       // 第四十三批的选站拒绝(终审 / 驳回目标 / 跨域审判要流程):译好的一句,不是后端的英文。
       const segmentRefusal = segmentRefusalText(t, segmentRefusalOf(err));
       if (segmentRefusal) {
@@ -341,7 +353,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       if (judgment.verdict) {
         setSelectedVerdict(judgment.verdict);
       } else if (!verdictTouched.current) {
-        setSelectedVerdict(judgment.draft_verdict || DEFAULT_VERDICT);
+        setSelectedVerdict(judgment.draft_verdict || judgment.admitted_balance?.weighing?.weighed_verdict || DEFAULT_VERDICT);
       }
       const savedPlacement = placementFromDraft(judgment);
       if (!placementTouched.current && savedPlacement) setPlacement(savedPlacement);
@@ -366,6 +378,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     const changes = draftToChanges(planDraft);
     if (changes === null) showToast(t("sentence_plan.errors.invalid_changes"), "error");
     return changes;
+  }
+
+  /** 埃及:天平给了「通过」就不能判「不通过」,反之亦然(待定 / 重审 = 天平摇摆,总可以选)。 */
+  function contradictsScale(member: string) {
+    return !!weighing && (member === "PASSED" || member === "FAILED") && member !== weighing.weighed_verdict;
   }
 
   function handleConclude() {
@@ -421,6 +438,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     enabled: !!judgment && !judgment.is_final && canExecute,
   });
   const chooseVerdict = (member: string) => {
+    if (contradictsScale(member)) return; // 快捷键也不能选天平没给的裁决
     verdictTouched.current = true;
     setSelectedVerdict(member);
     draft.markEdited();
@@ -1028,6 +1046,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             {VERDICTS.map((member, index) => {
               const isOrdered = ordered === member;
               const isChosen = selectedVerdict === member;
+              const offScale = !isFinal && contradictsScale(member);
               const marked = isFinal ? isOrdered : isChosen;
               const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
               const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
@@ -1046,13 +1065,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        carries the ring instead, on the same `--color-focus`
                        token globals.css uses. */
                     <label
-                      className={`${tile} cursor-pointer focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
+                      title={offScale ? t("judgment.weighing.contradicts") : undefined}
+                      className={`${tile} ${offScale ? "cursor-not-allowed opacity-40" : "cursor-pointer"} focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
                     >
                       <input
                         type="radio"
                         name="verdict"
                         value={member}
                         checked={isChosen}
+                        disabled={offScale}
                         onChange={(event) => chooseVerdict(event.target.value)}
                         className="sr-only"
                       />
@@ -1063,6 +1084,24 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               );
             })}
           </ol>
+
+          {/* 埃及:天平此刻的读数(按本案采信的证据)与结案时托特记下的结果。 */}
+          {weighing && !isFinal && (
+            <p data-testid="weighing-scale" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
+              {t("judgment.weighing.scale", { weight: String(weighing.heart_weight), counterweight: String(weighing.counterweight) })}
+              {" · "}
+              {t("judgment.weighing.gives", { verdict: t(`judgment.verdicts.${weighing.weighed_verdict.toLowerCase()}`) })}
+              <span className="mt-1 block">{t("judgment.weighing.wavering_hint")}</span>
+            </p>
+          )}
+          {isFinal && judgment.weighing_result && (
+            <p data-testid="weighing-recorded" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
+              {t("judgment.weighing.recorded", {
+                result: t(`judgment.weighing.result.${judgment.weighing_result}`),
+                weight: String(judgment.heart_weight ?? 0),
+              })}
+            </p>
+          )}
 
           {/* ── 进入盖印确认:落判在确认层里,不在这里 ─────────────────────── */}
           {!isFinal && (
@@ -1160,8 +1199,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           )}
 
           {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。 ── */}
-          {!isFinal && isOriginal && canExecute && (
+          {!isFinal && isOriginal && canExecute && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY")) && (
             <JudgmentPlacement
+              noTerm={judgment.civilization === "EGYPTIAN"}
               judgmentId={judgment.id}
               verdict={selectedVerdict}
               value={placement}
@@ -1191,14 +1231,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   id={createWorkflowId}
                   type="checkbox"
                   checked={withWorkflow}
-                  disabled={crossForced}
+                  disabled={crossForced || weighingForced}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
                   className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
                 />
                 <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
                   <span className="text-sm text-[oklch(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
                   <span className="text-xs text-[oklch(var(--color-ink-subtle))] block mt-1 max-w-prose">
-                    {crossForced ? t("workflow.pick.cross_forced") : t("judgment.detail.create_workflow_hint")}
+                    {weighingForced
+                      ? t("judgment.weighing.workflow_forced")
+                      : crossForced
+                        ? t("workflow.pick.cross_forced")
+                        : t("judgment.detail.create_workflow_hint")}
                   </span>
                 </label>
               </div>

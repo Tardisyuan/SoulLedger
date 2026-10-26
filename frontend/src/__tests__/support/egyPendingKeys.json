@@ -58,5 +58,19 @@
   "breadcrumb.menu.group_global",
   "reincarnation.error.plan_in_progress",
   "reincarnation.error.eternal_sentence",
-  "reincarnation.error.rebirth_not_approved"
+  "reincarnation.error.rebirth_not_approved",
+  "judgment.weighing.title",
+  "judgment.weighing.scale",
+  "judgment.weighing.gives",
+  "judgment.weighing.wavering_hint",
+  "judgment.weighing.contradicts",
+  "judgment.weighing.result.LIGHTER",
+  "judgment.weighing.result.HEAVIER",
+  "judgment.weighing.result.WAVERING",
+  "judgment.weighing.recorded",
+  "judgment.weighing.workflow_forced",
+  "judgment.weighing.errors.verdict_contradicts_weighing",
+  "judgment.weighing.errors.wavering_has_no_destination",
+  "judgment.weighing.errors.wavering_with_open_cross",
+  "judgment.placement.errors.term_not_applicable"
 ]

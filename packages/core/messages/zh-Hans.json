@@ -2176,7 +2176,8 @@
         "realm_not_found": "执行失败：目的地不存在",
         "term_conflict": "执行失败：刑期与永恒只能选一个",
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
-        "destination_not_applicable": "执行失败：此案不设发落"
+        "destination_not_applicable": "执行失败：此案不设发落",
+        "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。"
       },
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
@@ -2197,7 +2198,26 @@
     "error": {
       "at_city_god": "城隍初审中，解送后才能认领、结案"
     },
-    "at_city_god": "城隍初审中"
+    "at_city_god": "城隍初审中",
+    "weighing": {
+      "title": "称心",
+      "scale": "心重 {{weight}} · 羽重 {{counterweight}}",
+      "gives": "天平所给：{{verdict}}",
+      "wavering_hint": "「待定」「重审」= 天平摇摆：托特记下，另开一次称量，不发落。",
+      "contradicts": "与天平不符",
+      "result": {
+        "LIGHTER": "未重于羽",
+        "HEAVIER": "重于羽",
+        "WAVERING": "天平摇摆 · 再称"
+      },
+      "recorded": "托特所记：{{result}}（心重 {{weight}}）",
+      "workflow_forced": "埃及案必走称心流程：流程走完才能执行。",
+      "errors": {
+        "verdict_contradicts_weighing": "裁决与天平不符：心不重于羽只能判通过，重于羽只能判不通过。",
+        "wavering_has_no_destination": "天平摇摆时不发落：清空发落再结案，会另开一次称量。",
+        "wavering_with_open_cross": "这件案子挂着未结的联审，先结联审再重称。"
+      }
+    }
   },
   "audit": {
     "title": "审计日志",

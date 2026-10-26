@@ -200,6 +200,9 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   // Nephthys · 复核：埃及申诉流程里 Isis 受理之后的重审，与中国的
   // 「原殿阎王 · 复核」同形，后面还有 Osiris 终审。
   复核: "TRIAL",
+  // 神庭 · 确认：九神会确认托特宣读的称量结果（docs/02 §5.1「Let it not be given to the devourer」）。
+  // 确认一个已经量出的结果，不另作裁断。
+  神庭确认: "EVALUATION",
   // 功德评定（死后世界分流第一步，节点名与「功德核定」的步骤名互为镜像）：
   // 按生前功德衡量，名字说的是一件事不是一个人。
   // Osiris · 判入芦苇原：文件的注写明「分流的**裁定**在两真之殿作出；芦苇原
