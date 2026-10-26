@@ -36,6 +36,10 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // domBoundary / nodeGlobals each build a whole TS program (~4 s idle). Under the load of a full gate
+    // (2026-10-27, load 29) that crossed vitest's 5 s default and read as a boundary failure. Same fix as
+    // the frontend's jest `testTimeout`.
+    testTimeout: 30_000,
     include: ["src/**/*.test.ts"],
     exclude: ["**/node_modules/**", "src/api/generated/**"],
   },
