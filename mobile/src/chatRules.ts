@@ -13,6 +13,7 @@
  * still goes through the backend, which is what lifts it).
  */
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
+import { SOUL_CODE_LENGTH } from "@soulledger/core/domain/soulCode";
 
 export type ChatMode =
   /** ① Free: mutual, or a request that has been answered. */
@@ -98,7 +99,7 @@ export function chatSections(rows: SoulConversation[], lastTs: (roomId: string) 
  */
 export const normalizeCode = (raw: string) => raw.trim().toUpperCase();
 /** `SOUL_CODE_LENGTH` there. Shorter or longer is refused here with its own copy, before asking. */
-export const isCompleteCode = (code: string) => code.length === 10;
+export const isCompleteCode = (code: string) => code.length === SOUL_CODE_LENGTH;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
