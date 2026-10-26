@@ -14,6 +14,8 @@ import { View } from "react-native";
 import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { Row } from "../kit";
+import { useCan, useSession } from "../session";
+import { CaseUpload } from "./caseUpload";
 import { SectionLabel, SmallButton, Txt, space, useI18n, useRemote } from "../shared";
 import { AccountFrame } from "./account";
 
@@ -36,6 +38,9 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
   // 一段取不到不挡别的段:失败 = 那一段不画,整体写一句「案情没有加载出来」。
   const loadRecords = useCallback(() => Promise.resolve().then(() => soulsApi.records(data.soul)).then((r) => r.data), [data.soul]);
   const loadFiles = useCallback(() => Promise.resolve().then(() => judgmentApi.attachments(data.id)), [data.id]);
+  const { state } = useSession();
+  const me = state.status === "signedIn" ? state.user.id : null;
+  const canExecute = useCan("judgment.execute");
   const records = useRemote(loadRecords);
   const files = useRemote(loadFiles);
   const evidence = (records.data ?? []).filter((r) => r.cycle === (data.cycle ?? r.cycle));
@@ -75,15 +80,26 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
           })}
         </View>
       ) : null}
-      {attachments.length > 0 ? (
-        <View style={{ gap: space[2] }}>
-          <SectionLabel>{t("officer_app.case.evidence_attachment", { n: String(attachments.length) })}</SectionLabel>
-          <AttachmentList
-            items={attachments.map((a) => ({ ...a, meta: `${a.uploader_name} · ${formatWhen(a.created_at)}` }))}
-            resolve={(a) => judgmentApi.attachmentLink(data.id, a.id).then((link) => link.url)}
+      <View style={{ gap: space[2] }}>
+        {attachments.length > 0 ? (
+          <>
+            <SectionLabel>{t("officer_app.case.evidence_attachment", { n: String(attachments.length) })}</SectionLabel>
+            <AttachmentList
+              items={attachments.map((a) => ({ ...a, meta: `${a.uploader_name} · ${formatWhen(a.created_at)}` }))}
+              resolve={(a) => judgmentApi.attachmentLink(data.id, a.id).then((link) => link.url)}
+            />
+          </>
+        ) : null}
+        {/* 认领人或持有 judgment.execute 的人才有入口;结案后与没认领各只写一行(服务端同样拒)。 */}
+        {files.data || files.error ? (
+          <CaseUpload
+            judgmentId={data.id}
+            list={files.data ?? null}
+            canWrite={(data.claimed_by != null && data.claimed_by === me) || canExecute}
+            onUploaded={() => void files.reload()}
           />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
       {failed ? (
         <Txt variant="caption" tone="muted" testID="judgment-case-failed">
           {t("officer_app.case.load_failed")}
