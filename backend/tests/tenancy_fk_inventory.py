@@ -41,6 +41,7 @@ EDGES = {
     'death_sync.DeathRegistrationRequest.soul->souls.Soul': ('S->S', 'may cross: residence moves soul.tenant while this row keeps the tenant it was written under'),
     'death_sync.WebhookConfig.api_key->death_sync.ExternalApiKey': ('S->S', 'same hall (the key names the tenant of the webhook)'),
     'dispatch.CrossTenantJudgment.judgment->judgment.Judgment': ('S->S', "the initiating hall's own judgment"),
+    'judgment.Judgment.retrial_of->judgment.Judgment': ('S->S', 'an Egyptian retrial points at the same hall\'s earlier weighing (docs/02 §5.3)'),
     'dispatch.CrossTenantJudgmentParticipant.judgment->dispatch.CrossTenantJudgment': ('S->S', 'crosses by design: the participant row names the invited tenant, the joint judgment the initiating one'),
     'dispatch.CrossTenantJudgmentParticipant.participant_actor->actors.Actor': ('S->S', "crosses by design: an actor of the invited hall sits on the initiating hall's bench"),
     'dispatch.DispatchRecord.soul->souls.Soul': ('S->S', 'may cross: residence moves soul.tenant while this row keeps the tenant it was written under'),

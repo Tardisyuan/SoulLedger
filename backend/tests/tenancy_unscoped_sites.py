@@ -307,7 +307,7 @@ BY_ID_SITES = [
     ('apps/judgment/city_god_views.py', 'CityGodCaseViewSet.transfer', 'CityGod', 1, "city_gods.transfer refuses a target whose tenant_id differs from the judgment's"),
     ('apps/judgment/handover_views.py', '_HandoverBase._people', 'User', 1, "handover._assert_people requires an active officer of the source's hall"),
     ('apps/judgment/views.py', 'JudgmentViewSet._assignee', 'User', 1, "claims.assert_assignable refuses a user of another hall (400, same answer as not found)"),
-    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Judgment', 1, 'update of the judgment this request just created'),
+    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Judgment', 2, 'updates of the judgment this request just created (death columns; Egyptian weighing fields)'),
     ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Soul', 1, 'locks the soul the serializer already resolved through its tenant-scoped queryset'),
     ('apps/officer_app/views.py', 'CosignView.post', 'User', 1, "cosign.add refuses a candidate whose tenant_id differs from the adder's"),
     ('apps/social/media_views.py', 'PostMediaFileView.get', 'User', 1, 'viewer id comes from a signed URL token; access re-checked against the post'),

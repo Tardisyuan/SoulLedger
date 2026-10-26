@@ -372,11 +372,12 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
                 tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
                 if tenant is None or soul.tenant_id != tenant.pk:
                     raise ValidationError({"soul": ["No such soul in this tenant."]})
-            # Asked of a global admin too (2026-10-27): one open case per soul is a business rule, not a tenancy one.
-            if open_judgments(soul).exists():
-                raise ValidationError(
-                    {"soul": ["This soul already has an open case. Conclude it before opening another."]}
-                )
+                # ADMIN is exempt (user decision 2026-09-12, tests/test_admin_is_exempt_from_the_case_state_rules.py):
+                # it is the role that repairs a case stuck open.
+                if open_judgments(soul).exists():
+                    raise ValidationError(
+                        {"soul": ["This soul already has an open case. Conclude it before opening another."]}
+                    )
             was_alive = soul.current_state == SoulState.ALIVE
             super().perform_create(serializer)
             judgment = serializer.instance

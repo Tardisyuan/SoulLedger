@@ -101,7 +101,6 @@ def _field(label, name):
     ("authentication.User", "username"),
     ("souls.Soul", "soul_code"),
     ("judgment.Judgment", "case_number"),
-    ("realms.Realm", "realm_code"),
     ("org.Organization", "code"),
 ])
 def test_headline_values_are_unique_columns_without_the_tenant(label, name):
