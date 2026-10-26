@@ -182,6 +182,23 @@ describe("SoulDetailPage — rebirth form selection", () => {
     expect(mockReborn.mock.calls[0][0]).toMatchObject({ rebirth_form: "HUMAN" });
   });
 
+  it("the tenth court's suggestion is the default and the officer can change it (docs/07 §四)", async () => {
+    mockDispositionList.mockResolvedValue({
+      data: { results: [{ ...pendingDisposition, suggested_rebirth_form: "ANIMAL" }] },
+    });
+    renderPage();
+
+    await screen.findByTestId("rebirth-suggestion");
+    expect(screen.getByRole("radio", { name: "ANIMAL" })).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
+    await waitFor(() => expect(mockReborn).toHaveBeenCalledTimes(1));
+    expect(mockReborn.mock.calls[0][0]).toMatchObject({ rebirth_form: "ANIMAL" });
+
+    fireEvent.click(screen.getByRole("radio", { name: "HUMAN" }));
+    expect(screen.getByRole("radio", { name: "HUMAN" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "ANIMAL" })).not.toBeChecked();
+  });
+
   it("shows no picker for a soul with nothing to reincarnate into", async () => {
     mockDispositionList.mockResolvedValue({ data: { results: [] } });
     renderPage();

@@ -11778,6 +11778,7 @@ export interface components {
             readonly soul_state: components["schemas"]["CurrentStateEnum"];
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn: boolean;
+            readonly suggested_rebirth_form: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -16055,6 +16056,7 @@ export interface components {
             readonly soul_state?: components["schemas"]["CurrentStateEnum"];
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
+            readonly suggested_rebirth_form?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;

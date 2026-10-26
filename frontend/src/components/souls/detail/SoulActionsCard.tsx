@@ -17,6 +17,7 @@ export function SoulActionsCard({
   dispositions,
   reincarnations,
   rebirthForm,
+  suggestedRebirthForm,
   onRebirthFormChange,
   onDie,
   onStartJudgment,
@@ -32,6 +33,8 @@ export function SoulActionsCard({
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
   rebirthForm: RebirthFormValue;
+  /** 第十殿按功过给的六道建议(处置的 `suggested_rebirth_form`);地府以外为 null。 */
+  suggestedRebirthForm?: RebirthFormValue | null;
   onRebirthFormChange: (value: RebirthFormValue) => void;
   onDie: () => void;
   onStartJudgment: () => void;
@@ -105,6 +108,11 @@ export function SoulActionsCard({
                     disabled={!!actionLoading}
                     quota={quota}
                   />
+                  {suggestedRebirthForm && (
+                    <p data-testid="rebirth-suggestion" className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                      {t("souls.detail.rebirth_suggestion", { form: t(`reincarnation.forms.${suggestedRebirthForm}`) })}
+                    </p>
+                  )}
                   {full && (
                     <p role="status" data-testid="rebirth-quota-full" className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">
                       {t("rebirths.quota.full", {
