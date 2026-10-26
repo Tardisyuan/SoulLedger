@@ -331,7 +331,8 @@
       "CITY_GOD_RECEIVED": "Received by the City God",
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
       "CITY_GOD_RETURNED": "Returned by the City God for correction",
-      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting"
+      "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting",
+      "PURGATORY_ASCENDED": "Rose from purgatory to heaven"
     },
     "civilizations": {
       "CHINESE": "Chinese",
