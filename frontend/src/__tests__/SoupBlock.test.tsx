@@ -4,7 +4,9 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
 
-jest.mock("@/src/components/rbac/RequirePermission", () => ({ RequirePermission: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+jest.mock("@/src/hooks/usePermissions", () => ({
+  usePermissions: () => ({ isAdmin: true, hasPermission: () => true, hasAnyPermission: () => true, hasAllPermissions: () => true }),
+}));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: (k: string, p?: Record<string, string>) => (p ? `${k}|${JSON.stringify(p)}` : k), formatDateTime: (v: unknown) => `at:${String(v)}`, locale: "zh-Hans", hydrated: true }),

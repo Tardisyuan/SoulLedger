@@ -80,14 +80,13 @@ export default function AcceptInvitePage() {
 
   const link = "inline-flex min-h-11 items-center text-xs text-[oklch(var(--color-ink))] underline underline-offset-2";
   const box = "rounded-control border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-4 py-3 text-sm";
-  const h1 = "font-title text-xl font-semibold text-[oklch(var(--color-ink))]";
   const note = <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.link_note")}</p>;
 
   return (
     <LoginShell narrowStatute={false} back={{ href: "/login", label: t("auth.back_to_login") }}>
       {phase === "reading" ? null : phase === "invalid" ? (
         <div className="flex flex-col gap-4" data-testid="accept-invite-invalid">
-          <h1 className={h1}>{t("acceptInvite.invalid_title")}</h1>
+          <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("acceptInvite.invalid_title")}</h1>
           <div role="alert" className={box}>
             <p className="text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.invalid_body")}</p>
           </div>
@@ -95,7 +94,7 @@ export default function AcceptInvitePage() {
         </div>
       ) : phase === "done" ? (
         <div className="flex flex-col gap-4" data-testid="accept-invite-done">
-          <h1 className={h1}>{t("acceptInvite.done_title")}</h1>
+          <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("acceptInvite.done_title")}</h1>
           <div role="status" className={`${box} text-[oklch(var(--color-ink))]`}>
             <p className="text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.done_body")}</p>
           </div>
@@ -106,7 +105,7 @@ export default function AcceptInvitePage() {
       ) : (
         <form onSubmit={submit} noValidate className="flex w-full flex-col gap-4" data-testid="accept-invite-form" aria-busy={loading || undefined}>
           <div>
-            <h1 className={h1}>{t("acceptInvite.title")}</h1>
+            <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("acceptInvite.title")}</h1>
             <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.subtitle")}</p>
           </div>
           <PasswordRuleFields

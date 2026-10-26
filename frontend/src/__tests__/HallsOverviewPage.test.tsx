@@ -18,8 +18,8 @@ jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   tenantsApi: { overview: jest.fn() },
 }));
-jest.mock("@/src/components/rbac/RequirePermission", () => ({
-  RequireAdmin: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+jest.mock("@/src/hooks/usePermissions", () => ({
+  usePermissions: () => ({ isAdmin: true, hasPermission: () => true, hasAnyPermission: () => true, hasAllPermissions: () => true }),
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
