@@ -284,3 +284,34 @@ SITES = [
     ('apps/sentence_plan/requests.py', '_finished_plan', 'SentencePlan.all_objects', 1, 'PK', "the finished plan that judgment opened (origin_judgment_id), reopened when its cross-realm judgment concludes PASS; the plan's tenant is that judgment's home hall"),
     ('apps/sentence_plan/services.py', 'SentencePlanService.open_cross_judgment', 'CrossTenantJudgment._base_manager', 1, 'CROSS', 'joint judgment attached to one judgment, still open'),
 ]
+
+
+# ── By-id lookups in views (security review 2026-10-27 #6) ─────────────────────────────────
+# Read by `tests/test_by_id_lookups_in_views_are_declared.py`: every `<Model>.<manager>.get/filter(pk=… | id=…)`
+# in a view module, on a model with a `tenant` column, with no `tenant…` keyword in that same call.
+# The id often comes from the request body, so the row may be in another hall unless something
+# checks it. Entry: (file, "Class.function", model, count, what keeps it in the caller's hall).
+BY_ID_SITES = [
+    ('apps/authentication/impersonation_views.py', 'ImpersonateStartView.post', 'User', 1, 'ADMIN-only endpoint; ADMIN may view any non-admin officer across halls by design'),
+    ('apps/chat/image_views.py', 'ChatImageFileView.get', 'User', 1, 'viewer id comes from a signed URL token, and images.may_view re-checks viewer, image and tenant'),
+    ('apps/chat/image_views.py', 'MeChatImageUploadView.post', 'Conversation', 1, 'images.upload -> _speaker_check refuses a conversation the soul account is not a participant of'),
+    ('apps/chat/views.py', 'MeChatConversationsView.post', 'User', 1, 'svc.open_direct decides reachability from the same set as the circle search (same civilization)'),
+    ('apps/chat/views.py', 'MeChatMessagesView.post', 'Conversation', 1, 'conversation.has_account(account) checked on the next line; 404 otherwise'),
+    ('apps/chat/views.py', 'OfficerInboxViewSet.assign', 'User', 1, "inbox.assign -> is_assignable(target, conversation.tenant_id) refuses another hall's officer"),
+    ('apps/dispatch/views.py', 'CrossTenantJudgmentViewSet.participate', 'Actor', 1, "cross-hall by design: the seat's deity belongs to the invited civilization; add_participant validates it"),
+    ('apps/disposition/views.py', 'DispositionViewSet.execute', 'Disposition', 1, 'locks the disposition already reached through get_object(), by its pk'),
+    ('apps/judgment/attachment_views.py', 'CaseAttachmentActionsMixin._attachment', 'CaseAttachment', 1, 'also filtered by judgment=, a judgment already reached through get_object()'),
+    ('apps/judgment/attachment_views.py', 'CaseAttachmentFileView.get', 'CaseAttachment', 1, 'ids come from a signed URL bound to viewer and tenant; may_view re-checks permission and tenant'),
+    ('apps/judgment/attachment_views.py', 'CaseAttachmentFileView.get', 'User', 1, 'viewer id comes from the same signed URL; may_view re-checks it'),
+    ('apps/judgment/city_god_views.py', 'CityGodCaseViewSet.transfer', 'CityGod', 1, "city_gods.transfer refuses a target whose tenant_id differs from the judgment's"),
+    ('apps/judgment/handover_views.py', '_HandoverBase._people', 'User', 1, "handover._assert_people requires an active officer of the source's hall"),
+    ('apps/judgment/views.py', 'JudgmentViewSet._assignee', 'User', 1, "claims.assert_assignable refuses a user of another hall (400, same answer as not found)"),
+    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Judgment', 1, 'update of the judgment this request just created'),
+    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Soul', 1, 'locks the soul the serializer already resolved through its tenant-scoped queryset'),
+    ('apps/officer_app/views.py', 'CosignView.post', 'User', 1, "cosign.add refuses a candidate whose tenant_id differs from the adder's"),
+    ('apps/social/media_views.py', 'PostMediaFileView.get', 'User', 1, 'viewer id comes from a signed URL token; access re-checked against the post'),
+    ('apps/social/soul_views.py', 'MeSocialCommentsView.post', 'Comment', 1, 'also filtered by author=request.user (the caller\'s own comment)'),
+    ('apps/social/soul_views.py', 'MeSocialFeedView._one', 'Post', 1, 're-reads a post already returned to this caller, to annotate it'),
+    ('apps/social/soul_views.py', 'MeSocialFeedView.post', 'Post', 1, 'also filtered by author=request.user (the caller\'s own post)'),
+    ('apps/workflow/views.py', 'ApprovalWorkflowViewSet.start', 'Judgment', 1, 'also filtered by soul=, a soul already read through scope_to_tenant'),
+]
