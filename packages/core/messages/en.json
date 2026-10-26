@@ -2215,7 +2215,10 @@
       "errors": {
         "verdict_contradicts_weighing": "The verdict contradicts the scale: a heart not heavier than the feather passes, a heavier one fails.",
         "wavering_has_no_destination": "A wavering scale sends the soul nowhere: clear the placement; a new weighing is opened.",
-        "wavering_with_open_cross": "A cross-realm judgment is open on this case; conclude it before weighing again."
+        "wavering_with_open_cross": "A cross-realm judgment is open on this case; conclude it before weighing again.",
+        "weighing_in_progress": "The weighing flow is still running: execution waits for Thoth, the tribunal, Horus and Osiris (or Ammit).",
+        "weighing_rejected": "A station refused the weighing flow: reopen or appeal the case; it cannot be executed.",
+        "weighing_wavers": "A disposition parked by a wavering scale is not executed: open a new weighing."
       }
     }
   },
