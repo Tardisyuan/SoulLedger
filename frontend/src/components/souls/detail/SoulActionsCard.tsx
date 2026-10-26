@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { Button } from "@/src/components/ui/Button";
+import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
 
 /** Left column's 操作 card — the state-machine verbs available on this soul. */
 export function SoulActionsCard({
@@ -22,6 +23,8 @@ export function SoulActionsCard({
   onReincarnate,
   quota,
   quotaRefusal,
+  soupRefused,
+  onDrinkSoup,
 }: {
   soul: Soul | null;
   loading: boolean;
@@ -37,6 +40,9 @@ export function SoulActionsCard({
   quotaRefusal?: RebirthQuotaFull | null;
   /** 本月配额(`/reincarnation/quota/`,页面在有转世可办时才取);没有就不标、不拦。 */
   quota?: readonly RebirthQuotaUsage[];
+  /** 办转世被 409 `soup_not_taken` 拒了:孟婆汤那一块多一句说明,登记之后可以直接再点「转世」。 */
+  soupRefused?: boolean;
+  onDrinkSoup?: () => Promise<void>;
 }) {
   const { t } = useI18n();
   // 本月配额(第五十一批 Q-3):满了的道照样能选,选了它按钮置灰,下面写拒绝那句话 ——
@@ -130,6 +136,26 @@ export function SoulActionsCard({
               <span aria-hidden="true">↻ </span>
               {t("souls.detail.being_reborn")}
             </div>
+          )}
+          {soul?.current_state === "REINCARNATING" && soul.civilization === "CHINESE" && onDrinkSoup && (
+            <SoupBlock name={soul.name} takenAt={soul.soup_taken_at} refused={!!soupRefused} onRegister={onDrinkSoup} />
+          )}
+          {soul?.current_state === "REINCARNATING" && soupRefused && soul.soup_taken_at && (
+            <RequirePermission permissions="reincarnation.reborn">
+              {dispositions.filter((d) => !d.is_executed).map((disp) => (
+                <Button
+                  key={disp.id}
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
+                  onClick={() => onReincarnate(disp.id)}
+                  disabled={!!actionLoading}
+                >
+                  {`${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
+                </Button>
+              ))}
+            </RequirePermission>
           )}
           {soul?.current_state === "ALIVE" && reincarnations.length > 0 && (
             <div className="text-center text-[oklch(var(--color-ink-subtle))] text-xs pt-2">

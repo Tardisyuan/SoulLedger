@@ -19,7 +19,7 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { rebirthQuotaFullOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
+import { rebirthQuotaFullOf, soupNotTakenOf, soupRefusalOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict } from "@soulledger/core/api";
@@ -119,6 +119,8 @@ export default function SoulDetailPage() {
   const [rebirthForm, setRebirthForm] = useState<RebirthFormValue>(DEFAULT_REBIRTH_FORM);
   // 办转世被配额拒了(409 rebirth_quota_full):那句话留在操作卡里,换一道就清掉。
   const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
+  // 办转世被 409 `soup_not_taken` 拒了(地府的灵魂还没饮汤):灵魂留在轮回中,操作卡里的孟婆汤那一块写说明。
+  const [soupRefused, setSoupRefused] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
@@ -397,6 +399,11 @@ export default function SoulDetailPage() {
       void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
     } catch (e: unknown) {
       // 这一道本月满了(并发时刚被用完):不弹 toast,同一句话出现在操作卡里,灵魂留在原处。
+      if (soupNotTakenOf(e)) {
+        setSoupRefused(true);
+        refreshSoulViews();
+        return;
+      }
       const full = rebirthQuotaFullOf(e);
       if (full) {
         setQuotaRefusal(full);
@@ -408,6 +415,18 @@ export default function SoulDetailPage() {
     } finally {
       setActionLoading("");
     }
+  }
+
+  async function handleDrinkSoup() {
+    if (!soul) return;
+    try {
+      await reincarnationApi.drinkSoup(soul.id);
+      showToast(t("mengpoSoup.registered_toast", { name: soul.name }), "success");
+    } catch (e: unknown) {
+      const code = soupRefusalOf(e);
+      showToast(code ? t(`mengpoSoup.error.${code}`) : t("common.error"), "error");
+    }
+    refreshSoulViews();
   }
 
   function handleDeleteConfirm() {
@@ -751,6 +770,8 @@ export default function SoulDetailPage() {
                 setQuotaRefusal(null);
               }}
               quotaRefusal={quotaRefusal}
+              soupRefused={soupRefused}
+              onDrinkSoup={handleDrinkSoup}
               quota={rebirthQuota}
               onDie={handleDie}
               onStartJudgment={handleStartJudgment}
