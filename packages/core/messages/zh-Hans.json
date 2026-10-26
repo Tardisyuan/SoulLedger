@@ -7362,7 +7362,12 @@
       "enter_label": "进入{{name}}查看",
       "empty": "还没有殿",
       "load_failed": "各殿概况没取到",
-      "enter_failed": "没能进入这一殿，请重试"
+      "enter_failed": "没能进入这一殿，请重试",
+      "read_only": "只读",
+      "until": "{{time}} 前有效",
+      "read_only_hint": "全局管理员只读查看，这里不能改动",
+      "expired_title": "只读查看已过期",
+      "expired_body": "每次进入有效 30 分钟，不续期。回到各殿概况，再进入一次。"
     },
     "viewing": {
       "banner": "正在以全局管理员身份查看{{name}}",

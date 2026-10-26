@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { useImpersonation } from "./useImpersonation";
+import { useHallViewExpired } from "./hallViewExpiry";
 import { leaveImpersonation, wireImpersonation } from "./wireImpersonation";
 
 wireImpersonation();
@@ -26,14 +27,15 @@ export function ImpersonationBanner() {
   const state = useImpersonation();
   const [now, setNow] = useState(() => Date.now());
 
+  const hallExpired = useHallViewExpired();
   useEffect(() => {
-    if (!state) return;
+    if (!state || state.hallView) return; // 进殿查看写钟点不倒数,不需要每秒走字
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [state]);
 
   const remaining = state ? state.expiresAt - now : 0;
-  const expired = Boolean(state) && remaining <= 0;
+  const expired = Boolean(state) && !state?.hallView && remaining <= 0;
   useEffect(() => {
     if (expired) void leaveImpersonation();
   }, [expired]);
@@ -58,13 +60,23 @@ export function ImpersonationBanner() {
     >
       <span className="shrink-0 font-semibold">
         <span aria-hidden="true">◐ </span>
-        {t("admin.impersonate.readonly")}
+        {state.hallView ? (
+          <span className="border border-current px-2 py-0.5">{t("halls.overview.read_only")}</span>
+        ) : (
+          t("admin.impersonate.readonly")
+        )}
       </span>
       <span className="min-w-0 flex-1 truncate" title={text}>
         {text}
       </span>
-      <span className="shrink-0 font-mono tabular-nums" data-testid="impersonation-countdown">
-        {t("admin.impersonate.remaining", { time: mmss(remaining) })}
+      <span className="shrink-0 font-mono tabular-nums" data-testid={state.hallView ? "impersonation-until" : "impersonation-countdown"}>
+        {!state.hallView
+          ? t("admin.impersonate.remaining", { time: mmss(remaining) })
+          : hallExpired
+            ? t("soul_accounts.credentials.expired")
+            : t("halls.overview.until", {
+                time: new Date(state.expiresAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false }),
+              })}
       </span>
       <Button type="button" size="sm" variant="secondary" data-testid="impersonation-exit" onClick={() => void leaveImpersonation()}>
         {state.hallView ? t("halls.viewing.back") : t("admin.impersonate.exit")}

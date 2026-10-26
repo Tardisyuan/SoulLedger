@@ -126,3 +126,27 @@ describe("代看期间的 401", () => {
     expect(getAccessToken()).toBe("viewing-token");
   });
 });
+
+describe("进殿查看到期(第五十四批 O-3)", () => {
+  it("过期令牌的 401 标为到期:不跳走、不收场,状态仍在", async () => {
+    const { wireImpersonation } = await import("@/src/components/impersonation/wireImpersonation");
+    wireImpersonation();
+    post.mockResolvedValueOnce({
+      data: {
+        access: "hall-token",
+        impersonation_id: 31,
+        started_at: "2026-10-27T10:00:00Z",
+        expires_at: "2026-10-27T10:30:00Z",
+        code: "CN_DIYU",
+        hall_names: { "zh-Hans": "酆都第十殿" },
+      },
+    });
+    await startHallView("CN_DIYU");
+    const handlers = (api.interceptors.response as unknown as { handlers: ResponseHandler[] }).handlers;
+    const ours = handlers.filter((h) => h?.rejected).pop()?.rejected;
+    const error = { response: { status: 401 }, config: { url: "/souls/" } };
+    await expect(ours?.(error)).rejects.toBe(error);
+    expect(post).toHaveBeenCalledTimes(1); // 没有 /auth/impersonate/end/
+    expect(getImpersonation()?.hallView).toEqual({ code: "CN_DIYU" });
+  });
+});
