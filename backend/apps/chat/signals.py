@@ -7,16 +7,20 @@
 `retired_at` 有且只有那一条写路径,但 post_save 会对每一次保存都触发,包括改密、
 重置凭据这些与聊天无关的写。
 
-**`on_commit`,不是立即。** 停用要发 HTTP 到 Synapse:转世事务万一回滚,一个已经被
+**`on_commit`,不是立即;Synapse 那一半再交给 celery。** 停用要发 HTTP 到 Synapse:转世事务万一回滚,一个已经被
 停用、踢出所有房间的 Matrix 用户是回滚不掉的。聊天没启用或 Synapse 不可达时只记日志,
 不阻断转世(`services.deactivate_for_account`)—— 账号本身已经登不进来了。
 """
+import logging
+
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from apps.events.models import SoulEvent
 from apps.social.models import SocialMute
+
+logger = logging.getLogger(__name__)
 
 #: 改了 `Soul.tenant` 的两条写路径(apps/dispatch/services.py)写的 STATE_CHANGED 动作。
 #: 私聊不看文明(2026-09-19),这里要同步的只剩**殿司收件箱**:灵魂只能写给当前所在的殿司,
@@ -46,9 +50,9 @@ def _mute_changed(sender, instance, **kwargs):
 
 
 def _sync(soul):
-    from apps.chat.services import sync_rooms_quietly
+    from apps.chat.services import enqueue_sync_rooms
 
-    sync_rooms_quietly(soul)
+    enqueue_sync_rooms(soul)
 
 
 @receiver(post_save, sender=SoulEvent, dispatch_uid="chat_retire_matrix_user")
@@ -62,9 +66,16 @@ def _retire_matrix_user(sender, instance, created, **kwargs):
 
 
 def _deactivate(account_id):
-    from apps.chat.services import deactivate_for_account
+    """库内关会话在这里(快、一定成功);Synapse 那一半进 celery,不拖住转世的请求。"""
+    from apps.chat.services import close_conversations_for_account
+    from apps.chat.tasks import deactivate_matrix_task
     from apps.soul_accounts.models import SoulAccount
 
     account = SoulAccount.objects.filter(pk=account_id).select_related("soul").first()
-    if account is not None:
-        deactivate_for_account(account)
+    if account is None:
+        return
+    ids = close_conversations_for_account(account)
+    try:
+        deactivate_matrix_task.delay(account.pk, ids)
+    except Exception:  # noqa: BLE001
+        logger.exception("chat: 停用 Matrix 用户入队失败 account=%s", account.pk)

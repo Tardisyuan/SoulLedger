@@ -429,7 +429,12 @@ def list_roles(request):
         User.objects.filter(role=OuterRef("name")).order_by()
         .values("role").annotate(n=Count("pk")).values("n")
     )
+    active_holders = (
+        User.objects.filter(role=OuterRef("name"), is_active=True).order_by()
+        .values("role").annotate(n=Count("pk")).values("n")
+    )
     roles = Role.objects.annotate(
+        user_count_annotated=Coalesce(Subquery(active_holders, output_field=IntegerField()), 0),
         permission_count_annotated=Count("permissions", filter=Q(permissions__is_deleted=False)),
         member_count_annotated=Coalesce(Subquery(holders, output_field=IntegerField()), 0),
     )

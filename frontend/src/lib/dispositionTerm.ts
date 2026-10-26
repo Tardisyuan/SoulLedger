@@ -1,5 +1,6 @@
 import type { Disposition } from "@soulledger/core/api";
 import type { HistoricalDate } from "@soulledger/core/domain/dates";
+import { daysLeft, historicalDateMs, termFraction } from "@soulledger/core/domain/term";
 
 /**
  * 处置页「执行中」一段的期限条 TermBar 读数。
@@ -19,16 +20,6 @@ export type TermState =
   | { kind: "no_start"; years: number }
   | { kind: "running"; start: HistoricalDate; end: HistoricalDate; fraction: number; daysLeft: number };
 
-const DAY_MS = 86_400_000;
-
-// ponytail: 公元前年份按 JS 天文纪年(0 年存在)换算,跨越公元元年的刑期会差一年;要精确就换成
-// 与后端 apps/souls/dates.py 同一套纪年换算。
-function toMs(date: HistoricalDate): number {
-  const d = new Date(0);
-  d.setUTCFullYear(date.year, (date.month ?? 1) - 1, date.day ?? 1);
-  return d.getTime();
-}
-
 export function termState(
   d: Pick<Disposition, "is_eternal" | "sentence_years" | "term_start" | "term_end">,
   now: number
@@ -39,13 +30,15 @@ export function termState(
   const start = d.term_start;
   if (!start) return { kind: "no_start", years };
   const end: HistoricalDate = d.term_end ?? { ...start, year: start.year + years };
-  const from = toMs(start);
-  const to = toMs(end);
+  const from = historicalDateMs(start);
+  const to = historicalDateMs(end);
   return {
     kind: "running",
     start,
     end,
-    fraction: to > from ? Math.min(1, Math.max(0, (now - from) / (to - from))) : 1,
-    daysLeft: Math.max(0, Math.ceil((to - now) / DAY_MS)),
+    // A zero-length or inverted term has nothing to measure (the soul app hides its bar);
+    // this page always draws one, and a term with no length is served.
+    fraction: termFraction(from, to, now) ?? 1,
+    daysLeft: daysLeft(to, now),
   };
 }

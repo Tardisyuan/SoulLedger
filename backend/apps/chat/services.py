@@ -231,11 +231,23 @@ ACCOUNT_JOINS = ("soul_a", "soul_b", "account_a__user", "account_b__user")
 
 
 def sync_rooms_quietly(soul):
-    """signals 用:聊天没启用、Synapse 不可达都只记日志,不阻断触发它的那件事(禁言、调拨)。"""
+    """celery 任务用:聊天没启用、Synapse 不可达都只记日志(下一次同步补)。"""
     try:
         sync_rooms(soul)
     except MatrixError as exc:
         logger.warning("chat: 同步发言权失败 soul=%s: %s", soul.pk, exc)
+
+
+def enqueue_sync_rooms(soul):
+    """把「重算这个灵魂所有房间的发言权」交给 celery:每个房间一次 Synapse 往返(超时 5+20 秒),
+    不能让 web 请求(打开聊天、禁言、调拨)按房间数串行等。入队失败只记日志 ——
+    发言权下一次任何一方的同步会补上(`sync_rooms` 的筛选连没写成的也算在内)。"""
+    from apps.chat.tasks import sync_rooms_task
+
+    try:
+        sync_rooms_task.delay(soul.pk)
+    except Exception:  # noqa: BLE001
+        logger.exception("chat: 同步发言权入队失败 soul=%s,留给下一次同步", soul.pk)
 
 
 # ── 身份 ─────────────────────────────────────────────────────────────────
@@ -246,7 +258,7 @@ def chat_session(account):
     (禁言到期在这里生效)。"""
     client = get_client()
     identity = ensure_identity(account, client=client)
-    sync_rooms(account.soul, client=client)
+    enqueue_sync_rooms(account.soul)
     return {
         "homeserver": settings.MATRIX_PUBLIC_BASEURL,
         "user_id": identity.matrix_user_id,
@@ -256,24 +268,34 @@ def chat_session(account):
     }
 
 
-def deactivate_for_account(account):
-    """转世停用:先关会话(库里,一定成功),再停 Matrix 用户(= 离开它的所有房间,Synapse 语义)。
-
-    聊天没启用、或 Synapse 暂时不可达时**不阻断转世**:账号本身已经登不进来了
-    (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
-    """
+def close_conversations_for_account(account):
+    """转世停用的库内那一半(一定成功):关掉这个账号的所有未关会话,返回它们的 id。"""
     closing = Conversation.objects.filter(
         Q(account_a=account) | Q(account_b=account), closed_at__isnull=True
     )
     ids = list(closing.values_list("pk", flat=True))
     closing.update(closed_at=timezone.now())
+    return ids
+
+
+def deactivate_matrix_side(account, conversation_ids):
+    """转世停用的 Synapse 那一半(停 Matrix 用户 = 离开它的所有房间,再把关闭的房间降权)。
+
+    聊天没启用、或 Synapse 暂时不可达时**不阻断转世**:账号本身已经登不进来了
+    (`SoulJWTAuthentication` 认 `retired_at`),Matrix 侧留一条日志等人工或下次调用。
+    """
     try:
         identity = deactivate_identity(account)
     except MatrixError as exc:
         logger.warning("chat: 停用 Matrix 用户失败 account=%s: %s", account.pk, exc)
         identity = None
-    silence_closed(ids)
+    silence_closed(conversation_ids)
     return identity
+
+
+def deactivate_for_account(account):
+    """库内先关会话,再(同步)停 Matrix 用户。signals 走拆开的两半:第二半进 celery。"""
+    return deactivate_matrix_side(account, close_conversations_for_account(account))
 
 
 def silence_closed(conversation_ids):

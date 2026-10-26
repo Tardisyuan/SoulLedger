@@ -1,8 +1,7 @@
 /**
  * Tests for src/hooks/useSidebarMenus.ts — the sidebar visibility gates.
  *
- * Five things decide whether a menu row appears: the endpoint chosen by
- * role, the DRF envelope shape, the top-level filter, the `visible` flag,
+ * Five things decide whether a menu row appears: the endpoint, the top-level filter, the `visible` flag,
  * and the recursive prune of children. Each of those fails *silently* —
  * a broken gate shows an extra row or hides a real one, and nothing errors.
  * So every case below asserts on the exact resulting tree, and the
@@ -87,15 +86,18 @@ describe("useSidebarMenus endpoint selection", () => {
     expect(names(result.current.data)).toEqual(["Souls"]);
   });
 
-  it("uses the paginated list() endpoint for a non-ADMIN role", async () => {
+  it("uses the unpaginated all() endpoint for a non-ADMIN role too, and keeps more than one page of menus", async () => {
     mockUser = { id: 2, role: "CLERK" };
-    mockedList.mockResolvedValue({ data: { results: [{ id: 1, name: "Souls", parent: null }] } });
+    // 25 > the backend's PAGE_SIZE of 20: the paginated /menus/ list used to
+    // cut a non-ADMIN sidebar off at page 1.
+    const many = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `Menu ${i + 1}`, parent: null }));
+    mockedAll.mockResolvedValue({ data: many });
 
     const result = await renderMenus();
 
-    expect(mockedList).toHaveBeenCalledTimes(1);
-    expect(mockedAll).not.toHaveBeenCalled();
-    expect(names(result.current.data)).toEqual(["Souls"]);
+    expect(mockedAll).toHaveBeenCalledTimes(1);
+    expect(mockedList).not.toHaveBeenCalled();
+    expect(names(result.current.data)).toHaveLength(25);
   });
 
   it("fetches nothing at all when no user is logged in", () => {
@@ -109,10 +111,10 @@ describe("useSidebarMenus endpoint selection", () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it("refetches through the other endpoint when the role changes", async () => {
+  it("refetches when the role changes (the cache key is role-scoped)", async () => {
     mockUser = { id: 3, role: "CLERK" };
-    mockedList.mockResolvedValue({ data: { results: [{ id: 1, name: "Clerk view", parent: null }] } });
-    mockedAll.mockResolvedValue({ data: [{ id: 2, name: "Admin view", parent: null }] });
+    mockedAll.mockResolvedValueOnce({ data: [{ id: 1, name: "Clerk view", parent: null }] });
+    mockedAll.mockResolvedValueOnce({ data: [{ id: 2, name: "Admin view", parent: null }] });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const sharedWrapper = ({ children }: { children: ReactNode }) =>
       createElement(QueryClientProvider, { client: queryClient }, children);
@@ -124,7 +126,7 @@ describe("useSidebarMenus endpoint selection", () => {
     rerender();
 
     await waitFor(() => expect(names(result.current.data)).toEqual(["Admin view"]));
-    expect(mockedAll).toHaveBeenCalledTimes(1);
+    expect(mockedAll).toHaveBeenCalledTimes(2);
   });
 });
 
