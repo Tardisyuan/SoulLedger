@@ -206,6 +206,42 @@ def candidates(tenant_id, today: datetime.date):
     )
 
 
+def ascend_from_purgatory(disposition, *, via: str) -> bool:
+    """A European soul whose purgatory is over goes up to heaven (user decision 2026-10-27).
+
+    Purgatory is passage, not a third destination: the saved are purged and then enter heaven
+    (docs/01_欧洲天堂地狱整体架构.md §1.2, docs/03_七宗罪与地狱惩罚.md §5.1). ``via`` is ``TERM_SERVED`` (the expiry
+    sweep) or ``PURGATORY_REVIEW`` (a 炼狱复核 flow approved, which counts as served). Only while the soul still
+    stands in that purgatory realm; the move and its ``PURGATORY_ASCENDED`` event are one unit in the caller's
+    transaction. Returns whether the soul moved."""
+    from apps.events.services import EventService
+    from apps.realms.models import RealmType, SoulPathEntry, realm_by_code
+    from apps.realms.path import SoulPathService
+    from apps.souls.models import Civilization
+
+    realm = disposition.destination_realm
+    if realm is None or realm.civilization != Civilization.EUROPEAN or realm.realm_type != RealmType.PURGATORY:
+        return False
+    soul = disposition.soul
+    here = SoulPathEntry.all_objects.filter(soul_id=soul.pk, left_at__isnull=True).values_list("realm_id", flat=True)
+    if realm.pk not in here:
+        return False
+    from apps.disposition.services import DispositionService
+
+    heaven = realm_by_code(DispositionService.EU_HEAVEN, tenant_id=disposition.tenant_id)
+    if heaven is None:
+        logger.warning("purgatory: hall %s has no %s; soul %s stays", disposition.tenant_id,
+                       DispositionService.EU_HEAVEN, soul.pk)
+        return False
+    with transaction.atomic():
+        SoulPathService.enter(soul, heaven, tenant_id=disposition.tenant_id)
+        EventService.log(soul, "PURGATORY_ASCENDED", {
+            "disposition_id": str(disposition.pk), "from_realm": realm.realm_code, "realm": heaven.realm_code,
+            "via": via,
+        })
+    return True
+
+
 def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
     """把这个租户里刑期已走完的处置标为期满。幂等:已标过的不再选中。
 
@@ -215,7 +251,8 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
     `DISPOSITION_EXPIRED`。调用方负责设置租户 contextvar(见 tasks.py),
     审计行才归得到租户。
 
-    不动灵魂状态:期满的灵魂在等轮回,推进它是转生那一步的事。
+    不动灵魂状态:期满的灵魂在等轮回,推进它是转生那一步的事。唯一的例外是欧洲炼狱:期满即升天堂
+    (`ascend_from_purgatory`,同一事务;用户 2026-10-27 决定)。
     """
     from apps.disposition.models import Disposition
     from apps.events.services import log_disposition_expired
@@ -253,6 +290,7 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
                 row.expired_at = now
                 row.save(update_fields=["expired_at"])
                 log_disposition_expired(row)
+                ascend_from_purgatory(row, via="TERM_SERVED")
                 expired += 1
         except Exception:
             logger.exception("disposition expiry: row %s of tenant %s left unexpired", pk, tenant.code)

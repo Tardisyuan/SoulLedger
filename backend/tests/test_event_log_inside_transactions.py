@@ -272,6 +272,35 @@ def _workflow_decision(verdict, event_type):
     return path
 
 
+def _purgatory_review_ascends():
+    """2026-10-27(docs-others E-1):炼狱复核的最后一站通过 → 灵魂升天堂,PURGATORY_ASCENDED 与那次决定同一事务。"""
+    from apps.authentication.models import User
+    from apps.realms.models import Realm
+    from apps.realms.path import SoulPathService
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+    from tests.soul_account_support import dead_soul, officer_client
+
+    tenant = plan.tenant("EU_HEAVEN_HELL")
+    purgatory, _heaven = (Realm.all_objects.create(realm_code=code, civilization="EUROPEAN", name_local=code,
+                                                   realm_type=kind, tenant=tenant)
+                          for code, kind in (("EU_PURGATORY", "PURGATORY"), ("EU_HEAVEN", "BLISS")))
+    soul = dead_soul(tenant, name="炼狱魂", state=SoulState.SETTLED)
+    Disposition.objects.create(soul=soul, tenant=tenant, destination_realm=purgatory, is_executed=True,
+                               executed_at=timezone.now(), sentence_years=10)
+    SoulPathService.enter(soul, purgatory, tenant_id=tenant.pk)
+    wf = ApprovalWorkflow.objects.create(soul=soul, workflow_name="炼狱复核", case_type="PURGATORY_REVIEW",
+                                         status=ApprovalWorkflowStatus.IN_PROGRESS, tenant=tenant)
+    node = ApprovalNode.objects.create(workflow=wf, node_name="天堂准入终审", node_order=1, node_type="FINAL",
+                                       approver_type="ROLE", approver_role="JUDGE", status=NodeStatus.PENDING,
+                                       activated_at=timezone.now())
+    wf.current_node = node
+    wf.save(update_fields=["current_node"])
+    judge = User.objects.get_or_create(username="evlog_eu_judge", defaults={"role": "JUDGE", "tenant": tenant})[0]
+    return (lambda: officer_client(judge).post(f"/api/v1/workflows/{wf.pk}/approve_node/",
+                                               {"verdict": "PASSED", "notes": "x"}, format="json"),
+            lambda: ApprovalNode.all_objects.get(pk=node.pk).status != NodeStatus.PENDING, "PURGATORY_ASCENDED")
+
+
 def _workflow_timeout_reject():
     from apps.workflow import timeouts
     from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus
@@ -518,6 +547,7 @@ PATHS = {
     "workflow_approve/WORKFLOW_APPROVED": _workflow_decision("PASSED", "WORKFLOW_APPROVED"),
     "workflow_reject/WORKFLOW_REJECTED": _workflow_decision("FAILED", "WORKFLOW_REJECTED"),
     "workflow_timeout_reject/WORKFLOW_REJECTED": _workflow_timeout_reject,
+    "purgatory_review/PURGATORY_ASCENDED": _purgatory_review_ascends,
     # the application's status follows the decision IN the decision's transaction (`sync_from_workflow`)
     "rebirth_approve+sync/REBIRTH_STATUS_CHANGED": _rebirth_decision_syncs_the_application,
     "rebirth_timeout+sync/REBIRTH_STATUS_CHANGED": _rebirth_timeout_syncs_the_application,

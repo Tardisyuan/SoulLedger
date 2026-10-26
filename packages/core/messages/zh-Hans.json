@@ -331,7 +331,8 @@
       "CITY_GOD_RECEIVED": "城隍收案",
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正",
-      "MENGPO_SOUP_TAKEN": "饮孟婆汤"
+      "MENGPO_SOUP_TAKEN": "饮孟婆汤",
+      "PURGATORY_ASCENDED": "出炼狱，升天堂"
     },
     "civilizations": {
       "CHINESE": "中国",

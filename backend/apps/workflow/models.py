@@ -708,6 +708,24 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)
+        if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
+            self._purgatory_review_passed(now)
+
+    def _purgatory_review_passed(self, now) -> None:
+        """炼狱复核 approved (天堂准入): the soul's purgatory counts as served and it goes up to heaven
+        (user decision 2026-10-27; docs/01_欧洲 §1.2). Same transaction as the decision that completed the flow."""
+        from apps.disposition.expiry import ascend_from_purgatory
+        from apps.disposition.models import Disposition
+
+        disposition = (
+            Disposition.all_objects.select_related("destination_realm", "soul")
+            .filter(soul_id=self.soul_id, is_executed=True, is_deleted=False,
+                    destination_realm__realm_type="PURGATORY")
+            .order_by("-executed_at").first()
+        )
+        if disposition is not None and ascend_from_purgatory(disposition, via="PURGATORY_REVIEW"):
+            if disposition.expired_at is None:
+                Disposition.all_objects.filter(pk=disposition.pk).update(expired_at=now)
 
     def _fail_target(self, node: "ApprovalNode") -> "ApprovalNode | None":
         """Where `on_fail` jumps, or None (the FAIL then ends the flow REJECTED).

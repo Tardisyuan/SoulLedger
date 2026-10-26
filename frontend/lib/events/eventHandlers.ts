@@ -143,6 +143,9 @@ export const EVENT_LABELS: Record<string, string> = {
   // Mengpo soup (孟婆汤)
   MENGPO_SOUP_TAKEN: "Drank the soup of forgetting",
 
+  // Purgatory → heaven (欧洲, 2026-10-27)
+  PURGATORY_ASCENDED: "Rose from purgatory to heaven",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

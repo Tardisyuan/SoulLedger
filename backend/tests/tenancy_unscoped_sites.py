@@ -167,6 +167,8 @@ SITES = [
     ('apps/realms/path.py', 'SoulPathService._open_entry', 'SoulPathEntry.all_objects', 1, 'LOCK', 'locks the open path entry of one soul by soul_id'),
     ('apps/realms/path.py', 'SoulPathService.enter', 'SoulPathEntry.all_objects', 2, 'PK', 'path entries of one soul'),
     ('apps/realms/path.py', 'entry_realm_for', 'Realm.all_objects', 1, 'FILTERED', 'explicit tenant_id=soul.tenant_id'),
+    ('apps/disposition/expiry.py', 'ascend_from_purgatory', 'SoulPathEntry.all_objects', 1, 'PK', "the soul's own open path entry, by soul_id of a disposition the caller already holds"),
+    ('apps/workflow/models.py', 'ApprovalWorkflow._purgatory_review_passed', 'Disposition.all_objects', 2, 'PK', "the workflow's own soul's dispositions, by soul_id; then one row by its pk"),
     ('apps/realms/models.py', 'realm_by_code', 'Realm.all_objects', 1, 'FILTERED', 'explicit tenant (by id or code) filter; falls back only to hall-less rows (tenant IS NULL)'),
     ('apps/reincarnation/services.py', 'ReincarnationService.complete_rebirth', 'Tenant.objects', 1, 'LOCK', 'locks the soul\'s own hall row by pk for the rebirth quota count (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/reincarnation/services.py', 'ReincarnationService.complete_rebirth', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
