@@ -64,6 +64,12 @@ if [ -z "${GATES_QOS_APPLIED:-}" ] && [ "${GATES_QOS:-utility}" != none ] && com
     export GATES_QOS_APPLIED=1
     exec taskpolicy -c "${GATES_QOS:-utility}" nice -n 10 bash "${BASH_SOURCE[0]}" "$@"
 fi
+# TWO WORKERS PER TEST RUNNER (2026-10-27, user decision). The QoS clamp above yields CPU but not memory:
+# 4 pytest workers + 4 jsdom jest workers (up to 1 GB each) pushed this 16 GB Mac into swap and froze the
+# desktop through four full runs in one evening. PYTEST_WORKERS / JEST_WORKERS / VITEST_WORKERS override.
+export JEST_WORKERS="${JEST_WORKERS:-2}"
+PYTEST_WORKERS="${PYTEST_WORKERS:-2}"
+VITEST_WORKERS="${VITEST_WORKERS:-2}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREPUSH=0; MODE=auto; BASE=""
@@ -423,6 +429,11 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify-officer: officer=$RUN_OFFICER"
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-meta: meta=$RUN_META"
+    if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
+        SEL=$(echo "$CHANGED" | python3 -I "$HERE/select-backend-tests.py")
+        case "$SEL" in FULL*) echo "classify-backend-select: whole suite (${SEL#FULL	})" ;;
+                       *) echo "classify-backend-select: $(echo "$SEL" | grep -c . || true) test files" ;; esac
+    fi
     echo "classify-jest: full=$([ -n "$FULL_F" ] && echo 1 || echo 0)"
     printf '%s' "$FULL_F" | sed 's/^/  full because: /'
     echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
@@ -482,7 +493,7 @@ if [ "$RUN_CORE" = 1 ]; then
     # `rootDir` at the repo root and a path-scoped coverageThreshold for
     # `packages/core/src`, and the frontend gate below runs that.
     echo "  → core vitest"
-    npm run --workspace packages/core test --silent \
+    npm run --workspace packages/core test --silent -- --maxWorkers="$VITEST_WORKERS" \
         || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
 fi
 
@@ -837,13 +848,12 @@ PROBE_PY
     # piped through `tail` printed nothing until it ended. The full log is kept
     # on failure, like the jest one above.
     #
-    # -n 4 (pytest-xdist, requirements-dev.txt) when it is installed: measured
-    # 2026-09-29 at 4:21 against 5:43 serial for this selection, and -n 6 was no
-    # faster (each worker spends ~36 s building its own test database).
+    # -n $PYTEST_WORKERS (pytest-xdist, requirements-dev.txt) when it is installed. 2 since 2026-10-27
+    # (see TWO WORKERS near the top); it was 4 (measured 2026-09-29 at 4:21 against 5:43 serial).
     # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
     XDIST=""
-    if [ "${PYTEST_WORKERS:-4}" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
-        XDIST="-n ${PYTEST_WORKERS:-4}"
+    if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
+        XDIST="-n $PYTEST_WORKERS"
         echo "    (pytest-xdist: $XDIST)"
     fi
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
@@ -866,6 +876,30 @@ PROBE_PY
         PYTEST_PATHS="$BACKEND_READERS"
         [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
         echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
+    fi
+    # BY APP, NOT THE WHOLE SUITE (2026-10-27, user decision): a backend change runs the test files
+    # that belong to, name, or call the URLs of the apps it touched — scripts/select-backend-tests.py,
+    # which also says when a change cannot be traced (settings, a conftest, dependencies) and the
+    # whole suite runs. --full / GATES_FULL=1 always run everything. The files that read other areas
+    # (reads-outside-backend.txt) are added as on a backend-less push.
+    if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
+        echo "    (whole suite: no select-backend-tests.py next to this script)"
+    elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
+        SELECTED=$(echo "$CHANGED" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
+        case "$SELECTED" in
+            FULL*) echo "    (whole suite: ${SELECTED#FULL	})" ;;
+            *)
+                READERS=$(TOPS="$TOPS" awk '
+                    BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
+                    /^[[:space:]]*(#|$)/ { next }
+                    { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
+                ' "$READERS_LIST" 2>/dev/null)
+                PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
+                [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+                echo "    (by app: $(echo "$PYTEST_PATHS" | grep -c . || true) test files — scripts/select-backend-tests.py; --full runs all)"
+                [ -z "$PYTEST_PATHS" ] && RUN_BACKEND=0
+                ;;
+        esac
     fi
     if [ "$RUN_BACKEND" = 0 ] && [ -z "$PYTEST_PATHS" ]; then
         echo "    nothing to run"
