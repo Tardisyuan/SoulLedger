@@ -88,7 +88,10 @@ class Realm(AuditUserFields, models.Model):
     Examples: 奈何狱 (Chinese), Heaven (EU), Aaru (EG)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    realm_code = models.CharField(max_length=50, unique=True)
+    # Unique per hall, not globally (2026-10-27, docs-others X-1): a hall the global admin creates is seeded
+    # with its civilization's realms under the same codes, because the codes are the routing join key
+    # (`allowed_realm_codes`). Look a code up with `realm_by_code`, which asks within a hall.
+    realm_code = models.CharField(max_length=50)
     civilization = models.CharField(max_length=20, choices=Civilization.choices)
     # Local name in native script (保留原生语言)
     name_local = models.CharField(max_length=255, help_text="Native/local name")
@@ -214,6 +217,10 @@ class Realm(AuditUserFields, models.Model):
             models.Index(fields=["tenant", "civilization"]),
             models.Index(fields=["realm_code"]),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "realm_code"], condition=models.Q(is_deleted=False),
+                                    name="unique_realm_tenant_code"),
+        ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
@@ -233,6 +240,16 @@ class Realm(AuditUserFields, models.Model):
             name_en=self.name_en,
             name_egy=self.name_egy,
         )
+
+
+def realm_by_code(code, *, tenant_id=None, tenant_code=None):
+    """The live realm with this code in this hall (codes are per hall since 2026-10-27), else a hall-less row."""
+    live = Realm.all_objects.filter(realm_code=code or "", is_deleted=False)
+    if tenant_code is not None:
+        mine = live.filter(tenant__code=tenant_code)
+    else:
+        mine = live.filter(tenant_id=tenant_id)
+    return mine.first() or live.filter(tenant__isnull=True).first()
 
 
 class SoulPathEntry(models.Model):
