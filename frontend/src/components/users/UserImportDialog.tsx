@@ -41,7 +41,7 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
   const [preview, setPreview] = useState<UserImportPreview | null>(null);
   const [fileError, setFileError] = useState<UserImportFileError | null>(null);
   const [onlyErrors, setOnlyErrors] = useState(false);
-  const [created, setCreated] = useState<number | null>(null);
+  const [created, setCreated] = useState<{ created: number; invited: number } | null>(null);
   const [commitFailed, setCommitFailed] = useState(false);
 
   const reset = () => {
@@ -84,7 +84,7 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
     commitMutation.mutate(formOf(file), {
       onSuccess: (result) => {
         if (result.errors.length > 0) setCommitFailed(true);
-        setCreated(result.created);
+        setCreated({ created: result.created, invited: result.invited ?? 0 });
       },
       onError: () => setCommitFailed(true),
     });
@@ -105,6 +105,7 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
   };
 
   const rows = preview ? (onlyErrors ? preview.rows.filter((r) => r.status === "error") : preview.rows) : [];
+  const inviteCount = preview ? preview.rows.filter((r) => r.delivery === "invite").length : 0;
   const blocked = preview !== null && preview.error_count > 0;
   const busy = previewMutation.isPending;
   // 步骤:没预览 = 1,有预览 = 2,导入完 = 3。
@@ -135,7 +136,12 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
           {stepLine}
           <p role="status" className="text-[oklch(var(--color-ink))]">
             <span aria-hidden="true">✓ </span>
-            {t("users.import.success", { n: String(created) })}
+            {t("users.import.success", {
+              created: String(created.created),
+              invited: String(created.invited),
+              // 须改密码 = 导入的减去发了邀请信的;后端不单独给这个数。
+              password: String(created.created - created.invited),
+            })}
           </p>
           {commitFailed && (
             <p role="alert" className="text-sm text-[oklch(var(--color-status-error))]">
@@ -234,6 +240,12 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
                   bad: String(preview.error_count),
                 })}
               </span>
+              <span className="text-sm text-[oklch(var(--color-ink-muted))]">
+                {t("users.import.delivery_summary", {
+                  invite: String(inviteCount),
+                  password: String(preview.rows.length - inviteCount),
+                })}
+              </span>
               <FilterChipToggle pressed={onlyErrors} onPressedChange={setOnlyErrors}>
                 {t("souls.import.only_errors")}
               </FilterChipToggle>
@@ -251,13 +263,14 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
                     <th scope="col" className="px-2 py-1 font-semibold">{t("souls.import.col_row")}</th>
                     <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_username")}</th>
                     <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_name")}</th>
+                    <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.delivery_col")}</th>
                     <th scope="col" className="px-2 py-1 font-semibold">{t("users.import.col_issue")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-2 py-3 text-[oklch(var(--color-ink-muted))]">
+                      <td colSpan={5} className="px-2 py-3 text-[oklch(var(--color-ink-muted))]">
                         {t("souls.import.empty_filtered")}
                       </td>
                     </tr>
@@ -267,6 +280,16 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
                       <td className="px-2 py-1 font-mono">{r.row}</td>
                       <td className="px-2 py-1 font-mono">{r.values.username}</td>
                       <td className="px-2 py-1">{r.values.display_name}</td>
+                      <td className="px-2 py-1">
+                        {r.delivery === "invite" ? (
+                          <span className="inline-flex items-center gap-1 border border-[oklch(var(--color-ink))] px-2">
+                            <span aria-hidden="true">✉</span>
+                            {t("users.import.delivery.invite")}
+                          </span>
+                        ) : (
+                          t("users.import.delivery.password")
+                        )}
+                      </td>
                       <td className="px-2 py-1">
                         {r.errors.length === 0 ? (
                           <span className="text-[oklch(var(--color-ink-muted))]">

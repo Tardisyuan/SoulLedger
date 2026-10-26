@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, PAGE_SIZE, type User } from "@soulledger/core/api";
+import { usersApi, permApi, handoverApi, PAGE_SIZE, type User } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -17,6 +17,9 @@ import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
 import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { UserImportDialog } from "@/src/components/users/UserImportDialog";
+import { OfficerInviteDialog } from "@/src/components/users/OfficerInviteDialog";
+import { OfficerHandoverDialog, previewTotal } from "@/src/components/users/OfficerHandoverDialog";
+import { OfficerDeactivateDialog } from "@/src/components/users/OfficerDeactivateDialog";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -76,6 +79,9 @@ function UsersRoute() {
   const [ordering, setOrdering] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [handoverUser, setHandoverUser] = useState<User | null>(null);
+  const [deactivatePrompt, setDeactivatePrompt] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
@@ -151,6 +157,36 @@ function UsersRoute() {
     },
   });
 
+  // 邀请重发:一直可点、不弹确认(界面不知道邮件到底发没发出去)。旧链接在被接受或 7 天内仍有效。
+  const resendMutation = useMutation({
+    mutationFn: (user: User) =>
+      usersApi.invite({ email: user.email, role: user.role, username: user.username, ...(user.tenant?.code ? { tenant: user.tenant.code } : {}) }),
+    onSuccess: (res, user) => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      showToast(t(res.status === 200 ? "officerInvite.resent_toast" : "officerInvite.sent_toast", { email: user.email }), "success");
+    },
+    onError: () => showToast(t("users.create_error"), "error"),
+  });
+
+  /**
+   * 停用前先问一次「他手上有没有在途的事」(交接预览,只读,每次点停用只调一次):有才弹「停用前先移交?」,
+   * 没有、或预览本身失败(接手人只借用自己做占位,殿外的全局管理员会被后端拒),照旧直接停用。
+   */
+  const requestDeactivate = async (user: User) => {
+    if (myId != null && user.role !== "SOUL" && user.id !== myId) {
+      try {
+        const { data: preview } = await handoverApi.preview(user.id, myId);
+        if (previewTotal(preview) > 0) {
+          setDeactivatePrompt(user);
+          return;
+        }
+      } catch {
+        /* 预览不可用 = 不拦 */
+      }
+    }
+    toggleStatusMutation.mutate({ id: String(user.id), isActive: false });
+  };
+
   const users = data?.results ?? [];
   const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter, organization }), users);
 
@@ -184,6 +220,9 @@ function UsersRoute() {
           <ExportCsvButton fetchCsv={() => usersApi.export()} page={t("users.title")} hall={hall} />
           <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
             {t("users.import.button")}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setIsInviteOpen(true)}>
+            {t("officerInvite.action")}
           </Button>
           <Button type="button" variant="secondary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
@@ -297,6 +336,23 @@ function UsersRoute() {
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </Badge>
               {user.is_eval_identity && <EvalIdentityTag />}
+              {user.invite_pending ? (
+                <span className="ml-2 inline-flex flex-wrap items-center gap-1" data-testid="invite-pending">
+                  <Badge tone="neutral" glyph="✉">{t("officerInvite.pending_badge")}</Badge>
+                  <RequirePermission permissions="user.manage">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      title={t("officerInvite.resend_hint")}
+                      data-testid="invite-resend"
+                      onClick={() => resendMutation.mutate(user)}
+                    >
+                      {t("officerInvite.resend")}
+                    </Button>
+                  </RequirePermission>
+                </span>
+              ) : null}
             </td>}
             {show("mfa") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 三态,字形 + 文字(A12):✓ 已开启 + 日期 / ○ 未开启 · 角色不要求 / ! 要求开启 · 未开启。 */}
@@ -338,6 +394,13 @@ function UsersRoute() {
                     </Button>
                   </RequirePermission>
                 ) : null}
+                {user.role !== "SOUL" && user.is_active ? (
+                  <RequirePermission permissions="judgment.assign">
+                    <Button type="button" size="sm" variant="ghost" data-testid="handover-open" onClick={() => setHandoverUser(user)}>
+                      {t("officerHandover.action")}
+                    </Button>
+                  </RequirePermission>
+                ) : null}
                 <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="ghost" onClick={() => setRolesUser(user)}>
                     {t("users.edit_roles")}
@@ -348,10 +411,9 @@ function UsersRoute() {
                     type="button"
                     size="sm"
                     variant="ghost"
-                    onClick={() => toggleStatusMutation.mutate({
-                      id: String(user.id),
-                      isActive: !user.is_active,
-                    })}
+                    onClick={() => user.is_active
+                      ? void requestDeactivate(user)
+                      : toggleStatusMutation.mutate({ id: String(user.id), isActive: true })}
                     disabled={toggleStatusMutation.isPending}
                   >
                     {user.is_active ? t("users.deactivate") : t("users.activate")}
@@ -393,6 +455,25 @@ function UsersRoute() {
 
       {/* Create/Edit Modal */}
       <UserImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+      <OfficerInviteDialog isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
+      {handoverUser ? <OfficerHandoverDialog from={handoverUser} onClose={() => setHandoverUser(null)} /> : null}
+      {deactivatePrompt ? (
+        <OfficerDeactivateDialog
+          user={deactivatePrompt}
+          pending={toggleStatusMutation.isPending}
+          onClose={() => setDeactivatePrompt(null)}
+          onHandover={() => {
+            setHandoverUser(deactivatePrompt);
+            setDeactivatePrompt(null);
+          }}
+          onDeactivate={() =>
+            toggleStatusMutation.mutate(
+              { id: String(deactivatePrompt.id), isActive: false },
+              { onSettled: () => setDeactivatePrompt(null) },
+            )
+          }
+        />
+      ) : null}
       <UserModal
         isOpen={isModalOpen || !!editingUser}
         onClose={() => {
