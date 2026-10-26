@@ -48,6 +48,7 @@ const ENUM_FIELDS = [
   "new_state",
   "civilization",
   "verdict",
+  "weighing_result",
   "judgment_verdict",
   "draft_verdict",
   "node_type",
