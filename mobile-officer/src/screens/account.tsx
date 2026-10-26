@@ -105,7 +105,7 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
       <Txt variant="title">{t("auth.forgot_password")}</Txt>
       <Txt variant="body" tone="muted">{t("auth.forgot_email_desc")}</Txt>
       {failure ? <Notice tone="neg" testID="forgot-failure">{failure}</Notice> : null}
-      <Input testID="forgot-identifier" label={t("auth.forgot_email_label")} value={identifier} onChangeText={setIdentifier} textContentType="username" autoComplete="username" autoCapitalize="none" autoCorrect={false} />
+      <Input testID="forgot-identifier" label={t("auth.forgot_email_label")} value={identifier} onChangeText={setIdentifier} textContentType="username" autoComplete="username" autoCapitalize="none" autoCorrect={false} keyboardType="ascii-capable" />
       <Button testID="forgot-submit" title={t("auth.forgot_email_submit")} busy={busy} disabled={!identifier.trim()} onPress={submit} />
       <ActionButton testID="forgot-back" kind="outline" title={t("auth.back_to_login")} onPress={onBack} />
     </View>
