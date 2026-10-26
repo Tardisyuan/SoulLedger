@@ -94,7 +94,7 @@ class TestWorkflowServiceCivilizations:
         wf = WorkflowService.create_from_judgment(j)
         assert wf is not None
         assert wf.workflow_name == "十殿审判流程"
-        assert wf.nodes.count() == 10
+        assert wf.nodes.count() == 11  # 2026-10-27: + 结束 node (ten courts end on an 11th)
         assert wf.status == ApprovalWorkflowStatus.IN_PROGRESS
 
     def test_chinese_appeal_workflow(self, cn_tenant_obj):
@@ -196,7 +196,7 @@ class TestWorkflowServiceCivilizations:
         j = self._make_judgment(soul, cn_tenant_obj)
         wf = WorkflowService.create_from_judgment(j)
         stats = WorkflowService.get_workflow_stats(wf)
-        assert stats["total_nodes"] == 10
+        assert stats["total_nodes"] == 11
         assert stats["completed_nodes"] == 0
         assert stats["progress_percent"] == 0.0
 
@@ -208,7 +208,7 @@ class TestWorkflowServiceCivilizations:
         wf.complete_node(first.id, "PASSED", "")
         stats = WorkflowService.get_workflow_stats(wf)
         assert stats["completed_nodes"] == 1
-        assert stats["progress_percent"] == 10.0
+        assert stats["progress_percent"] == pytest.approx(100 / 11)
 
     def test_get_workflow_stats_zero_nodes(self, cn_tenant_obj):
         soul = self._make_soul(cn_tenant_obj, "Empty WF")

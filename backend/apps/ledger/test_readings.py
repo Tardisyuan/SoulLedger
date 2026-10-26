@@ -83,7 +83,7 @@ class TestCivilizationReadings:
         assert reading["heavier_than_feather"] is True
 
     def test_merit_lightens_an_egyptian_heart(self):
-        """docs/02 §3.2: good deeds 减轻心脏. 塞內布's real numbers — 18 points of
+        """埃及文档 02 §3.2: good deeds 减轻心脏. 塞內布's real numbers — 18 points of
         wrongdoing against 24 of merit — leave a heart lighter than the feather;
         the same wrongs with no merit do not."""
         soul = self._soul(self.tenants[Civilization.EGYPTIAN], merits=(24,), demerits=(18,))

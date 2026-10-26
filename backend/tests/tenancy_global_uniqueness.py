@@ -31,7 +31,7 @@ UNIQUE_KEYS = {
     'perm.DataScope:code': ('GLOBAL_VALUE', 'data-scope code, global RBAC table'),
     'perm.Permission:unique_permission_codename_alive': ('GLOBAL_VALUE', 'permission codename, global RBAC table'),
     'perm.Role:unique_role_name_alive': ('GLOBAL_VALUE', 'role name, global RBAC table'),
-    'realms.Realm:realm_code': ('GLOBAL_VALUE', 'realm code; looked up across tenants by dispatch, sentence plans and the ledger'),
+    'realms.Realm:unique_realm_tenant_code': ('PER_TENANT', '(tenant, realm_code) since 2026-10-27: a created hall gets its own copy of its civilization\'s realms; lookups ask within a hall (realm_by_code)'),
     'scheduler.TaskRun:celery_task_id': ('GLOBAL_VALUE', 'Celery task id'),
     'soul_assist.HelpChunk:help_chunk_one_per_entry': ('GLOBAL_VALUE', '(locale, entry_id) of the help corpus; global content'),
     'soul_push.PushDevice:token': ('GLOBAL_VALUE', 'push token of a soul device'),

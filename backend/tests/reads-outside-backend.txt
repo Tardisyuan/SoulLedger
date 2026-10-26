@@ -17,6 +17,7 @@ tests/test_chat_images.py                                        config
 tests/test_chat_inbox_folders.py                                 config
 tests/test_chat_lives.py                                         config
 tests/test_chat_lookup.py                                        config
+tests/test_chat_matrix_off_the_request.py                        config
 tests/test_chat_moves_and_mutes.py                               config
 tests/test_chat_officer_inbox.py                                 config
 tests/test_chat_policy.py                                        config
