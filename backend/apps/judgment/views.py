@@ -191,6 +191,10 @@ def _enter_judgment_realm(soul, judgment):
     SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
 
 
+#: `comments` answers a bare array; a judgment with more 评议 than this shows the oldest.
+COMMENTS_CAP = 500
+
+
 class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
@@ -1166,7 +1170,9 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
     def comments(self, request, pk=None):
         """评议, oldest first. `GET /api/v1/judgment/{id}/comments/` (tenant-scoped through `get_object`)."""
         judgment = self.get_object()
-        return Response(JudgmentCommentSerializer(judgment.comments.select_related("author"), many=True).data)
+        # Bare array, so capped rather than paginated: the oldest COMMENTS_CAP.
+        rows = judgment.comments.select_related("author")[:COMMENTS_CAP]
+        return Response(JudgmentCommentSerializer(rows, many=True).data)
 
     @extend_schema(request=JudgmentCommentSerializer, responses={201: JudgmentCommentSerializer})
     @comments.mapping.post
