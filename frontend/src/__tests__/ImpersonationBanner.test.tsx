@@ -21,6 +21,8 @@ const COPY: Record<string, string> = {
   "admin.impersonate.readonly": "只读",
   "admin.impersonate.exit": "退出查看",
   "admin.impersonate.locked": "查看中，不能操作",
+  "halls.viewing.banner": "正在以全局管理员身份查看{{name}}",
+  "halls.viewing.back": "回到各殿概况",
 };
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -95,6 +97,44 @@ describe("代看固定条", () => {
   it("没有在看时什么都不画", () => {
     render(<ImpersonationBanner />);
     expect(screen.queryByTestId("impersonation-banner")).toBeNull();
+  });
+});
+
+describe("进殿查看(第五十四批 O-2)", () => {
+  function enterHall() {
+    sessionStorage.setItem(
+      IMPERSONATION_KEY,
+      JSON.stringify({
+        id: 9,
+        target: { id: 0, name: "", role: "ADMIN", hall: { "zh-Hans": "酆都第十殿" } },
+        reason: "",
+        expiresAt: Date.now() + 60_000,
+        adminAccess: "admin-token",
+        hallView: { code: "CN_DIYU" },
+      })
+    );
+  }
+
+  it("说看的是哪一殿、退出写「回到各殿概况」;没有理由、没有被看的人", () => {
+    enterHall();
+    render(<ImpersonationBanner />);
+    const banner = screen.getByTestId("impersonation-banner");
+    expect(banner).toHaveTextContent("正在以全局管理员身份查看酆都第十殿");
+    expect(banner).not.toHaveTextContent("理由");
+    expect(banner).not.toHaveTextContent("的身份查看");
+    expect(screen.getByTestId("impersonation-exit")).toHaveTextContent("回到各殿概况");
+    fireEvent.click(screen.getByTestId("impersonation-exit"));
+    expect(leaveImpersonation).toHaveBeenCalledTimes(1);
+  });
+
+  it("写类控件照样置灰", () => {
+    enterHall();
+    render(
+      <RequirePermission permissions="soul.create">
+        <button type="button">go</button>
+      </RequirePermission>
+    );
+    expect(screen.getByText("go").closest("[inert]")).not.toBeNull();
   });
 });
 

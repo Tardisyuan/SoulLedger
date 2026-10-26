@@ -3915,7 +3915,9 @@
       "group_rebirth": "轮回",
       "judgment_appeals": "申诉复核",
       "city_gods": "城隍",
-      "city_god_cases": "城隍初审"
+      "city_god_cases": "城隍初审",
+      "halls": "各殿概况",
+      "group_global": "全局"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -7305,6 +7307,69 @@
       "not_diyu": "只有地府的灵魂要饮孟婆汤",
       "not_reincarnating": "只有候转世的灵魂才能登记饮汤",
       "soup_already_taken": "这一世已经饮过了"
+    }
+  },
+  "halls": {
+    "create": "新建殿",
+    "create_title": "新建殿",
+    "code": "代号",
+    "code_hint": "大写字母开头，只用大写字母、数字和下划线，2–50 位。建好后不能改。",
+    "code_taken": "这个代号已经有殿用了",
+    "code_invalid": "代号格式不对",
+    "civilization": "文明",
+    "civilization_pick": "选一个文明",
+    "civ_mismatch": "{{code}} 是{{civ}}的殿",
+    "name": "名称",
+    "hall_names": "殿的叫法",
+    "hall_names_hint": "egy 留空时用默认叫法",
+    "description_optional": "说明 · 选填",
+    "submit": "新建",
+    "submitting": "新建中…",
+    "created_toast": "已新建{{name}}",
+    "create_failed": "没能新建，请重试",
+    "deactivate": "停用",
+    "activate": "重新启用",
+    "row_menu": "更多操作",
+    "deactivate_title": "停用{{name}}？",
+    "deactivate_body": "数据全部保留，已有的灵魂和案件照常办理。停用后：",
+    "deactivate_no_souls": "不能再登记新灵魂；",
+    "deactivate_no_deaths": "外部系统送来的死亡登记会被拒，重试也一样。",
+    "deactivate_reversible": "随时可以重新启用。殿不能删除。",
+    "deactivated_toast": "已停用{{name}}",
+    "activated_toast": "已重新启用{{name}}",
+    "action_failed": "没能完成，请重试",
+    "overview": {
+      "title": "各殿概况",
+      "subtitle": "只有件数，不列灵魂名；停用的殿也在内。",
+      "sort_label": "排序",
+      "sort_code": "按代号",
+      "sort_todo": "待办多的在前",
+      "col_hall": "殿",
+      "col_todo": "殿内待办",
+      "col_judgments": "未结审判 · 城隍 · 枉死城 · 认领 · 无人",
+      "col_rebirth": "本月转世",
+      "col_appeals": "待复核申诉",
+      "col_enter": "进入",
+      "todo_approvals": "审批 {{n}}",
+      "todo_dispatch": "调入 {{n}}",
+      "todo_cooldowns": "冷却 {{n}}",
+      "todo_letters": "书信 {{n}}",
+      "judgments_label": "未结审判：在城隍处 {{at_city_god}} · 在枉死城 {{held}} · 有人认领 {{claimed}} · 无人认领 {{unclaimed}}",
+      "note": "殿内待办是殿的数，不是某位官员的「待我处理」。",
+      "legend": "分段条：浅 → 深 = 在城隍处 · 在枉死城 · 有人认领；最浅的空格 = 无人认领。",
+      "enter": "进入 →",
+      "enter_label": "进入{{name}}查看",
+      "empty": "还没有殿",
+      "load_failed": "各殿概况没取到",
+      "enter_failed": "没能进入这一殿，请重试"
+    },
+    "viewing": {
+      "banner": "正在以全局管理员身份查看{{name}}",
+      "back": "回到各殿概况"
+    },
+    "audit": {
+      "view_start": "以全局管理员身份查看 {{hall}}",
+      "view_end": "以全局管理员身份查看 {{hall}} · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
     }
   }
 }

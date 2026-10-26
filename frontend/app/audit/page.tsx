@@ -40,6 +40,17 @@ function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<st
   const changes = g.entries[0]?.changes as Record<string, unknown> | null | undefined;
   if (!changes) return null;
   const name = String(changes.target_name ?? "");
+  // 进殿查看(第五十四批 O-2):changes 里是 `hall`(殿代号),没有被看的人与理由。
+  if (typeof changes.hall === "string") {
+    if (g.action === "IMPERSONATE_START") return t("halls.audit.view_start", { hall: changes.hall });
+    if (g.action === "IMPERSONATE_END") {
+      return t("halls.audit.view_end", {
+        hall: changes.hall,
+        minutes: String(changes.minutes ?? 0),
+        pages: String(changes.pages ?? 0),
+      });
+    }
+  }
   if (g.action === "IMPERSONATE_START") {
     return t("audit.descriptions.impersonate_start", { name, reason: String(changes.reason ?? "") });
   }

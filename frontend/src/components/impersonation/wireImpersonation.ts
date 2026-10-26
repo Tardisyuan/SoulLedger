@@ -1,12 +1,22 @@
 import { api } from "@soulledger/core/api/client";
-import { endImpersonation, getImpersonation } from "@soulledger/core/api/impersonation";
+import { endImpersonation, getImpersonation, startHallView } from "@soulledger/core/api/impersonation";
 
 let wired = false;
 
-/** 代看收场的唯一路径:结束(服务端写结束行、放回管理员的 access)并回到用户管理。整页跳转,清掉被看者的缓存。 */
+/**
+ * 代看收场的唯一路径:结束(服务端写结束行、放回管理员的 access)并回到用户管理 —— 进殿查看则回到各殿概况。
+ * 整页跳转,清掉被看者(那一殿)的缓存。
+ */
 export async function leaveImpersonation(): Promise<void> {
+  const back = getImpersonation()?.hallView ? "/halls" : "/users";
   await endImpersonation();
-  if (typeof window !== "undefined") window.location.assign("/users");
+  if (typeof window !== "undefined") window.location.assign(back);
+}
+
+/** 全局管理员只读进入某殿(第五十四批 O-2)并整页跳到 `path`:清掉管理员自己的缓存,页顶出现横幅。失败原样抛。 */
+export async function enterHall(code: string, path: string): Promise<void> {
+  await startHallView(code);
+  if (typeof window !== "undefined") window.location.assign(path);
 }
 
 /**
