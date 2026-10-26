@@ -82,10 +82,17 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
 
     @extend_schema(request=TenantCreateSerializer, responses={201: TenantSerializer})
     def create(self, request, *args, **kwargs):
-        """建殿(ADMIN)。审计一条 CREATE(由审计信号写)。"""
+        """建殿(ADMIN)。审计一条 CREATE(由审计信号写)。按文明种下界域、神祇、条文与正式流程模板(官员仍由管理员添加)。"""
+        from django.db import transaction
+
+        from apps.tenants.hall_seed import seed_hall
+
         serializer = TenantCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        tenant = serializer.save()
+        # The hall and its civilization's seed are one unit (docs-others X-1): no empty shell is left behind.
+        with transaction.atomic():
+            tenant = serializer.save()
+            seed_hall(tenant)
         return Response(TenantSerializer(tenant).data, status=201)
 
     def _set_active(self, request, active):

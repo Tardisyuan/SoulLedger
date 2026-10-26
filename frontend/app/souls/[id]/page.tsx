@@ -116,7 +116,8 @@ export default function SoulDetailPage() {
   // literal "HUMAN", so every soul this app ever reincarnated went into 人道
   // no matter what the six-path enum offered. HUMAN stays the default — 人道
   // is 苦乐参半 and the ordinary case — but it is now a default, not a fact.
-  const [rebirthForm, setRebirthForm] = useState<RebirthFormValue>(DEFAULT_REBIRTH_FORM);
+  // null until the officer picks: then the 第十殿's suggestion (below, once the dispositions are in) stands.
+  const [pickedRebirthForm, setRebirthForm] = useState<RebirthFormValue | null>(null);
   // 办转世被配额拒了(409 rebirth_quota_full):那句话留在操作卡里,换一道就清掉。
   const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
   // 办转世被 409 `soup_not_taken` 拒了(地府的灵魂还没饮汤):灵魂留在轮回中,操作卡里的孟婆汤那一块写说明。
@@ -227,6 +228,9 @@ export default function SoulDetailPage() {
   );
   const judgments = useMemo(() => [...(judgmentsQuery.data?.results ?? NO_JUDGMENTS), ...moreJudgments.rows], [judgmentsQuery.data, moreJudgments.rows]);
   const dispositions = useMemo(() => [...(dispositionsQuery.data?.results ?? NO_DISPOSITIONS), ...moreDispositions.rows], [dispositionsQuery.data, moreDispositions.rows]);
+  // 第十殿按结案时的功过给的六道建议(docs/07 §四,2026-10-27):不改就按它办,官员可改。
+  const suggestedRebirthForm = (dispositions.find((d) => !d.is_executed)?.suggested_rebirth_form ?? null) as RebirthFormValue | null;
+  const rebirthForm = pickedRebirthForm ?? suggestedRebirthForm ?? DEFAULT_REBIRTH_FORM;
   const reincarnations = useMemo(() => [...(reincarnationsQuery.data?.results ?? NO_REINCARNATIONS), ...moreReincarnations.rows], [reincarnationsQuery.data, moreReincarnations.rows]);
   const events = useMemo(() => [...(eventsQuery.data?.results ?? NO_EVENTS), ...moreEvents.rows], [eventsQuery.data, moreEvents.rows]);
   const loadedAll =
@@ -770,6 +774,7 @@ export default function SoulDetailPage() {
               dispositions={dispositions}
               reincarnations={reincarnations}
               rebirthForm={rebirthForm}
+              suggestedRebirthForm={suggestedRebirthForm}
               onRebirthFormChange={(form) => {
                 setRebirthForm(form);
                 setQuotaRefusal(null);

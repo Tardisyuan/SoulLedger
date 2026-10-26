@@ -82,6 +82,12 @@ it("a refused one says why in one grey line and offers no button", () => {
   expect(screen.queryByTestId(`appeal-file-${J}`)).toBeNull();
 });
 
+it("a Greek judgment offers no appeal and says Minos is final (docs/02 希腊 §5.2)", () => {
+  wrap(<AppealLine row={row({ can_appeal: false, refusal_code: "no_appeal_above_minos" })} rounds={[]} onChanged={() => {}} />);
+  expect(screen.getByTestId(`appeal-refusal-${J}`).props.children).toBe("米诺斯的判决是终裁，其上无可申诉");
+  expect(screen.queryByTestId(`appeal-file-${J}`)).toBeNull();
+});
+
 it("a landed decision opens the latest round: 原判 → 新判, the reviewer's note, a row per compensated station", () => {
   const amended = round({
     status: "AMENDED",

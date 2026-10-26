@@ -118,6 +118,10 @@ class EventType(models.TextChoices):
     # 记在灵魂的时间线上,与记下饮汤的那一笔同一事务。payload 只有时间,不带经办官员。
     MENGPO_SOUP_TAKEN = "MENGPO_SOUP_TAKEN"
 
+    # 炼狱升天堂(2026-10-27,只在欧洲;apps/disposition/expiry.py::ascend_from_purgatory)。炼狱期满或炼狱复核
+    # 通过,灵魂从炼狱进天堂,与那一笔同一事务。payload:原处置、从哪一层、到哪、`via`(TERM_SERVED / PURGATORY_REVIEW)。
+    PURGATORY_ASCENDED = "PURGATORY_ASCENDED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

@@ -45,6 +45,7 @@ from apps.workflow.templates import (  # noqa: F401
     WORKFLOW_TEMPLATES,
     _designates_nobody,
     _named_person,
+    formal_template,
 )
 
 
@@ -337,7 +338,8 @@ class WorkflowService:
                 exc_info=True,
             )
 
-        template = WORKFLOW_TEMPLATES.get((civilization, case_type))
+        # The formal flow (return rules, European / Greek ROUTINE, default approver role), docs-others X-2.
+        template = formal_template(civilization, case_type)
         if template and template["nodes"]:
             return template, None
 

@@ -234,7 +234,8 @@ def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
     first, second, third = _by_order(workflow)
 
     assert second.node_name == "四十二神官 · 否定告白"
-    assert (second.approver_type, second.approver_actor_id) == ("SYSTEM", None), (
+    # Not the bench row: the default role (docs-others X-3, 2026-10-27).
+    assert (second.approver_type, second.approver_actor_id, second.approver_role) == ("ROLE", None, "JUDGE"), (
         f"the bench node was resolved to {bench.pk}"
     )
     # …while the two nodes beside it, which do name individuals, resolve.

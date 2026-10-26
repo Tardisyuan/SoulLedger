@@ -1,6 +1,8 @@
 """申诉:灵魂对已结案审判的异议,另一位官员复核(用户 2026-10-24 决定)。`JudgmentAppeal` 只在这里写。
 
 规则
+* 希腊不能申诉:米诺斯之上无可上诉(docs/02_希腊冥府审判与人物详解.md §5.2,用户 2026-10-27),拒绝码
+  `no_appeal_above_minos`。
 * 灵魂只能对**自己本世**、**已结案**的**原审判**(ORIGINAL)申诉;结案后 30 天内;每件审判至多 2 次
   (撤回的也算一次);同一时刻至多一份没有结论的。
 * 复核人不能是作出原判的官员:结案人(`Judgment.concluded_by`)或认领人(`claimed_by`)。
@@ -25,6 +27,7 @@ from apps.judgment.models import (
     JudgmentAppeal,
     JudgmentKind,
 )
+from apps.souls.models import Civilization
 
 
 class AppealRefusedError(ClaimRefusedError):
@@ -74,6 +77,9 @@ def appeal_refusal(judgment, account):
     灵魂端列表用它算 `can_appeal`,`file` 在锁下再问一遍。"""
     if judgment.cycle != account.cycle:
         return AppealRefusedError("A previous life's judgment is read only.", "past_life_read_only", status=403)
+    if judgment.civilization == Civilization.GREEK:
+        # Minos's judgment is the last word: nothing above it to appeal to (docs/02 希腊 §5.2; user 2026-10-27).
+        return AppealRefusedError("Minos's judgment cannot be appealed.", "no_appeal_above_minos")
     if judgment.verdict is None or not judgment.is_final or judgment.is_deleted:
         return AppealRefusedError("This judgment has not been concluded.", "not_concluded")
     if judgment.kind != JudgmentKind.ORIGINAL:

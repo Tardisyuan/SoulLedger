@@ -58,7 +58,7 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
     * 只有 PENDING 节点能被减项(§3.2);已开始的刑要 ABORTED 或撤销整份计划。
     * REOPEN 不带改动(重开审判的结论才改计划,N1=(a))。
     """
-    from apps.realms.models import Realm
+    from apps.realms.models import realm_by_code
     from apps.tenants.models import Tenant
 
     changes = changes or {}
@@ -88,7 +88,7 @@ def normalize_changes(plan, from_tenant_code, changes, kind):
                 "a node elsewhere is added by the home judge through a cross-tenant judgment",
                 "foreign_node",
             )
-        realm = Realm.all_objects.filter(realm_code=item.get("realm_code") or "", is_deleted=False).first()
+        realm = realm_by_code(item.get("realm_code"), tenant_code=from_tenant_code)
         if realm is None or civilization is None or realm.civilization != civilization:
             raise PlanChangeRefusedError(f"Realm {item.get('realm_code')!r} is not a realm of {from_tenant_code}",
                                     "foreign_realm")
@@ -464,7 +464,7 @@ def conclude_reopened(judgment):
     新节点的 realm 按**原属**文明与新裁决路由(同原审判);处置在节点激活时建(`_activate_home_node`),
     挂这件重开审判。永久刑期而后面还有未执行节点 → 409 `eternal_not_last`(Q5),结案回滚。
     """
-    from apps.realms.models import Realm
+    from apps.realms.models import realm_by_code
 
     soul = _lock_soul(judgment.soul)
     plan = _lock_plan(judgment.amends_plan_id)
@@ -476,7 +476,7 @@ def conclude_reopened(judgment):
         node.order += 1
         _save(node, "order")
     realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method, judgment=judgment)
-    realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
+    realm = realm_by_code(realm_code, tenant_id=plan.tenant_id)
     home_code = plan.tenant.code
     new_node = SentenceNode.objects.create(
         plan=plan, order=anchor + 1, tenant_code=home_code, is_home=True, status=SentenceNodeStatus.PENDING,
@@ -506,10 +506,10 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     调用方持有灵魂行锁与事务;计划上的锁序照旧(计划 → 节点 → 处置)。
     """
     from apps.disposition.models import Disposition
-    from apps.realms.models import Realm
+    from apps.realms.models import realm_by_code
 
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
-    realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
+    realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
     content = {
         "realm_code": realm.realm_code if realm else "", "is_eternal": realm.is_eternal if realm else False,
         "memory_reset": (realm.memory_reset_mechanism if realm else None) or "NONE", "sentence_years": None,

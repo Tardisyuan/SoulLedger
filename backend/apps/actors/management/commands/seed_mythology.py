@@ -133,33 +133,7 @@ class Command(MythologySeeder, BaseCommand):
                 self.stdout.write(self.style.MIGRATE_HEADING(f"[{label}] {civilization}"))
 
                 tenant = self._seed_tenant(civilization, tenant_stats)
-                self._seed_realms(civilization, tenant, realms, do_update, realm_stats)
-                self._seed_actors(
-                    civilization, tenant, actors, do_update, actor_stats,
-                    aliases=CIVILIZATION_ACTOR_ALIASES.get(label),
-                )
-                assessors = CIVILIZATION_ASSESSORS.get(label)
-                if assessors:
-                    self._seed_assessors(
-                        civilization, tenant, assessors, do_update, actor_stats
-                    )
-                # Statutes come last within a civilization: the Egyptian corpus
-                # is derived from the assessor rows written immediately above,
-                # and reads them back out of this same transaction.
-                #
-                # A loop rather than one call: a civilization may have more than
-                # one transcribed corpus, and Europe does — the seven capital
-                # sins on the terraces of Purgatorio and the circles of the
-                # Inferno are two structures, not one list. See
-                # CIVILIZATION_STATUTES.
-                for corpus in CIVILIZATION_STATUTES.get(label, ()):
-                    self._seed_statutes(
-                        civilization, tenant, *corpus, do_update, statute_stats
-                    )
-                if assessors:
-                    self._seed_derived_statutes(
-                        civilization, tenant, do_update, statute_stats
-                    )
+                self._seed_civilization(label, tenant, do_update, realm_stats, actor_stats, statute_stats)
                 self.stdout.write("")
 
             if dry_run:
