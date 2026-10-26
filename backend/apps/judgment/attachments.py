@@ -91,6 +91,16 @@ def _prepare(uploaded_file):
     return image.file, image.content_type, image.extension
 
 
+def _with_extension(name, ext):
+    """存下来的格式定后缀:HEIC 转成 JPG 后,显示名不再写 `.heic`(2026-10-27 模拟器上看到 `IMG_0111.heic`)。
+    原名没有后缀或后缀已对(`.jpeg` 也算 JPG)时不动。"""
+    stem, dot, old = name.rpartition(".")
+    if not dot or not stem:
+        return name
+    same = {"jpg": {"jpg", "jpeg"}}.get(ext, {ext})
+    return name if old.lower() in same else f"{stem}.{ext}"
+
+
 def upload(user, judgment, uploaded_file):
     """校验、存盘、建行。拒绝时抛 `AttachmentError`。已在调用方的租户划界与权限闸门之后。"""
     if uploaded_file.size > MAX_FILE_BYTES:
@@ -107,6 +117,7 @@ def upload(user, judgment, uploaded_file):
         if size > MAX_FILE_BYTES:
             raise AttachmentError("Each file must be at most 20 MB.", "too_large", 400)
         _check_room(locked, size)  # 重编码后的大小才是存下来的大小
+        name = _with_extension(name, ext)
         row = CaseAttachment(
             judgment=locked, tenant_id=locked.tenant_id, uploader=user, name=name,
             byte_size=size, content_type=content_type,

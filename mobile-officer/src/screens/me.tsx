@@ -306,7 +306,7 @@ function StatsCard({ onOpen }: { onOpen: () => void }) {
       testID="me-stats"
       minHeight={88}
       title={t("officer_app.stats.title")}
-      lines={[{ one: failed ? t("officer_app.stats.load_failed") : t("officer_app.stats.scope") }]}
+      lines={[failed ? t("officer_app.stats.load_failed") : t("officer_app.stats.scope")]}
       onPress={onOpen}
       right={
         failed ? (

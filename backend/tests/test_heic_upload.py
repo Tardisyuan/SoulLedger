@@ -82,7 +82,8 @@ def test_case_attachment_stores_a_jpg(cn_tenant, judge_user, settings, tmp_path)
     client = officer_client(judge_user)
     res = client.post(url, {"file": as_upload(heic_bytes())}, format="multipart")
     assert res.status_code == 201, res.data
-    assert res.data["content_type"] == "image/jpeg" and res.data["name"] == "IMG_0001.HEIC"
+    # 显示名跟存下的格式走(2026-10-27):转成 JPG 就叫 .jpg,网页上不再像一张打不开的 HEIC。
+    assert res.data["content_type"] == "image/jpeg" and res.data["name"] == "IMG_0001.jpg"
     row = CaseAttachment.all_objects.get(pk=res.data["id"])
     assert row.file.name.endswith(".jpg") and row.content_type == "image/jpeg"
     bad = client.post(url, {"file": as_upload(FAKE_HEIC)}, format="multipart")
@@ -96,3 +97,14 @@ def test_post_media_stores_a_jpg(cn_tenant, settings, tmp_path):
     assert res.status_code == 201, res.content
     assert res.json()["content_type"] == "image/jpeg"
     assert [p.suffix for p in (tmp_path / "media").rglob("*") if p.is_file()] == [".jpg"]
+
+
+def test_the_display_name_follows_the_stored_format():
+    from apps.judgment.attachments import _with_extension
+
+    assert _with_extension("IMG_0001.HEIC", "jpg") == "IMG_0001.jpg"
+    assert _with_extension("scan.jpeg", "jpg") == "scan.jpeg"
+    assert _with_extension("scan.JPG", "jpg") == "scan.JPG"
+    assert _with_extension("notes.pdf", "pdf") == "notes.pdf"
+    assert _with_extension("no-extension", "jpg") == "no-extension"
+    assert _with_extension(".hidden", "jpg") == ".hidden"
