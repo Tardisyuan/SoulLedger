@@ -4152,6 +4152,7 @@
     "app_name": "Soul Ledger",
     "update_required": {
       "title": "Update required",
+      "open_failed": "Could not open the store. Search for the update in the store, or open this link in a browser: {{url}}",
       "body": "This version can no longer be used. After you update, your letters and records will still be there.",
       "button": "Update",
       "version": "Version {{version}}"
@@ -4477,6 +4478,7 @@
       }
     },
     "settings": {
+      "row_load_failed": "Could not load",
       "title": "Settings",
       "language": "Language",
       "language_name": "English",

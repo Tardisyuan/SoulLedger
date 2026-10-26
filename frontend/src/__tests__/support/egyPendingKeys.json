@@ -56,5 +56,7 @@
   "halls.audit.view_end",
   "breadcrumb.menu.halls",
   "breadcrumb.menu.group_global",
-  "case.attachments.print_failed"
+  "case.attachments.print_failed",
+  "soul_app.update_required.open_failed",
+  "soul_app.settings.row_load_failed"
 ]

@@ -43,6 +43,17 @@ test("below the minimum: the update screen replaces the app and opens the store"
   expect(open).toHaveBeenCalledWith("https://store.test/app");
 });
 
+test("the store link failing to open is said, with the link to copy", async () => {
+  reply(policy("0.2.0"));
+  jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no handler"));
+  await mount();
+  expect(screen.queryByTestId("update-open-failed")).toBeNull();
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("update-open-store"));
+  });
+  expect(screen.getByTestId("update-open-failed").props.children).toContain("https://store.test/app");
+});
+
 test("the screen: mark, title, the soul's own body, one button, the running version; nothing to close", async () => {
   reply(policy("0.2.0"));
   await mount();
