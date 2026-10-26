@@ -45,8 +45,8 @@ class Tenant(AuditUserFields, models.Model):
     seal_glyphs = models.JSONField(default=list, blank=True)
     #: 管理员新建的殿所属的文明(2026-10-25 用户决定:全局管理员建殿)。四个种子殿的文明仍由
     #: `TENANT_CIVILIZATION`(按 code)给出,那张表优先;这一列只给不在表里的殿用。空 = 未知文明。
-    #: 路由(`CIVILIZATION_TENANT`)仍按「每个文明一个殿」反查种子殿 —— 新殿收灵魂、审判、转生,
-    #: 但跨文明调拨的默认目的地不会是它。
+    #: 路由(`CIVILIZATION_TENANT`)仍按「每个文明一个殿」反查种子殿。跨文明调拨不走那张表:
+    #: 目标殿由人选,启用的新殿在单选里(`/ledger/stats/overview/` 补空殿),界域按 `civilization` 取。
     declared_civilization = models.CharField(max_length=20, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 

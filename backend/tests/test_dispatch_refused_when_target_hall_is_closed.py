@@ -167,3 +167,38 @@ def test_the_stats_overview_tells_the_form_which_halls_are_closed(w, admin_user)
     assert resp.status_code == 200, resp.data
     flags = {row["tenant_code"]: row["dispatch_enabled"] for row in resp.data["tenants"]}
     assert flags == {"CN_DIYU": True, "EU_HEAVEN_HELL": False}
+
+
+def test_a_newly_created_active_hall_is_a_target_and_a_deactivated_one_is_not(w, admin_user):
+    """管理员新建的殿(code 不在 `TENANT_CIVILIZATION`,文明靠 `declared_civilization`):
+
+    * 目标殿单选读的 `/ledger/stats/overview/` 列出它,哪怕它还没有灵魂;停用的殿不列。
+      变异:去掉补空殿那段 → EU_NEW 不在表里,红。
+    * `eligible_realms` 给出它的界域。变异:改回 `TENANT_CIVILIZATION.get(code)` → 空,红。
+    * 向它发起移交 201;向停用的殿发起 400 `target_dispatch_disabled`。
+      变异:`check_target_accepts` 去掉 `is_active` → 停用那条 201,红。
+    """
+    from apps.realms.models import Realm
+
+    new = Tenant.objects.create(code="EU_NEW", display_name="新殿", declared_civilization="EUROPEAN")
+    old = Tenant.objects.create(code="EU_OLD", display_name="旧殿", declared_civilization="EUROPEAN", is_active=False)
+    realm = Realm.objects.create(realm_code="EU_NEW_LIMBO", name_en="Limbo", civilization="EUROPEAN", tenant=new)
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(admin_user).access_token}")
+    resp = client.get("/api/v1/ledger/stats/overview/")
+    assert resp.status_code == 200, resp.data
+    rows = {row["tenant_code"]: row for row in resp.data["tenants"]}
+    assert rows["EU_NEW"]["dispatch_enabled"] is True and rows["EU_NEW"]["total_souls"] == 0
+    assert "EU_OLD" not in rows
+
+    assert list(DispatchService.eligible_realms(new)) == [realm]
+
+    for target, expected in ((new, 201), (old, 400)):
+        soul = Soul.objects.create(name=f"客{target.code}", current_state=SoulState.JUDGING, tenant=w["cn"])
+        resp = _client(w["cn_mod"]).post(URL, {
+            "source_tenant": w["cn"].pk, "target_tenant": target.pk, "soul": str(soul.pk), "reason": LONG_REASON,
+        }, format="json")
+        assert resp.status_code == expected, resp.data
+        if expected == 400:
+            assert resp.data["code"] == CODE

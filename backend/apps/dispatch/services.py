@@ -130,7 +130,8 @@ class DispatchService:
         """目标殿必须开着调拨。发起(`propose` / `submit`,经 `_check_proposable`)、批准、执行
         都从这里过 —— 批准与执行再问一次,是因为殿可以在提案挂着的时候关掉。
         `target_tenant` 为空(草稿)放行,完整性另有人查。"""
-        if target_tenant is not None and not target_tenant.dispatch_enabled:
+        # 停用的殿(`is_active=False`,管理员停殿)同样不收:它已不收新灵魂,不能再是调拨的目的地。
+        if target_tenant is not None and not (target_tenant.dispatch_enabled and target_tenant.is_active):
             raise TargetHallClosedError(target_tenant)
 
     @staticmethod
@@ -146,10 +147,12 @@ class DispatchService:
         * 文明也要对上(同 `submit_sentence`):租户对上而文明不对的行是数据错误,不给选。
         """
         from apps.realms.models import Realm
-        from apps.souls.models import TENANT_CIVILIZATION
+        from apps.souls.models import UNKNOWN_CIVILIZATION
 
-        civilization = TENANT_CIVILIZATION.get(target_tenant.code) if target_tenant else None
-        if civilization is None:
+        # `Tenant.civilization`,不是 `TENANT_CIVILIZATION[code]`:后者只认四个种子殿,管理员新建的殿
+        # (`declared_civilization`)在那里查不到,于是它永远没有可选界域、选不成调拨目的地。
+        civilization = target_tenant.civilization if target_tenant else UNKNOWN_CIVILIZATION
+        if civilization == UNKNOWN_CIVILIZATION:
             return Realm.all_objects.none()
         return Realm.all_objects.filter(
             tenant_id=target_tenant.pk, civilization=civilization, is_deleted=False,
@@ -947,7 +950,6 @@ class CrossTenantJudgmentService:
         `is_eternal` / `memory_reset` 抄自 realm,与 `DispositionService.create_from_judgment` 同一抄法。
         """
         from apps.realms.models import Realm
-        from apps.souls.models import TENANT_CIVILIZATION
 
         # 锁序 联审 → 参与方,与 `conclude` 相同:结束与填写并发时,要么填写在校验之前落地,
         # 要么看到 CONCLUDED 被拒 —— 不会有「校验通过之后才改」的节点内容。
@@ -959,9 +961,9 @@ class CrossTenantJudgmentService:
             raise ValueError(f"Cannot submit a sentence to a judgment in status: {judgment.status}")
         if locked.role == ParticipantRole.ADVISOR:
             raise ValueError("An ADVISOR carries no sentence node")
-        civilization = TENANT_CIVILIZATION.get(participant.participant_tenant.code)
+        civilization = participant.participant_tenant.civilization  # 新建的殿也有文明(见 `eligible_realms`)
         realm = Realm.all_objects.filter(realm_code=realm_code, is_deleted=False).first()
-        if realm is None or civilization is None or realm.civilization != civilization:
+        if realm is None or realm.civilization != civilization:
             raise ValueError(f"Realm {realm_code!r} is not a realm of {participant.participant_tenant.code}")
 
         locked.sentence_realm_code = realm.realm_code
@@ -990,8 +992,6 @@ class CrossTenantJudgmentService:
 
         返回错误信息列表,空 = 通过。没挂审判的联审不校验(存量会议,行为不变)。
         """
-        from apps.souls.models import TENANT_CIVILIZATION
-
         if judgment.judgment_id is None:
             return []
         seats = list(
@@ -1020,7 +1020,7 @@ class CrossTenantJudgmentService:
         foreign = [
             p.participant_tenant.code for p in seats
             if p.sentence_submitted_at is not None
-            and realms.get(p.sentence_realm_code) != TENANT_CIVILIZATION.get(p.participant_tenant.code)
+            and realms.get(p.sentence_realm_code) != p.participant_tenant.civilization
         ]
         if foreign:
             errors.append(f"Realm is not of the participant's civilization: {', '.join(foreign)}")

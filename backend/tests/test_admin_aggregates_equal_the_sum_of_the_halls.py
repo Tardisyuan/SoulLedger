@@ -204,7 +204,9 @@ def test_the_overview_hall_rows_are_the_halls_own_rows(world):
     whole, halls = _both(world, OVERVIEW)
 
     by_code = {row["tenant_code"]: row for row in whole["tenants"]}
-    assert set(by_code) == {"CN_DIYU", "EG_DUAT", "EU_HEAVEN_HELL"}, "an empty hall has no row, in either answer"
+    # 空的启用殿也有一行(0 条):发起移交页的目标殿单选读这张表,新建的殿没有灵魂也得选得到。
+    assert set(by_code) == set(HALLS), "an empty active hall has a zero row, in either answer"
+    assert by_code["GR_HADES"]["total_souls"] == 0
     for code, body in halls.items():
         assert body["tenants"] == ([by_code[code]] if code in by_code else [])
     assert [row["tenant_code"] for row in whole["tenants"]] == sorted(by_code)
