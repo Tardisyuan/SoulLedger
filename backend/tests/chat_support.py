@@ -285,8 +285,16 @@ def can_speak(room_id, mxid):
 
 
 @pytest.fixture
-def matrix(settings):
-    """打开聊天、把客户端换成假的、把状态清零。"""
+def matrix(settings, monkeypatch):
+    """打开聊天、把客户端换成假的、把状态清零。
+
+    发言权同步与转世停用在生产里是 celery 任务(`.delay`);这里让 `.delay` 当场跑,
+    测试断言的是 Synapse 那一侧最终的样子。入队本身由 `test_chat_matrix_off_the_request.py` 测。"""
+    from apps.chat import tasks
+
+    monkeypatch.setattr(tasks.sync_rooms_task, "delay", lambda *a, **k: tasks.sync_rooms_task.run(*a, **k))
+    monkeypatch.setattr(tasks.deactivate_matrix_task, "delay",
+                        lambda *a, **k: tasks.deactivate_matrix_task.run(*a, **k))
     settings.MATRIX_ENABLED = True
     settings.MATRIX_CLIENT = "tests.chat_support.FakeMatrix"
     settings.MATRIX_PUBLIC_BASEURL = "https://matrix.test.soulledger/"
