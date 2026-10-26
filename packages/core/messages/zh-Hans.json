@@ -4152,6 +4152,7 @@
     "app_name": "灵魂簿",
     "update_required": {
       "title": "需要更新",
+      "open_failed": "没能打开应用商店。请在应用商店里搜索更新,或在浏览器里打开:{{url}}",
       "body": "这一版已经不能用了。更新后，你的书信和档案都还在。",
       "button": "去更新",
       "version": "版本 {{version}}"
@@ -4477,6 +4478,7 @@
       }
     },
     "settings": {
+      "row_load_failed": "加载失败",
       "title": "设置",
       "language": "语言",
       "language_name": "中文",

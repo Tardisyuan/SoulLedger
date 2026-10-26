@@ -171,6 +171,14 @@ describe("LoginPage · failure states (A9 §二「状态」)", () => {
 });
 
 describe("LoginPage · layout and content", () => {
+  it("the username is not capitalised, auto-corrected or spell-checked by the phone keyboard", () => {
+    render(<LoginPage />);
+    const username = document.getElementById("login-username") as HTMLInputElement;
+    expect(username).toHaveAttribute("autocapitalize", "off");
+    expect(username).toHaveAttribute("autocorrect", "off");
+    expect(username).toHaveAttribute("spellcheck", "false");
+  });
+
   it("toggles the password between hidden and shown", () => {
     render(<LoginPage />);
     const toggle = screen.getByRole("button", { name: "soul_app.common.show" });

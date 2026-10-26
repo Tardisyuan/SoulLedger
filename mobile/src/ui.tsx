@@ -928,6 +928,8 @@ export function Input({
                 // A multiline field's return key only adds a line, so inside a sheet nothing could put the keyboard
                 // away: let return finish the field there.
                 {...(inSheet && multiline ? { submitBehavior: "blurAndSubmit" as const, returnKeyType: "done" as const } : null)}
+                // A password field is typed in Latin letters; revealed, the pinyin keyboard would compose it. The caller may still override.
+                {...(rest.secureTextEntry && !rest.keyboardType ? { keyboardType: "ascii-capable" as const } : null)}
                 {...rest}
                 secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
                 onFocus={(e) => {

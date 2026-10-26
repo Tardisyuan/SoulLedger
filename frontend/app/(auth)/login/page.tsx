@@ -130,6 +130,9 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
         id="password-help-username"
         name="username"
         autoComplete="username"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
         type="text"
         label={t("auth.account")}
         value={username}
@@ -376,6 +379,9 @@ export default function LoginPage() {
             id="login-username"
             name="username"
             autoComplete="username"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             type="text"
             label={t("auth.account")}
             value={form.username}
