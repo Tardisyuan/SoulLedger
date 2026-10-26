@@ -46,7 +46,8 @@ def is_tenant_exempt(user) -> bool:
     ``AttributeError`` on it before its own ``is_authenticated`` guard was
     added. Anonymous is never exempt.
     """
-    return getattr(user, "role", None) == ADMIN_ROLE
+    # 进殿查看(`apps/authentication/impersonation.py::start_hall`):这一次请求里管理员只看那一殿。
+    return getattr(user, "role", None) == ADMIN_ROLE and not getattr(user, "hall_view", None)
 
 
 def scope_to_tenant(
