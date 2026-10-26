@@ -7086,7 +7086,8 @@
       "appeal_window_closed": "The appeal period ended on {{date}}",
       "not_concluded": "This judgment isn't concluded yet; you can appeal once it is",
       "not_appealable": "This judgment can't be appealed",
-      "past_life_read_only": "Judgments from past lives are read-only"
+      "past_life_read_only": "Judgments from past lives are read-only",
+      "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to"
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",
