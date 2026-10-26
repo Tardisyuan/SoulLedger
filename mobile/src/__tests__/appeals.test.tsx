@@ -98,6 +98,14 @@ it("a landed decision opens the latest round: 原判 → 新判, the reviewer's 
   expect(screen.queryByTestId("appeal-withdraw-a1")).toBeNull();
 });
 
+it("opened, the latest round is named once (on the toggle), an earlier round keeps its own heading", () => {
+  const older = round({ id: "a1", round: 1, status: "UPHELD", decided_at: "2026-10-10T00:00:00Z" });
+  const latest = round({ id: "a2", round: 2 });
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[latest, older]} focused onChanged={() => {}} />);
+  expect(screen.getAllByText(/第 2 次申诉/)).toHaveLength(1);
+  expect(screen.getAllByText(/第 1 次申诉/)).toHaveLength(1);
+});
+
 it("withdrawing the first of two says one is left; the second says none is", () => {
   const first = wrap(<AppealLine row={row({ rounds_used: 1 })} rounds={[round()]} focused onChanged={() => {}} />);
   fireEvent.press(screen.getByTestId("appeal-withdraw-a1"));

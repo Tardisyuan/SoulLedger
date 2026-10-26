@@ -54,8 +54,11 @@ function Round({
   round,
   roundsFiled,
   onWithdrawn,
+  heading = true,
 }: {
   round: MeJudgmentAppeal;
+  /** The toggle row above already names the latest round: its body leaves the heading out (2026-10-27, simulator). */
+  heading?: boolean;
   /** Rounds filed on this judgment, this one included: the withdraw confirmation says how many are left. */
   roundsFiled: number;
   onWithdrawn: () => void;
@@ -82,7 +85,9 @@ function Round({
   };
   return (
     <View testID={`appeal-round-${round.id}`} style={styles.round}>
-      <Txt variant="bodyLg">{`${t("appeals.round", { round: String(round.round) })} · ${t(`appeals.status.${round.status}`)}`}</Txt>
+      {heading ? (
+        <Txt variant="bodyLg">{`${t("appeals.round", { round: String(round.round) })} · ${t(`appeals.status.${round.status}`)}`}</Txt>
+      ) : null}
       <Txt variant="caption" tone="subtle">
         {t("appeals.reason_label")}
       </Txt>
@@ -222,7 +227,9 @@ export function AppealLine({
         </Pressable>
       ) : null}
       {open
-        ? rounds.map((r) => <Round key={r.id} round={r} roundsFiled={row.rounds_used} onWithdrawn={onChanged} />)
+        ? rounds.map((r) => (
+            <Round key={r.id} round={r} roundsFiled={row.rounds_used} onWithdrawn={onChanged} heading={r.id !== latest?.id} />
+          ))
         : null}
     </View>
   );
