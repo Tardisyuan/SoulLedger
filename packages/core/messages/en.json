@@ -2992,11 +2992,11 @@
       "col_username": "Username",
       "col_name": "Name",
       "col_issue": "Issue",
-      "template_notes": "Template columns: username is required; password is required — you set it, and the person must change it at first login; role is optional (default VIEWER); email and display_name are optional.",
+      "template_notes": "username is required. A row with an email and no password gets an invite email, and the person sets their own password within 7 days. A row with a password uses it as the initial password, to be changed at first sign-in. Rows with neither are not imported. Invite rows can't have the ADMIN role.",
       "back": "Back",
       "commit": "Import {{n}} people",
       "blocked": "{{n}} rows have problems; import is disabled. Fix the file and choose it again.",
-      "success": "Imported {{n}} people. They must change their password at first login.",
+      "success": "Imported {{created}}: {{invited}} invited by email, {{password}} must change their password at first sign-in",
       "view_users": "View users",
       "row_codes": {
         "username_required": "Username missing",
@@ -3007,7 +3007,13 @@
         "password_required": "Password missing",
         "password_weak": "Password does not meet the rules",
         "unknown": "This row could not be checked"
-      }
+      },
+      "delivery_col": "Access",
+      "delivery": {
+        "invite": "Invite email",
+        "password": "Initial password"
+      },
+      "delivery_summary": "{{invite}} by invite · {{password}} with a password"
     },
     "organization": "Organization",
     "organization_none": "No organization",
@@ -3723,6 +3729,9 @@
     "groups": {
       "THREE_GOOD_PATHS": "Three good paths",
       "THREE_EVIL_PATHS": "Three evil paths"
+    },
+    "error": {
+      "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth."
     }
   },
   "social": {
@@ -6849,7 +6858,16 @@
       "admin_context": "With {{name}} · you're an admin here",
       "reassign_to": "Reassign to…",
       "release_for": "Release for {{name}}",
-      "reassign_request": "{{name}} asked to reassign · {{time}}"
+      "reassign_request": "{{name}} asked to reassign · {{time}}",
+      "attach_camera": "Take a photo",
+      "attach_library": "Choose from photos",
+      "attach_file": "Choose a PDF",
+      "attach_uploading": "Uploading {{percent}}%",
+      "attach_cancel": "Cancel upload",
+      "attach_by": "{{name}} · {{time}}",
+      "attach_privacy": "Location and device details are removed from photos on upload",
+      "attach_need_claim": "Claim the case to add attachments",
+      "attach_concluded": "Concluded; attachments are read-only"
     },
     "notify": {
       "intro": "Types you turn off aren't pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
@@ -6896,6 +6914,21 @@
     },
     "appeals": {
       "desk_only": "Reviews are done on the web"
+    },
+    "stats": {
+      "title": "My numbers",
+      "scope": "Your own only, across all halls",
+      "section_judgments": "Judgments",
+      "section_appeals": "Appeal reviews",
+      "concluded_this_month": "Concluded this month",
+      "month_since": "Since {{date}}",
+      "concluded_total": "Concluded in all",
+      "open_claims": "Claimed, not concluded",
+      "appeals_reviewed": "Decided",
+      "appeals_in_review": "In review",
+      "empty_title": "Nothing to count yet",
+      "empty_body": "These fill in once you claim and conclude your first case.",
+      "load_failed": "Couldn't load your numbers"
     }
   },
   "print": {
@@ -7183,5 +7216,95 @@
     "life": "Born – died",
     "go_to_review": "Go to first review →",
     "transfer_on_web": "Moving to another City God is done on the web"
+  },
+  "officerHandover": {
+    "action": "Hand over open work",
+    "title": "Hand over open work",
+    "intro": "Moves everything one officer still has open to another: claimed judgments, appeals in review, City God assignments and open letters. Preview first, then submit.",
+    "from": "From",
+    "to": "To",
+    "pick": "Pick an active officer of this hall",
+    "preview": "Preview",
+    "preview_stale": "The officers changed; preview again",
+    "submit": "Hand over",
+    "submitting": "Handing over…",
+    "row_judgments": "Claimed judgments",
+    "row_appeals": "Appeals in review",
+    "row_city_gods": "City God assignments",
+    "row_city_gods_names": "Moves from {{names}}",
+    "row_letters": "Open letters",
+    "returned_to_pool": "{{n}} of the appeals go back to the review pool: the new officer gave the original verdict and can't review their own judgment. Anyone who can review may claim them.",
+    "empty": "{{name}} has nothing open; there is nothing to hand over.",
+    "may_shrink": "Anything concluded or reassigned after this preview is left alone, so the final count may be lower.",
+    "blocked_title": "Can't hand over yet",
+    "problem": {
+      "target_cannot_judge": "{{name}} can't take cases, and there are judgments or appeals to hand over. Pick someone else, or give them case permissions first.",
+      "target_cannot_reply": "{{name}} can't answer letters, and there are letters to hand over. Pick someone else, or give them that permission first."
+    },
+    "result_title": "Handed over to {{name}}",
+    "result_counts": "Moved: judgments {{judgments}} · appeals {{appeals}} · City Gods {{city_gods}} · letters {{letters}}",
+    "result_pool": "{{n}} appeals went back to the review pool",
+    "result_fewer": "The ones missing from the preview were concluded or reassigned in the meantime.",
+    "result_notified": "{{name}} has been notified",
+    "error": {
+      "same_officer": "Pick two different officers",
+      "invalid_target": "The new officer isn't an active officer of this hall",
+      "not_found": "Officer not found"
+    },
+    "deactivate_prompt": "{{name}} still has open work. Hand it over before deactivating?",
+    "deactivate_anyway": "Deactivate anyway"
+  },
+  "officerInvite": {
+    "action": "Invite an officer",
+    "title": "Invite an officer",
+    "body": "They get an email with a link to set their own password. The link lasts 7 days and works once.",
+    "username_optional": "Username · optional",
+    "username_hint": "Leave blank to use the part before the @; a number is added if it's taken",
+    "display_name_optional": "Display name · optional",
+    "hall": "Hall",
+    "send": "Send invite",
+    "sent_toast": "Invite sent to {{email}}",
+    "resent_toast": "{{email}} was already invited; the invite was sent again",
+    "pending_badge": "Invite pending",
+    "resend": "Resend invite",
+    "resend_hint": "If the email didn't arrive, send it again",
+    "error": {
+      "email_invalid": "That isn't a valid email",
+      "role_invalid": "Invite officer roles only, not Soul or Administrator",
+      "email_taken": "This email belongs to another account",
+      "username_taken": "That username is taken"
+    }
+  },
+  "acceptInvite": {
+    "title": "Set your password",
+    "subtitle": "You've been invited as an officer. Once the password is set, sign in with your username and this password.",
+    "new_password": "New password",
+    "confirm_password": "Repeat the password",
+    "mismatch": "The two passwords differ",
+    "submit": "Set password",
+    "weak": "That password isn't strong enough:",
+    "done_title": "Password set",
+    "done_body": "Sign in with your username and the new password.",
+    "go_login": "Go to sign in",
+    "invalid_title": "This invite link can't be used",
+    "invalid_body": "Ask your hall's administrator to invite you again.",
+    "rate_limited": "Too many tries. Try again in {{seconds}} s",
+    "link_note": "An invite link lasts 7 days and works once."
+  },
+  "mengpoSoup": {
+    "title": "Mengpo's soup",
+    "hint": "Souls of Diyu take Mengpo's soup before rebirth.",
+    "not_taken": "Not taken",
+    "taken": "Taken · {{time}}",
+    "register": "Record as taken",
+    "register_title": "Record that {{name}} has taken Mengpo's soup?",
+    "register_body": "Once per life. It can't be undone; it clears when the rebirth completes.",
+    "registered_toast": "Recorded: {{name}} has taken Mengpo's soup",
+    "batch_refused": "{{n}} haven't taken Mengpo's soup and were not reborn; they stay awaiting rebirth:",
+    "error": {
+      "not_diyu": "Only souls of Diyu take Mengpo's soup",
+      "not_reincarnating": "Only souls awaiting rebirth can take it",
+      "soup_already_taken": "Already taken in this life"
+    }
   }
 }
