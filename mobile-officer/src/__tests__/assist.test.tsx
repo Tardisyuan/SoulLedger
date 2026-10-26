@@ -25,6 +25,7 @@ jest.mock("@soulledger/core/api/officer-assist", () => ({
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
   officerAppApi: {
+    stats: jest.fn(async () => ({ data: { concluded_this_month: 0, concluded_total: 0, open_claims: 0, appeals_reviewed: 0, appeals_in_review: 0 } })),
     todo: jest.fn(async () => ({ data: { approvals: { count: 0, items: [] }, reassignments: { count: 0, items: [] }, cooldowns: { count: 0, items: [] }, rebirths: { count: 0, items: [] } } })),
     registerPush: jest.fn(),
     unregisterPush: jest.fn(),

@@ -19,7 +19,7 @@ const mockList = jest.fn();
 const mockNotices = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
-  officerAppApi: { todo: (...a: unknown[]) => mockTodo(...a), registerPush: jest.fn(), unregisterPush: jest.fn() },
+  officerAppApi: { stats: jest.fn(async () => ({ data: { concluded_this_month: 0, concluded_total: 0, open_claims: 0, appeals_reviewed: 0, appeals_in_review: 0 } })), todo: (...a: unknown[]) => mockTodo(...a), registerPush: jest.fn(), unregisterPush: jest.fn() },
 }));
 jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
