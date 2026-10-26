@@ -70,7 +70,7 @@ def _ends_on(node, status):
 def soul_plan(account):
     """本人本世(`account.cycle`)最新那份计划 —— 与转生资格(`rebirth.eligibility`)读的是同一份。"""
     from apps.ledger.constants import REBIRTH_CAPABLE_CIVILIZATIONS
-    from apps.realms.models import Realm
+    from apps.realms.models import realm_by_code
     from apps.souls.models import UNKNOWN_CIVILIZATION
 
     soul = account.soul
@@ -81,7 +81,7 @@ def soul_plan(account):
     nodes = [] if plan is None else [
         n for n in plan.nodes.filter(is_deleted=False).order_by("order") if n.status in SOUL_STATUS
     ]
-    realms = {r.realm_code: r for r in Realm.all_objects.filter(realm_code__in={n.realm_code for n in nodes})}
+    realms = {(n.tenant_code, n.realm_code): realm_by_code(n.realm_code, tenant_code=n.tenant_code) for n in nodes}
     from apps.tenants.models import Tenant
 
     civs = {t.code: t.civilization for t in Tenant.objects.filter(code__in={n.tenant_code for n in nodes})}
@@ -91,7 +91,7 @@ def soul_plan(account):
         stations.append({
             "id": node.pk, "n": n, "status": status, "is_home": node.is_home,
             "civilization": civs.get(node.tenant_code, UNKNOWN_CIVILIZATION),
-            "realm": realms.get(node.realm_code), "sentence_years": node.sentence_years,
+            "realm": realms.get((node.tenant_code, node.realm_code)), "sentence_years": node.sentence_years,
             "is_eternal": node.is_eternal,
             "started_on": node.activated_at.date() if node.activated_at else None,
             "ends_on": _ends_on(node, status),

@@ -9,8 +9,16 @@ point Django discovers.
 
 Moved verbatim out of ``seed_mythology.py``.
 """
+from django.db.models import Q
+
 from apps.actors.models import ALIASES_KEY, Actor, ActorRole
-from apps.actors.mythology import TENANTS
+from apps.actors.mythology import (
+    CIVILIZATION_ACTOR_ALIASES,
+    CIVILIZATION_ASSESSORS,
+    CIVILIZATION_DATA,
+    CIVILIZATION_STATUTES,
+    TENANTS,
+)
 from apps.actors.mythology.actors_egyptian import (
     ASSESSOR_PAPYRUS,
     ASSESSOR_REALM_CODE,
@@ -154,7 +162,51 @@ class MythologySeeder:
 
     Mixed into the management command rather than instantiated: every method
     reports through ``self.stdout``/``self.style``, which are BaseCommand's.
+
+    Every lookup is confined to the hall being seeded (plus rows no hall owns yet, which the canonical run
+    adopts): since 2026-10-27 a hall the global admin creates is seeded with the same codes and names
+    (docs-others X-1), so a global lookup would find — and move — another hall's row. ``hall`` is set by
+    ``apps.tenants.hall_seed.seed_hall``; it drops the hall-less rows, which belong to the canonical halls.
     """
+
+    hall = None
+
+    def _in_hall(self, queryset, tenant):
+        if self.hall is not None:
+            return queryset.filter(tenant=self.hall)
+        return queryset.filter(Q(tenant=tenant) | Q(tenant__isnull=True))
+
+
+    def _seed_civilization(self, label, tenant, do_update, realm_stats, actor_stats, statute_stats):
+        """Realms, actors, the Forty-Two and the statutes of one civilization, into ``tenant``."""
+        civilization, realms, actors = CIVILIZATION_DATA[label]
+        self._seed_realms(civilization, tenant, realms, do_update, realm_stats)
+        self._seed_actors(
+            civilization, tenant, actors, do_update, actor_stats,
+            aliases=CIVILIZATION_ACTOR_ALIASES.get(label),
+        )
+        assessors = CIVILIZATION_ASSESSORS.get(label)
+        if assessors:
+            self._seed_assessors(
+                civilization, tenant, assessors, do_update, actor_stats
+            )
+        # Statutes come last within a civilization: the Egyptian corpus
+        # is derived from the assessor rows written immediately above,
+        # and reads them back out of this same transaction.
+        #
+        # A loop rather than one call: a civilization may have more than
+        # one transcribed corpus, and Europe does — the seven capital
+        # sins on the terraces of Purgatorio and the circles of the
+        # Inferno are two structures, not one list. See
+        # CIVILIZATION_STATUTES.
+        for corpus in CIVILIZATION_STATUTES.get(label, ()):
+            self._seed_statutes(
+                civilization, tenant, *corpus, do_update, statute_stats
+            )
+        if assessors:
+            self._seed_derived_statutes(
+                civilization, tenant, do_update, statute_stats
+            )
 
     # ------------------------------------------------------------------
     # Tenants
@@ -209,9 +261,9 @@ class MythologySeeder:
                 do_update=do_update,
                 stats=stats,
             )
-        self._link_realm_parents(civilization, rows, do_update, stats)
+        self._link_realm_parents(civilization, tenant, rows, do_update, stats)
 
-    def _link_realm_parents(self, civilization, rows, do_update, stats):
+    def _link_realm_parents(self, civilization, tenant, rows, do_update, stats):
         """Attach the realms in REALM_PARENTS to the realm they are part of.
 
         A second pass rather than a column in `values`: the parent has to exist
@@ -228,7 +280,7 @@ class MythologySeeder:
         codes = {row[0] for row in rows}
         by_code = {
             realm.realm_code: realm
-            for realm in Realm.all_objects.filter(civilization=civilization)
+            for realm in self._in_hall(Realm.all_objects.filter(civilization=civilization), tenant)
         }
         for child_code, parent_code in REALM_PARENTS.items():
             if child_code not in codes:
@@ -287,7 +339,9 @@ class MythologySeeder:
 
         # Realm FKs are resolved by code against whatever is in the DB now —
         # including the realms this same run just wrote inside this transaction.
-        realm_by_code = {r.realm_code: r for r in Realm.all_objects.filter(civilization=civilization)}
+        realm_by_code = {
+            r.realm_code: r for r in self._in_hall(Realm.all_objects.filter(civilization=civilization), tenant)
+        }
 
         for row in rows:
             (name, name_zh, name_en, name_egy, role, realm_code,
@@ -347,9 +401,9 @@ class MythologySeeder:
         clause) and they go into `powers_json`. Idempotency, tenant assignment,
         soft-delete handling and dry-run all come from `_upsert` unchanged.
         """
-        realm = Realm.all_objects.filter(
+        realm = self._in_hall(Realm.all_objects.filter(
             civilization=civilization, realm_code=ASSESSOR_REALM_CODE
-        ).first()
+        ), tenant).first()
         if realm is None:
             self.stdout.write(self.style.ERROR(
                 f"  [warn] The Forty-Two reference unknown realm "
@@ -483,7 +537,7 @@ class MythologySeeder:
         """
         assessors = [
             actor
-            for actor in Actor.all_objects.filter(civilization=civilization, is_deleted=False)
+            for actor in self._in_hall(Actor.all_objects.filter(civilization=civilization, is_deleted=False), tenant)
             if isinstance(actor.powers_json, dict)
             and actor.powers_json.get("assessor_index") is not None
         ]
@@ -574,7 +628,7 @@ class MythologySeeder:
         overwritten. A column that holds a *different* value still needs
         `--update`.
         """
-        existing = list(model.all_objects.filter(**lookup))
+        existing = list(self._in_hall(model.all_objects.filter(**lookup), tenant))
         alive = [obj for obj in existing if not obj.is_deleted]
 
         if len(alive) > 1:

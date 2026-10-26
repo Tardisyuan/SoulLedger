@@ -412,7 +412,7 @@ class SentencePlanService:
         """
         from apps.disposition.models import Disposition, MemoryResetMechanism
         from apps.events.models import EventType
-        from apps.realms.models import Realm
+        from apps.realms.models import realm_by_code
 
         found = SentenceNode.all_objects.filter(dispatch_record_id=record.pk, is_deleted=False).first()
         if found is None:
@@ -421,7 +421,7 @@ class SentencePlanService:
         node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
         if node.status != SentenceNodeStatus.DISPATCHING:
             return None
-        realm = Realm.all_objects.filter(realm_code=node.realm_code, is_deleted=False).first()
+        realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
         disposition = Disposition.objects.create(
             soul_id=soul.pk, tenant_id=record.target_tenant_id, destination_realm=realm,
             sentence_years=node.sentence_years, is_eternal=node.is_eternal,
@@ -631,9 +631,9 @@ class SentencePlanService:
         from apps.disposition.models import Disposition, MemoryResetMechanism
         from apps.events.models import EventType
         from apps.judgment.models import Judgment
-        from apps.realms.models import Realm
+        from apps.realms.models import realm_by_code
 
-        realm = Realm.all_objects.filter(realm_code=node.realm_code, is_deleted=False).first()
+        realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
         judgment = None
         if node.added_by_judgment_id is not None:
             candidate = Judgment.all_objects.filter(pk=node.added_by_judgment_id, tenant_id=plan.tenant_id).first()

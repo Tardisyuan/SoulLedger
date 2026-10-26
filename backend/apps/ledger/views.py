@@ -361,17 +361,17 @@ def _attach_capacity(rows) -> None:
     """给「界域前十」每行补 `capacity` 与 `held`(此刻在押)。
 
     口径与界域页、发落拒绝(`realm_full`)同一个:`apps.disposition.destination.realm_held`
-    数这个界域里未离开的行程站。`realm_code` 全局唯一,所以一行就是一个界域。
+    数这个界域里未离开的行程站。按界域主键配(`realm_code` 自 2026-10-27 起只在一殿内唯一)。
     `Realm.all_objects`:界域软删了,在押的人与记下的容量仍然是事实。
     """
     realms = {
-        r.realm_code: r
-        for r in Realm.all_objects.filter(realm_code__in=[row["realm_code"] for row in rows]).annotate(
+        r.pk: r
+        for r in Realm.all_objects.filter(pk__in=[row["realm_id"] for row in rows]).annotate(
             held=Count("path_entries", filter=Q(path_entries__left_at__isnull=True))
         )
     }
     for row in rows:
-        realm = realms.get(row["realm_code"])
+        realm = realms.get(row.pop("realm_id"))
         row["held"] = realm.held if realm is not None else 0
         row["capacity"] = realm.capacity if realm is not None else None
 
@@ -581,6 +581,7 @@ class LedgerOverviewStatsView(APIView):
         souls_by_realm = [
             {
                 "realm_code": row["destination_realm__realm_code"],
+                "realm_id": row["destination_realm"],  # popped by _attach_capacity (codes are per hall)
                 "realm_name": resolve_localized_name(
                     locale,
                     name_local=row["destination_realm__name_local"],
@@ -598,6 +599,7 @@ class LedgerOverviewStatsView(APIView):
                 disp_qs.filter(is_executed=True, is_archived=False)
                 .exclude(destination_realm__isnull=True)
                 .values(
+                    "destination_realm",
                     "destination_realm__realm_code",
                     "destination_realm__name_local",
                     "destination_realm__name_zh",
