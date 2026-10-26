@@ -243,8 +243,11 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     for case_type in ("ROUTINE", "APPEAL"):
         assert {n["court_code"] for n in _row(eu, case_type).nodes_json} == {"天堂"}
     assert not any(n["court_code"] == "Heaven" for r in WorkflowTemplate.objects.all() for n in r.nodes_json)
-    # The default pass path is written out so the editor draws it (only linear rows with an on_fail jump).
-    assert _edges(ten, "on_pass") == {}
+    # The ten courts are a graph since 2026-10-27 (C-1: 功过两平 → 第十殿), so every PASS edge is written and the
+    # flow ends on a 结束 after court 10.
+    assert _edges(ten, "on_pass") == {f"n{i}": f"n{i + 1}" for i in range(1, 11)}
+    assert ten.nodes_json[10]["kind"] == "END"
+    assert ten.nodes_json[0]["branches"][0]["target"] == "n10"
 
 
 def test_the_greek_seed_row_routes_by_origin_and_ends_after_one_judge(halls):
@@ -269,14 +272,22 @@ def test_the_greek_seed_row_routes_by_origin_and_ends_after_one_judge(halls):
 
 def test_the_seed_tells_the_editor_who_approves_each_station(halls):
     # The editor's 审批人 select reads `approver_type` and showed 职能角色 with no role for every seeded
-    # station (seen on 115, 2026-10-19). A named actor is 指定人员, a station naming nobody is 系统自动.
+    # station (seen on 115, 2026-10-19). A named actor is 指定人员; since 2026-10-27 (docs-others X-3) a station
+    # naming nobody is the JUDGE role rather than 系统自动, and only a 通知 / 结束 step stays SYSTEM.
     _seed()
     for row in WorkflowTemplate.objects.all():
         for n in row.nodes_json:
-            assert n["approver_type"] == ("ACTOR" if n.get("actor") else "SYSTEM"), (row.name, n["node_name"])
+            if n.get("actor"):
+                expected = ("ACTOR", None)
+            elif n.get("kind") in ("NOTIFY", "END"):
+                expected = ("SYSTEM", None)
+            else:
+                expected = ("ROLE", "JUDGE")
+            assert (n["approver_type"], n.get("approver_role")) == expected, (row.name, n["node_name"])
     ten = _row(halls["CN_DIYU"], "ROUTINE").nodes_json
     assert ten[9]["approver_type"] == "ACTOR" and ten[9]["actor"] == "转轮王"
-    assert _row(halls["CN_DIYU"], "APPEAL").nodes_json[3]["approver_type"] == "SYSTEM"  # 酆都大帝 has no Actor row
+    # 酆都大帝 has no Actor row: the default role decides it.
+    assert _row(halls["CN_DIYU"], "APPEAL").nodes_json[3]["approver_role"] == "JUDGE"
 
 
 def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
@@ -311,9 +322,9 @@ def _judged(tenant, **soul_fields):
 
 def test_the_ten_court_flow_from_the_seeded_row_returns_to_court_one_on_a_final_fail(halls):
     _seed()
-    wf = _judged(halls["CN_DIYU"])
+    wf = _judged(halls["CN_DIYU"], merit_score=10)  # not 功过两平, which would skip to court 10
     nodes = list(wf.nodes.order_by("node_order"))
-    assert len(nodes) == 10
+    assert len(nodes) == 11  # ten courts and the 结束 (C-1)
     assert wf.template_version_id == _row(halls["CN_DIYU"], "ROUTINE").published_version_id
     for node in nodes[:9]:
         _decide(wf, node, "PASSED")
@@ -427,3 +438,52 @@ def test_the_greek_preview_lists_the_three_judges_all_locked_and_nothing_to_pick
     assert [s["is_required"] for s in preview["stations"]] == [False, False, True]
     assert [[j["key"] for j in s["jump_target_of"]] for s in preview["stations"]] == [["1"], ["1"], ["2", "3"]]
     assert preview["nothing_to_pick"] is True
+
+
+# ── the same flows with nothing seeded (docs-others X-2 / X-3 / C-1, 2026-10-27) ─────────────
+
+
+def test_an_unseeded_hall_gets_the_return_rules_from_the_code_default(halls):
+    # No `_seed()`: a hall the global admin just created has no template rows.
+    assert not WorkflowTemplate.objects.exists()
+    wf = _judged(halls["CN_DIYU"], merit_score=10)
+    nodes = list(wf.nodes.order_by("node_order"))
+    assert nodes[-1].node_name == "结束 · 发往六道"
+    for node in nodes[:9]:
+        _decide(wf, node, "PASSED")
+    _decide(wf, nodes[9], "FAILED")
+    assert wf.current_node.node_name == "秦广王 · 分流" and wf.return_count == 1
+
+
+def test_an_unseeded_european_and_greek_hall_get_their_regular_flows(halls):
+    eu = [n.node_name for n in _judged(halls["EU_HEAVEN_HELL"]).nodes.order_by("node_order")]
+    assert eu == ["Christ · 私审判", "Michael · 引领入光", "Christ · 公审判"]
+    wf = _judged(halls["GR_HADES"], origin_region="ASIA")
+    assert wf.current_node.node_name.startswith("Rhadamanthus")
+
+
+def test_a_station_naming_nobody_is_the_judge_role_not_system(halls):
+    soul = Soul.objects.create(name="申诉魂", tenant=halls["CN_DIYU"])
+    judgment = Judgment.objects.create(soul=soul, civilization=soul.civilization, court="—",
+                                       verdict="FAILED", is_final=True, tenant=halls["CN_DIYU"])
+    appeal = WorkflowService.create_from_judgment(judgment, is_appeal=True)
+    by_name = {n.node_name: n for n in appeal.nodes.all()}
+    for name in ("原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"):
+        assert (by_name[name].approver_type, by_name[name].approver_role) == ("ROLE", "JUDGE"), name
+        assert by_name[name].designates_approver
+
+
+def test_balanced_merit_and_demerit_go_from_court_one_straight_to_court_ten(halls):
+    wf = _judged(halls["CN_DIYU"], merit_score=30, demerit_score=30)
+    nodes = list(wf.nodes.order_by("node_order"))
+    _decide(wf, nodes[0], "PASSED")
+    assert wf.current_node.node_name == "转轮王 · 终审"
+    _decide(wf, nodes[9], "PASSED")
+    assert wf.status == ApprovalWorkflowStatus.COMPLETED
+    assert all(_status(n) == NodeStatus.SKIPPED for n in nodes[1:9])
+
+
+def test_an_unbalanced_soul_walks_all_ten_courts(halls):
+    wf = _judged(halls["CN_DIYU"], merit_score=31, demerit_score=30)
+    _decide(wf, wf.current_node, "PASSED")
+    assert wf.current_node.node_name == "楚江王 · 初审"
