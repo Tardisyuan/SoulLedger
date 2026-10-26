@@ -597,6 +597,13 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         because the soul's dates are. `manage.py check_soul_dates` reports
         the mismatch instead.
         """
+        # 阳寿 is only ever compared with the date of death as a full CE date (`Soul.die`, `held_until` is a
+        # DateField); a BCE or partial fated date would be accepted here and silently ignored there (2026-10-27).
+        if attrs.get("fated_death_year") is not None and (
+                attrs["fated_death_year"] < 1 or attrs.get("fated_death_month") is None
+                or attrs.get("fated_death_day") is None):
+            raise serializers.ValidationError({"fated_death_date": [
+                "The fated date of death must be a full date (year, month and day) of the Common Era."]})
         if not _touches_dates(attrs, self.instance, "birth", "death"):
             return attrs
         _reject_errors(check_soul_dates(
