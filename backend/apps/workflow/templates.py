@@ -238,9 +238,26 @@ WORKFLOW_TEMPLATES = {
             # Already-stored rows carrying the old spellings are corrected by
             # `0012_correct_the_egyptian_weighing_nodes`, which also records why
             # `0011`'s frozen ROWS still name the old label and must.
-            {"name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis"},
-            {"name": "四十二神官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2},
-            {"name": "欧西里斯 · 终审", "court": "Duat", "type": NodeType.FINAL, "order": 3, "actor": "Osiris"},
+            #
+            # STATIONS AND BRANCHES PER docs/02 §2.1 (L125–126) AND §5.1–5.2 (2026-10-27): 阿努比斯称量 →
+            # 托特记录并宣读 → 神庭确认 → 荷鲁斯引导 → 奥西里斯接纳; 阿米特只在失败时行动. The verdict is
+            # already the scale's when this flow is built (apps/judgment/weighing.py), so Thoth's station is
+            # automatic (通知): he records what the scale said and the flow takes the branch the verdict
+            # selects — FAILED → Ammit, otherwise the tribunal. An automatic node cannot be unticked, so the
+            # fork cannot be skipped. Osiris receives in the Hall of Two Truths (02 L88–91), not 「Duat」.
+            # Both ends meet at 结束. Execution waits for this flow (DispositionService.execute).
+            {"id": "n1", "name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis", "on_pass": "n2"},
+            {"id": "n2", "name": "四十二神官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2, "on_pass": "n3"},
+            {"id": "n3", "name": "托特 · 记录并宣读", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 3,
+             "actor": "Thoth", "kind": "NOTIFY", "on_pass": "n4",
+             "branches": [{"id": "heavier", "when": [{"fact": "verdict", "op": "in", "value": ["FAILED"]}], "target": "n7"}]},
+            {"id": "n4", "name": "神庭 · 确认", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 4, "on_pass": "n5"},
+            {"id": "n5", "name": "荷鲁斯 · 引导", "court": "Hall of Two Truths", "type": NodeType.EXECUTION, "order": 5, "actor": "Horus", "on_pass": "n6"},
+            {"id": "n6", "name": "欧西里斯 · 终审", "court": "Hall of Two Truths", "type": NodeType.FINAL, "order": 6,
+             "actor": "Osiris", "on_pass": "n8"},
+            {"id": "n7", "name": "阿米特 · 吞噬", "court": "Hall of Two Truths", "type": NodeType.EXECUTION, "order": 7,
+             "actor": "Ammit", "on_pass": "n8"},
+            {"id": "n8", "name": "结束 · 称心毕", "court": "Hall of Two Truths", "type": NodeType.FINAL, "order": 8, "kind": "END"},
         ],
     },
 }
@@ -337,6 +354,11 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
                      "(seed_mythology seeds them individually). One FK cannot "
                      "hold a bench, and the declarations are addressed to all "
                      "of them in one passage of the hall (BD 125).",
+    # 称心流程的两站(docs/02 §2.1、§5.1,2026-10-27)。
+    "神庭 · 确认": "The Ennead confirms Thoth's reading (02 §5.1). A tribunal of "
+               "nine-plus gods; one FK cannot hold it, and only four of its "
+               "members (Ra, Isis, Nephthys, Horus) have Actor rows.",
+    "结束 · 称心毕": "The end of the weighing flow, not anybody's decision.",
     # Generic fallback built in create_from_judgment
     "审批节点": "The fallback node for a (civilization, case_type) pair with no "
              "template. By construction nothing is known about who decides it.",
@@ -382,6 +404,8 @@ PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
     "申诉受理",
     # 埃及
     "42审判者 · 否定告白",
+    "神庭 · 确认",
+    "结束 · 称心毕",
     # 希腊(分流与终点,2026-10-19)
     "按出身地域分流",
     "结束 · 各走其路",

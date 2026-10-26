@@ -50,12 +50,17 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
     assert template["name"] == "欧西里斯称重流程", (
         f"埃及 ROUTINE 落到了 {template['name']!r} —— 泛用兜底,不是两真之殿"
     )
-    assert len(template["nodes"]) == 3
+    # 2026-10-27:托特、神庭、荷鲁斯、阿米特(只在不通过分支)与结束补上(docs/02 §2.1、§5.1–5.2)。
     names = [n["name"] for n in template["nodes"]]
     assert names == [
         "阿努比斯 · 引导与称量",
         "四十二神官 · 否定告白",
+        "托特 · 记录并宣读",
+        "神庭 · 确认",
+        "荷鲁斯 · 引导",
         "欧西里斯 · 终审",
+        "阿米特 · 吞噬",
+        "结束 · 称心毕",
     ], names
     # 中间那个节点 `actor` 是 None,而那是**刻意的**:四十二神官是四十二个,
     # 一个 `approver_actor` 外键指不了一群人。它因此走审计过的 `escalate`,
@@ -64,7 +69,7 @@ def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
     # 我第一版这里断的是 `"Ammit" in actors` —— 而 Ammit 是**前端预设**里的
     # 失败分支节点,后端这份没有它。断言写的是我以为的形状,不是实测的形状。
     actors = [n.get("actor") for n in template["nodes"]]
-    assert actors == ["Anubis", None, "Osiris"], actors
+    assert actors == ["Anubis", None, "Thoth", None, "Horus", "Osiris", "Ammit", None], actors
 
 
 @pytest.mark.django_db

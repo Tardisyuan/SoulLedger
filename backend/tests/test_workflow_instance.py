@@ -102,7 +102,7 @@ class TestWorkflowService:
 
         assert workflow is not None
         assert workflow.workflow_name == "欧西里斯称重流程"
-        assert workflow.nodes.count() == 3  # Heart weighing nodes
+        assert workflow.nodes.count() == 8  # Heart weighing nodes (docs/02 §2.1, 2026-10-27)
 
     def test_workflow_stats(self, judgment):
         """get_workflow_stats returns correct progress."""

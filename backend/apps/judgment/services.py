@@ -252,6 +252,14 @@ class JudgmentConclusionService:
                     "A cross-realm judgment is open on this case; conclude it before weighing again",
                     "wavering_with_open_cross", status=409)
 
+            # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
+            # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
+            if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:
+                if create_workflow is False:
+                    raise weighing.WeighingRefusedError(
+                        "An Egyptian case is concluded through the weighing flow", "weighing_flow_required")
+                create_workflow = True
+
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).
             # Validated — and the chosen realm row locked for its capacity —
             # before anything is written. None of the three given = the

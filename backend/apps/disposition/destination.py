@@ -107,6 +107,10 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
     if eternal and term_years is not None:
         raise DestinationRefusedError("A sentence is either eternal or a term in years, not both",
                                       "term_conflict")
+    # 埃及的两个去处都不服刑:芦苇原是永生,第二死是「不再存在」(docs/02 §5.2、03 §五)。
+    if term_years is not None and judgment.soul.civilization == Civilization.EGYPTIAN:
+        raise DestinationRefusedError("Neither the Field of Reeds nor the second death is served for a term",
+                                      "term_not_applicable")
 
     placement = {}
     if realm_id is not None:
