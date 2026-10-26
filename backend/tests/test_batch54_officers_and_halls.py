@@ -52,11 +52,13 @@ class TestInvite:
         assert res.status_code == 201, res.data
         user = User.objects.get(email="new@example.com")
         assert not user.has_usable_password()
+        assert admin_client.get(f"/api/v1/users/{user.pk}/").data["invite_pending"] is True
         uid, token = re.search(r"uid=([^&\s]+)&token=(\S+)", mail.outbox[-1].body).groups()
         body = {"uid": uid, "token": token, "new_password": "A-very-good-passphrase-2026"}
         assert admin_client.post("/api/v1/auth/officer-invite/accept/", body, format="json").status_code == 200
         user.refresh_from_db()
         assert user.check_password(body["new_password"]) and user.email_verified
+        assert admin_client.get(f"/api/v1/users/{user.pk}/").data["invite_pending"] is False
         again = admin_client.post("/api/v1/auth/officer-invite/accept/", body, format="json")
         assert (again.status_code, again.data["code"]) == (400, "invite_link_invalid")
 
@@ -92,6 +94,13 @@ class TestHalls:
             Soul.objects.create(name="late", tenant=hall)
         assert officer_client(judge_user).post("/api/v1/tenants/", {"code": "X_Y", "display_name": "x",
                                                                     "civilization": "GREEK"}, format="json").status_code == 403
+
+    def test_web_create_in_a_deactivated_hall_is_a_400_not_a_500(self, admin_client, admin_user):
+        Tenant.objects.filter(pk=admin_user.tenant_id).update(is_active=False)
+        admin_client.raise_request_exception = False
+        res = admin_client.post("/api/v1/souls/", {"name": "late", "civilization": "CHINESE"}, format="json")
+        assert res.status_code == 400, res.status_code
+        assert "tenant" in res.data
 
     def test_overview_is_admin_only(self, admin_client, judge_user):
         res = admin_client.get("/api/v1/tenants/overview/")

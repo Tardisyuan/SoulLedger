@@ -581,7 +581,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles', 'mfa']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles', 'mfa', 'invite_pending']
         read_only_fields = ['id', 'create_time', 'extra_roles']
 
     # 两步验证列(A12):三态 = enabled / required。`get_queryset` 把 `mfa` 行 select_related 进来,这里不另查。
@@ -602,6 +602,15 @@ class UserManagementSerializer(serializers.ModelSerializer):
             "confirmed_at": row.confirmed_at if enabled else None,
             "last_used_at": row.last_used_at if enabled else None,
         }
+
+    # 邀请了、还没设密码(第五十四批,用户 2026-10-26 定):列表打「待接受邀请」,同一邮箱再邀请一次即重发。
+    # 评测官员同样没有可用密码,但不是被邀请的人,除外。
+    invite_pending = serializers.SerializerMethodField()
+
+    def get_invite_pending(self, obj) -> bool:
+        from apps.authentication.officer_invite import is_pending
+
+        return is_pending(obj) and not self.get_is_eval_identity(obj)
 
     def get_is_eval_identity(self, obj) -> bool:
         from apps.soul_assist.eval_identities import tagged_ids
