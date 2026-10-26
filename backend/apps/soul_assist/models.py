@@ -20,7 +20,7 @@ SCREENS = ("applications", "sentence", "life", "letters", "circle", "settings", 
 #: 把它钉在前端的目录上:加一个页面而不加这里 → 红。
 OFFICER_SCREENS = (
     "about", "actors", "admin", "audit", "city-god-cases", "city-gods", "corpus", "cross-judgments", "dashboard", "death-sync", "dispatch",
-    "disposition", "events", "judgment", "ledger", "menus", "moderation", "notifications", "organizations",
+    "disposition", "events", "halls", "judgment", "ledger", "menus", "moderation", "notifications", "organizations",
     "permissions", "profile", "realms", "rebirth-applications", "rebirths", "recycle-bin", "scheduler",
     "sentence-plans", "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
     "welcome", "workflow", "other",

@@ -11981,6 +11981,7 @@ export interface components {
          *     * `dispatch` - dispatch
          *     * `disposition` - disposition
          *     * `events` - events
+         *     * `halls` - halls
          *     * `judgment` - judgment
          *     * `ledger` - ledger
          *     * `menus` - menus
@@ -12006,7 +12007,7 @@ export interface components {
          *     * `workflow` - workflow
          * @enum {string}
          */
-        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "halls" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
         EvalIdentities: {
             /** Format: uuid */
             eval_soul_account: string;
@@ -14644,6 +14645,7 @@ export interface components {
          *     * `dispatch` - dispatch
          *     * `disposition` - disposition
          *     * `events` - events
+         *     * `halls` - halls
          *     * `judgment` - judgment
          *     * `ledger` - ledger
          *     * `menus` - menus
@@ -14670,7 +14672,7 @@ export interface components {
          *     * `other` - other
          * @enum {string}
          */
-        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "city-god-cases" | "city-gods" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "events" | "halls" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "rebirths" | "recycle-bin" | "scheduler" | "sentence-plans" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
         OfficerStats: {
             concluded_this_month: number;
             concluded_total: number;
