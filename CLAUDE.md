@@ -163,7 +163,7 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 utility QoS + nice 10;Xcode 同时编译限 4 个任务(`IOS_JOBS` 覆盖,写进 `com.apple.dt.xcodebuild` 的 user default);
 ccache 由 `mobile/plugins/withBuildTuning.js` 打开(要 `brew install ccache`,已装);没设 Sentry DSN 的构建不编 Sentry 原生代码
 (各 App 的 `react-native.config.js`,实测官员 App 721 个编译单元里 Sentry 占 243)。DSN 要在构建时和打包时一起设。
-**只有改了原生依赖或 app.json plugins 才重编**,改 JS 只要 Metro。编译完、负载回到 12 以下再开模拟器 —— 10-27 两件事挤在一起,负载 575、交换区 19/20 GB。
+**只有改了原生依赖或 app.json plugins 才重编 —— 脚本自己判断**:用 `@expo/fingerprint` 算原生指纹(加 `react-native.config.js` 与 DSN 状态),和上次编成的一样就直接退出、提示只起 Metro;不一样才自动 prebuild + pod install + 编译(`FORCE=1` 强制)。上次的指纹在 `<git common dir>/soulledger-native-builds/`。实测 prebuild 前后指纹不变(生成的 ios/ 不计入)。改 JS 只要 Metro。编译完、负载回到 12 以下再开模拟器 —— 10-27 两件事挤在一起,负载 575、交换区 19/20 GB。
 
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
