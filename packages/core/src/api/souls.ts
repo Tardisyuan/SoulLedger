@@ -116,6 +116,8 @@ export type SoulListItem = SoulBase & {
   has_record_error: boolean;
   /** True only on rows a `show_archived` list brought back; the default list excludes archived souls. */
   is_archived?: boolean;
+  /** 本世饮孟婆汤的时刻;没饮是 null(列表的孟婆汤列,只对轮回中的地府灵魂有意义)。 */
+  soup_taken_at?: string | null;
 };
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */

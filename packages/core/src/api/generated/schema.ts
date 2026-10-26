@@ -12609,7 +12609,7 @@ export interface components {
          */
         HandoverPreviewProblemsEnum: "target_cannot_judge" | "target_cannot_reply";
         HandoverRequest: {
-            to: number;
+            to?: number | null;
             from: number;
         };
         HandoverResult: {
@@ -18668,6 +18668,8 @@ export interface components {
             readonly has_record_error: boolean;
             readonly is_eval_identity: boolean;
             readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly soup_taken_at: string | null;
         };
         SoulLoginOutcome: components["schemas"]["SoulLoginResponse"] | components["schemas"]["SoulMfaRequired"];
         SoulLoginRequest: {
