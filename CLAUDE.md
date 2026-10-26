@@ -201,7 +201,10 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 或要更新壳旁边那份备用副本(`.git/hooks/soulledger-gates/`,给还没有 `run-gates.sh` 的
 老分支用)时才需要。
 
-**pre-push 只跑受影响的 jest(2026-09-30 起);其余门禁照旧全跑。**
+**pre-push 只跑受影响的测试:jest(2026-09-30 起)和后端 pytest(2026-10-27 起,按 app 选)。**
+**每个测试运行器默认 2 个进程(2026-10-27 用户决定)**:jest / pytest / vitest 各 2(`JEST_WORKERS` /
+`PYTEST_WORKERS` / `VITEST_WORKERS` 覆盖)。此前各 4 个,内存进交换区,一晚上四轮全量把电脑卡死。
+**不要自己加 `--full`**:提交推送只测改动部分(用户 10-27 明确要求);全量只在用户要求时跑,并先问时间。
 会话里要跑「推送时会跑的那一套」,直接跑同一个脚本,它自己拿门禁锁:
 
     scripts/run-gates.sh                 # 与 base 比:已提交 + 已暂存 + 未暂存 + 未跟踪
@@ -233,7 +236,14 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   也包括 `jest.always-run.txt` 本身)、根上的 JS 依赖树(package*.json、.nvmrc)、删掉或改名的文件、
   不认识的根文件、以及门禁脚本本身(`run-gates.sh` / `install-hooks.sh`)。
   `--affected` 就是默认行为;**没有任何办法强制选择性运行** —— `GATES_FULL=0` 不是开关。
-- **后端 pytest 仍然全跑**,tsc / eslint / core / mobile / ruff / makemigrations 也是。
+- **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
+  源码里写了 `apps.<app>` / 调了该 app 的 `/api/v1/<前缀>/`」的测试文件,前缀从 `config/urls.py` 读;
+  再加上 `reads-outside-backend.txt` 里命中的读文件测试。改了 `backend/config/`、任一 conftest、`pytest.ini`、
+  依赖、`backend/` 顶层文件 → 全量。实测:只改 judgment 一个文件选 474 个里的 113 个,2348 passed,
+  `-n 2` 4 分 41 秒(全量 `-n 4` 是 10–28 分钟)。**可能漏的**:只经别的 app 间接走到某 app、源码里既没写它
+  名字也没调它网址的测试 —— 用户接受,没有夜间全量兜底。守卫 `tests/test_backend_test_selection.py`。
+  下面那段 testmon 的实测是当时不选的理由(按 import 选太宽且会漏 URLconf),按 app 选是另一条路。
+- tsc / eslint / core / mobile / ruff / makemigrations 照旧在对应区域有改动时跑。
   pytest-testmon 做进去并实测过(2026-09-30,`-n 4`,同一棵树),**没有采用**,因为安全的版本比全跑慢:
 
       全量,不记录            5647 passed   130 s
