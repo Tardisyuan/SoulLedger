@@ -55,5 +55,6 @@
   "halls.audit.view_start",
   "halls.audit.view_end",
   "breadcrumb.menu.halls",
-  "breadcrumb.menu.group_global"
+  "breadcrumb.menu.group_global",
+  "case.attachments.print_failed"
 ]

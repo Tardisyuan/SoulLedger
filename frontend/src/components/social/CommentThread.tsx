@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
+import { QueryError } from "@/src/components/ui/PageError";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { ReactionBar } from "./ReactionBar";
@@ -152,7 +153,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
   const { t } = useI18n();
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const { data, isLoading } = useComments(postId);
+  const { data, isLoading, isError, refetch } = useComments(postId);
   const createComment = useCreateComment();
   const comments = data?.results ?? [];
   const tree = buildTree(comments);
@@ -170,6 +171,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
   return (
     <section
       aria-labelledby="comments-heading"
+      aria-busy={isLoading}
       className="flex flex-col gap-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px] max-[768px]:border-x-0 max-[768px]:p-4"
     >
       <h2 id="comments-heading" className="pb-2 text-lg text-[oklch(var(--color-ink))]">
@@ -177,11 +179,14 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
       </h2>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div role="status" className="space-y-3">
+          <span className="sr-only">{t("common.loading")}</span>
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-12 bg-[oklch(var(--color-surface-2))]" />
           ))}
         </div>
+      ) : isError && !data ? (
+        <QueryError onRetry={() => void refetch()} />
       ) : comments.length === 0 ? (
         <p className="border-t border-[oklch(var(--color-line))] py-4 text-sm text-[oklch(var(--color-ink-subtle))]">
           {t("social.no_comments")}

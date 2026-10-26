@@ -8,6 +8,7 @@ import { pickHall } from "@soulledger/core/domain/workflowSegments";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
+import { QueryError } from "@/src/components/ui/PageError";
 import { PickStationsSheet } from "./PickStationsSheet";
 
 /**
@@ -23,6 +24,7 @@ export function PickNodesGroup() {
     staleTime: 60_000,
   });
   const [picking, setPicking] = useState<{ id: string; order: number } | null>(null);
+  if (todo.isError && !todo.data) return <QueryError onRetry={() => void todo.refetch()} />;
   const group = todo.data?.pick_nodes;
   const items = group?.items ?? [];
   if (!group || items.length === 0) return null;
