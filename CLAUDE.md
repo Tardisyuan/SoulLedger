@@ -159,6 +159,12 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 - **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
   2026-10-11 灵魂端和官员端的恢复码框都漏了;编号框(`auth.tsx`、`letters.tsx`)早就设了。
 
+**原生重编用 `scripts/build-mobile-dev.sh <mobile|mobile-officer> <ios|android> [--device <udid>]`(2026-10-27 用户决定)**:
+utility QoS + nice 10;Xcode 同时编译限 4 个任务(`IOS_JOBS` 覆盖,写进 `com.apple.dt.xcodebuild` 的 user default);
+ccache 由 `mobile/plugins/withBuildTuning.js` 打开(要 `brew install ccache`,已装);没设 Sentry DSN 的构建不编 Sentry 原生代码
+(各 App 的 `react-native.config.js`,实测官员 App 721 个编译单元里 Sentry 占 243)。DSN 要在构建时和打包时一起设。
+**只有改了原生依赖或 app.json plugins 才重编**,改 JS 只要 Metro。编译完、负载回到 12 以下再开模拟器 —— 10-27 两件事挤在一起,负载 575、交换区 19/20 GB。
+
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
 而 `CI=1` 启动时 Metro 根本不监视文件 —— App 跑的仍是旧 bundle,且不报任何错,于是「改动没生效」
