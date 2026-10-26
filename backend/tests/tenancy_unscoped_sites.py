@@ -34,6 +34,8 @@ SITES = [
     ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'global admin with no hall names one hall by its globally unique code for the invite (ADMIN only)'),
     ('apps/judgment/handover.py', '_target_takes_appeal', 'Judgment.all_objects', 1, 'PK', 'the judgment of an appeal already filtered to the handover hall, by its FK'),
     ('apps/judgment/handover.py', 'commit', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks the appeals whose pks come from a query filtered by the handover hall'),
+    ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'SentenceNode.all_objects', 1, 'PK', "the soul's own plan nodes (plan__soul_id), to tell a pardoned eternal sentence"),
+    ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'Disposition.all_objects', 1, 'PK', "the soul's own dispositions, by its pk"),
     ('apps/reincarnation/services.py', 'drink_soup', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'Tenant.objects', 1, 'CODE', "the requesting hall by its globally unique code; only its civilization is read (Tenant has no tenant column)"),
     ('apps/sentence_plan/soul_view.py', 'soul_plan', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),

@@ -395,6 +395,10 @@ def _reopen(soul, plan, nodes, judgment):
                                                  f"{judgment.pk} concluded PASS"):
         return False
     soul.refresh_from_db()
+    # 孟婆汤每世一次、在「最后一次候转世」时饮:重开计划后再回到候转世要重新饮(2026-10-27)。
+    if soul.soup_taken_at is not None:
+        soul.soup_taken_at = None
+        soul.save(update_fields=["soup_taken_at"])
     plan.status = SentencePlanStatus.ACTIVE
     plan.completed_at = None
     _save(plan, "status", "completed_at")

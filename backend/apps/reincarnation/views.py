@@ -114,7 +114,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         soul = reincarnation.soul
 
         from apps.ledger.services import LedgerService
-        from apps.reincarnation.services import ReincarnationService
+        from apps.reincarnation.services import ReincarnationService, assert_may_be_reborn
         from apps.souls.models import SoulState
         disposition = reincarnation.disposition
 
@@ -142,6 +142,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # this is the not-yet-executed path.) Raising here answers 409
         # REBIRTH_NOT_APPLICABLE and leaves the soul where it was.
         LedgerService.assert_rebirth_capable(soul)
+        assert_may_be_reborn(soul, disposition)
 
         # Ask the state machine for the move rather than assigning it.
         # DISPOSED → REINCARNATING is legal and goes through as before; every
@@ -206,7 +207,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         """
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
-        from apps.reincarnation.services import ReincarnationService
+        from apps.reincarnation.services import ReincarnationService, assert_may_be_reborn
         from apps.souls.models import Soul, SoulState
 
         # Body first, before the soul and disposition lookups: a malformed
@@ -240,7 +241,8 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
 
         disposition = None
         if disposition_id:
-            disp_qs = Disposition.objects.all()
+            # 只认这个灵魂自己的处置:别人的处置会把别人的去向与清记忆写到这个灵魂身上(2026-10-27)。
+            disp_qs = Disposition.objects.filter(soul=soul)
             if getattr(request.user, 'role', None) != 'ADMIN' and user_tenant:
                 disp_qs = disp_qs.filter(tenant=user_tenant)
             try:
@@ -258,6 +260,7 @@ class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         # answer 400 for everything else; the 400 becomes a 409 because the
         # request was never malformed, only in conflict with the soul's state.
         LedgerService.assert_rebirth_capable(soul)
+        assert_may_be_reborn(soul, disposition)
 
         if soul.current_state != SoulState.REINCARNATING:
             moved = soul.transition_to(
