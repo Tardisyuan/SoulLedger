@@ -28,6 +28,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
+import { SoupCell } from "@/src/components/souls/SoupCell";
 import { SoulImportDialog } from "@/src/components/souls/SoulImportDialog";
 import { SoulRegionBackfillDialog } from "@/src/components/souls/SoulRegionBackfillDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
@@ -217,15 +218,18 @@ function SoulsList({
 
   /* 列菜单(Design 第二十八批 W1)。菜单里的列清单是固定五列:死亡列本页没有值时仍在菜单里,
      只是不画(上面的 `showsDeathColumn`),这样「列 · 4/5」不随翻页跳动。名称列钉住。 */
+  // 孟婆汤列(第五十四批 R-1):本页有轮回中的地府灵魂才画,和死亡列一样「没话说就不占位」。
+  const showsSoupColumn = souls.some((s) => s.civilization === "CHINESE" && s.current_state === "REINCARNATING");
   const columnDefs = [
     { key: "name", header: t("souls.name"), sortable: true, pinned: true },
     { key: "civilization", header: t("souls.civilization") },
     { key: "state", header: t("souls.state") },
     { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
     { key: "death", header: t("souls.death") },
+    { key: "soup", header: t("mengpoSoup.title") },
   ];
   const columnVis = useColumnVisibility(SOULS_COLUMNS_KEY, columnDefs);
-  const showsColumn = (key: string) => columnVis.isVisible(key) && (key !== "death" || showsDeathColumn);
+  const showsColumn = (key: string) => columnVis.isVisible(key) && (key !== "death" || showsDeathColumn) && (key !== "soup" || showsSoupColumn);
 
   const states = [
     { value: "", label: t("filter.all") },
@@ -525,6 +529,11 @@ function SoulsList({
                 <DomainNumber value={soul.karmic_balance} signed toned />
               )}
             </td>
+            )}
+            {showsColumn("soup") && (
+              <td className="px-4 py-3 text-xs whitespace-nowrap">
+                <SoupCell soul={soul} onChanged={() => void refetch()} />
+              </td>
             )}
             {showsColumn("death") && (
               /* 02 档：日期是元数据，不是正文。 */

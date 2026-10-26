@@ -1,5 +1,6 @@
 /** 我的: profile (the name opens its edit screen), two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
 import { authApi, mfaApi } from "@soulledger/core/api/auth";
+import { officerAppApi } from "@soulledger/core/api/officer-app";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -44,7 +45,7 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   return (
     <Screen testID="tab-me-screen" edges={["left", "right"]} scrollRef={scroll}>
       <View style={{ padding: space[5], gap: space[5] }}>
-        <Row testID="me-stats" minHeight={64} title={t("officer_app.stats.title")} lines={[{ one: t("officer_app.stats.scope") }]} onPress={() => onOpen("stats")} right={<Txt variant="nav">›</Txt>} />
+        <StatsCard onOpen={() => onOpen("stats")} />
 
         <Block label={t("officer_app.me.profile")}>
           <Row
@@ -285,5 +286,39 @@ function ConfirmBlock() {
         />
       </View>
     </Block>
+  );
+}
+
+/** 我的数(S-1): the three numbers in motion; the whole card opens the stats screen. Loading shows a dash-free placeholder, an error says so (never zeros). */
+function StatsCard({ onOpen }: { onOpen: () => void }) {
+  const { t } = useI18n();
+  const load = useCallback(() => officerAppApi.stats().then((r) => r.data), []);
+  const { data, error } = useRemote(load);
+  const cell = (testID: string, label: string, n: number | undefined) => (
+    <View key={testID} style={{ alignItems: "center", minWidth: 56 }}>
+      <Txt testID={testID} variant="title">{n === undefined ? "…" : String(n)}</Txt>
+      <Txt variant="caption" tone="muted">{label}</Txt>
+    </View>
+  );
+  const failed = !data && !!error;
+  return (
+    <Row
+      testID="me-stats"
+      minHeight={88}
+      title={t("officer_app.stats.title")}
+      lines={[{ one: failed ? t("officer_app.stats.load_failed") : t("officer_app.stats.scope") }]}
+      onPress={onOpen}
+      right={
+        failed ? (
+          <Txt variant="nav">›</Txt>
+        ) : (
+          <View style={{ flexDirection: "row", gap: space[3] }}>
+            {cell("me-stat-month", t("officer_app.stats.concluded_this_month"), data?.concluded_this_month)}
+            {cell("me-stat-open", t("officer_app.stats.open_claims"), data?.open_claims)}
+            {cell("me-stat-review", t("officer_app.stats.appeals_in_review"), data?.appeals_in_review)}
+          </View>
+        )
+      }
+    />
   );
 }

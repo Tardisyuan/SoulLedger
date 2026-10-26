@@ -27813,11 +27813,11 @@ components:
       properties:
         to:
           type: integer
+          nullable: true
         from:
           type: integer
       required:
       - from
-      - to
     HandoverResult:
       type: object
       properties:
@@ -40704,6 +40704,11 @@ components:
         is_archived:
           type: boolean
           readOnly: true
+        soup_taken_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
       - civilization
       - create_time
@@ -40715,6 +40720,7 @@ components:
       - is_eval_identity
       - karmic_balance
       - name
+      - soup_taken_at
       - tenant_code
     SoulLoginOutcome:
       oneOf:

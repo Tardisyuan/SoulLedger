@@ -683,10 +683,10 @@ class SoulListSerializer(serializers.ModelSerializer):
             "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "date_problems", "has_date_warning",
-            "has_record_error", "is_eval_identity", "is_archived",
+            "has_record_error", "is_eval_identity", "is_archived", "soup_taken_at",
         ]
         # 只在 `?show_archived=1` 时会是 true(默认列表排除已归档);Web 据此把那一行调灰、标「已归档」。
-        read_only_fields = ["is_archived"]
+        read_only_fields = ["is_archived", "soup_taken_at"]
 
     def get_karmic_balance(self, obj) -> int | None:
         if _is_viewer(self.context):
