@@ -40,6 +40,7 @@ SITES = [
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'Tenant.objects', 1, 'CODE', "the requesting hall by its globally unique code; only its civilization is read (Tenant has no tenant column)"),
     ('apps/sentence_plan/soul_view.py', 'soul_plan', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),
     ('apps/tenants/serializers.py', 'TenantCreateSerializer.validate_code', 'Tenant.objects', 1, 'GLOBAL', 'uniqueness check of a new hall code (Tenant has no tenant column; ADMIN only)'),
+    ('apps/tenants/views.py', 'TenantViewSet.hall_settings', 'Tenant.objects', 1, 'LOCK', 'locks the one hall get_object() already resolved through the scoped queryset, by its pk'),
     ('apps/tenants/views.py', 'TenantViewSet.overview', 'Tenant.objects', 1, 'FANOUT', 'cross-hall overview for the global admin (ADMIN only): one row per hall'),
     ('apps/ledger/views.py', 'LedgerOverviewStatsView.get', 'Tenant.objects', 1, 'FANOUT', 'lists active halls with no souls yet (ADMIN only); narrowed to the request hall when there is one, same scope as soul_qs'),
     ('apps/actors/management/commands/consolidate_eu_pantheon.py', 'Command.handle', 'Actor.all_objects', 1, 'CLI', 'operator cleanup command, filtered by the two tenant codes it merges'),
