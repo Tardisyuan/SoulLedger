@@ -427,15 +427,6 @@ describe('API Client — @soulledger/core/api', () => {
       }, { withCredentials: true }); // the 「不再询问」 device cookie lives on the API origin
     });
 
-    it('register() should POST to /auth/register/', () => {
-      mockInstance.post.mockResolvedValueOnce({ data: {} });
-      authApi.register({ username: 'new_user', email: 'u@test.com' });
-      expect(mockInstance.post).toHaveBeenCalledWith('/auth/register/', {
-        username: 'new_user',
-        email: 'u@test.com',
-      });
-    });
-
     it('profile() should GET /auth/profile/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: {} });
       authApi.profile();

@@ -289,9 +289,6 @@ export const authApi = {
   preferences: () => api.get<UserPreferences>("/auth/profile/preferences/"),
   updatePreferences: (data: Partial<Omit<UserPreferences, "notifications">> & { notifications?: NotificationPrefsPatch }) =>
     api.patch<UserPreferences>("/auth/profile/preferences/", data),
-  // 201 body is UserSerializer, not the login envelope — registering does not
-  // hand back tokens (backend/apps/authentication/views.py:492).
-  register: (data: object) => api.post<AuthProfile>("/auth/register/", data),
   // SIMPLE_JWT rotates refresh tokens, so the body carries a new `refresh`
   // as well as `access`.
   refresh: (data: { refresh: string }) => api.post<{ access: string; refresh: string }>("/auth/refresh/", data),

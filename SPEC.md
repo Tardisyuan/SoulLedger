@@ -1030,7 +1030,6 @@ def check_judgment_timeouts():
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
 | POST | /api/v1/auth/login/ | 登录 | 否 |
-| POST | /api/v1/auth/register/ | 注册 | 否 |
 | POST | /api/v1/auth/refresh/ | 刷新 token | 否 |
 | POST | /api/v1/auth/logout/ | 注销 | 是 |
 | GET | /api/v1/auth/profile/ | 当前用户（含 tenant 信息） | 是 |

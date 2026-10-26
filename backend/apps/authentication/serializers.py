@@ -2,7 +2,6 @@
 Auth serializers: register, login, user profile.
 """
 from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -86,7 +85,7 @@ def role_rank(role):
 # Case-insensitive: an address differing only in case is the same mailbox, and
 # the registration check was already `iexact`.
 #
-# NOT a database constraint, for the reason `RegisterSerializer` records: a
+# NOT a database constraint: a
 # `unique=True` migration would have to run against a column that may already
 # hold duplicates and holds `""` for every account created without an address.
 # This closes the paths that create NEW duplicates; a constraint needs a data
@@ -427,49 +426,6 @@ class TokenRefreshSerializer(signin_sessions.SessionAwareRefreshMixin, SimpleJWT
     `TokenRefresh`."""
 
     token_class = RefreshToken
-
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={"input_type": "password"},
-    )
-
-    class Meta:
-        model = User
-        # FIX: removed 'role' — role is always set to VIEWER on creation
-        # this prevents mass assignment of privileged roles during registration
-        fields = ["username", "email", "password", "first_name", "last_name"]
-
-    def validate_password(self, value):
-        validate_password(value)
-        return value
-
-    def validate_email(self, value):
-        """Refuse an address that already has an account.
-
-        This endpoint is `AllowAny`, so without the check anyone could register
-        a second account on someone else's address and take that address's
-        password reset offline permanently. The rule itself now lives in
-        `validate_email_is_unclaimed` above, because this was the only write
-        path that had it — profile, admin create/update and CSV import all let
-        a duplicate through (BP-04).
-        """
-        return validate_email_is_unclaimed(value, self.instance)
-
-    def create(self, validated_data):
-        # role is always VIEWER on registration — never user-controlled
-        validated_data.pop("role", None)
-        user = User.objects.create_user(
-            username=validated_data["username"],
-            email=validated_data.get("email", ""),
-            password=validated_data["password"],
-            role="VIEWER",  # always VIEWER on self-registration
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-        )
-        return user
 
 
 class UserSerializer(serializers.ModelSerializer):

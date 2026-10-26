@@ -1188,27 +1188,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/register/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description POST /api/v1/auth/register/
-         *     Create a new user account.
-         *     Rate limited via DRF throttle (RegisterThrottle: 5/hour per IP).
-         */
-        post: operations["v1_auth_register_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/reset-password/": {
         parameters: {
             query?: never;
@@ -17619,15 +17598,6 @@ export interface components {
         RecycleBinRestoreResult: {
             restored: number;
         };
-        Register: {
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            username: string;
-            /** Email address */
-            email?: string;
-            password: string;
-            first_name?: string;
-            last_name?: string;
-        };
         /**
          * @description * `OFFICER` - OFFICER
          *     * `DEATH_SYNC` - DEATH_SYNC
@@ -22571,49 +22541,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenRefresh"];
-                };
-            };
-        };
-    };
-    v1_auth_register_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Register"];
-                "application/x-www-form-urlencoded": components["schemas"]["Register"];
-                "multipart/form-data": components["schemas"]["Register"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
-                };
-            };
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

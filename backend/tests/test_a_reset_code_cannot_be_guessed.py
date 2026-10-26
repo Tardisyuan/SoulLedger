@@ -174,18 +174,3 @@ class TestDuplicateEmailDoesNotCrashTheReset:
             format="json",
         )
         assert res.status_code == 200, res.data
-
-    def test_registration_refuses_an_address_that_already_exists(
-        self, api_client, django_user_model, cn_tenant
-    ):
-        django_user_model.objects.create_user(
-            username="taken", email="taken@example.com", password="OldPass!123",
-            role="SOUL", tenant=cn_tenant,
-        )
-        res = api_client.post(
-            "/api/v1/auth/register/",
-            {"username": "impostor", "email": "taken@example.com", "password": GOOD_PASSWORD},
-            format="json",
-        )
-        assert res.status_code == 400, res.data
-        assert "email" in res.data
