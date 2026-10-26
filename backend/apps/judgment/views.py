@@ -367,10 +367,12 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
                 tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
                 if tenant is None or soul.tenant_id != tenant.pk:
                     raise ValidationError({"soul": ["No such soul in this tenant."]})
-                if open_judgments(soul).exists():
-                    raise ValidationError(
-                        {"soul": ["This soul already has an open case. Conclude it before opening another."]}
-                    )
+            # Asked of a global admin too (2026-10-27): one open case per soul is a business rule, not a tenancy one.
+            if open_judgments(soul).exists():
+                raise ValidationError(
+                    {"soul": ["This soul already has an open case. Conclude it before opening another."]}
+                )
+            was_alive = soul.current_state == SoulState.ALIVE
             super().perform_create(serializer)
             judgment = serializer.instance
             # 受刑计划进行中的灵魂,这件案子是对计划的加 / 减项(情况 1,§4.1):结案生成请求,
@@ -383,8 +385,21 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
 
                 Judgment.all_objects.filter(pk=judgment.pk).update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
                 judgment.kind, judgment.amends_plan_id = JudgmentKind.AMENDMENT, plan.pk
-            if soul.current_state == SoulState.ALIVE:
-                soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
+            if was_alive:
+                # Opening a case for a living soul is a death recorded today: the same 枉死城 and 城隍 columns
+                # `Soul.die` writes, or the case skips both (2026-10-27, review #7).
+                from django.utils import timezone
+
+                from apps.judgment import city_gods
+                from apps.judgment.models import Judgment
+
+                fields = soul.opening_fields(timezone.now().date())
+                Judgment.all_objects.filter(pk=judgment.pk).update(**fields)
+                for name, value in fields.items():
+                    setattr(judgment, name, value)
+                if not soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated"):
+                    raise ValidationError({"soul": [f"The soul is {soul.current_state}; it cannot enter judgment."]})
+                city_gods.received(judgment)
             _enter_judgment_realm(soul, judgment)
 
     def perform_update(self, serializer):

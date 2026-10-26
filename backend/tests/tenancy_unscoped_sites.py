@@ -144,7 +144,7 @@ SITES = [
     ('apps/judgment/services.py', 'StatuteCitationService.uncite', 'JudgmentCitation.all_objects', 1, 'PK', 'citations of one judgment'),
     ('apps/judgment/tasks.py', 'auto_conclude_stale_judgments', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/judgment/tasks.py', 'auto_conclude_stale_judgments_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),
-    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Judgment.all_objects', 1, 'LOCK', "locks the soul, then rejects it when soul.tenant_id != the caller's tenant (non-ADMIN)"),
+    ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Judgment.all_objects', 2, 'PK', "updates the case this request just created, by its pk (AMENDMENT kind; the death columns of a living soul)"),
     ('apps/judgment/views.py', 'JudgmentViewSet.perform_create', 'Soul.all_objects', 1, 'LOCK', "locks the soul, then rejects it when soul.tenant_id != the caller's tenant (non-ADMIN)"),
     ('apps/judgment/views.py', 'citing_judgments', 'JudgmentCitation.all_objects', 1, 'PK', 'subquery of judgment ids citing one statute, used inside an already scoped judgment queryset'),
     ('apps/ledger/management/commands/snapshot_balances.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
