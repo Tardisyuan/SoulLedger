@@ -160,6 +160,20 @@ def test_a_disposition_parked_at_the_duat_entry_does_not_execute_into_settled(eg
     assert Soul.objects.get(pk=case.soul_id).current_state != SoulState.SETTLED
 
 
+def test_a_death_reaches_the_hall_of_two_truths(eg_tenant):
+    """02 §1.1: through the Duat to the Hall of Two Truths, where the case is heard."""
+    from apps.realms.models import SoulPathEntry
+
+    Realm.objects.create(realm_code="EG_HALL_TWO_TRUTHS", civilization="EGYPTIAN", name_local="hall",
+                         name_zh="两真之殿", realm_type="PURGATORY", tenant=eg_tenant)
+    soul = Soul.objects.create(name="Died", tenant=eg_tenant, current_state=SoulState.ALIVE)
+    case = soul.die()
+    assert case.realm.realm_code == "EG_HALL_TWO_TRUTHS"
+    path = list(SoulPathEntry.all_objects.filter(soul=soul).order_by("entered_at", "pk")
+                .values_list("realm__realm_code", flat=True))
+    assert path == ["EG_DUAT_ENTRY", "EG_HALL_TWO_TRUTHS"]
+
+
 def test_neither_egyptian_outcome_takes_a_term(eg_tenant):
     """02 §5.2 / 03 §五: the second death is not served; nor is the Field of Reeds."""
     from apps.disposition.destination import DestinationRefusedError
