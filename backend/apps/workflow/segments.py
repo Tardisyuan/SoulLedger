@@ -229,7 +229,6 @@ def foreign_realms(cross, own_tenant_id, case_type):
     """跨域审判的各参与域,按流程里各段的顺序:`node_order`(入席时定的「各域顺序」),没有序号的(顾问)按入席先后
     排后面。同一个域入席两次只算一段;发起方自己的顾问席不另起一段。每项 (租户, 文明, 该域的默认流程)。
     `add_foreign` 与生成之前的选站列表(`flow_preview`)共用,两处的外域段不会不一样。"""
-    from apps.souls.models import TENANT_CIVILIZATION
     from apps.workflow.services import WorkflowService
 
     seats = (cross.participants.filter(is_deleted=False).select_related("participant_tenant")
@@ -240,7 +239,7 @@ def foreign_realms(cross, own_tenant_id, case_type):
         if realm.pk in seen:
             continue
         seen.add(realm.pk)
-        civilization = TENANT_CIVILIZATION.get(realm.code, realm.code)
+        civilization = realm.known_civilization or realm.code
         template, _priority = WorkflowService._resolve_template(
             civilization, case_type_for(civilization, case_type), realm)
         yield realm, civilization, template
@@ -338,10 +337,9 @@ def add_foreign(workflow, cross):
 
 def _foreign_segment(workflow, realm, order):
     """一个外域段:那个域的默认流程,节点接在流程现有各站之后,等那个域选站。"""
-    from apps.souls.models import TENANT_CIVILIZATION
     from apps.workflow.services import WorkflowService
 
-    civilization = TENANT_CIVILIZATION.get(realm.code, realm.code)
+    civilization = realm.known_civilization or realm.code
     template, _priority = WorkflowService._resolve_template(
         civilization, case_type_for(civilization, workflow.case_type), realm)
     segment = WorkflowSegment.objects.create(
@@ -798,9 +796,8 @@ def _realm(tenant):
 def _realm_params(tenant):
     """通知里的域:`realm_civ` 让 `messages.render` 按收件人的语言换成文明名(中国 / 埃及 …,同客户端的分段头);
     `realm` 是租户展示名(库里的英文),只给认不出文明的租户作退路。"""
-    from apps.souls.models import TENANT_CIVILIZATION
 
-    civ = TENANT_CIVILIZATION.get(tenant.code)
+    civ = tenant.known_civilization
     return {"realm": _realm(tenant), **({"realm_civ": str(civ)} if civ else {})}
 
 

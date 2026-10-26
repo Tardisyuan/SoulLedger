@@ -70,6 +70,15 @@ class Tenant(AuditUserFields, models.Model):
         return UNKNOWN_CIVILIZATION
 
     @property
+    def known_civilization(self):
+        """`civilization`,认不出时是 None —— 给原来写 `TENANT_CIVILIZATION.get(code)` 的调用点:
+        那张表只认四个种子殿,新建的殿要读 `declared_civilization`(2026-10-26)。"""
+        from apps.souls.models import UNKNOWN_CIVILIZATION
+
+        civ = self.civilization
+        return None if civ == UNKNOWN_CIVILIZATION else civ
+
+    @property
     def hall_names(self):
         """{locale: 殿司展示名},键与 App 的三个语言包同名。空的退回 zh,再退回 `display_name`。"""
         zh = self.hall_name or self.display_name

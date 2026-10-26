@@ -123,10 +123,10 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
 
     @extend_schema(responses={201: CityGodSerializer, 400: JudgmentClaimRefusalSerializer})
     def create(self, request, *args, **kwargs):
-        from apps.souls.models import TENANT_CIVILIZATION, Civilization
+        from apps.souls.models import Civilization
 
         tenant = self.get_serializer_context()["tenant"]
-        if tenant is None or TENANT_CIVILIZATION.get(tenant.code) != Civilization.CHINESE:
+        if tenant is None or tenant.known_civilization != Civilization.CHINESE:
             return Response({"error": "City gods belong to 地府 (CN_DIYU) only.", "code": "city_gods_diyu_only"},
                             status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
