@@ -294,7 +294,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         from apps.souls.models import Soul
         from apps.workflow.models import CaseType
-        from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, WORKFLOW_TEMPLATES
+        from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, formal_template
 
         civilization = request.query_params.get("civilization", "")
         soul_id = request.query_params.get("soul", "")
@@ -318,7 +318,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response({"code": "unknown_civilization", "error": f"Unknown civilization '{civilization}'"},
                             status=status.HTTP_400_BAD_REQUEST)
         rows = [
-            {"value": c.value, "builtin": bool((WORKFLOW_TEMPLATES.get((civilization, c)) or {}).get("nodes"))}
+            {"value": c.value, "builtin": bool((formal_template(civilization, c) or {}).get("nodes"))}
             for c in CaseType
             if c in valid
         ]

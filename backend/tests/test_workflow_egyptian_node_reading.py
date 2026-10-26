@@ -208,7 +208,8 @@ def test_a_heart_weighing_workflow_is_built_with_the_corrected_reading(seeded):
     # above and be a stuck workflow.
     first, second, third = workflow.nodes.order_by("node_order")
     assert (first.approver_type, first.approver_actor.name) == ("ACTOR", "Anubis")
-    assert (second.approver_type, second.approver_actor_id) == ("SYSTEM", None)
+    # The bench names no person; since 2026-10-27 (docs-others X-3) it carries the default role instead of SYSTEM.
+    assert (second.approver_type, second.approver_actor_id, second.approver_role) == ("ROLE", None, "JUDGE")
     assert (third.approver_type, third.approver_actor.name) == ("ACTOR", "Osiris")
 
 

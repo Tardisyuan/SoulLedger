@@ -15,6 +15,7 @@ import logging
 
 from apps.souls.models import Civilization
 from apps.workflow.models import CaseType, NodeType
+from apps.workflow.node_shape import normalize_template_node
 
 logger = logging.getLogger(__name__)
 
@@ -480,3 +481,138 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
     # repository keeps finding in its own history.
     Civilization.GREEK: {CaseType.ROUTINE, CaseType.APPEAL},
 }
+
+
+# ── The formal flows: return rules, the European / Greek ROUTINE flows, a default approver role ──
+#
+# Moved here from ``seed_workflow_templates`` (2026-10-27, docs-others X-2): these used to exist only as the
+# database rows that command writes, so a hall nobody had seeded — every hall the global admin creates — ran
+# the ten courts with no returns and European / Greek ROUTINE as one generic node. ``_resolve_template`` now
+# falls back to ``formal_template`` (a stored row still wins), and the command writes the same thing.
+#
+# X-3: a station that names nobody gets ``approver_role`` ``DEFAULT_APPROVER_ROLE`` instead of ``SYSTEM``, so a
+# fresh hall's officers can decide it without first editing the template (``TEMPLATE_NODES_WITHOUT_AN_APPROVER``
+# still records why no *person* is named). JUDGE, because MODERATOR is deliberately denied ``workflow.approve``.
+
+DEFAULT_APPROVER_ROLE = "JUDGE"
+
+C, EU, EG, GR = Civilization.CHINESE, Civilization.EUROPEAN, Civilization.EGYPTIAN, Civilization.GREEK
+
+#: Flows ``WORKFLOW_TEMPLATES`` does not have: the presets, in its spelling.
+PRESET_FLOWS = {
+    (EU, CaseType.ROUTINE): {
+        "name": "末日审判流程",
+        "nodes": [
+            {"name": "Christ · 私审判", "court": "天堂", "type": NodeType.TRIAL, "order": 1, "actor": "Christ"},
+            {"name": "Michael · 引领入光", "court": "天堂", "type": NodeType.EXECUTION, "order": 2, "actor": "Michael"},
+            {"name": "Christ · 公审判", "court": "天堂", "type": NodeType.FINAL, "order": 3, "actor": "Christ"},
+        ],
+    },
+    # Gorgias 524a (2026-10-19): one judge or the other, by where the dead came from; Minos only in doubt.
+    # n1 is 通知 with nobody designated: the engine runs it at once and takes the branch `origin_region` selects
+    # (`ApprovalWorkflow._enter` → `_pass_successor`), else `on_pass` — Minos, for a soul whose region is 不详.
+    (GR, CaseType.ROUTINE): {
+        "name": "希腊冥界流程",
+        "nodes": [
+            {"name": "按出身地域分流", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 1,
+             "kind": "NOTIFY", "on_pass": "n4", "branches": [
+                 {"id": "europe", "when": [{"fact": "origin_region", "op": "in", "value": ["EUROPE"]}],
+                  "target": "n2"},
+                 {"id": "asia", "when": [{"fact": "origin_region", "op": "in", "value": ["ASIA"]}],
+                  "target": "n3"},
+             ]},
+            {"name": "Aeacus · 分区审判（欧洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 2,
+             "actor": "Aeacus", "on_pass": "n5"},
+            {"name": "Rhadamanthus · 分区审判（亚洲亡魂）", "court": "岔路口草地", "type": NodeType.TRIAL, "order": 3,
+             "actor": "Rhadamanthus", "on_pass": "n5"},
+            {"name": "Minos · 终裁（另二人存疑时）", "court": "岔路口草地", "type": NodeType.FINAL, "order": 4,
+             "actor": "Minos", "on_pass": "n5"},
+            {"name": "结束 · 各走其路", "court": "岔路口草地", "type": NodeType.FINAL, "order": 5, "kind": "END"},
+        ],
+    },
+}
+
+
+#: One spelling per court across the rows this command writes (2026-10-19): ``WORKFLOW_TEMPLATES`` spells the
+#: European appeal's court ``Heaven`` while the 末日审判 preset says 天堂 — the same court. The rows take the
+#: presets' 天堂; screens show either spelling in the reader's language (``courtLabel`` in packages/core).
+COURT_SPELLING = {"Heaven": "天堂"}
+
+
+def _back(*pairs):
+    return {order: ("reject_to", target) for order, target in pairs}
+
+
+#: (civilization, case_type) -> {station: (field, target station)}. A station not listed ends the flow
+#: on FAIL. Also the list of rows this command writes.
+FAIL_ROUTES = {
+    (C, CaseType.ROUTINE): {**_back(*((i, i - 1) for i in range(2, 10))), 10: ("reject_to", 1)},
+    (C, CaseType.APPEAL): _back((2, 1), (3, 2)),
+    (C, CaseType.CROSS_REALM): _back((2, 1), (3, 2), (4, 3)),
+    (EG, CaseType.ROUTINE): {},
+    (EG, CaseType.HEART_WEIGHING): {},
+    (EG, CaseType.APPEAL): _back((2, 1)),
+    (EU, CaseType.ROUTINE): {},
+    (EU, CaseType.APPEAL): {},
+    (EU, CaseType.CANONIZATION): _back((2, 1), (3, 2)),
+    (EU, CaseType.PURGATORY_REVIEW): _back((2, 1), (3, 2)),
+    (GR, CaseType.ROUTINE): {2: ("on_fail", 4), 3: ("on_fail", 4)},
+}
+
+#: (civilization, case_type) -> {station: [branch taken on PASS, target as a station number]}.
+#: 十殿: 功过两平者由第一殿径送第十殿 (docs/01 §二 第三层, docs/02 第一殿, docs/11) — balance = merit − demerit = 0.
+#: The 结束 a branched flow ends on (the ten courts: the soul leaves court 10 for its rebirth).
+BRANCH_END_NAME = "结束 · 发往六道"
+PASS_BRANCHES = {
+    (C, CaseType.ROUTINE): {1: [{"id": "balanced", "when": [{"fact": "balance", "op": "eq", "value": 0}], "target": 10}]},
+}
+
+
+def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
+    """The name and canonical nodes (ids ``n1``…, edges by id, as the editor saves them) for one pair."""
+    key = (civilization, case_type)
+    source = PRESET_FLOWS.get(key) or WORKFLOW_TEMPLATES[key]
+    nodes = []
+    for position, raw in enumerate(source["nodes"], start=1):
+        node = normalize_template_node(raw, position)
+        node["node_type"] = str(node["node_type"])
+        node["court_code"] = COURT_SPELLING.get(node.get("court_code") or "", node.get("court_code") or "")
+        node["id"] = f"n{node['node_order']}"
+        # The editor's 审批人 select reads `approver_type` and shows 职能角色 when it is absent. The backend
+        # resolves `actor` first whatever this says, so this only makes the editor show what will happen.
+        if node.get("actor"):
+            node["approver_type"] = "ACTOR"
+        elif node.get("kind") in ("NOTIFY", "END"):
+            node["approver_type"] = "SYSTEM"
+        else:
+            node["approver_type"], node["approver_role"] = "ROLE", DEFAULT_APPROVER_ROLE
+        nodes.append(node)
+    for order, (field, target) in FAIL_ROUTES[key].items():
+        nodes[order - 1][field] = f"n{target}"
+    for order, branches in PASS_BRANCHES.get(key, {}).items():
+        nodes[order - 1]["branches"] = [{**b, "target": f"n{b['target']}"} for b in branches]
+    if key in PASS_BRANCHES:
+        # A branch makes the flow a graph, and a graph needs every PASS edge written and a 结束 (validation.py).
+        end = {"node_name": BRANCH_END_NAME, "node_order": len(nodes) + 1, "node_type": "FINAL",
+               "court_code": nodes[-1]["court_code"], "kind": "END", "id": f"n{len(nodes) + 1}",
+               "approver_type": "SYSTEM"}
+        for here, after in zip(nodes, [*nodes[1:], end], strict=True):
+            here.setdefault("on_pass", after["id"])
+        nodes.append(end)
+    # Once a row carries an `on_fail` jump the editor draws only the edges written down, so the pass path the
+    # engine takes by default (next station) disappeared and Rhadamanthus showed as an unreached 分支 (seen on
+    # 115, 2026-10-19). Write that default out; the engine walks exactly the same way.
+    # A graph (a 结束 or a branch) writes every edge itself; filling in "next station" there would be wrong.
+    if any(n.get("on_fail") for n in nodes) and not any(n.get("kind") == "END" or n.get("branches") for n in nodes):
+        for here, after in zip(nodes, nodes[1:], strict=False):
+            here.setdefault("on_pass", after["id"])
+    return source["name"], nodes
+
+
+def formal_template(civilization, case_type) -> dict | None:
+    """The built-in flow for a pair, in the canonical shape with its edges; None means the generic fallback."""
+    key = (civilization, case_type)
+    if key in FAIL_ROUTES:
+        name, nodes = seed_template(civilization, case_type)
+        return {"name": name, "nodes": nodes}
+    return WORKFLOW_TEMPLATES.get(key)

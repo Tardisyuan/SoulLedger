@@ -201,14 +201,14 @@ CASE_TYPES = "/api/v1/workflows/case-types/"
 
 @pytest.mark.django_db
 def test_case_types_by_civilization_are_the_validator_s_set(cn):
-    from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, WORKFLOW_TEMPLATES
+    from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, formal_template
 
     for civilization, valid in VALID_CASE_TYPES_BY_CIVILIZATION.items():
         response = cn["moderator"].get(CASE_TYPES, {"civilization": civilization})
         assert response.status_code == 200, response.data
         assert {row["value"] for row in response.data} == {c.value for c in valid}
         for row in response.data:
-            builtin = bool((WORKFLOW_TEMPLATES.get((civilization, row["value"])) or {}).get("nodes"))
+            builtin = bool((formal_template(civilization, row["value"]) or {}).get("nodes"))
             assert row["builtin"] is builtin, (civilization, row)
     # REBIRTH_APPLICATION is never offered: it is not started by hand.
     chinese = cn["moderator"].get(CASE_TYPES, {"civilization": Civilization.CHINESE}).data

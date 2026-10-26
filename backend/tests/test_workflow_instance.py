@@ -58,7 +58,7 @@ class TestWorkflowService:
         assert workflow.judgment == judgment
         assert workflow.workflow_name == "十殿审判流程"
         assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
-        assert workflow.nodes.count() == 10  # Ten courts
+        assert workflow.nodes.count() == 11  # Ten courts and the 结束 (C-1, 2026-10-27)
 
         # First node should be current
         first_node = workflow.nodes.order_by("node_order").first()
@@ -110,9 +110,9 @@ class TestWorkflowService:
 
         stats = WorkflowService.get_workflow_stats(workflow)
 
-        assert stats["total_nodes"] == 10
+        assert stats["total_nodes"] == 11  # + 结束 (C-1)
         assert stats["completed_nodes"] == 0
-        assert stats["pending_nodes"] == 10
+        assert stats["pending_nodes"] == 11
         assert stats["progress_percent"] == 0.0
 
         # Complete first node
@@ -122,8 +122,8 @@ class TestWorkflowService:
         stats = WorkflowService.get_workflow_stats(workflow)
 
         assert stats["completed_nodes"] == 1
-        assert stats["pending_nodes"] == 9
-        assert stats["progress_percent"] == 10.0
+        assert stats["pending_nodes"] == 10
+        assert stats["progress_percent"] == pytest.approx(100 / 11)
 
 
 @pytest.mark.django_db
