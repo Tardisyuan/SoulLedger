@@ -30,8 +30,20 @@ def set_current_user(user):
 
 
 def get_current_user():
-    """Get the current authenticated user from context variable."""
-    return _user_var.get()
+    """The user set explicitly, else the authenticated user of the current request.
+
+    The fallback is what gives function views (`@api_view`) an actor: only the
+    viewset mixin calls `set_current_user`, and DRF's `Request.user` setter also
+    writes the user onto the Django request the middleware stored. Before it,
+    every permission-matrix save was audited with `user = NULL` (security
+    review 2026-10-27 #1; `tests/test_function_views_audit_their_actor.py`).
+    """
+    user = _user_var.get()
+    if user is None:
+        user = getattr(_request_var.get(), "user", None)
+        if not getattr(user, "is_authenticated", False):
+            return None
+    return user
 
 
 def set_current_request(request):
@@ -58,7 +70,7 @@ class RequestContextMiddleware:
     ``finally`` 里不是保险而是必需 —— 一个活过请求边界的 context-var,会让同一个
     worker 处理的下一个请求把自己的写入记到上一个用户名下。
 
-    **它不设置当前 user,那件事由 ``apps/core/viewsets.py`` 的 mixin 做**,在
+    **它不设置当前 user**(函数视图靠 ``get_current_user`` 退回读 ``request.user``),viewset 由 ``apps/core/viewsets.py`` 的 mixin 设,在
     ``perform_create`` / ``perform_update`` / ``perform_destroy`` 里,各自带自己的
     ``try/finally``。那个位置能拿到已认证的用户,这里拿不到 —— 原因见下。
 
