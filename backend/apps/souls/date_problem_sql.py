@@ -10,7 +10,18 @@ is exactly "cannot be separated at this precision".
 oracle and compares the two.
 """
 from django.db.models import (
-    Case, CharField, Count, Exists, ExpressionWrapper, F, IntegerField, OuterRef, Q, Subquery, Value, When,
+    Case,
+    CharField,
+    Count,
+    Exists,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Value,
+    When,
 )
 from django.db.models.functions import Cast, Coalesce, Concat
 
@@ -60,7 +71,7 @@ def filter_has_date_problem(queryset, value):
     from apps.reincarnation.models import Reincarnation
     from apps.souls.record_models import SoulRecord
 
-    birth, death = _triple("birth"), _triple("death")
+    birth = _triple("birth")
     # ---- the soul's own two dates (check_soul_dates)
     both = Q(birth_year__isnull=False, death_year__isnull=False)
     cross_era = Q(birth_year__lt=0, death_year__gt=0) | Q(birth_year__gt=0, death_year__lt=0)
