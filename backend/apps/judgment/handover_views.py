@@ -21,7 +21,8 @@ User = get_user_model()
 
 
 class HandoverRequestSerializer(serializers.Serializer):
-    to = serializers.IntegerField()
+    # 预览可不填 `to`:只数件数(停用官员前问一句「他手上还有没有事」,那时还没选接手人)。提交必须填。
+    to = serializers.IntegerField(required=False, allow_null=True)
 
 
 # `from` is a Python keyword, so the body key is declared outside the class body.
@@ -61,7 +62,8 @@ class _HandoverBase(APIView):
         source = officers.filter(pk=body.validated_data["from"], tenant__isnull=False).first()
         if source is None:
             raise NotFound()
-        target = User.objects.filter(pk=body.validated_data["to"]).first()
+        to = body.validated_data.get("to")
+        target = User.objects.filter(pk=to).first() if to is not None else None
         return source, target
 
     def _refused(self, exc):

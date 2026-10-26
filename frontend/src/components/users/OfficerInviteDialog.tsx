@@ -84,7 +84,7 @@ export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onCl
     if (invite.isPending) return;
     const next: typeof errors = {};
     if (!email.trim()) next.email = t("officerInvite.error.email_invalid");
-    if (needsTenant && !tenant) next.tenant = t("officerInvite.hall");
+    if (needsTenant && !tenant) next.tenant = t("common.field_required");
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     invite.mutate({

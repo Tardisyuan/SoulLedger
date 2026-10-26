@@ -22,6 +22,12 @@ class TestHandover:
         assert res.status_code == 200, res.data
         assert res.data["judgments"] == 1 and res.data["problems"] == []
         assert Judgment.all_objects.get(pk=case.pk).claimed_by_id == world.users["a"].pk  # preview writes nothing
+        # 停用前的提醒:不带接手人也能数件数;提交没有接手人是 400。
+        counted = world.clients["mod"].post("/api/v1/judgment/handover/preview/", {"from": world.users["a"].pk}, format="json")
+        assert counted.status_code == 200 and counted.data["judgments"] == 1 and counted.data["problems"] == []
+        refused = world.clients["mod"].post("/api/v1/judgment/handover/", {"from": world.users["a"].pk}, format="json")
+        assert refused.status_code == 400
+        assert Judgment.all_objects.get(pk=case.pk).claimed_by_id == world.users["a"].pk
         with django_capture_on_commit_callbacks(execute=True):
             res = world.clients["mod"].post("/api/v1/judgment/handover/", body, format="json")
         assert res.status_code == 200 and res.data["judgments"] == 1

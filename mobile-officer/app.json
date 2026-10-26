@@ -55,7 +55,15 @@
       ],
       "../mobile/plugins/withSceneLifecycle",
       ["../mobile/plugins/withAndroidShortcuts", { "app": "officer" }],
-      ["../mobile/plugins/withAppIntents", { "app": "officer" }]
+      ["../mobile/plugins/withAppIntents", { "app": "officer" }],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "从相册选照片作为案卷附件。",
+          "cameraPermission": "拍照作为案卷附件。",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

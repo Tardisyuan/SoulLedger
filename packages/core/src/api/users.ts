@@ -190,7 +190,8 @@ export function handoverProblemsOf(error: unknown): HandoverPreview["problems"] 
 }
 
 export const handoverApi = {
-  preview: (from: number, to: number) => api.post<HandoverPreview>("/judgment/handover/preview/", { from, to }),
+  /** `to` 省略 = 只数件数(停用前的提醒)。 */
+  preview: (from: number, to?: number) => api.post<HandoverPreview>("/judgment/handover/preview/", to == null ? { from } : { from, to }),
   commit: (from: number, to: number) => api.post<HandoverResult>("/judgment/handover/", { from, to }),
 };
 

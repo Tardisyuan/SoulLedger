@@ -7229,6 +7229,7 @@
     "preview": "预览",
     "preview_stale": "改了人选，请重新预览",
     "submit": "移交",
+    "submit_n": "移交 {{n}} 件",
     "submitting": "移交中…",
     "row_judgments": "认领中的审判",
     "row_appeals": "复核中的申诉",
