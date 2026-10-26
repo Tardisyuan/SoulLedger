@@ -35,9 +35,12 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.impersonation_models import Impersonation
+from apps.authentication.signin_sessions import SID_CLAIM, is_revoked
 from apps.core.client_ip import get_client_ip
 
 IMP_BY, IMP_ID, IMP_EXP = "imp_by", "imp_id", "imp_exp"
+# 管理员自己的会话:改密码 / 退出全部(session_version)或退出这台设备(sid)时,代看令牌一并失效。
+IMP_SV, IMP_SID = "imp_sv", "imp_sid"
 MAX_MINUTES = 30
 #: 令牌比记录多活一会儿:到点时客户端拿到的是带 code 的 403,而不是笼统的 401(401 意味着「去刷新」)。
 TOKEN_GRACE = timedelta(seconds=60)
@@ -64,12 +67,16 @@ def _open(actor, target, reason, request, hall=None):
     )
 
 
-def _token(record, tenant_code):
+def _token(record, tenant_code, request):
     token = AccessToken.for_user(record.target)
     if tenant_code:
         token["tenant_code"] = tenant_code
     token["sv"] = record.target.session_version
     token[IMP_BY], token[IMP_ID], token[IMP_EXP] = record.actor_id, record.pk, int(record.expires_at.timestamp())
+    token[IMP_SV] = record.actor.session_version
+    auth = getattr(request, "auth", None)
+    if auth is not None and auth.get(SID_CLAIM):
+        token[IMP_SID] = auth.get(SID_CLAIM)
     token.set_exp(lifetime=timedelta(minutes=MAX_MINUTES) + TOKEN_GRACE)
     return str(token)
 
@@ -84,7 +91,7 @@ def start(actor, target, reason, request):
             changes={"imp_id": record.pk, "reason": reason, "target_name": _name(target), "target_role": target.role},
         )
         _notify_target(record)
-    return _token(record, target.tenant.code if target.tenant_id else None), record
+    return _token(record, target.tenant.code if target.tenant_id else None, request), record
 
 
 def start_hall(actor, hall, request):
@@ -96,7 +103,7 @@ def start_hall(actor, hall, request):
             description=f"以全局管理员身份查看 {hall.code}",
             changes={"imp_id": record.pk, "hall": hall.code},
         )
-    return _token(record, hall.code), record
+    return _token(record, hall.code, request), record
 
 
 def end(record, how, *, request=None):
@@ -142,7 +149,7 @@ def enforce(request, user, token):
     if timezone.now() >= record.expires_at:
         end(record, "expired")
         raise refuse("impersonation_expired", "代看已到时。")
-    if not (record.actor.is_active and record.actor.role == "ADMIN"):
+    if not (record.actor.is_active and record.actor.role == "ADMIN") or _actor_signed_out(record.actor, token):
         end(record, "manual")
         raise refuse("impersonation_ended", "代看已结束。")
 
@@ -159,6 +166,11 @@ def enforce(request, user, token):
     if request.method == "GET":
         _count_page(record, request.META.get(PAGE_HEADER, ""))
     request.impersonation = record
+
+
+def _actor_signed_out(actor, token):
+    """管理员自己的会话已结束:session_version 变了(改密码 / 退出全部),或签发时那台设备已退出。"""
+    return token.get(IMP_SV) != actor.session_version or is_revoked({SID_CLAIM: token.get(IMP_SID)})
 
 
 def _count_page(record, page):

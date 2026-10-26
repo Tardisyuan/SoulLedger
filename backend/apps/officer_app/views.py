@@ -94,7 +94,7 @@ class TodoItemView(OfficerAppBaseView):
 class SignerCandidatesView(OfficerAppBaseView):
     """加签候选人。**只限本殿**(2026-10-09 用户决定:跨殿加签留给官员台)。"""
 
-    permission_classes = [TenantPermission, CodenamePermission]
+    permission_classes = [*OfficerAppBaseView.permission_classes, CodenamePermission]
 
     def get_required_permissions(self):
         return ["workflow.approve"]
@@ -128,7 +128,7 @@ class CosignView(OfficerAppBaseView):
     或本来就能单独决定这个节点。留痕:一条审计;被加的人收到通知与官员端推送。
     """
 
-    permission_classes = [TenantPermission, CodenamePermission]
+    permission_classes = [*OfficerAppBaseView.permission_classes, CodenamePermission]
 
     def get_required_permissions(self):
         return ["workflow.approve"]

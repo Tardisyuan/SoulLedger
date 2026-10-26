@@ -262,3 +262,47 @@ def test_officer_app_endpoints_refuse_the_impersonation_token(admin_user, target
     response = viewing.get("/api/v1/officer-app/todo/")
     assert response.status_code == 403
     assert officer_client(target).get("/api/v1/officer-app/todo/").status_code != 403
+
+
+def test_officer_app_views_with_their_own_permission_classes_refuse_it_too(admin_user, target):
+    """`SignerCandidatesView` / `CosignView` 覆盖了 `permission_classes`,曾丢掉 `NotImpersonating`(审查 #5)。"""
+    viewing, _ = _viewing(admin_user, target)
+    for url in ("/api/v1/officer-app/signer-candidates/",
+                "/api/v1/officer-app/items/judgment/00000000-0000-0000-0000-000000000000/cosigners/"):
+        response = viewing.get(url)
+        assert response.status_code == 403 and "代看令牌" in str(response.data.get("detail")), (
+            url, response.status_code, response.data)
+
+
+# ── 管理员自己的会话结束,代看跟着结束(安全审查 2026-10-27 #3) ─────────────────
+
+
+def test_the_session_dies_when_the_admins_own_sessions_are_ended(admin_user, target):
+    from apps.authentication.passwords import end_sessions
+
+    viewing, _ = _viewing(admin_user, target)
+    assert viewing.get(PROFILE).status_code == 200
+    end_sessions(admin_user)  # 改密码 / 退出全部
+    response = viewing.get(PROFILE)
+    assert response.status_code == 403 and response.data["code"] == "impersonation_ended"
+    assert Impersonation.objects.get(actor=admin_user).ended_at is not None
+
+
+def test_the_session_dies_when_the_device_that_started_it_is_signed_out(admin_user, target):
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from apps.authentication import signin_sessions
+    from apps.authentication.models import SignInSession
+
+    device = SignInSession.objects.create(user=admin_user, label="laptop")
+    refresh = RefreshToken.for_user(admin_user)
+    refresh["sid"] = str(device.pk)
+    admin = APIClient()
+    admin.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+    response = admin.post(START, {"user_id": target.pk, "reason": "看菜单"}, format="json")
+    assert response.status_code == 201, response.content
+    viewing = APIClient()
+    viewing.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+    assert viewing.get(PROFILE).status_code == 200
+    signin_sessions.revoke(device)
+    assert viewing.get(PROFILE).status_code == 403
