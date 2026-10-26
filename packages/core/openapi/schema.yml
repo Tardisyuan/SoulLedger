@@ -43095,10 +43095,14 @@ components:
           allOf:
           - $ref: '#/components/schemas/UserMfaRef'
           readOnly: true
+        invite_pending:
+          type: boolean
+          readOnly: true
       required:
       - create_time
       - extra_roles
       - id
+      - invite_pending
       - is_eval_identity
       - mfa
       - organization

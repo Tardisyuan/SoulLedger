@@ -19779,6 +19779,7 @@ export interface components {
             readonly is_eval_identity: boolean;
             readonly extra_roles: unknown;
             readonly mfa: components["schemas"]["UserMfaRef"];
+            readonly invite_pending: boolean;
         };
         /** @description The 「两步验证」 column of the users list. */
         UserMfaRef: {
