@@ -75,3 +75,22 @@ def open_retrial(judgment) -> Judgment:
         "reason": WeighingResult.WAVERING.value,
     })
     return retrial
+
+
+def unfinished_flow(disposition) -> str | None:
+    """Why this disposition may not execute yet, or None (docs/02 §2.1, §5.1–5.2).
+
+    Thoth reads, the tribunal confirms, Horus leads, Osiris receives — or Ammit devours — and only then is
+    the soul placed. So an Egyptian disposition waits for its weighing flow to be COMPLETED: one still
+    running is `weighing_in_progress`, one a station refused is `weighing_rejected` (reopen or appeal the
+    case). A case concluded without a flow (before this rule, or a reopened one) is not held.
+    """
+    judgment = disposition.judgment
+    if judgment is None or not applies(judgment):
+        return None
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    flow = ApprovalWorkflow.objects.filter(judgment=judgment).only("status").first()
+    if flow is None or flow.status == ApprovalWorkflowStatus.COMPLETED:
+        return None
+    return "weighing_rejected" if flow.status == ApprovalWorkflowStatus.REJECTED else "weighing_in_progress"

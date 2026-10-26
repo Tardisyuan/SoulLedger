@@ -304,7 +304,15 @@ class TestAdmittedBalance:
         demerit = _record(soul, "DEMERIT", 20)
         judgment = _judgment(soul)
         EvidenceAdmissionService.rule(judgment, demerit.pk, admitted=False, reason="不采信")
-        assert EvidenceAdmissionService.admitted_balance(judgment) == {
+        result = EvidenceAdmissionService.admitted_balance(judgment)
+        # The Egyptian case also carries the scale over the admitted evidence (docs/02 §5): merit 30 alone.
+        weighing = result.pop("weighing", None)
+        if code == "EG_DUAT":
+            assert weighing == {"heart_weight": 0, "counterweight": 1, "heavier_than_feather": False,
+                                "weighed_verdict": "PASSED"}
+        else:
+            assert weighing is None
+        assert result == {
             "reading_kind": kind,
             "balance": None,
             "not_admitted_count": 1,
@@ -388,13 +396,19 @@ class TestConcludeRoutesOnTheAdmittedLedger:
         EvidenceAdmissionService.rule(judgment, heavy.pk, admitted=False, reason="不采信")
         assert _route(soul, Verdict.FAILED, judgment) == DispositionService.EU_HELL_CIRCLES[2]
 
-    def test_egyptian_a_non_admitted_merit_keeps_the_soul_in_the_duat(self):
+    def test_egyptian_a_non_admitted_merit_no_longer_lightens_the_heart(self):
+        """Every Egyptian case is weighed and merit lightens the heart (docs/02 §3.2, 2026-10-27):
+        refusing the merit is what tips the scale, not a net-merit routing rule."""
+        from apps.judgment import weighing
+
         soul = _soul(_tenant("EG_DUAT"))
         merit = _record(soul, "MERIT", 60)
+        _record(soul, "DEMERIT", 5)
         judgment = _judgment(soul)
-        # STANDARD, inconclusive verdict: karma ≥ 50 admits to Aaru.
-        assert _route(soul, Verdict.PURGATORY, judgment) == DispositionService.EG_AARU
+        assert weighing.weighed_verdict(weighing.scale(judgment)) == Verdict.PASSED
         EvidenceAdmissionService.rule(judgment, merit.pk, admitted=False, reason="伪证")
+        assert weighing.weighed_verdict(weighing.scale(judgment)) == Verdict.FAILED
+        # And the inconclusive verdict sends nowhere new: no merit threshold left (01 §3.3).
         assert _route(soul, Verdict.PURGATORY, judgment) == DispositionService.EG_DUAT_ENTRY
 
     def test_greek_routing_reads_no_ledger_figure_so_admission_cannot_move_it(self):

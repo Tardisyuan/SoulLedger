@@ -131,7 +131,7 @@ class TestWorkflowServiceCivilizations:
         j = self._make_judgment(soul, eg_tenant_obj)
         wf = WorkflowService.create_from_judgment(j)
         assert wf.workflow_name == "欧西里斯称重流程"
-        assert wf.nodes.count() == 3
+        assert wf.nodes.count() == 8  # 2026-10-27: + Thoth, tribunal, Horus, Ammit, end (docs/02 §2.1)
 
     def test_european_routine_default(self, eu_tenant_obj):
         soul = self._make_soul(eu_tenant_obj, "EU Routine")

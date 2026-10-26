@@ -95,3 +95,62 @@ def test_a_wavering_scale_takes_no_destination(eg_tenant):
         case.conclude("PURGATORY", term_years=3)
     assert refused.value.code == "wavering_has_no_destination"
     assert not Judgment.objects.filter(retrial_of=case).exists()
+
+
+# ── The weighing flow: Thoth, the tribunal, Horus, Osiris — Ammit only on the heavy branch (02 §2.1, §5) ──
+
+def _walk(flow):
+    """Pass every station the flow stops at; return the flow and the names it stopped at."""
+    from apps.workflow.models import ApprovalWorkflow
+
+    stops = []
+    while True:
+        flow = ApprovalWorkflow.objects.get(pk=flow.pk)
+        node = flow.current_node
+        if node is None:
+            return flow, stops
+        stops.append(node.node_name)
+        assert flow.complete_node(node.pk, "PASSED")
+
+
+def test_a_light_heart_walks_the_pass_branch_and_executes_only_after(eg_tenant):
+    from apps.disposition.services import DispositionService
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    case = _case(eg_tenant)
+    case.conclude("PASSED")
+    disposition = Disposition.objects.get(judgment=case)
+    assert DispositionService.execute(disposition) is False  # the flow has not run yet
+    flow, stops = _walk(ApprovalWorkflow.objects.get(judgment=case))
+    assert flow.status == ApprovalWorkflowStatus.COMPLETED
+    assert stops == ["阿努比斯 · 引导与称量", "四十二神官 · 否定告白", "神庭 · 确认", "荷鲁斯 · 引导", "欧西里斯 · 终审"]
+    assert DispositionService.execute(Disposition.objects.get(pk=disposition.pk)) is True
+
+
+def test_a_heavy_heart_goes_to_ammit_and_skips_the_tribunal(eg_tenant):
+    from apps.workflow.models import ApprovalWorkflow, NodeStatus
+
+    case = _case(eg_tenant, demerit=5)
+    case.conclude("FAILED")
+    flow, stops = _walk(ApprovalWorkflow.objects.get(judgment=case))
+    assert stops == ["阿努比斯 · 引导与称量", "四十二神官 · 否定告白", "阿米特 · 吞噬"]
+    skipped = set(flow.nodes.filter(status=NodeStatus.SKIPPED).values_list("node_name", flat=True))
+    assert {"神庭 · 确认", "荷鲁斯 · 引导", "欧西里斯 · 终审"} <= skipped
+
+
+def test_an_egyptian_case_cannot_be_concluded_without_the_weighing_flow(eg_tenant):
+    case = _case(eg_tenant)
+    with pytest.raises(WeighingRefusedError) as refused:
+        case.conclude("PASSED", create_workflow=False)
+    assert refused.value.code == "weighing_flow_required"
+
+
+def test_neither_egyptian_outcome_takes_a_term(eg_tenant):
+    """02 §5.2 / 03 §五: the second death is not served; nor is the Field of Reeds."""
+    from apps.disposition.destination import DestinationRefusedError
+
+    for verdict, demerit in (("PASSED", 0), ("FAILED", 5)):
+        case = _case(eg_tenant, demerit=demerit)
+        with pytest.raises(DestinationRefusedError) as refused:
+            case.conclude(verdict, term_years=3)
+        assert refused.value.code == "term_not_applicable"
