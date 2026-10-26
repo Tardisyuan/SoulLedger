@@ -17,7 +17,7 @@ jest.mock("../rules", () => ({ ...jest.requireActual("../rules"), submitDecision
 const mockAddCosigner = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
-  officerAppApi: { addCosigner: (...a: unknown[]) => mockAddCosigner(...a), signerCandidates: jest.fn(async () => ({ data: [{ id: 2, name: "孟婆", username: "mengpo", role: "JUDGE" }] })) },
+  officerAppApi: { stats: jest.fn(async () => ({ data: { concluded_this_month: 0, concluded_total: 0, open_claims: 0, appeals_reviewed: 0, appeals_in_review: 0 } })), addCosigner: (...a: unknown[]) => mockAddCosigner(...a), signerCandidates: jest.fn(async () => ({ data: [{ id: 2, name: "孟婆", username: "mengpo", role: "JUDGE" }] })) },
 }));
 jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
