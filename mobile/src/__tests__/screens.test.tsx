@@ -14,7 +14,7 @@ import { application, life, stubApi } from "./stubApi";
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn(), addListener: () => () => {}, dispatch: jest.fn() }),
 }));
 
 function wrap(children: ReactNode) {
