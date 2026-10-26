@@ -46,9 +46,15 @@ def test_death_puts_the_soul_at_its_civilizations_entry_realm(seeded, tenant_cod
     tenant = plan.tenant(tenant_code)
     soul = Soul.objects.create(name=f"亡{tenant_code}", tenant=tenant, current_state=SoulState.ALIVE)
     assert soul.die() is not None
-    [entry] = _path(soul)
+    entry, *after = _path(soul)
     realm = Realm.all_objects.get(realm_code=realm_code, tenant=tenant)
-    assert (entry.realm_id, entry.sequence, entry.left_at, entry.tenant_id) == (realm.pk, 1, None, tenant.pk)
+    assert (entry.realm_id, entry.sequence, entry.tenant_id) == (realm.pk, 1, tenant.pk)
+    # 埃及:穿过杜阿特入口,停在两真之殿受审(docs/02 §1.1);其余文明停在入口。
+    if tenant_code == "EG_DUAT":
+        assert entry.left_at is not None
+        assert [(e.realm.realm_code, e.left_at) for e in after] == [("EG_HALL_TWO_TRUTHS", None)]
+    else:
+        assert (entry.left_at, after) == (None, [])
 
 
 @pytest.mark.django_db

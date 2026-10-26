@@ -64,5 +64,22 @@
   "soul_app.settings.row_load_failed",
   "appeals.refusal.no_appeal_above_minos",
   "souls.events.PURGATORY_ASCENDED",
-  "souls.detail.rebirth_suggestion"
+  "souls.detail.rebirth_suggestion",
+  "judgment.weighing.title",
+  "judgment.weighing.scale",
+  "judgment.weighing.gives",
+  "judgment.weighing.wavering_hint",
+  "judgment.weighing.contradicts",
+  "judgment.weighing.result.LIGHTER",
+  "judgment.weighing.result.HEAVIER",
+  "judgment.weighing.result.WAVERING",
+  "judgment.weighing.recorded",
+  "judgment.weighing.workflow_forced",
+  "judgment.weighing.errors.verdict_contradicts_weighing",
+  "judgment.weighing.errors.wavering_has_no_destination",
+  "judgment.weighing.errors.wavering_with_open_cross",
+  "judgment.placement.errors.term_not_applicable",
+  "judgment.weighing.errors.weighing_in_progress",
+  "judgment.weighing.errors.weighing_rejected",
+  "judgment.weighing.errors.weighing_wavers"
 ]

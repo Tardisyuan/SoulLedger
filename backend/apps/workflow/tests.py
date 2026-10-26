@@ -1219,6 +1219,21 @@ NODES_ADDED_AFTER_THE_BACKFILL = {
     "Osiris · 终审": "Same template, same reason. Note this is NOT the "
                   "heart-weighing template's 「欧西里斯 · 终审」, which 0011 did "
                   "freeze — different string, different node, different court.",
+    # The weighing flow's stations added 2026-10-27 (docs/02 §2.1, §5.1–5.2). Flows built before keep their
+    # three stored nodes; no stored node carries these names, so a backfill would match nothing.
+    "托特 · 记录并宣读": "Added 2026-10-27 (02 §2.1: Thoth records and reads); no stored node.",
+    "荷鲁斯 · 引导": "Added 2026-10-27 (02 §5.1: Horus leads the vindicated); no stored node.",
+    "阿米特 · 吞噬": "Added 2026-10-27 (02 §5.2: Ammit only on the heavy branch); no stored node.",
+}
+
+#: Frozen 0011 rows whose node the template has since moved, -> (court, order) it stands at now, and why.
+#: 0011 still matches stored rows at the old place, which is what it must do (it records what was true).
+NODES_MOVED_AFTER_THE_BACKFILL = {
+    ("欧西里斯 · 终审", "Duat", 3, "Osiris"): (
+        "Hall of Two Truths", 6,
+        "2026-10-27: Osiris receives in the Hall of Two Truths (02 L88–91), after Thoth, the tribunal and "
+        "Horus (02 §2.1).",
+    ),
 }
 
 
@@ -1334,6 +1349,9 @@ class TestTemplateApproverBasis:
             (renamed_to.get(name, name), court, order, actor)
             for name, court, order, _civ, actor in rows
         }
+        for (name, court, order, actor), (new_court, new_order, _why) in NODES_MOVED_AFTER_THE_BACKFILL.items():
+            assert (name, court, order, actor) in from_migration, f"{name!r} is not a frozen row; stale move"
+            from_migration = (from_migration - {(name, court, order, actor)}) | {(name, new_court, new_order, actor)}
 
         exempt = {
             entry for entry in from_templates

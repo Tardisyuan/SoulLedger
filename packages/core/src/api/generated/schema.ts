@@ -10079,6 +10079,7 @@ export interface components {
             not_admitted_net: number | null;
             reason_code: string | null;
             current_balance?: number | null;
+            weighing?: components["schemas"]["Weighing"];
         };
         /**
          * @description The two configured ceilings on the key. Zero when there is no key on
@@ -12858,6 +12859,10 @@ export interface components {
             readonly realm_name: string | null;
             /** Format: uuid */
             readonly workflow: string;
+            readonly weighing_result: (components["schemas"]["WeighingResultEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly heart_weight: number | null;
+            /** Format: uuid */
+            readonly retrial_of: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13171,6 +13176,10 @@ export interface components {
             readonly realm_name: string | null;
             /** Format: uuid */
             readonly workflow: string;
+            readonly weighing_result: (components["schemas"]["WeighingResultEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly heart_weight: number | null;
+            /** Format: uuid */
+            readonly retrial_of: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13837,6 +13846,7 @@ export interface components {
             judge: components["schemas"]["MeJudge"] | null;
             judgment_method: string;
             verdict: string | null;
+            weighing_result: string | null;
             is_final: boolean;
             /** Format: date-time */
             created_at: string;
@@ -16213,6 +16223,10 @@ export interface components {
             readonly realm_name?: string | null;
             /** Format: uuid */
             readonly workflow?: string;
+            readonly weighing_result?: (components["schemas"]["WeighingResultEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly heart_weight?: number | null;
+            /** Format: uuid */
+            readonly retrial_of?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -19274,8 +19288,8 @@ export interface components {
             };
         };
         /**
-         * @description kind=THRESHOLD — the Egyptian weighing. No merit member: the scale
-         *     does not subtract, and `heart_weight` is the demerit total alone.
+         * @description kind=THRESHOLD — the Egyptian weighing. `heart_weight` is demerit
+         *     lightened by merit, floored at 0 (docs/02 §3.2).
          */
         ThresholdReading: {
             /**
@@ -20002,6 +20016,20 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        /** @description 埃及称心,按本案采信的证据(apps/judgment/weighing.py)。 */
+        Weighing: {
+            heart_weight: number;
+            counterweight: number;
+            heavier_than_feather: boolean;
+            weighed_verdict: string;
+        };
+        /**
+         * @description * `LIGHTER` - 未重于羽
+         *     * `HEAVIER` - 重于羽
+         *     * `WAVERING` - 天平摇摆 · 再称
+         * @enum {string}
+         */
+        WeighingResultEnum: "LIGHTER" | "HEAVIER" | "WAVERING";
         /** @description `POST /workflows/{id}/adjust/` (加减站): stations of ONE segment to restore / to skip. Reason required. */
         WorkflowAdjust: {
             restore_node_ids?: string[];

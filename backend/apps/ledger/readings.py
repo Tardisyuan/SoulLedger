@@ -183,39 +183,32 @@ def _egyptian_reading(merit: int, demerit: int, merit_count: int,
                       term_start: tuple | None = None) -> dict:
     """A threshold. The heart against a fixed counterweight — pass or fail.
 
-    The heart's weight is the demerit total *alone*. Merit does not appear, and
-    its absence is the whole point of this reading: the weighing has no
-    offsetting step. A life of recorded charity does not make a heart lighter in
-    the Hall of Two Truths, because what the scale measures is the wrongdoing
-    the heart is carrying, and Ammit is not waiting on a subtraction.
+    The heart's weight is the recorded wrongdoing *lightened by* the recorded
+    good: demerit minus merit, never below zero. docs/02 §3.2's table names both
+    pans of the heart — 加重心脏(罪恶) and 减轻心脏(良善): 善待动物, 施舍穷人,
+    照顾孤儿 … (user decision 2026-10-27: where code and docs disagree, the docs
+    win). This reading used to put the demerit total alone on the scale; the
+    doc says the good a heart carries makes it lighter, so it does here.
 
-    Netting is what the shared summary did, and against this deployment's own
-    data it passed a soul it should not have: a heart carrying 18 points of
-    recorded wrongdoing read as +6 once 24 points of merit were subtracted from
-    it, and +6 is on the passing side of every threshold anyone would pick.
+    Floored at zero: a heart whose good outweighs its wrongs is as light as a
+    heart can be, and a negative weight on a pan is not a thing a scale shows.
 
-    `merit_count` is therefore doubly irrelevant here and is received anyway.
-    If the merit *sum* has nothing to say to a scale that never subtracts, a
-    tally of the deeds behind it has less; and the weighing does not count
-    wrongs either, because what goes on the pan is the heart's weight and not a
-    list of charges. The 42 declarations of the Papyrus of Ani are denials, one
-    per wrong, but they are the interrogation and not the measurement.
+    The 42 declarations of the Papyrus of Ani are the interrogation and not the
+    measurement, so the record counts are still unused.
 
-    `term_start` is received and unused for a reason of the same kind. The
-    weighing happens once. Aaru and the Devourer are outcomes, not sentences
-    served, so there is no interval for a start date to be the start of — and
-    an Egyptian Disposition that carries one is recording something this
-    reading has no place to put rather than something it is failing to report.
+    `term_start` is received and unused: the weighing happens once. Aaru and
+    the second death are outcomes, not sentences served (02 §5.2, 03 §五).
     """
+    heart_weight = max(demerit - merit, 0)
     return {
         "kind": "THRESHOLD",
         "civilization": Civilization.EGYPTIAN.value,
-        "heart_weight": demerit,
+        "heart_weight": heart_weight,
         "counterweight": MAAT_FEATHER_WEIGHT,
         # "Not heavier than" — equality passes. The formula in the Book of the
         # Dead is balance, not surplus, and a heart level with the feather is
         # the ideal outcome rather than a near miss.
-        "heavier_than_feather": demerit > MAAT_FEATHER_WEIGHT,
+        "heavier_than_feather": heart_weight > MAAT_FEATHER_WEIGHT,
     }
 
 
@@ -567,8 +560,8 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
 
     Every builder takes the same five arguments and each one ignores some of
     them on purpose rather than not being offered them. Only the Chinese
-    builder uses `class_totals`: merit does not enter an Egyptian weighing at
-    all and does not reduce European culpa, so a per-class split of merit has
+    builder uses `class_totals`: merit lightens an Egyptian heart as one pan
+    (docs/02 §3.2), not by class, and does not reduce European culpa, so a per-class split of merit has
     nothing to say there. Only the European and Greek builders use a record
     count, and only the Greek one uses `merit_count` — a uniform signature is
     what keeps each of those a stated decision, argued in the builder's own

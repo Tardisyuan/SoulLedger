@@ -50,6 +50,7 @@ def _planned_soul(home, stops, name="受刑魂"):
     if stops:
         plan.bench(case, stops)
     case.conclude("PASSED", "")
+    plan.walk_weighing(case)  # 埃及:处置等称心流程走完(apps/judgment/weighing.py)
     soul.refresh_from_db()
     return soul, SentencePlan.all_objects.get(soul=soul), client
 

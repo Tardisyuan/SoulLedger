@@ -22305,6 +22305,8 @@ components:
         current_balance:
           type: integer
           nullable: true
+        weighing:
+          $ref: '#/components/schemas/Weighing'
       required:
       - balance
       - not_admitted_count
@@ -28417,6 +28419,21 @@ components:
           type: string
           format: uuid
           readOnly: true
+        weighing_result:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WeighingResultEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        heart_weight:
+          type: integer
+          readOnly: true
+          nullable: true
+        retrial_of:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -28462,6 +28479,7 @@ components:
       - draft_verdict
       - draft_version
       - evidence_count
+      - heart_weight
       - held_until
       - id
       - is_archived
@@ -28476,12 +28494,14 @@ components:
       - reassign_requested_at
       - reassign_requested_by
       - reassign_requested_by_name
+      - retrial_of
       - sent_on_at
       - soul
       - soul_name
       - stale_since
       - untimely
       - verdict
+      - weighing_result
       - workflow
     JudgmentAppeal:
       type: object
@@ -29190,6 +29210,21 @@ components:
           type: string
           format: uuid
           readOnly: true
+        weighing_result:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WeighingResultEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        heart_weight:
+          type: integer
+          readOnly: true
+          nullable: true
+        retrial_of:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -29252,6 +29287,7 @@ components:
       - draft_version
       - evidence_admissions
       - evidence_count
+      - heart_weight
       - held_until
       - id
       - is_archived
@@ -29266,12 +29302,14 @@ components:
       - reassign_requested_at
       - reassign_requested_by
       - reassign_requested_by_name
+      - retrial_of
       - sent_on_at
       - soul
       - soul_name
       - stale_since
       - untimely
       - verdict
+      - weighing_result
       - workflow
     JudgmentDraft:
       type: object
@@ -30693,6 +30731,9 @@ components:
         verdict:
           type: string
           nullable: true
+        weighing_result:
+          type: string
+          nullable: true
         is_final:
           type: boolean
         created_at:
@@ -30711,6 +30752,7 @@ components:
       - judge
       - judgment_method
       - verdict
+      - weighing_result
     MeJudgmentAppeal:
       type: object
       description: 灵魂看的:不带复核人是谁(与事件、推送一样不说判官)。
@@ -35481,6 +35523,21 @@ components:
           type: string
           format: uuid
           readOnly: true
+        weighing_result:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WeighingResultEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        heart_weight:
+          type: integer
+          readOnly: true
+          nullable: true
+        retrial_of:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -42068,8 +42125,8 @@ components:
     ThresholdReading:
       type: object
       description: |-
-        kind=THRESHOLD — the Egyptian weighing. No merit member: the scale
-        does not subtract, and `heart_weight` is the demerit total alone.
+        kind=THRESHOLD — the Egyptian weighing. `heart_weight` is demerit
+        lightened by merit, floored at 0 (docs/02 §3.2).
       properties:
         kind:
           type: string
@@ -43541,6 +43598,33 @@ components:
       - create_time
       - id
       - url
+    Weighing:
+      type: object
+      description: 埃及称心,按本案采信的证据(apps/judgment/weighing.py)。
+      properties:
+        heart_weight:
+          type: integer
+        counterweight:
+          type: integer
+        heavier_than_feather:
+          type: boolean
+        weighed_verdict:
+          type: string
+      required:
+      - counterweight
+      - heart_weight
+      - heavier_than_feather
+      - weighed_verdict
+    WeighingResultEnum:
+      enum:
+      - LIGHTER
+      - HEAVIER
+      - WAVERING
+      type: string
+      description: |-
+        * `LIGHTER` - 未重于羽
+        * `HEAVIER` - 重于羽
+        * `WAVERING` - 天平摇摆 · 再称
     WorkflowAdjust:
       type: object
       description: '`POST /workflows/{id}/adjust/` (加减站): stations of ONE segment

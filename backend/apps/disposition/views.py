@@ -236,6 +236,13 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                     {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
                 )
             disposition = locked
+            # 埃及:称心流程还没走完(或被驳回)就不执行 —— 先称后判,判了才发落(docs/02 §5)。
+            from apps.judgment.weighing import unfinished_flow
+
+            waiting = unfinished_flow(disposition)
+            if waiting is not None:
+                return Response({"error": "The weighing flow has not completed", "code": waiting},
+                                status=status.HTTP_409_CONFLICT)
             from apps.sentence_plan.services import SentencePlanService
 
             # 挂在受刑计划节点上的处置:转生 / 终局由计划完成时的 `advance` 做

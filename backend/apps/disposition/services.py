@@ -557,68 +557,21 @@ class DispositionService:
         judgment_method: str,
         karma: int,
     ) -> str:
-        """
-        Route Egyptian soul.
-        - HEART_WEIGHING: verdict already encodes heart weighing result
-          (PASSED = heart lighter than feather = paradise,
-           FAILED = heart heavier = Ammit destroys)
-          PURGATORY = inconclusive, wait in Duat
-        - STANDARD: fall back to karma-based routing
+        """Route an Egyptian soul by the weighing's verdict, whatever the method column says.
 
-        DELIBERATELY NOT GIVEN THE 不可折 TREATMENT, and for a sharper reason
-        than the European branch: there is no offsetting step here for a
-        non-fungibility rule to constrain. The heart is weighed against the
-        feather and merit never goes on the scale at all (see
-        `_egyptian_reading`), so partitioning merit into pools it may and may
-        not discharge from answers a question this cosmology does not ask.
-        `karma >= 50` on the inconclusive branch is a threshold read, not an
-        offset, and it is left exactly as it was.
+        Every Egyptian case is weighed (docs/01 §3.3, 02 §1.1; user 2026-10-27), and the verdict IS
+        the scale's (apps/judgment/weighing.py): PASSED = not heavier than the feather → Aaru,
+        FAILED = heavier → Ammit, the second death. `judgment_method` and `karma` are received and
+        unused: a STANDARD Egyptian case used to reach Aaru on net merit ≥ 50, a rule no Egyptian
+        source has. PURGATORY / RETRY no longer conclude an original weighing (a wavering scale is
+        weighed again, no destination); the Duat entry answer stays for rows written before that and
+        for an appeal's re-routing.
         """
-        if judgment_method == JudgmentMethod.HEART_WEIGHING:
-            if verdict == Verdict.PASSED:
-                # Heart lighter than Ma'at's feather → paradise
-                return cls.EG_AARU
-            elif verdict == Verdict.FAILED:
-                # Heart heavier than feather → Ammit devours
-                return cls.EG_ANNIHILATION
-            else:
-                # PURGATORY/RETRY: soul waits in Duat entry
-                return cls.EG_DUAT_ENTRY
-        else:
-            # STANDARD judgment for Egyptian souls: same precedence rule as
-            # Chinese/European (see `_route_chinese`) — verdict is the
-            # court's authoritative decision and is checked first, not
-            # disjunctively with karma. The previous
-            # `verdict == PASSED or karma >= 50` / `verdict == PURGATORY or
-            # -50 < karma < 50` let a decayed-to-zero karma balance override
-            # an explicit FAILED verdict: FAILED with karma == 0 fell into
-            # the tie band and was parked in EG_DUAT_ENTRY indefinitely
-            # instead of going to the Devourer — the same class of bug as
-            # the Chinese/European heaven override, just landing in
-            # purgatory instead of heaven.
-            if verdict == Verdict.PASSED:
-                return cls.EG_AARU
-            if verdict == Verdict.FAILED:
-                return cls.EG_ANNIHILATION
-            # PURGATORY/RETRY: the verdict is inconclusive, so karma must not
-            # be allowed to reach for the Devourer. Being eaten by Ammit is
-            # the second death — annihilation, with no appeal and nothing left
-            # to appeal for — and an undecided judgment has no business
-            # triggering it however heavy the heart reads. A soul the court
-            # has not finished judging waits in the Duat.
-            #
-            # The positive side is deliberately not symmetric. A decisive
-            # karma reading still admits to Aaru, because Egyptian judgment is
-            # a threshold ("not heavier than the feather") rather than a
-            # severity score, so a clearly light heart is the weighing itself
-            # speaking rather than an arithmetic tie-break. Admission is also
-            # not destructive in the way the Devourer is: the asymmetry is
-            # between an outcome that is merely final and one that is
-            # annihilating, which is the same reason the rest of this codebase
-            # treats irreversible operations as needing a higher bar.
-            if karma >= 50:
-                return cls.EG_AARU
-            return cls.EG_DUAT_ENTRY
+        if verdict == Verdict.PASSED:
+            return cls.EG_AARU
+        if verdict == Verdict.FAILED:
+            return cls.EG_ANNIHILATION
+        return cls.EG_DUAT_ENTRY
 
     @classmethod
     def _route_greek(cls, soul: Soul, verdict: str) -> str:
@@ -774,6 +727,12 @@ class DispositionService:
             # False, not an exception, matching every other refusal in this
             # method — the caller's contract is "returns False, and writes
             # nothing, when the soul cannot make that move".
+            return False
+
+        # 埃及:称心流程走完才执行(docs/02 §5.1–5.2;apps/judgment/weighing.py)。
+        from apps.judgment.weighing import unfinished_flow
+
+        if unfinished_flow(disposition) is not None:
             return False
 
         if soul.is_residing:

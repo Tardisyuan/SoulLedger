@@ -820,7 +820,24 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 **self.opening_fields(to_legacy_date(self.death_year, self.death_month, self.death_day)),
             )
             city_gods.received(judgment)
+            if self.civilization == Civilization.EGYPTIAN:
+                self._arrive_in_the_hall(judgment)
             return judgment
+
+    def _arrive_in_the_hall(self, judgment):
+        """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口
+        走到殿里;租户没有这一殿就什么都不写。两组门(七道 ꜥrrwt、廿一道 sbḫt)不入行程 —— 门的位置是 Design
+        B 组画布定的,拓扑之外没有业务把灵魂送进去,这里不替它们决定。"""
+        from apps.realms.models import Realm
+        from apps.realms.path import SoulPathService
+
+        hall = Realm.all_objects.filter(
+            tenant_id=self.tenant_id, realm_code="EG_HALL_TWO_TRUTHS", is_deleted=False).first()
+        if hall is None:
+            return
+        judgment.realm = hall
+        judgment.save(update_fields=["realm"])
+        SoulPathService.enter(self, hall, tenant_id=self.tenant_id)
 
     def opening_fields(self, died) -> dict:
         """The columns a first-instance case of this death carries: 枉死城 (died before the fated date, Diyu only)
