@@ -36,6 +36,36 @@ export async function startImpersonation(userId: number, reason: string): Promis
   return state;
 }
 
+interface HallViewResponse {
+  access: string;
+  impersonation_id: number;
+  started_at: string;
+  expires_at: string;
+  code: string;
+  hall_names: Record<string, string>;
+}
+
+/**
+ * 全局管理员只读进入某殿(`POST /tenants/{code}/view/`,第五十四批 O-2)。与代看同一份状态、同一个横幅位置、
+ * 同一条退出路径(`endImpersonation`);失败原样抛,什么也没改。
+ */
+export async function startHallView(code: string): Promise<ImpersonationState> {
+  const { data } = await api.post<HallViewResponse>(`/tenants/${encodeURIComponent(code)}/view/`);
+  const skew = Date.parse(data.started_at) - Date.now();
+  const state: ImpersonationState = {
+    id: data.impersonation_id,
+    target: { id: 0, name: "", role: "ADMIN", hall: data.hall_names },
+    reason: "",
+    expiresAt: Date.parse(data.expires_at) - skew,
+    adminAccess: getAccessToken(),
+    hallView: { code: data.code },
+  };
+  platform().session.set(IMPERSONATION_KEY, JSON.stringify(state));
+  setAccessToken(data.access);
+  notifyImpersonation();
+  return state;
+}
+
 /**
  * 结束代看并把管理员的会话放回去。服务端那一步失败(已到点 / 已结束 / 离线)不拦着放回:
  * 服务端以记录为准,令牌随记录作废;到点没人来结束的,下一次代看或结束时补写结束行。

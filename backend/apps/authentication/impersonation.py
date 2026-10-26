@@ -18,6 +18,12 @@ WebSocket(`apps/core/ws_auth.py`、`apps/notifications/consumers.py`)和官员 A
 
 审计:开始、结束各一行(`IMPERSONATE_START` / `IMPERSONATE_END`),**代看期间不另记每次浏览**。
 被看的人收到站内通知 + 邮件(类型 `IMPERSONATION_STARTED`,类别 `account_security`,锁定不能关)。
+
+**进殿查看**(第五十四批 O-2,`start_hall`):全局管理员只读进入某一殿(停用的殿也行)。同一套:一行
+`Impersonation`(`hall` 有值,`target` = 管理员自己)、同样的三个声明、同样 30 分钟、同样只读、同样开始 / 结束审计
+(`resource="tenant"`)。令牌的 `tenant_code` 是那一殿;`enforce` 给本次请求的 user 挂上 `hall_view`,
+`apps/core/tenant.py::is_tenant_exempt` 见到它就不再把管理员当跨殿角色 —— 于是各页照常按 `request.tenant`
+收窄到这一殿,而不是看见全部殿。没有被看的人,所以不发通知。
 """
 import re
 from datetime import timedelta
@@ -49,30 +55,48 @@ def refuse(code, detail):
     return PermissionDenied({"detail": detail, "code": code})
 
 
+def _open(actor, target, reason, request, hall=None):
+    close_expired()
+    for old in Impersonation.objects.filter(actor=actor, ended_at__isnull=True):
+        end(old, "superseded", request=request)
+    return Impersonation.objects.create(
+        actor=actor, target=target, reason=reason, hall=hall, expires_at=timezone.now() + timedelta(minutes=MAX_MINUTES)
+    )
+
+
+def _token(record, tenant_code):
+    token = AccessToken.for_user(record.target)
+    if tenant_code:
+        token["tenant_code"] = tenant_code
+    token["sv"] = record.target.session_version
+    token[IMP_BY], token[IMP_ID], token[IMP_EXP] = record.actor_id, record.pk, int(record.expires_at.timestamp())
+    token.set_exp(lifetime=timedelta(minutes=MAX_MINUTES) + TOKEN_GRACE)
+    return str(token)
+
+
 def start(actor, target, reason, request):
     """开始一次代看,返回 `(access 令牌字符串, 记录)`。校验在视图里做完。"""
-    close_expired()
-    now = timezone.now()
     with transaction.atomic():
-        for old in Impersonation.objects.filter(actor=actor, ended_at__isnull=True):
-            end(old, "superseded", request=request)
-        record = Impersonation.objects.create(
-            actor=actor, target=target, reason=reason, expires_at=now + timedelta(minutes=MAX_MINUTES)
-        )
+        record = _open(actor, target, reason, request)
         _audit(
             record, AuditAction.IMPERSONATE_START, request,
             description=f"以 {_name(target)} 的身份查看 · 理由：{reason}",
             changes={"imp_id": record.pk, "reason": reason, "target_name": _name(target), "target_role": target.role},
         )
         _notify_target(record)
+    return _token(record, target.tenant.code if target.tenant_id else None), record
 
-    token = AccessToken.for_user(target)
-    if target.tenant_id:
-        token["tenant_code"] = target.tenant.code
-    token["sv"] = target.session_version
-    token[IMP_BY], token[IMP_ID], token[IMP_EXP] = actor.pk, record.pk, int(record.expires_at.timestamp())
-    token.set_exp(lifetime=timedelta(minutes=MAX_MINUTES) + TOKEN_GRACE)
-    return str(token), record
+
+def start_hall(actor, hall, request):
+    """全局管理员只读进入 `hall`,返回 `(access 令牌字符串, 记录)`。校验(只限 ADMIN)在视图里做完。"""
+    with transaction.atomic():
+        record = _open(actor, actor, f"hall:{hall.code}", request, hall=hall)
+        _audit(
+            record, AuditAction.IMPERSONATE_START, request,
+            description=f"以全局管理员身份查看 {hall.code}",
+            changes={"imp_id": record.pk, "hall": hall.code},
+        )
+    return _token(record, hall.code), record
 
 
 def end(record, how, *, request=None):
@@ -85,13 +109,15 @@ def end(record, how, *, request=None):
     record.refresh_from_db()
     minutes = round((record.ended_at - record.started_at).total_seconds() / 60)
     pages = len(record.pages)
+    who = f"全局管理员身份查看 {record.hall.code}" if record.hall_id else f"{_name(record.target)} 的身份查看"
+    changes = {
+        "imp_id": record.pk, "minutes": minutes,
+        "seconds": int((record.ended_at - record.started_at).total_seconds()), "pages": pages, "how": how,
+    }
+    changes.update({"hall": record.hall.code} if record.hall_id else {"target_name": _name(record.target)})
     _audit(
         record, AuditAction.IMPERSONATE_END, request,
-        description=f"以 {_name(record.target)} 的身份查看 · {minutes} 分钟 · 看过 {pages} 个页面",
-        changes={
-            "imp_id": record.pk, "target_name": _name(record.target), "minutes": minutes,
-            "seconds": int((record.ended_at - record.started_at).total_seconds()), "pages": pages, "how": how,
-        },
+        description=f"以 {who} · {minutes} 分钟 · 看过 {pages} 个页面", changes=changes,
     )
     return True
 
@@ -105,7 +131,7 @@ def close_expired():
 def enforce(request, user, token):
     """认证层的唯一入口。通过则返回,不通过抛 403(带 `code`)。"""
     record = (
-        Impersonation.objects.select_related("actor", "target")
+        Impersonation.objects.select_related("actor", "target", "hall")
         .filter(pk=token.get(IMP_ID), target_id=user.pk, actor_id=token.get(IMP_BY))
         .first()
     )
@@ -125,6 +151,11 @@ def enforce(request, user, token):
         raise refuse("impersonation_read_only", "查看中，不能操作。")
     if _EXPORT_PATH.search(request.path):
         raise refuse("impersonation_read_only", "查看中，不能导出。")
+    if record.hall_id:
+        if token.get("tenant_code") != record.hall.code:
+            raise refuse("impersonation_invalid", "代看已失效。")
+        # 只挂在这一次请求的 user 实例上:`is_tenant_exempt` 见到它就按 `request.tenant`(= 这一殿)收窄。
+        user.hall_view = record.hall_id
     if request.method == "GET":
         _count_page(record, request.META.get(PAGE_HEADER, ""))
     request.impersonation = record
@@ -144,8 +175,10 @@ def _name(user):
 
 def _audit(record, action, request, *, description, changes):
     actor = record.actor
+    resource, resource_id = ("tenant", record.hall.code) if record.hall_id else ("user", str(record.target_id))
     AuditLog.objects.create(
-        tenant=actor.tenant, user=actor, action=action, resource="user", resource_id=str(record.target_id),
+        tenant=record.hall if record.hall_id else actor.tenant, user=actor, action=action,
+        resource=resource, resource_id=resource_id,
         description=description[:500], changes=changes,
         ip_address=get_client_ip(request) if request is not None else None,
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500] if request is not None else "",
