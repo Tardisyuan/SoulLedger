@@ -150,7 +150,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if user_role == 'ADMIN':
             top_menus = Menu.objects.filter(
                 parent__isnull=True, is_active=True
-            ).order_by("order")
+            ).order_by("order").prefetch_related("buttons")
             # Pre-fetch all menus to avoid N+1 queries
             all_menus = Menu.objects.filter(is_active=True).prefetch_related('buttons')
             children_map = {}
@@ -165,7 +165,7 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # Non-admin: filter by role
         top_menus = Menu.objects.filter(
             parent__isnull=True, is_active=True
-        ).order_by("order")
+        ).order_by("order").prefetch_related("buttons")
         # Same rule as get_queryset, from the same function. Written twice it
         # would drift, which is how this gap opened in the first place: `tree`
         # honoured `roles` and `get_queryset` did not.

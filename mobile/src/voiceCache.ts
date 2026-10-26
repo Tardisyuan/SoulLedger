@@ -42,10 +42,3 @@ export function createVoiceCache(native: () => VoiceNative | null) {
 const cache = createVoiceCache(() => requireOptionalNativeModule<VoiceNative>("SoulLedgerVoice"));
 export const publishVoiceNumber = cache.publish;
 export const clearVoiceNumbers = cache.clear;
-
-/** Whole days until `until`, rounded up like the server's; 0 for none or past. The cooldown form uses the same rule. */
-export function daysLeft(until: string | null, now: number = Date.now()): number {
-  if (!until) return 0;
-  const ms = Date.parse(until) - now;
-  return Number.isFinite(ms) ? Math.max(0, Math.ceil(ms / 86_400_000)) : 0;
-}

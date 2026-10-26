@@ -5,9 +5,8 @@ import django_filters as filters
 from django.db.models import ExpressionWrapper, F, IntegerField, Q
 from django.db.models.functions import Coalesce
 
-from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
+from apps.souls.date_problem_sql import filter_has_date_problem
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
-from apps.souls.serializers import _this_lifes_records
 
 
 class SoulFilter(filters.FilterSet):
@@ -129,41 +128,11 @@ class SoulFilter(filters.FilterSet):
     def filter_has_date_problem(self, queryset, name, value):
         """?has_date_problem=true|false — souls with an unresolved DateProblem.
 
-        DateProblem is computed, not stored, so this can't be expressed as a
-        column lookup the way the other filters above are. It walks the
-        (already tenant/DataScope-scoped) queryset in Python once, the same
-        computation SoulListSerializer does per row, and turns the result
-        into a plain `pk__in` filter so pagination, ordering and count()
-        downstream all keep working normally.
-
-        `.prefetch_related("records")` here is not a second fetch on top of
-        what SoulViewSet.get_queryset already attaches — Django keys its
-        prefetch cache by the relation name, so a queryset that already
-        carries a "records" prefetch (which this one, reached through the
-        viewset, always does) reuses it rather than issuing another query.
-        Declaring it again here is what makes that true independent of the
-        caller, rather than this method silently depending on the viewset
-        never changing its prefetch list.
+        The same rules as SoulListSerializer's per-row check, expressed in SQL
+        (apps/souls/date_problem_sql.py) so the filter costs one query however
+        many souls the tenant has. It used to walk the whole scoped queryset in
+        Python and return a `pk__in` list of ids.
         """
         if value is None:
             return queryset
-        scoped = queryset.prefetch_related("records", "reincarnations")
-        matching_ids = []
-        for soul in scoped:
-            birth = (soul.birth_year, soul.birth_month, soul.birth_day)
-            death = (soul.death_year, soul.death_month, soul.death_day)
-            if check_soul_dates(birth, death):
-                matching_ids.append(soul.pk)
-                continue
-            # This life's deeds only — see serializers._this_lifes_records.
-            for record in _this_lifes_records(soul):
-                event = (record.event_year, record.event_month, record.event_day)
-                problems = check_record_date(
-                    event, birth, death,
-                    ack_fingerprint=record.date_warning_ack_fingerprint or None,
-                )
-                if any(p.severity == ERROR or (p.severity == WARNING and not p.acknowledged) for p in problems):
-                    matching_ids.append(soul.pk)
-                    break
-        matched = queryset.filter(pk__in=matching_ids)
-        return matched if value else queryset.exclude(pk__in=matching_ids)
+        return filter_has_date_problem(queryset, value)

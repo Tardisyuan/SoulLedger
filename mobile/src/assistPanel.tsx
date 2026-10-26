@@ -29,7 +29,7 @@ import { radius } from "./theme";
 import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { useCurrentHall } from "./screens/letters";
+import { useCurrentHall } from "./useCurrentHall";
 import { Button, OneLine, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */

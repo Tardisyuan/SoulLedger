@@ -20,7 +20,7 @@ import { AssistEntry, useAssist } from "./assist";
 import { Emblem, Icon, type IconName } from "./emblems";
 import { family, quoteFamily, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { useCurrentHall } from "./screens/letters";
+import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import type { Theme } from "./theme";

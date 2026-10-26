@@ -34,3 +34,26 @@ def cleanup_unsent_images():
     from apps.chat import images
 
     return images.purge_all_stale()
+
+
+@shared_task(name="chat.sync_rooms", ignore_result=True)
+def sync_rooms_task(soul_id):
+    """重算一个灵魂所有房间的发言权并写进 Synapse(`services.sync_rooms`)。
+    Synapse 没配 / 不可达只记日志:下一次同步补(未写成的房间仍在 `sync_rooms` 的筛选里)。"""
+    from apps.chat import services
+    from apps.souls.models import Soul
+
+    soul = Soul.objects.filter(pk=soul_id).first()
+    if soul is not None:
+        services.sync_rooms_quietly(soul)
+
+
+@shared_task(name="chat.deactivate_matrix", ignore_result=True)
+def deactivate_matrix_task(account_id, conversation_ids):
+    """转世停用账号的 Synapse 那一半(`services.deactivate_matrix_side`)。"""
+    from apps.chat import services
+    from apps.soul_accounts.models import SoulAccount
+
+    account = SoulAccount.objects.filter(pk=account_id).select_related("soul").first()
+    if account is not None:
+        services.deactivate_matrix_side(account, conversation_ids)

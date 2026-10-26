@@ -13,6 +13,7 @@
  * still goes through the backend, which is what lifts it).
  */
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
+import { SOUL_CODE_LENGTH } from "@soulledger/core/domain/soulCode";
 
 export type ChatMode =
   /** ① Free: mutual, or a request that has been answered. */
@@ -98,7 +99,7 @@ export function chatSections(rows: SoulConversation[], lastTs: (roomId: string) 
  */
 export const normalizeCode = (raw: string) => raw.trim().toUpperCase();
 /** `SOUL_CODE_LENGTH` there. Shorter or longer is refused here with its own copy, before asking. */
-export const isCompleteCode = (code: string) => code.length === 10;
+export const isCompleteCode = (code: string) => code.length === SOUL_CODE_LENGTH;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -122,9 +123,4 @@ export function bubbleStamp(ts: number, now: number): string {
 export function dayOf(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-/** Whole days left on a mute, rounded up — "你被禁言 N 日" counts what is left, not what was given. */
-export function daysLeft(until: string, now: number): number {
-  return Math.max(1, Math.ceil((Date.parse(until) - now) / 86_400_000));
 }

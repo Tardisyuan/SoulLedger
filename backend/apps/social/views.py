@@ -69,6 +69,10 @@ from apps.social.soul_serializers import SoulPostMediaUploadSerializer, SoulSoci
 from apps.social.visibility import visible_posts
 
 # 帖子的图随帖子一次取出(每页一条查询);`PostMedia.objects` 已排除软删除的。
+#: `following` / `followers` answer a bare array (no envelope); cap it so one account with
+#: a huge audience cannot make the response unbounded.
+FOLLOW_LIST_CAP = 500
+
 WITH_MEDIA = Prefetch("media", queryset=PostMedia.objects.order_by("position"), to_attr="live_media")
 
 
@@ -455,7 +459,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         tenant = getattr(request, "tenant", None)
         qs = Follow.objects.filter(
             follower=request.user, tenant=tenant
-        ).select_related("following")
+        ).select_related("following")[:FOLLOW_LIST_CAP]
         serializer = FollowSerializer(qs, many=True)
         return Response(serializer.data)
 
@@ -466,7 +470,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         tenant = getattr(request, "tenant", None)
         qs = Follow.objects.filter(
             following=request.user, tenant=tenant
-        ).select_related("follower")
+        ).select_related("follower")[:FOLLOW_LIST_CAP]
         serializer = FollowSerializer(qs, many=True)
         return Response(serializer.data)
 

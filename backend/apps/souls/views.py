@@ -364,7 +364,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         ])
         rows = 0
         # 文件里没有功过明细:不要列表为日期检查预取的 records / reincarnations(至多五万行)。
-        for soul in souls.prefetch_related(None):
+        for soul in souls.prefetch_related(None).iterator(chunk_size=2000):
             rows += 1
             writer.writerow([
                 str(soul.id),

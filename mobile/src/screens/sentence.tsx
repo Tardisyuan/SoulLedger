@@ -42,14 +42,11 @@ import {
   useRemote,
   useTheme,
 } from "../ui";
+import type { SentenceLanding } from "../sentenceKinds";
 import { useResidenceNames, type AppStackParams } from "./applications";
 import { realmName } from "./life";
 
-/** The four push kinds that land on the sentence plan (1d). */
-export const SENTENCE_PUSH_KINDS = ["sentence_completed", "sentence_waiting", "sentence_amended", "sentence_pardoned"] as const;
-export type SentencePushKind = (typeof SENTENCE_PUSH_KINDS)[number];
-/** Where a sentence push landed: its kind, and the stations the server named as new (amended / waiting). */
-export type SentenceLanding = { kind: SentencePushKind; nodeIds: string[] };
+export { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "../sentenceKinds";
 
 const STATUS_KEY: Record<SentenceStationStatus, string> = {
   pending: "soul_app.sentence.state.pending",

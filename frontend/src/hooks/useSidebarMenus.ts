@@ -23,10 +23,9 @@ export const isDirectory = (menu: Pick<SidebarMenu, "menu_type" | "path">) =>
  * 侧边栏数据归一化。
  *
  * 两件事：
- * 1. 只保留一级项。ADMIN 走 /menus/list-public/（本来就只返回一级），
- *    但非 ADMIN 走 /menus/，那个接口返回的是拉平的全量菜单 —— 子菜单
- *    既嵌在 parent 的 children 里、又作为独立条目出现在顶层。不过滤的话
- *    分组后每个子项都会重复渲染一次。
+ * 1. 只保留一级项。/menus/list-public/ 本来就只返回一级;这一步是兜底 ——
+ *    若换回返回拉平全量的 /menus/,子菜单会既嵌在 children 里又作为独立条目
+ *    出现在顶层,分组后每个子项都会重复渲染一次。
  * 2. 去掉 visible=false 的项（欢迎页 / 个人资料 / 通知中心），这三处
  *    在顶栏或右上角已有入口。后端没有对该字段做过滤，只能在这里处理。
  */
@@ -64,14 +63,12 @@ export function useSidebarMenus() {
   return useQuery<SidebarMenu[]>({
     queryKey: menuKeys.sidebar(user?.role, !!user),
     queryFn: async () => {
-      // Use all() for admin (returns unfiltered, bare array), list() for others
-      // (role-filtered, DRF-paginated — unwrap .results)
-      if (user?.role === "ADMIN") {
-        const res = await menusApi.all();
-        return normalizeMenus(res.data);
-      }
-      const res = await menusApi.list();
-      return normalizeMenus(res.data.results);
+      // Everyone reads /menus/list-public/: unpaginated and already role-filtered
+      // by the same `menu_is_visible_to` as /menus/. The paginated /menus/ list
+      // (PAGE_SIZE 20) used to serve non-ADMIN roles and silently dropped every
+      // row past page 1 -- the visible set for a JUDGE is larger than that.
+      const res = await menusApi.all();
+      return normalizeMenus(res.data);
     },
     select: (menus) => hideOutsideDiyu(menus, user?.tenant?.civilization),
     staleTime: 5 * 60 * 1000,
