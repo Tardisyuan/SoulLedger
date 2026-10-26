@@ -808,18 +808,22 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # (枉死城) and cannot be claimed before it (apps/judgment/claims.py).
             self.refresh_from_db(fields=["death_year", "death_month", "death_day", "origin_location",
                                          "fated_death_year", "fated_death_month", "fated_death_day"])
-            fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
-            died = to_legacy_date(self.death_year, self.death_month, self.death_day)
-            untimely = bool(self.civilization == Civilization.CHINESE and fated and died and died < fated)
             judgment = Judgment.objects.create(
                 soul=self,
                 civilization=self.civilization,
                 tenant=self.tenant,
                 judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
-                untimely=untimely,
-                held_until=fated if untimely else None,
-                # 城隍初审(地府):按出身地交给本殿的城隍,解送之后才进十殿(apps/judgment/city_gods.py)。
-                **city_gods.initial_fields(self),
+                **self.opening_fields(to_legacy_date(self.death_year, self.death_month, self.death_day)),
             )
             city_gods.received(judgment)
             return judgment
+
+    def opening_fields(self, died) -> dict:
+        """The columns a first-instance case of this death carries: 枉死城 (died before the fated date, Diyu only)
+        and 城隍初审 (Diyu: the city god of the birthplace takes it first). `Soul.die` and a case opened by hand
+        for a living soul (`JudgmentViewSet.perform_create`, 2026-10-27) both go through here."""
+        from apps.judgment import city_gods
+
+        fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
+        untimely = bool(self.civilization == Civilization.CHINESE and fated and died and died < fated)
+        return {"untimely": untimely, "held_until": fated if untimely else None, **city_gods.initial_fields(self)}

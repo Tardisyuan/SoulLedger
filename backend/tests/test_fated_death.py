@@ -41,6 +41,27 @@ def test_a_fated_date_the_death_check_cannot_compare_is_refused_on_entry(cn_tena
     assert client.patch(url, {"fated_death_date": None}, format="json").status_code == 200
 
 
+def test_a_case_opened_by_hand_for_a_living_soul_is_held_too(cn_tenant, admin_user, judge_user):
+    """Review #7 (2026-10-27): `POST /judgment/` for an ALIVE soul skipped 枉死城; and a global admin could open a
+    second case beside an open one."""
+    from tests.soul_account_support import officer_client
+
+    fated = date.today() + timedelta(days=400)
+    soul = _soul(cn_tenant, fated)
+    client = officer_client(admin_user)
+    res = client.post("/api/v1/judgment/", {"soul": str(soul.pk), "court": "第一殿"}, format="json")
+    assert res.status_code == 201, res.data
+    from apps.judgment.models import Judgment
+
+    judgment = Judgment.all_objects.get(pk=res.data["id"])
+    assert judgment.untimely is True and judgment.held_until == fated
+    with pytest.raises(ClaimRefusedError) as refused:
+        claims.claim(judgment.pk, judge_user)
+    assert refused.value.code == "held_until_fated_date"
+    again = client.post("/api/v1/judgment/", {"soul": str(soul.pk), "court": "第一殿"}, format="json")
+    assert again.status_code == 400 and Judgment.all_objects.filter(soul=soul).count() == 1
+
+
 def test_no_fated_date_or_a_timely_death_is_judged_as_usual(cn_tenant, judge_user):
     plain = _soul(cn_tenant, None).die(death_date=date.today())
     assert plain.untimely is False and plain.held_until is None
