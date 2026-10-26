@@ -58,6 +58,7 @@ const COLLECTED_FILES = [
   "ApiKeysPanel.test.tsx",
   // 2026-10-08 管理端 Webhook:/death-sync/webhooks。
   "SoupBlock.test.tsx",
+  "SoupCell.test.tsx",
   "WebhooksPanel.test.tsx",
   "LoginLogPage.test.tsx",
   "AppLayout.test.tsx",
