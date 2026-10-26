@@ -18,7 +18,6 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.judgment.claims import ClaimRefusedError
-from apps.souls.models import Civilization
 from apps.judgment.models import (
     APPEAL_MAX_ROUNDS,
     APPEAL_WINDOW_DAYS,
@@ -28,6 +27,7 @@ from apps.judgment.models import (
     JudgmentAppeal,
     JudgmentKind,
 )
+from apps.souls.models import Civilization
 
 
 class AppealRefusedError(ClaimRefusedError):
