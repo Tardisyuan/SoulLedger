@@ -6,6 +6,7 @@ import { api } from "@soulledger/core/api/client";
 import {
   endImpersonation,
   getImpersonation,
+  startHallView,
   startImpersonation,
 } from "@soulledger/core/api/impersonation";
 import { getAccessToken, setAccessToken, platform, REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
@@ -33,6 +34,36 @@ beforeEach(() => {
 afterEach(() => {
   post.mockRestore();
   sessionStorage.clear();
+});
+
+describe("进殿查看(第五十四批 O-2)", () => {
+  it("同一条路:令牌换进 access 位置、管理员的收起;状态带上殿;退出放回同一条", async () => {
+    post
+      .mockResolvedValueOnce({
+        data: {
+          access: "hall-token",
+          impersonation_id: 9,
+          started_at: "2026-10-27T10:00:00Z",
+          expires_at: "2026-10-27T10:30:00Z",
+          code: "CN_DIYU",
+          hall_names: { "zh-Hans": "酆都第十殿" },
+        },
+      })
+      .mockResolvedValueOnce({ data: { ended: true } });
+
+    const state = await startHallView("CN_DIYU");
+
+    expect(post).toHaveBeenCalledWith("/tenants/CN_DIYU/view/");
+    expect(getAccessToken()).toBe("hall-token");
+    expect(state.hallView).toEqual({ code: "CN_DIYU" });
+    expect(state.target.hall).toEqual({ "zh-Hans": "酆都第十殿" });
+    expect(state.adminAccess).toBe("admin-token");
+
+    await endImpersonation();
+    expect(post).toHaveBeenLastCalledWith("/auth/impersonate/end/");
+    expect(getAccessToken()).toBe("admin-token");
+    expect(getImpersonation()).toBeNull();
+  });
 });
 
 describe("开始与退出", () => {

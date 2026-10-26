@@ -61,6 +61,39 @@ export interface TenantSettingsPatch {
   rebirth_monthly_quota?: Record<string, number | null>;
 }
 
+/** `POST /tenants/`(全局管理员建殿)的请求体。code 建后不能改;文明必填,没有默认值。 */
+export interface TenantCreateBody {
+  code: string;
+  display_name: string;
+  civilization: string;
+  description?: string;
+  hall_name?: string;
+  hall_name_en?: string;
+  hall_name_egy?: string;
+}
+
+/** 本月转世配额的一道(与 `GET /reincarnation/quota/` 同形)。 */
+export interface HallQuotaRow {
+  rebirth_form: string;
+  limit: number | null;
+  used: number;
+}
+
+/**
+ * `GET /tenants/overview/`(ADMIN)的一行:一殿一行,只有数。形状见 `backend/apps/tenants/overview.py`。
+ * `judgments` 四格互不相交。
+ */
+export interface HallOverviewRow {
+  code: string;
+  hall_names: Record<string, string>;
+  civilization: string;
+  is_active: boolean;
+  todo: { approvals: number; dispatch_proposals: number; cooldowns: number; letters_awaiting: number; total: number };
+  judgments: { at_city_god: number; held: number; claimed: number; unclaimed: number };
+  rebirth_quota: HallQuotaRow[];
+  open_appeals: number;
+}
+
 export const tenantsApi = {
   list: () => api.get<PaginatedResponse<Tenant>>("/tenants/"),
   // TenantViewSet sets lookup_field = "code" (backend/apps/tenants/views.py:9),
@@ -74,4 +107,12 @@ export const tenantsApi = {
     api.patch<Tenant>(`/tenants/${code}/settings/`, patch),
   /** ADMIN only. */
   mfaRoles: (code: string) => api.get<TenantMfaRoleRow[]>(`/tenants/${code}/mfa-roles/`),
+  /** ADMIN only. 400 field errors: `code`(格式 / 已占用)、`civilization`(种子殿代号配错文明)。 */
+  create: (body: TenantCreateBody) => api.post<Tenant>("/tenants/", body),
+  /** ADMIN only. 停用不删数据;已停用再停用不写。 */
+  deactivate: (code: string) => api.post<Tenant>(`/tenants/${code}/deactivate/`),
+  /** ADMIN only. */
+  activate: (code: string) => api.post<Tenant>(`/tenants/${code}/activate/`),
+  /** ADMIN only. 停用的殿也在内。 */
+  overview: () => api.get<HallOverviewRow[]>("/tenants/overview/"),
 };

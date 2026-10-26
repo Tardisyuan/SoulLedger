@@ -18,6 +18,7 @@ import { SealGlyphsDialog } from "@/src/components/tenants/SealGlyphsDialog";
 import { TenantSettingsDialog } from "@/src/components/tenants/TenantSettingsDialog";
 import { DEFAULT_SEAL_GLYPHS, type SealCiv } from "@/src/components/plaque/Seal";
 import { civSkinOf } from "@/src/lib/civSkin";
+import { CreateHallDialog, DeactivateHallDialog, useHallActiveMutation } from "@/src/components/tenants/HallLifecycleDialogs";
 
 function TenantsPageContent() {
   const { t } = useI18n();
@@ -26,6 +27,10 @@ function TenantsPageContent() {
   const [page, setPage] = useState(1);
   const [editingSeal, setEditingSeal] = useState<Tenant | null>(null);
   const [editingSettings, setEditingSettings] = useState<Tenant | null>(null);
+  // 第五十四批 K-1~K-3:新建殿、停用(确认)、重新启用(行尾直接给,可逆,不确认)。列表上没有删除。
+  const [creating, setCreating] = useState(false);
+  const [deactivating, setDeactivating] = useState<Tenant | null>(null);
+  const activate = useHallActiveMutation();
 
   // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
   // calls the shared `api` client directly to reach `/tenants/?page=`.
@@ -49,6 +54,11 @@ function TenantsPageContent() {
         </>
       }
       subtitle={t("tenants.subtitle") || "Tenant management"}
+      actions={
+        <Button type="button" variant="primary" size="sm" data-testid="hall-create-open" onClick={() => setCreating(true)}>
+          {t("halls.create")}
+        </Button>
+      }
     >
       {/* 账页(规范 v1 §2):卡片列换成表格 —— 名称、编号(等宽)、状态徽章。
           加载 / 失败 / 空三种状态交给 DataTable:失败时是「! 加载失败」加重试,
@@ -71,7 +81,10 @@ function TenantsPageContent() {
         keyExtractor={(tenant) => String(tenant.id)}
         renderRow={(tenant) => (
           <>
-            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">{tenant.display_name}</td>
+            {/* 停用的殿整行灰字(K-1)。 */}
+            <td className={`px-4 py-3 font-medium ${tenant.is_active === false ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}>
+              {tenant.display_name}
+            </td>
             <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{tenant.code}</td>
             <td className="px-4 py-3">
               {/* `is_active` is in the same response and was going unread: every
@@ -85,6 +98,22 @@ function TenantsPageContent() {
               <SealGlyphsCell tenant={tenant} />
             </td>
             <td className="px-4 py-3 text-right">
+              {tenant.is_active === false ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  data-testid="hall-activate"
+                  loading={activate.isPending && activate.variables?.tenant.code === tenant.code}
+                  onClick={() => activate.mutate({ tenant, active: true })}
+                >
+                  {t("halls.activate")}
+                </Button>
+              ) : (
+                <Button type="button" variant="ghost" size="sm" data-testid="hall-deactivate-open" onClick={() => setDeactivating(tenant)}>
+                  {t("halls.deactivate")}
+                </Button>
+              )}
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditingSettings(tenant)}>
                 {t("tenants.settings.edit")}
               </Button>
@@ -108,6 +137,10 @@ function TenantsPageContent() {
       {/* 殿的设置(说明、调拨开关、三语殿名、转生冷却):同样只有管理员,同样按 key 从现值起步。 */}
       {editingSettings ? (
         <TenantSettingsDialog key={editingSettings.code} tenant={editingSettings} onClose={() => setEditingSettings(null)} />
+      ) : null}
+      {creating ? <CreateHallDialog onClose={() => setCreating(false)} /> : null}
+      {deactivating ? (
+        <DeactivateHallDialog key={deactivating.code} tenant={deactivating} onClose={() => setDeactivating(null)} />
       ) : null}
     </PageShell>
   );
