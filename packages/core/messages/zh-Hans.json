@@ -2992,11 +2992,11 @@
       "col_username": "用户名",
       "col_name": "姓名",
       "col_issue": "问题",
-      "template_notes": "模板列说明：username 必填；password 必填，由你设定，对方第一次登录必须先改；role 选填，默认 VIEWER；email、display_name 选填。",
+      "template_notes": "username 必填。写了 email、没写 password 的行发邀请信，本人 7 天内自设密码；写了 password 的行用它作初始密码，首次登录须改。两样都没写的行不导入。邀请信的行，role 不能是 ADMIN。",
       "back": "上一步",
       "commit": "导入 {{n}} 人",
       "blocked": "有 {{n}} 行有问题，导入被禁用。修正文件后重新选择。",
-      "success": "已导入 {{n}} 人。他们第一次登录必须先改密码。",
+      "success": "已导入 {{created}} 人：{{invited}} 人收到邀请信，{{password}} 人首次登录须改密码",
       "view_users": "查看用户列表",
       "row_codes": {
         "username_required": "缺用户名",
@@ -3007,7 +3007,13 @@
         "password_required": "缺密码",
         "password_weak": "密码不符合规则",
         "unknown": "这一行没能检查"
-      }
+      },
+      "delivery_col": "方式",
+      "delivery": {
+        "invite": "邀请信",
+        "password": "初始密码"
+      },
+      "delivery_summary": "邀请信 {{invite}} · 初始密码 {{password}}"
     },
     "organization": "所属机构",
     "organization_none": "不属于任何机构",
@@ -3723,6 +3729,9 @@
     "groups": {
       "THREE_GOOD_PATHS": "三善道",
       "THREE_EVIL_PATHS": "三恶道"
+    },
+    "error": {
+      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂留在候转世。"
     }
   },
   "social": {
@@ -6849,7 +6858,16 @@
       "admin_context": "在{{name}}手上 · 你是本殿管理员",
       "reassign_to": "改派给…",
       "release_for": "替{{name}}放回",
-      "reassign_request": "{{name}}请求改派 · {{time}}"
+      "reassign_request": "{{name}}请求改派 · {{time}}",
+      "attach_camera": "拍照",
+      "attach_library": "从相册选",
+      "attach_file": "选 PDF",
+      "attach_uploading": "上传中 {{percent}}%",
+      "attach_cancel": "取消上传",
+      "attach_by": "{{name}} · {{time}}",
+      "attach_privacy": "照片上传后会去掉拍摄地点和设备信息",
+      "attach_need_claim": "认领后才能添加附件",
+      "attach_concluded": "已结案，附件只读"
     },
     "notify": {
       "intro": "关掉的类别不推送到这部手机，也不在站内提醒。和网页个人中心是同一份设置；邮件在网页上设置。",
@@ -6896,6 +6914,21 @@
     },
     "appeals": {
       "desk_only": "复核在网页上进行"
+    },
+    "stats": {
+      "title": "我的数",
+      "scope": "只数你自己的，所有殿合在一起",
+      "section_judgments": "审判",
+      "section_appeals": "申诉复核",
+      "concluded_this_month": "本月结案",
+      "month_since": "{{date}} 起",
+      "concluded_total": "累计结案",
+      "open_claims": "认领未结",
+      "appeals_reviewed": "已有结论",
+      "appeals_in_review": "复核中",
+      "empty_title": "还没有数",
+      "empty_body": "认领并结掉第一件案子后，这里就有数了。",
+      "load_failed": "数没取到"
     }
   },
   "print": {
@@ -7183,5 +7216,95 @@
     "life": "生卒",
     "go_to_review": "去初审 →",
     "transfer_on_web": "改交在网页上办"
+  },
+  "officerHandover": {
+    "action": "移交在途案件",
+    "title": "移交在途案件",
+    "intro": "把一位官员手上没办完的事，一次交给另一位：认领中的审判、复核中的申诉、城隍名下的分工、经办的书信。先预览，再提交。",
+    "from": "交出人",
+    "to": "接手人",
+    "pick": "选一位本殿在职官员",
+    "preview": "预览",
+    "preview_stale": "改了人选，请重新预览",
+    "submit": "移交",
+    "submitting": "移交中…",
+    "row_judgments": "认领中的审判",
+    "row_appeals": "复核中的申诉",
+    "row_city_gods": "城隍名下",
+    "row_city_gods_names": "从 {{names}} 名下移给接手人",
+    "row_letters": "经办的书信",
+    "returned_to_pool": "其中 {{n}} 件申诉会回到待复核：接手人是这几件的原判官员，不能复核自己的判决。复核人清空后，任何能复核的官员都可以认领。",
+    "empty": "{{name}}手上没有在途的事，不用移交。",
+    "may_shrink": "预览之后有人结案或改派的件，提交时不再移动；实际件数可能比预览少。",
+    "blocked_title": "现在不能移交",
+    "problem": {
+      "target_cannot_judge": "{{name}}不能办案，而要交出的有审判或申诉。换一位接手人，或先给他办案的权限。",
+      "target_cannot_reply": "{{name}}不能回信，而要交出的有书信。换一位接手人，或先给他回信的权限。"
+    },
+    "result_title": "已移交给{{name}}",
+    "result_counts": "实际移交：审判 {{judgments}} · 申诉 {{appeals}} · 城隍 {{city_gods}} · 书信 {{letters}}",
+    "result_pool": "{{n}} 件申诉回到了待复核",
+    "result_fewer": "比预览少的那几件，预览之后已经结案或被改派。",
+    "result_notified": "{{name}}已收到站内通知",
+    "error": {
+      "same_officer": "交出人和接手人不能是同一位",
+      "invalid_target": "接手人不是本殿在职官员",
+      "not_found": "找不到这位官员"
+    },
+    "deactivate_prompt": "{{name}}手上还有在途的事。停用前先移交？",
+    "deactivate_anyway": "仍然停用"
+  },
+  "officerInvite": {
+    "action": "邀请官员",
+    "title": "邀请官员",
+    "body": "对方会收到一封邮件，点里面的链接自己设密码。链接 7 天内有效，只能用一次。",
+    "username_optional": "用户名 · 选填",
+    "username_hint": "不填就用邮箱 @ 前面那段；重名时自动加数字",
+    "display_name_optional": "显示名 · 选填",
+    "hall": "殿",
+    "send": "发送邀请",
+    "sent_toast": "邀请已发到 {{email}}",
+    "resent_toast": "{{email}} 已邀请过，这次是重发",
+    "pending_badge": "待接受邀请",
+    "resend": "重发邀请",
+    "resend_hint": "对方没收到邮件时，可以再发一次",
+    "error": {
+      "email_invalid": "邮箱格式不对",
+      "role_invalid": "只能邀请官员角色，不能是灵魂或全局管理员",
+      "email_taken": "这个邮箱属于另一个账号",
+      "username_taken": "这个用户名已被占用"
+    }
+  },
+  "acceptInvite": {
+    "title": "设置你的密码",
+    "subtitle": "你被邀请为官员。设好密码后，用用户名和这个密码登录。",
+    "new_password": "新密码",
+    "confirm_password": "再输一次",
+    "mismatch": "两次输入的不一样",
+    "submit": "设置密码",
+    "weak": "这个密码不够强：",
+    "done_title": "密码已设置",
+    "done_body": "请用用户名和新密码登录。",
+    "go_login": "去登录",
+    "invalid_title": "这个邀请链接用不了",
+    "invalid_body": "请联系本殿管理员，重新给你发一次邀请。",
+    "rate_limited": "试得太多了，请 {{seconds}} 秒后再试",
+    "link_note": "邀请链接 7 天有效，只能用一次。"
+  },
+  "mengpoSoup": {
+    "title": "孟婆汤",
+    "hint": "地府的灵魂转世前，要先饮孟婆汤。",
+    "not_taken": "未饮",
+    "taken": "已饮 · {{time}}",
+    "register": "登记已饮汤",
+    "register_title": "登记{{name}}已饮孟婆汤？",
+    "register_body": "每一世饮一次。登记后不能撤回，转世完成时清空。",
+    "registered_toast": "已登记：{{name}}已饮孟婆汤",
+    "batch_refused": "{{n}} 位还没饮孟婆汤，没有转世，留在候转世：",
+    "error": {
+      "not_diyu": "只有地府的灵魂要饮孟婆汤",
+      "not_reincarnating": "只有候转世的灵魂才能登记饮汤",
+      "soup_already_taken": "这一世已经饮过了"
+    }
   }
 }
