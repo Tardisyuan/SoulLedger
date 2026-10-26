@@ -13865,6 +13865,7 @@ export interface components {
             judge: components["schemas"]["MeJudge"] | null;
             judgment_method: string;
             verdict: string | null;
+            weighing_result: string | null;
             is_final: boolean;
             /** Format: date-time */
             created_at: string;

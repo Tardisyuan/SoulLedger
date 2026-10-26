@@ -30764,6 +30764,9 @@ components:
         verdict:
           type: string
           nullable: true
+        weighing_result:
+          type: string
+          nullable: true
         is_final:
           type: boolean
         created_at:
@@ -30782,6 +30785,7 @@ components:
       - judge
       - judgment_method
       - verdict
+      - weighing_result
     MeJudgmentAppeal:
       type: object
       description: 灵魂看的:不带复核人是谁(与事件、推送一样不说判官)。
