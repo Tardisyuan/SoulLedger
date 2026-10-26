@@ -38,6 +38,7 @@ from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.ledger.snapshots import previous_month_average
 from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.models import Soul, SoulState
+from apps.tenants.models import Tenant
 
 
 def _format_death_date(soul: Soul) -> str:
@@ -440,7 +441,8 @@ class LedgerOverviewStatsView(APIView):
         # Per-tenant soul counts with state breakdown (single query, no N+1)
         tenant_state_data = (
             soul_qs
-            .values('tenant', 'tenant__code', 'tenant__display_name', 'tenant__dispatch_enabled', 'current_state')
+            .values('tenant', 'tenant__code', 'tenant__display_name', 'tenant__dispatch_enabled',
+                    'tenant__is_active', 'current_state')
             .annotate(count=Count('id'))
             .order_by('tenant__code')
         )
@@ -454,7 +456,8 @@ class LedgerOverviewStatsView(APIView):
                     "tenant_id": tid,
                     "tenant_code": row['tenant__code'],
                     "tenant_name": row['tenant__display_name'],
-                    "dispatch_enabled": row['tenant__dispatch_enabled'],
+                    # 停用的殿不收调拨(`DispatchService.check_target_accepts`),发起移交页据此禁用它。
+                    "dispatch_enabled": bool(row['tenant__dispatch_enabled'] and row['tenant__is_active']),
                     "total_souls": 0,
                     "state_breakdown": {s: 0 for s in SoulState.values},
                 }
@@ -462,6 +465,23 @@ class LedgerOverviewStatsView(APIView):
             tenant_map[tid]["state_breakdown"][row['current_state']] = row['count']
 
         tenant_stats = [v for v in tenant_map.values() if v['total_souls'] > 0]
+        # 还没有灵魂的启用殿也要列出(0 条):发起移交页的目标殿单选只读这张表,管理员刚建的殿
+        # 没有灵魂,不补就永远选不到。范围同 soul_qs:不带租户看全部,带租户只看自己。
+        halls = Tenant.objects.filter(is_active=True)
+        if tenant is not None:
+            halls = halls.filter(pk=tenant.pk)
+        listed = {v['tenant_id'] for v in tenant_stats}
+        empty_halls = [
+            {
+                "tenant_id": hall.pk, "tenant_code": hall.code, "tenant_name": hall.display_name,
+                "dispatch_enabled": hall.dispatch_enabled, "total_souls": 0,
+                "state_breakdown": {s: 0 for s in SoulState.values},
+            }
+            for hall in halls.exclude(pk__in=listed)
+        ]
+        if empty_halls:
+            tenant_stats = sorted(tenant_stats + empty_halls,
+                                  key=lambda v: (v['tenant_code'] is None, v['tenant_code'] or ""))
 
         # Karma distribution buckets - scoped to tenant (S-H3)
         #
