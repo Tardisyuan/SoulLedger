@@ -111,7 +111,8 @@ def test_the_allowed_sets_are_the_whole_routing_image():
     assert allowed_realm_codes("CHINESE", "PURGATORY") == {D.CHINESE_PURGATORY}
     assert allowed_realm_codes("EUROPEAN", "FAILED") == frozenset(D.EU_HELL_CIRCLES.values())
     assert allowed_realm_codes("EGYPTIAN", "RETRY", "HEART_WEIGHING") == {D.EG_DUAT_ENTRY}
-    assert allowed_realm_codes("EGYPTIAN", "RETRY", "STANDARD") == {D.EG_DUAT_ENTRY, D.EG_AARU}
+    # Every Egyptian case is weighed: the method column no longer widens the set (docs/01 §3.3).
+    assert allowed_realm_codes("EGYPTIAN", "RETRY", "STANDARD") == {D.EG_DUAT_ENTRY}
     assert allowed_realm_codes("GREEK", "FAILED") == {D.GR_TARTARUS}
     assert allowed_realm_codes("UNKNOWN", "FAILED") == frozenset()
 

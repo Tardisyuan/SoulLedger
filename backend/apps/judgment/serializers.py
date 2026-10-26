@@ -208,6 +208,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
             "workflow",
+            # 埃及称心的结果,结案时冻结;天平摇摆而再称的案子指回上一件(apps/judgment/weighing.py)。
+            "weighing_result", "heart_weight", "retrial_of",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
@@ -220,7 +222,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
             "reassign_requested_at", "reassign_requested_by", "reassign_reason",
             "stale_since",
-            "cycle", "judgment_method",
+            "cycle", "judgment_method", "weighing_result", "heart_weight", "retrial_of",
             "city_god", "city_god_status", "city_god_note", "sent_on_at",
         ]
 
@@ -348,6 +350,14 @@ class EvidenceRulingWriteSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class WeighingSerializer(serializers.Serializer):
+    """埃及称心,按本案采信的证据(apps/judgment/weighing.py)。"""
+    heart_weight = serializers.IntegerField()
+    counterweight = serializers.IntegerField()
+    heavier_than_feather = serializers.BooleanField()
+    weighed_verdict = serializers.CharField()
+
+
 class AdmittedBalanceSerializer(serializers.Serializer):
     """`LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
     are null unless `reading_kind` is BALANCE (and the judgment is from the
@@ -360,6 +370,8 @@ class AdmittedBalanceSerializer(serializers.Serializer):
     #: A concluded case whose `balance` is the conclusion snapshot: today's
     #: admitted figure for the same reading. Null otherwise.
     current_balance = serializers.IntegerField(allow_null=True, required=False)
+    #: Egyptian cases only: what the scale gives today. Absent elsewhere.
+    weighing = WeighingSerializer(required=False)
 
 
 class EvidenceRulingResultSerializer(serializers.Serializer):

@@ -560,8 +560,8 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
 
     Every builder takes the same five arguments and each one ignores some of
     them on purpose rather than not being offered them. Only the Chinese
-    builder uses `class_totals`: merit does not enter an Egyptian weighing at
-    all and does not reduce European culpa, so a per-class split of merit has
+    builder uses `class_totals`: merit lightens an Egyptian heart as one pan
+    (docs/02 §3.2), not by class, and does not reduce European culpa, so a per-class split of merit has
     nothing to say there. Only the European and Greek builders use a record
     count, and only the Greek one uses `merit_count` — a uniform signature is
     what keeps each of those a stated decision, argued in the builder's own
