@@ -51,6 +51,7 @@ import {
   useTheme,
 } from "../ui";
 import { CooldownShorteningBlock } from "./cooldown";
+import { useDiscardGuard } from "./discardGuard";
 import { useResidence } from "./life";
 import { SentenceBlocked, type SentenceLanding } from "./sentence";
 
@@ -359,6 +360,7 @@ export function NewApplicationScreen() {
   const [statement, setStatement] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
+  const guard = useDiscardGuard(!!statement.trim(), "application");
 
   const submit = async () => {
     if (!form) return setError({ key: "soul_app.applications.choose_form" });
@@ -367,6 +369,7 @@ export function NewApplicationScreen() {
     try {
       const created = await soulApi.submitApplication(form, statement);
       toast(t("soul_app.applications.submitted"));
+      guard.release();
       navigation.goBack();
       navigation.navigate("ApplicationDetail", { id: created.id });
     } catch (e) {
@@ -377,6 +380,7 @@ export function NewApplicationScreen() {
 
   return (
     <Screen>
+      {guard.sheet}
       <Block last style={styles.stack}>
         <View style={[styles.note, { borderLeftColor: theme.hair2 }]}>
           <Interp

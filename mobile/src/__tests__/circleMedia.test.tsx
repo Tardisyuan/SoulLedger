@@ -25,7 +25,7 @@ import { heldReply, stubApi } from "./stubApi";
 const mockPopTo = jest.fn();
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
-  useNavigation: () => ({ navigate: jest.fn(), popTo: mockPopTo, goBack: jest.fn(), setOptions: jest.fn() }),
+  useNavigation: () => ({ navigate: jest.fn(), popTo: mockPopTo, goBack: jest.fn(), setOptions: jest.fn(), addListener: () => () => {}, dispatch: jest.fn() }),
   useRoute: () => ({ params: undefined }),
   useFocusEffect: () => {},
 }));
