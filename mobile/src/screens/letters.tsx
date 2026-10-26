@@ -15,7 +15,7 @@ import { soulErrorCode } from "@soulledger/core/api/soul";
 import { soulChatApi, soulChatErrorMessage, type SoulChatLookupResult, type SoulConversation } from "@soulledger/core/api/soul-chat";
 import { soulSocialApi, type PaginatedSoulCards, type SoulCard } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useChat, type Chat } from "../chat";
@@ -24,11 +24,11 @@ import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { TAG_GLYPH } from "../rules";
-import { SessionContext } from "../session";
+import { useCurrentHall } from "../useCurrentHall";
+import { useNow } from "../useNow";
 import { radius, type Theme } from "../theme";
 import { Button, Empty, FadeIn, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
-import { useNow } from "./auth";
 
 export const ANDROID = Platform.OS === "android";
 /** The ground of my own letter: s2, a step off the page — not a colour. */
@@ -37,15 +37,6 @@ export const wash = (t: Theme) => t.s2;
 /** A hall's name in the interface language (`hall_names`); the server's simplified-Chinese `hall` otherwise. */
 export function hallOf(c: SoulConversation, locale: string): string {
   return c.hall_names?.[locale] || c.hall;
-}
-
-/** The hall this soul is in now (`/me/`'s tenant), by its hall name — not the tenant's admin name. */
-export function useCurrentHall(): string {
-  const session = useContext(SessionContext);
-  const { locale } = useI18n();
-  if (session?.state.status !== "signedIn") return "";
-  const tenant = session.state.profile.tenant;
-  return tenant.hall_names?.[locale] || tenant.display_name;
 }
 
 /** The newest text in a room: what the row previews and when it sorts. */

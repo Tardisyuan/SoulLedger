@@ -38,20 +38,21 @@ import Svg, { Path } from "react-native-svg";
 
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
-import { bubbleStamp, chatMode, dayOf, daysLeft, type ChatMode } from "../chatRules";
+import { bubbleStamp, chatMode, dayOf, type ChatMode } from "../chatRules";
 import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
-import { formatStamp, TAG_GLYPH } from "../rules";
+import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
-import { useNow } from "./auth";
+import { useCurrentHall } from "../useCurrentHall";
+import { useNow } from "../useNow";
 import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage } from "./chatImages";
 import { compressWithSize, pickImages } from "./circleMedia";
-import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
+import { ANDROID, Glyph, Tag, hallOf, wash } from "./letters";
 
 type Line =
   | { kind: "day"; key: string; day: string }
@@ -539,7 +540,7 @@ function Band({
                 variant="caption"
                 tone="muted"
                 text={tr("soul_app.chat.muted.banner")}
-                parts={{ days: <Mono>{String(daysLeft(mutedUntil, now))}</Mono>, time: <Mono>{formatStamp(mutedUntil) ?? ""}</Mono> }}
+                parts={{ days: <Mono>{String(daysLeft(mutedUntil, now, 1))}</Mono>, time: <Mono>{formatStamp(mutedUntil) ?? ""}</Mono> }}
               />
             ) : (
               <Txt testID="muted-reason" variant="caption" tone="muted">

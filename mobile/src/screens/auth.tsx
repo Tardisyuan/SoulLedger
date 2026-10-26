@@ -18,6 +18,7 @@ import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesV
 import { SoulCodeField, SoulCodeText } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
+import { useNow } from "../useNow";
 import { SwitchAccountSheet } from "./bio";
 import { LoginSecondStep } from "./loginMfa";
 
@@ -454,16 +455,6 @@ const FIELD_OF: Record<string, PasswordField> = {
   "soul_app.errors.password_unchanged": "new",
   "soul_app.errors.invalid_old_password": "old",
 };
-
-/** Re-renders every minute, so "N hours left" and the warning state do not go stale on an open screen. */
-export function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: number }) {
   const theme = useTheme();
