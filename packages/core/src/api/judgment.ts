@@ -114,6 +114,11 @@ export interface Judgment extends ArchiveFields {
   cycle?: number;
   /** 审判方式(`Judgment.judgment_method`),只读。 */
   judgment_method?: "STANDARD" | "HEART_WEIGHING" | "DIABOLICAL_TRIAL";
+  /** 埃及称心的结果,结案时冻结(docs/02 §5);非称心的案子是 null。 */
+  weighing_result?: "LIGHTER" | "HEAVIER" | "WAVERING" | null;
+  heart_weight?: number | null;
+  /** 天平摇摆而再称时,指回上一次称量的那件案子。 */
+  retrial_of?: string | null;
   /**
    * 灵魂此刻的功 / 过两本账,分开给(队列「功 / 过」)。不是净值,所以四个文明都有;
    * VIEWER 拿不到(字段不在),同 `karmic_balance`。

@@ -1441,3 +1441,52 @@ describe("v3 · 草稿与批注开关(768–1279)", () => {
     expect(draftSection()).not.toHaveClass("md:max-xl:hidden");
   });
 });
+
+describe("埃及:裁决是天平的(docs/02 §5,2026-10-27)", () => {
+  const heavy = (over: Record<string, unknown> = {}) =>
+    judgment({
+      civilization: "EGYPTIAN", judgment_method: "HEART_WEIGHING", citations: [],
+      admitted_balance: {
+        reading_kind: "THRESHOLD", balance: null, not_admitted_count: 0, not_admitted_net: null, reason_code: "BALANCE_NOT_APPLICABLE",
+        weighing: { heart_weight: 5, counterweight: 1, heavier_than_feather: true, weighed_verdict: "FAILED" },
+      },
+      ...over,
+    });
+
+  it("预选天平给的裁决,另一个禁选;称心流程勾上且锁住;发落没有刑期一栏", async () => {
+    judgmentApi.get.mockResolvedValue({ data: heavy() });
+    renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(radio("FAILED").checked).toBe(true));
+    expect(radio("PASSED").disabled).toBe(true);
+    expect(radio("PURGATORY").disabled).toBe(false);
+    fireEvent.keyDown(document.body, { key: "1" }); // 快捷键也选不了
+    expect(radio("PASSED").checked).toBe(false);
+    expect(screen.getByTestId("weighing-scale")).toHaveTextContent(tZh("judgment.weighing.scale", { weight: "5", counterweight: "1" }));
+    const box = screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(box.disabled).toBe(true);
+    await screen.findByTestId("placement");
+    expect(screen.queryByLabelText(tZh("judgment.placement.term"))).toBeNull();
+  });
+
+  it("天平摇摆(待定)不给发落", async () => {
+    judgmentApi.get.mockResolvedValue({ data: heavy() });
+    renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(radio("FAILED").checked).toBe(true));
+    fireEvent.keyDown(document.body, { key: "3" });
+    expect(radio("PURGATORY").checked).toBe(true);
+    expect(screen.queryByTestId("placement")).toBeNull();
+  });
+
+  it("已结案:托特所记的结果", async () => {
+    judgmentApi.get.mockResolvedValue({
+      data: heavy({ is_final: true, verdict: "FAILED", weighing_result: "HEAVIER", heart_weight: 5 }),
+    });
+    renderPage();
+    expect(await screen.findByTestId("weighing-recorded")).toHaveTextContent(
+      tZh("judgment.weighing.recorded", { result: tZh("judgment.weighing.result.HEAVIER"), weight: "5" })
+    );
+  });
+});

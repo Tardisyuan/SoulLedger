@@ -373,7 +373,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // Truths, and no assessor approves or rejects on their own. A workflow
       // node is an approval step, so 42 of them would model 42 sequential
       // sign-offs that the rite does not have. apps/workflow/services.py holds
-      // the same shape server-side ("四十二神官 · 罪行核实", one TRIAL node),
+      // the same shape server-side ("四十二神官 · 否定告白", one EVALUATION node),
       // and this preset must stay in step with it — a preset the backend would
       // not accept is worse than an abstract one. Pick individual assessors in
       // the editor if a case genuinely needs a named one.
@@ -385,19 +385,41 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // 暗示这是一级审级——四十二判官不作审级裁断，故改称「否定告白」。
       { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
       { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
+      // 神庭确认与荷鲁斯引导（docs/02 §2.1、§5.1，2026-10-27 补）：通过者先经九神会确认托特的宣读，
+      // 再由荷鲁斯牵手引到奥西里斯座前。只在通过分支上（见下 routes）。
+      { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
+      { id: "n7", name: "Horus · 引导", court: "两真之殿", type: "引见", order: 5 },
       // 奥西里斯在**两真之殿**受理并接纳，芦苇原（Aaru）是判决通过之后才去的
       // 地方——原值把审判地点写成了结果地点。依据：Budge/亚尼 图版 IV
       //「Ani, found just, is led into the presence of Osiris… enthroned on the
       // right within a shrine」，该 shrine 就在同一座殿内。
-      { id: "n4", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 4 },
+      { id: "n4", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 6 },
       // 阿米特是**失败分支**，不是主流程里的一步：她在天平旁等待，只有心脏未
       // 通过时才吞噬（「第二次死亡」，即不再存在，而非去某个地狱）。九神会对托特
       // 的答复正是「Let it not be given to the devourer Amemet to prevail over
       // him」——可见吞噬是判词之后的**否定后果**。原值把她排在终审之前，等于让
       // 刑罚先于判决。type 标为「失败分支」以便本 schema（线性 order）也能看出
       // 它不在主链上。
-      { id: "n5", name: "Ammit · 吞噬（未通过分支）", court: "两真之殿", type: "失败分支", order: 5 },
+      { id: "n5", name: "Ammit · 吞噬（未通过分支）", court: "两真之殿", type: "失败分支", order: 7 },
+      { id: "n8", name: "结束 · 称心毕", court: "两真之殿", type: "结束", order: 8 },
     ],
+    // 分支（2026-10-27，与后端 WORKFLOW_TEMPLATES 的称心流程同形）：裁决就是天平的结果，托特一站自动
+    // （通知）记下并按裁决分岔 —— 不通过（FAILED）→ 阿米特，其余 → 神庭。两头都到「结束」。
+    // 此前没有 routes，按 order 直走，通过的灵魂也要经过阿米特那一站。
+    routes: {
+      n1: { onPass: "n2" },
+      n2: { onPass: "n3" },
+      n3: {
+        kind: "NOTIFY",
+        onPass: "n6",
+        branches: [{ id: "heavier", when: [{ fact: "verdict", op: "in", value: ["FAILED"] }], target: "n5" }],
+      },
+      n6: { onPass: "n7" },
+      n7: { onPass: "n4" },
+      n4: { onPass: "n8" },
+      n5: { onPass: "n8" },
+      n8: { kind: "END" },
+    },
   },
   EGYPTIAN_APPEAL: {
     civilization: "EGYPTIAN",
@@ -529,5 +551,7 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   // ── 希腊 ──────────────────────────────────────────────
   "按出身地域分流": "自动分流，无人审批：按灵魂的出身地域交给 Aeacus 或 Rhadamanthus。",
   "结束 · 各走其路": "终点，不是谁的裁断。",
+  "神庭 · 确认": "九神会是一整席神（拉、舒、泰芙努特、盖布、努特、伊西斯、奈芙蒂斯……），一个外键装不下；名册里也只有其中四位。后端同一节点记的是同一条理由。",
+  "结束 · 称心毕": "终点，不是谁的裁断。",
   "42审判者 · 否定告白": "四十二判官确实是四十二行真实的 Actor（powers_json.assessor_index 1-42），但一个外键装不下一整席，而否定告白是向他们全体一次说完的（BD 125）。后端同一节点（「四十二神官 · 罪行核实」）记的是同一条理由。",
 };

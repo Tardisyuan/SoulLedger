@@ -2176,7 +2176,8 @@
         "realm_not_found": "Not executed: no such destination",
         "term_conflict": "Not executed: choose a term or eternal, not both",
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
-        "destination_not_applicable": "Not executed: this case has no placement"
+        "destination_not_applicable": "Not executed: this case has no placement",
+        "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served."
       },
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
@@ -2197,7 +2198,26 @@
     "error": {
       "at_city_god": "With the City God for first review; it can be claimed and concluded once sent on"
     },
-    "at_city_god": "With the City God"
+    "at_city_god": "With the City God",
+    "weighing": {
+      "title": "Weighing of the heart",
+      "scale": "Heart {{weight}} · feather {{counterweight}}",
+      "gives": "The scale gives: {{verdict}}",
+      "wavering_hint": "Pending or Retry = the scale wavers: Thoth records it and the heart is weighed again; no destination.",
+      "contradicts": "Contradicts the scale",
+      "result": {
+        "LIGHTER": "Not heavier than the feather",
+        "HEAVIER": "Heavier than the feather",
+        "WAVERING": "The scale wavers · weighed again"
+      },
+      "recorded": "Recorded by Thoth: {{result}} (heart {{weight}})",
+      "workflow_forced": "An Egyptian case always runs the weighing flow; execution waits for it to finish.",
+      "errors": {
+        "verdict_contradicts_weighing": "The verdict contradicts the scale: a heart not heavier than the feather passes, a heavier one fails.",
+        "wavering_has_no_destination": "A wavering scale sends the soul nowhere: clear the placement; a new weighing is opened.",
+        "wavering_with_open_cross": "A cross-realm judgment is open on this case; conclude it before weighing again."
+      }
+    }
   },
   "audit": {
     "title": "Audit Log",
