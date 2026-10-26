@@ -170,12 +170,12 @@ function UsersRoute() {
 
   /**
    * 停用前先问一次「他手上有没有在途的事」(交接预览,只读,每次点停用只调一次):有才弹「停用前先移交?」,
-   * 没有、或预览本身失败(接手人只借用自己做占位,殿外的全局管理员会被后端拒),照旧直接停用。
+   * 没有、或预览本身失败,照旧直接停用。预览不带接手人,只数件数。
    */
   const requestDeactivate = async (user: User) => {
-    if (myId != null && user.role !== "SOUL" && user.id !== myId) {
+    if (user.role !== "SOUL" && user.id !== myId) {
       try {
-        const { data: preview } = await handoverApi.preview(user.id, myId);
+        const { data: preview } = await handoverApi.preview(user.id);
         if (previewTotal(preview) > 0) {
           setDeactivatePrompt(user);
           return;

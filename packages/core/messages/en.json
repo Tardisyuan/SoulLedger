@@ -7229,6 +7229,7 @@
     "preview": "Preview",
     "preview_stale": "The officers changed; preview again",
     "submit": "Hand over",
+    "submit_n": "Hand over {{n}}",
     "submitting": "Handing over…",
     "row_judgments": "Claimed judgments",
     "row_appeals": "Appeals in review",

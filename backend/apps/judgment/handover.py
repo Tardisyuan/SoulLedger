@@ -62,17 +62,19 @@ def _target_takes_appeal(appeal, target, can_judge) -> bool:
 
 
 def preview(source, target, tenant_id) -> dict:
-    _assert_people(source, target, tenant_id)
-    can_judge = claims.is_assignable(target, tenant_id)
-    can_reply = claims.is_assignable(target, tenant_id, LETTER_PERMISSION)
+    """`target` 为 None:只数件数(没有接手人就没有「退回待复核池」与 problems)。"""
+    if target is not None:
+        _assert_people(source, target, tenant_id)
+    can_judge = target is not None and claims.is_assignable(target, tenant_id)
+    can_reply = target is not None and claims.is_assignable(target, tenant_id, LETTER_PERMISSION)
     judgments = _open_judgments(source, tenant_id).count()
     appeals = list(_open_appeals(source, tenant_id))
-    returned = sum(1 for a in appeals if not _target_takes_appeal(a, target, can_judge))
+    returned = 0 if target is None else sum(1 for a in appeals if not _target_takes_appeal(a, target, can_judge))
     letters = _letters(source, tenant_id).count()
     problems = []
-    if judgments and not can_judge:
+    if target is not None and judgments and not can_judge:
         problems.append("target_cannot_judge")
-    if letters and not can_reply:
+    if target is not None and letters and not can_reply:
         problems.append("target_cannot_reply")
     return {
         "judgments": judgments,
@@ -88,6 +90,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
     from apps.audit.models import AuditAction, AuditLog
     from apps.core.client_ip import get_client_ip
 
+    _assert_people(source, target, tenant_id)  # 预览可以没有接手人,提交不行
     summary = preview(source, target, tenant_id)
     if summary["problems"]:
         raise HandoverRefusedError("The receiving officer cannot take everything.", "handover_blocked",
