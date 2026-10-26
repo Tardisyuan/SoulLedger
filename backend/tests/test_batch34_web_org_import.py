@@ -98,6 +98,17 @@ class TestUserImportPreview:
         assert "password" not in str(res.data["rows"][0]["values"])
         assert not User.objects.filter(username="ok_user").exists()
 
+    def test_preview_refuses_a_username_another_hall_or_a_deleted_officer_holds(self, admin_client, eu_tenant):
+        """Usernames are unique across the table (review #11): the preview must say so, not the commit."""
+        User.objects.create_user(username="eu_twin", password="x", role="JUDGE", tenant=eu_tenant)
+        gone = User.objects.create_user(username="gone_twin", password="x", role="JUDGE", tenant=eu_tenant)
+        User.all_objects.filter(pk=gone.pk).update(is_deleted=True)
+        body = "username,password,role\neu_twin,GoodPass12345,VIEWER\ngone_twin,GoodPass12345,VIEWER\n"
+        res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload(body), "dry_run": "1"}, format="multipart")
+        assert res.status_code == 200, res.data
+        assert {r["row"]: [e["code"] for e in r["errors"]] for r in res.data["rows"]} == {
+            2: ["username_taken"], 3: ["username_taken"]}
+
     def test_commit_reads_display_name_and_bom(self, admin_client):
         body = "﻿username,password,display_name\nbom_user,GoodPass12345,带名字\n"
         res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload(body)}, format="multipart")
