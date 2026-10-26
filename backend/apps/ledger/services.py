@@ -38,7 +38,7 @@ from apps.ledger.fungibility import class_for_category, granularity_of
 from apps.ledger.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 from apps.ledger.readings import get_civilization_reading
 from apps.souls.dates import year_span
-from apps.souls.models import Soul
+from apps.souls.models import Civilization, Soul
 
 
 class RebirthNotApplicable(APIException):
@@ -636,6 +636,16 @@ class LedgerService:
             return None
         sums = cls._admitted_sums(soul, cycle, {str(pk) for pk in not_admitted_ids})
         return round(sums["merit"]) - round(sums["demerit"])
+
+    @classmethod
+    def get_admitted_weighing(cls, soul: Soul, cycle: int, not_admitted_ids) -> dict:
+        """The Egyptian reading (heart against feather) over a judgment's admitted
+        evidence — what the scale says at conclusion (apps/judgment/weighing.py)."""
+        sums = cls._admitted_sums(soul, cycle, {str(pk) for pk in not_admitted_ids})
+        return get_civilization_reading(
+            Civilization.EGYPTIAN, round(sums["merit"]), round(sums["demerit"]),
+            merit_count=sums["merit_count"], demerit_count=sums["demerit_count"],
+        )
 
     @classmethod
     def _admitted_sums(cls, soul: Soul, cycle: int, excluded: set) -> dict:

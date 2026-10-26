@@ -72,6 +72,7 @@ from apps.judgment.services import (
     JudgmentNotConcludableError,
     StatuteCitationService,
 )
+from apps.judgment.weighing import WeighingRefusedError
 from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -1427,6 +1428,9 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         except ClaimRefusedError as exc:
             # 409 `claimed_by_other`:别人认领的案子,只有认领人、ADMIN、殿主能结。什么都没写。
             return Response(exc.as_payload(), status=exc.status)
+        except WeighingRefusedError as exc:
+            # 埃及:裁决与天平不符(`verdict_contradicts_weighing`,带天平给的裁决),或天平摇摆却选了去处。
+            return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
         except DestinationRefusedError as exc:
             # 「戊 · 发落」选的门或刑期不成立。什么都没写(同一事务)。
             return Response({"error": str(exc), "code": exc.code}, status=exc.status)

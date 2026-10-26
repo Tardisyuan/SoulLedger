@@ -1,0 +1,97 @@
+"""The Egyptian verdict is the scale's (docs/02 §3, §5; 01 §3.3; user decisions 2026-10-27).
+
+- every Egyptian case is weighed, hand-opened ones too (no STANDARD net-merit ≥ 50 rule);
+- the officer cannot declare a verdict the scale did not give — devoured only when the heart is heavier;
+- the weighing is frozen on the judgment (Thoth records it);
+- a wavering scale (PURGATORY / RETRY) opens a new weighing: no disposition, the soul stays under judgment.
+"""
+import pytest
+
+from apps.disposition.models import Disposition
+from apps.judgment.models import Judgment, JudgmentMethod, WeighingResult
+from apps.judgment.weighing import WeighingRefusedError
+from apps.realms.models import Realm
+from apps.souls.models import Soul, SoulState
+from apps.souls.record_models import SoulRecord
+from apps.tenants.models import Tenant
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def eg_tenant():
+    tenant = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "Duat"})[0]
+    for code in ("EG_AARU", "EG_ANNIHILATION", "EG_DUAT_ENTRY"):
+        Realm.objects.create(realm_code=code, civilization="EGYPTIAN", name_local=code, name_zh=code,
+                             realm_type="HEAVEN", tenant=tenant)
+    return tenant
+
+
+def _case(tenant, merit=0, demerit=0):
+    soul = Soul.objects.create(name="Weighed", tenant=tenant, current_state=SoulState.JUDGING, death_year=2000)
+    for record_type, weight in (("MERIT", merit), ("DEMERIT", demerit)):
+        if weight:
+            SoulRecord.objects.create(soul=soul, record_type=record_type, description=record_type,
+                                      weight=weight, event_year=2000, tenant=tenant)
+    # Opened by hand: no judgment_method given.
+    return Judgment.objects.create(soul=soul, civilization=soul.civilization, court="两真之殿", tenant=tenant)
+
+
+def test_a_hand_opened_egyptian_case_is_weighed(eg_tenant):
+    assert _case(eg_tenant).judgment_method == JudgmentMethod.HEART_WEIGHING
+
+
+def test_the_officer_cannot_send_a_light_heart_to_ammit(eg_tenant):
+    case = _case(eg_tenant)
+    with pytest.raises(WeighingRefusedError) as refused:
+        case.conclude("FAILED")
+    assert refused.value.code == "verdict_contradicts_weighing"
+    assert refused.value.extra["weighed_verdict"] == "PASSED"
+    case.refresh_from_db()
+    assert case.verdict is None and not Disposition.objects.filter(judgment=case).exists()
+
+
+def test_a_heavy_heart_is_devoured_and_the_weighing_is_recorded(eg_tenant):
+    case = _case(eg_tenant, demerit=5)
+    with pytest.raises(WeighingRefusedError):
+        case.conclude("PASSED")
+    case.conclude("FAILED")
+    case.refresh_from_db()
+    assert (case.weighing_result, case.heart_weight) == (WeighingResult.HEAVIER, 5)
+    assert Disposition.objects.get(judgment=case).destination_realm.realm_code == "EG_ANNIHILATION"
+
+
+def test_good_deeds_lighten_the_heart_on_the_scale(eg_tenant):
+    case = _case(eg_tenant, merit=5, demerit=5)
+    case.conclude("PASSED")
+    case.refresh_from_db()
+    assert (case.weighing_result, case.heart_weight) == (WeighingResult.LIGHTER, 0)
+    assert Disposition.objects.get(judgment=case).destination_realm.realm_code == "EG_AARU"
+
+
+def test_net_merit_no_longer_decides_an_egyptian_case(eg_tenant):
+    """The old STANDARD branch sent PURGATORY with karma ≥ 50 to Aaru."""
+    case = _case(eg_tenant, merit=60)
+    case.conclude("PURGATORY")
+    assert not Disposition.objects.filter(judgment=case).exists()
+
+
+def test_a_wavering_scale_is_weighed_again(eg_tenant):
+    case = _case(eg_tenant, demerit=5)
+    case.conclude("PURGATORY")
+    case.refresh_from_db()
+    assert case.weighing_result == WeighingResult.WAVERING
+    assert not Disposition.objects.filter(judgment=case).exists()
+    soul = Soul.objects.get(pk=case.soul_id)
+    assert soul.current_state == SoulState.JUDGING
+    retrial = Judgment.objects.get(retrial_of=case)
+    assert retrial.verdict is None and retrial.judgment_method == JudgmentMethod.HEART_WEIGHING
+    assert soul.events.filter(event_type="JUDGMENT_INITIATED").exists()
+
+
+def test_a_wavering_scale_takes_no_destination(eg_tenant):
+    case = _case(eg_tenant)
+    with pytest.raises(WeighingRefusedError) as refused:
+        case.conclude("PURGATORY", term_years=3)
+    assert refused.value.code == "wavering_has_no_destination"
+    assert not Judgment.objects.filter(retrial_of=case).exists()
