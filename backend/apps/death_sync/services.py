@@ -340,8 +340,8 @@ def progress_of(registration) -> dict:
     """一条死亡登记对应的灵魂**此刻**走到哪一步。只看灵魂状态与这条登记开的那件审判在不在城隍处。
 
     reincarnated:灵魂已转入下一世(本世序号大于那件审判的世)—— 之后的事不再属于这条登记;
-    settled:终局(SETTLED);sentenced:已判、在受刑或候转世(DISPOSED / REINCARNATING);
-    at_city_god / judging:审判中,前者是还在城隍初审;其余(登记失败、没找到灵魂、LOST)都是 registered。
+    settled:终局(SETTLED);sentenced:已判、在受刑、候转世或押送途中失踪(DISPOSED / REINCARNATING / LOST);
+    at_city_god / judging:审判中,前者是还在城隍初审;其余(登记失败、没找到灵魂)都是 registered。
     """
     from apps.death_sync.models import DeathRegistrationStatus
     from apps.judgment.models import AT_CITY_GOD
@@ -353,7 +353,8 @@ def progress_of(registration) -> dict:
             stage = "reincarnated"
         elif soul.current_state == SoulState.SETTLED:
             stage = "settled"
-        elif soul.current_state in (SoulState.DISPOSED, SoulState.REINCARNATING):
+        # LOST is only reachable from DISPOSED (missing in transit): still sentenced, never back to `registered`.
+        elif soul.current_state in (SoulState.DISPOSED, SoulState.REINCARNATING, SoulState.LOST):
             stage = "sentenced"
         elif soul.current_state == SoulState.JUDGING:
             stage = "at_city_god" if judgment is not None and judgment.city_god_status in AT_CITY_GOD else "judging"
