@@ -30,6 +30,7 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
+      "./plugins/withBuildTuning",
       [
         "expo-splash-screen",
         {
