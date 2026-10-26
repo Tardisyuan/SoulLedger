@@ -47,13 +47,35 @@ const comments: Comment[] = [
   },
 ];
 
+const mockRefetch = jest.fn();
+let mockCommentsQuery: Record<string, unknown> | null = null;
 jest.mock("@soulledger/core/hooks/useSocial", () => ({
-  useComments: () => ({ data: { results: comments }, isLoading: false }),
+  useComments: () => mockCommentsQuery ?? { data: { results: comments }, isLoading: false, isError: false, refetch: mockRefetch },
   useCreateComment: () => ({ mutate: mockCreateMutate, isPending: false }),
   useDeleteComment: () => ({ mutate: mockDeleteMutate, isPending: false }),
   useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
   useReactions: () => ({ data: { results: [] } }),
 }));
+
+describe("CommentThread load states", () => {
+  afterEach(() => { mockCommentsQuery = null; });
+
+  it("a failed load is an error with retry, never 'no comments yet'", () => {
+    mockCommentsQuery = { data: undefined, isLoading: false, isError: true, refetch: mockRefetch };
+    render(<CommentThread postId="post-1" />);
+    expect(screen.queryByText("social.no_comments")).toBeNull();
+    const alert = screen.getByRole("alert");
+    fireEvent.click(within(alert).getByRole("button"));
+    expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("loading is announced: aria-busy on the section and a status with the loading text", () => {
+    mockCommentsQuery = { data: undefined, isLoading: true, isError: false, refetch: mockRefetch };
+    render(<CommentThread postId="post-1" />);
+    expect(screen.getByRole("status")).toHaveTextContent("common.loading");
+    expect(document.querySelector("section")).toHaveAttribute("aria-busy", "true");
+  });
+});
 
 describe("CommentThread 作者视角的审核状态", () => {
   it("待审 / 已隐藏的评论有状态标记,已发布的没有", () => {

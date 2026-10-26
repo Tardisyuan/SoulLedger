@@ -406,6 +406,15 @@ describe("审批页「待我选站」(W-2)", () => {
     await waitFor(() => expect(officerAppApi.todo).toHaveBeenCalled());
     expect(screen.queryByTestId("pick-nodes-group")).toBeNull();
   });
+
+  it("a failed to-do fetch says so and retries, instead of drawing nothing", async () => {
+    officerAppApi.todo.mockRejectedValueOnce(new Error("down"));
+    wrap(<PickNodesGroup />);
+    const alert = await screen.findByRole("alert");
+    officerAppApi.todo.mockResolvedValue({ data: { pick_nodes: emptyGroup } });
+    fireEvent.click(within(alert).getByRole("button"));
+    await waitFor(() => expect(officerAppApi.todo).toHaveBeenCalledTimes(2));
+  });
 });
 
 // ── 历史句子 ────────────────────────────────────────────────────────────
