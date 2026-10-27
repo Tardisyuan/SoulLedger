@@ -1214,3 +1214,77 @@ class TestJestReadersFollowWhatChanged:
         assert self._labelled("*") <= got
         only_backend = self._labelled("backend") - self._labelled("docs") - self._labelled("*")
         assert only_backend and not (only_backend & got), got
+
+
+class TestRealPostgres:
+    """`run-gates.sh --real-pg` (2026-10-28, user decision): the by-app selection plus every
+    PostgreSQL-only test on backend/.env's PostgreSQL; round trips only when a migration changed;
+    `--full` runs everything. Never falls back to SQLite."""
+
+    PG_ONLY = "tests/test_x.py::test_needs_row_locks"
+
+    def _gates(self, repo: Path, python: str, *args, changed=("backend/apps/souls/views.py",), **extra):
+        env = _clean_env(PREPUSH_CHANGED="\n".join(changed), PYTHON_BIN=python, RUFF_BIN=shutil.which("true"),
+                         GATES_PG_ONLY_TESTS=self.PG_ONLY, **extra)
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), "--prepush", "--real-pg", *args],
+                              cwd=repo, env=env, capture_output=True, text=True, timeout=120)
+
+    def test_only_the_backend_runs_and_round_trips_wait_for_a_migration(self, hook):
+        out = _classify_jest(hook, ["backend/apps/souls/views.py", "frontend/app/page.tsx"])[1]
+        assert "classify: core=0 frontend=1" in out  # the ordinary run is unchanged
+        proc = subprocess.run(
+            ["bash", str(REPO_ROOT / "scripts" / "run-gates.sh"), "--prepush", "--real-pg"], cwd=REPO_ROOT,
+            env=_clean_env(PREPUSH_CHANGED="backend/apps/souls/views.py\nfrontend/app/page.tsx",
+                           PREPUSH_CLASSIFY_ONLY="1"), capture_output=True, text=True, timeout=60)
+        assert "classify: core=0 frontend=0 backend=1" in proc.stdout, proc.stdout
+        assert "classify-mobile: mobile=0" in proc.stdout and "classify-migration: migration=0" in proc.stdout
+        assert "classify-readers: jest=0" in proc.stdout, proc.stdout
+
+    def test_full_includes_the_migration_round_trips(self):
+        proc = subprocess.run(
+            ["bash", str(REPO_ROOT / "scripts" / "run-gates.sh"), "--prepush", "--real-pg", "--full"], cwd=REPO_ROOT,
+            env=_clean_env(PREPUSH_CHANGED="backend/apps/souls/views.py", PREPUSH_CLASSIFY_ONLY="1"),
+            capture_output=True, text=True, timeout=60)
+        assert "classify-migration: migration=1" in proc.stdout, proc.stdout
+
+    def test_it_refuses_without_a_postgres_url(self, checkouts, fake_backend):
+        main, _ = checkouts
+        (main / "backend" / ".env").write_text("DATABASE_URL=sqlite:///db.sqlite3\n")
+        proc = self._gates(main, fake_backend)
+        assert proc.returncode != 0
+        assert "is not PostgreSQL" in proc.stdout, proc.stdout
+        assert "PYTEST TEMPLATE" not in proc.stdout
+
+    def test_an_unreachable_postgres_is_a_refusal_not_sqlite(self, checkouts, fake_backend):
+        main, _ = checkouts
+        (main / "backend" / ".env").write_text("DATABASE_URL=postgres://u:p@127.0.0.1:1/x\n")
+        proc = self._gates(main, fake_backend)
+        assert proc.returncode != 0
+        assert "PostgreSQL unreachable" in proc.stdout, proc.stdout
+        assert "PYTEST TEMPLATE" not in proc.stdout
+
+    def test_a_reachable_postgres_runs_the_selection_plus_the_postgres_only_tests(
+        self, checkouts, fake_backend
+    ):
+        import socket
+
+        main, _ = checkouts
+        # A stand-in selector, so the by-app branch runs (with none, the whole suite runs — PG-only included).
+        (main / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        try:
+            port = listener.getsockname()[1]
+            (main / "backend" / ".env").write_text(f'DATABASE_URL="postgres://u:p@127.0.0.1:{port}/x"\n')
+            proc = self._gates(main, fake_backend, DATABASE_URL="sqlite:///:memory:")
+        finally:
+            listener.close()
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        m = re.search(r"^PYTEST TEMPLATE=\S* SECRET_KEY=\S* ARGS=(.*)$", proc.stdout, re.M)
+        assert m, proc.stdout
+        args = re.findall(r"\[([^\]]*)\]", m.group(1))
+        assert "--create-db" in args and "faulthandler_timeout=600" in args, args
+        assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
+        assert "-m" in args and "not migration" in args, args
+        assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
