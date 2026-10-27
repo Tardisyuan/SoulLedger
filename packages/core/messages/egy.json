@@ -712,6 +712,14 @@
       "recalled_toast": "Wehem Iyi Seth · Wetep Seth",
       "since": "Nen Gem Er {{date}}",
       "by": "Sab: {{name}}"
+    },
+    "duat_passage": {
+      "label": "Tepy Er Weret Maaty",
+      "NONE": "Qeres Maat",
+      "EARLY_DEATH": "Mut Em Ankh Nedjes",
+      "NAMELESS": "Nen Ren",
+      "IMPROPER_BURIAL": "Qeres Nen Maat",
+      "help": "Qeres Maat: Wet Hru 70, Er Khet Ba Shem Er Weret Maaty; Tepy: Nen Shesep. Mut Em Ankh Nedjes: Nen Wedja, Er Sekhet Aaru. Nen Ren: Nen Aq Er Duat. Qeres Nen Maat (Khat Nen Neb, Nen Heka): Shem Nen Khetem. Wedja 2: Em Smen Djet."
     }
   },
   "common": {
@@ -2119,7 +2127,10 @@
       "stale_soon": "Er Khet: Shesep Tepy",
       "undefer": "Sehen Sedjer",
       "done_undefer": "Sehen Sedjer Seth · Sep Iyi Er Sepu Wedja",
-      "load_more": "Ky ({{n}} Khery)"
+      "load_more": "Ky ({{n}} Khery)",
+      "embalming": "Em Smen Er {{date}}: Wet Nen Khetem Djer; Ba Nen Shem Er Weret Maaty Djer. Nen Shesep Er Hru Pen.",
+      "duat_unfinished": "Nen Shesep: Ba Nen Shem Er Weret Maaty.",
+      "duat_barred_short": "Nen Shem Er Weret Maaty · Nen Shesep"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -2223,6 +2234,12 @@
         "weighing_rejected": "Wat Hesy Fai Ib Khesef Seth: Wen Mawy Er Nehet · Nen Iri.",
         "weighing_wavers": "Wetep Em Fai Nen Smen: Nen Iri. Fai Ib Mawy."
       }
+    },
+    "duat_stage": {
+      "EMBALMING": "Em Wet",
+      "EARLY_DEATH": "Mut Em Ankh Nedjes · Er Sekhet Aaru",
+      "NAMELESS": "Nen Ren · Nen Aq Er Duat",
+      "IMPROPER_BURIAL": "Qeres Nen Maat · Shem Nen Khetem Djer"
     }
   },
   "audit": {
@@ -7105,7 +7122,8 @@
       "IN_REVIEW": "Em Maa",
       "UPHELD": "Wedja Tepy Smen",
       "AMENDED": "Wedja Khemen Seth",
-      "WITHDRAWN": "Sehen Seth"
+      "WITHDRAWN": "Sehen Seth",
+      "VOID": "Nen Wenen"
     },
     "round": "Nehet {{round}}",
     "deadline": "Nehet Wenen Er {{date}}",
@@ -7117,7 +7135,8 @@
       "not_appealable": "Wedja Pen: Nen Nehet",
       "past_life_read_only": "Ankh Tepyu: Maa Wa, Nen Nehet",
       "no_appeal_above_minos": "Wedja Minos: Wedja Pehwy · Nen Nehet Er Hery",
-      "not_escalatable": "Seshem Er Hery: Er Khet Wedja Tepy Smen Em Maa"
+      "not_escalatable": "Seshem Er Hery: Er Khet Wedja Tepy Smen Em Maa",
+      "soul_devoured": "Ammit: Ba Pehwy. Nen Nehet."
     },
     "file": "Nehet",
     "file_title": "Nehet · Wedja Pen",
