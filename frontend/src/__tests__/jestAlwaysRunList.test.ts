@@ -18,8 +18,19 @@
  * a throwaway test that called `readFileSync` and was not on the list.
  *
  * This file reads files itself, so it is on the list.
+ *
+ * EACH LINE ALSO NAMES WHAT THE TEST READS (2026-10-27). When nothing under
+ * frontend/ or packages/ changed, run-gates.sh runs only the lines naming a
+ * top-level entry the push changed, or `*`. The labels are derived like the
+ * list: the repository's top-level entries (`git ls-tree`) that the test's
+ * source, or a module it imports by a relative path, quotes or uses as a path
+ * segment — comments stripped. A test that runs git or a subprocess, or reaches
+ * the repository root without naming anything, is `*`; one that names nothing
+ * and has no such reach reads only frontend/ and says `frontend`. Same rule as
+ * backend/tests/reads-outside-backend.txt.
  */
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const FRONTEND = path.resolve(__dirname, "..", "..");
@@ -77,6 +88,37 @@ function readsFiles(file: string): boolean {
   return result;
 }
 
+function sourceWithImports(file: string, seen = new Set<string>()): string {
+  if (seen.has(file)) return "";
+  seen.add(file);
+  let src = readFileSync(file, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  for (const m of src.matchAll(/(?:from|import|require\()\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const target = resolveRelative(file, m[1]);
+    if (target && /\.tsx?$/.test(target)) src += "\n" + sourceWithImports(target, seen);
+  }
+  return src;
+}
+
+const TOP_LEVEL = execFileSync("git", ["ls-tree", "--name-only", "HEAD"], {
+  cwd: path.resolve(FRONTEND, ".."),
+})
+  .toString()
+  .trim()
+  .split("\n");
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function derivedLabel(rel: string): string {
+  const src = sourceWithImports(path.join(FRONTEND, rel));
+  if (/execSync|execFileSync|spawnSync|\bgit\s/.test(src)) return "*";
+  const names = TOP_LEVEL.filter((t) => new RegExp(`(['"\`/])${escapeRe(t)}(['"\`/])`).test(src));
+  if (names.length) return names.join(" ");
+  const reachesRoot = /REPO|repoRoot|ROOT\b|"\.\.", "\.\.", "\.\."|\.\.\/\.\.\/\.\./.test(src);
+  return reachesRoot ? "*" : "frontend";
+}
+
 function derived(): string[] {
   return testDirs(FRONTEND)
     .flatMap(filesUnder)
@@ -85,11 +127,16 @@ function derived(): string[] {
     .sort();
 }
 
-function listed(): string[] {
+function listedLines(): string[] {
   return readFileSync(LIST, "utf8")
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith("#"))
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+function listed(): string[] {
+  return listedLines()
+    .map((l) => l.split(/\s+/)[0])
     .sort();
 }
 
@@ -113,5 +160,23 @@ describe("jest.always-run.txt", () => {
     const stale = listed().filter((f) => !want.has(f));
     // Deleted, renamed, or no longer reading files: remove them.
     expect(stale).toEqual([]);
+  });
+
+  it("labels each test with the top-level entries it reads", () => {
+    const wrong = listedLines()
+      .map((l) => {
+        const [file, ...labels] = l.split(/\s+/);
+        const want = derivedLabel(file);
+        return labels.join(" ") === want ? null : `${file} ${want}`;
+      })
+      .filter(Boolean);
+    // Replace these lines in frontend/jest.always-run.txt with the ones shown.
+    expect(wrong).toEqual([]);
+  });
+
+  it("labels are not all `*` (non-vacuity)", () => {
+    const labels = listedLines().map((l) => l.split(/\s+/).slice(1).join(" "));
+    expect(labels.filter((l) => l === "*").length).toBeLessThan(labels.length / 2);
+    expect(labels.some((l) => l.split(" ").includes("backend"))).toBe(true);
   });
 });

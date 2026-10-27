@@ -157,7 +157,7 @@ fi
 # A TREE THAT ALREADY PASSED `--full` IS NOT RUN AGAIN (2026-10-19, user decision).
 # A push to main runs the full set, which is exactly what `scripts/run-gates.sh --full`
 # runs; doing it twice for the same files cost ~22 minutes a push. A full run that
-# passes on a clean checkout records HEAD's tree in this file (see record_full_pass
+# passes on a clean checkout records HEAD's tree in this file (see record_pass
 # at the end); a push whose pushed commit has that very tree is let through. Any
 # change at all — one byte in any tracked file — is a different tree and runs as before.
 # The real-PostgreSQL run and E2E were never part of this script; they are unaffected.
@@ -165,14 +165,61 @@ fi
 STAMP="${GATES_STAMP_FILE:-$(git rev-parse --path-format=absolute --git-common-dir)/soulledger-gates-passed}"
 PUSHED_SHA=""
 case "${PREPUSH_RANGE:-}" in *..*) PUSHED_SHA="${PREPUSH_RANGE##*..}" ;; esac
-if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_SHA" ] && [ -f "$STAMP" ] \
-    && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null)"; then
+PUSHED_TREE=""
+[ -n "$PUSHED_SHA" ] && PUSHED_TREE="$(git rev-parse -q --verify "$PUSHED_SHA^{tree}" 2>/dev/null || true)"
+if [ "$PREPUSH" = 1 ] && [ -n "$PUSHED_TREE" ] && [ -f "$STAMP" ]; then
     HIT="$(grep -m1 "^$PUSHED_TREE	" "$STAMP" || true)"
     if [ -n "$HIT" ]; then
         echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh --full\` (${HIT#*	}) — not running it again"
         exit 0
     fi
 fi
+# A SELECTIVE PASS COUNTS TOO (2026-10-27, user decision). A session runs `scripts/run-gates.sh`
+# and then pushes, and the hook ran the same tests a second time. A selective run that passes on a
+# clean checkout records HEAD's tree and the files it treated as changed (SEL_STAMP); a push is let
+# through when its commit has that very tree and every file the push changes is among the recorded
+# ones. A larger change set never selects less: each rule only adds tests or forces a full run.
+# --full / GATES_FULL=1 at push time still run.
+SEL_STAMP="$STAMP-selective"
+if [ "$PREPUSH" = 1 ] && [ -n "${PUSHED_TREE:-}" ] && [ -f "$SEL_STAMP" ] \
+    && [ "$MODE" != full ] && [ "${GATES_FULL:-}" != 1 ] && [ -n "$CHANGED" ]; then
+    HIT="$(CHANGED="$CHANGED" awk -F'\t' -v t="$PUSHED_TREE" '
+        BEGIN { n = split(ENVIRON["CHANGED"], c, "\n") }
+        $1 == t { m = split($3, r, "|"); delete have; for (i = 1; i <= m; i++) have[r[i]] = 1
+                  ok = 1; for (i = 1; i <= n; i++) if (c[i] != "" && !(c[i] in have)) { ok = 0; break }
+                  if (ok) { print $2; exit } }' "$SEL_STAMP")"
+    if [ -n "$HIT" ]; then
+        echo "$P: tree ${PUSHED_TREE:0:10} already passed \`scripts/run-gates.sh\` for these changes ($HIT) — not running it again"
+        exit 0
+    fi
+fi
+
+# record_pass: after a green run outside a push, on a clean checkout. --full goes to STAMP (any push
+# of the tree passes); a selective run goes to SEL_STAMP with the files it covered.
+record_pass() {
+    [ "$PREPUSH" = 0 ] || return 0
+    cd "$ROOT" || return 0
+    if ! git diff --quiet HEAD --; then
+        echo "$P: not recording this pass — tracked files differ from HEAD"; return 0
+    fi
+    local stray
+    stray="$(git ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
+    if [ -n "$stray" ]; then
+        echo "$P: not recording this pass — untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 0
+    fi
+    local tree file; tree="$(git rev-parse HEAD^{tree})"
+    if [ "$FULL_RUN" = 1 ]; then
+        file="$STAMP"
+        printf '%s\t%s, %s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$file"
+        echo "$P: recorded a full pass for tree ${tree:0:10} — a push of this exact tree will not re-run the gates"
+    else
+        file="$SEL_STAMP"
+        printf '%s\t%s, %s\t%s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" \
+            "$(echo "$CHANGED" | grep -v '^$' | paste -sd'|' -)" >>"$file"
+        echo "$P: recorded a selective pass for tree ${tree:0:10} — a push of this tree changing only these files will not re-run the gates"
+    fi
+    tail -n 50 "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+}
 # Consumed: nothing below (pytest included) should inherit the hand-off.
 unset PREPUSH_CHANGED PREPUSH_RANGE
 [ -z "$CHANGED" ] && { echo "$P: no file changes in $RANGE"; exit 0; }
@@ -325,6 +372,18 @@ fi
 # in full — and jestAlwaysRunList.test.ts fails on it.
 RUN_JEST_READERS=0
 [ "$RUN_FRONTEND" = 0 ] && [ -f "$ROOT/frontend/jest.always-run.txt" ] && RUN_JEST_READERS=1
+# Of those, only the lines naming a top-level entry this push changed, and the `*` ones (2026-10-27).
+# The labels are derived and checked by frontend/src/__tests__/jestAlwaysRunList.test.ts.
+JEST_READERS=""
+if [ "$RUN_JEST_READERS" = 1 ]; then
+    JEST_READERS=$(TOPS="$TOPS" awk '
+        BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
+        /^[[:space:]]*(#|$)/ { next }
+        { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
+    ' "$ROOT/frontend/jest.always-run.txt")
+    # Empty means "nothing reads what changed", and must never reach jest as an empty path list.
+    [ -z "$JEST_READERS" ] && RUN_JEST_READERS=0
+fi
 MOBILE_READERS=""
 if [ "$RUN_MOBILE" = 0 ]; then
     MOBILE_READERS=$(git ls-files 'mobile/*.test.ts' 'mobile/*.test.tsx' \
@@ -460,6 +519,8 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     fi
     echo "classify-jest: full=$([ -n "$FULL_F" ] && echo 1 || echo 0)"
     printf '%s' "$FULL_F" | sed 's/^/  full because: /'
+    echo "classify-jest-readers: $(echo "$JEST_READERS" | grep -c . || true)"
+    printf '%s\n' "$JEST_READERS" | grep . | sed 's/^/  jest reader: /'
     echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
     printf '%s' "$BACKEND_READERS" | sed 's/^/  backend reader: /'; echo
     exit 0
@@ -481,9 +542,9 @@ T_GATES=$(date +%s)   # after the lock: the time below is the gates', not the qu
 
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
-# Core first: it is the frontend's dependency, it is fast, and a boundary
-# failure should be the thing you read rather than the tsc error it causes 400
-# lines later.
+# STATIC CHECKS FIRST (2026-10-27, user decision): every type check and linter, all areas, before
+# any test runner. They take seconds each and fail on the commonest mistakes; run after the web and
+# app jest, a ruff error surfaced only after several minutes of tests, at full CPU and memory.
 if [ "$RUN_CORE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -495,150 +556,14 @@ if [ "$RUN_CORE" = 1 ]; then
     echo "  → core eslint"
     npm run --workspace packages/core lint --silent \
         || fail "@soulledger/core lint failed. Note this config refuses \`process.env\` and \`import.meta.env\`: Expo and Tauri define neither of the ones Next does, and the fallback fails silently."
-    # `typecheck` alone does NOT catch the widest hole in this boundary.
-    # `types: []` only disables *automatic* @types inclusion; it does not stop
-    # ambient globals arriving through an import. hooks/useStatutes.ts pulls in
-    # @tanstack/react-query -> @types/react -> @types/react/global.d.ts, which
-    # declares Document, HTMLElement, MouseEvent and ~150 more as **empty
-    # interfaces**. Measured: `export const el: HTMLElement = {}` compiles
-    # clean in this package, because `{}` satisfies an empty interface. So a
-    # DOM-shaped signature passes tsc while being unimplementable on RN.
-    # domBoundary.test.ts builds a program from this very tsconfig (not a
-    # hand-copy, which would drift) and asserts those names stay unresolvable.
-    # Without this line it would be a guard nobody runs — which is the exact
-    # defect the `packages/` gate above was added to fix.
-    # Plain `test` — no coverage floor here anymore. `vitest.config.ts` used
-    # to carry one, but its denominator was core's whole source and its
-    # numerator only the ~7 files core has its own vitest tests for (9%): it
-    # measured "how much of core has its own tests", not "how much of core is
-    # tested" — most of core's hooks/API modules are exercised by the
-    # frontend's jest suites via the `@soulledger/core` mappings, which that
-    # gate could not see. As of 2026-09-14 `frontend/jest.config.js` has
-    # `rootDir` at the repo root and a path-scoped coverageThreshold for
-    # `packages/core/src`, and the frontend gate below runs that.
-    echo "  → core vitest"
-    npm run --workspace packages/core test --silent -- --maxWorkers="$VITEST_WORKERS" \
-        || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
 fi
-
-# RUN_FRONTEND already folds in TOUCHES_CORE — see where it is computed.
 if [ "$RUN_FRONTEND" = 1 ]; then
     need npx
     cd "$ROOT/frontend" || fail "frontend/ missing"
     echo "  → tsc";   npx tsc --noEmit          || fail "tsc failed"
     echo "  → eslint"; npm run lint --silent    || fail "eslint failed"
-    # The last 4 lines say "1 failed" and name nothing. 2026-09-25 a push was
-    # refused twice for one test that never failed outside the hook, and there
-    # was no way to tell which. On failure, print the failing files and tests
-    # and keep the whole log.
-    echo "  → jest"
-    ALWAYS_LIST="$ROOT/frontend/jest.always-run.txt"
-    [ -z "$FULL_F" ] && [ ! -f "$ALWAYS_LIST" ] && full "no frontend/jest.always-run.txt in this checkout"
-    JEST_PATHS=""
-    if [ -z "$FULL_F" ]; then
-        # `--roots` adds packages/core: jest.config.js roots only `frontend/`, so
-        # a changed core file is outside jest's graph and --findRelatedTests
-        # returns nothing for it — no error, just an empty selection. Measured
-        # 2026-09-30: packages/core/src/hooks/useSouls.ts → 0 related tests
-        # without it, 20 with; the full test list is 196 either way.
-        SRC=$(echo "$CHANGED" | grep -E '^(frontend|packages/core)/' | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
-        RELATED=""
-        if [ -n "$SRC" ]; then
-            # shellcheck disable=SC2086
-            RELATED=$(npx jest --roots '<rootDir>/frontend' --roots '<rootDir>/packages/core' \
-                --listTests --findRelatedTests $SRC 2>/dev/null) \
-                || full "jest --findRelatedTests failed, so the selection is unknown"
-            RELATED=$(echo "$RELATED" | grep '^/' || true)
-        fi
-    fi
-    if [ -z "$FULL_F" ]; then
-        ALWAYS=$(grep -vE '^[[:space:]]*(#|$)' "$ALWAYS_LIST" | sed "s|^|$ROOT/frontend/|")
-        JEST_PATHS=$(printf '%s\n%s\n' "$RELATED" "$ALWAYS" | grep -v '^$' | sort -u)
-        n() { [ -n "$1" ] && echo "$1" | wc -l | tr -d ' ' || echo 0; }
-        # No "of <total>": counting it started a second jest just to list files.
-        echo "    affected: $(n "$JEST_PATHS") test files ($(n "$RELATED") related to the change, $(n "$ALWAYS") always-run)"
-    else
-        echo "    FULL, because:"; printf '%s' "$FULL_F" | sed 's/^/      /'
-    fi
-    JEST_LOG=$(mktemp -t prepush-jest)
-    T_JEST=$(date +%s)
-    # shellcheck disable=SC2086
-    npx jest --coverage=false --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
-    JEST_STATUS=$?
-    tail -4 "$JEST_LOG"
-    echo "    jest took $(( $(date +%s) - T_JEST ))s"
-    if [ "$JEST_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$JEST_LOG" | awk '!seen[$0]++' | head -20
-        echo "    full jest log: $JEST_LOG"
-        fail "jest failed"
-    fi
-    rm -f "$JEST_LOG"
     cd "$ROOT" || exit 1
 fi
-
-# The frontend is not running, so its file readers do (see TESTS THAT READ
-# ANOTHER AREA'S FILES above).
-if [ "$RUN_JEST_READERS" = 1 ]; then
-    need npx
-    cd "$ROOT/frontend" || fail "frontend/ missing"
-    ALWAYS=$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/frontend/jest.always-run.txt" | sed "s|^|$ROOT/frontend/|")
-    [ -n "$ALWAYS" ] || fail "frontend/jest.always-run.txt is empty, so the frontend tests that read other areas cannot be selected"
-    echo "  → jest: the $(echo "$ALWAYS" | wc -l | tr -d ' ') tests that read files (frontend/jest.always-run.txt)"
-    JEST_LOG=$(mktemp -t prepush-jest)
-    T_JEST=$(date +%s)
-    # shellcheck disable=SC2086
-    npx jest --coverage=false --silent --runTestsByPath $ALWAYS >"$JEST_LOG" 2>&1
-    JEST_STATUS=$?
-    tail -4 "$JEST_LOG"
-    echo "    jest took $(( $(date +%s) - T_JEST ))s"
-    if [ "$JEST_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
-        echo "    full jest log: $JEST_LOG"
-        fail "jest (file readers) failed"
-    fi
-    rm -f "$JEST_LOG"
-    cd "$ROOT" || exit 1
-fi
-
-# app_jest <dir> <changed-path regex> <extra --roots> <failure message> — see MOBILE / OFFICER JEST above.
-app_jest() {
-    local dir="$1" re="$2" roots="$3" msg="$4" paths="" related="" readers src log status
-    echo "  → $dir jest"
-    if [ -z "$APP_FULL_F" ]; then
-        src=$(echo "$CHANGED" | grep -E "$re" | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
-        if [ -n "$src" ]; then
-            # shellcheck disable=SC2086
-            related=$(cd "$ROOT/$dir" && npx jest --roots '<rootDir>/src' $roots --listTests --findRelatedTests $src 2>/dev/null) \
-                || APP_FULL_F="jest --findRelatedTests failed, so the selection is unknown"$'\n'
-            related=$(echo "$related" | grep "^$ROOT/$dir/src/" || true)
-        fi
-    fi
-    if [ -z "$APP_FULL_F" ]; then
-        readers=$(git ls-files "$dir/src/*.test.ts" "$dir/src/*.test.tsx" | while IFS= read -r f; do
-            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$ROOT/$f" 2>/dev/null
-        done)
-        paths=$(printf '%s\n%s\n' "$related" "$readers" | grep -v '^$' | sort -u)
-        echo "    affected: $(echo "$paths" | grep -c . || true) test files ($(echo "$related" | grep -c . || true) related to the change, $(echo "$readers" | grep -c . || true) that read files)"
-        # Empty here means "nothing affected", never "everything": no --runTestsByPath would run the suite.
-        [ -z "$paths" ] && { echo "    nothing to run"; return 0; }
-    else
-        echo "    FULL, because:"; printf '%s' "$APP_FULL_F" | sed 's/^/      /'
-    fi
-    # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
-    # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
-    log=$(mktemp -t "prepush-$dir-jest")
-    # shellcheck disable=SC2086
-    npm run --workspace "$dir" test --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
-    status=$?
-    tail -4 "$log"
-    if [ "$status" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$log" | awk '!seen[$0]++' | head -20
-        echo "    full $dir jest log: $log"
-        fail "$msg"
-    fi
-    rm -f "$log"
-}
-
 if [ "$RUN_MOBILE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -646,10 +571,7 @@ if [ "$RUN_MOBILE" = 1 ]; then
     npm run --workspace mobile typecheck --silent || fail "mobile typecheck failed"
     echo "  → mobile eslint"
     npm run --workspace mobile lint --silent || fail "mobile lint failed"
-    app_jest mobile "^(mobile|packages/core)/" "--roots <rootDir>/../packages/core" \
-        "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
 fi
-
 if [ "$RUN_OFFICER" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -657,22 +579,7 @@ if [ "$RUN_OFFICER" = 1 ]; then
     npm run --workspace mobile-officer typecheck --silent || fail "officer typecheck failed"
     echo "  → officer eslint"
     npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
-    app_jest mobile-officer "^(mobile-officer|mobile|packages/core)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../mobile/src" \
-        "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
 fi
-
-if [ -n "$MOBILE_READERS" ]; then
-    need npm
-    cd "$ROOT" || exit 1
-    echo "  → mobile jest: the $(echo "$MOBILE_READERS" | wc -l | tr -d ' ') tests that read files"
-    # shellcheck disable=SC2046
-    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
-fi
-
-# RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
-# only the tests that read the areas that did (see above) — no ruff and no
-# makemigrations, which read nothing outside backend/.
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     # THE INTERPRETER IS THE PROJECT VENV, `backend/.venv` — Python 3.11 with
@@ -740,6 +647,184 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     else
         echo "  → ruff, makemigrations: skipped — nothing under backend/ changed"
     fi
+    cd "$ROOT" || exit 1
+fi
+
+# Core first: it is the frontend's dependency, it is fast, and a boundary
+# failure should be the thing you read rather than the tsc error it causes 400
+# lines later.
+if [ "$RUN_CORE" = 1 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    # `typecheck` alone does NOT catch the widest hole in this boundary.
+    # `types: []` only disables *automatic* @types inclusion; it does not stop
+    # ambient globals arriving through an import. hooks/useStatutes.ts pulls in
+    # @tanstack/react-query -> @types/react -> @types/react/global.d.ts, which
+    # declares Document, HTMLElement, MouseEvent and ~150 more as **empty
+    # interfaces**. Measured: `export const el: HTMLElement = {}` compiles
+    # clean in this package, because `{}` satisfies an empty interface. So a
+    # DOM-shaped signature passes tsc while being unimplementable on RN.
+    # domBoundary.test.ts builds a program from this very tsconfig (not a
+    # hand-copy, which would drift) and asserts those names stay unresolvable.
+    # Without this line it would be a guard nobody runs — which is the exact
+    # defect the `packages/` gate above was added to fix.
+    # Plain `test` — no coverage floor here anymore. `vitest.config.ts` used
+    # to carry one, but its denominator was core's whole source and its
+    # numerator only the ~7 files core has its own vitest tests for (9%): it
+    # measured "how much of core has its own tests", not "how much of core is
+    # tested" — most of core's hooks/API modules are exercised by the
+    # frontend's jest suites via the `@soulledger/core` mappings, which that
+    # gate could not see. As of 2026-09-14 `frontend/jest.config.js` has
+    # `rootDir` at the repo root and a path-scoped coverageThreshold for
+    # `packages/core/src`, and the frontend gate below runs that.
+    echo "  → core vitest"
+    npm run --workspace packages/core test --silent -- --maxWorkers="$VITEST_WORKERS" \
+        || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
+fi
+
+# RUN_FRONTEND already folds in TOUCHES_CORE — see where it is computed.
+if [ "$RUN_FRONTEND" = 1 ]; then
+    need npx
+    cd "$ROOT/frontend" || fail "frontend/ missing"
+    # The last 4 lines say "1 failed" and name nothing. 2026-09-25 a push was
+    # refused twice for one test that never failed outside the hook, and there
+    # was no way to tell which. On failure, print the failing files and tests
+    # and keep the whole log.
+    echo "  → jest"
+    ALWAYS_LIST="$ROOT/frontend/jest.always-run.txt"
+    [ -z "$FULL_F" ] && [ ! -f "$ALWAYS_LIST" ] && full "no frontend/jest.always-run.txt in this checkout"
+    JEST_PATHS=""
+    if [ -z "$FULL_F" ]; then
+        # `--roots` adds packages/core: jest.config.js roots only `frontend/`, so
+        # a changed core file is outside jest's graph and --findRelatedTests
+        # returns nothing for it — no error, just an empty selection. Measured
+        # 2026-09-30: packages/core/src/hooks/useSouls.ts → 0 related tests
+        # without it, 20 with; the full test list is 196 either way.
+        SRC=$(echo "$CHANGED" | grep -E '^(frontend|packages/core)/' | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
+        RELATED=""
+        if [ -n "$SRC" ]; then
+            # shellcheck disable=SC2086
+            RELATED=$(npx jest --roots '<rootDir>/frontend' --roots '<rootDir>/packages/core' \
+                --listTests --findRelatedTests $SRC 2>/dev/null) \
+                || full "jest --findRelatedTests failed, so the selection is unknown"
+            RELATED=$(echo "$RELATED" | grep '^/' || true)
+        fi
+    fi
+    if [ -z "$FULL_F" ]; then
+        ALWAYS=$(awk '!/^[[:space:]]*(#|$)/ { print $1 }' "$ALWAYS_LIST" | sed "s|^|$ROOT/frontend/|")
+        JEST_PATHS=$(printf '%s\n%s\n' "$RELATED" "$ALWAYS" | grep -v '^$' | sort -u)
+        n() { [ -n "$1" ] && echo "$1" | wc -l | tr -d ' ' || echo 0; }
+        # No "of <total>": counting it started a second jest just to list files.
+        echo "    affected: $(n "$JEST_PATHS") test files ($(n "$RELATED") related to the change, $(n "$ALWAYS") always-run)"
+    else
+        echo "    FULL, because:"; printf '%s' "$FULL_F" | sed 's/^/      /'
+    fi
+    JEST_LOG=$(mktemp -t prepush-jest)
+    T_JEST=$(date +%s)
+    # shellcheck disable=SC2086
+    npx jest --coverage=false --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
+    JEST_STATUS=$?
+    tail -4 "$JEST_LOG"
+    echo "    jest took $(( $(date +%s) - T_JEST ))s"
+    if [ "$JEST_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$JEST_LOG" | awk '!seen[$0]++' | head -20
+        echo "    full jest log: $JEST_LOG"
+        fail "jest failed"
+    fi
+    rm -f "$JEST_LOG"
+    cd "$ROOT" || exit 1
+fi
+
+# The frontend is not running, so its file readers do (see TESTS THAT READ
+# ANOTHER AREA'S FILES above).
+if [ "$RUN_JEST_READERS" = 1 ]; then
+    need npx
+    cd "$ROOT/frontend" || fail "frontend/ missing"
+    ALWAYS=$(echo "$JEST_READERS" | sed "s|^|$ROOT/frontend/|")
+    echo "  → jest: the $(echo "$ALWAYS" | grep -c . || true) tests that read what changed (frontend/jest.always-run.txt)"
+    JEST_LOG=$(mktemp -t prepush-jest)
+    T_JEST=$(date +%s)
+    # shellcheck disable=SC2086
+    npx jest --coverage=false --silent --runTestsByPath $ALWAYS >"$JEST_LOG" 2>&1
+    JEST_STATUS=$?
+    tail -4 "$JEST_LOG"
+    echo "    jest took $(( $(date +%s) - T_JEST ))s"
+    if [ "$JEST_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
+        echo "    full jest log: $JEST_LOG"
+        fail "jest (file readers) failed"
+    fi
+    rm -f "$JEST_LOG"
+    cd "$ROOT" || exit 1
+fi
+
+# app_jest <dir> <changed-path regex> <extra --roots> <failure message> — see MOBILE / OFFICER JEST above.
+app_jest() {
+    local dir="$1" re="$2" roots="$3" msg="$4" paths="" related="" readers src log status
+    echo "  → $dir jest"
+    if [ -z "$APP_FULL_F" ]; then
+        src=$(echo "$CHANGED" | grep -E "$re" | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
+        if [ -n "$src" ]; then
+            # shellcheck disable=SC2086
+            related=$(cd "$ROOT/$dir" && npx jest --roots '<rootDir>/src' $roots --listTests --findRelatedTests $src 2>/dev/null) \
+                || APP_FULL_F="jest --findRelatedTests failed, so the selection is unknown"$'\n'
+            related=$(echo "$related" | grep "^$ROOT/$dir/src/" || true)
+        fi
+    fi
+    if [ -z "$APP_FULL_F" ]; then
+        readers=$(git ls-files "$dir/src/*.test.ts" "$dir/src/*.test.tsx" | while IFS= read -r f; do
+            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$ROOT/$f" 2>/dev/null
+        done)
+        paths=$(printf '%s\n%s\n' "$related" "$readers" | grep -v '^$' | sort -u)
+        echo "    affected: $(echo "$paths" | grep -c . || true) test files ($(echo "$related" | grep -c . || true) related to the change, $(echo "$readers" | grep -c . || true) that read files)"
+        # Empty here means "nothing affected", never "everything": no --runTestsByPath would run the suite.
+        [ -z "$paths" ] && { echo "    nothing to run"; return 0; }
+    else
+        echo "    FULL, because:"; printf '%s' "$APP_FULL_F" | sed 's/^/      /'
+    fi
+    # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
+    # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
+    log=$(mktemp -t "prepush-$dir-jest")
+    # shellcheck disable=SC2086
+    npm run --workspace "$dir" test --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
+    status=$?
+    tail -4 "$log"
+    if [ "$status" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$log" | awk '!seen[$0]++' | head -20
+        echo "    full $dir jest log: $log"
+        fail "$msg"
+    fi
+    rm -f "$log"
+}
+
+if [ "$RUN_MOBILE" = 1 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    app_jest mobile "^(mobile|packages/core)/" "--roots <rootDir>/../packages/core" \
+        "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
+fi
+
+if [ "$RUN_OFFICER" = 1 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    app_jest mobile-officer "^(mobile-officer|mobile|packages/core)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../mobile/src" \
+        "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
+fi
+
+if [ -n "$MOBILE_READERS" ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    echo "  → mobile jest: the $(echo "$MOBILE_READERS" | wc -l | tr -d ' ') tests that read files"
+    # shellcheck disable=SC2046
+    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
+    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
+fi
+
+# RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
+# only the tests that read the areas that did (see above) — no ruff and no
+# makemigrations, which read nothing outside backend/.
+if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
+    cd "$ROOT/backend" || fail "backend/ missing"
 
     echo "  → pytest"
     # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
@@ -947,6 +1032,7 @@ PROBE_PY
     if [ "$RUN_BACKEND" = 0 ] && [ -z "$PYTEST_PATHS" ]; then
         echo "    nothing to run"
         [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
+        record_pass
         echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"; exit 0
     fi
     # A HUNG TEST COSTS ONE WORKER, NOT THE PUSH (2026-10-27). Without this a test that blocks
@@ -986,21 +1072,5 @@ fi
 # outside the hook, and only when what was tested IS HEAD's tree: tracked files
 # match HEAD, and no untracked file sits where a gate could have read it — an
 # untracked test or migration ran here but would not be in the pushed commit.
-record_full_pass() {
-    [ "$PREPUSH" = 0 ] && [ "$FULL_RUN" = 1 ] || return 0
-    cd "$ROOT" || return 0
-    if ! git diff --quiet HEAD --; then
-        echo "$P: not recording this pass — tracked files differ from HEAD"; return 0
-    fi
-    local stray
-    stray="$(git ls-files --others --exclude-standard -- backend frontend packages mobile mobile-officer scripts | head -3)"
-    if [ -n "$stray" ]; then
-        echo "$P: not recording this pass — untracked files a gate may have read: $(echo "$stray" | tr '\n' ' ')"; return 0
-    fi
-    local tree; tree="$(git rev-parse HEAD^{tree})"
-    printf '%s\t%s, %s\n' "$tree" "$(date '+%Y-%m-%d %H:%M')" "$(git rev-parse --short HEAD)" >>"$STAMP"
-    tail -n 50 "$STAMP" >"$STAMP.tmp" && mv "$STAMP.tmp" "$STAMP"
-    echo "$P: recorded a full pass for tree ${tree:0:10} — a push of this exact tree will not re-run the gates"
-}
-record_full_pass
+record_pass
 echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"
