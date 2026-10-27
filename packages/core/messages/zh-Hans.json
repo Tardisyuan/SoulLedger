@@ -4467,7 +4467,9 @@
       "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生",
       "not_in_cooldown": "只有在冷却期内才能申请缩短冷却",
       "shortening_pending": "已有一份待决的缩短冷却申请",
-      "shortening_used": "这段冷却期已申请过一次缩短"
+      "shortening_used": "这段冷却期已申请过一次缩短",
+      "desired_form_required": "请先选一个希望转生的形态",
+      "rebirth_form_not_applicable": "你的文明转世不分六道，不用选形态"
     },
     "lexicon": {
       "eg": {

@@ -14,5 +14,7 @@
   "souls.denied_immortality.UNRECORDED",
   "souls.denied_immortality.YES",
   "souls.denied_immortality.NO",
-  "souls.denied_immortality.help"
+  "souls.denied_immortality.help",
+  "soul_app.errors.desired_form_required",
+  "soul_app.errors.rebirth_form_not_applicable"
 ]
