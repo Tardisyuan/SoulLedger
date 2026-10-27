@@ -32,7 +32,7 @@ const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))] whitespace-nowrap";
 const TAB_FILTER: Record<Tab, Record<string, string>> = {
   PENDING: { status: "PENDING" },
   IN_REVIEW: { status: "IN_REVIEW" },
-  CLOSED: { status__in: "UPHELD,AMENDED" },
+  CLOSED: { status__in: "UPHELD,AMENDED,VOID" },
   WITHDRAWN: { status: "WITHDRAWN" },
 };
 

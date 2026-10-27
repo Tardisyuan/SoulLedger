@@ -3,6 +3,8 @@
 规则
 * 希腊不能申诉:米诺斯之上无可上诉(docs/02_希腊冥府审判与人物详解.md §5.2,用户 2026-10-27),拒绝码
   `no_appeal_above_minos`。
+* 被阿米特吞噬(第二次死亡,docs/02_奥西里斯审判详解.md「不复存在」)之后不能申诉,拒绝码 `soul_devoured`;
+  吞噬执行时还开着的申诉(连同它的申诉流程)当场作废(`VOID`,无补偿、不改判),见 `void_for_devoured`。
 * 灵魂只能对**自己本世**、**已结案**的**原审判**(ORIGINAL)申诉;结案后 30 天内;每件审判至多 2 次
   (撤回的也算一次);同一时刻至多一份没有结论的。
 * 复核人不能是作出原判的官员:结案人(`Judgment.concluded_by`)或认领人(`claimed_by`)。
@@ -74,6 +76,41 @@ def _event(soul, event_type, appeal, **extra):
     })
 
 
+def devoured(soul_id):
+    """被阿米特吞噬:有一笔已执行、去处是 `EG_ANNIHILATION` 的处置。"""
+    from apps.disposition.models import Disposition
+    from apps.disposition.services import DispositionService
+
+    return Disposition.all_objects.filter(
+        soul_id=soul_id, is_executed=True, is_deleted=False,
+        destination_realm__realm_code=DispositionService.EG_ANNIHILATION).exists()
+
+
+def void_for_devoured(soul):
+    """吞噬执行时调(`DispositionService._mark_executed`,同一事务):还开着的申诉作废 —— 不补偿、不改判,
+    事件照记;挂着的申诉流程随之结束(REJECTED,`end_reason=SOUL_DEVOURED`)。申诉先作废,
+    所以流程结束时 `on_ladder_finished` 找不到开着的申诉,不会再按「维持原判」结一次。"""
+    from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES, ApprovalWorkflow, ApprovalWorkflowStatus
+
+    now = timezone.now()
+    for appeal in JudgmentAppeal.all_objects.select_for_update(of=("self",)).filter(
+            soul_id=soul.pk, is_deleted=False, status__in=OPEN_APPEAL_STATUSES):
+        appeal.status = AppealStatus.VOID
+        appeal.decided_at = now
+        appeal.save(update_fields=["status", "decided_at", "update_time", "update_user", "version"])
+        _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=None, compensation_record_ids=[],
+               voided_because="soul_devoured")
+        if appeal.workflow_id is not None:
+            workflow = ApprovalWorkflow.all_objects.select_for_update().filter(pk=appeal.workflow_id).first()
+            if workflow is not None and workflow.status not in TERMINAL_WORKFLOW_STATUSES:
+                workflow._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason=END_REASON_DEVOURED)
+                workflow.save()
+
+
+#: 灵魂被吞噬而结束的申诉流程写在 `end_reason` 上。
+END_REASON_DEVOURED = "SOUL_DEVOURED"
+
+
 # ── 灵魂 ────────────────────────────────────────────────────────────────
 
 
@@ -85,6 +122,8 @@ def appeal_refusal(judgment, account):
     if judgment.civilization == Civilization.GREEK:
         # Minos's judgment is the last word: nothing above it to appeal to (docs/02 希腊 §5.2; user 2026-10-27).
         return AppealRefusedError("Minos's judgment cannot be appealed.", "no_appeal_above_minos")
+    if devoured(judgment.soul_id):
+        return AppealRefusedError("A soul devoured by Ammit no longer exists to appeal.", "soul_devoured")
     if judgment.verdict is None or not judgment.is_final or judgment.is_deleted:
         return AppealRefusedError("This judgment has not been concluded.", "not_concluded")
     if judgment.kind != JudgmentKind.ORIGINAL:
