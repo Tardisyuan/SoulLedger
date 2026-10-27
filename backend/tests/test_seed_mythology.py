@@ -98,7 +98,8 @@ RETIRED_SUB_HELLS = ["DY_07_JIAN", "DY_08_HAN", "DY_09_YANG"]
 # (role, title_zh, realm_code). Each is depended on by something outside the
 # seed: 魏征 opens the 申诉审判流程 appeal template in apps/workflow/services.py,
 # 崔府君 and 魏征 hold 四大判官 org units in apps/org's init_organizations, and
-# 地藏 is the Chinese overseer named in apps/perm/migrations/0015. The only
+# 地藏 is the Chinese overseer named in apps/perm/migrations/0015; 酆都大帝
+# closes the appeal and cross-realm templates. The only
 # thing that ever created them was a `populate_chinese_actors` command that
 # raised AttributeError on invocation (bare `run()`, no `Command` class), so no
 # database could actually have them. Folding them into seed_mythology is what
@@ -107,6 +108,7 @@ JUDICIAL_PERSONNEL = {
     "魏征": ("JUDGE", "察查司正堂", "DY_COURT_05_YANLUO"),
     "崔府君": ("JUDGE", "崔判官", "DY_COURT_05_YANLUO"),
     "地藏王菩萨": ("OVERSEER", "地藏王菩萨", "DY_COURT_01_QINGUANG"),
+    "酆都大帝": ("JUDGE", "北阴酆都大帝", "DY_COURT_01_QINGUANG"),
 }
 
 # --------------------------------------------------------------------------

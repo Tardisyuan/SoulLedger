@@ -1226,6 +1226,14 @@ NODES_ADDED_AFTER_THE_BACKFILL = {
     "阿米特 · 吞噬": "Added 2026-10-27 (02 §5.2: Ammit only on the heavy branch); no stored node.",
 }
 
+#: Nodes that existed (and have stored copies) before they named an actor. Unlike the list above, such a pair was
+#: buildable, so stored copies do exist. Since X-3 a nameless station is built as ROLE JUDGE (any judge of the
+#: hall decides it); older copies are SYSTEM (escalate-only), as they were. Re-pointing stored copies at the new
+#: actor would change who may decide a running flow; that is left for the owner to decide, not done by migration.
+NODES_NAMED_AFTER_THE_BACKFILL = {
+    "酆都大帝 · 终审": "酆都大帝 seeded 2026-10-28 (actors_chinese.py); stored appeal / cross-realm nodes stay ROLE JUDGE.",
+}
+
 #: Frozen 0011 rows whose node the template has since moved, -> (court, order) it stands at now, and why.
 #: 0011 still matches stored rows at the old place, which is what it must do (it records what was true).
 NODES_MOVED_AFTER_THE_BACKFILL = {
@@ -1355,7 +1363,7 @@ class TestTemplateApproverBasis:
 
         exempt = {
             entry for entry in from_templates
-            if entry[0] in NODES_ADDED_AFTER_THE_BACKFILL
+            if entry[0] in NODES_ADDED_AFTER_THE_BACKFILL or entry[0] in NODES_NAMED_AFTER_THE_BACKFILL
         }
         from_templates = from_templates - exempt
 
@@ -1379,7 +1387,7 @@ class TestTemplateApproverBasis:
         # The exemption list, held from both ends. Without these two an entry
         # here could excuse a frozen row that had gone missing from the
         # templates, or go on excusing a node that no longer exists.
-        for name in sorted(NODES_ADDED_AFTER_THE_BACKFILL):
+        for name in sorted({*NODES_ADDED_AFTER_THE_BACKFILL, *NODES_NAMED_AFTER_THE_BACKFILL}):
             assert name not in frozen, (
                 f"{name!r} is listed as postdating 0011, but 0011 froze a row "
                 f"for it. The list would then be hiding a real disagreement "

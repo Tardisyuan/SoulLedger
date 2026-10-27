@@ -189,4 +189,20 @@ CHINESE_ACTORS = [
      "地藏王菩萨", "地藏王菩萨", "Ksitigarbha Bodhisattva", "Dizang",
      "Bodhisattva of the Great Vow - 地狱不空，誓不成佛. Delivers souls out of "
      "the hells; relief path for wrongful deaths and those in the torture chambers"),
+    # 酆都大帝 — the Daoist / folk head of the underworld, the ten kings' superior
+    # (docs/01_地府整体架构.md 「主管阴间行政与审判」; docs/02_地府人物详解.md §一).
+    # Seeded so the final node of the appeal and cross-realm flows and the
+    # emergency preset's 直审 name somebody (apps/workflow/templates.py). JUDGE,
+    # not OVERSEER: what the system asks of him is the last decision on a case,
+    # and only JUDGE sits a decision seat (apps/dispatch/services.py).
+    # The appeal ladder itself is this system's own (docs/11 §3.2: 「查无出处」,
+    # and 《玉历》 does not have him try cases); the row records the Daoist
+    # pantheon the docs hold, not a 《玉历》 office.
+    # REALM IS A COMPROMISE, the same one 地藏王菩萨 above makes: his seat, 罗酆山 /
+    # 酆都城, is not a realm this system models, so he is filed at the intake
+    # court rather than getting a realm invented for him.
+    ("酆都大帝", "酆都大帝", "Emperor of Fengdu", "Fengdu", ActorRole.JUDGE, "DY_COURT_01_QINGUANG",
+     "北阴酆都大帝", "北阴酆都大帝", "Great Emperor of Fengdu", "Fengdu",
+     "北阴大帝 - head of the whole underworld from 罗酆山 (酆都城), superior of the "
+     "ten kings in the Daoist pantheon; hears the last instance of an appeal"),
 ]
