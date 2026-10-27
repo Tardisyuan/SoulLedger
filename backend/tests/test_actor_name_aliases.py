@@ -319,8 +319,10 @@ def test_a_node_label_resolves_to_the_actor_that_node_designates(seeded, resolve
     # how many may have them.
     # 18 -> 21 (2026-10-27): the weighing flow gained 托特 · 记录并宣读, 荷鲁斯 · 引导 and 阿米特 · 吞噬
     # (docs/02 §2.1, §5.1–5.2).
-    assert checked == 21, (
-        f"expected the 21 nodes that name an approver, checked {checked} — the "
+    # 21 -> 23 (2026-10-28): the CHINESE appeal and cross-realm flows' 「酆都大帝 · 终审」 now name 酆都大帝,
+    # who got an Actor row (docs/01 第一层, docs/02 §一).
+    assert checked == 23, (
+        f"expected the 23 nodes that name an approver, checked {checked} — the "
         f"count is asserted so a template losing its `actor` keys cannot pass "
         f"this by having nothing to check"
     )
