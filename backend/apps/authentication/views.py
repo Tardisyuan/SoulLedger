@@ -67,6 +67,7 @@ from .serializers import (
     LoginResponseSerializer,
     LogoutRequestSerializer,
     MfaRequiredResponseSerializer,
+    OfficerHasOpenWorkSerializer,
     OfficerInviteSerializer,
     OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
@@ -78,6 +79,7 @@ from .serializers import (
     TokenRefreshSerializer,
     UserBatchUpdateResultSerializer,
     UserCreateSerializer,
+    UserDeactivateSerializer,
     UserImportResultSerializer,
     UserManagementSerializer,
     UserMfaResetSerializer,
@@ -106,6 +108,23 @@ RESET_REQUEST_WINDOW_SECONDS = 300
 # ---------------------------------------------------------------------------
 # User Management ViewSet (Tenant Admin)
 # ---------------------------------------------------------------------------
+
+
+def _open_work(user):
+    """交接预览(不带接手人)的件数;一件都没有、或不是某个殿的官员,返回 None。"""
+    from apps.judgment import handover
+
+    if user.role == 'SOUL' or user.tenant_id is None or not user.is_active:
+        return None
+    counts = handover.preview(user, None, user.tenant_id)
+    counts.pop('problems')
+    total = sum(len(v) if isinstance(v, list) else v for v in counts.values())
+    return counts if total else None
+
+
+def _open_work_refusal(open_work):
+    return Response({'error': 'The officer still holds open work; hand it over first.',
+                     'code': 'officer_has_open_work', 'open_work': open_work}, status=status.HTTP_409_CONFLICT)
 
 
 class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
@@ -291,12 +310,35 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['is_active'])
         return Response(UserManagementSerializer(user).data)
 
+    @extend_schema(request=UserDeactivateSerializer,
+                   responses={200: UserManagementSerializer, 400: OpenApiTypes.OBJECT, 409: OfficerHasOpenWorkSerializer})
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):
-        """停用指定用户"""
+        """停用指定用户。
+
+        手上还有在途的事(认领中的审判、复核中的申诉、城隍名下、经办的书信 —— 与交接预览同一套计数)的官员:
+        不带 `handover_to` 是 409 `officer_has_open_work` 附件数;带上本殿一位在职官员,则交接与停用在同一个事务里,
+        交接的审计行也在里面 —— 任何一步失败,两件都不发生(2026-10-27 用户决定,检查业务 #10)。
+        """
+        from apps.judgment import handover
+
         user = self.get_object()
-        user.is_active = False
-        user.save(update_fields=['is_active'])
+        body = UserDeactivateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        to = body.validated_data.get('handover_to')
+        if to is None:
+            work = _open_work(user)
+            if work:
+                return _open_work_refusal({str(user.pk): work})
+        try:
+            with transaction.atomic():
+                if to is not None:
+                    target = User.objects.filter(pk=to, tenant_id=user.tenant_id).first()  # 别殿的人与不存在的人同一个 400
+                    handover.commit(user, target, user.tenant_id, actor=request.user, request=request)
+                user.is_active = False
+                user.save(update_fields=['is_active'])
+        except handover.HandoverRefusedError as exc:
+            return Response(exc.as_payload(), status=exc.status)
         close_user_sockets(user.pk)  # 已连上的实时连接一并关(握手本来就拒停用账号)
         return Response(UserManagementSerializer(user).data)
 
@@ -339,6 +381,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # (one BATCH_UPDATE row naming every user), from the same list the
         # update runs on.
         targets = list(self._batch_targets(user_ids))
+        if not active:
+            # 批量不做交接(接手人是逐个选的):手上有事的人一个都不停,列出来让管理员逐个停用并移交。
+            held = {str(u.pk): work for u in targets if (work := _open_work(u))}
+            if held:
+                return _open_work_refusal(held)
         updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
         if targets:
             create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
@@ -353,7 +400,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """批量激活用户"""
         return self._batch_set_active(request, True)
 
-    @extend_schema(responses=UserBatchUpdateResultSerializer)
+    @extend_schema(responses={200: UserBatchUpdateResultSerializer, 409: OfficerHasOpenWorkSerializer})
     @action(detail=False, methods=['post'])
     def batch_deactivate(self, request):
         """批量停用用户"""

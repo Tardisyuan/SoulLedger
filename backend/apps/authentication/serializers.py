@@ -527,6 +527,32 @@ class UserMfaResetSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=200, allow_blank=False, trim_whitespace=True)
 
 
+class UserDeactivateSerializer(serializers.Serializer):
+    """`POST /users/{id}/deactivate/`: an officer who still holds open work is refused (409 `officer_has_open_work`)
+    unless `handover_to` names the officer of the same hall who takes it; the handover and the deactivation are one
+    transaction (`apps/judgment/handover.py`)."""
+
+    handover_to = serializers.IntegerField(required=False, allow_null=True)
+
+
+class OpenWorkSerializer(serializers.Serializer):
+    """What an officer still holds: the counts of `handover.preview(source, None)`."""
+
+    judgments = serializers.IntegerField()
+    appeals = serializers.IntegerField()
+    appeals_returned_to_pool = serializers.IntegerField()
+    city_gods = serializers.ListField(child=serializers.CharField())
+    letters = serializers.IntegerField()
+
+
+class OfficerHasOpenWorkSerializer(serializers.Serializer):
+    """409 of single and batch deactivation. `open_work` is keyed by user id (one key for a single deactivation)."""
+
+    error = serializers.CharField()
+    code = serializers.ChoiceField(["officer_has_open_work"])
+    open_work = serializers.DictField(child=OpenWorkSerializer())
+
+
 class UserManagementSerializer(serializers.ModelSerializer):
     """User serializer for list/retrieve operations in user management API."""
     tenant = serializers.SerializerMethodField()

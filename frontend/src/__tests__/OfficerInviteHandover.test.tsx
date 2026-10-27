@@ -6,13 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import AcceptInvitePage from "@/app/(auth)/accept-invite/page";
 import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
-import { OfficerDeactivateDialog } from "@/src/components/users/OfficerDeactivateDialog";
 import { authApi, handoverApi, usersApi, type User } from "@soulledger/core/api";
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: { acceptOfficerInvite: jest.fn() },
   handoverApi: { preview: jest.fn(), commit: jest.fn() },
-  usersApi: { list: jest.fn() },
+  usersApi: { list: jest.fn(), deactivate: jest.fn() },
   officerRefusalOf: (error: { response?: { data?: { code?: string } } }) =>
     error?.response?.data?.code ? { code: error.response.data.code } : null,
   handoverProblemsOf: (error: { response?: { status?: number; data?: { problems?: string[] } } }) =>
@@ -38,6 +37,7 @@ const accept = authApi.acceptOfficerInvite as jest.Mock;
 const preview = handoverApi.preview as jest.Mock;
 const commit = handoverApi.commit as jest.Mock;
 const list = usersApi.list as jest.Mock;
+const deactivate = usersApi.deactivate as jest.Mock;
 
 const officer = (id: number, username: string): User => ({ id, username, email: `${username}@x.test`, role: "JUDGE", is_active: true, tenant: { id: 1, code: "h", display_name: "H" } });
 
@@ -138,13 +138,27 @@ describe("OfficerHandoverDialog", () => {
   });
 });
 
-describe("OfficerDeactivateDialog", () => {
-  it("offers handover first and does not make 'deactivate anyway' the focused default", () => {
-    const onHandover = jest.fn();
-    render(<OfficerDeactivateDialog user={officer(1, "alice")} pending={false} onHandover={onHandover} onDeactivate={jest.fn()} onClose={jest.fn()} />);
-    expect(screen.getByText("officerHandover.deactivate_prompt(alice)")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("deactivate-handover"));
-    expect(onHandover).toHaveBeenCalled();
-    expect(screen.getByTestId("deactivate-anyway")).not.toHaveFocus();
+describe("OfficerHandoverDialog, opened from deactivation", () => {
+  beforeEach(() => list.mockResolvedValue({ data: { results: [officer(1, "alice"), officer(2, "bob")] } }));
+
+  it("locks the source and deactivates with the receiver in one call, never the bare handover", async () => {
+    preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, problems: [] } });
+    deactivate.mockResolvedValue({ data: officer(1, "alice") });
+    const onClose = jest.fn();
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <OfficerHandoverDialog from={officer(1, "alice")} deactivate onClose={onClose} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId("handover-deactivate-prompt")).toHaveTextContent("officerHandover.deactivate_prompt(alice)");
+    const [source, target] = await screen.findAllByRole("combobox");
+    expect(source).toBeDisabled();
+    await within(target).findByRole("option", { name: "bob" });
+    fireEvent.change(target, { target: { value: "2" } });
+    await waitFor(() => expect(screen.getByTestId("handover-submit")).toHaveTextContent("officerHandover.submit_and_deactivate_n(1)"));
+    fireEvent.click(screen.getByTestId("handover-submit"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(deactivate).toHaveBeenCalledWith("1", 2);
+    expect(commit).not.toHaveBeenCalled();
   });
 });

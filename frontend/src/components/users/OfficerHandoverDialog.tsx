@@ -16,6 +16,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
+import { showToast } from "@/src/components/ui/Toast";
 
 /** 预览里一共有几件会动:申诉退回待复核的那几件也算(它们换了复核人,只是清空)。 */
 export function previewTotal(p: HandoverPreview): number {
@@ -29,8 +30,11 @@ const name = (u: Pick<User, "username" | "display_name">) => u.display_name || u
  * 任一人改了,旧预览丢掉重新取。预览四类各占一行、0 也写;回到待复核池的申诉写在申诉那一行下面;
  * 有 `problems`(或提交时真收到 409)= 少见的真阻断,danger 框、接手人描红、提交置灰;全 0 = `empty`、提交置灰。
  * 提交按钮写总件数。结果写实际件数:比预览少才有 `result_fewer`,有申诉回池才有 `result_pool`。
+ *
+ * `deactivate`:从「停用」进来(手上有事的官员,后端不带接手人就 409)。交出人锁定,提交走
+ * `usersApi.deactivate(from, to)` —— 交接与停用在后端同一个事务里;成功后关掉对话框并提示一句。
  */
-export function OfficerHandoverDialog({ from, onClose }: { from: User; onClose: () => void }) {
+export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { from: User; onClose: () => void; deactivate?: boolean }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [fromId, setFromId] = useState(from.id);
@@ -64,9 +68,17 @@ export function OfficerHandoverDialog({ from, onClose }: { from: User; onClose: 
   const total = preview ? previewTotal(preview) : 0;
 
   const commit = useMutation({
-    mutationFn: async () => (await handoverApi.commit(fromId, toId as number)).data,
+    mutationFn: async () =>
+      deactivate
+        ? (await usersApi.deactivate(String(fromId), toId as number), null)
+        : (await handoverApi.commit(fromId, toId as number)).data,
     onSuccess: (done) => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all });
+      if (done === null) {
+        showToast(t("officerHandover.deactivated_toast", { name: name(from) }), "success");
+        onClose();
+        return;
+      }
       setResult({ done, planned: total, to: target ? name(target) : "" });
     },
     onError: (error) => {
@@ -142,7 +154,8 @@ export function OfficerHandoverDialog({ from, onClose }: { from: User; onClose: 
     );
   }
 
-  const canSubmit = preview !== undefined && total > 0 && problems.length === 0 && !commit.isPending;
+  // 停用时 0 件也能提交(预览之后都办完了,就只是停用)。
+  const canSubmit = preview !== undefined && (total > 0 || deactivate) && problems.length === 0 && !commit.isPending;
 
   return (
     <BaseModal
@@ -163,16 +176,25 @@ export function OfficerHandoverDialog({ from, onClose }: { from: User; onClose: 
             loading={commit.isPending}
             onClick={() => commit.mutate()}
           >
-            {commit.isPending ? t("officerHandover.submitting") : t("officerHandover.submit_n", { n: String(total) })}
+            {commit.isPending
+              ? t("officerHandover.submitting")
+              : t(deactivate ? "officerHandover.submit_and_deactivate_n" : "officerHandover.submit_n", { n: String(total) })}
           </Button>
         </div>
       }
     >
       <div className="flex flex-col gap-4">
+        {deactivate && (
+          <p role="alert" className="text-sm text-[oklch(var(--color-ink))]" data-testid="handover-deactivate-prompt">
+            <span aria-hidden="true">! </span>
+            {t("officerHandover.deactivate_prompt", { name: name(from) })}
+          </p>
+        )}
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("officerHandover.intro")}</p>
         <SelectField
           label={t("officerHandover.from")}
           value={String(fromId)}
+          disabled={deactivate}
           onChange={pick((id) => id !== null && setFromId(id))}
           options={[
             ...(officers.some((u) => u.id === from.id) ? [] : [{ value: String(from.id), label: name(from) }]),
