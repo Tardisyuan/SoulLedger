@@ -189,6 +189,13 @@ export function handoverProblemsOf(error: unknown): HandoverPreview["problems"] 
   return Array.isArray(data?.problems) ? data.problems : null;
 }
 
+/** 409 `officer_has_open_work` of deactivate / batch_deactivate: the handover-preview counts, keyed by user id. */
+export function openWorkOf(error: unknown): Record<string, Omit<HandoverPreview, "problems">> | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
+  const data = error.response.data as { code?: string; open_work?: Record<string, Omit<HandoverPreview, "problems">> } | undefined;
+  return data?.code === "officer_has_open_work" && data.open_work ? data.open_work : null;
+}
+
 export const handoverApi = {
   /** `to` 省略 = 只数件数(停用前的提醒)。 */
   preview: (from: number, to?: number) => api.post<HandoverPreview>("/judgment/handover/preview/", to == null ? { from } : { from, to }),
@@ -204,7 +211,11 @@ export const usersApi = {
   update: (id: string, data: UpdateUserInput) => api.patch<User>(`/users/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/users/${id}/`),
   activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
-  deactivate: (id: string) => api.post<User>(`/users/${id}/deactivate/`),
+  /** An officer still holding open work is a 409 `officer_has_open_work` (`openWorkOf`) unless `handoverTo` names an
+   *  active officer of the same hall: then the handover and the deactivation are one transaction (400 `invalid_target`,
+   *  409 `handover_blocked` with `problems`, as the handover route). */
+  deactivate: (id: string, handoverTo?: number) =>
+    api.post<User>(`/users/${id}/deactivate/`, handoverTo == null ? {} : { handover_to: handoverTo }),
   assignRoles: (id: string, data: AssignRolesInput) => api.post<User>(`/users/${id}/assign_roles/`, data),
   batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
   batchDeactivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_deactivate/", { user_ids: userIds }),

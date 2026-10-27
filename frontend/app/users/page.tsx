@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, handoverApi, PAGE_SIZE, type User } from "@soulledger/core/api";
+import { usersApi, permApi, handoverApi, openWorkOf, PAGE_SIZE, type User } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -19,7 +19,6 @@ import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { UserImportDialog } from "@/src/components/users/UserImportDialog";
 import { OfficerInviteDialog } from "@/src/components/users/OfficerInviteDialog";
 import { OfficerHandoverDialog, previewTotal } from "@/src/components/users/OfficerHandoverDialog";
-import { OfficerDeactivateDialog } from "@/src/components/users/OfficerDeactivateDialog";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -81,7 +80,8 @@ function UsersRoute() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [handoverUser, setHandoverUser] = useState<User | null>(null);
-  const [deactivatePrompt, setDeactivatePrompt] = useState<User | null>(null);
+  /** 手上有事的官员:停用要经交接对话框(选接手人,交接与停用同一个事务)。 */
+  const [deactivateWith, setDeactivateWith] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
@@ -152,8 +152,8 @@ function UsersRoute() {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       showToast(t("users.status_updated"), "success");
     },
-    onError: () => {
-      showToast(t("users.status_update_error"), "error");
+    onError: (error) => {
+      if (!openWorkOf(error)) showToast(t("users.status_update_error"), "error");
     },
   });
 
@@ -169,22 +169,25 @@ function UsersRoute() {
   });
 
   /**
-   * 停用前先问一次「他手上有没有在途的事」(交接预览,只读,每次点停用只调一次):有才弹「停用前先移交?」,
-   * 没有、或预览本身失败,照旧直接停用。预览不带接手人,只数件数。
+   * 停用前先问一次「他手上有没有在途的事」(交接预览,只读,每次点停用只调一次):有就打开交接对话框的停用模式。
+   * 没有、或预览本身失败,直接停用 —— 后端仍会对手上有事的人答 409 `officer_has_open_work`,那时同样打开对话框。
    */
   const requestDeactivate = async (user: User) => {
     if (user.role !== "SOUL" && user.id !== myId) {
       try {
         const { data: preview } = await handoverApi.preview(user.id);
         if (previewTotal(preview) > 0) {
-          setDeactivatePrompt(user);
+          setDeactivateWith(user);
           return;
         }
       } catch {
-        /* 预览不可用 = 不拦 */
+        /* 预览不可用 = 交给后端判断 */
       }
     }
-    toggleStatusMutation.mutate({ id: String(user.id), isActive: false });
+    toggleStatusMutation.mutate(
+      { id: String(user.id), isActive: false },
+      { onError: (error) => openWorkOf(error) && setDeactivateWith(user) },
+    );
   };
 
   const users = data?.results ?? [];
@@ -457,23 +460,7 @@ function UsersRoute() {
       <UserImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
       <OfficerInviteDialog isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
       {handoverUser ? <OfficerHandoverDialog from={handoverUser} onClose={() => setHandoverUser(null)} /> : null}
-      {deactivatePrompt ? (
-        <OfficerDeactivateDialog
-          user={deactivatePrompt}
-          pending={toggleStatusMutation.isPending}
-          onClose={() => setDeactivatePrompt(null)}
-          onHandover={() => {
-            setHandoverUser(deactivatePrompt);
-            setDeactivatePrompt(null);
-          }}
-          onDeactivate={() =>
-            toggleStatusMutation.mutate(
-              { id: String(deactivatePrompt.id), isActive: false },
-              { onSettled: () => setDeactivatePrompt(null) },
-            )
-          }
-        />
-      ) : null}
+      {deactivateWith ? <OfficerHandoverDialog from={deactivateWith} deactivate onClose={() => setDeactivateWith(null)} /> : null}
       <UserModal
         isOpen={isModalOpen || !!editingUser}
         onClose={() => {

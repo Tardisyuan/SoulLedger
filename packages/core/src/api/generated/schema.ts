@@ -9347,7 +9347,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 停用指定用户 */
+        /**
+         * @description 停用指定用户。
+         *
+         *     手上还有在途的事(认领中的审判、复核中的申诉、城隍名下、经办的书信 —— 与交接预览同一套计数)的官员:
+         *     不带 `handover_to` 是 409 `officer_has_open_work` 附件数;带上本殿一位在职官员,则交接与停用在同一个事务里,
+         *     交接的审计行也在里面 —— 任何一步失败,两件都不发生(2026-10-27 用户决定,检查业务 #10)。
+         */
         post: operations["v1_users_deactivate_create"];
         delete?: never;
         options?: never;
@@ -14461,6 +14467,19 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /** @description 409 of single and batch deactivation. `open_work` is keyed by user id (one key for a single deactivation). */
+        OfficerHasOpenWork: {
+            error: string;
+            code: components["schemas"]["OfficerHasOpenWorkCodeEnum"];
+            open_work: {
+                [key: string]: components["schemas"]["OpenWork"];
+            };
+        };
+        /**
+         * @description * `officer_has_open_work` - officer_has_open_work
+         * @enum {string}
+         */
+        OfficerHasOpenWorkCodeEnum: "officer_has_open_work";
         OfficerInbox: {
             /** Format: uuid */
             readonly id: string;
@@ -14655,6 +14674,14 @@ export interface components {
             tenant_code?: string;
             username: string;
             password: string;
+        };
+        /** @description What an officer still holds: the counts of `handover.preview(source, None)`. */
+        OpenWork: {
+            judgments: number;
+            appeals: number;
+            appeals_returned_to_pool: number;
+            city_gods: string[];
+            letters: number;
         };
         /**
          * @description * `claim` - claim
@@ -19707,6 +19734,14 @@ export interface components {
              * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
              */
             is_active?: boolean;
+        };
+        /**
+         * @description `POST /users/{id}/deactivate/`: an officer who still holds open work is refused (409 `officer_has_open_work`)
+         *     unless `handover_to` names the officer of the same hall who takes it; the handover and the deactivation are one
+         *     transaction (`apps/judgment/handover.py`).
+         */
+        UserDeactivate: {
+            handover_to?: number | null;
         };
         /**
          * @description `{"created": N, "errors": [...]}` — the CSV import summary.
@@ -37275,11 +37310,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["UserManagement"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserManagement"];
-                "multipart/form-data": components["schemas"]["UserManagement"];
+                "application/json": components["schemas"]["UserDeactivate"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserDeactivate"];
+                "multipart/form-data": components["schemas"]["UserDeactivate"];
             };
         };
         responses: {
@@ -37289,6 +37324,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserManagement"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerHasOpenWork"];
                 };
             };
         };
@@ -37435,6 +37488,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserBatchUpdateResult"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerHasOpenWork"];
                 };
             };
         };

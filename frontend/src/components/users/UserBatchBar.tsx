@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { User } from "@soulledger/core/api";
+import { openWorkOf, type User } from "@soulledger/core/api";
 import { useBatchSetUsersActive } from "@soulledger/core/hooks/useUsers";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -60,7 +60,11 @@ export function UserBatchBar({ selection }: { selection: UserSelection }) {
           showToast(t("users.batch.done", { n: String(result.updated) }), "success");
           selection.clear();
         },
-        onError: () => showToast(t("users.batch.failed"), "error"),
+        onError: (error) => {
+          // 有人手上还有在途的事:后端整批不停(批量不做交接),要逐个停用、停用时移交。
+          const held = openWorkOf(error);
+          showToast(held ? t("users.batch.open_work", { n: String(Object.keys(held).length) }) : t("users.batch.failed"), "error");
+        },
       }
     );
 
