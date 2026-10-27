@@ -62,13 +62,16 @@ def weigh(judgment, verdict) -> tuple[str, int]:
             reading["heart_weight"])
 
 
-def open_retrial(judgment, reason=WeighingResult.WAVERING.value) -> Judgment:
-    """The new weighing a wavering scale (or a refused flow) calls for: same soul, life, court, kind and plan."""
+def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=JudgmentMethod.HEART_WEIGHING) -> Judgment:
+    """The new weighing a wavering scale (or a refused flow) calls for: same soul, life, court, kind and plan.
+
+    Also the European RETRY (`judgment/services.py`), with that case's own `method`: a RETRY is not a
+    purgatory sentence there (docs/01_欧洲天堂地狱整体架构.md §1.2), so the case is heard again."""
     retrial = Judgment.objects.create(
         soul=judgment.soul, tenant=judgment.tenant, civilization=judgment.civilization,
         realm=judgment.realm, court=judgment.court, kind=judgment.kind,
         amends_plan_id=judgment.amends_plan_id, cycle=judgment.cycle,
-        judgment_method=JudgmentMethod.HEART_WEIGHING, retrial_of=judgment,
+        judgment_method=method, retrial_of=judgment,
     )
     from apps.events.services import EventService
 
