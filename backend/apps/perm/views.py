@@ -178,8 +178,8 @@ def get_role_permissions(request):
     # 角色名。
     #
     # 重新核过之后,真正的边界在这里,而它是成立的:**授权**(哪个角色有哪些
-    # codename)只有两条读取路径 —— 这一条(只给自己)和
-    # `get_permissions_for_role`(只给 ADMIN)。`RoleSerializer` 没有
+    # codename)只有这几条读取路径 —— 这一条(只给自己)、
+    # `get_permissions_for_role` 与 `get_all_role_permissions`(都只给 ADMIN)。`RoleSerializer` 没有
     # `permissions` 字段,`list_permissions` 返回的是 codename 目录本身。
     #
     # 所以对非 ADMIN 泄漏的是**目录**,不是**授权**:codename 有哪些、角色叫什么、
@@ -234,6 +234,32 @@ def get_permissions_for_role(request, name):
         "permissions": permission_codenames,
         "details": serializer.data,
     })
+
+
+@extend_schema(request=None, responses={200: RolePermissionsSerializer(many=True)})
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def get_all_role_permissions(request):
+    """
+    GET /api/v1/perm/role-permissions/all/
+    每个角色一份 `get_permissions_for_role` 的结果,一次取回(仅 ADMIN)。
+
+    权限页此前对每个角色各发一次 `roles/<name>/permissions/`(perf review 2026-10-27 #10)。
+    逐角色解析走同一个 `_get_role_permissions_from_db`,所以与单个角色的读取答案相同;
+    Permission 行只查一次。
+    """
+    rows = list(Permission.objects.all())
+    payload = []
+    for name in Role.objects.values_list("name", flat=True):
+        codenames = _get_role_permissions_from_db(name)
+        held = set(codenames)
+        details = [p for p in rows if p.codename in held]
+        payload.append({
+            "role": name,
+            "permissions": codenames,
+            "details": PermissionSerializer(details, many=True).data,
+        })
+    return Response(payload)
 
 
 @extend_schema(

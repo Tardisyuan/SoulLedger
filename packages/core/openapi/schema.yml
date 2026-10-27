@@ -13787,6 +13787,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/RolePermissions'
           description: ''
+  /api/v1/perm/role-permissions/all/:
+    get:
+      operationId: v1_perm_role_permissions_all_list
+      description: |-
+        GET /api/v1/perm/role-permissions/all/
+        每个角色一份 `get_permissions_for_role` 的结果,一次取回(仅 ADMIN)。
+
+        权限页此前对每个角色各发一次 `roles/<name>/permissions/`(perf review 2026-10-27 #10)。
+        逐角色解析走同一个 `_get_role_permissions_from_db`,所以与单个角色的读取答案相同;
+        Permission 行只查一次。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RolePermissions'
+          description: ''
   /api/v1/perm/role-permissions/assign/:
     post:
       operationId: v1_perm_role_permissions_assign_create
