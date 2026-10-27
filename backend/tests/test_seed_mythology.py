@@ -217,13 +217,14 @@ CHRISTIAN_CAST = {
 #
 # Two roles here are the least-wrong value rather than the right one, and the
 # assertion is deliberately made on them anyway. ActorRole has no term for "works
-# the instrument" (Anubis, left JUDGE) or "is the standard" (Ma'at, demoted to
-# GUARDIAN because her feather is the counterweight in the pan and JUDGE seated
+# the instrument" (Anubis, CONDUIT since 2026-10-27: docs/01 §1.2 says he is not a
+# judge, and he leads the dead to the balance) or "is the standard" (Ma'at, demoted
+# to GUARDIAN because her feather is the counterweight in the pan and JUDGE seated
 # the measure among the people applying it). Locking the compromise is what
 # makes it visible when someone revisits it.
 EGYPTIAN_PRINCIPALS_PLACED = {
     "Osiris": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
-    "Anubis": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
+    "Anubis": ("CONDUIT", "EG_HALL_TWO_TRUTHS"),
     "Thoth": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
     "Ma'at": ("GUARDIAN", "EG_HALL_TWO_TRUTHS"),
     "Ammit": ("EXECUTOR", "EG_HALL_TWO_TRUTHS"),

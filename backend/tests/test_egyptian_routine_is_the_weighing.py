@@ -41,6 +41,12 @@ def test_the_two_case_types_share_one_template_object():
     )
 
 
+def test_a_divine_trial_is_weighed_too():
+    """神判 / 紧急审判同样称心(egypt-docs 检查 #15;用户 2026-10-27:埃及案不管怎么开一律走称心审法)。"""
+    weighing = WORKFLOW_TEMPLATES[(Civilization.EGYPTIAN, CaseType.HEART_WEIGHING)]
+    assert WORKFLOW_TEMPLATES.get((Civilization.EGYPTIAN, CaseType.DIVINE_TRIAL)) is weighing
+
+
 @pytest.mark.django_db
 def test_an_egyptian_routine_judgment_reaches_the_hall_of_two_truths():
     """从 `_resolve_template` 进,不是直接读表 —— 读表证明不了路由走到哪。"""

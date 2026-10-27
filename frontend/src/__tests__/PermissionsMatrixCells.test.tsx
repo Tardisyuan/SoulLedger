@@ -25,6 +25,7 @@ jest.mock("@soulledger/core/api", () => ({
     list: jest.fn(),
     roles: { list: jest.fn(), update: jest.fn(), delete: jest.fn(), copy: jest.fn() },
     rolePermissions: jest.fn(),
+    allRolePermissions: jest.fn(),
     applyChanges: jest.fn(),
     impact: jest.fn(),
   },
@@ -50,9 +51,18 @@ const api = permApi as unknown as {
   list: jest.Mock;
   roles: { list: jest.Mock; update: jest.Mock; delete: jest.Mock; copy: jest.Mock };
   rolePermissions: jest.Mock;
+  allRolePermissions: jest.Mock;
   applyChanges: jest.Mock;
   impact: jest.Mock;
 };
+
+/** The bulk read the page makes: every listed role, each answered by the per-role mock. */
+function composeAllRolePermissions(p: { roles: { list: jest.Mock }; rolePermissions: jest.Mock; allRolePermissions: jest.Mock }) {
+  p.allRolePermissions.mockImplementation(async () => {
+    const roles: { name: string }[] = (await p.roles.list()).data;
+    return { data: await Promise.all(roles.map(async (r) => (await p.rolePermissions(r.name)).data)) };
+  });
+}
 
 const PERMS: Permission[] = [
   { id: 1, codename: "soul.read", name: "读灵魂", category: "soul" } as Permission,
@@ -106,6 +116,17 @@ beforeEach(() => {
     data: { role: name, permissions: [], details: (GRANTS[name] ?? []).map((id) => PERMS[id - 1]) },
   }));
   api.impact.mockResolvedValue({ data: { required_codenames: [], conflicts: [] } });
+  composeAllRolePermissions(api);
+});
+
+describe("loading the grants", () => {
+  it("asks for every role's grants in one request, not one per role", async () => {
+    renderPage();
+    await ready();
+    expect(api.allRolePermissions).toHaveBeenCalledTimes(1);
+    // The per-role mock is reached only through the composed bulk mock: once per role, never by the page.
+    expect(api.rolePermissions).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("PermCell states", () => {
@@ -145,9 +166,11 @@ describe("PermCell states", () => {
 
 describe("saving", () => {
   it("sends exactly the pending cells with the versions it loaded (⌘S works too)", async () => {
-    api.applyChanges.mockResolvedValue({
-      data: { saved: 1, unchanged: 0, refused: 0, failed: 0, versions: { YIN_CLERK: 3 },
-        results: [{ index: 0, role: "YIN_CLERK", permission_id: 2, codename: "soul.update", action: "grant", status: "saved", code: null, detail: null }] },
+    // The server holds what it saved: the grants refetch after a save reads it back.
+    api.applyChanges.mockImplementation(async () => {
+      GRANTS.YIN_CLERK = [1, 2];
+      return { data: { saved: 1, unchanged: 0, refused: 0, failed: 0, versions: { YIN_CLERK: 3 },
+        results: [{ index: 0, role: "YIN_CLERK", permission_id: 2, codename: "soul.update", action: "grant", status: "saved", code: null, detail: null }] } };
     });
     renderPage();
     await ready();
@@ -161,12 +184,13 @@ describe("saving", () => {
   });
 
   it("a partial save keeps only the refused cell pending, names why, and 定位 focuses it", async () => {
-    api.applyChanges.mockResolvedValue({
-      data: { saved: 1, unchanged: 0, refused: 1, failed: 0, versions: { JUDGE: 8, YIN_CLERK: 3 },
+    api.applyChanges.mockImplementation(async () => {
+      GRANTS.YIN_CLERK = [1, 2]; // saved; JUDGE's refused grant is not on the server
+      return { data: { saved: 1, unchanged: 0, refused: 1, failed: 0, versions: { JUDGE: 8, YIN_CLERK: 3 },
         results: [
           { index: 0, role: "JUDGE", permission_id: 3, codename: "recycle_bin.hard_delete", action: "grant", status: "refused", code: "admin_only_permission", detail: "x" },
           { index: 1, role: "YIN_CLERK", permission_id: 2, codename: "soul.update", action: "grant", status: "saved", code: null, detail: null },
-        ] },
+        ] } };
     });
     renderPage();
     await ready();

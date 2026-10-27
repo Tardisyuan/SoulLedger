@@ -25,6 +25,7 @@ def admin_client(api_client, admin_user, cn_tenant):
 
 
 def _queries(client, url):
+    client.get(url)  # warm-up: the first request also fills TenantMiddleware's per-worker hall copy
     with CaptureQueriesContext(connection) as ctx:
         response = client.get(url)
     assert response.status_code == 200

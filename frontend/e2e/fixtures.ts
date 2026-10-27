@@ -1517,6 +1517,13 @@ export class ApiMock {
       const details = PERMISSIONS.filter((p) => ids.includes(p.id));
       return { body: { role, permissions: details.map((p) => p.codename), details } };
     });
+    this.on("GET", "/perm/role-permissions/all/", () => ({
+      body: ROLES.map(({ name }) => {
+        const ids = this.roleGrants[name] ?? [];
+        const details = PERMISSIONS.filter((p) => ids.includes(p.id));
+        return { role: name, permissions: details.map((p) => p.codename), details };
+      }),
+    }));
     this.on("POST", "/perm/role-permissions/assign/", (call) => {
       const role: string = call.body?.role;
       const current = this.roleVersions[role] ?? 0;

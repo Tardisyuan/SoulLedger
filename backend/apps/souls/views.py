@@ -130,6 +130,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     residence_read_actions = ("list", "retrieve", "karma", "records", "path", "export")
     search_fields = SoulFilter.search_fields
     ordering_fields = SoulFilter.ordering_fields
+    #: The actions whose response is a SoulSerializer / SoulListSerializer, or (`records`) every record.
+    _ACTIONS_THAT_SERIALIZE_SOULS = frozenset({
+        "list", "retrieve", "update", "partial_update", "archive", "unarchive", "correct_settlement", "die",
+        "transition", "records",
+    })
 
     def get_queryset(self):
         """
@@ -137,7 +142,13 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         Applies tenant isolation + DataScope filtering for non-ADMIN users.
         """
         from apps.souls.querysets import SoulQuerySet
-        qs = SoulQuerySet(Soul).select_related("tenant", "home_tenant").prefetch_related("records", "reincarnations")
+        qs = SoulQuerySet(Soul).select_related("tenant", "home_tenant")
+        # Only the actions that serialize souls read `records` and `life_index` (perf review 2026-10-27 #6).
+        # Without the prefetch a SoulSerializer pays one `reincarnations` COUNT per nested record; the other
+        # actions (add_record, karma, path, the acknowledgements, delete …) loaded a soul's whole history for
+        # nothing.
+        if getattr(self, "action", None) in self._ACTIONS_THAT_SERIALIZE_SOULS:
+            qs = qs.prefetch_related("records", "reincarnations")
         # SoulQuerySet(Soul) instantiates the raw queryset directly rather
         # than going through SoulManager.get_queryset(), so — unlike almost
         # every other viewset in this codebase — it does NOT pick up the

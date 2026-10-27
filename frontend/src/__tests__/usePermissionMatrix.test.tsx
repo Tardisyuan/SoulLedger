@@ -76,7 +76,7 @@ describe("summarizeMatrixSave", () => {
 });
 
 describe("useApplyMatrixChanges", () => {
-  it("sends the versions and invalidates only roles that had a saved cell", async () => {
+  it("sends the versions and invalidates the roles and the one all-roles grants query", async () => {
     permApi.applyChanges.mockResolvedValue({ data: mixed });
     const client = newClient();
     const spy = jest.spyOn(client, "invalidateQueries");
@@ -86,13 +86,10 @@ describe("useApplyMatrixChanges", () => {
     expect(permApi.applyChanges).toHaveBeenCalledWith(changes, { JUDGE: 3 });
     const keys = spy.mock.calls.map(([arg]) => JSON.stringify(arg?.queryKey));
     expect(keys).toEqual(
-      expect.arrayContaining([
-        JSON.stringify(permKeys.roles),
-        JSON.stringify(permKeys.rolePermissions("JUDGE")),
-        JSON.stringify(permKeys.rolePermissions("SCRIBE")),
-      ]),
+      expect.arrayContaining([JSON.stringify(permKeys.roles), JSON.stringify(permKeys.allRolePermissions)]),
     );
-    expect(keys).not.toContain(JSON.stringify(permKeys.rolePermissions("VIEWER")));
+    // Every role's grants are one query now (perf review 2026-10-27 #10): refetched once, not once per role.
+    expect(keys.filter((k) => k === JSON.stringify(permKeys.allRolePermissions))).toHaveLength(1);
   });
 
   it("invalidates nothing when no cell was saved", async () => {

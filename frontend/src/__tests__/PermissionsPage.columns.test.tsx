@@ -13,6 +13,7 @@ jest.mock("@soulledger/core/api", () => ({
     list: jest.fn(),
     roles: { list: jest.fn() },
     rolePermissions: jest.fn(),
+    allRolePermissions: jest.fn().mockResolvedValue({ data: [] }),
     applyChanges: jest.fn(),
     impact: jest.fn().mockResolvedValue({ data: { required_codenames: [], conflicts: [] } }),
   },

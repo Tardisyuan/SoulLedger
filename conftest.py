@@ -104,12 +104,16 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
     `test_viewer_can_read_souls` fails every time.
     """
     from apps.perm.cache import invalidate_all_permissions
+    from apps.tenants.middleware import clear_tenant_cache
 
+    # `TenantMiddleware`'s per-worker hall copies: a rolled-back test leaves no signal behind to drop them.
     cache.clear()
     invalidate_all_permissions()
+    clear_tenant_cache()
     yield
     cache.clear()
     invalidate_all_permissions()
+    clear_tenant_cache()
 
 
 @pytest.fixture(scope="session")

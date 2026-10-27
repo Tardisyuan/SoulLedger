@@ -29,10 +29,19 @@ from apps.actors.models import ActorRole
 # ROLES: THE ENUM DOES NOT HAVE THE WORDS THIS SCENE NEEDS. There is no role
 # meaning "works the instrument of judgment" (Anubis) or "is the standard by
 # which it is judged" (Ma'at). Rather than add enum values for one civilization,
-# JUDGE is left to mean "principal of the tribunal" and the descriptions carry
-# what each one actually does. The one demotion made is Ma'at's, because
-# Ma'at-as-juror is the clearly wrong one: her feather is the counterweight in
-# the pan, so she is not on the bench, she is the test.
+# the descriptions carry what each one actually does. Two are not JUDGE, because
+# docs/01_埃及冥界整体架构.md §1.2 says so of both: Ma'at (her feather is the
+# counterweight in the pan, so she is not on the bench, she is the test) and
+# Anubis (「他不是判官，他是执秤者」, user rule 2026-10-27: docs win). Anubis is
+# CONDUIT: he leads the dead into the Hall and to the balance (Papyrus of Ani,
+# plate III; the weighing flow's first station is 「阿努比斯 · 引导与称量」), and
+# verify-egyptian §2.2 names CONDUIT as the fit for that half of his office.
+# Thoth stays JUDGE: §1.2 reads his "judge" as 书记／陪审 — a juror who records
+# and reads out, not the one who pronounces — the same seat the Chinese 判官
+# (Clerk-Registrar) holds as JUDGE; OVERSEER is administration of a realm here
+# (Ra, Hades, God), not a scribe. What the roles decide: only JUDGE actors may
+# sit CO_JUDGE or CHAIRMAN on a cross-hall bench (apps/dispatch/services.py
+# SEAT_ACTOR_ROLES); Anubis can now be seated as ADVISOR only.
 #
 # HEADCOUNT WARNING: with the four relocations below, EG_HALL_TWO_TRUTHS holds
 # nine principals plus the forty-two assessors. Any UI that renders "judges of
@@ -45,14 +54,14 @@ EGYPTIAN_ACTORS = [
      "God of the dead and resurrection - presides over the Hall of Two Truths, "
      "enthroned in his shrine, and receives the vindicated dead (Budge, Papyrus "
      "of Ani, Plate IV; BD 125A in the Papyrus of Nu, BM EA 10477)"),
-    ("Anubis", "阿努比斯", "Anubis", "Inpw", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
+    ("Anubis", "阿努比斯", "Anubis", "Inpw", ActorRole.CONDUIT, "EG_HALL_TWO_TRUTHS",
      "掌秤者阿努比斯", "掌秤者阿努比斯", "Anubis - Keeper of the Scales", "Inpw",
      "Jackal-headed god - WORKS THE BALANCE. He tests the tongue of the scales "
      "and adjusts the plummet; the inscription over him in the Papyrus of Ani "
      "reads 'O weigher of righteousness, guide the balance that it may be "
      "stablished', and BD 30B calls him 'him who keepeth the scales'. He "
-     "decides nothing - the role JUDGE here means principal of the tribunal, "
-     "because ActorRole has no term for the one who operates the instrument"),
+     "decides nothing. Cast CONDUIT: he leads the dead into the Hall and to the "
+     "balance; ActorRole has no term for the one who operates the instrument"),
     ("Thoth", "托特", "Thoth", "Djehuty", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
      "书记之神托特", "书记之神托特", "Thoth - Scribe of the Tribunal", "Djehuty",
      "Ibis-headed god - THE REGISTRAR. He stands behind Anubis with reed-pen "
