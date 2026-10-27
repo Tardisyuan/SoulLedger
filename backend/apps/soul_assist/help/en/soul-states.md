@@ -14,5 +14,5 @@ The tag under your name on the "This life" page is your current state in the reg
 - Disposed: judgment is over; you are serving or awaiting your disposition.
 - Reincarnating: your sentence is served and you have entered the cycle; if your home civilization has rebirth, you may be able to apply; whether you can depends on what the system finds.
 - Settled: this life is closed in the register; there is no next step.
-- Lost: your record is suspended or unaccounted for; write to the hall office.
+- Lost: the disposition was decided but the soul went missing on the way to it; an officer can recall it after checking, and it returns to "Disposed". Write to the hall office.
 States move with judgment and sentence; you cannot change them yourself. The page takes precedence.
