@@ -53,9 +53,9 @@ function roleBadgeClass(fill: string): string {
 
 /**
  * The seat an actor holds on the Forty-Two Assessors of Ma'at, or null for a
- * major god. This is the whole basis of the split on this page: Osiris,
- * Anubis, Thoth and Ma'at are all EGYPTIAN JUDGEs, exactly like the 42, and
- * nothing else on the row tells them apart.
+ * major god. This is the whole basis of the split on this page: Osiris and
+ * Thoth are EGYPTIAN JUDGEs, exactly like the 42, and nothing else on the row
+ * tells them apart.
  */
 function seatOf(actor: Actor): number | null {
   return typeof actor.assessor_index === "number" ? actor.assessor_index : null;
@@ -142,7 +142,7 @@ function ActorsPageContent() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   /**
    * The bench starts CLOSED, and that is the point of this state living apart
-   * from `collapsed`. Egypt is 46 JUDGEs since the Forty-Two landed; folding
+   * from `collapsed`. Egypt is 44 JUDGEs since the Forty-Two landed; folding
    * them behind one row is what keeps the first paint at a readable handful of
    * named gods instead of fifty-one identical cards.
    */
