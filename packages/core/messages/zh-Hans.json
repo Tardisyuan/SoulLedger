@@ -2208,7 +2208,8 @@
         "term_conflict": "执行失败：刑期与永恒只能选一个",
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
         "destination_not_applicable": "执行失败：此案不设发落",
-        "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。"
+        "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。",
+        "retry_has_no_destination": "「重审」不发落：这件案子会另开一案再审，清空发落再结案。"
       },
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
@@ -6011,7 +6012,9 @@
       "not_refused": "这一站的调拨没有被拒绝或取消过",
       "not_next": "前面还有没开始的站，先处理它",
       "soul_away": "灵魂不在原属地，不能重新发起",
-      "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试"
+      "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试",
+      "retry_with_open_cross": "这件案子挂着未结的联审，先结联审再判「重审」。",
+      "retry_not_a_destination": "欧洲的「重审」不是去处：请给出终局裁决，或另开一件审判。"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -7209,7 +7212,8 @@
       "not_reviewer": "只有认领的复核人能作出结论",
       "appeal_closed": "这份申诉已有结论或已撤回",
       "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。",
-      "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论"
+      "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论",
+      "retry_not_a_destination": "欧洲的「重审」不是去处：请改判为终局裁决，或另开一件审判。"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",

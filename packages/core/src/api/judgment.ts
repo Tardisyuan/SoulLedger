@@ -742,6 +742,8 @@ export const APPEAL_ERROR_CODES = [
   "verdict_unchanged",
   // 上诉到申诉流程的那一轮:流程走完前不能认领、作结论(2026-10-27)。
   "ladder_running",
+  // 欧洲申诉改判成「重审」:不是去处(apps/sentence_plan/requests.py)。
+  "retry_not_a_destination",
 ] as const;
 
 // ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────
