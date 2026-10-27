@@ -38230,7 +38230,8 @@ components:
       description: |-
         400 body of restore. `code` / `missing_roles` come with a refusal from a
         registered restore check (`template_role_missing`: a workflow template in
-        the cascade names roles that no longer exist); the other 400s carry
+        the cascade names roles that no longer exist) or `system_void` (the system voided the rows, e.g. a
+        refused Egyptian weighing; they never come back through the bin); the other 400s carry
         `error` alone.
       properties:
         error:
@@ -38246,8 +38247,11 @@ components:
     RecycleBinRestoreRefusalCodeEnum:
       enum:
       - template_role_missing
+      - system_void
       type: string
-      description: '* `template_role_missing` - template_role_missing'
+      description: |-
+        * `template_role_missing` - template_role_missing
+        * `system_void` - system_void
     RecycleBinRestoreRequest:
       type: object
       description: |-

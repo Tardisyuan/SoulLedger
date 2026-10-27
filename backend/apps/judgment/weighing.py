@@ -81,18 +81,16 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     """A station refused the weighing flow: weigh again, the same path as a wavering scale (user 2026-10-27).
 
     The refused conclusion placed nothing yet — its disposition cannot execute before the flow completes
-    (`unfinished_flow`) — so it is withdrawn: the disposition and the sentence plan it opened are soft-deleted,
-    the soul goes back from DISPOSED to JUDGING, and a new weighing (`retrial_of`) is opened with
+    (`unfinished_flow`) — so it is withdrawn: the disposition and the sentence plan it opened are voided by the system (soft-deleted, not
+    in the recycle bin, not restorable), the soul takes the system-only edge DISPOSED → JUDGING, and a new weighing (`retrial_of`) is opened with
     JUDGMENT_INITIATED. Same transaction as the decision that rejected the flow. Returns None, leaving the old
     way out (reopen or appeal), when the soul was already placed or the case is not an original weighing.
     """
     judgment = flow.judgment
     if judgment is None or not applies(judgment) or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
         return None
-    from django.utils import timezone
-
+    from apps.core.recycle_bin import system_void
     from apps.disposition.models import Disposition
-    from apps.events.services import EventService
     from apps.sentence_plan.models import SentenceNode, SentencePlan
     from apps.souls.models import Soul, SoulState
 
@@ -100,14 +98,16 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     dispositions = Disposition.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
     if soul.current_state != SoulState.DISPOSED or dispositions.filter(is_executed=True).exists():
         return None
-    gone = {"is_deleted": True, "deleted_at": timezone.now()}
-    plans = SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
-    SentenceNode.all_objects.filter(plan__in=plans, is_deleted=False).update(**gone)
-    plans.update(**gone)
-    dispositions.update(**gone)
-    soul.current_state = SoulState.JUDGING
-    soul.save(update_fields=["current_state"])
-    EventService.log_soul_state_change(soul, SoulState.DISPOSED, SoulState.JUDGING, "Weighing flow rejected")
+    # A system void, not a deletion: out of the recycle bin and never restorable (user 2026-10-27).
+    plan_ids = list(SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
+                    .values_list("pk", flat=True))
+    why = f"weighing_rejected:{judgment.pk}"
+    void = system_void(SentenceNode.all_objects.filter(plan_id__in=plan_ids, is_deleted=False), why)
+    system_void(SentencePlan.all_objects.filter(pk__in=plan_ids), why, void)
+    system_void(dispositions, why, void)
+    # The state machine's system-only edge (Soul.SYSTEM_ONLY_TRANSITIONS); it writes STATE_CHANGED itself.
+    if not soul.transition_to(SoulState.JUDGING, "Weighing flow rejected", system="weighing_rejected"):
+        raise RuntimeError(f"Soul {soul.pk} could not go back to JUDGING after its weighing was rejected")
     return open_retrial(judgment, reason="REJECTED")
 
 

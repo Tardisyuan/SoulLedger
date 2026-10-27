@@ -208,3 +208,26 @@ def test_a_station_refusing_the_weighing_opens_a_new_weighing(eg_tenant):
 
     retrial.conclude("PASSED")  # the new weighing concludes like the first one
     assert Disposition.objects.get(judgment=retrial).destination_realm.realm_code == "EG_AARU"
+
+
+def test_the_voided_conclusion_is_not_in_the_recycle_bin_and_cannot_be_restored(eg_tenant, admin_user):
+    """User 2026-10-27: what a refused weighing withdraws is a system void, not something a person deleted."""
+    from apps.sentence_plan.models import SentencePlan
+    from apps.workflow.models import ApprovalWorkflow
+    from tests.soul_account_support import officer_client
+
+    case = _case(eg_tenant)
+    case.conclude("PASSED")
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    flow.complete_node(flow.current_node.pk, "FAILED")
+    voided = Disposition.all_objects.get(judgment=case)
+    plan = SentencePlan.all_objects.get(origin_judgment_id=case.pk)
+    assert voided.is_deleted and plan.is_deleted and voided.delete_cascade_id == plan.delete_cascade_id
+
+    client = officer_client(admin_user)
+    listed = client.get("/api/v1/recycle-bin/").data["results"]
+    assert str(voided.delete_cascade_id) not in {e["cascade_id"] for e in listed}
+    refused = client.post("/api/v1/recycle-bin/restore/", {"cascade_id": str(voided.delete_cascade_id)}, format="json")
+    assert (refused.status_code, refused.data.get("code")) == (400, "system_void"), refused.data
+    assert Disposition.all_objects.get(pk=voided.pk).is_deleted
+    assert SentencePlan.all_objects.get(pk=plan.pk).is_deleted
