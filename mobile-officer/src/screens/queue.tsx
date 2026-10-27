@@ -4,7 +4,7 @@
  * says so: 「◇ 待宣判 · 请在官员台」.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
@@ -85,6 +85,8 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
         data!.map((row) => {
           // 枉死城(第五十一批):候审中的不放「认领」,换一行「到期后可认领」;徽标一直留着。
           const held = isHeldUntilFatedDate(row);
+          // 埃及入殿前(review P2-9):无名、葬仪不当的到不了殿,永远候着,不放「认领」。
+          const barred = isDuatBarred(row);
           return (
           <Row
             key={row.id}
@@ -101,11 +103,20 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
               ...(row.untimely
                 ? [{ one: [`▢ ${t("judgment.untimely")}`, ...(held ? [t("judgment.held_until", { date: row.held_until as string })] : [])].join(" · ") }]
                 : []),
+              ...(row.duat_stage
+                ? [{ one: [`▢ ${t(`judgment.duat_stage.${row.duat_stage}`)}`, ...(held ? [t("judgment.held_until", { date: row.held_until as string })] : [])].join(" · ") }]
+                : []),
             ].filter(Boolean)}
             onPress={() => onOpen(row.id)}
             gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
             right={
-              group === "unclaimed" && canClaim && held ? (
+              group === "unclaimed" && canClaim && barred ? (
+                <View style={{ width: 88 }}>
+                  <Txt variant="caption" tone="muted" testID={`queue-held-${row.id}`}>
+                    {t("judgment.claim.duat_barred_short")}
+                  </Txt>
+                </View>
+              ) : group === "unclaimed" && canClaim && held ? (
                 <View style={{ width: 88 }}>
                   <Txt variant="caption" tone="muted" testID={`queue-held-${row.id}`}>
                     {t("judgment.claim.held_short")}

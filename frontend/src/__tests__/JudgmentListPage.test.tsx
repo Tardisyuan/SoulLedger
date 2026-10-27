@@ -888,6 +888,39 @@ describe("已结案 column menu", () => {
   });
 });
 
+describe("埃及入殿前 (review P2-9)", () => {
+  const unclaimed = GROUP_ROWS.unclaimed;
+  beforeEach(() => {
+    GROUP_ROWS.unclaimed = [
+      row("emb", "Ka", { duat_stage: "EMBALMING", held_until: "2999-03-01" }),
+      row("nn", "Ren", { duat_stage: "NAMELESS", held_until: null }),
+      row("ok", "海瑞"),
+    ];
+  });
+  afterEach(() => {
+    GROUP_ROWS.unclaimed = unclaimed;
+  });
+
+  it("木乃伊候至日期;无名者没有日期、永远不能认领,排在最后", async () => {
+    renderPage();
+    await screen.findByText("Ren");
+    const names = within(screen.getByTestId("queue-group-unclaimed")).getAllByRole("link").map((a) => a.textContent);
+    expect(names).toEqual(["海瑞", "Ka", "Ren"]);
+
+    const embalmed = rowOf("Ka");
+    expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.EMBALMING"));
+    expect(within(embalmed).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.held_until", { date: "2999-03-01" }));
+    expect(within(embalmed).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.held_short"));
+
+    const nameless = rowOf("Ren");
+    expect(within(nameless).getByTestId("duat-mark")).toHaveTextContent(tZh("judgment.duat_stage.NAMELESS"));
+    expect(within(nameless).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.claim.duat_barred_short"));
+    expect(within(nameless).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
+    expect(within(nameless).getByRole("checkbox")).toBeDisabled();
+    expect(within(rowOf("海瑞")).queryByTestId("duat-mark")).toBeNull();
+  });
+});
+
 describe("枉死城 (第五十一批 F-2)", () => {
   const unclaimed = GROUP_ROWS.unclaimed;
   beforeEach(() => {

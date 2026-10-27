@@ -17,6 +17,9 @@ import type { PaginatedResponse } from "./users";
  * per-role from DB-configured rules, so everything past the identity fields
  * is optional in principle.
  */
+/** `Judgment.duat_stage` (backend/apps/judgment/models.py `DuatStage`); "" = 不涉及。 */
+export type JudgmentDuatStage = "EMBALMING" | "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL" | "";
+
 export interface Judgment extends ArchiveFields {
   id: string;
   /**
@@ -102,6 +105,12 @@ export interface Judgment extends ArchiveFields {
    */
   untimely?: boolean;
   held_until?: string | null;
+  /**
+   * 埃及入殿前(review P2-9,`Judgment.duat_stage`):EMBALMING = 木乃伊 70 天,`held_until` 是那一天;
+   * NAMELESS / IMPROPER_BURIAL 到不了殿,永远候着(409 `duat_unfinished`);EARLY_DEATH 不称心,登记时已送芦苇原。
+   * "" = 不涉及。用 `domain/dates.ts::isDuatBarred` 判断「到不了殿」。
+   */
+  duat_stage?: JudgmentDuatStage;
   /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
@@ -246,7 +255,7 @@ export interface JudgmentClaimRefusal {
   id?: string;
   /** On a batch 404: the ids outside the caller's scope. */
   missing?: string[];
-  /** On `held_until_fated_date` (枉死城): the ISO date the case can first be claimed. */
+  /** On `held_until_fated_date` (枉死城) or `embalming` (埃及木乃伊 70 天): the ISO date the case can first be claimed. */
   held_until?: string;
   /** 申诉改判(`foreign_stops_choice_required`):联审带进来、还没开始的外地站的站序。 */
   foreign_orders?: number[];

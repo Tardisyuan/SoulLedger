@@ -712,6 +712,14 @@
       "recalled_toast": "已召回，回到「已处置」",
       "since": "{{date}} 起失踪",
       "by": "经办：{{name}}"
+    },
+    "duat_passage": {
+      "label": "入殿前情形",
+      "NONE": "葬仪如常",
+      "EARLY_DEATH": "婴儿或早夭",
+      "NAMELESS": "无名者",
+      "IMPROPER_BURIAL": "葬仪不当",
+      "help": "葬仪如常：木乃伊 70 天后灵魂启程前往两真之殿，此前审判不能认领。婴儿或早夭者不受审，直入芦苇原。无名者不入冥界；葬仪不当（身体不全、没有咒语）走不完旅程：这两种审判一直候着。"
     }
   },
   "common": {
@@ -2125,7 +2133,10 @@
       "col_cycle_kind": "世次 / 种类",
       "undefer": "恢复",
       "done_undefer": "已恢复，案子回到队列",
-      "load_more": "更多（还有 {{n}} 件）"
+      "load_more": "更多（还有 {{n}} 件）",
+      "embalming": "这桩审判候至 {{date}}：木乃伊尚未完成，灵魂还没启程前往两真之殿，到那天才能认领。",
+      "duat_unfinished": "这桩审判不能认领：灵魂到不了两真之殿。",
+      "duat_barred_short": "到不了殿，不能认领"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2223,6 +2234,12 @@
         "weighing_rejected": "称心流程被驳回：这件案子要重开或申诉，不能直接执行。",
         "weighing_wavers": "天平摇摆的旧处置不执行：另开一次称量。"
       }
+    },
+    "duat_stage": {
+      "EMBALMING": "木乃伊制作中",
+      "EARLY_DEATH": "早夭 · 直入芦苇原",
+      "NAMELESS": "无名者 · 不入冥界",
+      "IMPROPER_BURIAL": "葬仪不当 · 旅程未竟"
     }
   },
   "audit": {
