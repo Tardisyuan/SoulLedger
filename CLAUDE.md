@@ -282,7 +282,8 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     `node_modules` 与 `backend/.venv` 装在那棵同步树里，锁文件 / package.json 变了才重装(约 2 分钟);数据库是网络 `sl-gates` 里的
     `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关),所以同时跑 PG-only 测试。远端各 runner 8 个 worker,容器限 12 核 / 24 GB,
     各 checkout 的运行在那台上用 `flock` 排队。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因);临时要在本机跑就注释掉 `GATES_REMOTE`。
-    远端失败日志在 `<work>/.sl-tmp/`,留一天。
+    远端失败日志在 `/mnt/cache/appdata/sl-gates/tmp/<checkout>-<哈希>/`,留一天。**临时目录不能放在同步树里**:放在 `/app` 下时，
+    `test_testdb_name` 的子 pytest 会在它的 tmp_path 上层找到仓库根的 conftest,配置生效两次，每次委托运行都红(10-28)。
     实测(后端同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;本机 SQLite `-n 2` 313 s / CPU 566 s;
     本机进程连树莓派 PG 830 s;全在树莓派 753 s。约 100 s 是开头单线程建模板库。
     搬过去时撞到的三处 Linux/macOS 差异(都已修):GNU `mktemp` 要 `XXXXXX`;rsync 保留 Mac 的 uid 时 git 在容器里拒认仓库
