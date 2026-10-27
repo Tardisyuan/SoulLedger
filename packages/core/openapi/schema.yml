@@ -26077,6 +26077,28 @@ components:
       required:
       - soul_id
       - soup_taken_at
+    DuatPassageEnum:
+      enum:
+      - EARLY_DEATH
+      - NAMELESS
+      - IMPROPER_BURIAL
+      type: string
+      description: |-
+        * `EARLY_DEATH` - 婴儿或早夭
+        * `NAMELESS` - 无名者
+        * `IMPROPER_BURIAL` - 葬仪不当
+    DuatStageEnum:
+      enum:
+      - EMBALMING
+      - EARLY_DEATH
+      - NAMELESS
+      - IMPROPER_BURIAL
+      type: string
+      description: |-
+        * `EMBALMING` - 木乃伊制作中
+        * `EARLY_DEATH` - 早夭 · 直入芦苇原
+        * `NAMELESS` - 无名者 · 不入冥界
+        * `IMPROPER_BURIAL` - 葬仪不当 · 旅程未竟
     EffortEnum:
       enum:
       - low
@@ -28276,6 +28298,10 @@ components:
           format: date
           readOnly: true
           nullable: true
+        duat_stage:
+          allOf:
+          - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -28486,6 +28512,7 @@ components:
       - draft_term_years
       - draft_verdict
       - draft_version
+      - duat_stage
       - evidence_count
       - heart_weight
       - held_until
@@ -29093,6 +29120,10 @@ components:
           format: date
           readOnly: true
           nullable: true
+        duat_stage:
+          allOf:
+          - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -29319,6 +29350,7 @@ components:
       - draft_term_years
       - draft_verdict
       - draft_version
+      - duat_stage
       - evidence_admissions
       - evidence_count
       - heart_weight
@@ -35435,6 +35467,10 @@ components:
           format: date
           readOnly: true
           nullable: true
+        duat_stage:
+          allOf:
+          - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -36053,6 +36089,10 @@ components:
         origin_region:
           oneOf:
           - $ref: '#/components/schemas/OriginRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        duat_passage:
+          oneOf:
+          - $ref: '#/components/schemas/DuatPassageEnum'
           - $ref: '#/components/schemas/BlankEnum'
         birth_name:
           type: string
@@ -39937,6 +39977,10 @@ components:
         origin_region:
           oneOf:
           - $ref: '#/components/schemas/OriginRegionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        duat_passage:
+          oneOf:
+          - $ref: '#/components/schemas/DuatPassageEnum'
           - $ref: '#/components/schemas/BlankEnum'
         birth_name:
           type: string

@@ -105,6 +105,12 @@ describe("JudgmentActionBar", () => {
     expect(screen.getByTestId("judgment-claim")).toBeTruthy();
   });
 
+  it("unclaimed but the soul cannot reach the hall (埃及,review P2-9): no 认领, the stage instead", () => {
+    bar({ duat_stage: "IMPROPER_BURIAL", held_until: null });
+    expect(screen.queryByTestId("judgment-claim")).toBeNull();
+    expect(screen.getByTestId("judgment-claim-held")).toHaveTextContent("葬仪不当 · 旅程未竟 · 到不了殿，不能认领");
+  });
+
   it("without judgment.execute: no 认领 / 恢复 / ⋯ (they would 403); 写评议 or 在电脑上继续 stands in", () => {
     const reader = { ...OFFICER, permissions: ["judgment.read"] };
     bar({}, {}, reader);

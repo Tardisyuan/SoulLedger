@@ -612,6 +612,13 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             : t("judgment.untimely")}
         </span>
       )}
+      {/* 埃及入殿前(review P2-9):木乃伊 70 天期间带「候至 日期」,到期后只留阶段名。 */}
+      {judgment.duat_stage && (
+        <span data-testid="desk-duat" className="basis-full text-[oklch(var(--color-ink))]">
+          <DomainEnum namespace="judgment.duat_stage" value={judgment.duat_stage} />
+          {isHeldUntilFatedDate(judgment) && ` · ${t("judgment.held_until", { date: judgment.held_until as string })}`}
+        </span>
+      )}
       {atCityGod && (
         <span data-testid="desk-at-city-god" className="basis-full flex flex-wrap items-center gap-2 text-[oklch(var(--color-ink))]">
           <Badge tone="warning">{t("judgment.at_city_god")}</Badge>
