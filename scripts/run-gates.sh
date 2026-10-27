@@ -1040,7 +1040,9 @@ PROBE_PY
     # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
     XDIST=""
     if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
-        XDIST="-n $PYTEST_WORKERS"
+        # worksteal: an idle worker takes queued tests from a busy one, so the run does not end on one
+        # worker grinding through its slow tail while the other sits idle (2026-10-28).
+        XDIST="-n $PYTEST_WORKERS --dist worksteal"
         echo "    (pytest-xdist: $XDIST)"
     fi
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
@@ -1113,7 +1115,7 @@ PROBE_PY
     # shellcheck disable=SC2086
     # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
     # that is still red says so in its first minute instead of at the end of the selection.
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov --ff $XDIST \
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov --ff --durations=10 $XDIST \
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS \
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
@@ -1131,6 +1133,8 @@ PROBE_PY
         fi
     done
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
+    # The ten slowest, so a run that stalls says where (--durations=10 above).
+    sed -n '/slowest 10 durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
     tail -4 "$PYTEST_LOG"
     if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.

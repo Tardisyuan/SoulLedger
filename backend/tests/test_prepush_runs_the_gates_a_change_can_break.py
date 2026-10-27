@@ -664,6 +664,15 @@ class TestWhatPytestIsInvokedWith:
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert "--ff" in args, args
 
+    def test_workers_steal_work_and_the_slowest_tests_are_named(self, hook, checkouts, fake_backend):
+        """Stalls at ~70-96% were one worker on a slow tail while the other idled (2026-10-28)."""
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "--durations=10" in args, args
+        # The stand-in python has no xdist, so -n never reaches this line here: read the script for it.
+        text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
+        assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"

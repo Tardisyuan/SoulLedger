@@ -34,4 +34,9 @@ def test_the_indexes_exist_on_postgresql():
         found = dict(cursor.fetchall())
     for column in migration.SEARCHED:
         definition = found.get(migration.index_name(column), "")
-        assert "gin_trgm_ops" in definition and f"upper(({column})::text)" in definition.lower(), definition
+        # PostgreSQL prints the cast only where it does something: `upper((name)::text)` for a varchar
+        # column, `upper(description)` for a text one (text::text is dropped at parse time, for the
+        # index and for the query alike, so the planner still matches them).
+        lowered = definition.lower()
+        assert "gin_trgm_ops" in lowered, definition
+        assert f"upper(({column})::text)" in lowered or f"upper({column})" in lowered, definition
