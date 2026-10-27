@@ -52,7 +52,7 @@ class TestReincarnationAPI:
 
 @pytest.mark.django_db
 class TestRebirthEndpointsRespectTheStateMachine:
-    """/complete/ and /reborn/ used to write DISPOSED → REINCARNATING directly.
+    """/complete/ (removed 2026-10-27) and /reborn/ used to write DISPOSED → REINCARNATING directly.
 
     Both assigned current_state and called save(), never asking
     Soul.can_transition_to. For a terminal cosmology that produced the exact
@@ -85,28 +85,6 @@ class TestRebirthEndpointsRespectTheStateMachine:
         soul.refresh_from_db()
         assert soul.current_state == SoulState.DISPOSED
         assert Reincarnation.objects.filter(soul=soul).count() == 0
-
-    def test_complete_refuses_a_terminal_cosmology_without_writing_the_state(
-        self, api_client, eu_admin_user, eu_tenant
-    ):
-        soul = Soul.objects.create(
-            name="Purgatorio Soul", current_state=SoulState.DISPOSED, tenant=eu_tenant,
-        )
-        reincarnation = Reincarnation.objects.create(
-            soul=soul, tenant=eu_tenant, cycle_count=1, rebirth_form="HUMAN",
-        )
-        client = _auth(api_client, eu_admin_user)
-
-        response = client.post(
-            f"/api/v1/reincarnation/{reincarnation.id}/complete/", {}, format="json"
-        )
-
-        assert response.status_code == 409
-        assert response.data["code"] == "REBIRTH_NOT_APPLICABLE"
-        assert response.data["civilization"] == "EUROPEAN"
-
-        soul.refresh_from_db()
-        assert soul.current_state == SoulState.DISPOSED
 
     def test_reborn_refuses_a_settled_soul_and_says_so_as_a_state_conflict(
         self, api_client, admin_user, cn_tenant
@@ -158,6 +136,40 @@ class TestRebirthEndpointsRespectTheStateMachine:
 
 
 @pytest.mark.django_db
+class TestOneRebirthWritesOneRecord:
+    """Review business #8 (2026-10-27). `{id}/complete/` called complete_rebirth on an existing row, and
+    complete_rebirth always creates one, so a rebirth through it wrote two rows and moved
+    `Soul.life_index` (= the row count) by 2. `complete` and the CRUD writes are gone; `reborn` is the
+    only HTTP door, and it moves the soul one life on."""
+
+    def test_reborn_moves_the_life_index_by_exactly_one(self, api_client, admin_user, cn_tenant):
+        soul = Soul.objects.create(name="One Life On", current_state=SoulState.DISPOSED, tenant=cn_tenant)
+        assert soul.life_index == 0
+        client = _auth(api_client, admin_user)
+
+        response = client.post("/api/v1/reincarnation/reborn/", {"soul_id": str(soul.id)}, format="json")
+
+        assert response.status_code == 201
+        soul.refresh_from_db()
+        assert soul.life_index == 1
+        assert response.data["cycle_count"] == 1
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 1
+
+    def test_the_complete_route_and_the_crud_writes_are_gone(self, api_client, admin_user, cn_tenant):
+        soul = Soul.objects.create(name="No Second Row", current_state=SoulState.DISPOSED, tenant=cn_tenant)
+        record = Reincarnation.objects.create(soul=soul, tenant=cn_tenant, cycle_count=1, rebirth_form="HUMAN")
+        client = _auth(api_client, admin_user)
+
+        assert client.post(f"/api/v1/reincarnation/{record.id}/complete/", {}, format="json").status_code == 404
+        assert client.post("/api/v1/reincarnation/", {"soul": str(soul.id)}, format="json").status_code == 405
+        assert client.patch(f"/api/v1/reincarnation/{record.id}/", {"notes": "x"}, format="json").status_code == 405
+        assert client.delete(f"/api/v1/reincarnation/{record.id}/").status_code == 405
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 1
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+
+
+@pytest.mark.django_db
 class TestRebirthFormIsValidated:
     """/complete/ and /reborn/ are the only writes in this app that skip a
     serializer: they read request.data directly and hand the strings to
@@ -195,30 +207,6 @@ class TestRebirthFormIsValidated:
         assert Reincarnation.all_objects.filter(soul=soul).count() == 0
         soul.refresh_from_db()
         assert soul.current_state == SoulState.DISPOSED
-
-    def test_complete_refuses_a_rebirth_form_outside_the_enum(
-        self, api_client, admin_user, cn_tenant
-    ):
-        soul = Soul.objects.create(
-            name="Garbage Form Complete", current_state=SoulState.DISPOSED, tenant=cn_tenant,
-        )
-        reincarnation = Reincarnation.objects.create(
-            soul=soul, tenant=cn_tenant, cycle_count=1, rebirth_form=RebirthForm.HUMAN,
-        )
-        client = _auth(api_client, admin_user)
-
-        response = client.post(
-            f"/api/v1/reincarnation/{reincarnation.id}/complete/",
-            {"rebirth_form": "PASTA_MONSTER"},
-            format="json",
-        )
-
-        assert response.status_code == 400
-        assert "rebirth_form" in response.data
-        soul.refresh_from_db()
-        assert soul.current_state == SoulState.DISPOSED
-        reincarnation.refresh_from_db()
-        assert reincarnation.rebirth_form == RebirthForm.HUMAN
 
     @pytest.mark.parametrize("form", list(SIX_PATHS))
     def test_reborn_accepts_every_one_of_the_six_paths(
@@ -263,32 +251,6 @@ class TestRebirthFormIsValidated:
         assert response.status_code == 400
         assert "six paths" in str(response.data["rebirth_form"][0])
         assert Reincarnation.all_objects.filter(soul=soul).count() == 0
-
-    def test_complete_still_honours_a_legacy_other_row_when_the_field_is_omitted(
-        self, api_client, admin_user, cn_tenant
-    ):
-        """Refusing to *write* OTHER must not make rows that already hold it
-        uncompletable. An omitted rebirth_form falls back to the record's own
-        value and is not re-validated."""
-        soul = Soul.objects.create(
-            name="Old Record", current_state=SoulState.DISPOSED, tenant=cn_tenant,
-        )
-        reincarnation = Reincarnation.objects.create(
-            soul=soul, tenant=cn_tenant, cycle_count=1, rebirth_form=RebirthForm.OTHER,
-        )
-        client = _auth(api_client, admin_user)
-
-        response = client.post(
-            f"/api/v1/reincarnation/{reincarnation.id}/complete/", {}, format="json"
-        )
-
-        assert response.status_code == 200
-        soul.refresh_from_db()
-        assert soul.current_state == SoulState.ALIVE
-        assert (
-            Reincarnation.all_objects.filter(soul=soul, rebirth_form=RebirthForm.OTHER).count()
-            == 2
-        )
 
     def test_new_identity_longer_than_the_column_is_refused(
         self, api_client, admin_user, cn_tenant

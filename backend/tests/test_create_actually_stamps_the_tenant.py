@@ -43,15 +43,17 @@ Each case was checked by reverting its fix and watching this file go red:
   `test_a_judgment_created_by_a_judge_carries_the_tenant`;
 * removing `TenantCreateMixin` from `DispositionViewSet` reddens
   `test_a_disposition_created_by_a_judge_carries_the_tenant`;
-* removing it from `ReincarnationViewSet` reddens
-  `test_a_reincarnation_created_by_a_judge_carries_the_tenant`.
+* `ReincarnationViewSet` lost its create route on 2026-10-27 (the record is
+  read-only; review business #8), so `TenantCreateMixin` went with it. Its one
+  writer, `ReincarnationService.complete_rebirth`, stamps `tenant=soul.tenant`
+  itself; dropping that keyword reddens
+  `test_a_rebirth_carries_the_souls_tenant`.
 """
 
 import pytest
 
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment
-from apps.realms.models import Realm
 from apps.reincarnation.models import Reincarnation
 from apps.souls.models import Soul, SoulState
 
@@ -111,18 +113,10 @@ class TestCreateStampsTheTenant:
         row = Disposition.all_objects.get(id=res.data["id"])
         assert row.tenant_id == cn_tenant.pk
 
-    def test_a_reincarnation_created_by_a_judge_carries_the_tenant(
-        self, api_client, auth_headers, cn_tenant, cn_soul
-    ):
-        realm = Realm.objects.create(
-            realm_code="TEST_REBIRTH", name_en="Test", civilization="CHINESE", tenant=cn_tenant
-        )
-        res = api_client.post(
-            "/api/v1/reincarnation/",
-            {"soul": str(cn_soul.id), "target_realm": str(realm.id)},
-            format="json",
-            **auth_headers,
-        )
-        assert res.status_code == 201, res.data
-        row = Reincarnation.all_objects.get(id=res.data["id"])
-        assert row.tenant_id == cn_tenant.pk
+    def test_a_rebirth_carries_the_souls_tenant(self, cn_tenant, cn_soul):
+        from apps.reincarnation.services import ReincarnationService
+
+        cn_soul.current_state = SoulState.REINCARNATING
+        cn_soul.save(update_fields=["current_state"])
+        row = ReincarnationService.complete_rebirth(soul=cn_soul, new_identity="下一世")
+        assert Reincarnation.all_objects.get(pk=row.pk).tenant_id == cn_tenant.pk

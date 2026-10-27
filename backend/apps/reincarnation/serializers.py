@@ -8,9 +8,9 @@ from apps.reincarnation.models import SIX_PATHS, RebirthForm, Reincarnation
 
 
 class RebirthRequestSerializer(serializers.Serializer):
-    """The write payload of /complete/ and /reborn/.
+    """The write payload of /reborn/ (and of /complete/ until 2026-10-27).
 
-    Those two actions are the only writes in this app that do not go through
+    Those actions were the only writes in this app that do not go through
     a ModelSerializer: they read `request.data.get(...)` and hand the raw
     strings to ReincarnationService.complete_rebirth, which calls
     Reincarnation.objects.create(). `create()` runs no validators and never
@@ -29,9 +29,9 @@ class RebirthRequestSerializer(serializers.Serializer):
     Accepted values end up narrower than the model's: RebirthForm.OTHER
     stays a legal *stored* value so rows written before the six paths existed
     remain readable through the admin and the API filter, but nothing may
-    newly write it — it is not a seventh path. Omitting the field entirely
-    still falls back to whatever the existing record holds, which is what
-    keeps a legacy OTHER row completable.
+    newly write it — it is not a seventh path. (`/complete/`, which fell back
+    to an existing record's form, was removed 2026-10-27: it wrote a second
+    record. `/reborn/` is the one action left and defaults to HUMAN.)
 
     OTHER is kept in the ChoiceField's own choices and refused one layer
     later, in validate_rebirth_form. Narrowing the choices to SIX_PATHS would

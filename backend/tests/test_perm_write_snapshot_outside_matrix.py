@@ -17,7 +17,10 @@ Four of the five do now, so that name had stopped being true. The property
 that has not expired, and that the current name records, is which routes
 ``test_matrix_snapshot.py`` leaves uncovered.
 
-27 write endpoints × 5 roles = 135 cases. The reincarnation/dispatch/
+23 write endpoints × 5 roles = 115 cases (27 / 135 until 2026-10-27, when the
+reincarnation record became read-only — see READ-ONLY REINCARNATION below and
+``apps/reincarnation/views.py``; four reincarnation routes and their 6 denials
+left the file with the routes themselves). The reincarnation/dispatch/
 notifications tranche moved 34 (reincarnation 9, dispatch 25, notifications
 0); this tranche enforces ``org`` on top of that and moves 9 more
 (``org.manage`` — ADMIN, MODERATOR — denies JUDGE, GUARDIAN, VIEWER on all
@@ -40,10 +43,9 @@ that policy does not account for.
 
 What each app turned out to be
 ------------------------------
-* ``reincarnation`` — 5 writable endpoints. ENFORCED. 9 codes moved: VIEWER
-  loses the three CRUD writes (``reincarnation.manage``), and JUDGE, GUARDIAN
-  and VIEWER all lose ``complete`` and ``reborn``, which are held by ADMIN and
-  MODERATOR alone.
+* ``reincarnation`` — 1 writable endpoint left (``reborn``; 5 until 2026-10-27).
+  ENFORCED. JUDGE, GUARDIAN and VIEWER lose ``reborn``, held by ADMIN and
+  MODERATOR alone. The three CRUD writes and ``complete`` no longer exist.
 * ``dispatch`` — 11 writable endpoints across two viewsets. ENFORCED, and the
   largest move in the tranche at 25 codes, because JUDGE holds no ``dispatch.*``
   codename whatsoever and loses all eleven. **Enforced is not the same as
@@ -149,11 +151,10 @@ Findings that are not permission bugs but were measured here
   See NOTIFICATION_CREATE. Enforcing the app did not change it and could not:
   all five roles hold the codename, so the request reaches the same broken
   save.
-* ``ReincarnationSerializer`` declares no ``read_only_fields``, so
-  ``cycle_count``, ``new_identity``, ``rebirth_form`` and the ``soul`` FK
-  itself are all writable under ``reincarnation.manage``. That is record
-  integrity, not authorization — see RECORD INTEGRITY below, and do not
-  "fix" it by narrowing a codename that was never the problem.
+* ``ReincarnationSerializer`` used to make ``cycle_count``, ``new_identity``,
+  ``rebirth_form`` and the ``soul`` FK writable under ``reincarnation.manage``.
+  Record integrity, not authorization; fixed 2026-10-27 by removing the write
+  routes, not by narrowing a codename — see READ-ONLY REINCARNATION below.
 * ``apps/notifications/views.py`` used to carry a comment claiming only ADMIN
   and MODERATOR hold ``notification.read`` and that enforcement would cost the
   other three their inbox. Untrue of ``ROLE_PERMISSIONS`` then and now; the
@@ -217,15 +218,8 @@ def _views():
 
 DECLARED = {
     # ── reincarnation ────────────────────────────────────────────────────
-    # reincarnation.manage is held by ADMIN, MODERATOR, JUDGE, GUARDIAN.
-    # VIEWER holds reincarnation.read and stops there.
-    "POST /reincarnation/": ("reincarnation", "create", ["reincarnation.manage"]),
-    "PATCH /reincarnation/{id}/": ("reincarnation", "partial_update", ["reincarnation.manage"]),
-    "DELETE /reincarnation/{id}/": ("reincarnation", "destroy", ["reincarnation.manage"]),
-    # reincarnation.complete / .reborn are held by ADMIN and MODERATOR only.
-    # JUDGE and GUARDIAN hold `manage` but not these two — editing the record
-    # of a rebirth and performing one are separated on purpose.
-    "POST /reincarnation/{id}/complete/": ("reincarnation", "complete", ["reincarnation.complete"]),
+    # reincarnation.reborn is held by ADMIN and MODERATOR only. The record
+    # itself has no write route (2026-10-27).
     "POST /reincarnation/reborn/": ("reincarnation", "reborn", ["reincarnation.reborn"]),
     # ── dispatch: DispatchRecordViewSet ──────────────────────────────────
     # dispatch.manage is held by ADMIN, MODERATOR, GUARDIAN. JUDGE does not
@@ -297,25 +291,10 @@ def _denied(*roles):
     return build
 
 
-# ── reincarnation: 9 codes moved ─────────────────────────────────────────────
-# reincarnation.manage — ADMIN, MODERATOR, JUDGE, GUARDIAN. VIEWER holds
-# reincarnation.read and stops there, so VIEWER alone loses the three CRUD
-# writes. Three codes: 201->403, 200->403, 204->403.
-REINCARNATION_CREATE = _denied("VIEWER")(201)
-REINCARNATION_PATCH = _denied("VIEWER")(200)
-REINCARNATION_DELETE = _denied("VIEWER")(204)
-
-# reincarnation.complete — ADMIN and MODERATOR only. JUDGE and GUARDIAN hold
-# `manage` but not this, and VIEWER holds neither, so three roles lose it.
-# This is the endpoint with teeth: it walks the soul DISPOSED ->
-# REINCARNATING -> ALIVE, renames it to the new identity, and resets
-# merit/demerit from the ledger. Editing the record of a rebirth and
-# performing one are separated on purpose, and until now they were not.
-REINCARNATION_COMPLETE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
-
-# reincarnation.reborn — ADMIN and MODERATOR only, same three roles denied for
-# the same reason. Same side effect as `complete`, reachable without an
-# existing Reincarnation row.
+# ── reincarnation: 3 codes ──────────────────────────────────────────────────
+# (9 until 2026-10-27; CRUD and `complete` were removed — READ-ONLY REINCARNATION.)
+# reincarnation.reborn — ADMIN and MODERATOR only. It walks the soul DISPOSED ->
+# REINCARNATING -> ALIVE, renames it and resets merit/demerit from the ledger.
 REINCARNATION_REBORN = _denied("JUDGE", "GUARDIAN", "VIEWER")(201)
 
 # ── dispatch: 25 codes moved, and JUDGE carries most of them ─────────────────
@@ -409,10 +388,6 @@ DEATH_SYNC_WEBHOOK_CREATE = ALL_401
 
 
 EXPECTED = {
-    "POST /reincarnation/": REINCARNATION_CREATE,
-    "PATCH /reincarnation/{id}/": REINCARNATION_PATCH,
-    "DELETE /reincarnation/{id}/": REINCARNATION_DELETE,
-    "POST /reincarnation/{id}/complete/": REINCARNATION_COMPLETE,
     "POST /reincarnation/reborn/": REINCARNATION_REBORN,
     "POST /dispatch/records/": DISPATCH_RECORD_CREATE,
     "PATCH /dispatch/records/{id}/": DISPATCH_RECORD_PATCH,
@@ -560,88 +535,6 @@ def _is_deleted(model, pk):
 # ---------------------------------------------------------------------------
 # reincarnation
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("role", ROLES)
-def test_reincarnation_create(role_clients, snapshot_tenants, role):
-    """reincarnation.manage — ADMIN/MODERATOR/JUDGE/GUARDIAN. VIEWER lacks it and is refused."""
-    from apps.reincarnation.models import Reincarnation
-
-    clients, _ = role_clients
-    home, _o = snapshot_tenants
-    soul = _soul(home, f"wsnap-rc-{role}")
-    response = clients[role].post(
-        "/api/v1/reincarnation/",
-        {"soul": str(soul.id), "target_realm": "人间"},
-        format="json",
-    )
-    assert response.status_code == REINCARNATION_CREATE[role], _msg(
-        role, "POST /reincarnation/", response
-    )
-    # A denial that still wrote the row would be the worst of both worlds, so
-    # assert the table and not just the status line.
-    assert Reincarnation.objects.filter(soul=soul).exists() == (REINCARNATION_CREATE[role] == 201)
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("role", ROLES)
-def test_reincarnation_partial_update(role_clients, snapshot_tenants, role):
-    """reincarnation.manage. VIEWER lacks it; the other four rewrite the notes on any rebirth."""
-    from apps.reincarnation.models import Reincarnation
-
-    clients, _ = role_clients
-    home, _o = snapshot_tenants
-    record = _reincarnation(home, _soul(home, f"wsnap-rp-{role}"))
-    response = clients[role].patch(
-        f"/api/v1/reincarnation/{record.id}/", {"notes": f"EDITED_BY_{role}"}, format="json"
-    )
-    assert response.status_code == REINCARNATION_PATCH[role], _msg(
-        role, "PATCH /reincarnation/{id}/", response
-    )
-    expected_notes = f"EDITED_BY_{role}" if REINCARNATION_PATCH[role] == 200 else ""
-    assert Reincarnation.objects.get(pk=record.pk).notes == expected_notes
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("role", ROLES)
-def test_reincarnation_destroy(role_clients, snapshot_tenants, role):
-    """reincarnation.manage. VIEWER lacks it and can no longer erase a rebirth record."""
-    from apps.reincarnation.models import Reincarnation
-
-    clients, _ = role_clients
-    home, _o = snapshot_tenants
-    record = _reincarnation(home, _soul(home, f"wsnap-rd-{role}"))
-    response = clients[role].delete(f"/api/v1/reincarnation/{record.id}/")
-    assert response.status_code == REINCARNATION_DELETE[role], _msg(
-        role, "DELETE /reincarnation/{id}/", response
-    )
-    assert _is_deleted(Reincarnation, record.pk) == (REINCARNATION_DELETE[role] == 204)
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("role", ROLES)
-def test_reincarnation_complete(role_clients, snapshot_tenants, role):
-    """reincarnation.complete — ADMIN/MODERATOR. JUDGE, GUARDIAN and VIEWER lack it."""
-    from apps.souls.models import Soul, SoulState
-
-    clients, _ = role_clients
-    home, _o = snapshot_tenants
-    soul = _soul(home, f"wsnap-rcm-{role}", state=SoulState.DISPOSED)
-    record = _reincarnation(home, soul)
-    response = clients[role].post(
-        f"/api/v1/reincarnation/{record.id}/complete/",
-        {"new_identity": f"REBORN_BY_{role}", "rebirth_form": "HUMAN"},
-        format="json",
-    )
-    assert response.status_code == REINCARNATION_COMPLETE[role], _msg(
-        role, "POST /reincarnation/{id}/complete/", response
-    )
-    # The rebirth actually lands: DISPOSED -> REINCARNATING -> ALIVE, and the
-    # soul is renamed to the new identity. Asserted so a future 403 has to
-    # prove it prevented the write, not merely reported one.
-    expected_state = SoulState.ALIVE if REINCARNATION_COMPLETE[role] == 200 else SoulState.DISPOSED
-    assert Soul.objects.get(pk=soul.pk).current_state == expected_state
 
 
 @pytest.mark.django_db
@@ -1451,8 +1344,8 @@ def test_every_denial_traces_to_a_missing_codename():
     by_app = {}
     for endpoint, _role in denials:
         by_app[_app_of(endpoint)] = by_app.get(_app_of(endpoint), 0) + 1
-    assert by_app == {"reincarnation": 9, "dispatch": 25, "organizations": 9}, by_app
-    assert len(denials) == 43, sorted(denials)
+    assert by_app == {"reincarnation": 3, "dispatch": 25, "organizations": 9}, by_app
+    assert len(denials) == 37, sorted(denials)
 
 
 def test_unenforced_apps_would_still_move_nothing():
@@ -1520,8 +1413,10 @@ def _matrix_test_names():
 def test_snapshot_covers_every_write_endpoint_it_claims_to():
     """Guard the shape: deleting rows to make a fix pass should fail, not shrink the run.
 
-    27 write endpoints × 5 roles = 135 cases. 26 of the 27 are status-code
-    cases (EXPECTED); POST /notifications/ is the exception and is asserted as
+    23 write endpoints × 5 roles = 115 cases (27 / 135 until the reincarnation
+    record went read-only on 2026-10-27 — four routes removed from the API, not
+    rows deleted from this file to make something pass). 22 of the 23 are
+    status-code cases (EXPECTED); POST /notifications/ is the exception and is asserted as
     a raised IntegrityError instead, so it lives in DECLARED but not EXPECTED.
 
     This tranche moved 34 codes and deleted nothing, which is the property this
@@ -1530,10 +1425,10 @@ def test_snapshot_covers_every_write_endpoint_it_claims_to():
     delete a case rather than change a 201 to a 403 — the whole point of the
     file is that changing it is cheap and deleting from it is loud.
     """
-    assert len(DECLARED) == 27
-    assert len(EXPECTED) == 26
+    assert len(DECLARED) == 23
+    assert len(EXPECTED) == 22
     assert set(EXPECTED) | {"POST /notifications/"} == set(DECLARED)
-    assert len(DECLARED) * len(ROLES) == 135
+    assert len(DECLARED) * len(ROLES) == 115
     for endpoint, codes in EXPECTED.items():
         assert set(codes) == set(ROLES), endpoint
     # DECLARED and EXPECTED are data, so dropping an endpoint shrinks them and
@@ -1563,14 +1458,10 @@ def test_snapshot_covers_every_write_endpoint_it_claims_to():
         "test_organization_create",
         "test_organization_destroy",
         "test_organization_partial_update",
-        "test_reincarnation_complete",
-        "test_reincarnation_create",
-        "test_reincarnation_destroy",
-        "test_reincarnation_partial_update",
         "test_reincarnation_reborn",
     ], _matrix_test_names()
     assert len(_matrix_test_names()) == len(DECLARED)
-    # Three of the 27 declare no codename at all, all three in `death_sync`.
+    # Three of the 23 declare no codename at all, all three in `death_sync`.
     # `org` used to contribute three more — this tranche answered that
     # question, so the count dropped from 6 to 3. That count is the blocker
     # list's length; if it grows, an app gained a write endpoint no codename
@@ -1731,19 +1622,14 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
 # disagree most visibly: each is an endpoint whose denial set is non-trivial
 # (or, for notifications, provably empty).
 DB_PATH_PROBES = {
-    # reincarnation.complete — ADMIN/MODERATOR only, three roles refused.
-    "POST /reincarnation/{id}/complete/": (
+    # reincarnation.reborn — ADMIN/MODERATOR only, three roles refused.
+    "POST /reincarnation/reborn/": (
         lambda client, ctx: client.post(
-            f"/api/v1/reincarnation/{ctx['reincarnation'].id}/complete/",
-            {"new_identity": "dbpath", "rebirth_form": "HUMAN"},
+            "/api/v1/reincarnation/reborn/",
+            {"soul_id": str(ctx["reincarnation"].soul_id), "new_identity": "dbpath", "rebirth_form": "HUMAN"},
             format="json",
         ),
-        REINCARNATION_COMPLETE,
-    ),
-    # reincarnation.manage — VIEWER alone refused.
-    "DELETE /reincarnation/{id}/": (
-        lambda client, ctx: client.delete(f"/api/v1/reincarnation/{ctx['reincarnation'].id}/"),
-        REINCARNATION_DELETE,
+        REINCARNATION_REBORN,
     ),
     # dispatch.approve — ADMIN/MODERATOR only, three roles refused.
     "POST /dispatch/records/{id}/approve/": (
@@ -2131,214 +2017,48 @@ def test_cross_tenant_judgment_status_and_conclusion_type_no_longer_reach_via_pa
 
 
 # ---------------------------------------------------------------------------
-# THE BYPASS THAT DOES NOT EXIST.  (reincarnation)
+# READ-ONLY REINCARNATION.  (2026-10-27, review business #8)
 #
-# A REFUTED HYPOTHESIS, ESTABLISHED BY MEASUREMENT, and recorded at the same
-# weight as the confirmed one above — because "we checked and it is not there"
-# is only worth anything if it was actually checked.
-#
-# reincarnation has the precondition for the tranche-2 pattern exactly:
-# reincarnation.complete and .reborn are held by ADMIN and MODERATOR, while
-# reincarnation.manage — which create/partial_update/destroy map to — is held by
-# those two AND JUDGE AND GUARDIAN. A strictly wider holder set guarding the
-# CRUD route, which is the whole shape.
-#
-# THE BYPASS IS STILL ABSENT, and the reason is structural rather than lucky:
-# everything `complete` and `reborn` do to a soul lives in
-# ReincarnationService.complete_rebirth — the transition to REINCARNATING and
-# back to ALIVE, the ledger carryover into merit_score/demerit_score, clearing
-# death_date and origin_location, the rename to new_identity, the
-# REINCARNATION_COMPLETED event. The Reincarnation model has no signals and no
-# save() override, so writing its row through CRUD reaches none of it. The
-# pattern needs "the same FIELDS writable through the wider route"; here the
-# fields the actions write are on a different model entirely.
-#
-# So JUDGE's and GUARDIAN's 403s on complete/reborn are real denials with no
-# walk-around, and that is asserted below rather than asserted about.
-#
-# WHAT IS REACHABLE UNDER reincarnation.manage IS A DIFFERENT FINDING, and it
-# must not be filed as this one. See RECORD INTEGRITY below.
+# This section used to record two things about the reincarnation CRUD route:
+# that it could not reach the soul-side effects `complete` / `reborn` guard
+# (no bypass), and that it let any reincarnation.manage holder write history
+# that never happened — set cycle_count, repoint a rebirth at another soul, or
+# POST a row that moved Soul.life_index and took a quota place with no rebirth
+# behind it. The repair is not read_only_fields on some of the columns: the
+# record has no write route at all now. A row exists only because
+# ReincarnationService.complete_rebirth wrote it. `complete` went too — it
+# called complete_rebirth on an existing row and so always wrote a second one.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("role", ["JUDGE", "GUARDIAN"])
-def test_the_crud_route_cannot_reach_the_soul_state_complete_and_reborn_write(
-    role_clients, snapshot_tenants, role
-):
-    """Denied reincarnation.complete/.reborn, and the wide route does NOT substitute.
+def test_no_role_can_write_a_reincarnation_record_by_hand(role_clients, snapshot_tenants):
+    """Every role — ADMIN included — gets 405 from the CRUD writes and 404 from `complete`, and nothing moves.
 
-    The negative result, driven rather than reasoned: after a 403 on both named
-    actions and a successful 200 on PATCH plus 201 on POST under
-    reincarnation.manage, the soul is byte-for-byte where it started. Every
-    field complete_rebirth would have written is asserted unchanged, so a future
-    change that gives the CRUD route a soul-side effect — a signal, a save()
-    override, a serializer that reaches through the FK — fails here instead of
-    quietly opening the bypass this test says is absent.
+    Loops over the roles instead of parametrizing: a role-parametrized test with this signature is
+    counted as a write-matrix case by `_matrix_test_names`, and these are routes that no longer exist.
     """
     from apps.reincarnation.models import Reincarnation
     from apps.souls.models import Soul, SoulState
 
     clients, _users = role_clients
     home, _other = snapshot_tenants
-    soul = _soul(home, f"no-bypass-{role}", state=SoulState.DISPOSED)
-    before = Soul.objects.get(pk=soul.pk)
-    record = _reincarnation(home, soul)
-    client = clients[role]
+    for role in ROLES:
+        soul = _soul(home, f"read-only-{role}", state=SoulState.DISPOSED)
+        record = _reincarnation(home, soul)
+        client = clients[role]
 
-    denied_complete = client.post(
-        f"/api/v1/reincarnation/{record.id}/complete/",
-        {"new_identity": f"FORGED_BY_{role}", "rebirth_form": "HUMAN"},
-        format="json",
-    )
-    assert denied_complete.status_code == 403, f"{role} is supposed to lack reincarnation.complete"
+        created = client.post(
+            "/api/v1/reincarnation/", {"soul": str(soul.id), "target_realm": "人间"}, format="json"
+        )
+        patched = client.patch(f"/api/v1/reincarnation/{record.id}/", {"cycle_count": 99}, format="json")
+        put = client.put(f"/api/v1/reincarnation/{record.id}/", {"soul": str(soul.id)}, format="json")
+        deleted = client.delete(f"/api/v1/reincarnation/{record.id}/")
+        completed = client.post(f"/api/v1/reincarnation/{record.id}/complete/", {}, format="json")
 
-    denied_reborn = client.post(
-        "/api/v1/reincarnation/reborn/",
-        {"soul_id": str(soul.id), "new_identity": f"FORGED_BY_{role}"},
-        format="json",
-    )
-    assert denied_reborn.status_code == 403, f"{role} is supposed to lack reincarnation.reborn"
-
-    # The wide route, which the role DOES hold, and which succeeds.
-    allowed = client.patch(
-        f"/api/v1/reincarnation/{record.id}/",
-        {"new_identity": f"FORGED_BY_{role}", "rebirth_form": "DIVINE", "notes": "walked around"},
-        format="json",
-    )
-    assert allowed.status_code == 200, f"{role} is supposed to hold reincarnation.manage"
-    assert Reincarnation.objects.get(pk=record.pk).new_identity == f"FORGED_BY_{role}"
-
-    # And the soul is untouched. This is the assertion that makes the negative
-    # result a result rather than an absence of evidence.
-    after = Soul.objects.get(pk=soul.pk)
-    assert after.current_state == SoulState.DISPOSED, (
-        "The CRUD route moved the soul's state. The bypass this test says does "
-        "not exist now does — check for a new signal or save() override on "
-        "Reincarnation before touching any codename."
-    )
-    assert after.name == before.name
-    assert after.death_date == before.death_date
-    assert after.merit_score == before.merit_score
-    assert after.demerit_score == before.demerit_score
-
-    # Creating a fresh record for an untouched soul is equally inert.
-    soul2 = _soul(home, f"no-bypass-create-{role}", state=SoulState.DISPOSED)
-    created = client.post(
-        "/api/v1/reincarnation/",
-        {"soul": str(soul2.id), "target_realm": "人间", "new_identity": "FORGED"},
-        format="json",
-    )
-    assert created.status_code == 201
-    assert Soul.objects.get(pk=soul2.pk).current_state == SoulState.DISPOSED
-
-
-# ---------------------------------------------------------------------------
-# RECORD INTEGRITY, NOT AUTHORIZATION.  (reincarnation)
-#
-# ReincarnationSerializer declares no read_only_fields at all, so every field it
-# lists is writable under reincarnation.manage. That is real, and it is NOT the
-# tranche-2 bypass — no narrow codename is being escaped, because the CRUD route
-# reaches nothing a custom action guards. It is a serializer that lets a holder
-# write history that never happened.
-#
-# Naming it accurately is the point. Narrowing reincarnation.manage, or moving
-# these fields behind reincarnation.complete, would be "fixing" a codename that
-# was never the problem — the holders of `manage` are supposed to be able to
-# edit rebirth records; they are not supposed to be able to invent them.
-#
-# NOT FIXED HERE: read_only_fields on the serializer is the repair, and which
-# fields belong there is the lead's call.
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-def test_cycle_count_is_free_text_though_complete_rebirth_derives_it(
-    role_clients, snapshot_tenants
-):
-    """A soul's count of past lives is a number any reincarnation.manage holder sets.
-
-    ReincarnationService.complete_rebirth computes cycle_count as
-    `soul.reincarnations.count() + 1` — it is derived, and derived from rows
-    that exist. Through the CRUD route it is an ordinary writable integer, so
-    the number of times a soul has been round the wheel can be set to anything
-    without those lives having occurred.
-    """
-    from apps.reincarnation.models import Reincarnation
-
-    clients, _users = role_clients
-    home, _other = snapshot_tenants
-    soul = _soul(home, "integrity-cycle-count")
-    record = _reincarnation(home, soul)
-    assert soul.reincarnations.count() == 1
-
-    allowed = clients["GUARDIAN"].patch(
-        f"/api/v1/reincarnation/{record.id}/", {"cycle_count": 99}, format="json"
-    )
-    assert allowed.status_code == 200, (
-        "If cycle_count became read-only, this is fixed. Delete this test."
-    )
-    assert Reincarnation.objects.get(pk=record.pk).cycle_count == 99
-    # And the rows that would have to exist for 99 to be true do not.
-    assert soul.reincarnations.count() == 1
-
-
-@pytest.mark.django_db
-def test_an_existing_rebirth_record_can_be_repointed_at_a_different_soul(
-    role_clients, snapshot_tenants
-):
-    """The `soul` FK is writable, so a rebirth can be reattributed after the fact.
-
-    Sharper than cycle_count, because it does not fabricate a life — it moves
-    one. A rebirth that genuinely happened to soul A can be made to read as
-    soul B's, and the ledger carryover, identity and cycle history recorded on
-    that row travel with it.
-    """
-    from apps.reincarnation.models import Reincarnation
-
-    clients, _users = role_clients
-    home, _other = snapshot_tenants
-    original = _soul(home, "integrity-soul-a")
-    other_soul = _soul(home, "integrity-soul-b")
-    record = _reincarnation(home, original)
-
-    allowed = clients["GUARDIAN"].patch(
-        f"/api/v1/reincarnation/{record.id}/", {"soul": str(other_soul.id)}, format="json"
-    )
-    assert allowed.status_code == 200, (
-        "If `soul` became read-only, this is fixed. Delete this test."
-    )
-    assert Reincarnation.objects.get(pk=record.pk).soul_id == other_soul.pk, (
-        "A rebirth record was reattributed to a different soul."
-    )
-
-
-@pytest.mark.django_db
-def test_reincarnation_serializer_declares_no_read_only_fields():
-    """Pin the cause, not only the two symptoms above.
-
-    The two tests before this one probe individual fields. This one asserts the
-    shape that produced both, so that fixing `soul` and `cycle_count` alone —
-    and leaving new_identity, rebirth_form, target_realm and previous_realm
-    equally writable — does not read as the job being done.
-    """
-    from apps.reincarnation.serializers import ReincarnationSerializer
-
-    meta = ReincarnationSerializer.Meta
-    assert getattr(meta, "read_only_fields", ()) == (), (
-        "ReincarnationSerializer gained read_only_fields. Good — check which "
-        "fields, and retire whichever of the two tests above it covers."
-    )
-    writable = {
-        name for name, field in ReincarnationSerializer().get_fields().items() if not field.read_only
-    }
-    assert writable == {
-        "soul",
-        "disposition",
-        "target_realm",
-        "rebirth_form",
-        "cycle_count",
-        "previous_realm",
-        "new_identity",
-        "notes",
-    }, sorted(writable)
+        codes = (created.status_code, patched.status_code, put.status_code, deleted.status_code, completed.status_code)
+        assert codes == (405, 405, 405, 405, 404), (role, codes)
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 1, role
+        row = Reincarnation.all_objects.get(pk=record.pk)
+        assert (row.cycle_count, row.is_deleted) == (record.cycle_count, False), role
+        assert Soul.objects.get(pk=soul.pk).current_state == SoulState.DISPOSED, role
