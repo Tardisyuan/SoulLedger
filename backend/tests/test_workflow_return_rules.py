@@ -293,8 +293,9 @@ def test_the_seed_tells_the_editor_who_approves_each_station(halls):
             assert (n["approver_type"], n.get("approver_role")) == expected, (row.name, n["node_name"])
     ten = _row(halls["CN_DIYU"], "ROUTINE").nodes_json
     assert ten[9]["approver_type"] == "ACTOR" and ten[9]["actor"] == "转轮王"
-    # 酆都大帝 has no Actor row: the default role decides it.
-    assert _row(halls["CN_DIYU"], "APPEAL").nodes_json[3]["approver_role"] == "JUDGE"
+    # 酆都大帝 has an Actor row since 2026-10-28, so the appeal's final station names him.
+    final = _row(halls["CN_DIYU"], "APPEAL").nodes_json[3]
+    assert (final["approver_type"], final["actor"]) == ("ACTOR", "酆都大帝")
 
 
 def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
