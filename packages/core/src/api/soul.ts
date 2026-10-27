@@ -340,9 +340,13 @@ export const soulApi = {
     soulHttp.get<MeRebirthApplicationList>("/me/rebirth-applications/").then((r) => r.data),
   application: (id: string) =>
     soulHttp.get<MeRebirthApplication>(`/me/rebirth-applications/${id}/`).then((r) => r.data),
-  submitApplication: (desired_form: DesiredRebirthForm, statement: string) =>
+  /** `desired_form` 为 null:希腊灵魂不走六道,不带这个字段,服务端记 OTHER(带了是 400)。 */
+  submitApplication: (desired_form: DesiredRebirthForm | null, statement: string) =>
     soulHttp
-      .post<MeRebirthApplication>("/me/rebirth-applications/", { desired_form, statement })
+      .post<MeRebirthApplication>(
+        "/me/rebirth-applications/",
+        desired_form ? { desired_form, statement } : { statement },
+      )
       .then((r) => r.data),
   appeal: (id: string, statement: string) =>
     soulHttp

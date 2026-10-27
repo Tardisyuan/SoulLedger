@@ -353,7 +353,7 @@ class MeRebirthApplicationsView(SoulAPIView):
         })
 
     @extend_schema(request=RebirthApplicationCreateSerializer,
-                   responses={201: MeRebirthApplicationSerializer, 409: SoulErrorSerializer})
+                   responses={201: MeRebirthApplicationSerializer, 400: SoulErrorSerializer, 409: SoulErrorSerializer})
     def post(self, request):
         body = RebirthApplicationCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)

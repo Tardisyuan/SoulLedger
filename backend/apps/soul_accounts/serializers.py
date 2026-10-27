@@ -447,12 +447,13 @@ class MeRebirthApplicationListSerializer(MeRebirthEligibilitySerializer):
     cooldown_shortening = MeCooldownShorteningSerializer(allow_null=True)
 
 
-# OTHER 不收:它是历史遗留值,「Nothing should write it any more」(RebirthForm 文档)。
+# OTHER 不收:灵魂只能选六道之一;希腊灵魂不带这个字段,服务端记 OTHER(`rebirth.submit`)。
 DESIRED_REBIRTH_FORMS = [c for c in RebirthForm.choices if c[0] != "OTHER"]
 
 
 class RebirthApplicationCreateSerializer(serializers.Serializer):
-    desired_form = serializers.ChoiceField(choices=DESIRED_REBIRTH_FORMS)
+    #: 地府灵魂必填(缺了是 400 `desired_form_required`);希腊灵魂不带(带了是 400 `rebirth_form_not_applicable`)。
+    desired_form = serializers.ChoiceField(choices=DESIRED_REBIRTH_FORMS, required=False)
     statement = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
 
 

@@ -361,13 +361,16 @@ export function NewApplicationScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
   const guard = useDiscardGuard(!!statement.trim(), "application");
+  // 六道只属于地府(G-2):希腊灵魂的再生不选一道,申请不带 desired_form,服务端记 OTHER。
+  const session = useContext(SessionContext);
+  const sixPaths = !(session?.state.status === "signedIn" && session.state.profile.home_civilization === "GREEK");
 
   const submit = async () => {
-    if (!form) return setError({ key: "soul_app.applications.choose_form" });
+    if (sixPaths && !form) return setError({ key: "soul_app.applications.choose_form" });
     setBusy(true);
     setError(null);
     try {
-      const created = await soulApi.submitApplication(form, statement);
+      const created = await soulApi.submitApplication(sixPaths ? form : null, statement);
       toast(t("soul_app.applications.submitted"));
       guard.release();
       navigation.goBack();
@@ -390,16 +393,18 @@ export function NewApplicationScreen() {
             parts={{ hope: <Txt variant="caption">{t("soul_app.applications.expectation_word")}</Txt> }}
           />
         </View>
-        <View>
-          <SectionLabel style={styles.heading}>
-            {t("soul_app.applications.desired_form")}
-          </SectionLabel>
-          <View accessibilityRole="radiogroup" style={[styles.forms, { backgroundColor: theme.hair }]}>
-            {DESIRED_REBIRTH_FORMS.map((f) => (
-              <FormCard key={f} form={f} selected={form === f} onPick={() => setForm(f)} />
-            ))}
+        {sixPaths ? (
+          <View>
+            <SectionLabel style={styles.heading}>
+              {t("soul_app.applications.desired_form")}
+            </SectionLabel>
+            <View accessibilityRole="radiogroup" style={[styles.forms, { backgroundColor: theme.hair }]}>
+              {DESIRED_REBIRTH_FORMS.map((f) => (
+                <FormCard key={f} form={f} selected={form === f} onPick={() => setForm(f)} />
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
         <View style={styles.statement}>
           <Input
             testID="statement"
@@ -421,7 +426,7 @@ export function NewApplicationScreen() {
           title={t(busy ? "soul_app.applications.submitting" : "soul_app.applications.submit")}
           onPress={submit}
           busy={busy}
-          disabled={!form}
+          disabled={sixPaths && !form}
           reason={t("soul_app.applications.choose_form")}
           reasonTestID="submit-application-reason"
         />
