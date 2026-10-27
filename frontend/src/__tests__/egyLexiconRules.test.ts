@@ -126,7 +126,8 @@ const ABOLISHED_TEN_WORDS = [
   // 第十二节「这一轮之后应当废止的写法」(Per Aa 是词组,单列在下面)。Hotep(「待」义)与 Rekhyu(「原因 / 方式」义)
   // 只按义项废止,整词名单表达不了义项,所以不在这里 —— 包里已无这两个词,单独出现由封闭词汇拦下。
   "Am", "Aru", "Aset", "Ahamet", "Aba", "Djewet", "Hemset", "Kheme", "Mech", "Renenu", "Ru", "Seh",
-  "Senu", "Set", "Shen", "Tep", "We", "Weben", "Wepet", "Wer", "Wu",
+  "Senu", "Set", "Shen", "Tep", "We", "Weben", "Wepet", "Wu",
+  // Wer 已划掉:2026-10-27 复用(用户定),义项只有「大 / 大写」,只放在被修饰的词后面(Medu Wer);「太、过于」仍是 Menmen / Aa Er。
   // Her 与 Ma 也在第十二节名单里;它们唯一的键 escalate_reason_placeholder 第十四节改写 Khet: Nen Iri Sekhet Pen
   // (第十二节给的 Khet: Seshem Sekhet Pen 撞了「Seshem 只表推进」),换净,从旧账挪来。
   "Her", "Ma",
@@ -608,8 +609,8 @@ const ROOTS_BATCH28B = ["Sedjer", "Shat"];
 // 第二十八批 W2 登录设备:Ikhet = 设备。
 const ROOTS_BATCH28C = ["Ikhet"];
 // 第五十四批(用户定,2026-10-27):Design 建议的新词根 Swri = 饮(孟婆汤)、Nis = 召唤(邀请官员)、Shewet = 应用商店。
-// Wer(大)也已采用，但它在第十二节废止名单里，要等 Design 改写 halls.code_hint 时一起登记。
-const ROOTS_BATCH54 = ["Swri", "Nis", "Shewet"];
+// Wer = 大 / 大写(Medu Wer),从第十二节废止名单里拿出来复用。
+const ROOTS_BATCH54 = ["Swri", "Nis", "Shewet", "Wer"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
