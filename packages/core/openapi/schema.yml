@@ -10854,7 +10854,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RebirthApplicationCreate'
-        required: true
       security:
       - soulJwtAuth: []
       responses:
@@ -10863,6 +10862,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeRebirthApplication'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
           description: ''
         '409':
           content:
@@ -37961,8 +37966,6 @@ components:
           type: string
           default: ''
           maxLength: 2000
-      required:
-      - desired_form
     RebirthApplicationStatusEnum:
       enum:
       - UNDER_REVIEW
