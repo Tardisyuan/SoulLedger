@@ -17463,7 +17463,7 @@ export interface components {
             statement: string;
         };
         RebirthApplicationCreate: {
-            desired_form: components["schemas"]["DesiredRebirthFormEnum"];
+            desired_form?: components["schemas"]["DesiredRebirthFormEnum"];
             /** @default  */
             statement: string;
         };
@@ -29393,7 +29393,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["RebirthApplicationCreate"];
                 "application/x-www-form-urlencoded": components["schemas"]["RebirthApplicationCreate"];
@@ -29407,6 +29407,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeRebirthApplication"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
                 };
             };
             409: {

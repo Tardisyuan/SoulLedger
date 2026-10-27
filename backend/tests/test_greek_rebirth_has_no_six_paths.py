@@ -48,3 +48,42 @@ def test_a_soul_of_diyu_still_takes_the_path_it_is_given_and_defaults_to_human(a
     assert _reborn(admin_user, asura, rebirth_form="ASURA").data["rebirth_form"] == "ASURA"
     plain = _disposed("CN_DIYU")
     assert _reborn(admin_user, plain).data["rebirth_form"] == "HUMAN"
+
+
+# ── 灵魂端的转生申请(2026-10-28 用户决定):希腊灵魂不选一道,申请记 OTHER;选了就拒绝;地府照旧必选。
+
+APPLY = "/api/v1/me/rebirth-applications/"
+
+
+def _apply(tenant_code, django_capture_on_commit_callbacks, **body):
+    from apps.soul_accounts.models import RebirthApplication
+    from tests.soul_account_support import rebirth_ready_soul
+
+    tenant = Tenant.objects.get_or_create(code=tenant_code, defaults={"display_name": tenant_code})[0]
+    account, client = rebirth_ready_soul(tenant)
+    with django_capture_on_commit_callbacks(execute=True):
+        res = client.post(APPLY, {"statement": "愿再来", **body}, format="json")
+    return res, RebirthApplication.objects.filter(soul=account.soul)
+
+
+def test_a_greek_soul_applies_without_a_path_and_the_application_records_other(django_capture_on_commit_callbacks):
+    res, rows = _apply("GR_HADES", django_capture_on_commit_callbacks)
+    assert res.status_code == 201, res.data
+    assert res.data["desired_form"] == "OTHER"
+    assert rows.get().desired_form == "OTHER"
+
+
+@pytest.mark.parametrize("form", [str(f) for f in SIX_PATHS])
+def test_a_greek_soul_applying_for_a_path_is_refused_and_nothing_is_written(form, django_capture_on_commit_callbacks):
+    res, rows = _apply("GR_HADES", django_capture_on_commit_callbacks, desired_form=form)
+    assert (res.status_code, res.data["code"]) == (400, "rebirth_form_not_applicable"), res.data
+    assert not rows.exists()
+
+
+def test_a_soul_of_diyu_must_still_choose_a_path(django_capture_on_commit_callbacks):
+    res, rows = _apply("CN_DIYU", django_capture_on_commit_callbacks)
+    assert (res.status_code, res.data["code"]) == (400, "desired_form_required"), res.data
+    assert not rows.exists()
+    res, rows = _apply("CN_DIYU", django_capture_on_commit_callbacks, desired_form="ASURA")
+    assert res.status_code == 201, res.data
+    assert rows.get().desired_form == "ASURA"

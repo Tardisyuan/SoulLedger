@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -7,9 +7,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { clearGone } from "../gone";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { ApplicationDetailScreen, ApplicationsScreen } from "../screens/applications";
+import { ApplicationDetailScreen, ApplicationsScreen, NewApplicationScreen } from "../screens/applications";
 import { PastLivesSection } from "../screens/life";
-import { application, life, stubApi } from "./stubApi";
+import { SessionContext } from "../session";
+import { application, life, PROFILE, stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => ({
@@ -130,6 +131,38 @@ describe("applying", () => {
     stubApi({ "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "brand_new_rule", cooldown_until: null, results: [] } } });
     wrap(<ApplicationsScreen />);
     expect((await screen.findByTestId("eligibility-reason")).props.children).toBe("出错了(brand_new_rule)");
+  });
+});
+
+describe("new application: six paths only for a soul of Diyu", () => {
+  function newApplication(home_civilization: string) {
+    const session = { state: { status: "signedIn", profile: { ...PROFILE, home_civilization } } };
+    return wrap(
+      <SessionContext.Provider value={session as never}>
+        <NewApplicationScreen />
+      </SessionContext.Provider>
+    );
+  }
+
+  it("a Greek soul sees no path to choose and submits without desired_form", async () => {
+    const calls = stubApi({ "POST /me/rebirth-applications/": { status: 201, data: application({ desired_form: "OTHER" }) } });
+    newApplication("GREEK");
+    expect(screen.queryByTestId("form-HUMAN")).toBeNull();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    fireEvent.press(screen.getByTestId("submit-application"));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("ApplicationDetail", expect.anything()));
+    const post = calls.find((c) => c.method === "POST");
+    expect(post?.body).toEqual({ statement: "" });
+  });
+
+  it("a soul of Diyu still has to choose one, and the choice is sent", async () => {
+    const calls = stubApi({ "POST /me/rebirth-applications/": { status: 201, data: application() } });
+    newApplication("CHINESE");
+    expect(screen.getByTestId("submit-application").props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId("form-ASURA"));
+    fireEvent.press(screen.getByTestId("submit-application"));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("ApplicationDetail", expect.anything()));
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ desired_form: "ASURA", statement: "" });
   });
 });
 
