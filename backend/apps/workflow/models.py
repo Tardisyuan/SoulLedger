@@ -708,6 +708,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)
+        if status == ApprovalWorkflowStatus.REJECTED and self.judgment_id:
+            # A refused Egyptian weighing is weighed again (user 2026-10-27); a no-op for any other flow.
+            from apps.judgment import weighing
+
+            weighing.reweigh_after_rejection(self)
         if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
             self._purgatory_review_passed(now)
 
