@@ -59,6 +59,7 @@ export {
   type SoulInput,
   type SoulOriginRegion,
   type SoulDuatPassage,
+  type SoulBaptism,
   type Soul,
   type SoulListItem,
   type SoulRecord,
