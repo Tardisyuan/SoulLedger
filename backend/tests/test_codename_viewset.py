@@ -130,8 +130,8 @@ class TestReincarnationViewSetCodename(TestCase):
 
     def test_reincarnation_viewset_extra_permissions(self):
         from apps.reincarnation.views import ReincarnationViewSet
-        self.assertIn("complete", ReincarnationViewSet.extra_permissions)
-        self.assertEqual(ReincarnationViewSet.extra_permissions["complete"], ["reincarnation.complete"])
+        # `complete` was removed 2026-10-27 (it wrote a second record); the codename stays seeded, unasked.
+        self.assertNotIn("complete", ReincarnationViewSet.extra_permissions)
         self.assertIn("reborn", ReincarnationViewSet.extra_permissions)
         self.assertEqual(ReincarnationViewSet.extra_permissions["reborn"], ["reincarnation.reborn"])
 

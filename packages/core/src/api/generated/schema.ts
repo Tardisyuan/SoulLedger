@@ -6564,36 +6564,28 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Set the current-user contextvar around every write.
+         * @description Mixin that auto-generates the codenames a request must carry.
          *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
          *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
          */
         get: operations["v1_reincarnation_list"];
         put?: never;
-        /**
-         * @description Set the current-user contextvar around every write.
-         *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
-         *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
-         */
-        post: operations["v1_reincarnation_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6608,85 +6600,28 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Set the current-user contextvar around every write.
+         * @description Mixin that auto-generates the codenames a request must carry.
          *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
+         *     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
+         *     codenames like "soul.read", "soul.create" from the current DRF action.
          *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
+         *     Custom actions are mapped via `extra_permissions` dict:
+         *         extra_permissions = {
+         *             'die': ['soul.die'],
+         *             'karma': ['soul.read'],
+         *         }
+         *
+         *     `apps/core/permissions.py::CodenamePermission` calls
+         *     get_required_permissions() from `APIView.initial()`. It has to be there
+         *     and not in middleware: the answer depends on `self.action`, which DRF sets
+         *     in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+         *     this docstring used to name ran in the request phase, read a
+         *     `request.view` attribute nothing sets, and took its `view is None` early
+         *     return on every request ever made. It was deleted 2026-08-28.
          */
         get: operations["v1_reincarnation_retrieve"];
-        /**
-         * @description Set the current-user contextvar around every write.
-         *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
-         *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
-         */
-        put: operations["v1_reincarnation_update"];
-        post?: never;
-        /**
-         * @description Set the current-user contextvar around every write.
-         *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
-         *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
-         */
-        delete: operations["v1_reincarnation_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * @description Set the current-user contextvar around every write.
-         *
-         *     A `contextvar` (`apps/core/request_local.py`), not thread-local — the
-         *     distinction matters under ASGI, where one thread serves many requests.
-         *
-         *     **This is the only place that sets it.** `AuditUserFields.save()` reads it
-         *     to fill `create_user` / `update_user`, so a writable viewset that does not
-         *     inherit this mixin records rows with no author — measured on eight of them
-         *     2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
-         *     "who added this" is the whole of the audit question.
-         *     `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
-         *     URLconf so the next one to be added is caught rather than counted.
-         */
-        patch: operations["v1_reincarnation_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/reincarnation/{id}/complete/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
         put?: never;
-        /**
-         * @description Complete a reincarnation — create rebirth record, reset soul to ALIVE.
-         *     POST /reincarnation/{id}/complete/
-         *     Body: { "new_identity": "...", "rebirth_form": "HUMAN", "notes": "..." }
-         */
-        post: operations["v1_reincarnation_complete_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6704,7 +6639,7 @@ export interface paths {
         put?: never;
         /**
          * @description POST /reincarnation/drink-soup/ {soul_id} — 记下这一世已饮孟婆汤(地府,候转世的灵魂;2026-10-25)。
-         *     地府的灵魂没饮过,`complete` / `reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。
+         *     地府的灵魂没饮过,`reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。
          */
         post: operations["v1_reincarnation_drink_soup_create"];
         delete?: never;
@@ -16381,26 +16316,6 @@ export interface components {
          */
         PatchedRealmCapacity: {
             capacity?: number | null;
-        };
-        PatchedReincarnation: {
-            /** Format: uuid */
-            readonly id?: string;
-            /** Format: uuid */
-            soul?: string;
-            readonly soul_name?: string;
-            readonly soul_code?: string | null;
-            /** Format: uuid */
-            disposition?: string | null;
-            target_realm?: string;
-            rebirth_form?: components["schemas"]["RebirthFormEnum"];
-            /** @description Which turn of the wheel this is; the first rebirth is 1. */
-            cycle_count?: number;
-            previous_realm?: string;
-            /** @description Name in new life */
-            new_identity?: string;
-            notes?: string;
-            /** Format: date-time */
-            readonly reincarnated_at?: string;
         };
         /**
          * @description PATCH body. Partial: any subset of enabled, the five cron fields, timezone.
@@ -32736,31 +32651,6 @@ export interface operations {
             };
         };
     };
-    v1_reincarnation_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reincarnation"];
-                "application/x-www-form-urlencoded": components["schemas"]["Reincarnation"];
-                "multipart/form-data": components["schemas"]["Reincarnation"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Reincarnation"];
-                };
-            };
-        };
-    };
     v1_reincarnation_retrieve: {
         parameters: {
             query?: never;
@@ -32772,111 +32662,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Reincarnation"];
-                };
-            };
-        };
-    };
-    v1_reincarnation_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A UUID string identifying this Reincarnation. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reincarnation"];
-                "application/x-www-form-urlencoded": components["schemas"]["Reincarnation"];
-                "multipart/form-data": components["schemas"]["Reincarnation"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Reincarnation"];
-                };
-            };
-        };
-    };
-    v1_reincarnation_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A UUID string identifying this Reincarnation. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    v1_reincarnation_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A UUID string identifying this Reincarnation. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedReincarnation"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedReincarnation"];
-                "multipart/form-data": components["schemas"]["PatchedReincarnation"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Reincarnation"];
-                };
-            };
-        };
-    };
-    v1_reincarnation_complete_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A UUID string identifying this Reincarnation. */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reincarnation"];
-                "application/x-www-form-urlencoded": components["schemas"]["Reincarnation"];
-                "multipart/form-data": components["schemas"]["Reincarnation"];
-            };
-        };
         responses: {
             200: {
                 headers: {
