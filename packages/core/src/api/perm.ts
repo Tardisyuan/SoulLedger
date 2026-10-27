@@ -191,6 +191,8 @@ export const permApi = {
   // Read and write sit on different routes: the reader is ADMIN-only and keyed
   // by role name in the path, while the writer takes the role in its body.
   rolePermissions: (roleName: string) => api.get<RolePermissions>(`/perm/roles/${roleName}/permissions/`),
+  /** Every role's grants in one call, same shape per role as `rolePermissions` (ADMIN only). */
+  allRolePermissions: () => api.get<RolePermissions[]>("/perm/role-permissions/all/"),
   // `expectedVersion` is optional so existing callers keep working, but the
   // matrix screen always sends it — it's the stale-write guard (see
   // RolePermissionConflict above). Omitted entirely (not sent as undefined)

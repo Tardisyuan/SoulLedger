@@ -263,18 +263,19 @@ export const socialKeys = {
 };
 
 /**
- * The permissions page. The two literals are the ones
- * `frontend/app/permissions/page.tsx` already reads under (`["roles"]`,
- * `["role-permissions", name]`), so an invalidation from these hooks reaches
+ * The permissions page. The literals are the ones
+ * `frontend/app/permissions/page.tsx` reads under (`["roles"]`,
+ * `["role-permissions", "all", names]`), so an invalidation from these hooks reaches
  * the queries that page owns.
  */
 export const permKeys = {
   /** The permission definitions list (`permApi.list`). */
   permissions: ["permissions"] as const,
   roles: ["roles"] as const,
-  /** Prefix of every `rolePermissions(name)` — for invalidating all roles' grants at once. */
+  /** Prefix of every roles'-grants key — invalidate or patch with this one. */
   allRolePermissions: ["role-permissions"] as const,
-  rolePermissions: (roleName: string) => ["role-permissions", roleName] as const,
+  /** Every role's grants (`permApi.allRolePermissions`), keyed by the role names so a new or renamed role refetches. */
+  allRolePermissionsFor: (roleNames: readonly string[]) => ["role-permissions", "all", [...roleNames].sort()] as const,
 };
 
 /** The officer console's 「问一问」 history (`/assist/conversations/`), one list per signed-in officer. */

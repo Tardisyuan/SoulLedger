@@ -142,15 +142,17 @@ export function useMatrixCells({
       (r.action === "grant" ? entry.add : entry.remove).push(r.permission_id);
       byRole.set(r.role, entry);
     }
-    for (const [role, { add, remove }] of byRole) {
-      queryClient.setQueryData<RolePermissions>(permKeys.rolePermissions(role), (old) => {
-        if (!old) return old;
-        const ids = new Set(old.details.map((p) => p.id));
-        add.forEach((id) => ids.add(id));
-        remove.forEach((id) => ids.delete(id));
-        const details = [...ids].map((id) => permsById[id]).filter((p): p is Permission => !!p);
-        return { ...old, details, permissions: details.map((p) => p.codename) };
-      });
+    const patch = (old: RolePermissions): RolePermissions => {
+      const change = byRole.get(old.role);
+      if (!change) return old;
+      const ids = new Set(old.details.map((p) => p.id));
+      change.add.forEach((id) => ids.add(id));
+      change.remove.forEach((id) => ids.delete(id));
+      const details = [...ids].map((id) => permsById[id]).filter((p): p is Permission => !!p);
+      return { ...old, details, permissions: details.map((p) => p.codename) };
+    };
+    if (byRole.size > 0) {
+      queryClient.setQueriesData<RolePermissions[]>({ queryKey: permKeys.allRolePermissions }, (old) => old?.map(patch));
     }
     queryClient.setQueryData<Role[]>(permKeys.roles, (old) =>
       old?.map((r) => (r.name in result.versions ? { ...r, version: result.versions[r.name] } : r))
@@ -158,7 +160,7 @@ export function useMatrixCells({
     // A version conflict means someone else saved that role: reload it, so
     // the operator decides against what is really there.
     const stale = new Set(result.results.filter((r) => r.code === "version_conflict").map((r) => r.role));
-    for (const role of stale) void queryClient.invalidateQueries({ queryKey: permKeys.rolePermissions(role) });
+    if (stale.size > 0) void queryClient.invalidateQueries({ queryKey: permKeys.allRolePermissions });
   }
 
   async function runSave() {

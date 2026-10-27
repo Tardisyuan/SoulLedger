@@ -268,7 +268,7 @@ SITES = [
     ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'fingerprints', 'model._base_manager', 1, 'CLI', 'reconciliation tool: reads one database at a time, always filtered by the --tenant id; soft-deleted rows must be compared too'),
     ('apps/tenants/management/commands/seed_tenants.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
-    ('apps/tenants/middleware.py', 'TenantMiddleware._resolve_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
+    ('apps/tenants/middleware.py', 'cached_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/views.py', 'TenantViewSet.get_queryset', 'Tenant.objects', 1, 'FILTERED', "wrapped in scope_to_tenant(field='pk')"),
     ('apps/workflow/management/commands/process_workflow_timeouts.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/workflow/management/commands/seed_workflow_templates.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'operator seed command: resolves the four halls by their globally unique codes (CIVILIZATION_TENANT); every template it writes carries its hall as tenant explicitly'),

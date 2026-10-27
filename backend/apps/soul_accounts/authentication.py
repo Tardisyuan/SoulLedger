@@ -52,6 +52,11 @@ class OfficerJWTAuthentication(JWTAuthentication):
     """项目默认认证类(`REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES`)。"""
 
     def authenticate(self, request):
+        # `TenantMiddleware` already decoded and verified this header's token with the same class
+        # (`AUTH_TOKEN_CLASSES` is AccessToken alone); reuse it instead of decoding it a second time.
+        from apps.tenants.middleware import DECODED_ACCESS_ATTR
+
+        self._decoded = getattr(request, DECODED_ACCESS_ATTR, None)
         result = super().authenticate(request)
         if result is not None:
             from apps.authentication import impersonation
@@ -73,6 +78,10 @@ class OfficerJWTAuthentication(JWTAuthentication):
         raise PermissionDenied({"detail": "请先修改密码。", "code": "password_change_required"})
 
     def get_validated_token(self, raw_token):
+        decoded = getattr(self, "_decoded", None)
+        raw = raw_token.decode() if isinstance(raw_token, bytes) else raw_token
+        if decoded is not None and decoded[0] == raw:
+            return decoded[1]
         try:
             return super().get_validated_token(raw_token)
         except InvalidToken:

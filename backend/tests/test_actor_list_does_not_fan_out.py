@@ -45,6 +45,7 @@ def make_actors(tenant, n, prefix):
 
 
 def count_queries(client, page_size):
+    client.get(URL, {"page_size": page_size})  # warm-up: the first request also fills the per-worker hall copy
     with CaptureQueriesContext(connection) as ctx:
         response = client.get(URL, {"page_size": page_size})
         assert response.status_code == 200, response.data

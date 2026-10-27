@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -33,6 +33,7 @@ import { buildPermissionColumns } from "@/src/components/permissions/permissionC
 import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
 import { useMatrixCells, type CellFailure } from "@/src/components/permissions/useMatrixCells";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
+import { permKeys } from "@soulledger/core/query_keys";
 import { fieldControl } from "@/src/components/ui/Field";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { cn } from "@/lib/utils";
@@ -79,9 +80,9 @@ export default function PermissionsPage() {
 
   // ── Data fetching ──
   // Full matrix = 1 call for all Permission rows + 1 call for all Role rows
-  // (which now carries user_count/version) + one call per role for its
-  // current grants (there is no bulk role-permission endpoint — see
-  // backend/apps/perm/urls.py). 5 roles today, so 7 calls total on load.
+  // (which carries user_count/version) + 1 call for every role's grants
+  // (`/perm/role-permissions/all/`). Three calls, whatever the role count —
+  // it used to be one call per role (perf review 2026-10-27 #10).
   const permsQuery = useQuery({
     queryKey: ["permissions"],
     queryFn: async () => (await permApi.list()).data,
@@ -105,11 +106,12 @@ export default function PermissionsPage() {
         : undefined,
   });
 
-  const rolePermQueries = useQueries({
-    queries: roleNames.map((name) => ({
-      queryKey: ["role-permissions", name],
-      queryFn: async () => (await permApi.rolePermissions(name)).data,
-    })),
+  // Keyed by the role names, so a created / copied / renamed role refetches the grants instead of
+  // reading as a role with none (FL-05: an empty baseline turns into "remove every grant").
+  const grantsQuery = useQuery({
+    queryKey: permKeys.allRolePermissionsFor(roleNames),
+    queryFn: async () => (await permApi.allRolePermissions()).data,
+    enabled: roleNames.length > 0,
   });
 
   const roleMeta = useMemo(() => {
@@ -140,47 +142,23 @@ export default function PermissionsPage() {
     return order.map((category) => ({ category, perms: byCategory[category] }));
   }, [permsQuery.data]);
 
-  const rolePermsLoaded = roleNames.length > 0 && rolePermQueries.every((q) => !!q.data);
-  const rolePermsError = rolePermQueries.some((q) => q.isError);
+  const grantsByRole = useMemo(() => {
+    const map: Record<string, RolePermissions> = {};
+    (grantsQuery.data ?? []).forEach((r) => { map[r.role] = r; });
+    return map;
+  }, [grantsQuery.data]);
+  const rolePermsLoaded = roleNames.length > 0 && roleNames.every((name) => !!grantsByRole[name]);
+  const rolePermsError = grantsQuery.isError;
   const matrixReady = !!permsQuery.data && rolePermsLoaded;
 
-  // A dependency array must stay the same length across renders — roleNames
-  // (and so rolePermQueries) grows from 0 to N once /perm/roles/ resolves,
-  // so the query results are folded into one stable string key here rather
-  // than spread into the deps array itself.
-  const rolePermsUpdatedKey = rolePermQueries.map((q) => q.dataUpdatedAt).join(",");
   const baseline = useMemo<GrantMap | null>(() => {
     if (!matrixReady) return null;
     const map: GrantMap = {};
-    roleNames.forEach((name, i) => {
-      const data = rolePermQueries[i].data as RolePermissions;
-      map[name] = new Set(data.details.map((p) => p.id));
+    roleNames.forEach((name) => {
+      map[name] = new Set(grantsByRole[name].details.map((p) => p.id));
     });
     return map;
-    // `rolePermQueries` is deliberately not a dependency. `useQueries` returns
-    // a **new array on every render**, so including it would re-run this memo
-    // every render and mint a fresh `baseline` object each time — which the
-    // effect below takes as a dependency. That effect is guarded by
-    // `checked === null` so it would not loop forever, but the memo would stop
-    // memoising anything and every role's Set would be rebuilt on each
-    // keystroke in the filter box.
-    //
-    // `rolePermsUpdatedKey` is the stand-in: it folds each query's
-    // `dataUpdatedAt` into one string, so the memo re-runs exactly when a
-    // role's permission payload actually changes, which is the only thing that
-    // array's identity was ever standing for here.
-    //
-    // `roleNames` is the other name the rule asked for, and it *is* now a real
-    // dependency: it is `useMemo`'d on `rolesQuery.data`, so its identity moves
-    // only when the role list does. It replaced a `roleNamesKey =
-    // roleNames.join(",")` string that existed solely to stand in for it — with
-    // the array itself in the deps, that key had no remaining reader.
-    //
-    // What would remove the suppression: `useQueries` growing a stable-identity
-    // result, or this deriving `baseline` from a single fetch of all roles'
-    // permissions rather than N parallel ones.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matrixReady, roleNames, rolePermsUpdatedKey]);
+  }, [matrixReady, roleNames, grantsByRole]);
 
   // Populate the editable `checked` state from the loaded baseline once, then
   // keep its KEY SET in step with the baseline's. After a save, individual

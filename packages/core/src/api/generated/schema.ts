@@ -6191,6 +6191,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perm/role-permissions/all/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /api/v1/perm/role-permissions/all/
+         *     每个角色一份 `get_permissions_for_role` 的结果,一次取回(仅 ADMIN)。
+         *
+         *     权限页此前对每个角色各发一次 `roles/<name>/permissions/`(perf review 2026-10-27 #10)。
+         *     逐角色解析走同一个 `_get_role_permissions_from_db`,所以与单个角色的读取答案相同;
+         *     Permission 行只查一次。
+         */
+        get: operations["v1_perm_role_permissions_all_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perm/role-permissions/assign/": {
         parameters: {
             query?: never;
@@ -32055,6 +32079,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RolePermissions"];
+                };
+            };
+        };
+    };
+    v1_perm_role_permissions_all_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolePermissions"][];
                 };
             };
         };

@@ -4,10 +4,11 @@
  * jsdom 不排版,所以这里检查时间线本身(谁、从哪儿、到哪儿、什么时候、多久、什么曲线)。
  */
 import { createElement, useState } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { gsap } from "gsap";
 
-import { DESK_ENTER_EASE, MaterialDock, fullCaseTimeline } from "@/src/components/judgment/JudgmentDeskStage";
+import { MaterialDock, loadDeskMotion } from "@/src/components/judgment/JudgmentDeskStage";
+import { DESK_ENTER_EASE, fullCaseTimeline } from "@/src/components/judgment/deskMotion";
 import { MOTION_EASINGS } from "@/lib/motion";
 
 function desk(): HTMLElement {
@@ -91,7 +92,7 @@ it("reduced motion: no movement, the new layout fades in over 80ms", () => {
 
 /* MaterialDock 本身:F 一换版式就起一条时间线,判决区要走的距离 = 旧中心 − 新中心;
    别的重渲染不起。jsdom 不排版,判决区的位置按当前版式假造。 */
-it("the dock starts one timeline per layout switch, with the verdict's measured shift", () => {
+it("the dock starts one timeline per layout switch, with the verdict's measured shift", async () => {
   function Harness() {
     const [fullCase, setFullCase] = useState(false);
     const [, bump] = useState(0);
@@ -113,6 +114,7 @@ it("the dock starts one timeline per layout switch, with the verdict's measured 
   const spy = jest.spyOn(gsap, "timeline");
   document.body.innerHTML = "";
   render(createElement(Harness));
+  await act(() => loadDeskMotion()); // the timeline module arrives after mount (perf review 2026-10-27 #13)
   const verdictEl = screen.getByTestId("current-decision");
   jest.spyOn(verdictEl, "getBoundingClientRect").mockImplementation(() => {
     const left = verdictEl.closest("[data-view]")?.getAttribute("data-view") === "case" ? 900 : 400;

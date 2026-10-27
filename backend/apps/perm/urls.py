@@ -12,6 +12,7 @@ urlpatterns = [
     path("permissions/create/", views.create_permission, name="create"),
     path("permissions/<int:pk>/", views.update_delete_permission, name="detail"),
     path("role-permissions/", views.get_role_permissions, name="role-permissions"),
+    path("role-permissions/all/", views.get_all_role_permissions, name="role-permissions-all"),
     path("role-permissions/assign/", views.assign_role_permissions, name="assign"),
     path("role-permissions/changes/", views.apply_matrix_changes, name="matrix-changes"),
     path("role-permissions/impact/", views.matrix_impact, name="matrix-impact"),
