@@ -17590,7 +17590,8 @@ export interface components {
         /**
          * @description 400 body of restore. `code` / `missing_roles` come with a refusal from a
          *     registered restore check (`template_role_missing`: a workflow template in
-         *     the cascade names roles that no longer exist); the other 400s carry
+         *     the cascade names roles that no longer exist) or `system_void` (the system voided the rows, e.g. a
+         *     refused Egyptian weighing; they never come back through the bin); the other 400s carry
          *     `error` alone.
          */
         RecycleBinRestoreRefusal: {
@@ -17600,9 +17601,10 @@ export interface components {
         };
         /**
          * @description * `template_role_missing` - template_role_missing
+         *     * `system_void` - system_void
          * @enum {string}
          */
-        RecycleBinRestoreRefusalCodeEnum: "template_role_missing";
+        RecycleBinRestoreRefusalCodeEnum: "template_role_missing" | "system_void";
         /**
          * @description Restore is keyed by cascade id, not by row: the whole set deleted
          *     together comes back together.
