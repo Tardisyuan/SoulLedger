@@ -110,7 +110,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         """
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
-        from apps.reincarnation.services import ReincarnationService, assert_may_be_reborn
+        from apps.reincarnation.services import ReincarnationService, assert_may_be_reborn, rebirth_form_for
         from apps.souls.models import Soul, SoulState
 
         # Body first, before the soul and disposition lookups: a malformed
@@ -126,7 +126,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         soul_id = request.data.get("soul_id")
         disposition_id = request.data.get("disposition_id")
         new_identity = payload.validated_data.get("new_identity", "")
-        rebirth_form = payload.validated_data.get("rebirth_form", "HUMAN")
+        rebirth_form = payload.validated_data.get("rebirth_form")
 
         # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
         user_tenant = getattr(request, "tenant", None)
@@ -165,6 +165,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         # request was never malformed, only in conflict with the soul's state.
         LedgerService.assert_rebirth_capable(soul)
         assert_may_be_reborn(soul, disposition)
+        rebirth_form_for(soul, rebirth_form)  # 希腊灵魂指定了六道:400,在动状态之前
 
         if soul.current_state != SoulState.REINCARNATING:
             moved = soul.transition_to(

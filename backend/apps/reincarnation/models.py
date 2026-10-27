@@ -28,7 +28,9 @@ class RebirthForm(models.TextChoices):
     OTHER is not a seventh path. It is kept only because rows may already
     carry it and dropping a choice would make those rows unreadable through
     the admin and the API filter; it means "recorded before the six paths
-    existed, or outside this cosmology". Nothing should write it any more.
+    existed, or outside this cosmology". No client may write it; the one writer
+    is the server, for a rebirth outside the six paths — a Greek soul, who is
+    reborn after Lethe with no path to choose (2026-10-27, `rebirth_form_for`).
     """
 
     # 三善道 — the three good paths
