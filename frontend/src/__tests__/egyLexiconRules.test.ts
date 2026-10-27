@@ -548,6 +548,8 @@ const PROPER_NAMES = [
   // 第十五节(egy 第四节审定,v3,2026-10-02):三个专名原样引用(魔鬼审判 Wedja Apep、米诺斯之庭 Wesekhet Minos、冥界哈迪斯 Hades),
   // 一个新词根 Meh(满;将满 Er Meh);Enter / Esc 是键名原样保留(同 IP、PNG)。
   "Apep", "Minos", "Hades", "Meh", "Enter", "Esc",
+  // 第五十四批第二批(Design,2026-10-27):埃及申诉链里的荷鲁斯单独出现(此前只在星期名整词里)。
+  "Heru",
   "IP", "JPEG", "MB", "PNG", "PDF", "CSV", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
@@ -788,10 +790,11 @@ describe("egy 词表规则", () => {
     expect(offenders(KEYS, (v, k) => /\bSethet\b/.test(prose(v)) && !/错误|出错|故障|异常/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
-  it("Seshem 只表推进:中文不含「推进 / 越级 / 升级」的键不出现 Seshem", () => {
+  it("Seshem 只表推进:中文不含「推进 / 越级 / 升级 / 上诉」的键不出现 Seshem", () => {
     // 第六节:创建 Iri、展开 Wen、开始 Tepy、图表 Tut-Hesb、系统层 Ta、开关 Wen-Khetem 都分出去了。
     // 「升级」是 workflow.status.ESCALATED 的中文(越级推进后的状态)。不设白名单,理由同上。
-    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级/.test(ZH[k] ?? ""))).toEqual([]);
+    // 「上诉」(第五十四批第二批,Design):灵魂把复核送进上级的申诉流程,与工作流的「上报」同一个 Seshem Er Hery。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {
