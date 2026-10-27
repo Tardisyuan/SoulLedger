@@ -11,6 +11,7 @@ import pytest
 
 from apps.authentication.models import User
 from apps.disposition.models import Disposition
+from apps.events.models import SoulEvent
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import DuatStage
@@ -114,6 +115,7 @@ def test_a_burial_found_proper_releases_the_held_case_to_embalming_and_the_hall(
     with pytest.raises(ClaimRefusedError) as refused:
         claims.claim(case.pk, judge)
     assert refused.value.code == "embalming"
+    assert _passage_events(soul) == [{"from": passage, "to": "", "judgments": [str(case.pk)]}]
 
 
 def test_a_release_after_the_seventy_days_holds_nothing(eg_tenant, judge, admin_user):
@@ -142,3 +144,61 @@ def test_early_death_cannot_be_recorded_once_the_case_has_opened(eg_tenant, admi
     alive = _soul(eg_tenant)
     res = client.patch(f"/api/v1/souls/{alive.pk}/", {"duat_passage": "EARLY_DEATH"}, format="json")
     assert res.status_code == 200
+
+
+def _patch_passage(admin_user, soul, passage):
+    from tests.soul_account_support import officer_client
+
+    return officer_client(admin_user).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": passage}, format="json")
+
+
+def _passage_events(soul):
+    return [{k: v for k, v in e.payload.items() if k != "soul_id"}
+            for e in SoulEvent.objects.filter(soul=soul, event_type="DUAT_PASSAGE_CHANGED")]
+
+
+def test_nameless_and_improper_burial_swap_only_the_stage(eg_tenant, judge, admin_user):
+    soul = _soul(eg_tenant, "NAMELESS")
+    case = soul.die(death_date=date.today() - timedelta(days=200))
+    assert _patch_passage(admin_user, soul, "IMPROPER_BURIAL").status_code == 200
+    case.refresh_from_db()
+    assert (case.duat_stage, case.held_until, case.realm) == (DuatStage.IMPROPER_BURIAL, None, None)
+    assert _passage_events(soul) == [{"from": "NAMELESS", "to": "IMPROPER_BURIAL", "judgments": [str(case.pk)]}]
+
+
+@pytest.mark.parametrize("passage", ["NAMELESS", "IMPROPER_BURIAL"])
+def test_a_passage_barred_after_death_takes_the_unclaimed_case_back_to_the_duat_entry(eg_tenant, judge, admin_user,
+                                                                                     passage):
+    from apps.realms.models import SoulPathEntry
+
+    soul = _soul(eg_tenant)
+    case = soul.die(death_date=date.today() - timedelta(days=10))
+    assert case.realm.realm_code == "EG_HALL_TWO_TRUTHS"
+    res = _patch_passage(admin_user, soul, passage)
+    assert res.status_code == 200, res.data
+    case.refresh_from_db()
+    assert (case.duat_stage, case.held_until, case.realm) == (passage, None, None)    # as at death registration
+    here = SoulPathEntry.all_objects.get(soul=soul, left_at__isnull=True)
+    assert here.realm.realm_code == "EG_DUAT_ENTRY"
+    with pytest.raises(ClaimRefusedError) as refused:
+        claims.claim(case.pk, judge)
+    assert refused.value.code == "duat_unfinished"
+    assert _passage_events(soul) == [{"from": "", "to": passage, "judgments": [str(case.pk)]}]
+
+
+def test_a_passage_cannot_be_barred_once_an_officer_claimed_the_case(eg_tenant, judge, admin_user):
+    soul = _soul(eg_tenant)
+    case = soul.die(death_date=date.today() - timedelta(days=200))
+    claims.claim(case.pk, judge)
+    res = _patch_passage(admin_user, soul, "NAMELESS")
+    assert res.status_code == 400 and "duat_passage" in res.data
+    case.refresh_from_db()
+    soul.refresh_from_db()
+    assert soul.duat_passage == "" and case.duat_stage == DuatStage.EMBALMING
+    assert case.realm.realm_code == "EG_HALL_TWO_TRUTHS" and not _passage_events(soul)
+
+
+def test_a_passage_recorded_for_the_living_logs_nothing(eg_tenant, admin_user):
+    soul = _soul(eg_tenant)
+    assert _patch_passage(admin_user, soul, "NAMELESS").status_code == 200
+    assert not _passage_events(soul)

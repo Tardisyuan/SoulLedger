@@ -332,7 +332,9 @@
       "CITY_GOD_SENT_ON": "城隍解送十殿",
       "CITY_GOD_RETURNED": "城隍退回补正",
       "MENGPO_SOUP_TAKEN": "饮孟婆汤",
-      "PURGATORY_ASCENDED": "出炼狱，升天堂"
+      "PURGATORY_ASCENDED": "出炼狱，升天堂",
+      "OFFICER_HANDOVER": "经办官员交接",
+      "DUAT_PASSAGE_CHANGED": "杜阿特行程改记"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -3004,7 +3006,7 @@
       "deactivate": "停用所选",
       "done": "已更新 {{n}} 个账号",
       "failed": "批量更新失败",
-      "open_work": "一个都没有停用：{{n}} 位官员手上还有在途的事。请逐个停用，停用时移交。",
+      "open_work": "已停用 {{n}} 位；{{m}} 位手上还有在途的事，没有停用：{{names}}。请逐个停用，停用时移交。",
       "skipped_note": "管理员账号和你自己不在批量范围内。"
     },
     "reset_password": {

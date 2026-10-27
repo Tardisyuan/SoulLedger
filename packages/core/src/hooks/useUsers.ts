@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type AssignRolesInput } from "../api/index";
+import { usersApi, type AssignRolesInput, type UserBatchDeactivateResult, type UserBatchUpdateResult } from "../api/index";
 import { userKeys } from "../query_keys";
 
 /**
@@ -23,8 +23,8 @@ export function useAssignUserRoles() {
 export function useBatchSetUsersActive() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ ids, active }: { ids: string[]; active: boolean }) =>
-      (await (active ? usersApi.batchActivate(ids) : usersApi.batchDeactivate(ids))).data,
+    mutationFn: async ({ ids, active }: { ids: string[]; active: boolean }): Promise<UserBatchUpdateResult | UserBatchDeactivateResult> =>
+      (active ? await usersApi.batchActivate(ids) : await usersApi.batchDeactivate(ids)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
   });
 }

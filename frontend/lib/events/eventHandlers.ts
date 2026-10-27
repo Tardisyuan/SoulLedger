@@ -146,6 +146,10 @@ export const EVENT_LABELS: Record<string, string> = {
   // Purgatory → heaven (欧洲, 2026-10-27)
   PURGATORY_ASCENDED: "Rose from purgatory to heaven",
 
+  // Officer handover / Duat passage (2026-10-27)
+  OFFICER_HANDOVER: "Case handed to another officer",
+  DUAT_PASSAGE_CHANGED: "Duat passage changed",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

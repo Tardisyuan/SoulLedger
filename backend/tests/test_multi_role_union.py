@@ -266,7 +266,7 @@ def test_batch_deactivate_and_activate_are_audited_and_skip_admins_and_self(worl
     AuditLog.objects.all().delete()
     ids = [a.pk, b.pk, other_admin.pk, world["admin"].pk]
     res = world["client"].post("/api/v1/users/batch_deactivate/", {"user_ids": ids}, format="json")
-    assert res.status_code == 200 and res.json() == {"updated": 2}
+    assert res.status_code == 200 and res.json() == {"updated": 2, "held": []}
     assert not User.objects.get(pk=a.pk).is_active and not User.objects.get(pk=b.pk).is_active
     assert User.objects.get(pk=other_admin.pk).is_active
     row = AuditLog.objects.get(action=AuditAction.BATCH_UPDATE)

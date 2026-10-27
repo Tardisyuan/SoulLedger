@@ -1,12 +1,13 @@
 """停用官员不再把他手上的事无声地留在一个停用账号名下(2026-10-27 用户决定,检查业务 #10)。
 
 手上有事 → 409 `officer_has_open_work` 附件数;带 `handover_to` → 交接与停用同一个事务,交接的审计行也在里面,
-审计写不进去则停用一并回滚。批量停用不做交接,有人手上有事就整批 409。
+审计写不进去则停用一并回滚。批量停用不做交接:手上没事的停用,有事的留着并在 `held` 里列出(同日改)。
 """
 import pytest
 from django.db import OperationalError, connection
 
 from apps.audit.models import AuditLog
+from apps.events.models import SoulEvent
 from apps.judgment.models import Judgment
 from tests.soul_account_support import officer_client
 from tests.test_judgment_claim import _case, _post, world  # noqa: F401
@@ -49,6 +50,9 @@ def test_naming_a_receiver_hands_over_and_deactivates_together(held):
     assert not _active(a)
     assert Judgment.all_objects.get(pk=case.pk).claimed_by_id == b.pk
     assert AuditLog.objects.filter(resource="officer_handover", resource_id=str(a.pk)).count() == 1
+    events = SoulEvent.objects.filter(event_type="OFFICER_HANDOVER")
+    assert [e.payload for e in events] == [
+        {"soul_id": str(case.soul_id), "from": a.username, "to": b.username, "judgments": [str(case.pk)]}]
 
 
 def test_a_receiver_from_another_hall_refuses_both(held):
@@ -67,13 +71,23 @@ def test_no_open_work_deactivates_directly(held):
     assert not _active(b)
 
 
-def test_batch_with_a_holder_deactivates_nobody(held):
+def test_batch_deactivates_the_free_and_lists_the_holders(held):
     w, _, admin = held
     a, b = w.users["a"], w.users["b"]
     res = admin.post("/api/v1/users/batch_deactivate/", {"user_ids": [a.pk, b.pk]}, format="json")
-    assert res.status_code == 409, res.data
-    assert list(res.data["open_work"]) == [str(a.pk)]
-    assert _active(a) and _active(b)
+    assert res.status_code == 200, res.data
+    assert res.data["updated"] == 1
+    assert [(h["id"], h["username"], h["open_work"]["judgments"]) for h in res.data["held"]] == [
+        (str(a.pk), a.username, 1)
+    ]
+    assert _active(a) and not _active(b)
+
+
+def test_batch_with_nobody_holding_work_has_an_empty_held_list(held):
+    w, _, admin = held
+    b = w.users["b"]
+    res = admin.post("/api/v1/users/batch_deactivate/", {"user_ids": [b.pk]}, format="json")
+    assert (res.status_code, res.data) == (200, {"updated": 1, "held": []})
 
 
 def test_the_handover_audit_failing_rolls_back_the_deactivation(held):

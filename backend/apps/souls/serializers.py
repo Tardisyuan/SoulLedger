@@ -640,16 +640,17 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             raise serializers.ValidationError({"tenant": exc.messages}) from exc
 
     def update(self, instance, validated_data):
-        """NAMELESS / IMPROPER_BURIAL → blank releases the case held at the Duat entry, in the same transaction."""
+        """A changed `duat_passage` moves the open case with it, in the same transaction (`Soul.follow_duat_passage`)."""
+        from django.core.exceptions import ValidationError as DjangoValidationError
         from django.db import transaction
 
-        from apps.judgment.models import DUAT_BARRED
-
-        barred = instance.duat_passage in DUAT_BARRED
-        with transaction.atomic():
-            soul = super().update(instance, validated_data)
-            if barred and not soul.duat_passage:
-                soul.release_from_the_duat_entry()
+        old = instance.duat_passage
+        try:
+            with transaction.atomic():
+                soul = super().update(instance, validated_data)
+                soul.follow_duat_passage(old)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"duat_passage": exc.messages}) from exc
         return soul
 
     def get_merit_score(self, obj) -> int | None:

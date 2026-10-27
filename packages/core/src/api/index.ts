@@ -82,7 +82,7 @@ export {
   type ImpersonationState,
 } from "./impersonation";
 
-export { usersApi, handoverApi, officerRefusalOf, handoverProblemsOf, openWorkOf, type OfficerInviteInput, type OfficerRefusal, type HandoverPreview, type HandoverResult, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type UserImportPreview, type UserImportRow, type UserImportFileError, userImportFileErrorOf, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
+export { usersApi, handoverApi, officerRefusalOf, handoverProblemsOf, openWorkOf, type OfficerInviteInput, type OfficerRefusal, type HandoverPreview, type HandoverResult, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type UserImportPreview, type UserImportRow, type UserImportFileError, userImportFileErrorOf, type AssignRolesInput, type UserBatchUpdateResult, type UserBatchDeactivateResult, type PaginatedResponse } from "./users";
 
 // Judgment
 export {

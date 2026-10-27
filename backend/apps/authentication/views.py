@@ -77,6 +77,7 @@ from .serializers import (
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
     TokenRefreshSerializer,
+    UserBatchDeactivateResultSerializer,
     UserBatchUpdateResultSerializer,
     UserCreateSerializer,
     UserDeactivateSerializer,
@@ -384,19 +385,28 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # `.update()` fires no signals, so the audit row is written by hand
         # (one BATCH_UPDATE row naming every user), from the same list the
         # update runs on.
-        targets = list(self._batch_targets(user_ids))
-        if not active:
-            # 批量不做交接(接手人是逐个选的):手上有事的人一个都不停,列出来让管理员逐个停用并移交。
-            held = {str(u.pk): work for u in targets if (work := _open_work(u))}
-            if held:
-                return _open_work_refusal(held)
-        updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
-        if targets:
-            create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
-        if not active:
-            for target in targets:
-                close_user_sockets(target.pk)
-        return Response({'updated': updated})
+        held = []
+        with transaction.atomic():
+            if active:
+                targets = list(self._batch_targets(user_ids))
+            else:
+                # 批量不做交接(接手人是逐个选的):手上没事的人停用;有事的人留着、连同件数列出来,
+                # 让管理员逐个停用并移交(2026-10-27 用户决定)。计数在锁住这些行之后做,同单个停用。
+                targets = []
+                for u in self._batch_targets(user_ids).select_for_update().order_by('pk'):
+                    work = _open_work(u)
+                    if work:
+                        held.append({'id': str(u.pk), 'username': u.username, 'open_work': work})
+                    else:
+                        targets.append(u)
+            updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
+            if targets:
+                create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
+        if active:
+            return Response({'updated': updated})
+        for target in targets:
+            close_user_sockets(target.pk)
+        return Response({'updated': updated, 'held': held})
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
@@ -404,7 +414,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """批量激活用户"""
         return self._batch_set_active(request, True)
 
-    @extend_schema(responses={200: UserBatchUpdateResultSerializer, 409: OfficerHasOpenWorkSerializer})
+    @extend_schema(responses=UserBatchDeactivateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_deactivate(self, request):
         """批量停用用户"""
