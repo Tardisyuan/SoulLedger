@@ -243,11 +243,19 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 - **推到 main 不再强制全跑(2026-10-24 用户决定)**:此前推 main 一律全量，每次 15–20 分钟、负载近 20,而这里的推送全是推 main。
   现在 main 和任何分支一样按改动跑;要全量就 `scripts/run-gates.sh --full` 或 `GATES_FULL=1`。跨区漏网靠「读文件」清单兜底。
 - **什么强制全跑**(输出里逐条写明是哪条规则、哪个文件):`--full`、`GATES_FULL=1`、
-  语言包(`packages/core/messages/**`)、`frontend/` 或 `packages/core/`
-  下的 JSON / MD / YAML、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
+  `frontend/` 或 `packages/core/` 下的 JSON / MD / YAML(语言包除外)、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
   也包括 `jest.always-run.txt` 本身)、根上的 JS 依赖树(package*.json、.nvmrc)、删掉或改名的文件、
   不认识的根文件、以及门禁脚本本身(`run-gates.sh` / `install-hooks.sh`)。
   `--affected` 就是默认行为;**没有任何办法强制选择性运行** —— `GATES_FULL=0` 不是开关。
+- **2026-10-27 起(用户决定)三处放宽、一处加限**:
+  - 语言包不再强制全跑:运行时全是静态 `import`,`--findRelatedTests` 追得到(实测 en.json 选 312 个测试文件里的 204 个)。
+    此前 10-13 到 10-27 的 497 个提交里 204 个因此全跑。**语言包只能静态 import**,拼路径加载就追不到。
+  - mobile / 官员端 jest 也按 `--findRelatedTests` 选,再加该 App 读文件的测试(`run-gates.sh` 的 `app_jest`)。
+    App 目录里 `src/` 以外或非代码文件改了、删改名、或上面任一条全跑规则命中 → 该 App 全跑。
+    实测:mobile `navigation.tsx` 选 58 个里的 20 个;官员端 `judgmentActions.tsx` 选 39 个里的 16 个。
+  - 钩子的 pytest 带 `-o faulthandler_timeout=300 -o faulthandler_exit_on_timeout=true`(`PYTEST_TEST_TIMEOUT` 覆盖):
+    单条测试挂住只赔那个 worker,不再握着门禁锁挂几个小时。
+  - 门禁锁被一个活进程握超过 45 分钟时，等待方每分钟打印持有者的 `ps` / `kill` 命令;不自动抢。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
   源码里写了 `apps.<app>` / 调了该 app 的 `/api/v1/<前缀>/`」的测试文件,前缀从 `config/urls.py` 读;
   再加上 `reads-outside-backend.txt` 里命中的读文件测试。改了 `backend/config/`、任一 conftest、`pytest.ini`、

@@ -53,6 +53,11 @@ gate_lock() {
         fi
         if [ $((waited % 60)) -eq 0 ]; then
             echo "    … waiting for the gate lock: $(cat "$GATE_LOCK_DIR/label" 2>/dev/null) (pid ${pid:-?}), ${waited}s so far"
+            # A live holder is never taken over automatically: it may be a full run that is just slow.
+            # Past 45 minutes say so, and how to look at it — no gate here normally takes that long.
+            if [ -n "$pid" ] && [ -n "$(find "$GATE_LOCK_DIR" -maxdepth 0 -mmin +45 2>/dev/null)" ]; then
+                echo "    … the holder has had the lock over 45 minutes and may be hung: ps -o pid,etime,command -p $pid ; kill $pid frees the lock"
+            fi
         fi
         sleep 5; waited=$((waited + 5))
     done

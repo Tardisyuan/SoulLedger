@@ -651,6 +651,14 @@ def _template_switch(hook, cwd, python, changed, **extra):
 
 
 class TestWhatPytestIsInvokedWith:
+    def test_each_test_has_a_time_limit_that_ends_its_worker(self, hook, checkouts, fake_backend):
+        """2026-10-19 a run hung for hours holding the gate lock, and every session waited."""
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        joined = " ".join(args)
+        assert "-o faulthandler_timeout=300" in joined, args
+        assert "-o faulthandler_exit_on_timeout=true" in joined, args
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
@@ -741,6 +749,9 @@ class TestJestSelection:
             ["packages/core/src/index.ts"],
             ["frontend/src/__tests__/suiteShape.test.ts"],
             ["backend/apps/souls/views.py"],
+            # 2026-10-27: a language pack is traced through its static imports.
+            ["packages/core/messages/en.json"],
+            ["frontend/app/page.tsx", "packages/core/messages/egy.json"],
         ],
     )
     def test_an_ordinary_source_change_is_selective(self, hook, changed):
@@ -751,7 +762,6 @@ class TestJestSelection:
     @pytest.mark.parametrize(
         "changed",
         [
-            ["packages/core/messages/en.json"],
             ["frontend/jest.config.js"],
             ["frontend/tsconfig.json"],
             ["packages/core/package.json"],
@@ -763,7 +773,7 @@ class TestJestSelection:
             ["frontend/src/components/NoSuchComponent.tsx"],
             ["tsconfig.base.json"],
             # One matching file among ordinary ones still counts.
-            ["frontend/app/page.tsx", "packages/core/messages/egy.json"],
+            ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"],
         ],
     )
     def test_what_jest_cannot_trace_forces_a_full_run_and_says_why(self, hook, changed):
@@ -777,15 +787,63 @@ class TestJestSelection:
     def test_gates_full_0_does_not_force_selective(self, hook):
         """There is no way to force a selective run. GATES_FULL=0 is not one."""
         full, out = _classify_jest(
-            hook, ["packages/core/messages/en.json"], GATES_FULL="0"
+            hook, ["frontend/tsconfig.json"], GATES_FULL="0"
         )
         assert full == 1, out
         full, _ = _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="0", PREPUSH_TO_MAIN="1")
         assert full == 0  # 2026-10-24: main is selective too
 
     def test_the_runner_names_the_file_that_forced_it(self, hook):
-        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/messages/egy.json"])
-        assert "language pack" in out and "packages/core/messages/egy.json" in out
+        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/openapi/schema.yml"])
+        assert "data file" in out and "packages/core/openapi/schema.yml" in out
+
+
+def _classify_app_jest(hook, changed: list[str], **extra) -> tuple[int, str]:
+    _, out = _classify_jest(hook, changed, **extra)
+    m = re.search(r"^classify-app-jest: full=(\d)$", out, re.M)
+    assert m, f"no classify-app-jest line in hook output:\n{out}"
+    return int(m.group(1)), out
+
+
+class TestAppJestSelection:
+    """mobile/ and mobile-officer/ jest: selective like the web one (2026-10-27)."""
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["mobile/src/navigation.tsx"],
+            ["mobile-officer/src/shared.ts"],
+            ["packages/core/messages/en.json"],
+            ["packages/core/src/index.ts"],
+            ["frontend/app/globals.css"],
+        ],
+    )
+    def test_code_in_the_graph_is_selective(self, hook, changed):
+        assert _classify_app_jest(hook, changed)[0] == 0
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["mobile/jest.config.js"],
+            ["mobile-officer/package.json"],
+            ["mobile/app.json"],
+            ["mobile/plugins/withBuildTuning.js"],
+            ["mobile/src/locales.json"],
+            ["mobile/src/NoSuchScreen.tsx"],
+            ["package-lock.json"],
+            ["scripts/run-gates.sh"],
+            ["mobile/src/navigation.tsx", "mobile/app.json"],
+        ],
+    )
+    def test_what_the_app_graph_cannot_trace_forces_a_full_run(self, hook, changed):
+        full, out = _classify_app_jest(hook, changed)
+        assert full == 1, out
+        assert "app full because:" in out
+
+    def test_gates_full_forces_it(self, hook):
+        assert _classify_app_jest(hook, ["mobile/src/navigation.tsx"], GATES_FULL="1")[0] == 1
+
+
 
 
 def _push(hook, cwd: Path, remote_ref: str) -> subprocess.CompletedProcess:
@@ -988,8 +1046,11 @@ class TestTheOfficerAppIsGated:
 
     def test_the_runner_runs_all_three_officer_gates(self):
         runner = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
-        for script in ("typecheck", "lint", "test"):
+        for script in ("typecheck", "lint"):
             assert f"npm run --workspace mobile-officer {script}" in runner
+        # jest goes through app_jest (2026-10-27), which runs the named workspace's own `test` script.
+        assert re.search(r"^\s*app_jest mobile-officer ", runner, re.M)
+        assert 'npm run --workspace "$dir" test' in runner
 
     def test_every_workspace_the_runner_names_exists(self):
         """`--workspace officer` named no workspace: npm refused, and the hook read that as a failed
@@ -1006,6 +1067,7 @@ class TestTheOfficerAppIsGated:
             for d in dirs if (REPO_ROOT / d / "package.json").exists()
         }
         named = set(re.findall(r"--workspace[ =]([^\s\"']+)", runner))
+        named |= set(re.findall(r"^\s*app_jest (\S+) ", runner, re.M))
         assert named, "the runner names no workspace at all"
         assert named <= dirs | names, sorted(named - dirs - names)
 

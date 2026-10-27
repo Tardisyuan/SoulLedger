@@ -396,8 +396,15 @@ RUN_META=0
 # what that list cannot: configuration that changes how every test runs, data
 # that tests import (a JSON import is an edge jest may or may not resolve;
 # not worth betting a language pack on), and the selection machinery itself.
+# A LANGUAGE PACK IS SELECTIVE (2026-10-27, user decision). It forced a full run
+# until then, and 204 of the 497 commits from 10-13 to 10-27 touched one. Every
+# runtime use is a static `import … from "@soulledger/core/messages/<lang>.json"`
+# (I18nContext, slipTexts, mobile/src/i18n.tsx), which --findRelatedTests
+# follows: measured that day, en.json selects 204 of 312 test files, egy.json
+# 205, zh-Hans.json 209. Parity and lexicon tests read the packs and are
+# always-run. A pack loaded by a computed path would not be traced — keep them
+# static imports. The data-file rule below therefore skips messages/.
 FULL_RULES='^scripts/(run-gates\.sh|install-hooks\.sh)$	the gate machinery itself changed
-^packages/core/messages/	a language pack changed
 ^(package\.json|package-lock\.json|\.nvmrc)$	the JS dependency tree changed
 ^(frontend|packages/core)/[^/]+$	top-level config of frontend/ or packages/core/ changed (jest, ts, next, eslint, package.json)
 ^(frontend|packages/core)/.*\.(json|md|ya?ml)$	a data file under frontend/ or packages/core/ changed'
@@ -408,7 +415,7 @@ full() { FULL_F="$FULL_F$1"$'\n'; }
 unset PREPUSH_TO_MAIN
 [ -n "$UNKNOWN_ROOT" ] && full "a root-level file this script does not recognise"
 while IFS=$'\t' read -r re name; do
-    hit=$(echo "$CHANGED" | grep -E "$re" | head -1)
+    hit=$(echo "$CHANGED" | grep -v '^packages/core/messages/' | grep -E "$re" | head -1)
     [ -n "$hit" ] && full "$name: $hit"
 done <<<"$FULL_RULES"
 # A deleted or renamed file cannot be traced: the import edge to it is gone
@@ -419,6 +426,21 @@ while IFS= read -r f; do
     fi
 done <<<"$CHANGED"
 
+# ── MOBILE / OFFICER JEST: FULL OR SELECTIVE (2026-10-27, user decision) ─────
+#
+# Same scheme as the web jest above: --findRelatedTests from the changed files,
+# plus the app's tests that read files (grep, below). Both app configs root jest
+# at <app>/src, so only a code file under <app>/src or packages/core (added with
+# --roots) is in the graph; anything else an app changed cannot be traced and
+# runs that app's suite. Measured 2026-10-27: mobile navigation.tsx selects 20 of
+# 58 test files, screens/letters.tsx 25; officer judgmentActions.tsx 16 of 39.
+APP_FULL_F="$FULL_F"
+hit=$(echo "$CHANGED" | grep -E '^(mobile|mobile-officer)/' | grep -vE '^(mobile|mobile-officer)/src/.*\.(ts|tsx|js|jsx)$' | head -1)
+[ -n "$hit" ] && APP_FULL_F="${APP_FULL_F}an app file outside src/, or not code: $hit"$'\n'
+while IFS= read -r f; do
+    case "$f" in mobile/*|mobile-officer/*) [ ! -e "$ROOT/$f" ] && { APP_FULL_F="${APP_FULL_F}an app file was deleted or renamed: $f"$'\n'; break; } ;; esac
+done <<<"$CHANGED"
+
 echo "$P: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files (root: js $JS_ROOT, backend $BACKEND_ROOT)"
 
 if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
@@ -427,6 +449,8 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py) is unchanged.
     echo "classify-mobile: mobile=$RUN_MOBILE"
     echo "classify-officer: officer=$RUN_OFFICER"
+    echo "classify-app-jest: full=$([ -n "$APP_FULL_F" ] && echo 1 || echo 0)"
+    printf '%s' "$APP_FULL_F" | sed 's/^/  app full because: /'
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-meta: meta=$RUN_META"
     if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ -f "$HERE/select-backend-tests.py" ]; then
@@ -576,6 +600,45 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     cd "$ROOT" || exit 1
 fi
 
+# app_jest <dir> <changed-path regex> <extra --roots> <failure message> — see MOBILE / OFFICER JEST above.
+app_jest() {
+    local dir="$1" re="$2" roots="$3" msg="$4" paths="" related="" readers src log status
+    echo "  → $dir jest"
+    if [ -z "$APP_FULL_F" ]; then
+        src=$(echo "$CHANGED" | grep -E "$re" | while IFS= read -r f; do [ -f "$ROOT/$f" ] && echo "$ROOT/$f"; done)
+        if [ -n "$src" ]; then
+            # shellcheck disable=SC2086
+            related=$(cd "$ROOT/$dir" && npx jest --roots '<rootDir>/src' $roots --listTests --findRelatedTests $src 2>/dev/null) \
+                || APP_FULL_F="jest --findRelatedTests failed, so the selection is unknown"$'\n'
+            related=$(echo "$related" | grep "^$ROOT/$dir/src/" || true)
+        fi
+    fi
+    if [ -z "$APP_FULL_F" ]; then
+        readers=$(git ls-files "$dir/src/*.test.ts" "$dir/src/*.test.tsx" | while IFS= read -r f; do
+            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$ROOT/$f" 2>/dev/null
+        done)
+        paths=$(printf '%s\n%s\n' "$related" "$readers" | grep -v '^$' | sort -u)
+        echo "    affected: $(echo "$paths" | grep -c . || true) test files ($(echo "$related" | grep -c . || true) related to the change, $(echo "$readers" | grep -c . || true) that read files)"
+        # Empty here means "nothing affected", never "everything": no --runTestsByPath would run the suite.
+        [ -z "$paths" ] && { echo "    nothing to run"; return 0; }
+    else
+        echo "    FULL, because:"; printf '%s' "$APP_FULL_F" | sed 's/^/      /'
+    fi
+    # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
+    # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
+    log=$(mktemp -t "prepush-$dir-jest")
+    # shellcheck disable=SC2086
+    npm run --workspace "$dir" test --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
+    status=$?
+    tail -4 "$log"
+    if [ "$status" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$log" | awk '!seen[$0]++' | head -20
+        echo "    full $dir jest log: $log"
+        fail "$msg"
+    fi
+    rm -f "$log"
+}
+
 if [ "$RUN_MOBILE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -583,19 +646,8 @@ if [ "$RUN_MOBILE" = 1 ]; then
     npm run --workspace mobile typecheck --silent || fail "mobile typecheck failed"
     echo "  → mobile eslint"
     npm run --workspace mobile lint --silent || fail "mobile lint failed"
-    echo "  → mobile jest"
-    # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
-    # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
-    MOBILE_LOG=$(mktemp -t prepush-mobile-jest)
-    npm run --workspace mobile test --silent -- --silent >"$MOBILE_LOG" 2>&1
-    MOBILE_STATUS=$?
-    tail -4 "$MOBILE_LOG"
-    if [ "$MOBILE_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$MOBILE_LOG" | awk '!seen[$0]++' | head -20
-        echo "    full mobile jest log: $MOBILE_LOG"
-        fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
-    fi
-    rm -f "$MOBILE_LOG"
+    app_jest mobile "^(mobile|packages/core)/" "--roots <rootDir>/../packages/core" \
+        "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
 fi
 
 if [ "$RUN_OFFICER" = 1 ]; then
@@ -605,17 +657,8 @@ if [ "$RUN_OFFICER" = 1 ]; then
     npm run --workspace mobile-officer typecheck --silent || fail "officer typecheck failed"
     echo "  → officer eslint"
     npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
-    echo "  → officer jest"
-    OFFICER_LOG=$(mktemp -t prepush-officer-jest)
-    npm run --workspace mobile-officer test --silent -- --silent >"$OFFICER_LOG" 2>&1
-    OFFICER_STATUS=$?
-    tail -4 "$OFFICER_LOG"
-    if [ "$OFFICER_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$OFFICER_LOG" | awk '!seen[$0]++' | head -20
-        echo "    full officer jest log: $OFFICER_LOG"
-        fail "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
-    fi
-    rm -f "$OFFICER_LOG"
+    app_jest mobile-officer "^(mobile-officer|mobile|packages/core)/" "--roots <rootDir>/../packages/core --roots <rootDir>/../mobile/src" \
+        "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
 fi
 
 if [ -n "$MOBILE_READERS" ]; then
@@ -906,8 +949,15 @@ PROBE_PY
         [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
         echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"; exit 0
     fi
+    # A HUNG TEST COSTS ONE WORKER, NOT THE PUSH (2026-10-27). Without this a test that blocks
+    # (2026-10-19: a worker idle in transaction, another stuck on a thread lock, CPU 0, no output)
+    # held the gate lock for hours and every other session waited behind it. A test past the limit
+    # dumps every thread's stack into the log and its worker exits, so the run ends red and names
+    # it. The slowest test measured is a 67 s migration round trip; 300 s leaves room for load.
+    TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-300}"
     # shellcheck disable=SC2086
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
+        -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true \
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     T0=$(date +%s); NEXT=30
