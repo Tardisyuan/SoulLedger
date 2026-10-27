@@ -1,17 +1,1 @@
-[
-  "appeals.status.VOID",
-  "appeals.refusal.soul_devoured",
-  "judgment.duat_stage.EMBALMING",
-  "judgment.duat_stage.EARLY_DEATH",
-  "judgment.duat_stage.NAMELESS",
-  "judgment.duat_stage.IMPROPER_BURIAL",
-  "judgment.claim.embalming",
-  "judgment.claim.duat_unfinished",
-  "judgment.claim.duat_barred_short",
-  "souls.duat_passage.label",
-  "souls.duat_passage.NONE",
-  "souls.duat_passage.EARLY_DEATH",
-  "souls.duat_passage.NAMELESS",
-  "souls.duat_passage.IMPROPER_BURIAL",
-  "souls.duat_passage.help"
-]
+[]
