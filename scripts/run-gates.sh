@@ -971,9 +971,11 @@ PROBE_PY
     # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
     XDIST=""
     if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
-        # worksteal: an idle worker takes queued tests from a busy one, so the run does not end on one
-        # worker grinding through its slow tail while the other sits idle (2026-10-28).
-        XDIST="-n $PYTEST_WORKERS --dist worksteal"
+        # NOT --dist worksteal, and no --ff below: both reorder the tests, and some realtime tests
+        # (test_realtime_bus, test_websocket_m12, test_workflow_events, test_scheduler_realtime_events)
+        # and test_testdb_name depend on the order. 2026-10-28 on the unRAID box, full suite, -n 8:
+        # with them 9 and 11 failed (a different set each run); with plain -n 8, 8061 passed, 0 failed.
+        XDIST="-n $PYTEST_WORKERS"
         echo "    (pytest-xdist: $XDIST)"
     fi
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
@@ -1045,11 +1047,9 @@ PROBE_PY
     # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
     REAL_PG_ARGS=""
     if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
-    PYARGS=(-q --no-header --no-cov --ff --durations=10 $XDIST
+    PYARGS=(-q --no-header --no-cov --durations=10 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
-    # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
-    # that is still red says so in its first minute instead of at the end of the selection.
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     pytest_finish
