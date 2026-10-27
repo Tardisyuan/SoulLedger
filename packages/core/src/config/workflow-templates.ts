@@ -437,61 +437,73 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n3", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 3 },
     ],
   },
+  // 神判 / 紧急审判(2026-10-27,egypt-docs 检查 #15;用户定:埃及案不管怎么开，一律走埃及称心审法)。
+  // 这两套原先是「Horus 引见 → Osiris 终审」与「紧急受理 → Osiris 紧急审判」—— 不称心就裁断，文档里没有这种流程。
+  // 现在两套的站与分支和 EGYPTIAN_ROUTINE 逐字相同(理由与出处写在那一套里);留下来的区别只有名字和 priority。
+  // 后端 (EGYPTIAN, DIVINE_TRIAL) 同样指向称心模板(apps/workflow/templates.py)。节点逐字写出而不是引用
+  // EGYPTIAN_ROUTINE:后端几道守卫按文本解析本文件(backend/tests/test_workflow_preset_node_types.py)。
   EGYPTIAN_TRIALS: {
     civilization: "EGYPTIAN",
-    // SPECIAL → DIVINE_TRIAL。这一套叫「神判流程」、描述写「神明直接审判」，而
-    // `DIVINE_TRIAL` 的中文标签就是「神判」——名字与它挂的 case_type 原本互相
-    // 矛盾。内容也说的是同一件事：没有称量，两个节点是 Horus 引见 + Osiris 裁
-    // 断，即神明不经心脏称重直接裁断，正是 DIVINE_TRIAL 命名的东西（同理见
-    // EGYPTIAN_EMERGENCY 顶部）。
-    //
-    // 另一半理由是这个 case_type 根本到不了：`SPECIAL` 不在埃及的
-    // `VALID_CASE_TYPES_BY_CIVILIZATION` 里，所以这套预设存得下来，
-    // `create_from_judgment` 却对 (EGYPTIAN, SPECIAL) 抛 ValueError——存了也永远
-    // 路由不到。改成 DIVINE_TRIAL 两头都通，登记表里的对应条目随之删除。
-    //
-    // 与 EGYPTIAN_EMERGENCY 同挂 DIVINE_TRIAL 是允许的：没有任何代码按
-    // (civilization, case_type) 取唯一模板——`WorkflowTemplate` 上没有相应的唯一
-    // 约束（`0006` 删掉了按名字的那条，`0008` 又删掉了 civ/case/active 索引），
-    // `create_from_judgment` 用的是 `.first()`，而预设本身按自己的键索引。同一
-    // 文明多套预设共用一个 case_type 也不是新情况：`EGYPTIAN_AFTERLIFE` 与本套
-    // 此前就同挂 SPECIAL，欧洲的 GREEK / HELL_CIRCLE 至今如此。
     caseType: "DIVINE_TRIAL",
     name: "神判流程",
-    description: "神明直接审判",
+    description: "神明主持的审判，同样经心脏称重",
     priority: 0,
     nodes: [
-      // 荷鲁斯不作任何初审。他在称量**之后**牵着已获判无罪的亡者的手，把他引入
-      // 奥西里斯的神龛——依据：Budge/亚尼 图版 IV「the hawk-headed god Horus,
-      // the son of Isis… takes Ani by the hand and leads him forward towards
-      //『Osiris, the lord of eternity』」；BM EA 9901（Hunefer）同。角色是
-      // CONDUIT（引见），不是 JUDGE，也不是杜阿特入口的守卫。
-      { id: "n1", name: "Horus · 引见", court: "两真之殿", type: "引见", order: 1 },
-      { id: "n2", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 2 },
+      { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
+      { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
+      { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
+      { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
+      { id: "n7", name: "Horus · 引导", court: "两真之殿", type: "引见", order: 5 },
+      { id: "n4", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 6 },
+      { id: "n5", name: "Ammit · 吞噬（未通过分支）", court: "两真之殿", type: "失败分支", order: 7 },
+      { id: "n8", name: "结束 · 称心毕", court: "两真之殿", type: "结束", order: 8 },
     ],
+    routes: {
+      n1: { onPass: "n2" },
+      n2: { onPass: "n3" },
+      n3: {
+        kind: "NOTIFY",
+        onPass: "n6",
+        branches: [{ id: "heavier", when: [{ fact: "verdict", op: "in", value: ["FAILED"] }], target: "n5" }],
+      },
+      n6: { onPass: "n7" },
+      n7: { onPass: "n4" },
+      n4: { onPass: "n8" },
+      n5: { onPass: "n8" },
+      n8: { kind: "END" },
+    },
   },
   EGYPTIAN_EMERGENCY: {
     civilization: "EGYPTIAN",
-    // 见 CHINESE_EMERGENCY 顶部：为什么急缓不进 case_type，而留在 priority。
-    //
-    // 这一套归到 DIVINE_TRIAL（神判）：奥西里斯不经称心直接裁断，「神明直接审判」
-    // 正是 DIVINE_TRIAL 这个成员命名的东西，也不能是 HEART_WEIGHING——这套流程里
-    // 没有称量。埃及一侧此前没有任何一套预设落在 DIVINE_TRIAL 上，这一套补上了。
-    //
-    //（原先这里记着一笔「不在本次改动范围内」的错配：叫「神判流程」的
-    // EGYPTIAN_TRIALS 反而挂着 SPECIAL。那一处现已修正，EGYPTIAN_TRIALS 也归到
-    // DIVINE_TRIAL，理由写在它自己那里；两套同挂一个 case_type 没有代码依赖被
-    // 破坏，同样写在那里。）
+    // 见 CHINESE_EMERGENCY 顶部：为什么急缓不进 case_type，而留在 priority。急的是排队顺序，不是少称一次心。
     caseType: "DIVINE_TRIAL",
     name: "紧急审判流程",
-    description: "神庙紧急处置",
+    description: "优先排队，仍经心脏称重",
     priority: 1,
     nodes: [
-      { id: "n1", name: "紧急受理", court: "埃及", type: "紧急受理", order: 1 },
-      // 芦苇原 → 两真之殿：同 EGYPTIAN_ROUTINE n4，奥西里斯在殿内审判，
-      // 芦苇原是通过之后的去处。
-      { id: "n2", name: "Osiris · 紧急审判", court: "两真之殿", type: "紧急审判", order: 2 },
+      { id: "n1", name: "Anubis · 引导与称量", court: "两真之殿", type: "灵魂引导", order: 1 },
+      { id: "n2", name: "42审判者 · 否定告白", court: "两真之殿", type: "42审判", order: 2 },
+      { id: "n3", name: "Thoth · 记录与宣读判词", court: "两真之殿", type: "功过记录", order: 3 },
+      { id: "n6", name: "神庭 · 确认", court: "两真之殿", type: "神庭确认", order: 4 },
+      { id: "n7", name: "Horus · 引导", court: "两真之殿", type: "引见", order: 5 },
+      { id: "n4", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 6 },
+      { id: "n5", name: "Ammit · 吞噬（未通过分支）", court: "两真之殿", type: "失败分支", order: 7 },
+      { id: "n8", name: "结束 · 称心毕", court: "两真之殿", type: "结束", order: 8 },
     ],
+    routes: {
+      n1: { onPass: "n2" },
+      n2: { onPass: "n3" },
+      n3: {
+        kind: "NOTIFY",
+        onPass: "n6",
+        branches: [{ id: "heavier", when: [{ fact: "verdict", op: "in", value: ["FAILED"] }], target: "n5" }],
+      },
+      n6: { onPass: "n7" },
+      n7: { onPass: "n4" },
+      n4: { onPass: "n8" },
+      n5: { onPass: "n8" },
+      n8: { kind: "END" },
+    },
   },
 };
 
@@ -545,7 +557,7 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   "阿鼻地狱入狱": "执行动作；阿鼻地狱是地方不是人。",
   "功德核定": "名字说的是一件事。",
   "轮回分流": "名字说的是一件事。",
-  "紧急受理": "受理动作。中国 / 欧洲 / 埃及三套紧急流程共用这个节点名，理由相同。",
+  "紧急受理": "受理动作。中国 / 欧洲两套紧急流程共用这个节点名，理由相同(埃及的紧急审判 2026-10-27 起也走称心，没有这一站)。",
   "申诉受理": "受理动作。原来这里写的是「Gabriel · 受理」，见欧洲一节顶部为什么传信天使不受理亡魂案件。",
   // ── 埃及 ──────────────────────────────────────────────
   // ── 希腊 ──────────────────────────────────────────────

@@ -219,7 +219,7 @@ def _edges(row, field):
 def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(halls):
     _seed()
     _seed()  # idempotent
-    assert WorkflowTemplate.objects.count() == 11
+    assert WorkflowTemplate.objects.count() == 12
     assert all(r.is_active and r.published_version_id and r.nodes_json for r in WorkflowTemplate.objects.all())
     assert all(r.versions.count() == 1 for r in WorkflowTemplate.objects.all())
 
@@ -232,6 +232,7 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     # The heart is weighed once: no returns in either weighing row.
     assert _edges(_row(eg, "ROUTINE"), "reject_to") == {}
     assert _edges(_row(eg, "HEART_WEIGHING"), "reject_to") == {}
+    assert _edges(_row(eg, "DIVINE_TRIAL"), "reject_to") == {}  # 神判 is the same weighing (egypt-docs #15)
     assert _edges(_row(eg, "APPEAL"), "reject_to") == {"n2": "n1"}
     assert _edges(_row(eu, "ROUTINE"), "reject_to") == {}
     assert [n["node_name"] for n in _row(eu, "ROUTINE").nodes_json] == [
@@ -297,7 +298,7 @@ def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
         nodes_json=[{"id": "n1", "node_name": "一", "node_order": 1}])
     _seed()
     assert list(WorkflowTemplate.objects.filter(tenant=cn, case_type="ROUTINE")) == [mine]
-    assert WorkflowTemplate.objects.count() == 11  # 本殿自定 1 份 + 种子建的其余 10 份
+    assert WorkflowTemplate.objects.count() == 12  # 本殿自定 1 份 + 种子建的其余 11 份
 
 
 def test_the_seed_overwrites_a_changed_row_only_with_update(halls):

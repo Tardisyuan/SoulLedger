@@ -55,9 +55,10 @@ case each one is, and urgency stays on ``priority``:
   is the same judgment by the same and only judge — 「紧急队列仍由基督审判——
   没有可以升级到的第二位审判者」. Nothing about the *kind* of case differs from
   ``EUROPEAN_ROUTINE``; only the queue does.
-* ``EGYPTIAN_EMERGENCY`` -> ``DIVINE_TRIAL`` (神判). Osiris judges directly,
-  without the weighing of the heart — a god deciding outside the rite is what
-  ``DIVINE_TRIAL`` names, and it is the only preset that fills that slot.
+* ``EGYPTIAN_EMERGENCY`` -> ``DIVINE_TRIAL`` (神判). It was filed there as
+  "Osiris judges directly, without the weighing"; since 2026-10-27 (user: every
+  Egyptian case is weighed, however opened) DIVINE_TRIAL runs the weighing
+  stations too, and the preset differs from EGYPTIAN_ROUTINE only in priority.
 
 Each of the three lands inside its civilization's set in
 ``VALID_CASE_TYPES_BY_CIVILIZATION``, so the change adds nothing to
