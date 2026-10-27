@@ -23565,6 +23565,18 @@ components:
       - demerit
       - kind
       - merit
+    BaptismEnum:
+      enum:
+      - UNRECORDED
+      - BAPTISED
+      - UNBAPTISED
+      - BEFORE_CHRIST
+      type: string
+      description: |-
+        * `UNRECORDED` - 未记录
+        * `BAPTISED` - 已受洗
+        * `UNBAPTISED` - 未受洗
+        * `BEFORE_CHRIST` - 生于基督之前
     BatchDeleteResult:
       type: object
       description: '`{"deleted": N}` —— 实际被删的条数(不含别人的、不存在的、已删的)。'
@@ -35960,6 +35972,23 @@ components:
         birth_name:
           type: string
           maxLength: 255
+        baptism:
+          allOf:
+          - $ref: '#/components/schemas/BaptismEnum'
+          description: |-
+            Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
+
+            * `UNRECORDED` - 未记录
+            * `BAPTISED` - 已受洗
+            * `UNBAPTISED` - 未受洗
+            * `BEFORE_CHRIST` - 生于基督之前
+        denied_immortality:
+          type: boolean
+          nullable: true
+          description: Whether this soul held, in life, that the spirit dies with
+            the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes.
+            NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null
+            means unrecorded.
         description:
           type: string
         merit_score:
@@ -39848,6 +39877,23 @@ components:
         birth_name:
           type: string
           maxLength: 255
+        baptism:
+          allOf:
+          - $ref: '#/components/schemas/BaptismEnum'
+          description: |-
+            Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
+
+            * `UNRECORDED` - 未记录
+            * `BAPTISED` - 已受洗
+            * `UNBAPTISED` - 未受洗
+            * `BEFORE_CHRIST` - 生于基督之前
+        denied_immortality:
+          type: boolean
+          nullable: true
+          description: Whether this soul held, in life, that the spirit dies with
+            the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes.
+            NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null
+            means unrecorded.
         description:
           type: string
         merit_score:
