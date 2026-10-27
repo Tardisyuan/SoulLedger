@@ -208,9 +208,11 @@ describe("escalated appeal", () => {
     const judgment_appeal = { id: "ap1", case_number: "CN-2026-0007", round: 2, status: "IN_REVIEW" };
     workflowApi.get.mockResolvedValue({ data: { ...base.data, is_appeal: true, judgment_appeal } });
     const { unmount } = renderPage();
-    const link = await screen.findByTestId("workflow-judgment-appeal");
-    expect(link).toHaveAttribute("href", "/judgment/appeals/ap1");
-    expect(link).toHaveTextContent(`CN-2026-0007 · ${tZh("appeals.round", { round: "2" })}`);
+    const row = await screen.findByTestId("workflow-judgment-appeal");
+    // The case number goes through <CaseNumber> (whole, copyable — CASE_NUMBER_POLICY) and links to the round.
+    expect(row.querySelector("a")).toHaveAttribute("href", "/judgment/appeals/ap1");
+    expect(row).toHaveTextContent("CN-2026-0007");
+    expect(row).toHaveTextContent(tZh("appeals.round", { round: "2" }));
     unmount();
 
     workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
