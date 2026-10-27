@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Popover } from "@base-ui/react/popover";
-import { LazyMotion, domMax } from "motion/react";
+import { LazyMotion } from "motion/react";
 import { notificationsApi, type Notification } from "@soulledger/core/api";
 import { notificationKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -50,6 +50,9 @@ import { useImpersonation } from "@/src/components/impersonation/useImpersonatio
  *   (`ConnectionBanner`,Design E 组:它是全局状态),浮在内容上,不推动内容。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
+/** domMax arrives after first paint (`motionFeatures.ts`); an `m` element renders unanimated until then. */
+const loadMotionFeatures = () => import("./motionFeatures").then((mod) => mod.default);
+
 /** 问一问 pushed panel (canvas 1a) and the room the page keeps beside it (Design E 组). */
 export const ASSIST_PANEL_WIDTH = 420;
 export const ASSIST_MIN_MAIN_WIDTH = 720;
@@ -145,7 +148,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       : t("nav.collapse_menu");
 
   return (
-    <LazyMotion features={domMax}>
+    <LazyMotion features={loadMotionFeatures}>
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
       <aside className="sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block">
