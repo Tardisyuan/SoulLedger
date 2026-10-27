@@ -65,8 +65,20 @@ from apps.realms.models import CommediaRegion, RealmFork, RealmKind, RealmType
 # repoints anything that referenced them onto the court whose 大地狱 covers the
 # same offence and tombstones the rows; see that migration for the mapping.
 CHINESE_REALMS = [
+    # NOT ETERNAL, AND IT WASHES. This row used to say "no reincarnation" with
+    # `is_eternal=True`, so every PASSED Chinese soul ended SETTLED and never
+    # came back — the one outcome the documents rule out. 天道 is the highest of
+    # the 三善道, not an exit from the wheel: its reward is 「福报盛，然有尽时」
+    # and 福尽仍入轮回 (docs/07_六道轮回详解.md §二, docs/05_系统建模建议.md
+    # §2.1); a soul found innocent goes 「直接投胎」 / 「善人径投」
+    # (docs/11_地府审判制度与冥律.md §3.1, §3.3). So the heaven is a stay, and
+    # the soul leaves it the way every Chinese soul is reborn — through the
+    # broth (§3.1 第十二步「喝孟婆汤 → 投胎」), which is why the mechanism is
+    # MENGPO and tests/test_seed_mythology.py's washing guard lists this row
+    # beside the ten courts.
     ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "Tianjie", RealmType.BLISS, 1,
-     "Pure merit souls - highest bliss, no reincarnation", "NONE", True, None),
+     "Pure merit souls - highest bliss, for as long as the merit lasts; "
+     "when it is spent the soul returns to the wheel", "MENGPO", False, None),
     # SOURCE NOT FOUND. 「杨柳宫」 could not be located as an underworld place in
     # 《玉历宝钞》, in 《佛说预修十王生七经》, or in the general folklore material
     # searched for the 2026-08-14 cast review — see
@@ -604,9 +616,9 @@ GREEK_REALMS = [
      # bodies. The two texts agree here, so this is the one place the basis
      # needs no division rule.
      #
-     # It is the destination that carries it, following the twelve Chinese
-     # realms: 孟婆汤 is on every court a soul can be sentenced to and NONE on
-     # DY_01_HEAVEN, the one that does not send anyone back. Same shape here —
+     # It is the destination that carries it, following the Chinese table:
+     # 孟婆汤 is on every court a soul can be sentenced to and on DY_01_HEAVEN,
+     # every destination a Chinese soul is reborn from. Same shape here —
      # the meadow and the crossing stay NONE because nobody is sentenced to
      # either, so no rebirth follows from them.
     ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",

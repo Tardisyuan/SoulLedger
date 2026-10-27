@@ -852,8 +852,10 @@ def test_the_weighing_cast_all_stands_in_the_hall(seeded):
 
 
 @pytest.mark.django_db
-def test_only_the_ten_courts_wash_a_chinese_soul(seeded):
-    """孟婆汤 is drunk after sentence, so only a court may carry it.
+def test_only_the_ten_courts_and_heaven_wash_a_chinese_soul(seeded):
+    """孟婆汤 is drunk after sentence and before rebirth, so only a court — or
+    the heaven a PASSED soul is reborn from once its merit is spent
+    (docs/07_六道轮回详解.md §二; docs/11 §3.1 第十二步) — may carry it.
 
     《玉历宝钞》「孟婆神」 puts the 醧忘台 「居第十殿，冥王殿前六桥之外」 and has
     the broth drunk after sentence and before rebirth. `DY_00_PURGATORY` — the
@@ -878,8 +880,8 @@ def test_only_the_ten_courts_wash_a_chinese_soul(seeded):
         .values_list("realm_code", flat=True)
     )
     assert len(courts) == 10, courts
-    assert washed == courts, (
-        f"realms carrying 孟婆汤 are {washed}; expected exactly the ten courts. "
+    assert washed == sorted([*courts, "DY_01_HEAVEN"]), (
+        f"realms carrying 孟婆汤 are {washed}; expected exactly the ten courts and DY_01_HEAVEN. "
         f"A non-court with the mechanism records a memory wipe on a soul that "
         f"has not been sentenced — see the note on DY_00_PURGATORY."
     )

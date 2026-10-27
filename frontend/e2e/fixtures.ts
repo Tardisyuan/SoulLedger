@@ -322,7 +322,7 @@ export const REALMS = [
   court(8, "DY_COURT_08_DUSHI"),
   court(9, "DY_COURT_09_PINGDENG"),
   court(10, "DY_COURT_10_ZHUANLUN"),
-  { id: "cccccccc-0000-4000-8000-000000000011", realm_code: "DY_01_HEAVEN", name_en: "First heaven", civilization: "CHINESE", realm_type: "BLISS", tier: 1, parent_realm: null, is_eternal: true, order: null, kind: null, capacity: null },
+  { id: "cccccccc-0000-4000-8000-000000000011", realm_code: "DY_01_HEAVEN", name_en: "First heaven", civilization: "CHINESE", realm_type: "BLISS", tier: 1, parent_realm: null, is_eternal: false, order: null, kind: null, capacity: null },
   // 称心二岔 — order / fork / tier as realms/0022 writes them (REALM_TOPOLOGY's EGYPTIAN part).
   duat("01", "EG_DUAT_ENTRY", "Gate of Duat", "PURGATORY", 1, { order: 1 }),
   duat("03", "EG_SEVEN_ARRWT", "The Seven Approaches", "PURGATORY", 2, { order: 2 }),
