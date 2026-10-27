@@ -3,72 +3,78 @@
 # run, because `--findRelatedTests` only follows imports and cannot see what
 # they read. Derived, not curated: src/__tests__/jestAlwaysRunList.test.ts fails
 # when this list and the test sources disagree in either direction.
-src/__tests__/ActorsPage.test.tsx
-src/__tests__/AppLayout.test.tsx
-src/__tests__/Button.test.tsx
-src/__tests__/Field.test.tsx
-src/__tests__/LoginPage.test.tsx
-src/__tests__/PageShell.test.tsx
-src/__tests__/SchedulerPage.test.tsx
-src/__tests__/Spinner.test.tsx
-src/__tests__/a11yEngineBaseline.test.tsx
-src/__tests__/accessTokenNeverBecomesACookie.test.ts
-src/__tests__/apiEndpointContract.test.ts
-src/__tests__/arrowNotDoubled.test.ts
-src/__tests__/brandTokensMatchIcon.test.ts
-src/__tests__/chartColourContract.test.ts
-src/__tests__/civilizationMapCoverage.test.ts
-src/__tests__/creditsOssDrift.test.ts
-src/__tests__/cssTokenReferenceContract.test.ts
-src/__tests__/dangerButtonPlacement.test.ts
-src/__tests__/dataGridToneContract.test.ts
-src/__tests__/designGuardContract.test.ts
-src/__tests__/dialogsAreNotHandRolled.test.ts
-src/__tests__/domainDisplayContract.test.tsx
-src/__tests__/domainDisplayRendering.test.tsx
-src/__tests__/domainNamespaceContract.test.ts
-src/__tests__/draftSavedFlash.test.tsx
-src/__tests__/egyLexiconRules.test.ts
-src/__tests__/enumsMatchTheSchema.test.ts
-src/__tests__/errorIsNotAnEmptyState.test.ts
-src/__tests__/eventInvalidationReachesCache.test.ts
-src/__tests__/eventRegistry.test.ts
-src/__tests__/focusRingContract.test.ts
-src/__tests__/inkOnSurfaceContract.test.ts
-src/__tests__/jestAlwaysRunList.test.ts
-src/__tests__/jestRunsNextVendoredReact.test.ts
-src/__tests__/ledgerPaletteContract.test.ts
-src/__tests__/loginStatutes.test.ts
-src/__tests__/printLayout.test.tsx
-src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts
-src/__tests__/motionTokens.test.ts
-src/__tests__/notificationTarget.test.tsx
-src/__tests__/notifyKeysExistInTheBundles.test.ts
-src/__tests__/notifyPortCarriesTheToast.test.ts
-src/__tests__/officerAssist.test.tsx
-src/__tests__/oneRealtimeSocketPerSession.test.ts
-src/__tests__/paginatedPagesCanBePaged.test.ts
-src/__tests__/plaqueTitleStaysLargeText.test.ts
-src/__tests__/platformAdapterIsInstalled.test.tsx
-src/__tests__/proseLinkIsNotColourOnly.test.ts
-src/__tests__/proxyAuthGate.test.ts
-src/__tests__/reducedMotionContract.test.ts
-src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts
-src/__tests__/soulCodeMatchesBackend.test.ts
-src/__tests__/soulLifecycleEventCopy.test.tsx
-src/__tests__/soulStateBadgeContract.test.ts
-src/__tests__/statusGlyphFont.test.ts
-src/__tests__/statusTokenLayering.test.ts
-src/__tests__/suiteShape.test.ts
-src/__tests__/tabClassContract.test.ts
-src/__tests__/toastColourContract.test.ts
-src/__tests__/truncatedValuesAreRecoverable.test.ts
-src/__tests__/v3DataDisplayContract.test.tsx
-src/__tests__/viewportHeightContract.test.ts
-src/__tests__/workflowAutoLayoutMotion.test.tsx
-src/__tests__/workflowEdgeArrowSingleSource.test.ts
-src/__tests__/zIndexOrderContract.test.ts
-src/__tests__/zhuyinShell.test.tsx
-src/__tests__/menuTranslationCoverage.test.ts
-src/__tests__/loadingScreensFitAPhone.test.ts
-src/__tests__/passwordRulesMatchBackend.test.ts
+#
+# After each path: the top-level entries of the repository it reads (`*`: it
+# runs git or a subprocess, or reaches the root without naming anything;
+# `frontend`: only frontend/). When nothing under frontend/ or packages/
+# changed, run-gates.sh runs only the lines naming what the push changed, and
+# the `*` lines. Derived and checked by the same test.
+src/__tests__/ActorsPage.test.tsx packages
+src/__tests__/AppLayout.test.tsx frontend
+src/__tests__/Button.test.tsx frontend
+src/__tests__/Field.test.tsx *
+src/__tests__/LoginPage.test.tsx backend
+src/__tests__/PageShell.test.tsx frontend
+src/__tests__/SchedulerPage.test.tsx backend
+src/__tests__/Spinner.test.tsx frontend
+src/__tests__/a11yEngineBaseline.test.tsx *
+src/__tests__/accessTokenNeverBecomesACookie.test.ts frontend packages
+src/__tests__/apiEndpointContract.test.ts packages
+src/__tests__/arrowNotDoubled.test.ts packages
+src/__tests__/brandTokensMatchIcon.test.ts docs frontend mobile scripts
+src/__tests__/chartColourContract.test.ts packages
+src/__tests__/civilizationMapCoverage.test.ts config frontend packages
+src/__tests__/creditsOssDrift.test.ts backend config frontend mobile package.json packages
+src/__tests__/cssTokenReferenceContract.test.ts packages
+src/__tests__/dangerButtonPlacement.test.ts frontend
+src/__tests__/dataGridToneContract.test.ts packages
+src/__tests__/designGuardContract.test.ts *
+src/__tests__/dialogsAreNotHandRolled.test.ts frontend
+src/__tests__/domainDisplayContract.test.tsx packages
+src/__tests__/domainDisplayRendering.test.tsx packages
+src/__tests__/domainNamespaceContract.test.ts packages
+src/__tests__/draftSavedFlash.test.tsx packages
+src/__tests__/egyLexiconRules.test.ts frontend
+src/__tests__/enumsMatchTheSchema.test.ts packages
+src/__tests__/errorIsNotAnEmptyState.test.ts *
+src/__tests__/eventInvalidationReachesCache.test.ts *
+src/__tests__/eventRegistry.test.ts backend
+src/__tests__/focusRingContract.test.ts packages
+src/__tests__/inkOnSurfaceContract.test.ts packages
+src/__tests__/jestAlwaysRunList.test.ts *
+src/__tests__/jestRunsNextVendoredReact.test.ts package.json
+src/__tests__/ledgerPaletteContract.test.ts *
+src/__tests__/loginStatutes.test.ts backend config
+src/__tests__/printLayout.test.tsx frontend
+src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts *
+src/__tests__/motionTokens.test.ts packages
+src/__tests__/notificationTarget.test.tsx backend
+src/__tests__/notifyKeysExistInTheBundles.test.ts frontend packages
+src/__tests__/notifyPortCarriesTheToast.test.ts packages
+src/__tests__/officerAssist.test.tsx backend config
+src/__tests__/oneRealtimeSocketPerSession.test.ts frontend packages
+src/__tests__/paginatedPagesCanBePaged.test.ts packages
+src/__tests__/plaqueTitleStaysLargeText.test.ts packages
+src/__tests__/platformAdapterIsInstalled.test.tsx frontend
+src/__tests__/proseLinkIsNotColourOnly.test.ts packages
+src/__tests__/proxyAuthGate.test.ts config
+src/__tests__/reducedMotionContract.test.ts *
+src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts backend
+src/__tests__/soulCodeMatchesBackend.test.ts backend
+src/__tests__/soulLifecycleEventCopy.test.tsx packages
+src/__tests__/soulStateBadgeContract.test.ts packages
+src/__tests__/statusGlyphFont.test.ts frontend mobile
+src/__tests__/statusTokenLayering.test.ts packages
+src/__tests__/suiteShape.test.ts frontend
+src/__tests__/tabClassContract.test.ts *
+src/__tests__/toastColourContract.test.ts packages
+src/__tests__/truncatedValuesAreRecoverable.test.ts frontend
+src/__tests__/v3DataDisplayContract.test.tsx packages
+src/__tests__/viewportHeightContract.test.ts *
+src/__tests__/workflowAutoLayoutMotion.test.tsx frontend
+src/__tests__/workflowEdgeArrowSingleSource.test.ts packages
+src/__tests__/zIndexOrderContract.test.ts packages
+src/__tests__/zhuyinShell.test.tsx frontend
+src/__tests__/menuTranslationCoverage.test.ts backend
+src/__tests__/loadingScreensFitAPhone.test.ts frontend
+src/__tests__/passwordRulesMatchBackend.test.ts backend config

@@ -1106,3 +1106,111 @@ class TestATreeThatAlreadyPassedFull:
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "already passed" not in proc.stdout
         assert re.search(r"^classify: ", proc.stdout, re.M), proc.stdout
+
+
+class TestASelectivePassIsNotRunAgain:
+    """A green selective run is recorded with the files it covered; a push of that tree changing
+    only those files is let through (2026-10-27, user decision). A session ran the gates and then
+    pushed, and the hook ran the same tests again."""
+
+    def _env(self, stamp: Path, python: str, **extra) -> dict:
+        return _clean_env(PYTHON_BIN=python, RUFF_BIN=shutil.which("true"), GATES_STAMP_FILE=str(stamp),
+                          REDIS_URL=os.environ.get("REDIS_URL", ""), **extra)
+
+    def _head(self, repo: Path, what: str = "HEAD") -> str:
+        return subprocess.run(["git", "rev-parse", what], cwd=repo, env=_clean_env(),
+                              capture_output=True, text=True, check=True).stdout.strip()
+
+    def _push(self, hook, repo: Path, stamp: Path, changed: list[str], **extra):
+        return _run(hook, repo, changed, PREPUSH_RANGE=f"{'0' * 40}..{self._head(repo)}",
+                    GATES_STAMP_FILE=str(stamp), PREPUSH_CLASSIFY_ONLY="1", **extra)
+
+    def test_a_green_selective_run_is_recorded_and_its_push_skips(self, hook, checkouts, fake_backend, tmp_path):
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        stamp = tmp_path / "passed"
+        run = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--base", "HEAD~1"], cwd=main,
+                             env=self._env(stamp, fake_backend), capture_output=True, text=True, timeout=120)
+        assert run.returncode == 0, run.stdout + run.stderr
+        assert "recorded a selective pass" in run.stdout, run.stdout
+        line = (tmp_path / "passed-selective").read_text()
+        assert line.startswith(self._head(main, "HEAD^{tree}") + "\t") and line.rstrip().endswith("\tbackend/x.py"), line
+        push = self._push(hook, main, stamp, ["backend/x.py"])
+        assert push.returncode == 0, push.stdout + push.stderr
+        assert "for these changes" in push.stdout, push.stdout
+        assert "classify:" not in push.stdout, "the gates were classified (would have run) for changes that passed"
+
+    def _stamp_for(self, main: Path, tmp_path: Path, files: str) -> Path:
+        stamp = tmp_path / "passed"
+        (tmp_path / "passed-selective").write_text(
+            f"{self._head(main, 'HEAD^{tree}')}\t2026-10-27 12:00, abc1234\t{files}\n")
+        return stamp
+
+    def test_a_push_changing_a_file_the_run_did_not_cover_runs(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        stamp = self._stamp_for(main, tmp_path, "backend/a.py")
+        push = self._push(hook, main, stamp, ["backend/a.py", "backend/b.py"])
+        assert "for these changes" not in push.stdout
+        assert re.search(r"^classify: ", push.stdout, re.M), push.stdout
+
+    def test_a_subset_of_the_covered_files_skips(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        stamp = self._stamp_for(main, tmp_path, "backend/a.py|backend/b.py")
+        assert "for these changes" in self._push(hook, main, stamp, ["backend/b.py"]).stdout
+
+    def test_another_tree_runs(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        stamp = tmp_path / "passed"
+        (tmp_path / "passed-selective").write_text(f"{'f' * 40}\t2026-10-27 12:00, abc1234\tbackend/a.py\n")
+        assert "for these changes" not in self._push(hook, main, stamp, ["backend/a.py"]).stdout
+
+    def test_gates_full_at_push_time_still_runs(self, hook, checkouts, tmp_path):
+        main, _ = checkouts
+        stamp = self._stamp_for(main, tmp_path, "backend/a.py")
+        assert "for these changes" not in self._push(hook, main, stamp, ["backend/a.py"], GATES_FULL="1").stdout
+
+
+class TestStaticChecksRunBeforeAnyTests:
+    """2026-10-27: a ruff error used to surface only after the web and app jest had run."""
+
+    def test_every_type_check_and_linter_comes_before_the_first_test_runner(self):
+        text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
+        static = ['echo "  → core tsc"', 'echo "  → core eslint"', 'echo "  → tsc"', 'echo "  → eslint"',
+                  'echo "  → mobile tsc"', 'echo "  → mobile eslint"', 'echo "  → officer tsc"',
+                  'echo "  → officer eslint"', 'echo "  → ruff"', 'echo "  → makemigrations --check"']
+        tests = ['echo "  → core vitest"', 'echo "  → jest"', 'echo "  → $dir jest"', 'echo "  → pytest"']
+        for s in static:
+            assert text.count(s) == 1, s
+        last_static = max(text.index(s) for s in static)
+        first_test = min(text.index(t) for t in tests)
+        assert last_static < first_test
+
+
+class TestJestReadersFollowWhatChanged:
+    """When the web jest does not run, only the file-reading tests labelled with what changed run
+    (2026-10-27). The labels are derived by frontend/src/__tests__/jestAlwaysRunList.test.ts."""
+
+    def _readers(self, hook, changed):
+        _, out = _classify_jest(hook, changed)
+        m = re.search(r"^classify-jest-readers: (\d+)$", out, re.M)
+        assert m, out
+        return set(re.findall(r"^  jest reader: (\S+)$", out, re.M))
+
+    def _labelled(self, label):
+        lines = (REPO_ROOT / "frontend" / "jest.always-run.txt").read_text(encoding="utf-8").splitlines()
+        return {ln.split()[0] for ln in lines if ln.strip() and not ln.startswith("#") and label in ln.split()[1:]}
+
+    def test_a_backend_change_runs_the_backend_readers_and_the_stars_only(self, hook):
+        got = self._readers(hook, ["backend/apps/souls/views.py"])
+        assert self._labelled("backend") <= got and self._labelled("*") <= got, got
+        everything = self._labelled("frontend") | self._labelled("packages") | self._labelled("backend") | self._labelled("*")
+        unrelated = everything - self._labelled("backend") - self._labelled("*")
+        assert unrelated and not (unrelated & got), "a test that does not read backend/ ran on a backend push"
+
+    def test_a_docs_change_does_not_run_the_backend_readers(self, hook):
+        got = self._readers(hook, ["docs/notes.md"])
+        assert self._labelled("*") <= got
+        only_backend = self._labelled("backend") - self._labelled("docs") - self._labelled("*")
+        assert only_backend and not (only_backend & got), got

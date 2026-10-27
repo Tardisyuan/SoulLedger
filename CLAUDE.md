@@ -256,6 +256,15 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   - 钩子的 pytest 带 `-o faulthandler_timeout=300 -o faulthandler_exit_on_timeout=true`(`PYTEST_TEST_TIMEOUT` 覆盖):
     单条测试挂住只赔那个 worker,不再握着门禁锁挂几个小时。
   - 门禁锁被一个活进程握超过 45 分钟时，等待方每分钟打印持有者的 `ps` / `kill` 命令;不自动抢。
+- **2026-10-27 第二批(用户决定)**:
+  - **选择性通过也记账**:`run-gates.sh` 在干净工作区按改动跑通后，把树哈希和它当作「改动」的文件清单记进
+    `<git common dir>/soulledger-gates-passed-selective`。推送时被推提交的树相同、且推送改动的文件**全在**记下的清单里，
+    钩子打印「already passed … for these changes」直接放行。改动更多就照跑;推送时带 `--full` / `GATES_FULL=1` 也照跑。
+    所以会话里先跑 `scripts/run-gates.sh`(工作区要干净，即先提交)再推送，只跑一遍。
+  - **静态检查全部排在测试之前**:core / 前端 / 两个 App 的 tsc 与 eslint、ruff、makemigrations 先跑，再跑 vitest / jest / pytest。
+  - **前端读文件测试按目录选**:`jest.always-run.txt` 每行后面写着它读的顶层条目(`*` = 跑 git 或子进程、或摸到仓库根却没点名;
+    `frontend` = 只读 frontend/)。前端不跑时只跑点名了本次改动顶层条目的行和 `*` 行;实测只改后端时 69 个里跑 22 个。
+    标注由 `jestAlwaysRunList.test.ts` 推导并核对(注释先剥掉;与 `reads-outside-backend.txt` 同一条规则)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
   源码里写了 `apps.<app>` / 调了该 app 的 `/api/v1/<前缀>/`」的测试文件,前缀从 `config/urls.py` 读;
   再加上 `reads-outside-backend.txt` 里命中的读文件测试。改了 `backend/config/`、任一 conftest、`pytest.ini`、
