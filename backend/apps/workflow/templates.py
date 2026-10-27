@@ -294,6 +294,12 @@ WORKFLOW_TEMPLATES = {
 WORKFLOW_TEMPLATES[(Civilization.EGYPTIAN, CaseType.ROUTINE)] = WORKFLOW_TEMPLATES[
     (Civilization.EGYPTIAN, CaseType.HEART_WEIGHING)
 ]
+# 神判 / 紧急审判 too (egypt-docs review 2026-10-27 #15; user 2026-10-27: 埃及案不管怎么开一律走埃及称心审法).
+# The two presets used to be Horus → Osiris and 紧急受理 → Osiris: a verdict with no weighing, which no doc
+# has. A 神判 is now the same weighing; how urgent it is lives in `priority`, not in the stations.
+WORKFLOW_TEMPLATES[(Civilization.EGYPTIAN, CaseType.DIVINE_TRIAL)] = WORKFLOW_TEMPLATES[
+    (Civilization.EGYPTIAN, CaseType.HEART_WEIGHING)
+]
 
 TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # 申诉审判流程
@@ -577,6 +583,7 @@ FAIL_ROUTES = {
     (C, CaseType.CROSS_REALM): _back((2, 1), (3, 2), (4, 3)),
     (EG, CaseType.ROUTINE): {},
     (EG, CaseType.HEART_WEIGHING): {},
+    (EG, CaseType.DIVINE_TRIAL): {},
     (EG, CaseType.APPEAL): _back((2, 1)),
     (EU, CaseType.ROUTINE): {},
     (EU, CaseType.APPEAL): {},
