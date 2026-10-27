@@ -72,11 +72,12 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-2}"
 VITEST_WORKERS="${VITEST_WORKERS:-2}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PREPUSH=0; MODE=auto; BASE=""
+PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --prepush)  PREPUSH=1 ;;
         --full)     MODE=full ;;
+        --real-pg)  REAL_PG=1 ;;
         --affected) MODE=auto ;;
         --base)     BASE="${2:?--base needs a ref}"; shift ;;
         -h|--help)  sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
@@ -197,7 +198,7 @@ fi
 # record_pass: after a green run outside a push, on a clean checkout. --full goes to STAMP (any push
 # of the tree passes); a selective run goes to SEL_STAMP with the files it covered.
 record_pass() {
-    [ "$PREPUSH" = 0 ] || return 0
+    [ "$PREPUSH" = 0 ] && [ "$REAL_PG" = 0 ] || return 0
     cd "$ROOT" || return 0
     if ! git diff --quiet HEAD --; then
         echo "$P: not recording this pass — tracked files differ from HEAD"; return 0
@@ -446,6 +447,23 @@ TOUCHES_META=$((TOUCHES_META + FULL_RUN))
 RUN_META=0
 [ "$TOUCHES_META" -gt 0 ] && RUN_META=1
 
+# ── --real-pg: THE BACKEND SUITE ON REAL POSTGRESQL (2026-10-28, user decision) ─
+#
+# What SQLite cannot test — row locks, varchar(n), aborted transactions, pg_trgm,
+# pgvector — runs on the shared box (backend/.env's DATABASE_URL), with a throwaway
+# Redis as always. Day to day it runs the same by-app selection as the push, plus
+# every PostgreSQL-only test (the set test_concurrency.py pins); the 26 migration
+# round trips only when a migration changed. `--real-pg --full` runs everything,
+# round trips included — before merging into main. The full run took ~45 minutes
+# at -n 2 with the round trips (2026-10-28); 950 s at -n 4 without (2026-10-19).
+# No jest, no tsc/eslint, no ruff/makemigrations: the ordinary run covers those.
+if [ "$REAL_PG" = 1 ]; then
+    P="real-pg"
+    RUN_CORE=0; RUN_FRONTEND=0; RUN_MOBILE=0; RUN_OFFICER=0; RUN_JEST_READERS=0; MOBILE_READERS=""
+    RUN_BACKEND=1; BACKEND_READERS=""
+    [ "$FULL_RUN" = 1 ] && RUN_MIGRATION=1
+fi
+
 # ── JEST: FULL OR SELECTIVE ──────────────────────────────────────────────────
 #
 # --findRelatedTests follows imports. Each rule below names a change it cannot
@@ -529,7 +547,7 @@ fi
 if [ "$PREPUSH" = 1 ]; then
     fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
 else
-    fail() { echo ""; echo "gates: $1"; echo "gates: FAILED"; exit 1; }
+    fail() { echo ""; echo "$P: $1"; echo "$P: FAILED"; exit 1; }
 fi
 
 # One heavy gate at a time across every worktree and session (gate-lock.sh,
@@ -618,7 +636,7 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     fi
     command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found or not executable."
     command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found or not executable."
-    if [ "$RUN_BACKEND" = 1 ]; then
+    if [ "$RUN_BACKEND" = 1 ] && [ "$REAL_PG" = 0 ]; then
         echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
         # `makemigrations --check` BEFORE pytest, because it is the cheap one and
         # because it catches a class the suite does not: a model `choices` list
@@ -644,6 +662,8 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
             fi
             fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
         fi
+    elif [ "$REAL_PG" = 1 ]; then
+        echo "  → ruff, makemigrations: skipped — --real-pg runs pytest only"
     else
         echo "  → ruff, makemigrations: skipped — nothing under backend/ changed"
     fi
@@ -757,6 +777,28 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     rm -f "$JEST_LOG"
     cd "$ROOT" || exit 1
 fi
+
+# pg_only_tests — node ids of every test SQLite skips, from the scanner test_concurrency.py pins the set with.
+pg_only_tests() {
+    # GATES_PG_ONLY_TESTS is the test seam (the gate tests' stand-in python has no Django).
+    [ -n "${GATES_PG_ONLY_TESTS:-}" ] && { printf '%s\n' "$GATES_PG_ONLY_TESTS"; return 0; }
+    (cd "$ROOT/backend" && SECRET_KEY="$CI_SECRET_KEY" DATABASE_URL="sqlite:///:memory:" "$PY" - <<'PG_ONLY_PY'
+import ast, os, sys
+from pathlib import Path
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+sys.path.insert(0, ".")
+import django
+django.setup()
+from tests.test_concurrency import _sqlite_skipped_tests
+for p in sorted(Path(".").rglob("*.py")):
+    if {".venv", "node_modules"} & set(p.parts):
+        continue
+    if p.name.startswith("test_") or p.name == "tests.py":
+        for name in _sqlite_skipped_tests(ast.parse(p.read_text(encoding="utf-8"))):
+            print(f"{p.as_posix()}::{name}")
+PG_ONLY_PY
+    ) 2>/dev/null
+}
 
 # app_jest <dir> <changed-path regex> <extra --roots> <failure message> — see MOBILE / OFFICER JEST above.
 app_jest() {
@@ -878,6 +920,22 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     # permission-cache tests degrade silently without a cache and report a false
     # red, which is the 2026-09-04 failure described above.
     # Reports one line per service: "<name> <ok|down> <detail>".
+    # --real-pg: the database is backend/.env's PostgreSQL, never .prepush.env's SQLite override, and
+    # a worktree has no backend/.env of its own (gitignored) — the main checkout's describes the same box.
+    if [ "$REAL_PG" = 1 ]; then
+        unset DATABASE_URL
+        PG_URL=""
+        for f in "$ROOT/backend/.env" "${MAIN_ROOT:+$MAIN_ROOT/backend/.env}"; do
+            [ -n "$f" ] && [ -f "$f" ] || continue
+            PG_URL=$(sed -nE "s/^DATABASE_URL=[\"']?([^\"']*)[\"']?\$/\\1/p" "$f" | tail -1)
+            [ -n "$PG_URL" ] && break
+        done
+        case "$PG_URL" in
+            postgres://*|postgresql://*) export DATABASE_URL="$PG_URL" ;;
+            "") fail "--real-pg: no DATABASE_URL in backend/.env (looked under $ROOT${MAIN_ROOT:+ and $MAIN_ROOT})" ;;
+            *) fail "--real-pg: backend/.env's DATABASE_URL is not PostgreSQL (${PG_URL%%:*}://…)" ;;
+        esac
+    fi
     PROBE=$(ENV_FILE="$ROOT/backend/.env" DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
 import os, re, socket
 
@@ -927,7 +985,8 @@ PROBE_PY
     RPORT=""
     case "$DB_STATE" in
         ok*) ;;
-        *)  echo "    → database unreachable, using in-memory SQLite"
+        *)  [ "$REAL_PG" = 1 ] && fail "--real-pg: PostgreSQL unreachable ($DB_STATE). Not falling back to SQLite: that is the run this one exists to complement."
+            echo "    → database unreachable, using in-memory SQLite"
             echo "      NOTE: SQLite ignores varchar(n) and does not abort a"
             echo "            transaction on a failed statement. Two shipped"
             echo "            bugs needed PostgreSQL to surface. Weaker run."
@@ -1024,6 +1083,12 @@ PROBE_PY
                 ' "$READERS_LIST" 2>/dev/null)
                 PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
                 [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+                if [ "$REAL_PG" = 1 ]; then
+                    PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
+                    [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
+                    PYTEST_PATHS=$(printf '%s\n%s\n' "$PYTEST_PATHS" "$PG_ONLY" | grep -v '^$' | sort -u)
+                    echo "    (plus the $(echo "$PG_ONLY" | grep -c .) PostgreSQL-only tests — tests/test_concurrency.py pins the set)"
+                fi
                 echo "    (by app: $(echo "$PYTEST_PATHS" | grep -c . || true) test files — scripts/select-backend-tests.py; --full runs all)"
                 [ -z "$PYTEST_PATHS" ] && RUN_BACKEND=0
                 ;;
@@ -1041,9 +1106,13 @@ PROBE_PY
     # dumps every thread's stack into the log and its worker exits, so the run ends red and names
     # it. The slowest test measured is a 67 s migration round trip; 300 s leaves room for load.
     TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-300}"
+    # Real PostgreSQL: a fresh per-run test database (a stale test_soulledger caused ~1800 errors once),
+    # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
+    REAL_PG_ARGS=""
+    if [ "$REAL_PG" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
     # shellcheck disable=SC2086
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
-        -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true \
+        -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS \
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     T0=$(date +%s); NEXT=30
