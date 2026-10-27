@@ -33,6 +33,8 @@ ROUTED = {"using", "db_manager"}
 NO_ORM_TARGETS = {
     ("0006_rag.py", "create_vector_extension"): "runs one statement through schema_editor.execute, which is already bound to the migrated database",
     ("0009_drop_dead_cross_tenant_permission_table.py", "noop_reverse"): "does nothing",
+    ("0047_soul_search_trigram.py", "forward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
+    ("0047_soul_search_trigram.py", "backward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
 }
 
 #: (file name, function, kind) -> reason.
