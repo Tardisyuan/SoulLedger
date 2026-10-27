@@ -491,9 +491,11 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
     # what ROUTINE names. `GREEK_ROUTINE` in
     # `packages/core/src/config/workflow-templates.ts` is that flow.
     #
-    # APPEAL for the reason the whole table gained it: both entry points write
-    # it unconditionally for any civilization, so a set without it makes the
-    # feature raise rather than refuse.
+    # NO APPEAL (user 2026-10-27, docs/02_希腊冥府审判与人物详解.md §5.2): Minos's
+    # judgment is the last word. It used to be admitted "so the feature refuses
+    # rather than raises", which built the generic one-node flow — an appeal
+    # nobody hears. Both doors now refuse it with `NoAppealAboveMinosError`
+    # (code `no_appeal_above_minos`, the soul-side refusal's code too).
     #
     # NOTHING ELSE IS ADMITTED, and the omissions are decisions rather than an
     # unfinished list. CANONIZATION and PURGATORY_REVIEW are Christian
@@ -503,7 +505,7 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
     # Plato's fork has no ladder to skip. Adding one here on the strength of
     # "the other civilizations have more" is exactly the template-filling this
     # repository keeps finding in its own history.
-    Civilization.GREEK: {CaseType.ROUTINE, CaseType.APPEAL},
+    Civilization.GREEK: {CaseType.ROUTINE},
 }
 
 

@@ -708,6 +708,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)
+        if self.case_type == CaseType.APPEAL:
+            # A soul's appeal taken up this flow gets its outcome here (apps/judgment/appeals.py, user 2026-10-27).
+            from apps.judgment import appeals
+
+            appeals.on_ladder_finished(self, status, end_reason)
         if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
             self._purgatory_review_passed(now)
 

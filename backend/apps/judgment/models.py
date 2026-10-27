@@ -1110,6 +1110,11 @@ class JudgmentAppeal(AuditUserFields, models.Model):
     claimed_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
     decision_note = models.TextField(blank=True, default="")
+    #: 上诉到本文明的多站申诉流程(`CaseType.APPEAL`,用户 2026-10-27):一次复核维持之后,灵魂用剩下的次数
+    #: 「上诉」。有它时由流程定结论:驳回 = 维持原判,走完 = 申诉成立,由终审那位官员照常改判(`appeals.decide`)。
+    workflow = models.OneToOneField(
+        "workflow.ApprovalWorkflow", null=True, blank=True, on_delete=models.SET_NULL, related_name="judgment_appeal",
+    )
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()

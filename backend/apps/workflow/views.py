@@ -492,7 +492,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 status=status.HTTP_409_CONFLICT,
             )
         except ValueError as e:
-            return Response({"code": "invalid_case_type", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"code": getattr(e, "code", "invalid_case_type"), "error": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
         return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
@@ -909,7 +910,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 priority=priority,
             )
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"code": getattr(e, "code", "invalid_case_type"), "error": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         if workflow:
             return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data, status=status.HTTP_201_CREATED)

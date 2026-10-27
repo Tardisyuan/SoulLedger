@@ -30,6 +30,16 @@ class WorkflowInProgressError(Exception):
         self.workflow = workflow
 
 
+class NoAppealAboveMinosError(ValueError):
+    """A Greek APPEAL workflow: Minos's judgment is final (docs/02_希腊冥府审判与人物详解.md §5.2, user 2026-10-27).
+    A ``ValueError`` so every caller that already refuses an invalid case type refuses this one too."""
+
+    code = "no_appeal_above_minos"
+
+    def __init__(self):
+        super().__init__("Minos's judgment cannot be appealed: there is no Greek appeal flow.")
+
+
 # 模板表住在 `apps/workflow/templates.py`,这里重导出。
 #
 # 它们本来就在这个文件里,占了前 461 行 —— 而这个文件是 1125 行,是仓库里最大的
@@ -195,6 +205,8 @@ class WorkflowService:
         Returns:
             Error message if invalid, None if valid
         """
+        if civilization == Civilization.GREEK and case_type == CaseType.APPEAL:
+            return str(NoAppealAboveMinosError())
         valid_types = VALID_CASE_TYPES_BY_CIVILIZATION.get(civilization, set())
         if case_type not in valid_types:
             return (
@@ -702,6 +714,8 @@ class WorkflowService:
         civilization = soul.civilization
         validation_error = cls.validate_civilization_case_type(civilization, case_type)
         if validation_error:
+            if civilization == Civilization.GREEK and case_type == CaseType.APPEAL:
+                raise NoAppealAboveMinosError()
             raise ValueError(validation_error)
 
         # DB first, then the hardcoded table, then a generic one-node flow — see `_resolve_template`.
@@ -995,6 +1009,8 @@ class WorkflowService:
         judgment = original_workflow.judgment
         soul = original_workflow.soul
 
+        if soul.civilization == Civilization.GREEK:
+            raise NoAppealAboveMinosError()
         validation_error = cls.validate_civilization_case_type(
             soul.civilization, CaseType.APPEAL
         )

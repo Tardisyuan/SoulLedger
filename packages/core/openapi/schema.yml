@@ -22822,6 +22822,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        judgment_appeal:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowJudgmentAppeal'
+          nullable: true
+          readOnly: true
       required:
       - awaiting_segment
       - can_adjust
@@ -22833,6 +22838,7 @@ components:
       - end_reason
       - history
       - id
+      - judgment_appeal
       - judgment_case_number
       - judgment_verdict
       - nodes
@@ -28564,6 +28570,23 @@ components:
           type: array
           items: {}
           readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        workflow_number:
+          type: string
+          readOnly: true
+          nullable: true
+        workflow_status:
+          type: string
+          readOnly: true
+          nullable: true
+        workflow_name:
+          type: string
+          readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
@@ -28622,6 +28645,10 @@ components:
       - soul
       - soul_name
       - status
+      - workflow
+      - workflow_name
+      - workflow_number
+      - workflow_status
     JudgmentAppealCreate:
       type: object
       properties:
@@ -28635,6 +28662,9 @@ components:
           type: string
           default: ''
           maxLength: 4000
+        escalate:
+          type: boolean
+          default: false
       required:
       - judgment
       - reason
@@ -30560,8 +30590,11 @@ components:
         refusal_code:
           type: string
           nullable: true
+        can_escalate:
+          type: boolean
       required:
       - can_appeal
+      - can_escalate
       - case_number
       - concluded_at
       - deadline
@@ -30814,6 +30847,23 @@ components:
           type: array
           items: {}
           readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        workflow_number:
+          type: string
+          readOnly: true
+          nullable: true
+        workflow_status:
+          type: string
+          readOnly: true
+          nullable: true
+        workflow_name:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - case_number
       - compensations
@@ -30830,6 +30880,10 @@ components:
       - reason
       - round
       - status
+      - workflow
+      - workflow_name
+      - workflow_number
+      - workflow_status
     MeJudgmentAppealList:
       type: object
       properties:
@@ -34585,6 +34639,11 @@ components:
           readOnly: true
         cross_judgment_id:
           type: string
+          nullable: true
+          readOnly: true
+        judgment_appeal:
+          allOf:
+          - $ref: '#/components/schemas/WorkflowJudgmentAppeal'
           nullable: true
           readOnly: true
     PatchedBackupUpdate:
@@ -43705,6 +43764,25 @@ components:
       - restored
       - segment
       - skipped
+    WorkflowJudgmentAppeal:
+      type: object
+      description: The soul's appeal an APPEAL workflow was started for (apps/judgment/appeals.py,
+        user 2026-10-27).
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_number:
+          type: string
+        round:
+          type: integer
+        status:
+          type: string
+      required:
+      - case_number
+      - id
+      - round
+      - status
     WorkflowNodeAction:
       type: object
       description: Serializer for node approval action.
