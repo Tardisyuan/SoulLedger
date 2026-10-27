@@ -2208,7 +2208,8 @@
         "term_conflict": "Not executed: choose a term or eternal, not both",
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement",
-        "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served."
+        "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served.",
+        "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude."
       },
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
@@ -6011,7 +6012,9 @@
       "not_refused": "This stop's dispatch was never refused or cancelled",
       "not_next": "An earlier stop has not started yet; deal with that one first",
       "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
-      "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later"
+      "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later",
+      "retry_with_open_cross": "A cross-realm judgment is open on this case; conclude it before hearing the case again.",
+      "retry_not_a_destination": "A European RETRY is not a destination: give a final verdict, or open a new judgment."
     },
     "cross": {
       "title": "Sentence plan stops",
@@ -7209,7 +7212,8 @@
       "not_reviewer": "Only the officer who claimed it can decide",
       "appeal_closed": "This appeal has already been decided or withdrawn",
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
-      "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done"
+      "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
+      "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment."
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",

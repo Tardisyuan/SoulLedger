@@ -37,6 +37,8 @@ export const PLACEMENT_REFUSALS = [
   "eternal_not_allowed",
   "destination_not_applicable",
   "term_not_applicable",
+  // 欧洲「重审」另开一案、不发落(apps/judgment/services.py)。
+  "retry_has_no_destination",
 ] as const;
 
 /** 这份发落在 `verdict` 之下要加进结案请求的字段;为别的裁决选的发落一律不带。 */
