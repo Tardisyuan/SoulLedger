@@ -4467,7 +4467,9 @@
       "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete",
       "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
       "shortening_pending": "A cooldown shortening request is already pending",
-      "shortening_used": "This cooldown has already been asked to be shortened once"
+      "shortening_used": "This cooldown has already been asked to be shortened once",
+      "desired_form_required": "Choose the form you hope to be reborn as first",
+      "rebirth_form_not_applicable": "Your civilization has no six paths; there is no form to choose"
     },
     "lexicon": {
       "eg": {

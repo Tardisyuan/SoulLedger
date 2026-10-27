@@ -434,6 +434,8 @@ export const SOUL_ERROR_CODES = [
   "password_change_required",
   "account_retired",
   "application_open",
+  "desired_form_required",
+  "rebirth_form_not_applicable",
   "cooldown",
   "terminal_cosmology",
   "soul_state",
