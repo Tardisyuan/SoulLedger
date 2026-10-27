@@ -1,5 +1,7 @@
 # Backend Test Coverage Roadmap
 
+> 注(2026-10-28):下面的数字是 2026-08-28 的,会过期;当前基线以 `CLAUDE.md` 与 `frontend/jest.config.js` 为准。
+
 ## Current State (Updated: 2026-08-28)
 
 | Metric | Value |
