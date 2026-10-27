@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useUpdateSoul } from "@soulledger/core/hooks/useSouls";
-import type { Soul, SoulDuatPassage, SoulOriginRegion } from "@soulledger/core/api";
+import type { Soul, SoulBaptism, SoulDuatPassage, SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
@@ -39,6 +39,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const stateId = `${formId}-state`;
   const regionId = `${formId}-origin-region`;
   const duatId = `${formId}-duat-passage`;
+  const baptismId = `${formId}-baptism`;
+  const deniedId = `${formId}-denied-immortality`;
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -47,6 +49,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const [originLocation, setOriginLocation] = useState("");
   const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [duatPassage, setDuatPassage] = useState<SoulDuatPassage>("");
+  const [baptism, setBaptism] = useState<SoulBaptism>("UNRECORDED");
+  const [deniedImmortality, setDeniedImmortality] = useState<boolean | null>(null);
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
 
   // SETTLED is terminal to an operator — its one way out (back to DISPOSED
@@ -60,6 +64,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const hasFatedDate = soul.civilization === "CHINESE";
   // 入殿前情形(review P2-9):只有埃及登记,同阳寿一样别的文明不画、不发。
   const hasDuatPassage = soul.civilization === "EGYPTIAN";
+  // 受洗与否认灵魂不灭(review E-2):只有欧洲登记 —— 第一圈 Limbo 与第六圈读它们,别的文明不画、不发。
+  const hasInfernoFacts = soul.civilization === "EUROPEAN";
 
   // Convert HistoricalDate to HTML date input format (YYYY-MM-DD)
   const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
@@ -80,6 +86,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       setOriginLocation(soul.origin_location || "");
       setOriginRegion(soul.origin_region ?? "");
       setDuatPassage(soul.duat_passage ?? "");
+      setBaptism(soul.baptism ?? "UNRECORDED");
+      setDeniedImmortality(soul.denied_immortality ?? null);
       setCurrentState(soul.current_state || "ALIVE");
     }
   }, [isOpen, soul]);
@@ -98,6 +106,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       origin_location: originLocation || undefined,
       origin_region: originRegion,
       ...(hasDuatPassage ? { duat_passage: duatPassage } : {}),
+      ...(hasInfernoFacts ? { baptism, denied_immortality: deniedImmortality } : {}),
       current_state: currentState,
     };
 
@@ -265,6 +274,37 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
               }))}
             />
             <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.duat_passage.help")}</p>
+          </div>
+        )}
+
+        {hasInfernoFacts && (
+          <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+              <SelectField
+                id={baptismId}
+                label={t("souls.baptism.label")}
+                value={baptism}
+                onChange={(e) => setBaptism(e.target.value as SoulBaptism)}
+                disabled={updateMutation.isPending}
+                options={(["UNRECORDED", "BAPTISED", "UNBAPTISED", "BEFORE_CHRIST"] as const).map((v) => ({
+                  value: v,
+                  label: t(`souls.baptism.${v}`),
+                }))}
+              />
+              <SelectField
+                id={deniedId}
+                label={t("souls.denied_immortality.label")}
+                value={deniedImmortality === null ? "UNRECORDED" : deniedImmortality ? "YES" : "NO"}
+                onChange={(e) => setDeniedImmortality(e.target.value === "UNRECORDED" ? null : e.target.value === "YES")}
+                disabled={updateMutation.isPending}
+                options={(["UNRECORDED", "YES", "NO"] as const).map((v) => ({
+                  value: v,
+                  label: t(`souls.denied_immortality.${v}`),
+                }))}
+              />
+            </div>
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.baptism.help")}</p>
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.denied_immortality.help")}</p>
           </div>
         )}
 

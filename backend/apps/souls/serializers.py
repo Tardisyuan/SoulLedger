@@ -574,6 +574,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "duat_passage", "birth_name",
+            "baptism", "denied_immortality",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
@@ -608,6 +609,13 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 "The fated date of death must be a full date (year, month and day) of the Common Era."]})
         if attrs.get("duat_passage") and self.instance is not None and self.instance.civilization != "EGYPTIAN":
             raise serializers.ValidationError({"duat_passage": ["Only an Egyptian soul has a Duat passage."]})
+        # Limbo and the sixth circle are Dante's (2026-10-27, review E-2): the two facts only a European soul records.
+        if self.instance is not None and self.instance.civilization != "EUROPEAN":
+            if attrs.get("baptism", Soul.Baptism.UNRECORDED) != Soul.Baptism.UNRECORDED:
+                raise serializers.ValidationError({"baptism": ["Only a European soul records baptism."]})
+            if attrs.get("denied_immortality") is not None:
+                raise serializers.ValidationError(
+                    {"denied_immortality": ["Only a European soul records a denial of immortality."]})
         # An early death is decided at death: `Soul.die` concludes the case PASSED unweighed on the spot. After
         # death the case already went down another road (embalming, the hall, or the Duat entry), and turning it
         # into an early death now would mean voiding that case and concluding a new one — not a field edit.

@@ -64,7 +64,11 @@ def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.ST
     route = routers.get(civilization)
     if route is None:
         return frozenset()
-    return frozenset(route(s) for s in _SEVERITY_SWEEP) - {""}
+    codes = frozenset(route(s) for s in _SEVERITY_SWEEP)
+    if civilization == Civilization.EUROPEAN:
+        # 受洗与否是欧洲路由的另一个输入(Limbo,2026-10-27 E-2):两种都扫一遍。
+        codes |= {D._route_european(None, verdict, s, unbaptised=True) for s in _SEVERITY_SWEEP}
+    return codes - {""}
 
 
 def _tenant_realms(judgment):

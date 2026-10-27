@@ -127,11 +127,13 @@ class EuropeanRoutingTest(TestCase):
 
     def test_failed_with_zero_culpa_is_regression_case(self):
         """Same regression as Chinese routing: a ledger that decayed to nothing
-        must not send a FAILED verdict to heaven. Lands in the outermost circle
-        — which is Limbo, and is one of the things
-        `tests/test_european_hell_basis.py` pins as still wrong."""
+        must not send a FAILED verdict to heaven. Lands in the shallowest circle of
+        punishment, the second; Limbo (the first) is for the unbaptised only
+        (review E-2, 2026-10-27) — `tests/test_european_limbo_and_heresy.py`."""
         realm = DispositionService._route_european(None, Verdict.FAILED, 0)
-        self.assertEqual(realm, DispositionService.EU_HELL_CIRCLES[1])
+        self.assertEqual(realm, DispositionService.EU_HELL_CIRCLES[2])
+        self.assertEqual(DispositionService._route_european(None, Verdict.FAILED, 0, unbaptised=True),
+                         DispositionService.EU_HELL_CIRCLES[1])
 
     def test_failed_severity_scales_with_culpa(self):
         self.assertEqual(

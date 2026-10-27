@@ -1,5 +1,16 @@
 [
   "officerHandover.submit_and_deactivate_n",
   "officerHandover.deactivated_toast",
-  "users.batch.open_work"
+  "users.batch.open_work",
+  "souls.baptism.label",
+  "souls.baptism.UNRECORDED",
+  "souls.baptism.BAPTISED",
+  "souls.baptism.UNBAPTISED",
+  "souls.baptism.BEFORE_CHRIST",
+  "souls.baptism.help",
+  "souls.denied_immortality.label",
+  "souls.denied_immortality.UNRECORDED",
+  "souls.denied_immortality.YES",
+  "souls.denied_immortality.NO",
+  "souls.denied_immortality.help"
 ]
