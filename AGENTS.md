@@ -362,7 +362,7 @@ SoulLedger/
 ├── backend/
 │   ├── apps/              ← 26 个本地 app(config/settings.py 的 INSTALLED_APPS)
 │   │   ├── souls/         ← 灵魂 CRUD
-│   │   ├── tenants/       ← 多租户(TenantManager / 中间件)
+│   │   ├── tenants/       ← 多租户(`TenantManager` 只过滤软删除;中间件只解析 `request.tenant`;租户过滤靠视图层 `apps/core/tenant.py::scope_to_tenant`)
 │   │   ├── authentication/ ← 登录/JWT/两步验证
 │   │   ├── ledger/         ← 功德计算(旧名 karma,已重命名)
 │   │   ├── soul_accounts/ soul_push/ chat/ soul_assist/ social/ ← 灵魂端与助手、书信、朋友圈
@@ -403,7 +403,7 @@ SoulLedger/
 ### 新增一个 CRUD 页面（如管理某租户的 XX）
 
 **后端**：
-1. `models.py` — 定义模型，使用 `TenantManager()`
+1. `models.py` — 定义模型，使用 `TenantManager()`(只过滤软删除,**不**过滤租户;视图里必须用 `scope_to_tenant`)
 2. `serializers.py` — 定义序列化器，包含 tenant
 3. `views.py` — ViewSet，`perform_create` 必须设置 `tenant`
 4. `urls.py` — 注册路由

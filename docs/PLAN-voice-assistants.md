@@ -1,7 +1,9 @@
 # 语音助手接入(Siri / 小爱同学)可行性与计划
 
 2026-10-09 起草。记忆和文档里都没有这件事的既有决定(过去的对话提到过，但没有落成结论)。
-本文只写计划，不改代码。
+本文起草时只写计划，不改代码。
+
+**现状(2026-10-28):一期已做;二期代码已合入(`041e09c4`),只在模拟器上验证过,真机未验;三期(小爱)没做。** 两个 App 现在都配了 scheme(`mobile/app.json:7` 的 `soulledger`、`mobile-officer/app.json:7` 的 `soulledger-officer`),下面 §2 的「没有配置 scheme」是起草时的状态。实现位置:`mobile/plugins/appIntents.js`、`androidShortcuts.js`、`voiceEntries.js`,`mobile/modules/soulledger-voice/`,`mobile/src/voiceCache.ts`。
 
 ## 0. 结论先说
 
@@ -35,7 +37,7 @@
 
 ## 2. 前置条件(两端共用)
 
-1. **深链接**:两个 App 现在都没有配置 `scheme`,也没有处理链接打开(代码里没有 `Linking.getInitialURL` / `addEventListener`)。语音和桌面快捷方式「打开某一页」都靠它,所以第一步是给两个 App 加 scheme(如 `soulledger-officer://todo`)和路由。官员 App 现有的推送落地(按推送里的 `target` 打开条目)可以复用同一套路由。
+1. **深链接**(现状 2026-10-28:已做,两个 App 都配了 scheme 并处理链接;以下为起草时的描述):两个 App 当时都没有配置 `scheme`,也没有处理链接打开(代码里没有 `Linking.getInitialURL` / `addEventListener`)。语音和桌面快捷方式「打开某一页」都靠它,所以第一步是给两个 App 加 scheme(如 `soulledger-officer://todo`)和路由。官员 App 现有的推送落地(按推送里的 `target` 打开条目)可以复用同一套路由。
 2. **只读接口**:待办总数已有(`/officer-app/todo/` 的各组 count);冷却剩余天数可以由灵魂端已有的 `cooldown_until` 算出(App 的申请表现在就是这样算的)。不需要新接口。
 
 ## 3. iOS:App Intents
@@ -84,6 +86,8 @@
 一、二期都在我们自己的代码里，可以照现在的方式派子代理做，在 iOS 和 Android 模拟器上验收(iOS 的 Siri 能在模拟器里用键盘输入测)。
 
 ## 7. 需要你定的
+
+> 现状(2026-10-28):第 1 条已决(做了,一、二期都做);第 2 条已决(代码里官员端没有审批 / 提交类 Intent,见 §6 二期状态);第 3 条未决,小爱没做。
 1. 要不要做?做的话从第一期开始，还是一、二期一起做?
 2. 语音「审批 / 提交申请」不做 —— 同意吗?
 3. 小爱同学要不要列入计划?列入的话，要先决定账号关联方式，以及谁去申请小米开发者账号。

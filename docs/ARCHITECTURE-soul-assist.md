@@ -380,8 +380,11 @@ npm run schema:generate --workspace @soulledger/core
   - 字号 1.8 时「问 / 答」方记溢出被裁(`1974936f`);
   - App 自带的 18 个建议问题里 7 个没有帮助条目,模型只能答「不知道」(补 4 条、扩 2 条;`1be6c763`);
   - 中文帮助与固定回复用了半角标点(同上)。
-- **阶段 1.5(真实 key 行为评测)未做**:需要供应商 key。
-- **阶段 3(官员端)**:计划见 `docs/ARCHITECTURE-officer-assist.md`,待拍板。
+- **阶段 1.5(真实 key 行为评测)**:
+  - 现状(2026-10-28):评测框架已在管理页落地(`backend/apps/soul_assist/evals.py`,迁移 `0004_draft_eval_cases`、`0010_eval_expected_entries`;见 `docs/ARCHITECTURE-assist-admin.md`)。**用真实 key 跑出的正确率仍没有记录,保留为未做。**
+  - 原记(2026-09-29):未做,需要供应商 key。
+- **阶段 3(官员端)**:计划见 `docs/ARCHITECTURE-officer-assist.md`。
+  - 现状(2026-10-28):已做(`backend/apps/soul_assist/officer_tools.py`,迁移 `0002_officer_conversations`;Web `frontend/src/components/assist/OfficerAssist.tsx`,官员端 App `mobile-officer/src/assist.tsx`)。
 
 ## 13. 流式回答与备用供应商(2026-10-01 用户定,`feat/assist-streaming-failover`)
 
