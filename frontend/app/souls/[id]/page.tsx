@@ -29,7 +29,7 @@ import { useDispositions } from "@soulledger/core/hooks/useDispositions";
 import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
-import { DEFAULT_REBIRTH_FORM, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
+import type { RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
@@ -231,8 +231,10 @@ export default function SoulDetailPage() {
   // 第十殿按结案时的功过给的六道建议(docs/07 §四,2026-10-27):不改就按它办,官员可改。
   // 地府里没有建议(功过为负而不到地狱道:畜生 / 饿鬼由官员定,用户 2026-10-27)时不预选,官员选了才能办。
   const suggestedRebirthForm = (dispositions.find((d) => !d.is_executed)?.suggested_rebirth_form ?? null) as RebirthFormValue | null;
-  const rebirthForm: RebirthFormValue | null =
-    pickedRebirthForm ?? suggestedRebirthForm ?? (soul?.civilization === "CHINESE" ? null : DEFAULT_REBIRTH_FORM);
+  // 六道只属于地府(按原属文明,同后端 `rebirth_form_for`;2026-10-27 G-2):希腊的再生是饮忘川后回来,
+  // 没有道可选,不显示选择器、不发 `rebirth_form`(后端记成 OTHER「六道之外」,发了一道反而 400)。
+  const sixPaths = (soul?.home_civilization ?? soul?.civilization) === "CHINESE";
+  const rebirthForm: RebirthFormValue | null = sixPaths ? (pickedRebirthForm ?? suggestedRebirthForm ?? null) : null;
   const reincarnations = useMemo(() => [...(reincarnationsQuery.data?.results ?? NO_REINCARNATIONS), ...moreReincarnations.rows], [reincarnationsQuery.data, moreReincarnations.rows]);
   const events = useMemo(() => [...(eventsQuery.data?.results ?? NO_EVENTS), ...moreEvents.rows], [eventsQuery.data, moreEvents.rows]);
   const loadedAll =
@@ -388,7 +390,7 @@ export default function SoulDetailPage() {
   }
 
   async function handleReincarnate(dispositionId: string) {
-    if (!rebirthForm) return;
+    if (sixPaths && !rebirthForm) return;
     setActionLoading("reincarnate");
     setQuotaRefusal(null);
     try {
@@ -396,7 +398,7 @@ export default function SoulDetailPage() {
         soul_id: soul?.id,
         disposition_id: dispositionId,
         new_identity: `${soul?.name} (rebirth)`,
-        rebirth_form: rebirthForm,
+        ...(sixPaths && rebirthForm ? { rebirth_form: rebirthForm } : {}),
       });
       // 转生会写出一条新的处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
@@ -776,6 +778,7 @@ export default function SoulDetailPage() {
               actionLoading={actionLoading}
               dispositions={dispositions}
               reincarnations={reincarnations}
+              sixPaths={sixPaths}
               rebirthForm={rebirthForm}
               suggestedRebirthForm={suggestedRebirthForm}
               onRebirthFormChange={(form) => {

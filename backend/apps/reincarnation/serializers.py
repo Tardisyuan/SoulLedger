@@ -31,7 +31,8 @@ class RebirthRequestSerializer(serializers.Serializer):
     remain readable through the admin and the API filter, but nothing may
     newly write it — it is not a seventh path. (`/complete/`, which fell back
     to an existing record's form, was removed 2026-10-27: it wrote a second
-    record. `/reborn/` is the one action left and defaults to HUMAN.)
+    record. `/reborn/` is the one action left; omitted, it is HUMAN for a soul
+    of Diyu and OTHER for a Greek one — see `rebirth_form_for`.)
 
     OTHER is kept in the ChoiceField's own choices and refused one layer
     later, in validate_rebirth_form. Narrowing the choices to SIX_PATHS would
