@@ -412,9 +412,8 @@ def test_both_greek_roads_reset_memory_and_the_two_thresholds_do_not(db):
     two texts agree without needing the division rule.
 
     The meadow and the crossing do not, and that is the same shape the Chinese
-    table already uses: 孟婆汤 sits on every court a soul can be sentenced to
-    and DY_01_HEAVEN — the one destination that sends nobody back — is NONE.
-    Nobody is sentenced to the meadow or the crossing, so no rebirth follows
+    table already uses: 孟婆汤 sits on every destination a Chinese soul is
+    reborn from (the courts and DY_01_HEAVEN) and on nothing else. Nobody is sentenced to the meadow or the crossing, so no rebirth follows
     from either.
     """
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())

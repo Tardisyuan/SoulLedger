@@ -66,6 +66,8 @@ def _realm(code, tenant, civilization="CHINESE", *, eternal=False, capacity=None
 @pytest.fixture
 def cn_realms(cn_tenant):
     return {
+        # eternal=True is this fixture's, not the seed's (the seeded heaven is
+        # not eternal — 福尽仍入轮回): it lets the copy test below see a True.
         "heaven": _realm("DY_01_HEAVEN", cn_tenant, eternal=True),
         "purgatory": _realm("DY_00_PURGATORY", cn_tenant),
         "hell2": _realm("DY_COURT_02_CHUJIANG", cn_tenant),

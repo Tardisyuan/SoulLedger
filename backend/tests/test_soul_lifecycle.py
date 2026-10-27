@@ -25,7 +25,7 @@ def chinese_realms(db, cn_tenant):
         defaults={
             "name_local": "天堂", "name_zh": "第一层天界", "name_en": "First Heaven",
             "civilization": "CHINESE", "realm_type": "BLISS", "tier": 1,
-            "is_eternal": True,
+            "is_eternal": False,  # as seeded: 福尽仍入轮回
             "tenant": cn_tenant,
         }
     )
@@ -75,11 +75,8 @@ class TestSoulLifecycle:
         assert not judgment.is_final
 
         # 4. Conclude judgment → PASSED
-        # DY_01_HEAVEN is eternal in the seed, and an eternal term means no
-        # rebirth (2026-09-29 owner decision; tests/test_eternal_no_rebirth.py):
-        # that soul ends SETTLED. This test is about the wheel, so its heaven
-        # is a finite term here.
-        Realm.all_objects.filter(realm_code="DY_01_HEAVEN").update(is_eternal=False)
+        # DY_01_HEAVEN is not eternal in the seed: 福尽仍入轮回
+        # (docs/07_六道轮回详解.md §二), so a PASSED soul goes round the wheel.
         judgment.conclude(Verdict.PASSED, "Excellent karma, enter paradise")
         soul.refresh_from_db()
 
