@@ -14,7 +14,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -353,13 +353,14 @@ export default function WorkflowDetailPage() {
           )}
           {/* 灵魂上诉到这条申诉流程的那一轮申诉(2026-10-27):流程走完,结论在申诉页上作。 */}
           {workflow.judgment_appeal && (
-            <Link
-              data-testid="workflow-judgment-appeal"
-              href={`/judgment/appeals/${workflow.judgment_appeal.id}`}
-              className="text-sm underline underline-offset-2"
-            >
-              {workflow.judgment_appeal.case_number} · {t("appeals.round", { round: String(workflow.judgment_appeal.round) })}
-            </Link>
+            <span data-testid="workflow-judgment-appeal" className="text-sm">
+              <CaseNumber
+                value={workflow.judgment_appeal.case_number}
+                variant="inline"
+                href={`/judgment/appeals/${workflow.judgment_appeal.id}`}
+              />{" "}
+              · {t("appeals.round", { round: String(workflow.judgment_appeal.round) })}
+            </span>
           )}
         </div>
       }
