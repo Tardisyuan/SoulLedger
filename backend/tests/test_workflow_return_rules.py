@@ -475,7 +475,8 @@ def test_a_station_naming_nobody_is_the_judge_role_not_system(halls):
                                        verdict="FAILED", is_final=True, tenant=halls["CN_DIYU"])
     appeal = WorkflowService.create_from_judgment(judgment, is_appeal=True)
     by_name = {n.node_name: n for n in appeal.nodes.all()}
-    for name in ("原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"):
+    # 酆都大帝 · 终审 names him since he was seeded (actors_chinese.py), so it is no longer a nameless station.
+    for name in ("原殿阎王 · 复核", "上级殿阎王"):
         assert (by_name[name].approver_type, by_name[name].approver_role) == ("ROLE", "JUDGE"), name
         assert by_name[name].designates_approver
 

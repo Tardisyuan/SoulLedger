@@ -86,7 +86,7 @@ WORKFLOW_TEMPLATES = {
             {"name": "魏征 · 察查司", "court": "察查司", "type": NodeType.APPEAL, "order": 1, "actor": "魏征"},
             {"name": "原殿阎王 · 复核", "court": "原审判殿", "type": NodeType.TRIAL, "order": 2},
             {"name": "上级殿阎王", "court": "上一殿", "type": NodeType.TRIAL, "order": 3},
-            {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4},
+            {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4, "actor": "酆都大帝"},
         ],
     },
     # Chinese cross-realm
@@ -96,7 +96,7 @@ WORKFLOW_TEMPLATES = {
             {"name": "案件分类", "court": "第一殿", "type": NodeType.EVALUATION, "order": 1},
             {"name": "城隍初审", "court": "城隍体系", "type": NodeType.TRIAL, "order": 2},
             {"name": "十殿联审", "court": "十殿", "type": NodeType.TRIAL, "order": 3},
-            {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4},
+            {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4, "actor": "酆都大帝"},
         ],
     },
     # European canonization
@@ -310,10 +310,6 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
                    "it would mean picking one of ten kings.",
     "上级殿阎王": "「上一殿」 is relative to the court above, which is unknown for "
               "the same reason 原殿阎王 is.",
-    "酆都大帝 · 终审": "酆都大帝 has no Actor row in any civilization's cast "
-                  "(0 hits in seed_mythology). Creating one to satisfy a "
-                  "workflow template would be inventing a member of the "
-                  "pantheon.",
     "案件分类": "Names an activity, not a person.",
     "城隍初审": "城隍 is an office held by many local City Gods and has no Actor "
              "row; 「城隍体系」 in the court column says so outright — it is a "
@@ -395,8 +391,6 @@ PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
     # 中国
     "原殿阎王 · 复核",
     "上级殿阎王",
-    "酆都大帝 · 终审",
-    "酆都大帝直审",
     "案件分类",
     "城隍初审",
     "城隍申诉审理",

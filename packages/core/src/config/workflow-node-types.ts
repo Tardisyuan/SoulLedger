@@ -144,7 +144,7 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   // 归入 SPECIAL / ROUTINE / DIVINE_TRIAL，理由见 workflow-templates.ts 里
   // CHINESE_EMERGENCY 顶部。分诊出来的「紧急」落在 ApprovalWorkflow.priority 上。）
   紧急受理: "EVALUATION",
-  // 酆都大帝直审：紧急案件直达酆都，跳过十殿审级。酆都大帝之上没有更高的一级，
+  // 酆都大帝 · 直审：紧急案件直达酆都，跳过十殿审级。酆都大帝之上没有更高的一级，
   // 他的话就是最后一句；后端两处「酆都大帝 · 终审」也都是 FINAL。
   直审: "FINAL",
 
