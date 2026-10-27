@@ -219,7 +219,7 @@ def _edges(row, field):
 def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(halls):
     _seed()
     _seed()  # idempotent
-    assert WorkflowTemplate.objects.count() == 12
+    assert WorkflowTemplate.objects.count() == 13  # 含欧洲异端审判(E-4)
     assert all(r.is_active and r.published_version_id and r.nodes_json for r in WorkflowTemplate.objects.all())
     assert all(r.versions.count() == 1 for r in WorkflowTemplate.objects.all())
 
@@ -237,6 +237,12 @@ def test_the_seed_writes_one_row_per_hall_and_case_type_with_the_approved_edges(
     assert _edges(_row(eu, "ROUTINE"), "reject_to") == {}
     assert [n["node_name"] for n in _row(eu, "ROUTINE").nodes_json] == [
         "Christ · 私审判", "Michael · 引领入光", "Christ · 公审判"]
+    # 异端审判 (E-4, 2026-10-27): the 末日审判 flow with one 异端裁定 station first, decided by a JUDGE.
+    heresy = _row(eu, "HERESY_TRIAL")
+    assert [n["node_name"] for n in heresy.nodes_json] == [
+        "异端裁定", "Christ · 私审判", "Michael · 引领入光", "Christ · 公审判"]
+    assert (heresy.nodes_json[0]["node_type"], heresy.nodes_json[0]["approver_role"]) == ("EVALUATION", "JUDGE")
+    assert _edges(heresy, "reject_to") == {}
     assert _edges(_row(eu, "APPEAL"), "reject_to") == {}
     assert _edges(_row(eu, "CANONIZATION"), "reject_to") == {"n2": "n1", "n3": "n2"}
     assert _edges(_row(eu, "PURGATORY_REVIEW"), "reject_to") == {"n2": "n1", "n3": "n2"}
@@ -298,7 +304,7 @@ def test_the_seed_leaves_another_live_template_of_the_pair_alone(halls):
         nodes_json=[{"id": "n1", "node_name": "一", "node_order": 1}])
     _seed()
     assert list(WorkflowTemplate.objects.filter(tenant=cn, case_type="ROUTINE")) == [mine]
-    assert WorkflowTemplate.objects.count() == 12  # 本殿自定 1 份 + 种子建的其余 11 份
+    assert WorkflowTemplate.objects.count() == 13  # 本殿自定 1 份 + 种子建的其余 12 份
 
 
 def test_the_seed_overwrites_a_changed_row_only_with_update(halls):
