@@ -3004,7 +3004,8 @@
       "deactivate": "Khetem Setep Seth",
       "done": "Kheperu Sesen Seth {{n}}",
       "failed": "Nen Sesen Kheperu",
-      "skipped_note": "Sab Hery Hena Djes-Ek: Nen Em Iri Neb."
+      "skipped_note": "Sab Hery Hena Djes-Ek: Nen Em Iri Neb.",
+      "open_work": "Nen Khetem Sab Neb: Sab {{n}} Em Sep Em Iri. Khetem Em Sep Wa, Redi Tepy."
     },
     "reset_password": {
       "action": "Wehem Sekhem",
@@ -7312,7 +7313,9 @@
       "invalid_target": "Sab Shesep Nen Em Wesekhet Pen",
       "not_found": "Nen Gem Sab"
     },
-    "deactivate_prompt": "{{name}}: Sep Em Iri. Redi Tepy?"
+    "deactivate_prompt": "{{name}}: Sep Em Iri. Redi Tepy?",
+    "submit_and_deactivate_n": "Redi Sep {{n}} · Khetem",
+    "deactivated_toast": "Redi Hena Khetem Seth: {{name}}"
   },
   "officerInvite": {
     "action": "Nis Sab",

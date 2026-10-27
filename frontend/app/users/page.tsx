@@ -12,7 +12,7 @@ import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { UserRolesDialog } from "@/src/components/users/UserRolesDialog";
 import { UserRoleChips } from "@/src/components/users/UserRoleChips";
-import { UserBatchBar, useUserSelection } from "@/src/components/users/UserBatchBar";
+import { UserBatchBar, useUserSelection, type HeldOfficer } from "@/src/components/users/UserBatchBar";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
 import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
@@ -82,6 +82,7 @@ function UsersRoute() {
   const [handoverUser, setHandoverUser] = useState<User | null>(null);
   /** 手上有事的官员:停用要经交接对话框(选接手人,交接与停用同一个事务)。 */
   const [deactivateWith, setDeactivateWith] = useState<User | null>(null);
+  const [held, setHeld] = useState<HeldOfficer[]>([]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
@@ -452,7 +453,25 @@ function UsersRoute() {
         onPageChange={setPage}
       />
 
-      {canManage && <UserBatchBar selection={selection} />}
+      {canManage && <UserBatchBar selection={selection} onHeld={setHeld} />}
+      {canManage && held.length > 0 && (
+        <ul aria-label={t("users.batch.held_region")} className="mt-2 divide-y divide-[oklch(var(--color-block))] border border-[oklch(var(--color-block))]">
+          {held.map((h) => {
+            const n = previewTotal({ ...h.open_work, problems: [] });
+            const row = users.find((u) => String(u.id) === String(h.id));
+            return (
+              <li key={h.id} className="flex items-center gap-3 px-4 py-2 text-sm">
+                <span className="flex-1">{t("users.batch.held_row", { name: h.username, n: String(n) })}</span>
+                {row ? (
+                  <Button type="button" size="sm" onClick={() => { setHeld((rest) => rest.filter((x) => x.id !== h.id)); setDeactivateWith(row); }}>
+                    {t("officerHandover.submit_and_deactivate_n", { n: String(n) })}
+                  </Button>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <UserRolesDialog user={rolesUser} onClose={() => setRolesUser(null)} />
 

@@ -1,7 +1,7 @@
 [
-  "officerHandover.submit_and_deactivate_n",
-  "officerHandover.deactivated_toast",
-  "users.batch.open_work",
   "souls.events.OFFICER_HANDOVER",
-  "souls.events.DUAT_PASSAGE_CHANGED"
+  "souls.events.DUAT_PASSAGE_CHANGED",
+  "users.batch.open_work_partial",
+  "users.batch.held_row",
+  "users.batch.held_region"
 ]

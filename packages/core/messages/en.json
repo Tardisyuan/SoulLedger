@@ -3006,8 +3006,11 @@
       "deactivate": "Deactivate selected",
       "done": "Updated {{n}} accounts",
       "failed": "Batch update failed",
-      "open_work": "{{n}} deactivated. {{m}} still hold open work and stay active: {{names}}. Deactivate them one at a time and hand it over.",
-      "skipped_note": "Administrator accounts and your own are left out of batches."
+      "open_work": "Nobody was deactivated: {{n}} officers still hold open work. Deactivate them one at a time and hand it over.",
+      "skipped_note": "Administrator accounts and your own are left out of batches.",
+      "open_work_partial": "{{done}} deactivated. {{n}} still hold open work and stay active: deactivate them one at a time and hand it over.",
+      "held_row": "{{name}} · {{n}} open",
+      "held_region": "Officers not deactivated"
     },
     "reset_password": {
       "action": "Reset password",
