@@ -32,6 +32,7 @@ export function SoulInfoCard({
   const { t, tf, locale } = useI18n();
   // 阳寿(第五十一批 F-3):生卒一栏的第三格,顺序同编辑弹层;没登记就没有这一格。
   const fatedDisplay = formatHistoricalDate(soul?.fated_death_date, locale);
+  const isEuropean = soul?.civilization === "EUROPEAN";
 
   return (
     <section aria-labelledby="soul-identity-title" data-testid="soul-identity" className="min-w-0 bg-[oklch(var(--color-surface-1))] p-6">
@@ -96,6 +97,23 @@ export function SoulInfoCard({
                 <dt className={DT}>{t("souls.duat_passage.label")}</dt>
                 <dd className={DD}>
                   <DomainEnum namespace="souls.duat_passage" value={soul.duat_passage} />
+                </dd>
+              </div>
+            )}
+            {/* 欧洲的受洗 / 否认灵魂不灭(E-2):同编辑弹层只对欧洲灵魂,登记了才画。 */}
+            {isEuropean && soul.baptism && soul.baptism !== "UNRECORDED" && (
+              <div className={ROW} data-testid="soul-baptism">
+                <dt className={DT}>{t("souls.baptism.label")}</dt>
+                <dd className={DD}>
+                  <DomainEnum namespace="souls.baptism" value={soul.baptism} />
+                </dd>
+              </div>
+            )}
+            {isEuropean && soul.denied_immortality != null && (
+              <div className={ROW} data-testid="soul-denied-immortality">
+                <dt className={DT}>{t("souls.denied_immortality.label")}</dt>
+                <dd className={DD}>
+                  <DomainEnum namespace="souls.denied_immortality" value={soul.denied_immortality ? "YES" : "NO"} />
                 </dd>
               </div>
             )}
