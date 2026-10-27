@@ -3,7 +3,7 @@
 每个殿一行,只有数,没有灵魂名:
 * `todo` —— 殿里等人处理的事:审批中的流程、调到本殿等批的提案、待决的缩短冷却申请、灵魂最后一封还没回的书信。
   是**殿级**的数,不是某位官员的「待我处理」(那个在 `apps/officer_app/todo.py`,按人、按权限)。
-* `judgments` —— 未结案审判按此刻在哪儿分四格,互不相交:在城隍处 → 押在枉死城(`held_until` 未到)→ 有人认领 → 无人认领。
+* `judgments` —— 未结案审判按此刻在哪儿分四格,互不相交:在城隍处 → 候着(`held_until` 未到,或埃及案到不了殿)→ 有人认领 → 无人认领。
 * `rebirth_quota` —— 本月转世配额用量,与 `GET /reincarnation/quota/` 同一个函数。
 * `open_appeals` —— 待复核与复核中的申诉。
 
@@ -16,7 +16,7 @@ from django.utils import timezone
 def hall_row(tenant) -> dict:
     from apps.chat.models import Conversation, ConversationKind
     from apps.dispatch.models import DispatchRecord, DispatchStatus
-    from apps.judgment.models import AT_CITY_GOD, OPEN_APPEAL_STATUSES, Judgment, JudgmentAppeal
+    from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, OPEN_APPEAL_STATUSES, Judgment, JudgmentAppeal
     from apps.reincarnation.services import quota_usage
     from apps.soul_accounts.models import CooldownShorteningRequest, CooldownShorteningStatus
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
@@ -35,9 +35,11 @@ def hall_row(tenant) -> dict:
 
     today = timezone.localdate()
     at_god = Q(city_god_status__in=AT_CITY_GOD)
-    held = ~at_god & Q(held_until__gt=today)
-    claimed = ~at_god & ~Q(held_until__gt=today) & Q(claimed_by__isnull=False)
-    unclaimed = ~at_god & ~Q(held_until__gt=today) & Q(claimed_by__isnull=True)
+    # 候着的:枉死城、埃及木乃伊 70 天(都看 `held_until`),以及到不了殿的埃及案(无名、葬仪不当,永远候着)。
+    is_held = Q(held_until__gt=today) | Q(duat_stage__in=DUAT_BARRED)
+    held = ~at_god & is_held
+    claimed = ~at_god & ~is_held & Q(claimed_by__isnull=False)
+    unclaimed = ~at_god & ~is_held & Q(claimed_by__isnull=True)
     judgments = Judgment.objects.filter(tenant=tenant, verdict__isnull=True, is_final=False, is_archived=False).aggregate(
         at_city_god=Count("pk", filter=at_god), held=Count("pk", filter=held),
         claimed=Count("pk", filter=claimed), unclaimed=Count("pk", filter=unclaimed),

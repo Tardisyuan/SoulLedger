@@ -90,6 +90,15 @@ export function SoulInfoCard({
                 <dd className={`${DD} font-mono`}>{fatedDisplay}</dd>
               </div>
             )}
+            {/* 埃及入殿前情形(review P2-9):登记了才画,与阳寿一样。 */}
+            {soul?.duat_passage && (
+              <div className={ROW} data-testid="soul-duat-passage">
+                <dt className={DT}>{t("souls.duat_passage.label")}</dt>
+                <dd className={DD}>
+                  <DomainEnum namespace="souls.duat_passage" value={soul.duat_passage} />
+                </dd>
+              </div>
+            )}
             <div className={ROW}>
               <dt className={DT}>{t("souls.detail.location_label")}</dt>
               <dd className={DD}>

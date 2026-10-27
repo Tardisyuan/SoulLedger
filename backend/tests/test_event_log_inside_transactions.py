@@ -145,6 +145,13 @@ def _die(event_type):
     return path
 
 
+def _die_early():
+    """埃及早夭(docs/01 §4.2):死亡登记当场结案送芦苇原,结案的事件与死亡同一笔。"""
+    soul = Soul.objects.create(name="Early", tenant=plan.tenant("EG_DUAT"), duat_passage="EARLY_DEATH")
+    return (lambda: Soul.all_objects.get(pk=soul.pk).die(),
+            lambda: Judgment.all_objects.filter(soul=soul, verdict="PASSED").exists(), "JUDGMENT_CONCLUDED")
+
+
 def _city_god(action):
     """城隍初审(apps/judgment/city_gods.py):收案(在 die 里)、解送、退回,各自的事件与它描述的那一笔同进退。"""
     from apps.judgment import city_gods
@@ -525,6 +532,7 @@ PATHS = {
     "transition_to/STATE_CHANGED": _transition_standalone,
     "die/STATE_CHANGED": _die("STATE_CHANGED"),
     "die/SOUL_ACCOUNT_CREATED": _die("SOUL_ACCOUNT_CREATED"),
+    "die_early/JUDGMENT_CONCLUDED": _die_early,
     "die+city_god/CITY_GOD_RECEIVED": _city_god("received"),
     "city_god_send_on/CITY_GOD_SENT_ON": _city_god("sent_on"),
     "city_god_return/CITY_GOD_RETURNED": _city_god("returned"),

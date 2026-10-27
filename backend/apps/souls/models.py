@@ -201,6 +201,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         ASIA = "ASIA", "亚洲"
 
     origin_region = models.CharField(max_length=8, choices=OriginRegion.choices, blank=True, default="")
+
+    #: 埃及(2026-10-27,review P2-9):亡者未得审判的三种情形(docs/01 §4.2),官员登记,与阳寿同样是在死亡
+    #: 登记之前记下的事实。空 = 葬仪如常:木乃伊 70 天后启程入殿(02 §1.1)。葬仪不当包括 03 §六 的通关要素
+    #: (身体完整、咒语、自我介绍、知神名)—— 它们都是葬仪备下的。只有埃及读它(`Soul.opening_fields`)。
+    class DuatPassage(models.TextChoices):
+        EARLY_DEATH = "EARLY_DEATH", "婴儿或早夭"
+        NAMELESS = "NAMELESS", "无名者"
+        IMPROPER_BURIAL = "IMPROPER_BURIAL", "葬仪不当"
+
+    duat_passage = models.CharField(max_length=20, choices=DuatPassage.choices, blank=True, default="")
     birth_name = models.CharField(max_length=255, blank=True)  # name at birth
     description = models.TextField(blank=True)
 
@@ -822,7 +832,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # 阳寿: dying before the recorded fated date is untimely; the judgment is held until that date
             # (枉死城) and cannot be claimed before it (apps/judgment/claims.py).
             self.refresh_from_db(fields=["death_year", "death_month", "death_day", "origin_location",
-                                         "fated_death_year", "fated_death_month", "fated_death_day"])
+                                         "fated_death_year", "fated_death_month", "fated_death_day",
+                                         "duat_passage"])
             judgment = Judgment.objects.create(
                 soul=self,
                 civilization=self.civilization,
@@ -832,8 +843,24 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             )
             city_gods.received(judgment)
             if self.civilization == Civilization.EGYPTIAN:
-                self._arrive_in_the_hall(judgment)
+                self._after_egyptian_death(judgment)
             return judgment
+
+    def _after_egyptian_death(self, judgment):
+        """docs/01 §4.2: 早夭者不受审,直入芦苇原 —— 不称心(`weighing.applies`)、不走称心流程,当场结案 PASSED,
+        处置照常由官员执行;无名者与葬仪不当者到不了殿,案子留在杜阿特入口候着(`claims._assert_not_held`)。
+        其余的(含木乃伊 70 天)照旧挂到两真之殿。"""
+        from apps.judgment.models import DUAT_BARRED, DuatStage, Verdict
+
+        if judgment.duat_stage == DuatStage.EARLY_DEATH:
+            from apps.judgment.services import JudgmentConclusionService
+
+            JudgmentConclusionService.conclude_judgment(
+                judgment, Verdict.PASSED, notes="Early death: straight to the Field of Reeds (docs/01 §4.2).",
+                create_workflow=False)
+        elif judgment.duat_stage not in DUAT_BARRED:
+            # ponytail: 木乃伊 70 天期间行程已写到殿上(案子归殿);要「70 天后才入殿」得有个到期任务来挪行程。
+            self._arrive_in_the_hall(judgment)
 
     def _arrive_in_the_hall(self, judgment):
         """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口
@@ -858,4 +885,20 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
         untimely = bool(self.civilization == Civilization.CHINESE and fated and died and died < fated)
-        return {"untimely": untimely, "held_until": fated if untimely else None, **city_gods.initial_fields(self)}
+        return {"untimely": untimely, "held_until": fated if untimely else None, **city_gods.initial_fields(self),
+                **self._duat_fields(died)}
+
+    def _duat_fields(self, died) -> dict:
+        """埃及入殿前(docs/02 §1.1、01 §4.2):登记了未得审判的情形就照它;否则木乃伊 70 天,候到那一天。
+        死亡日期不是完整的公元日期(公元前、只有年份)时不候 —— 与阳寿同一条规矩。"""
+        if self.civilization != Civilization.EGYPTIAN:
+            return {}
+        from datetime import timedelta
+
+        from apps.judgment.models import EMBALMING_DAYS, DuatStage
+
+        if self.duat_passage:
+            return {"duat_stage": self.duat_passage}
+        if not died:
+            return {}
+        return {"duat_stage": DuatStage.EMBALMING, "held_until": died + timedelta(days=EMBALMING_DAYS)}

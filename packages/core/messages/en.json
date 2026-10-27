@@ -712,6 +712,14 @@
       "recalled_toast": "Recalled; back to Disposed",
       "since": "Lost since {{date}}",
       "by": "By {{name}}"
+    },
+    "duat_passage": {
+      "label": "Before the hall",
+      "NONE": "Proper burial",
+      "EARLY_DEATH": "Infant or early death",
+      "NAMELESS": "Nameless",
+      "IMPROPER_BURIAL": "Improper burial",
+      "help": "Proper burial: after 70 days of embalming the soul sets out for the Hall of Two Truths; the judgment can't be claimed before then. An infant or early death is not judged and goes straight to the Field of Reeds. The nameless do not enter the underworld, and an improper burial (body not intact, no spells) cannot complete the journey: both judgments stay held."
     }
   },
   "common": {
@@ -2125,7 +2133,10 @@
       "col_cycle_kind": "Life / kind",
       "undefer": "Restore",
       "done_undefer": "Restored; the case is back in the queue",
-      "load_more": "More ({{n}} left)"
+      "load_more": "More ({{n}} left)",
+      "embalming": "This judgment is held until {{date}}: the embalming isn't finished and the soul hasn't set out for the Hall of Two Truths; it can't be claimed before then.",
+      "duat_unfinished": "This judgment can't be claimed: the soul cannot reach the Hall of Two Truths.",
+      "duat_barred_short": "Can't reach the hall"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2223,6 +2234,12 @@
         "weighing_rejected": "A station refused the weighing flow: reopen or appeal the case; it cannot be executed.",
         "weighing_wavers": "A disposition parked by a wavering scale is not executed: open a new weighing."
       }
+    },
+    "duat_stage": {
+      "EMBALMING": "Being embalmed",
+      "EARLY_DEATH": "Died young · straight to the Field of Reeds",
+      "NAMELESS": "Nameless · does not enter the underworld",
+      "IMPROPER_BURIAL": "Improper burial · journey unfinished"
     }
   },
   "audit": {

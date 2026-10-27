@@ -9,7 +9,7 @@
  * operator couldn't even change the name. That is the bug these tests
  * guard against.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import type { Soul } from "@soulledger/core/api";
 
@@ -59,7 +59,7 @@ describe("SoulEditModal", () => {
     expect(stateSelect.value).toBe("SETTLED");
     // Only the settled option is offered — SETTLED is not appended to the
     // normal pick-list, it replaces it once the soul is already settled.
-    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(within(stateSelect).getAllByRole("option")).toHaveLength(1);
   });
 
   it("does not offer SETTLED as a pick for a soul that isn't already settled", () => {
@@ -69,7 +69,7 @@ describe("SoulEditModal", () => {
 
     const stateSelect = screen.getByLabelText("souls.form.state_label") as HTMLSelectElement;
     expect(stateSelect).not.toBeDisabled();
-    const values = screen.getAllByRole("option").map((o) => (o as HTMLOptionElement).value);
+    const values = within(stateSelect).getAllByRole("option").map((o) => (o as HTMLOptionElement).value);
     expect(values).not.toContain("SETTLED");
   });
 
@@ -138,5 +138,28 @@ describe("SoulEditModal · 阳寿 (第五十一批 F-1)", () => {
     const { data } = mockMutate.mock.calls[0][0];
     expect(data.fated_death_date).toBe("1531-06-18");
     expect(data).not.toHaveProperty("death_date");
+  });
+});
+
+describe("SoulEditModal · 入殿前情形 (review P2-9)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("埃及: the passage is picked and sent; blank is a proper burial", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={aliveSoul} onUpdated={jest.fn()} />);
+    const box = screen.getByLabelText("souls.duat_passage.label") as HTMLSelectElement;
+    expect(box.value).toBe("");
+    expect(screen.getByText("souls.duat_passage.help")).toBeInTheDocument();
+    fireEvent.change(box, { target: { value: "NAMELESS" } });
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].data.duat_passage).toBe("NAMELESS");
+  });
+
+  it("other civilizations: no field, nothing sent", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={{ ...aliveSoul, civilization: "GREEK" }} onUpdated={jest.fn()} />);
+    expect(screen.queryByLabelText("souls.duat_passage.label")).toBeNull();
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].data).not.toHaveProperty("duat_passage");
   });
 });

@@ -28,6 +28,20 @@ class JudgmentMethod(models.TextChoices):
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 
 
+class DuatStage(models.TextChoices):
+    """Where an Egyptian case stands before the hall (`Judgment.duat_stage`)."""
+    EMBALMING = "EMBALMING", "木乃伊制作中"
+    EARLY_DEATH = "EARLY_DEATH", "早夭 · 直入芦苇原"
+    NAMELESS = "NAMELESS", "无名者 · 不入冥界"
+    IMPROPER_BURIAL = "IMPROPER_BURIAL", "葬仪不当 · 旅程未竟"
+
+
+#: Stages that never reach the hall: the case can be neither claimed nor concluded.
+DUAT_BARRED = (DuatStage.NAMELESS, DuatStage.IMPROPER_BURIAL)
+#: docs/02 §1.1: 制作木乃伊(70 天后完成)。
+EMBALMING_DAYS = 70
+
+
 class WeighingResult(models.TextChoices):
     """What the scale said at an Egyptian conclusion (docs/02 §3.1, §5; 01 §3.3).
 
@@ -191,6 +205,10 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     #: `held_until` is that date, and the judgment cannot be claimed before it.
     untimely = models.BooleanField(default=False)
     held_until = models.DateField(null=True, blank=True)
+    #: 埃及入殿前的一段(review P2-9,docs/02 §1.1、01 §4.2),死亡登记时由 `Soul.opening_fields` 写:
+    #: EMBALMING = 木乃伊 70 天,`held_until` 是那一天;NAMELESS / IMPROPER_BURIAL 永远候着(不入冥界 /
+    #: 走不完旅程),不能认领、不能结案;EARLY_DEATH 不称心,`Soul.die` 当场送芦苇原。空 = 不涉及。
+    duat_stage = models.CharField(max_length=20, choices=DuatStage.choices, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     concluded_at = models.DateTimeField(null=True, blank=True)
     # 结案那一刻采信后的业力净值(功 − 过,剔除本案不采信的记录,与 `get_ledger_summary`

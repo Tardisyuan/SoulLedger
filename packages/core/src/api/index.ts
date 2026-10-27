@@ -58,6 +58,7 @@ export {
   type SoulImportFileError,
   type SoulInput,
   type SoulOriginRegion,
+  type SoulDuatPassage,
   type Soul,
   type SoulListItem,
   type SoulRecord,

@@ -87,6 +87,10 @@ const ENUM_FIELDS = [
   "skip_kind",
   // Added 2026-10-19 by the meta-test: `Soul.origin_region` (EUROPE / ASIA), batch 45.
   "origin_region",
+  // Added 2026-10-27 (review P2-9): `Judgment.duat_stage` and `Soul.duat_passage`, the Egyptian stages before
+  // the hall, drawn through judgment.duat_stage.* / souls.duat_passage.*.
+  "duat_stage",
+  "duat_passage",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),

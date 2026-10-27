@@ -33,7 +33,7 @@ import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/compon
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { Badge } from "@/src/components/ui/Badge";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
@@ -45,6 +45,9 @@ import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 import { withFrom } from "@/src/lib/backSource";
+
+/** 此刻不能认领:枉死城 / 埃及木乃伊 70 天候着,或埃及案到不了殿(永远候着)。 */
+const onHold = (j: Judgment) => isHeldUntilFatedDate(j) || isDuatBarred(j);
 
 /**
  * 审判队列的「待审」一面(规范 v3 第 7 轮 `QueuePage`,落在规范 v1 第三类 A·02 的四组上):
@@ -224,7 +227,9 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const rowsOf = (group: JudgmentQueueGroup): Judgment[] => {
     const rows = groupQueries[GROUPS.indexOf(group)].data?.results ?? [];
     const later = (j: Judgment) => (sessionDeferred.includes(j.id) ? 1 : 0);
-    const heldUntil = (j: Judgment) => (group === "unclaimed" && isHeldUntilFatedDate(j) ? (j.held_until as string) : "");
+    // 到不了殿的埃及案没有日期,排在所有候着的后面。
+    const heldUntil = (j: Judgment) =>
+      group !== "unclaimed" ? "" : isDuatBarred(j) ? "9999-12-31" : isHeldUntilFatedDate(j) ? (j.held_until as string) : "";
     return [...rows].sort((a, b) => {
       const ha = heldUntil(a);
       const hb = heldUntil(b);
@@ -260,7 +265,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
     }
   };
   // 候审中的不能勾:批量认领自然跳过它们(不放一个点了必然被拒的动作)。
-  const selectable = new Set(allRows.filter((j) => !isHeldUntilFatedDate(j)).map((j) => j.id));
+  const selectable = new Set(allRows.filter((j) => !onHold(j)).map((j) => j.id));
   const chosen = [...selected].filter((id) => selectable.has(id));
   /** 工具条「改派…」作用的案子:勾选的;没勾选时是焦点行。 */
   const reassignIds = rowReassign
@@ -380,7 +385,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
     c: () => {
       if (!focusedRow || !canExecute || claim.isPending || release.isPending) return;
       if (focusedRow.claimed_by == null) {
-        if (!isHeldUntilFatedDate(focusedRow)) claimOne(focusedRow.id);
+        if (!onHold(focusedRow)) claimOne(focusedRow.id);
       }
       else if (focusedRow.claimed_by === user?.id) releaseOne(focusedRow.id);
     },
@@ -616,6 +621,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                   const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
                   const laterThisSession = sessionDeferred.includes(j.id);
                   const held = isHeldUntilFatedDate(j);
+                  const barred = isDuatBarred(j);
                   return (
                     <tr
                       key={j.id}
@@ -633,8 +639,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         <td className="w-6 px-1 relative z-10">
                           <input
                             type="checkbox"
-                            checked={isSel && !held}
-                            disabled={held}
+                            checked={isSel && !held && !barred}
+                            disabled={held || barred}
                             onChange={() => toggle(j.id)}
                             aria-label={t("judgment.claim.select_row", { name: j.soul_name || t(MISSING_LABEL_KEY.unrecorded) })}
                             className="h-3.5 w-3.5 max-sm:h-5 max-sm:w-5 accent-[oklch(var(--color-accent))]"
@@ -662,6 +668,13 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         {j.untimely && (
                           <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="untimely-mark">
                             <Badge tone="ink">{t("judgment.untimely")}</Badge>
+                            {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
+                          </span>
+                        )}
+                        {/* 埃及入殿前(review P2-9):木乃伊 70 天、早夭、无名、葬仪不当 —— 与枉死同一种方框徽标。 */}
+                        {j.duat_stage && (
+                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="duat-mark">
+                            <Badge tone="ink"><DomainEnum namespace="judgment.duat_stage" value={j.duat_stage} /></Badge>
                             {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
                           </span>
                         )}
@@ -700,6 +713,10 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                                 </span>
                               )}
                             </span>
+                          </span>
+                        ) : canExecute && group !== "deferred" && barred ? (
+                          <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                            {t("judgment.claim.duat_barred_short")}
                           </span>
                         ) : canExecute && group !== "deferred" && held ? (
                           /* 候审中:认领按钮换成一行灰字,到期后按钮回来。 */
