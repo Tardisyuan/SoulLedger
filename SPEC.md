@@ -1070,7 +1070,7 @@ def check_judgment_timeouts():
 | POST | /api/v1/souls/{id}/die/ | 标记死亡 |
 | POST | /api/v1/souls/{id}/transition/ | 手动转态 |
 | POST | /api/v1/souls/{id}/add_record/ | 添加业力记录 |
-| GET | /api/v1/souls/{id}/karma/ | 业力汇总 |
+| GET | /api/v1/souls/{id}/karma/ | 业力汇总(现状 2026-10-28:已不存在,`karma` 已改名 `ledger`,见 `docs/API.md`) |
 | GET | /api/v1/souls/{id}/records/ | 业力记录列表 |
 | GET | /api/v1/souls/{id}/events/ | 事件日志 |
 
@@ -1850,7 +1850,7 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | 业力时间衰减 | 🔲 | effective_score = original × e^(-0.01×years) |
 | KarmaService Redis 缓存 | 🔲 | TTL=5min，自动失效 |
 | Celery 定时任务 | 🔲 | 每日重算、逾期检查（>30天 JUDGING 提醒） |
-| 业力计算 API | 🔲 | /api/v1/souls/{id}/karma/ |
+| 业力计算 API | 🔲 | /api/v1/souls/{id}/karma/(现状 2026-10-28:该路径已不存在,见 `docs/API.md`) |
 | 前端业力可视化 | 🔲 | Recharts 时间线图 |
 | 全局统计 API | 🔲 | /stats/global/、/stats/by-tenant/（ADMIN 专用） |
 | ADMIN 统计大屏 | 🔲 | 状态分布饼图、租户对比柱图、业力分布直方图 |
@@ -1919,6 +1919,8 @@ localhost
 ### ADR-001：Django + Next.js 而非其他组合
 
 **决策：** Django（后端）+ Next.js 14（前端）
+
+> 现状(2026-10-28):前端现为 Next.js 16(`frontend/package.json` 的 `next` ^16.3.4)。下面的「14」是当时的决定。
 
 **理由：** Django ORM + DRF 非常适合有复杂关系模型的系统；Django admin 内置对管理后台的开发效率极高；Next.js 14 App Router 提供现代前端开发体验。
 
