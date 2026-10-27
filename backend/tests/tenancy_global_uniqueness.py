@@ -42,6 +42,7 @@ UNIQUE_KEYS = {
     'tenants.Tenant:code': ('GLOBAL_VALUE', 'tenant code; the key the JWT, the death-sync API key and every *_for_tenant task resolve a tenant by'),
     'soul_accounts.SoulMfa:account': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'authentication.OfficerMfa:user': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'judgment.JudgmentAppeal:workflow': ('PER_PARENT', "one appeal per ladder workflow (OneToOne); unique inside one parent row, the rows live with the parent"),
     'chat.ChatIdentity:account': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'chat.Conversation:chat_one_open_direct_room_per_pair': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'soul_accounts.SoulDataExport:soul_data_export_one_in_progress': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
