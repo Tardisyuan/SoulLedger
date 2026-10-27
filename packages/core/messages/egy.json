@@ -328,7 +328,8 @@
       "CITY_GOD_RECEIVED": "Chenghuang Shesep Sep",
       "CITY_GOD_SENT_ON": "Chenghuang Hab Er Wesekhet 1 Er 10",
       "CITY_GOD_RETURNED": "Chenghuang Khesef Er Khemen",
-      "MENGPO_SOUP_TAKEN": "Mu Mengpo Shesep Seth"
+      "MENGPO_SOUP_TAKEN": "Mu Mengpo Shesep Seth",
+      "PURGATORY_ASCENDED": "Per Em Ta Hesmen · Er Pet"
     },
     "civilizations": {
       "CHINESE": "Sherer",
@@ -564,7 +565,9 @@
       "recalculate": "Wehem Hesb Nefer Isfet",
       "recalculate_confirm": "Wehem Hesb Nefer Isfet {{name}} Em Sesh Neb?",
       "recalculate_success": "Nefer Isfet Wehem Hesb Seth",
-      "recalculate_failed": "Nen Hesb Wehem. Wehem Iri Er Khet."
+      "recalculate_failed": "Nen Hesb Wehem. Wehem Iri Er Khet.",
+      "rebirth_suggestion": "Wesekhet 10 · Hesb Nefer Isfet Em Khetem: {{form}}",
+      "rebirth_pick_form": "Isfet Er Nefer, Nen Khet Duat: Wesekhet 10 Nen Djed. Setep Wat."
     },
     "balance_range": "Pehwy Nefer Isfet",
     "balance_max": "Er Pehwy",
@@ -2170,7 +2173,8 @@
         "realm_not_found": "Nen Iri: Ta Nen Gem",
         "term_conflict": "Nen Iri: Renpet Wa, Djet Wa",
         "eternal_not_allowed": "Nen Iri: Nen Djet Em Ta Pen",
-        "destination_not_applicable": "Nen Iri: Sep Pen Nen Wat Er Ta"
+        "destination_not_applicable": "Nen Iri: Sep Pen Nen Wat Er Ta",
+        "term_not_applicable": "Ta Kemet: Nen Renpet · Sekhet Aaru Hena Mut Sen."
       },
       "draft": "Sesh · Nen Hab",
       "filtered_by": "Setep Em «{{verdict}}»; Nen Aq Hena Nen Er: Maa Wa.",
@@ -2197,7 +2201,29 @@
     "error": {
       "at_city_god": "Em Chenghuang · Maa Tepy: Nen Shesep Er Khet Hab"
     },
-    "at_city_god": "Em Chenghuang"
+    "at_city_god": "Em Chenghuang",
+    "weighing": {
+      "title": "Fai Ib",
+      "scale": "Ib {{weight}} · Shut {{counterweight}}",
+      "gives": "Fai Ib: {{verdict}}",
+      "wavering_hint": "«Nen Wedja Djer» «Wehem Wedja» = Fai Nen Smen: Sab Sesh Sesh, Fai Ib Mawy · Nen Wat.",
+      "contradicts": "Nen Mi Fai Ib",
+      "result": {
+        "LIGHTER": "Ib Nen Dens Er Shut",
+        "HEAVIER": "Ib Dens Er Shut",
+        "WAVERING": "Fai Nen Smen · Wehem Fai"
+      },
+      "recorded": "Sab Sesh: {{result}} (Ib {{weight}})",
+      "workflow_forced": "Sep Kemet: Wat Hesy Fai Ib Em Tepy · Er Khet Iri.",
+      "errors": {
+        "verdict_contradicts_weighing": "Wedja Nen Mi Fai Ib: Ib Nen Dens Er Shut = Menkh Wa; Ib Dens Er Shut = Nen Menkh Wa.",
+        "wavering_has_no_destination": "Fai Nen Smen: Nen Wat. Fekh Wat Er Ta, Er Khet Khetem · Fai Ib Mawy.",
+        "wavering_with_open_cross": "Wedja Ta Ky Nen Khetem Djer: Khetem Tepy, Er Khet Wehem Fai.",
+        "weighing_in_progress": "Wat Hesy Fai Ib Em Iri: Sab Sesh, Djadjat En Maat, Heru, Wesir (Er Ammit) Tepy · Er Khet Iri.",
+        "weighing_rejected": "Wat Hesy Fai Ib Khesef Seth: Wen Mawy Er Nehet · Nen Iri.",
+        "weighing_wavers": "Wetep Em Fai Nen Smen: Nen Iri. Fai Ib Mawy."
+      }
+    }
   },
   "audit": {
     "title": "Medew Maa",
@@ -3253,7 +3279,8 @@
       "col_uploader": "Hab Em",
       "col_time": "Ahet",
       "limit": "Tut Er PDF · 20 MB Er Aa",
-      "failed_type": "Tut Er PDF Wa"
+      "failed_type": "Tut Er PDF Wa",
+      "print_failed": "Nen Ini Sesh Tut: Nen Dy. Wehem Iri Em Medjat, Er Khet Wehem Sesh Djama."
     }
   },
   "death_sync": {
@@ -3720,7 +3747,10 @@
       "THREE_EVIL_PATHS": "Wat Bin 3"
     },
     "error": {
-      "soup_not_taken": "{{name}}: Nen Mu Mengpo Djer. Ba Duat Sherer: Mu Mengpo Tepy. Ba Em Smen."
+      "soup_not_taken": "{{name}}: Nen Mu Mengpo Djer. Ba Duat Sherer: Mu Mengpo Tepy. Ba Em Smen.",
+      "plan_in_progress": "{{name}}: Wetep Nen Khetem Djer · Nen Wehem Mesut.",
+      "eternal_sentence": "{{name}}: Djet · Nen Ankh Em Khet.",
+      "rebirth_not_approved": "{{name}}: Dbh Wehem Mesut Khesef Seth Er Em Wedja · Nen Wehem Mesut."
     }
   },
   "social": {
@@ -4507,7 +4537,8 @@
       "email_hint": "Nen Rekh Sekhem: Hesb Maa Hab Er Wat Sesh Pen.",
       "email_code_sent": "Hesb Maa Hab Seth Er {{email}}",
       "email_new": "Wat Sesh Mawy",
-      "email_taken": "Wat Sesh Pen Em Aq Ky."
+      "email_taken": "Wat Sesh Pen Em Aq Ky.",
+      "row_load_failed": "Nen Ini"
     },
     "push": {
       "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
@@ -4915,7 +4946,8 @@
       "title": "Iri Mawy",
       "body": "Hemet-Sesh Pen Nen Iri Djer. Iri Mawy: Sesh-Ek Hena Medjat-Ek Wenen Djer.",
       "button": "Iri Mawy",
-      "version": "Hemet-Sesh {{version}}"
+      "version": "Hemet-Sesh {{version}}",
+      "open_failed": "Nen Wen Per Medjat. Hehy Iri Mawy Em Per Medjat, Er Wen Menf: {{url}}"
     },
     "mfa": {
       "setup": {
@@ -7083,7 +7115,9 @@
       "appeal_window_closed": "Nehet Khetem: {{date}}",
       "not_concluded": "Wedja Nen Khetem Djer: Nen Nehet",
       "not_appealable": "Wedja Pen: Nen Nehet",
-      "past_life_read_only": "Ankh Tepyu: Maa Wa, Nen Nehet"
+      "past_life_read_only": "Ankh Tepyu: Maa Wa, Nen Nehet",
+      "no_appeal_above_minos": "Wedja Minos: Wedja Pehwy · Nen Nehet Er Hery",
+      "not_escalatable": "Seshem Er Hery: Er Khet Wedja Tepy Smen Em Maa"
     },
     "file": "Nehet",
     "file_title": "Nehet · Wedja Pen",
@@ -7132,7 +7166,8 @@
       "original_judge": "Sab Wedja Tepy: Nen Maa",
       "not_reviewer": "Sab Shesep Wa: Djed Wedja",
       "appeal_closed": "Nehet Khetem Er Sehen Seth",
-      "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen»."
+      "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen».",
+      "ladder_running": "Nehet Em Wat Nehet: Nen Shesep, Nen Djed Er Khet Khetem"
     },
     "decide": {
       "foreign_title": "Sekhet Em Taui Ky · Wedja Taui Ky",
@@ -7140,7 +7175,11 @@
       "foreign_keep": "Smen Neb",
       "foreign_remove": "Fekh Neb",
       "foreign_required": "Setep: Smen Er Fekh"
-    }
+    },
+    "escalate": "Seshem Er Hery",
+    "escalate_title": "Seshem Er Wat Nehet",
+    "escalate_body": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery: Wat Nehet Em Taui Pen, Sekhet Neb; Sekhet Wa Khesef = Wedja Tepy Smen. Sekhet Neb Menkh: Wedja Pehwy Djed. Em Iri: Nen Sehen · Nehet Wa.",
+    "ladder": "Wat Nehet · {{name}}"
   },
   "cityGods": {
     "title": "Chenghuang",
