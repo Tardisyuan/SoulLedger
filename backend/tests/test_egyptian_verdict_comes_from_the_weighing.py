@@ -183,3 +183,28 @@ def test_neither_egyptian_outcome_takes_a_term(eg_tenant):
         with pytest.raises(DestinationRefusedError) as refused:
             case.conclude(verdict, term_years=3)
         assert refused.value.code == "term_not_applicable"
+
+
+def test_a_station_refusing_the_weighing_opens_a_new_weighing(eg_tenant):
+    """User 2026-10-27: a rejection is weighed again, as a wavering scale — not parked for reopen / appeal."""
+    from apps.events.models import SoulEvent
+    from apps.sentence_plan.services import in_progress_plan
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    case = _case(eg_tenant)
+    case.conclude("PASSED")
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    flow.complete_node(flow.current_node.pk, "FAILED")
+    flow.refresh_from_db()
+    assert flow.status == ApprovalWorkflowStatus.REJECTED
+
+    soul = Soul.objects.get(pk=case.soul_id)
+    assert soul.current_state == SoulState.JUDGING
+    assert not Disposition.objects.filter(judgment=case).exists() and in_progress_plan(soul) is None
+    retrial = Judgment.objects.get(retrial_of=case)
+    assert retrial.verdict is None and retrial.judgment_method == JudgmentMethod.HEART_WEIGHING
+    started = SoulEvent.objects.get(soul=soul, event_type="JUDGMENT_INITIATED", payload__judgment_id=str(retrial.pk))
+    assert started.payload["reason"] == "REJECTED"
+
+    retrial.conclude("PASSED")  # the new weighing concludes like the first one
+    assert Disposition.objects.get(judgment=retrial).destination_realm.realm_code == "EG_AARU"
