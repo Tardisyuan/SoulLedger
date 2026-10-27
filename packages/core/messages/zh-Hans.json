@@ -7105,7 +7105,8 @@
       "IN_REVIEW": "复核中",
       "UPHELD": "维持原判",
       "AMENDED": "已改判",
-      "WITHDRAWN": "已撤回"
+      "WITHDRAWN": "已撤回",
+      "VOID": "已作废"
     },
     "round": "第 {{round}} 次申诉",
     "deadline": "{{date}} 前可申诉",
@@ -7117,6 +7118,7 @@
       "not_appealable": "这件审判不能申诉",
       "past_life_read_only": "前世的审判只能查看，不能申诉",
       "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉",
+      "soul_devoured": "灵魂已被阿米特吞噬，不复存在，无从申诉",
       "not_escalatable": "上一次复核维持原判之后才能上诉"
     },
     "file": "申诉",
