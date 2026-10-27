@@ -326,12 +326,16 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         body = UserDeactivateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         to = body.validated_data.get('handover_to')
-        if to is None:
-            work = _open_work(user)
-            if work:
-                return _open_work_refusal({str(user.pk): work})
         try:
             with transaction.atomic():
+                # 计数在锁住这一行之后、同一个事务里做:检查与停用之间不留空档。
+                # ponytail: 认领不锁官员行,与之并发的一次认领仍可能落在刚停用的人名下;
+                # 交接不看 is_active,管理员之后照样能移交。要彻底就让认领也锁认领人行。
+                user = User.objects.select_for_update().get(pk=user.pk, tenant_id=user.tenant_id)
+                if to is None:
+                    work = _open_work(user)
+                    if work:
+                        return _open_work_refusal({str(user.pk): work})
                 if to is not None:
                     target = User.objects.filter(pk=to, tenant_id=user.tenant_id).first()  # 别殿的人与不存在的人同一个 400
                     handover.commit(user, target, user.tenant_id, actor=request.user, request=request)
