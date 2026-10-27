@@ -232,7 +232,10 @@ _STRIPPED = (
 
 
 def _clean_env(**extra) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if k not in _STRIPPED and not k.startswith("GIT_")}
+    # GATES_*: the outer run's settings (a delegated run sets GATES_IN_REMOTE, GATES_PG_URL …) must not
+    # reach the throwaway gates these tests start — inside one, they took the PostgreSQL path (2026-10-28).
+    env = {k: v for k, v in os.environ.items()
+           if k not in _STRIPPED and not k.startswith(("GIT_", "GATES_"))}
     env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", **extra)
     return env
 
@@ -1304,11 +1307,9 @@ class TestRealPostgres:
         assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
 
 
-class TestPytestOnAnotherMachine:
-    """GATES_REMOTE (2026-10-28, user decision): the backend selection runs in a container on another
-    machine against real PostgreSQL while this one runs the rest; unreachable means it runs here."""
-
-    PG_ONLY = "tests/test_x.py::test_needs_row_locks"
+class TestTheWholeRunOnAnotherMachine:
+    """GATES_REMOTE (2026-10-28, user decision): this machine decides what runs, rsyncs the tree and runs
+    this same script there in a container; it never falls back to running here."""
 
     def _bin(self, tmp_path: Path, image_ok=True, remote_status=0) -> Path:
         b = tmp_path / "bin"
@@ -1317,48 +1318,61 @@ class TestPytestOnAnotherMachine:
             "#!/bin/bash\n"
             'case "$*" in\n'
             f'  *"docker image inspect"*) exit {0 if image_ok else 1} ;;\n'
-            '  *"docker volume inspect"*) exit 0 ;;\n'
             '  *"docker rm -f"*) exit 0 ;;\n'
-            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "REMOTE RUN"; echo "== 1 passed in 0.1s =="; exit {remote_status} ;;\n'
+            f'  *"cat > "*) cat > "{tmp_path}/changed" ; exit 0 ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "pre-push: ok (remote)"; exit {remote_status} ;;\n'
             "esac\nexit 0\n")
         (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
         for f in ("ssh", "rsync"):
             (b / f).chmod(0o755)
         return b
 
-    def _gates(self, repo, python, tmp_path, **kw):
-        b = self._bin(tmp_path, **kw)
-        (repo / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
-        env = _clean_env(PREPUSH_CHANGED="backend/apps/souls/views.py", PYTHON_BIN=python,
-                         RUFF_BIN=shutil.which("true"), GATES_PG_ONLY_TESTS=self.PG_ONLY,
-                         GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
-                         REDIS_URL=os.environ.get("REDIS_URL", ""))
+    def _run(self, repo, tmp_path, *args, prepush=True, **kw):
+        b = self._bin(tmp_path, **{k: kw.pop(k) for k in ("image_ok", "remote_status") if k in kw})
+        env = _clean_env(GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
+                         GATES_STAMP_FILE=str(tmp_path / "passed"), **kw)
+        if prepush:
+            env["PREPUSH_CHANGED"] = "backend/apps/souls/views.py"
         env["PATH"] = f"{b}:{env['PATH']}"
-        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), "--prepush"], cwd=repo,
-                              env=env, capture_output=True, text=True, timeout=120)
+        cmd = ["bash", str(repo / "scripts" / "run-gates.sh"), *(["--prepush"] if prepush else []), *args]
+        return subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True, timeout=120)
 
-    def test_a_reachable_machine_runs_the_selection_there_on_postgres(self, checkouts, fake_backend, tmp_path):
+    def test_it_runs_there_and_nothing_runs_here(self, checkouts, tmp_path):
         main, _ = checkouts
-        proc = self._gates(main, fake_backend, tmp_path)
+        proc = self._run(main, tmp_path)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert "on fake-host: real PostgreSQL" in proc.stdout, proc.stdout
-        assert "waiting for it" in proc.stdout and "== 1 passed" in proc.stdout, proc.stdout
-        assert "PYTEST TEMPLATE" not in proc.stdout, "pytest also ran on this machine"
-        log = (tmp_path / "remote-run").read_text()
-        assert "--create-db" in log and self.PG_ONLY in log and "tests/test_souls.py" in log, log
-        assert "--dist worksteal" in log and "DATABASE_URL='postgres://sl:x@sl-pg-test:5432/s'" in log, log
+        assert "only syncs and waits" in proc.stdout and "pre-push: ok (remote)" in proc.stdout, proc.stdout
+        assert "→ ruff" not in proc.stdout and "PYTEST TEMPLATE" not in proc.stdout, "checks ran here"
+        remote = (tmp_path / "remote-run").read_text()
+        assert "GATES_IN_REMOTE=1" in remote and "run-gates.sh --prepush" in remote, remote
+        assert "DATABASE_URL='postgres://sl:x@sl-pg-test:5432/s'" in remote and "flock" in remote, remote
+        assert (tmp_path / "changed").read_text().strip() == "backend/apps/souls/views.py"
 
-    def test_an_unreachable_machine_stops_the_run_instead_of_running_here(self, checkouts, fake_backend, tmp_path):
-        """2026-10-28 user decision: no fallback to this machine — the local run is what froze it."""
+    def test_full_and_real_pg_are_handed_over(self, checkouts, tmp_path):
         main, _ = checkouts
-        proc = self._gates(main, fake_backend, tmp_path, image_ok=False)
+        self._run(main, tmp_path, "--full", "--real-pg")
+        assert "run-gates.sh --prepush --full --real-pg" in (tmp_path / "remote-run").read_text()
+
+    def test_an_unreachable_machine_stops_the_run_instead_of_running_here(self, checkouts, tmp_path):
+        """2026-10-28 user decision: no fallback to this machine — running here is what froze it."""
+        main, _ = checkouts
+        proc = self._run(main, tmp_path, image_ok=False)
         assert proc.returncode != 0
         assert "unreachable" in proc.stdout and "SKIP_PREPUSH=1" in proc.stdout, proc.stdout
-        assert "PYTEST TEMPLATE" not in proc.stdout and "REMOTE RUN" not in proc.stdout
-        assert "→ ruff" not in proc.stdout, "checks ran before the refusal"
+        assert "→ ruff" not in proc.stdout and not (tmp_path / "remote-run").exists()
 
-    def test_a_red_run_there_refuses_the_push(self, checkouts, fake_backend, tmp_path):
+    def test_a_red_run_there_is_a_red_run_here(self, checkouts, tmp_path):
         main, _ = checkouts
-        proc = self._gates(main, fake_backend, tmp_path, remote_status=1)
+        proc = self._run(main, tmp_path, remote_status=1)
         assert proc.returncode != 0
-        assert "pytest failed (on fake-host)" in proc.stdout, proc.stdout
+        assert "the gates failed on fake-host" in proc.stdout, proc.stdout
+
+    def test_a_green_run_there_is_recorded_here(self, checkouts, tmp_path):
+        main, _ = checkouts
+        (main / "backend" / "x.py").write_text("X = 1\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "x")
+        proc = self._run(main, tmp_path, "--base", "HEAD~1", prepush=False)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "recorded a selective pass" in proc.stdout, proc.stdout
+        assert (tmp_path / "passed-selective").read_text().rstrip().endswith("\tbackend/x.py")
