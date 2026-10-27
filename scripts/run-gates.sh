@@ -587,10 +587,13 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     RNAME="sl-gates-$RID-$$"
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
-    # flock: one delegated run at a time on that machine, from any checkout or session.
+    # flock: one delegated run at a time on that machine, from any checkout or session. It is the only
+    # lock there: GATE_LOCK=0 turns off gate-lock.sh inside the container, whose pid check cannot work
+    # across containers — each numbers its processes from 1, so a lock an interrupted run left behind
+    # named pid 7, the next container had a live pid 7, and that push waited 30 minutes (2026-10-28).
     ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
-        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATES_FULL=${GATES_FULL:-} \
+        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
         -e JEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e VITEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e PYTEST_WORKERS=${GATES_REMOTE_WORKERS:-8} \
         -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS=$DEPS \
         -e TMPDIR=/app/.sl-tmp $RIMG bash -c '

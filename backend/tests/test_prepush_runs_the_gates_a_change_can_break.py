@@ -1346,6 +1346,7 @@ class TestTheWholeRunOnAnotherMachine:
         remote = (tmp_path / "remote-run").read_text()
         assert "GATES_IN_REMOTE=1" in remote and "run-gates.sh --prepush" in remote, remote
         assert "DATABASE_URL='postgres://sl:x@sl-pg-test:5432/s'" in remote and "flock" in remote, remote
+        assert "GATE_LOCK=0" in remote, "the container's own gate lock must be off: pids repeat across containers"
         assert (tmp_path / "changed").read_text().strip() == "backend/apps/souls/views.py"
 
     def test_full_and_real_pg_are_handed_over(self, checkouts, tmp_path):
