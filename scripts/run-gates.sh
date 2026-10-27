@@ -132,6 +132,10 @@ fi
 # and REDIS_URL at the shared box.
 # ≥32 bytes, or PyJWT's InsecureKeyLengthWarning — an error in pytest.ini.
 CI_SECRET_KEY="ci-test-key-not-for-production-32-bytes-min"
+# ENCRYPTION_KEY: the death-registration retry tests need one, and so far it came from the main
+# checkout's backend/.env — a worktree, a container or CI has none, and four tests went red there
+# (2026-10-28, first run in a container). A fixed test-only Fernet key, used only when none is set.
+export ENCRYPTION_KEY="${ENCRYPTION_KEY:-Y2ktdGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcyE=}"
 if [ -z "${SECRET_KEY:-}" ] && [ ! -f "$ROOT/backend/.env" ]; then
     echo "$P: no backend/.env here — using CI's SECRET_KEY/DEBUG for the backend gates"
     export SECRET_KEY="$CI_SECRET_KEY"
