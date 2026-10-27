@@ -33,6 +33,8 @@ jest.mock("@soulledger/core/api", () => ({
   },
   permApi: { roles: { list: jest.fn() } },
   PAGE_SIZE: 20,
+  openWorkOf: (e: { response?: { status?: number; data?: { code?: string; open_work?: object } } }) =>
+    e?.response?.status === 409 && e.response.data?.code === "officer_has_open_work" ? e.response.data.open_work : null,
 }));
 
 const mockToast = jest.fn();
@@ -245,6 +247,14 @@ describe("batch activate / deactivate", () => {
     fireEvent.click(screen.getByRole("button", { name: "users.batch.deactivate" }));
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith("users.batch.failed", "error"));
     expect(screen.getByRole("region", { name: "users.batch.region" })).toBeInTheDocument();
+  });
+
+  it("a batch refused for open work says how many officers still hold it, not 'failed'", async () => {
+    mockBatchDeactivate.mockRejectedValue({ response: { status: 409, data: { code: "officer_has_open_work", open_work: { "7": {}, "8": {} } } } });
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "users.batch.deactivate" }));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.stringContaining("users.batch.open_work"), "error"));
+    expect(mockToast).not.toHaveBeenCalledWith("users.batch.failed", "error");
   });
 
   it("changing the filter empties the selection", async () => {

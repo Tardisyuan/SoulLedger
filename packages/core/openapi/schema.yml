@@ -20468,7 +20468,12 @@ paths:
   /api/v1/users/{id}/deactivate/:
     post:
       operationId: v1_users_deactivate_create
-      description: 停用指定用户
+      description: |-
+        停用指定用户。
+
+        手上还有在途的事(认领中的审判、复核中的申诉、城隍名下、经办的书信 —— 与交接预览同一套计数)的官员:
+        不带 `handover_to` 是 409 `officer_has_open_work` 附件数;带上本殿一位在职官员,则交接与停用在同一个事务里,
+        交接的审计行也在里面 —— 任何一步失败,两件都不发生(2026-10-27 用户决定,检查业务 #10)。
       parameters:
       - in: path
         name: id
@@ -20482,14 +20487,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/UserDeactivate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/UserDeactivate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/UserManagement'
-        required: true
+              $ref: '#/components/schemas/UserDeactivate'
       security:
       - jwtAuth: []
       responses:
@@ -20498,6 +20502,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserManagement'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerHasOpenWork'
           description: ''
   /api/v1/users/{id}/own_roles/:
     get:
@@ -20657,6 +20674,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserBatchUpdateResult'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerHasOpenWork'
           description: ''
   /api/v1/users/export_csv/:
     get:
@@ -32201,6 +32224,28 @@ components:
       - soul_name
       - status
       - updated_at
+    OfficerHasOpenWork:
+      type: object
+      description: 409 of single and batch deactivation. `open_work` is keyed by user
+        id (one key for a single deactivation).
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/OfficerHasOpenWorkCodeEnum'
+        open_work:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/OpenWork'
+      required:
+      - code
+      - error
+      - open_work
+    OfficerHasOpenWorkCodeEnum:
+      enum:
+      - officer_has_open_work
+      type: string
+      description: '* `officer_has_open_work` - officer_has_open_work'
     OfficerInbox:
       type: object
       properties:
@@ -32665,6 +32710,29 @@ components:
       required:
       - password
       - username
+    OpenWork:
+      type: object
+      description: 'What an officer still holds: the counts of `handover.preview(source,
+        None)`.'
+      properties:
+        judgments:
+          type: integer
+        appeals:
+          type: integer
+        appeals_returned_to_pool:
+          type: integer
+        city_gods:
+          type: array
+          items:
+            type: string
+        letters:
+          type: integer
+      required:
+      - appeals
+      - appeals_returned_to_pool
+      - city_gods
+      - judgments
+      - letters
     OperationEnum:
       enum:
       - claim
@@ -42938,6 +43006,16 @@ components:
       - id
       - password
       - username
+    UserDeactivate:
+      type: object
+      description: |-
+        `POST /users/{id}/deactivate/`: an officer who still holds open work is refused (409 `officer_has_open_work`)
+        unless `handover_to` names the officer of the same hall who takes it; the handover and the deactivation are one
+        transaction (`apps/judgment/handover.py`).
+      properties:
+        handover_to:
+          type: integer
+          nullable: true
     UserImportResult:
       type: object
       description: |-

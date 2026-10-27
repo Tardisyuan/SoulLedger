@@ -7312,8 +7312,7 @@
       "invalid_target": "Sab Shesep Nen Em Wesekhet Pen",
       "not_found": "Nen Gem Sab"
     },
-    "deactivate_prompt": "{{name}}: Sep Em Iri. Redi Tepy?",
-    "deactivate_anyway": "Khetem"
+    "deactivate_prompt": "{{name}}: Sep Em Iri. Redi Tepy?"
   },
   "officerInvite": {
     "action": "Nis Sab",

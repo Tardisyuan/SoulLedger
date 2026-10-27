@@ -3004,6 +3004,7 @@
       "deactivate": "停用所选",
       "done": "已更新 {{n}} 个账号",
       "failed": "批量更新失败",
+      "open_work": "一个都没有停用：{{n}} 位官员手上还有在途的事。请逐个停用，停用时移交。",
       "skipped_note": "管理员账号和你自己不在批量范围内。"
     },
     "reset_password": {
@@ -7313,7 +7314,8 @@
       "not_found": "找不到这位官员"
     },
     "deactivate_prompt": "{{name}}手上还有在途的事。停用前先移交？",
-    "deactivate_anyway": "仍然停用"
+    "submit_and_deactivate_n": "移交 {{n}} 件并停用",
+    "deactivated_toast": "已移交并停用{{name}}"
   },
   "officerInvite": {
     "action": "邀请官员",
