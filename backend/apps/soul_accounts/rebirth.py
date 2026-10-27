@@ -190,9 +190,10 @@ def _lock_account(account):
     return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "soul__home_tenant", "user").get(pk=account.pk)
 
 
-def submit(account, desired_form, statement=""):
+def submit(account, desired_form=None, statement=""):
     from apps.events.services import EventService
-    from apps.souls.models import Soul
+    from apps.reincarnation.services import RebirthFormNotApplicable, rebirth_form_for
+    from apps.souls.models import Civilization, Soul
     from apps.workflow.services import WorkflowService
 
     with transaction.atomic():
@@ -204,6 +205,13 @@ def submit(account, desired_form, statement=""):
         if not can:
             raise SoulAccountError(REFUSALS[code], code, 409)
         soul = account.soul
+        # 六道只属于地府(G-2):地府灵魂必须选一道;希腊灵魂不选,记 OTHER(「六道之外」),选了就拒绝。
+        if soul.home_civilization == Civilization.CHINESE and not desired_form:
+            raise SoulAccountError("请选择希望转入的一道。", "desired_form_required", 400)
+        try:
+            desired_form = rebirth_form_for(soul, desired_form)
+        except RebirthFormNotApplicable:
+            raise SoulAccountError("本文明的再生不走六道,不能指定一道。", "rebirth_form_not_applicable", 400) from None
         try:
             with transaction.atomic():
                 workflow = _create_workflow(soul, REBIRTH_NODES, name=f"转生申请: {soul.soul_code}")
