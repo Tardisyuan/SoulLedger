@@ -76,7 +76,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     civilization: "CHINESE",
     caseType: "SPECIAL",
     name: "阿鼻地狱流程",
-    description: "五逆十恶直接入阿鼻地狱，永不轮回",
+    description: "犯五逆者直接入阿鼻地狱，永不轮回",
     priority: 0,
     nodes: [
       { id: "n1", name: "罪行核定", court: "第一殿", type: "罪行评定", order: 1 },

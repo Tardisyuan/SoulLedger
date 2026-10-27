@@ -76,7 +76,8 @@ CHINESE_ACTORS = [
      "inciting litigation, betraying a trust"),
     ("五官王", "五官王", "Wuguan Wang", "Wuguan", ActorRole.JUDGE, "DY_COURT_04_WUGUAN",
      "第四殿五官王", "第四殿五官王", "Fourth Court Wuguan", "Wuguan",
-     "Fourth court judge - chief accountant of deeds"),
+     "Fourth court judge - presides over 合大地狱: withholding grain tax and rent, "
+     "fraud in trade"),
     ("卞城王", "卞城王", "Biancheng Wang", "Biancheng", ActorRole.JUDGE, "DY_COURT_06_BIANCHENG",
      "第六殿卞城王", "第六殿卞城王", "Sixth Court Biancheng", "Biancheng",
      "Sixth court judge - presides over 大叫唤大地狱: sacrilege against images "
@@ -92,7 +93,8 @@ CHINESE_ACTORS = [
      "not a marketplace"),
     ("平等王", "平等王", "Pingdeng Wang", "Pingdeng", ActorRole.JUDGE, "DY_COURT_09_PINGDENG",
      "第九殿平等王", "第九殿平等王", "Ninth Court Pingdeng", "Pingdeng",
-     "Ninth court - embodies perfect impartial justice"),
+     "Ninth court judge - presides over 阿鼻大地狱, the deepest hell: murder, arson, "
+     "poisoning, the gravest crimes"),
     ("转轮王", "转轮王", "Zhuanlun Wang", "Zhuanlun", ActorRole.JUDGE, "DY_COURT_10_ZHUANLUN",
      "第十殿转轮王", "第十殿转轮王", "Tenth Court Zhuanlun", "Zhuanlun",
      "Tenth court - the wheel of rebirth; assigns fate for the next life"),
@@ -126,10 +128,10 @@ CHINESE_ACTORS = [
      "fifth-court 望乡台 escort 《玉历》 names them in"),
     ("白无常", "白无常", "White Impermanence", "Bai Wuchang", ActorRole.CONDUIT, "DY_00_PURGATORY",
      "白无常", "白无常", "White Wuchang", "BaiWuchang",
-     "White Impermanence - captures wandering souls, brings gentle death"),
+     "White Impermanence (七爷 谢必安) - captures wandering souls, brings gentle death"),
     ("黑无常", "黑无常", "Black Impermanence", "Hei Wuchang", ActorRole.CONDUIT, "DY_00_PURGATORY",
      "黑无常", "黑无常", "Black Wuchang", "HeiWuchang",
-     "Black Impermanence - captures wicked souls with chains of darkness"),
+     "Black Impermanence (八爷 范无救) - captures wicked souls with chains of darkness"),
     ("判官", "判官", "Registrar", "Panguan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "判官", "判官", "Clerk-Registrar of the Dead", "Panguan",
      "Registrars who compile and verify the Book of Life and Death"),
