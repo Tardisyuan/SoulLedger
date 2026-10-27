@@ -6,6 +6,8 @@
  *   A-2 整页表单(`JudgmentAppealScreen`):理由 2000 字,新证据选填;有未提交内容时离开先确认。
  *   A-3 各轮:新的一轮在上;复核意见是人写的话,用 `Quote`(serif);不写复核人;待复核 / 复核中可撤回。
  *   A-4 推送落地(`focused`):自动展开最新一轮,改判时写「原判 → 新判」与补偿各站。
+ *   上诉(2026-10-27):上一轮一次复核维持原判、还有次数时(`can_escalate`),同一行多一个「上诉 ›」,
+ *       走同一张表单(`escalate`),交本文明的申诉流程逐站复核;那一轮写流程名,不能撤回。
  *
  * 数据是 `GET /me/judgment-appeals/`:`judgments` 只列本世已结案的原审,所以没有这一行的审判
  * (未结案、复审、前世)不画申诉行。
@@ -105,6 +107,11 @@ function Round({
           </Txt>
         </>
       ) : null}
+      {round.workflow_name ? (
+        <Txt testID={`appeal-ladder-${round.id}`} variant="caption" tone="muted">
+          {t("appeals.ladder", { name: round.workflow_name })}
+        </Txt>
+      ) : null}
       {round.status === "AMENDED" ? (
         <DataRows>
           <DataRow label={t("appeals.original_verdict")}>{verdict(round.original_verdict)}</DataRow>
@@ -141,7 +148,7 @@ function Round({
           </Txt>
         </View>
       ) : null}
-      {OPEN.includes(round.status) ? (
+      {OPEN.includes(round.status) && !round.workflow ? (
         <Button testID={`appeal-withdraw-${round.id}`} kind="secondary" title={t("appeals.withdraw")} onPress={() => setAsking(true)} />
       ) : null}
       <MfaSheet testID="appeal-withdraw-sheet" open={asking} onClose={() => setAsking(false)} closeLabel={t("soul_app.common.cancel")}>
@@ -192,6 +199,21 @@ export function AppealLine({
             <Txt testID={`appeal-deadline-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
               {t("appeals.deadline", { date: appealDay(row.deadline) })}
             </Txt>
+            {row.can_escalate ? (
+              <SmallButton
+                testID={`appeal-escalate-${row.judgment_id}`}
+                title={`${t("appeals.escalate")} ›`}
+                onPress={() =>
+                  navigation.navigate("JudgmentAppeal", {
+                    judgment: row.judgment_id,
+                    caseNumber: row.case_number,
+                    verdict: row.verdict,
+                    deadline: row.deadline,
+                    escalate: true,
+                  })
+                }
+              />
+            ) : null}
             <SmallButton
               testID={`appeal-file-${row.judgment_id}`}
               title={`${t("appeals.file")} ›`}
@@ -236,7 +258,14 @@ export function AppealLine({
   );
 }
 
-export type JudgmentAppealParams = { judgment: string; caseNumber: string; verdict: string; deadline: string };
+export type JudgmentAppealParams = {
+  judgment: string;
+  caseNumber: string;
+  verdict: string;
+  deadline: string;
+  /** 上诉到本文明的申诉流程,而不是再一次一次复核。 */
+  escalate?: boolean;
+};
 
 /** A-2: the form, a whole page — a 2000-character reason does not fit a sheet with the keyboard up. */
 export function JudgmentAppealScreen() {
@@ -260,7 +289,7 @@ export function JudgmentAppealScreen() {
     setBusy(true);
     setError(null);
     try {
-      await soulApi.fileJudgmentAppeal(params.judgment, reason.trim(), evidence.trim());
+      await soulApi.fileJudgmentAppeal(params.judgment, reason.trim(), evidence.trim(), !!params.escalate);
       guard.release();
       toast(t("appeals.submitted_toast"));
       navigation.goBack();
@@ -302,7 +331,7 @@ export function JudgmentAppealScreen() {
         </View>
         <Input testID="appeal-evidence" label={t("appeals.evidence_label")} value={evidence} onChangeText={setEvidence} multiline maxLength={EVIDENCE_MAX} editable={!busy} />
         <Txt testID="appeal-file-body" variant="body" tone="muted">
-          {t("appeals.file_body")}
+          {t(params.escalate ? "appeals.escalate_body" : "appeals.file_body")}
         </Txt>
         <Txt variant="caption" tone="subtle">
           {t("appeals.deadline", { date: appealDay(params.deadline) })}

@@ -7115,7 +7115,8 @@
       "not_concluded": "这件审判还没结案，结案后才能申诉",
       "not_appealable": "这件审判不能申诉",
       "past_life_read_only": "前世的审判只能查看，不能申诉",
-      "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉"
+      "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉",
+      "not_escalatable": "上一次复核维持原判之后才能上诉"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",
@@ -7164,7 +7165,8 @@
       "original_judge": "你作出了原判，不能复核",
       "not_reviewer": "只有认领的复核人能作出结论",
       "appeal_closed": "这份申诉已有结论或已撤回",
-      "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。"
+      "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。",
+      "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",
@@ -7172,7 +7174,11 @@
       "foreign_keep": "全部保留",
       "foreign_remove": "全部撤掉",
       "foreign_required": "请决定这些外地站保留还是撤掉"
-    }
+    },
+    "escalate": "上诉",
+    "escalate_title": "上诉至申诉流程",
+    "escalate_body": "上一次复核维持了原判。上诉后由本文明的申诉流程逐站复核：任一站驳回即维持原判，走完由终审作出结论。流程审理中不能撤回，这一次也算一次申诉。",
+    "ladder": "申诉流程 · {{name}}"
   },
   "cityGods": {
     "title": "城隍",

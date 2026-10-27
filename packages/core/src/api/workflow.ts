@@ -61,6 +61,8 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   can_adjust?: boolean;
   /** The cross-realm judgment this workflow merged, if any. */
   cross_judgment_id?: string | null;
+  /** The soul's appeal escalated to this APPEAL workflow (2026-10-27); null otherwise. */
+  judgment_appeal?: { id: string; case_number: string; round: number; status: string } | null;
 }
 
 /** `WorkflowSegment.state` as shown: AWAITING_PICK / PICKED (not started) / RUNNING / DONE / SKIPPED. */

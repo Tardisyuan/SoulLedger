@@ -446,8 +446,13 @@ export function RootNavigator() {
             <Stack.Screen
               name="JudgmentAppeal"
               component={JudgmentAppealScreen}
-              options={({ navigation }) => ({
-                header: () => <AppHeader title={t("appeals.file_title")} onBack={navigation.goBack} />,
+              options={({ navigation, route }) => ({
+                header: () => (
+                  <AppHeader
+                    title={t(route.params?.escalate ? "appeals.escalate_title" : "appeals.file_title")}
+                    onBack={navigation.goBack}
+                  />
+                ),
               })}
             />
             <Stack.Screen
