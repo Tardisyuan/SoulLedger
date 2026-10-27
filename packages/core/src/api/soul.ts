@@ -327,7 +327,7 @@ export const soulApi = {
   sentencePlan: () => soulHttp.get<MeSentencePlan>("/me/sentence-plan/").then((r) => r.data),
   /** 审判申诉(第五十二批):本世已结案的审判(`can_appeal` / `refusal_code` / `deadline`)与各轮申诉。 */
   judgmentAppeals: () => soulHttp.get<MeJudgmentAppealList>("/me/judgment-appeals/").then((r) => r.data),
-  /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable` / `no_appeal_above_minos`(希腊)。 */
+  /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable` / `no_appeal_above_minos`(希腊)/ `soul_devoured`(被阿米特吞噬)。 */
   //  `escalate`:上诉到本文明的多站申诉流程(上一轮一次复核维持原判之后;409 `not_escalatable`)。
   fileJudgmentAppeal: (judgment: string, reason: string, evidence = "", escalate = false) =>
     soulHttp
@@ -402,6 +402,8 @@ export const APPEAL_REFUSAL_CODES = [
   "past_life_read_only",
   // 希腊:米诺斯之上无可上诉(docs/02 希腊 §5.2,用户 2026-10-27)。
   "no_appeal_above_minos",
+  // 埃及:被阿米特吞噬即不复存在，无从申诉(P2-10,用户 2026-10-27)。
+  "soul_devoured",
   // 上诉到申诉流程:上一轮要是一次复核、维持原判(2026-10-27)。
   "not_escalatable",
 ] as const;

@@ -1079,6 +1079,8 @@ class AppealStatus(models.TextChoices):
     UPHELD = "UPHELD", "维持原判"
     AMENDED = "AMENDED", "改判"
     WITHDRAWN = "WITHDRAWN", "已撤回"
+    #: 灵魂被阿米特吞噬(第二次死亡):申诉随之作废,无补偿、不改判(用户 2026-10-27,P2-10)。
+    VOID = "VOID", "已作废"
 
 
 #: 还没有结论的申诉:一件审判同一时刻至多一份(部分唯一约束)。
