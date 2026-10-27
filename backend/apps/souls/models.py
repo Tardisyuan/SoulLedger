@@ -524,10 +524,20 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         routing helpers all read through here; `self.records` is every life."""
         return self.records.filter(cycle=self.life_index)
 
-    def can_transition_to(self, new_state: str) -> bool:
+    #: Edges only a named system action may take, never a person (user 2026-10-27). `can_transition_to` allows
+    #: one only when the caller passes its `system` reason; `POST /souls/{id}/transition/` passes none.
+    #: DISPOSED → JUDGING: a refused Egyptian weighing is weighed again (apps/judgment/weighing.py
+    #: ::reweigh_after_rejection), its unexecuted disposition voided first.
+    SYSTEM_ONLY_TRANSITIONS = {("DISPOSED", "JUDGING"): "weighing_rejected"}
+
+    def can_transition_to(self, new_state: str, *, system: str | None = None) -> bool:
         """
         State machine guard. Returns True if the transition is valid.
+        `system` names the system action asking for a system-only edge (SYSTEM_ONLY_TRANSITIONS).
         """
+        only_for = self.SYSTEM_ONLY_TRANSITIONS.get((self.current_state, new_state))
+        if only_for is not None:
+            return system == only_for
         valid_transitions = {
             SoulState.ALIVE: [SoulState.JUDGING],
             SoulState.JUDGING: [SoulState.DISPOSED],
@@ -570,7 +580,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         return new_state in valid_transitions.get(self.current_state, [])
 
     def transition_to(
-        self, new_state: str, reason: str = "", *, account_origin: str = "OFFICER", actor: str = "system", **kwargs
+        self, new_state: str, reason: str = "", *, account_origin: str = "OFFICER", actor: str = "system",
+        system: str | None = None, **kwargs
     ) -> bool:
         """
         Attempt state transition with pessimistic locking to prevent race conditions.
@@ -598,7 +609,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                     self.pk,
                 )
                 return False
-            if not locked_soul.can_transition_to(new_state):
+            if not locked_soul.can_transition_to(new_state, system=system):
                 return False
 
             old_state = locked_soul.current_state

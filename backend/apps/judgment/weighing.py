@@ -60,8 +60,8 @@ def weigh(judgment, verdict) -> tuple[str, int]:
             reading["heart_weight"])
 
 
-def open_retrial(judgment) -> Judgment:
-    """The new weighing a wavering scale calls for: same soul, life, court, kind and plan."""
+def open_retrial(judgment, reason=WeighingResult.WAVERING.value) -> Judgment:
+    """The new weighing a wavering scale (or a refused flow) calls for: same soul, life, court, kind and plan."""
     retrial = Judgment.objects.create(
         soul=judgment.soul, tenant=judgment.tenant, civilization=judgment.civilization,
         realm=judgment.realm, court=judgment.court, kind=judgment.kind,
@@ -72,9 +72,43 @@ def open_retrial(judgment) -> Judgment:
 
     EventService.log(judgment.soul, "JUDGMENT_INITIATED", {
         "judgment_id": str(retrial.pk), "retrial_of": str(judgment.pk),
-        "reason": WeighingResult.WAVERING.value,
+        "reason": reason,
     })
     return retrial
+
+
+def reweigh_after_rejection(flow) -> Judgment | None:
+    """A station refused the weighing flow: weigh again, the same path as a wavering scale (user 2026-10-27).
+
+    The refused conclusion placed nothing yet — its disposition cannot execute before the flow completes
+    (`unfinished_flow`) — so it is withdrawn: the disposition and the sentence plan it opened are voided by the system (soft-deleted, not
+    in the recycle bin, not restorable), the soul takes the system-only edge DISPOSED → JUDGING, and a new weighing (`retrial_of`) is opened with
+    JUDGMENT_INITIATED. Same transaction as the decision that rejected the flow. Returns None, leaving the old
+    way out (reopen or appeal), when the soul was already placed or the case is not an original weighing.
+    """
+    judgment = flow.judgment
+    if judgment is None or not applies(judgment) or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
+        return None
+    from apps.core.recycle_bin import system_void
+    from apps.disposition.models import Disposition
+    from apps.sentence_plan.models import SentenceNode, SentencePlan
+    from apps.souls.models import Soul, SoulState
+
+    soul = Soul.all_objects.select_for_update().get(pk=judgment.soul_id)
+    dispositions = Disposition.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
+    if soul.current_state != SoulState.DISPOSED or dispositions.filter(is_executed=True).exists():
+        return None
+    # A system void, not a deletion: out of the recycle bin and never restorable (user 2026-10-27).
+    plan_ids = list(SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
+                    .values_list("pk", flat=True))
+    why = f"weighing_rejected:{judgment.pk}"
+    void = system_void(SentenceNode.all_objects.filter(plan_id__in=plan_ids, is_deleted=False), why)
+    system_void(SentencePlan.all_objects.filter(pk__in=plan_ids), why, void)
+    system_void(dispositions, why, void)
+    # The state machine's system-only edge (Soul.SYSTEM_ONLY_TRANSITIONS); it writes STATE_CHANGED itself.
+    if not soul.transition_to(SoulState.JUDGING, "Weighing flow rejected", system="weighing_rejected"):
+        raise RuntimeError(f"Soul {soul.pk} could not go back to JUDGING after its weighing was rejected")
+    return open_retrial(judgment, reason="REJECTED")
 
 
 def unfinished_flow(disposition) -> str | None:
@@ -82,8 +116,9 @@ def unfinished_flow(disposition) -> str | None:
 
     Thoth reads, the tribunal confirms, Horus leads, Osiris receives — or Ammit devours — and only then is
     the soul placed. So an Egyptian disposition waits for its weighing flow to be COMPLETED: one still
-    running is `weighing_in_progress`, one a station refused is `weighing_rejected` (reopen or appeal the
-    case). A case concluded without a flow (before this rule, or a reopened one) is not held.
+    running is `weighing_in_progress`, a refused one normally withdraws its disposition and opens a new
+    weighing (`reweigh_after_rejection`); one that could not (the soul already placed) is `weighing_rejected`
+    (reopen or appeal the case). A case concluded without a flow (before this rule, or a reopened one) is not held.
     """
     judgment = disposition.judgment
     # A wavering scale sends the soul nowhere (02 §5.3): a disposition written before that rule, parked at

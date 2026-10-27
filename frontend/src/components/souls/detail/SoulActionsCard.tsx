@@ -32,7 +32,8 @@ export function SoulActionsCard({
   actionLoading: string;
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
-  rebirthForm: RebirthFormValue;
+  /** null = 还没选(地府里没有建议时不预选)。 */
+  rebirthForm: RebirthFormValue | null;
   /** 第十殿按功过给的六道建议(处置的 `suggested_rebirth_form`);地府以外为 null。 */
   suggestedRebirthForm?: RebirthFormValue | null;
   onRebirthFormChange: (value: RebirthFormValue) => void;
@@ -113,6 +114,11 @@ export function SoulActionsCard({
                       {t("souls.detail.rebirth_suggestion", { form: t(`reincarnation.forms.${suggestedRebirthForm}`) })}
                     </p>
                   )}
+                  {!rebirthForm && (
+                    <p role="status" data-testid="rebirth-pick-form" className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                      {t("souls.detail.rebirth_pick_form")}
+                    </p>
+                  )}
                   {full && (
                     <p role="status" data-testid="rebirth-quota-full" className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">
                       {t("rebirths.quota.full", {
@@ -132,7 +138,7 @@ export function SoulActionsCard({
                   size="lg"
                   className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading || !!full}
+                  disabled={!!actionLoading || !!full || !rebirthForm}
                 >
                   {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                 </Button>

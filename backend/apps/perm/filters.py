@@ -22,45 +22,54 @@ class DataScopeFilter:
 
     @property
     def scopes(self):
-        """Lazy-load RowLevelDataScope entries for the user's role."""
+        """Lazy-load RowLevelDataScope entries, grouped by role: ``{role: [scope, ...]}``.
+
+        Every role the person holds counts — the primary role plus the live
+        ``extra_roles`` (same set ``check_permission`` uses). A held role with
+        no scope rows for this model maps to ``[]``, which means "unrestricted".
+        """
         if self._scopes is None:
+            from apps.perm.checker import _live_extra_roles
             from apps.perm.models import RowLevelDataScope
 
             user_role = getattr(self.user, 'role', None)
             if not user_role:
-                self._scopes = []
+                self._scopes = {}
                 return self._scopes
 
+            roles = [user_role, *_live_extra_roles(self.user)]
             # Normalize model name to lowercase for consistent matching
             model_name = self.model_class.__name__.lower()
-            self._scopes = list(
-                RowLevelDataScope.objects.filter(
-                    role__name=user_role,
-                    model_name__iexact=model_name,
-                    scope_type=self.scope_type,
-                    is_active=True,
-                ).select_related('role')
-            )
+            self._scopes = {r: [] for r in roles}
+            for scope in RowLevelDataScope.objects.filter(
+                role__name__in=roles,
+                model_name__iexact=model_name,
+                scope_type=self.scope_type,
+                is_active=True,
+            ).select_related('role'):
+                self._scopes[scope.role.name].append(scope)
         return self._scopes
 
     def apply(self, queryset):
         """
-        Apply all matching RowLevelDataScope rules as AND conditions.
-        Returns filtered queryset.
+        Within one role, its scope rules are ANDed. Across the roles a person
+        holds, a row is visible if ANY role's scope allows it (OR; user
+        2026-10-27). A held role with no rule for this model allows every row.
         """
         if not self.scopes:
             return queryset
 
-        # Combine all scopes with AND (all conditions must be satisfied)
-        combined_q = Q()
-        for scope in self.scopes:
-            scope_q = self._build_q_for_scope(scope)
-            if scope_q:
-                combined_q &= scope_q
-
-        if combined_q:
-            return queryset.filter(combined_q)
-        return queryset
+        combined = None
+        for role_scopes in self.scopes.values():
+            role_q = Q()
+            for scope in role_scopes:
+                scope_q = self._build_q_for_scope(scope)
+                if scope_q:
+                    role_q &= scope_q
+            if not role_q:
+                return queryset  # this role is unrestricted for the model
+            combined = role_q if combined is None else combined | role_q
+        return queryset.filter(combined)
 
     def _build_q_for_scope(self, scope) -> Q | None:
         """Build a Q object from a single RowLevelDataScope entry."""

@@ -167,7 +167,7 @@ def _remove_file(sender, instance, **kwargs):
 
 
 def may_view(user, attachment, tenant_id=None):
-    """`user` 此刻能不能取到这份文件:没删、不是灵魂、持 `judgment.read`、案子在签发地址那次请求的租户里。
+    """`user` 此刻能不能取到这份文件:没删、不是灵魂、持 `judgment.read`、案子在签发地址那次请求的租户里且在他的数据范围内。
     签发地址与文件出口用的是同一个判定。"""
     if user is None or not user.is_authenticated or not user.is_active or attachment.deleted_at is not None:
         return False
@@ -181,8 +181,11 @@ def may_view(user, attachment, tenant_id=None):
     if req is None or not check_permission(user, READ_PERMISSION):
         return False
     from apps.core.tenant import scope_to_tenant
+    from apps.perm.filters import DataScopeFilter
 
-    return scope_to_tenant(Judgment.all_objects.filter(pk=attachment.judgment_id), req).exists()
+    # 附件跟它所属案子的数据范围走(用户 2026-10-27):看不到案子,就看不到它的附件。
+    judgments = scope_to_tenant(Judgment.all_objects.filter(pk=attachment.judgment_id), req)
+    return DataScopeFilter.filter_queryset(req, judgments, Judgment).exists()
 
 
 def signed_url(attachment, viewer, tenant=None):

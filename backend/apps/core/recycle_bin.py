@@ -82,6 +82,28 @@ class RestoreRefusedError(Exception):
 _RESTORE_CHECKS = []
 
 
+#: `delete_reason` of a row the system voided rather than a person deleted (e.g. a refused Egyptian weighing's
+#: disposition and sentence plan, apps/judgment/weighing.py). Such rows are not in the bin and never come back
+#: through it (user 2026-10-27).
+SYSTEM_VOID_PREFIX = "system_void:"
+
+
+def system_void(qs, why, cascade_id=None):
+    """Soft-delete `qs` as a system void under one cascade id (shared across calls when passed). Returns the id."""
+    cascade_id = cascade_id or new_cascade_id()
+    qs.update(is_deleted=True, deleted_at=timezone.now(), delete_reason=f"{SYSTEM_VOID_PREFIX}{why}"[:500],
+              delete_cascade_id=cascade_id)
+    return cascade_id
+
+
+def _is_system_void(cascade_id) -> bool:
+    return any(
+        _unfiltered_manager(model).filter(delete_cascade_id=cascade_id, is_deleted=True,
+                                          delete_reason__startswith=SYSTEM_VOID_PREFIX).exists()
+        for model in _soft_deletable_models()
+    )
+
+
 def register_restore_check(check):
     _RESTORE_CHECKS.append(check)
 
@@ -102,6 +124,9 @@ def restore_cascade(cascade_id) -> int:
     it: a row the bin does not list (a soul's own deleted post) is not in the
     bin, so it cannot come back through it either.
     """
+    if _is_system_void(cascade_id):
+        raise RestoreRefusedError({"error": "The system voided these records; they cannot be restored",
+                                   "code": "system_void"})
     for check in _RESTORE_CHECKS:
         refusal = check(cascade_id)
         if refusal:
@@ -203,7 +228,7 @@ def list_bin_entries(tenant=None, is_admin=False):
     entries = []
     for bin_type in registered_types():
         manager = _unfiltered_manager(bin_type.model)
-        qs = manager.filter(is_deleted=True)
+        qs = manager.filter(is_deleted=True).exclude(delete_reason__startswith=SYSTEM_VOID_PREFIX)
         if bin_type.listable is not None:
             qs = qs.filter(bin_type.listable)
         if not is_admin and tenant is not None and hasattr(bin_type.model, "tenant_id"):

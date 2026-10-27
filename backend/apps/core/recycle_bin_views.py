@@ -110,11 +110,12 @@ class RecycleBinRestoreRequestSerializer(serializers.Serializer):
 class RecycleBinRestoreRefusalSerializer(serializers.Serializer):
     """400 body of restore. `code` / `missing_roles` come with a refusal from a
     registered restore check (`template_role_missing`: a workflow template in
-    the cascade names roles that no longer exist); the other 400s carry
+    the cascade names roles that no longer exist) or `system_void` (the system voided the rows, e.g. a
+    refused Egyptian weighing; they never come back through the bin); the other 400s carry
     `error` alone."""
 
     error = serializers.CharField()
-    code = serializers.ChoiceField(choices=["template_role_missing"], required=False)
+    code = serializers.ChoiceField(choices=["template_role_missing", "system_void"], required=False)
     missing_roles = serializers.ListField(child=serializers.CharField(), required=False)
 
 

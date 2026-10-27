@@ -71,7 +71,23 @@ def _workflows(scope):
     qs = ApprovalWorkflow._base_manager.select_related(
         "soul", "current_node", "current_node__approver", "create_user", "tenant", "judgment")
     own = DataScopeFilter.filter_queryset(scope, scope_to_tenant(qs, scope), ApprovalWorkflow)
-    return own | foreign_workflows(qs, scope)
+    both = own | foreign_workflows(qs, scope)
+    seen = _judgments_in_scope(scope)
+    if seen is None:
+        return both
+    from django.db.models import Q
+
+    return both.filter(Q(judgment__isnull=True) | Q(judgment__in=seen.values("pk")))
+
+
+def _judgments_in_scope(scope):
+    """待办跟它所属案子的数据范围走(用户 2026-10-27):看不到案子,就看不到它的待办。
+    None = 这个人对审判没有行级范围(不必再过滤)。"""
+    from apps.judgment.models import Judgment
+
+    every = Judgment.objects.all()
+    seen = DataScopeFilter.filter_queryset(scope, every, Judgment)
+    return None if seen is every else seen
 
 
 def _cooldowns(scope):
@@ -156,7 +172,8 @@ def _city_god_items(scope):
         return []
     returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
                           output_field=IntegerField())
-    qs = (scope_to_tenant(Judgment.objects.all(), scope)
+    seen = _judgments_in_scope(scope)
+    qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)
           .filter(city_god__officers=scope.user, city_god_status__in=AT_CITY_GOD, verdict__isnull=True, is_final=False)
           .select_related("soul", "city_god").order_by(returned_first, "created_at"))
     return [_item("city_god", j.pk, j.soul.name, j.created_at, city_god_status=j.city_god_status,
@@ -169,13 +186,18 @@ def _pick_items(scope):
     `hall` 是租户展示名(库里的英文),只作退路;客户端按 `realm`(租户代码)读冥界名,再接 `court`(审判所在的殿)。"""
     from apps.workflow.segments import pick_tasks
 
+    rows = pick_tasks(scope)
+    seen = _judgments_in_scope(scope)
+    seen_ids = None if seen is None else set(
+        seen.filter(pk__in=[r["workflow"].judgment_id for r in rows]).values_list("pk", flat=True))
     return [
         _item("pick", row["workflow"].pk, row["workflow"].soul.name, row["segment"].created_at,
               segment_order=row["segment"].order, go=row["go"], total=row["total"],
               realm=row["workflow"].tenant.code, hall=row["workflow"].tenant.display_name,
               court=row["workflow"].judgment.court if row["workflow"].judgment_id else "",
               gate_days=row["gate_days"], stations_ahead=row["stations_ahead"])
-        for row in pick_tasks(scope)
+        for row in rows
+        if seen_ids is None or not row["workflow"].judgment_id or row["workflow"].judgment_id in seen_ids
     ]
 
 

@@ -51,21 +51,18 @@ THREE_EVIL_PATHS = (RebirthForm.ANIMAL, RebirthForm.HUNGRY_GHOST, RebirthForm.HE
 SIX_PATHS = THREE_GOOD_PATHS + THREE_EVIL_PATHS
 
 
-def suggested_rebirth_form(balance: int) -> str:
+def suggested_rebirth_form(balance: int) -> str | None:
     """第十殿结案时按功过给的六道建议(官员可改;用户 2026-10-27)。
 
-    分档是 docs/05_系统建模建议.md §3.2(≥500 大善 → 天道,100~-99 → 人道,≤-500 大恶 → 地狱道),
-    恶的那一档按 docs/07_六道轮回详解.md §四 再分下品 / 中品十恶:畜生道在前、饿鬼道在后。
-    ponytail: -300 是 -100~-499 的中点,文档没给这条线;阿修罗道(下品十善而常怀忌慢)没有功过读数可依,
-    不作建议。"""
+    分档是 docs/05_系统建模建议.md §3.2(≥500 大善 → 天道,100~-99 → 人道,≤-500 大恶 → 地狱道)。
+    -100~-499 不给建议(None):畜生道还是饿鬼道由官员定(用户 2026-10-27),文档也没有给这一档再分的线。
+    阿修罗道(下品十善而常怀忌慢)没有功过读数可依,同样不作建议。"""
     if balance >= 500:
         return RebirthForm.DIVINE
     if balance > -100:
         return RebirthForm.HUMAN
-    if balance > -300:
-        return RebirthForm.ANIMAL
     if balance > -500:
-        return RebirthForm.HUNGRY_GHOST
+        return None
     return RebirthForm.HELL_BEING
 
 

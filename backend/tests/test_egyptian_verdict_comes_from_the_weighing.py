@@ -183,3 +183,51 @@ def test_neither_egyptian_outcome_takes_a_term(eg_tenant):
         with pytest.raises(DestinationRefusedError) as refused:
             case.conclude(verdict, term_years=3)
         assert refused.value.code == "term_not_applicable"
+
+
+def test_a_station_refusing_the_weighing_opens_a_new_weighing(eg_tenant):
+    """User 2026-10-27: a rejection is weighed again, as a wavering scale — not parked for reopen / appeal."""
+    from apps.events.models import SoulEvent
+    from apps.sentence_plan.services import in_progress_plan
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    case = _case(eg_tenant)
+    case.conclude("PASSED")
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    flow.complete_node(flow.current_node.pk, "FAILED")
+    flow.refresh_from_db()
+    assert flow.status == ApprovalWorkflowStatus.REJECTED
+
+    soul = Soul.objects.get(pk=case.soul_id)
+    assert soul.current_state == SoulState.JUDGING
+    assert not Disposition.objects.filter(judgment=case).exists() and in_progress_plan(soul) is None
+    retrial = Judgment.objects.get(retrial_of=case)
+    assert retrial.verdict is None and retrial.judgment_method == JudgmentMethod.HEART_WEIGHING
+    started = SoulEvent.objects.get(soul=soul, event_type="JUDGMENT_INITIATED", payload__judgment_id=str(retrial.pk))
+    assert started.payload["reason"] == "REJECTED"
+
+    retrial.conclude("PASSED")  # the new weighing concludes like the first one
+    assert Disposition.objects.get(judgment=retrial).destination_realm.realm_code == "EG_AARU"
+
+
+def test_the_voided_conclusion_is_not_in_the_recycle_bin_and_cannot_be_restored(eg_tenant, admin_user):
+    """User 2026-10-27: what a refused weighing withdraws is a system void, not something a person deleted."""
+    from apps.sentence_plan.models import SentencePlan
+    from apps.workflow.models import ApprovalWorkflow
+    from tests.soul_account_support import officer_client
+
+    case = _case(eg_tenant)
+    case.conclude("PASSED")
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    flow.complete_node(flow.current_node.pk, "FAILED")
+    voided = Disposition.all_objects.get(judgment=case)
+    plan = SentencePlan.all_objects.get(origin_judgment_id=case.pk)
+    assert voided.is_deleted and plan.is_deleted and voided.delete_cascade_id == plan.delete_cascade_id
+
+    client = officer_client(admin_user)
+    listed = client.get("/api/v1/recycle-bin/").data["results"]
+    assert str(voided.delete_cascade_id) not in {e["cascade_id"] for e in listed}
+    refused = client.post("/api/v1/recycle-bin/restore/", {"cascade_id": str(voided.delete_cascade_id)}, format="json")
+    assert (refused.status_code, refused.data.get("code")) == (400, "system_void"), refused.data
+    assert Disposition.all_objects.get(pk=voided.pk).is_deleted
+    assert SentencePlan.all_objects.get(pk=plan.pk).is_deleted

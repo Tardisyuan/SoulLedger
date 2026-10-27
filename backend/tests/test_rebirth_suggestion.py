@@ -11,9 +11,10 @@ from tests import sentence_plan_support as sp
 
 @pytest.mark.parametrize("balance,form", [
     (500, "DIVINE"), (499, "HUMAN"), (0, "HUMAN"), (-99, "HUMAN"),
-    (-100, "ANIMAL"), (-299, "ANIMAL"), (-300, "HUNGRY_GHOST"), (-499, "HUNGRY_GHOST"), (-500, "HELL_BEING"),
+    (-100, None), (-299, None), (-300, None), (-499, None), (-500, "HELL_BEING"),
 ])
 def test_the_bands(balance, form):
+    # -100~-499:畜生 / 饿鬼由官员定,不给建议(用户 2026-10-27)
     assert suggested_rebirth_form(balance) == form
 
 
