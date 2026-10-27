@@ -789,9 +789,11 @@ class DispositionService:
         # 被阿米特吞噬:这一世的灵魂账号在同一事务里永久注销,数据保留(用户 2026-10-20)。
         # 三条执行分支都经过这里,所以接在这一处。
         if disposition.destination_realm_id and disposition.destination_realm.realm_code == DispositionService.EG_ANNIHILATION:
+            from apps.judgment.appeals import void_for_devoured
             from apps.soul_accounts.services import retire_account_annihilated
 
             retire_account_annihilated(disposition.soul)
+            void_for_devoured(disposition.soul)
 
     @staticmethod
     def _leave_served_realm(disposition, soul, node=None):

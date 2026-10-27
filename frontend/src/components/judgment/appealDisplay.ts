@@ -8,6 +8,8 @@ export const APPEAL_STATUS_TONES: Record<JudgmentAppealStatus, BadgeTone> = {
   UPHELD: "neutral",
   AMENDED: "ink",
   WITHDRAWN: "neutral",
+  // 灵魂被阿米特吞噬，申诉随之作废(P2-10)。
+  VOID: "neutral",
 };
 
 export type AppealRefusal = { code: string; foreignOrders?: number[] };

@@ -352,6 +352,25 @@ def _rebirth_appeal(event_type):
     return path
 
 
+def _devour_voids_the_appeal():
+    """吞噬执行(EG_ANNIHILATION)把开着的申诉作废,事件写在执行的事务里(P2-10)。业务写 = 处置已执行。"""
+    from apps.disposition.services import DispositionService
+    from apps.judgment.models import JudgmentAppeal
+    from tests.soul_account_support import ready_soul
+
+    eg = plan.tenant("EG_DUAT")
+    account, _client = ready_soul(eg, state=SoulState.DISPOSED)
+    soul = account.soul
+    judgment = Judgment.all_objects.create(soul=soul, civilization="EGYPTIAN", court="Hall of Two Truths", tenant=eg,
+                                           verdict="FAILED", is_final=True, concluded_at=timezone.now())
+    JudgmentAppeal.all_objects.create(judgment=judgment, soul=soul, tenant=eg, round=1, reason="冤",
+                                      original_verdict="FAILED")
+    disposition = Disposition.all_objects.create(
+        soul=soul, tenant=eg, destination_realm=plan.realm(DispositionService.EG_ANNIHILATION, "EGYPTIAN", eternal=True))
+    return (lambda: DispositionService.execute(Disposition.all_objects.get(pk=disposition.pk)),
+            lambda: Disposition.all_objects.get(pk=disposition.pk).is_executed, "JUDGMENT_APPEAL_DECIDED")
+
+
 def _rebirth_sync():
     from apps.soul_accounts import rebirth
     from apps.soul_accounts.models import RebirthApplication, RebirthApplicationStatus
@@ -541,6 +560,7 @@ PATHS = {
     "rebirth_appeal/WORKFLOW_CREATED": _rebirth_appeal("WORKFLOW_CREATED"),
     "rebirth_appeal/REBIRTH_STATUS_CHANGED": _rebirth_appeal("REBIRTH_STATUS_CHANGED"),
     "rebirth_sync/REBIRTH_STATUS_CHANGED": _rebirth_sync,
+    "devour/JUDGMENT_APPEAL_DECIDED": _devour_voids_the_appeal,
     "rebirth_cooldown_decide/COOLDOWN_SHORTENING_DECIDED": _rebirth_cooldown_decide,
     "rebirth_cross_civ/REBIRTH_CROSS_CIV_DECIDED": _rebirth_cross_civ,
     # workflow decisions: the timeline event is written in the decision's transaction (`record_events`)

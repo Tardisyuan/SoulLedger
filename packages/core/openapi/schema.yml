@@ -8065,6 +8065,7 @@ paths:
           - IN_REVIEW
           - PENDING
           - UPHELD
+          - VOID
           - WITHDRAWN
         description: |-
           * `PENDING` - 待复核
@@ -8072,6 +8073,7 @@ paths:
           * `UPHELD` - 维持原判
           * `AMENDED` - 改判
           * `WITHDRAWN` - 已撤回
+          * `VOID` - 已作废
       - in: query
         name: status__in
         schema:
@@ -28691,6 +28693,7 @@ components:
       - UPHELD
       - AMENDED
       - WITHDRAWN
+      - VOID
       type: string
       description: |-
         * `PENDING` - 待复核
@@ -28698,6 +28701,7 @@ components:
         * `UPHELD` - 维持原判
         * `AMENDED` - 改判
         * `WITHDRAWN` - 已撤回
+        * `VOID` - 已作废
     JudgmentBatch:
       type: object
       description: '`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。'

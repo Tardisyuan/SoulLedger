@@ -12931,9 +12931,10 @@ export interface components {
          *     * `UPHELD` - 维持原判
          *     * `AMENDED` - 改判
          *     * `WITHDRAWN` - 已撤回
+         *     * `VOID` - 已作废
          * @enum {string}
          */
-        JudgmentAppealStatusEnum: "PENDING" | "IN_REVIEW" | "UPHELD" | "AMENDED" | "WITHDRAWN";
+        JudgmentAppealStatusEnum: "PENDING" | "IN_REVIEW" | "UPHELD" | "AMENDED" | "WITHDRAWN" | "VOID";
         /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
         JudgmentBatch: {
             operation: components["schemas"]["OperationEnum"];
@@ -26635,8 +26636,9 @@ export interface operations {
                  *     * `UPHELD` - 维持原判
                  *     * `AMENDED` - 改判
                  *     * `WITHDRAWN` - 已撤回
+                 *     * `VOID` - 已作废
                  */
-                status?: "AMENDED" | "IN_REVIEW" | "PENDING" | "UPHELD" | "WITHDRAWN";
+                status?: "AMENDED" | "IN_REVIEW" | "PENDING" | "UPHELD" | "VOID" | "WITHDRAWN";
                 /** @description Multiple values may be separated by commas. */
                 status__in?: string[];
             };

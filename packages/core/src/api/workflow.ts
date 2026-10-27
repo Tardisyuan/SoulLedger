@@ -48,7 +48,7 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   template_version_number?: number | null;
   /** How many times 驳回到 sent it back (capped at 3). */
   return_count?: number;
-  /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "CROSS_CANCELLED" when cancelling the merged
+  /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "SOUL_DEVOURED" when the soul of an appeal flow was devoured by Ammit; "CROSS_CANCELLED" when cancelling the merged
    *  cross-realm judgment ended it; "" otherwise. */
   end_reason?: string;
   /** 第四十三批: one row per realm (order 1 = this realm); empty for a workflow built before segments. */

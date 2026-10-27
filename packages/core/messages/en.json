@@ -7105,7 +7105,8 @@
       "IN_REVIEW": "Under review",
       "UPHELD": "Verdict stands",
       "AMENDED": "Verdict changed",
-      "WITHDRAWN": "Withdrawn"
+      "WITHDRAWN": "Withdrawn",
+      "VOID": "Void"
     },
     "round": "Appeal {{round}}",
     "deadline": "You can appeal until {{date}}",
@@ -7117,6 +7118,7 @@
       "not_appealable": "This judgment can't be appealed",
       "past_life_read_only": "Judgments from past lives are read-only",
       "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to",
+      "soul_devoured": "This soul was devoured by Ammit and no longer exists; there is no appeal",
       "not_escalatable": "You can escalate only after a review has upheld the verdict"
     },
     "file": "Appeal",
