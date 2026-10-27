@@ -91,6 +91,8 @@ const ENUM_FIELDS = [
   // the hall, drawn through judgment.duat_stage.* / souls.duat_passage.*.
   "duat_stage",
   "duat_passage",
+  // Added 2026-10-27 (review E-2): `Soul.baptism`, drawn through souls.baptism.*.
+  "baptism",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),

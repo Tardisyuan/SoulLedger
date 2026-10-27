@@ -82,7 +82,7 @@ describe("RebirthFormSelect", () => {
     );
     const labels = screen.getAllByRole("radio").map((o) => o.textContent);
     expect(labels).toEqual(SIX_PATHS.map((form) => zh.reincarnation.forms[form]));
-    // Absence, twice over. 未分类 is the copy for the legacy OTHER value, which
+    // Absence, twice over. 六道之外 is the copy for the legacy OTHER value, which
     // is not a seventh path; and no option fell through to its raw enum name,
     // which is precisely what a made-up key would look like on screen.
     expect(screen.queryByText(zh.reincarnation.forms.OTHER)).not.toBeInTheDocument();

@@ -65,6 +65,8 @@ export const soulUpdateSchema = z.object({
   origin_location: z.string().max(200, '地点最多200位').optional(),
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   duat_passage: z.enum(['', 'EARLY_DEATH', 'NAMELESS', 'IMPROPER_BURIAL']).optional(),
+  baptism: z.enum(['UNRECORDED', 'BAPTISED', 'UNBAPTISED', 'BEFORE_CHRIST']).optional(),
+  denied_immortality: z.boolean().nullable().optional(),
   // Includes SETTLED even though nothing lets an operator pick it (it is the
   // terminal state the backend assigns when a terminal disposition executes,
   // never a manual transition target): this schema validates the edit form,

@@ -409,6 +409,8 @@ PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
     "轮回分流",
     "紧急受理",
     "申诉受理",
+    # 欧洲(异端审判,2026-10-27)
+    "异端裁定",
     # 埃及
     "42审判者 · 否定告白",
     "神庭 · 确认",
@@ -540,6 +542,19 @@ PRESET_FLOWS = {
             {"name": "Christ · 公审判", "court": "天堂", "type": NodeType.FINAL, "order": 3, "actor": "Christ"},
         ],
     },
+    # 异端审判 (2026-10-27, docs-others E-4): it used to fall through to the generic one-node flow. The docs name
+    # no stations for it, so it is the 末日审判 flow with one 异端裁定 station first — whether the soul held that
+    # the spirit dies with the body (`Soul.denied_immortality`, Inf. X.13-15), which sorts it into the sixth
+    # circle. A determination, not a verdict on the case (Christ's), so EVALUATION; it names nobody.
+    (EU, CaseType.HERESY_TRIAL): {
+        "name": "异端审判流程",
+        "nodes": [
+            {"name": "异端裁定", "court": "天堂", "type": NodeType.EVALUATION, "order": 1},
+            {"name": "Christ · 私审判", "court": "天堂", "type": NodeType.TRIAL, "order": 2, "actor": "Christ"},
+            {"name": "Michael · 引领入光", "court": "天堂", "type": NodeType.EXECUTION, "order": 3, "actor": "Michael"},
+            {"name": "Christ · 公审判", "court": "天堂", "type": NodeType.FINAL, "order": 4, "actor": "Christ"},
+        ],
+    },
     # Gorgias 524a (2026-10-19): one judge or the other, by where the dead came from; Minos only in doubt.
     # n1 is 通知 with nobody designated: the engine runs it at once and takes the branch `origin_region` selects
     # (`ApprovalWorkflow._enter` → `_pass_successor`), else `on_pass` — Minos, for a soul whose region is 不详.
@@ -586,6 +601,7 @@ FAIL_ROUTES = {
     (EG, CaseType.DIVINE_TRIAL): {},
     (EG, CaseType.APPEAL): _back((2, 1)),
     (EU, CaseType.ROUTINE): {},
+    (EU, CaseType.HERESY_TRIAL): {},
     (EU, CaseType.APPEAL): {},
     (EU, CaseType.CANONIZATION): _back((2, 1), (3, 2)),
     (EU, CaseType.PURGATORY_REVIEW): _back((2, 1), (3, 2)),

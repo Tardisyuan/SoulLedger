@@ -10710,6 +10710,14 @@ export interface components {
             demerit: number;
             non_fungible?: components["schemas"]["NonFungible"];
         };
+        /**
+         * @description * `UNRECORDED` - 未记录
+         *     * `BAPTISED` - 已受洗
+         *     * `UNBAPTISED` - 未受洗
+         *     * `BEFORE_CHRIST` - 生于基督之前
+         * @enum {string}
+         */
+        BaptismEnum: "UNRECORDED" | "BAPTISED" | "UNBAPTISED" | "BEFORE_CHRIST";
         /** @description `{"deleted": N}` —— 实际被删的条数(不含别人的、不存在的、已删的)。 */
         BatchDeleteResult: {
             deleted: number;
@@ -16462,6 +16470,17 @@ export interface components {
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
+            /**
+             * @description Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
+             *
+             *     * `UNRECORDED` - 未记录
+             *     * `BAPTISED` - 已受洗
+             *     * `UNBAPTISED` - 未受洗
+             *     * `BEFORE_CHRIST` - 生于基督之前
+             */
+            baptism?: components["schemas"]["BaptismEnum"];
+            /** @description Whether this soul held, in life, that the spirit dies with the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes. NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null means unrecorded. */
+            denied_immortality?: boolean | null;
             description?: string;
             readonly merit_score?: number | null;
             readonly demerit_score?: number | null;
@@ -18317,6 +18336,17 @@ export interface components {
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
+            /**
+             * @description Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
+             *
+             *     * `UNRECORDED` - 未记录
+             *     * `BAPTISED` - 已受洗
+             *     * `UNBAPTISED` - 未受洗
+             *     * `BEFORE_CHRIST` - 生于基督之前
+             */
+            baptism?: components["schemas"]["BaptismEnum"];
+            /** @description Whether this soul held, in life, that the spirit dies with the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes. NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null means unrecorded. */
+            denied_immortality?: boolean | null;
             description?: string;
             readonly merit_score: number | null;
             readonly demerit_score: number | null;

@@ -195,6 +195,10 @@ def _shapes(expr):
         return found
     m = re.match(r"^(\w+)(\[\d+\])?(?:\.map\(.*\))?$", expr, re.S)
     if m and m.group(1) in CONSTS:
+        if ".map(" in expr and "..." not in expr:
+            # NAME.map(x => ({...x, …})) keeps NAME's shape; a map that builds a new object
+            # (`ROLES.map(({ name }) => ({ role: name, … }))`) does not, and is read as unknown.
+            return []
         resolved = _shapes(CONSTS[m.group(1)])
         if m.group(2):
             return [s for kind, v in resolved if kind == "list" for s in v[:1]]

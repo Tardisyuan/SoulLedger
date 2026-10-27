@@ -722,6 +722,21 @@
       "NAMELESS": "Nameless",
       "IMPROPER_BURIAL": "Improper burial",
       "help": "Proper burial: after 70 days of embalming the soul sets out for the Hall of Two Truths; the judgment can't be claimed before then. An infant or early death is not judged and goes straight to the Field of Reeds. The nameless do not enter the underworld, and an improper burial (body not intact, no spells) cannot complete the journey: both judgments stay held."
+    },
+    "baptism": {
+      "label": "Baptism",
+      "UNRECORDED": "Not recorded",
+      "BAPTISED": "Baptised",
+      "UNBAPTISED": "Unbaptised",
+      "BEFORE_CHRIST": "Born before Christ",
+      "help": "Unbaptised or born before Christ, with no heavier sin: the first circle, Limbo (not a punishment). A heavier sin decides instead. A baptised soul never lands in Limbo."
+    },
+    "denied_immortality": {
+      "label": "Denied the soul's immortality",
+      "UNRECORDED": "Not recorded",
+      "YES": "Yes",
+      "NO": "No",
+      "help": "Held in life that the soul dies with the body (the Epicureans, Inf. X): when condemned, the sixth circle (heresy), unless a cited sin lies deeper. Not blasphemy, which is the seventh circle."
     }
   },
   "common": {
@@ -3774,7 +3789,7 @@
       "ANIMAL": "Animal",
       "HUNGRY_GHOST": "Hungry Ghost",
       "HELL_BEING": "Hell Being",
-      "OTHER": "Unclassified"
+      "OTHER": "Outside the six paths"
     },
     "groups": {
       "THREE_GOOD_PATHS": "Three good paths",

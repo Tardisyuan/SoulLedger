@@ -16,6 +16,7 @@ export function SoulActionsCard({
   actionLoading,
   dispositions,
   reincarnations,
+  sixPaths = true,
   rebirthForm,
   suggestedRebirthForm,
   onRebirthFormChange,
@@ -32,6 +33,8 @@ export function SoulActionsCard({
   actionLoading: string;
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
+  /** 这个灵魂转世走六道(原属地府)。false = 希腊:饮忘川后再生,没有道可选,不画选择器(2026-10-27 G-2)。 */
+  sixPaths?: boolean;
   /** null = 还没选(地府里没有建议时不预选)。 */
   rebirthForm: RebirthFormValue | null;
   /** 第十殿按功过给的六道建议(处置的 `suggested_rebirth_form`);地府以外为 null。 */
@@ -101,7 +104,7 @@ export function SoulActionsCard({
                   pick 道. Rendered only when there is something to
                   commit — a soul with no pending disposition has no
                   rebirth to configure. */}
-              {dispositions.some(d => !d.is_executed) && (
+              {sixPaths && dispositions.some(d => !d.is_executed) && (
                 <div className="pb-3 mb-3 border-b border-[oklch(var(--color-hairline))]">
                   <RebirthFormSelect
                     value={rebirthForm}
@@ -138,7 +141,7 @@ export function SoulActionsCard({
                   size="lg"
                   className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading || !!full || !rebirthForm}
+                  disabled={!!actionLoading || !!full || (sixPaths && !rebirthForm)}
                 >
                   {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                 </Button>

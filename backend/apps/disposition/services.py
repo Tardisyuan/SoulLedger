@@ -73,6 +73,11 @@ class DispositionService:
     #: by kind of sin, not by quantity of it — see `_route_european`.
     EU_HELL_CULPA_BAND = 15
 
+    #: Limbo and the sixth circle, the two circles that sort a soul by a fact about the person rather than by a
+    #: deed (`Soul.baptism`, `Soul.denied_immortality`; review E-2, 2026-10-27).
+    EU_LIMBO_CIRCLE = 1
+    EU_HERESY_CIRCLE = 6
+
     # Egyptian realms
     #
     # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS. The row used to be
@@ -369,9 +374,18 @@ class DispositionService:
         return cls.CHINESE_PURGATORY
 
     @classmethod
-    def _route_european(cls, soul: Soul, verdict: str, culpa: int, excluded=()) -> str:
+    def _route_european(cls, soul: Soul, verdict: str, culpa: int, excluded=(), unbaptised: bool | None = None) -> str:
         """
         Route European soul based on verdict and culpa (Dante's Inferno circles).
+
+        LIMBO AND HERESY READ THE PERSON (2026-10-27, review E-2; docs/03_七宗罪与地狱惩罚.md §三).
+        Limbo (circle 1) holds the unbaptised and those born before Christ — it is not a light sentence.
+        So: an unbaptised soul (`Soul.baptism` UNBAPTISED / BEFORE_CHRIST) with no heavier sin goes to Limbo,
+        on a PASSED verdict too (the virtuous pagans of Inf. IV would pass any weighing of deeds); a heavier sin
+        wins over Limbo (user decision: heavy sin first). A soul not recorded as unbaptised never lands in Limbo:
+        the culpa ladder's floor is circle 2. `Soul.denied_immortality` puts a FAILED soul in the sixth circle
+        (Inf. X.13-15), unless a cited deed lies deeper. `unbaptised` overrides the soul's own field for callers
+        without a soul (`allowed_realm_codes` sweeps both).
 
         Same precedence rule as `_route_chinese`: verdict is checked first
         and is authoritative, the ledger only selects circle depth once FAILED
@@ -433,8 +447,9 @@ class DispositionService:
         Routing by kind needs to know what kind, and nothing in this system
         records it:
 
-          * `Soul` carries `merit_score` and `demerit_score` and no other moral
-            field.
+          * `Soul` carries `merit_score` and `demerit_score`, and two facts about
+            the person (`baptism`, `denied_immortality`) that reach circles 1 and
+            6 only — no kind of deed.
           * `SoulRecord.category` (RecordCategory) is the closest thing, and it
             is a Chinese vocabulary — apps/ledger/fungibility.py maps each
             member onto a 功過格 gate. It has no member for lust, gluttony,
@@ -461,8 +476,11 @@ class DispositionService:
         the contradiction that remains — whoever supplies real sin
         classification has to delete those assertions on purpose.
         """
+        if unbaptised is None:
+            unbaptised = soul is not None and soul.baptism in (Soul.Baptism.UNBAPTISED, Soul.Baptism.BEFORE_CHRIST)
+        limbo = cls.EU_HELL_CIRCLES[cls.EU_LIMBO_CIRCLE]
         if verdict == Verdict.PASSED:
-            return cls.EU_HEAVEN
+            return limbo if unbaptised else cls.EU_HEAVEN
         if verdict == Verdict.FAILED:
             # BY KIND WHERE THE KIND IS RECORDED, BY THE LADDER WHERE IT IS NOT.
             #
@@ -481,16 +499,23 @@ class DispositionService:
             # instead would be the mapping the EU-INF corpus exists to avoid —
             # that vocabulary is Chinese, mapped onto 功過格 gates, with no
             # member for five of the nine circles.
-            deepest = cls._deepest_cited_circle(soul, excluded)
-            if deepest is not None:
-                return cls.EU_HELL_CIRCLES[deepest]
+            kinds = [cls._deepest_cited_circle(soul, excluded)]
+            if soul is not None and soul.denied_immortality:
+                kinds.append(cls.EU_HERESY_CIRCLE)
+            kinds = [c for c in kinds if c is not None]
+            if kinds:
+                return cls.EU_HELL_CIRCLES[max(kinds)]
 
             # culpa / 15 → circle 1-9. A stopgap ladder on the right number,
             # not Dante's basis; see §2 and §3 above. culpa is a demerit total
             # and so is never negative — there is no magnitude to take and no
             # sign to lose, which is why there is no abs() here any more.
             circle = min(9, max(1, (culpa // cls.EU_HELL_CULPA_BAND) + 1))
-            return cls.EU_HELL_CIRCLES.get(circle, cls.EU_HELL_CIRCLES[9])
+            # The ladder's first band is "nothing heavier than Limbo": Limbo for the unbaptised, the second circle
+            # for everyone else — Limbo is not where a light sinner goes (Inf. IV).
+            if circle == cls.EU_LIMBO_CIRCLE:
+                return limbo if unbaptised else cls.EU_HELL_CIRCLES[2]
+            return cls.EU_HELL_CIRCLES[circle]
         # PURGATORY and RETRY: inconclusive verdict, soul waits regardless
         # of what the ledger says.
         return cls.EU_PURGATORY

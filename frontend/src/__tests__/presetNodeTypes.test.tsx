@@ -99,8 +99,8 @@ describe("preset step names map onto NodeType", () => {
     // 「按功德分流」仪轨,它的地点与两个结局逐项就是称心的(Budge《亚尼纸草》1895
     // 图版 III–IV;docs/lore-verification/verify-egyptian.md §3.3)。两套同文明同
     // case_type,`.first()` 只取得到一套,另一套在界面上可见而永远路由不到。
-    toHaveLength(16);
-    expect(allNodes).toHaveLength(70)  // 56 − EGYPTIAN_AFTERLIFE 的三个节点 + 希腊的分流与结束(2026-10-19) + 埃及称心的神庭、荷鲁斯、结束(2026-10-27) + 神判与紧急审判改走称心各 2 → 8 站(2026-10-27);
+    toHaveLength(17);  // + EUROPEAN_HERESY_TRIAL(E-4,2026-10-27)
+    expect(allNodes).toHaveLength(74)  // + 异端审判四站(E-4,2026-10-27); 56 − EGYPTIAN_AFTERLIFE 的三个节点 + 希腊的分流与结束(2026-10-19) + 埃及称心的神庭、荷鲁斯、结束(2026-10-27) + 神判与紧急审判改走称心各 2 → 8 站(2026-10-27);
     expect(stepNames.length).toBeGreaterThan(0);
   });
 

@@ -54,6 +54,31 @@ class RebirthBlocked(APIException):
         super().__init__({"code": code, "error": detail, "detail": detail})
 
 
+class RebirthFormNotApplicable(APIException):
+    """六道只属于地府(2026-10-27 用户决定,G-2)。希腊的再生是饮忘川后回来(维吉尔 Aen. 6.703-751),
+    没有六道可择:给希腊灵魂指定一道是 400,不写任何东西。"""
+
+    status_code = 400
+    default_code = "rebirth_form_not_applicable"
+
+    def __init__(self, form):
+        super().__init__({"code": "rebirth_form_not_applicable", "rebirth_form": form,
+                          "detail": "Only a soul of Diyu is reborn into one of the six paths; omit rebirth_form."})
+
+
+def rebirth_form_for(soul, requested=None) -> str:
+    """这一世转进哪一道。按**原属**文明(同 `needs_soup`):地府走六道,没指定就是人道;
+    别的能转世的文明(希腊)不走六道,存 OTHER(「六道之外」),指定了一道就拒绝。"""
+    from apps.reincarnation.models import RebirthForm
+    from apps.souls.models import Civilization
+
+    if soul.home_civilization == Civilization.CHINESE:
+        return requested or RebirthForm.HUMAN
+    if requested and requested != RebirthForm.OTHER:
+        raise RebirthFormNotApplicable(requested)
+    return RebirthForm.OTHER
+
+
 def assert_may_be_reborn(soul, disposition=None):
     """`reborn` / `complete` 在动灵魂状态之前问一次,`complete_rebirth` 在灵魂行锁下再问一次。"""
     from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
@@ -223,7 +248,7 @@ class ReincarnationService:
         soul: Soul,
         disposition: Disposition = None,
         new_identity: str = "",
-        rebirth_form: str = "HUMAN",
+        rebirth_form: str | None = None,
         notes: str = "",
     ):
         """
@@ -279,6 +304,7 @@ class ReincarnationService:
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
             assert_may_be_reborn(soul, disposition)
+            rebirth_form = rebirth_form_for(soul, rebirth_form)
 
             # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
             from django.conf import settings
