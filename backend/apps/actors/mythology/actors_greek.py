@@ -119,9 +119,9 @@ GREEK_ACTORS = [
      "for the gods themselves (Isthmian 8.23-24) - that is the judging, not "
      "the keys. Son of Zeus and the nymph Aegina, and grandfather of Achilles. "
      "He does not appear in Dante"),
-    ("Rhadamanthus", "拉达曼提斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
+    ("Rhadamanthus", "拉达曼迪斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
      "EU_PLATO_MEADOW",
-     "冥界判官拉达曼提斯", "冥界判官拉达曼提斯", "Judge Rhadamanthus", "Rhadamanthys",
+     "冥界判官拉达曼迪斯", "冥界判官拉达曼迪斯", "Judge Rhadamanthus", "Rhadamanthys",
      "One of the three judges of the dead - tries those who come from Asia "
      "(Plato, Gorgias 524a). Homer instead has him living in Elysium rather "
      "than judging (Odyssey 4.563-565) and Virgil has him ruling and punishing "

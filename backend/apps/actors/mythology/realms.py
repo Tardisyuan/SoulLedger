@@ -128,7 +128,7 @@ CHINESE_REALMS = [
     ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Wesekhet 1 · Qinguang",
      RealmType.HELL, 1,
      "Intake court - the Ledger of Life and Death is read and the soul's case "
-     "opened; no punishment is administered here", "MENGPO", False, None),
+     "opened at the 孽镜台 (Mirror of Retribution); no punishment is administered here", "MENGPO", False, None),
     ("DY_COURT_02_CHUJIANG", "第二殿", "第二殿楚江王", "Second Court Chujiang", "Wesekhet 2 · Chujiang",
      RealmType.HELL, 2,
      "活大地狱 - the mildest punishment court; thieves and those who wounded "
@@ -156,7 +156,7 @@ CHINESE_REALMS = [
      "大叫唤大地狱 - sacrilege and irreverence", "MENGPO", False, 40),
     ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Wesekhet 7 · Taishan",
      RealmType.HELL, 7,
-     "热恼地狱 - desecration of the dead, trafficking in bodies", "MENGPO", False, 30),
+     "热恼大地狱 - taking bones for medicine, scattering of kin", "MENGPO", False, 30),
     # COURTS 8 AND 9 ARE SWAPPED BETWEEN THE TWO MAJOR SYSTEMS, AND THIS REPO
     # FOLLOWS 《玉历宝钞》. 《佛说预修十王生七经》 and the Daoist tradition seat
     # 平等王 at the eighth and 都市王 at the ninth; 《玉历宝钞》 reverses them, and
@@ -168,7 +168,7 @@ CHINESE_REALMS = [
     # 卞城 not 变成, 泰山 not 太山), so the choice is at least consistent.
     ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Wesekhet 8 · Dushi",
      RealmType.HELL, 8,
-     "大热恼地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
+     "大热恼大地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
     ("DY_COURT_09_PINGDENG", "第九殿", "第九殿平等王", "Ninth Court Pingdeng", "Wesekhet 9 · Pingdeng",
      RealmType.HELL, 9,
      "阿鼻地狱 - the deepest hell; murder, arson, the crimes with no remedy",
