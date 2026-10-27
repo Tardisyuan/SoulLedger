@@ -550,6 +550,8 @@ const PROPER_NAMES = [
   "Apep", "Minos", "Hades", "Meh", "Enter", "Esc",
   // 第五十四批第二批(Design,2026-10-27):埃及申诉链里的荷鲁斯单独出现(此前只在星期名整词里)。
   "Heru",
+  // 同批(用户定):托特 Djehuty 是专名;Browser 照 Webhook / JSON 原样写拉丁字母。
+  "Djehuty", "Browser",
   "IP", "JPEG", "MB", "PNG", "PDF", "CSV", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
@@ -605,12 +607,15 @@ const ROOTS_BATCH28 = ["Iwn"];
 const ROOTS_BATCH28B = ["Sedjer", "Shat"];
 // 第二十八批 W2 登录设备:Ikhet = 设备。
 const ROOTS_BATCH28C = ["Ikhet"];
+// 第五十四批(用户定,2026-10-27):Design 建议的新词根 Swri = 饮(孟婆汤)、Nis = 召唤(邀请官员)、Shewet = 应用商店。
+// Wer(大)也已采用，但它在第十二节废止名单里，要等 Design 改写 halls.code_hint 时一起登记。
+const ROOTS_BATCH54 = ["Swri", "Nis", "Shewet"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
