@@ -7115,7 +7115,8 @@
       "not_concluded": "This judgment isn't concluded yet; you can appeal once it is",
       "not_appealable": "This judgment can't be appealed",
       "past_life_read_only": "Judgments from past lives are read-only",
-      "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to"
+      "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to",
+      "not_escalatable": "You can escalate only after a review has upheld the verdict"
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",
@@ -7164,7 +7165,8 @@
       "original_judge": "You made the original ruling and can't review it",
       "not_reviewer": "Only the officer who claimed it can decide",
       "appeal_closed": "This appeal has already been decided or withdrawn",
-      "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict."
+      "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
+      "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done"
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",
@@ -7172,7 +7174,11 @@
       "foreign_keep": "Keep them all",
       "foreign_remove": "Remove them all",
       "foreign_required": "Choose whether to keep or remove these stations"
-    }
+    },
+    "escalate": "Escalate",
+    "escalate_title": "Escalate to the appeal court",
+    "escalate_body": "The last review upheld the verdict. Escalated, the appeal goes station by station through this realm's appeal court: any station that rejects it upholds the verdict, and if it passes every station the final judge decides. It can't be withdrawn while the court hears it, and it counts as one appeal.",
+    "ladder": "Appeal court · {{name}}"
   },
   "cityGods": {
     "title": "City Gods",

@@ -200,3 +200,22 @@ describe("workflow info card · 案号", () => {
     expect(value.querySelector("button")).toBeNull();
   });
 });
+
+/** 灵魂上诉到申诉流程(2026-10-27):流程页链回那一轮申诉,结论在申诉页上作。 */
+describe("escalated appeal", () => {
+  it("links the APPEAL workflow to the soul's appeal round, and a plain workflow links nothing", async () => {
+    const base = payload("IN_PROGRESS", "n2");
+    const judgment_appeal = { id: "ap1", case_number: "CN-2026-0007", round: 2, status: "IN_REVIEW" };
+    workflowApi.get.mockResolvedValue({ data: { ...base.data, is_appeal: true, judgment_appeal } });
+    const { unmount } = renderPage();
+    const link = await screen.findByTestId("workflow-judgment-appeal");
+    expect(link).toHaveAttribute("href", "/judgment/appeals/ap1");
+    expect(link).toHaveTextContent(`CN-2026-0007 · ${tZh("appeals.round", { round: "2" })}`);
+    unmount();
+
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    expect(screen.queryByTestId("workflow-judgment-appeal")).toBeNull();
+  });
+});

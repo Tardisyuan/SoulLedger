@@ -111,6 +111,9 @@ function AppealReviewContent({ id }: { id: string }) {
   const appeal = query.data;
   const original = !!user && appeal.original_officer_ids.includes(user.id);
   const mine = !!user && appeal.reviewer === user.id;
+  // 上诉到申诉流程的那一轮:流程跑着时谁都不能认领;走完而终审站没有记下官员时,照常认领(2026-10-27)。
+  const ladderOver = !appeal.workflow || appeal.workflow_status === "COMPLETED" || appeal.workflow_status === "REJECTED";
+  const claimable = appeal.status === "PENDING" || (appeal.status === "IN_REVIEW" && !appeal.reviewer && !!appeal.workflow && ladderOver);
 
   return (
     <PageShell
@@ -123,7 +126,7 @@ function AppealReviewContent({ id }: { id: string }) {
       }
       actions={
         <RequirePermission permissions="judgment.execute">
-          {appeal.status === "PENDING" && (
+          {claimable && (
             <div className="flex flex-col items-end gap-1">
               <Button type="button" data-testid="appeal-claim" disabled={original} loading={claim.isPending} onClick={() => claim.mutate()}>
                 {t("appeals.claim")}
@@ -148,6 +151,11 @@ function AppealReviewContent({ id }: { id: string }) {
         <span>{t("appeals.round", { round: String(appeal.round) })}</span>
         <span className={LABEL}>·</span>
         <Link href={`/souls/${appeal.soul}`} className="underline underline-offset-2">{appeal.soul_name}</Link>
+        {appeal.workflow && (
+          <Link data-testid="appeal-workflow" href={`/workflow/${appeal.workflow}`} className="underline underline-offset-2">
+            {t("appeals.ladder", { name: appeal.workflow_name ?? "" })} · <span className="font-mono">{appeal.workflow_number}</span>
+          </Link>
+        )}
         {appeal.status === "IN_REVIEW" && appeal.reviewer_name && (
           <span className={LABEL}>
             {t("appeals.col.reviewer")} {appeal.reviewer_name}

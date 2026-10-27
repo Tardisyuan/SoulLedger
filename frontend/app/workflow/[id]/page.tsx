@@ -351,6 +351,16 @@ export default function WorkflowDetailPage() {
               {t("workflow.detail.appeal")}
             </Badge>
           )}
+          {/* 灵魂上诉到这条申诉流程的那一轮申诉(2026-10-27):流程走完,结论在申诉页上作。 */}
+          {workflow.judgment_appeal && (
+            <Link
+              data-testid="workflow-judgment-appeal"
+              href={`/judgment/appeals/${workflow.judgment_appeal.id}`}
+              className="text-sm underline underline-offset-2"
+            >
+              {workflow.judgment_appeal.case_number} · {t("appeals.round", { round: String(workflow.judgment_appeal.round) })}
+            </Link>
+          )}
         </div>
       }
     >

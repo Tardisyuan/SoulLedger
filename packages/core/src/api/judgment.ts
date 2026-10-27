@@ -731,6 +731,8 @@ export const APPEAL_ERROR_CODES = [
   "not_reviewer",
   "appeal_closed",
   "verdict_unchanged",
+  // 上诉到申诉流程的那一轮:流程走完前不能认领、作结论(2026-10-27)。
+  "ladder_running",
 ] as const;
 
 // ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────

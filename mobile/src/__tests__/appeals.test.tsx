@@ -48,6 +48,7 @@ const row = (over: Record<string, unknown> = {}): MeAppealableJudgment => ({
   rounds_used: 0,
   can_appeal: true,
   refusal_code: null,
+  can_escalate: false,
   ...over,
 }) as MeAppealableJudgment;
 const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
@@ -66,6 +67,10 @@ const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
   decided_at: null,
   create_time: "2026-10-10T00:00:00Z",
   compensations: [],
+  workflow: null,
+  workflow_number: null,
+  workflow_status: null,
+  workflow_name: null,
   ...over,
 }) as MeJudgmentAppeal;
 
@@ -86,6 +91,22 @@ it("a Greek judgment offers no appeal and says Minos is final (docs/02 希腊 §
   wrap(<AppealLine row={row({ can_appeal: false, refusal_code: "no_appeal_above_minos" })} rounds={[]} onChanged={() => {}} />);
   expect(screen.getByTestId(`appeal-refusal-${J}`).props.children).toBe("米诺斯的判决是终裁，其上无可申诉");
   expect(screen.queryByTestId(`appeal-file-${J}`)).toBeNull();
+});
+
+it("after an upheld review, 「上诉 ›」 opens the same form for the appeal flow; without it there is no button", () => {
+  const first = wrap(<AppealLine row={row({ rounds_used: 1, can_escalate: true })} rounds={[]} onChanged={() => {}} />);
+  fireEvent.press(screen.getByTestId(`appeal-escalate-${J}`));
+  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, escalate: true }));
+  first.unmount();
+  wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
+  expect(screen.queryByTestId(`appeal-escalate-${J}`)).toBeNull();
+});
+
+it("a round in the appeal flow names the flow and cannot be withdrawn", () => {
+  const ladder = round({ id: "a2", round: 2, status: "IN_REVIEW", workflow: "w1", workflow_name: "申诉审判流程", workflow_status: "IN_PROGRESS" });
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[ladder]} focused onChanged={() => {}} />);
+  expect(screen.getByTestId("appeal-ladder-a2").props.children).toBe("申诉流程 · 申诉审判流程");
+  expect(screen.queryByTestId("appeal-withdraw-a2")).toBeNull();
 });
 
 it("a landed decision opens the latest round: 原判 → 新判, the reviewer's note, a row per compensated station", () => {
@@ -132,7 +153,7 @@ it("the form refuses an empty reason locally, then sends the reason and goes bac
   fireEvent.press(screen.getByTestId("appeal-submit"));
   await screen.findByTestId("appeal-submit");
   await new Promise((r) => setTimeout(r, 0));
-  expect(calls[0]?.body).toEqual({ judgment: J, reason: "证据有误", evidence: "" });
+  expect(calls[0]?.body).toEqual({ judgment: J, reason: "证据有误", evidence: "", escalate: false });
   expect(mockGoBack).toHaveBeenCalled();
 });
 

@@ -81,5 +81,11 @@
   "judgment.placement.errors.term_not_applicable",
   "judgment.weighing.errors.weighing_in_progress",
   "judgment.weighing.errors.weighing_rejected",
-  "judgment.weighing.errors.weighing_wavers"
+  "judgment.weighing.errors.weighing_wavers",
+  "appeals.escalate",
+  "appeals.escalate_title",
+  "appeals.escalate_body",
+  "appeals.ladder",
+  "appeals.refusal.not_escalatable",
+  "appeals.error.ladder_running"
 ]

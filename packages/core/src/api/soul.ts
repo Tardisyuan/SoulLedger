@@ -328,8 +328,11 @@ export const soulApi = {
   /** 审判申诉(第五十二批):本世已结案的审判(`can_appeal` / `refusal_code` / `deadline`)与各轮申诉。 */
   judgmentAppeals: () => soulHttp.get<MeJudgmentAppealList>("/me/judgment-appeals/").then((r) => r.data),
   /** 403 `past_life_read_only`;409 `appeal_open` / `appeal_rounds_used` / `appeal_window_closed` / `not_concluded` / `not_appealable` / `no_appeal_above_minos`(希腊)。 */
-  fileJudgmentAppeal: (judgment: string, reason: string, evidence = "") =>
-    soulHttp.post<MeJudgmentAppeal>("/me/judgment-appeals/", { judgment, reason, evidence }).then((r) => r.data),
+  //  `escalate`:上诉到本文明的多站申诉流程(上一轮一次复核维持原判之后;409 `not_escalatable`)。
+  fileJudgmentAppeal: (judgment: string, reason: string, evidence = "", escalate = false) =>
+    soulHttp
+      .post<MeJudgmentAppeal>("/me/judgment-appeals/", { judgment, reason, evidence, escalate })
+      .then((r) => r.data),
   /** 待复核、复核中都可以撤回;撤回也算一次。409 `appeal_closed`。 */
   withdrawJudgmentAppeal: (id: string) =>
     soulHttp.post<MeJudgmentAppeal>(`/me/judgment-appeals/${id}/withdraw/`).then((r) => r.data),
@@ -399,6 +402,8 @@ export const APPEAL_REFUSAL_CODES = [
   "past_life_read_only",
   // 希腊:米诺斯之上无可上诉(docs/02 希腊 §5.2,用户 2026-10-27)。
   "no_appeal_above_minos",
+  // 上诉到申诉流程:上一轮要是一次复核、维持原判(2026-10-27)。
+  "not_escalatable",
 ] as const;
 
 export function appealRefusalKey(code: string | null | undefined): string | null {
