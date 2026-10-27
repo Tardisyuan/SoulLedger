@@ -229,8 +229,10 @@ export default function SoulDetailPage() {
   const judgments = useMemo(() => [...(judgmentsQuery.data?.results ?? NO_JUDGMENTS), ...moreJudgments.rows], [judgmentsQuery.data, moreJudgments.rows]);
   const dispositions = useMemo(() => [...(dispositionsQuery.data?.results ?? NO_DISPOSITIONS), ...moreDispositions.rows], [dispositionsQuery.data, moreDispositions.rows]);
   // 第十殿按结案时的功过给的六道建议(docs/07 §四,2026-10-27):不改就按它办,官员可改。
+  // 地府里没有建议(功过为负而不到地狱道:畜生 / 饿鬼由官员定,用户 2026-10-27)时不预选,官员选了才能办。
   const suggestedRebirthForm = (dispositions.find((d) => !d.is_executed)?.suggested_rebirth_form ?? null) as RebirthFormValue | null;
-  const rebirthForm = pickedRebirthForm ?? suggestedRebirthForm ?? DEFAULT_REBIRTH_FORM;
+  const rebirthForm: RebirthFormValue | null =
+    pickedRebirthForm ?? suggestedRebirthForm ?? (soul?.civilization === "CHINESE" ? null : DEFAULT_REBIRTH_FORM);
   const reincarnations = useMemo(() => [...(reincarnationsQuery.data?.results ?? NO_REINCARNATIONS), ...moreReincarnations.rows], [reincarnationsQuery.data, moreReincarnations.rows]);
   const events = useMemo(() => [...(eventsQuery.data?.results ?? NO_EVENTS), ...moreEvents.rows], [eventsQuery.data, moreEvents.rows]);
   const loadedAll =
@@ -386,6 +388,7 @@ export default function SoulDetailPage() {
   }
 
   async function handleReincarnate(dispositionId: string) {
+    if (!rebirthForm) return;
     setActionLoading("reincarnate");
     setQuotaRefusal(null);
     try {
