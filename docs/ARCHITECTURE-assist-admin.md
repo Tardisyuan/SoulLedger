@@ -1,6 +1,8 @@
 # 助手管理页(阶段 1.5)—— 计划稿
 
-> **状态:§7 Q1–Q3 已由用户拍板(2026-09-29);Q4 等 Design 出稿。** 用户 2026-09-29 定:阶段 1.5 不由开发者拿 key 在后台跑评测,
+> **现状(2026-10-28):已实施。** 后端见 §8,Web 页已存在(`frontend/app/admin/assistant/`,含 `usage/`;组件 `frontend/src/components/assist-admin/`),评测集迁移 `0004`、`0010`。下面「等 Design 出稿」是 2026-09-29 的原记。
+>
+> **(原记)状态:§7 Q1–Q3 已由用户拍板(2026-09-29);Q4 等 Design 出稿。** 用户 2026-09-29 定:阶段 1.5 不由开发者拿 key 在后台跑评测,
 > 而是给**管理员一个页面**,在页面上完成配置与测试。**整个系统只有一位管理员**(ADMIN,阎罗王),
 > 所以这一页只对 ADMIN 开放,不做多人协作、不做审批。
 > 灵魂端与官员端助手的设计见 `docs/ARCHITECTURE-soul-assist.md`、`docs/ARCHITECTURE-officer-assist.md`。
