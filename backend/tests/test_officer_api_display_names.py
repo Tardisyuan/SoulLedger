@@ -152,6 +152,8 @@ def test_the_cross_judgment_list_does_not_query_once_per_row(world):
         other = _tenant(f"DN_Q{i % 5}", f"Query Hall {i % 5}")
         _bench(other, a, title=f"row{i}")  # A is seated, so each is in A's list
 
+    # Creating halls drops TenantMiddleware's per-worker hall copy; warm it again so both reads start equal.
+    assert world["client_a"].get(CJ).status_code == 200
     with CaptureQueriesContext(connection) as ten_rows:
         resp = world["client_a"].get(CJ)
     rows = _results(resp)
