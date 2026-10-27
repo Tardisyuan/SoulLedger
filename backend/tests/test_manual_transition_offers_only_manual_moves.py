@@ -36,3 +36,18 @@ def test_the_lost_moves_are_still_offered(cn_tenant, admin_user):
     assert client.post(url, {"new_state": SoulState.LOST, "reason": "途中走失"}, format="json").status_code == 200
     assert client.post(url, {"new_state": SoulState.DISPOSED, "reason": "寻回"}, format="json").status_code == 200
     assert Soul.objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
+
+
+def test_disposed_back_to_judging_is_a_system_only_edge(cn_tenant, admin_user):
+    """DISPOSED → JUDGING exists for one system action (a refused Egyptian weighing, user 2026-10-27):
+    the state machine allows it only when that action names itself, and never by hand."""
+    soul = Soul.objects.create(name="重称", tenant=cn_tenant, current_state=SoulState.DISPOSED)
+    assert not soul.can_transition_to(SoulState.JUDGING)
+    assert not soul.can_transition_to(SoulState.JUDGING, system="something_else")
+    assert soul.can_transition_to(SoulState.JUDGING, system="weighing_rejected")
+    res = officer_client(admin_user).post(f"/api/v1/souls/{soul.pk}/transition/",
+                                          {"new_state": SoulState.JUDGING, "reason": "by hand"}, format="json")
+    assert res.status_code == 400, res.data
+    assert Soul.objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
+    assert soul.transition_to(SoulState.JUDGING, "test", system="weighing_rejected")
+    assert Soul.objects.get(pk=soul.pk).current_state == SoulState.JUDGING

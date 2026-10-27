@@ -713,6 +713,12 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             from apps.judgment import appeals
 
             appeals.on_ladder_finished(self, status, end_reason)
+        elif status == ApprovalWorkflowStatus.REJECTED and self.judgment_id:
+            # A refused Egyptian weighing is weighed again (user 2026-10-27); a no-op for any other flow.
+            # Not for an appeal ladder: a refused appeal closes as upheld (above), it is not a weighing.
+            from apps.judgment import weighing
+
+            weighing.reweigh_after_rejection(self)
         if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
             self._purgatory_review_passed(now)
 
