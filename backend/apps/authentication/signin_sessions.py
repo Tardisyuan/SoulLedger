@@ -237,6 +237,8 @@ class SessionAwareRefreshMixin:
     """混进两个 `TokenRefreshSerializer`(官员与灵魂):会话已退出 → 拒;成功 → 记活动与新 jti。"""
 
     def validate(self, attrs):
+        from django.core.exceptions import ObjectDoesNotExist
+        from rest_framework.exceptions import AuthenticationFailed
         from rest_framework_simplejwt.exceptions import InvalidToken
 
         old = self.token_class(attrs["refresh"])
@@ -244,7 +246,12 @@ class SessionAwareRefreshMixin:
         session = session_of(old) if sid else None
         if session is not None and session.revoked_at is not None:
             raise InvalidToken("Token is blacklisted")
-        data = super().validate(attrs)
+        try:
+            data = super().validate(attrs)
+        except ObjectDoesNotExist:
+            # simplejwt 5.5.1 looks the token's user up with a bare `.get()`: a refresh token whose
+            # account was deleted came back as a 500 instead of the 401 that sends the app to sign-in.
+            raise AuthenticationFailed("No active account found for the given token.", "no_active_account") from None
         if session is not None:
             fields = {"last_seen_at": timezone.now()}
             if data.get("refresh"):
