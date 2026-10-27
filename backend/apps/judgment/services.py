@@ -252,6 +252,26 @@ class JudgmentConclusionService:
                     "A cross-realm judgment is open on this case; conclude it before weighing again",
                     "wavering_with_open_cross", status=409)
 
+            # 欧洲 RETRY:重开一案,不进炼狱。炼狱只收确定得救者(docs/01_欧洲天堂地狱整体架构.md §1.2,
+            # CCC 1030-1031),而 RETRY 说的是这件案子还没判定 —— 送进炼狱,期满 `ascend_from_purgatory`
+            # 就把一个没判定的灵魂送上了天堂。照埃及天平摇摆的做法(见下):不建处置、不动计划与灵魂状态。
+            # PURGATORY 裁决照旧送炼狱。重开 / 申诉改判成 RETRY 在 sentence_plan/requests.py 拒绝。
+            from apps.judgment.models import Verdict
+            from apps.souls.models import Civilization
+
+            eu_retry = (verdict == Verdict.RETRY and judgment.kind == JudgmentKind.ORIGINAL
+                        and judgment.soul.civilization == Civilization.EUROPEAN)
+            if eu_retry and (destination_realm_id is not None or term_years is not None or eternal is not None):
+                from apps.disposition.destination import DestinationRefusedError
+                raise DestinationRefusedError(
+                    "A RETRY verdict hears the case again and sends the soul nowhere yet",
+                    "retry_has_no_destination")
+            if eu_retry and open_cross is not None:
+                from apps.sentence_plan.requests import PlanChangeRefusedError
+                raise PlanChangeRefusedError(
+                    "A cross-realm judgment is open on this case; conclude it before hearing the case again",
+                    "retry_with_open_cross", status=409)
+
             # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
             # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
             if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:
@@ -301,8 +321,11 @@ class JudgmentConclusionService:
 
             # 天平摇摆(02 §5.3):托特记下,再称一次。不建处置、不动计划、不动灵魂状态 —— 灵魂留在审判中,
             # 新的一件案子回到队列(用户 2026-10-27:不自动发落,不能落成 SETTLED 而不在任何一站)。
-            if wavering:
-                weighing.open_retrial(judgment)
+            if wavering or eu_retry:
+                if wavering:
+                    weighing.open_retrial(judgment)
+                else:
+                    weighing.open_retrial(judgment, reason=Verdict.RETRY.value, method=judgment.judgment_method)
                 from apps.events.services import EventService
                 EventService.log_judgment_concluded(judgment)
                 return True

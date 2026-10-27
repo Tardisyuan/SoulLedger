@@ -457,6 +457,19 @@ def _open_reopen_judgment(soul, plan, req):
     _save(plan, "status")
 
 
+def _refuse_european_retry(soul, verdict):
+    """欧洲 RETRY 不是一个去处:路由会给炼狱,而炼狱期满即升天堂(docs/01_欧洲天堂地狱整体架构.md §1.2:
+    炼狱只收确定得救者)。原审判结案时它重开一案(`JudgmentConclusionService`);重开审判与申诉改判
+    没有「再开一案」这一步,所以拒绝 —— 要么给 PURGATORY / FAILED / PASSED,要么另开审判。"""
+    from apps.judgment.models import Verdict
+    from apps.souls.models import Civilization
+
+    if verdict == Verdict.RETRY and soul.home_civilization == Civilization.EUROPEAN:
+        raise PlanChangeRefusedError(
+            "A European RETRY is not a destination; give a final verdict or open a new judgment",
+            "retry_not_a_destination")
+
+
 def conclude_reopened(judgment):
     """重开审判结案(N1=(a)):新裁决 + 一个新的原属节点,排在所有已开始的节点之后、未执行的节点之前
     (灵魂回原属地后先执行它)。计划 RETRIAL → ACTIVE 由随后的 `advance` 做。
@@ -475,6 +488,7 @@ def conclude_reopened(judgment):
     for node in sorted((n for n in live if n.order > anchor), key=lambda n: -n.order):
         node.order += 1
         _save(node, "order")
+    _refuse_european_retry(soul, judgment.verdict)
     realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=plan.tenant_id)
     home_code = plan.tenant.code
@@ -508,6 +522,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     from apps.disposition.models import Disposition
     from apps.realms.models import realm_by_code
 
+    _refuse_european_retry(soul, verdict)
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
     content = {

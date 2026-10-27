@@ -517,7 +517,10 @@ class DispositionService:
                 return limbo if unbaptised else cls.EU_HELL_CIRCLES[2]
             return cls.EU_HELL_CIRCLES[circle]
         # PURGATORY and RETRY: inconclusive verdict, soul waits regardless
-        # of what the ledger says.
+        # of what the ledger says. An original RETRY never reaches here — it is
+        # heard again instead (`JudgmentConclusionService`), and a reopen or an
+        # appeal to RETRY is refused (`sentence_plan.requests`): purgatory holds
+        # only the saved (docs/01 §1.2) and ascends to heaven when served.
         return cls.EU_PURGATORY
 
     @classmethod

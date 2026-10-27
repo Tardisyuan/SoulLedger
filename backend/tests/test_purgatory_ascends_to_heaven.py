@@ -96,3 +96,40 @@ def test_a_rejected_purgatory_review_leaves_the_soul_in_purgatory(eu):
     wf.refresh_from_db()
     assert wf.status == ApprovalWorkflowStatus.REJECTED
     assert _where(soul) == "EU_PURGATORY"
+
+
+def _open_case(tenant):
+    from apps.judgment.models import Judgment
+    soul = Soul.objects.create(name="待再审", tenant=tenant, current_state=SoulState.JUDGING)
+    return Judgment.objects.create(soul=soul, civilization=soul.civilization, court="—", tenant=tenant)
+
+
+def test_a_retry_hears_the_case_again_instead_of_entering_purgatory(eu):
+    """Purgatory holds only the saved (docs/01 §1.2): a RETRY is an undecided case, and sending it there let the
+    expiry sweep carry an undecided soul up to heaven. It is heard again, the way a wavering Egyptian scale is."""
+    from apps.judgment.models import Judgment
+    tenant, _purgatory, _heaven = eu
+    case = _open_case(tenant)
+    case.conclude("RETRY")
+    soul = Soul.objects.get(pk=case.soul_id)
+    assert not Disposition.all_objects.filter(soul=soul).exists()
+    assert soul.current_state == SoulState.JUDGING
+    assert not SoulPathEntry.all_objects.filter(soul_id=soul.pk, realm__realm_code="EU_PURGATORY").exists()
+    retrial = Judgment.objects.get(retrial_of=case)
+    assert retrial.verdict is None and retrial.judgment_method == case.judgment_method
+
+    # A PURGATORY verdict still goes to purgatory.
+    other = _open_case(tenant)
+    other.conclude("PURGATORY")
+    assert Disposition.all_objects.get(judgment=other).destination_realm.realm_code == "EU_PURGATORY"
+
+
+def test_a_retry_takes_no_destination(eu):
+    from apps.disposition.destination import DestinationRefusedError
+    from apps.judgment.models import Judgment
+    tenant, purgatory, _heaven = eu
+    case = _open_case(tenant)
+    with pytest.raises(DestinationRefusedError) as refused:
+        case.conclude("RETRY", destination_realm_id=purgatory.pk)
+    assert refused.value.code == "retry_has_no_destination"
+    assert not Judgment.objects.filter(retrial_of=case).exists()
