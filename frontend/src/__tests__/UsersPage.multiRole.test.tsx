@@ -249,14 +249,27 @@ describe("batch activate / deactivate", () => {
     expect(screen.getByRole("region", { name: "users.batch.region" })).toBeInTheDocument();
   });
 
-  it("officers still holding work are named with the count deactivated, not 'done' or 'failed'", async () => {
+  it("officers still holding work: partial toast, and one row each with a handover entry", async () => {
+    const work = (judgments: number) => ({ judgments, appeals: 0, appeals_returned_to_pool: 0, city_gods: ["城隍甲"], letters: 1 });
     mockBatchDeactivate.mockResolvedValue({ data: { updated: 1, held: [
-      { id: "7", username: "lu", open_work: {} }, { id: "8", username: "bao", open_work: {} }] } });
+      { id: "7", username: "lu", open_work: work(1) }, { id: "8", username: "bao", open_work: work(3) }] } });
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "users.batch.deactivate" }));
-    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("users.batch.open_work:1,2,lu, bao", "info"));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("users.batch.open_work_partial:1,2", "info"));
     expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining("users.batch.done"), expect.anything());
     expect(mockToast).not.toHaveBeenCalledWith("users.batch.failed", "error");
+    const rows = within(screen.getByRole("list", { name: "users.batch.held_region" })).getAllByRole("listitem");
+    expect(rows.map((r) => r.textContent)).toEqual([expect.stringContaining("users.batch.held_row:lu,3"),
+                                                    expect.stringContaining("users.batch.held_row:bao,5")]);
+  });
+
+  it("nobody deactivated: the open_work toast, not the partial one", async () => {
+    mockBatchDeactivate.mockResolvedValue({ data: { updated: 0, held: [
+      { id: "7", username: "lu", open_work: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0 } }] } });
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "users.batch.deactivate" }));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("users.batch.open_work:1", "info"));
+    expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining("open_work_partial"), expect.anything());
   });
 
   it("changing the filter empties the selection", async () => {

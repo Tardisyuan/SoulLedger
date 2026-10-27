@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { User } from "@soulledger/core/api";
+import type { User, UserBatchDeactivateResult } from "@soulledger/core/api";
 import { useBatchSetUsersActive } from "@soulledger/core/hooks/useUsers";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -46,7 +46,9 @@ export function useUserSelection(queryKey: string, users: User[]) {
 
 export type UserSelection = ReturnType<typeof useUserSelection>;
 
-export function UserBatchBar({ selection }: { selection: UserSelection }) {
+export type HeldOfficer = UserBatchDeactivateResult["held"][number];
+
+export function UserBatchBar({ selection, onHeld }: { selection: UserSelection; onHeld?: (held: HeldOfficer[]) => void }) {
   const { t } = useI18n();
   const batch = useBatchSetUsersActive();
   const count = selection.ids.size;
@@ -58,10 +60,13 @@ export function UserBatchBar({ selection }: { selection: UserSelection }) {
       {
         onSuccess: (result) => {
           // 批量不做交接:手上还有在途的事的官员后端不停(`held`),点名让管理员逐个停用、停用时移交。
+          // 一个都没停掉用 open_work,停了一部分用 open_work_partial;没停的人由页面逐行列出、各给一个移交入口。
           const held = "held" in result ? result.held : [];
+          onHeld?.(held);
           if (held.length) {
-            showToast(t("users.batch.open_work", { n: String(result.updated), m: String(held.length),
-                                                   names: held.map((h) => h.username).join(", ") }), "info");
+            showToast(result.updated
+              ? t("users.batch.open_work_partial", { done: String(result.updated), n: String(held.length) })
+              : t("users.batch.open_work", { n: String(held.length) }), "info");
           } else {
             showToast(t("users.batch.done", { n: String(result.updated) }), "success");
           }
