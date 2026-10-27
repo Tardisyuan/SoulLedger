@@ -202,6 +202,8 @@ const COLLECTED_FILES = [
   // 2026-10-01 灵魂详情 v3(首字页头、账页两标签、功过栏、PageShell 首格 / 尾格)。
   "SoulDetailV3.test.tsx",
   "SoulEditModal.test.tsx",
+  // 2026-10-28 欧洲灵魂详情卡的受洗 / 否认灵魂不灭两行。
+  "SoulInfoCard.infernoFacts.test.tsx",
   "SoulLedgerBook.test.tsx",
   "SoulLedgerDetail.test.tsx",
   // 2026-10-08 /souls 的 CSV 导入对话框。
