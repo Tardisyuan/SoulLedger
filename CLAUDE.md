@@ -265,6 +265,15 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
   - **前端读文件测试按目录选**:`jest.always-run.txt` 每行后面写着它读的顶层条目(`*` = 跑 git 或子进程、或摸到仓库根却没点名;
     `frontend` = 只读 frontend/)。前端不跑时只跑点名了本次改动顶层条目的行和 `*` 行;实测只改后端时 69 个里跑 22 个。
     标注由 `jestAlwaysRunList.test.ts` 推导并核对(注释先剥掉;与 `reads-outside-backend.txt` 同一条规则)。
+- **2026-10-28(用户决定)真 PostgreSQL 进了 `run-gates.sh`**:
+  - 日常 `scripts/run-gates.sh --real-pg`:和推送同一套按 app 选的测试，加上全部 PG-only 测试(28 条，由 `test_concurrency.py`
+    钉住名单的那个扫描器列出);迁移往返只在改了迁移时跑。只跑 pytest,不跑 jest / tsc / eslint / ruff / makemigrations。
+    数据库读 `backend/.env` 的 `DATABASE_URL`(worktree 用主 checkout 的),不认 `.prepush.env` 的 SQLite 覆盖;115 连不上就**拒绝**,不退回 SQLite。
+    自带 `--create-db`、单条测试 600 s 限时、一次性 Redis、门禁锁。
+  - 全量 `scripts/run-gates.sh --real-pg --full`(含迁移往返)**只在大分支合进 main 前跑一次**。实测 `-n 2` 含往返约 45 分钟(10-28)。
+  - 钩子的 pytest 加了 `--ff`:上次失败的先跑。
+  - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
+    改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
   源码里写了 `apps.<app>` / 调了该 app 的 `/api/v1/<前缀>/`」的测试文件,前缀从 `config/urls.py` 读;
   再加上 `reads-outside-backend.txt` 里命中的读文件测试。改了 `backend/config/`、任一 conftest、`pytest.ini`、
