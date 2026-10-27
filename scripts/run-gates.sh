@@ -1111,7 +1111,9 @@ PROBE_PY
     REAL_PG_ARGS=""
     if [ "$REAL_PG" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
     # shellcheck disable=SC2086
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
+    # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
+    # that is still red says so in its first minute instead of at the end of the selection.
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov --ff $XDIST \
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS \
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!

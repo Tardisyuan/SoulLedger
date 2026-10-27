@@ -659,6 +659,11 @@ class TestWhatPytestIsInvokedWith:
         assert "-o faulthandler_timeout=300" in joined, args
         assert "-o faulthandler_exit_on_timeout=true" in joined, args
 
+    def test_what_failed_last_time_runs_first(self, hook, checkouts, fake_backend):
+        main, _ = checkouts
+        args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
+        assert "--ff" in args, args
+
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts
         assert _template_switch(hook, main, fake_backend, ["backend/apps/souls/views.py"]) == "unset"
