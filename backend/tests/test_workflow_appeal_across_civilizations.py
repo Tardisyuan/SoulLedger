@@ -81,11 +81,12 @@ from apps.workflow.services import VALID_CASE_TYPES_BY_CIVILIZATION, WorkflowSer
 #: agrees with it by construction. GREEK joined when it became the fourth enum
 #: member — it has its own tenant (`GR_HADES`) and therefore its own souls, so
 #: an appeal on that side is a real path and not a hypothetical one.
+#: GREEK LEFT AGAIN (user 2026-10-27): Minos's judgment is final, so a Greek APPEAL is refused with
+#: `no_appeal_above_minos` at both doors — `test_a_greek_appeal_is_refused_at_both_doors` below.
 CIVILIZATIONS = (
     Civilization.CHINESE,
     Civilization.EUROPEAN,
     Civilization.EGYPTIAN,
-    Civilization.GREEK,
 )
 
 
@@ -221,6 +222,27 @@ def test_the_endpoint_still_refuses_a_case_type_the_civilization_has_not(seeded)
     assert response.status_code == 400, response.data
     assert "CANONIZATION" in response.data["error"], response.data
     assert ApprovalWorkflow.all_objects.filter(judgment=judgment).count() == 0
+
+
+@pytest.mark.django_db
+def test_a_greek_appeal_is_refused_at_both_doors(seeded):
+    """No appeal above Minos (docs/02_希腊冥府审判与人物详解.md §5.2): a clean 400 with a code, not a built flow."""
+    from apps.workflow.services import NoAppealAboveMinosError
+
+    tenant = _tenant(Civilization.GREEK)
+    client = APIClient(**_bearer(_admin(tenant, "appeal_greek_admin")))
+    judgment = _judgment(Civilization.GREEK, tenant, "希腊申诉魂")
+    response = client.post("/api/v1/workflows/create_from_judgment/",
+                           {"judgment_id": str(judgment.id), "is_appeal": True}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "no_appeal_above_minos", response.data
+    response = client.post("/api/v1/workflows/start/",
+                           {"soul": str(judgment.soul_id), "case_type": CaseType.APPEAL, "reason": "申诉"}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "no_appeal_above_minos", response.data
+    original = ApprovalWorkflow.objects.create(soul=judgment.soul, workflow_name="原流程", case_type=CaseType.ROUTINE,
+                                               status=ApprovalWorkflowStatus.REJECTED, tenant=tenant)
+    with pytest.raises(NoAppealAboveMinosError):
+        WorkflowService.create_appeal_workflow(original)
+    assert ApprovalWorkflow.all_objects.filter(soul=judgment.soul, case_type=CaseType.APPEAL).count() == 0
 
 
 # ── the same thing at the service boundary ────────────────────────────

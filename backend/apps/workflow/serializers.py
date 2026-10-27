@@ -661,6 +661,15 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class WorkflowJudgmentAppealSerializer(serializers.Serializer):
+    """The soul's appeal an APPEAL workflow was started for (apps/judgment/appeals.py, user 2026-10-27)."""
+
+    id = serializers.UUIDField()
+    case_number = serializers.CharField(source="judgment.case_number")
+    round = serializers.IntegerField()
+    status = serializers.CharField()
+
+
 class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalWorkflow.
 
@@ -717,6 +726,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     history = serializers.SerializerMethodField()
     can_adjust = serializers.SerializerMethodField()
     cross_judgment_id = serializers.SerializerMethodField()
+    judgment_appeal = serializers.SerializerMethodField()
 
     @extend_schema_field(WorkflowSegmentSerializer(many=True))
     def get_segments(self, obj):
@@ -750,6 +760,13 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
 
         cross = segments.cross_of(obj) if obj.segments.filter(order__gt=1).exists() else None
         return str(cross.pk) if cross else None
+
+    @extend_schema_field(WorkflowJudgmentAppealSerializer(allow_null=True))
+    def get_judgment_appeal(self, obj):
+        from apps.judgment.models import JudgmentAppeal
+
+        appeal = JudgmentAppeal.all_objects.select_related("judgment").filter(workflow_id=obj.pk).first()
+        return WorkflowJudgmentAppealSerializer(appeal).data if appeal else None
 
     class Meta:
         model = ApprovalWorkflow
@@ -785,6 +802,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "history",
             "can_adjust",
             "cross_judgment_id",
+            "judgment_appeal",
         ]
         read_only_fields = [
             "id",

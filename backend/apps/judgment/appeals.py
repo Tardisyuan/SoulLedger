@@ -9,6 +9,11 @@
 * 结论:维持(UPHELD)或改判(AMENDED)。改判时受刑计划未执行的部分改按新裁决
   (`apps/sentence_plan/requests.amend_for_appeal`),已执行的每一站记一笔补偿功德(`COMPENSATION`)。
 
+上诉(用户 2026-10-27,docs/03_人物关系图.md、local-gates/流程退回规则草案.md「申诉审判流程」):一次复核**维持**之后,
+灵魂可用剩下的次数把申诉送进本文明的多站申诉流程(`CaseType.APPEAL` 模板:地府 魏征 → 原殿 → 上级殿 → 酆都大帝,
+杜阿特 Isis → Nephthys → Osiris,彼岸 受理 → Michael 呈上 → Christ 终审)。流程驳回 = 申诉不成立、维持原判(自动);
+流程走完 = 申诉成立,终审那位官员成为复核人,照常 `decide`(改判的计划与补偿同一套)。流程跑着时不能认领、决定、撤回。
+
 事件写在同一事务里(CLAUDE.md 事件日志一节);推送由事件经 `apps/soul_push` 在提交后发出。
 拒绝一律 `AppealRefusedError`(稳定的 `code`),在任何写入之前抛出。
 """
@@ -96,13 +101,26 @@ def appeal_refusal(judgment, account):
     return None
 
 
-def file(account, judgment_id, *, reason, evidence=""):
+def escalation_refusal(judgment, account):
+    """能否上诉到多站申诉流程:先过 `appeal_refusal`,再要求上一轮是一次复核、且维持原判。"""
+    refusal = appeal_refusal(judgment, account)
+    if refusal is not None:
+        return refusal
+    last = (JudgmentAppeal.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
+            .exclude(status=AppealStatus.WITHDRAWN).order_by("-round").first())
+    if last is None or last.status != AppealStatus.UPHELD or last.workflow_id is not None:
+        return AppealRefusedError("Only an appeal upheld on review can be taken up the appeal flow.",
+                                  "not_escalatable")
+    return None
+
+
+def file(account, judgment_id, *, reason, evidence="", escalate=False):
     soul = account.soul
     with transaction.atomic():
         if not Judgment.all_objects.filter(pk=judgment_id, soul_id=soul.pk).exists():
             raise AppealRefusedError("No such judgment.", "not_found", status=404)
         judgment = _lock_judgment(judgment_id)
-        refusal = appeal_refusal(judgment, account)
+        refusal = (escalation_refusal if escalate else appeal_refusal)(judgment, account)
         if refusal is not None:
             raise refusal
         round_ = JudgmentAppeal.all_objects.filter(judgment_id=judgment.pk, is_deleted=False).count() + 1
@@ -115,8 +133,58 @@ def file(account, judgment_id, *, reason, evidence=""):
         except IntegrityError:
             # 并发的第二份(行锁之外的路径,例如 SQLite 没有行锁):部分唯一约束挡住。
             raise AppealRefusedError("An appeal on this judgment is already open.", "appeal_open") from None
-        _event(soul, "JUDGMENT_APPEAL_FILED", appeal)
+        if escalate:
+            _start_ladder(appeal, judgment, soul)
+        _event(soul, "JUDGMENT_APPEAL_FILED", appeal, escalated=escalate,
+               workflow_id=str(appeal.workflow_id) if appeal.workflow_id else None)
     return appeal
+
+
+def _start_ladder(appeal, judgment, soul):
+    """建本文明的 APPEAL 流程(与「发起流程」同一个门:节点、WORKFLOW_CREATED 事件、提交后通知)并挂到申诉上。"""
+    from apps.workflow.models import ApprovalWorkflow, CaseType
+    from apps.workflow.services import WorkflowService
+
+    workflow = WorkflowService.start_workflow(
+        soul, case_type=CaseType.APPEAL, tenant=judgment.tenant, is_appeal=True,
+        notes=f"{judgment.case_number} 第 {appeal.round} 次申诉:{appeal.reason}",
+    )
+    original = ApprovalWorkflow.all_objects.filter(judgment_id=judgment.pk).values_list("pk", flat=True).first()
+    if original is not None:
+        ApprovalWorkflow.all_objects.filter(pk=workflow.pk).update(original_workflow_id=original)
+    appeal.workflow = workflow
+    appeal.status = AppealStatus.IN_REVIEW
+    appeal.save(update_fields=["workflow", "status", "update_time", "update_user", "version"])
+
+
+def _ladder_running(appeal):
+    from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES, ApprovalWorkflow
+
+    if appeal.workflow_id is None:
+        return None
+    wf_status = ApprovalWorkflow.all_objects.filter(pk=appeal.workflow_id).values_list("status", flat=True).first()
+    if wf_status in TERMINAL_WORKFLOW_STATUSES:
+        return None
+    return AppealRefusedError("This appeal is still in the appeal flow.", "ladder_running",
+                              workflow=str(appeal.workflow_id))
+
+
+def on_ladder_finished(workflow, status, end_reason=""):
+    """`ApprovalWorkflow._finish` 调,同一事务。驳回(或被撤掉)= 维持原判,直接结;走完 = 申诉成立,
+    终审那位官员成为复核人,申诉留在 IN_REVIEW 等他照常 `decide`。"""
+    from apps.workflow.models import ApprovalWorkflowStatus
+
+    appeal = JudgmentAppeal.all_objects.select_for_update(of=("self",)).filter(
+        workflow_id=workflow.pk, is_deleted=False, status__in=OPEN_APPEAL_STATUSES).first()
+    if appeal is None:
+        return
+    last = workflow.nodes.filter(decided_at__isnull=False).order_by("-decided_at").first()
+    appeal.reviewer_id = last.approver_id if last is not None else None
+    appeal.claimed_at = timezone.now()
+    appeal.save(update_fields=["reviewer", "claimed_at", "update_time", "update_user", "version"])
+    if status == ApprovalWorkflowStatus.COMPLETED and not end_reason:
+        return
+    _settle(appeal.soul, appeal, AppealStatus.UPHELD, (last.notes if last is not None else "") or "")
 
 
 def withdraw(account, appeal_id):
@@ -126,6 +194,8 @@ def withdraw(account, appeal_id):
         appeal = _lock_appeal(appeal_id)
         if appeal.status not in OPEN_APPEAL_STATUSES:
             raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")
+        if appeal.workflow_id is not None:
+            raise AppealRefusedError("An appeal in the appeal flow cannot be withdrawn.", "ladder_running")
         appeal.status = AppealStatus.WITHDRAWN
         appeal.decided_at = timezone.now()
         appeal.save(update_fields=["status", "decided_at", "update_time", "update_user", "version"])
@@ -142,6 +212,8 @@ def claim(appeal_id, user):
         appeal = _lock_appeal(appeal_id)
         if appeal.status not in OPEN_APPEAL_STATUSES:
             raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")
+        if (running := _ladder_running(appeal)) is not None:
+            raise running
         if user.pk in original_officers(Judgment.all_objects.get(pk=appeal.judgment_id)):
             raise AppealRefusedError("The officer who decided the judgment cannot review its appeal.",
                                      "original_judge", status=403)
@@ -162,8 +234,7 @@ def decide(appeal_id, user, *, outcome, note, verdict=None, keep_foreign_stops=N
 
     锁序:灵魂 → 申诉 → 计划 → 节点 → 处置 → 审判。改判的事务里:审判换成新裁决、计划改按新裁决、
     已执行的每一站一笔补偿、推进计划、事件 —— 任何一步拒绝,整笔回滚。"""
-    from apps.sentence_plan import requests as plan_requests
-    from apps.sentence_plan.services import SentencePlanService, _lock_soul
+    from apps.sentence_plan.services import _lock_soul
 
     if outcome not in (AppealStatus.UPHELD, AppealStatus.AMENDED):
         raise AppealRefusedError("outcome is UPHELD or AMENDED.", "invalid_outcome", status=400)
@@ -175,35 +246,45 @@ def decide(appeal_id, user, *, outcome, note, verdict=None, keep_foreign_stops=N
         appeal = _lock_appeal(appeal_id)
         if appeal.status not in OPEN_APPEAL_STATUSES:
             raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")
+        if (running := _ladder_running(appeal)) is not None:
+            raise running
         if appeal.reviewer_id != user.pk:
             raise AppealRefusedError("Only the officer reviewing this appeal can decide it; claim it first.",
                                      "not_reviewer", status=403, reviewer=appeal.reviewer_id)
-        compensations = []
-        if outcome == AppealStatus.AMENDED:
-            judgment = Judgment.all_objects.get(pk=appeal.judgment_id)
-            if not verdict:
-                raise AppealRefusedError("An amended verdict is required.", "verdict_required", status=400)
-            if verdict == judgment.verdict:
-                raise AppealRefusedError("The new verdict is the one already given; uphold instead.",
-                                         "verdict_unchanged", status=400)
-            try:
-                executed = plan_requests.amend_for_appeal(soul, judgment, verdict, keep_foreign=keep_foreign_stops)
-            except plan_requests.PlanChangeRefusedError as exc:
-                raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
-            judgment = _lock_judgment(appeal.judgment_id)
-            judgment.verdict = verdict
-            judgment.save(update_fields=["verdict", "update_time", "update_user", "version"])
-            compensations = _compensate(soul, judgment, appeal, executed)
-            appeal.new_verdict = verdict
-            SentencePlanService.advance(soul)
-        appeal.status = outcome
-        appeal.decision_note = note
-        appeal.decided_at = timezone.now()
-        appeal.save(update_fields=["status", "new_verdict", "decision_note", "decided_at",
-                                   "update_time", "update_user", "version"])
-        _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=appeal.new_verdict,
-               compensation_record_ids=[str(r.pk) for r in compensations])
+        _settle(soul, appeal, outcome, note, verdict, keep_foreign_stops)
     return appeal
+
+
+def _settle(soul, appeal, outcome, note, verdict=None, keep_foreign_stops=None):
+    """结论落库:`decide` 与流程驳回(`on_ladder_finished`)共用。调用方已在事务里、已锁申诉。"""
+    from apps.sentence_plan import requests as plan_requests
+    from apps.sentence_plan.services import SentencePlanService
+
+    compensations = []
+    if outcome == AppealStatus.AMENDED:
+        judgment = Judgment.all_objects.get(pk=appeal.judgment_id)
+        if not verdict:
+            raise AppealRefusedError("An amended verdict is required.", "verdict_required", status=400)
+        if verdict == judgment.verdict:
+            raise AppealRefusedError("The new verdict is the one already given; uphold instead.",
+                                     "verdict_unchanged", status=400)
+        try:
+            executed = plan_requests.amend_for_appeal(soul, judgment, verdict, keep_foreign=keep_foreign_stops)
+        except plan_requests.PlanChangeRefusedError as exc:
+            raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
+        judgment = _lock_judgment(appeal.judgment_id)
+        judgment.verdict = verdict
+        judgment.save(update_fields=["verdict", "update_time", "update_user", "version"])
+        compensations = _compensate(soul, judgment, appeal, executed)
+        appeal.new_verdict = verdict
+        SentencePlanService.advance(soul)
+    appeal.status = outcome
+    appeal.decision_note = note
+    appeal.decided_at = timezone.now()
+    appeal.save(update_fields=["status", "new_verdict", "decision_note", "decided_at",
+                               "update_time", "update_user", "version"])
+    _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=appeal.new_verdict,
+           compensation_record_ids=[str(r.pk) for r in compensations])
 
 
 #: 已执行刑期折补偿:每多少年折 1 点功德,按处置所在的文明(2026-10-24 用户决定按文明分别折算)。

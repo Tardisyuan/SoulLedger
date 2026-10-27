@@ -78,11 +78,12 @@ from apps.workflow.services import (
 #: constant in tests/test_workflow_appeal_across_civilizations.py. GREEK is
 #: included because it has a tenant and therefore souls; a civilization with no
 #: appeal path is what this file exists to catch.
+#: GREEK left (user 2026-10-27): a Greek APPEAL is refused, not built — see
+#: test_workflow_appeal_across_civilizations.py::test_a_greek_appeal_is_refused_at_both_doors.
 CIVILIZATIONS = (
     Civilization.CHINESE,
     Civilization.EUROPEAN,
     Civilization.EGYPTIAN,
-    Civilization.GREEK,
 )
 
 #: Which of them has an appeal flow that names anybody, as opposed to falling

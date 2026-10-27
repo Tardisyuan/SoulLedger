@@ -175,7 +175,7 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     #   recorded defect (`docs/lore-verification/README.md` §3,
     #   `verify-greek.md` §3.1) and has since been fixed at its own layer:
     #   `Civilization.GREEK` is the fourth enum member, the preset carries it,
-    #   and `VALID_CASE_TYPES_BY_CIVILIZATION[GREEK]` is `{ROUTINE, APPEAL}`. The
+    #   and `VALID_CASE_TYPES_BY_CIVILIZATION[GREEK]` is `{ROUTINE}` (no appeal above Minos). The
     #   case type did not have to move to accommodate that, which is the point —
     #   it was already answering the right question.
     # * `EUROPEAN_HELL_CIRCLE` -> `ROUTINE`. `HERESY_TRIAL` would name one of

@@ -36,10 +36,15 @@ class _AppealBase(serializers.ModelSerializer):
     current_verdict = serializers.CharField(source="judgment.verdict", read_only=True)
     judgment_concluded_at = serializers.DateTimeField(source="judgment.concluded_at", read_only=True)
     compensations = serializers.SerializerMethodField()
+    #: 上诉到多站申诉流程时的那条流程(编号与状态);一次复核为 null。
+    workflow_number = serializers.CharField(source="workflow.number", read_only=True, allow_null=True, default=None)
+    workflow_status = serializers.CharField(source="workflow.status", read_only=True, allow_null=True, default=None)
+    workflow_name = serializers.CharField(source="workflow.workflow_name", read_only=True, allow_null=True,
+                                          default=None)
 
     FIELDS = ("id", "judgment", "case_number", "round", "reason", "evidence", "status", "original_verdict",
               "new_verdict", "current_verdict", "judgment_concluded_at", "decision_note", "decided_at",
-              "create_time", "compensations")
+              "create_time", "compensations", "workflow", "workflow_number", "workflow_status", "workflow_name")
 
     @extend_schema(responses=AppealCompensationSerializer(many=True))
     def get_compensations(self, obj) -> list:
@@ -95,6 +100,8 @@ class MeAppealableJudgmentSerializer(serializers.Serializer):
     can_appeal = serializers.BooleanField()
     #: 不能申诉的原因(`appeal_open` / `appeal_rounds_used` / `appeal_window_closed`);能申诉时为 null。
     refusal_code = serializers.CharField(allow_null=True)
+    #: 能否上诉到本文明的多站申诉流程(上一轮一次复核维持原判、还有次数)。
+    can_escalate = serializers.BooleanField()
 
 
 class MeJudgmentAppealListSerializer(serializers.Serializer):
@@ -106,6 +113,8 @@ class JudgmentAppealCreateSerializer(serializers.Serializer):
     judgment = serializers.UUIDField()
     reason = serializers.CharField(max_length=2000, trim_whitespace=True)
     evidence = serializers.CharField(max_length=4000, required=False, allow_blank=True, default="")
+    #: true:上诉到多站申诉流程(`appeals.escalation_refusal` 的条件),而不是再一次一次复核。
+    escalate = serializers.BooleanField(required=False, default=False)
 
 
 class JudgmentAppealDecideSerializer(serializers.Serializer):
@@ -135,7 +144,7 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
     extra_permissions = {"claim": ["judgment.execute"], "decide": ["judgment.execute"]}
-    queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer").all()
+    queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer", "workflow").all()
     serializer_class = JudgmentAppealSerializer
     filterset_fields = {"status": ["exact", "in"]}
 
@@ -188,8 +197,10 @@ class MeJudgmentAppealsView(SoulAPIView):
                 "concluded_at": judgment.concluded_at, "deadline": appeals.deadline(judgment),
                 "rounds_used": judgment.appeals.filter(is_deleted=False).count(),
                 "can_appeal": refusal is None, "refusal_code": refusal.code if refusal else None,
+                "can_escalate": refusal is None and appeals.escalation_refusal(judgment, account) is None,
             })
-        mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related("judgment")
+        mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related(
+            "judgment", "workflow")
         return Response({"judgments": MeAppealableJudgmentSerializer(rows, many=True).data,
                          "results": MeJudgmentAppealSerializer(mine, many=True).data})
 
@@ -201,7 +212,8 @@ class MeJudgmentAppealsView(SoulAPIView):
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
-            appeal = appeals.file(self.account, data["judgment"], reason=data["reason"], evidence=data["evidence"])
+            appeal = appeals.file(self.account, data["judgment"], reason=data["reason"], evidence=data["evidence"],
+                                  escalate=data["escalate"])
         except appeals.AppealRefusedError as exc:
             return _soul_error(exc)
         return Response(MeJudgmentAppealSerializer(appeal).data, status=status.HTTP_201_CREATED)

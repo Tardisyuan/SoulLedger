@@ -10342,6 +10342,7 @@ export interface components {
             readonly history: components["schemas"]["WorkflowHistoryEntry"][];
             readonly can_adjust: boolean;
             readonly cross_judgment_id: string | null;
+            readonly judgment_appeal: components["schemas"]["WorkflowJudgmentAppeal"] | null;
         };
         /** @description Lightweight serializer for listing workflows. */
         ApprovalWorkflowList: {
@@ -12892,6 +12893,11 @@ export interface components {
             readonly create_time: string;
             readonly compensations: unknown[];
             /** Format: uuid */
+            readonly workflow: string | null;
+            readonly workflow_number: string | null;
+            readonly workflow_status: string | null;
+            readonly workflow_name: string | null;
+            /** Format: uuid */
             readonly soul: string;
             readonly soul_name: string;
             readonly reviewer: number | null;
@@ -12910,6 +12916,8 @@ export interface components {
             reason: string;
             /** @default  */
             evidence: string;
+            /** @default false */
+            escalate: boolean;
         };
         JudgmentAppealDecide: {
             outcome: components["schemas"]["OutcomeEnum"];
@@ -13784,6 +13792,7 @@ export interface components {
             rounds_used: number;
             can_appeal: boolean;
             refusal_code: string | null;
+            can_escalate: boolean;
         };
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
@@ -13875,6 +13884,11 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
             readonly compensations: unknown[];
+            /** Format: uuid */
+            readonly workflow: string | null;
+            readonly workflow_number: string | null;
+            readonly workflow_status: string | null;
+            readonly workflow_name: string | null;
         };
         MeJudgmentAppealList: {
             judgments: components["schemas"]["MeAppealableJudgment"][];
@@ -15798,6 +15812,7 @@ export interface components {
             readonly history?: components["schemas"]["WorkflowHistoryEntry"][];
             readonly can_adjust?: boolean;
             readonly cross_judgment_id?: string | null;
+            readonly judgment_appeal?: components["schemas"]["WorkflowJudgmentAppeal"] | null;
         };
         /** @description 与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。 */
         PatchedBackupUpdate: {
@@ -20061,6 +20076,14 @@ export interface components {
             restored: string[];
             skipped: string[];
             reason: string;
+        };
+        /** @description The soul's appeal an APPEAL workflow was started for (apps/judgment/appeals.py, user 2026-10-27). */
+        WorkflowJudgmentAppeal: {
+            /** Format: uuid */
+            id: string;
+            case_number: string;
+            round: number;
+            status: string;
         };
         /** @description Serializer for node approval action. */
         WorkflowNodeAction: {
