@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useUpdateSoul } from "@soulledger/core/hooks/useSouls";
-import type { Soul, SoulOriginRegion } from "@soulledger/core/api";
+import type { Soul, SoulDuatPassage, SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
@@ -38,6 +38,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const locationId = `${formId}-location`;
   const stateId = `${formId}-state`;
   const regionId = `${formId}-origin-region`;
+  const duatId = `${formId}-duat-passage`;
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -45,6 +46,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const [fatedDate, setFatedDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
+  const [duatPassage, setDuatPassage] = useState<SoulDuatPassage>("");
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
 
   // SETTLED is terminal to an operator — its one way out (back to DISPOSED
@@ -56,6 +58,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const isSettled = soul.current_state === "SETTLED";
   // 阳寿(第五十一批 F-1):只有地府登记;别的文明连字段一起不画,也不发。
   const hasFatedDate = soul.civilization === "CHINESE";
+  // 入殿前情形(review P2-9):只有埃及登记,同阳寿一样别的文明不画、不发。
+  const hasDuatPassage = soul.civilization === "EGYPTIAN";
 
   // Convert HistoricalDate to HTML date input format (YYYY-MM-DD)
   const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
@@ -75,6 +79,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       setFatedDate(historicalDateToInputValue(soul.fated_death_date));
       setOriginLocation(soul.origin_location || "");
       setOriginRegion(soul.origin_region ?? "");
+      setDuatPassage(soul.duat_passage ?? "");
       setCurrentState(soul.current_state || "ALIVE");
     }
   }, [isOpen, soul]);
@@ -92,6 +97,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         : {}),
       origin_location: originLocation || undefined,
       origin_region: originRegion,
+      ...(hasDuatPassage ? { duat_passage: duatPassage } : {}),
       current_state: currentState,
     };
 
@@ -242,6 +248,23 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
                 {t("souls.fated_death_preview", { date: fatedDate })}
               </p>
             )}
+          </div>
+        )}
+
+        {hasDuatPassage && (
+          <div className="space-y-1">
+            <SelectField
+              id={duatId}
+              label={t("souls.duat_passage.label")}
+              value={duatPassage}
+              onChange={(e) => setDuatPassage(e.target.value as SoulDuatPassage)}
+              disabled={updateMutation.isPending}
+              options={(["", "EARLY_DEATH", "NAMELESS", "IMPROPER_BURIAL"] as const).map((v) => ({
+                value: v,
+                label: t(`souls.duat_passage.${v || "NONE"}`),
+              }))}
+            />
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.duat_passage.help")}</p>
           </div>
         )}
 

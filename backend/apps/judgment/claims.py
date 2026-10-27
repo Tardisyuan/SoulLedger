@@ -22,7 +22,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from apps.judgment.models import AT_CITY_GOD, Judgment
+from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, DuatStage, Judgment
 
 #: 一次批量最多多少件。与需求一致;超过的请求在序列化器上 400,不截断。
 BATCH_LIMIT = 100
@@ -77,7 +77,23 @@ def assert_concludable(judgment: Judgment) -> None:
     city god, or an untimely death still held in 枉死城, cannot be concluded. Before this only claiming checked
     `held_until`, and a workflow-driven conclude (by=None) checked neither."""
     _assert_sent_on(judgment)
+    _assert_not_held(judgment)
+
+
+def _assert_not_held(judgment: Judgment) -> None:
+    """Held before the case can be heard: 枉死城 until the fated date (Diyu), or the Egyptian stages before the
+    hall — 70 days of embalming, or for ever when the soul cannot reach it (docs/02 §1.1, 01 §4.2)."""
+    if judgment.duat_stage in DUAT_BARRED:
+        raise ClaimRefusedError(
+            "This soul cannot complete the journey to the Hall of Two Truths.", "duat_unfinished",
+            duat_stage=judgment.duat_stage,
+        )
     if judgment.held_until and judgment.held_until > timezone.localdate():
+        if judgment.duat_stage == DuatStage.EMBALMING:
+            raise ClaimRefusedError(
+                "This soul is being embalmed and sets out for the hall when it is done.", "embalming",
+                held_until=judgment.held_until.isoformat(),
+            )
         raise ClaimRefusedError(
             "This soul died before its fated date and waits in 枉死城 until then.", "held_until_fated_date",
             held_until=judgment.held_until.isoformat(),
@@ -144,11 +160,7 @@ def _clear_reassign_request(judgment: Judgment) -> list[str]:
 
 def _apply_claim(judgment: Judgment, user) -> None:
     _assert_pending(judgment)
-    if judgment.held_until and judgment.held_until > timezone.localdate():
-        raise ClaimRefusedError(
-            "This soul died before its fated date and waits in 枉死城 until then.", "held_until_fated_date",
-            held_until=judgment.held_until.isoformat(),
-        )
+    _assert_not_held(judgment)
     if judgment.claimed_by_id == user.pk:
         return  # 幂等:重复认领自己的案子不写、不改 claimed_at
     if judgment.claimed_by_id is not None:

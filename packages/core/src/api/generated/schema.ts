@@ -11784,6 +11784,21 @@ export interface components {
             soup_taken_at: string;
         };
         /**
+         * @description * `EARLY_DEATH` - 婴儿或早夭
+         *     * `NAMELESS` - 无名者
+         *     * `IMPROPER_BURIAL` - 葬仪不当
+         * @enum {string}
+         */
+        DuatPassageEnum: "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL";
+        /**
+         * @description * `EMBALMING` - 木乃伊制作中
+         *     * `EARLY_DEATH` - 早夭 · 直入芦苇原
+         *     * `NAMELESS` - 无名者 · 不入冥界
+         *     * `IMPROPER_BURIAL` - 葬仪不当 · 旅程未竟
+         * @enum {string}
+         */
+        DuatStageEnum: "EMBALMING" | "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL";
+        /**
          * @description * `` -
          *     * `low` - low
          *     * `medium` - medium
@@ -12797,6 +12812,7 @@ export interface components {
             readonly untimely: boolean;
             /** Format: date */
             readonly held_until: string | null;
+            readonly duat_stage: components["schemas"]["DuatStageEnum"];
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -13121,6 +13137,7 @@ export interface components {
             readonly untimely: boolean;
             /** Format: date */
             readonly held_until: string | null;
+            readonly duat_stage: components["schemas"]["DuatStageEnum"];
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -16175,6 +16192,7 @@ export interface components {
             readonly untimely?: boolean;
             /** Format: date */
             readonly held_until?: string | null;
+            readonly duat_stage?: components["schemas"]["DuatStageEnum"];
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;
@@ -16467,6 +16485,7 @@ export interface components {
             } | null;
             origin_location?: string;
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
+            duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
             description?: string;
             readonly merit_score?: number | null;
@@ -18321,6 +18340,7 @@ export interface components {
             } | null;
             origin_location?: string;
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
+            duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
             description?: string;
             readonly merit_score: number | null;

@@ -157,3 +157,11 @@ function localIsoDate(now: Date): string {
 export function isHeldUntilFatedDate(j: { held_until?: string | null }, now: Date = new Date()): boolean {
   return !!j.held_until && j.held_until > localIsoDate(now);
 }
+
+/**
+ * 埃及的案子到不了两真之殿(review P2-9,docs/01 §4.2):无名者不入冥界、葬仪不当走不完旅程。永远候着,
+ * 服务端拒绝认领与结案(409 `duat_unfinished`),所以界面不放「认领」。
+ */
+export function isDuatBarred(j: { duat_stage?: string | null }): boolean {
+  return j.duat_stage === "NAMELESS" || j.duat_stage === "IMPROPER_BURIAL";
+}

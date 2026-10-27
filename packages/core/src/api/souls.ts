@@ -12,6 +12,9 @@ type Schemas = components["schemas"];
 /** `Soul.OriginRegion` (backend/apps/souls/models.py); "" is 不详. */
 export type SoulOriginRegion = "EUROPE" | "ASIA" | "";
 
+/** `Soul.DuatPassage`(埃及未得审判的情形,docs/01 §4.2);"" = 葬仪如常。 */
+export type SoulDuatPassage = "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL" | "";
+
 export interface SoulInput {
   name: string;
   // Derived, not re-listed. This union was written out by hand when
@@ -29,6 +32,8 @@ export interface SoulInput {
   origin_location: string;
   /** Gorgias 524a: which Greek judge tries the soul. "" = 不详. */
   origin_region?: SoulOriginRegion;
+  /** 只埃及:未得审判的情形。 */
+  duat_passage?: SoulDuatPassage;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
@@ -151,6 +156,8 @@ export interface Soul extends SoulBase, ArchiveFields {
    * (`Judgment.untimely` / `held_until`)。null = 没登记。
    */
   fated_death_date?: HistoricalDate | null;
+  /** 埃及(review P2-9):未得审判的情形,官员登记;"" = 葬仪如常(木乃伊 70 天后入殿)。 */
+  duat_passage?: SoulDuatPassage;
 }
 
 /**

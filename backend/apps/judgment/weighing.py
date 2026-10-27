@@ -12,7 +12,7 @@ soul is never left SETTLED at no station (user decision 2026-10-27).
 The scale reads the case's admitted evidence — the same sums the desk shows —
 through the Egyptian reading (demerit lightened by merit, 02 §3.2).
 """
-from apps.judgment.models import Judgment, JudgmentKind, JudgmentMethod, Verdict, WeighingResult
+from apps.judgment.models import DuatStage, Judgment, JudgmentKind, JudgmentMethod, Verdict, WeighingResult
 
 WAVERING_VERDICTS = (Verdict.PURGATORY, Verdict.RETRY)
 
@@ -26,8 +26,10 @@ class WeighingRefusedError(Exception):
 
 
 def applies(judgment) -> bool:
-    """A weighed case. An AMENDMENT changes a sentence plan at a stop; it weighs nothing."""
-    return judgment.judgment_method == JudgmentMethod.HEART_WEIGHING and judgment.kind != JudgmentKind.AMENDMENT
+    """A weighed case. An AMENDMENT changes a sentence plan at a stop; it weighs nothing. Nor is an early death
+    weighed: it goes straight to the Field of Reeds (docs/01 §4.2, `Soul._after_egyptian_death`)."""
+    return (judgment.judgment_method == JudgmentMethod.HEART_WEIGHING and judgment.kind != JudgmentKind.AMENDMENT
+            and judgment.duat_stage != DuatStage.EARLY_DEATH)
 
 
 def scale(judgment) -> dict:

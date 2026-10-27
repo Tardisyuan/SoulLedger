@@ -545,6 +545,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     is_residing = serializers.BooleanField(read_only=True)
     # Which Greek judge tries the soul (Gorgias 524a; `Soul.origin_region`). Blank = 不详.
     origin_region = serializers.ChoiceField(choices=Soul.OriginRegion.choices, allow_blank=True, required=False)
+    # 埃及未得审判的情形(docs/01 §4.2,`Soul.duat_passage`)。空 = 葬仪如常。
+    duat_passage = serializers.ChoiceField(choices=Soul.DuatPassage.choices, allow_blank=True, required=False)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -571,7 +573,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         fields = [
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
-            "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "birth_name",
+            "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "duat_passage", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
@@ -604,6 +606,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 or attrs.get("fated_death_day") is None):
             raise serializers.ValidationError({"fated_death_date": [
                 "The fated date of death must be a full date (year, month and day) of the Common Era."]})
+        if attrs.get("duat_passage") and self.instance is not None and self.instance.civilization != "EGYPTIAN":
+            raise serializers.ValidationError({"duat_passage": ["Only an Egyptian soul has a Duat passage."]})
         if not _touches_dates(attrs, self.instance, "birth", "death"):
             return attrs
         _reject_errors(check_soul_dates(

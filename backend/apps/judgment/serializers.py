@@ -194,7 +194,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name",
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
-            "is_final", "created_at", "concluded_at", "untimely", "held_until",
+            "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
@@ -216,7 +216,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
         # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
         read_only_fields = [
-            *ARCHIVE_FIELDS, "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id", "untimely", "held_until",
+            *ARCHIVE_FIELDS, "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id", "untimely", "held_until", "duat_stage",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
