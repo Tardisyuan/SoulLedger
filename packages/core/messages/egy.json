@@ -3021,9 +3021,9 @@
       "col_issue": "Nen Maat",
       "blocked": "{{n}} Nen Maat: Nen Ini. Sesh Mawy Djama, Setep Wehem.",
       "commit": "Ini Sab {{n}}",
-      "success": "Ini Seth {{created}}: Menf {{invited}} · Khemen Em Aq Tepy {{password}}",
+      "success": "Ini Seth {{created}}: Nis {{invited}} · Khemen Em Aq Tepy {{password}}",
       "view_users": "Maa Sab",
-      "template_notes": "Ren Em Tepy. Djeret, Nen Sekhem: Menf Hab, Sesh Sekhem Djes Em Hru 7. Sekhem: Sekhem Tepy, Khemen Em Aq Tepy. Nen Djeret, Nen Sekhem: Nen Ini. Menf: Nen Netjer Em Tepy.",
+      "template_notes": "Ren Em Tepy. Djeret, Nen Sekhem: Hab Nis, Sesh Sekhem Djes Em Hru 7. Sekhem: Sekhem Tepy, Khemen Em Aq Tepy. Nen Djeret, Nen Sekhem: Nen Ini. Nis: Nen Netjer Em Tepy.",
       "row_codes": {
         "username_required": "Nen Ren Aq",
         "username_taken": "Ren Aq Em Ky, Mi Wehem Em Tepy",
@@ -3036,10 +3036,10 @@
       },
       "delivery_col": "Aq",
       "delivery": {
-        "invite": "Menf",
+        "invite": "Nis",
         "password": "Sekhem Tepy"
       },
-      "delivery_summary": "Menf {{invite}} · Sekhem Tepy {{password}}"
+      "delivery_summary": "Nis {{invite}} · Sekhem Tepy {{password}}"
     },
     "organization": "Kher Sab",
     "organization_column": "Kher Sab · Ren Iri",
@@ -7299,14 +7299,14 @@
   "officerInvite": {
     "action": "Nis Sab",
     "title": "Nis Sab",
-    "body": "Menf Hab Er Djeret: Sesh Sekhem Djes. Hru 7, Sep Wa.",
+    "body": "Nis Hab Er Djeret: Sesh Sekhem Djes. Hru 7, Sep Wa.",
     "username_optional": "Ren · Nen Em Tepy",
     "username_hint": "Nen Sesh: Ren Em Djeret",
     "display_name_optional": "Ren Sesen · Nen Em Tepy",
     "hall": "Wesekhet",
-    "send": "Hab Menf",
-    "sent_toast": "Menf Hab Seth Er {{email}}",
-    "resent_toast": "{{email}}: Menf Wehem Hab Seth",
+    "send": "Hab Nis",
+    "sent_toast": "Nis Hab Seth Er {{email}}",
+    "resent_toast": "{{email}}: Wehem Nis Seth",
     "pending_badge": "Nis Em Smen",
     "resend": "Wehem Nis",
     "resend_hint": "Nen Iyi: Wehem Hab",
@@ -7319,7 +7319,7 @@
   },
   "acceptInvite": {
     "title": "Sesh Sekhem",
-    "subtitle": "Sab Mawy: Sesh Sekhem, Er Khet Aq.",
+    "subtitle": "Nis Er Sab: Sesh Sekhem, Er Khet Aq Em Ren Aq Hena Sekhem Pen.",
     "new_password": "Sekhem Mawy",
     "confirm_password": "Wehem Sesh Sekhem Mawy",
     "mismatch": "Sekhem Mawy Sen Nen Wa",
@@ -7328,10 +7328,10 @@
     "done_title": "Sekhem Smen Seth",
     "done_body": "Aq Em Ren Hena Sekhem Mawy.",
     "go_login": "Wehem Er Aq",
-    "invalid_title": "Menf Nen Wenen",
-    "invalid_body": "Dbh Sab Hery: Wehem Hab Menf.",
+    "invalid_title": "Menf Nis Nen Wenen",
+    "invalid_body": "Dbh Sab Hery: Wehem Nis.",
     "rate_limited": "Dbh Menmen. Wehem Iri Er Khet {{seconds}}",
-    "link_note": "Menf: Hru 7, Sep Wa."
+    "link_note": "Menf Nis: Hru 7, Sep Wa."
   },
   "mengpoSoup": {
     "title": "Mu Mengpo",
@@ -7383,7 +7383,7 @@
     "create": "Iri Wesekhet",
     "create_title": "Iri Wesekhet",
     "code": "Medu",
-    "code_hint": "Medu: Medu Hena Hesb Wa; 2 Er 50. Nen Khemen Er Khet.",
+    "code_hint": "Medu: Medu Wer Tepy; Medu Wer, Hesb Hena _ Wa; 2 Er 50. Nen Khemen Er Khet.",
     "code_taken": "Medu Em Wesekhet Ky",
     "code_invalid": "Medu Nen Maat",
     "civilization": "Taui",
