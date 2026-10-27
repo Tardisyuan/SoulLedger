@@ -608,6 +608,15 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 "The fated date of death must be a full date (year, month and day) of the Common Era."]})
         if attrs.get("duat_passage") and self.instance is not None and self.instance.civilization != "EGYPTIAN":
             raise serializers.ValidationError({"duat_passage": ["Only an Egyptian soul has a Duat passage."]})
+        # An early death is decided at death: `Soul.die` concludes the case PASSED unweighed on the spot. After
+        # death the case already went down another road (embalming, the hall, or the Duat entry), and turning it
+        # into an early death now would mean voiding that case and concluding a new one — not a field edit.
+        # So it is refused; recording EARLY_DEATH is for a living soul (2026-10-27).
+        if (attrs.get("duat_passage") == Soul.DuatPassage.EARLY_DEATH and self.instance is not None
+                and self.instance.duat_passage != Soul.DuatPassage.EARLY_DEATH
+                and self.instance.current_state != SoulState.ALIVE):
+            raise serializers.ValidationError({"duat_passage": [
+                "An early death is recorded before death; this soul's case has already opened."]})
         if not _touches_dates(attrs, self.instance, "birth", "death"):
             return attrs
         _reject_errors(check_soul_dates(
@@ -629,6 +638,19 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             return super().create(validated_data)
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"tenant": exc.messages}) from exc
+
+    def update(self, instance, validated_data):
+        """NAMELESS / IMPROPER_BURIAL → blank releases the case held at the Duat entry, in the same transaction."""
+        from django.db import transaction
+
+        from apps.judgment.models import DUAT_BARRED
+
+        barred = instance.duat_passage in DUAT_BARRED
+        with transaction.atomic():
+            soul = super().update(instance, validated_data)
+            if barred and not soul.duat_passage:
+                soul.release_from_the_duat_entry()
+        return soul
 
     def get_merit_score(self, obj) -> int | None:
         if _is_viewer(self.context):

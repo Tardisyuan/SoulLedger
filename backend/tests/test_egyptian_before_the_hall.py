@@ -96,3 +96,49 @@ def test_only_an_egyptian_soul_records_a_duat_passage(cn_tenant, eg_tenant, admi
     assert res.status_code == 400 and "duat_passage" in res.data
     res = client.patch(f"/api/v1/souls/{eg.pk}/", {"duat_passage": "NAMELESS"}, format="json")
     assert res.status_code == 200 and res.data["duat_passage"] == "NAMELESS"
+
+
+@pytest.mark.parametrize("passage", ["NAMELESS", "IMPROPER_BURIAL"])
+def test_a_burial_found_proper_releases_the_held_case_to_embalming_and_the_hall(eg_tenant, judge, admin_user,
+                                                                                passage):
+    from tests.soul_account_support import officer_client
+
+    soul = _soul(eg_tenant, passage)
+    died = date.today() - timedelta(days=10)
+    case = soul.die(death_date=died)
+    res = officer_client(admin_user).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": ""}, format="json")
+    assert res.status_code == 200, res.data
+    case.refresh_from_db()
+    assert case.duat_stage == DuatStage.EMBALMING and case.held_until == died + timedelta(days=70)
+    assert case.realm.realm_code == "EG_HALL_TWO_TRUTHS"
+    with pytest.raises(ClaimRefusedError) as refused:
+        claims.claim(case.pk, judge)
+    assert refused.value.code == "embalming"
+
+
+def test_a_release_after_the_seventy_days_holds_nothing(eg_tenant, judge, admin_user):
+    from tests.soul_account_support import officer_client
+
+    soul = _soul(eg_tenant, "NAMELESS")
+    case = soul.die(death_date=date.today() - timedelta(days=200))
+    res = officer_client(admin_user).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": ""}, format="json")
+    assert res.status_code == 200, res.data
+    case.refresh_from_db()
+    assert case.duat_stage == DuatStage.EMBALMING and case.realm.realm_code == "EG_HALL_TWO_TRUTHS"
+    claims.claim(case.pk, judge)
+
+
+def test_early_death_cannot_be_recorded_once_the_case_has_opened(eg_tenant, admin_user):
+    """`Soul.die` decides an early death on the spot; after death the case has gone another way (serializer)."""
+    from tests.soul_account_support import officer_client
+
+    client = officer_client(admin_user)
+    dead = _soul(eg_tenant, "NAMELESS")
+    case = dead.die(death_date=date.today())
+    res = client.patch(f"/api/v1/souls/{dead.pk}/", {"duat_passage": "EARLY_DEATH"}, format="json")
+    assert res.status_code == 400 and "duat_passage" in res.data
+    case.refresh_from_db()
+    assert case.duat_stage == DuatStage.NAMELESS and not case.is_final
+    alive = _soul(eg_tenant)
+    res = client.patch(f"/api/v1/souls/{alive.pk}/", {"duat_passage": "EARLY_DEATH"}, format="json")
+    assert res.status_code == 200
