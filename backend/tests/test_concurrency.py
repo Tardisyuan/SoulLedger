@@ -1271,6 +1271,9 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # tests/test_conclude_destination.py 的 realm_full 测试每个引擎都跑。
         here + "TestConcludeDestinationCapacityHoldsTheRealmLock::"
         "test_two_officers_filling_the_last_seat_at_once_exactly_one_wins",
+        # 2026-10-27 灵魂搜索的三元组索引(apps/souls/migrations/0047_soul_search_trigram.py):pg_trgm 与 GIN
+        # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
+        "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",
         # 2026-09-30 助手向量检索(docs/ARCHITECTURE-soul-assist.md §7.7):pgvector 的 `<=>`、
         # vector(N) / halfvec(N) 表达式与 HNSW 索引只在 PostgreSQL 上存在。SQLite 路径的同一组断言
         # (Python 余弦的排序、过滤、降级)在同文件里每个引擎都跑。
