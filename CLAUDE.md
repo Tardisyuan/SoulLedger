@@ -272,6 +272,14 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     自带 `--create-db`、单条测试 600 s 限时、一次性 Redis、门禁锁。
   - 全量 `scripts/run-gates.sh --real-pg --full`(含迁移往返)**只在大分支合进 main 前跑一次**。实测 `-n 2` 含往返约 45 分钟(10-28)。
   - 钩子的 pytest 加了 `--ff`:上次失败的先跑。
+  - **后端 pytest 放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名，`root@192.168.2.2`,
+    私钥 `~/.ssh/unraid-host`)和 `GATES_REMOTE_DB_URL`。选测试仍在本机算;rsync 同步树(含 `.git`)到
+    `/mnt/cache/appdata/sl-gates/work/<checkout>-<哈希>/`,在容器 `sl-gates-py:1`(python 3.11 + git/redis/bash,venv 在卷
+    `sl-venv-<锁文件哈希>`,锁文件变了自动重建)里跑，连同网络 `sl-gates` 里的 `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关)。
+    远端跑后端，本机同时跑 jest,最后等远端结果。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因)。
+    实测(同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;
+    本机 SQLite `-n 2` 313 s / CPU 566 s;本机进程连树莓派 PG 830 s;全在树莓派 753 s。约 100 s 是开头单线程建模板库。
+    10-28 本机全量推送那次 15 条实时类测试红(`test_realtime_bus` 等)，空闲时本机与 unRAID 都 34/34 过 —— 交换区满时的超时，不是代码。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /

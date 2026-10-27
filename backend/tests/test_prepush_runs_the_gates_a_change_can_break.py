@@ -1302,3 +1302,63 @@ class TestRealPostgres:
         assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
         assert "-m" in args and "not migration" in args, args
         assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
+
+
+class TestPytestOnAnotherMachine:
+    """GATES_REMOTE (2026-10-28, user decision): the backend selection runs in a container on another
+    machine against real PostgreSQL while this one runs the rest; unreachable means it runs here."""
+
+    PG_ONLY = "tests/test_x.py::test_needs_row_locks"
+
+    def _bin(self, tmp_path: Path, image_ok=True, remote_status=0) -> Path:
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "ssh").write_text(
+            "#!/bin/bash\n"
+            'case "$*" in\n'
+            f'  *"docker image inspect"*) exit {0 if image_ok else 1} ;;\n'
+            '  *"docker volume inspect"*) exit 0 ;;\n'
+            '  *"docker rm -f"*) exit 0 ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; echo "REMOTE RUN"; echo "== 1 passed in 0.1s =="; exit {remote_status} ;;\n'
+            "esac\nexit 0\n")
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        for f in ("ssh", "rsync"):
+            (b / f).chmod(0o755)
+        return b
+
+    def _gates(self, repo, python, tmp_path, **kw):
+        b = self._bin(tmp_path, **kw)
+        (repo / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
+        env = _clean_env(PREPUSH_CHANGED="backend/apps/souls/views.py", PYTHON_BIN=python,
+                         RUFF_BIN=shutil.which("true"), GATES_PG_ONLY_TESTS=self.PG_ONLY,
+                         GATES_REMOTE="fake-host", GATES_REMOTE_DB_URL="postgres://sl:x@sl-pg-test:5432/s",
+                         REDIS_URL=os.environ.get("REDIS_URL", ""))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), "--prepush"], cwd=repo,
+                              env=env, capture_output=True, text=True, timeout=120)
+
+    def test_a_reachable_machine_runs_the_selection_there_on_postgres(self, checkouts, fake_backend, tmp_path):
+        main, _ = checkouts
+        proc = self._gates(main, fake_backend, tmp_path)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "on fake-host: real PostgreSQL" in proc.stdout, proc.stdout
+        assert "waiting for it" in proc.stdout and "== 1 passed" in proc.stdout, proc.stdout
+        assert "PYTEST TEMPLATE" not in proc.stdout, "pytest also ran on this machine"
+        log = (tmp_path / "remote-run").read_text()
+        assert "--create-db" in log and self.PG_ONLY in log and "tests/test_souls.py" in log, log
+        assert "--dist worksteal" in log and "DATABASE_URL='postgres://sl:x@sl-pg-test:5432/s'" in log, log
+
+    def test_an_unreachable_machine_stops_the_run_instead_of_running_here(self, checkouts, fake_backend, tmp_path):
+        """2026-10-28 user decision: no fallback to this machine — the local run is what froze it."""
+        main, _ = checkouts
+        proc = self._gates(main, fake_backend, tmp_path, image_ok=False)
+        assert proc.returncode != 0
+        assert "unreachable" in proc.stdout and "SKIP_PREPUSH=1" in proc.stdout, proc.stdout
+        assert "PYTEST TEMPLATE" not in proc.stdout and "REMOTE RUN" not in proc.stdout
+        assert "→ ruff" not in proc.stdout, "checks ran before the refusal"
+
+    def test_a_red_run_there_refuses_the_push(self, checkouts, fake_backend, tmp_path):
+        main, _ = checkouts
+        proc = self._gates(main, fake_backend, tmp_path, remote_status=1)
+        assert proc.returncode != 0
+        assert "pytest failed (on fake-host)" in proc.stdout, proc.stdout

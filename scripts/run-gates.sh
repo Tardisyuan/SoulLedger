@@ -558,6 +558,19 @@ if [ -f "$HERE/gate-lock.sh" ]; then
 fi
 T_GATES=$(date +%s)   # after the lock: the time below is the gates', not the queue's
 
+# REMOTE PYTEST (see "ON ANOTHER MACHINE" at the pytest step). Decided before any check runs: when
+# GATES_REMOTE is set and the machine cannot be used, the run stops here — it does NOT fall back to
+# this machine (2026-10-28, user decision: the local run is what froze this Mac). Retry once it is up,
+# unset GATES_REMOTE in .prepush.env to run here on purpose, or `SKIP_PREPUSH=1 git push`.
+REMOTE=0
+if [ -n "${GATES_REMOTE:-}" ] && { [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; }; then
+    [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the backend tests here."
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" \
+        "docker image inspect ${GATES_REMOTE_IMAGE:-sl-gates-py:1} >/dev/null 2>&1" 2>/dev/null \
+        || fail "$GATES_REMOTE is unreachable, or has no ${GATES_REMOTE_IMAGE:-sl-gates-py:1} image. Not running the backend tests on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
+    REMOTE=1
+fi
+
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
 # STATIC CHECKS FIRST (2026-10-27, user decision): every type check and linter, all areas, before
@@ -670,6 +683,366 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT" || exit 1
 fi
 
+# pytest_finish — progress every 30 s until pytest (here, or over ssh) exits, then its verdict.
+pytest_finish() {
+    T0=$(date +%s); NEXT=30
+    while kill -0 "$PYTEST_PID" 2>/dev/null; do
+        sleep 2
+        EL=$(( $(date +%s) - T0 ))
+        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
+            NEXT=$(( NEXT + 30 ))
+            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
+            # Progress lines are `path.py ..F. [ 12%]` serially and bare
+            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
+            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
+            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
+        fi
+    done
+    wait "$PYTEST_PID"; PYTEST_STATUS=$?
+    # The ten slowest, so a run that stalls says where (--durations=10 above).
+    sed -n '/slowest 10 durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
+    tail -4 "$PYTEST_LOG"
+    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
+    # Stop the throwaway before deciding, so a failure does not leak a daemon.
+    [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
+    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed$([ "$REMOTE" = 1 ] && echo " (on $GATES_REMOTE)")"
+    cd "$ROOT" || exit 1
+}
+
+# remote_pytest_start <pytest args...> — rsync this tree to $GATES_REMOTE, make sure the venv for this
+# requirements.lock exists there, and start pytest in a container; output goes to $PYTEST_LOG.
+remote_pytest_start() {
+    local dir="${GATES_REMOTE_DIR:-/mnt/cache/appdata/sl-gates}" img="${GATES_REMOTE_IMAGE:-sl-gates-py:1}"
+    local id h name quoted
+    id="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
+    h=$(cat "$ROOT/backend/requirements.lock" "$ROOT/backend/requirements-dev.txt" | shasum | cut -c1-12)
+    name="sl-run-$id-$$"
+    { git -C "$ROOT" ls-files -z; git -C "$ROOT" ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
+        | rsync -a --delete --filter='P backend/.pytest_cache/' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$dir/work/$id/" \
+        || fail "could not rsync this tree to $GATES_REMOTE:$dir/work/$id"
+    if ! ssh -o BatchMode=yes "$GATES_REMOTE" "docker volume inspect sl-venv-$h >/dev/null 2>&1"; then
+        echo "    (building the venv for this requirements.lock on $GATES_REMOTE — once per lock)"
+        ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm -v sl-venv-$h:/venv -v $dir/work/$id/backend:/req:ro $img sh -c 'python -m venv /venv && /venv/bin/pip install -q --no-deps -r /req/requirements.lock -r /req/requirements-dev.txt'" \
+            || { ssh -o BatchMode=yes "$GATES_REMOTE" "docker volume rm sl-venv-$h" >/dev/null 2>&1; fail "could not build the venv on $GATES_REMOTE"; }
+    fi
+    quoted=$(printf '%q ' "$@")
+    # An interrupted push must not leave the container running there.
+    trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f '"$name"'" >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
+    trap 'exit 130' INT TERM
+    ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm --init --name $name --network ${GATES_REMOTE_NET:-sl-gates} \
+        --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} -v sl-venv-$h:/venv -v $dir/work/$id:/app -w /app/backend \
+        -e SECRET_KEY=$CI_SECRET_KEY -e DEBUG=true -e DATABASE_URL='$GATES_REMOTE_DB_URL' $img bash -c '
+        redis-server --port 6390 --daemonize yes --save \"\" --appendonly no >/dev/null
+        export REDIS_URL=redis://127.0.0.1:6390/0 CELERY_BROKER_URL=redis://127.0.0.1:6390/1 CELERY_RESULT_BACKEND=redis://127.0.0.1:6390/2
+        exec /venv/bin/python -m pytest $quoted'" >"$PYTEST_LOG" 2>&1 &
+    PYTEST_PID=$!
+}
+
+# pg_only_tests — node ids of every test SQLite skips, from the scanner test_concurrency.py pins the set with.
+pg_only_tests() {
+    # GATES_PG_ONLY_TESTS is the test seam (the gate tests' stand-in python has no Django).
+    [ -n "${GATES_PG_ONLY_TESTS:-}" ] && { printf '%s\n' "$GATES_PG_ONLY_TESTS"; return 0; }
+    (cd "$ROOT/backend" && SECRET_KEY="$CI_SECRET_KEY" DATABASE_URL="sqlite:///:memory:" "$PY" - <<'PG_ONLY_PY'
+import ast, os, sys
+from pathlib import Path
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+sys.path.insert(0, ".")
+import django
+django.setup()
+from tests.test_concurrency import _sqlite_skipped_tests
+for p in sorted(Path(".").rglob("*.py")):
+    if {".venv", "node_modules"} & set(p.parts):
+        continue
+    if p.name.startswith("test_") or p.name == "tests.py":
+        for name in _sqlite_skipped_tests(ast.parse(p.read_text(encoding="utf-8"))):
+            print(f"{p.as_posix()}::{name}")
+PG_ONLY_PY
+    ) 2>/dev/null
+}
+
+# RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
+# only the tests that read the areas that did (see above) — no ruff and no
+# makemigrations, which read nothing outside backend/.
+if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
+    cd "$ROOT/backend" || fail "backend/ missing"
+
+    echo "  → pytest"
+    # ON ANOTHER MACHINE WHEN ONE IS CONFIGURED (2026-10-28, user decision). `.prepush.env` names an
+    # ssh host (GATES_REMOTE) with Docker, the image GATES_REMOTE_IMAGE and a throwaway PostgreSQL
+    # (GATES_REMOTE_DB_URL, reachable from the container network GATES_REMOTE_NET). The selection is
+    # made here, as always; the tree is rsynced there and pytest runs in a container against real
+    # PostgreSQL, the PostgreSQL-only tests included, while this machine runs its own checks. Measured
+    # on the unRAID box (i5-13500T, -n 8): the judgment selection plus the PG-only tests, 2983 passed in
+    # 306 s, this Mac idle — against 313 s for the smaller SQLite set here at -n 2, and 830 s with this
+    # Mac's workers on the Pi's PostgreSQL. Unset: it runs here.
+    [ "$REMOTE" = 1 ] && echo "    (on $GATES_REMOTE: real PostgreSQL, -n ${GATES_REMOTE_WORKERS:-8}; the rest runs here meanwhile)"
+    # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
+    # run (this repo's websocket tests need a reachable Redis). It is an
+    # exclusion list, so it is stated per-machine and visible in the output
+    # below rather than hidden in the hook.
+    [ -n "${PYTEST_PREPUSH_ARGS:-}" ] && echo "    (with ${PYTEST_PREPUSH_ARGS})"
+
+    # PROBE THE SERVICES THAT WILL ACTUALLY BE USED, THEN SAY WHICH ONES RAN.
+    #
+    # The effective targets are not simply backend/.env: `.prepush.env` is
+    # sourced above and may already override either one. On the machine this
+    # was written for it exports DATABASE_URL=sqlite:///:memory: and leaves
+    # REDIS_URL alone — so the database was already isolated and only the cache
+    # still pointed at the shared box. Probing backend/.env would have reported
+    # a PostgreSQL host that this run never contacts.
+    #
+    # WHY THIS EXISTS. On 2026-09-04 the shared box answered ping and refused
+    # both ports, and pytest reported ONE failure:
+    # `test_a_warm_read_does_not_touch_the_database_per_codename`. That test
+    # warms the permission cache and asserts the second read is cheap; with
+    # Redis unreachable the cache write degrades silently, so the warm read is
+    # a cold read and the assertion cannot hold. Nothing was wrong with the
+    # commit — but the push was refused. A dead box must not read as a red suite.
+    #
+    # Each service falls back on its own. A reachable PostgreSQL is worth
+    # keeping when it is there: CLAUDE.md records two shipped bugs SQLite could
+    # not have caught (a failed statement aborts the transaction on PostgreSQL
+    # and does not on SQLite; varchar(n) length is enforced there and ignored
+    # here). Dropping to SQLite is a real loss, so it is announced rather than
+    # silently substituted.
+    #
+    # THE CACHE IS ALWAYS THROWN AWAY WHEN IT CAN BE — reachable or not.
+    #
+    # Until 2026-09-11 a reachable shared Redis was used as-is, on the ground
+    # that the owner had confirmed (2026-09-04) nobody else uses that box. That
+    # was a decision with a condition, and it was reversed on the owner's
+    # instruction rather than because the condition broke. What the suite writes
+    # there is not only Django-cache traffic: conftest.py swaps CACHES for
+    # LocMem, but `apps/perm/cache.py` opens its OWN client from
+    # `settings.REDIS_URL`, and so does the channels layer — the LocMem override
+    # covers neither. So every push wrote permission-cache keys into the shared
+    # Redis, and each `invalidate_all_permissions()` in the cache tests deleted
+    # every `perm:*` key in it — whoever wrote them. A throwaway redis-server is
+    # still a real Redis, so nothing
+    # the tests measure is lost, and the push no longer depends on 115's cache
+    # being up at all.
+    #
+    # The configured cache is used only when redis-server is not installed, and
+    # the run says so. Unreachable AND no redis-server is still a refusal: the
+    # permission-cache tests degrade silently without a cache and report a false
+    # red, which is the 2026-09-04 failure described above.
+    # Reports one line per service: "<name> <ok|down> <detail>".
+    RPORT=""
+    if [ "$REMOTE" = 0 ]; then
+    # --real-pg: the database is backend/.env's PostgreSQL, never .prepush.env's SQLite override, and
+    # a worktree has no backend/.env of its own (gitignored) — the main checkout's describes the same box.
+    if [ "$REAL_PG" = 1 ]; then
+        unset DATABASE_URL
+        PG_URL=""
+        for f in "$ROOT/backend/.env" "${MAIN_ROOT:+$MAIN_ROOT/backend/.env}"; do
+            [ -n "$f" ] && [ -f "$f" ] || continue
+            PG_URL=$(sed -nE "s/^DATABASE_URL=[\"']?([^\"']*)[\"']?\$/\\1/p" "$f" | tail -1)
+            [ -n "$PG_URL" ] && break
+        done
+        case "$PG_URL" in
+            postgres://*|postgresql://*) export DATABASE_URL="$PG_URL" ;;
+            "") fail "--real-pg: no DATABASE_URL in backend/.env (looked under $ROOT${MAIN_ROOT:+ and $MAIN_ROOT})" ;;
+            *) fail "--real-pg: backend/.env's DATABASE_URL is not PostgreSQL (${PG_URL%%:*}://…)" ;;
+        esac
+    fi
+    PROBE=$(ENV_FILE="$ROOT/backend/.env" DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
+import os, re, socket
+
+def from_env_file(key):
+    # An absolute path from $ROOT. A relative one is wrong here: the hook has
+    # already `cd`-ed into $ROOT/backend by this point, so "backend/.env"
+    # resolves to backend/backend/.env and silently finds nothing — which is
+    # how the first version of this probe printed "redis: unknown (unset)"
+    # and started a throwaway cache while claiming the real one was down.
+    # The outcome was harmless; the stated reason was false.
+    try:
+        with open(os.environ.get("ENV_FILE", ""), encoding="utf-8") as f:
+            for line in f:
+                if line.lstrip().startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                if k.strip() == key:
+                    return v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+def check(name, url):
+    # sqlite / in-memory needs no socket.
+    if url.startswith("sqlite"):
+        print(f"{name} ok in-memory"); return
+    m = re.search(r"@?([\w.-]+):(\d+)", url)
+    if not m:
+        print(f"{name} unknown {url or '(unset)'}"); return
+    host, port = m.group(1), int(m.group(2))
+    s = socket.socket(); s.settimeout(3)
+    try:
+        s.connect((host, port)); print(f"{name} ok {host}:{port}")
+    except OSError:
+        print(f"{name} down {host}:{port}")
+    finally:
+        s.close()
+
+check("db", os.environ.get("DB_URL") or from_env_file("DATABASE_URL"))
+check("redis", os.environ.get("RD_URL") or from_env_file("REDIS_URL"))
+PROBE_PY
+)
+    DB_STATE=$(echo "$PROBE" | awk '$1=="db"{print $2" "$3}')
+    RD_STATE=$(echo "$PROBE" | awk '$1=="redis"{print $2" "$3}')
+    echo "    db: $DB_STATE | redis: $RD_STATE"
+
+    RPORT=""
+    case "$DB_STATE" in
+        ok*) ;;
+        *)  [ "$REAL_PG" = 1 ] && fail "--real-pg: PostgreSQL unreachable ($DB_STATE). Not falling back to SQLite: that is the run this one exists to complement."
+            echo "    → database unreachable, using in-memory SQLite"
+            echo "      NOTE: SQLite ignores varchar(n) and does not abort a"
+            echo "            transaction on a failed statement. Two shipped"
+            echo "            bugs needed PostgreSQL to surface. Weaker run."
+            export DATABASE_URL="sqlite:///:memory:" ;;
+    esac
+    if command -v redis-server >/dev/null 2>&1; then
+        echo "    → starting a throwaway redis-server (configured cache is never used when this is possible)"
+        RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
+        redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
+            || fail "could not start a throwaway redis-server on port $RPORT"
+        # Also stop it when the run is interrupted (Ctrl-C, a killed push): the shutdown
+        # below only runs on a normal finish, and one interrupted push on 2026-10-09 left
+        # this daemon running for a day. Chains the gate lock's own EXIT trap.
+        trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
+        trap 'exit 130' INT TERM
+        export REDIS_URL="redis://127.0.0.1:$RPORT/0"
+        export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
+        export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2"
+    else
+        case "$RD_STATE" in
+            ok*) echo "    → redis-server not installed — using the configured cache ($RD_STATE)"
+                 echo "      NOTE: this run writes permission-cache keys into it and"
+                 echo "            invalidates that cache's perm:* keys. Install redis-server to isolate." ;;
+            *)   fail "redis-server not found and the configured cache is unreachable ($RD_STATE). Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent." ;;
+        esac
+    fi
+
+    fi  # REMOTE = 0
+    # --no-cov: the coverage floor (--cov-fail-under in pytest.ini) is checked
+    # in CI only — `ci.yml` runs the plain command. Accepted trade-off
+    # (2026-09-29): measuring coverage costs this gate minutes on every push,
+    # and CI is manual-dispatch only, so a drop below the floor is found when
+    # someone dispatches it, not when it is pushed.
+    #
+    # SECRET_KEY: always the ≥32-byte test key here. The suite needs *a* key,
+    # not the developer's: a checkout's backend/.env may hold a shorter one
+    # (the main checkout's was 20 bytes on 2026-09-29), and pytest.ini turns
+    # PyJWT's short-key warning into an error, so every JWT test would fail.
+    SKIP_MIGRATION=""
+    if [ "$RUN_MIGRATION" = 1 ]; then
+        echo "    (with the migration round trips: the push touches migrations or their tests)"
+    else
+        SKIP_MIGRATION=1
+        echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
+    fi
+    # Progress every 30 s instead of silence: the run takes minutes and `-q`
+    # piped through `tail` printed nothing until it ended. The full log is kept
+    # on failure, like the jest one above.
+    #
+    # -n $PYTEST_WORKERS (pytest-xdist, requirements-dev.txt) when it is installed. 2 since 2026-10-27
+    # (see TWO WORKERS near the top); it was 4 (measured 2026-09-29 at 4:21 against 5:43 serial).
+    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
+    XDIST=""
+    if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
+        # worksteal: an idle worker takes queued tests from a busy one, so the run does not end on one
+        # worker grinding through its slow tail while the other sits idle (2026-10-28).
+        XDIST="-n $PYTEST_WORKERS --dist worksteal"
+        echo "    (pytest-xdist: $XDIST)"
+    fi
+    [ "$REMOTE" = 1 ] && XDIST="-n ${GATES_REMOTE_WORKERS:-8} --dist worksteal"
+    # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
+    # loading the cached SQLite template, and checks that template against what it
+    # migrated — backend/config/sqlite_template.py. Other runs reuse the template.
+    if [ "$FULL_RUN" = 1 ]; then
+        export SOULLEDGER_SQLITE_TEMPLATE=0
+        echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
+    fi
+    PYTEST_LOG=$(mktemp -t prepush-pytest)
+    PYTEST_PATHS=""
+    META_IGNORE=""
+    if [ "$RUN_META" = 0 ]; then
+        META_IGNORE=$(echo "$META_TESTS" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
+        echo "    (without the 2 suite-about-the-suite tests: nothing they guard changed)"
+    fi
+    if [ "$RUN_BACKEND" = 0 ]; then
+        # Readers are listed relative to backend/; drop the meta tests here too, and
+        # if nothing is left run nothing — an empty path list would mean "the whole suite".
+        PYTEST_PATHS="$BACKEND_READERS"
+        [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+        echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
+    fi
+    # BY APP, NOT THE WHOLE SUITE (2026-10-27, user decision): a backend change runs the test files
+    # that belong to, name, or call the URLs of the apps it touched — scripts/select-backend-tests.py,
+    # which also says when a change cannot be traced (settings, a conftest, dependencies) and the
+    # whole suite runs. --full / GATES_FULL=1 always run everything. The files that read other areas
+    # (reads-outside-backend.txt) are added as on a backend-less push.
+    if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
+        echo "    (whole suite: no select-backend-tests.py next to this script)"
+    elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
+        SELECTED=$(echo "$CHANGED" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
+        case "$SELECTED" in
+            FULL*) echo "    (whole suite: ${SELECTED#FULL	})" ;;
+            *)
+                READERS=$(TOPS="$TOPS" awk '
+                    BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
+                    /^[[:space:]]*(#|$)/ { next }
+                    { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
+                ' "$READERS_LIST" 2>/dev/null)
+                PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
+                [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
+                if [ "$REAL_PG" = 1 ] || [ "$REMOTE" = 1 ]; then
+                    PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
+                    [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
+                    PYTEST_PATHS=$(printf '%s\n%s\n' "$PYTEST_PATHS" "$PG_ONLY" | grep -v '^$' | sort -u)
+                    echo "    (plus the $(echo "$PG_ONLY" | grep -c .) PostgreSQL-only tests — tests/test_concurrency.py pins the set)"
+                fi
+                echo "    (by app: $(echo "$PYTEST_PATHS" | grep -c . || true) test files — scripts/select-backend-tests.py; --full runs all)"
+                [ -z "$PYTEST_PATHS" ] && RUN_BACKEND=0
+                ;;
+        esac
+    fi
+    # Nothing selected: no pytest, and the checks after this one still run (it used to be the last step).
+    PYTEST_SKIP=0
+    if [ "$RUN_BACKEND" = 0 ] && [ -z "$PYTEST_PATHS" ]; then
+        echo "    nothing to run"
+        [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
+        PYTEST_SKIP=1
+    fi
+    if [ "$PYTEST_SKIP" = 0 ]; then
+    # A HUNG TEST COSTS ONE WORKER, NOT THE PUSH (2026-10-27). Without this a test that blocks
+    # (2026-10-19: a worker idle in transaction, another stuck on a thread lock, CPU 0, no output)
+    # held the gate lock for hours and every other session waited behind it. A test past the limit
+    # dumps every thread's stack into the log and its worker exits, so the run ends red and names
+    # it. The slowest test measured is a 67 s migration round trip; 300 s leaves room for load.
+    TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-300}"
+    # Real PostgreSQL: a fresh per-run test database (a stale test_soulledger caused ~1800 errors once),
+    # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
+    REAL_PG_ARGS=""
+    if [ "$REAL_PG" = 1 ] || [ "$REMOTE" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
+    PYARGS=(-q --no-header --no-cov --ff --durations=10 $XDIST
+        -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
+        ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
+    if [ "$REMOTE" = 1 ]; then
+        remote_pytest_start "${PYARGS[@]}"
+    else
+    # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
+    # that is still red says so in its first minute instead of at the end of the selection.
+    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
+    PYTEST_PID=$!
+    fi
+    # Remote: this machine goes on to its own checks and collects the result at the end. Here: the
+    # result now, so jest and pytest never share this machine.
+    if [ "$REMOTE" = 1 ]; then PYTEST_DEFERRED=1; cd "$ROOT" || exit 1; else pytest_finish; fi
+    fi  # PYTEST_SKIP = 0
+    cd "$ROOT" || exit 1
+fi
+
 # Core first: it is the frontend's dependency, it is fast, and a boundary
 # failure should be the thing you read rather than the tsc error it causes 400
 # lines later.
@@ -778,28 +1151,6 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     cd "$ROOT" || exit 1
 fi
 
-# pg_only_tests — node ids of every test SQLite skips, from the scanner test_concurrency.py pins the set with.
-pg_only_tests() {
-    # GATES_PG_ONLY_TESTS is the test seam (the gate tests' stand-in python has no Django).
-    [ -n "${GATES_PG_ONLY_TESTS:-}" ] && { printf '%s\n' "$GATES_PG_ONLY_TESTS"; return 0; }
-    (cd "$ROOT/backend" && SECRET_KEY="$CI_SECRET_KEY" DATABASE_URL="sqlite:///:memory:" "$PY" - <<'PG_ONLY_PY'
-import ast, os, sys
-from pathlib import Path
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-sys.path.insert(0, ".")
-import django
-django.setup()
-from tests.test_concurrency import _sqlite_skipped_tests
-for p in sorted(Path(".").rglob("*.py")):
-    if {".venv", "node_modules"} & set(p.parts):
-        continue
-    if p.name.startswith("test_") or p.name == "tests.py":
-        for name in _sqlite_skipped_tests(ast.parse(p.read_text(encoding="utf-8"))):
-            print(f"{p.as_posix()}::{name}")
-PG_ONLY_PY
-    ) 2>/dev/null
-}
-
 # app_jest <dir> <changed-path regex> <extra --roots> <failure message> — see MOBILE / OFFICER JEST above.
 app_jest() {
     local dir="$1" re="$2" roots="$3" msg="$4" paths="" related="" readers src log status
@@ -862,290 +1213,11 @@ if [ -n "$MOBILE_READERS" ]; then
     [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
 fi
 
-# RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
-# only the tests that read the areas that did (see above) — no ruff and no
-# makemigrations, which read nothing outside backend/.
-if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
-    cd "$ROOT/backend" || fail "backend/ missing"
-
-    echo "  → pytest"
-    # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
-    # run (this repo's websocket tests need a reachable Redis). It is an
-    # exclusion list, so it is stated per-machine and visible in the output
-    # below rather than hidden in the hook.
-    [ -n "${PYTEST_PREPUSH_ARGS:-}" ] && echo "    (with ${PYTEST_PREPUSH_ARGS})"
-
-    # PROBE THE SERVICES THAT WILL ACTUALLY BE USED, THEN SAY WHICH ONES RAN.
-    #
-    # The effective targets are not simply backend/.env: `.prepush.env` is
-    # sourced above and may already override either one. On the machine this
-    # was written for it exports DATABASE_URL=sqlite:///:memory: and leaves
-    # REDIS_URL alone — so the database was already isolated and only the cache
-    # still pointed at the shared box. Probing backend/.env would have reported
-    # a PostgreSQL host that this run never contacts.
-    #
-    # WHY THIS EXISTS. On 2026-09-04 the shared box answered ping and refused
-    # both ports, and pytest reported ONE failure:
-    # `test_a_warm_read_does_not_touch_the_database_per_codename`. That test
-    # warms the permission cache and asserts the second read is cheap; with
-    # Redis unreachable the cache write degrades silently, so the warm read is
-    # a cold read and the assertion cannot hold. Nothing was wrong with the
-    # commit — but the push was refused. A dead box must not read as a red suite.
-    #
-    # Each service falls back on its own. A reachable PostgreSQL is worth
-    # keeping when it is there: CLAUDE.md records two shipped bugs SQLite could
-    # not have caught (a failed statement aborts the transaction on PostgreSQL
-    # and does not on SQLite; varchar(n) length is enforced there and ignored
-    # here). Dropping to SQLite is a real loss, so it is announced rather than
-    # silently substituted.
-    #
-    # THE CACHE IS ALWAYS THROWN AWAY WHEN IT CAN BE — reachable or not.
-    #
-    # Until 2026-09-11 a reachable shared Redis was used as-is, on the ground
-    # that the owner had confirmed (2026-09-04) nobody else uses that box. That
-    # was a decision with a condition, and it was reversed on the owner's
-    # instruction rather than because the condition broke. What the suite writes
-    # there is not only Django-cache traffic: conftest.py swaps CACHES for
-    # LocMem, but `apps/perm/cache.py` opens its OWN client from
-    # `settings.REDIS_URL`, and so does the channels layer — the LocMem override
-    # covers neither. So every push wrote permission-cache keys into the shared
-    # Redis, and each `invalidate_all_permissions()` in the cache tests deleted
-    # every `perm:*` key in it — whoever wrote them. A throwaway redis-server is
-    # still a real Redis, so nothing
-    # the tests measure is lost, and the push no longer depends on 115's cache
-    # being up at all.
-    #
-    # The configured cache is used only when redis-server is not installed, and
-    # the run says so. Unreachable AND no redis-server is still a refusal: the
-    # permission-cache tests degrade silently without a cache and report a false
-    # red, which is the 2026-09-04 failure described above.
-    # Reports one line per service: "<name> <ok|down> <detail>".
-    # --real-pg: the database is backend/.env's PostgreSQL, never .prepush.env's SQLite override, and
-    # a worktree has no backend/.env of its own (gitignored) — the main checkout's describes the same box.
-    if [ "$REAL_PG" = 1 ]; then
-        unset DATABASE_URL
-        PG_URL=""
-        for f in "$ROOT/backend/.env" "${MAIN_ROOT:+$MAIN_ROOT/backend/.env}"; do
-            [ -n "$f" ] && [ -f "$f" ] || continue
-            PG_URL=$(sed -nE "s/^DATABASE_URL=[\"']?([^\"']*)[\"']?\$/\\1/p" "$f" | tail -1)
-            [ -n "$PG_URL" ] && break
-        done
-        case "$PG_URL" in
-            postgres://*|postgresql://*) export DATABASE_URL="$PG_URL" ;;
-            "") fail "--real-pg: no DATABASE_URL in backend/.env (looked under $ROOT${MAIN_ROOT:+ and $MAIN_ROOT})" ;;
-            *) fail "--real-pg: backend/.env's DATABASE_URL is not PostgreSQL (${PG_URL%%:*}://…)" ;;
-        esac
-    fi
-    PROBE=$(ENV_FILE="$ROOT/backend/.env" DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
-import os, re, socket
-
-def from_env_file(key):
-    # An absolute path from $ROOT. A relative one is wrong here: the hook has
-    # already `cd`-ed into $ROOT/backend by this point, so "backend/.env"
-    # resolves to backend/backend/.env and silently finds nothing — which is
-    # how the first version of this probe printed "redis: unknown (unset)"
-    # and started a throwaway cache while claiming the real one was down.
-    # The outcome was harmless; the stated reason was false.
-    try:
-        with open(os.environ.get("ENV_FILE", ""), encoding="utf-8") as f:
-            for line in f:
-                if line.lstrip().startswith("#") or "=" not in line:
-                    continue
-                k, _, v = line.partition("=")
-                if k.strip() == key:
-                    return v.strip().strip('"').strip("'")
-    except OSError:
-        pass
-    return ""
-
-def check(name, url):
-    # sqlite / in-memory needs no socket.
-    if url.startswith("sqlite"):
-        print(f"{name} ok in-memory"); return
-    m = re.search(r"@?([\w.-]+):(\d+)", url)
-    if not m:
-        print(f"{name} unknown {url or '(unset)'}"); return
-    host, port = m.group(1), int(m.group(2))
-    s = socket.socket(); s.settimeout(3)
-    try:
-        s.connect((host, port)); print(f"{name} ok {host}:{port}")
-    except OSError:
-        print(f"{name} down {host}:{port}")
-    finally:
-        s.close()
-
-check("db", os.environ.get("DB_URL") or from_env_file("DATABASE_URL"))
-check("redis", os.environ.get("RD_URL") or from_env_file("REDIS_URL"))
-PROBE_PY
-)
-    DB_STATE=$(echo "$PROBE" | awk '$1=="db"{print $2" "$3}')
-    RD_STATE=$(echo "$PROBE" | awk '$1=="redis"{print $2" "$3}')
-    echo "    db: $DB_STATE | redis: $RD_STATE"
-
-    RPORT=""
-    case "$DB_STATE" in
-        ok*) ;;
-        *)  [ "$REAL_PG" = 1 ] && fail "--real-pg: PostgreSQL unreachable ($DB_STATE). Not falling back to SQLite: that is the run this one exists to complement."
-            echo "    → database unreachable, using in-memory SQLite"
-            echo "      NOTE: SQLite ignores varchar(n) and does not abort a"
-            echo "            transaction on a failed statement. Two shipped"
-            echo "            bugs needed PostgreSQL to surface. Weaker run."
-            export DATABASE_URL="sqlite:///:memory:" ;;
-    esac
-    if command -v redis-server >/dev/null 2>&1; then
-        echo "    → starting a throwaway redis-server (configured cache is never used when this is possible)"
-        RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
-        redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
-            || fail "could not start a throwaway redis-server on port $RPORT"
-        # Also stop it when the run is interrupted (Ctrl-C, a killed push): the shutdown
-        # below only runs on a normal finish, and one interrupted push on 2026-10-09 left
-        # this daemon running for a day. Chains the gate lock's own EXIT trap.
-        trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
-        trap 'exit 130' INT TERM
-        export REDIS_URL="redis://127.0.0.1:$RPORT/0"
-        export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
-        export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2"
-    else
-        case "$RD_STATE" in
-            ok*) echo "    → redis-server not installed — using the configured cache ($RD_STATE)"
-                 echo "      NOTE: this run writes permission-cache keys into it and"
-                 echo "            invalidates that cache's perm:* keys. Install redis-server to isolate." ;;
-            *)   fail "redis-server not found and the configured cache is unreachable ($RD_STATE). Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent." ;;
-        esac
-    fi
-
-    # --no-cov: the coverage floor (--cov-fail-under in pytest.ini) is checked
-    # in CI only — `ci.yml` runs the plain command. Accepted trade-off
-    # (2026-09-29): measuring coverage costs this gate minutes on every push,
-    # and CI is manual-dispatch only, so a drop below the floor is found when
-    # someone dispatches it, not when it is pushed.
-    #
-    # SECRET_KEY: always the ≥32-byte test key here. The suite needs *a* key,
-    # not the developer's: a checkout's backend/.env may hold a shorter one
-    # (the main checkout's was 20 bytes on 2026-09-29), and pytest.ini turns
-    # PyJWT's short-key warning into an error, so every JWT test would fail.
-    SKIP_MIGRATION=""
-    if [ "$RUN_MIGRATION" = 1 ]; then
-        echo "    (with the migration round trips: the push touches migrations or their tests)"
-    else
-        SKIP_MIGRATION=1
-        echo "    (-m 'not migration': nothing the 26 round-trip tests exercise changed)"
-    fi
-    # Progress every 30 s instead of silence: the run takes minutes and `-q`
-    # piped through `tail` printed nothing until it ended. The full log is kept
-    # on failure, like the jest one above.
-    #
-    # -n $PYTEST_WORKERS (pytest-xdist, requirements-dev.txt) when it is installed. 2 since 2026-10-27
-    # (see TWO WORKERS near the top); it was 4 (measured 2026-09-29 at 4:21 against 5:43 serial).
-    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
-    XDIST=""
-    if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
-        # worksteal: an idle worker takes queued tests from a busy one, so the run does not end on one
-        # worker grinding through its slow tail while the other sits idle (2026-10-28).
-        XDIST="-n $PYTEST_WORKERS --dist worksteal"
-        echo "    (pytest-xdist: $XDIST)"
-    fi
-    # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
-    # loading the cached SQLite template, and checks that template against what it
-    # migrated — backend/config/sqlite_template.py. Other runs reuse the template.
-    if [ "$FULL_RUN" = 1 ]; then
-        export SOULLEDGER_SQLITE_TEMPLATE=0
-        echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
-    fi
-    PYTEST_LOG=$(mktemp -t prepush-pytest)
-    PYTEST_PATHS=""
-    META_IGNORE=""
-    if [ "$RUN_META" = 0 ]; then
-        META_IGNORE=$(echo "$META_TESTS" | sed 's|^backend/|--ignore=|' | tr '\n' ' ')
-        echo "    (without the 2 suite-about-the-suite tests: nothing they guard changed)"
-    fi
-    if [ "$RUN_BACKEND" = 0 ]; then
-        # Readers are listed relative to backend/; drop the meta tests here too, and
-        # if nothing is left run nothing — an empty path list would mean "the whole suite".
-        PYTEST_PATHS="$BACKEND_READERS"
-        [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
-        echo "    (only the $(echo "$PYTEST_PATHS" | grep -c . || true) test files that read what changed — backend/tests/reads-outside-backend.txt)"
-    fi
-    # BY APP, NOT THE WHOLE SUITE (2026-10-27, user decision): a backend change runs the test files
-    # that belong to, name, or call the URLs of the apps it touched — scripts/select-backend-tests.py,
-    # which also says when a change cannot be traced (settings, a conftest, dependencies) and the
-    # whole suite runs. --full / GATES_FULL=1 always run everything. The files that read other areas
-    # (reads-outside-backend.txt) are added as on a backend-less push.
-    if [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ] && [ ! -f "$HERE/select-backend-tests.py" ]; then
-        echo "    (whole suite: no select-backend-tests.py next to this script)"
-    elif [ "$RUN_BACKEND" = 1 ] && [ "$FULL_RUN" = 0 ]; then
-        SELECTED=$(echo "$CHANGED" | "$PY" -I "$HERE/select-backend-tests.py") || fail "select-backend-tests.py failed"
-        case "$SELECTED" in
-            FULL*) echo "    (whole suite: ${SELECTED#FULL	})" ;;
-            *)
-                READERS=$(TOPS="$TOPS" awk '
-                    BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
-                    /^[[:space:]]*(#|$)/ { next }
-                    { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
-                ' "$READERS_LIST" 2>/dev/null)
-                PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
-                [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
-                if [ "$REAL_PG" = 1 ]; then
-                    PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
-                    [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
-                    PYTEST_PATHS=$(printf '%s\n%s\n' "$PYTEST_PATHS" "$PG_ONLY" | grep -v '^$' | sort -u)
-                    echo "    (plus the $(echo "$PG_ONLY" | grep -c .) PostgreSQL-only tests — tests/test_concurrency.py pins the set)"
-                fi
-                echo "    (by app: $(echo "$PYTEST_PATHS" | grep -c . || true) test files — scripts/select-backend-tests.py; --full runs all)"
-                [ -z "$PYTEST_PATHS" ] && RUN_BACKEND=0
-                ;;
-        esac
-    fi
-    if [ "$RUN_BACKEND" = 0 ] && [ -z "$PYTEST_PATHS" ]; then
-        echo "    nothing to run"
-        [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
-        record_pass
-        echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"; exit 0
-    fi
-    # A HUNG TEST COSTS ONE WORKER, NOT THE PUSH (2026-10-27). Without this a test that blocks
-    # (2026-10-19: a worker idle in transaction, another stuck on a thread lock, CPU 0, no output)
-    # held the gate lock for hours and every other session waited behind it. A test past the limit
-    # dumps every thread's stack into the log and its worker exits, so the run ends red and names
-    # it. The slowest test measured is a 67 s migration round trip; 300 s leaves room for load.
-    TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-300}"
-    # Real PostgreSQL: a fresh per-run test database (a stale test_soulledger caused ~1800 errors once),
-    # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
-    REAL_PG_ARGS=""
-    if [ "$REAL_PG" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
-    # shellcheck disable=SC2086
-    # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
-    # that is still red says so in its first minute instead of at the end of the selection.
-    SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov --ff --durations=10 $XDIST \
-        -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS \
-        ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
-    PYTEST_PID=$!
-    T0=$(date +%s); NEXT=30
-    while kill -0 "$PYTEST_PID" 2>/dev/null; do
-        sleep 2
-        EL=$(( $(date +%s) - T0 ))
-        if [ "$EL" -ge "$NEXT" ] && kill -0 "$PYTEST_PID" 2>/dev/null; then
-            NEXT=$(( NEXT + 30 ))
-            PCT=$(grep -oE '\[ *[0-9]+%\]' "$PYTEST_LOG" | tail -1 | tr -d '[] ')
-            # Progress lines are `path.py ..F. [ 12%]` serially and bare
-            # `..F. [ 12%]` under xdist: count F/E in the marks, never in a path.
-            NBAD=$(grep -E '\[ *[0-9]+%\]$' "$PYTEST_LOG" | sed -E 's/^[^ ]+\.py //; s/\[.*//' | tr -cd 'FE' | wc -c | tr -d ' ')
-            echo "    … pytest ${PCT:-0%} · $((EL / 60))m$((EL % 60))s · failed so far: $NBAD"
-        fi
-    done
-    wait "$PYTEST_PID"; PYTEST_STATUS=$?
-    # The ten slowest, so a run that stalls says where (--durations=10 above).
-    sed -n '/slowest 10 durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
-    tail -4 "$PYTEST_LOG"
-    if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
-    # Stop the throwaway before deciding, so a failure does not leak a daemon.
-    [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
-    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"
-    cd "$ROOT" || exit 1
-fi
 
 # Record the pass (see "A TREE THAT ALREADY PASSED" near the top). Only a full run
 # outside the hook, and only when what was tested IS HEAD's tree: tracked files
 # match HEAD, and no untracked file sits where a gate could have read it — an
 # untracked test or migration ran here but would not be in the pushed commit.
+[ "${PYTEST_DEFERRED:-0}" = 1 ] && { echo "  → pytest on $GATES_REMOTE: waiting for it"; pytest_finish; }
 record_pass
 echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"
