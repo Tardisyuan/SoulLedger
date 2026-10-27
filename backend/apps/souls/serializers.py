@@ -675,7 +675,7 @@ class SoulListSerializer(serializers.ModelSerializer):
     # Record-level (`event_after_death`) rather than soul-level, and
     # collapsed to a bool because a list row has no room for a per-record
     # breakdown. Also free: SoulViewSet.get_queryset prefetch_related's
-    # "records" for every action, list included, so `obj.records.all()`
+    # "records" for list and every action that serializes a soul, so `obj.records.all()`
     # here hits the prefetch cache rather than issuing a query per soul.
     has_date_warning = serializers.SerializerMethodField()
     # Record-level ERROR (`event_before_birth`) — the counterpart gap to
