@@ -328,7 +328,7 @@
       "CITY_GOD_RECEIVED": "Chenghuang Shesep Sep",
       "CITY_GOD_SENT_ON": "Chenghuang Hab Er Wesekhet 1 Er 10",
       "CITY_GOD_RETURNED": "Chenghuang Khesef Er Khemen",
-      "MENGPO_SOUP_TAKEN": "Mu Mengpo Shesep Seth",
+      "MENGPO_SOUP_TAKEN": "Mu Mengpo Swri Seth",
       "PURGATORY_ASCENDED": "Per Em Ta Hesmen · Er Pet"
     },
     "civilizations": {
@@ -2206,20 +2206,20 @@
       "title": "Fai Ib",
       "scale": "Ib {{weight}} · Shut {{counterweight}}",
       "gives": "Fai Ib: {{verdict}}",
-      "wavering_hint": "«Nen Wedja Djer» «Wehem Wedja» = Fai Nen Smen: Sab Sesh Sesh, Fai Ib Mawy · Nen Wat.",
+      "wavering_hint": "«Nen Wedja Djer» «Wehem Wedja» = Fai Nen Smen: Djehuty Sesh, Fai Ib Mawy · Nen Wat.",
       "contradicts": "Nen Mi Fai Ib",
       "result": {
         "LIGHTER": "Ib Nen Dens Er Shut",
         "HEAVIER": "Ib Dens Er Shut",
         "WAVERING": "Fai Nen Smen · Wehem Fai"
       },
-      "recorded": "Sab Sesh: {{result}} (Ib {{weight}})",
+      "recorded": "Djehuty Sesh: {{result}} (Ib {{weight}})",
       "workflow_forced": "Sep Kemet: Wat Hesy Fai Ib Em Tepy · Er Khet Iri.",
       "errors": {
         "verdict_contradicts_weighing": "Wedja Nen Mi Fai Ib: Ib Nen Dens Er Shut = Menkh Wa; Ib Dens Er Shut = Nen Menkh Wa.",
         "wavering_has_no_destination": "Fai Nen Smen: Nen Wat. Fekh Wat Er Ta, Er Khet Khetem · Fai Ib Mawy.",
         "wavering_with_open_cross": "Wedja Ta Ky Nen Khetem Djer: Khetem Tepy, Er Khet Wehem Fai.",
-        "weighing_in_progress": "Wat Hesy Fai Ib Em Iri: Sab Sesh, Djadjat En Maat, Heru, Wesir (Er Ammit) Tepy · Er Khet Iri.",
+        "weighing_in_progress": "Wat Hesy Fai Ib Em Iri: Djehuty, Djadjat En Maat, Heru, Wesir (Er Ammit) Tepy · Er Khet Iri.",
         "weighing_rejected": "Wat Hesy Fai Ib Khesef Seth: Wen Mawy Er Nehet · Nen Iri.",
         "weighing_wavers": "Wetep Em Fai Nen Smen: Nen Iri. Fai Ib Mawy."
       }
@@ -4947,7 +4947,7 @@
       "body": "Hemet-Sesh Pen Nen Iri Djer. Iri Mawy: Sesh-Ek Hena Medjat-Ek Wenen Djer.",
       "button": "Iri Mawy",
       "version": "Hemet-Sesh {{version}}",
-      "open_failed": "Nen Wen Per Medjat. Hehy Iri Mawy Em Per Medjat, Er Wen Menf: {{url}}"
+      "open_failed": "Nen Wen Shewet. Hehy Iri Mawy Em Shewet, Er Wen Menf Em Browser: {{url}}"
     },
     "mfa": {
       "setup": {
@@ -7297,8 +7297,8 @@
     "deactivate_anyway": "Khetem"
   },
   "officerInvite": {
-    "action": "Hab Menf Sab",
-    "title": "Hab Menf Sab",
+    "action": "Nis Sab",
+    "title": "Nis Sab",
     "body": "Menf Hab Er Djeret: Sesh Sekhem Djes. Hru 7, Sep Wa.",
     "username_optional": "Ren · Nen Em Tepy",
     "username_hint": "Nen Sesh: Ren Em Djeret",
@@ -7307,8 +7307,8 @@
     "send": "Hab Menf",
     "sent_toast": "Menf Hab Seth Er {{email}}",
     "resent_toast": "{{email}}: Menf Wehem Hab Seth",
-    "pending_badge": "Menf Em Smen",
-    "resend": "Wehem Hab Menf",
+    "pending_badge": "Nis Em Smen",
+    "resend": "Wehem Nis",
     "resend_hint": "Nen Iyi: Wehem Hab",
     "error": {
       "email_invalid": "Djeret Nen Maat",
@@ -7336,8 +7336,8 @@
   "mengpoSoup": {
     "title": "Mu Mengpo",
     "hint": "Ba Duat Sherer: Mu Mengpo Tepy, Er Khet Wehem Mesut.",
-    "not_taken": "Nen Shesep Djer",
-    "taken": "Shesep Seth · {{time}}",
+    "not_taken": "Nen Swri Djer",
+    "taken": "Swri Seth · {{time}}",
     "register": "Sesh Mu Mengpo",
     "register_title": "Sesh {{name}}: Mu Mengpo?",
     "register_body": "Ankh Wa: Sep Wa. Nen Sehen; Fekh Em Wehem Mesut Khetem Seth.",
@@ -7346,7 +7346,7 @@
     "error": {
       "not_diyu": "Duat Sherer Wa",
       "not_reincarnating": "Ba Em Wehem Mesut Wa",
-      "soup_already_taken": "Shesep Seth Em Ankh Pen"
+      "soup_already_taken": "Swri Seth Em Ankh Pen"
     }
   },
   "halls": {
