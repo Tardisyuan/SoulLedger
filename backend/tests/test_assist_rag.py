@@ -625,7 +625,8 @@ def test_pgvector_orders_exactly_like_the_python_cosine():
     for dims in (64, 2560):
         HelpChunk.objects.all().delete()
         query = _load(dims)
-        in_db = vectors.nearest(HelpChunk.objects.filter(model="m"), query, 20)
+        # Every row, not the first 20: by_hand sorts them all, and the corpus outgrew 20 (2026-10-28).
+        in_db = vectors.nearest(HelpChunk.objects.filter(model="m"), query, HelpChunk.objects.count())
         by_hand = sorted(((vectors.cosine(r.embedding, query), r.entry_id) for r in HelpChunk.objects.all()),
                          key=lambda t: (-t[0], t[1]))
         assert [e for _, e in in_db] == [e for _, e in by_hand], dims
