@@ -3,5 +3,19 @@
   "souls.events.DUAT_PASSAGE_CHANGED",
   "users.batch.open_work_partial",
   "users.batch.held_row",
-  "users.batch.held_region"
+  "users.batch.held_region",
+  "officerHandover.submit_and_deactivate_n",
+  "officerHandover.deactivated_toast",
+  "users.batch.open_work",
+  "souls.baptism.label",
+  "souls.baptism.UNRECORDED",
+  "souls.baptism.BAPTISED",
+  "souls.baptism.UNBAPTISED",
+  "souls.baptism.BEFORE_CHRIST",
+  "souls.baptism.help",
+  "souls.denied_immortality.label",
+  "souls.denied_immortality.UNRECORDED",
+  "souls.denied_immortality.YES",
+  "souls.denied_immortality.NO",
+  "souls.denied_immortality.help"
 ]

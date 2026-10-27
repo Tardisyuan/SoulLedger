@@ -177,6 +177,23 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n3", name: "Christ · 公审判", court: "天堂", type: "终审", order: 3 },
     ],
   },
+  // 异端审判(2026-10-27,docs-others E-4):此前没有模板，落到泛用单节点。文档没给站点，
+  // 所以就是上面的末日审判，前面加一站「异端裁定」——生前是否主张灵魂随肉体而死
+  //（Inf. X.13-15，`Soul.denied_immortality`，判入第六圈的依据）。它是一项认定，
+  // 不是对案子的裁断（裁断仍是基督的），故记作评定，不指任何人。
+  EUROPEAN_HERESY_TRIAL: {
+    civilization: "EUROPEAN",
+    caseType: "HERESY_TRIAL",
+    name: "异端审判流程",
+    description: "先认定是否否认灵魂不灭，再由基督审判",
+    priority: 0,
+    nodes: [
+      { id: "n1", name: "异端裁定", court: "天堂", type: "罪行评定", order: 1 },
+      { id: "n2", name: "Christ · 私审判", court: "天堂", type: "私审判", order: 2 },
+      { id: "n3", name: "Michael · 引领入光", court: "天堂", type: "引领", order: 3 },
+      { id: "n4", name: "Christ · 公审判", court: "天堂", type: "终审", order: 4 },
+    ],
+  },
   EUROPEAN_APPEAL: {
     civilization: "EUROPEAN",
     caseType: "APPEAL",
@@ -559,6 +576,7 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   "轮回分流": "名字说的是一件事。",
   "紧急受理": "受理动作。中国 / 欧洲两套紧急流程共用这个节点名，理由相同(埃及的紧急审判 2026-10-27 起也走称心，没有这一站)。",
   "申诉受理": "受理动作。原来这里写的是「Gabriel · 受理」，见欧洲一节顶部为什么传信天使不受理亡魂案件。",
+  "异端裁定": "一项认定（是否否认灵魂不灭），不是谁的裁断；但丁的异端圈没有审判者。",
   // ── 埃及 ──────────────────────────────────────────────
   // ── 希腊 ──────────────────────────────────────────────
   "按出身地域分流": "自动分流，无人审批：按灵魂的出身地域交给 Aeacus 或 Rhadamanthus。",

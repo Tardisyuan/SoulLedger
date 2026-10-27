@@ -203,6 +203,19 @@ describe("SoulDetailPage — rebirth form selection", () => {
     expect(screen.getByRole("radio", { name: "ANIMAL" })).not.toBeChecked();
   });
 
+  it("a Greek soul has no six paths: no picker, the button is live, no rebirth_form is sent (G-2, 2026-10-27)", async () => {
+    mockSoulsGet.mockResolvedValue({ data: { ...disposedSoul, civilization: "GREEK", home_civilization: "GREEK" } });
+    renderPage();
+
+    const button = await screen.findByRole("button", { name: /souls\.detail\.reincarnate/ });
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("rebirth-pick-form")).toBeNull();
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(mockReborn).toHaveBeenCalledTimes(1));
+    expect(mockReborn.mock.calls[0][0]).not.toHaveProperty("rebirth_form");
+  });
+
   it("shows no picker for a soul with nothing to reincarnate into", async () => {
     mockDispositionList.mockResolvedValue({ data: { results: [] } });
     renderPage();

@@ -15,6 +15,9 @@ export type SoulOriginRegion = "EUROPE" | "ASIA" | "";
 /** `Soul.DuatPassage`(埃及未得审判的情形,docs/01 §4.2);"" = 葬仪如常。 */
 export type SoulDuatPassage = "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL" | "";
 
+/** `Soul.Baptism`(只欧洲;未受洗 / 生于基督之前且没有更重的罪 → Limbo,review E-2)。 */
+export type SoulBaptism = "UNRECORDED" | "BAPTISED" | "UNBAPTISED" | "BEFORE_CHRIST";
+
 export interface SoulInput {
   name: string;
   // Derived, not re-listed. This union was written out by hand when
@@ -34,6 +37,9 @@ export interface SoulInput {
   origin_region?: SoulOriginRegion;
   /** 只埃及:未得审判的情形。 */
   duat_passage?: SoulDuatPassage;
+  /** 只欧洲:受洗(Limbo)与否认灵魂不灭(第六圈);null = 未记录。 */
+  baptism?: SoulBaptism;
+  denied_immortality?: boolean | null;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
@@ -158,6 +164,9 @@ export interface Soul extends SoulBase, ArchiveFields {
   fated_death_date?: HistoricalDate | null;
   /** 埃及(review P2-9):未得审判的情形,官员登记;"" = 葬仪如常(木乃伊 70 天后入殿)。 */
   duat_passage?: SoulDuatPassage;
+  /** 欧洲(review E-2):受洗决定 Limbo;否认灵魂不灭决定第六圈。别的文明恒为 UNRECORDED / null。 */
+  baptism?: SoulBaptism;
+  denied_immortality?: boolean | null;
 }
 
 /**

@@ -278,10 +278,10 @@ def test_a_petty_fraud_is_sorted_above_a_grave_one_by_weight_alone(
     """CONTRADICTION, PINNED. The same sin, two circles, because of a number.
 
     One swindler cheats small and one cheats large. Both belong in Malebolge and
-    nowhere else; this router sends them to different circles — and sends the
-    small one to Limbo, which holds virtuous pagans and unbaptized infants and is
-    not a punishment at all (Inf. IV). The magnitude ladder does not merely lack
-    a kind, it actively contradicts the one it is standing on.
+    nowhere else; this router sends them to different circles. It used to send
+    the small one to Limbo as well; since 2026-10-27 (review E-2) Limbo is only
+    for the unbaptised (Inf. IV) and the ladder's floor for anyone else is the
+    second circle — see tests/test_european_limbo_and_heresy.py.
     """
     petty = make_european_soul("petty swindler")
     grave = make_european_soul("grave swindler")
@@ -291,7 +291,7 @@ def test_a_petty_fraud_is_sorted_above_a_grave_one_by_weight_alone(
     petty.refresh_from_db()
     grave.refresh_from_db()
 
-    assert DispositionService._route_to_realm(petty, Verdict.FAILED) == LIMBO
+    assert DispositionService._route_to_realm(petty, Verdict.FAILED) == DispositionService.EU_HELL_CIRCLES[2]
     assert DispositionService._route_to_realm(grave, Verdict.FAILED) == TREACHERY
     assert FRAUD not in {
         DispositionService._route_to_realm(petty, Verdict.FAILED),
@@ -553,10 +553,10 @@ def test_an_unclassified_soul_still_takes_the_culpa_ladder(
         _fraud(unclassified, weight=1)
     unclassified.refresh_from_db()
 
-    assert DispositionService._route_to_realm(unclassified, Verdict.FAILED) == LIMBO, (
-        "an unclassified petty fraud should still take the ladder — including "
-        "to Limbo, which is the contradiction the ladder has and the citation "
-        "path does not"
+    assert DispositionService._route_to_realm(unclassified, Verdict.FAILED) == DispositionService.EU_HELL_CIRCLES[2], (
+        "an unclassified petty fraud should still take the ladder — whose floor "
+        "is the second circle for a soul not recorded as unbaptised: Limbo is "
+        "not a light sentence (Inf. IV; review E-2, 2026-10-27)"
     )
 
 

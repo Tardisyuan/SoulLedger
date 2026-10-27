@@ -163,3 +163,33 @@ describe("SoulEditModal · 入殿前情形 (review P2-9)", () => {
     expect(mockMutate.mock.calls[0][0].data).not.toHaveProperty("duat_passage");
   });
 });
+
+describe("SoulEditModal · 受洗与否认灵魂不灭 (review E-2)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("欧洲: both facts are picked and sent; an unrecorded denial is null", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={{ ...aliveSoul, civilization: "EUROPEAN" }} onUpdated={jest.fn()} />);
+    const baptism = screen.getByLabelText("souls.baptism.label") as HTMLSelectElement;
+    const denied = screen.getByLabelText("souls.denied_immortality.label") as HTMLSelectElement;
+    expect([baptism.value, denied.value]).toEqual(["UNRECORDED", "UNRECORDED"]);
+    fireEvent.change(baptism, { target: { value: "UNBAPTISED" } });
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].data).toMatchObject({ baptism: "UNBAPTISED", denied_immortality: null });
+
+    fireEvent.change(denied, { target: { value: "YES" } });
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(2));
+    expect(mockMutate.mock.calls[1][0].data.denied_immortality).toBe(true);
+  });
+
+  it("other civilizations: no fields, nothing sent", async () => {
+    render(<SoulEditModal isOpen={true} onClose={jest.fn()} soul={aliveSoul} onUpdated={jest.fn()} />);
+    expect(screen.queryByLabelText("souls.baptism.label")).toBeNull();
+    expect(screen.queryByLabelText("souls.denied_immortality.label")).toBeNull();
+    fireEvent.click(screen.getByText("common.save"));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    expect(mockMutate.mock.calls[0][0].data).not.toHaveProperty("baptism");
+    expect(mockMutate.mock.calls[0][0].data).not.toHaveProperty("denied_immortality");
+  });
+});
