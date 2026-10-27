@@ -79,9 +79,8 @@ export function useApplyMatrixChanges() {
       const { rolesChanged } = summarizeMatrixSave(result);
       if (rolesChanged.length === 0) return;
       queryClient.invalidateQueries({ queryKey: permKeys.roles });
-      for (const role of rolesChanged) {
-        queryClient.invalidateQueries({ queryKey: permKeys.rolePermissions(role) });
-      }
+      // One query holds every role's grants, so a save refetches it once, not once per changed role.
+      queryClient.invalidateQueries({ queryKey: permKeys.allRolePermissions });
     },
   });
 }

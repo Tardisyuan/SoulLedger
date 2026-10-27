@@ -34,6 +34,7 @@ jest.mock("@soulledger/core/api", () => ({
     list: jest.fn(),
     roles: { list: jest.fn() },
     rolePermissions: jest.fn(),
+    allRolePermissions: jest.fn(),
     applyChanges: jest.fn(),
     // The page asks what a pending edit would break (debounced); nothing, here.
     impact: jest.fn().mockResolvedValue({ data: { required_codenames: [], conflicts: [] } }),
@@ -67,6 +68,14 @@ jest.mock("@/src/components/layout/MenuGloss", () => ({
 const mockList = permApi.list as jest.Mock;
 const mockRolesList = permApi.roles.list as jest.Mock;
 const mockRolePermissions = permApi.rolePermissions as jest.Mock;
+
+/** The bulk read the page makes: every listed role, each answered by the per-role mock. */
+function composeAllRolePermissions(p: { roles: { list: jest.Mock }; rolePermissions: jest.Mock; allRolePermissions: jest.Mock }) {
+  p.allRolePermissions.mockImplementation(async () => {
+    const roles: { name: string }[] = (await p.roles.list()).data;
+    return { data: await Promise.all(roles.map(async (r) => (await p.rolePermissions(r.name)).data)) };
+  });
+}
 
 const PERMS: Permission[] = [
   { id: 1, codename: "soul.read", name: "读灵魂", category: "soul" } as Permission,
@@ -141,6 +150,7 @@ beforeEach(() => {
       details: (GRANTS[name] ?? []).map((id) => PERMS[id - 1]),
     },
   }));
+  composeAllRolePermissions(permApi as unknown as Parameters<typeof composeAllRolePermissions>[0]);
 });
 
 describe("a renamed role keeps its grants in the matrix", () => {
