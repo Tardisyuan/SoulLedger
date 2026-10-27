@@ -862,21 +862,52 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # ponytail: 木乃伊 70 天期间行程已写到殿上(案子归殿);要「70 天后才入殿」得有个到期任务来挪行程。
             self._arrive_in_the_hall(judgment)
 
-    def release_from_the_duat_entry(self):
-        """An officer found the burial proper after all (`duat_passage` NAMELESS / IMPROPER_BURIAL → blank,
-        2026-10-27): the open case held at the Duat entry sets out as it would have at death — embalming and
-        its 70 days by the same rule (`_duat_fields`: nothing held once that day has passed, no stage at all
-        without a full CE date of death), then the hall. Called inside the edit's transaction (SoulSerializer).
-        No event: arriving in the hall at death logs none either; the Judgment edit is in the audit log."""
-        from apps.judgment.models import DUAT_BARRED, Judgment
+    def follow_duat_passage(self, old):
+        """An officer changed `duat_passage` after death (2026-10-27); the open first-instance case follows it.
 
-        died = to_legacy_date(self.death_year, self.death_month, self.death_day)
-        fields = {"duat_stage": "", "held_until": None, **self._duat_fields(died)}
-        for judgment in Judgment.objects.filter(soul=self, is_final=False, duat_stage__in=DUAT_BARRED):
+        * NAMELESS ↔ IMPROPER_BURIAL: only the case's `duat_stage` changes; it stays held at the Duat entry.
+        * NAMELESS / IMPROPER_BURIAL → blank (a burial found proper): the case sets out as it would have at death —
+          embalming and its 70 days by the same rule (`_duat_fields`), then the hall.
+        * blank → NAMELESS / IMPROPER_BURIAL: an unclaimed case leaves the hall for the Duat entry and is held for
+          ever, as at death registration (`opening_fields`: that stage, nothing held until a date, no realm). A case
+          an officer has claimed is being decided: refused (`DjangoValidationError`, the serializer's 400).
+
+        One `DUAT_PASSAGE_CHANGED` per soul whose case moved, in the caller's transaction (SoulSerializer.update).
+        """
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from apps.events.services import EventService
+        from apps.judgment.models import DUAT_BARRED, Judgment, JudgmentKind
+        from apps.realms.path import SoulPathService
+
+        new = self.duat_passage
+        if old == new or (old not in DUAT_BARRED and new not in DUAT_BARRED):
+            return
+        cases = list(Judgment.objects.select_for_update(of=("self",)).filter(
+            soul=self, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False))
+        if old in DUAT_BARRED:
+            cases = [case for case in cases if case.duat_stage in DUAT_BARRED]
+        if not cases:
+            return
+        if new in DUAT_BARRED and old not in DUAT_BARRED and any(case.claimed_by_id for case in cases):
+            raise DjangoValidationError("An officer has claimed this soul's case; it is being decided.")
+        for case in cases:
+            if new in DUAT_BARRED:
+                fields = {"duat_stage": new}
+                if old not in DUAT_BARRED:
+                    fields.update(held_until=None, realm=None)
+            else:
+                died = to_legacy_date(self.death_year, self.death_month, self.death_day)
+                fields = {"duat_stage": "", "held_until": None, **self._duat_fields(died)}
             for name, value in fields.items():
-                setattr(judgment, name, value)
-            judgment.save(update_fields=list(fields))
-            self._arrive_in_the_hall(judgment)
+                setattr(case, name, value)
+            case.save(update_fields=list(fields))
+            if new not in DUAT_BARRED:
+                self._arrive_in_the_hall(case)
+        if new in DUAT_BARRED and old not in DUAT_BARRED:
+            SoulPathService.enter_on_death(self)  # 回到杜阿特入口(租户没有入口这一站就不写)
+        EventService.log(self, "DUAT_PASSAGE_CHANGED", {
+            "from": old, "to": new, "judgments": [str(case.pk) for case in cases]})
 
     def _arrive_in_the_hall(self, judgment):
         """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口

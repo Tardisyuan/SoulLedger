@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { openWorkOf, type User } from "@soulledger/core/api";
+import type { User } from "@soulledger/core/api";
 import { useBatchSetUsersActive } from "@soulledger/core/hooks/useUsers";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -57,14 +57,17 @@ export function UserBatchBar({ selection }: { selection: UserSelection }) {
       { ids: [...selection.ids], active },
       {
         onSuccess: (result) => {
-          showToast(t("users.batch.done", { n: String(result.updated) }), "success");
+          // 批量不做交接:手上还有在途的事的官员后端不停(`held`),点名让管理员逐个停用、停用时移交。
+          const held = "held" in result ? result.held : [];
+          if (held.length) {
+            showToast(t("users.batch.open_work", { n: String(result.updated), m: String(held.length),
+                                                   names: held.map((h) => h.username).join(", ") }), "info");
+          } else {
+            showToast(t("users.batch.done", { n: String(result.updated) }), "success");
+          }
           selection.clear();
         },
-        onError: (error) => {
-          // 有人手上还有在途的事:后端整批不停(批量不做交接),要逐个停用、停用时移交。
-          const held = openWorkOf(error);
-          showToast(held ? t("users.batch.open_work", { n: String(Object.keys(held).length) }) : t("users.batch.failed"), "error");
-        },
+        onError: () => showToast(t("users.batch.failed"), "error"),
       }
     );
 

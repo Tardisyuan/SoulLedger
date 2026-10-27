@@ -87,6 +87,11 @@ export interface UserBatchUpdateResult {
   updated: number;
 }
 
+/** 200 body of POST /users/batch_deactivate/ (2026-10-27): 手上没事的人停用(`updated`);还有在途的事的官员不停,列在 `held`。 */
+export interface UserBatchDeactivateResult extends UserBatchUpdateResult {
+  held: { id: string; username: string; open_work: Omit<HandoverPreview, "problems"> }[];
+}
+
 export interface UserFilters {
   page?: number;
   role?: string;
@@ -189,7 +194,7 @@ export function handoverProblemsOf(error: unknown): HandoverPreview["problems"] 
   return Array.isArray(data?.problems) ? data.problems : null;
 }
 
-/** 409 `officer_has_open_work` of deactivate / batch_deactivate: the handover-preview counts, keyed by user id. */
+/** 409 `officer_has_open_work` of deactivate: the handover-preview counts, keyed by user id. */
 export function openWorkOf(error: unknown): Record<string, Omit<HandoverPreview, "problems">> | null {
   if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
   const data = error.response.data as { code?: string; open_work?: Record<string, Omit<HandoverPreview, "problems">> } | undefined;
@@ -218,7 +223,7 @@ export const usersApi = {
     api.post<User>(`/users/${id}/deactivate/`, handoverTo == null ? {} : { handover_to: handoverTo }),
   assignRoles: (id: string, data: AssignRolesInput) => api.post<User>(`/users/${id}/assign_roles/`, data),
   batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
-  batchDeactivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_deactivate/", { user_ids: userIds }),
+  batchDeactivate: (userIds: string[]) => api.post<UserBatchDeactivateResult>("/users/batch_deactivate/", { user_ids: userIds }),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
   /** `user.manage`. 200 `{password}`: a random password, shown once; the officer must change it at next login and
    *  every other session of theirs is ended. */

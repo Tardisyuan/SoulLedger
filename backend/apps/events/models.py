@@ -122,6 +122,15 @@ class EventType(models.TextChoices):
     # 通过,灵魂从炼狱进天堂,与那一笔同一事务。payload:原处置、从哪一层、到哪、`via`(TERM_SERVED / PURGATORY_REVIEW)。
     PURGATORY_ASCENDED = "PURGATORY_ASCENDED"
 
+    # 官员交接(2026-10-27,apps/judgment/handover.py::commit):一位官员手上的审判 / 申诉 / 书信交给另一位,
+    # 每个受影响的灵魂一条,与交接同一事务。payload:交出人、接手人(用户名)与这个灵魂被移交的各件 id。
+    OFFICER_HANDOVER = "OFFICER_HANDOVER"
+
+    # 杜阿特行程改动(2026-10-27,只在埃及;Soul.follow_duat_passage):死后改了 `duat_passage`,未结的原审跟着走 ——
+    # 放行入殿、退回杜阿特入口、或在两种未竟之间改记。只在有案子跟着动时写,与那次编辑同一事务。
+    # payload:`from` / `to`(passage)与动到的审判 id。
+    DUAT_PASSAGE_CHANGED = "DUAT_PASSAGE_CHANGED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

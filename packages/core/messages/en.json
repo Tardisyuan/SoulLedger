@@ -332,7 +332,9 @@
       "CITY_GOD_SENT_ON": "Sent on by the City God to the Ten Courts",
       "CITY_GOD_RETURNED": "Returned by the City God for correction",
       "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting",
-      "PURGATORY_ASCENDED": "Rose from purgatory to heaven"
+      "PURGATORY_ASCENDED": "Rose from purgatory to heaven",
+      "OFFICER_HANDOVER": "Case handed to another officer",
+      "DUAT_PASSAGE_CHANGED": "Duat passage changed"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -3004,7 +3006,7 @@
       "deactivate": "Deactivate selected",
       "done": "Updated {{n}} accounts",
       "failed": "Batch update failed",
-      "open_work": "Nobody was deactivated: {{n}} officers still hold open work. Deactivate them one at a time and hand it over.",
+      "open_work": "{{n}} deactivated. {{m}} still hold open work and stay active: {{names}}. Deactivate them one at a time and hand it over.",
       "skipped_note": "Administrator accounts and your own are left out of batches."
     },
     "reset_password": {

@@ -111,6 +111,9 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     // 孟婆汤(backend/apps/reincarnation/services.py::drink_soup):地府转世前饮汤,落在灵魂时间线上。
     MENGPO_SOUP_TAKEN: handleSoulEvent,
     PURGATORY_ASCENDED: handleSoulEvent,
+    // 官员交接(backend/apps/judgment/handover.py::commit)与杜阿特行程改动(Soul.follow_duat_passage)。
+    OFFICER_HANDOVER: handleSoulEvent,
+    DUAT_PASSAGE_CHANGED: handleSoulEvent,
   },
 
   // Workflow domain
@@ -287,6 +290,9 @@ export const BACKEND_EVENT_TYPES = [
   "MENGPO_SOUP_TAKEN",
   // Purgatory → heaven (European only)
   "PURGATORY_ASCENDED",
+  // Officer handover; Duat passage changed after death (Egyptian only)
+  "OFFICER_HANDOVER",
+  "DUAT_PASSAGE_CHANGED",
   // Scheduler (only the failure is an EventType; see REALTIME_ONLY below)
   "SCHEDULER_RUN_FAILED",
 ] as const;
@@ -301,7 +307,8 @@ type BackendEventType = (typeof BACKEND_EVENT_TYPES)[number];
 export const SOUL_EVENT_GROUPS = {
   lifecycle: [
     "SOUL_CREATED", "STATE_CHANGED", "KARMA_RECALCULATED", "SETTLEMENT_CORRECTED", "RECORD_ADDED",
-    "JUDGMENT_INITIATED", "CITY_GOD_RECEIVED", "CITY_GOD_RETURNED", "CITY_GOD_SENT_ON",
+    "JUDGMENT_INITIATED", "CITY_GOD_RECEIVED", "CITY_GOD_RETURNED", "CITY_GOD_SENT_ON", "DUAT_PASSAGE_CHANGED",
+    "OFFICER_HANDOVER",
     "JUDGMENT_CONCLUDED", "JUDGMENT_APPEAL_FILED", "JUDGMENT_APPEAL_WITHDRAWN",
     "JUDGMENT_APPEAL_DECIDED", "DISPOSITION_CREATED", "DISPOSITION_EXPIRED",
     "REINCARNATION_TRIGGERED", "MENGPO_SOUP_TAKEN", "REINCARNATION_COMPLETED", "PURGATORY_ASCENDED",

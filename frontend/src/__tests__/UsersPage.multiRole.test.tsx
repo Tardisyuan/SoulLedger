@@ -132,7 +132,7 @@ beforeEach(() => {
   });
   mockAssign.mockResolvedValue({ data: user({ id: 2 }) });
   mockBatchActivate.mockResolvedValue({ data: { updated: 2 } });
-  mockBatchDeactivate.mockResolvedValue({ data: { updated: 2 } });
+  mockBatchDeactivate.mockResolvedValue({ data: { updated: 2, held: [] } });
 });
 
 describe("role chips", () => {
@@ -249,11 +249,13 @@ describe("batch activate / deactivate", () => {
     expect(screen.getByRole("region", { name: "users.batch.region" })).toBeInTheDocument();
   });
 
-  it("a batch refused for open work says how many officers still hold it, not 'failed'", async () => {
-    mockBatchDeactivate.mockRejectedValue({ response: { status: 409, data: { code: "officer_has_open_work", open_work: { "7": {}, "8": {} } } } });
+  it("officers still holding work are named with the count deactivated, not 'done' or 'failed'", async () => {
+    mockBatchDeactivate.mockResolvedValue({ data: { updated: 1, held: [
+      { id: "7", username: "lu", open_work: {} }, { id: "8", username: "bao", open_work: {} }] } });
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "users.batch.deactivate" }));
-    await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.stringContaining("users.batch.open_work"), "error"));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("users.batch.open_work:1,2,lu, bao", "info"));
+    expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining("users.batch.done"), expect.anything());
     expect(mockToast).not.toHaveBeenCalledWith("users.batch.failed", "error");
   });
 

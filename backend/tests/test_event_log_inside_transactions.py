@@ -308,6 +308,45 @@ def _purgatory_review_ascends():
             lambda: ApprovalNode.all_objects.get(pk=node.pk).status != NodeStatus.PENDING, "PURGATORY_ASCENDED")
 
 
+def _handover():
+    """2026-10-27:官员交接把审判移给另一位官员,每个受影响的灵魂一条 OFFICER_HANDOVER,与交接同一事务。"""
+    from apps.judgment import handover
+
+    tenant = _cn()
+    soul, case = plan.open_case(tenant, name="交接魂")
+    tag = soul.pk.hex[:8]
+    a, b = (plan.officer(f"ho_{who}_{tag}", "JUDGE", tenant) for who in ("a", "b"))
+    Judgment.all_objects.filter(pk=case.pk).update(claimed_by=a, claimed_at=timezone.now())
+    return (lambda: handover.commit(a, b, tenant.pk, actor=b),
+            lambda: Judgment.all_objects.get(pk=case.pk).claimed_by_id == b.pk, "OFFICER_HANDOVER")
+
+
+def _duat_passage(old, new):
+    """2026-10-27:死后改 duat_passage,未结的原审跟着走(放行入殿 / 退回杜阿特入口),DUAT_PASSAGE_CHANGED 同一事务。"""
+    def path():
+        from apps.authentication.models import User
+        from apps.realms.models import Realm
+        from tests.soul_account_support import officer_client
+
+        tenant = plan.tenant("EG_DUAT")
+        for code in ("EG_DUAT_ENTRY", "EG_HALL_TWO_TRUTHS"):
+            Realm.all_objects.get_or_create(realm_code=code, tenant=tenant, defaults={
+                "civilization": "EGYPTIAN", "name_local": code, "realm_type": "HEAVEN"})
+        soul = Soul.objects.create(name="Ka", tenant=tenant, current_state=SoulState.ALIVE, duat_passage=old)
+        case = soul.die(death_date=datetime.date.today() - datetime.timedelta(days=10))
+        admin = User.objects.get_or_create(username="evlog_admin", defaults={"role": "ADMIN", "is_staff": True,
+                                                                             "is_superuser": True})[0]
+
+        def run():
+            res = officer_client(admin).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": new}, format="json")
+            assert res.status_code == 200, res.data
+            return res
+
+        return run, lambda: Judgment.all_objects.get(pk=case.pk).duat_stage == (new or "EMBALMING"), \
+            "DUAT_PASSAGE_CHANGED"
+    return path
+
+
 def _workflow_timeout_reject():
     from apps.workflow import timeouts
     from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus
@@ -576,6 +615,9 @@ PATHS = {
     "workflow_reject/WORKFLOW_REJECTED": _workflow_decision("FAILED", "WORKFLOW_REJECTED"),
     "workflow_timeout_reject/WORKFLOW_REJECTED": _workflow_timeout_reject,
     "purgatory_review/PURGATORY_ASCENDED": _purgatory_review_ascends,
+    "officer_handover/OFFICER_HANDOVER": _handover,
+    "duat_release/DUAT_PASSAGE_CHANGED": _duat_passage("NAMELESS", ""),
+    "duat_bar/DUAT_PASSAGE_CHANGED": _duat_passage("", "IMPROPER_BURIAL"),
     # the application's status follows the decision IN the decision's transaction (`sync_from_workflow`)
     "rebirth_approve+sync/REBIRTH_STATUS_CHANGED": _rebirth_decision_syncs_the_application,
     "rebirth_timeout+sync/REBIRTH_STATUS_CHANGED": _rebirth_timeout_syncs_the_application,

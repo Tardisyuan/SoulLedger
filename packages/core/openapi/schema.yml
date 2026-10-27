@@ -6323,6 +6323,7 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - DUAT_PASSAGE_CHANGED
           - JUDGMENT_APPEAL_DECIDED
           - JUDGMENT_APPEAL_FILED
           - JUDGMENT_APPEAL_WITHDRAWN
@@ -6331,6 +6332,7 @@ paths:
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
           - NOTIFICATION_CREATED
+          - OFFICER_HANDOVER
           - POST_CREATED
           - POST_DELETED
           - POST_UPDATED
@@ -6424,6 +6426,8 @@ paths:
           * `CITY_GOD_RETURNED` - City God Returned
           * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
           * `PURGATORY_ASCENDED` - Purgatory Ascended
+          * `OFFICER_HANDOVER` - Officer Handover
+          * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6547,6 +6551,7 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - DUAT_PASSAGE_CHANGED
           - JUDGMENT_APPEAL_DECIDED
           - JUDGMENT_APPEAL_FILED
           - JUDGMENT_APPEAL_WITHDRAWN
@@ -6555,6 +6560,7 @@ paths:
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
           - NOTIFICATION_CREATED
+          - OFFICER_HANDOVER
           - POST_CREATED
           - POST_DELETED
           - POST_UPDATED
@@ -6648,6 +6654,8 @@ paths:
           * `CITY_GOD_RETURNED` - City God Returned
           * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
           * `PURGATORY_ASCENDED` - Purgatory Ascended
+          * `OFFICER_HANDOVER` - Officer Handover
+          * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -20696,13 +20704,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserBatchUpdateResult'
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OfficerHasOpenWork'
+                $ref: '#/components/schemas/UserBatchDeactivateResult'
           description: ''
   /api/v1/users/export_csv/:
     get:
@@ -26771,6 +26773,8 @@ components:
       - CITY_GOD_RETURNED
       - MENGPO_SOUP_TAKEN
       - PURGATORY_ASCENDED
+      - OFFICER_HANDOVER
+      - DUAT_PASSAGE_CHANGED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -26831,6 +26835,8 @@ components:
         * `CITY_GOD_RETURNED` - City God Returned
         * `MENGPO_SOUP_TAKEN` - Mengpo Soup Taken
         * `PURGATORY_ASCENDED` - Purgatory Ascended
+        * `OFFICER_HANDOVER` - Officer Handover
+        * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -27699,6 +27705,21 @@ components:
       - city_gods
       - judgments
       - letters
+    HeldOfficer:
+      type: object
+      description: One officer a batch deactivation left active because they still
+        hold open work.
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        open_work:
+          $ref: '#/components/schemas/OpenWork'
+      required:
+      - id
+      - open_work
+      - username
     ImpersonateEndResponse:
       type: object
       properties:
@@ -32249,8 +32270,8 @@ components:
       - updated_at
     OfficerHasOpenWork:
       type: object
-      description: 409 of single and batch deactivation. `open_work` is keyed by user
-        id (one key for a single deactivation).
+      description: 409 of a single deactivation. `open_work` is keyed by user id (one
+        key).
       properties:
         error:
           type: string
@@ -42952,6 +42973,21 @@ components:
       - role
       - tenant
       - username
+    UserBatchDeactivateResult:
+      type: object
+      description: |-
+        `batch_deactivate`: everyone without open work is deactivated (`updated`); the officers who still hold work
+        stay active and are listed in `held`, to be deactivated one at a time with a handover (2026-10-27).
+      properties:
+        updated:
+          type: integer
+        held:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeldOfficer'
+      required:
+      - held
+      - updated
     UserBatchUpdateResult:
       type: object
       description: |-

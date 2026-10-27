@@ -546,7 +546,7 @@ class OpenWorkSerializer(serializers.Serializer):
 
 
 class OfficerHasOpenWorkSerializer(serializers.Serializer):
-    """409 of single and batch deactivation. `open_work` is keyed by user id (one key for a single deactivation)."""
+    """409 of a single deactivation. `open_work` is keyed by user id (one key)."""
 
     error = serializers.CharField()
     code = serializers.ChoiceField(["officer_has_open_work"])
@@ -869,6 +869,21 @@ class UserBatchUpdateResultSerializer(serializers.Serializer):
     """
 
     updated = serializers.IntegerField()
+
+
+class HeldOfficerSerializer(serializers.Serializer):
+    """One officer a batch deactivation left active because they still hold open work."""
+
+    id = serializers.CharField()
+    username = serializers.CharField()
+    open_work = OpenWorkSerializer()
+
+
+class UserBatchDeactivateResultSerializer(UserBatchUpdateResultSerializer):
+    """`batch_deactivate`: everyone without open work is deactivated (`updated`); the officers who still hold work
+    stay active and are listed in `held`, to be deactivated one at a time with a handover (2026-10-27)."""
+
+    held = HeldOfficerSerializer(many=True)
 
 
 class UserImportResultSerializer(serializers.Serializer):

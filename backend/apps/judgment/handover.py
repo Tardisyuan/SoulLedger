@@ -130,6 +130,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
             conversation.save(update_fields=["assignee", "assigned_at"])
             moved["letters"].append(str(conversation.pk))
 
+        _log_per_soul(source, target, actor, moved)
         AuditLog.objects.create(
             tenant_id=tenant_id, user=actor, action=AuditAction.EXECUTE, resource="officer_handover",
             resource_id=str(source.pk), description=f"officer handover {source.username} -> {target.username}",
@@ -140,6 +141,27 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
         _notify_after_commit(target, actor, source, moved)
     counts = {k: len(v) for k, v in moved.items()}
     return counts
+
+
+def _log_per_soul(source, target, actor, moved):
+    """一个受影响的灵魂一条 OFFICER_HANDOVER(2026-10-27),在交接的事务里。城隍不属于某个灵魂,不记。"""
+    from apps.chat.models import Conversation
+    from apps.events.services import EventService
+    from apps.souls.models import Soul
+
+    per_soul = {}
+    for kind, soul_ids in (
+        ("judgments", Judgment.all_objects.filter(pk__in=moved["judgments"]).values_list("pk", "soul_id")),
+        ("appeals", JudgmentAppeal.all_objects.filter(pk__in=moved["appeals"]).values_list("pk", "soul_id")),
+        ("appeals_returned_to_pool", JudgmentAppeal.all_objects.filter(
+            pk__in=moved["appeals_returned_to_pool"]).values_list("pk", "soul_id")),
+        ("letters", Conversation.objects.filter(pk__in=moved["letters"]).values_list("pk", "soul_a_id")),
+    ):
+        for pk, soul_id in soul_ids:
+            per_soul.setdefault(soul_id, {}).setdefault(kind, []).append(str(pk))
+    for soul in Soul.all_objects.filter(pk__in=per_soul).order_by("pk"):
+        EventService.log(soul, "OFFICER_HANDOVER", {"from": source.username, "to": target.username,
+                                                    **per_soul[soul.pk]}, actor=actor.username)
 
 
 def _notify_after_commit(target, actor, source, moved):
