@@ -94,3 +94,14 @@ class Tenant(AuditUserFields, models.Model):
     # See `backend/tests/test_a_dispatch_notification_reaches_a_reader.py` for
     # the incident this model was the cause of, and migration 0010 for the
     # table drop.
+
+
+def _drop_cached_halls(**_kwargs):
+    """`TenantMiddleware` keeps a short per-worker copy of each hall row; a save or delete here drops it."""
+    from apps.tenants.middleware import clear_tenant_cache
+
+    clear_tenant_cache()
+
+
+models.signals.post_save.connect(_drop_cached_halls, sender=Tenant, dispatch_uid="tenants.drop_cached_halls.save")
+models.signals.post_delete.connect(_drop_cached_halls, sender=Tenant, dispatch_uid="tenants.drop_cached_halls.delete")
