@@ -58,7 +58,8 @@ const UNSELECTED =
   "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]";
 
 interface RebirthFormSelectProps {
-  value: RebirthFormValue;
+  /** null = nothing chosen yet (Diyu with no suggestion): no radio is checked. */
+  value: RebirthFormValue | null;
   onChange: (form: RebirthFormValue) => void;
   disabled?: boolean;
   /**
@@ -116,7 +117,7 @@ export function RebirthFormSelect({ value, onChange, disabled, quota }: RebirthF
    */
   const flat = groups.flatMap((g) => g.forms);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const selectedIndex = Math.max(0, flat.indexOf(value));
+  const selectedIndex = value ? Math.max(0, flat.indexOf(value)) : 0;
 
   const moveTo = (index: number) => {
     const next = flat[(index + flat.length) % flat.length];

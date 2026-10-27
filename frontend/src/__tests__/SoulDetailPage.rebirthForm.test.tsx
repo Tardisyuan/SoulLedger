@@ -172,14 +172,18 @@ describe("SoulDetailPage — rebirth form selection", () => {
     );
   });
 
-  it("still posts HUMAN when the operator picks nothing", async () => {
+  it("a Diyu soul with no suggestion has nothing preselected: the officer picks before the rebirth (user 2026-10-27)", async () => {
     renderPage();
 
-    await screen.findByRole("radio", { name: "HUMAN" });
-    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
+    expect(await screen.findByTestId("rebirth-pick-form")).toHaveTextContent("souls.detail.rebirth_pick_form");
+    for (const radio of screen.getAllByRole("radio")) expect(radio).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ })).toBeDisabled();
 
+    fireEvent.click(screen.getByRole("radio", { name: "ANIMAL" }));
+    expect(screen.queryByTestId("rebirth-pick-form")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
     await waitFor(() => expect(mockReborn).toHaveBeenCalledTimes(1));
-    expect(mockReborn.mock.calls[0][0]).toMatchObject({ rebirth_form: "HUMAN" });
+    expect(mockReborn.mock.calls[0][0]).toMatchObject({ rebirth_form: "ANIMAL" });
   });
 
   it("the tenth court's suggestion is the default and the officer can change it (docs/07 §四)", async () => {
@@ -215,6 +219,7 @@ describe("SoulDetailPage — monthly rebirth quota (第五十一批 Q-3)", () =>
     mockQuota.mockResolvedValue({ data: [{ rebirth_form: "HUMAN", limit: 20, used: 20 }] });
     renderPage();
 
+    fireEvent.click(await screen.findByRole("radio", { name: "HUMAN" }));
     expect(await screen.findByTestId("rebirth-quota-full")).toHaveTextContent("rebirths.quota.full");
     expect(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ })).toBeDisabled();
     // 换一道没满的:句子消失,按钮回来。
@@ -229,7 +234,7 @@ describe("SoulDetailPage — monthly rebirth quota (第五十一批 Q-3)", () =>
     });
     renderPage();
 
-    await screen.findByRole("radio", { name: "HUMAN" });
+    fireEvent.click(await screen.findByRole("radio", { name: "HUMAN" }));
     expect(screen.queryByTestId("rebirth-quota-full")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
 
