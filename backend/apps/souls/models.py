@@ -862,6 +862,22 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # ponytail: 木乃伊 70 天期间行程已写到殿上(案子归殿);要「70 天后才入殿」得有个到期任务来挪行程。
             self._arrive_in_the_hall(judgment)
 
+    def release_from_the_duat_entry(self):
+        """An officer found the burial proper after all (`duat_passage` NAMELESS / IMPROPER_BURIAL → blank,
+        2026-10-27): the open case held at the Duat entry sets out as it would have at death — embalming and
+        its 70 days by the same rule (`_duat_fields`: nothing held once that day has passed, no stage at all
+        without a full CE date of death), then the hall. Called inside the edit's transaction (SoulSerializer).
+        No event: arriving in the hall at death logs none either; the Judgment edit is in the audit log."""
+        from apps.judgment.models import DUAT_BARRED, Judgment
+
+        died = to_legacy_date(self.death_year, self.death_month, self.death_day)
+        fields = {"duat_stage": "", "held_until": None, **self._duat_fields(died)}
+        for judgment in Judgment.objects.filter(soul=self, is_final=False, duat_stage__in=DUAT_BARRED):
+            for name, value in fields.items():
+                setattr(judgment, name, value)
+            judgment.save(update_fields=list(fields))
+            self._arrive_in_the_hall(judgment)
+
     def _arrive_in_the_hall(self, judgment):
         """埃及:亡者穿过杜阿特,抵达两真之殿受审(docs/02 §1.1、01 §2.1)。案子挂在殿上,行程从杜阿特入口
         走到殿里;租户没有这一殿就什么都不写。两组门(七道 ꜥrrwt、廿一道 sbḫt)不入行程 —— 门的位置是 Design
