@@ -272,13 +272,18 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     自带 `--create-db`、单条测试 600 s 限时、一次性 Redis、门禁锁。
   - 全量 `scripts/run-gates.sh --real-pg --full`(含迁移往返)**只在大分支合进 main 前跑一次**。实测 `-n 2` 含往返约 45 分钟(10-28)。
   - 钩子的 pytest 加了 `--ff`:上次失败的先跑。
-  - **后端 pytest 放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名，`root@192.168.2.2`,
-    私钥 `~/.ssh/unraid-host`)和 `GATES_REMOTE_DB_URL`。选测试仍在本机算;rsync 同步树(含 `.git`)到
-    `/mnt/cache/appdata/sl-gates/work/<checkout>-<哈希>/`,在容器 `sl-gates-py:1`(python 3.11 + git/redis/bash,venv 在卷
-    `sl-venv-<锁文件哈希>`,锁文件变了自动重建)里跑，连同网络 `sl-gates` 里的 `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关)。
-    远端跑后端，本机同时跑 jest,最后等远端结果。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因)。
-    实测(同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;
-    本机 SQLite `-n 2` 313 s / CPU 566 s;本机进程连树莓派 PG 830 s;全在树莓派 753 s。约 100 s 是开头单线程建模板库。
+  - **整轮门禁放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名 → `root@192.168.2.2`,
+    私钥 `~/.ssh/unraid-host`)和 `GATES_REMOTE_DB_URL`。本机只算「跑什么」、rsync 同步树(含 `.git`,`--no-owner`)到
+    `/mnt/cache/appdata/sl-gates/work/<checkout>-<哈希>/`,然后在容器 `sl-gates-all:1`(node 20.19.5 + Python 3.11 + git/redis)里跑
+    **同一个 `run-gates.sh`**(`GATES_IN_REMOTE=1`,改动清单经 `PREPUSH_CHANGED` 交过去),输出与退出码传回;成功后「已通过」记账仍记在本机。
+    `node_modules` 与 `backend/.venv` 装在那棵同步树里，锁文件 / package.json 变了才重装(约 2 分钟);数据库是网络 `sl-gates` 里的
+    `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关),所以同时跑 PG-only 测试。远端各 runner 8 个 worker,容器限 12 核 / 24 GB,
+    各 checkout 的运行在那台上用 `flock` 排队。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因);临时要在本机跑就注释掉 `GATES_REMOTE`。
+    远端失败日志在 `<work>/.sl-tmp/`,留一天。
+    实测(后端同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;本机 SQLite `-n 2` 313 s / CPU 566 s;
+    本机进程连树莓派 PG 830 s;全在树莓派 753 s。约 100 s 是开头单线程建模板库。
+    搬过去时撞到的三处 Linux/macOS 差异(都已修):GNU `mktemp` 要 `XXXXXX`;rsync 保留 Mac 的 uid 时 git 在容器里拒认仓库
+    (门禁测试设了 `GIT_CONFIG_NOSYSTEM`);外层的 `GATES_*` 环境串进门禁测试起的子门禁(`_clean_env` 现在去掉全部 `GATES_*`)。
     10-28 本机全量推送那次 15 条实时类测试红(`test_realtime_bus` 等)，空闲时本机与 unRAID 都 34/34 过 —— 交换区满时的超时，不是代码。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。

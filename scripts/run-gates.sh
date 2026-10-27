@@ -550,6 +550,70 @@ else
     fail() { echo ""; echo "$P: $1"; echo "$P: FAILED"; exit 1; }
 fi
 
+# ── DELEGATED RUNS: THE WHOLE RUN ON ANOTHER MACHINE (2026-10-28, user decision) ──
+#
+# `.prepush.env` (gitignored, one machine) names an ssh host with Docker: GATES_REMOTE. Then this
+# machine only decides what runs (everything above), rsyncs the tree, and runs THIS SCRIPT there in a
+# container — same rules, one copy of them — with the decision handed over in PREPUSH_CHANGED. Its
+# output streams back, its exit status is this run's. The container image (GATES_REMOTE_IMAGE) has
+# node (.nvmrc), Python 3.11, git, redis-server; node_modules and backend/.venv are installed there,
+# in the synced tree, and reinstalled only when a lockfile or package.json changes. Its database is
+# the throwaway PostgreSQL GATES_REMOTE_DB_URL names, so the run includes the PostgreSQL-only tests.
+# Runs from all checkouts queue on one lock on that machine.
+#
+# NO FALLBACK. When GATES_REMOTE is set and the machine cannot be used, the run stops here: running
+# on this machine is what froze it (user decision). Retry when it is up; to run here on purpose,
+# comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
+if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
+    RDIR="${GATES_REMOTE_DIR:-/mnt/cache/appdata/sl-gates}"
+    RIMG="${GATES_REMOTE_IMAGE:-sl-gates-all:1}"
+    [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1" 2>/dev/null \
+        || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
+    RID="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
+    RWORK="$RDIR/work/$RID"
+    # Owned by the remote user, not this machine's uid: git there refuses a repository another user
+    # owns once the tests turn the system config off (GIT_CONFIG_NOSYSTEM), and four gate tests went red.
+    echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
+    T_SYNC=$(date +%s)
+    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
+        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
+            --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
+        || fail "could not rsync this tree to $GATES_REMOTE:$RWORK"
+    printf '%s\n' "$CHANGED" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed" || fail "could not hand the change list to $GATES_REMOTE"
+    echo "    (synced in $(( $(date +%s) - T_SYNC ))s)"
+    DEPS=$( { git ls-files -z -- package-lock.json '*package.json' backend/requirements.lock backend/requirements-dev.txt .nvmrc | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
+    RFLAGS="--prepush"; [ "$MODE" = full ] && RFLAGS="$RFLAGS --full"; [ "$REAL_PG" = 1 ] && RFLAGS="$RFLAGS --real-pg"
+    RNAME="sl-gates-$RID-$$"
+    trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
+    trap 'exit 130' INT TERM
+    # flock: one delegated run at a time on that machine, from any checkout or session.
+    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $RNAME \
+        --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
+        -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATES_FULL=${GATES_FULL:-} \
+        -e JEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e VITEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e PYTEST_WORKERS=${GATES_REMOTE_WORKERS:-8} \
+        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS=$DEPS \
+        -e TMPDIR=/app/.sl-tmp $RIMG bash -c '
+          mkdir -p /app/.sl-tmp && find /app/.sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
+          if [ \"\$(cat .sl-deps 2>/dev/null)\" != \"\$SL_DEPS\" ]; then
+            echo \"    (installing node_modules and backend/.venv for these lockfiles — once per lockfile change)\"
+            { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
+              && git checkout -- package-lock.json && rm -rf backend/.venv && python3 -m venv backend/.venv \
+              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt; } >/tmp/deps.log 2>&1 \
+              || { tail -20 /tmp/deps.log; echo \"gates: could not install the dependencies\"; exit 1; }
+            echo \"\$SL_DEPS\" > .sl-deps
+          fi
+          export PREPUSH_CHANGED=\"\$(cat .sl-changed)\"
+          exec bash scripts/run-gates.sh $RFLAGS'"
+    RSTATUS=$?
+    trap - EXIT
+    # Logs it names as /app/.sl-tmp/… are kept there: $RWORK/.sl-tmp/ on $GATES_REMOTE (a day).
+    [ "$RSTATUS" -eq 0 ] || fail "the gates failed on $GATES_REMOTE (exit $RSTATUS) — see above; a log named /app/.sl-tmp/… is $GATES_REMOTE:$RWORK/.sl-tmp/…"
+    record_pass
+    echo "$P: ok on $GATES_REMOTE ($(( $(date +%s) - T_SYNC ))s)"
+    exit 0
+fi
+
 # One heavy gate at a time across every worktree and session (gate-lock.sh,
 # next to this script — the hook's installed copy carries its own).
 if [ -f "$HERE/gate-lock.sh" ]; then
@@ -557,19 +621,6 @@ if [ -f "$HERE/gate-lock.sh" ]; then
     gate_lock "$P $(git rev-parse --abbrev-ref HEAD)"
 fi
 T_GATES=$(date +%s)   # after the lock: the time below is the gates', not the queue's
-
-# REMOTE PYTEST (see "ON ANOTHER MACHINE" at the pytest step). Decided before any check runs: when
-# GATES_REMOTE is set and the machine cannot be used, the run stops here — it does NOT fall back to
-# this machine (2026-10-28, user decision: the local run is what froze this Mac). Retry once it is up,
-# unset GATES_REMOTE in .prepush.env to run here on purpose, or `SKIP_PREPUSH=1 git push`.
-REMOTE=0
-if [ -n "${GATES_REMOTE:-}" ] && { [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; }; then
-    [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the backend tests here."
-    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" \
-        "docker image inspect ${GATES_REMOTE_IMAGE:-sl-gates-py:1} >/dev/null 2>&1" 2>/dev/null \
-        || fail "$GATES_REMOTE is unreachable, or has no ${GATES_REMOTE_IMAGE:-sl-gates-py:1} image. Not running the backend tests on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
-    REMOTE=1
-fi
 
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
@@ -705,37 +756,8 @@ pytest_finish() {
     if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
     [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
-    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed$([ "$REMOTE" = 1 ] && echo " (on $GATES_REMOTE)")"
+    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"
     cd "$ROOT" || exit 1
-}
-
-# remote_pytest_start <pytest args...> — rsync this tree to $GATES_REMOTE, make sure the venv for this
-# requirements.lock exists there, and start pytest in a container; output goes to $PYTEST_LOG.
-remote_pytest_start() {
-    local dir="${GATES_REMOTE_DIR:-/mnt/cache/appdata/sl-gates}" img="${GATES_REMOTE_IMAGE:-sl-gates-py:1}"
-    local id h name quoted
-    id="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
-    h=$(cat "$ROOT/backend/requirements.lock" "$ROOT/backend/requirements-dev.txt" | shasum | cut -c1-12)
-    name="sl-run-$id-$$"
-    { git -C "$ROOT" ls-files -z; git -C "$ROOT" ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
-        | rsync -a --delete --filter='P backend/.pytest_cache/' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$dir/work/$id/" \
-        || fail "could not rsync this tree to $GATES_REMOTE:$dir/work/$id"
-    if ! ssh -o BatchMode=yes "$GATES_REMOTE" "docker volume inspect sl-venv-$h >/dev/null 2>&1"; then
-        echo "    (building the venv for this requirements.lock on $GATES_REMOTE — once per lock)"
-        ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm -v sl-venv-$h:/venv -v $dir/work/$id/backend:/req:ro $img sh -c 'python -m venv /venv && /venv/bin/pip install -q --no-deps -r /req/requirements.lock -r /req/requirements-dev.txt'" \
-            || { ssh -o BatchMode=yes "$GATES_REMOTE" "docker volume rm sl-venv-$h" >/dev/null 2>&1; fail "could not build the venv on $GATES_REMOTE"; }
-    fi
-    quoted=$(printf '%q ' "$@")
-    # An interrupted push must not leave the container running there.
-    trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f '"$name"'" >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
-    trap 'exit 130' INT TERM
-    ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm --init --name $name --network ${GATES_REMOTE_NET:-sl-gates} \
-        --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} -v sl-venv-$h:/venv -v $dir/work/$id:/app -w /app/backend \
-        -e SECRET_KEY=$CI_SECRET_KEY -e DEBUG=true -e DATABASE_URL='$GATES_REMOTE_DB_URL' $img bash -c '
-        redis-server --port 6390 --daemonize yes --save \"\" --appendonly no >/dev/null
-        export REDIS_URL=redis://127.0.0.1:6390/0 CELERY_BROKER_URL=redis://127.0.0.1:6390/1 CELERY_RESULT_BACKEND=redis://127.0.0.1:6390/2
-        exec /venv/bin/python -m pytest $quoted'" >"$PYTEST_LOG" 2>&1 &
-    PYTEST_PID=$!
 }
 
 # pg_only_tests — node ids of every test SQLite skips, from the scanner test_concurrency.py pins the set with.
@@ -767,15 +789,6 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
 
     echo "  → pytest"
-    # ON ANOTHER MACHINE WHEN ONE IS CONFIGURED (2026-10-28, user decision). `.prepush.env` names an
-    # ssh host (GATES_REMOTE) with Docker, the image GATES_REMOTE_IMAGE and a throwaway PostgreSQL
-    # (GATES_REMOTE_DB_URL, reachable from the container network GATES_REMOTE_NET). The selection is
-    # made here, as always; the tree is rsynced there and pytest runs in a container against real
-    # PostgreSQL, the PostgreSQL-only tests included, while this machine runs its own checks. Measured
-    # on the unRAID box (i5-13500T, -n 8): the judgment selection plus the PG-only tests, 2983 passed in
-    # 306 s, this Mac idle — against 313 s for the smaller SQLite set here at -n 2, and 830 s with this
-    # Mac's workers on the Pi's PostgreSQL. Unset: it runs here.
-    [ "$REMOTE" = 1 ] && echo "    (on $GATES_REMOTE: real PostgreSQL, -n ${GATES_REMOTE_WORKERS:-8}; the rest runs here meanwhile)"
     # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
     # run (this repo's websocket tests need a reachable Redis). It is an
     # exclusion list, so it is stated per-machine and visible in the output
@@ -828,13 +841,14 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     # red, which is the 2026-09-04 failure described above.
     # Reports one line per service: "<name> <ok|down> <detail>".
     RPORT=""
-    if [ "$REMOTE" = 0 ]; then
+    if :; then
     # --real-pg: the database is backend/.env's PostgreSQL, never .prepush.env's SQLite override, and
     # a worktree has no backend/.env of its own (gitignored) — the main checkout's describes the same box.
     if [ "$REAL_PG" = 1 ]; then
         unset DATABASE_URL
-        PG_URL=""
+        PG_URL="${GATES_PG_URL:-}"   # a delegated run is handed its PostgreSQL (DELEGATED RUNS, near the lock)
         for f in "$ROOT/backend/.env" "${MAIN_ROOT:+$MAIN_ROOT/backend/.env}"; do
+            [ -n "$PG_URL" ] && break
             [ -n "$f" ] && [ -f "$f" ] || continue
             PG_URL=$(sed -nE "s/^DATABASE_URL=[\"']?([^\"']*)[\"']?\$/\\1/p" "$f" | tail -1)
             [ -n "$PG_URL" ] && break
@@ -923,7 +937,7 @@ PROBE_PY
         esac
     fi
 
-    fi  # REMOTE = 0
+    fi
     # --no-cov: the coverage floor (--cov-fail-under in pytest.ini) is checked
     # in CI only — `ci.yml` runs the plain command. Accepted trade-off
     # (2026-09-29): measuring coverage costs this gate minutes on every push,
@@ -955,7 +969,6 @@ PROBE_PY
         XDIST="-n $PYTEST_WORKERS --dist worksteal"
         echo "    (pytest-xdist: $XDIST)"
     fi
-    [ "$REMOTE" = 1 ] && XDIST="-n ${GATES_REMOTE_WORKERS:-8} --dist worksteal"
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of
     # loading the cached SQLite template, and checks that template against what it
     # migrated — backend/config/sqlite_template.py. Other runs reuse the template.
@@ -963,7 +976,7 @@ PROBE_PY
         export SOULLEDGER_SQLITE_TEMPLATE=0
         echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
     fi
-    PYTEST_LOG=$(mktemp -t prepush-pytest)
+    PYTEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest.XXXXXX")
     PYTEST_PATHS=""
     META_IGNORE=""
     if [ "$RUN_META" = 0 ]; then
@@ -996,7 +1009,7 @@ PROBE_PY
                 ' "$READERS_LIST" 2>/dev/null)
                 PYTEST_PATHS=$(printf '%s\n%s\n' "$SELECTED" "$READERS" | grep -v '^$' | sort -u)
                 [ "$RUN_META" = 0 ] && PYTEST_PATHS=$(echo "$PYTEST_PATHS" | grep -vxF "$(echo "$META_TESTS" | sed 's|^backend/||')" || true)
-                if [ "$REAL_PG" = 1 ] || [ "$REMOTE" = 1 ]; then
+                if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
                     PG_ONLY=$(pg_only_tests) || fail "--real-pg: could not list the PostgreSQL-only tests"
                     [ -n "$PG_ONLY" ] || fail "--real-pg: the PostgreSQL-only test list came back empty — the scanner in tests/test_concurrency.py is broken, not the set"
                     PYTEST_PATHS=$(printf '%s\n%s\n' "$PYTEST_PATHS" "$PG_ONLY" | grep -v '^$' | sort -u)
@@ -1024,21 +1037,15 @@ PROBE_PY
     # Real PostgreSQL: a fresh per-run test database (a stale test_soulledger caused ~1800 errors once),
     # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
     REAL_PG_ARGS=""
-    if [ "$REAL_PG" = 1 ] || [ "$REMOTE" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
+    if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
     PYARGS=(-q --no-header --no-cov --ff --durations=10 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
-    if [ "$REMOTE" = 1 ]; then
-        remote_pytest_start "${PYARGS[@]}"
-    else
     # --ff: what failed last time runs first (pytest's cache plugin, .pytest_cache/), so a push
     # that is still red says so in its first minute instead of at the end of the selection.
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
-    fi
-    # Remote: this machine goes on to its own checks and collects the result at the end. Here: the
-    # result now, so jest and pytest never share this machine.
-    if [ "$REMOTE" = 1 ]; then PYTEST_DEFERRED=1; cd "$ROOT" || exit 1; else pytest_finish; fi
+    pytest_finish
     fi  # PYTEST_SKIP = 0
     cd "$ROOT" || exit 1
 fi
@@ -1112,7 +1119,7 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     else
         echo "    FULL, because:"; printf '%s' "$FULL_F" | sed 's/^/      /'
     fi
-    JEST_LOG=$(mktemp -t prepush-jest)
+    JEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-jest.XXXXXX")
     T_JEST=$(date +%s)
     # shellcheck disable=SC2086
     npx jest --coverage=false --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
@@ -1135,7 +1142,7 @@ if [ "$RUN_JEST_READERS" = 1 ]; then
     cd "$ROOT/frontend" || fail "frontend/ missing"
     ALWAYS=$(echo "$JEST_READERS" | sed "s|^|$ROOT/frontend/|")
     echo "  → jest: the $(echo "$ALWAYS" | grep -c . || true) tests that read what changed (frontend/jest.always-run.txt)"
-    JEST_LOG=$(mktemp -t prepush-jest)
+    JEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-jest.XXXXXX")
     T_JEST=$(date +%s)
     # shellcheck disable=SC2086
     npx jest --coverage=false --silent --runTestsByPath $ALWAYS >"$JEST_LOG" 2>&1
@@ -1177,7 +1184,7 @@ app_jest() {
     fi
     # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
     # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
-    log=$(mktemp -t "prepush-$dir-jest")
+    log=$(mktemp "${TMPDIR:-/tmp}/prepush-$dir-jest.XXXXXX")
     # shellcheck disable=SC2086
     npm run --workspace "$dir" test --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
     status=$?
@@ -1218,6 +1225,5 @@ fi
 # outside the hook, and only when what was tested IS HEAD's tree: tracked files
 # match HEAD, and no untracked file sits where a gate could have read it — an
 # untracked test or migration ran here but would not be in the pushed commit.
-[ "${PYTEST_DEFERRED:-0}" = 1 ] && { echo "  → pytest on $GATES_REMOTE: waiting for it"; pytest_finish; }
 record_pass
 echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"
