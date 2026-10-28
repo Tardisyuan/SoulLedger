@@ -3615,11 +3615,9 @@
     "reference": "Reference",
     "status": {
       "PENDING": "Pending",
-      "ACCEPTED": "Accepted",
       "PROCESSED": "Processed",
       "FAILED": "Failed",
-      "DUPLICATE": "Duplicate",
-      "PARTIAL": "Partial"
+      "DUPLICATE": "Duplicate"
     },
     "source_system": "Source system",
     "status_label": "Status",

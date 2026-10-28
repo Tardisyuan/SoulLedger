@@ -50,7 +50,7 @@ SITES = [
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'Disposition.all_objects', 1, 'PK', "the soul's own dispositions, by its pk"),
     ('apps/souls/stations.py', 'arrive', 'Soul.all_objects', 2, 'PK', "reads and updates the station column of the one soul the caller passed in, by its pk (the caller reached it through a scoped path or holds its lock)"),
     ('apps/souls/stations.py', 'move', 'Soul.all_objects', 1, 'LOCK', 'locks the soul the station view already reached through get_object(), by its pk'),
-    ('apps/dispatch/capture.py', 'issue', 'Soul.all_objects', 2, 'LOCK', 'locks / re-reads the soul the capture view resolved with tenant= of the request, by its pk'),
+    ('apps/dispatch/capture.py', 'issue', 'Soul.all_objects', 2, 'LOCK', 'locks / re-reads the soul the capture view resolved through scope_to_tenant (the same scope as due/), by its pk'),
     ('apps/dispatch/capture.py', '_lock', 'CaptureWarrant.all_objects', 1, 'LOCK', 'locks the warrant the capture viewset already reached through get_object(), by its pk'),
     ('apps/dispatch/capture.py', 'hand_over', 'Soul.all_objects', 1, 'PK', "the warrant's own soul, by its FK (the warrant was reached through get_object())"),
     ('apps/dispatch/capture.py', 'void_on_death', 'CaptureWarrant.all_objects', 1, 'PK', "the open warrants of the one soul dying in this transaction, by soul_id; is_deleted=False is in the filter"),
