@@ -595,13 +595,22 @@ const PATH_WORD: Record<LifePathStep, string> = {
 };
 
 /**
- * How a stage word fits its fifth of the row. A phrase may wrap, at its spaces, onto two lines; a
- * single word (「Reincarnating」) keeps to one line and shrinks instead — given two lines it broke
- * as 「Reincarnatin / g」 (华为真机 10-29). Chinese words are one token too, two or three characters
- * that fit at full size, so for them nothing changes.
+ * How the five stage words fit their fifths of the row — one rule for the whole row, so the five
+ * read at one size. A phrase may wrap, at its spaces, onto two lines; a single word keeps to one
+ * line — given two it broke as 「Reincarnatin / g」 (华为真机 10-29). Width is settled by size, not
+ * by `adjustsFontSizeToFit`: on Android that shrinks a word a little even when it fits, so
+ * 「Alive」 came out smaller than the phrase 「My sentence」 beside it (华为真机 10-29 第二轮).
+ * Instead the longest unbreakable token of the five decides one size for all five: 11pt while it is
+ * at most STAGE_WORD_CHARS letters (what a fifth of a 360dp phone holds at 11pt), else scaled down
+ * in proportion, never under 8pt. Chinese words are two or three characters and stay at 11pt.
  */
-export const stageWordFit = (word: string) =>
-  /\s/.test(word.trim()) ? { numberOfLines: 2 } : { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 };
+const STAGE_WORD_CHARS = 11;
+export const stageWordFit = (words: string[]) => {
+  const longest = Math.max(0, ...words.flatMap((w) => w.trim().split(/\s+/)).map((tok) => Array.from(tok).length));
+  const fontSize = longest <= STAGE_WORD_CHARS ? 11 : Math.max(8, Math.floor((22 * STAGE_WORD_CHARS) / longest) / 2);
+  const size = { fontSize, lineHeight: Math.ceil(fontSize * 1.45) };
+  return (word: string) => ({ numberOfLines: /\s/.test(word.trim()) ? 2 : 1, size });
+};
 
 /**
  * v3 .life-stages: five 30pt circles on one line. Passed: solid ink with ✓; here: ink inside a
@@ -614,6 +623,7 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
   const { t: tr } = useI18n();
   const word = (step: LifePathStep) => tr(step === "JUDGING" ? lexiconKey(lex, "judging") : PATH_WORD[step]);
   const span = 100 / LIFE_PATH.length;
+  const fit = stageWordFit(LIFE_PATH.map(word));
   return (
     <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${word(LIFE_PATH[at])}`} style={styles.path}>
       {LIFE_PATH.slice(1).map((step, i) => (
@@ -644,8 +654,8 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
             </View>
             <Txt
               testID={`path-${step}-word`}
-              {...stageWordFit(word(step))}
-              style={[styles.stageWord, { color: where === "here" ? t.ink : t.inkMuted, fontFamily: family.ui[where === "here" ? 600 : 400] }]}
+              numberOfLines={fit(word(step)).numberOfLines}
+              style={[styles.stageWord, fit(word(step)).size, { color: where === "here" ? t.ink : t.inkMuted, fontFamily: family.ui[where === "here" ? 600 : 400] }]}
             >
               {word(step)}
             </Txt>
