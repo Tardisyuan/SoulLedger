@@ -1272,7 +1272,7 @@ paths:
             paginated: Timestamp, Tenant, User, Action, Resource, Resource ID, Description,
             IP, Trace ID.'
         '400':
-          description: A filter is malformed, or more than 50000 rows match.
+          description: A filter is malformed, or more than 10000 rows match.
   /api/v1/audit-logs/resources/:
     get:
       operationId: v1_audit_logs_resources_retrieve

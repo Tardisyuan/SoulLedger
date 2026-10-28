@@ -17,8 +17,10 @@ from rest_framework.exceptions import ValidationError
 
 from apps.core.csv_safe import csv_safe
 
-#: Same ceiling as the audit export.
-EXPORT_MAX_ROWS = 50_000
+#: Every export's ceiling, the audit export included. Design batch 28 W5 greys the
+#: button above 1 万 rows and says so (`common.export_too_many`); the server holds
+#: the same line, so pages without a row count cannot export more than the UI promises.
+EXPORT_MAX_ROWS = 10_000
 _CHUNK = 500
 
 

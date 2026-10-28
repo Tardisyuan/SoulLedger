@@ -21587,7 +21587,7 @@ export interface operations {
                     "text/csv": string;
                 };
             };
-            /** @description A filter is malformed, or more than 50000 rows match. */
+            /** @description A filter is malformed, or more than 10000 rows match. */
             400: {
                 headers: {
                     [name: string]: unknown;
