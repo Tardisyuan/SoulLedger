@@ -121,12 +121,16 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
               options={GRIEVANCE_LEVELS.map((key) => ({ key, label: t(`judgment.grievance_levels.${key}`) }))}
             />
           )}
+          {/* 点一下就保存(同网页),没有「保存」按钮,所以写一句(华为真机 10-29 第二轮)。 */}
+          {mode === "none" || !canAct ? null : <Txt variant="caption" tone="muted" testID="wangsi-level-saves">{t("officer_app.wangsi.level_saves")}</Txt>}
         </View>
         {mode === "none" ? (
           <Txt variant="bodyLg" testID="wangsi-status">{j.grievance_status ? t(`judgment.grievance_statuses.${j.grievance_status}`) : t("judgment.wangsi.unset")}</Txt>
         ) : (
           <View style={{ gap: space[3] }}>
             <Input testID="wangsi-note" label={t("judgment.wangsi.decision_note")} multiline maxLength={2000} value={note} onChangeText={setNote} />
+            {/* 意见没写时三个按钮都灰;原因写在按钮上方,不让人猜(华为真机 10-29 第二轮)。 */}
+            {noteMissing && canAct ? <Txt variant="caption" tone="muted" testID="wangsi-note-required">{t("officer_app.wangsi.note_required")}</Txt> : null}
             {mode === "late" ? <Txt variant="body" tone="muted" testID="wangsi-late-hint">{t("judgment.wangsi.late_hint")}</Txt> : null}
             <ActionButton testID="wangsi-reject" kind="ink-outline" disabled={locked || noteMissing} title={t("judgment.wangsi.reject")} onPress={() => decide(false)} style={{ minHeight: 48 }} />
             {mode === "late" ? (

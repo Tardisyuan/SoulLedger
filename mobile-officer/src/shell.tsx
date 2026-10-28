@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
+import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { AppState, BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
@@ -49,6 +50,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
+  // 审判's segment, kept above the tab: opening a case unmounts the tab, and 「返回」 should land where it was.
+  const [queueGroup, setQueueGroup] = useState<JudgmentQueueGroup>("mine");
   const assist = useOfficerAssist();
   // O-c: the tab a detail was opened from (a notice lands on 待办 / 审判 / 查询, but 「回到…」 means 通知), and the
   // rows whose detail turned out to be gone -- greyed in the lists until the app restarts.
@@ -211,7 +214,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : tab === "todo" ? (
           <TodoTab key={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : tab === "queue" ? (
-          <QueueTab key={version} gone={gone} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
+          <QueueTab key={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
         ) : tab === "search" ? (
           <SearchTab
             onOpenSoul={(id) => { setOrigin("search"); setDetail({ type: "soul", id }); }}

@@ -309,7 +309,9 @@ export function Segmented<K extends string>({
             onPress={() => onChange(key)}
             style={[styles.segment, { backgroundColor: on ? t.ink : "transparent" }]}
           >
-            <Txt variant="nav" style={{ color: on ? t.s0 : t.ink, letterSpacing: 0 }}>
+            {/* One line, always: four segments on a 360dp phone left 「他人手上 · 0」 its count on a second
+                line (华为真机 10-29 第二轮). Four or more take 13pt, so the label fits, not cut. */}
+            <Txt variant="nav" numberOfLines={1} style={[{ color: on ? t.s0 : t.ink, letterSpacing: 0 }, options.length > 3 && styles.segmentTight]}>
               {label}
             </Txt>
           </Pressable>
@@ -504,7 +506,8 @@ const styles = StyleSheet.create({
   action: { flex: 1, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
   actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
-  segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
+  segmentTight: { fontSize: 13, lineHeight: 18 },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },

@@ -19,13 +19,28 @@ import { Screen, Txt, space, useI18n, useOnline, useRemote, useToast } from "../
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
 type Group = JudgmentQueueGroup;
 
-/** `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable. */
-export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?: ReadonlySet<string> }) {
+/**
+ * `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable.
+ * `initialGroup` / `onGroup`: the shell keeps the chosen segment. Opening a case unmounts this tab and
+ * closing it remounts it (`key={version}`), so a segment kept here alone fell back to 我手上 on every
+ * return from a case opened under 待认领 (华为真机 10-29 第二轮).
+ */
+export function QueueTab({
+  onOpen,
+  gone,
+  initialGroup = "mine",
+  onGroup,
+}: {
+  onOpen: (id: string) => void;
+  gone?: ReadonlySet<string>;
+  initialGroup?: Group;
+  onGroup?: (group: Group) => void;
+}) {
   const { t } = useI18n();
   const toast = useToast();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const [group, setGroup] = useState<Group>("mine");
+  const [group, setGroup] = useState<Group>(initialGroup);
   const [claiming, setClaiming] = useState<string | null>(null);
   const { offline } = useOnline();
   // 认领要 `judgment.execute`;只有 judgment.read 的角色看得到队列,但不画认领键。
@@ -63,6 +78,7 @@ export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?
         value={group}
         onChange={(next) => {
           setGroup(next);
+          onGroup?.(next);
         }}
         options={GROUPS.map((key) => ({ key, label: counts ? `${t(`officer_app.queue.${key}`)} · ${counts[key]}` : t(`officer_app.queue.${key}`) }))}
       />
