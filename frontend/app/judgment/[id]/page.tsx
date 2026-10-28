@@ -63,6 +63,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
+import { NegativeConfessionPanel } from "@/src/components/judgment/NegativeConfessionPanel";
 import {
   EMPTY_DRAFT,
   draftIsEmpty,
@@ -670,6 +671,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
               <MissingValue kind="unrecorded" />
             </p>
+          )}
+          {/* 埃及称心:四十二条否定告白逐条记录(2026-10-28)。不称心的案子组件自己不画。 */}
+          {judgment.judgment_method === "HEART_WEIGHING" && (
+            <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canExecute} />
           )}
           {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
           {fullCase && notesShown && (

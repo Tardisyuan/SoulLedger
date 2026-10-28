@@ -74,3 +74,26 @@ describe("SoulInfoCard:受洗 / 否认灵魂不灭", () => {
     expect(screen.queryByTestId("soul-denied-immortality")).toBeNull();
   });
 });
+
+describe("SoulInfoCard:中立者与过河(2026-10-28)", () => {
+  it("欧洲灵魂登记了中立者:画一行,写词不写原值", () => {
+    card({ neutral_in_life: true } as Partial<Soul>);
+    expect(screen.getByTestId("soul-neutral-in-life")).toHaveTextContent("中立者是");
+  });
+
+  it("中立者未登记,或不是欧洲灵魂:不画", () => {
+    card({ neutral_in_life: null } as Partial<Soul>);
+    expect(screen.queryByTestId("soul-neutral-in-life")).toBeNull();
+  });
+
+  it("希腊灵魂未葬:画过河一行;已葬(空)不画", () => {
+    card({ civilization: "GREEK", ferry_passage: "UNBURIED" } as Partial<Soul>);
+    expect(screen.getByTestId("soul-ferry-passage")).toHaveTextContent("过河未葬");
+    expect(screen.queryByText("UNBURIED")).toBeNull();
+  });
+
+  it("希腊灵魂已葬有渡资:不画", () => {
+    card({ civilization: "GREEK", ferry_passage: "" } as Partial<Soul>);
+    expect(screen.queryByTestId("soul-ferry-passage")).toBeNull();
+  });
+});

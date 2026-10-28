@@ -93,6 +93,10 @@ const ENUM_FIELDS = [
   "duat_passage",
   // Added 2026-10-27 (review E-2): `Soul.baptism`, drawn through souls.baptism.*.
   "baptism",
+  // Added 2026-10-28: `Soul.ferry_passage` (Greek, UNBURIED / NO_FARE) and `SoulRecord.sin_gravity`
+  // (European, MORTAL / MORTAL_ABSOLVED / VENIAL), drawn through souls.ferry_passage.* / souls.sin_gravity.*.
+  "ferry_passage",
+  "sin_gravity",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),

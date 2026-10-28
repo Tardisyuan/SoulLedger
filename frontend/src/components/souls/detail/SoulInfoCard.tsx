@@ -117,6 +117,24 @@ export function SoulInfoCard({
                 </dd>
               </div>
             )}
+            {/* 中立者(Inf. III,2026-10-28):同上,只欧洲、登记了才画。 */}
+            {isEuropean && soul.neutral_in_life != null && (
+              <div className={ROW} data-testid="soul-neutral-in-life">
+                <dt className={DT}>{t("souls.neutral_in_life.label")}</dt>
+                <dd className={DD}>
+                  <DomainEnum namespace="souls.neutral_in_life" value={soul.neutral_in_life ? "YES" : "NO"} />
+                </dd>
+              </div>
+            )}
+            {/* 希腊过河(2026-10-28):未葬 / 无渡资才画 —— 空就是照常过河。 */}
+            {soul?.ferry_passage && (
+              <div className={ROW} data-testid="soul-ferry-passage">
+                <dt className={DT}>{t("souls.ferry_passage.label")}</dt>
+                <dd className={DD}>
+                  <DomainEnum namespace="souls.ferry_passage" value={soul.ferry_passage} />
+                </dd>
+              </div>
+            )}
             <div className={ROW}>
               <dt className={DT}>{t("souls.detail.location_label")}</dt>
               <dd className={DD}>

@@ -58,6 +58,8 @@ export const REFUSAL_CODES = [
   "not_found", "invalid_changes", "empty_changes", "foreign_node", "foreign_realm", "unknown_node",
   "soul_is_here", "node_not_retryable", "not_refused", "not_next", "soul_away", "dispatch_not_started",
   "retry_with_open_cross", "retry_not_a_destination",
+  // 欧洲 大罪 / 小罪(2026-10-28,DispositionService.refuse_against_gravity):结案裁决与已采信的罪不符。
+  "mortal_sin_unrepented", "no_mortal_sin",
 ] as const;
 
 export function refusalKey(error: unknown): string {

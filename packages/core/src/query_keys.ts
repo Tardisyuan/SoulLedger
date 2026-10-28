@@ -67,6 +67,7 @@ export const judgmentKeys = {
   comments: (id: string) => [...judgmentKeys.all, "comments", id] as const,
   /** 案卷附件。Under `all`: a colleague's upload or the case concluding (which locks deletion) reaches it. */
   attachments: (id: string) => [...judgmentKeys.all, "attachments", id] as const,
+  negativeConfessions: (id: string) => [...judgmentKeys.all, "negative-confessions", id] as const,
   /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
   destinations: (id: string, verdict: string) => [...judgmentKeys.all, "destinations", id, verdict] as const,
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
