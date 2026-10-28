@@ -57,6 +57,7 @@ import { DataExportScreen } from "./screens/dataExport";
 import { HelpScreen } from "./screens/help";
 import { FeedbackScreen } from "./screens/writeToHall";
 import { JudgmentAppealScreen } from "./screens/appeals";
+import { WangsiGrievanceScreen } from "./screens/wangsi";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
@@ -453,6 +454,13 @@ export function RootNavigator() {
                     onBack={navigation.goBack}
                   />
                 ),
+              })}
+            />
+            <Stack.Screen
+              name="WangsiGrievance"
+              component={WangsiGrievanceScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.wangsi.file_title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

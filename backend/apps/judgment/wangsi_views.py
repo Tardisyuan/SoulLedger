@@ -2,9 +2,12 @@
 
 两个动作都要 `judgment.execute`;审核另要是这件案子城隍名下的官员或持 `judgment.assign`(服务里查)。
 只看得到本殿枉死的案子(别的是 404)。答复是整件审判(`JudgmentSerializer`),审判台直接换上。
+
+灵魂端:`/api/v1/me/wangsi/` —— 本人本世枉死的案子(还押与否、申诉到哪一步),与提出申诉。只从 `self.account` 出发,
+规则与官员端是同一个函数(`wangsi.file_grievance`)。
 """
 from drf_spectacular.utils import extend_schema
-from rest_framework import serializers, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -13,6 +16,8 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.judgment import wangsi
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer, JudgmentSerializer
+from apps.soul_accounts.me_views import SoulAPIView
+from apps.soul_accounts.serializers import SoulErrorSerializer
 
 
 class WangsiGrievanceSerializer(serializers.Serializer):
@@ -69,3 +74,66 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
         data = body.validated_data
         return self._answer(lambda pk: wangsi.decide_grievance(pk, request.user, upheld=data["upheld"],
                                                                note=data["note"]))
+
+
+# ── 灵魂 ────────────────────────────────────────────────────────────────
+
+
+class MeWangsiCaseSerializer(serializers.ModelSerializer):
+    """灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。"""
+
+    judgment_id = serializers.UUIDField(source="pk", read_only=True)
+    #: 此刻还押在枉死城(`wangsi.is_held`):阳寿未到、未提前释放、未结案。
+    held = serializers.SerializerMethodField()
+    #: 现在能不能提申诉;不能时 `refusal_code` 是原因(`not_pending` / `not_in_wangsi` / `grievance_open`)。
+    can_file = serializers.SerializerMethodField()
+    refusal_code = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Judgment
+        fields = ("judgment_id", "case_number", "held_until", "held", "wrongful_death_cause", "grievance_level",
+                  "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at", "can_file",
+                  "refusal_code")
+        read_only_fields = fields
+
+    def get_held(self, obj) -> bool:
+        return wangsi.is_held(obj)
+
+    def get_can_file(self, obj) -> bool:
+        return wangsi.filing_refusal(obj) is None
+
+    def get_refusal_code(self, obj) -> str | None:
+        refusal = wangsi.filing_refusal(obj)
+        return refusal.code if refusal else None
+
+
+class MeWangsiFileSerializer(serializers.Serializer):
+    judgment = serializers.UUIDField()
+    plea = serializers.CharField(max_length=2000, trim_whitespace=True)
+
+
+class MeWangsiView(SoulAPIView):
+    def _mine(self):
+        account = self.account
+        return Judgment.objects.filter(soul_id=account.soul_id, cycle=account.cycle, untimely=True).order_by(
+            "-created_at")
+
+    @extend_schema(responses={200: MeWangsiCaseSerializer(many=True), 403: SoulErrorSerializer})
+    def get(self, request):
+        """本人本世枉死的案子(新的在前)。不是枉死的案子不在这里。"""
+        return Response(MeWangsiCaseSerializer(self._mine(), many=True).data)
+
+    @extend_schema(request=MeWangsiFileSerializer,
+                   responses={201: MeWangsiCaseSerializer, 403: SoulErrorSerializer, 404: SoulErrorSerializer,
+                              409: SoulErrorSerializer})
+    def post(self, request):
+        """提出冤情申诉。别人的或不是本世的案子 → 404 `not_found`;其余拒绝与官员端相同。"""
+        body = MeWangsiFileSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        try:
+            judgment = wangsi.file_grievance(data["judgment"], None, data["plea"], account=self.account)
+        except wangsi.WangsiRefusedError as exc:
+            return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
+        return Response(MeWangsiCaseSerializer(self._mine().get(pk=judgment.pk)).data,
+                        status=status.HTTP_201_CREATED)

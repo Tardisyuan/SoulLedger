@@ -141,6 +141,13 @@ class EventType(models.TextChoices):
     CAPTURE_HANDED_OVER = "CAPTURE_HANDED_OVER"
     CAPTURE_WARRANT_CANCELLED = "CAPTURE_WARRANT_CANCELLED"
 
+    # 枉死城的冤情申诉(2026-10-28,只在地府;apps/judgment/wangsi.py):提出 / 属实即提前释放 / 不属实,
+    # 与那一笔同一事务。payload:judgment_id、status、grievance_level;提出另带 via(officer / soul)。
+    # 不带申诉原文、审核批语与经办官员(与申诉事件一样不说判官)。
+    WANGSI_GRIEVANCE_FILED = "WANGSI_GRIEVANCE_FILED"
+    WANGSI_GRIEVANCE_UPHELD = "WANGSI_GRIEVANCE_UPHELD"
+    WANGSI_GRIEVANCE_REJECTED = "WANGSI_GRIEVANCE_REJECTED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

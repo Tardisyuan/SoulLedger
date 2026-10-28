@@ -1,4 +1,4 @@
-import { soulApi, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord } from "@soulledger/core/api/soul";
+import { soulApi, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
@@ -66,6 +66,7 @@ import {
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
 import { AppealLine, roundsOf } from "./appeals";
+import { WangsiLine } from "./wangsi";
 import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
@@ -177,8 +178,11 @@ export function LifeSections({
   numbered,
   focus,
   appeals,
+  wangsi,
 }: {
   life: MeLife;
+  /** 枉死城:本世枉死的案子(只有当前这一世传)。 */
+  wangsi?: MeWangsiCase[] | null;
   /** 第五十二批:本世审判的申诉(只有当前这一世传;前世只能看,不画申诉行)。 */
   appeals?: { data: MeJudgmentAppealList | null; reload: () => unknown };
   /** The row a tapped push points at (第四十批 S-e): a judgment or a disposition, washed for two seconds. */
@@ -255,6 +259,7 @@ export function LifeSections({
                   onChanged={() => void appeals.reload()}
                 />
               ) : null}
+              {wangsi && !sealed ? <WangsiLine row={wangsi.find((w) => w.judgment_id === j.id)} /> : null}
             </LandingWash>
           ))
         ) : (
@@ -722,9 +727,12 @@ export function MyLifeScreen() {
   const life = useRemote(soulApi.life);
   // 第五十二批:申诉行。失败就不画(审判卡片照旧),下次回到这页再取。
   const appeals = useRemote(soulApi.judgmentAppeals);
+  // 枉死城申诉行:同上,失败就不画。
+  const wangsi = useRemote(soulApi.wangsi);
   const residence = useResidence();
   useReloadOnRefocus(life.reload);
   useReloadOnRefocus(appeals.reload);
+  useReloadOnRefocus(wangsi.reload);
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   const scroll = useScrollToLanding(landing);
@@ -753,6 +761,7 @@ export function MyLifeScreen() {
   const refresh = () => {
     void life.reload();
     void appeals.reload();
+    void wangsi.reload();
     setRefreshes((n) => n + 1);
     refreshProfile().catch(() => {});
   };
@@ -812,6 +821,7 @@ export function MyLifeScreen() {
               numbered
               focus={focus}
               appeals={appeals}
+              wangsi={wangsi.data}
               open={open}
               onToggle={toggle}
               onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
