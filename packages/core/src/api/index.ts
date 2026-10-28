@@ -214,7 +214,7 @@ export { organizationsApi, organizationNotEmptyOf, type Organization, type Organ
 export { notificationsApi, type Notification, type NotificationEmailStatus } from "./notifications";
 
 // Dispatch
-export { captureWarrantsApi, type CaptureWarrant, type CaptureStatus, type CaptureEscort, type CaptureDueSoul, type CaptureRefusal } from "./dispatch";
+export { captureWarrantsApi, type CaptureWarrant, type CaptureStatus, type CaptureEscort, type CaptureDueSoul, type CaptureDueList, type CaptureRefusal } from "./dispatch";
 export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type DispatchDraftInput, type DispatchRealmOption, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
 
 // Social

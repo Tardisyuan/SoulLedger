@@ -187,16 +187,21 @@ def _city_god_items(scope):
 
 
 def _wangsi_items(scope):
-    """「枉死申诉」:我名下城隍的枉死案子里待审的申诉。日期是最后一次改动(提出申诉时写下;改冤情等级也会动它)。"""
+    """「枉死申诉」:我名下城隍的枉死案子里待审的申诉,按提出的时刻排(`grievance_filed_at`;改冤情等级动的是
+    `update_time`,不该把一件旧申诉顶成新的)。这一列之前提出的申诉没有它,退回 `update_time`。已归档的不列。"""
+    from django.db.models.functions import Coalesce
+
     from apps.judgment.models import GrievanceStatus, Judgment
 
     if not check_permission(scope.user, "judgment.execute"):
         return []
     seen = _judgments_in_scope(scope)
     qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)
-          .filter(city_god__officers=scope.user, untimely=True, grievance_status=GrievanceStatus.FILED)
-          .select_related("soul", "city_god").order_by("update_time", "pk"))
-    return [_item("wangsi", j.pk, j.soul.name, j.update_time, city_god_name=j.city_god.name,
+          .filter(city_god__officers=scope.user, untimely=True, grievance_status=GrievanceStatus.FILED,
+                  is_archived=False)
+          .annotate(filed=Coalesce("grievance_filed_at", "update_time"))
+          .select_related("soul", "city_god").order_by("filed", "pk"))
+    return [_item("wangsi", j.pk, j.soul.name, j.filed, city_god_name=j.city_god.name,
                   grievance_level=j.grievance_level)
             for j in qs]
 

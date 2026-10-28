@@ -5059,21 +5059,8 @@ paths:
           description: ''
   /api/v1/dispatch/capture-warrants/due/:
     get:
-      operationId: v1_dispatch_capture_warrants_due_list
-      description: 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(最多 200 个,阳寿早的在前)。
-      parameters:
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
-        schema:
-          type: string
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
+      operationId: v1_dispatch_capture_warrants_due_retrieve
+      description: 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(`results` 最多 200 个,阳寿早的在前;`count` 是总数)。
       tags:
       - v1
       security:
@@ -5083,9 +5070,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CaptureDueSoul'
+                $ref: '#/components/schemas/CaptureDueList'
           description: ''
   /api/v1/dispatch/cross-tenant-judgments/:
     get:
@@ -24548,6 +24533,19 @@ components:
           maxLength: 2000
       required:
       - reason
+    CaptureDueList:
+      type: object
+      description: '`due/`:`results` 最多 200 行;`count` 是全部待发的数(页头写它,不写截断后的行数)。'
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptureDueSoul'
+      required:
+      - count
+      - results
     CaptureDueSoul:
       type: object
       properties:
@@ -29494,6 +29492,12 @@ components:
         ferry_barred:
           type: string
           readOnly: true
+        wangsi_held:
+          type: boolean
+          readOnly: true
+        conclude_refusal:
+          type: string
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -29717,6 +29721,7 @@ components:
       - claimed_at
       - claimed_by
       - claimed_by_name
+      - conclude_refusal
       - concluded_at
       - created_at
       - cycle
@@ -29760,6 +29765,7 @@ components:
       - stale_since
       - untimely
       - verdict
+      - wangsi_held
       - weighing_result
       - workflow
     JudgmentAppeal:
@@ -30365,6 +30371,12 @@ components:
         ferry_barred:
           type: string
           readOnly: true
+        wangsi_held:
+          type: boolean
+          readOnly: true
+        conclude_refusal:
+          type: string
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -30608,6 +30620,7 @@ components:
       - claimed_at
       - claimed_by
       - claimed_by_name
+      - conclude_refusal
       - concluded_at
       - created_at
       - cross_judgment_id
@@ -30654,6 +30667,7 @@ components:
       - stale_since
       - untimely
       - verdict
+      - wangsi_held
       - weighing_result
       - workflow
     JudgmentDraft:
@@ -37084,6 +37098,12 @@ components:
           - $ref: '#/components/schemas/DuatStageEnum'
           readOnly: true
         ferry_barred:
+          type: string
+          readOnly: true
+        wangsi_held:
+          type: boolean
+          readOnly: true
+        conclude_refusal:
           type: string
           readOnly: true
         kind:

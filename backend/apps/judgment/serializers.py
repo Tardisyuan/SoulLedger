@@ -10,8 +10,8 @@ from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.destination import MAX_TERM_YEARS
-from apps.judgment import snapshot
-from apps.judgment.claims import BATCH_LIMIT, ferry_barred
+from apps.judgment import snapshot, wangsi
+from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred
 from apps.judgment.models import (
     CitationSnapshotKind,
     EvidenceAdmission,
@@ -175,6 +175,11 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     city_god_name = serializers.CharField(source="city_god.name", read_only=True, allow_null=True, default=None)
     # 希腊原审此刻过不了阿刻戎的原因(UNBURIED / NO_FARE),能过河是空串;队列据此不画「认领」(第五十七批 G-1)。
     ferry_barred = serializers.SerializerMethodField()
+    # 此刻还押在枉死城(`wangsi.is_held`,按服务端的日期判):官员端「还押 / 已到期」读它,不拿手机日期比 `held_until`。
+    wangsi_held = serializers.SerializerMethodField()
+    # 此刻为什么不能结案(`claims.assert_concludable` 的拒绝码:at_city_god / held_until_fated_date / embalming /
+    # duat_unfinished / unferried),能结案是空串。审判台据此置灰「落判」,不在前端重抄一遍规则。
+    conclude_refusal = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -197,6 +202,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage", "ferry_barred",
+            "wangsi_held", "conclude_refusal",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
@@ -287,6 +293,16 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
 
     def get_ferry_barred(self, obj) -> str:
         return ferry_barred(obj)
+
+    def get_wangsi_held(self, obj) -> bool:
+        return wangsi.is_held(obj)
+
+    def get_conclude_refusal(self, obj) -> str:
+        try:
+            assert_concludable(obj)
+        except ClaimRefusedError as exc:
+            return exc.code
+        return ""
 
     def get_realm_name(self, obj) -> str | None:
         realm = obj.realm

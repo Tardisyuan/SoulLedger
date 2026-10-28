@@ -2395,7 +2395,9 @@
         "wavering_with_open_cross": "A cross-realm judgment is open on this case; conclude it before weighing again.",
         "weighing_in_progress": "The weighing flow is still running: execution waits for Thoth, the tribunal, Horus and Osiris (or Ammit).",
         "weighing_rejected": "A station refused the weighing flow: reopen or appeal the case; it cannot be executed.",
-        "weighing_wavers": "A disposition parked by a wavering scale is not executed: open a new weighing."
+        "weighing_wavers": "A disposition parked by a wavering scale is not executed: open a new weighing.",
+        "approval_flow_required": "An original judgment is concluded through its approval workflow, not directly.",
+        "weighing_flow_required": "An Egyptian case is concluded through the weighing flow, not directly."
       }
     },
     "duat_stage": {
@@ -4067,7 +4069,8 @@
     "release_success": "Released at term end",
     "release_error": {
       "term_not_ended": "The term has not ended yet; it cannot be released.",
-      "not_serving": "This disposition is not being served."
+      "not_serving": "This disposition is not being served.",
+      "generic": "Release failed"
     },
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
@@ -4096,7 +4099,8 @@
       "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
       "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
       "disposition_not_executed": "{{name}} still has a disposition that has not been executed; execute it and let the term run out before the rebirth.",
-      "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path."
+      "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path.",
+      "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents."
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
@@ -4778,7 +4782,8 @@
       "shortening_pending": "A cooldown shortening request is already pending",
       "shortening_used": "This cooldown has already been asked to be shortened once",
       "desired_form_required": "Choose the form you hope to be reborn as first",
-      "rebirth_form_not_applicable": "Your civilization has no six paths; there is no form to choose"
+      "rebirth_form_not_applicable": "Your civilization has no six paths; there is no form to choose",
+      "invalid_days": "That number of days is outside the allowed range."
     },
     "lexicon": {
       "eg": {
@@ -6931,7 +6936,8 @@
       "hint": "Nobody else can decide with your phone in hand",
       "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
       "failed": "{{bio}} not recognised. Not approved yet. Tap Confirm to try again.",
-      "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again."
+      "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
+      "prompt": "Confirm it is you before approving or rejecting."
     },
     "update_required": {
       "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
@@ -7514,7 +7520,9 @@
       "past_life_read_only": "Judgments from past lives are read-only",
       "no_appeal_above_minos": "Minos's judgment is final; there is no one above him to appeal to",
       "soul_devoured": "This soul was devoured by Ammit and no longer exists; there is no appeal",
-      "not_escalatable": "You can escalate only after a review has upheld the verdict"
+      "not_escalatable": "You can escalate only after a review has upheld the verdict",
+      "appeal_closed": "This appeal has already been decided or withdrawn.",
+      "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done."
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",

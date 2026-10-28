@@ -97,7 +97,9 @@ def file_grievance(pk, user, plea: str, *, account=None) -> Judgment:
         judgment.grievance_plea = plea
         judgment.grievance_note = ""
         judgment.grievance_decided_at = None
-        _save(judgment, "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at")
+        judgment.grievance_filed_at = timezone.now()
+        _save(judgment, "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
+              "grievance_filed_at")
         _event(judgment, "WANGSI_GRIEVANCE_FILED", via="soul" if account is not None else "officer")
     return judgment
 
