@@ -40,7 +40,7 @@ def test_death_puts_a_diyu_soul_at_the_earth_god_temple_and_no_one_else(cn_tenan
     cn.refresh_from_db()
     assert cn.diyu_station == "TUDI_TEMPLE"
     assert [e.payload for e in _events(cn, "DIYU_STATION_CHANGED")] == [
-        {"from": "", "to": "TUDI_TEMPLE", "via": "death"}]
+        {"from": "", "to": "TUDI_TEMPLE", "via": "death", "soul_id": str(cn.id)}]
     eu = Soul.objects.create(name="乙", tenant=eu_tenant)
     eu.die()
     eu.refresh_from_db()
@@ -58,7 +58,7 @@ def test_automatic_moves_only_go_forward_and_officer_moves_go_anywhere(cn_tenant
     stations.move(soul, "WANGXIANG_TERRACE", lead)
     assert Soul.objects.get(pk=soul.pk).diyu_station == "WANGXIANG_TERRACE"
     assert _events(soul, "DIYU_STATION_CHANGED")[-1].payload == {
-        "from": "EIGHTEEN_HELLS", "to": "WANGXIANG_TERRACE", "via": "officer"}
+        "from": "EIGHTEEN_HELLS", "to": "WANGXIANG_TERRACE", "via": "officer", "soul_id": str(soul.id)}
 
 
 def test_the_station_endpoint_refuses_the_living_and_other_civilizations(cn_tenant, eu_tenant):
