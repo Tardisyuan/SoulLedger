@@ -2258,6 +2258,78 @@
       "EARLY_DEATH": "Died young · straight to the Field of Reeds",
       "NAMELESS": "Nameless · does not enter the underworld",
       "IMPROPER_BURIAL": "Improper burial · journey unfinished"
+    },
+    "offences": {
+      "ABDUCTION": "Abducting young men and women",
+      "SEIZING_PROPERTY": "Seizing others' property",
+      "MAIMING": "Maiming another's eyes, ears, hands or feet",
+      "DEFYING_ELDERS": "Defying one's elders",
+      "INCITING_LITIGATION": "Inciting litigation",
+      "BETRAYING_TRUST": "Betraying a kindness or trust",
+      "WITHHOLDING_DUES": "Withholding grain dues and rent",
+      "TRADE_FRAUD": "Fraud in trade",
+      "RESENTMENT": "Resentment",
+      "INGRATITUDE": "Ingratitude",
+      "ENVY": "Envy",
+      "MISERLINESS": "Miserliness",
+      "CURSING_HEAVEN": "Cursing heaven and earth",
+      "SACRILEGE": "Sacrilege against gods and buddhas",
+      "DISRESPECTING_SCRIPT": "Disrespect for written paper and scripture",
+      "BONES_FOR_MEDICINE": "Taking bones for medicine",
+      "SEPARATING_KIN": "Scattering kin",
+      "NEGLECTING_PARENTS": "Not keeping living parents",
+      "UNBURIED_PARENTS": "Not burying dead parents",
+      "MURDER": "Murder",
+      "ARSON": "Arson",
+      "POISONING": "Making poison",
+      "FIVE_HEINOUS": "The five heinous crimes"
+    },
+    "offence_field": {
+      "label": "Offence",
+      "none": "Not recorded",
+      "routes_to": "If found guilty, sent to the {{court}}",
+      "fallback": "No offence recorded: if found guilty, the court is chosen by severity"
+    },
+    "wrongful_death_causes": {
+      "ACCIDENT": "Accident",
+      "VICTIM": "Victim of a crime",
+      "SUICIDE": "Suicide",
+      "WAR": "War",
+      "OTHER": "Other"
+    },
+    "grievance_levels": {
+      "NONE": "No grievance",
+      "MINOR": "Minor",
+      "MAJOR": "Major",
+      "SEVERE": "Severe"
+    },
+    "grievance_statuses": {
+      "FILED": "Filed · awaiting review",
+      "UPHELD": "Upheld · released early",
+      "REJECTED": "Not upheld"
+    },
+    "wangsi": {
+      "title": "City of the Wrongfully Dead",
+      "cause": "Cause of death",
+      "level": "Grievance",
+      "unset": "Not recorded",
+      "grievance": "Grievance",
+      "plea": "The grievance",
+      "plea_hint": "Recorded on the soul's behalf; the city god's officers or a hall administrator review it.",
+      "file": "File grievance",
+      "decision_note": "Review note",
+      "uphold": "Upheld · release early",
+      "reject": "Not upheld",
+      "uphold_hint": "With a major or severe grievance, upholding it releases the soul early.",
+      "decided_line": "Reviewed {{date}}",
+      "error": {
+        "not_in_wangsi": "This soul is no longer held in the City of the Wrongfully Dead.",
+        "grievance_open": "This case already has a grievance.",
+        "no_grievance_filed": "No grievance is awaiting review.",
+        "grievance_not_major": "Only a major or severe grievance releases the soul early.",
+        "not_city_god_officer": "Only this city god's officers or a hall administrator can review it.",
+        "not_pending": "This case is concluded."
+      }
     }
   },
   "audit": {
@@ -7276,7 +7348,60 @@
     "default_regions": "Cases whose place matches no one",
     "default_current": "Current default: {{name}}",
     "default_none": "This hall has no default City God now",
-    "go_to_queue": "Open the review queue"
+    "go_to_queue": "Open the review queue",
+    "rank": "Rank",
+    "rank_none": "Unranked",
+    "ranks": {
+      "PROVINCE": "Provincial city god",
+      "PREFECTURE": "Prefectural city god",
+      "DEPARTMENT": "Departmental city god",
+      "COUNTY": "County city god"
+    },
+    "rank_titles": {
+      "PROVINCE": "Duke Weiling",
+      "PREFECTURE": "Marquis Suijing",
+      "DEPARTMENT": "Earl Xianyou",
+      "COUNTY": "Earl Xianzheng"
+    },
+    "bureaus_label": "Bureaus",
+    "bureaus_hint": "Tick the bureaus this city god actually has. Higher ranks usually have more.",
+    "bureau_count": "{{count}} bureaus",
+    "ministries": {
+      "HEAD": "General office",
+      "PERSONNEL": "Personnel",
+      "REVENUE": "Revenue",
+      "RITES": "Rites",
+      "WAR": "War",
+      "JUSTICE": "Justice",
+      "WORKS": "Works"
+    },
+    "bureau_names": {
+      "YINYANG": "Bureau of Yin and Yang",
+      "GONGCAO": "Bureau of Merit Records",
+      "DIANJI": "Bureau of Registers",
+      "JIBU": "Bureau of Deeds",
+      "DUGUAN": "Bureau of Constables",
+      "CAIBO": "Bureau of Offerings",
+      "TUDI": "Bureau of Land",
+      "LIANGMO": "Bureau of Grain",
+      "KAOJIE": "Bureau of Life Spans",
+      "JISI": "Bureau of Sacrifices",
+      "YIZHU": "Bureau of Ceremonies",
+      "HUOFU": "Bureau of Fortune",
+      "MINGYI": "Bureau of Grave Goods",
+      "BINGZHANG": "Bureau of Implements",
+      "XINGXUN": "Bureau of Interrogation",
+      "JUBU": "Bureau of Arrests",
+      "XUNCHA": "Bureau of Patrols",
+      "XINGFA": "Bureau of Punishments",
+      "ANBU": "Bureau of Case Files",
+      "QUANDIAN": "Bureau of Hard Cases",
+      "XUMING": "Bureau of Prolonged Life",
+      "YINGZAO": "Bureau of Building",
+      "QIAODAO": "Bureau of Bridges and Roads",
+      "CIJI": "Bureau of Shrines",
+      "SHUYUN": "Bureau of Escort"
+    }
   },
   "cityGodCases": {
     "title": "City God review",

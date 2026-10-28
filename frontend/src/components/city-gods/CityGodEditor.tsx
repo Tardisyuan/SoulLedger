@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cityGodKeys, cityGodsApi, type CityGod } from "@soulledger/core/api";
+import { cityGodKeys, cityGodsApi, type CityGod, type CityGodWrite } from "@soulledger/core/api";
+import { CITY_GOD_BUREAU_GROUPS, CITY_GOD_RANKS } from "@soulledger/core/domain/cityGods";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
 import { Drawer } from "@/src/components/ui/Drawer";
@@ -36,6 +37,8 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
   const [regions, setRegions] = useState<string[]>(god?.regions ?? []);
   const [draft, setDraft] = useState("");
   const [isDefault, setIsDefault] = useState(god?.is_default ?? false);
+  const [rank, setRank] = useState<string>(god?.rank ?? "");
+  const [bureaus, setBureaus] = useState<string[]>(god?.bureaus ?? []);
   const [officerIds, setOfficerIds] = useState<number[]>((god?.officers ?? []).map((o) => o.id));
   const [search, setSearch] = useState("");
   const [refusal, setRefusal] = useState<CityGodFieldRefusal | null>(null);
@@ -47,7 +50,10 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), regions, is_default: isDefault, officer_ids: officerIds };
+      const body = {
+        name: name.trim(), regions, is_default: isDefault, officer_ids: officerIds,
+        rank: rank as CityGodWrite["rank"], bureaus: bureaus as CityGodWrite["bureaus"],
+      };
       return god ? cityGodsApi.update(god.id, body) : cityGodsApi.create(body);
     },
     onSuccess: () => {
@@ -114,6 +120,44 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
             }}
             error={refusal?.code === "name_taken" ? message : null}
           />
+
+          {/* 级别与诸司(docs/08 §二、§三;2026-10-28 临时版式,等 Design 定稿)。 */}
+          <div className="space-y-1">
+            <label htmlFor="city-god-rank" className={LABEL}>{t("cityGods.rank")}</label>
+            <select
+              id="city-god-rank"
+              data-testid="city-god-rank"
+              value={rank}
+              onChange={(e) => setRank(e.target.value)}
+              className={fieldControl({ size: "md" })}
+            >
+              <option value="">{t("cityGods.rank_none")}</option>
+              {CITY_GOD_RANKS.map((r) => (
+                <option key={r} value={r}>{`${t(`cityGods.ranks.${r}`)} · ${t(`cityGods.rank_titles.${r}`)}`}</option>
+              ))}
+            </select>
+          </div>
+
+          <fieldset className="space-y-2">
+            <legend className={LABEL}>{t("cityGods.bureaus_label")}</legend>
+            {CITY_GOD_BUREAU_GROUPS.map((group) => (
+              <div key={group.ministry} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="w-16 shrink-0 text-xs text-[oklch(var(--color-ink-muted))]">{t(`cityGods.ministries.${group.ministry}`)}</span>
+                {group.bureaus.map((b) => (
+                  <label key={b} className="inline-flex items-center gap-1 text-sm text-[oklch(var(--color-ink))]">
+                    <input
+                      type="checkbox"
+                      data-bureau={b}
+                      checked={bureaus.includes(b)}
+                      onChange={(e) => setBureaus(e.target.checked ? [...bureaus, b] : bureaus.filter((x) => x !== b))}
+                    />
+                    {t(`cityGods.bureau_names.${b}`)}
+                  </label>
+                ))}
+              </div>
+            ))}
+            <p className={HINT}>{t("cityGods.bureaus_hint")}</p>
+          </fieldset>
 
           <div className="space-y-2">
             <label htmlFor="city-god-region" className={LABEL}>{t("cityGods.regions")}</label>

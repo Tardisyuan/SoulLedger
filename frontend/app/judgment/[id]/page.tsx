@@ -19,6 +19,7 @@ import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { CaseAttachmentsPrintList } from "@/src/components/judgment/CaseAttachmentsPrintList";
 import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEvidenceColumn";
 import { JudgmentEvidenceAdmission } from "@/src/components/judgment/JudgmentEvidenceAdmission";
+import { OffenceField, WangsiPanel } from "@/src/components/judgment/DiyuCaseFields";
 import {
   DraftConflictBanner,
   DraftStatusLine,
@@ -651,6 +652,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       label: t("judgment.detail.confession"),
       node: (
         <>
+          {/* 地府:罪目(自动选殿按它)与枉死城(只在枉死的案子上)。同样未结案且持 judgment.execute 才可改。 */}
+          {judgment.civilization === "CHINESE" && <OffenceField judgment={judgment} editable={!isFinal && canExecute} />}
+          {judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
           {/* 案由(`summary`):官员写的概述,与下面灵魂的供词是两回事。未结案且持 judgment.execute 才可改;其余只读,空则不画。 */}
           {!isFinal && canExecute ? (
             <CaseSummaryField id={id} value={judgment.summary ?? ""} />

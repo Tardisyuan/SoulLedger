@@ -145,9 +145,26 @@ export interface Judgment extends ArchiveFields {
   city_god_status?: "" | CityGodStatus;
   city_god_note?: string;
   sent_on_at?: string | null;
+  /**
+   * 罪目(只地府,`ChineseOffence`):自动选殿按它(二至九殿各掌一类,`domain/diyuCase.ts::OFFENCES_BY_COURT`);
+   * 空串 = 没填,退回按严重度选殿。未结案时可 PATCH。
+   */
+  offence?: "" | ChineseOffence;
+  /** 枉死城(docs/10):死因分类与冤情等级,只在枉死(`untimely`)的案子上,未结案时可 PATCH。 */
+  wrongful_death_cause?: "" | WrongfulDeathCause;
+  grievance_level?: "" | GrievanceLevel;
+  /** 冤情申诉(只读,经 `wangsiApi` 写):FILED 待审;UPHELD 属实、已提前释放(`held_until` 清空);REJECTED 不属实。 */
+  grievance_status?: "" | GrievanceStatus;
+  grievance_plea?: string;
+  grievance_note?: string;
+  grievance_decided_at?: string | null;
 }
 
 type Schemas = components["schemas"];
+export type ChineseOffence = Schemas["ChineseOffenceEnum"];
+export type WrongfulDeathCause = Schemas["WrongfulDeathCauseEnum"];
+export type GrievanceLevel = Schemas["GrievanceLevelEnum"];
+export type GrievanceStatus = Schemas["GrievanceStatusEnum"];
 /** One ruling on one ledger record in this case. No row = admitted. */
 export type EvidenceAdmission = Schemas["EvidenceAdmission"];
 /**
@@ -585,7 +602,10 @@ export const judgmentApi = {
     api.get<Blob>("/judgment/export/", { params, responseType: "blob" }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
   /** 改案由(`summary`)等普通字段。`notes` 走 `saveDraft`,认领 / 暂缓走各自的动作。 */
-  update: (id: string, data: { summary?: string }) => api.patch<Judgment>(`/judgment/${id}/`, data),
+  update: (
+    id: string,
+    data: Partial<Pick<Judgment, "summary" | "offence" | "wrongful_death_cause" | "grievance_level">>,
+  ) => api.patch<Judgment>(`/judgment/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/judgment/${id}/`),
   /** 归档(`judgment.execute`):只收有裁决的审判;理由选填。 */
   archive: (id: string, reason = "") => api.post<Judgment>(`/judgment/${id}/archive/`, { reason }),
@@ -796,6 +816,26 @@ export const cityGodCasesApi = {
   transfer: (id: string, cityGod: string) =>
     api.post<CityGodCase>(`/judgment/city-god-cases/${id}/transfer/`, { city_god: cityGod }),
 };
+
+/**
+ * 枉死城的冤情申诉(apps/judgment/wangsi.py),都要 `judgment.execute`;审核另要是城隍名下官员或持 `judgment.assign`。
+ * 答复是整件审判。拒绝是 `JudgmentClaimRefusal` 形状,`code` 见 `WANGSI_ERROR_CODES`。
+ */
+export const wangsiApi = {
+  fileGrievance: (id: string, plea: string) => api.post<Judgment>(`/judgment/wangsi/${id}/grievance/`, { plea }),
+  decideGrievance: (id: string, upheld: boolean, note: string) =>
+    api.post<Judgment>(`/judgment/wangsi/${id}/decide/`, { upheld, note }),
+};
+
+/** 申诉动作被拒时有文案的 `code`(`judgment.wangsi.error.<code>`)。 */
+export const WANGSI_ERROR_CODES = [
+  "not_in_wangsi",
+  "grievance_open",
+  "no_grievance_filed",
+  "grievance_not_major",
+  "not_city_god_officer",
+  "not_pending",
+] as const;
 
 /** 初审动作被拒时有文案的 `code`(`cityGodCases.error.<code>`)。 */
 export const CITY_GOD_CASE_ERROR_CODES = [

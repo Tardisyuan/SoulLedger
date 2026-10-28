@@ -18,7 +18,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import city_gods
 from apps.judgment.claims import is_assignable
-from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodStatus, Judgment
+from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodBureau, CityGodStatus, Judgment
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer
 
 REGION_MAX_LENGTH = 50
@@ -54,11 +54,13 @@ class CityGodSerializer(serializers.ModelSerializer):
     )
     officers = serializers.SerializerMethodField()
     open_case_count = serializers.SerializerMethodField()
+    #: 设了哪些司(docs/08 §三);去重,按 `CityGodBureau` 的顺序存。
+    bureaus = serializers.ListField(child=serializers.ChoiceField(choices=CityGodBureau.choices), required=False)
 
     class Meta:
         model = CityGod
-        fields = ("id", "tenant", "name", "regions", "is_default", "officer_ids", "officers", "open_case_count",
-                  "create_time", "update_time")
+        fields = ("id", "tenant", "name", "rank", "bureaus", "regions", "is_default", "officer_ids", "officers",
+                  "open_case_count", "create_time", "update_time")
         read_only_fields = ("id", "tenant", "create_time", "update_time")
 
     @extend_schema_field(CityGodOfficerSerializer(many=True))
@@ -90,6 +92,10 @@ class CityGodSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     _refusal("region_taken", region=taken[0], regions=taken, city_god=other.name))
         return cleaned
+
+    def validate_bureaus(self, value):
+        chosen = set(value)
+        return [b for b in CityGodBureau.values if b in chosen]
 
     def validate_is_default(self, value):
         current = self._siblings().filter(is_default=True).first() if value else None
@@ -177,6 +183,8 @@ class CityGodCaseSerializer(serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     origin_location = serializers.CharField(source="soul.origin_location", read_only=True)
     city_god_name = serializers.CharField(source="city_god.name", read_only=True)
+    #: 这位城隍的级别(docs/08 §二);未定级是空串。
+    city_god_rank = serializers.CharField(source="city_god.rank", read_only=True)
     sent_on_by_name = serializers.SerializerMethodField()
     #: 调用者能否解送 / 退回(名下官员或殿管理员);界面据此置灰,服务端照样查。
     can_act = serializers.SerializerMethodField()
@@ -194,7 +202,7 @@ class CityGodCaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Judgment
         fields = ("id", "case_number", "soul", "soul_name", "origin_location", "matched_region", "city_god",
-                  "city_god_name", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name",
+                  "city_god_name", "city_god_rank", "city_god_status", "city_god_note", "sent_on_at", "sent_on_by", "sent_on_by_name",
                   "untimely", "held_until", "created_at", "registered_via", "returned_at", "soul_birth_year", "soul_death_year",
                   "soul_fated_death_year",
                   "can_act")

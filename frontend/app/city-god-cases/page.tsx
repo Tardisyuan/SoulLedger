@@ -18,7 +18,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
-import { CaseNumber } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum } from "@/src/components/ui/DomainValue";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
@@ -156,6 +156,7 @@ function CityGodCasesContent() {
               </td>
               <td className={cn("px-3 py-2 text-sm whitespace-nowrap", greyed && SUBTLE)}>
                 {c.city_god_name}
+                {c.city_god_rank && <span className="ml-1 text-2xs"><DomainEnum namespace="cityGods.ranks" value={c.city_god_rank} /></span>}
                 {c.city_god && defaults.has(c.city_god) && !c.matched_region ? ` · ${t("cityGods.default_badge")}` : ""}
               </td>
               <td className={cn("px-3 py-2 whitespace-nowrap", c.city_god_status === "RETURNED" && "font-semibold")}>

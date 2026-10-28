@@ -9150,6 +9150,114 @@ paths:
               schema:
                 $ref: '#/components/schemas/Statute'
           description: ''
+  /api/v1/judgment/wangsi/{id}/decide/:
+    post:
+      operationId: v1_judgment_wangsi_decide_create
+      description: |-
+        审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+        没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WangsiDecision'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WangsiDecision'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WangsiDecision'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
+  /api/v1/judgment/wangsi/{id}/grievance/:
+    post:
+      operationId: v1_judgment_wangsi_grievance_create
+      description: 提出冤情申诉。不在枉死城 → 409 `not_in_wangsi`;已有未决或已属实的 → 409 `grievance_open`。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WangsiGrievance'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WangsiGrievance'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WangsiGrievance'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
   /api/v1/ledger/balance/{soul_id}/:
     get:
       operationId: v1_ledger_balance_retrieve
@@ -24008,6 +24116,56 @@ components:
       - login_type
       - token
       - user_id
+    ChineseOffenceEnum:
+      enum:
+      - ABDUCTION
+      - SEIZING_PROPERTY
+      - MAIMING
+      - DEFYING_ELDERS
+      - INCITING_LITIGATION
+      - BETRAYING_TRUST
+      - WITHHOLDING_DUES
+      - TRADE_FRAUD
+      - RESENTMENT
+      - INGRATITUDE
+      - ENVY
+      - MISERLINESS
+      - CURSING_HEAVEN
+      - SACRILEGE
+      - DISRESPECTING_SCRIPT
+      - BONES_FOR_MEDICINE
+      - SEPARATING_KIN
+      - NEGLECTING_PARENTS
+      - UNBURIED_PARENTS
+      - MURDER
+      - ARSON
+      - POISONING
+      - FIVE_HEINOUS
+      type: string
+      description: |-
+        * `ABDUCTION` - 拐骗少年男女
+        * `SEIZING_PROPERTY` - 欺占他人财物
+        * `MAIMING` - 损坏人耳目手足
+        * `DEFYING_ELDERS` - 忤逆尊长
+        * `INCITING_LITIGATION` - 教唆兴讼
+        * `BETRAYING_TRUST` - 背恩失节
+        * `WITHHOLDING_DUES` - 抗粮赖租
+        * `TRADE_FRAUD` - 交易欺诈
+        * `RESENTMENT` - 怨怼
+        * `INGRATITUDE` - 忘恩
+        * `ENVY` - 嫉妒
+        * `MISERLINESS` - 悭吝
+        * `CURSING_HEAVEN` - 怨天尤地
+        * `SACRILEGE` - 亵渎神佛
+        * `DISRESPECTING_SCRIPT` - 不敬字纸经书
+        * `BONES_FOR_MEDICINE` - 取骸合药
+        * `SEPARATING_KIN` - 离散骨肉
+        * `NEGLECTING_PARENTS` - 亲存不养
+        * `UNBURIED_PARENTS` - 亲殁不葬
+        * `MURDER` - 杀人
+        * `ARSON` - 放火
+        * `POISONING` - 制毒
+        * `FIVE_HEINOUS` - 五逆
     CitationSnapshot:
       type: object
       description: Schema of `JudgmentCitationSerializer.snapshot` (read-only).
@@ -24053,6 +24211,14 @@ components:
         name:
           type: string
           maxLength: 100
+        rank:
+          oneOf:
+          - $ref: '#/components/schemas/CityGodRankEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        bureaus:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGodBureauEnum'
         regions:
           type: array
           items:
@@ -24091,6 +24257,60 @@ components:
       - open_case_count
       - tenant
       - update_time
+    CityGodBureauEnum:
+      enum:
+      - YINYANG
+      - GONGCAO
+      - DIANJI
+      - JIBU
+      - DUGUAN
+      - CAIBO
+      - TUDI
+      - LIANGMO
+      - KAOJIE
+      - JISI
+      - YIZHU
+      - HUOFU
+      - MINGYI
+      - BINGZHANG
+      - XINGXUN
+      - JUBU
+      - XUNCHA
+      - XINGFA
+      - ANBU
+      - QUANDIAN
+      - XUMING
+      - YINGZAO
+      - QIAODAO
+      - CIJI
+      - SHUYUN
+      type: string
+      description: |-
+        * `YINYANG` - 阴阳司
+        * `GONGCAO` - 功曹司
+        * `DIANJI` - 典籍司
+        * `JIBU` - 记簿司
+        * `DUGUAN` - 都官司
+        * `CAIBO` - 财帛司
+        * `TUDI` - 土地司
+        * `LIANGMO` - 粮秣司
+        * `KAOJIE` - 考劫司
+        * `JISI` - 祭祀司
+        * `YIZHU` - 仪注司
+        * `HUOFU` - 祸福司
+        * `MINGYI` - 冥衣司
+        * `BINGZHANG` - 兵杖司
+        * `XINGXUN` - 刑讯司
+        * `JUBU` - 拘捕司
+        * `XUNCHA` - 巡察司
+        * `XINGFA` - 刑罚司
+        * `ANBU` - 案簿司
+        * `QUANDIAN` - 权典司
+        * `XUMING` - 续命司
+        * `YINGZAO` - 营造司
+        * `QIAODAO` - 桥道司
+        * `CIJI` - 祠祭司
+        * `SHUYUN` - 输运司
     CityGodCase:
       type: object
       properties:
@@ -24121,6 +24341,9 @@ components:
           readOnly: true
           nullable: true
         city_god_name:
+          type: string
+          readOnly: true
+        city_god_rank:
           type: string
           readOnly: true
         city_god_status:
@@ -24185,6 +24408,7 @@ components:
       - city_god
       - city_god_name
       - city_god_note
+      - city_god_rank
       - city_god_status
       - created_at
       - held_until
@@ -24246,6 +24470,18 @@ components:
       required:
       - id
       - name
+    CityGodRankEnum:
+      enum:
+      - PROVINCE
+      - PREFECTURE
+      - DEPARTMENT
+      - COUNTY
+      type: string
+      description: |-
+        * `PROVINCE` - 都省城隍
+        * `PREFECTURE` - 府城隍
+        * `DEPARTMENT` - 州城隍
+        * `COUNTY` - 县城隍
     CityGodReturn:
       type: object
       properties:
@@ -27527,6 +27763,28 @@ components:
       - offset
       - unoffset_demerit
       - unusable_merit
+    GrievanceLevelEnum:
+      enum:
+      - NONE
+      - MINOR
+      - MAJOR
+      - SEVERE
+      type: string
+      description: |-
+        * `NONE` - 无冤情
+        * `MINOR` - 轻
+        * `MAJOR` - 重
+        * `SEVERE` - 极重
+    GrievanceStatusEnum:
+      enum:
+      - FILED
+      - UPHELD
+      - REJECTED
+      type: string
+      description: |-
+        * `FILED` - 已申诉
+        * `UPHELD` - 属实 · 提前释放
+        * `REJECTED` - 不属实
     GuiltAndPenaltyReading:
       type: object
       description: |-
@@ -28436,6 +28694,33 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        offence:
+          oneOf:
+          - $ref: '#/components/schemas/ChineseOffenceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        wrongful_death_cause:
+          oneOf:
+          - $ref: '#/components/schemas/WrongfulDeathCauseEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_level:
+          oneOf:
+          - $ref: '#/components/schemas/GrievanceLevelEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_status:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceStatusEnum'
+          readOnly: true
+        grievance_plea:
+          type: string
+          readOnly: true
+        grievance_note:
+          type: string
+          readOnly: true
+        grievance_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -28482,6 +28767,10 @@ components:
       - draft_version
       - duat_stage
       - evidence_count
+      - grievance_decided_at
+      - grievance_note
+      - grievance_plea
+      - grievance_status
       - heart_weight
       - held_until
       - id
@@ -29264,6 +29553,33 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        offence:
+          oneOf:
+          - $ref: '#/components/schemas/ChineseOffenceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        wrongful_death_cause:
+          oneOf:
+          - $ref: '#/components/schemas/WrongfulDeathCauseEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_level:
+          oneOf:
+          - $ref: '#/components/schemas/GrievanceLevelEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_status:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceStatusEnum'
+          readOnly: true
+        grievance_plea:
+          type: string
+          readOnly: true
+        grievance_note:
+          type: string
+          readOnly: true
+        grievance_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -29327,6 +29643,10 @@ components:
       - duat_stage
       - evidence_admissions
       - evidence_count
+      - grievance_decided_at
+      - grievance_note
+      - grievance_plea
+      - grievance_status
       - heart_weight
       - held_until
       - id
@@ -34762,6 +35082,14 @@ components:
         name:
           type: string
           maxLength: 100
+        rank:
+          oneOf:
+          - $ref: '#/components/schemas/CityGodRankEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        bureaus:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityGodBureauEnum'
         regions:
           type: array
           items:
@@ -35668,6 +35996,33 @@ components:
         retrial_of:
           type: string
           format: uuid
+          readOnly: true
+          nullable: true
+        offence:
+          oneOf:
+          - $ref: '#/components/schemas/ChineseOffenceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        wrongful_death_cause:
+          oneOf:
+          - $ref: '#/components/schemas/WrongfulDeathCauseEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_level:
+          oneOf:
+          - $ref: '#/components/schemas/GrievanceLevelEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_status:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceStatusEnum'
+          readOnly: true
+        grievance_plea:
+          type: string
+          readOnly: true
+        grievance_note:
+          type: string
+          readOnly: true
+        grievance_decided_at:
+          type: string
+          format: date-time
           readOnly: true
           nullable: true
         is_archived:
@@ -43720,6 +44075,58 @@ components:
       required:
       - id
       - name
+    WangsiDecision:
+      type: object
+      properties:
+        upheld:
+          type: boolean
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - note
+      - upheld
+    WangsiGrievance:
+      type: object
+      properties:
+        plea:
+          type: string
+          maxLength: 2000
+      required:
+      - plea
+    WangsiRefusal:
+      type: object
+      description: |-
+        认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+
+        `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+        `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
+        指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        claimed_by:
+          type: integer
+          nullable: true
+        claimed_by_name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        missing:
+          type: array
+          items:
+            type: string
+            format: uuid
+        grievance_status:
+          type: string
+        grievance_level:
+          type: string
+      required:
+      - code
+      - error
     WebhookConfig:
       type: object
       description: |-
@@ -44410,6 +44817,20 @@ components:
         * `DRAFT` - 草稿
         * `PUBLISHED` - 已发布
         * `SUPERSEDED` - 已替换
+    WrongfulDeathCauseEnum:
+      enum:
+      - ACCIDENT
+      - VICTIM
+      - SUICIDE
+      - WAR
+      - OTHER
+      type: string
+      description: |-
+        * `ACCIDENT` - 意外身亡
+        * `VICTIM` - 刑事被害
+        * `SUICIDE` - 自杀
+        * `WAR` - 战争死亡
+        * `OTHER` - 其他
   securitySchemes:
     ApiKeyAuth:
       type: apiKey

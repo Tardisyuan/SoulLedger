@@ -2258,6 +2258,78 @@
       "EARLY_DEATH": "早夭 · 直入芦苇原",
       "NAMELESS": "无名者 · 不入冥界",
       "IMPROPER_BURIAL": "葬仪不当 · 旅程未竟"
+    },
+    "offences": {
+      "ABDUCTION": "拐骗少年男女",
+      "SEIZING_PROPERTY": "欺占他人财物",
+      "MAIMING": "损坏人耳目手足",
+      "DEFYING_ELDERS": "忤逆尊长",
+      "INCITING_LITIGATION": "教唆兴讼",
+      "BETRAYING_TRUST": "背恩失节",
+      "WITHHOLDING_DUES": "抗粮赖租",
+      "TRADE_FRAUD": "交易欺诈",
+      "RESENTMENT": "怨怼",
+      "INGRATITUDE": "忘恩",
+      "ENVY": "嫉妒",
+      "MISERLINESS": "悭吝",
+      "CURSING_HEAVEN": "怨天尤地",
+      "SACRILEGE": "亵渎神佛",
+      "DISRESPECTING_SCRIPT": "不敬字纸经书",
+      "BONES_FOR_MEDICINE": "取骸合药",
+      "SEPARATING_KIN": "离散骨肉",
+      "NEGLECTING_PARENTS": "亲存不养",
+      "UNBURIED_PARENTS": "亲殁不葬",
+      "MURDER": "杀人",
+      "ARSON": "放火",
+      "POISONING": "制毒",
+      "FIVE_HEINOUS": "五逆"
+    },
+    "offence_field": {
+      "label": "罪目",
+      "none": "未填",
+      "routes_to": "判有罪时自动送{{court}}",
+      "fallback": "未填罪目:判有罪时按严重度选殿"
+    },
+    "wrongful_death_causes": {
+      "ACCIDENT": "意外身亡",
+      "VICTIM": "刑事被害",
+      "SUICIDE": "自杀",
+      "WAR": "战争死亡",
+      "OTHER": "其他"
+    },
+    "grievance_levels": {
+      "NONE": "无冤情",
+      "MINOR": "轻",
+      "MAJOR": "重",
+      "SEVERE": "极重"
+    },
+    "grievance_statuses": {
+      "FILED": "已申诉 · 待审",
+      "UPHELD": "属实 · 已提前释放",
+      "REJECTED": "不属实"
+    },
+    "wangsi": {
+      "title": "枉死城",
+      "cause": "死因",
+      "level": "冤情等级",
+      "unset": "未登记",
+      "grievance": "冤情申诉",
+      "plea": "申诉内容",
+      "plea_hint": "替亡魂记下申诉的冤情;城隍名下的官员或殿管理员审核。",
+      "file": "提出申诉",
+      "decision_note": "审核意见",
+      "uphold": "属实 · 提前释放",
+      "reject": "不属实",
+      "uphold_hint": "冤情等级为「重」或「极重」时,属实即提前释放。",
+      "decided_line": "{{date}} 审结",
+      "error": {
+        "not_in_wangsi": "这位亡魂已不在枉死城。",
+        "grievance_open": "这件案子已有申诉。",
+        "no_grievance_filed": "没有待审的申诉。",
+        "grievance_not_major": "冤情等级须为「重」或「极重」才能提前释放。",
+        "not_city_god_officer": "只有这位城隍名下的官员或殿管理员能审核。",
+        "not_pending": "这件案子已结案。"
+      }
     }
   },
   "audit": {
@@ -7276,7 +7348,60 @@
     "default_regions": "没写中任何一位的案子",
     "default_current": "现在的兜底城隍：{{name}}",
     "default_none": "本殿现在没有兜底城隍",
-    "go_to_queue": "去初审队列"
+    "go_to_queue": "去初审队列",
+    "rank": "级别",
+    "rank_none": "未定级",
+    "ranks": {
+      "PROVINCE": "都省城隍",
+      "PREFECTURE": "府城隍",
+      "DEPARTMENT": "州城隍",
+      "COUNTY": "县城隍"
+    },
+    "rank_titles": {
+      "PROVINCE": "威灵公",
+      "PREFECTURE": "绥靖侯",
+      "DEPARTMENT": "显佑伯",
+      "COUNTY": "显正伯"
+    },
+    "bureaus_label": "下属诸司",
+    "bureaus_hint": "按这位城隍实际设的司勾选。级别越高,诸司通常越齐全。",
+    "bureau_count": "{{count}} 司",
+    "ministries": {
+      "HEAD": "总务",
+      "PERSONNEL": "吏部",
+      "REVENUE": "户部",
+      "RITES": "礼部",
+      "WAR": "兵部",
+      "JUSTICE": "刑部",
+      "WORKS": "工部"
+    },
+    "bureau_names": {
+      "YINYANG": "阴阳司",
+      "GONGCAO": "功曹司",
+      "DIANJI": "典籍司",
+      "JIBU": "记簿司",
+      "DUGUAN": "都官司",
+      "CAIBO": "财帛司",
+      "TUDI": "土地司",
+      "LIANGMO": "粮秣司",
+      "KAOJIE": "考劫司",
+      "JISI": "祭祀司",
+      "YIZHU": "仪注司",
+      "HUOFU": "祸福司",
+      "MINGYI": "冥衣司",
+      "BINGZHANG": "兵杖司",
+      "XINGXUN": "刑讯司",
+      "JUBU": "拘捕司",
+      "XUNCHA": "巡察司",
+      "XINGFA": "刑罚司",
+      "ANBU": "案簿司",
+      "QUANDIAN": "权典司",
+      "XUMING": "续命司",
+      "YINGZAO": "营造司",
+      "QIAODAO": "桥道司",
+      "CIJI": "祠祭司",
+      "SHUYUN": "输运司"
+    }
   },
   "cityGodCases": {
     "title": "城隍初审",

@@ -4033,6 +4033,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/wangsi/{id}/decide/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+         *     没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。
+         */
+        post: operations["v1_judgment_wangsi_decide_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/wangsi/{id}/grievance/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 提出冤情申诉。不在枉死城 → 409 `not_in_wangsi`;已有未决或已属实的 → 409 `grievance_open`。 */
+        post: operations["v1_judgment_wangsi_grievance_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/balance/{soul_id}/": {
         parameters: {
             query?: never;
@@ -10907,6 +10944,33 @@ export interface components {
             token: string;
             expires_in: number;
         };
+        /**
+         * @description * `ABDUCTION` - 拐骗少年男女
+         *     * `SEIZING_PROPERTY` - 欺占他人财物
+         *     * `MAIMING` - 损坏人耳目手足
+         *     * `DEFYING_ELDERS` - 忤逆尊长
+         *     * `INCITING_LITIGATION` - 教唆兴讼
+         *     * `BETRAYING_TRUST` - 背恩失节
+         *     * `WITHHOLDING_DUES` - 抗粮赖租
+         *     * `TRADE_FRAUD` - 交易欺诈
+         *     * `RESENTMENT` - 怨怼
+         *     * `INGRATITUDE` - 忘恩
+         *     * `ENVY` - 嫉妒
+         *     * `MISERLINESS` - 悭吝
+         *     * `CURSING_HEAVEN` - 怨天尤地
+         *     * `SACRILEGE` - 亵渎神佛
+         *     * `DISRESPECTING_SCRIPT` - 不敬字纸经书
+         *     * `BONES_FOR_MEDICINE` - 取骸合药
+         *     * `SEPARATING_KIN` - 离散骨肉
+         *     * `NEGLECTING_PARENTS` - 亲存不养
+         *     * `UNBURIED_PARENTS` - 亲殁不葬
+         *     * `MURDER` - 杀人
+         *     * `ARSON` - 放火
+         *     * `POISONING` - 制毒
+         *     * `FIVE_HEINOUS` - 五逆
+         * @enum {string}
+         */
+        ChineseOffenceEnum: "ABDUCTION" | "SEIZING_PROPERTY" | "MAIMING" | "DEFYING_ELDERS" | "INCITING_LITIGATION" | "BETRAYING_TRUST" | "WITHHOLDING_DUES" | "TRADE_FRAUD" | "RESENTMENT" | "INGRATITUDE" | "ENVY" | "MISERLINESS" | "CURSING_HEAVEN" | "SACRILEGE" | "DISRESPECTING_SCRIPT" | "BONES_FOR_MEDICINE" | "SEPARATING_KIN" | "NEGLECTING_PARENTS" | "UNBURIED_PARENTS" | "MURDER" | "ARSON" | "POISONING" | "FIVE_HEINOUS";
         /** @description Schema of `JudgmentCitationSerializer.snapshot` (read-only). */
         CitationSnapshot: {
             kind: components["schemas"]["CitationSnapshotKindEnum"];
@@ -10928,6 +10992,8 @@ export interface components {
             readonly id: string;
             readonly tenant: number;
             name: string;
+            rank?: components["schemas"]["CityGodRankEnum"] | components["schemas"]["BlankEnum"];
+            bureaus?: components["schemas"]["CityGodBureauEnum"][];
             regions?: string[];
             is_default?: boolean;
             officer_ids?: number[];
@@ -10938,6 +11004,35 @@ export interface components {
             /** Format: date-time */
             readonly update_time: string;
         };
+        /**
+         * @description * `YINYANG` - 阴阳司
+         *     * `GONGCAO` - 功曹司
+         *     * `DIANJI` - 典籍司
+         *     * `JIBU` - 记簿司
+         *     * `DUGUAN` - 都官司
+         *     * `CAIBO` - 财帛司
+         *     * `TUDI` - 土地司
+         *     * `LIANGMO` - 粮秣司
+         *     * `KAOJIE` - 考劫司
+         *     * `JISI` - 祭祀司
+         *     * `YIZHU` - 仪注司
+         *     * `HUOFU` - 祸福司
+         *     * `MINGYI` - 冥衣司
+         *     * `BINGZHANG` - 兵杖司
+         *     * `XINGXUN` - 刑讯司
+         *     * `JUBU` - 拘捕司
+         *     * `XUNCHA` - 巡察司
+         *     * `XINGFA` - 刑罚司
+         *     * `ANBU` - 案簿司
+         *     * `QUANDIAN` - 权典司
+         *     * `XUMING` - 续命司
+         *     * `YINGZAO` - 营造司
+         *     * `QIAODAO` - 桥道司
+         *     * `CIJI` - 祠祭司
+         *     * `SHUYUN` - 输运司
+         * @enum {string}
+         */
+        CityGodBureauEnum: "YINYANG" | "GONGCAO" | "DIANJI" | "JIBU" | "DUGUAN" | "CAIBO" | "TUDI" | "LIANGMO" | "KAOJIE" | "JISI" | "YIZHU" | "HUOFU" | "MINGYI" | "BINGZHANG" | "XINGXUN" | "JUBU" | "XUNCHA" | "XINGFA" | "ANBU" | "QUANDIAN" | "XUMING" | "YINGZAO" | "QIAODAO" | "CIJI" | "SHUYUN";
         CityGodCase: {
             /** Format: uuid */
             readonly id: string;
@@ -10950,6 +11045,7 @@ export interface components {
             /** Format: uuid */
             readonly city_god: string | null;
             readonly city_god_name: string;
+            readonly city_god_rank: string;
             readonly city_god_status: components["schemas"]["CityGodStatusEnum"];
             readonly city_god_note: string;
             /** Format: date-time */
@@ -10992,6 +11088,14 @@ export interface components {
             id: number;
             name: string;
         };
+        /**
+         * @description * `PROVINCE` - 都省城隍
+         *     * `PREFECTURE` - 府城隍
+         *     * `DEPARTMENT` - 州城隍
+         *     * `COUNTY` - 县城隍
+         * @enum {string}
+         */
+        CityGodRankEnum: "PROVINCE" | "PREFECTURE" | "DEPARTMENT" | "COUNTY";
         CityGodReturn: {
             note: string;
         };
@@ -12503,6 +12607,21 @@ export interface components {
             unusable_merit: number;
         };
         /**
+         * @description * `NONE` - 无冤情
+         *     * `MINOR` - 轻
+         *     * `MAJOR` - 重
+         *     * `SEVERE` - 极重
+         * @enum {string}
+         */
+        GrievanceLevelEnum: "NONE" | "MINOR" | "MAJOR" | "SEVERE";
+        /**
+         * @description * `FILED` - 已申诉
+         *     * `UPHELD` - 属实 · 提前释放
+         *     * `REJECTED` - 不属实
+         * @enum {string}
+         */
+        GrievanceStatusEnum: "FILED" | "UPHELD" | "REJECTED";
+        /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
          *     `poena` is null in every response this code can currently produce:
@@ -12893,6 +13012,14 @@ export interface components {
             readonly heart_weight: number | null;
             /** Format: uuid */
             readonly retrial_of: string | null;
+            offence?: components["schemas"]["ChineseOffenceEnum"] | components["schemas"]["BlankEnum"];
+            wrongful_death_cause?: components["schemas"]["WrongfulDeathCauseEnum"] | components["schemas"]["BlankEnum"];
+            grievance_level?: components["schemas"]["GrievanceLevelEnum"] | components["schemas"]["BlankEnum"];
+            readonly grievance_status: components["schemas"]["GrievanceStatusEnum"];
+            readonly grievance_plea: string;
+            readonly grievance_note: string;
+            /** Format: date-time */
+            readonly grievance_decided_at: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13221,6 +13348,14 @@ export interface components {
             readonly heart_weight: number | null;
             /** Format: uuid */
             readonly retrial_of: string | null;
+            offence?: components["schemas"]["ChineseOffenceEnum"] | components["schemas"]["BlankEnum"];
+            wrongful_death_cause?: components["schemas"]["WrongfulDeathCauseEnum"] | components["schemas"]["BlankEnum"];
+            grievance_level?: components["schemas"]["GrievanceLevelEnum"] | components["schemas"]["BlankEnum"];
+            readonly grievance_status: components["schemas"]["GrievanceStatusEnum"];
+            readonly grievance_plea: string;
+            readonly grievance_note: string;
+            /** Format: date-time */
+            readonly grievance_decided_at: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -15890,6 +16025,8 @@ export interface components {
             readonly id?: string;
             readonly tenant?: number;
             name?: string;
+            rank?: components["schemas"]["CityGodRankEnum"] | components["schemas"]["BlankEnum"];
+            bureaus?: components["schemas"]["CityGodBureauEnum"][];
             regions?: string[];
             is_default?: boolean;
             officer_ids?: number[];
@@ -16300,6 +16437,14 @@ export interface components {
             readonly heart_weight?: number | null;
             /** Format: uuid */
             readonly retrial_of?: string | null;
+            offence?: components["schemas"]["ChineseOffenceEnum"] | components["schemas"]["BlankEnum"];
+            wrongful_death_cause?: components["schemas"]["WrongfulDeathCauseEnum"] | components["schemas"]["BlankEnum"];
+            grievance_level?: components["schemas"]["GrievanceLevelEnum"] | components["schemas"]["BlankEnum"];
+            readonly grievance_status?: components["schemas"]["GrievanceStatusEnum"];
+            readonly grievance_plea?: string;
+            readonly grievance_note?: string;
+            /** Format: date-time */
+            readonly grievance_decided_at?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -20085,6 +20230,31 @@ export interface components {
             id: number;
             name: string;
         };
+        WangsiDecision: {
+            upheld: boolean;
+            note: string;
+        };
+        WangsiGrievance: {
+            plea: string;
+        };
+        /**
+         * @description 认领类动作被拒时的响应体(`ClaimRefusedError.as_payload`)。Schema only。
+         *
+         *     `claimed_by` 只在 `already_claimed` / `not_claimant` / `claimed_by_other` 上有,
+         *     `claimed_by_name` 只在 `claimed_by_other`(结案被拒)上有;`id` 只在批量里有,
+         *     指出是哪一件让整批回滚;`missing` 只在批量的 404 上有。
+         */
+        WangsiRefusal: {
+            error: string;
+            code: string;
+            claimed_by?: number | null;
+            claimed_by_name?: string;
+            /** Format: uuid */
+            id?: string;
+            missing?: string[];
+            grievance_status?: string;
+            grievance_level?: string;
+        };
         /**
          * @description Serializer for WebhookConfig (hides signing_secret).
          *
@@ -20425,6 +20595,15 @@ export interface components {
          * @enum {string}
          */
         WorkflowTemplateVersionStatusEnum: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
+        /**
+         * @description * `ACCIDENT` - 意外身亡
+         *     * `VICTIM` - 刑事被害
+         *     * `SUICIDE` - 自杀
+         *     * `WAR` - 战争死亡
+         *     * `OTHER` - 其他
+         * @enum {string}
+         */
+        WrongfulDeathCauseEnum: "ACCIDENT" | "VICTIM" | "SUICIDE" | "WAR" | "OTHER";
     };
     responses: never;
     parameters: never;
@@ -27603,6 +27782,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Statute"];
+                };
+            };
+        };
+    };
+    v1_judgment_wangsi_decide_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WangsiDecision"];
+                "application/x-www-form-urlencoded": components["schemas"]["WangsiDecision"];
+                "multipart/form-data": components["schemas"]["WangsiDecision"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_wangsi_grievance_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WangsiGrievance"];
+                "application/x-www-form-urlencoded": components["schemas"]["WangsiGrievance"];
+                "multipart/form-data": components["schemas"]["WangsiGrievance"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
                 };
             };
         };
