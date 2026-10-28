@@ -33,6 +33,13 @@ describe("refusals", () => {
     expect(cityGodFieldRefusal({ response: { data: { name: ["This field is required."] } } })).toBeNull();
   });
 
+  it("says why a city god with earth gods under it cannot leave the county rank (2026-10-28)", () => {
+    const err = { response: { status: 400, data: { rank: { code: "city_god_has_tudi_gods", city_god: "临安县城隍" } } } };
+    const refusal = cityGodFieldRefusal(err);
+    expect(refusal?.code).toBe("city_god_has_tudi_gods");
+    expect(cityGodFieldMessage(refusal!, tZh)).toBe("临安县城隍名下有土地公，而土地公的上级只能是县城隍；先把土地公改交别的城隍再改级别");
+  });
+
   it("maps a case refusal by code and falls back for the rest", () => {
     expect(cityGodCaseRefusalMessage({ response: { data: { code: "not_pending" } } }, tZh)).toBe(tZh("cityGodCases.error.not_pending"));
     expect(cityGodCaseRefusalMessage({ response: { data: { code: "something_new" } } }, tZh)).toBe(tZh("judgment.claim.refused.generic"));

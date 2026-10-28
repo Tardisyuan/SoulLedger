@@ -18,7 +18,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import city_gods
 from apps.judgment.claims import is_assignable
-from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodBureau, CityGodStatus, Judgment
+from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodBureau, CityGodRank, CityGodStatus, Judgment
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer
 
 REGION_MAX_LENGTH = 50
@@ -92,6 +92,13 @@ class CityGodSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     _refusal("region_taken", region=taken[0], regions=taken, city_god=other.name))
         return cleaned
+
+    def validate_rank(self, value):
+        """土地公的上级只能是县城隍(`TudiGodSerializer.validate_city_god`):名下有土地公的城隍不能改成别的级。"""
+        if (value and value != CityGodRank.COUNTY and self.instance is not None
+                and self.instance.tudi_gods.filter(is_deleted=False).exists()):
+            raise serializers.ValidationError(_refusal("city_god_has_tudi_gods", city_god=self.instance.name))
+        return value
 
     def validate_bureaus(self, value):
         chosen = set(value)

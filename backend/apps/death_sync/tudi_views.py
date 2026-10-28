@@ -19,7 +19,7 @@ from apps.death_sync.models import DeathRegistrationRequest, TudiGod
 from apps.death_sync.serializers import DeathRegistrationCreateSerializer, DeathRegistrationRequestSerializer
 from apps.death_sync.services import DeathSyncService
 from apps.judgment.claims import is_assignable
-from apps.judgment.models import CityGod
+from apps.judgment.models import CityGod, CityGodRank
 
 REGION_MAX_LENGTH = 50
 REGIONS_MAX = 100
@@ -70,9 +70,12 @@ class TudiGodSerializer(serializers.ModelSerializer):
         return list(dict.fromkeys(r for r in value if r))
 
     def validate_city_god(self, value):
-        """上级城隍必须是本殿的(与 `Judgment.city_god` 同一条:城隍不跨殿)。"""
+        """上级城隍必须是本殿的(与 `Judgment.city_god` 同一条:城隍不跨殿);已定级的必须是县城隍
+        (2026-10-28 用户定:土地公是县城隍下面的一级,docs/08 §五),未定级的照收。"""
         if value is not None and value.tenant_id != self._tenant().pk:
             raise serializers.ValidationError({"code": "invalid_city_god"})
+        if value is not None and value.rank and value.rank != CityGodRank.COUNTY:
+            raise serializers.ValidationError({"code": "tudi_city_god_not_county", "rank": value.rank})
         return value
 
     def validate_officer_ids(self, value):

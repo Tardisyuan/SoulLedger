@@ -339,7 +339,10 @@
       "CAPTURE_WARRANT_ISSUED": "Capture warrant issued",
       "SOUL_CAPTURED": "Captured by the escorts",
       "CAPTURE_HANDED_OVER": "Capture handed over",
-      "CAPTURE_WARRANT_CANCELLED": "Capture warrant cancelled"
+      "CAPTURE_WARRANT_CANCELLED": "Capture warrant cancelled",
+      "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of the Wrongfully Dead",
+      "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
+      "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -5436,6 +5439,29 @@
       "reacted_two": "{{name}} and {{n}} other reacted to your post",
       "lamp_two": "{{name}} and {{n}} other lit a lamp on your post",
       "followed_two": "{{name}} and {{n}} other followed you"
+    },
+    "wangsi": {
+      "file": "File a grievance",
+      "file_title": "Grievance to the City God",
+      "held": "Held in the City of the Wrongfully Dead · judged from {{date}}",
+      "released": "Out of the City of the Wrongfully Dead",
+      "status": {
+        "FILED": "Grievance filed · awaiting the City God",
+        "UPHELD": "Grievance upheld · released early",
+        "REJECTED": "Grievance not upheld · held until the fated day"
+      },
+      "note_label": "The City God's note",
+      "plea_label": "Your grievance",
+      "plea_required": "Write down your grievance",
+      "file_body": "The City God will look into it. A grave grievance that proves true releases you early to be judged; if it is not upheld you stay until your fated day, and may file again.",
+      "submit": "Submit grievance",
+      "submitted_toast": "Grievance filed",
+      "errors": {
+        "not_found": "This case could not be found",
+        "not_pending": "This case is no longer pending",
+        "not_in_wangsi": "You are no longer held in the City of the Wrongfully Dead",
+        "grievance_open": "A grievance on this case is already awaiting the City God"
+      }
     }
   },
   "soul_push": {
@@ -7469,7 +7495,9 @@
       "name_taken": "This hall already has a City God named {{name}}",
       "invalid_officer": "This officer can't take cases in this hall",
       "city_god_has_open_cases": "{{name}} still has {{count}} cases not sent on; send them on or move them first",
-      "city_gods_diyu_only": "Only halls of the Chinese Diyu can have City Gods"
+      "city_gods_diyu_only": "Only halls of the Chinese Diyu can have City Gods",
+      "city_god_has_tudi_gods": "{{city_god}} has Earth Gods under it, and an Earth God reports only to a county City God; move them to another City God first",
+      "tudi_city_god_not_county": "An Earth God reports only to a county City God"
     },
     "no_officers": "No officers: only hall administrators can act on this City God's cases",
     "default_regions": "Cases whose place matches no one",
@@ -7485,10 +7513,10 @@
       "COUNTY": "County city god"
     },
     "rank_titles": {
-      "PROVINCE": "Duke Weiling",
-      "PREFECTURE": "Marquis Suijing",
-      "DEPARTMENT": "Earl Xianyou",
-      "COUNTY": "Earl Xianzheng"
+      "PROVINCE": "King Mingling",
+      "PREFECTURE": "Duke Weiling",
+      "DEPARTMENT": "Marquis Lingyou",
+      "COUNTY": "Earl Xianyou"
     },
     "bureaus_label": "Bureaus",
     "bureaus_hint": "Tick the bureaus this city god actually has. Higher ranks usually have more.",

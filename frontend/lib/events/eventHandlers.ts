@@ -157,6 +157,11 @@ export const EVENT_LABELS: Record<string, string> = {
   CAPTURE_HANDED_OVER: "Capture handed over",
   CAPTURE_WARRANT_CANCELLED: "Capture warrant cancelled",
 
+  // 枉死城 grievances (2026-10-28)
+  WANGSI_GRIEVANCE_FILED: "Grievance filed in the City of the Wrongfully Dead",
+  WANGSI_GRIEVANCE_UPHELD: "Grievance upheld · released early",
+  WANGSI_GRIEVANCE_REJECTED: "Grievance not upheld",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };
