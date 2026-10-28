@@ -631,15 +631,17 @@ const ROOTS_BATCH54 = ["Swri", "Nis", "Shewet", "Wer"];
 const ROOTS_BATCH54B = ["Wet", "Qeres", "Khat", "Heka"];
 /**
  * 第五十八批(Design,2026-10-29):新词根 药 Pekhret、战争 Mesha(用户同意采用)。Design 同批建议的 火 Sedjet、
- * 毒 Metu 撞了已废止写法(Sedjet 在 ABOLISHED_TEN_WORDS,Metu 已改用 Ahet),放火 / 制毒两条暂留上一批的写法,待 Design 另选。
+ * 毒 Metu 撞了已废止写法(Sedjet 在 ABOLISHED_TEN_WORDS,Metu 已改用 Ahet),第五十九批另定(见下)。
  */
 const ROOTS_BATCH58 = ["Pekhret", "Mesha"];
+/** 第五十九批(Design,2026-10-29):火焰 Nesret(放火 Redi Nesret Er Per);制毒定为 Iri Mu Mut(不另立词根)。 */
+const ROOTS_BATCH59 = ["Nesret"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
