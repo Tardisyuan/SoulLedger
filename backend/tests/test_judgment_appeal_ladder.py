@@ -168,6 +168,16 @@ def test_a_finished_ladder_is_passed_to_the_end(case):
     assert [s["state"] for s in ladder["stations"]] == ["PASSED"] * 4
 
 
+def test_a_running_ladder_waits_in_the_unclaimed_queue_not_under_review(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    reviewer = officer_client(case["reviewer"])
+    waiting = reviewer.get(HALL, {"status__in": "PENDING,IN_REVIEW", "reviewer__isnull": "true"}).data["results"]
+    in_review = reviewer.get(HALL, {"status": "IN_REVIEW", "reviewer__isnull": "false"}).data["results"]
+    assert [r["id"] for r in waiting] == [appeal_id]
+    assert in_review == []
+
+
 def test_a_greek_appeal_flow_is_refused_not_built(gr_tenant):
     soul = Soul.objects.create(name="希腊申诉魂", tenant=gr_tenant)
     assert soul.civilization == "GREEK"

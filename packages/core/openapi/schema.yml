@@ -8044,7 +8044,10 @@ paths:
   /api/v1/judgment/appeals/:
     get:
       operationId: v1_judgment_appeals_list
-      description: 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+      description: |-
+        本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+        `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+        「复核中」只列有复核人的。
       parameters:
       - name: ordering
         required: false
@@ -8058,6 +8061,10 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: reviewer__isnull
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -8105,7 +8112,10 @@ paths:
   /api/v1/judgment/appeals/{id}/:
     get:
       operationId: v1_judgment_appeals_retrieve
-      description: 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+      description: |-
+        本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+        `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+        「复核中」只列有复核人的。
       parameters:
       - in: path
         name: id

@@ -3523,7 +3523,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
+        /**
+         * @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+         *     `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+         *     「复核中」只列有复核人的。
+         */
         get: operations["v1_judgment_appeals_list"];
         put?: never;
         post?: never;
@@ -3540,7 +3544,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
+        /**
+         * @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+         *     `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+         *     「复核中」只列有复核人的。
+         */
         get: operations["v1_judgment_appeals_retrieve"];
         put?: never;
         post?: never;
@@ -26698,6 +26706,7 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                reviewer__isnull?: boolean;
                 /** @description A search term. */
                 search?: string;
                 /**
