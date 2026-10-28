@@ -737,6 +737,23 @@
       "YES": "Iu",
       "NO": "Nen",
       "help": "Djed Em Ankh: Ba Mut Hena Khat (Epicurei, Inf. X). Wedja Nen Menkh: Duat 6 · Haeresis; Isfet Djed Em Duat Khery: Er Isfet Pen. Nen Sebi Netjer: Sebi Netjer Em Duat 7."
+    },
+    "diyu_station": {
+      "move": "Khemen Sekhet…",
+      "move_title": "Khemen Sekhet · {{name}}",
+      "move_current": "Emu: Sekhet {{n}} · {{station}}",
+      "move_to": "Er",
+      "move_body": "Khemen Sekhet Em Sesh Wa · Sesh Em Medjat Sesh Ba.",
+      "not_on_road": "Sekhet 13 · Nen Em Wat"
+    },
+    "capture": {
+      "escort_hint": "Nefer Er Isfet: {{merit_escort}}. Isfet Er Nefer: {{demerit_escort}}.",
+      "revoke_reason_required": "Sesh Khet Em Tepy",
+      "go_review": "Er Maa Tepy →",
+      "overdue": "Hru {{n}} Er Khet"
+    },
+    "timeline": {
+      "earthly_paradise": "Shem Em Pet Em Ta · Swri Mu Lethe Hena Mu Eunoe"
     }
   },
   "common": {
@@ -3791,7 +3808,10 @@
       "plan_in_progress": "{{name}}: Wetep Nen Khetem Djer · Nen Wehem Mesut.",
       "eternal_sentence": "{{name}}: Djet · Nen Ankh Em Khet.",
       "rebirth_not_approved": "{{name}}: Dbh Wehem Mesut Khesef Seth Er Em Wedja · Nen Wehem Mesut."
-    }
+    },
+    "next_continent": "Ta Ankh Em Khet · Nen Em Tepy",
+    "next_continent_same": "Mi Ankh Pen",
+    "next_continent_hint": "Nen Setep: Mi Ankh Pen."
   },
   "social": {
     "title": "Sesh Netjeru",
@@ -4360,7 +4380,9 @@
       "stage": "Wat {{at}} / {{total}}",
       "balance": "Sepy Ankh Pen",
       "ledger": "Sesh Ankh Pen",
-      "ledger_hint": "Wen Sep: Maa"
+      "ledger_hint": "Wen Sep: Maa",
+      "stations_card": "Er Duat · Sekhet 13",
+      "station_here": "Emu: {{station}} · {{desc}}"
     },
     "past_lives": {
       "title": "Ankh Tepyu",
@@ -7481,5 +7503,15 @@
       "view_start": "Netjer Em Tepy · Maa {{hall}}",
       "view_end": "Netjer Em Tepy · Maa {{hall}} · At {{minutes}} · Per {{pages}}"
     }
+  },
+  "earthGods": {
+    "title": "Netjer Ta",
+    "create": "Iri Netjer Ta",
+    "jurisdiction": "Ren Nut",
+    "parent_city_god": "Chenghuang Hery",
+    "no_parent": "—",
+    "register_death": "Sesh Mut · Netjer Ta",
+    "report_label": "Medu Netjer Ta · Nen Em Tepy",
+    "register_hint": "Er Khet Sesh: Er {{city_god}} · Maa Tepy."
   }
 }

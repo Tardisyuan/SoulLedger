@@ -159,6 +159,22 @@ def test_the_vestibule_is_seeded_eternal_hell_outside_the_circles():
     assert row.name_egy == ""  # Design has not given the egy word: pending, not invented
 
 
+def test_the_vestibule_comes_before_the_first_circle_in_the_placement_list():
+    """Design 第五十七批 §9:发落下拉里地狱前庭排在第一圈前面。下拉按 `_tenant_realms` 的 (order, tier, code) 排,
+    欧洲各圈都没有 order,前庭的 tier 0 让它排在 tier 1 的第一圈之前 —— 这条钉住它,改 tier 或排序会红。"""
+    from types import SimpleNamespace
+
+    from apps.disposition.destination import destination_options
+
+    call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
+    tenant = Tenant.objects.get(code="EU_HEAVEN_HELL")
+    judgment = SimpleNamespace(tenant_id=tenant.pk, soul=SimpleNamespace(civilization="EUROPEAN"),
+                               judgment_method="STANDARD")
+    codes = [r.realm_code for r in destination_options(judgment, Verdict.FAILED)]
+    assert "EU_ANTINFERNO" in codes and D.EU_HELL_CIRCLES[1] in codes, codes
+    assert codes.index("EU_ANTINFERNO") < codes.index(D.EU_HELL_CIRCLES[1]), codes
+
+
 def test_only_a_european_soul_records_a_neutral_life(admin_user):
     client = officer_client(admin_user)
     res = client.patch(f"/api/v1/souls/{_soul().pk}/", {"neutral_in_life": True}, format="json")

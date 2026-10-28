@@ -280,6 +280,28 @@ it("is read-only without realms.manage and says why", async () => {
   expect(screen.queryByRole("spinbutton")).toBeNull();
 });
 
+it("地狱前庭的类型写「中立」,排在中立一组;数据仍是 HELL,第一圈照写地狱(第五十七批 §9)", async () => {
+  mockedList.mockResolvedValue({
+    data: {
+      results: [
+        R("EU_HELL_1ST", "EUROPEAN", { realm_type: "HELL", tier: 1 }),
+        R("EU_ANTINFERNO", "EUROPEAN", { realm_type: "HELL", tier: 0, is_eternal: true }),
+        R("EU_HEAVEN", "EUROPEAN", { realm_type: "BLISS" }),
+      ],
+      count: 3,
+    },
+  });
+  renderPage();
+  const tree = await screen.findByTestId("realm-tree");
+  // 第三格是类型(名字 · 代码 · 类型 · 在押)。名字「地狱前庭」本身带「地狱」二字,所以只看这一格。
+  const typeCell = (code: string) => tree.querySelector(`[data-realm-row="${code}"]`)!.querySelectorAll("td")[2];
+  expect(typeCell("EU_ANTINFERNO")).toHaveTextContent("中立");
+  expect(typeCell("EU_ANTINFERNO")).not.toHaveTextContent("地狱");
+  expect(typeCell("EU_HELL_1ST")).toHaveTextContent("地狱");
+  const order = Array.from(tree.querySelectorAll("[data-realm-row]")).map((r) => r.getAttribute("data-realm-row"));
+  expect(order).toEqual(["EU_HEAVEN", "EU_ANTINFERNO", "EU_HELL_1ST"]);
+});
+
 describe("with realms.manage", () => {
   beforeEach(() => {
     mockPermissions = ["realms.read", "realms.manage"];

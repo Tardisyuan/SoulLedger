@@ -24,14 +24,11 @@ export function SoulInfoCard({
   loading,
   birthDisplay,
   deathDisplay,
-  canMoveStation = false,
 }: {
   soul: Soul | null;
   loading: boolean;
   birthDisplay: string | null;
   deathDisplay: string | null;
-  /** 持 `soul.transition`:地府灵魂的十三站可以挪(DiyuRows)。 */
-  canMoveStation?: boolean;
 }) {
   const { t, tf, locale } = useI18n();
   // 阳寿(第五十一批 F-3):生卒一栏的第三格,顺序同编辑弹层;没登记就没有这一格。
@@ -152,8 +149,8 @@ export function SoulInfoCard({
                 <DomainText value={soul?.origin_location} />
               </dd>
             </div>
-            {/* 地府:十三站与出身部洲(2026-10-28);别的文明不画。 */}
-            {soul && <DiyuRows soul={soul} canMove={canMoveStation} />}
+            {/* 地府:出身部洲(2026-10-28);别的文明不画。十三站是页头下的行程条(DiyuStationStrip)。 */}
+            {soul && <DiyuRows soul={soul} />}
             {/* 出身地域(第四十五批):籍贯旁边;「不详」是一个词,不是「—」。 */}
             <div className={ROW}>
               <dt className={DT}>{t("souls.origin_region.label")}</dt>

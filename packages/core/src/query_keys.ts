@@ -15,6 +15,8 @@ export const soulKeys = {
   path: (id: string) => [...soulKeys.all, "path", id] as const,
   /** 勾魂牒(只地府)。Under `souls` for the same reason: a hand-over changes the soul. */
   capture: (id: string) => [...soulKeys.all, "capture", id] as const,
+  /** 待发勾魂牒(`capture-warrants/due/`,全殿):发牒或登记死亡都会让一行离开,所以也在 `souls` 下。 */
+  captureDue: () => [...soulKeys.all, "capture-due"] as const,
 };
 
 /**

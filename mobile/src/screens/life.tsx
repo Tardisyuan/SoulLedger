@@ -70,7 +70,7 @@ import { WangsiLine } from "./wangsi";
 import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
-import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
+import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -400,6 +400,12 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
                 {me.name}
               </Txt>
+              {/* 出身部洲是名字的副标(第五十七批 S-2):「钱谦益 · 南瞻部洲」。只地府、登记了才写。 */}
+              {!small && me.civilization === "CHINESE" && me.birth_continent ? (
+                <Txt testID="soul-continent" variant="caption" numberOfLines={1} style={[styles.shrink, { color: on }]}>
+                  {`· ${enumText(enumLabel("souls.birth_continent", me.birth_continent), tr)}`}
+                </Txt>
+              ) : null}
               {!small && me.birth_name && me.birth_name !== me.name ? (
                 <Txt variant="caption" numberOfLines={stack ? undefined : 1} style={[styles.shrink, { color: on }]}>
                   {tr("soul_app.life.birth_name", { name: me.birth_name })}
@@ -507,6 +513,39 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
           <LifePath at={at} lex={lex} />
         </>
       )}
+    </View>
+  );
+}
+
+/**
+ * 「赴冥 · 十三站」(Design 第五十七批 S-2):本世五段条里「赴冥」那一段的放大,在路上时才画,走完(转世)就没有。
+ * 同一种行程条(已过 ■ · 当前 ▪ · 未到 □),手机上只写当前站名,再一句这一站是什么地方(docs/06 §一)。
+ */
+function StationsCard({ station }: { station: string }) {
+  const t = useTheme();
+  const { t: tr, enumLabel } = useI18n();
+  const { gutter } = useLayout();
+  const at = diyuStationOrdinal(station);
+  if (at === null) return null;
+  const name = enumText(enumLabel("souls.diyu_station", station), tr);
+  return (
+    <View testID="life-stations" style={[styles.stations, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <View style={styles.stationsHead}>
+        <SectionLabel style={styles.fill}>{tr("soul_app.life.stations_card")}</SectionLabel>
+        <Txt testID="life-stations-at" variant="value" tone="muted" style={styles.small}>
+          {`${at} / ${DIYU_STATIONS.length}`}
+        </Txt>
+      </View>
+      <View testID="life-stations-strip" accessible accessibilityLabel={`${tr("soul_app.life.station_at", { n: String(at) })} · ${name}`} style={styles.stationsStrip}>
+        {DIYU_STATIONS.map((s, i) => (
+          <Txt key={s} style={[styles.stationGlyph, { color: i + 1 === at ? t.ink : t.inkMuted }]}>
+            {i + 1 < at ? "■" : i + 1 === at ? "▪" : "□"}
+          </Txt>
+        ))}
+      </View>
+      <Txt testID="life-station-here" variant="body">
+        {tr("soul_app.life.station_here", { station: name, desc: tr(`souls.diyu_station_desc.${station}`) })}
+      </Txt>
     </View>
   );
 }
@@ -780,6 +819,7 @@ export function MyLifeScreen() {
         <Homecoming me={me} />
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
         <Now me={me} lex={residence.home} planState={planState} />
+        {me.civilization === "CHINESE" && me.diyu_station ? <StationsCard station={me.diyu_station} /> : null}
         <Balance me={me} lex={residence.home} />
         <Block>
           <DataRows>
@@ -790,15 +830,7 @@ export function MyLifeScreen() {
               {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
             </DataRow>
             <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
-            {/* 地府(2026-10-28):十三站(docs/06)只在路上时画;出身部洲(docs/07)不详也画。别的文明都不画。
-                ponytail: 临时是两行数据,等 Design 画十三站的行程条。 */}
-            {me.civilization === "CHINESE" && me.diyu_station ? (
-              <DataRow label={t("soul_app.life.station")} testID="life-station">
-                {`${enumText(enumLabel("souls.diyu_station", me.diyu_station), t)} · ${t("soul_app.life.station_at", {
-                  n: String(diyuStationOrdinal(me.diyu_station) ?? "?"),
-                })}`}
-              </DataRow>
-            ) : null}
+            {/* 地府:出身部洲(docs/07)不详也画,别的文明不画。十三站是「你现在在哪」下面的卡片(StationsCard)。 */}
             {me.civilization === "CHINESE" ? (
               <DataRow label={t("soul_app.life.continent")} testID="life-continent">
                 {me.birth_continent ? enumText(enumLabel("souls.birth_continent", me.birth_continent), t) : unrecorded}
@@ -1020,6 +1052,10 @@ const styles = StyleSheet.create({
   nowGlyph: { fontSize: 56, lineHeight: 64 },
   nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
   small: { fontSize: 11, lineHeight: 16 },
+  stations: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },
+  stationsHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  stationsStrip: { flexDirection: "row", justifyContent: "space-between" },
+  stationGlyph: { fontFamily: family.glyph, fontSize: 13, lineHeight: 18 },
   path: { alignSelf: "stretch", flexDirection: "row", marginTop: 16 },
   /** The line behind the circles, centre to centre: walked in ink, ahead in the hairline. */
   segment: { position: "absolute", top: 14, height: 2 },

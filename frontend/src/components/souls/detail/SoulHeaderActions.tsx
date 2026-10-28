@@ -14,6 +14,7 @@ export function SoulHeaderActions({
   onCorrectSettlement,
   onRecalculate,
   onStartWorkflow,
+  onRegisterByTudi,
   onMarkLost,
   onRecall,
   isOverflowMenuOpen,
@@ -29,6 +30,8 @@ export function SoulHeaderActions({
   onRecalculate?: () => void;
   /** 「发起审批…」(W-11):只在持有 `workflow.create` 时给;没给就没有这一项。 */
   onStartWorkflow?: () => void;
+  /** 「以土地公名义登记死亡」(第五十七批 S-6):只地府、在世、持 `soul.die` 时给。 */
+  onRegisterByTudi?: () => void;
   /** 「标记失踪」(第五十批 L-1):只在 DISPOSED 且持有 `soul.transition` 时给。排在删除之前,中间一条分隔线。 */
   onMarkLost?: () => void;
   /** 「召回」(L-3):只在 LOST 且持有 `soul.transition` 时给;操作区的主按钮。 */
@@ -89,11 +92,12 @@ export function SoulHeaderActions({
   // Keyed on the booleans, not the callbacks: the page passes fresh arrows.
   const hasRecalculate = Boolean(onRecalculate);
   const hasStartWorkflow = Boolean(onStartWorkflow);
+  const hasTudi = Boolean(onRegisterByTudi);
   const hasCorrect = Boolean(onCorrectSettlement);
   const hasMarkLost = Boolean(onMarkLost);
   const enabled = useMemo(
-    () => [hasRecalculate, hasStartWorkflow, hasMarkLost, canDelete, hasCorrect],
-    [hasRecalculate, hasStartWorkflow, hasMarkLost, canDelete, hasCorrect]
+    () => [hasRecalculate, hasStartWorkflow, hasTudi, hasMarkLost, canDelete, hasCorrect],
+    [hasRecalculate, hasStartWorkflow, hasTudi, hasMarkLost, canDelete, hasCorrect]
   );
   const { containerRef: menuRef, itemRefs } = useRovingPopupKeys({
     open: isOverflowMenuOpen,
@@ -105,6 +109,7 @@ export function SoulHeaderActions({
     ...(onDelete ? ["soul.delete"] : []),
     ...(onRecalculate ? ["ledger.manage"] : []),
     ...(onStartWorkflow ? ["workflow.create"] : []),
+    ...(onRegisterByTudi ? ["soul.die"] : []),
     ...(onCorrectSettlement ? ["soul.correct_settlement"] : []),
     ...(onMarkLost ? ["soul.transition"] : []),
   ];
@@ -154,7 +159,7 @@ export function SoulHeaderActions({
               <div
                 ref={menuRef}
                 role="menu"
-                className="absolute right-0 mt-1 w-40 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1"
+                className="absolute right-0 mt-1 w-48 z-20 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] py-1"
               >
                 {onRecalculate ? (
                   <button
@@ -184,10 +189,25 @@ export function SoulHeaderActions({
                     {t("workflow.start.menu")}
                   </button>
                 ) : null}
+                {onRegisterByTudi ? (
+                  <button
+                    ref={(el) => { itemRefs.current[2] = el; }}
+                    type="button"
+                    role="menuitem"
+                    data-testid="soul-register-by-tudi"
+                    onClick={() => {
+                      close(true);
+                      onRegisterByTudi();
+                    }}
+                    className={`${itemClass} text-[oklch(var(--color-ink))]`}
+                  >
+                    {t("earthGods.register_death")}
+                  </button>
+                ) : null}
                 {onMarkLost ? (
                   <>
                     <button
-                      ref={(el) => { itemRefs.current[2] = el; }}
+                      ref={(el) => { itemRefs.current[3] = el; }}
                       type="button"
                       role="menuitem"
                       onClick={() => {
@@ -203,7 +223,7 @@ export function SoulHeaderActions({
                 ) : null}
                 {canDelete ? (
                   <button
-                    ref={(el) => { itemRefs.current[3] = el; }}
+                    ref={(el) => { itemRefs.current[4] = el; }}
                     type="button"
                     role="menuitem"
                     onClick={() => {
@@ -219,7 +239,7 @@ export function SoulHeaderActions({
                 ) : null}
                 {onCorrectSettlement ? (
                   <button
-                    ref={(el) => { itemRefs.current[4] = el; }}
+                    ref={(el) => { itemRefs.current[5] = el; }}
                     type="button"
                     role="menuitem"
                     onClick={() => {
