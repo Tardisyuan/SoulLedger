@@ -4,7 +4,7 @@
  * 审判申诉(第五十二批 W-1 ~ W-4)网页侧的纯规则:「距截止」、被拒的读法、时间线三种事件的后半行。
  */
 import type { SoulEvent } from "@soulledger/core/api/events";
-import { appealsLeftAfterWithdraw } from "@soulledger/core/domain/appeals";
+import { appealsLeftAfterWithdraw, finalStationName } from "@soulledger/core/domain/appeals";
 import { APPEAL_IN_DIALOG_CODES, appealRefusalMessage, appealRefusalOf } from "@/src/components/judgment/appealDisplay";
 import { describeSystemEvent, makeSystemEventLabels } from "@/src/components/souls/soulLifecycleRows";
 import { tZh } from "./support/zhBundle";
@@ -56,5 +56,15 @@ describe("shared appeal rules", () => {
     expect(appealsLeftAfterWithdraw(1)).toBe(1);
     expect(appealsLeftAfterWithdraw(2)).toBe(0);
     expect(appealsLeftAfterWithdraw(3)).toBe(0);
+  });
+
+  it("drops only a trailing 「 · 终审」 from the final station's name, so 终审 is not said twice", () => {
+    expect(finalStationName("酆都大帝 · 终审")).toBe("酆都大帝");
+    expect(finalStationName("Christ · 终审")).toBe("Christ");
+    expect(tZh("appeals.ladder_final", { name: finalStationName("酆都大帝 · 终审") })).toBe("终审 · 酆都大帝");
+    expect(finalStationName("梵蒂冈")).toBe("梵蒂冈");
+    expect(finalStationName("终审 · 梵蒂冈")).toBe("终审 · 梵蒂冈");
+    expect(finalStationName("酆都大帝 · 终审 · 复核")).toBe("酆都大帝 · 终审 · 复核");
+    expect(finalStationName("酆都大帝终审")).toBe("酆都大帝终审");
   });
 });

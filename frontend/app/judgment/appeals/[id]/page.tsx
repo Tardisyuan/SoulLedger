@@ -22,7 +22,7 @@ import { StatusBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { AppealDecideDialog } from "@/src/components/judgment/AppealDecideDialog";
 import { APPEAL_STATUS_TONES, appealRefusalMessage } from "@/src/components/judgment/appealDisplay";
-import { AppealLadderView, EscalatedTag, awaitingFinal, ladderOver } from "@/src/components/judgment/AppealLadder";
+import { AppealLadderView, EscalatedTag, awaitingFinal, ladderAnchor, ladderOver } from "@/src/components/judgment/AppealLadder";
 
 /*
  * 复核页(Design 第五十二批 W-2):左原判、右申诉,各占一半,标签行对齐,方便横着比。
@@ -32,10 +32,11 @@ import { AppealLadderView, EscalatedTag, awaitingFinal, ladderOver } from "@/src
  * 上诉(第五十五批 E-2):右边换成站梯,申诉理由移到下面。流程跑着时「认领复核」置灰,原因
  * `appeals.error.ladder_running` 写在按钮下;每站的复核在审批流程里办,这页只读。走完后终审那位官员是复核人,照常作出结论。
  *
- * 站梯走完 · 待终审(55b E-3):按钮换成「作出终审结论」,打开同一个结论弹层。不是这份申诉的复核人(终审官员)
- * 置灰,原因 `appeals.error.not_final_judge`。终审节点还是流程的当前节点(终审官员还没在审批流程里批它)时,
- * 后端 `decide` 拒 `ladder_running`:按钮同样置灰、原因写 `appeals.error.ladder_running`,并保留「在审批流程里查看 →」
- * —— 要先去那里批完终审节点(第五十六批:两步之间都显示待终审)。流程已走完时不再给那条链接。
+ * 站梯走完 · 待终审(55b E-3,55c 定稿):不用认领,终审官员已是复核人,看到的就是原来的「作出结论」(`decide_action`),
+ * 打开同一个结论弹层。不是这份申诉的复核人(终审官员)置灰,原因 `appeals.error.not_final_judge`。终审节点还是流程的
+ * 当前节点(终审官员还没在审批流程里批它)时,后端 `decide` 拒 `ladder_running`:按钮同样置灰、原因写
+ * `appeals.error.ladder_running`,并保留「查看审批流程 →」—— 要先去那里批完终审节点(第五十六批:两步之间都显示待终审)。
+ * 流程已走完时不再给那条链接。那条链接带 `#node-<节点 id>`(第五十六批 W-1),流程页滚到那一站并高亮。
  */
 
 const LABEL = "text-xs text-[oklch(var(--color-ink-subtle))]";
@@ -169,7 +170,7 @@ function AppealReviewContent({ id }: { id: string }) {
           {awaiting ? (
             <div className="flex flex-col items-end gap-1">
               <Button type="button" data-testid="appeal-final-decide" disabled={!!finalReason} onClick={() => setDeciding(true)}>
-                {t("appeals.final_decide")}
+                {t("appeals.decide_action")}
               </Button>
               {finalReason && (
                 <p data-testid="appeal-final-reason" className="text-xs text-[oklch(var(--color-ink-muted))] max-w-xs text-right">
@@ -223,7 +224,7 @@ function AppealReviewContent({ id }: { id: string }) {
           <PageSection title={t("appeals.ladder", { name: appeal.workflow_name ?? "" })}>
             <AppealLadderView appeal={appeal} />
             {!(awaiting && over) && (
-              <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}`} className="mt-3 inline-block text-sm underline underline-offset-2">
+              <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}${ladderAnchor(appeal.ladder)}`} className="mt-3 inline-block text-sm underline underline-offset-2">
                 {t("crossJudgments.flow.view")}
               </Link>
             )}
@@ -238,7 +239,7 @@ function AppealReviewContent({ id }: { id: string }) {
           <Decision appeal={appeal} />
         </div>
       )}
-      {deciding && <AppealDecideDialog appeal={appeal} isOpen final={awaiting} onClose={() => setDeciding(false)} />}
+      {deciding && <AppealDecideDialog appeal={appeal} isOpen onClose={() => setDeciding(false)} />}
     </PageShell>
   );
 }
