@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authentication.signin_sessions import session_of
+from apps.core.client_ip import get_client_ip
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.officer_app import push, todo
 from apps.officer_app.serializers import (
@@ -162,7 +163,7 @@ class CosignView(OfficerAppBaseView):
                     description=f"加签:{node.node_name} — {entry['user_name']}"[:500],
                     changes={"node": str(node.id), "node_name": node.node_name, "cosigner_id": candidate.pk,
                              "cosigner": entry["user_name"]},
-                    ip_address=request.META.get("REMOTE_ADDR"),
+                    ip_address=get_client_ip(request),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
         except cosign.CosignRefusedError as refused:

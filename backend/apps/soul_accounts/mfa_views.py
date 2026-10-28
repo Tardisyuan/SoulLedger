@@ -123,7 +123,8 @@ class SoulMfaVerifyView(APIView):
             return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
         ip, agent = get_client_ip(request), request.META.get("HTTP_USER_AGENT", "")[:500]
         account = mfa.account_from_pending(data["pending_token"])
-        if account is None:
+        jti = mfa.pending_jti(data["pending_token"]) if account is not None else ""
+        if account is None or mfa.core.pending_used(jti):
             cache.set(ip_key, ip_failures + 1, timeout=LOGIN_WINDOW_SECONDS)
             return _refuse("pending_invalid", status.HTTP_401_UNAUTHORIZED)
         username = f"soul:{account.soul.soul_code}"[:150]
@@ -137,6 +138,9 @@ class SoulMfaVerifyView(APIView):
             LoginLog.objects.create(user=account.user, username=username, status="FAILED", ip_address=ip,
                                     user_agent=agent, failure_reason=f"mfa_{outcome['code']}")
             return _refuse_outcome(outcome)
+        if not mfa.core.claim_pending(jti):
+            # 同一张凭据的两个请求同时验过了码:只有先占到的那个拿令牌。
+            return _refuse("pending_invalid", status.HTTP_401_UNAUTHORIZED)
         method = "recovery" if data.get("recovery_code") else mfa.pending_method(data["pending_token"])
         device_token = mfa.remember_device(account) if data.get("remember_device") else ""
         LoginLog.objects.create(user=account.user, username=username, status="SUCCESS", ip_address=ip,

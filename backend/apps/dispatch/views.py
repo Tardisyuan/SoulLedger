@@ -287,6 +287,18 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             )
         return super().destroy(request, *args, **kwargs)
 
+    # CRUD 更新只剩 `reason` 能改(其余字段 `validate()` 拦),而理由是发起方写的:
+    # 目标方能进 `get_object()` 是为了批 / 驳 / 执行,不是为了改对方的理由(此前目标方 PATCH 也是 200)。
+    # `partial_update` 经由这里。ADMIN 照 `create` 豁免。注释而非 docstring:见上。
+    def update(self, request, *args, **kwargs):
+        record = self.get_object()
+        if not is_tenant_exempt(request.user):
+            tenant = self._requester_tenant(request)
+            if tenant is None or record.source_tenant_id != tenant.pk:
+                return Response({"error": "Only the proposing tenant may edit this dispatch"},
+                                status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
     def perform_destroy(self, instance):
         """放弃草稿 = 软删并记下是谁(`deleted_by`),进回收站(`apps/dispatch/apps.py` 注册了
         `dispatch_draft`),ADMIN 可从那里恢复。"""
@@ -838,6 +850,18 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
                 {"error": "Only the initiating tenant may do this"}, status=status.HTTP_403_FORBIDDEN
             )
         return None
+
+    # 改标题 / 描述只归发起方:`CrossJudgmentPartyPermission` 放参与方进 `get_object()` 是为了看与入席,
+    # 不是为了改别人发起的案子(此前受邀方 PUT/PATCH 也是 200)。`partial_update` 经由这里。
+    # (注释而非 docstring:drf-spectacular 会把 docstring 写进已提交的 schema。)
+    def update(self, request, *args, **kwargs):
+        refused = self._initiator_or_403(request, self.get_object())
+        return refused if refused is not None else super().update(request, *args, **kwargs)
+
+    # 删除同上,只归发起方(此前受邀方 DELETE 也是 204)。
+    def destroy(self, request, *args, **kwargs):
+        refused = self._initiator_or_403(request, self.get_object())
+        return refused if refused is not None else super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=["post"])
     def participate(self, request, pk=None):

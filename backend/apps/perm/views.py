@@ -448,15 +448,19 @@ def list_roles(request):
     from django.db.models.functions import Coalesce
 
     from apps.authentication.models import User
+    from apps.core.tenant import scope_to_tenant
 
     from .matrix import role_template_references
 
+    # Holder counts are per hall for everyone but the global admin: this endpoint is open to any
+    # signed-in officer, and an unscoped count told each hall how many JUDGEs every other hall has.
+    users = scope_to_tenant(User.objects.all(), request)
     holders = (
-        User.objects.filter(role=OuterRef("name")).order_by()
+        users.filter(role=OuterRef("name")).order_by()
         .values("role").annotate(n=Count("pk")).values("n")
     )
     active_holders = (
-        User.objects.filter(role=OuterRef("name"), is_active=True).order_by()
+        users.filter(role=OuterRef("name"), is_active=True).order_by()
         .values("role").annotate(n=Count("pk")).values("n")
     )
     roles = Role.objects.annotate(

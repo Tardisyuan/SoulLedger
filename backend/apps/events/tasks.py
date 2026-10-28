@@ -9,7 +9,6 @@ import json
 import logging
 import time
 
-import requests
 from celery import shared_task
 from django.utils import timezone
 
@@ -83,29 +82,33 @@ def deliver_event_webhook(self, delivery_id):
     delivery.attempt += 1
 
     try:
+        from apps.death_sync.webhook_service import public_only_session
         from apps.events.handlers.webhook_handler import (
             _reject_if_not_publicly_routable,
         )
 
         _reject_if_not_publicly_routable(webhook.url)
         timeout = getattr(webhook, "timeout_seconds", None) or 10
-        response = requests.post(
-            webhook.url,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "X-SoulLedger-Domain": delivery.domain,
-                "X-SoulLedger-Event": delivery.event_type,
-                **signature_headers(secret, payload),
-                "X-SoulLedger-Delivery": str(delivery.id),
-            },
-            timeout=timeout,
-            # 与 `apps/death_sync/webhook_service.py` 同一个洞:上面的校验器只看过
-            # 这一个 URL。从前这里是 `urllib.request.urlopen`,默认 opener 跟随
-            # 302,于是一个公网端点答 `302 -> http://169.254.169.254/` 就能让
-            # 服务端带着租户的 HMAC 签名去请求内网。
-            allow_redirects=False,
-        )
+        # 上面那次检查与这里的连接各解析一次域名;`public_only_session` 在连上之后再查一次
+        # 真正连到的地址(DNS rebinding:第一次答公网、第二次答 169.254.169.254)。
+        with public_only_session() as session:
+            response = session.post(
+                webhook.url,
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-SoulLedger-Domain": delivery.domain,
+                    "X-SoulLedger-Event": delivery.event_type,
+                    **signature_headers(secret, payload),
+                    "X-SoulLedger-Delivery": str(delivery.id),
+                },
+                timeout=timeout,
+                # 与 `apps/death_sync/webhook_service.py` 同一个洞:上面的校验器只看过
+                # 这一个 URL。从前这里是 `urllib.request.urlopen`,默认 opener 跟随
+                # 302,于是一个公网端点答 `302 -> http://169.254.169.254/` 就能让
+                # 服务端带着租户的 HMAC 签名去请求内网。
+                allow_redirects=False,
+            )
         delivery.response_status = response.status_code
         if not 200 <= response.status_code < 300:
             # 3xx 不抛异常(没跟随),4xx/5xx 在 requests 里也不抛 —— 都得自己判。

@@ -19,6 +19,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.client_ip import get_client_ip
 from apps.core.throttling import ClientIPRateThrottle
 from apps.judgment import attachments as svc
 from apps.judgment.models import CaseAttachment
@@ -116,7 +117,7 @@ class CaseAttachmentActionsMixin:
             resource="judgment.attachment", resource_id=str(judgment.id),
             description=f"上传附件:{judgment.case_number} {row.name}"[:500],
             changes={"attachment": str(row.id), "name": row.name, "byte_size": row.byte_size},
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
         return Response(CaseAttachmentSerializer(row, context={"request": request}).data, status=status.HTTP_201_CREATED)
@@ -140,7 +141,7 @@ class CaseAttachmentActionsMixin:
             resource="judgment.attachment", resource_id=str(judgment.id),
             description=f"删除附件:{judgment.case_number} {row.name}"[:500],
             changes={"attachment": str(row.id), "name": row.name, "byte_size": row.byte_size},
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

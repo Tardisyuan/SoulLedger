@@ -135,10 +135,13 @@ export interface UserImportPreview {
   rows: UserImportRow[];
 }
 
-/** 400 body: the file as a whole is unusable (`bad_encoding` / `empty_file` / `missing_columns`). */
+/** 400 body: the file as a whole is unusable (`bad_encoding` / `empty_file` / `missing_columns` /
+ * `file_too_large` / `too_many_rows`, the last two with `max_bytes` / `max_rows`). */
 export interface UserImportFileError {
   code: string;
   columns?: string[];
+  max_rows?: number;
+  max_bytes?: number;
 }
 
 export function userImportFileErrorOf(error: unknown): UserImportFileError | null {

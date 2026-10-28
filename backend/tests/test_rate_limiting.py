@@ -177,3 +177,35 @@ class TestLoginRateLimiting:
             resp = self._login("ratelimit_user", "Correct123!")
             assert resp.status_code == 200
             assert "remaining_attempts" not in resp.data
+
+    def test_one_username_locks_after_20_failures_across_ips(self, django_user_model):
+        """Rotating addresses does not buy unlimited guesses at one officer's password."""
+        self._create_user(django_user_model)
+        self._create_user(django_user_model, username="bystander")
+
+        with patch("django.core.cache.cache", self.mock_cache):
+            for i in range(20):
+                resp = self._login("RateLimit_User ", "Wrong!", ip=f"10.1.0.{i + 1}")
+                assert resp.status_code == 401, (i, resp.status_code)
+            # A fresh IP, the right password: the username itself is locked.
+            resp = self._login("ratelimit_user", "Correct123!", ip="10.1.1.1")
+            assert resp.status_code == 429
+            assert resp.data["code"] == "login_locked"
+            # Another account from that same fresh IP is unaffected.
+            resp = self._login("bystander", "Correct123!", ip="10.1.1.1")
+            assert resp.status_code == 200
+            # The username never sits in a cache key in clear.
+            assert not any("ratelimit_user" in k.lower() for k in self.mock_cache._store)
+
+    def test_unexpected_exception_logs_only_its_class_name(self, django_user_model):
+        from apps.authentication.models import LoginLog
+
+        self._create_user(django_user_model, username="exc_log_user")
+        with patch("django.core.cache.cache", self.mock_cache), patch(
+            "apps.authentication.views.TokenObtainPairView.post",
+            side_effect=RuntimeError("SELECT secret FROM somewhere"),
+        ), pytest.raises(RuntimeError):
+            self._login("exc_log_user", "x")
+        log = LoginLog.objects.filter(username="exc_log_user").latest("id")
+        assert log.failure_reason == "RuntimeError"
+        assert "secret" not in log.failure_reason

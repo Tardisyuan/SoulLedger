@@ -171,9 +171,12 @@ NOT_A_DEED_CIRCLES = {
 
 
 class _StatuteField(serializers.PrimaryKeyRelatedField):
-    """Resolves against the tenant-scoped manager at request time. A class-level
-    `queryset=Statute.objects.all()` would be evaluated at import, under no
-    tenant context, and the import itself is circular (judgment imports souls)."""
+    """Resolved at request time: a class-level `queryset=Statute.objects.all()` would be
+    evaluated at import, and the import itself is circular (judgment imports souls).
+    `Statute.objects` is a TenantManager, but it does NOT confine this lookup to the
+    soul's hall: it filters by the request's tenant context, which an ADMIN (and any
+    caller with no context) does not narrow. The hall is checked against the soul in
+    `SoulRecordSerializer._check_statute_against_soul`."""
 
     def get_queryset(self):
         from apps.judgment.models import Statute
@@ -247,6 +250,12 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                     f"not to this soul's {soul.civilization}."
                 )
             }, code="statute_other_civilization")
+        if statute is not None and statute.tenant_id != soul.tenant_id:
+            # Same civilization is not the same hall: each hall keeps its own copy of the
+            # articles (seed_hall), and one hall's revision is not another's law.
+            raise serializers.ValidationError({
+                "statute": f"{statute.code} belongs to another hall's statute book, not this soul's.",
+            }, code="statute_other_hall")
 
     def validate_category(self, value):
         """改判补偿 is written only by an amended appeal (apps/judgment/appeals.py), never by hand, and a

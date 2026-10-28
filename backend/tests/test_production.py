@@ -220,6 +220,16 @@ class TestDockerConfiguration:
         # auditor it switched on could itself be abused. CSP covers it.
         assert 'X-XSS-Protection' not in content
 
+    def test_nginx_x_frame_options_is_only_a_fallback(self):
+        """Django sends its own X-Frame-Options (DENY, or SAMEORIGIN on attachments); an
+        unconditional nginx copy made those responses carry two conflicting headers."""
+        import re
+
+        content = _read(NGINX_CONF)
+        assert not re.search(r'add_header\s+X-Frame-Options\s+"', content), "literal X-Frame-Options is back"
+        assert re.search(r'map \$upstream_http_x_frame_options \$fallback_xfo', content)
+        assert re.search(r'add_header\s+X-Frame-Options\s+\$fallback_xfo\s+always;', content)
+
     def test_nginx_admin_is_allow_listed_and_rate_limited(self):
         """/admin/ was open to the internet with no throttle (DEPLOY.md, 2026-10-09). It must
         include the allow-list, which must end in `deny all`, and compose must mount that file

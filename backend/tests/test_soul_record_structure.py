@@ -105,6 +105,24 @@ def test_a_statute_from_another_civilization_is_refused_on_update(cn_soul):
     assert "statute" in s.errors
 
 
+def test_a_statute_from_another_hall_of_the_same_civilization_is_refused(cn_soul):
+    """Same cosmology, different hall: each hall keeps its own copy of the articles."""
+    other_hall = Tenant.objects.create(code="CN_OTHER_HALL", display_name="Other", declared_civilization="CHINESE")
+    own = _cn_statute()
+    copy = Statute.all_objects.get(pk=own.pk)
+    copy.pk = None
+    copy.code = own.code + "-OTHER"
+    copy.tenant = other_hall
+    copy.save()
+    assert copy.civilization == cn_soul.civilization  # the civilization check alone would pass
+    s = SoulRecordSerializer(data=_payload(statute=str(copy.pk)))
+    assert s.is_valid(), s.errors
+    with pytest.raises(serializers.ValidationError) as exc:
+        s.save(soul=cn_soul)
+    assert "another hall" in str(exc.value.detail["statute"])
+    assert not SoulRecord.objects.filter(soul=cn_soul).exists()
+
+
 def test_a_statute_from_the_souls_own_corpus_is_accepted_and_echoed_with_its_snapshot(cn_soul):
     s = SoulRecordSerializer(data=_payload(statute=str(_cn_statute().pk), life_stage="YOUTH",
                                            evidence_source="WITNESS", evidence_note="鄰人王氏"))

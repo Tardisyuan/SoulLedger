@@ -29,10 +29,15 @@ def _cell(value):
     return csv_safe(value) if isinstance(value, str) else ("" if value is None else value)
 
 
-def export_csv(request, *, qs, serializer_class, columns, filename, resource):
-    """`columns` is [(header, serializer_key), ...]. Returns the CSV response."""
+def refuse_if_too_many(qs):
+    """400 when more than `EXPORT_MAX_ROWS` rows would be written. For the hand-written exports too."""
     if qs.count() > EXPORT_MAX_ROWS:
         raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+
+
+def export_csv(request, *, qs, serializer_class, columns, filename, resource):
+    """`columns` is [(header, serializer_key), ...]. Returns the CSV response."""
+    refuse_if_too_many(qs)
 
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f"attachment; filename={filename}"

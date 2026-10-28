@@ -25,7 +25,7 @@ import { Modal } from "@/src/components/ui/Modal";
  */
 
 export const USER_IMPORT_COLUMNS = ["username", "password", "role", "email", "display_name"] as const;
-const FILE_CODES = ["bad_encoding", "empty_file", "missing_columns"] as const;
+const FILE_CODES = ["bad_encoding", "empty_file", "missing_columns", "file_too_large", "too_many_rows"] as const;
 
 /** 模板:表头加一行示例。前置 BOM,Excel 才会按 UTF-8 打开。 */
 export function userImportTemplate(): string {
@@ -94,6 +94,7 @@ export function UserImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
     const known: readonly string[] = FILE_CODES;
     return t(`souls.import.file_codes.${known.includes(e.code) ? e.code : "unknown"}`, {
       columns: (e.columns ?? []).join(", "),
+      max: String(e.max_rows ?? ""),
     });
   };
   const rowText = (code: string) => {

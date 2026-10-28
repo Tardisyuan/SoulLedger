@@ -198,6 +198,15 @@ class TestLoginSecondStep:
         row.refresh_from_db()
         assert row.last_used_method == "totp" and row.last_step == _now_step()
 
+    def test_a_pending_token_is_spent_by_its_first_success(self, api_client, admin_user):
+        row, codes = _enable(admin_user)
+        pending = api_client.post("/api/v1/auth/login/", {"username": "admin", "password": "admin123"}, format="json").data["pending_token"]
+        assert api_client.post("/api/v1/auth/mfa/verify/", {"pending_token": pending, "code": _code(row.secret)}, format="json").status_code == 200
+        # The same pending token with a fresh, valid second factor: refused, and the recovery code is not spent.
+        r = api_client.post("/api/v1/auth/mfa/verify/", {"pending_token": pending, "recovery_code": codes[0]}, format="json")
+        assert (r.status_code, r.data["code"]) == (401, "pending_invalid")
+        assert MfaRecoveryCode.objects.filter(mfa=row, used_at__isnull=True).count() == len(codes)
+
     def test_the_same_code_cannot_be_used_twice(self, api_client, admin_user):
         row, _ = _enable(admin_user)
         code = _code(row.secret)
@@ -447,6 +456,7 @@ class TestDisableAndReset:
         mfa.remember_device(judge_user)
         RefreshToken.for_user(judge_user)
         assert OutstandingToken.objects.filter(user=judge_user).count() == 1
+        version_before = judge_user.session_version
         api_client.force_authenticate(admin_user)
         # 理由必填。
         assert api_client.post(f"/api/v1/users/{judge_user.pk}/reset-mfa/", {"reason": " "}, format="json").status_code == 400
@@ -456,6 +466,9 @@ class TestDisableAndReset:
         assert MfaRecoveryCode.objects.count() == 0
         assert MfaRememberedDevice.objects.filter(user=judge_user).count() == 0
         assert BlacklistedToken.objects.filter(token__user=judge_user).count() == 1
+        # Access tokens already handed out die too, not only the refresh tokens.
+        judge_user.refresh_from_db(fields=["session_version"])
+        assert judge_user.session_version == version_before + 1
         log = AuditLog.objects.get(resource="mfa", resource_id=str(judge_user.pk), action="EXECUTE")
         assert log.user == admin_user and log.changes["reason"] == "手机丢了"
         # 没开启的账号:409,什么也不清。

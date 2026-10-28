@@ -110,6 +110,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
                 "rebirth_form_reason": "..." }
         `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
         """
+        from apps.core.tenant import scope_to_tenant
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
         from apps.reincarnation.services import (
@@ -137,10 +138,9 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         rebirth_continent = payload.validated_data.get("rebirth_continent", "")
 
         # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
-        user_tenant = getattr(request, "tenant", None)
-        soul_qs = Soul.objects.all()
-        if getattr(request.user, 'role', None) != 'ADMIN' and user_tenant:
-            soul_qs = soul_qs.filter(tenant=user_tenant)
+        # `scope_to_tenant` fails closed: the hand-rolled `and user_tenant` here skipped the
+        # filter for a non-ADMIN with no tenant context and let it reach any hall's soul.
+        soul_qs = scope_to_tenant(Soul.objects.all(), request)
 
         try:
             soul = soul_qs.get(id=soul_id)
@@ -153,9 +153,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         disposition = None
         if disposition_id:
             # 只认这个灵魂自己的处置:别人的处置会把别人的去向与清记忆写到这个灵魂身上(2026-10-27)。
-            disp_qs = Disposition.objects.filter(soul=soul)
-            if getattr(request.user, 'role', None) != 'ADMIN' and user_tenant:
-                disp_qs = disp_qs.filter(tenant=user_tenant)
+            disp_qs = scope_to_tenant(Disposition.objects.filter(soul=soul), request)
             try:
                 disposition = disp_qs.get(id=disposition_id)
             except Disposition.DoesNotExist:
