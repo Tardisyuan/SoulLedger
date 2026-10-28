@@ -7852,7 +7852,7 @@
     "no_parent": "—",
     "register_death": "以土地公名义登记死亡",
     "report_label": "土地公所报 · 选填",
-    "register_hint": "登记后发给{{city_god}}初审，并进「待发勾魂牒」名单。",
+    "register_hint": "登记后发给{{city_god}}初审。",
     "officers": "名下官员",
     "no_officers": "没有名下官员",
     "officers_hint": "名下官员与殿管理员能以这位土地公的名义登记死亡。",

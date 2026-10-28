@@ -7852,7 +7852,7 @@
     "no_parent": "—",
     "register_death": "Record a death as reported by an Earth God",
     "report_label": "Earth God's report · optional",
-    "register_hint": "Once recorded, it goes to {{city_god}} for first review and onto the list awaiting a summons.",
+    "register_hint": "Once recorded, it goes to {{city_god}} for first review.",
     "officers": "Officers",
     "no_officers": "No officers",
     "officers_hint": "This Earth God's officers, and hall administrators, can record a death in its name.",
