@@ -83,7 +83,7 @@ export function BureauPicker({ rank, bureaus, onChange }: { rank: string; bureau
                 </span>
               </button>
               <Collapse open={isOpen} id={id}>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 pb-2 pl-5">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 pb-2 pl-6">
                   {group.bureaus.map((b) => (
                     <label key={b} className="inline-flex items-center gap-1 text-sm text-[oklch(var(--color-ink))]">
                       <input
