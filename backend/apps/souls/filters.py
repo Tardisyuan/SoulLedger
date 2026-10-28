@@ -1,12 +1,16 @@
 """
 Soul FilterSet — filtering, search, and ordering for Soul API.
 """
+import re
+
 import django_filters as filters
 from django.db.models import ExpressionWrapper, F, IntegerField, Q
 from django.db.models.functions import Coalesce
 
 from apps.souls.date_problem_sql import filter_has_date_problem
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
+
+_SOUL_CODE_SEPARATOR = re.compile(r"[\s\-－]")
 
 
 class SoulFilter(filters.FilterSet):
@@ -59,7 +63,9 @@ class SoulFilter(filters.FilterSet):
         model = Soul
         fields = ["current_state", "tenant__code", "import_batch"]
 
-    search_fields = ["name", "birth_name", "origin_location", "description"]
+    # soul_code: 官员端搜索框写「姓名、编号或案号」。DRF 的 SearchFilter 也读这份清单(views.py),
+    # 它按空白拆词、每词 icontains,所以显示用的 3-4-3 空格分组(`QU3 3Q9F W5F`)在那边也命中。
+    search_fields = ["name", "birth_name", "origin_location", "description", "soul_code"]
     # death_date was dropped as a real field in favour of death_year/month/day
     # (see apps.souls.dates); death_year alone is still a meaningful,
     # directly sortable ordering key.
@@ -98,6 +104,11 @@ class SoulFilter(filters.FilterSet):
         q = Q()
         for field in self.search_fields:
             q |= Q(**{f"{field}__icontains": value})
+        # 编号显示带空格分组,输入可能照抄;分隔符与 App 的编号输入同一组
+        # (packages/core/src/domain/soulCode.ts 的 SEPARATOR:空白、`-`、全角 `－`)。
+        compact = _SOUL_CODE_SEPARATOR.sub("", value).upper()
+        if compact:
+            q |= Q(soul_code__icontains=compact)
         return queryset.filter(q)
 
     def filter_civilization(self, queryset, name, value):
