@@ -593,8 +593,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
     #: Edges only a named system action may take, never a person (user 2026-10-27). `can_transition_to` allows
     #: one only when the caller passes its `system` reason; `POST /souls/{id}/transition/` passes none.
-    #: DISPOSED → JUDGING: a refused Egyptian weighing is weighed again (apps/judgment/weighing.py
-    #: ::reweigh_after_rejection), its unexecuted disposition voided first.
+    #: DISPOSED → JUDGING: a refused original judgment's approval flow (the Egyptian weighing included) opens the
+    #: case again (apps/judgment/weighing.py::reweigh_after_rejection), its unexecuted disposition voided first.
     SYSTEM_ONLY_TRANSITIONS = {("DISPOSED", "JUDGING"): "weighing_rejected"}
 
     def can_transition_to(self, new_state: str, *, system: str | None = None) -> bool:
@@ -862,6 +862,13 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         if self.current_state != SoulState.ALIVE:
             return None
+        # 本殿没有能收案的城隍就不许开案(用户 2026-10-29):在状态变化之前问,内存里的灵魂不留一个回滚掉的 JUDGING。
+        # `opening_fields` 里还会再问一次(手开审判那条路也走它),这里只是先拦。
+        if self.civilization == Civilization.CHINESE and city_god is None:
+            from apps.judgment import city_gods
+
+            if city_gods.match(self.tenant_id, location or self.origin_location) is None:
+                raise city_gods.NoCityGodError()
 
         with transaction.atomic():
             result = self.transition_to(
@@ -1010,6 +1017,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 and city_god.tenant_id == self.tenant_id and not city_god.is_deleted):
             # 土地公报给自己的上级城隍(docs/08 §五、06 §二 第一站「通报当地城隍」),不按出身地另配。
             review = {**review, "city_god": city_god, "city_god_status": "PENDING"}
+        if self.civilization == Civilization.CHINESE and review.get("city_god") is None:
+            # 本殿没有能收案的城隍(没有匹配、没有兜底):不许开案(用户 2026-10-29)。在调用方的事务里抛,整笔回滚。
+            raise city_gods.NoCityGodError()
         return {"untimely": untimely, "held_until": fated if untimely else None, **review,
                 **self._duat_fields(died)}
 

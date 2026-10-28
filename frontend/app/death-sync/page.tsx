@@ -44,13 +44,15 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 const STATUSES = Object.keys(STATUS_TONES);
 
 /**
- * Only INTERNAL_ERROR is retried (user decision 2026-10-16): SOUL_NOT_FOUND,
+ * Only INTERNAL_ERROR is retried (user decision 2026-10-16), and NO_CITY_GOD (2026-10-29: once the hall has a
+ * default city god the same registration goes through): SOUL_NOT_FOUND,
  * SOUL_NOT_ALIVE, INVALID_TRANSITION, VALIDATION_ERROR are answers about the
  * data, and running them again gives the same answer. Same three checks the
- * server makes before answering 409 (`DeathSyncService.retry_failed`).
+ * server makes before answering 409 (`DeathSyncService.retry_failed`, `RETRYABLE_ERRORS`).
  */
+const RETRYABLE_ERRORS = ["INTERNAL_ERROR", "NO_CITY_GOD"];
 const canRetry = (reg: DeathRegistration) =>
-  reg.status === "FAILED" && reg.error_code === "INTERNAL_ERROR" && reg.retry_count < reg.max_retries;
+  reg.status === "FAILED" && RETRYABLE_ERRORS.includes(reg.error_code) && reg.retry_count < reg.max_retries;
 
 export default function DeathSyncPage() {
   // useSearchParams needs a Suspense boundary or the route opts out of static

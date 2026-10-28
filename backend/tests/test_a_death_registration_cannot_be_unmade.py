@@ -21,9 +21,12 @@ WRITE_METHODS = ["delete", "put", "patch"]
 
 @pytest.fixture
 def registration(db):
+    from tests.city_god_support import default_city_god
+
     tenant, _ = Tenant.objects.get_or_create(
         code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
     )
+    default_city_god(tenant)  # 地府开案要有城隍收案(2026-10-29)
     raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
     key = ExternalApiKey.objects.create(
         name="test-key",
