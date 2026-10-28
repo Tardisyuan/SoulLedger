@@ -15,8 +15,8 @@ from apps.judgment import appeals
 from apps.judgment.models import AppealStatus, Judgment, JudgmentAppeal, JudgmentKind, Verdict
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer
 from apps.soul_accounts.me_views import SoulAPIView
-from apps.souls.models import Civilization
 from apps.soul_accounts.serializers import SoulErrorSerializer
+from apps.souls.models import Civilization
 
 # ── 序列化 ──────────────────────────────────────────────────────────────
 
