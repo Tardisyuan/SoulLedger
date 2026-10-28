@@ -21,9 +21,14 @@ const mockDispositions = jest.fn();
 const mockReincarnations = jest.fn();
 const mockPlans = jest.fn();
 const mockItem = jest.fn();
+const mockWarrants = jest.fn();
 jest.mock("@soulledger/core/api/souls", () => ({
   ...jest.requireActual("@soulledger/core/api/souls"),
   soulsApi: { get: (...a: unknown[]) => mockSoul(...a), records: (...a: unknown[]) => mockRecords(...a) },
+}));
+jest.mock("@soulledger/core/api/dispatch", () => ({
+  ...jest.requireActual("@soulledger/core/api/dispatch"),
+  captureWarrantsApi: { list: (...a: unknown[]) => mockWarrants(...a) },
 }));
 jest.mock("@soulledger/core/api/events", () => ({ eventsApi: { list: (...a: unknown[]) => mockEvents(...a) } }));
 jest.mock("@soulledger/core/api/judgment", () => ({
@@ -96,6 +101,7 @@ beforeEach(() => {
   mockDispositions.mockResolvedValue(page([]));
   mockReincarnations.mockResolvedValue(page([]));
   mockPlans.mockResolvedValue(page([]));
+  mockWarrants.mockResolvedValue(page([]));
 });
 
 describe("soulView (pure)", () => {
@@ -358,6 +364,44 @@ describe("出身地域 (Design 第四十五批 O-1)", () => {
     } finally {
       platform().persistent.set(LOCALE_COOKIE, "zh-Hans");
     }
+  });
+});
+
+// 第五十七批 六:地府灵魂的身份页签多两行只读 —— 十三站「第 n / 13 站 · 站名」与勾魂状态。挪站、发牒留在网页上。
+describe("十三站与勾魂 (Design 第五十七批 六)", () => {
+  it("on the road: station n of 13 by name; the latest warrant's status and escort, words not members", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, diyu_station: "WANGXIANG_TERRACE" } });
+    mockWarrants.mockResolvedValue(
+      page([
+        { id: "w0", soul: "s1", status: "CANCELLED", escort: "WUCHANG", city_god_name: null, issued_at: "2026-10-01T00:00:00Z" },
+        { id: "w1", soul: "s1", status: "CAPTURED", escort: "NIUTOU_MAMIAN", city_god_name: "常熟县城隍", issued_at: "2026-10-27T00:00:00Z" },
+      ])
+    );
+    await openSoul();
+    await screen.findByTestId("soul-identity");
+    expect(screen.getByTestId("soul-diyu-station").props.children).toBe("第 3 / 13 站 · 望乡台");
+    expect(await screen.findByTestId("soul-capture")).toBeTruthy();
+    expect(screen.getByTestId("soul-capture").props.children).toBe("已拘到 · 牛头马面 · 常熟县城隍");
+    expect(mockWarrants).toHaveBeenCalledWith({ soul: "s1" });
+    expect(within(screen.getByTestId("soul-identity")).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("off the road it says so; no warrant, no capture row", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, diyu_station: "" } });
+    await openSoul();
+    await screen.findByTestId("soul-identity");
+    await waitFor(() => expect(mockWarrants).toHaveBeenCalled());
+    expect(screen.getByTestId("soul-diyu-station").props.children).toBe("不在路上");
+    expect(screen.queryByTestId("soul-capture")).toBeNull();
+  });
+
+  it("another civilization has neither row and never asks for warrants", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, civilization: "EUROPEAN" } });
+    await openSoul();
+    await screen.findByTestId("soul-identity");
+    expect(screen.queryByTestId("soul-diyu-station")).toBeNull();
+    expect(screen.queryByTestId("soul-capture")).toBeNull();
+    expect(mockWarrants).not.toHaveBeenCalled();
   });
 });
 

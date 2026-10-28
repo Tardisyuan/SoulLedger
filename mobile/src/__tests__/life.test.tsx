@@ -329,7 +329,7 @@ describe("reduce motion", () => {
   });
 });
 
-describe("地府十三站与出身部洲 (docs/06, 07; 2026-10-28)", () => {
+describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-2)", () => {
   async function openAs(profile: Record<string, unknown>) {
     stubApi({
       "/me/": { status: 200, data: { ...PROFILE, ...profile } },
@@ -342,15 +342,25 @@ describe("地府十三站与出身部洲 (docs/06, 07; 2026-10-28)", () => {
     await act(async () => {});
   }
 
-  it("the soul sees its station by name with its place on the road, and its continent", async () => {
+  it("on the road: a 赴冥 · 十三站 card with the station, its place and what it is; the continent under the name", async () => {
     await openAs({ diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN" });
-    expect(screen.getByTestId("life-station")).toHaveTextContent("望乡台 · 第 3 / 13 站");
+    expect(screen.getByTestId("life-stations-at")).toHaveTextContent("3 / 13");
+    expect(screen.getByTestId("life-station-here")).toHaveTextContent("现在在望乡台：回望人间、最后一眼看家乡的地方。");
+    expect(screen.getByTestId("life-station-here")).not.toHaveTextContent("WANGXIANG_TERRACE");
+    expect(screen.getByTestId("soul-continent")).toHaveTextContent("南瞻部洲");
     expect(screen.getByTestId("life-continent")).toHaveTextContent("南瞻部洲");
   });
 
-  it("no station row off the road; an unrecorded continent still has its row", async () => {
+  it("off the road (alive, or past the thirteen stations) there is no card; an unrecorded continent keeps its row only", async () => {
     await openAs({ diyu_station: "", birth_continent: "" });
-    expect(screen.queryByTestId("life-station")).toBeNull();
+    expect(screen.queryByTestId("life-stations")).toBeNull();
+    expect(screen.queryByTestId("soul-continent")).toBeNull();
     expect(screen.getByTestId("life-continent")).toBeTruthy();
+  });
+
+  it("another civilization has neither", async () => {
+    await openAs({ civilization: "EUROPEAN", diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN" });
+    expect(screen.queryByTestId("life-stations")).toBeNull();
+    expect(screen.queryByTestId("soul-continent")).toBeNull();
   });
 });

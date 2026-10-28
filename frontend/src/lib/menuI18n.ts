@@ -26,6 +26,10 @@ const LEAF_KEYS: Record<string, string> = {
   "/judgment/appeals": "breadcrumb.menu.judgment_appeals",
   "/city-god-cases": "breadcrumb.menu.city_god_cases",
   "/city-gods": "breadcrumb.menu.city_gods",
+  // backend/apps/menus/migrations/0028_add_tudi_gods_and_capture_due_menus.py:土地公(系统设置)、待发勾魂牒(灵魂业务)
+  // (egy: captureDue.title 见 egyPendingKeys.json)
+  "/death-sync/tudi-gods": "earthGods.title",
+  "/judgment/capture-due": "captureDue.title",
   // `/ledger`, not `/karma`. Migration 0011 moved the menu's path when the
   // backend app was renamed, and this key was not followed — so the ledger
   // breadcrumb has been falling back to its Chinese name alone in en and egy
