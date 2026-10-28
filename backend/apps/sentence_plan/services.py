@@ -6,7 +6,9 @@
 
 入口:
 * `create_from_conclusion` —— 原属审判结案:计划 + 原属节点(ACTIVE)+ 联审参与方节点(PENDING,只抄 PASS,Q15)。
-* `on_disposition_executed` —— 节点的处置执行完:COMPLETED / WAITING / ETERNAL。
+* `on_disposition_executed` —— 节点的处置执行:有刑期且没满 → 仍 ACTIVE(受刑中);否则 COMPLETED / WAITING / ETERNAL。
+* `on_term_served` —— 受刑中的节点期满(每日检查 / 官员「期满释放」):COMPLETED / WAITING。
+* `on_origin_flow_completed` —— 原审流程走完:没有节点的计划(地府判无罪)完成 → 候转世。
 * `on_dispatch_executed` / `on_dispatch_refused` —— 搬运层(调拨记录)的两个结果。
 * `on_residence_ended` —— 手动结束暂居:节点 ABORTED。
 * `advance` —— 状态的纯函数:回原属地检查剩余节点,有则调往下一站,无则完成计划。
@@ -210,6 +212,17 @@ def _leave_waiting_station(soul, node):
         DispositionService._leave_served_realm(disposition, soul)
 
 
+def _origin_flow_open(plan):
+    """生成这份计划的原审判挂着一个还没走完(不是 COMPLETED)的审批流程。"""
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    if plan.origin_judgment_id is None:
+        return False
+    return ApprovalWorkflow._base_manager.filter(
+        judgment_id=plan.origin_judgment_id, is_deleted=False,
+    ).exclude(status=ApprovalWorkflowStatus.COMPLETED).exists()
+
+
 def _route_home_realm(soul, verdict, judgment_method, judgment=None):
     """按**原属**文明路由的 realm。`DispositionService._route_to_realm` 读 `soul.civilization`(管辖),
     重开审判结案时灵魂可能还在外地,所以给它一份管辖 = 原属的副本(只读,不保存)。"""
@@ -266,6 +279,9 @@ class SentencePlanService:
 
         `judgment.kind != ORIGINAL` 不建(加减项 / 重开审判改计划,不建计划)。
         灵魂已有进行中的计划则**不建、记 warning、返回 None**(阶段 1 的约定,见 git 历史)。
+
+        `disposition=None`:地府判无罪(`acquitted_to_rebirth`,用户 2026-10-29)—— 没有刑期,计划不带原属节点
+        (联审 PASS 抄来的外地站照抄)。没有节点的计划由 `advance` 在审批流程走完后直接完成 → 候转世。
         """
         from apps.dispatch.models import CrossTenantJudgmentParticipant, ParticipantRole
         from apps.events.models import EventType
@@ -278,7 +294,7 @@ class SentencePlanService:
         if home is None or judgment.tenant_id != home.pk:
             return None
         bench = cross if cross is not None else open_cross
-        if bench is not None and disposition.is_eternal:
+        if bench is not None and disposition is not None and disposition.is_eternal:
             # Q5 同一条校验,原属节点也跑(2026-09-19 用户决定):原属处置是永久刑期,后面却还有联审
             # 抄来的节点 —— 那些节点永远执行不到。结案整体回滚。错误码沿用 Q5 在请求路径上的
             # `eternal_not_last`(同一条规则,一个码)。
@@ -310,15 +326,16 @@ class SentencePlanService:
             soul=soul, tenant=home, cycle=judgment.cycle, status=SentencePlanStatus.ACTIVE,
             origin_judgment_id=judgment.pk, cross_judgment_id=cross_id,
         )
-        home_node = SentenceNode.objects.create(
-            plan=plan, order=1, tenant_code=home.code, is_home=True, status=SentenceNodeStatus.ACTIVE,
-            realm_code=disposition.destination_realm.realm_code if disposition.destination_realm_id else "",
-            sentence_years=disposition.sentence_years, is_eternal=disposition.is_eternal,
-            memory_reset=disposition.memory_reset, disposition_id=disposition.pk,
-            added_by_judgment_id=judgment.pk, activated_at=timezone.now(),
-        )
-        disposition.sentence_node_id = home_node.pk
-        disposition.save(update_fields=["sentence_node_id"])
+        if disposition is not None:
+            home_node = SentenceNode.objects.create(
+                plan=plan, order=1, tenant_code=home.code, is_home=True, status=SentenceNodeStatus.ACTIVE,
+                realm_code=disposition.destination_realm.realm_code if disposition.destination_realm_id else "",
+                sentence_years=disposition.sentence_years, is_eternal=disposition.is_eternal,
+                memory_reset=disposition.memory_reset, disposition_id=disposition.pk,
+                added_by_judgment_id=judgment.pk, activated_at=timezone.now(),
+            )
+            disposition.sentence_node_id = home_node.pk
+            disposition.save(update_fields=["sentence_node_id"])
         if cross is not None:
             seats = (
                 CrossTenantJudgmentParticipant.all_objects.filter(judgment_id=cross.pk, is_deleted=False)
@@ -346,13 +363,17 @@ class SentencePlanService:
 
     @staticmethod
     def on_disposition_executed(soul, disposition):
-        """挂着这份处置的 ACTIVE 节点结束:`is_eternal` → ETERNAL(计划 HELD);否则有未结案审判
-        → WAITING(刑满暂留,Q7),没有 → COMPLETED。**不推进**:调用方随后 `advance`。
+        """挂着这份处置的 ACTIVE 节点:`is_eternal` → ETERNAL(计划 HELD);**刑期没满 → 仍是 ACTIVE(受刑中)**;
+        没有刑期或刑期已满 → `_end_served`。**不推进**:调用方随后 `advance`。
+
+        执行 = 开始服刑,刑期满了才能往下走(用户 2026-10-29)。此前执行即 COMPLETED → `advance` → 计划完成 →
+        灵魂当场 REINCARNATING,刑期只是一行 `expired_at`。现在受刑中的节点占着计划(`advance` 遇到 ACTIVE 就等),
+        期满由每日检查或官员「期满释放」调 `on_term_served`。没记刑期(`sentence_years` 为空)的处置
+        没有期满日可等,执行即服完,照旧。
 
         调用方已持有灵魂行锁。这里 计划 → 节点(§8;阶段 1 是 节点 → 计划,已改回)。
         """
-        from apps.events.models import EventType
-        from apps.judgment.models import open_judgments
+        from apps.disposition.expiry import serving
 
         found = SentencePlanService.node_for_disposition(disposition)
         if found is None:
@@ -374,7 +395,32 @@ class SentencePlanService:
                 plan.status = SentencePlanStatus.HELD
                 _save(plan, "status")
             SentencePlanService._node_finished(soul, plan, node)
-        elif open_judgments(soul).exists():
+        elif not serving(disposition):
+            SentencePlanService._end_served(soul, plan, node)
+        return node
+
+    @staticmethod
+    def on_term_served(soul, disposition):
+        """受刑中的节点刑期满了(每日期满检查、官员「期满释放」、炼狱复核通过):`_end_served`。**不推进**。
+        节点不是 ACTIVE、或处置还没执行,什么都不写,返回 None。调用方已持有灵魂行锁。"""
+        found = SentencePlanService.node_for_disposition(disposition)
+        if found is None or not disposition.is_executed or disposition.is_eternal:
+            return None
+        plan = _lock_plan(found.plan_id)
+        node = SentenceNode.all_objects.select_for_update(of=("self",)).get(pk=found.pk)
+        if node.status != SentenceNodeStatus.ACTIVE:
+            return None
+        SentencePlanService._end_served(soul, plan, node)
+        return node
+
+    @staticmethod
+    def _end_served(soul, plan, node):
+        """刑满:有未结案审判 → WAITING(刑满暂留,Q7),没有 → COMPLETED。"""
+        from apps.events.models import EventType
+        from apps.judgment.models import open_judgments
+
+        now = timezone.now()
+        if open_judgments(soul).exists():
             node.status = SentenceNodeStatus.WAITING
             _save(node, "status")
             record_event(soul, EventType.SENTENCE_NODE_WAITING, {
@@ -388,7 +434,6 @@ class SentencePlanService:
             node.completed_at = now
             _save(node, "status", "completed_at")
             SentencePlanService._node_finished(soul, plan, node)
-        return node
 
     @staticmethod
     def _node_finished(soul, plan, node):
@@ -556,6 +601,10 @@ class SentencePlanService:
         # 在原属地:① 无未结案审判 ② 无待决请求 ③ 有无未执行节点(图 1 下的三项检查)。
         if has_open or has_pending_request:
             return False
+        if not any(n.is_home for n in nodes) and _origin_flow_open(plan):
+            # 地府判无罪的计划没有原属节点(`acquitted_to_rebirth`):没有处置要执行来挡住它,就等结案的审批
+            # 流程走完(原审要流程走完才算数),由 `on_origin_flow_completed` 接着走 —— 完成,或调往联审的外地站。
+            return False
         occupying = [n for n in nodes if n.status in OCCUPYING_NODE_STATUSES]
         if occupying:
             node = occupying[0]
@@ -578,6 +627,34 @@ class SentencePlanService:
         return False
 
     @staticmethod
+    def on_origin_flow_completed(judgment_id):
+        """原审判的审批流程走完(`ApprovalWorkflow._finish` COMPLETED,同一事务):没有原属节点的计划(地府判无罪)
+        此刻往下走 —— 没有站就完成 → 灵魂候转世;有联审抄来的外地站就调往第一站。别的计划不在这里动,它们等
+        处置执行与期满。流程行的新状态此时还没保存,所以不走 `advance` 的流程检查,直接在锁下做。"""
+        from apps.judgment.models import open_judgments
+
+        found = SentencePlan.all_objects.filter(
+            origin_judgment_id=judgment_id, is_deleted=False, status=SentencePlanStatus.ACTIVE,
+        ).values_list("pk", "soul_id").first()
+        if found is None:
+            return False
+        from apps.souls.models import Soul
+
+        soul = _lock_soul(Soul(pk=found[1]))
+        plan = _lock_plan(found[0])
+        nodes = _lock_nodes(plan)
+        if (plan.status != SentencePlanStatus.ACTIVE or any(n.is_home for n in nodes) or soul.is_residing
+                or open_judgments(soul).exists()):
+            return False
+        nxt = next((n for n in nodes if n.status == SentenceNodeStatus.PENDING), None)
+        if nxt is not None:
+            SentencePlanService._dispatch(soul, plan, nxt)
+            return True
+        if any(n.status in OCCUPYING_NODE_STATUSES for n in nodes):
+            return False
+        return SentencePlanService._complete(soul, plan, nodes)
+
+    @staticmethod
     def _complete(soul, plan, nodes, *, pardoned=False):
         """计划完成:今天原属处置执行做的那次转移(`DispositionService.execute` 原属分支),挪到这里。
         可转世且没有永久刑期 → REINCARNATING(并记 REINCARNATION_TRIGGERED,原来在 `disposition/views.py`);
@@ -595,8 +672,10 @@ class SentencePlanService:
         home_disposition_id = next(
             (n.disposition_id for n in reversed(nodes) if n.is_home and n.disposition_id is not None), None,
         )
+        # 被系统作废的处置(申诉改判无罪撤下的那一站)不算。
         home_disposition = (
-            Disposition.all_objects.filter(pk=home_disposition_id).first() if home_disposition_id else None
+            Disposition.all_objects.filter(pk=home_disposition_id, is_deleted=False).first()
+            if home_disposition_id else None
         )
         # 永久刑期 = 不转生,原属地的永久刑期同样(2026-09-29 用户决定):还挂着 ETERNAL 节点的计划
         # 只可能是原属地永久收尾(外地永久 HELD 不到这里;撤销把 ETERNAL 改成 ABORTED = 赦免)→ SETTLED。

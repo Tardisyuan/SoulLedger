@@ -76,7 +76,7 @@ def merged(w, realms, *, skip_orders=(), convene=True):
         CrossTenantJudgmentService.submit_sentence(seat, plan.stop_realm(realm), 5, "", None)
     if convene:
         CrossTenantJudgmentService.activate(cj)
-    case.conclude("PASSED", "", skip_node_orders=skip_orders)
+    case.conclude("FAILED", "", skip_node_orders=skip_orders)  # 地府判无罪不建原属节点(2026-10-29)
     return soul, case, cj, ApprovalWorkflow.objects.get(judgment=case)
 
 
@@ -554,7 +554,7 @@ def test_the_preview_lists_what_the_conclusion_then_builds(w):
     assert [(f["order"], f["tenant_code"], f["default_node_count"]) for f in body["foreign"]] == [
         (2, w.eu.code, 3), (3, w.eg.code, 3)]
 
-    case.conclude("PASSED", "", skip_node_orders=[1])
+    case.conclude("FAILED", "", skip_node_orders=[1])
     wf = ApprovalWorkflow.objects.get(judgment=case)
     local = ApprovalNode.objects.filter(segment__workflow=wf, segment__order=1).order_by("node_order")
     assert [n.is_required for n in local] == [False, False, True]

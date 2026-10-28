@@ -66,7 +66,7 @@ def test_a_fail_bench_is_recorded_but_its_seats_are_not_copied(cn, eg):
     """Q15:FAIL 的联审照跑结束校验,但不抄节点 —— 计划只有原属一站。"""
     soul, case = plan.open_case(cn)
     cj = plan.bench(case, [(eg, plan.stop_realm(eg), 5)], conclusion="FAIL")
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     p = SentencePlan.all_objects.get(soul=soul)
     assert p.cross_judgment_id == cj.pk
     assert [(n.order, n.tenant_code) for n in p.nodes.all()] == [(1, "CN_DIYU")]
@@ -78,7 +78,7 @@ def test_a_cancelled_bench_does_not_hold_the_conclusion(cn, eg):
     cj.judgment = case
     cj.save(update_fields=["judgment"])
     cj.transition_to(JudgmentStatus.CANCELLED)
-    assert case.conclude("PASSED", "") is True
+    assert case.conclude("FAILED", "") is True
     assert [n.order for n in SentencePlan.all_objects.get(soul=soul).nodes.all()] == [1]
 
 
@@ -160,10 +160,11 @@ def test_executing_a_single_home_node_through_the_api_completes_the_plan_and_tri
 
 
 def _eternal_heaven():
-    """中国灵魂 PASSED 路由到 DY_01_HEAVEN;把它设成永久刑期。"""
+    """中国灵魂 FAILED(严重度 0)路由到第二殿;把它设成永久刑期。原来用 PASSED → DY_01_HEAVEN,
+    地府判无罪不再发落(2026-10-29),所以两处结案改判 FAILED。"""
     from apps.realms.models import Realm
 
-    realm = plan.realm("DY_01_HEAVEN", "CHINESE")
+    realm = plan.realm("DY_COURT_02_CHUJIANG", "CHINESE")
     Realm.all_objects.filter(pk=realm.pk).update(is_eternal=True)
 
 
@@ -175,7 +176,7 @@ def test_an_eternal_home_sentence_with_stops_after_it_refuses_the_conclusion(cn,
     plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
 
     response = officer_client(plan.officer("cn_judge", "JUDGE", cn)).post(
-        f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "PASSED"}, format="json")
+        f"/api/v1/judgment/{case.pk}/conclude/", {"verdict": "FAILED"}, format="json")
 
     assert response.status_code == 409 and response.data["code"] == "eternal_not_last", response.data
     case.refresh_from_db()
@@ -277,7 +278,7 @@ def _pushed_soul(home, stops):
     soul = account.soul
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=home)
     plan.bench(case, stops)
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     plan.walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     return soul, SentencePlan.all_objects.get(soul=soul)
 

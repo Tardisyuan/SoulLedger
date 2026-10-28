@@ -233,6 +233,20 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
         ]
 
+    def update(self, instance, validated_data):
+        """Write only the columns this PATCH/PUT carries (2026-10-29 审查).
+
+        DRF's default `instance.save()` rewrites the whole row from the copy loaded at the start of the request,
+        so a PATCH of `grievance_level` racing `wangsi.decide_grievance` put the old `grievance_status` and
+        `held_until` back — an upheld grievance undone, the soul held again. Every column the serializer can
+        write is a plain field (no many-to-many), so `update_fields` covers it; `Judgment.save` adds
+        `stale_since` itself, and the audit columns ride along as everywhere else.
+        """
+        for name, value in validated_data.items():
+            setattr(instance, name, value)
+        instance.save(update_fields=[*validated_data, "version", "update_user", "update_time"])
+        return instance
+
     # Fields that only `conclude/` may write. Checked against `initial_data`
     # (the ApprovalNodeSerializer shape) because DRF strips read-only fields
     # before `validate` runs and would otherwise answer 200 to a forgery.

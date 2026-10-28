@@ -36,7 +36,9 @@ def _case(code, verdict="FAILED"):
 
 @pytest.mark.parametrize("code", CODES)
 def test_every_civilizations_original_concludes_with_its_flow_and_waits_for_it(code):
-    case, disposition = _case(code, verdict="PASSED")
+    # 地府判无罪不建处置(`acquitted_to_rebirth`),这里要一份处置,地府判 FAILED;无罪那一半见
+    # tests/test_serving_acquittal_retry_and_rebirth_form.py。
+    case, disposition = _case(code, verdict="FAILED" if code == "CN_DIYU" else "PASSED")
     flow = ApprovalWorkflow.all_objects.get(judgment=case)
     assert flow.status == ApprovalWorkflowStatus.IN_PROGRESS
     assert unfinished_flow(disposition) == "approval_in_progress"

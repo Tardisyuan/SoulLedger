@@ -271,10 +271,11 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     数据库读 `backend/.env` 的 `DATABASE_URL`(worktree 用主 checkout 的),不认 `.prepush.env` 的 SQLite 覆盖;115 连不上就**拒绝**,不退回 SQLite。
     自带 `--create-db`、单条测试 600 s 限时、一次性 Redis、门禁锁。
   - 全量 `scripts/run-gates.sh --real-pg --full`(含迁移往返)**只在大分支合进 main 前跑一次**。实测 `-n 2` 含往返约 45 分钟(10-28)。
-  - **不要给 pytest 加 `--ff` 或 `--dist worksteal`**(10-28 加过又撤回):两者都打乱测试顺序，而实时类测试
-    (`test_realtime_bus`、`test_websocket_m12`、`test_workflow_events`、`test_scheduler_realtime_events`)和 `test_testdb_name`
-    依赖顺序。unRAID 全量 `-n 8`:带上它们两次分别红 9 / 11 条(每次是不同的几条),去掉后 8061 passed、0 failed、4 分 29 秒。
-    这些测试的顺序依赖本身是待修的缺陷。保留的是 `--durations=10`(只打印最慢的 10 条，不改顺序)。
+  - **`--dist worksteal` 已打开(2026-10-29),`--ff` 仍不加。** 10-28 加过又撤回:实时类测试随顺序变红(两次 9 / 11 条)。
+    根因是 `test_event_bus.py` 的 `EventBus().reset()` 清空了全进程共用的事件处理器表,之后同一 worker 上通知、事件、
+    WebSocket 推送全丢;根 `conftest.py` 的 `_restore_event_handlers` 现在每条测试后还原(`6d2c21dd`),worksteal 全量两轮 8076 passed。
+    打开它是因为不带时 xdist 预先分块,1–2 分钟一条的迁移往返堆在同一个 worker 上:全量在 99% 停 30–40 分钟、七个 worker 空等。
+    保留 `--durations=10`。
   - **整轮门禁放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名 → `root@192.168.2.2`,
     私钥 `~/.ssh/unraid-host`)和 `GATES_REMOTE_DB_URL`。本机只算「跑什么」、rsync 同步树(含 `.git`,`--no-owner`)到
     `/mnt/cache/appdata/sl-gates/work/<checkout>-<哈希>/`,然后在容器 `sl-gates-all:1`(node 20.19.5 + Python 3.11 + git/redis)里跑

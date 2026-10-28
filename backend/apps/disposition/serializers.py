@@ -72,6 +72,15 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
             return unfinished_flow(obj, flow_status=obj.judgment_flow_status)
         return unfinished_flow(obj)
 
+    # 「期满释放」可点:已执行、不是永久、还没记期满,期满日已到(与每日检查同一条判定,`expiry.releasable`)。
+    # 页面不自己比日期。受刑中(执行了、期满日未到)的行显示「服刑中 · 至 `term_end`」。
+    can_release = serializers.SerializerMethodField()
+
+    def get_can_release(self, obj) -> bool:
+        from apps.disposition.expiry import releasable
+
+        return releasable(obj)
+
     def get_suggested_rebirth_form(self, obj) -> str | None:
         from apps.reincarnation.models import suggested_rebirth_form
         from apps.souls.models import Civilization
@@ -126,7 +135,7 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
             "expired_at", "term_end", "section", "verdict", "soul_state", "soul_reborn",
-            "suggested_rebirth_form", "flow_waiting",
+            "suggested_rebirth_form", "flow_waiting", "can_release",
             *ARCHIVE_FIELDS,
         ]
         # This serializer had no `read_only_fields` at all. Measured

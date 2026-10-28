@@ -342,7 +342,8 @@
       "CAPTURE_WARRANT_CANCELLED": "Capture warrant revoked",
       "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of Wrongful Death",
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
-      "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld"
+      "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld",
+      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -827,7 +828,7 @@
       },
       "city_god": "issued by {{name}}",
       "issue": "Issue capture warrant",
-      "capture": "Captured",
+      "capture": "Mark captured",
       "hand_over": "Hand over",
       "cancel": "Revoke",
       "cancel_reason": "Reason for cancelling",
@@ -2345,7 +2346,8 @@
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement",
         "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served.",
-        "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude."
+        "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude.",
+        "passed_has_no_destination": "Acquitted in Diyu, the soul is not placed: once the case is concluded (and its approval flow completes) it awaits rebirth. Clear the placement and conclude."
       },
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
@@ -2465,7 +2467,9 @@
     "grievance_statuses": {
       "FILED": "Filed · awaiting review",
       "UPHELD": "Upheld · released early",
-      "REJECTED": "Not upheld"
+      "REJECTED": "Not upheld",
+      "UPHELD_LATE": "Upheld · after release",
+      "DELIVERED": "Upheld · delivered"
     },
     "wangsi": {
       "title": "City of Wrongful Death",
@@ -2474,7 +2478,7 @@
       "unset": "Not recorded",
       "grievance": "Grievance",
       "plea": "The grievance",
-      "plea_hint": "Recorded on the soul's behalf; the city god's officers or a hall administrator review it.",
+      "plea_hint": "Recorded on the soul's behalf; the City God's officers or a hall administrator review it.",
       "file": "File grievance",
       "decision_note": "Review note",
       "uphold": "Upheld · release early",
@@ -2486,14 +2490,22 @@
         "grievance_open": "This case already has a grievance.",
         "no_grievance_filed": "No grievance is awaiting review.",
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
-        "not_city_god_officer": "Only this city god's officers or a hall administrator can review it.",
-        "not_pending": "This case is concluded."
+        "not_city_god_officer": "Only this City God's officers or a hall administrator can review it.",
+        "not_pending": "This case is concluded.",
+        "deliver_needs_upheld": "Only an upheld grievance can deliver the soul."
       },
       "release_title": "Release {{name}} early?",
       "release_body": "Upheld: {{name}} leaves the City of Wrongful Death, and the judgment can be claimed now instead of on {{date}}.",
       "release_irreversible": "This can't be undone.",
       "release_gate": "Only a grievance of {{level}} or above can be upheld",
-      "released_line": "Untimely · released early on {{date}}"
+      "released_line": "Untimely · released early on {{date}}",
+      "deliver": "Upheld · deliver",
+      "deliver_title": "Deliver {{name}}?",
+      "deliver_body": "Upheld and delivered: {{name}} leaves the City of Wrongful Death for the Lotus Terrace, and the case is concluded without a hearing.",
+      "delivered_line": "Untimely · delivered on {{date}}",
+      "deliver_sends_on": "The case is still with the City God for first review; delivering sends it on in the same step.",
+      "uphold_late": "Upheld (finding only)",
+      "late_hint": "The fated day has passed or the case is concluded, so the soul has already left the city: the review only records a finding."
     },
     "confessions": {
       "title": "The forty-two denials",
@@ -3606,11 +3618,9 @@
     "reference": "Reference",
     "status": {
       "PENDING": "Pending",
-      "ACCEPTED": "Accepted",
       "PROCESSED": "Processed",
       "FAILED": "Failed",
-      "DUPLICATE": "Duplicate",
-      "PARTIAL": "Partial"
+      "DUPLICATE": "Duplicate"
     },
     "source_system": "Source system",
     "status_label": "Status",
@@ -4043,6 +4053,15 @@
     "days_left": "{{n}} days left",
     "expired_on": "Served {{date}}",
     "arrange_reincarnation": "Arrange rebirth",
+    "serving_until": "Serving · until {{date}}",
+    "release": "Release at term end",
+    "release_confirm": "Release at term end?",
+    "release_warning": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
+    "release_success": "Released at term end",
+    "release_error": {
+      "term_not_ended": "The term has not ended yet; it cannot be released.",
+      "not_serving": "This disposition is not being served."
+    },
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
       "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed."
@@ -4067,12 +4086,17 @@
       "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
       "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
-      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth."
+      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
+      "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
+      "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path."
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
     "next_continent_hint": "Leave it to keep this life's continent.",
-    "next_continent_unset": "Not specified"
+    "next_continent_unset": "Not specified",
+    "desired_form": "The soul asks for: {{form}}",
+    "form_reason": "Reason for another path",
+    "form_reason_hint": "This differs from what the soul asked for: give the reason; it is kept with the rebirth."
   },
   "social": {
     "title": "Social",
@@ -4741,7 +4765,7 @@
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
       "offline": "Offline",
-      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete",
+      "sentence_in_progress": "Your sentence plan is not finished (a term not yet served counts). You can apply once it is complete",
       "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
       "shortening_pending": "A cooldown shortening request is already pending",
       "shortening_used": "This cooldown has already been asked to be shortened once",
@@ -5527,7 +5551,9 @@
       "status": {
         "FILED": "Grievance filed · awaiting the City God",
         "UPHELD": "Grievance upheld · released early",
-        "REJECTED": "Grievance not upheld · held until the fated day"
+        "REJECTED": "Grievance not upheld · held until the fated day",
+        "UPHELD_LATE": "Grievance upheld · you had already left on the fated day",
+        "DELIVERED": "Grievance upheld · delivered to the Lotus Terrace"
       },
       "note_label": "The City God's note",
       "plea_label": "Your grievance",
@@ -5908,7 +5934,7 @@
     },
     "officer_handover_received": {
       "title": "Work handed over to you",
-      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} city gods, {{letters}} letters."
+      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."
     }
   },
   "social_moderation": {
@@ -6313,7 +6339,7 @@
       "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
       "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later",
       "retry_with_open_cross": "A cross-realm judgment is open on this case; conclude it before hearing the case again.",
-      "retry_not_a_destination": "A European RETRY is not a destination: give a final verdict, or open a new judgment.",
+      "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory).",
       "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again."
@@ -7515,7 +7541,7 @@
       "appeal_closed": "This appeal has already been decided or withdrawn",
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
       "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
-      "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment.",
+      "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: amend to a final verdict, or open a new judgment.",
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
@@ -7586,10 +7612,10 @@
     "rank": "Rank",
     "rank_none": "Unranked",
     "ranks": {
-      "PROVINCE": "Provincial city god",
-      "PREFECTURE": "Prefectural city god",
-      "DEPARTMENT": "Departmental city god",
-      "COUNTY": "County city god"
+      "PROVINCE": "Provincial City God",
+      "PREFECTURE": "Prefectural City God",
+      "DEPARTMENT": "Departmental City God",
+      "COUNTY": "County City God"
     },
     "rank_titles": {
       "PROVINCE": "King Mingling",
@@ -7598,7 +7624,7 @@
       "COUNTY": "Earl Xianyou"
     },
     "bureaus_label": "Bureaus",
-    "bureaus_hint": "Tick the bureaus this city god actually has. Higher ranks usually have more.",
+    "bureaus_hint": "Tick the bureaus this City God actually has. Higher ranks usually have more.",
     "bureau_count": "{{count}} bureaus",
     "ministries": {
       "HEAD": "General office",
@@ -7615,15 +7641,15 @@
       "DIANJI": "Bureau of Registers",
       "JIBU": "Bureau of Deeds",
       "DUGUAN": "Bureau of Constables",
-      "CAIBO": "Bureau of Offerings",
+      "CAIBO": "Bureau of Wealth",
       "TUDI": "Bureau of Land",
       "LIANGMO": "Bureau of Grain",
-      "KAOJIE": "Bureau of Life Spans",
+      "KAOJIE": "Bureau of Calamities",
       "JISI": "Bureau of Sacrifices",
       "YIZHU": "Bureau of Ceremonies",
       "HUOFU": "Bureau of Fortune",
       "MINGYI": "Bureau of Grave Goods",
-      "BINGZHANG": "Bureau of Implements",
+      "BINGZHANG": "Bureau of Arms",
       "XINGXUN": "Bureau of Interrogation",
       "JUBU": "Bureau of Arrests",
       "XUNCHA": "Bureau of Patrols",
@@ -7859,7 +7885,7 @@
     "no_parent": "—",
     "register_death": "Record a death as reported by an Earth God",
     "report_label": "Earth God's report · optional",
-    "register_hint": "Once recorded, it goes to {{city_god}} for first review and onto the list awaiting a summons.",
+    "register_hint": "Once recorded, it goes to {{city_god}} for first review.",
     "officers": "Officers",
     "no_officers": "No officers",
     "officers_hint": "This Earth God's officers, and hall administrators, can record a death in its name.",

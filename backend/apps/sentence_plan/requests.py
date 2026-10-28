@@ -307,10 +307,9 @@ def append_cross_stops(cross):
 
     只在原审判**已经结案**时追加:还没结案的是存量那种先结联审、后结原审判的,参与方的站在原审判结案时
     由 `SentencePlanService.create_from_conclusion` 抄。同一场联审已经抄过 / 追加过(有本审判加的外站)就什么都不做。
-    计划已经刑满(COMPLETED)而灵魂只是在等转世(REINCARNATING,本世没有审批中 / 已批准的转生申请)或已入终局
-    (SETTLED):重新打开计划、灵魂经 `Soul.transition_to` 回到 DISPOSED,追加之后由 `advance` 调往第一个外站
-    (2026-10-18 用户决定;SETTLED 那一半同日后补)。
-    其余结束了的(撤销 = 赦免、已转世、失踪、转生已批 / 审批中)或没有建计划的:记 warning、不追加。
+    计划已经结束(刑满、撤销)或没有建计划的:记 warning、不追加。原审要等审批流程走完才执行(2026-10-29),
+    并入流程的联审在流程结束时结束,计划不会先于它刑满 —— 所以此前「刑满后重开计划」那条路(2026-10-18)已删
+    (用户 2026-10-29)。
     """
     import logging
 
@@ -325,9 +324,6 @@ def append_cross_stops(cross):
     found = SentencePlan.all_objects.filter(
         origin_judgment_id=judgment.pk, is_deleted=False, status__in=IN_PROGRESS_PLAN_STATUSES,
     ).select_related("soul").first()
-    reopen = found is None
-    if reopen:
-        found = _finished_plan(judgment)
     if found is None:
         logging.getLogger(__name__).warning(
             "sentence_plan: cross judgment %s concluded PASS but judgment %s has no plan in progress; no stops added",
@@ -341,11 +337,6 @@ def append_cross_stops(cross):
     seats = list(cross.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
                  .select_related("participant_tenant").order_by("node_order"))
     if not seats:
-        return []
-    if reopen and not _reopen(soul, plan, nodes, judgment):
-        logging.getLogger(__name__).warning(
-            "sentence_plan: cross judgment %s concluded PASS but plan %s is %s and soul %s is %s; no stops added",
-            cross.pk, plan.pk, plan.status, soul.pk, soul.current_state)
         return []
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
     anchor = max(n.order for n in live)
@@ -361,48 +352,7 @@ def append_cross_stops(cross):
     ]
     _assert_eternal_last(live + added)
     plan_amended(soul, plan, {n.tenant_code for n in added}, judgment_id=judgment.pk, added=added)
-    if reopen:
-        SentencePlanService.advance(soul)  # 灵魂在原属、没有占位的站:不推就停在这里
     return added
-
-
-def _finished_plan(judgment):
-    """这份审判开出的、已经刑满的计划(最近的一份),或 None。撤销(CANCELLED = 赦免)的不重开:赦免是一个决定。"""
-    return SentencePlan.all_objects.filter(
-        origin_judgment_id=judgment.pk, is_deleted=False, status=SentencePlanStatus.COMPLETED,
-    ).select_related("soul").order_by("-completed_at").first()
-
-
-def _reopen(soul, plan, nodes, judgment):
-    """在灵魂与计划的行锁下重开:灵魂必须在 REINCARNATING(刑满、等转世)或 SETTLED(终局:那里没有下一世,
-    但计划没走完就不算结案),且本世没有审批中或已批准的转生申请 —— 那之后(转生已批、已转世 ALIVE、LOST)
-    都不再回头。原属地永久刑期收尾的(有 ETERNAL 节点,也是 SETTLED)不重开:永久之后不能再有站(Q5)。
-    返回是否重开了;没重开时什么都没写。
-    状态经 `transition_to`(STATE_CHANGED 事件同一事务),不直接写 `current_state`。"""
-    from apps.soul_accounts.models import OPEN_APPLICATION_STATUSES, RebirthApplicationStatus
-    from apps.souls.models import SoulState
-
-    if plan.status != SentencePlanStatus.COMPLETED or soul.current_state not in (
-            SoulState.REINCARNATING, SoulState.SETTLED):
-        return False
-    if any(n.status == SentenceNodeStatus.ETERNAL for n in nodes):
-        return False
-    if soul.rebirth_applications.filter(
-            cycle=soul.life_index,
-            status__in=[*OPEN_APPLICATION_STATUSES, RebirthApplicationStatus.APPROVED]).exists():
-        return False
-    if not soul.transition_to(SoulState.DISPOSED, f"Sentence plan {plan.pk} reopened: cross judgment of "
-                                                 f"{judgment.pk} concluded PASS"):
-        return False
-    soul.refresh_from_db()
-    # 孟婆汤每世一次、在「最后一次候转世」时饮:重开计划后再回到候转世要重新饮(2026-10-27)。
-    if soul.soup_taken_at is not None:
-        soul.soup_taken_at = None
-        soul.save(update_fields=["soup_taken_at"])
-    plan.status = SentencePlanStatus.ACTIVE
-    plan.completed_at = None
-    _save(plan, "status", "completed_at")
-    return True
 
 
 def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None, added=()):
@@ -457,16 +407,16 @@ def _open_reopen_judgment(soul, plan, req):
     _save(plan, "status")
 
 
-def _refuse_european_retry(soul, verdict):
-    """欧洲 RETRY 不是一个去处:路由会给炼狱,而炼狱期满即升天堂(docs/01_欧洲天堂地狱整体架构.md §1.2:
-    炼狱只收确定得救者)。原审判结案时它重开一案(`JudgmentConclusionService`);重开审判与申诉改判
-    没有「再开一案」这一步,所以拒绝 —— 要么给 PURGATORY / FAILED / PASSED,要么另开审判。"""
-    from apps.judgment.models import Verdict
-    from apps.souls.models import Civilization
+def _refuse_undecided(soul, verdict):
+    """「再审一次」的裁决(`hears_again`:RETRY,及欧洲以外的 PURGATORY)不是一个去处。原审判结案时它们重开一案
+    (`JudgmentConclusionService`,用户 2026-10-29 四文明统一);重开审判与申诉改判本身就是再审,没有「再开一案」
+    这一步,所以拒绝 —— 给一个终局裁决(欧洲还可以给 PURGATORY),或另开审判。此前只拒欧洲的 RETRY,
+    地府 / 希腊会把灵魂排进待审所 / 草地这一「站」,埃及会排进永远执行不了的 Duat 入口。"""
+    from apps.judgment.models import hears_again
 
-    if verdict == Verdict.RETRY and soul.home_civilization == Civilization.EUROPEAN:
+    if hears_again(soul.home_civilization, verdict):
         raise PlanChangeRefusedError(
-            "A European RETRY is not a destination; give a final verdict or open a new judgment",
+            f"{verdict} hears the case again; it is not a destination. Give a final verdict or open a new judgment",
             "retry_not_a_destination")
 
 
@@ -477,18 +427,22 @@ def conclude_reopened(judgment):
     新节点的 realm 按**原属**文明与新裁决路由(同原审判);处置在节点激活时建(`_activate_home_node`),
     挂这件重开审判。永久刑期而后面还有未执行节点 → 409 `eternal_not_last`(Q5),结案回滚。
     """
+    from apps.judgment.models import acquitted_to_rebirth
     from apps.realms.models import realm_by_code
 
     soul = _lock_soul(judgment.soul)
     plan = _lock_plan(judgment.amends_plan_id)
     nodes = _lock_nodes(plan)
+    _refuse_undecided(soul, judgment.verdict)
+    if acquitted_to_rebirth(soul.home_civilization, judgment.verdict):
+        # 地府判无罪不加刑期节点(用户 2026-10-29,docs/11 第六步):计划照常走完剩下的站,随后的 `advance` 收尾。
+        return
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
     started = [n for n in live if n.status != SentenceNodeStatus.PENDING]
     anchor = max(n.order for n in started) if started else 0
     for node in sorted((n for n in live if n.order > anchor), key=lambda n: -n.order):
         node.order += 1
         _save(node, "order")
-    _refuse_european_retry(soul, judgment.verdict)
     realm_code = _route_home_realm(soul, judgment.verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=plan.tenant_id)
     home_code = plan.tenant.code
@@ -517,18 +471,30 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     * 计划在重审 / 永久挂起 / 有待决请求 → 409 `plan_busy`;
     * 计划已结束 → 只返回已执行的部分(灵魂可能已转生,不再开新的一站)。
     没有计划的(早于受刑计划的结案)看审判自己的处置:未执行就地改,已执行记补偿。
+    * 受刑中的站(处置已执行、刑期没满,节点仍 ACTIVE;用户 2026-10-29)→ 原判被改,刑期就此止:记期满、节点
+      COMPLETED、离开那个界域;已服的部分照样交还调用方记补偿。
+    * 新裁决是地府判无罪(`acquitted_to_rebirth`)→ 不加刑期节点;就地可改的那一站(处置未执行)撤下
+      (节点 REMOVED、处置由系统作废),随后的 `advance` 完成计划 → 灵魂候转世。
     调用方持有灵魂行锁与事务;计划上的锁序照旧(计划 → 节点 → 处置)。
     """
+    from apps.core.recycle_bin import system_void
     from apps.disposition.models import Disposition
+    from apps.judgment.models import acquitted_to_rebirth
     from apps.realms.models import realm_by_code
 
-    _refuse_european_retry(soul, verdict)
+    acquitted = acquitted_to_rebirth(soul.home_civilization, verdict)
+    why = f"appeal_acquitted:{judgment.pk}"
+
+    _refuse_undecided(soul, verdict)
     from apps.souls.models import Civilization
 
     if soul.home_civilization == Civilization.EUROPEAN:
         # 大罪 / 小罪(docs/01 §1.2-1.3):改判同样不能把未悔的大罪判进炼狱,也不能把只有小罪的判下地狱。
+        # 与下面 `_route_home_realm(..., judgment=judgment)` 读同一套已采信证据(结案处同样传 excluded)。
         from apps.disposition.services import DispositionService
-        DispositionService.refuse_against_gravity(soul, verdict)
+        from apps.judgment.services import EvidenceAdmissionService
+        DispositionService.refuse_against_gravity(
+            soul, verdict, excluded=EvidenceAdmissionService.not_admitted_ids(judgment))
     # 埃及否定告白(docs/02 §2.2、§四):原审有一条记为「不实」,申诉也不能改判 PASSED。
     from apps.judgment.confessions import refuse_passed_if_untruthful
 
@@ -559,6 +525,12 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             return []
         if own.is_executed:
             return [(None, own)]
+        if acquitted:
+            system_void(Disposition.all_objects.filter(pk=own.pk), why)
+            from apps.souls.models import SoulState
+
+            soul.transition_to(SoulState.REINCARNATING, f"Appeal acquitted judgment {judgment.pk}")
+            return []
         reroute(own)
         return []
 
@@ -576,6 +548,19 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING).exists():
         raise PlanChangeRefusedError("The sentence plan is in retrial, held, or awaiting a request; decide later",
                                      "plan_busy", status=409, plan_status=plan.status)
+    now = timezone.now()
+    for node, served in executed:
+        if node.status == SentenceNodeStatus.ACTIVE:
+            # 受刑中:改判即止(见 docstring)。期满记在处置上,`assert_may_be_reborn` 才不再当它没服完。
+            from apps.disposition.services import DispositionService
+
+            served.expired_at = now
+            served.save(update_fields=["expired_at"])
+            node.status = SentenceNodeStatus.COMPLETED
+            node.completed_at = now
+            _save(node, "status", "completed_at")
+            SentencePlanService._node_finished(soul, plan, node)
+            DispositionService._leave_served_realm(served, soul, node)
     done = {n.pk for n, _ in executed}
     in_place = None
     for node in nodes:
@@ -600,7 +585,13 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             _save(node, "status")
             touched.add(node.tenant_code)
     added = []
-    if in_place is not None:
+    if acquitted:
+        if in_place is not None:
+            in_place.status = SentenceNodeStatus.REMOVED
+            in_place.reason = f"申诉改判:{verdict}"
+            _save(in_place, "status", "reason")
+            system_void(Disposition.all_objects.filter(pk=in_place.disposition_id), why)
+    elif in_place is not None:
         reroute(dispositions[in_place.disposition_id])
         for field, value in content.items():
             setattr(in_place, field, value)

@@ -15,7 +15,7 @@ When you cannot apply for rebirth, the app gives a reason. Meaning and next step
 - application_open: you already have an application under review or under appeal; only one may be open at a time. Wait for its outcome.
 - application_approved: this life's application has already been approved; you do not need a new one.
 - cooldown: your last application was rejected (or its appeal was rejected) and a cooldown is running. The date it ends is the one shown on the "Rebirth applications" page.
-- sentence_in_progress: your sentence plan is not fully served yet. Applying opens once every station is done (or the rest is pardoned).
+- sentence_in_progress: your sentence plan is not fully served yet. A stop's term starts when its sentence is carried out and the stop is done only when the term ends. Applying opens once every station is done (or the rest is pardoned).
 Reasons a request to shorten the cooldown is refused:
 - not_in_cooldown: no cooldown is running right now, so there is nothing to shorten.
 - shortening_pending: this cooldown already has a pending shortening request; wait for the decision.

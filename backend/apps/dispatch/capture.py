@@ -120,7 +120,7 @@ def hand_over(pk, location: str = "") -> CaptureWarrant:
         if judgment is None:
             raise CaptureRefused("not_alive", f"The soul is {soul.current_state}, not alive.")
         warrant.judgment = judgment
-        warrant.save(update_fields=["judgment"])
+        warrant.save(update_fields=["judgment", "version", "update_user", "update_time"])
         _event(warrant, "CAPTURE_HANDED_OVER", judgment_id=str(judgment.pk))
     return warrant
 
