@@ -29,7 +29,7 @@ def _diyu_souls(apps, alias):
     from django.db.models import Q
 
     Soul = apps.get_model("souls", "Soul")
-    return Soul.objects.using(alias).filter(
+    return Soul._base_manager.using(alias).filter(
         Q(tenant__code__in=CHINESE_TENANT_CODES)
         | (Q(tenant__declared_civilization="CHINESE") & ~Q(tenant__code__in=KNOWN_TENANT_CODES))
     )
@@ -43,7 +43,7 @@ def backfill(apps, schema_editor):
     souls.filter(birth_continent="").update(birth_continent="NANZHAN")
 
     dead = souls.exclude(current_state="ALIVE").filter(diyu_station="")
-    in_court = SoulPathEntry.objects.using(alias).filter(
+    in_court = SoulPathEntry._base_manager.using(alias).filter(
         left_at__isnull=True, realm__realm_code__startswith=COURT_PREFIX).values("soul_id")
     # 顺序即优先级:每一步只碰还空着的行,先写上的不会被后面的覆盖。
     dead.filter(soup_taken_at__isnull=False).update(diyu_station="HUANHUN_CLIFF")
