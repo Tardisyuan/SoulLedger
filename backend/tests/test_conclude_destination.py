@@ -135,7 +135,8 @@ def test_omitted_is_the_automatic_routing_untouched(cn_judge, cn_realms):
     assert response.status_code == 200, response.data
     d = Disposition.all_objects.get(judgment=case)
     assert d.destination_realm_id == cn_realms["hell2"].pk  # 严重度 0 → 第二殿
-    assert (d.sentence_years, d.is_eternal) == (None, False)
+    # 没写刑期 → 第二殿的默认刑期(2026-10-29,`disposition.default_terms`,工程设定 10 年)。
+    assert (d.sentence_years, d.is_eternal) == (10, False)
 
 
 def test_omitted_copies_eternal_off_the_routed_realm(cn_judge, cn_realms, cn_tenant):
@@ -317,9 +318,11 @@ def test_options_are_filtered_by_verdict(cn_judge, cn_realms, cn_tenant, eu_tena
     assert "DY_01_HEAVEN" not in codes and "DY_COURT_03_SONGDI" not in codes
     hell5 = next(o for o in failed.data["options"] if o["realm_code"] == HELL_5)
     assert (hell5["capacity"], hell5["occupancy"], hell5["is_eternal"]) == (1, 1, False)
-    assert set(hell5) == {"id", "name", "realm_code", "kind", "capacity", "occupancy", "is_eternal"}
+    assert set(hell5) == {"id", "name", "realm_code", "kind", "capacity", "occupancy", "is_eternal",
+                          "default_term_years"}
+    assert hell5["default_term_years"] == 40
     assert str(failed.data["default_realm_id"]) == str(cn_realms["hell2"].pk)
-    assert failed.data["default_term_years"] is None
+    assert failed.data["default_term_years"] == 10  # 第二殿的默认刑期(工程设定)
 
     # 地府判无罪不发落(2026-10-29):没有可选的门,也没有默认。
     passed = _options(cn_judge, case, "PASSED")

@@ -311,3 +311,73 @@ def test_the_backfill_reopens_rebirth_for_souls_parked_in_diyu_heaven(cn):
     assert (node.status, node.is_eternal) == ("COMPLETED", False)
     assert_may_be_reborn(Soul.objects.get(pk=acquitted.pk))  # 不再被当成永久刑期
     assert not SoulEvent.objects.filter(soul=acquitted, event_type="STATE_CHANGED").exists()  # 迁移不写事件
+
+
+# ── 7. 没写刑期的按界域默认刑期(用户 2026-10-29,`disposition.default_terms`)──────────
+
+
+def test_an_unwritten_term_takes_the_realms_default_and_a_written_one_wins(cn):
+    from apps.disposition.default_terms import DEFAULT_TERM_YEARS
+
+    sp.realm("DY_COURT_02_CHUJIANG", "CHINESE")
+    _soul, case = sp.open_case(cn)
+    case.conclude(Verdict.FAILED, "")  # 严重度 0 → 第二殿
+    auto = Disposition.all_objects.get(judgment=case)
+    assert auto.sentence_years == DEFAULT_TERM_YEARS["DY_COURT_02_CHUJIANG"] == 10
+    assert SentenceNode.all_objects.get(disposition_id=auto.pk).sentence_years == 10
+
+    _other, case2 = sp.open_case(cn, name="定了刑期")
+    case2.conclude(Verdict.FAILED, "", term_years=3)
+    assert Disposition.all_objects.get(judgment=case2).sentence_years == 3
+
+
+def test_an_eternal_realm_and_a_realm_outside_the_table_get_no_default():
+    from apps.disposition.default_terms import default_term_years
+
+    assert default_term_years("DY_COURT_09_PINGDENG", is_eternal=True) is None
+    assert default_term_years("EU_HELL_9TH") is None
+    assert default_term_years("EG_AARU") is None
+    assert default_term_years("GR_TARTARUS") == 1000
+
+
+def test_the_desk_and_the_list_say_what_the_default_is(cn, admin_user):
+    sp.realm("DY_COURT_02_CHUJIANG", "CHINESE")
+    _soul, case = sp.open_case(cn)
+    client = officer_client(admin_user)
+    desk = client.get(f"/api/v1/judgment/{case.pk}/destinations/", {"candidate_verdict": "FAILED"}).data
+    assert desk["default_term_years"] == 10
+    case.conclude(Verdict.FAILED, "")
+    d = Disposition.all_objects.get(judgment=case)
+    row = client.get(f"/api/v1/disposition/{d.pk}/").data
+    assert (row["sentence_years"], row["default_term_years"]) == (10, 10)
+
+
+def test_the_default_term_backfill_touches_only_unexecuted_unwritten_rows(cn):
+    import importlib
+
+    from django.apps import apps as registry
+    from django.db import connection
+
+    hall = sp.realm("DY_COURT_03_SONGDI", "CHINESE")
+    soul = Soul.objects.create(name="回填", tenant=cn)
+    pending = Disposition.objects.create(soul=soul, tenant=cn, destination_realm=hall)
+    written = Disposition.objects.create(soul=soul, tenant=cn, destination_realm=hall, sentence_years=5)
+    executed = Disposition.objects.create(soul=soul, tenant=cn, destination_realm=hall, is_executed=True,
+                                          executed_at=timezone.now())
+    plan = SentencePlan.all_objects.create(soul=soul, tenant=cn, status="ACTIVE")
+    node = SentenceNode.all_objects.create(plan=plan, order=1, tenant_code="CN_DIYU", is_home=True,
+                                           status="ACTIVE", realm_code=hall.realm_code, disposition_id=pending.pk)
+
+    migration = importlib.import_module("apps.disposition.migrations.0017_backfill_default_terms")
+
+    class Editor:
+        pass
+
+    editor = Editor()
+    editor.connection = connection
+    migration.backfill(registry, editor)
+
+    years = dict(Disposition.all_objects.filter(soul=soul).values_list("pk", "sentence_years"))
+    assert years == {pending.pk: 20, written.pk: 5, executed.pk: None}
+    node.refresh_from_db()
+    assert node.sentence_years == 20

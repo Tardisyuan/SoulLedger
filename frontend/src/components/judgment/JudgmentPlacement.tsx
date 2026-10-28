@@ -160,6 +160,13 @@ export function JudgmentPlacement({
           label={t("judgment.placement.term")}
           inputMode="numeric"
           value={current.eternal ? "" : current.term}
+          // 不填就按这扇门的默认刑期(2026-10-29,服务端 `disposition.default_terms`):占位写出年数,说明「可改」。
+          placeholder={chosen?.default_term_years != null && !current.eternal ? String(chosen.default_term_years) : undefined}
+          description={
+            chosen?.default_term_years != null && !current.eternal
+              ? t("judgment.placement.term_default", { n: String(chosen.default_term_years) })
+              : undefined
+          }
           disabled={current.eternal}
           // 只收正整数:非数字剥掉,前导零与单独的 0 归空。
           onChange={(e) => set({ term: String(Number(e.target.value.replace(/\D/g, "")) || "") })}
