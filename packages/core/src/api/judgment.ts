@@ -790,6 +790,8 @@ export const APPEAL_ERROR_CODES = [
   // 欧洲 大罪 / 小罪(2026-10-28):改判与已采信的罪不符。
   "mortal_sin_unrepented",
   "no_mortal_sin",
+  // 埃及否定告白(2026-10-28):原审有一条记为「不实」,不能改判通过。
+  "untruthful_confession",
 ] as const;
 
 // ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────

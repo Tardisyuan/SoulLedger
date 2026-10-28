@@ -136,6 +136,13 @@ export function SoulInfoCard({
                 <dt className={DT}>{t("souls.ferry_passage.label")}</dt>
                 <dd className={DD}>
                   <DomainEnum namespace="souls.ferry_passage" value={soul.ferry_passage} />
+                  {/* 未葬满百年得渡(Aen. 6.325-330):记录不改,只是不再滞留。 */}
+                  {soul.ferry_century_passed && (
+                    <span data-testid="soul-ferry-century-passed">
+                      {" · "}
+                      {t("souls.ferry_passage.century_passed")}
+                    </span>
+                  )}
                 </dd>
               </div>
             )}

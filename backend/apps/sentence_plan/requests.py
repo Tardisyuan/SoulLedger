@@ -529,6 +529,10 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         # 大罪 / 小罪(docs/01 §1.2-1.3):改判同样不能把未悔的大罪判进炼狱,也不能把只有小罪的判下地狱。
         from apps.disposition.services import DispositionService
         DispositionService.refuse_against_gravity(soul, verdict)
+    # 埃及否定告白(docs/02 §2.2、§四):原审有一条记为「不实」,申诉也不能改判 PASSED。
+    from apps.judgment.confessions import refuse_passed_if_untruthful
+
+    refuse_passed_if_untruthful(judgment, verdict)
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
     content = {

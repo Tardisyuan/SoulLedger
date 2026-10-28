@@ -6,11 +6,19 @@ text read off each assessor). Recorded only while the case is open and only on a
 (`weighing.applies`); frozen with the verdict, so the record beside `weighing_result` is what was heard before the
 scale was read. It does not move the scale: no source gives a false denial a weight, and the scale reads the
 admitted ledger (docs/02 §3.2). The tally is shown beside the scale (`tally`).
+
+A FALSE DENIAL BARS PASSED (user 2026-10-28; `refuse_passed_if_untruthful`). The verdict that lets the deceased
+through is Thoth's "There hath not been found any wickedness in him" (docs/02 §5.1), and the 42 denials are where
+the deceased says there is none (§2.2, §四: one wrong denied before each assessor); a denial recorded as untrue is
+wickedness found. So any one row with `truthful=False` refuses PASSED at conclusion, at a reopened conclusion and at
+an appeal amended to PASSED (400 `untruthful_confession`, with the assessor ordinals). Nothing else changes: the scale
+still gives the verdict, so a light heart with a false denial is not FAILED either — the way on is WAVERING, which
+weighs again (§5.3: more evidence). No rows, or only true / unrecorded ones: not checked.
 """
 from django.db import transaction
 
 from apps.judgment import weighing
-from apps.judgment.models import Judgment, NegativeConfession, Statute, StatuteCorpus
+from apps.judgment.models import Judgment, NegativeConfession, Statute, StatuteCorpus, Verdict
 
 
 class ConfessionRefusedError(Exception):
@@ -69,3 +77,22 @@ def record(judgment, ordinal: int, truthful, note: str = "") -> NegativeConfessi
         row.note = (note or "").strip()
         row.save()
         return row
+
+
+def untruthful_ordinals(judgment) -> list[int]:
+    """The assessors before whom this case's denial was recorded as untrue, in order."""
+    return list(NegativeConfession.all_objects.filter(judgment=judgment, is_deleted=False, truthful=False)
+                .order_by("statute__ordinal").values_list("statute__ordinal", flat=True))
+
+
+def refuse_passed_if_untruthful(judgment, verdict) -> None:
+    """400 `untruthful_confession` (with `ordinals`) when `verdict` is PASSED and any denial was recorded untrue."""
+    from apps.sentence_plan.requests import PlanChangeRefusedError
+
+    if verdict != Verdict.PASSED:
+        return
+    ordinals = untruthful_ordinals(judgment)
+    if ordinals:
+        raise PlanChangeRefusedError(
+            f"A denial before assessor(s) {', '.join(map(str, ordinals))} was recorded as untrue; "
+            "wickedness was found, and the verdict cannot be PASSED", "untruthful_confession", ordinals=ordinals)

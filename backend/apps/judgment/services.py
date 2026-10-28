@@ -280,6 +280,12 @@ class JudgmentConclusionService:
                 DispositionService.refuse_against_gravity(
                     judgment.soul, verdict, excluded=EvidenceAdmissionService.not_admitted_ids(judgment))
 
+            # 埃及 42 条否定告白(用户 2026-10-28,docs/02 §2.2、§四、§5.1):有一条记为「不实」就不能判 PASSED
+            # (400 `untruthful_confession`,带判官序号)。原审与重开都在这里;申诉改判在 sentence_plan/requests.py。
+            # 告白只记在称重的案子上(加减项审判没有),所以不用再判文明与种类。
+            from apps.judgment.confessions import refuse_passed_if_untruthful
+            refuse_passed_if_untruthful(judgment, verdict)
+
             # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
             # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
             if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:
