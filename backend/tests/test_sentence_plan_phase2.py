@@ -278,6 +278,7 @@ def _pushed_soul(home, stops):
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=home)
     plan.bench(case, stops)
     case.conclude("PASSED", "")
+    plan.walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     return soul, SentencePlan.all_objects.get(soul=soul)
 
 

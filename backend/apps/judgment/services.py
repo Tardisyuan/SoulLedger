@@ -201,7 +201,9 @@ class JudgmentConclusionService:
         the citations are written while the judgment is still amendable, which
         is the only window `StatuteCitationService.assert_amendable` allows.
 
-        `create_workflow` is None when the caller did not say (第四十三批). An ORIGINAL judgment with a cross-realm
+        `create_workflow` is None when the caller did not say (第四十三批). 2026-10-29: an ORIGINAL judgment that
+        places the soul always concludes with its approval workflow; an explicit False is refused (400
+        `approval_flow_required`, Egyptian `weighing_flow_required`). An ORIGINAL judgment with a cross-realm
         judgment still open (PROPOSED / ACTIVE) concludes WITH an approval workflow, which merges that bench; an
         explicit False is refused (400 `workflow_required`). `skip_node_orders` are the stations of this realm's
         flow the judge unticked (W-1); the final review cannot be one of them.
@@ -286,12 +288,23 @@ class JudgmentConclusionService:
             from apps.judgment.confessions import refuse_passed_if_untruthful
             refuse_passed_if_untruthful(judgment, verdict)
 
-            # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
-            # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
-            if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:
+            # 原审一律走审批流程(用户 2026-10-29,四文明):处置等流程 COMPLETED 才执行
+            # (`weighing.unfinished_flow`),流程驳回就撤回处置、重开一案(`weighing.reweigh_after_rejection`)。
+            # 埃及那条是称心流程(docs/02 §2.1、§5.1–5.2)。不建处置的结案(天平摇摆、欧洲 RETRY)和早夭直入芦苇原
+            # (不受审,docs/01 §4.2)不在此列;重开、申诉改判、加减项不是原审,照旧。
+            # 没有殿(租户)的灵魂没有文明,也就没有流程模板可走(只有手搭的数据才这样),不在此列。
+            from apps.judgment.models import DuatStage
+            from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION
+
+            if (judgment.kind == JudgmentKind.ORIGINAL and not wavering and not eu_retry
+                    and judgment.duat_stage != DuatStage.EARLY_DEATH
+                    and judgment.soul.civilization in VALID_CASE_TYPES_BY_CIVILIZATION):
                 if create_workflow is False:
+                    if weighed is not None:
+                        raise weighing.WeighingRefusedError(
+                            "An Egyptian case is concluded through the weighing flow", "weighing_flow_required")
                     raise weighing.WeighingRefusedError(
-                        "An Egyptian case is concluded through the weighing flow", "weighing_flow_required")
+                        "An original judgment is concluded through its approval workflow", "approval_flow_required")
                 create_workflow = True
 
             # Step -½: the officer's own destination / term (审判台「戊 · 发落」).

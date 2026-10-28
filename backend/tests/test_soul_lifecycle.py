@@ -10,11 +10,15 @@ from apps.realms.models import Realm
 from apps.reincarnation.services import ReincarnationService
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.city_god_support import default_city_god, sent_on
+from tests.sentence_plan_support import walk_flow
 
 
 @pytest.fixture
 def cn_tenant(db):
-    return Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+    tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+    default_city_god(tenant)  # 地府开案要有城隍收案(2026-10-29)
+    return tenant
 
 
 @pytest.fixture
@@ -69,7 +73,7 @@ class TestSoulLifecycle:
         # beside it; the stray open case went unnoticed until the sentence plan
         # (docs/ARCHITECTURE-sentence-plan.md §3.3) started asking "is any case
         # still open?" before completing — an open case now holds the plan.
-        judgment = Judgment.objects.get(soul=soul)
+        judgment = sent_on(Judgment.objects.get(soul=soul))  # 城隍解送十殿
         judgment.court = "First Court Qinguang"
         judgment.save(update_fields=["court"])
         assert not judgment.is_final
@@ -91,7 +95,9 @@ class TestSoulLifecycle:
         assert disposition.destination_realm.realm_code == "DY_01_HEAVEN"
         assert not disposition.is_executed
 
-        # 6. Execute disposition
+        # 6. Execute disposition — after the original judgment's approval flow (2026-10-29)
+        assert DispositionService.execute(disposition) is False
+        walk_flow(judgment)
         DispositionService.execute(disposition)
         disposition.refresh_from_db()
         soul.refresh_from_db()

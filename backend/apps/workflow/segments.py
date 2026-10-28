@@ -172,8 +172,12 @@ def _refuse_skipped_jump_targets(nodes, skipped, changed):
                                   "jump_target_required", jump_targets=refused)
 
 
-def build_local(workflow, template, civilization, skip_node_orders=(), user=None):
-    """本域那一段:建段、建节点(不进入)、按 `skip_node_orders`(模板里的站序)跳过。返回模板的第一个节点。"""
+def build_local(workflow, template, civilization, skip_node_orders=(), user=None, ruled=None):
+    """本域那一段:建段、建节点(不进入)、按 `skip_node_orders`(模板里的站序)跳过。返回模板的第一个节点。
+
+    `ruled`(`{"orders": …, "reason": …}`):按规则跳过的站(五逆直入阿鼻),不是判官选的 —— 模板里没有的站、终审
+    不跳,原因写进 `skip_reason`,不记跳过人;它们是驳回目标也照跳(规则定的,驳回落到被跳的站时流程以驳回结束,
+    `_fail_target`)。判官自己选的站照旧全部校验。"""
     from apps.workflow.services import WorkflowService
 
     if workflow.tenant_id is None:
@@ -190,18 +194,23 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
     first = WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False)
     mark_required(segment)
     wanted = set(skip_node_orders or ())
+    nodes = {n.node_order: n for n in segment.nodes.all()} if wanted or ruled else {}
+    ruled_orders = ({o for o in ruled["orders"] if o in nodes and not nodes[o].is_required} - wanted
+                    if ruled else set())
     if wanted:
-        nodes = {n.node_order: n for n in segment.nodes.all()}
         unknown = sorted(wanted - set(nodes))
         if unknown:
             raise SegmentRefusedError(f"No station {unknown} in this flow", "unknown_node", orders=unknown)
         required = sorted(o for o in wanted if nodes[o].is_required)
         if required:
             raise SegmentRefusedError("The final review cannot be skipped", "final_required", orders=required)
-        skipped = {nodes[o].pk for o in wanted}
-        _refuse_skipped_jump_targets(list(nodes.values()), skipped, skipped)
+        skipped = {nodes[o].pk for o in wanted | ruled_orders}
+        _refuse_skipped_jump_targets(list(nodes.values()), skipped, {nodes[o].pk for o in wanted})
         ApprovalNode.objects.filter(pk__in=[nodes[o].pk for o in wanted]).update(
             status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK, skipped_by=user, decided_at=now)
+    if ruled_orders:
+        ApprovalNode.objects.filter(pk__in=[nodes[o].pk for o in ruled_orders]).update(
+            status=NodeStatus.SKIPPED, skip_kind=SkipKind.AT_PICK, skip_reason=ruled["reason"], decided_at=now)
     return first
 
 

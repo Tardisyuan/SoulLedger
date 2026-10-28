@@ -27046,6 +27046,10 @@ components:
           type: string
           nullable: true
           readOnly: true
+        flow_waiting:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -27068,6 +27072,7 @@ components:
       - created_at
       - executed_at
       - expired_at
+      - flow_waiting
       - id
       - is_archived
       - is_executed
@@ -36719,6 +36724,10 @@ components:
             to.
           readOnly: true
         suggested_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
+        flow_waiting:
           type: string
           nullable: true
           readOnly: true

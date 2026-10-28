@@ -196,6 +196,35 @@ describe("处置页按服务端分三段", () => {
     expect(within(far).queryByText("◐", { exact: false })).toBeNull();
   });
 
+  it("原审的审批流程没走完:「执行」置灰,旁边写原因;走完的照常可点(2026-10-29)", async () => {
+    const waiting: Record<string, Disposition[]> = {
+      pending: [
+        row({ id: "w", is_executed: false, executed_at: null, flow_waiting: "approval_in_progress" }),
+        row({ id: "r", is_executed: false, executed_at: null, flow_waiting: "approval_rejected" }),
+        row({ id: "e", is_executed: false, executed_at: null, flow_waiting: "weighing_in_progress" }),
+        row({ id: "ok", is_executed: false, executed_at: null, flow_waiting: null }),
+      ],
+    };
+    (dispositionApi.list as jest.Mock).mockImplementation(async (params: Record<string, string>) => ({
+      data: { next: null, previous: null, section_counts: {}, count: (waiting[params.section] ?? []).length,
+              results: waiting[params.section] ?? [] },
+    }));
+    renderPage();
+    await screen.findByText("Soul w");
+    const rows = screen.getAllByTestId("disposition-pending-row");
+    const byName = (name: string) => rows.find((r) => r.textContent?.includes(`Soul ${name}`))!;
+    const execute = (r: HTMLElement) => within(r).getByRole("button", { name: "disposition.execute" });
+
+    expect(execute(byName("w"))).toBeDisabled();
+    expect(within(byName("w")).getByTestId("disposition-flow-waiting")).toHaveTextContent("disposition.flow_waiting.approval_in_progress");
+    expect(execute(byName("r"))).toBeDisabled();
+    expect(within(byName("r")).getByTestId("disposition-flow-waiting")).toHaveTextContent("disposition.flow_waiting.approval_rejected");
+    // 埃及的码沿用称心那一组文案。
+    expect(within(byName("e")).getByTestId("disposition-flow-waiting")).toHaveTextContent("judgment.weighing.errors.weighing_in_progress");
+    expect(execute(byName("ok"))).toBeEnabled();
+    expect(within(byName("ok")).queryByTestId("disposition-flow-waiting")).toBeNull();
+  });
+
   it("永恒画虚线框不画进度;缺起算写缺什么", async () => {
     renderPage();
     await screen.findByText("Soul p");

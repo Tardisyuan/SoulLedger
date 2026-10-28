@@ -64,20 +64,21 @@ def planned(home, stops=(), *, name="客魂", verdict=Verdict.PASSED):
     if stops:
         bench(case, stops)
     case.conclude(verdict, "")
-    walk_weighing(case)
+    walk_flow(case)
     soul.refresh_from_db()
     return soul, SentencePlan.all_objects.get(soul=soul, origin_judgment_id=case.pk)
 
 
-def walk_weighing(case):
-    """埃及:处置等称心流程走完才执行(apps/judgment/weighing.py)。这里把每一站批过去。"""
+def walk_flow(case):
+    """原审的处置等审批流程走完才执行(用户 2026-10-29;埃及是称心流程,apps/judgment/weighing.py)。
+    这里把每一站批过去。没有流程(非原审、早夭)什么都不做。"""
     from apps.workflow.models import ApprovalWorkflow
 
-    flow = ApprovalWorkflow.objects.filter(judgment=case).first()
-    if flow is None or case.judgment_method != "HEART_WEIGHING":
+    flow = ApprovalWorkflow.all_objects.filter(judgment_id=case.pk).first()
+    if flow is None:
         return
     while True:
-        flow = ApprovalWorkflow.objects.get(pk=flow.pk)
+        flow = ApprovalWorkflow.all_objects.get(pk=flow.pk)
         if flow.current_node_id is None:
             return
         assert flow.complete_node(flow.current_node_id, "PASSED")

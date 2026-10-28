@@ -1,7 +1,7 @@
 """
 REST views for Disposition app.
 """
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, OuterRef, Subquery
 from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -20,6 +20,7 @@ from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSec
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
 from apps.reincarnation.models import Reincarnation
+from apps.workflow.models import ApprovalWorkflow
 
 
 class DispositionFilter(filters.FilterSet):
@@ -107,6 +108,10 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         # 这一世之后是否已经转世 —— 一个子查询,不是每行一次(serializer 的 get_soul_reborn)。
         soul_reborn_flag=Exists(
             Reincarnation.objects.filter(soul=OuterRef("soul"), cycle_count__gt=OuterRef("cycle"))
+        ),
+        # 原审的审批流程走到哪了(serializer 的 `flow_waiting`):一个子查询,不是每行一次。没有流程为 null。
+        judgment_flow_status=Subquery(
+            ApprovalWorkflow.objects.filter(judgment_id=OuterRef("judgment_id")).values("status")[:1]
         ),
     ).alias(
         # 期满日的排序键(`?ordering=term_end`):SQL 里算,分页之外的行也排得对。
@@ -236,12 +241,12 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                     {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
                 )
             disposition = locked
-            # 埃及:称心流程还没走完(或被驳回)就不执行 —— 先称后判,判了才发落(docs/02 §5)。
+            # 原审的审批流程还没走完(或被驳回)就不执行(用户 2026-10-29;埃及是称心流程,docs/02 §5)。
             from apps.judgment.weighing import unfinished_flow
 
             waiting = unfinished_flow(disposition)
             if waiting is not None:
-                return Response({"error": "The weighing flow has not completed", "code": waiting},
+                return Response({"error": "The approval flow has not completed", "code": waiting},
                                 status=status.HTTP_409_CONFLICT)
             from apps.sentence_plan.services import SentencePlanService
 

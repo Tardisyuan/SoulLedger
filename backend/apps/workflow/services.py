@@ -21,6 +21,11 @@ from apps.workflow.node_shape import normalize_template_node
 
 logger = logging.getLogger(__name__)
 
+#: 五逆不经各殿、直入阿鼻(docs/11 §3.3):十殿流程跳过的站序。站序就是殿号(内置模板与种子行都是,
+#: `templates.py` 的十殿表);改了站序的自定义模板,这几站不一定是一至八殿。
+FIVE_HEINOUS_SKIPPED_COURTS = tuple(range(1, 9))
+FIVE_HEINOUS_SKIP_REASON = "五逆不经各殿、直入阿鼻(docs/11 §3.3):一至八殿自动跳过 · FIVE_HEINOUS"
+
 
 class WorkflowInProgressError(Exception):
     """``start_workflow(exclusive=True)`` found a live workflow of the same case type on the soul; ``.workflow`` is it."""
@@ -660,10 +665,19 @@ class WorkflowService:
         if case_type is None:
             case_type = cls.judgment_case_type(civilization, is_appeal)
 
+        # 五逆不经各殿、直入阿鼻(docs/11 §3.3;用户 2026-10-29):十殿流程自动跳过一至八殿,从九殿起。
+        from apps.judgment.models import ChineseOffence
+
+        ruled = {}
+        if (civilization == Civilization.CHINESE and case_type == CaseType.ROUTINE and not is_appeal
+                and judgment.offence == ChineseOffence.FIVE_HEINOUS):
+            ruled = {"orders": FIVE_HEINOUS_SKIPPED_COURTS, "reason": FIVE_HEINOUS_SKIP_REASON}
+
         # Validation, template, nodes and events: `start_workflow`.
         return cls.start_workflow(
             soul, case_type=case_type, tenant=judgment.tenant, judgment=judgment,
             is_appeal=is_appeal, priority=priority, skip_node_orders=skip_node_orders, picked_by=picked_by,
+            ruled_skips=ruled,
         )
 
     @classmethod
@@ -681,6 +695,7 @@ class WorkflowService:
         exclusive: bool = False,
         skip_node_orders=(),
         picked_by=None,
+        ruled_skips=None,
     ) -> ApprovalWorkflow:
         """Build a workflow for ``soul``: row, nodes, WORKFLOW_CREATED event, and the after-commit notification.
 
@@ -690,6 +705,9 @@ class WorkflowService:
 
         ``template`` is a ``stored_template(...)`` pair the caller already picked and checked; ``None``
         resolves one from ``(civilization, case_type, tenant)``.
+
+        ``ruled_skips`` (``{"orders": …, "reason": …}``) are stations skipped by a rule, not by the judge (五逆直入
+        阿鼻): skipped at pick with ``reason`` in ``skip_reason``; see ``segments.build_local``.
 
         ``exclusive`` refuses with ``WorkflowInProgressError`` when the soul already has a workflow **of the same
         case type** that is not in ``TERMINAL_WORKFLOW_STATUSES`` (user, 2026-10-17: different case types may
@@ -755,7 +773,8 @@ class WorkflowService:
 
             from apps.workflow import segments
 
-            first = segments.build_local(workflow, template, civilization, skip_node_orders, user=picked_by)
+            first = segments.build_local(workflow, template, civilization, skip_node_orders, user=picked_by,
+                                         ruled=ruled_skips)
             cross = segments.open_cross_for(judgment)
             if cross is not None:
                 segments.add_foreign(workflow, cross)
