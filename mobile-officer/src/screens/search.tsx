@@ -25,6 +25,16 @@ export function SearchTab({ onOpenSoul, onOpenJudgment }: { onOpenSoul: (id: str
   );
 }
 
+/**
+ * A soul code typed with dashes (`QU3-3Q9F-W5F`) is sent compact: the backend's DRF SearchFilter splits on
+ * whitespace only, so a dashed code reached it as one term and matched nothing (Huawei pass, 2026-10-29).
+ * Anything that is not a whole code goes through unchanged.
+ */
+export function soulSearchTerm(query: string): string {
+  const compact = query.replace(/[\s\-－]/g, "").toUpperCase();
+  return /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{10}$/.test(compact) ? compact : query;
+}
+
 function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; onOpenJudgment?: (id: string) => void }) {
   const { t, enumLabel } = useI18n();
   const { state } = useSession();
@@ -35,7 +45,7 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
   const [cases, setCases] = useState<Judgment[]>([]);
   const sent = useRef(0);
   const { query } = result;
-  const fetchPage = useCallback((page: number) => soulsApi.list({ search: query, page }).then((r) => r.data), [query]);
+  const fetchPage = useCallback((page: number) => soulsApi.list({ search: soulSearchTerm(query), page }).then((r) => r.data), [query]);
   const { rows, more, moreState } = useMoreRows(result.first, fetchPage);
 
   const search = useCallback(() => {
@@ -50,7 +60,7 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
         () => undefined
       );
     }
-    soulsApi.list({ search: query }).then(
+    soulsApi.list({ search: soulSearchTerm(query) }).then(
       (r) => mine === sent.current && setResult({ status: "done", first: r.data, query }),
       (e: unknown) => mine === sent.current && setResult({ status: isDenied(e) ? "denied" : "error", first: null, query })
     );
