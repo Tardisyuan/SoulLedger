@@ -95,7 +95,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER"]); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III"]); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -542,6 +542,17 @@ const PROPER_NAMES = [
   "Haunebut", "Gorgias", "Kemet", "Wepwawet", "Europa",
   // 第五十五批补充(55b,2026-10-28):受洗 Baptisma、伊壁鸠鲁派 Epicurei 照拉丁原样；出处编号「Inf. X」整体使用、不拆不译。
   "Baptisma", "Epicurei", "Inf", "X",
+  // 第五十七 / 五十八批(Design,2026-10-28/29,用户同意):地府专名照地府界名的惯例写拼音 —— 城隍四级 Du / Fu / Zhou / Xian、
+  // 封号、二十五司(Per + 司名)、七座大地狱、鬼差、十三站;四大部洲写梵名(不带长音);欧洲前庭 Antinferno、卡戎 Charon;
+  // 土地司 Tudi(司名;土地公本身仍是 Netjer Ta)。出处「Inf. III」同「Inf. X」整体使用。
+  "Du", "Fu", "Zhou", "Xian", "Chengtian", "Jianguo", "Simin", "Shengfu", "Mingling", "Wang", "Weiling", "Gong",
+  "Lingyou", "Hou", "Xianyou", "Bo",
+  "Yinyang", "Gongcao", "Dianji", "Jibu", "Duguan", "Caibo", "Tudi", "Liangmo", "Kaojie", "Jisi", "Yizhu", "Huofu",
+  "Mingyi", "Bingzhang", "Xingxun", "Jubu", "Xuncha", "Xingfa", "Anbu", "Quandian", "Xuming", "Yingzao", "Qiaodao",
+  "Ciji", "Shuyun",
+  "Huo", "Heisheng", "Zhonghe", "Jiaohuan", "Renao", "Heibai", "Wuchang", "Niutou", "Mamian",
+  "Huangquan", "Wangxiang", "Egou", "Jinji", "Yegui", "Mihun", "Gongyang", "Guijie", "Lianhua", "Huanhun",
+  "Purvavideha", "Jambudvipa", "Aparagodaniya", "Uttarakuru", "Antinferno", "Charon", "III",
   // 第五十七批(Design,2026-10-28):忆善河 Eunoë 写拉丁字母原样 Eunoe,和 Lethe 一样当专名(地上乐园那一行)。
   "Eunoe",
   // 第四十七批(用户定):城隍 / 九华山照中国地名用拼音的先例;亚洲照 Europa 借词。
@@ -619,11 +630,16 @@ const ROOTS_BATCH54 = ["Swri", "Nis", "Shewet", "Wer"];
 // Wet 与 Wat(路)只差一个字母;Design 的备选 Sah 在第十二节废止名单里，没用。
 const ROOTS_BATCH54B = ["Wet", "Qeres", "Khat", "Heka"];
 /**
+ * 第五十八批(Design,2026-10-29):新词根 药 Pekhret、战争 Mesha(用户同意采用)。Design 同批建议的 火 Sedjet、
+ * 毒 Metu 撞了已废止写法(Sedjet 在 ABOLISHED_TEN_WORDS,Metu 已改用 Ahet),放火 / 制毒两条暂留上一批的写法,待 Design 另选。
+ */
+const ROOTS_BATCH58 = ["Pekhret", "Mesha"];
+/**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
@@ -807,7 +823,9 @@ describe("egy 词表规则", () => {
     // 第六节:创建 Iri、展开 Wen、开始 Tepy、图表 Tut-Hesb、系统层 Ta、开关 Wen-Khetem 都分出去了。
     // 「升级」是 workflow.status.ESCALATED 的中文(越级推进后的状态)。不设白名单,理由同上。
     // 「上诉」(第五十四批第二批,Design):灵魂把复核送进上级的申诉流程,与工作流的「上报」同一个 Seshem Er Hery。
-    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉/.test(ZH[k] ?? ""))).toEqual([]);
+    // 「超度」(第五十八批,Design):城隍把亡魂送上莲花台,「引领、送上去」,与「上诉」同一个 Seshem;
+    //  第五十一批「超度回向」(阳间回向功德)用的是 Redi Nefer,两件事不混。
+    expect(offenders(KEYS, (v, k) => /\bSeshem\b/.test(prose(v)) && !/推进|越级|升级|上诉|超度/.test(ZH[k] ?? ""))).toEqual([]);
   });
 
   it("Sekhem 只表密码:中文不含「密码」的键不出现 Sekhem(白名单除外)", () => {
