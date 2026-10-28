@@ -15,11 +15,11 @@ import { stubApi } from "./stubApi";
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const J = "22222222-2222-2222-2222-222222222222";
-const PARAMS = { judgment: J, caseNumber: "CN-2026-0011", heldUntil: "2027-12-01" };
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, addListener: () => () => {}, dispatch: jest.fn() }),
-  useRoute: () => ({ params: PARAMS }),
+  // Inline: jest hoists this factory above the module's consts, so PARAMS is not readable from here.
+  useRoute: () => ({ params: { judgment: "22222222-2222-2222-2222-222222222222", caseNumber: "CN-2026-0011", heldUntil: "2027-12-01" } }),
 }));
 
 function wrap(children: ReactNode) {

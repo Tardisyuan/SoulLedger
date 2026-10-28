@@ -339,7 +339,8 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     });
     renderApp();
     await screen.findByTestId("section-records-body");
-    await act(async () => {});
+    // The 赴冥 card and the station row animate in; let them land before the test ends (act warnings otherwise).
+    await act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
   }
 
   it("on the road: a 赴冥 · 十三站 card with the station, its place and what it is; the continent under the name", async () => {
@@ -347,8 +348,8 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     expect(screen.getByTestId("life-stations-at")).toHaveTextContent("3 / 13");
     expect(screen.getByTestId("life-station-here")).toHaveTextContent("现在在望乡台：回望人间、最后一眼看家乡的地方。");
     expect(screen.getByTestId("life-station-here")).not.toHaveTextContent("WANGXIANG_TERRACE");
-    expect(screen.getByTestId("soul-continent")).toHaveTextContent("南瞻部洲");
-    expect(screen.getByTestId("life-continent")).toHaveTextContent("南瞻部洲");
+    expect(screen.getByTestId("soul-continent")).toHaveTextContent(/南瞻部洲/);
+    expect(screen.getByTestId("life-continent")).toHaveTextContent(/南瞻部洲/);
   });
 
   it("off the road (alive, or past the thirteen stations) there is no card; an unrecorded continent keeps its row only", async () => {
