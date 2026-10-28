@@ -13736,6 +13736,7 @@ export interface components {
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
             /** Format: uuid */
             readonly cross_judgment_id: string | null;
+            readonly flow_progress: components["schemas"]["JudgmentFlowProgress"] | null;
         };
         /** @description The draft as stored: what a save returns, and what a 409 hands back. */
         JudgmentDraft: {
@@ -13764,6 +13765,18 @@ export interface components {
          * @enum {string}
          */
         JudgmentDraftConflictCodeEnum: "draft_conflict" | "concluded";
+        /** @description 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。 */
+        JudgmentFlowProgress: {
+            /** Format: uuid */
+            workflow: string;
+            /** @description `ApprovalWorkflowStatus`:IN_PROGRESS / COMPLETED / REJECTED … */
+            status: string;
+            /** @description 走到第几站(只数要人决定的节点,同 `officer_app.facts`);没有当前节点时是最后决定的那站。 */
+            index: number;
+            total: number;
+            /** @description 处置为什么还不能执行:`weighing.unfinished_flow` 的码;没有处置、已执行或不被拦时为 null。 */
+            waiting: string | null;
+        };
         /**
          * @description * `ORIGINAL` - 原审判
          *     * `AMENDMENT` - 加项 / 减项审判
@@ -20075,6 +20088,8 @@ export interface components {
             pick_nodes: components["schemas"]["TodoGroup"];
             /** @description 城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。 */
             city_god: components["schemas"]["TodoGroup"];
+            /** @description 枉死申诉(第五十九批):我名下城隍的枉死案子里待审的申诉(先申诉的在前)。需 `judgment.execute`;计入角标,不推送。 */
+            wangsi: components["schemas"]["TodoGroup"];
         };
         /** @description O-01:批准前要看清的申请内容。按类给字段,没有的不出现。 */
         TodoFacts: {
@@ -20157,6 +20172,8 @@ export interface components {
             origin_location?: string;
             /** @description 仅城隍初审:枉死。 */
             untimely?: boolean;
+            /** @description 仅枉死申诉:冤情等级 NONE / MINOR / MAJOR / SEVERE,未登记为空串。 */
+            grievance_level?: string;
         };
         /**
          * @description `state`:actionable / already_handled / deadline_passed / permission_changed
@@ -33250,7 +33267,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 只要这一组(加载更多) */
-                kind?: "approval" | "city_god" | "cooldown" | "letter" | "pick" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter";
+                kind?: "approval" | "city_god" | "cooldown" | "letter" | "pick" | "reassignment" | "rebirth" | "sentence_change" | "unassigned_letter" | "wangsi";
                 /** @description 与 kind 同用:从第几条起,默认 0 */
                 offset?: number;
             };

@@ -21,6 +21,10 @@
   要 `judgment.execute`(与解送 / 退回同一个码名)。只给名下官员 —— 殿管理员也能办,但不进他们的待办(否则全殿的
   案子都塞给每一位管理员),他们在网页队列里办。条目的 target 是 `{"kind": "city_god", "id": <审判 id>}`;
   App 读 `judgment/city-god-cases/<id>/` 并复用那里的 `send_on` / `return`,没有单条详情。计入 `total()`。
+* 枉死申诉(`wangsi`,第五十九批 M-3):我名下城隍的枉死案子里、申诉还待审(FILED)的,先申诉的在前。
+  与城隍初审同一条「只给名下官员」与同一个码名(`judgment.execute`);殿管理员在网页上审。条目的 target 是
+  `{"kind": "wangsi", "id": <审判 id>}`;App 读 `judgment/<id>/` 并复用 `judgment/wangsi/<id>/decide/`,没有单条详情。
+  计入 `total()`,不推送。
 * 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
   「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
   所以这里的数与官员台翻到底的条数是同一个数。最早来信的在前(先来先回)。只读我们库里的列与 `last_from`,
@@ -54,7 +58,7 @@ from apps.workflow.models import (
 
 LIST_LIMIT = 10
 KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change", "unassigned_letter", "pick",
-         "city_god")
+         "city_god", "wangsi")
 
 
 def scope_of(user, request=None):
@@ -159,7 +163,8 @@ def _group(items, offset=0):
 # 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
 FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
             "rebirth": "rebirths", "letter": "letters", "sentence_change": "sentence_changes",
-            "unassigned_letter": "unassigned_letters", "pick": "pick_nodes", "city_god": "city_god"}
+            "unassigned_letter": "unassigned_letters", "pick": "pick_nodes", "city_god": "city_god",
+            "wangsi": "wangsi"}
 
 
 def _city_god_items(scope):
@@ -178,6 +183,21 @@ def _city_god_items(scope):
           .select_related("soul", "city_god").order_by(returned_first, "created_at"))
     return [_item("city_god", j.pk, j.soul.name, j.created_at, city_god_status=j.city_god_status,
                   city_god_name=j.city_god.name, origin_location=j.soul.origin_location, untimely=j.untimely)
+            for j in qs]
+
+
+def _wangsi_items(scope):
+    """「枉死申诉」:我名下城隍的枉死案子里待审的申诉。日期是最后一次改动(提出申诉时写下;改冤情等级也会动它)。"""
+    from apps.judgment.models import GrievanceStatus, Judgment
+
+    if not check_permission(scope.user, "judgment.execute"):
+        return []
+    seen = _judgments_in_scope(scope)
+    qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)
+          .filter(city_god__officers=scope.user, untimely=True, grievance_status=GrievanceStatus.FILED)
+          .select_related("soul", "city_god").order_by("update_time", "pk"))
+    return [_item("wangsi", j.pk, j.soul.name, j.update_time, city_god_name=j.city_god.name,
+                  grievance_level=j.grievance_level)
             for j in qs]
 
 
@@ -247,7 +267,8 @@ def build(user, request=None, kind=None, offset=0):
                       for c in _letters(scope, unassigned=True)]
     groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
               "rebirths": rebirths, "letters": letters, "sentence_changes": sentence_changes,
-              "unassigned_letters": unassigned, "pick_nodes": _pick_items(scope), "city_god": _city_god_items(scope)}
+              "unassigned_letters": unassigned, "pick_nodes": _pick_items(scope), "city_god": _city_god_items(scope),
+              "wangsi": _wangsi_items(scope)}
     if kind:
         return _group(groups[FIELD_OF[kind]], offset)
     return {field: _group(items) for field, items in groups.items()}

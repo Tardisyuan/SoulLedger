@@ -6936,7 +6936,8 @@
         "letters": "Sesh Er Wesheb",
         "unassigned_letters": "Sesh Nen Redi Djer",
         "pick_nodes": "Nen Setep Djer · Sekhet",
-        "city_god": "Chenghuang · Maa Tepy"
+        "city_god": "Chenghuang · Maa Tepy",
+        "wangsi": "Nehet · Nut Mut Nen Maat"
       },
       "see_all": "Neb · {{n}}",
       "group_sentence_change": "Dbh Khemen Shepet",
@@ -7286,7 +7287,9 @@
       "judgment_meta": "Ankh {{n}} · {{verdict}} · {{status}}",
       "current_stop": "◐ Sekhet Pen",
       "no_disposition": "Wetep Nen Iri Djer",
-      "open_label": "Wen Medjat Ba · {{name}}"
+      "open_label": "Wen Medjat Ba · {{name}}",
+      "term_due": "Shepet Khetem · {{date}}",
+      "term_default": "Tepy: Renpet {{n}}"
     },
     "reassign": {
       "title": "Hab Ky Er",
@@ -7325,6 +7328,13 @@
       "empty_title": "Nen Hesb Djer",
       "empty_body": "Shesep Hena Khetem Sep Tepy: Hesb Iyi.",
       "load_failed": "Nen Ini Hesb"
+    },
+    "wangsi": {
+      "row_meta": "{{city_god}} · Khet {{level}}",
+      "review_title": "Nehet · {{name}}"
+    },
+    "judgment": {
+      "flow_progress": "Wat Hesy · Sekhet {{n}} / {{total}}"
     }
   },
   "print": {

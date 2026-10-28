@@ -425,6 +425,17 @@ class EvidenceRulingResultSerializer(serializers.Serializer):
     admitted_balance = AdmittedBalanceSerializer()
 
 
+class JudgmentFlowProgressSerializer(serializers.Serializer):
+    """审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。"""
+
+    workflow = serializers.UUIDField()
+    status = serializers.CharField(help_text="`ApprovalWorkflowStatus`:IN_PROGRESS / COMPLETED / REJECTED …")
+    index = serializers.IntegerField(help_text="走到第几站(只数要人决定的节点,同 `officer_app.facts`);没有当前节点时是最后决定的那站。")
+    total = serializers.IntegerField()
+    waiting = serializers.CharField(allow_null=True, help_text="处置为什么还不能执行:`weighing.unfinished_flow` 的码;"
+                                    "没有处置、已执行或不被拦时为 null。")
+
+
 class JudgmentDetailSerializer(JudgmentSerializer):
     """`GET /judgment/{id}/` — the list shape plus the evidence rulings and the
     admitted balance. Detail only: the balance walks the soul's ledger, which
@@ -435,9 +446,33 @@ class JudgmentDetailSerializer(JudgmentSerializer):
     # 审判页据此把「开联审」换成去那场联审的链接 —— 此前它照样显示,点了才被服务端拒(审计 1017 #10)。
     # 反向访问在没有时抛的 RelatedObjectDoesNotExist 也是 AttributeError,`allow_null` 让它读作 null。
     cross_judgment_id = serializers.UUIDField(source="cross_judgment.pk", read_only=True, allow_null=True)
+    # 原审的审批流程走到哪一站、处置是否因此还不能执行(第五十九批 M-1);没有流程为 null。
+    flow_progress = serializers.SerializerMethodField()
 
     class Meta(JudgmentSerializer.Meta):
-        fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance", "cross_judgment_id"]
+        fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance", "cross_judgment_id",
+                  "flow_progress"]
+
+    @extend_schema_field(JudgmentFlowProgressSerializer(allow_null=True))
+    def get_flow_progress(self, obj):
+        from apps.judgment.weighing import unfinished_flow
+        from apps.workflow.models import AUTOMATIC_KINDS
+
+        wf = getattr(obj, "approval_workflow", None)  # 没有时反向一对一抛的也是 AttributeError
+        if wf is None:
+            return None
+        steps = [n for n in wf.nodes.order_by("node_order") if n.kind not in AUTOMATIC_KINDS]
+        at = wf.current_node_id
+        if at is None:
+            decided = [n for n in steps if n.decided_at is not None]
+            at = max(decided, key=lambda n: n.decided_at).pk if decided else None
+        disposition = getattr(obj, "disposition", None)
+        waiting = None
+        if disposition is not None and not disposition.is_executed and not getattr(disposition, "is_deleted", False):
+            waiting = unfinished_flow(disposition, flow_status=wf.status)
+        return {"workflow": wf.pk, "status": wf.status,
+                "index": next((i for i, n in enumerate(steps, 1) if n.pk == at), len(steps)),
+                "total": len(steps), "waiting": waiting}
 
     @extend_schema_field(AdmittedBalanceSerializer)
     def get_admitted_balance(self, obj):

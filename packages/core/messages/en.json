@@ -6943,7 +6943,8 @@
         "letters": "Letters to answer",
         "unassigned_letters": "Unassigned letters",
         "pick_nodes": "Stations to pick",
-        "city_god": "City God review"
+        "city_god": "City God review",
+        "wangsi": "Grievances from the City of Wrongful Death"
       },
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to you.",
@@ -7297,7 +7298,9 @@
       "judgment_meta": "Life {{n}} · {{verdict}} · {{status}}",
       "current_stop": "◐ Current stop",
       "no_disposition": "No disposition yet",
-      "open_label": "Open {{name}}'s soul record"
+      "open_label": "Open {{name}}'s soul record",
+      "term_due": "Term served · {{date}}",
+      "term_default": "Default {{n}} years"
     },
     "reassign": {
       "title": "Reassign to",
@@ -7336,6 +7339,13 @@
       "empty_title": "Nothing to count yet",
       "empty_body": "These fill in once you claim and conclude your first case.",
       "load_failed": "Couldn't load your numbers"
+    },
+    "wangsi": {
+      "row_meta": "{{city_god}} · grievance {{level}}",
+      "review_title": "Grievance · {{name}}"
+    },
+    "judgment": {
+      "flow_progress": "Approval workflow · station {{n}} of {{total}}"
     }
   },
   "print": {
