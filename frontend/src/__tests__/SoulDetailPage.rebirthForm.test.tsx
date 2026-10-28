@@ -101,6 +101,7 @@ const mockReborn = jest.fn();
 const mockQuota = jest.fn();
 const mockDispositionList = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
     karma: jest.fn().mockResolvedValue({ data: null }),

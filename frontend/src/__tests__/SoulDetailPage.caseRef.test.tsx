@@ -55,6 +55,7 @@ const judgment = (id: string, over: Record<string, unknown>) => ({
 const mockJudgmentList = jest.fn();
 
 jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
   soulsApi: {
     get: jest.fn().mockResolvedValue({
       data: {

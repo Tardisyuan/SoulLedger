@@ -82,6 +82,7 @@ const mockJudgmentList = jest.fn((params?: Record<string, string>): Promise<{ da
 const mockJudgmentCreate = jest.fn().mockResolvedValue({ data: { id: "a-duplicate" } });
 
 jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
   soulsApi: {
     get: jest.fn().mockResolvedValue({
       data: {
