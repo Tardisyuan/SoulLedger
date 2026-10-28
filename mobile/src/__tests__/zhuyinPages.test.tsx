@@ -109,22 +109,52 @@ describe("the bottom sheet's release (交互与动效 第 2 轮 原型 06)", () 
   });
 });
 
-// 华为真机 10-29: EN 「Reincarnating」 broke as 「Reincarnatin / g」 under the fifth circle.
-describe("the life path's stage words never break inside a word", () => {
-  const word = (locale: "en" | "zh-Hans" | "egy") => translate(locale, "soul_app.soul_states.REINCARNATING");
+// 华为真机 10-29: EN 「Reincarnating」 broke as 「Reincarnatin / g」 under the fifth circle. Second
+// round: Android's adjustsFontSizeToFit shrank 「Alive」 / 「Judging」 a little though they fit, so
+// they read smaller than the phrase 「My sentence」 — the five now share one size, set by the row.
+describe("the life path's stage words never break inside a word, and read at one size", () => {
+  const KEYS = [
+    "soul_app.soul_states.ALIVE",
+    "soul_app.soul_states.JUDGING",
+    "soul_app.soul_states.DISPOSED",
+    "soul_app.sentence.section_title",
+    "soul_app.soul_states.REINCARNATING",
+  ];
+  const row = (locale: "en" | "zh-Hans" | "egy") => KEYS.map((k) => translate(locale, k));
 
-  it("a single word keeps to one line and shrinks to fit", () => {
-    expect(word("en")).toBe("Reincarnating");
-    expect(stageWordFit(word("en"))).toEqual({ numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 });
+  it("all five words get the same size — none is left to shrink on its own", () => {
+    for (const locale of ["en", "zh-Hans", "egy"] as const) {
+      const words = row(locale);
+      const fit = stageWordFit(words);
+      const sizes = new Set(words.map((w) => fit(w).size.fontSize));
+      expect(sizes.size).toBe(1);
+      for (const w of words) expect(fit(w)).not.toHaveProperty("adjustsFontSizeToFit");
+    }
   });
 
-  it("a phrase (egy 「Em Wehem Mesut」) still wraps at its spaces onto two lines, as before", () => {
-    expect(word("egy")).toMatch(/\s/);
-    expect(stageWordFit(word("egy"))).toEqual({ numberOfLines: 2 });
+  it("a single word keeps to one line; the row shrinks together when one word is long", () => {
+    const words = row("en");
+    expect(words[4]).toBe("Reincarnating");
+    const fit = stageWordFit(words);
+    expect(fit("Reincarnating").numberOfLines).toBe(1);
+    expect(fit(words[0]).numberOfLines).toBe(1);
+    expect(fit("Reincarnating").size.fontSize).toBeLessThan(11);
+    expect(fit("Reincarnating").size.fontSize).toBeGreaterThanOrEqual(8);
+    // Short words alone keep the full 11pt.
+    expect(stageWordFit(["Alive", "Judging"])("Alive").size.fontSize).toBe(11);
   });
 
-  it("Chinese is one line, never asked to wrap", () => {
-    expect(stageWordFit(word("zh-Hans")).numberOfLines).toBe(1);
+  it("a phrase still wraps at its spaces onto two lines", () => {
+    const fit = stageWordFit(row("en"));
+    expect(fit("My sentence").numberOfLines).toBe(2);
+    expect(translate("egy", "soul_app.soul_states.REINCARNATING")).toMatch(/\s/);
+    expect(stageWordFit(row("egy"))(translate("egy", "soul_app.soul_states.REINCARNATING")).numberOfLines).toBe(2);
+  });
+
+  it("Chinese is one line at the full 11pt", () => {
+    const words = row("zh-Hans");
+    const fit = stageWordFit(words);
+    for (const w of words) expect(fit(w)).toEqual({ numberOfLines: 1, size: { fontSize: 11, lineHeight: 16 } });
   });
 });
 
