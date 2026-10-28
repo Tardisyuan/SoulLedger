@@ -12,6 +12,10 @@
  *     U-2 同一张整页表单(`escalate`),多一块各站名(`escalation_stations`),理由选填,后果说明用 `escalate_body`;不能撤回。
  *     U-3 ~ U-5 那一轮前一枚「上诉」方标,下面一条站梯(■ 已过 · ▪ 当前 · □ 未到 · ✕ 驳回),每站的结论用 `Quote`;
  *         驳回之后的站不写状态(「不再审」还没有词条)。终审站通过后写这一轮的结果(维持 / 改判),改判照 A-4。
+ *   第五十五批补充(55b):终审(`is_final`)不在站梯里,而是站梯下面虚线隔开的单独一行;U-2 的各站名最后一个写成「终审 · 站名」;
+ *     进度「第 n / 站数 站」不数终审。
+ *     U-6 站梯走完 · 待终审(`AWAITING_FINAL`):轮次行右侧写 `ladder_state.AWAITING_FINAL`,终审一行 ◇ 浅底 +
+ *         `ladder_final_pending`。
  *
  * 数据是 `GET /me/judgment-appeals/`:`judgments` 只列本世已结案的原审,所以没有这一行的审判
  * (未结案、复审、前世)不画申诉行。
@@ -51,7 +55,7 @@ export function roundsOf(list: MeJudgmentAppealList, judgment: string): MeJudgme
 }
 
 const OPEN = ["PENDING", "IN_REVIEW"];
-const GLYPH = { PASSED: "■", CURRENT: "▪", AHEAD: "□", REJECTED: "✕" } as const;
+const GLYPH = { PASSED: "■", CURRENT: "▪", AHEAD: "□", REJECTED: "✕", AWAITING_FINAL: "◇" } as const;
 const DECIDED = ["UPHELD", "AMENDED"];
 
 /** 「上诉」方标:2px ink 框,申诉那一轮没有。 */
@@ -68,45 +72,70 @@ function EscalatedTag() {
 /** U-3 ~ U-5:上诉那一轮的站梯。不写复核人(同申诉)。 */
 function Ladder({ round }: { round: MeJudgmentAppeal }) {
   const { t } = useI18n();
+  const theme = useTheme();
   const ladder = round.ladder;
   if (!ladder) return null;
   const over = round.workflow_status === "COMPLETED" || round.workflow_status === "REJECTED";
+  const final = ladder.stations.find((s) => s.is_final);
+  const row = (s: Station) => {
+    const notHeard = over && s.state === "AHEAD";
+    const faint = s.state === "AHEAD";
+    // The final station passing hands the appeal to the final judge: its result is the round's own.
+    const state = notHeard
+      ? null
+      : s.state === "AWAITING_FINAL"
+        ? t("appeals.ladder_final_pending")
+        : s.is_final && s.state === "PASSED"
+          ? DECIDED.includes(round.status)
+            ? t(`appeals.status.${round.status}`)
+            : null
+          : t(`appeals.ladder_state.${s.state}`);
+    return (
+      <View
+        key={s.node}
+        testID={`appeal-station-${round.id}-${s.order}`}
+        style={[styles.station, s.state === "AWAITING_FINAL" ? [styles.awaiting, { backgroundColor: theme.s2 }] : null]}
+      >
+        <Txt variant="body" tone={faint ? "subtle" : "ink"}>
+          {GLYPH[s.state]}
+        </Txt>
+        <View style={styles.fill}>
+          <View style={styles.entryLine}>
+            <Txt variant="body" tone={faint ? "subtle" : "ink"} style={styles.fill}>
+              {s.is_final ? t("appeals.ladder_final", { name: s.name }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
+            </Txt>
+            {state ? (
+              <Txt testID={`appeal-station-state-${round.id}-${s.order}`} variant="caption" tone="muted">
+                {state}
+              </Txt>
+            ) : null}
+          </View>
+          {s.note ? <Quote text={s.note} /> : null}
+        </View>
+      </View>
+    );
+  };
   return (
     <View testID={`appeal-stations-${round.id}`} style={styles.ladder}>
-      {ladder.stations.map((s) => {
-        const notHeard = over && s.state === "AHEAD";
-        const faint = s.state === "AHEAD";
-        // The final station passing hands the appeal to the final judge: its result is the round's own.
-        const state = notHeard
-          ? null
-          : s.is_final && s.state === "PASSED"
-            ? DECIDED.includes(round.status)
-              ? t(`appeals.status.${round.status}`)
-              : null
-            : t(`appeals.ladder_state.${s.state}`);
-        return (
-          <View key={s.node} testID={`appeal-station-${round.id}-${s.order}`} style={styles.station}>
-            <Txt variant="body" tone={faint ? "subtle" : "ink"}>
-              {GLYPH[s.state]}
-            </Txt>
-            <View style={styles.fill}>
-              <View style={styles.entryLine}>
-                <Txt variant="body" tone={faint ? "subtle" : "ink"} style={styles.fill}>
-                  {s.is_final ? t("appeals.ladder_final", { name: s.name }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
-                </Txt>
-                {state ? (
-                  <Txt testID={`appeal-station-state-${round.id}-${s.order}`} variant="caption" tone="muted">
-                    {state}
-                  </Txt>
-                ) : null}
-              </View>
-              {s.note ? <Quote text={s.note} /> : null}
-            </View>
-          </View>
-        );
-      })}
+      {ladder.stations.filter((s) => !s.is_final).map(row)}
+      {final ? (
+        <View testID={`appeal-final-${round.id}`} style={[styles.finalRow, { borderColor: theme.hair2 }]}>
+          {row(final)}
+        </View>
+      ) : null}
     </View>
   );
+}
+
+type Station = NonNullable<MeJudgmentAppeal["ladder"]>["stations"][number];
+
+/** 轮次行右侧:待终审时写那一句;流程停在某一站(不是终审)时写「第 n / 站数 站」,站数不含终审。 */
+function ladderProgress(ladder: MeJudgmentAppeal["ladder"], t: (key: string, vars?: Record<string, string>) => string) {
+  if (!ladder) return null;
+  if (ladder.stations.some((s) => s.state === "AWAITING_FINAL")) return t("appeals.ladder_state.AWAITING_FINAL");
+  const current = ladder.stations.find((s) => s.state === "CURRENT");
+  if (!current || current.is_final) return null;
+  return t("appeals.ladder_progress", { n: String(current.order), total: String(ladder.stations.filter((s) => !s.is_final).length) });
 }
 
 function useVerdict() {
@@ -312,9 +341,9 @@ export function AppealLine({
           <Txt variant="body" style={styles.fill}>
             {`${t("appeals.round", { round: String(latest.round) })} · ${t(`appeals.status.${latest.status}`)}`}
           </Txt>
-          {latest.ladder?.current ? (
+          {ladderProgress(latest.ladder, t) ? (
             <Txt testID={`appeal-progress-${latest.id}`} variant="value" tone="muted">
-              {t("appeals.ladder_progress", { n: String(latest.ladder.current), total: String(latest.ladder.total) })}
+              {ladderProgress(latest.ladder, t)}
             </Txt>
           ) : null}
           <Txt variant="caption" tone="subtle">
@@ -389,7 +418,8 @@ export function JudgmentAppealScreen() {
           {params.escalate && params.stations?.length ? (
             <DataRow label={t("appeals.escalate")}>
               <Txt testID="appeal-stations" variant="body">
-                {params.stations.join(" → ")}
+                {/* 55b:最后一站是终审,写成「终审 · 站名」。 */}
+                {params.stations.map((name, i) => (i === params.stations!.length - 1 ? t("appeals.ladder_final", { name }) : name)).join(" → ")}
               </Txt>
             </DataRow>
           ) : null}
@@ -439,5 +469,7 @@ const styles = StyleSheet.create({
   tag: { borderWidth: 2, paddingHorizontal: 4 },
   ladder: { gap: 8, marginTop: 4 },
   station: { flexDirection: "row", gap: 8 },
+  awaiting: { paddingHorizontal: 8, paddingVertical: 4 },
+  finalRow: { borderTopWidth: 1, borderStyle: "dashed", paddingTop: 8, marginTop: 4 },
   entryLine: { flexDirection: "row", alignItems: "baseline", gap: 8 },
 });

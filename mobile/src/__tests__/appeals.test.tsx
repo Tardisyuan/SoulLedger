@@ -3,8 +3,9 @@
  */
 import type { MeAppealableJudgment, MeJudgmentAppeal } from "@soulledger/core/api/soul";
 import { NavigationContainer } from "@react-navigation/native";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -134,8 +135,8 @@ it("U-1: the escalation takes the 「申诉 ›」 line's place — the hint on 
   expect(screen.queryByTestId(`appeal-deadline-${J}`)).toBeNull();
 });
 
-it("U-2: the escalation form lists the stations and sends without a reason", async () => {
-  mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "终审 · 梵蒂冈"] };
+it("U-2: the escalation form lists the stations, the last one as 终审, and sends without a reason", async () => {
+  mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "梵蒂冈"] };
   const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
   wrap(<JudgmentAppealScreen />);
   expect(screen.getByTestId("appeal-stations").props.children).toBe("主教区 → 总主教区 → 终审 · 梵蒂冈");
@@ -151,14 +152,31 @@ it("U-3: a round in the flow carries the 上诉 tag, its progress, and a station
   const live = escalated([station(1, "魏征 · 察查司", "PASSED", "理由成立"), station(2, "原殿阎王 · 复核", "CURRENT"), station(3, "酆都大帝", "AHEAD", null, true)]);
   wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[live]} focused onChanged={() => {}} />);
   expect(screen.getByTestId("appeal-escalated-tag")).toBeTruthy();
-  expect(screen.getByTestId("appeal-progress-a2").props.children).toBe("第 2 / 3 站");
+  // 终审 is not counted among the stations (55b).
+  expect(screen.getByTestId("appeal-progress-a2").props.children).toBe("第 2 / 2 站");
   expect(screen.getByText("第 1 站 · 魏征 · 察查司")).toBeTruthy();
   expect(screen.getByTestId("appeal-station-state-a2-1").props.children).toBe("通过，送往下一站");
   expect(screen.getByText("理由成立")).toBeTruthy();
   expect(screen.getByTestId("appeal-station-state-a2-2").props.children).toBe("审理中");
   expect(screen.getByText("终审 · 酆都大帝")).toBeTruthy();
   expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("未到");
+  // 终审 sits on its own row under the dashed rule, not in the ladder.
+  expect(within(screen.getByTestId("appeal-final-a2")).getByTestId("appeal-station-a2-3")).toBeTruthy();
+  expect(within(screen.getByTestId("appeal-final-a2")).queryByTestId("appeal-station-a2-2")).toBeNull();
   expect(screen.queryByTestId("appeal-withdraw-a2")).toBeNull();
+});
+
+it("U-6: all stations passed — the round says 站梯走完 · 待终审 and the final row is ◇ on a light ground", () => {
+  const waiting = escalated([station(1, "主教区", "PASSED"), station(2, "总主教区", "PASSED"), station(3, "梵蒂冈", "AWAITING_FINAL", null, true)], {
+    workflow_status: "COMPLETED",
+  });
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[waiting]} focused onChanged={() => {}} />);
+  expect(screen.getByTestId("appeal-progress-a2").props.children).toBe("站梯走完 · 待终审");
+  expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("终审 · 待作出结论");
+  expect(within(screen.getByTestId("appeal-station-a2-3")).getByText("◇")).toBeTruthy();
+  expect(StyleSheet.flatten(screen.getByTestId("appeal-station-a2-3").props.style).backgroundColor).toBeTruthy();
+  expect(StyleSheet.flatten(screen.getByTestId("appeal-station-a2-2").props.style).backgroundColor).toBeUndefined();
+  expect(screen.queryByText("▪")).toBeNull();
 });
 
 it("U-4: a rejecting station ends the ladder — the stations after it are not 'not reached'", () => {
