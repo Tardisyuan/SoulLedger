@@ -4,8 +4,9 @@
 02「黑白无常」「牛头马面」、08 §4.1(城隍「缉拿鬼魂:派遣黑白无常等勾魂」)。
 
 * 发牒(`issue`):地府、在世、阳寿(`Soul.fated_death_*`)已到、手上没有未了结的牒。发牒的城隍按出身地配
-  (`city_gods.match`,与收案同一条规则)。鬼差不指定时按功过建议:大恶(功过 ≤ -500,05 §3.2 的分档)
-  派牛头马面,其余黑白无常。
+  (`city_gods.match`,与收案同一条规则)。鬼差不指定时按功过建议:过多于功(功过余额 < 0)
+  派牛头马面,其余黑白无常(用户 2026-10-29 定,与界面文案 `souls.capture.escort_hint` 同一句话;
+  此前用 05 §3.2「≤ -500 大恶」那条线,与文案对不上)。
 * 拘到(`capture`):ISSUED → CAPTURED。
 * 交接(`hand_over`):CAPTURED → HANDED_OVER,并在同一事务里登记死亡(`Soul.die`,死亡日 = 拘到那天),
   案子交给发牒的城隍初审 —— 与死亡同步走的是同一个入口,不另开一套。`die()` 拒绝(灵魂已不在世)则整笔回滚。
@@ -24,10 +25,6 @@ from rest_framework.exceptions import APIException
 from apps.dispatch.models import OPEN_CAPTURE, CaptureEscort, CaptureStatus, CaptureWarrant
 from apps.souls.models import Civilization, Soul, SoulState
 
-#: 05 §3.2「≤ -500 大恶」。与 `reincarnation.models.suggested_rebirth_form` 的地狱道分档同一条线。
-GREAT_EVIL = -500
-
-
 class CaptureRefused(APIException):
     status_code = 409
     default_code = "capture_refused"
@@ -38,7 +35,7 @@ class CaptureRefused(APIException):
 
 
 def suggested_escort(soul) -> str:
-    return CaptureEscort.NIUTOU_MAMIAN if soul.karmic_balance <= GREAT_EVIL else CaptureEscort.WUCHANG
+    return CaptureEscort.NIUTOU_MAMIAN if soul.karmic_balance < 0 else CaptureEscort.WUCHANG
 
 
 def lifespan_ended_q(today=None) -> Q:

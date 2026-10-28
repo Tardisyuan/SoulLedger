@@ -67,7 +67,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
   });
   const soulOptions: SelectOption[] = (souls.data?.results ?? []).map((s) => ({
     value: s.id,
-    label: s.origin_location ? `${s.name} · ${s.origin_location}` : s.name,
+    label: s.name,
   }));
   const chosen = tudi ?? gods.data?.find((g) => g.id === tudiId);
   const soulName = soul?.name ?? souls.data?.results.find((s) => s.id === soulId)?.name ?? "";

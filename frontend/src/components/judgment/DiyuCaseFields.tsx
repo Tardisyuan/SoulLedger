@@ -72,7 +72,7 @@ export function OffenceField({ judgment, editable }: { judgment: Judgment; edita
   const fieldId = useId();
   const saved = judgment.offence ?? "";
   const label = (o: string) => t(`judgment.offences.${o}`);
-  const [picked, setPicked] = useState(saved);
+  const [picked, setPicked] = useState<string>(saved);
   const [search, setSearch] = useState(saved ? label(saved) : "");
   const save = useMutation({
     mutationFn: (offence: Judgment["offence"]) => judgmentApi.update(judgment.id, { offence }),
