@@ -6,7 +6,7 @@ import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Castle, Cloud, Flame, CircleDot } from "lucide-react";
+import { Castle, Cloud, Flame, CircleDot, CircleOff } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
@@ -60,9 +60,13 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string }> = {
  * rather than ink-tertiary because ink-tertiary on a 10% tint of itself is
  * under the 4.5:1 floor (2.56:1 light).
  *
+ * ANNIHILATION (Egyptian second death, user 2026-10-28) is not a place but it is
+ * what a FAILED weighing produces, so it takes the failed verdict token; the
+ * icon (a struck-out circle), not the colour, is what sets it apart from HELL.
+ *
  * src/__tests__/statusTokenLayering.test.ts holds this map to the rule. It reads
- * these four entries AS TEXT, one line per key, and parses the
- * `x-[oklch(var(--t)/a)]` utilities out of each — so the four lines below stay
+ * these five entries AS TEXT, one line per key, and parses the
+ * `x-[oklch(var(--t)/a)]` utilities out of each — so the five lines below stay
  * one-line literals and the alphas stay 0.1 / 0.3 / 1.
  */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
@@ -70,6 +74,7 @@ const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: stri
   PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-purgatory)/0.1)] border-[oklch(var(--color-verdict-purgatory)/0.3)] text-[oklch(var(--color-verdict-purgatory))]' },
   BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-passed)/0.1)] border-[oklch(var(--color-verdict-passed)/0.3)] text-[oklch(var(--color-verdict-passed))]' },
   NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
+  ANNIHILATION: { icon: <CircleOff className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-failed)/0.1)] border-[oklch(var(--color-verdict-failed)/0.3)] text-[oklch(var(--color-verdict-failed))]' },
 };
 
 /** One row of the tree table: a realm and how deep it sits under `parent_realm`. */

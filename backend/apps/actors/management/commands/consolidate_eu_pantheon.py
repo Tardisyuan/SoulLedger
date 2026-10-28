@@ -149,7 +149,7 @@ NORSE_NAMES = ["Odin", "Freya", "Hel", "Valkyries"]
 # GREEK_CAST, which are a deliberate second copy — importing these would make
 # that test ratify whatever this file happens to say.
 GRECO_ROMAN_EXPECTED = {
-    "Minos": (ActorRole.JUDGE, "EU_HELL_2ND"),
+    "Minos": (ActorRole.CONDUIT, "EU_HELL_2ND"),  # user 2026-10-28: Christ is the only European JUDGE
     "Charon": (ActorRole.CONDUIT, "EU_ACHERON"),
     "Cerberus": (ActorRole.GUARDIAN, "EU_HELL_3RD"),
 }

@@ -96,9 +96,9 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
     }
   });
 
-  it("the four realm types take the four patterns, one each", () => {
+  it("the five realm types take the five patterns, one each", () => {
     expect(Object.keys(REALM_PATTERNS).sort()).toEqual([...readRealmTypes()].sort());
-    expect(Object.values(REALM_PATTERNS).sort()).toEqual(["half", "hatch", "outline", "solid"]);
+    expect(Object.values(REALM_PATTERNS).sort()).toEqual(["half", "hatch", "outline", "solid", "void"]);
   });
 
   it("merit is solid and demerit is hatched — same colour, told apart by pattern", () => {
