@@ -7226,7 +7226,18 @@
     "escalate": "上诉",
     "escalate_title": "上诉至申诉流程",
     "escalate_body": "上一次复核维持了原判。上诉后由本文明的申诉流程逐站复核：任一站驳回即维持原判，走完由终审作出结论。流程审理中不能撤回，这一次也算一次申诉。",
-    "ladder": "申诉流程 · {{name}}"
+    "ladder": "申诉流程 · {{name}}",
+    "escalated_tag": "上诉",
+    "ladder_progress": "第 {{n}} / {{total}} 站",
+    "ladder_station": "第 {{n}} 站 · {{name}}",
+    "ladder_final": "终审 · {{name}}",
+    "ladder_state": {
+      "PASSED": "通过，送往下一站",
+      "REJECTED": "驳回 · 维持原判",
+      "CURRENT": "审理中",
+      "AHEAD": "未到"
+    },
+    "escalate_hint": "上一次复核维持了原判。还不服，可以上诉。"
   },
   "cityGods": {
     "title": "城隍",
