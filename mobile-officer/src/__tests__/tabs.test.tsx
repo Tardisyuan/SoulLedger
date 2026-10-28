@@ -4,7 +4,7 @@
  * shell (the band shows the hall; the two-step banner stays until it is set up).
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import { RefreshFailed, Row } from "../kit";
 import { NoticesTab } from "../screens/notices";
@@ -28,7 +28,8 @@ jest.mock("@soulledger/core/api/auth", () => ({
 const mockClaim = jest.fn();
 const mockCounts = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
-  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), queueCounts: (...a: unknown[]) => mockCounts(...a) },
+  // `get` never settles: a case opened from the list just sits loading (the shell test below only needs it open).
+  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), queueCounts: (...a: unknown[]) => mockCounts(...a), get: () => new Promise(() => {}) },
 }));
 const mockSouls = jest.fn();
 jest.mock("@soulledger/core/api/souls", () => ({
@@ -381,6 +382,41 @@ describe("the shell", () => {
     });
     await waitFor(() => expect(mockTodo.mock.calls.length).toBeGreaterThan(todoCalls));
     expect(mockNotices.mock.calls.length).toBeGreaterThan(countCalls);
+  });
+});
+
+// 华为真机 10-29 第二轮: 「他人手上 · 0」 put its count on a second line, and coming back from a
+// case opened under 待认领 showed 我手上 again.
+describe("the judgments tab's segments", () => {
+  it("each label keeps to one line, at 13pt when there are four", async () => {
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    const label = await within(screen.getByTestId("queue-group-others")).findByText("他人手上 · 0");
+    expect(label.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(label.props.style).fontSize).toBe(13);
+  });
+
+  it("starts on the segment it is given and reports a change", async () => {
+    const onGroup = jest.fn();
+    renderOfficer(<QueueTab onOpen={() => {}} initialGroup="unclaimed" onGroup={onGroup} />);
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "unclaimed" }));
+    expect(mockList).not.toHaveBeenCalledWith({ group: "mine" });
+    expect(screen.getByTestId("queue-group-unclaimed").props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(screen.getByTestId("queue-group-others"));
+    expect(onGroup).toHaveBeenCalledWith("others");
+  });
+
+  it("a case opened under 待认领 returns to 待认领, not 我手上", async () => {
+    mockList.mockImplementation(async (p: { group: string }) => ({
+      data: { results: p.group === "unclaimed" ? [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] : [] },
+    }));
+    renderOfficer(<Shell />);
+    fireEvent.press(await screen.findByTestId("tab-queue"));
+    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
+    fireEvent.press(await screen.findByTestId("queue-row-j9"));
+    fireEvent.press(await screen.findByTestId("detail-back"));
+    expect(await screen.findByTestId("queue-row-j9")).toBeTruthy();
+    expect(screen.getByTestId("queue-group-unclaimed").props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId("queue-group-mine").props.accessibilityState).toMatchObject({ selected: false });
   });
 });
 

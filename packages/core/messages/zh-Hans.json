@@ -2429,7 +2429,7 @@
       "label": "罪目",
       "none": "未填",
       "routes_to": "判有罪时送 {{court}}",
-      "fallback": "未填罪目:判有罪时按严重度选殿",
+      "fallback": "未填罪目：判有罪时按严重度选殿",
       "placeholder": "未填 · 按严重度选殿",
       "no_match": "没有这个罪目",
       "kings": {
@@ -2480,12 +2480,12 @@
       "unset": "未登记",
       "grievance": "冤情申诉",
       "plea": "申诉内容",
-      "plea_hint": "替亡魂记下申诉的冤情;城隍名下的官员或殿管理员审核。",
+      "plea_hint": "替亡魂记下申诉的冤情；城隍名下的官员或殿管理员审核。",
       "file": "提出申诉",
       "decision_note": "审核意见",
       "uphold": "属实 · 提前释放",
       "reject": "不属实",
-      "uphold_hint": "冤情等级为「重」或「极重」时,属实即提前释放。",
+      "uphold_hint": "冤情等级为「重」或「极重」时，属实即提前释放。",
       "decided_line": "{{date}} 审结",
       "error": {
         "not_in_wangsi": "这位亡魂已不在枉死城。",
@@ -3601,7 +3601,7 @@
       "preview_failed": "打不开这份附件",
       "open_tab": "在新窗口打开",
       "print_title": "附件清单",
-      "print_failed": "附件清单读取失败,本页未列出附件;请回到屏幕上重试后再打印。",
+      "print_failed": "附件清单读取失败，本页未列出附件；请回到屏幕上重试后再打印。",
       "print_footer": "附件原件见系统",
       "col_name": "名称",
       "col_size": "大小",
@@ -4518,7 +4518,7 @@
     "app_name": "灵魂簿",
     "update_required": {
       "title": "需要更新",
-      "open_failed": "没能打开应用商店。请在应用商店里搜索更新,或在浏览器里打开:{{url}}",
+      "open_failed": "没能打开应用商店。请在应用商店里搜索更新，或在浏览器里打开：{{url}}",
       "body": "这一版已经不能用了。更新后，你的书信和档案都还在。",
       "button": "去更新",
       "version": "版本 {{version}}"
@@ -7343,7 +7343,9 @@
     },
     "wangsi": {
       "row_meta": "{{city_god}} · 冤情 {{level}}",
-      "review_title": "枉死申诉 · {{name}}"
+      "review_title": "枉死申诉 · {{name}}",
+      "note_required": "先写审核意见",
+      "level_saves": "点选即保存"
     },
     "judgment": {
       "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站"
@@ -7637,7 +7639,7 @@
       "COUNTY": "显佑伯"
     },
     "bureaus_label": "下属诸司",
-    "bureaus_hint": "按这位城隍实际设的司勾选。级别越高,诸司通常越齐全。",
+    "bureaus_hint": "按这位城隍实际设的司勾选。级别越高，诸司通常越齐全。",
     "bureau_count": "{{count}} 司",
     "ministries": {
       "HEAD": "总务",
