@@ -325,7 +325,7 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
       </div>
 
       <ConfirmDialog
-        isOpen={confirming}
+        isOpen={confirming !== false}
         variant="info"
         title={confirming === "deliver"
           ? t("judgment.wangsi.deliver_title", { name: judgment.soul_name })
