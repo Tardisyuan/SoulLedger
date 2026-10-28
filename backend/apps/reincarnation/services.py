@@ -69,13 +69,15 @@ class RebirthBlocked(APIException):
     """转世被业务挡住(2026-10-27 用户决定),灵魂原地不动:
     `plan_in_progress` —— 受刑计划还没走完(计划完成才是转世的正门,`SentencePlanService._complete`);
     `eternal_sentence` —— 本世有未赦免的永久刑期(永久 = 不转生);
-    `rebirth_not_approved` —— 本世最近一份转生申请驳回了或还没决定。没有申请的灵魂官员照样可以办。"""
+    `rebirth_not_approved` —— 本世最近一份转生申请驳回了或还没决定。没有申请的灵魂官员照样可以办。
+    `term_not_served` —— 本世有执行了而刑期未满的处置(用户 2026-10-29:执行即开始服刑,刑满才能转世);
+    带 `term_end`,期满日那天(或之后)「期满释放」再办。"""
 
     status_code = 409
     default_code = "rebirth_blocked"
 
-    def __init__(self, code, detail):
-        super().__init__({"code": code, "error": detail, "detail": detail})
+    def __init__(self, code, detail, **extra):
+        super().__init__({"code": code, "error": detail, "detail": detail, **extra})
 
 
 class RebirthFormNotApplicable(APIException):
@@ -103,12 +105,75 @@ def rebirth_form_for(soul, requested=None) -> str:
     return RebirthForm.OTHER
 
 
+class RebirthFormReasonRequired(APIException):
+    """官员办转世选的道与灵魂已批准申请里的意愿不同,却没写原因(用户 2026-10-29):400,什么都不写。
+    写了原因就照官员选的办,原因与灵魂所愿一起记进 REINCARNATION_COMPLETED 的 payload(留痕)。"""
+
+    status_code = 400
+    default_code = "rebirth_form_reason_required"
+
+    def __init__(self, desired, chosen):
+        super().__init__({"code": "rebirth_form_reason_required", "desired_form": desired, "rebirth_form": chosen,
+                          "detail": f"The soul's approved application asks for {desired}; give a reason for "
+                                    f"{chosen} (rebirth_form_reason)."})
+
+
+def approved_desired_form(soul):
+    """本世已批准的转生申请里灵魂选的道;没有已批准的申请(或不是地府的灵魂)为 None。"""
+    from apps.soul_accounts.models import RebirthApplicationStatus
+    from apps.souls.models import Civilization
+
+    if soul.home_civilization != Civilization.CHINESE:
+        return None
+    return (soul.rebirth_applications.filter(cycle=soul.life_index, status=RebirthApplicationStatus.APPROVED)
+            .order_by("-created_at").values_list("desired_form", flat=True).first())
+
+
+def resolve_rebirth_form(soul, requested=None, reason=""):
+    """`(这一世转进哪一道, 灵魂所愿或 None, 改道原因)`(用户 2026-10-29)。
+
+    灵魂有已批准的申请:没指定就按它的意愿;指定了别的道必须写原因,否则 `RebirthFormReasonRequired`。
+    没有申请:照旧 `rebirth_form_for`(地府默认人道)。原因只在真的改了道时保留。"""
+    desired = approved_desired_form(soul)
+    form = rebirth_form_for(soul, requested or desired)
+    if desired and form != desired:
+        if not (reason or "").strip():
+            raise RebirthFormReasonRequired(desired, form)
+        return form, desired, reason.strip()
+    return form, desired, ""
+
+
+def _unserved_term(soul):
+    """本世一份受刑中(执行了、刑期未满)的处置的期满日(`{year, month, day}`),没有则 None。
+    排在计划检查之前:受刑中的灵魂计划自然也没走完,但「至某日」比「计划没走完」说得清楚。"""
+    from apps.disposition.expiry import effective_term_start, serving, term_end
+    from apps.souls.dates import to_representation
+
+    rows = Disposition.all_objects.filter(
+        soul_id=soul.pk, is_deleted=False, is_executed=True, is_eternal=False, expired_at__isnull=True,
+        sentence_years__isnull=False,
+    )
+    last_rebirth = soul.reincarnations.order_by("-reincarnated_at").values_list("reincarnated_at", flat=True).first()
+    if last_rebirth is not None:
+        rows = rows.filter(create_time__gt=last_rebirth)
+    for row in rows:
+        if serving(row):
+            end = term_end(effective_term_start((row.term_start_year, row.term_start_month, row.term_start_day),
+                                                row.executed_at), row.sentence_years, row.lost_days)
+            return to_representation(*end)
+    return None
+
+
 def assert_may_be_reborn(soul, disposition=None):
     """`reborn` / `complete` 在动灵魂状态之前问一次,`complete_rebirth` 在灵魂行锁下再问一次。"""
     from apps.sentence_plan.models import SentenceNode, SentenceNodeStatus
     from apps.sentence_plan.services import in_progress_plan
     from apps.soul_accounts.models import RebirthApplicationStatus
 
+    unserved = _unserved_term(soul)
+    if unserved is not None:
+        raise RebirthBlocked("term_not_served", "The soul's sentence has not been served out yet.",
+                             term_end=unserved)
     if in_progress_plan(soul) is not None:
         raise RebirthBlocked("plan_in_progress", "The soul's sentence plan is not finished.")
     # 赦免(撤销计划 / 手动结束)把永久节点改成 ABORTED / CANCELLED / REMOVED,那份永久处置就不再挡。
@@ -298,6 +363,7 @@ class ReincarnationService:
         rebirth_form: str | None = None,
         notes: str = "",
         rebirth_continent: str = "",
+        rebirth_form_reason: str = "",
     ):
         """
         Complete a reincarnation cycle:
@@ -352,7 +418,8 @@ class ReincarnationService:
             # count.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
             assert_may_be_reborn(soul, disposition)
-            rebirth_form = rebirth_form_for(soul, rebirth_form)
+            # 灵魂已批准的申请里的意愿是默认;官员改了要写原因,记进下面的事件(用户 2026-10-29)。
+            rebirth_form, desired_form, form_reason = resolve_rebirth_form(soul, rebirth_form, rebirth_form_reason)
             assert_continent_applies(soul, rebirth_form, rebirth_continent)
 
             # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
@@ -455,9 +522,11 @@ class ReincarnationService:
             soul.baptism = Soul.Baptism.UNRECORDED
             soul.denied_immortality = None
             soul.neutral_in_life = None
-            # 四大部洲各有人寿(docs/07 §人道表):生在某洲,阳寿默认 = 出生日 + 该洲人寿,官员仍可改。
-            # 出生日取转世完成这一天 —— 这里不写 birth_*,那几列仍是上一世的出生日,拿它算会差一整世。
-            fated = continent_fated_death(rebirth_continent, timezone.localdate())
+            # 这一世生于转世完成这一天(用户 2026-10-29):birth_* 改成今天,不再留着上一世的出生日。
+            # 四大部洲各有人寿(docs/07 §人道表):生在某洲,阳寿默认 = 这个出生日 + 该洲人寿,官员仍可改。
+            born = timezone.localdate()
+            soul.birth_year, soul.birth_month, soul.birth_day = born.year, born.month, born.day
+            fated = continent_fated_death(rebirth_continent, born)
             if fated:
                 soul.fated_death_year, soul.fated_death_month, soul.fated_death_day = fated
             soul.save()
@@ -501,6 +570,8 @@ class ReincarnationService:
                     "cycle_count": cycle_count,
                     "new_identity": new_identity or soul.name,
                     "rebirth_form": rebirth_form,
+                    "desired_form": desired_form,
+                    "rebirth_form_reason": form_reason,
                 }
             )
 

@@ -591,6 +591,13 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     # 灵魂编号是灵魂的标识,不是账号数据(Design 第四十批 第四节 4):不论调用者有没有 `soul_account.read`
     # 都给,审判官在官员端灵魂详情的页头要看到它。还没开过号的灵魂是 null。
     soul_code = serializers.CharField(read_only=True, allow_null=True)
+    # 本世已批准的转生申请里灵魂选的道(用户 2026-10-29):办转世时默认选它,改了要写原因。没有为 null。
+    desired_rebirth_form = serializers.SerializerMethodField()
+
+    def get_desired_rebirth_form(self, obj) -> str | None:
+        from apps.reincarnation.services import approved_desired_form
+
+        return approved_desired_form(obj)
 
     class Meta:
         model = Soul
@@ -603,7 +610,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
-            "soup_taken_at",
+            "soup_taken_at", "desired_rebirth_form",
             *ARCHIVE_FIELDS,
         ]
         read_only_fields = [
