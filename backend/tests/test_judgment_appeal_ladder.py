@@ -170,15 +170,38 @@ def test_a_rejecting_station_cuts_the_ladder(case):
         "workflow_status"] == "REJECTED"
 
 
-def test_a_finished_ladder_is_passed_to_the_end(case):
+def test_the_final_station_awaits_while_the_flow_stands_on_it(case):
+    """Design 55b U-6: every station before the final one passed and the flow stands on the final node."""
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    _drive(JudgmentAppeal.all_objects.get(pk=appeal_id).workflow, ["PASSED"] * 3, case["reviewer"])
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (4, 4)
+    assert _states(ladder) == [(1, "PASSED", "PASSED 意见"), (2, "PASSED", "PASSED 意见"),
+                               (3, "PASSED", "PASSED 意见"), (4, "AWAITING_FINAL", None)]
+    assert "CURRENT" not in [s["state"] for s in ladder["stations"]]
+
+
+def test_a_finished_ladder_awaits_the_final_decision_then_is_passed_to_the_end(case):
     _upheld_once(case)
     appeal_id = _escalate(case).data["id"]
     workflow = JudgmentAppeal.all_objects.get(pk=appeal_id).workflow
-    _drive(workflow, ["PASSED"] * 3, case["reviewer"])
-    _drive(workflow, ["PASSED"], sp.officer("fengdu", "JUDGE", case["judgment"].tenant))
+    _drive(workflow, ["PASSED"] * 2, case["reviewer"])
+    # One station short: the final one is still AHEAD, not awaiting.
+    assert [s["state"] for s in _ladder(case, appeal_id)["stations"]] == ["PASSED", "PASSED", "CURRENT", "AHEAD"]
+    _drive(workflow, ["PASSED"], case["reviewer"])
+    final_judge = sp.officer("fengdu", "JUDGE", case["judgment"].tenant)
+    _drive(workflow, ["PASSED"], final_judge)
+    # The flow completed and the appeal waits on the final judge's decide: 站梯走完 · 待终审.
     ladder = _ladder(case, appeal_id)
     assert (ladder["current"], ladder["total"]) == (None, 4)
-    assert [s["state"] for s in ladder["stations"]] == ["PASSED"] * 4
+    assert _states(ladder)[-1] == (4, "AWAITING_FINAL", None)
+    assert [s["state"] for s in ladder["stations"][:3]] == ["PASSED"] * 3
+
+    response = officer_client(final_judge).post(f"{HALL}{appeal_id}/decide/", {"outcome": "UPHELD", "note": "维持"},
+                                                format="json")
+    assert response.status_code == 200, response.data
+    assert [s["state"] for s in _ladder(case, appeal_id)["stations"]] == ["PASSED"] * 4
 
 
 def test_a_running_ladder_waits_in_the_unclaimed_queue_not_under_review(case):

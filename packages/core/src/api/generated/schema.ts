@@ -10111,9 +10111,10 @@ export interface components {
          *     * `REJECTED` - REJECTED
          *     * `CURRENT` - CURRENT
          *     * `AHEAD` - AHEAD
+         *     * `AWAITING_FINAL` - AWAITING_FINAL
          * @enum {string}
          */
-        AppealLadderStateEnum: "PASSED" | "REJECTED" | "CURRENT" | "AHEAD";
+        AppealLadderStateEnum: "PASSED" | "REJECTED" | "CURRENT" | "AHEAD" | "AWAITING_FINAL";
         AppealLadderStation: {
             order: number;
             /** Format: uuid */

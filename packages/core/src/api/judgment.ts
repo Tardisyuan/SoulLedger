@@ -714,6 +714,8 @@ export type JudgmentAppealDecidePayload = Schemas["JudgmentAppealDecide"];
 /**
  * 上诉的站梯(第五十五批;`appeals.ladder`):一次复核为 null。一站 = 一个人工审批节点,按顺序;
  * 流程已结束(`workflow_status` 是 COMPLETED / REJECTED)时剩下的 AHEAD 写「不再审」。不带审批人。
+ * `is_final` 那一站画在站梯下面单独一行「终审」(第五十五批补充);它的 `AWAITING_FINAL` = 前面各站都过了、
+ * 等终审官员作出结论(终审节点还在当前,或流程已走完而申诉还没有结论)。
  */
 export type AppealLadder = Schemas["AppealLadder"];
 export type AppealLadderStation = Schemas["AppealLadderStation"];
