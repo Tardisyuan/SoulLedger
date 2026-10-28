@@ -181,3 +181,25 @@ def test_only_a_european_soul_records_a_neutral_life(admin_user):
     assert res.status_code == 200 and res.data["neutral_in_life"] is True, res.data
     res = client.patch(f"/api/v1/souls/{_soul(code='CN_DIYU').pk}/", {"neutral_in_life": True}, format="json")
     assert res.status_code == 400 and "neutral_in_life" in res.data, res.data
+
+
+# ── 核对读的文明与路由一致(2026-10-29 审查)─────────────────────────────────
+
+
+def test_a_residing_european_souls_reopened_case_is_checked_as_european(cn_tenant):
+    """重开审判按原属文明路由(`conclude_reopened` → `_route_home_realm`),大罪 / 小罪的核对也要按原属读。
+    此前读管辖文明:原属欧洲、暂居地府的灵魂重开时一条未悔的大罪也能判 PASSED。"""
+    from apps.judgment.models import JudgmentKind
+    from apps.judgment.services import JudgmentConclusionService
+
+    eu = Tenant.objects.get_or_create(code="EU_HEAVEN_HELL", defaults={"display_name": "EU"})[0]
+    soul = Soul.objects.create(name="暂居", tenant=cn_tenant, home_tenant=eu, current_state=SoulState.DISPOSED,
+                               death_year=1300)
+    assert (soul.civilization, soul.home_civilization) == ("CHINESE", "EUROPEAN")
+    _demerit(soul, SinGravity.MORTAL)
+    reopen = Judgment.objects.create(soul=soul, tenant=eu, civilization="EUROPEAN", kind=JudgmentKind.REOPEN,
+                                     court="重开审判")
+    with pytest.raises(PlanChangeRefusedError) as refused:
+        JudgmentConclusionService.conclude_judgment(reopen, Verdict.PASSED)
+    assert refused.value.code == "mortal_sin_unrepented"
+    assert Judgment.all_objects.get(pk=reopen.pk).verdict is None

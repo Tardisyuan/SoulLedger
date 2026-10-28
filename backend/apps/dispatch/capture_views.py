@@ -101,8 +101,8 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     def create(self, request):
         body = CaptureIssueSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        tenant = getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
-        soul = Soul.objects.filter(pk=body.validated_data["soul"], tenant=tenant).first()
+        # 与 `due/` 同一个范围(2026-10-29 审查):此前按 `tenant=<请求的租户>` 过滤,没有租户的 ADMIN 永远 404。
+        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=body.validated_data["soul"]).first()
         if soul is None:
             return Response({"code": "not_found", "detail": "Soul not found."}, status=status.HTTP_404_NOT_FOUND)
         warrant = capture_service.issue(soul, body.validated_data.get("escort"))

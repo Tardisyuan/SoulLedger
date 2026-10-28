@@ -32,13 +32,11 @@ import { cn } from "@/lib/utils";
  * PENDING / PROCESSED / FAILED 说的正是一次同步操作的结果。登记条目随之删除。
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  // 规范 v3:还没处理不是风险,中性;部分失败(PARTIAL)是可补救的风险,仍是警示;FAILED 是错误。
+  // 规范 v3:还没处理不是风险,中性;FAILED 是错误。ACCEPTED / PARTIAL 已从后端删去(2026-10-29):从没有行写过它们。
   PENDING: "neutral",
-  ACCEPTED: "info",
   PROCESSED: "success",
   FAILED: "error",
   DUPLICATE: "neutral",
-  PARTIAL: "warning",
 };
 
 const STATUSES = Object.keys(STATUS_TONES);

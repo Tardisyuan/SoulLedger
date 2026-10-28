@@ -387,8 +387,7 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
         """How many of this tenant's registrations need a human.
 
         FAILED is the only anomalous state a row is ever written in: PENDING
-        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
-        its job, and PARTIAL is a batch-level answer no row carries. The status
+        is in flight and DUPLICATE is the idempotency check doing its job. The status
         goes on the wire so the dashboard links to the same filter it counted.
         """
         anomaly = DeathRegistrationStatus.FAILED

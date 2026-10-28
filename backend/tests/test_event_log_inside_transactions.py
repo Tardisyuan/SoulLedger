@@ -612,7 +612,7 @@ def _capture(step):
 
 
 def _wangsi(step):
-    """枉死城的冤情申诉(apps/judgment/wangsi.py):提出 / 属实 / 不属实,事件与申诉那几列同进退。"""
+    """枉死城的冤情申诉(apps/judgment/wangsi.py):提出 / 属实 / 超度 / 不属实,事件与申诉那几列同进退。"""
     from apps.judgment import wangsi
     from apps.judgment.models import GrievanceLevel, GrievanceStatus
 
@@ -631,6 +631,9 @@ def _wangsi(step):
         if step == "uphold":
             return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=True, note="属实"),
                     lambda: status() == GrievanceStatus.UPHELD, "WANGSI_GRIEVANCE_UPHELD")
+        if step == "deliver":
+            return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=True, note="属实", deliver=True),
+                    lambda: status() == GrievanceStatus.DELIVERED, "WANGSI_GRIEVANCE_DELIVERED")
         return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=False, note="不属实"),
                 lambda: status() == GrievanceStatus.REJECTED, "WANGSI_GRIEVANCE_REJECTED")
     return path
@@ -640,6 +643,7 @@ PATHS = {
     "wangsi_file/WANGSI_GRIEVANCE_FILED": _wangsi("file"),
     "wangsi_uphold/WANGSI_GRIEVANCE_UPHELD": _wangsi("uphold"),
     "wangsi_reject/WANGSI_GRIEVANCE_REJECTED": _wangsi("reject"),
+    "wangsi_deliver/WANGSI_GRIEVANCE_DELIVERED": _wangsi("deliver"),
     "die/DIYU_STATION_CHANGED": _die("DIYU_STATION_CHANGED"),
     "station_move/DIYU_STATION_CHANGED": _station_move,
     "capture_issue/CAPTURE_WARRANT_ISSUED": _capture("issue"),
