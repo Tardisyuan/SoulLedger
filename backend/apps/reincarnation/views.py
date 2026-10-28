@@ -110,7 +110,12 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         """
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
-        from apps.reincarnation.services import ReincarnationService, assert_may_be_reborn, rebirth_form_for
+        from apps.reincarnation.services import (
+            ReincarnationService,
+            assert_continent_applies,
+            assert_may_be_reborn,
+            rebirth_form_for,
+        )
         from apps.souls.models import Soul, SoulState
 
         # Body first, before the soul and disposition lookups: a malformed
@@ -127,6 +132,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         disposition_id = request.data.get("disposition_id")
         new_identity = payload.validated_data.get("new_identity", "")
         rebirth_form = payload.validated_data.get("rebirth_form")
+        rebirth_continent = payload.validated_data.get("rebirth_continent", "")
 
         # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
         user_tenant = getattr(request, "tenant", None)
@@ -166,6 +172,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         LedgerService.assert_rebirth_capable(soul)
         assert_may_be_reborn(soul, disposition)
         rebirth_form_for(soul, rebirth_form)  # 希腊灵魂指定了六道:400,在动状态之前
+        assert_continent_applies(soul, rebirth_form_for(soul, rebirth_form), rebirth_continent)  # 同上:部洲只在人道
 
         if soul.current_state != SoulState.REINCARNATING:
             moved = soul.transition_to(
@@ -179,6 +186,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
             disposition=disposition,
             new_identity=new_identity,
             rebirth_form=rebirth_form,
+            rebirth_continent=rebirth_continent,
         )
 
         return Response(ReincarnationSerializer(reincarnation).data, status=status.HTTP_201_CREATED)

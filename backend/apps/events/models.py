@@ -131,6 +131,16 @@ class EventType(models.TextChoices):
     # payload:`from` / `to`(passage)与动到的审判 id。
     DUAT_PASSAGE_CHANGED = "DUAT_PASSAGE_CHANGED"
 
+    # 地府十三站与勾魂(2026-10-28,只在地府)。都记在灵魂自己的时间线上,与那一笔写入同一事务,不推送给灵魂。
+    # DIYU_STATION_CHANGED(apps/souls/stations.py):换了一站。payload:from / to / via(death / court / soup / officer)。
+    # 勾魂牒(apps/dispatch/capture.py):发牒 / 拘到 / 交接(登记死亡)/ 撤销。payload:牒 id、鬼差、状态、发牒城隍名;
+    # 撤销另带 via(officer / death:别的路先登记了死亡)。不带经办官员与撤销理由。
+    DIYU_STATION_CHANGED = "DIYU_STATION_CHANGED"
+    CAPTURE_WARRANT_ISSUED = "CAPTURE_WARRANT_ISSUED"
+    SOUL_CAPTURED = "SOUL_CAPTURED"
+    CAPTURE_HANDED_OVER = "CAPTURE_HANDED_OVER"
+    CAPTURE_WARRANT_CANCELLED = "CAPTURE_WARRANT_CANCELLED"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`
