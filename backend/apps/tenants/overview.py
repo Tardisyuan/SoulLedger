@@ -43,9 +43,12 @@ def hall_row(tenant) -> dict:
     today = timezone.localdate()
     at_god = Q(city_god_status__in=AT_CITY_GOD)
     # 候着的:枉死城、埃及木乃伊 70 天(都看 `held_until`),以及到不了殿的埃及案(无名、葬仪不当,永远候着),
-    # 以及滞留阿刻戎岸边的希腊原审(未葬 / 无渡资,`claims._assert_not_held`)。
+    # 以及滞留阿刻戎岸边的希腊原审(未葬 / 无渡资,`claims._assert_not_held`)—— 未葬满百年的已得渡,不算。
+    from apps.souls import acheron
+
     is_held = (Q(held_until__gt=today) | Q(duat_stage__in=DUAT_BARRED)
-               | (Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL) & ~Q(soul__ferry_passage="")))
+               | (Q(civilization="GREEK", kind=JudgmentKind.ORIGINAL) & ~Q(soul__ferry_passage="")
+                  & ~acheron.crossed_q(today, prefix="soul__")))
     held = ~at_god & is_held
     claimed = ~at_god & ~is_held & Q(claimed_by__isnull=False)
     unclaimed = ~at_god & ~is_held & Q(claimed_by__isnull=True)

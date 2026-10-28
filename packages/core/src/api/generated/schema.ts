@@ -17055,6 +17055,7 @@ export interface components {
             /** @description Whether this soul lived neither for God nor against him — Dante's neutrals (Inf. III), who are outside the nine circles. European only. Null means unrecorded. */
             neutral_in_life?: boolean | null;
             ferry_passage?: components["schemas"]["FerryPassageEnum"] | components["schemas"]["BlankEnum"];
+            readonly ferry_century_passed?: boolean;
             description?: string;
             readonly merit_score?: number | null;
             readonly demerit_score?: number | null;
@@ -18960,6 +18961,7 @@ export interface components {
             /** @description Whether this soul lived neither for God nor against him — Dante's neutrals (Inf. III), who are outside the nine circles. European only. Null means unrecorded. */
             neutral_in_life?: boolean | null;
             ferry_passage?: components["schemas"]["FerryPassageEnum"] | components["schemas"]["BlankEnum"];
+            readonly ferry_century_passed: boolean;
             description?: string;
             readonly merit_score: number | null;
             readonly demerit_score: number | null;

@@ -37455,6 +37455,9 @@ components:
           oneOf:
           - $ref: '#/components/schemas/FerryPassageEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        ferry_century_passed:
+          type: boolean
+          readOnly: true
         description:
           type: string
         merit_score:
@@ -41452,6 +41455,9 @@ components:
           oneOf:
           - $ref: '#/components/schemas/FerryPassageEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        ferry_century_passed:
+          type: boolean
+          readOnly: true
         description:
           type: string
         merit_score:
@@ -41525,6 +41531,7 @@ components:
       - date_problems
       - demerit_score
       - diyu_station
+      - ferry_century_passed
       - home_civilization
       - home_tenant
       - id

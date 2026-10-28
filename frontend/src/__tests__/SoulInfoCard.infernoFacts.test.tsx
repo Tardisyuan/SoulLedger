@@ -92,6 +92,16 @@ describe("SoulInfoCard:中立者与过河(2026-10-28)", () => {
     expect(screen.queryByText("UNBURIED")).toBeNull();
   });
 
+  it("未葬满百年:同一行注明可渡;没满不注", () => {
+    card({ civilization: "GREEK", ferry_passage: "UNBURIED", ferry_century_passed: true } as Partial<Soul>);
+    expect(screen.getByTestId("soul-ferry-passage")).toHaveTextContent("岸边已满百年，可渡");
+  });
+
+  it("未葬未满百年:不注可渡", () => {
+    card({ civilization: "GREEK", ferry_passage: "UNBURIED", ferry_century_passed: false } as Partial<Soul>);
+    expect(screen.queryByTestId("soul-ferry-century-passed")).toBeNull();
+  });
+
   it("希腊灵魂已葬有渡资:不画", () => {
     card({ civilization: "GREEK", ferry_passage: "" } as Partial<Soul>);
     expect(screen.queryByTestId("soul-ferry-passage")).toBeNull();

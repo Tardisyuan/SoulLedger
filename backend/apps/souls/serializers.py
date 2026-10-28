@@ -1,11 +1,13 @@
 """
 REST serializers for Soul app.
 """
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.souls import acheron
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Soul, SoulState
@@ -563,6 +565,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     duat_passage = serializers.ChoiceField(choices=Soul.DuatPassage.choices, allow_blank=True, required=False)
     # 希腊:未葬 / 无渡资者滞留阿刻戎岸边(`Soul.ferry_passage`)。空 = 已葬且有渡资。
     ferry_passage = serializers.ChoiceField(choices=Soul.FerryPassage.choices, allow_blank=True, required=False)
+    # 未葬者在岸边游荡满一百年后得渡(Aen. 6.325-330,`apps/souls/acheron.py`):true = 案子不再因未葬被拦。
+    ferry_century_passed = serializers.SerializerMethodField()
     # 地府十三站(docs/06 §一,`Soul.diyu_station`):只读,挪站走 `POST /souls/{id}/station/`。空 = 不在路上。
     diyu_station = serializers.ChoiceField(choices=Soul.DiyuStation.choices, allow_blank=True, read_only=True)
     # 四大部洲(docs/07 §人道,`Soul.birth_continent`):这一世生在哪一洲,官员登记。空 = 不详。只在地府。
@@ -595,7 +599,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "duat_passage", "birth_name",
             "diyu_station", "birth_continent",
-            "baptism", "denied_immortality", "neutral_in_life", "ferry_passage",
+            "baptism", "denied_immortality", "neutral_in_life", "ferry_passage", "ferry_century_passed",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
@@ -715,6 +719,9 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
 
     def get_is_eval_identity(self, obj) -> bool:
         return _is_eval_soul(self, obj)
+
+    def get_ferry_century_passed(self, obj) -> bool:
+        return acheron.crossed(obj, timezone.localdate())
 
     def to_representation(self, instance):
         # Remove karmic_balance from output for VIEWER (use the computed field name)

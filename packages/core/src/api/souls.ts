@@ -191,6 +191,8 @@ export interface Soul extends SoulBase, ArchiveFields {
   neutral_in_life?: boolean | null;
   /** 只希腊:未葬 / 无渡资。 */
   ferry_passage?: SoulFerryPassage;
+  /** 未葬且死后满一百年(Aen. 6.325-330,`apps/souls/acheron.py`):不再滞留岸边。只读。 */
+  ferry_century_passed?: boolean;
   /** 地府十三站:此刻在哪一站;"" = 不在路上。只读,挪站走 `soulsApi.moveStation`。 */
   diyu_station?: SoulDiyuStation;
   /** 地府四大部洲:这一世生在哪一洲;"" = 不详。 */

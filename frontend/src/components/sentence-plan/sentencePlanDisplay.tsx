@@ -60,6 +60,8 @@ export const REFUSAL_CODES = [
   "retry_with_open_cross", "retry_not_a_destination",
   // 欧洲 大罪 / 小罪(2026-10-28,DispositionService.refuse_against_gravity):结案裁决与已采信的罪不符。
   "mortal_sin_unrepented", "no_mortal_sin",
+  // 埃及否定告白(2026-10-28,apps/judgment/confessions.py):有一条记为「不实」,不能判通过。
+  "untruthful_confession",
 ] as const;
 
 export function refusalKey(error: unknown): string {

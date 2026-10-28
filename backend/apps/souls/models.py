@@ -237,7 +237,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     #: 希腊(2026-10-28):卡戎只渡已葬者(Aen. 6.298-330;Il. 23.71-74 帕特洛克罗斯的魂未葬不得过河),也收一枚
     #: 奥波尔(Lucian, De luctu 10)—— docs/01_希腊冥府整体架构.md §2.3。空 = 已葬且有渡资:照常过河受审。
     #: 有值时灵魂滞留阿刻戎岸边(死亡登记时它已在 GR_ACHERON),案子不能认领、不能结案
-    #: (`claims._assert_not_held`,409 `unferried`)。只有希腊读它。
+    #: (`claims._assert_not_held`,409 `unferried`)—— 未葬者满一百年后得渡(`apps/souls/acheron.py`)。只有希腊读它。
     class FerryPassage(models.TextChoices):
         UNBURIED = "UNBURIED", "未葬"
         NO_FARE = "NO_FARE", "无渡资"
