@@ -465,7 +465,7 @@ export function JudgmentAppealScreen() {
             {t("appeals.escalate_last")}
           </Txt>
         ) : null}
-        <Button testID="appeal-submit" title={t("appeals.submit")} busy={busy} onPress={() => void submit()} />
+        <Button testID="appeal-submit" title={t(params.escalate ? "appeals.escalate" : "appeals.submit")} busy={busy} onPress={() => void submit()} />
         <Button testID="appeal-cancel" kind="secondary" title={t("soul_app.common.cancel")} onPress={() => navigation.goBack()} />
       </View>
       {guard.sheet}
