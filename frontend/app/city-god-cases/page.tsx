@@ -156,7 +156,8 @@ function CityGodCasesContent() {
               </td>
               <td className={cn("px-3 py-2 text-sm whitespace-nowrap", greyed && SUBTLE)}>
                 {c.city_god_name}
-                {c.city_god_rank && <span className="ml-1 text-2xs"><DomainEnum namespace="cityGods.ranks" value={c.city_god_rank} /></span>}
+                {/* 级别写成「· 府」小字,和「· 兜底」同一种写法(第五十七批 D-4)。 */}
+                {c.city_god_rank && <span className="text-2xs"> · <DomainEnum namespace="cityGods.rank_short" value={c.city_god_rank} /></span>}
                 {c.city_god && defaults.has(c.city_god) && !c.matched_region ? ` · ${t("cityGods.default_badge")}` : ""}
               </td>
               <td className={cn("px-3 py-2 whitespace-nowrap", c.city_god_status === "RETURNED" && "font-semibold")}>

@@ -10,7 +10,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { ClauseLink, clauseCode, hasRecordFacts, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
+import { ClauseLink, clauseCode, hasRecordFacts, RecordFacts, SinGravityMark } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -136,8 +136,12 @@ export function JudgmentEvidenceAdmission({
                 )}
                 <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))] max-md:hidden">{when}</span>
                 <span className="min-w-0">
-                  <span className={`block text-sm text-[oklch(var(--color-ink))] truncate ${admitted ? "" : "line-through"}`} title={label}>
-                    {label || <MissingValue kind="unrecorded" />}
+                  <span className="flex min-w-0 items-center">
+                    <span className={`min-w-0 text-sm text-[oklch(var(--color-ink))] truncate ${admitted ? "" : "line-through"}`} title={label}>
+                      {label || <MissingValue kind="unrecorded" />}
+                    </span>
+                    {/* 欧洲大罪 / 小罪(第五十七批 E-1):落判前要一眼看见会挡判决的那一条,所以不随事目截断。 */}
+                    <SinGravityMark record={record} />
                   </span>
                   <span
                     className="block text-xs text-[oklch(var(--color-ink-muted))] truncate"

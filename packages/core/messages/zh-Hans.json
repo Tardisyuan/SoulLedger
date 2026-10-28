@@ -2388,8 +2388,30 @@
     "offence_field": {
       "label": "罪目",
       "none": "未填",
-      "routes_to": "判有罪时自动送{{court}}",
-      "fallback": "未填罪目:判有罪时按严重度选殿"
+      "routes_to": "判有罪时送 {{court}}",
+      "fallback": "未填罪目:判有罪时按严重度选殿",
+      "placeholder": "未填 · 按严重度选殿",
+      "no_match": "没有这个罪目",
+      "kings": {
+        "2": "楚江王",
+        "3": "宋帝王",
+        "4": "五官王",
+        "5": "阎罗王",
+        "6": "卞城王",
+        "7": "泰山王",
+        "8": "都市王",
+        "9": "平等王"
+      },
+      "hells": {
+        "2": "活大地狱",
+        "3": "黑绳大地狱",
+        "4": "合大地狱",
+        "5": "叫唤大地狱",
+        "6": "大叫唤大地狱",
+        "7": "热恼大地狱",
+        "8": "大热恼大地狱",
+        "9": "阿鼻大地狱"
+      }
     },
     "wrongful_death_causes": {
       "ACCIDENT": "意外身亡",
@@ -2430,7 +2452,12 @@
         "grievance_not_major": "冤情等级须为「重」或「极重」才能提前释放。",
         "not_city_god_officer": "只有这位城隍名下的官员或殿管理员能审核。",
         "not_pending": "这件案子已结案。"
-      }
+      },
+      "release_title": "提前释放{{name}}？",
+      "release_body": "属实：{{name}}离开枉死城，这桩审判现在就可以认领，不再候到 {{date}}。",
+      "release_irreversible": "释放后不能收回。",
+      "release_gate": "冤情到「{{level}}」或以上才能判属实",
+      "released_line": "枉死 · {{date}} 已提前释放"
     },
     "confessions": {
       "title": "四十二条否定告白",
@@ -2442,13 +2469,18 @@
       "note": "备注",
       "note_placeholder": "依据（可空）",
       "row_label": "第 {{n}} 位判官 {{assessor}}",
-      "empty": "本殿还没有四十二条告白的条文（种子未运行）。",
       "errors": {
         "concluded": "已结案，告白记录不能再改。",
         "not_weighed": "这件案子不称心，没有否定告白。",
         "unknown_clause": "本殿没有这一位判官。",
         "generic": "没有记下，请重试。"
-      }
+      },
+      "only_unrecorded": "只看未记",
+      "not_seeded": "告白条目还没有导入"
+    },
+    "ferry": {
+      "barred_unburied": "未葬，不得过河",
+      "barred_no_fare": "无渡资，不得过河"
     }
   },
   "audit": {
@@ -7556,6 +7588,16 @@
       "QIAODAO": "桥道司",
       "CIJI": "祠祭司",
       "SHUYUN": "输运司"
+    },
+    "bureaus_preset": "按{{level}}预设",
+    "bureaus_preset_confirm": "会替换现在勾选的 {{n}} 司",
+    "bureaus_summary": "{{names}} 等 {{n}} 司",
+    "bureaus_group_count": "{{selected}} / {{total}}",
+    "rank_short": {
+      "PROVINCE": "都",
+      "PREFECTURE": "府",
+      "DEPARTMENT": "州",
+      "COUNTY": "县"
     }
   },
   "cityGodCases": {

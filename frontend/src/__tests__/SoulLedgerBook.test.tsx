@@ -360,3 +360,24 @@ describe("功 and 过 carry no colour — the heads and the signs tell them apar
     expect(colouredElements(container)).toEqual([]);
   });
 });
+
+describe("欧洲大罪 / 小罪 (第五十七批 E-1)", () => {
+  it("未悔大罪 2px 方框、已告解 1px 方框、小罪只写灰字;没分级不画", () => {
+    const eu = { type: "DEMERIT" as const, civilization: "EUROPEAN" };
+    const { container } = renderBook([
+      record({ ...eu, id: "m", original_weight: 40, recorded_at: "2020-03-01T00:00:00Z", sin_gravity: "MORTAL" }),
+      record({ ...eu, id: "a", original_weight: 12, recorded_at: "2020-02-01T00:00:00Z", sin_gravity: "MORTAL_ABSOLVED" }),
+      record({ ...eu, id: "v", original_weight: 2, recorded_at: "2020-01-01T00:00:00Z", sin_gravity: "VENIAL" }),
+      record({ ...eu, id: "n", original_weight: 1, recorded_at: "2019-01-01T00:00:00Z" }),
+    ]);
+    const mark = (g: string) => container.querySelector(`[data-sin-gravity="${g}"]`) as HTMLElement;
+    expect(mark("MORTAL").className).toContain("border-2");
+    expect(mark("MORTAL_ABSOLVED").className).toMatch(/(^|\s)border(\s|$)/);
+    expect(mark("MORTAL_ABSOLVED").className).not.toContain("border-2");
+    expect(mark("VENIAL").className).not.toMatch(/(^|\s)border/);
+    expect(mark("MORTAL")).toHaveTextContent("大罪 · 未悔");
+    expect(container.querySelectorAll("[data-sin-gravity]")).toHaveLength(3);
+    // 不用颜色:三级都在 ink 系里。
+    expect(colouredElements(container)).toEqual([]);
+  });
+});

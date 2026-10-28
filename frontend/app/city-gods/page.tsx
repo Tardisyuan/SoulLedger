@@ -26,7 +26,11 @@ import { CityGodEditor } from "@/src/components/city-gods/CityGodEditor";
 const MUTED = "text-sm text-[oklch(var(--color-ink-subtle))]";
 
 function CityGodsContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const bureauSummary = (bureaus: readonly string[]) => {
+    const names = bureaus.slice(0, 2).map((b) => t(`cityGods.bureau_names.${b}`)).join(locale === "zh-Hans" ? "、" : ", ");
+    return bureaus.length > 2 ? t("cityGods.bureaus_summary", { names, n: String(bureaus.length) }) : names;
+  };
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission("judgment.assign");
@@ -87,7 +91,8 @@ function CityGodsContent() {
               ) : <span className={MUTED}>{t("cityGods.rank_none")}</span>}
             </td>
             <td className="px-3 py-2 text-sm" title={(g.bureaus ?? []).map((b) => t(`cityGods.bureau_names.${b}`)).join(" · ")}>
-              {g.bureaus?.length ? t("cityGods.bureau_count", { count: String(g.bureaus.length) }) : <MissingValue kind="unrecorded" />}
+              {/* 前两个司名 +「等 N 司」(第五十七批 D-4):只写数字看不出区别;全名在悬浮提示里。 */}
+              {g.bureaus?.length ? bureauSummary(g.bureaus) : <MissingValue kind="unrecorded" />}
             </td>
             <td className="px-3 py-2 text-sm">
               {g.regions?.length ? g.regions.join(" · ") : g.is_default ? <span className={MUTED}>{t("cityGods.default_regions")}</span> : <MissingValue kind="unrecorded" />}

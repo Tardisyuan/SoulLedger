@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, wangsiApi, WANGSI_ERROR_CODES, type Judgment } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
@@ -16,12 +16,19 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Button } from "@/src/components/ui/Button";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
+import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
+import { Segmented } from "@/src/components/ui/Segmented";
 
 /*
- * 地府案子在审判台「资料舱 · 供词」一栏顶上的两块(2026-10-28,临时版式,等 Design 定稿):
- *  - 罪目:按殿分组的下拉;选了之后说明判有罪时去哪一殿,没选说明退回按严重度。
- *  - 枉死城:只在枉死的案子上。死因、冤情等级两个下拉;冤情申诉(提出 → 属实 / 不属实)。
+ * 地府案子的两块(Design 第五十七批 D-1、D-2):
+ *  - 罪目:放在「戊 · 发落」最上面(罪目只用来决定送哪一殿,和发落是一件事)。可搜索的下拉按殿分组,
+ *    组头「殿序 · 殿王 · 狱名」;选中后一块浅底写「判有罪时送 九殿 · 平等王」+ 狱名小字。未填时控件里是占位,
+ *    不另起一行。结案(或不能改)只读一行「罪目 · 杀生 · 第九殿」。
+ *  - 枉死城:只在枉死的案子上,放在资料舱身份那一组下面。块头右侧和页头同一句(`untimelyLine`)。冤情 4 档用分段。
+ *    「属实 · 提前释放…」二次确认(ink 实底,不用危险色);冤情不到「重」按钮置灰、原因写在下面。判不实后申诉块回到
+ *    可提交,上一条记录灰字留在下面。
  * 未结案且持 `judgment.execute` 才可改,其余只读。
  */
 
@@ -37,65 +44,108 @@ function refusalCode(err: unknown): string | undefined {
   return (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
 }
 
+type Translate = ReturnType<typeof useI18n>["t"];
+type FormatDate = ReturnType<typeof useI18n>["formatDate"];
+
+/**
+ * 页头与枉死城块头同一句(D-2):候审期间「枉死 · 候至 日期 · 在枉死城」;申诉属实已提前释放「枉死 · 日期 已提前释放」;
+ * 其余只写「枉死」。
+ */
+export function untimelyLine(judgment: Judgment, t: Translate, formatDate: FormatDate): string {
+  if (judgment.grievance_status === "UPHELD" && judgment.grievance_decided_at) {
+    return t("judgment.wangsi.released_line", { date: formatDate(judgment.grievance_decided_at) });
+  }
+  if (isHeldUntilFatedDate(judgment)) {
+    return [t("judgment.untimely"), t("judgment.held_until", { date: judgment.held_until as string }), t("judgment.in_city")].join(" · ");
+  }
+  return t("judgment.untimely");
+}
+
+function courtLine(court: number, t: Translate) {
+  return `${t(`workflow.court.court_${court}`)} · ${t(`judgment.offence_field.kings.${court}`)}`;
+}
+
 export function OffenceField({ judgment, editable }: { judgment: Judgment; editable: boolean }) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const refresh = useRefresh();
   const fieldId = useId();
-  const value = judgment.offence ?? "";
+  const saved = judgment.offence ?? "";
+  const label = (o: string) => t(`judgment.offences.${o}`);
+  const [picked, setPicked] = useState(saved);
+  const [search, setSearch] = useState(saved ? label(saved) : "");
   const save = useMutation({
     mutationFn: (offence: Judgment["offence"]) => judgmentApi.update(judgment.id, { offence }),
     onSuccess: refresh,
     onError: () => showToast(t("common.error"), "error"),
   });
-  const court = offenceCourt(value);
+  const court = offenceCourt(saved);
+
+  if (!editable) {
+    return (
+      <p className="mb-4 text-sm text-[oklch(var(--color-ink))]" data-testid="desk-offence">
+        {t("judgment.offence_field.label")} · {saved ? <DomainEnum namespace="judgment.offences" value={saved} /> : t("judgment.offence_field.none")}
+        {court && ` · ${t(`workflow.court.court_${court}`)}`}
+      </p>
+    );
+  }
+
+  // 23 项,客户端筛就够:选中后输入框里是它的名字,这时列全部。
+  const query = search.trim() && !(picked && search === label(picked)) ? search.trim().toLowerCase() : "";
+  const options = OFFENCES_BY_COURT.flatMap((g) =>
+    g.offences.map((o) => ({
+      value: o,
+      label: label(o),
+      group: `${courtLine(g.court, t)} · ${t(`judgment.offence_field.hells.${g.court}`)}`,
+    })),
+  ).filter((o) => !query || o.label.toLowerCase().includes(query) || o.group.toLowerCase().includes(query));
+
   return (
-    <div className="mb-4" data-testid="desk-offence">
-      <label htmlFor={fieldId} className={LABEL}>{t("judgment.offence_field.label")}</label>
-      {editable ? (
-        <select
-          id={fieldId}
-          value={value}
-          disabled={save.isPending}
-          onChange={(e) => save.mutate(e.target.value as Judgment["offence"])}
-          className={fieldControl({ size: "sm" })}
-        >
-          <option value="">{t("judgment.offence_field.none")}</option>
-          {OFFENCES_BY_COURT.map((group) => (
-            <optgroup key={group.court} label={t(`workflow.court.court_${group.court}`)}>
-              {group.offences.map((o) => (
-                <option key={o} value={o}>{t(`judgment.offences.${o}`)}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      ) : (
-        <p className="mt-1 text-sm text-[oklch(var(--color-ink))]">
-          {value ? <DomainEnum namespace="judgment.offences" value={value} /> : t("judgment.offence_field.none")}
-        </p>
-      )}
-      {!judgment.is_final && (
-        <p className={HINT}>
-          {court
-            ? t("judgment.offence_field.routes_to", { court: t(`workflow.court.court_${court}`) })
-            : t("judgment.offence_field.fallback")}
-        </p>
+    <div className="mb-4 space-y-2" data-testid="desk-offence">
+      <SearchSelectField
+        id={fieldId}
+        name="offence"
+        label={t("judgment.offence_field.label")}
+        value={picked}
+        onValueChange={(v) => {
+          setPicked(v);
+          // 打字会先清掉选择(值变空);那不是「改成未填」,只有把框清空才是。
+          if (v && v !== saved) save.mutate(v as Judgment["offence"]);
+        }}
+        options={options}
+        searchText={search}
+        onSearchTextChange={(text) => {
+          setSearch(text);
+          if (text === "" && saved) save.mutate("" as Judgment["offence"]);
+        }}
+        disabled={save.isPending}
+        placeholder={t("judgment.offence_field.placeholder")}
+        loadingText={t("common.loading")}
+        emptyText={t("judgment.offence_field.no_match")}
+      />
+      {court && (
+        <div className="bg-[oklch(var(--color-surface-2))] px-3 py-2" data-testid="desk-offence-route">
+          <p className="text-sm text-[oklch(var(--color-ink))]">{t("judgment.offence_field.routes_to", { court: courtLine(court, t) })}</p>
+          <p className="text-2xs text-[oklch(var(--color-ink-muted))]">{t(`judgment.offence_field.hells.${court}`)}</p>
+        </div>
       )}
     </div>
   );
 }
 
 export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editable: boolean }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const refresh = useRefresh();
   const causeId = useId();
-  const levelId = useId();
   const [plea, setPlea] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const held = isHeldUntilFatedDate(judgment);
   const status = judgment.grievance_status ?? "";
+  const level = judgment.grievance_level ?? "";
+  const canRelease = GRIEVANCE_RELEASE_LEVELS.includes(level);
 
   const onRefused = (err: unknown) => {
     const code = refusalCode(err);
@@ -113,56 +163,78 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
   });
   const decide = useMutation({
     mutationFn: (upheld: boolean) => wangsiApi.decideGrievance(judgment.id, upheld, note.trim()),
-    onSuccess: () => { setNote(""); setError(null); void refresh(); },
-    onError: onRefused,
+    onSuccess: () => { setNote(""); setError(null); setConfirming(false); void refresh(); },
+    onError: (err) => { setConfirming(false); onRefused(err); },
   });
 
-  const select = (id: string, label: string, value: string, members: readonly string[], ns: string,
-    field: "wrongful_death_cause" | "grievance_level", shown: ReactNode) => (
-    <div>
-      <label htmlFor={id} className={LABEL}>{label}</label>
-      {editable ? (
-        <select
-          id={id}
-          value={value}
-          disabled={patch.isPending}
-          onChange={(e) => patch.mutate({ [field]: e.target.value } as Parameters<typeof judgmentApi.update>[1])}
-          className={fieldControl({ size: "sm" })}
-        >
-          <option value="">{t("judgment.wangsi.unset")}</option>
-          {members.map((m) => <option key={m} value={m}>{t(`${ns}.${m}`)}</option>)}
-        </select>
-      ) : (
-        <p className="mt-1 text-sm text-[oklch(var(--color-ink))]">
-          {value ? shown : t("judgment.wangsi.unset")}
-        </p>
-      )}
+  // 上一条申诉记录。判不实之后它留在提交框下面,灰字。
+  const lastRecord = status && (
+    <div
+      className={`mt-1 text-sm ${status === "REJECTED" ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}
+      data-testid="wangsi-grievance-status"
+    >
+      <DomainEnum namespace="judgment.grievance_statuses" value={status} />
+      {judgment.grievance_decided_at && ` · ${t("judgment.wangsi.decided_line", { date: formatDateTime(judgment.grievance_decided_at) })}`}
+      {judgment.grievance_plea && <p className="mt-1 whitespace-pre-wrap font-serif">{judgment.grievance_plea}</p>}
+      {judgment.grievance_note && <p className="mt-1 whitespace-pre-wrap text-[oklch(var(--color-ink-muted))]">{judgment.grievance_note}</p>}
     </div>
   );
+  const canFile = editable && held && (status === "" || status === "REJECTED");
 
   return (
-    <section className="mb-4 border-l-2 border-[oklch(var(--color-line))] pl-3" data-testid="desk-wangsi" aria-label={t("judgment.wangsi.title")}>
-      <p className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("judgment.wangsi.title")}</p>
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {select(causeId, t("judgment.wangsi.cause"), judgment.wrongful_death_cause ?? "", WRONGFUL_DEATH_CAUSES,
-          "judgment.wrongful_death_causes", "wrongful_death_cause",
-          <DomainEnum namespace="judgment.wrongful_death_causes" value={judgment.wrongful_death_cause} />)}
-        {select(levelId, t("judgment.wangsi.level"), judgment.grievance_level ?? "", GRIEVANCE_LEVELS,
-          "judgment.grievance_levels", "grievance_level",
-          <DomainEnum namespace="judgment.grievance_levels" value={judgment.grievance_level} />)}
+    <section className="mt-6" data-testid="desk-wangsi" aria-label={t("judgment.wangsi.title")}>
+      <div className="flex flex-wrap items-baseline gap-x-3 border-b border-[oklch(var(--color-block))] pb-1">
+        <p className="flex-1 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.wangsi.title")}</p>
+        <span className="text-xs text-[oklch(var(--color-ink))]" data-testid="wangsi-head-line">{untimelyLine(judgment, t, formatDate)}</span>
+      </div>
+
+      <div className="mt-3 space-y-3">
+        <div>
+          <label htmlFor={causeId} className={LABEL}>{t("judgment.wangsi.cause")}</label>
+          {editable ? (
+            <select
+              id={causeId}
+              value={judgment.wrongful_death_cause ?? ""}
+              disabled={patch.isPending}
+              onChange={(e) => patch.mutate({ wrongful_death_cause: e.target.value as Judgment["wrongful_death_cause"] })}
+              className={fieldControl({ size: "sm" })}
+            >
+              <option value="">{t("judgment.wangsi.unset")}</option>
+              {WRONGFUL_DEATH_CAUSES.map((m) => <option key={m} value={m}>{t(`judgment.wrongful_death_causes.${m}`)}</option>)}
+            </select>
+          ) : (
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink))]">
+              {judgment.wrongful_death_cause ? (
+                <DomainEnum namespace="judgment.wrongful_death_causes" value={judgment.wrongful_death_cause} />
+              ) : t("judgment.wangsi.unset")}
+            </p>
+          )}
+        </div>
+        <div>
+          <p className={LABEL}>{t("judgment.wangsi.level")}</p>
+          {editable ? (
+            <Segmented
+              label={t("judgment.wangsi.level")}
+              value={level}
+              options={GRIEVANCE_LEVELS.map((m) => ({ value: m, label: t(`judgment.grievance_levels.${m}`) }))}
+              onChange={(v) => patch.mutate({ grievance_level: v as Judgment["grievance_level"] })}
+              disabled={patch.isPending}
+              fill
+              className="mt-1"
+              data-testid="wangsi-level"
+            />
+          ) : (
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink))]">
+              {level ? <DomainEnum namespace="judgment.grievance_levels" value={level} /> : t("judgment.wangsi.unset")}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-3">
         <p className={LABEL}>{t("judgment.wangsi.grievance")}</p>
-        {status && (
-          <div className="mt-1 text-sm text-[oklch(var(--color-ink))]" data-testid="wangsi-grievance-status">
-            <DomainEnum namespace="judgment.grievance_statuses" value={status} />
-            {judgment.grievance_decided_at && ` · ${t("judgment.wangsi.decided_line", { date: formatDateTime(judgment.grievance_decided_at) })}`}
-            {judgment.grievance_plea && <p className="mt-1 whitespace-pre-wrap">{judgment.grievance_plea}</p>}
-            {judgment.grievance_note && <p className="mt-1 whitespace-pre-wrap text-[oklch(var(--color-ink-muted))]">{judgment.grievance_note}</p>}
-          </div>
-        )}
-        {editable && held && (status === "" || status === "REJECTED") && (
+        {!canFile && lastRecord}
+        {canFile && (
           <div className="mt-2 space-y-2">
             <textarea
               aria-label={t("judgment.wangsi.plea")}
@@ -170,12 +242,13 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
               onChange={(e) => setPlea(e.target.value)}
               rows={3}
               maxLength={2000}
-              className={fieldControl({ size: "sm" })}
+              className={`${fieldControl({ size: "sm" })} font-serif`}
             />
             <p className={HINT}>{t("judgment.wangsi.plea_hint")}</p>
             <Button type="button" size="sm" variant="secondary" data-testid="wangsi-file" disabled={!plea.trim()} loading={file.isPending} onClick={() => file.mutate()}>
               {t("judgment.wangsi.file")}
             </Button>
+            {lastRecord}
           </div>
         )}
         {editable && held && status === "FILED" && (
@@ -188,27 +261,42 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
               maxLength={2000}
               className={fieldControl({ size: "sm" })}
             />
-            <p className={HINT}>{t("judgment.wangsi.uphold_hint")}</p>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="primary"
                 data-testid="wangsi-uphold"
-                disabled={!note.trim() || !GRIEVANCE_RELEASE_LEVELS.includes(judgment.grievance_level ?? "")}
-                loading={decide.isPending}
-                onClick={() => decide.mutate(true)}
+                disabled={!note.trim() || !canRelease}
+                onClick={() => setConfirming(true)}
               >
-                {t("judgment.wangsi.uphold")}
+                {`${t("judgment.wangsi.uphold")}…`}
               </Button>
-              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-reject" disabled={!note.trim()} loading={decide.isPending} onClick={() => decide.mutate(false)}>
+              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-reject" disabled={!note.trim()} loading={decide.isPending && !confirming} onClick={() => decide.mutate(false)}>
                 {t("judgment.wangsi.reject")}
               </Button>
             </div>
+            {/* 冤情不到「重」:原因写在按钮下面,不藏在 tooltip 里。 */}
+            {!canRelease && (
+              <p className={HINT} data-testid="wangsi-release-gate">
+                {t("judgment.wangsi.release_gate", { level: t("judgment.grievance_levels.MAJOR") })}
+              </p>
+            )}
           </div>
         )}
         {error && <p role="alert" className="mt-1 text-xs text-[oklch(var(--color-danger))]">{error}</p>}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirming}
+        variant="info"
+        title={t("judgment.wangsi.release_title", { name: judgment.soul_name })}
+        message={`${t("judgment.wangsi.release_body", { name: judgment.soul_name, date: judgment.held_until ?? "" })} ${t("judgment.wangsi.release_irreversible")}`}
+        confirmText={t("judgment.wangsi.uphold")}
+        confirmLoading={decide.isPending}
+        onConfirm={() => decide.mutate(true)}
+        onCancel={() => setConfirming(false)}
+      />
     </section>
   );
 }

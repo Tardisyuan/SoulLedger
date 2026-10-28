@@ -13280,6 +13280,7 @@ export interface components {
             /** Format: date */
             readonly held_until: string | null;
             readonly duat_stage: components["schemas"]["DuatStageEnum"];
+            readonly ferry_barred: string;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -13617,6 +13618,7 @@ export interface components {
             /** Format: date */
             readonly held_until: string | null;
             readonly duat_stage: components["schemas"]["DuatStageEnum"];
+            readonly ferry_barred: string;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -16801,6 +16803,7 @@ export interface components {
             /** Format: date */
             readonly held_until?: string | null;
             readonly duat_stage?: components["schemas"]["DuatStageEnum"];
+            readonly ferry_barred?: string;
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;

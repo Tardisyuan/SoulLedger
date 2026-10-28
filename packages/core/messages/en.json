@@ -2389,7 +2389,29 @@
       "label": "Offence",
       "none": "Not recorded",
       "routes_to": "If found guilty, sent to the {{court}}",
-      "fallback": "No offence recorded: if found guilty, the court is chosen by severity"
+      "fallback": "No offence recorded: if found guilty, the court is chosen by severity",
+      "placeholder": "Not recorded · court by severity",
+      "no_match": "No such offence",
+      "kings": {
+        "2": "Chujiang",
+        "3": "Songdi",
+        "4": "Wuguan",
+        "5": "Yanluo",
+        "6": "Biancheng",
+        "7": "Taishan",
+        "8": "Dushi",
+        "9": "Pingdeng"
+      },
+      "hells": {
+        "2": "Reviving Hell",
+        "3": "Black Rope Hell",
+        "4": "Crushing Hell",
+        "5": "Wailing Hell",
+        "6": "Great Wailing Hell",
+        "7": "Scorching Hell",
+        "8": "Great Scorching Hell",
+        "9": "Avici Hell"
+      }
     },
     "wrongful_death_causes": {
       "ACCIDENT": "Accident",
@@ -2430,7 +2452,12 @@
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
         "not_city_god_officer": "Only this city god's officers or a hall administrator can review it.",
         "not_pending": "This case is concluded."
-      }
+      },
+      "release_title": "Release {{name}} early?",
+      "release_body": "Upheld: {{name}} leaves the City of Wrongful Death, and the judgment can be claimed now instead of on {{date}}.",
+      "release_irreversible": "This can't be undone.",
+      "release_gate": "Only a grievance of {{level}} or above can be upheld",
+      "released_line": "Untimely · released early on {{date}}"
     },
     "confessions": {
       "title": "The forty-two denials",
@@ -2442,13 +2469,18 @@
       "note": "Note",
       "note_placeholder": "Grounds (optional)",
       "row_label": "Assessor {{n}}, {{assessor}}",
-      "empty": "This hall has no articles for the forty-two denials yet (the seed has not run).",
       "errors": {
         "concluded": "The case is concluded; the confession record can't be changed.",
         "not_weighed": "This case is not weighed and hears no denials.",
         "unknown_clause": "This hall has no such assessor.",
         "generic": "Not recorded; please try again."
-      }
+      },
+      "only_unrecorded": "Unrecorded only",
+      "not_seeded": "The confession list hasn't been imported yet"
+    },
+    "ferry": {
+      "barred_unburied": "Unburied: can't cross the river",
+      "barred_no_fare": "No fare: can't cross the river"
     }
   },
   "audit": {
@@ -7556,6 +7588,16 @@
       "QIAODAO": "Bureau of Bridges and Roads",
       "CIJI": "Bureau of Shrines",
       "SHUYUN": "Bureau of Escort"
+    },
+    "bureaus_preset": "Preset for {{level}}",
+    "bureaus_preset_confirm": "This replaces the {{n}} bureaus now ticked",
+    "bureaus_summary": "{{names}} and more · {{n}} in all",
+    "bureaus_group_count": "{{selected}} of {{total}}",
+    "rank_short": {
+      "PROVINCE": "Province",
+      "PREFECTURE": "Prefecture",
+      "DEPARTMENT": "Department",
+      "COUNTY": "County"
     }
   },
   "cityGodCases": {

@@ -44,9 +44,13 @@ def test_an_unferried_soul_waits_on_the_bank(gr_tenant, judge, admin_user, passa
         assert refused.value.code == "unferried"
         assert refused.value.extra == {"ferry_passage": passage}
     assert hall_row(gr_tenant)["judgments"]["held"] == 1
+    # The queue reads the same rule (batch 57 G-1): it draws a grey line instead of a claim button.
+    client = officer_client(admin_user)
+    assert client.get(f"/api/v1/judgment/{case.pk}/").data["ferry_barred"] == passage
     # Buried at last: the officer clears it and the case can be heard. Nothing on the case moved.
-    res = officer_client(admin_user).patch(f"/api/v1/souls/{soul.pk}/", {"ferry_passage": ""}, format="json")
+    res = client.patch(f"/api/v1/souls/{soul.pk}/", {"ferry_passage": ""}, format="json")
     assert res.status_code == 200, res.data
+    assert client.get(f"/api/v1/judgment/{case.pk}/").data["ferry_barred"] == ""
     claims.claim(case.pk, judge)
     assert hall_row(gr_tenant)["judgments"]["held"] == 0
 

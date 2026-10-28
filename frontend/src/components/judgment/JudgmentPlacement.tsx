@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import type { ConcludeJudgmentPayload, JudgmentVerdict } from "@soulledger/core/api";
 import { useJudgmentDestinations } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -87,6 +87,7 @@ export function JudgmentPlacement({
   refusal,
   savedAt,
   noTerm = false,
+  lead,
 }: {
   judgmentId: string;
   verdict: string;
@@ -98,6 +99,8 @@ export function JudgmentPlacement({
   savedAt?: string | null;
   /** 埃及:芦苇原与第二死都不服刑(docs/02 §5.2、03 §五),不给刑期一栏;服务端拒收 `term_not_applicable`。 */
   noTerm?: boolean;
+  /** 画在标题下、目的地之上:地府的罪目(第五十七批 D-1,罪目决定送哪一殿,和发落是一件事)。 */
+  lead?: ReactNode;
 }) {
   const { t, formatDateTime } = useI18n();
   const { data, isLoading, isError } = useJudgmentDestinations(judgmentId, (verdict || null) as JudgmentVerdict | null);
@@ -199,6 +202,7 @@ export function JudgmentPlacement({
           ) : undefined
         }
       />
+      {lead && <div className="mt-3">{lead}</div>}
       {body}
       {refusal && (
         <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-danger))]">

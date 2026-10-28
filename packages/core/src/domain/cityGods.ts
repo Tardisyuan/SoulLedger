@@ -25,3 +25,23 @@ export const CITY_GOD_BUREAU_GROUPS: readonly { ministry: string; bureaus: reado
   { ministry: "JUSTICE", bureaus: ["XINGFA", "ANBU", "QUANDIAN", "XUMING"] },
   { ministry: "WORKS", bureaus: ["YINGZAO", "QIAODAO", "CIJI", "SHUYUN"] },
 ];
+
+/**
+ * 各级城隍通常设的司 —— 编辑抽屉「按{级别}预设」一键勾上的那一组(Design 第五十七批 D-3)。
+ *
+ * **这是工程按文档提的方案,不是文献里的名单**(2026-10-28,第五十七批补表第二节):docs/08 只说「级别越高诸司越齐全」,
+ * 没给每级的名单。县级取接引、记功过、拘魂、审案、押送这些办一件死亡案必经的司;往上逐级补齐;都城隍全设。
+ * 预设之后照样可以逐个改。合计:县 10 司、州 18 司、府 23 司、都 25 司。
+ */
+const COUNTY_BUREAUS = ["YINYANG", "GONGCAO", "JIBU", "TUDI", "KAOJIE", "JISI", "XINGXUN", "JUBU", "ANBU", "SHUYUN"] as const;
+const DEPARTMENT_BUREAUS = [
+  ...COUNTY_BUREAUS, "DIANJI", "DUGUAN", "CAIBO", "YIZHU", "HUOFU", "XUNCHA", "XINGFA", "QIAODAO",
+] as const;
+const PREFECTURE_BUREAUS = [...DEPARTMENT_BUREAUS, "LIANGMO", "MINGYI", "BINGZHANG", "QUANDIAN", "YINGZAO"] as const;
+
+export const CITY_GOD_BUREAU_PRESETS: Readonly<Record<(typeof CITY_GOD_RANKS)[number], readonly string[]>> = {
+  COUNTY: COUNTY_BUREAUS,
+  DEPARTMENT: DEPARTMENT_BUREAUS,
+  PREFECTURE: PREFECTURE_BUREAUS,
+  PROVINCE: CITY_GOD_BUREAU_GROUPS.flatMap((g) => g.bureaus),
+};
