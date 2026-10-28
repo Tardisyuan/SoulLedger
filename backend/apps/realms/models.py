@@ -46,6 +46,9 @@ class RealmType(models.TextChoices):
     PURGATORY = "PURGATORY", "Purgatory / Intermediate"
     BLISS = "BLISS", "Heaven / Bliss"
     NEUTRAL = "NEUTRAL", "Neutral / Between"
+    #: Not a place: the soul ceases to exist (Egyptian second death, user 2026-10-28;
+    #: docs/01_埃及冥界整体架构.md §2.2, docs/02_奥西里斯审判详解.md §5.2).
+    ANNIHILATION = "ANNIHILATION", "Annihilation / Ceased to exist"
 
 
 class RealmKind(models.TextChoices):

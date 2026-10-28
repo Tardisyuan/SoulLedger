@@ -65,7 +65,7 @@ export interface LedgerStatsOverview {
     realm_name: string;
     civilization?: string;
     /** `Realm.realm_type` —— 仪表盘按它选图案(web `REALM_PATTERNS`)。 */
-    realm_type: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
+    realm_type: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL" | "ANNIHILATION";
     count: number;
     /** 容量;null = 未记录。 */
     capacity: number | null;
