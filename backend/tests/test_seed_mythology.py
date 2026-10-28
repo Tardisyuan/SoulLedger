@@ -147,7 +147,7 @@ JUDICIAL_PERSONNEL = {
 #   Charon       EU_ACHERON       Virgil, Aeneid 6.295-297; Dante, Inferno III.
 #   Cerberus     EU_HELL_3RD      Dante, Inferno VI.
 GRECO_ROMAN_CAST = {
-    "Minos": ("JUDGE", "EU_HELL_2ND"),
+    "Minos": ("CONDUIT", "EU_HELL_2ND"),
     "Charon": ("CONDUIT", "EU_ACHERON"),
     "Cerberus": ("GUARDIAN", "EU_HELL_3RD"),
 }
@@ -1440,31 +1440,27 @@ def test_the_christian_side_seats_one_judge_and_no_bench(seeded):
     exclusion is done by the column that means it, so the query here is now the
     *whole* European cast and nothing in it is unwatched.
 
-    WHY THE ANSWER IS TWO NAMES AND NOT ONE. Dante's Minos stays EUROPEAN and
-    stays a JUDGE. The tempting alternative was to demote him — call him a
-    sorter, get the count down to one, and have a rounder assertion — and the
-    poem does not allow it: Inf. V.9 is 「giudica e manda secondo ch'avvinghia」,
-    *judges* and sends, after 「essamina le colpe ne l'intrata」. The tail is how
-    the sentence is pronounced, not a substitute for pronouncing one. So the
-    honest statement is not "Europe has one judge" but "Europe has one
-    *Christian* judge, and one more that Dante borrowed" — and the way to keep
-    that from becoming a licence to add a third is to name both and refuse
-    anything else.
+    WHY THE ANSWER IS ONE NAME (user 2026-10-28). Dante's Minos stays EUROPEAN
+    but is a CONDUIT, not a JUDGE: the docs make Christ the only judge here
+    (docs/01_欧洲天堂地狱整体架构.md v2.1, docs/02_天使九级 hierarchy.md §四).
+    Dante's 「giudica e manda」 (Inf. V.6) is kept in the row's own note — he
+    examines and sorts by circle at the second circle's entrance, and does not
+    give the final judgment. Plato's Minos is a separate GREEK row.
     """
     judges = sorted(
         Actor.objects.filter(civilization="EUROPEAN", role="JUDGE")
         .values_list("name", flat=True)
     )
-    assert judges == ["Christ", "Minos"], (
-        f"The EUROPEAN cast should seat exactly two judges and it seats "
+    assert judges == ["Christ"], (
+        f"The EUROPEAN cast should seat exactly one judge and it seats "
         f"{judges}.\n"
         f"  Christ — the only judge this theology has (John 5:22; the Nicene "
         f"Creed; CCC 1021-1041). If he is missing, the judgment system has no "
         f"judge.\n"
         f"  Minos — Dante's, at the entrance to the second circle (Inf. "
-        f"V.4-15). He is not a member of a tribunal and there is no tribunal "
-        f"for him to be a member of; he is here because the Commedia is part of "
-        f"this cosmology and Plato's Minos is a separate GREEK row.\n"
+        f"V.4-15) — is a CONDUIT: he sorts the damned by circle and does not "
+        f"give the final judgment (user 2026-10-28). If he is back here, his "
+        f"role was reverted.\n"
         f"Anyone else is a bench being filled. There is no bench: Matt 19:28 / "
         f"Luke 22:30 seats the twelve apostles with no dockets and no names, "
         f"and 1 Cor 6:2-3 makes the subject 'the saints', i.e. everyone."

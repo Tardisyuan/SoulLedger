@@ -145,23 +145,21 @@ EUROPEAN_ACTORS = [
     # the number of times equal to the circle it belongs in (Inferno V.4-15). A
     # judge who allots circles cannot be sitting in the last one.
     #
-    # HE KEEPS `JUDGE`, AND THE SPLIT WAS THE MOMENT TO RE-EXAMINE IT. The
-    # tempting reading is that Dante's Minos only *sorts* — that he routes a soul
-    # to a circle already decided by the sin it confessed, which would make him a
-    # CONDUIT and would leave EUROPEAN with exactly one judge, Christ, and a
-    # tidier test. The poem does not support it. Inf. V.6 is 「giudica e manda
-    # secondo ch'avvinghia」 — *judges* and sends, in that order, after V.5's
-    # 「essamina le colpe ne l'intrata」, examines the transgressions at the
-    # entrance. (This note used to cite V.9 for the first of those; V.9 is 「e
-    # quel conoscitor de le peccata」. The range cited below, V.4-15, was right.) The
-    # examining and the judging are the work; the tail is only how the sentence
-    # is pronounced. Demoting him would have meant contradicting the one verb the
-    # source is explicit about in order to make an assertion elsewhere in the
-    # repository come out round, which is the shape of error this file exists to
-    # document. `ActorRole` has no member meaning "allots without adjudicating"
-    # either — CONDUIT carries, GUARDIAN bars, EXECUTOR inflicts — so the
-    # demotion would also have had to store a claim none of the five values make.
-    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_HELL_2ND",
+    # CONDUIT, NOT JUDGE (user 2026-10-28). The docs make Christ the only JUDGE
+    # in this cosmology (docs/01_欧洲天堂地狱整体架构.md v2.1, docs/02_天使九级
+    # hierarchy.md §四), and the row follows the docs. Dante is not overruled on
+    # what his Minos does — Inf. V.5 「essamina le colpe ne l'intrata」, examines
+    # the transgressions at the entrance, and V.6 「giudica e manda secondo
+    # ch'avvinghia」, judges and sends by the coils of his tail — only on which of
+    # this system's roles that work is. What he decides is which circle; whether
+    # the soul is damned at all was settled before it reached him, and no appeal,
+    # bench or final decision runs through him. So he sorts and dispatches at the
+    # second circle and never sits as the final judge, and among the five
+    # `ActorRole` values the one that means "sends the soul on to where it goes"
+    # is CONDUIT. Consequence: he can no longer take a CO_JUDGE or CHAIRMAN seat
+    # on a cross-hall bench (dispatch/services.py SEAT_ACTOR_ROLES), only ADVISOR.
+    # Plato's Minos (GREEK row) is a different office and stays JUDGE.
+    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.CONDUIT, "EU_HELL_2ND",
      "米诺斯", "米诺斯", "Judge Minos", "Mino",
      "King Minos - stands at the entrance to the second circle, examines each "
      "soul's confession and allots it the circle it belongs to by the coils of "
