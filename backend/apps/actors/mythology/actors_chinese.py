@@ -38,8 +38,8 @@ from apps.actors.models import ActorRole
 # test_seed_mythology asserts king N is in DY_COURT_NN and nowhere else.
 # --------------------------------------------------------------------------
 CHINESE_ACTORS = [
-    ("阎罗王", "阎罗王", "Yama King", "Yanluo", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
-     "第五殿阎罗王", "第五殿阎罗王", "Fifth Court Yama", "Yanluo",
+    ("阎罗王", "阎罗王", "Yanluo King", "Yanluo", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
+     "第五殿阎罗王", "第五殿阎罗王", "Fifth Court Yanluo", "Yanluo",
      "Fifth court judge - the best-known of the ten kings. He sat at the first "
      "court and was demoted here for leniency, by his own account: 「吾本前居第一"
      "殿，因憐屈死，屢放還陽伸雪；降調司掌…叫喚大地獄、並十六誅心小地獄」. His "

@@ -339,8 +339,8 @@
       "CAPTURE_WARRANT_ISSUED": "Capture warrant issued",
       "SOUL_CAPTURED": "Captured by the escorts",
       "CAPTURE_HANDED_OVER": "Capture handed over",
-      "CAPTURE_WARRANT_CANCELLED": "Capture warrant cancelled",
-      "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of the Wrongfully Dead",
+      "CAPTURE_WARRANT_CANCELLED": "Capture warrant revoked",
+      "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of Wrongful Death",
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
       "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld"
     },
@@ -823,19 +823,19 @@
         "ISSUED": "Issued",
         "CAPTURED": "Captured",
         "HANDED_OVER": "Handed over",
-        "CANCELLED": "Cancelled"
+        "CANCELLED": "Revoked"
       },
       "city_god": "issued by {{name}}",
       "issue": "Issue capture warrant",
       "capture": "Captured",
       "hand_over": "Hand over",
-      "cancel": "Cancel",
+      "cancel": "Revoke",
       "cancel_reason": "Reason for cancelling",
-      "cancel_confirm": "Cancel the warrant",
+      "cancel_confirm": "Revoke the warrant",
       "issued_toast": "Capture warrant issued for {{name}}",
       "captured_toast": "{{name}} captured",
       "handed_over_toast": "{{name}} handed over; death registered",
-      "cancelled_toast": "Capture warrant for {{name}} cancelled",
+      "cancelled_toast": "Capture warrant for {{name}} revoked",
       "error": {
         "not_diyu": "Only a soul of Diyu is fetched by the ghost escorts.",
         "not_alive": "This soul is no longer alive.",
@@ -849,10 +849,10 @@
       "go_review": "Go to first review →",
       "overdue": "{{n}} days over",
       "due_on": "Fated date reached · {{date}}",
-      "cancel_open": "Cancel…",
+      "cancel_open": "Revoke…",
       "hand_over_city_god": "Hand over to the City God",
       "handed_line": "Handed to {{city_god}} on {{date}}",
-      "cancelled_line": "Cancelled · {{reason}}"
+      "cancelled_line": "Revoked · {{reason}}"
     },
     "timeline": {
       "earthly_paradise": "By way of the Earthly Paradise · drank of Lethe and Eunoë"
@@ -2466,7 +2466,7 @@
       "REJECTED": "Not upheld"
     },
     "wangsi": {
-      "title": "City of the Wrongfully Dead",
+      "title": "City of Wrongful Death",
       "cause": "Cause of death",
       "level": "Grievance",
       "unset": "Not recorded",
@@ -2480,7 +2480,7 @@
       "uphold_hint": "With a major or severe grievance, upholding it releases the soul early.",
       "decided_line": "Reviewed {{date}}",
       "error": {
-        "not_in_wangsi": "This soul is no longer held in the City of the Wrongfully Dead.",
+        "not_in_wangsi": "This soul is no longer held in the City of Wrongful Death.",
         "grievance_open": "This case already has a grievance.",
         "no_grievance_filed": "No grievance is awaiting review.",
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
@@ -2836,7 +2836,7 @@
       "DY_COURT_02_CHUJIANG": "Second Court Chujiang",
       "DY_COURT_03_SONGDI": "Third Court Songdi",
       "DY_COURT_04_WUGUAN": "Fourth Court Wuguan",
-      "DY_COURT_05_YANLUO": "Fifth Court Yama",
+      "DY_COURT_05_YANLUO": "Fifth Court Yanluo",
       "DY_COURT_06_BIANCHENG": "Sixth Court Biancheng",
       "DY_COURT_07_TAISHAN": "Seventh Court Taishan",
       "DY_COURT_08_DUSHI": "Eighth Court Dushi",
@@ -5515,8 +5515,8 @@
     "wangsi": {
       "file": "File a grievance",
       "file_title": "Grievance to the City God",
-      "held": "Held in the City of the Wrongfully Dead · judged from {{date}}",
-      "released": "Out of the City of the Wrongfully Dead",
+      "held": "Held in the City of Wrongful Death · judged from {{date}}",
+      "released": "Out of the City of Wrongful Death",
       "status": {
         "FILED": "Grievance filed · awaiting the City God",
         "UPHELD": "Grievance upheld · released early",
@@ -5531,7 +5531,7 @@
       "errors": {
         "not_found": "This case could not be found",
         "not_pending": "This case is no longer pending",
-        "not_in_wangsi": "You are no longer held in the City of the Wrongfully Dead",
+        "not_in_wangsi": "You are no longer held in the City of Wrongful Death",
         "grievance_open": "A grievance on this case is already awaiting the City God"
       }
     }
