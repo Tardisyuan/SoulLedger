@@ -321,6 +321,7 @@ SITES = [
 # The id often comes from the request body, so the row may be in another hall unless something
 # checks it. Entry: (file, "Class.function", model, count, what keeps it in the caller's hall).
 BY_ID_SITES = [
+    ('apps/judgment/wangsi_views.py', 'WangsiViewSet._answer', 'Judgment', 1, 're-reads, by its pk, the judgment get_object() just reached through the tenant-scoped viewset, after the grievance service wrote it'),
     ('apps/authentication/impersonation_views.py', 'ImpersonateStartView.post', 'User', 1, 'ADMIN-only endpoint; ADMIN may view any non-admin officer across halls by design'),
     ('apps/chat/image_views.py', 'ChatImageFileView.get', 'User', 1, 'viewer id comes from a signed URL token, and images.may_view re-checks viewer, image and tenant'),
     ('apps/chat/image_views.py', 'MeChatImageUploadView.post', 'Conversation', 1, 'images.upload -> _speaker_check refuses a conversation the soul account is not a participant of'),
