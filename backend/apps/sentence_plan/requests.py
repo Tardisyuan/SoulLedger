@@ -307,10 +307,9 @@ def append_cross_stops(cross):
 
     只在原审判**已经结案**时追加:还没结案的是存量那种先结联审、后结原审判的,参与方的站在原审判结案时
     由 `SentencePlanService.create_from_conclusion` 抄。同一场联审已经抄过 / 追加过(有本审判加的外站)就什么都不做。
-    计划已经刑满(COMPLETED)而灵魂只是在等转世(REINCARNATING,本世没有审批中 / 已批准的转生申请)或已入终局
-    (SETTLED):重新打开计划、灵魂经 `Soul.transition_to` 回到 DISPOSED,追加之后由 `advance` 调往第一个外站
-    (2026-10-18 用户决定;SETTLED 那一半同日后补)。
-    其余结束了的(撤销 = 赦免、已转世、失踪、转生已批 / 审批中)或没有建计划的:记 warning、不追加。
+    计划已经结束(刑满、撤销)或没有建计划的:记 warning、不追加。原审要等审批流程走完才执行(2026-10-29),
+    并入流程的联审在流程结束时结束,计划不会先于它刑满 —— 所以此前「刑满后重开计划」那条路(2026-10-18)已删
+    (用户 2026-10-29)。
     """
     import logging
 
@@ -325,9 +324,6 @@ def append_cross_stops(cross):
     found = SentencePlan.all_objects.filter(
         origin_judgment_id=judgment.pk, is_deleted=False, status__in=IN_PROGRESS_PLAN_STATUSES,
     ).select_related("soul").first()
-    reopen = found is None
-    if reopen:
-        found = _finished_plan(judgment)
     if found is None:
         logging.getLogger(__name__).warning(
             "sentence_plan: cross judgment %s concluded PASS but judgment %s has no plan in progress; no stops added",
@@ -341,11 +337,6 @@ def append_cross_stops(cross):
     seats = list(cross.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
                  .select_related("participant_tenant").order_by("node_order"))
     if not seats:
-        return []
-    if reopen and not _reopen(soul, plan, nodes, judgment):
-        logging.getLogger(__name__).warning(
-            "sentence_plan: cross judgment %s concluded PASS but plan %s is %s and soul %s is %s; no stops added",
-            cross.pk, plan.pk, plan.status, soul.pk, soul.current_state)
         return []
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
     anchor = max(n.order for n in live)
@@ -361,48 +352,7 @@ def append_cross_stops(cross):
     ]
     _assert_eternal_last(live + added)
     plan_amended(soul, plan, {n.tenant_code for n in added}, judgment_id=judgment.pk, added=added)
-    if reopen:
-        SentencePlanService.advance(soul)  # 灵魂在原属、没有占位的站:不推就停在这里
     return added
-
-
-def _finished_plan(judgment):
-    """这份审判开出的、已经刑满的计划(最近的一份),或 None。撤销(CANCELLED = 赦免)的不重开:赦免是一个决定。"""
-    return SentencePlan.all_objects.filter(
-        origin_judgment_id=judgment.pk, is_deleted=False, status=SentencePlanStatus.COMPLETED,
-    ).select_related("soul").order_by("-completed_at").first()
-
-
-def _reopen(soul, plan, nodes, judgment):
-    """在灵魂与计划的行锁下重开:灵魂必须在 REINCARNATING(刑满、等转世)或 SETTLED(终局:那里没有下一世,
-    但计划没走完就不算结案),且本世没有审批中或已批准的转生申请 —— 那之后(转生已批、已转世 ALIVE、LOST)
-    都不再回头。原属地永久刑期收尾的(有 ETERNAL 节点,也是 SETTLED)不重开:永久之后不能再有站(Q5)。
-    返回是否重开了;没重开时什么都没写。
-    状态经 `transition_to`(STATE_CHANGED 事件同一事务),不直接写 `current_state`。"""
-    from apps.soul_accounts.models import OPEN_APPLICATION_STATUSES, RebirthApplicationStatus
-    from apps.souls.models import SoulState
-
-    if plan.status != SentencePlanStatus.COMPLETED or soul.current_state not in (
-            SoulState.REINCARNATING, SoulState.SETTLED):
-        return False
-    if any(n.status == SentenceNodeStatus.ETERNAL for n in nodes):
-        return False
-    if soul.rebirth_applications.filter(
-            cycle=soul.life_index,
-            status__in=[*OPEN_APPLICATION_STATUSES, RebirthApplicationStatus.APPROVED]).exists():
-        return False
-    if not soul.transition_to(SoulState.DISPOSED, f"Sentence plan {plan.pk} reopened: cross judgment of "
-                                                 f"{judgment.pk} concluded PASS"):
-        return False
-    soul.refresh_from_db()
-    # 孟婆汤每世一次、在「最后一次候转世」时饮:重开计划后再回到候转世要重新饮(2026-10-27)。
-    if soul.soup_taken_at is not None:
-        soul.soup_taken_at = None
-        soul.save(update_fields=["soup_taken_at"])
-    plan.status = SentencePlanStatus.ACTIVE
-    plan.completed_at = None
-    _save(plan, "status", "completed_at")
-    return True
 
 
 def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None, added=()):

@@ -29,7 +29,11 @@ from apps.tenants.models import Tenant
 
 @pytest.fixture
 def tenant(db):
-    return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})[0]
+    from tests.city_god_support import default_city_god
+
+    tenant = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "CN"})[0]
+    default_city_god(tenant)  # 地府开案要有城隍收案(2026-10-29)
+    return tenant
 
 
 @pytest.fixture

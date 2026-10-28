@@ -65,6 +65,8 @@ export interface Disposition extends ArchiveFields {
   soul_reborn?: boolean;
   /** 第十殿按结案时功过给的六道建议(docs/07 §四);地府以外为 null。官员可改。 */
   suggested_rebirth_form?: Schemas["Disposition"]["suggested_rebirth_form"];
+  /** 为什么现在还不能执行(原审的审批流程没走完 / 被驳回 / 天平摇摆),与执行的 409 同一个码;能执行为 null。 */
+  flow_waiting?: Schemas["Disposition"]["flow_waiting"];
   /** 「期满释放」可点:已执行、不是永久、没记期满,期满日已到(与每日期满检查同一条判定,2026-10-29)。 */
   can_release?: boolean;
   /** 这扇门没写刑期时的默认年数(2026-10-29);永久或没有默认为 null。等于 `sentence_years` 时页面标「默认 · 可改」。 */

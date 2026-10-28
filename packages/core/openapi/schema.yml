@@ -27081,6 +27081,10 @@ components:
           type: string
           nullable: true
           readOnly: true
+        flow_waiting:
+          type: string
+          nullable: true
+          readOnly: true
         can_release:
           type: boolean
           readOnly: true
@@ -27112,6 +27116,7 @@ components:
       - default_term_years
       - executed_at
       - expired_at
+      - flow_waiting
       - id
       - is_archived
       - is_executed
@@ -36775,6 +36780,10 @@ components:
             to.
           readOnly: true
         suggested_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
+        flow_waiting:
           type: string
           nullable: true
           readOnly: true

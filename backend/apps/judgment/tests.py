@@ -71,6 +71,9 @@ class JudgmentAPITest(TestCase):
         self.client = APIClient()
         self.tenant_cn = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         self.tenant_eg = Tenant.objects.create(code="EG_DUAT", display_name="Egyptian Duat")
+        from tests.city_god_support import default_city_god
+
+        default_city_god(self.tenant_cn)  # 地府开案要有城隍收案(2026-10-29)
 
         self.admin_user = User.objects.create_user(
             username="judge_admin",

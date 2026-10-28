@@ -253,9 +253,12 @@ class TestDeathSyncService:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     @pytest.fixture
@@ -600,9 +603,12 @@ class TestEventService:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     @pytest.fixture
@@ -906,9 +912,12 @@ class TestActorModel:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     def test_create_actor(self, tenant):
@@ -989,9 +998,12 @@ class TestRealmModel:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     def test_create_realm(self, tenant):
@@ -1039,9 +1051,12 @@ class TestSoulRecord:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     @pytest.fixture
@@ -1108,9 +1123,12 @@ class TestDispatchRecordModel:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     @pytest.fixture
@@ -1192,9 +1210,12 @@ class TestCrossTenantJudgmentModel:
 
     @pytest.fixture
     def tenant(self, db):
+        from tests.city_god_support import default_city_god
+
         t, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "CN"}
         )
+        default_city_god(t)  # 地府开案要有城隍收案(2026-10-29)
         return t
 
     def test_can_transition(self, tenant):

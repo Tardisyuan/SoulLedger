@@ -10,6 +10,14 @@ from apps.souls.record_models import RecordType, SoulRecord
 from apps.tenants.models import Tenant
 
 
+@pytest.fixture(autouse=True)
+def _diyu_has_a_city_god(cn_tenant):
+    """地府开案要有城隍收案(用户 2026-10-29):本殿先有一位兜底城隍。"""
+    from tests.city_god_support import default_city_god
+
+    default_city_god(cn_tenant)
+
+
 @pytest.fixture
 def cn_tenant(db):
     return Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")

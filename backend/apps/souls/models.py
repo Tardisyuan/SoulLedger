@@ -593,8 +593,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
     #: Edges only a named system action may take, never a person (user 2026-10-27). `can_transition_to` allows
     #: one only when the caller passes its `system` reason; `POST /souls/{id}/transition/` passes none.
-    #: DISPOSED → JUDGING: a refused Egyptian weighing is weighed again (apps/judgment/weighing.py
-    #: ::reweigh_after_rejection), its unexecuted disposition voided first.
+    #: DISPOSED → JUDGING: a refused original judgment's approval flow (the Egyptian weighing included) opens the
+    #: case again (apps/judgment/weighing.py::reweigh_after_rejection), its unexecuted disposition voided first.
     SYSTEM_ONLY_TRANSITIONS = {("DISPOSED", "JUDGING"): "weighing_rejected"}
 
     def can_transition_to(self, new_state: str, *, system: str | None = None) -> bool:
@@ -617,17 +617,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 SoulState.SETTLED,
                 SoulState.LOST,
             ],
-            # Back to DISPOSED only when a finished sentence plan is reopened (2026-10-18 user decision): a
-            # cross-realm judgment concluded PASS after the plan completed adds its stops to that plan
-            # (apps/sentence_plan/requests.py::append_cross_stops). Not reachable through
-            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there).
-            SoulState.REINCARNATING: [SoulState.ALIVE, SoulState.DISPOSED],
-            # SETTLED has exactly one exit, back to DISPOSED, and one writer of it: a cross-realm judgment
-            # concluded PASS after the soul's sentence plan finished reopens that plan and appends the
-            # foreign stops (apps/sentence_plan/requests.py::append_cross_stops; 2026-10-18 user decision).
-            # The plan is unfinished business, so the case was not closed after all. Not reachable through
-            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there), and correcting a
-            # mistaken settlement is still `correct_settlement`, its own event.
+            # REINCARNATING → DISPOSED and SETTLED → DISPOSED were removed (user 2026-10-29): their one writer
+            # reopened a sentence plan that finished before a merged cross-realm judgment ended, and an original
+            # judgment's disposition now waits for its approval flow, which ends that judgment first.
+            SoulState.REINCARNATING: [SoulState.ALIVE],
+            # SETTLED is terminal. Correcting a mistaken settlement is `correct_settlement`, its own event.
             #
             # SETTLED deliberately does not keep LOST reachable the way
             # DISPOSED does. LOST means the disposition was
@@ -638,7 +632,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # bookkeeping problem, not a change in what became of the soul.
             # Letting an administrative mistake re-open a cosmologically closed
             # case is exactly the lie this state exists to stop telling.
-            SoulState.SETTLED: [SoulState.DISPOSED],
+            SoulState.SETTLED: [],
             # Recalled: found again, back in transit to the realm its disposition named (2026-10-24 user
             # decision: a minimal way in and out, no pursuit workflow). Both moves need a written reason
             # (apps/souls/views.py::transition); the STATE_CHANGED event and the audit row keep it.
@@ -817,10 +811,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
 
         Deliberately does not go through transition_to/can_transition_to —
-        SETTLED's only transition (back to DISPOSED) belongs to reopening a
-        finished sentence plan (see the comment there on why re-opening a
-        cosmologically closed case must never look like an ordinary
-        transition). This is a correction, not
+        SETTLED is terminal in the state machine (see the comment there on why
+        re-opening a cosmologically closed case must never look like an
+        ordinary transition). This is a correction, not
         a transition: ADMIN-only (enforced by the view's permission
         codename, not here), requires a reason, and is logged as its own
         SETTLEMENT_CORRECTED event so the lifecycle timeline never renders
@@ -862,6 +855,13 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         if self.current_state != SoulState.ALIVE:
             return None
+        # 本殿没有能收案的城隍就不许开案(用户 2026-10-29):在状态变化之前问,内存里的灵魂不留一个回滚掉的 JUDGING。
+        # `opening_fields` 里还会再问一次(手开审判那条路也走它),这里只是先拦。
+        if self.civilization == Civilization.CHINESE and city_god is None:
+            from apps.judgment import city_gods
+
+            if city_gods.match(self.tenant_id, location or self.origin_location) is None:
+                raise city_gods.NoCityGodError()
 
         with transaction.atomic():
             result = self.transition_to(
@@ -1010,6 +1010,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 and city_god.tenant_id == self.tenant_id and not city_god.is_deleted):
             # 土地公报给自己的上级城隍(docs/08 §五、06 §二 第一站「通报当地城隍」),不按出身地另配。
             review = {**review, "city_god": city_god, "city_god_status": "PENDING"}
+        if self.civilization == Civilization.CHINESE and review.get("city_god") is None:
+            # 本殿没有能收案的城隍(没有匹配、没有兜底):不许开案(用户 2026-10-29)。在调用方的事务里抛,整笔回滚。
+            raise city_gods.NoCityGodError()
         return {"untimely": untimely, "held_until": fated if untimely else None, **review,
                 **self._duat_fields(died)}
 

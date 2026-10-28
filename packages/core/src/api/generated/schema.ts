@@ -12198,6 +12198,7 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn: boolean;
             readonly suggested_rebirth_form: string | null;
+            readonly flow_waiting: string | null;
             readonly can_release: boolean;
             readonly default_term_years: number | null;
             readonly is_archived: boolean;
@@ -16720,6 +16721,7 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
             readonly suggested_rebirth_form?: string | null;
+            readonly flow_waiting?: string | null;
             readonly can_release?: boolean;
             readonly default_term_years?: number | null;
             readonly is_archived?: boolean;

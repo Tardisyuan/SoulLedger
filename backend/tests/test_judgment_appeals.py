@@ -249,6 +249,7 @@ def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
 
 def test_amend_after_the_plan_finished_only_compensates(case):
     judgment, soul = case["judgment"], case["soul"]
+    sp.walk_flow(judgment)  # 原审的处置等审批流程走完才执行(2026-10-29)
     DispositionService.execute(Disposition.all_objects.get(judgment=judgment))
     plan = SentencePlan.all_objects.get(origin_judgment_id=judgment.pk)
     assert plan.status == "COMPLETED"

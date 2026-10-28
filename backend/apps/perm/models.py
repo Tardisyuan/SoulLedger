@@ -280,9 +280,8 @@ DEFAULT_PERMISSIONS = [
     ("soul.delete", "删除灵魂", "soul"),
     ("soul.die", "宣告死亡", "soul"),
     ("soul.transition", "状态流转", "soul"),
-    # SETTLED 唯一的流转(回到 DISPOSED)只属于重开已刑满的受刑计划(见 Soul.can_transition_to;
-    # 手动流转接口拒绝它),撤销它因此从来不是"流转"，而是一次需要单独授权、
-    # 单独审计的更正——ADMIN-only,同 recycle_bin.* 的定位。
+    # SETTLED 是终态(见 Soul.can_transition_to,2026-10-29 起没有出边),撤销它因此从来不是"流转"，
+    # 而是一次需要单独授权、单独审计的更正——ADMIN-only,同 recycle_bin.* 的定位。
     ("soul.correct_settlement", "更正已结案状态", "soul"),
     # judgment 权限
     ("judgment.read", "查看审判", "judgment"),

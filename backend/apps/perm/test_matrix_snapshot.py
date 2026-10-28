@@ -501,6 +501,10 @@ def snapshot_tenant(db):
     tenant, _ = Tenant.objects.get_or_create(
         code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
     )
+    # 地府开案要有城隍收案(2026-10-29):没有它,POST /die/ 对有权的角色也是 409 `no_city_god`,快照测的就不是权限了。
+    from tests.city_god_support import default_city_god
+
+    default_city_god(tenant)
     yield tenant
     clear_current_tenant()
 

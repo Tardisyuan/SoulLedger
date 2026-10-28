@@ -113,7 +113,7 @@ def test_the_original_judgment_concludes_after_cancel(bench):
     with pytest.raises(CrossJudgmentOpenError):
         bench["case"].conclude(Verdict.PASSED, "", create_workflow=False)
     assert _cancel(bench["convener"], bench["cj"]).status_code == 200
-    bench["case"].conclude(Verdict.PASSED, "", create_workflow=False)
+    bench["case"].conclude(Verdict.PASSED, "")  # 原审一律带审批流程(2026-10-29)
     bench["case"].refresh_from_db()
     assert bench["case"].is_final
 

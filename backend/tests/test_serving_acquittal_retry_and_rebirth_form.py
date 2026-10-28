@@ -39,6 +39,7 @@ def _termed(cn, years=3):
     """地府 FAILED 结案、判官定了刑期:一份挂在原属节点上的有期处置。返回 (soul, plan, disposition)。"""
     soul, case = sp.open_case(cn)
     case.conclude(Verdict.FAILED, "", term_years=years)
+    sp.walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     soul.refresh_from_db()
     disposition = Disposition.all_objects.get(judgment=case)
     return soul, SentencePlan.all_objects.get(soul=soul), disposition
@@ -65,6 +66,7 @@ def test_executing_a_termed_disposition_starts_serving_and_holds_the_plan(cn):
 def test_a_disposition_without_a_term_is_served_on_execution_as_before(cn):
     soul, case = sp.open_case(cn)
     case.conclude(Verdict.FAILED, "")
+    sp.walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     disposition = Disposition.all_objects.get(judgment=case)
     assert DispositionService.execute(disposition) is True
     soul.refresh_from_db()
@@ -116,14 +118,38 @@ def test_release_needs_the_execute_permission(cn):
 # ── 2. 地府判无罪 ──────────────────────────────────────────────────────────
 
 
-def test_a_diyu_acquittal_without_a_flow_goes_straight_to_rebirth(cn):
+def test_a_diyu_acquittal_cannot_skip_its_flow(cn):
+    """原审一律走审批流程(2026-10-29):判无罪也不能明说不要流程,当场候转世的出口只剩免审(枉死城超度)。"""
+    from apps.judgment.weighing import WeighingRefusedError
+
     soul, case = sp.open_case(cn)
-    case.conclude(Verdict.PASSED, "", create_workflow=False)
+    with pytest.raises(WeighingRefusedError) as refused:
+        case.conclude(Verdict.PASSED, "", create_workflow=False)
+    assert refused.value.code == "approval_flow_required"
     soul.refresh_from_db()
+    assert soul.current_state == SoulState.JUDGING and not SentencePlan.all_objects.filter(soul=soul).exists()
+
+
+def test_a_rejected_flow_on_a_diyu_acquittal_withdraws_the_nodeless_plan_and_hears_the_case_again(cn):
+    """无罪没有处置,只有一份没有节点的计划:流程驳回时计划不能停在 ACTIVE、灵魂不能卡在 DISPOSED。"""
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    soul, case = sp.open_case(cn)
+    case.conclude(Verdict.PASSED, "")
     plan = SentencePlan.all_objects.get(soul=soul)
     assert not Disposition.all_objects.filter(judgment=case).exists()
     assert not SentenceNode.all_objects.filter(plan=plan).exists()
-    assert (plan.status, soul.current_state) == ("COMPLETED", SoulState.REINCARNATING)
+    flow = ApprovalWorkflow.objects.get(judgment=case)
+    flow.complete_node(flow.current_node.pk, "FAILED")
+    flow.refresh_from_db()
+    assert flow.status == ApprovalWorkflowStatus.REJECTED
+
+    soul.refresh_from_db()
+    plan = SentencePlan.all_objects.get(pk=plan.pk)
+    assert plan.is_deleted and plan.status == "ACTIVE"  # 系统作废,不是完成
+    assert soul.current_state == SoulState.JUDGING
+    retrial = Judgment.objects.get(retrial_of=case)
+    assert retrial.verdict is None and not retrial.is_final
 
 
 def test_a_diyu_acquittal_waits_for_its_flow_then_goes_to_rebirth(cn):

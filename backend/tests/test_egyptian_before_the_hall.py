@@ -83,6 +83,9 @@ def test_an_early_death_goes_straight_to_the_field_of_reeds_unweighed(eg_tenant)
 
 
 def test_other_civilizations_have_no_duat_stage(cn_tenant):
+    from tests.city_god_support import default_city_god
+
+    default_city_god(cn_tenant)  # 地府开案要有城隍收案(2026-10-29)
     case = Soul.objects.create(name="张三", tenant=cn_tenant, current_state=SoulState.ALIVE).die()
     assert case.duat_stage == "" and case.held_until is None
 
