@@ -31,6 +31,7 @@ import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import type { RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
+import { CapturePanel } from "@/src/components/souls/detail/CapturePanel";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
@@ -769,7 +770,11 @@ export default function SoulDetailPage() {
           768 以下单栏,按身份、功过、账页的顺序(原型注 03)。 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[190px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[220px_minmax(0,1fr)_220px]">
         <div className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
-          <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay} />
+          <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay}
+            canMoveStation={canTransition && !readOnlyAway && !archived} />
+          {soul && soul.civilization === "CHINESE" && !readOnlyAway && !archived && (
+            <CapturePanel soul={soul} canAct={hasPermission("soul.die")} />
+          )}
 
           {!readOnlyAway && !archived && (
             <SoulActionsCard

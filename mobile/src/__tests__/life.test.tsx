@@ -328,3 +328,29 @@ describe("reduce motion", () => {
     expect(flat(screen.getByTestId("identity")).height).toBe(48);
   });
 });
+
+describe("地府十三站与出身部洲 (docs/06, 07; 2026-10-28)", () => {
+  async function openAs(profile: Record<string, unknown>) {
+    stubApi({
+      "/me/": { status: 200, data: { ...PROFILE, ...profile } },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/past-lives/": { status: 200, data: [] },
+      "/me/sentence-plan/": { status: 200, data: { state: "none", rebirth_open: true, stations: [] } },
+    });
+    renderApp();
+    await screen.findByTestId("section-records-body");
+    await act(async () => {});
+  }
+
+  it("the soul sees its station by name with its place on the road, and its continent", async () => {
+    await openAs({ diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN" });
+    expect(screen.getByTestId("life-station")).toHaveTextContent("望乡台 · 第 3 / 13 站");
+    expect(screen.getByTestId("life-continent")).toHaveTextContent("南瞻部洲");
+  });
+
+  it("no station row off the road; an unrecorded continent still has its row", async () => {
+    await openAs({ diyu_station: "", birth_continent: "" });
+    expect(screen.queryByTestId("life-station")).toBeNull();
+    expect(screen.getByTestId("life-continent")).toBeTruthy();
+  });
+});

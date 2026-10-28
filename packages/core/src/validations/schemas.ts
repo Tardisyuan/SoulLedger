@@ -65,6 +65,8 @@ export const soulUpdateSchema = z.object({
   origin_location: z.string().max(200, '地点最多200位').optional(),
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   duat_passage: z.enum(['', 'EARLY_DEATH', 'NAMELESS', 'IMPROPER_BURIAL']).optional(),
+  // 只地府:四大部洲(docs/07 §人道);'' 是不详。与 `SoulContinent` 同五个值。
+  birth_continent: z.enum(['', 'DONGSHENG', 'NANZHAN', 'XINIU', 'BEIJULU']).optional(),
   baptism: z.enum(['UNRECORDED', 'BAPTISED', 'UNBAPTISED', 'BEFORE_CHRIST']).optional(),
   denied_immortality: z.boolean().nullable().optional(),
   // Includes SETTLED even though nothing lets an operator pick it (it is the

@@ -13,6 +13,8 @@ export const soulKeys = {
   ledger: (id: string) => [...soulKeys.all, "ledger", id] as const,
   /** 行程. Under `souls` so a state change that invalidates the soul refreshes its route. */
   path: (id: string) => [...soulKeys.all, "path", id] as const,
+  /** 勾魂牒(只地府)。Under `souls` for the same reason: a hand-over changes the soul. */
+  capture: (id: string) => [...soulKeys.all, "capture", id] as const,
 };
 
 /**

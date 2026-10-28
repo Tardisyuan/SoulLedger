@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useUpdateSoul } from "@soulledger/core/hooks/useSouls";
-import type { Soul, SoulBaptism, SoulDuatPassage, SoulOriginRegion } from "@soulledger/core/api";
+import { CONTINENTS, type Soul, type SoulBaptism, type SoulContinent, type SoulDuatPassage, type SoulOriginRegion } from "@soulledger/core/api";
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
@@ -39,6 +39,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const stateId = `${formId}-state`;
   const regionId = `${formId}-origin-region`;
   const duatId = `${formId}-duat-passage`;
+  const continentId = `${formId}-birth-continent`;
   const baptismId = `${formId}-baptism`;
   const deniedId = `${formId}-denied-immortality`;
 
@@ -49,6 +50,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const [originLocation, setOriginLocation] = useState("");
   const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [duatPassage, setDuatPassage] = useState<SoulDuatPassage>("");
+  const [birthContinent, setBirthContinent] = useState<SoulContinent>("");
   const [baptism, setBaptism] = useState<SoulBaptism>("UNRECORDED");
   const [deniedImmortality, setDeniedImmortality] = useState<boolean | null>(null);
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
@@ -86,6 +88,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       setOriginLocation(soul.origin_location || "");
       setOriginRegion(soul.origin_region ?? "");
       setDuatPassage(soul.duat_passage ?? "");
+      setBirthContinent(soul.birth_continent ?? "");
       setBaptism(soul.baptism ?? "UNRECORDED");
       setDeniedImmortality(soul.denied_immortality ?? null);
       setCurrentState(soul.current_state || "ALIVE");
@@ -106,6 +109,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       origin_location: originLocation || undefined,
       origin_region: originRegion,
       ...(hasDuatPassage ? { duat_passage: duatPassage } : {}),
+      // 四大部洲(docs/07 §人道):与阳寿一样只地府登记,别的文明不画、不发。
+      ...(hasFatedDate ? { birth_continent: birthContinent } : {}),
       ...(hasInfernoFacts ? { baptism, denied_immortality: deniedImmortality } : {}),
       current_state: currentState,
     };
@@ -257,6 +262,23 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
                 {t("souls.fated_death_preview", { date: fatedDate })}
               </p>
             )}
+          </div>
+        )}
+
+        {hasFatedDate && (
+          <div className="space-y-1">
+            <SelectField
+              id={continentId}
+              label={t("souls.birth_continent.label")}
+              value={birthContinent}
+              onChange={(e) => setBirthContinent(e.target.value as SoulContinent)}
+              disabled={updateMutation.isPending}
+              options={(["", ...CONTINENTS] as const).map((v) => ({
+                value: v,
+                label: t(`souls.birth_continent.${v || "NONE"}`),
+              }))}
+            />
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.birth_continent.help")}</p>
           </div>
         )}
 
