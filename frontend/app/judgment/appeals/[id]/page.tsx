@@ -22,7 +22,7 @@ import { StatusBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { AppealDecideDialog } from "@/src/components/judgment/AppealDecideDialog";
 import { APPEAL_STATUS_TONES, appealRefusalMessage } from "@/src/components/judgment/appealDisplay";
-import { AppealLadderView, EscalatedTag, ladderOver } from "@/src/components/judgment/AppealLadder";
+import { AppealLadderView, EscalatedTag, awaitingFinal, ladderOver } from "@/src/components/judgment/AppealLadder";
 
 /*
  * 复核页(Design 第五十二批 W-2):左原判、右申诉,各占一半,标签行对齐,方便横着比。
@@ -31,6 +31,11 @@ import { AppealLadderView, EscalatedTag, ladderOver } from "@/src/components/jud
  *
  * 上诉(第五十五批 E-2):右边换成站梯,申诉理由移到下面。流程跑着时「认领复核」置灰,原因
  * `appeals.error.ladder_running` 写在按钮下;每站的复核在审批流程里办,这页只读。走完后终审那位官员是复核人,照常作出结论。
+ *
+ * 站梯走完 · 待终审(55b E-3):按钮换成「作出终审结论」,打开同一个结论弹层。不是这份申诉的复核人(终审官员)
+ * 置灰,原因 `appeals.error.not_final_judge`。终审节点还是流程的当前节点(终审官员还没在审批流程里批它)时,
+ * 后端 `decide` 拒 `ladder_running`:按钮同样置灰、原因写 `appeals.error.ladder_running`,并保留「在审批流程里查看 →」
+ * —— 要先去那里批完终审节点(第五十六批:两步之间都显示待终审)。流程已走完时不再给那条链接。
  */
 
 const LABEL = "text-xs text-[oklch(var(--color-ink-subtle))]";
@@ -120,6 +125,9 @@ function AppealReviewContent({ id }: { id: string }) {
   const running = !over && appeal.status === "IN_REVIEW";
   const claimable = appeal.status === "PENDING" || (appeal.status === "IN_REVIEW" && !appeal.reviewer && !!appeal.workflow);
   const claimReason = running ? t("appeals.error.ladder_running") : original ? t("appeals.claim_disabled_original") : null;
+  // 待终审:流程还停在终审节点(running),或已走完且有复核人(on_ladder_finished 记下的终审官员)。走完而没有复核人时走上面的认领。
+  const awaiting = appeal.status === "IN_REVIEW" && awaitingFinal(appeal.ladder) && (running || !!appeal.reviewer);
+  const finalReason = running ? t("appeals.error.ladder_running") : mine ? null : t("appeals.error.not_final_judge");
   const filed = (
     <PageSection title={t("appeals.file")}>
       <Row label={t("appeals.col.filed_at")}>
@@ -146,7 +154,7 @@ function AppealReviewContent({ id }: { id: string }) {
       }
       actions={
         <RequirePermission permissions="judgment.execute">
-          {claimable && (
+          {claimable && !awaiting && (
             <div className="flex flex-col items-end gap-1">
               <Button type="button" data-testid="appeal-claim" disabled={!!claimReason} loading={claim.isPending} onClick={() => claim.mutate()}>
                 {t("appeals.claim")}
@@ -158,10 +166,24 @@ function AppealReviewContent({ id }: { id: string }) {
               )}
             </div>
           )}
-          {appeal.status === "IN_REVIEW" && mine && (
-            <Button type="button" data-testid="appeal-decide" onClick={() => setDeciding(true)}>
-              {t("appeals.decide_action")}
-            </Button>
+          {awaiting ? (
+            <div className="flex flex-col items-end gap-1">
+              <Button type="button" data-testid="appeal-final-decide" disabled={!!finalReason} onClick={() => setDeciding(true)}>
+                {t("appeals.final_decide")}
+              </Button>
+              {finalReason && (
+                <p data-testid="appeal-final-reason" className="text-xs text-[oklch(var(--color-ink-muted))] max-w-xs text-right">
+                  {finalReason}
+                </p>
+              )}
+            </div>
+          ) : (
+            appeal.status === "IN_REVIEW" &&
+            mine && (
+              <Button type="button" data-testid="appeal-decide" onClick={() => setDeciding(true)}>
+                {t("appeals.decide_action")}
+              </Button>
+            )
           )}
         </RequirePermission>
       }
@@ -200,9 +222,11 @@ function AppealReviewContent({ id }: { id: string }) {
         {appeal.ladder ? (
           <PageSection title={t("appeals.ladder", { name: appeal.workflow_name ?? "" })}>
             <AppealLadderView appeal={appeal} />
-            <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}`} className="mt-3 inline-block text-sm underline underline-offset-2">
-              {t("crossJudgments.flow.view")}
-            </Link>
+            {!(awaiting && over) && (
+              <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}`} className="mt-3 inline-block text-sm underline underline-offset-2">
+                {t("crossJudgments.flow.view")}
+              </Link>
+            )}
           </PageSection>
         ) : (
           filed
@@ -214,7 +238,7 @@ function AppealReviewContent({ id }: { id: string }) {
           <Decision appeal={appeal} />
         </div>
       )}
-      {deciding && <AppealDecideDialog appeal={appeal} isOpen onClose={() => setDeciding(false)} />}
+      {deciding && <AppealDecideDialog appeal={appeal} isOpen final={awaiting} onClose={() => setDeciding(false)} />}
     </PageShell>
   );
 }
