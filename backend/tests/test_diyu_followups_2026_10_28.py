@@ -40,7 +40,7 @@ def _run_backfill():
 
 def test_the_migrations_copy_of_the_tenant_map_matches_the_runtime_one():
     chinese = tuple(code for code, civ in TENANT_CIVILIZATION.items() if civ == "CHINESE")
-    assert BACKFILL.CHINESE_TENANT_CODES == chinese
+    assert chinese == BACKFILL.CHINESE_TENANT_CODES
     assert set(BACKFILL.KNOWN_TENANT_CODES) == set(TENANT_CIVILIZATION)
 
 

@@ -25,6 +25,7 @@ from rest_framework.exceptions import APIException
 from apps.dispatch.models import OPEN_CAPTURE, CaptureEscort, CaptureStatus, CaptureWarrant
 from apps.souls.models import Civilization, Soul, SoulState
 
+
 class CaptureRefused(APIException):
     status_code = 409
     default_code = "capture_refused"
