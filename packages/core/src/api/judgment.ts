@@ -112,6 +112,11 @@ export interface Judgment extends ArchiveFields {
    */
   duat_stage?: JudgmentDuatStage;
   /**
+   * 希腊原审此刻过不了阿刻戎的原因(`apps/judgment/claims.py::ferry_barred`,与认领的 409 `unferried` 同一条规则):
+   * UNBURIED / NO_FARE;能过河(已葬有渡资、或未葬满百年)是 ""。队列据此不画「认领」(第五十七批 G-1)。
+   */
+  ferry_barred?: "" | "UNBURIED" | "NO_FARE";
+  /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
    * floor `SoulSerializer` keeps.

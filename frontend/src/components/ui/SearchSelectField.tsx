@@ -57,8 +57,12 @@ export interface SearchSelectFieldProps {
   /** The current selection, as the value that will be submitted. `""` is none. */
   value: string;
   onValueChange: (value: string) => void;
-  /** The server's answer for `searchText`. Rendered verbatim; never filtered here. */
-  options: SelectOption[];
+  /**
+   * The server's answer for `searchText`. Rendered verbatim; never filtered here.
+   * `group` draws a header row above the first option of each run of the same group (罪目按殿分组,第五十七批 D-1);
+   * the caller keeps a group's options together.
+   */
+  options: (SelectOption & { group?: string })[];
   /** Raw query text. Owned by the caller so it can debounce before fetching. */
   searchText: string;
   onSearchTextChange: (text: string) => void;
@@ -138,6 +142,19 @@ export function SearchSelectField({
   React.useEffect(() => {
     if (value === "") setSelected(null);
   }, [value]);
+
+  // A value the field starts with (a saved choice shown again) has no pick behind it: adopt its option once it is
+  // in the list, so the input names it and typing over it clears it like any other selection.
+  React.useEffect(() => {
+    if (value !== "" && selected?.value !== value) {
+      const found = options.find((o) => o.value === value);
+      if (found) {
+        // Base UI may write the label back into the input as it adopts the value; that is not typing.
+        echoAfterSelect.current = found.label;
+        setSelected(found);
+      }
+    }
+  }, [value, options, selected]);
 
   return (
     <Field
@@ -239,15 +256,25 @@ export function SearchSelectField({
                       </p>
                     ) : null}
                     <Combobox.List>
-                      {(option: SelectOption) => (
-                        <Combobox.Item
-                          key={option.value}
-                          value={option}
-                          className="flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
-                        >
-                          <Combobox.ItemIndicator className="w-3 shrink-0" aria-hidden="true">✓</Combobox.ItemIndicator>
-                          {option.label}
-                        </Combobox.Item>
+                      {(option: SelectOption & { group?: string }, index: number) => (
+                        <React.Fragment key={option.value}>
+                          {option.group && option.group !== options[index - 1]?.group ? (
+                            <div
+                              role="presentation"
+                              data-option-group=""
+                              className="px-3 pt-2 pb-1 text-2xs text-[oklch(var(--color-ink-subtle))] border-t border-[oklch(var(--color-hairline))] first:border-t-0"
+                            >
+                              {option.group}
+                            </div>
+                          ) : null}
+                          <Combobox.Item
+                            value={option}
+                            className="flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
+                          >
+                            <Combobox.ItemIndicator className="w-3 shrink-0" aria-hidden="true">✓</Combobox.ItemIndicator>
+                            {option.label}
+                          </Combobox.Item>
+                        </React.Fragment>
                       )}
                     </Combobox.List>
                     {/* Says the list is a slice, which the old `<select>` never

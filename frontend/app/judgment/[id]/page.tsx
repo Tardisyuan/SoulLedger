@@ -19,7 +19,7 @@ import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { CaseAttachmentsPrintList } from "@/src/components/judgment/CaseAttachmentsPrintList";
 import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEvidenceColumn";
 import { JudgmentEvidenceAdmission } from "@/src/components/judgment/JudgmentEvidenceAdmission";
-import { OffenceField, WangsiPanel } from "@/src/components/judgment/DiyuCaseFields";
+import { OffenceField, WangsiPanel, untimelyLine } from "@/src/components/judgment/DiyuCaseFields";
 import {
   DraftConflictBanner,
   DraftStatusLine,
@@ -606,12 +606,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       {civilisation}
       <span aria-hidden="true" className="text-[oklch(var(--color-ink-tertiary))]">·</span>
       <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>
-      {/* 枉死(第五十一批 F-3):候审期间多一行「枉死 · 候至 日期 · 在枉死城」,到期后收成「枉死」。 */}
+      {/* 枉死(第五十一批 F-3):候审期间多一行「枉死 · 候至 日期 · 在枉死城」,到期后收成「枉死」;
+          申诉属实提前释放后是「枉死 · 日期 已提前释放」(第五十七批 D-2b)。枉死城块头写同一句。 */}
       {judgment.untimely && (
         <span data-testid="desk-untimely" className="basis-full text-[oklch(var(--color-ink))]">
-          {isHeldUntilFatedDate(judgment)
-            ? [t("judgment.untimely"), t("judgment.held_until", { date: judgment.held_until as string }), t("judgment.in_city")].join(" · ")
-            : t("judgment.untimely")}
+          {untimelyLine(judgment, t, formatDate)}
         </span>
       )}
       {/* 埃及入殿前(review P2-9):木乃伊 70 天期间带「候至 日期」,到期后只留阶段名。 */}
@@ -648,14 +647,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     : "grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_300px]";
   const notesShown = isFinal ? judgment.notes : notes;
 
+  const showPlacement =
+    !isFinal && isOriginal && canExecute && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY"));
+  const offenceField =
+    judgment.civilization === "CHINESE" ? <OffenceField judgment={judgment} editable={!isFinal && canExecute} /> : null;
+
   const materials: Record<DeskMaterial, { label: string; node: ReactNode }> = {
     confession: {
       label: t("judgment.detail.confession"),
       node: (
         <>
-          {/* 地府:罪目(自动选殿按它)与枉死城(只在枉死的案子上)。同样未结案且持 judgment.execute 才可改。 */}
-          {judgment.civilization === "CHINESE" && <OffenceField judgment={judgment} editable={!isFinal && canExecute} />}
-          {judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
           {/* 案由(`summary`):官员写的概述,与下面灵魂的供词是两回事。未结案且持 judgment.execute 才可改;其余只读,空则不画。 */}
           {!isFinal && canExecute ? (
             <CaseSummaryField id={id} value={judgment.summary ?? ""} />
@@ -891,6 +892,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               )}
             </MetaRow>
           </dl>
+          {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
+          {judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
 
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
@@ -1214,9 +1217,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </>
           )}
 
-          {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。 ── */}
-          {!isFinal && isOriginal && canExecute && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY")) && (
+          {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。地府的罪目在最上面(第五十七批 D-1)。 ── */}
+          {showPlacement ? (
             <JudgmentPlacement
+              lead={offenceField}
               noTerm={judgment.civilization === "EGYPTIAN"}
               judgmentId={judgment.id}
               verdict={selectedVerdict}
@@ -1230,6 +1234,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               refusal={placementRefusal}
               savedAt={draft.status === "idle" && !draft.conflict ? judgment.draft_saved_at : null}
             />
+          ) : (
+            /* 没有发落一节(已结案、不能改、加减项)时,罪目只读一行,照样在这里。 */
+            offenceField && <div className="mt-6">{offenceField}</div>
           )}
           {!isFinal && isAmendment && myTenant && (
             <AmendmentPlanChanges

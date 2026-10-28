@@ -921,6 +921,38 @@ describe("埃及入殿前 (review P2-9)", () => {
   });
 });
 
+describe("希腊过不了阿刻戎 (第五十七批 G-1)", () => {
+  const unclaimed = GROUP_ROWS.unclaimed;
+  beforeEach(() => {
+    GROUP_ROWS.unclaimed = [
+      row("unb", "Elpenor", { civilization: "GREEK", ferry_barred: "UNBURIED" }),
+      row("fare", "Kleon", { civilization: "GREEK", ferry_barred: "NO_FARE" }),
+      row("ok", "Kleitos", { civilization: "GREEK", ferry_barred: "" }),
+    ];
+  });
+  afterEach(() => {
+    GROUP_ROWS.unclaimed = unclaimed;
+  });
+
+  it("未葬 / 无渡资不画「认领」,换一行灰字;能过河的照常可认领", async () => {
+    renderPage();
+    await screen.findByText("Elpenor");
+
+    const unburied = rowOf("Elpenor");
+    expect(within(unburied).getByTestId("ferry-mark")).toHaveTextContent(tZh("souls.ferry_passage.UNBURIED"));
+    expect(within(unburied).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.ferry.barred_unburied"));
+    expect(within(unburied).queryByRole("button", { name: tZh("judgment.claim.claim") })).toBeNull();
+    expect(within(unburied).getByRole("checkbox")).toBeDisabled();
+
+    expect(within(rowOf("Kleon")).getByTestId("claim-held")).toHaveTextContent(tZh("judgment.ferry.barred_no_fare"));
+
+    const crossed = rowOf("Kleitos");
+    expect(within(crossed).queryByTestId("ferry-mark")).toBeNull();
+    expect(within(crossed).queryByTestId("claim-held")).toBeNull();
+    expect(within(crossed).getByRole("button", { name: tZh("judgment.claim.claim") })).toBeInTheDocument();
+  });
+});
+
 describe("枉死城 (第五十一批 F-2)", () => {
   const unclaimed = GROUP_ROWS.unclaimed;
   beforeEach(() => {

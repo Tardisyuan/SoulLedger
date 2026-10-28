@@ -206,3 +206,50 @@ describe("keyboard", () => {
     expect(input).toHaveAttribute("aria-expanded", "true");
   });
 });
+
+describe("groups and a starting value (第五十七批 D-1)", () => {
+  it("draws one header above each run of a group", async () => {
+    render(
+      <Harness
+        options={[
+          { value: "a", label: "诱拐人口", group: "第二殿" },
+          { value: "b", label: "伤人肢体", group: "第二殿" },
+          { value: "c", label: "杀生", group: "第九殿" },
+        ] as SelectOption[]}
+      />
+    );
+    await type("人");
+    expect(Array.from(document.querySelectorAll("[data-option-group]")).map((el) => el.textContent)).toEqual(["第二殿", "第九殿"]);
+    expect(options()).toHaveLength(3);
+  });
+
+  it("a value the field starts with names its option, and typing over it still clears it", async () => {
+    function Saved() {
+      const [text, setText] = useState("杀生");
+      const [value, setValue] = useState("c");
+      return (
+        <>
+          <SearchSelectField
+            id="offence"
+            name="offence"
+            label="罪目"
+            value={value}
+            onValueChange={setValue}
+            options={[{ value: "c", label: "杀生" }]}
+            searchText={text}
+            onSearchTextChange={setText}
+            loadingText="LOADING"
+            emptyText="EMPTY"
+          />
+          <output data-testid="value">{value}</output>
+        </>
+      );
+    }
+    render(<Saved />);
+    const input = screen.getByLabelText("罪目") as HTMLInputElement;
+    expect(input.value).toBe("杀生");
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    fireEvent.change(input, { target: { value: "放" } });
+    await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent(""));
+  });
+});

@@ -105,6 +105,8 @@ const ENUM_FIELDS = [
   // (European, MORTAL / MORTAL_ABSOLVED / VENIAL), drawn through souls.ferry_passage.* / souls.sin_gravity.*.
   "ferry_passage",
   "sin_gravity",
+  // Added 2026-10-28 (batch 57 G-1): `Judgment.ferry_barred`, the same members, drawn through souls.ferry_passage.*.
+  "ferry_barred",
   "reaction_type",
   "visibility",
   // Added 2026-09-25 by the meta-test: `MuteFilters.term` (SHORT / MEDIUM / LONG),

@@ -46,8 +46,8 @@ import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 import { withFrom } from "@/src/lib/backSource";
 
-/** 此刻不能认领:枉死城 / 埃及木乃伊 70 天候着,或埃及案到不了殿(永远候着)。 */
-const onHold = (j: Judgment) => isHeldUntilFatedDate(j) || isDuatBarred(j);
+/** 此刻不能认领:枉死城 / 埃及木乃伊 70 天候着,埃及案到不了殿(永远候着),或希腊亡魂过不了阿刻戎(第五十七批 G-1)。 */
+const onHold = (j: Judgment) => isHeldUntilFatedDate(j) || isDuatBarred(j) || !!j.ferry_barred;
 
 /**
  * 审判队列的「待审」一面(规范 v3 第 7 轮 `QueuePage`,落在规范 v1 第三类 A·02 的四组上):
@@ -621,7 +621,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                   const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
                   const laterThisSession = sessionDeferred.includes(j.id);
                   const held = isHeldUntilFatedDate(j);
-                  const barred = isDuatBarred(j);
+                  const barred = isDuatBarred(j) || !!j.ferry_barred;
                   return (
                     <tr
                       key={j.id}
@@ -678,6 +678,12 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                             {held && <span className="font-mono tabular-nums">{t("judgment.held_until", { date: j.held_until as string })}</span>}
                           </span>
                         )}
+                        {/* 希腊过不了阿刻戎(第五十七批 G-1):与枉死、入殿前同一种方框徽标。 */}
+                        {j.ferry_barred && (
+                          <span className="mt-0.5 flex items-center gap-2 whitespace-nowrap text-2xs text-[oklch(var(--color-ink-muted))]" data-testid="ferry-mark">
+                            <Badge tone="ink"><DomainEnum namespace="souls.ferry_passage" value={j.ferry_barred} /></Badge>
+                          </span>
+                        )}
                       </td>
                       <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[j.court, j.judge_name].filter(Boolean).join(" · ") || undefined}>
                         {[j.court, j.judge_name].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
@@ -715,8 +721,11 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                             </span>
                           </span>
                         ) : canExecute && group !== "deferred" && barred ? (
+                          /* 点了必然被拒的按钮不放(第五十七批 G-1);认领被拒的 toast 仍在 claimOne 里兜底。 */
                           <span data-testid="claim-held" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
-                            {t("judgment.claim.duat_barred_short")}
+                            {j.ferry_barred
+                              ? t(j.ferry_barred === "NO_FARE" ? "judgment.ferry.barred_no_fare" : "judgment.ferry.barred_unburied")
+                              : t("judgment.claim.duat_barred_short")}
                           </span>
                         ) : canExecute && group !== "deferred" && held ? (
                           /* 候审中:认领按钮换成一行灰字,到期后按钮回来。 */
@@ -774,7 +783,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         <ActionsMenu
                           menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
                           items={[
-                            ...(canExecute && j.claimed_by == null && group !== "deferred" && !held
+                            ...(canExecute && j.claimed_by == null && group !== "deferred" && !held && !barred
                               ? [{ key: "claim", label: t("judgment.claim.claim"), onSelect: () => claimOne(j.id), disabled: claim.isPending }]
                               : []),
                             ...(canExecute && mine

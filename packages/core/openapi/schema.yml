@@ -29433,6 +29433,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/DuatStageEnum'
           readOnly: true
+        ferry_barred:
+          type: string
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -29672,6 +29675,7 @@ components:
       - draft_version
       - duat_stage
       - evidence_count
+      - ferry_barred
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -30294,6 +30298,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/DuatStageEnum'
           readOnly: true
+        ferry_barred:
+          type: string
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -30550,6 +30557,7 @@ components:
       - duat_stage
       - evidence_admissions
       - evidence_count
+      - ferry_barred
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -36967,6 +36975,9 @@ components:
         duat_stage:
           allOf:
           - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
+        ferry_barred:
+          type: string
           readOnly: true
         kind:
           allOf:

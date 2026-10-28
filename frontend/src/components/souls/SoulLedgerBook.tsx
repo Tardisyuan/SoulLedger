@@ -146,6 +146,25 @@ export function DedicationTag() {
   );
 }
 
+/**
+ * 欧洲 大罪 / 小罪(第五十七批 E-1):三级三种分量,不用颜色。「大罪 · 未悔」2px ink 方框 —— 最重,也是唯一
+ * 会挡判决的一级;「大罪 · 已告解」1px 方框;「小罪」只写灰字。没分级不画。审判台证据行与灵魂详情台账共用。
+ */
+const SIN_GRAVITY_FRAME: Record<string, string> = {
+  MORTAL: "border-2 border-[oklch(var(--color-ink))] px-1 text-[oklch(var(--color-ink))]",
+  MORTAL_ABSOLVED: "border border-[oklch(var(--color-ink))] px-1 text-[oklch(var(--color-ink))]",
+  VENIAL: "text-[oklch(var(--color-ink-subtle))]",
+};
+
+export function SinGravityMark({ record }: { record: LedgerRecord }) {
+  if (!record.sin_gravity) return null;
+  return (
+    <span data-sin-gravity={record.sin_gravity} className={`ml-2 inline-block whitespace-nowrap text-2xs leading-4 ${SIN_GRAVITY_FRAME[record.sin_gravity] ?? ""}`}>
+      <DomainEnum namespace="souls.sin_gravity" value={record.sin_gravity} />
+    </span>
+  );
+}
+
 /** 事目第二行有没有东西可写(次数 / 节点 / 人生阶段 / 证据来源)。两处共用,免得各自漏一项。 */
 export function hasRecordFacts(record: LedgerRecord): boolean {
   return record.occurrence_count != null || record.is_milestone || !!record.life_stage || !!record.evidence_source;
@@ -335,7 +354,10 @@ export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
                         </span>
                       </>
                     ) : (
-                      record.description
+                      <>
+                        {record.description}
+                        <SinGravityMark record={record} />
+                      </>
                     )}
                     {/* 次数与重要节点在事目的第二行;条款在窄屏(< 768,没有条款列)也折进来。 */}
                     {(clause || hasFacts) && (

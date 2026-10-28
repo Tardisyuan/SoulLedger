@@ -11,7 +11,7 @@ from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.destination import MAX_TERM_YEARS
 from apps.judgment import snapshot
-from apps.judgment.claims import BATCH_LIMIT
+from apps.judgment.claims import BATCH_LIMIT, ferry_barred
 from apps.judgment.models import (
     CitationSnapshotKind,
     EvidenceAdmission,
@@ -173,6 +173,8 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 审判台「所在界域」:案子挂的那一站(`realm`),按请求语言给名字;没挂站是 null。
     realm_name = serializers.SerializerMethodField()
     city_god_name = serializers.CharField(source="city_god.name", read_only=True, allow_null=True, default=None)
+    # 希腊原审此刻过不了阿刻戎的原因(UNBURIED / NO_FARE),能过河是空串;队列据此不画「认领」(第五十七批 G-1)。
+    ferry_barred = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -194,7 +196,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name",
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
-            "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage",
+            "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage", "ferry_barred",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
@@ -268,6 +270,9 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         if obj.civilization != Civilization.CHINESE:
             return None
         return obj.soul.karmic_balance
+
+    def get_ferry_barred(self, obj) -> str:
+        return ferry_barred(obj)
 
     def get_realm_name(self, obj) -> str | None:
         realm = obj.realm

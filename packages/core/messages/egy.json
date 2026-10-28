@@ -2258,6 +2258,21 @@
       "EARLY_DEATH": "Mut Em Ankh Nedjes · Er Sekhet Aaru",
       "NAMELESS": "Nen Ren · Nen Aq Er Duat",
       "IMPROPER_BURIAL": "Qeres Nen Maat · Shem Nen Khetem Djer"
+    },
+    "wangsi": {
+      "release_title": "{{name}}: Per Em Nut Mut Nen Maat?",
+      "release_body": "Maat: {{name}} Per Em Nut Mut Nen Maat; Shesep Emu, Nen Em Smen Er {{date}}.",
+      "release_irreversible": "Nen Sehen.",
+      "release_gate": "Maat Wa: {{level}} Er Hery",
+      "released_line": "Mut Nen Maat · Per Tepy {{date}}"
+    },
+    "ferry": {
+      "barred_unburied": "Nen Qeres · Nen Shem Itru",
+      "barred_no_fare": "Nen Redi Er Itru · Nen Shem Itru"
+    },
+    "confessions": {
+      "only_unrecorded": "Nen Sesh Djer Wa",
+      "not_seeded": "Medu Nen Ini Djer"
     }
   },
   "audit": {
@@ -7276,7 +7291,11 @@
     "default_regions": "Nen Gem Nut",
     "default_current": "Smen Tepy: {{name}}",
     "default_none": "Nen Smen Tepy Em Wesekhet Pen",
-    "go_to_queue": "Er Maa Tepy"
+    "go_to_queue": "Er Maa Tepy",
+    "bureaus_preset": "Smen Tepy · {{level}}",
+    "bureaus_preset_confirm": "Khemen {{n}} Setep Seth",
+    "bureaus_summary": "{{names}} · {{n}} Neb",
+    "bureaus_group_count": "{{selected}} / {{total}}"
   },
   "cityGodCases": {
     "title": "Chenghuang · Maa Tepy",

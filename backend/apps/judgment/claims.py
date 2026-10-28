@@ -81,6 +81,18 @@ def assert_concludable(judgment: Judgment) -> None:
     _assert_not_held(judgment)
 
 
+def ferry_barred(judgment) -> str:
+    """希腊原审此刻过不了阿刻戎的原因(`Soul.FerryPassage`,UNBURIED / NO_FARE);能过河是空串。
+
+    认领的拒绝与队列的 `ferry_barred` 列(审判队列据此不画「认领」,第五十七批 G-1)读同一条规则。
+    """
+    soul = judgment.soul
+    if (judgment.civilization == "GREEK" and judgment.kind == JudgmentKind.ORIGINAL
+            and soul.ferry_passage and not acheron.crossed(soul, timezone.localdate())):
+        return soul.ferry_passage
+    return ""
+
+
 def _assert_not_held(judgment: Judgment) -> None:
     """Held before the case can be heard: 枉死城 until the fated date (Diyu), or the Egyptian stages before the
     hall — 70 days of embalming, or for ever when the soul cannot reach it (docs/02 §1.1, 01 §4.2)."""
@@ -93,11 +105,10 @@ def _assert_not_held(judgment: Judgment) -> None:
     # `Soul.ferry_passage`)。读灵魂此刻的记录,不冻在案子上:官员补记「已葬」后即可认领。只拦原审 ——
     # 上诉、重开时灵魂早已过河。未葬者在岸边游荡满一百年后得渡(Aen. 6.325-330,`apps/souls/acheron.py`);
     # 无渡资照拦,死亡日没登记也照拦。
-    if (judgment.civilization == "GREEK" and judgment.kind == JudgmentKind.ORIGINAL
-            and judgment.soul.ferry_passage and not acheron.crossed(judgment.soul, timezone.localdate())):
+    if ferry := ferry_barred(judgment):
         raise ClaimRefusedError(
             "Charon ferries only the buried who can pay; this soul waits on the bank of Acheron.", "unferried",
-            ferry_passage=judgment.soul.ferry_passage,
+            ferry_passage=ferry,
         )
     if judgment.held_until and judgment.held_until > timezone.localdate():
         if judgment.duat_stage == DuatStage.EMBALMING:
