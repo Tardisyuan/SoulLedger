@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
@@ -84,6 +84,16 @@ const VERDICT_GLYPH: Record<string, string> = {
 // because the bundle keys this namespace lowercase. resolveEnumDisplay now
 // folds case itself, so the map (and the raw-enum fallback beside every use
 // of it) is gone — see src/lib/domainDisplay.ts.
+
+/**
+ * 第五十六批 W-1:从上诉详情「查看审批流程 →」带 `#node-<节点 id>` 进来,节点列表滚到那一行,
+ * 左侧 3px ink 竖条 + surface-2 浅底。服务端渲染时没有 hash(空串),水合后再读,hash 变了跟着变。
+ */
+const subscribeHash = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+};
+const useHash = () => useSyncExternalStore(subscribeHash, () => window.location.hash.slice(1), () => "");
 
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -198,6 +208,12 @@ export default function WorkflowDetailPage() {
 
   const currentNode = workflow?.current_node_detail;
   const sortedNodes = workflow?.nodes?.slice().sort((a, b) => a.node_order - b.node_order) || [];
+  const anchor = useHash();
+  const loadedId = workflow?.id;
+  useEffect(() => {
+    // Once per load or hash, not on every refetch: a WS-driven refresh must not yank the page back.
+    if (loadedId && anchor.startsWith("node-")) document.getElementById(anchor)?.scrollIntoView?.({ block: "center" });
+  }, [anchor, loadedId]);
   // By `case_type` from the serializer — never by the workflow's name.
   const needsReasonForSoul = requiresReasonForSoul(workflow?.case_type, selectedVerdict);
 
@@ -404,18 +420,27 @@ export default function WorkflowDetailPage() {
                     (node.status === "PENDING" && (workflow.status === "COMPLETED" || workflow.status === "REJECTED"));
                   const isPast = node.status !== "PENDING" && !notReached;
                   const nodeStatusLabel = notReached ? t("workflow.node_state.not_reached") : statusLabel(node.status);
+                  const anchored = anchor === `node-${node.id}`;
                   return (
                     <li
                       key={node.id}
+                      id={`node-${node.id}`}
                       aria-current={isCurrent ? "step" : undefined}
                       className={`relative grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-x-2 min-h-16 px-3 py-2 border-b last:border-b-0 border-[oklch(var(--color-line))] ${
+                        anchored
+                          ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                          : isCurrent
+                            ? "bg-[oklch(var(--color-ink)/0.07)]"
+                            : ""
+                      } ${
                         isCurrent
-                          ? "bg-[oklch(var(--color-ink)/0.07)] font-medium text-[oklch(var(--color-ink))]"
+                          ? "font-medium text-[oklch(var(--color-ink))]"
                           : isPast
                             ? "text-[oklch(var(--color-ink-muted))]"
                             : "text-[oklch(var(--color-ink-subtle))]"
                       }`}
                       data-node-state={notReached ? "not-reached" : undefined}
+                      data-anchored={anchored || undefined}
                     >
                       {isCurrent && waitingOnMe && (
                         <span

@@ -221,3 +221,38 @@ describe("escalated appeal", () => {
     expect(screen.queryByTestId("workflow-judgment-appeal")).toBeNull();
   });
 });
+
+/** 第五十六批 W-1:上诉详情「查看审批流程 →」带 `#node-<id>` 进来,那一行滚到眼前,左 3px ink 竖条 + surface-2 浅底。 */
+describe("arriving at one node by its anchor", () => {
+  const scroll = jest.fn();
+  beforeEach(() => {
+    scroll.mockClear();
+    Element.prototype.scrollIntoView = scroll;
+  });
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("highlights and scrolls to the anchored row, and only that one — not the current node", async () => {
+    window.location.hash = "#node-n1";
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    const row = document.getElementById("node-n1")!;
+    expect(row).toHaveAttribute("data-anchored", "true");
+    expect(row).toHaveClass("bg-[oklch(var(--color-surface-2))]", "shadow-[inset_3px_0_0_oklch(var(--color-ink))]");
+    expect(scroll.mock.contexts).toContain(row);
+    for (const other of ["node-n2", "node-n3"]) {
+      expect(document.getElementById(other)).not.toHaveAttribute("data-anchored");
+      expect(document.getElementById(other)).not.toHaveClass("shadow-[inset_3px_0_0_oklch(var(--color-ink))]");
+    }
+  });
+
+  it("highlights nothing without an anchor", async () => {
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    expect(document.querySelector("[data-anchored]")).toBeNull();
+    expect(scroll).not.toHaveBeenCalled();
+  });
+});
