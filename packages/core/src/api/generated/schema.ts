@@ -3388,6 +3388,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/negative-confessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The 42 denials of this case, in assessor order, with what was heard. Bounded: the hall's 42 articles. */
+        get: operations["v1_judgment_negative_confessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/negative-confessions/{ordinal}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Record whether one denial is true. PUT: a state, repeating it is a no-op. Answers the whole listing. */
+        put: operations["v1_judgment_negative_confessions_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/precedents/": {
         parameters: {
             query?: never;
@@ -10984,6 +11018,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             missing?: string[];
+            ferry_passage?: string;
             /** Format: uuid */
             city_god?: string;
             city_god_status?: string;
@@ -12424,6 +12459,12 @@ export interface components {
          */
         FeedbackTagEnum: "account" | "record" | "app" | "other";
         /**
+         * @description * `UNBURIED` - 未葬
+         *     * `NO_FARE` - 无渡资
+         * @enum {string}
+         */
+        FerryPassageEnum: "UNBURIED" | "NO_FARE";
+        /**
          * @description `GET /workflows/flow-preview/` (W-1): the stations of this realm's default flow before the workflow is
          *     generated, and the other realms that will follow (`segments.flow_preview`).
          */
@@ -13029,6 +13070,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             missing?: string[];
+            ferry_passage?: string;
         };
         JudgmentComment: {
             /** Format: uuid */
@@ -13566,6 +13608,7 @@ export interface components {
             life_stage: string;
             evidence_source: string;
             evidence_note: string;
+            sin_gravity: string;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.
@@ -14368,6 +14411,45 @@ export interface components {
             days: number;
             /** @default  */
             reason: string;
+        };
+        NegativeConfessionError: {
+            error: string;
+            /** @description concluded (409) / not_weighed (400) / unknown_clause (404) */
+            code: string;
+        };
+        NegativeConfessionList: {
+            /** @description False: this case is not weighed and hears no denials. */
+            applies: boolean;
+            concluded: boolean;
+            items: components["schemas"]["NegativeConfessionRow"][];
+            tally: components["schemas"]["NegativeConfessionTally"] | null;
+        };
+        NegativeConfessionRow: {
+            /** @description assessor_index, 1-42 */
+            ordinal: number;
+            /** Format: uuid */
+            statute_id: string;
+            /** @description EG-NC-NN */
+            code: string;
+            /** @description The assessor before whom the denial is made (localized). */
+            assessor: string;
+            /** @description The denial (localized; read off the assessor row). */
+            text: string;
+            /** @description true 如实 / false 不实 / null 未记 */
+            truthful: boolean | null;
+            note: string;
+            /** Format: date-time */
+            recorded_at: string | null;
+        };
+        NegativeConfessionTally: {
+            truthful: number;
+            untruthful: number;
+            unheard: number;
+            total: number;
+        };
+        NegativeConfessionWrite: {
+            truthful: boolean | null;
+            note?: string;
         };
         /**
          * @description * `PASSED` - PASSED
@@ -16518,6 +16600,9 @@ export interface components {
             baptism?: components["schemas"]["BaptismEnum"];
             /** @description Whether this soul held, in life, that the spirit dies with the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes. NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null means unrecorded. */
             denied_immortality?: boolean | null;
+            /** @description Whether this soul lived neither for God nor against him — Dante's neutrals (Inf. III), who are outside the nine circles. European only. Null means unrecorded. */
+            neutral_in_life?: boolean | null;
+            ferry_passage?: components["schemas"]["FerryPassageEnum"] | components["schemas"]["BlankEnum"];
             description?: string;
             readonly merit_score?: number | null;
             readonly demerit_score?: number | null;
@@ -16590,6 +16675,14 @@ export interface components {
             occurrence_count?: number | null;
             /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
             inferno_article?: string;
+            /**
+             * @description European DEMERIT only: MORTAL (unrepented at death), MORTAL_ABSOLVED (confessed and absolved) or VENIAL. Blank = unclassified.
+             *
+             *     * `MORTAL` - 大罪 · 未悔
+             *     * `MORTAL_ABSOLVED` - 大罪 · 已告解
+             *     * `VENIAL` - 小罪
+             */
+            sin_gravity?: components["schemas"]["SinGravityEnum"] | components["schemas"]["BlankEnum"];
             /** @description Life index this record belongs to; 0 is the first life. */
             readonly cycle?: number;
             /** Format: uuid */
@@ -18230,6 +18323,13 @@ export interface components {
             label: string;
         };
         /**
+         * @description * `MORTAL` - 大罪 · 未悔
+         *     * `MORTAL_ABSOLVED` - 大罪 · 已告解
+         *     * `VENIAL` - 小罪
+         * @enum {string}
+         */
+        SinGravityEnum: "MORTAL" | "MORTAL_ABSOLVED" | "VENIAL";
+        /**
          * @description * `AT_PICK` - 选站时跳过
          *     * `LATER` - 中途跳过
          *     * `CANCELLED` - 跨域审判取消
@@ -18385,6 +18485,9 @@ export interface components {
             baptism?: components["schemas"]["BaptismEnum"];
             /** @description Whether this soul held, in life, that the spirit dies with the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes. NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null means unrecorded. */
             denied_immortality?: boolean | null;
+            /** @description Whether this soul lived neither for God nor against him — Dante's neutrals (Inf. III), who are outside the nine circles. European only. Null means unrecorded. */
+            neutral_in_life?: boolean | null;
+            ferry_passage?: components["schemas"]["FerryPassageEnum"] | components["schemas"]["BlankEnum"];
             description?: string;
             readonly merit_score: number | null;
             readonly demerit_score: number | null;
@@ -18973,6 +19076,14 @@ export interface components {
             occurrence_count?: number | null;
             /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
             inferno_article?: string;
+            /**
+             * @description European DEMERIT only: MORTAL (unrepented at death), MORTAL_ABSOLVED (confessed and absolved) or VENIAL. Blank = unclassified.
+             *
+             *     * `MORTAL` - 大罪 · 未悔
+             *     * `MORTAL_ABSOLVED` - 大罪 · 已告解
+             *     * `VENIAL` - 小罪
+             */
+            sin_gravity?: components["schemas"]["SinGravityEnum"] | components["schemas"]["BlankEnum"];
             /** @description Life index this record belongs to; 0 is the first life. */
             readonly cycle: number;
             /** Format: uuid */
@@ -26470,6 +26581,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceRulingResult"];
+                };
+            };
+        };
+    };
+    v1_judgment_negative_confessions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NegativeConfessionList"];
+                };
+            };
+        };
+    };
+    v1_judgment_negative_confessions_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+                /** @description assessor_index, 1-42 */
+                ordinal: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NegativeConfessionWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["NegativeConfessionWrite"];
+                "multipart/form-data": components["schemas"]["NegativeConfessionWrite"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NegativeConfessionList"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NegativeConfessionError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NegativeConfessionError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NegativeConfessionError"];
                 };
             };
         };

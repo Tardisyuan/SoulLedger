@@ -737,6 +737,28 @@
       "YES": "Yes",
       "NO": "No",
       "help": "Held in life that the soul dies with the body (the Epicureans, Inf. X): when condemned, the sixth circle (heresy), unless a cited sin lies deeper. Not blasphemy, which is the seventh circle."
+    },
+    "neutral_in_life": {
+      "label": "Neutral in life",
+      "UNRECORDED": "Not recorded",
+      "YES": "Yes",
+      "NO": "No",
+      "help": "Lived neither for good nor for evil, taking no side (Inf. III): when condemned with no deeper circle cited, the vestibule of hell, outside the nine circles."
+    },
+    "ferry_passage": {
+      "label": "The crossing",
+      "NONE": "Buried, fare paid",
+      "UNBURIED": "Unburied",
+      "NO_FARE": "No fare",
+      "help": "Charon ferries only the buried who can pay. The unburied and those without a fare wait on the bank of Acheron and their judgment can't be claimed; record “Buried, fare paid” and the case can be heard."
+    },
+    "sin_gravity": {
+      "label": "Mortal / venial",
+      "NONE": "Unclassified",
+      "MORTAL": "Mortal · unrepented",
+      "MORTAL_ABSOLVED": "Mortal · absolved",
+      "VENIAL": "Venial",
+      "help": "An unrepented mortal sin can only be condemned (hell). Venial sins and absolved mortal sins can't be sent to hell; they are purged in purgatory. Unclassified deeds are not checked."
     }
   },
   "common": {
@@ -2153,7 +2175,8 @@
       "load_more": "More ({{n}} left)",
       "embalming": "This judgment is held until {{date}}: the embalming isn't finished and the soul hasn't set out for the Hall of Two Truths; it can't be claimed before then.",
       "duat_unfinished": "This judgment can't be claimed: the soul cannot reach the Hall of Two Truths.",
-      "duat_barred_short": "Can't reach the hall"
+      "duat_barred_short": "Can't reach the hall",
+      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron."
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2258,6 +2281,24 @@
       "EARLY_DEATH": "Died young · straight to the Field of Reeds",
       "NAMELESS": "Nameless · does not enter the underworld",
       "IMPROPER_BURIAL": "Improper burial · journey unfinished"
+    },
+    "confessions": {
+      "title": "The forty-two denials",
+      "hint": "The deceased denies one wrong before each of the forty-two assessors. Record whether each denial is true; it can't be changed once the case is concluded.",
+      "tally": "True {{truthful}} · False {{untruthful}} · Not recorded {{unheard}}",
+      "truthful": "True",
+      "untruthful": "False",
+      "unheard": "Not recorded",
+      "note": "Note",
+      "note_placeholder": "Grounds (optional)",
+      "row_label": "Assessor {{n}}, {{assessor}}",
+      "empty": "This hall has no articles for the forty-two denials yet (the seed has not run).",
+      "errors": {
+        "concluded": "The case is concluded; the confession record can't be changed.",
+        "not_weighed": "This case is not weighed and hears no denials.",
+        "unknown_clause": "This hall has no such assessor.",
+        "generic": "Not recorded; please try again."
+      }
     }
   },
   "audit": {
@@ -2568,7 +2609,8 @@
       "EG_SEVEN_ARRWT": "七道通路",
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
       "EG_AARU": "阿鲁之地",
-      "EG_ANNIHILATION": "第二次死亡"
+      "EG_ANNIHILATION": "第二次死亡",
+      "EU_ANTINFERNO": "地狱前庭"
     },
     "names": {
       "DY_01_HEAVEN": "First Heaven",
@@ -2613,7 +2655,8 @@
       "EG_SEVEN_ARRWT": "The Seven Approaches to the House of Osiris",
       "EG_TWENTYONE_SEBKHET": "The Twenty-One Portals of the Field of Reeds",
       "EG_AARU": "Field of Reeds (Aaru)",
-      "EG_ANNIHILATION": "Second Death (annihilation by Ammit)"
+      "EG_ANNIHILATION": "Second Death (annihilation by Ammit)",
+      "EU_ANTINFERNO": "The Vestibule of Hell"
     },
     "no_realms": "No realms are recorded yet.",
     "topology": {
@@ -6015,7 +6058,9 @@
       "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
       "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later",
       "retry_with_open_cross": "A cross-realm judgment is open on this case; conclude it before hearing the case again.",
-      "retry_not_a_destination": "A European RETRY is not a destination: give a final verdict, or open a new judgment."
+      "retry_not_a_destination": "A European RETRY is not a destination: give a final verdict, or open a new judgment.",
+      "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
+      "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory)."
     },
     "cross": {
       "title": "Sentence plan stops",
@@ -7215,7 +7260,9 @@
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
       "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
       "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment.",
-      "not_final_judge": "Only the final judge can decide"
+      "not_final_judge": "Only the final judge can decide",
+      "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
+      "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell."
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",

@@ -7769,6 +7769,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/EvidenceRulingResult'
           description: ''
+  /api/v1/judgment/{id}/negative-confessions/:
+    get:
+      operationId: v1_judgment_negative_confessions_retrieve
+      description: 'The 42 denials of this case, in assessor order, with what was
+        heard. Bounded: the hall''s 42 articles.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NegativeConfessionList'
+          description: ''
+  /api/v1/judgment/{id}/negative-confessions/{ordinal}/:
+    put:
+      operationId: v1_judgment_negative_confessions_update
+      description: 'Record whether one denial is true. PUT: a state, repeating it
+        is a no-op. Answers the whole listing.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      - in: path
+        name: ordinal
+        schema:
+          type: integer
+        description: assessor_index, 1-42
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NegativeConfessionWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NegativeConfessionWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NegativeConfessionWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NegativeConfessionList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NegativeConfessionError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NegativeConfessionError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NegativeConfessionError'
+          description: ''
   /api/v1/judgment/{id}/precedents/:
     get:
       operationId: v1_judgment_precedents_list
@@ -24228,6 +24312,8 @@ components:
           items:
             type: string
             format: uuid
+        ferry_passage:
+          type: string
         city_god:
           type: string
           format: uuid
@@ -27360,6 +27446,14 @@ components:
         * `record` - 我的记录有误
         * `app` - App 出了问题
         * `other` - 其他
+    FerryPassageEnum:
+      enum:
+      - UNBURIED
+      - NO_FARE
+      type: string
+      description: |-
+        * `UNBURIED` - 未葬
+        * `NO_FARE` - 无渡资
     FlowPreview:
       type: object
       description: |-
@@ -28828,6 +28922,8 @@ components:
           items:
             type: string
             format: uuid
+        ferry_passage:
+          type: string
       required:
       - code
       - error
@@ -30038,6 +30134,8 @@ components:
           type: string
         evidence_note:
           type: string
+        sin_gravity:
+          type: string
       required:
       - category
       - civilization
@@ -30054,6 +30152,7 @@ components:
       - occurrence_count
       - original_weight
       - recorded_at
+      - sin_gravity
       - statute_clause
       - statute_snapshot
       - type
@@ -31985,6 +32084,102 @@ components:
       required:
       - days
       - user_id
+    NegativeConfessionError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: concluded (409) / not_weighed (400) / unknown_clause (404)
+      required:
+      - code
+      - error
+    NegativeConfessionList:
+      type: object
+      properties:
+        applies:
+          type: boolean
+          description: 'False: this case is not weighed and hears no denials.'
+        concluded:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NegativeConfessionRow'
+        tally:
+          allOf:
+          - $ref: '#/components/schemas/NegativeConfessionTally'
+          nullable: true
+      required:
+      - applies
+      - concluded
+      - items
+      - tally
+    NegativeConfessionRow:
+      type: object
+      properties:
+        ordinal:
+          type: integer
+          description: assessor_index, 1-42
+        statute_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: EG-NC-NN
+        assessor:
+          type: string
+          description: The assessor before whom the denial is made (localized).
+        text:
+          type: string
+          description: The denial (localized; read off the assessor row).
+        truthful:
+          type: boolean
+          nullable: true
+          description: true 如实 / false 不实 / null 未记
+        note:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - assessor
+      - code
+      - note
+      - ordinal
+      - recorded_at
+      - statute_id
+      - text
+      - truthful
+    NegativeConfessionTally:
+      type: object
+      properties:
+        truthful:
+          type: integer
+        untruthful:
+          type: integer
+        unheard:
+          type: integer
+        total:
+          type: integer
+      required:
+      - total
+      - truthful
+      - unheard
+      - untruthful
+    NegativeConfessionWrite:
+      type: object
+      properties:
+        truthful:
+          type: boolean
+          nullable: true
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - truthful
     NodeDecisionVerdictEnum:
       enum:
       - PASSED
@@ -36104,6 +36299,16 @@ components:
             the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes.
             NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null
             means unrecorded.
+        neutral_in_life:
+          type: boolean
+          nullable: true
+          description: Whether this soul lived neither for God nor against him — Dante's
+            neutrals (Inf. III), who are outside the nine circles. European only.
+            Null means unrecorded.
+        ferry_passage:
+          oneOf:
+          - $ref: '#/components/schemas/FerryPassageEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         description:
           type: string
         merit_score:
@@ -36269,6 +36474,16 @@ components:
             girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves
             the European router on its culpa ladder for this deed.
           maxLength: 32
+        sin_gravity:
+          description: |-
+            European DEMERIT only: MORTAL (unrepented at death), MORTAL_ABSOLVED (confessed and absolved) or VENIAL. Blank = unclassified.
+
+            * `MORTAL` - 大罪 · 未悔
+            * `MORTAL_ABSOLVED` - 大罪 · 已告解
+            * `VENIAL` - 小罪
+          oneOf:
+          - $ref: '#/components/schemas/SinGravityEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         cycle:
           type: integer
           readOnly: true
@@ -39703,6 +39918,16 @@ components:
       - role
       - user_count
       - users
+    SinGravityEnum:
+      enum:
+      - MORTAL
+      - MORTAL_ABSOLVED
+      - VENIAL
+      type: string
+      description: |-
+        * `MORTAL` - 大罪 · 未悔
+        * `MORTAL_ABSOLVED` - 大罪 · 已告解
+        * `VENIAL` - 小罪
     SkipKindEnum:
       enum:
       - AT_PICK
@@ -40009,6 +40234,16 @@ components:
             the body (Inf. X.13-15) — the specific claim Dante's sixth circle punishes.
             NOT a general heresy flag, and not blasphemy, which is Inf. XIV. Null
             means unrecorded.
+        neutral_in_life:
+          type: boolean
+          nullable: true
+          description: Whether this soul lived neither for God nor against him — Dante's
+            neutrals (Inf. III), who are outside the nine circles. European only.
+            Null means unrecorded.
+        ferry_passage:
+          oneOf:
+          - $ref: '#/components/schemas/FerryPassageEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         description:
           type: string
         merit_score:
@@ -41389,6 +41624,16 @@ components:
             girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves
             the European router on its culpa ladder for this deed.
           maxLength: 32
+        sin_gravity:
+          description: |-
+            European DEMERIT only: MORTAL (unrepented at death), MORTAL_ABSOLVED (confessed and absolved) or VENIAL. Blank = unclassified.
+
+            * `MORTAL` - 大罪 · 未悔
+            * `MORTAL_ABSOLVED` - 大罪 · 已告解
+            * `VENIAL` - 小罪
+          oneOf:
+          - $ref: '#/components/schemas/SinGravityEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         cycle:
           type: integer
           readOnly: true

@@ -271,6 +271,8 @@ export interface LedgerRecord {
   /** souls.evidence_sources 的成员;空串 / 缺 = 没记。 */
   evidence_source?: string;
   evidence_note?: string;
+  /** 欧洲 大罪 / 小罪(SoulRecord.sin_gravity);空串 / 缺 = 没记。 */
+  sin_gravity?: string;
 }
 
 /** `SoulRecord.statute_snapshot`(apps/judgment/snapshot.record_snapshot):引用时冻结的律条。 */

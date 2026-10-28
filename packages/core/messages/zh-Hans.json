@@ -737,6 +737,28 @@
       "YES": "是",
       "NO": "否",
       "help": "生前主张灵魂随肉体而死（伊壁鸠鲁派，Inf. X）：判有罪时入第六圈（异端），除非引用的罪更深。不是渎神，渎神在第七圈。"
+    },
+    "neutral_in_life": {
+      "label": "中立者",
+      "UNRECORDED": "未记录",
+      "YES": "是",
+      "NO": "否",
+      "help": "生前既不为善也不为恶、不站任何一边（Inf. III）：判有罪而没有引用更深的圈时，入地狱前庭，不入九圈。"
+    },
+    "ferry_passage": {
+      "label": "过河",
+      "NONE": "已葬，有渡资",
+      "UNBURIED": "未葬",
+      "NO_FARE": "无渡资",
+      "help": "卡戎只渡已葬且付了渡资的亡魂。未葬或无渡资者滞留阿刻戎岸边，审判不能认领；补记为「已葬，有渡资」后即可受审。"
+    },
+    "sin_gravity": {
+      "label": "大罪 / 小罪",
+      "NONE": "未分",
+      "MORTAL": "大罪 · 未悔",
+      "MORTAL_ABSOLVED": "大罪 · 已告解",
+      "VENIAL": "小罪",
+      "help": "未悔的大罪只能判不通过（下地狱）；小罪与已告解的大罪不能判下地狱，进炼狱涤罪。未分的不核对。"
     }
   },
   "common": {
@@ -2153,7 +2175,8 @@
       "load_more": "更多（还有 {{n}} 件）",
       "embalming": "这桩审判候至 {{date}}：木乃伊尚未完成，灵魂还没启程前往两真之殿，到那天才能认领。",
       "duat_unfinished": "这桩审判不能认领：灵魂到不了两真之殿。",
-      "duat_barred_short": "到不了殿，不能认领"
+      "duat_barred_short": "到不了殿，不能认领",
+      "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2258,6 +2281,24 @@
       "EARLY_DEATH": "早夭 · 直入芦苇原",
       "NAMELESS": "无名者 · 不入冥界",
       "IMPROPER_BURIAL": "葬仪不当 · 旅程未竟"
+    },
+    "confessions": {
+      "title": "四十二条否定告白",
+      "hint": "亡者向四十二位判官逐一否认一项罪。逐条记下是否如实；结案后不能再改。",
+      "tally": "如实 {{truthful}} · 不实 {{untruthful}} · 未记 {{unheard}}",
+      "truthful": "如实",
+      "untruthful": "不实",
+      "unheard": "未记",
+      "note": "备注",
+      "note_placeholder": "依据（可空）",
+      "row_label": "第 {{n}} 位判官 {{assessor}}",
+      "empty": "本殿还没有四十二条告白的条文（种子未运行）。",
+      "errors": {
+        "concluded": "已结案，告白记录不能再改。",
+        "not_weighed": "这件案子不称心，没有否定告白。",
+        "unknown_clause": "本殿没有这一位判官。",
+        "generic": "没有记下，请重试。"
+      }
     }
   },
   "audit": {
@@ -2568,7 +2609,8 @@
       "EG_SEVEN_ARRWT": "七道通路",
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
       "EG_AARU": "阿鲁之地",
-      "EG_ANNIHILATION": "第二次死亡"
+      "EG_ANNIHILATION": "第二次死亡",
+      "EU_ANTINFERNO": "地狱前庭"
     },
     "names": {
       "DY_01_HEAVEN": "第一层天界",
@@ -2613,7 +2655,8 @@
       "EG_SEVEN_ARRWT": "七道通路",
       "EG_TWENTYONE_SEBKHET": "二十一道门户",
       "EG_AARU": "芦苇原",
-      "EG_ANNIHILATION": "湮灭"
+      "EG_ANNIHILATION": "湮灭",
+      "EU_ANTINFERNO": "地狱前庭"
     },
     "no_realms": "还没有登记任何殿域。",
     "topology": {
@@ -6015,7 +6058,9 @@
       "soul_away": "灵魂不在原属地，不能重新发起",
       "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试",
       "retry_with_open_cross": "这件案子挂着未结的联审，先结联审再判「重审」。",
-      "retry_not_a_destination": "欧洲的「重审」不是去处：请给出终局裁决，或另开一件审判。"
+      "retry_not_a_destination": "欧洲的「重审」不是去处：请给出终局裁决，或另开一件审判。",
+      "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
+      "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判待定（炼狱）。"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -7215,7 +7260,9 @@
       "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。",
       "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论",
       "retry_not_a_destination": "欧洲的「重审」不是去处：请改判为终局裁决，或另开一件审判。",
-      "not_final_judge": "只有终审官员能作出结论"
+      "not_final_judge": "只有终审官员能作出结论",
+      "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能改判不通过。",
+      "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能改判下地狱。"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",
