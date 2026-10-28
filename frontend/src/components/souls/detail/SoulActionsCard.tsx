@@ -7,7 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { Button } from "@/src/components/ui/Button";
+import { SelectField } from "@/src/components/ui/Field";
 import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
+
+/** 四大部洲(docs/07 §人道),`Soul.Continent` 的次序。 */
+const CONTINENTS = ["DONGSHENG", "NANZHAN", "XINIU", "BEIJULU"] as const;
 
 /** Left column's 操作 card — the state-machine verbs available on this soul. */
 export function SoulActionsCard({
@@ -18,6 +22,8 @@ export function SoulActionsCard({
   reincarnations,
   sixPaths = true,
   rebirthForm,
+  nextContinent = "",
+  onNextContinentChange,
   suggestedRebirthForm,
   onRebirthFormChange,
   onDie,
@@ -37,6 +43,9 @@ export function SoulActionsCard({
   sixPaths?: boolean;
   /** null = 还没选(地府里没有建议时不预选)。 */
   rebirthForm: RebirthFormValue | null;
+  /** 下一世部洲(第五十七批 S-3),只在人道时出现;"" = 同本世(本世未登记时是「不指定」)。 */
+  nextContinent?: string;
+  onNextContinentChange?: (value: string) => void;
   /** 第十殿按功过给的六道建议(处置的 `suggested_rebirth_form`);地府以外为 null。 */
   suggestedRebirthForm?: RebirthFormValue | null;
   onRebirthFormChange: (value: RebirthFormValue) => void;
@@ -112,6 +121,29 @@ export function SoulActionsCard({
                     disabled={!!actionLoading}
                     quota={quota}
                   />
+                  {rebirthForm === "HUMAN" && onNextContinentChange && (
+                    <SelectField
+                      id="rebirth-next-continent"
+                      className="mt-3"
+                      label={t("reincarnation.next_continent")}
+                      description={t("reincarnation.next_continent_hint")}
+                      value={nextContinent}
+                      onChange={(e) => onNextContinentChange(e.target.value)}
+                      disabled={!!actionLoading}
+                      options={[
+                        {
+                          value: "",
+                          label: soul?.birth_continent
+                            ? `${t(`souls.birth_continent.${soul.birth_continent}`)} · ${t("reincarnation.next_continent_same")}`
+                            : t("reincarnation.next_continent_unset"),
+                        },
+                        ...CONTINENTS.filter((c) => c !== soul?.birth_continent).map((c) => ({
+                          value: c,
+                          label: t(`souls.birth_continent.${c}`),
+                        })),
+                      ]}
+                    />
+                  )}
                   {suggestedRebirthForm && (
                     <p data-testid="rebirth-suggestion" className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">
                       {t("souls.detail.rebirth_suggestion", { form: t(`reincarnation.forms.${suggestedRebirthForm}`) })}

@@ -360,6 +360,11 @@ export function SoulLifecycleTimeline({
                         </span>
                       )}
                     </div>
+                    {row.note && (
+                      <div data-testid="timeline-system-note" className="text-2xs text-[oklch(var(--color-ink-subtle))]">
+                        {row.note}
+                      </div>
+                    )}
                   </button>
                   <Collapse open={isOpen} id={`timeline-system-${row.id}`} className="mt-1">
                     <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">

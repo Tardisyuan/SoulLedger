@@ -99,6 +99,8 @@ export type TudiRegistrationInput = {
   idempotency_key?: string;
 };
 
+export const tudiGodKeys = { all: ["tudi-gods"] as const };
+
 export const tudiGodsApi = {
   list: (params: { page?: string } = {}) =>
     api.get<PaginatedResponse<TudiGod>>("/death-sync/tudi-gods/", { params }),

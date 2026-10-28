@@ -6,6 +6,7 @@
  * so going back to it keeps its 「加载更多」 state. A tab that fails says so inside itself, with 重试; the header and
  * the other tabs are untouched. Only the soul itself failing is the whole-page `state.error_*`.
  */
+import { captureWarrantsApi } from "@soulledger/core/api/dispatch";
 import { dispositionApi, type Disposition } from "@soulledger/core/api/disposition";
 import { eventsApi, type SoulEvent } from "@soulledger/core/api/events";
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
@@ -13,6 +14,7 @@ import { reincarnationApi, type Reincarnation } from "@soulledger/core/api/reinc
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
 import { originRegionLabel } from "@soulledger/core/domain/originRegion";
+import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
 import { useCallback, useState, type ReactNode } from "react";
@@ -219,6 +221,7 @@ function Fact({ label, value, wide, testID }: { label: string; value: string; wi
 
 function IdentityTab({ soul }: { soul: Soul }) {
   const { t, locale } = useI18n();
+  const diyu = soul.civilization === "CHINESE";
   return (
     <View testID="soul-identity" style={{ padding: GUTTER, flexDirection: "row", flexWrap: "wrap", gap: space[4] }}>
       <Fact label={t("souls.detail.birth")} value={[dateText(soul.birth_date), soul.origin_location].filter(Boolean).join(" · ")} />
@@ -226,9 +229,37 @@ function IdentityTab({ soul }: { soul: Soul }) {
       <Fact testID="soul-origin-region" label={t("souls.origin_region.label")} value={originRegionLabel(t, soul.origin_region, locale)} />
       <Fact label={t("souls.detail.death")} value={dateText(soul.death_date)} />
       {soul.birth_name && soul.birth_name !== soul.name ? <Fact label={t("officer_app.soul.birth_name")} value={soul.birth_name} /> : null}
+      {diyu ? <StationFact soul={soul} /> : null}
+      {diyu ? <CaptureFact soulId={soul.id} /> : null}
       {soul.description ? <Fact wide label={t("souls.detail.profile.description")} value={soul.description} /> : null}
     </View>
   );
+}
+
+/** 十三站(第五十七批 六):「第 n / 13 站 · 站名」,只读;不在路上写「不在路上」。挪站留在网页上。 */
+function StationFact({ soul }: { soul: Soul }) {
+  const { t, enumLabel } = useI18n();
+  const at = diyuStationOrdinal(soul.diyu_station);
+  const name = enumLabel("souls.diyu_station", soul.diyu_station);
+  const value = at === null ? t("souls.diyu_station.NONE") : `${t("souls.diyu_station.ordinal", { n: String(at) })} · ${name.state === "known" ? name.label : soul.diyu_station}`;
+  return <Fact testID="soul-diyu-station" label={t("souls.diyu_station.label")} value={value} />;
+}
+
+/** 勾魂状态(第五十七批 六):最近一张勾魂牒的状态与鬼差,只读,接口同网页(`capture-warrants/?soul=`)。没有牒就不画。 */
+function CaptureFact({ soulId }: { soulId: string }) {
+  const { t, enumLabel } = useI18n();
+  const load = useCallback(() => captureWarrantsApi.list({ soul: soulId }).then((r) => r.data.results), [soulId]);
+  const { data } = useRemote(load);
+  const latest = [...(data ?? [])].sort((a, b) => b.issued_at.localeCompare(a.issued_at))[0];
+  if (!latest) return null;
+  const label = (ns: string, raw: string) => {
+    const x = enumLabel(ns, raw);
+    return x.state === "known" ? x.label : raw;
+  };
+  const value = [label("souls.capture.status", latest.status), label("souls.capture.escort", latest.escort), latest.city_god_name]
+    .filter(Boolean)
+    .join(" · ");
+  return <Fact testID="soul-capture" label={t("souls.capture.title")} value={value} />;
 }
 
 /** Inside one tab only: 「这一块没能载入，其余照常显示」 + 重试. */

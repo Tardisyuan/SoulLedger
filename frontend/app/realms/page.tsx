@@ -90,8 +90,16 @@ interface TreeRow {
  */
 /** 天堂 → 炼狱 → 中立 → 地狱 → 湮灭。枚举字符串的字母序不是这个顺序;未知类型排在最后。 */
 const TYPE_ORDER = ["BLISS", "PURGATORY", "NEUTRAL", "HELL", "ANNIHILATION"];
+/**
+ * 地狱前庭(EU_ANTINFERNO,Inf. III)在数据里是 HELL:受罚、永久,路由与容量照地狱算(`actors/mythology/realms.py`)。
+ * 界域页上它的类型写「中立」,排在中立一组(Design 第五十七批 §9):它在九圈之外,写「地狱」会被读成第一圈。
+ */
+const SHOWN_AS_NEUTRAL = new Set(["EU_ANTINFERNO"]);
+const shownRealmType =(r: Pick<Realm, "realm_code" | "realm_type">) =>
+  SHOWN_AS_NEUTRAL.has(r.realm_code) ? "NEUTRAL" : r.realm_type;
+
 const typeRank = (r: Realm) => {
-  const i = TYPE_ORDER.indexOf(r.realm_type);
+  const i = TYPE_ORDER.indexOf(shownRealmType(r));
   return i < 0 ? TYPE_ORDER.length : i;
 };
 
@@ -327,10 +335,10 @@ function RealmTree({
     realmStationLabel(t, { id: realm.id, code: realm.realm_code, realm, state: "pending" }) ?? realm.realm_code;
   const typeOf = (realm: Realm) => {
     if (realm.kind) return t(`realms.kind.${realm.kind}`);
-    const type = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
+    const type = REALM_TYPE_CONFIG[shownRealmType(realm)] || REALM_TYPE_CONFIG.NEUTRAL;
     return (
       <Badge glyph={type.icon} className={type.className}>
-        <DomainEnum namespace="realms.types" value={realm.realm_type} />
+        <DomainEnum namespace="realms.types" value={shownRealmType(realm)} />
       </Badge>
     );
   };
@@ -480,7 +488,7 @@ function RealmTree({
                 {noPlace ? <span className={MUTED}>{t("realms.table.not_a_place")}</span> : heldCap(realm, false)}
               </span>
               <span title={realm.realm_code} className={`col-span-2 truncate font-mono text-2xs ${MUTED}`}>
-                {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace="realms.types" value={realm.realm_type} />}
+                {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace="realms.types" value={shownRealmType(realm)} />}
                 {realm.is_eternal && <> · ≡ {t("realms.table.eternal_yes")}</>}
               </span>
             </span>

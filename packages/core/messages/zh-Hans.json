@@ -787,12 +787,19 @@
       "HUANHUN_CLIFF": "还魂崖",
       "ordinal": "第 {{n}} / 13 站",
       "move_label": "挪到",
-      "move": "挪站",
+      "move": "挪站…",
       "moved": "已挪到{{station}}",
       "error": {
         "not_diyu": "只有地府的亡魂走十三站。",
         "alive": "在世的灵魂不在路上。"
-      }
+      },
+      "move_title": "挪站 · {{name}}",
+      "move_current": "现在：第 {{n}} 站 · {{station}}",
+      "move_to": "挪到",
+      "move_body": "挪站只改记录的位置，会记进灵魂账页。",
+      "not_on_road": "十三站 · 不在路上",
+      "move_confirm": "挪站",
+      "here_mark": "现在"
     },
     "birth_continent": {
       "label": "出身部洲",
@@ -836,7 +843,34 @@
         "warrant_open": "这个灵魂已有一张未了结的勾魂牒。",
         "wrong_status": "勾魂牒此刻不能这样办，刷新后再试。",
         "reason_required": "撤销要写理由。"
-      }
+      },
+      "escort_hint": "功多于过，建议{{merit_escort}}；过多于功，建议{{demerit_escort}}。",
+      "revoke_reason_required": "请写明撤销理由",
+      "go_review": "去初审 →",
+      "overdue": "超 {{n}} 天",
+      "due_on": "阳寿已到 · {{date}}",
+      "cancel_open": "撤销…",
+      "hand_over_city_god": "交接城隍",
+      "handed_line": "{{date}} 交{{city_god}}",
+      "cancelled_line": "已撤销 · {{reason}}"
+    },
+    "timeline": {
+      "earthly_paradise": "经地上乐园 · 饮忘川、忆善河"
+    },
+    "diyu_station_desc": {
+      "TUDI_TEMPLE": "亡魂先到土地庙报到，由土地公通报城隍、接引上路。",
+      "YELLOW_SPRINGS_ROAD": "通往阴间的必经之路。",
+      "WANGXIANG_TERRACE": "回望人间、最后一眼看家乡的地方。",
+      "EVIL_DOG_VILLAGE": "生前作恶者在此受恶狗拦咬。",
+      "GOLDEN_ROOSTER_HILL": "生前造业者在此受考验。",
+      "WILD_GHOST_VILLAGE": "孤魂野鬼聚集之处。",
+      "MIHUN_HALL": "饮迷魂水，清醒头脑。",
+      "OFFERING_PAVILION": "领取阳间亲人烧来的纸钱供养。",
+      "GHOST_FORT": "无处可去的孤魂暂时栖身。",
+      "FENGDU_CITY": "进入酆都城，正式归地府管辖，候十殿审判。",
+      "EIGHTEEN_HELLS": "判有罪者在此受刑。",
+      "LOTUS_TERRACE": "受度化，超拔出离苦海。",
+      "HUANHUN_CLIFF": "饮孟婆汤后，投胎前的最后一关。"
     }
   },
   "common": {
@@ -4027,7 +4061,11 @@
       "plan_in_progress": "{{name}}的受刑计划还没走完，不能转世。",
       "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
       "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。"
-    }
+    },
+    "next_continent": "下一世部洲 · 选填",
+    "next_continent_same": "同本世",
+    "next_continent_hint": "不选就沿用本世的部洲。",
+    "next_continent_unset": "不指定"
   },
   "social": {
     "title": "动态",
@@ -4606,7 +4644,9 @@
       "ledger_hint": "展开一项查看",
       "station": "所在之站",
       "station_at": "第 {{n}} / 13 站",
-      "continent": "出身部洲"
+      "continent": "出身部洲",
+      "stations_card": "赴冥 · 十三站",
+      "station_here": "现在在{{station}}：{{desc}}"
     },
     "past_lives": {
       "title": "前世",
@@ -7803,5 +7843,48 @@
       "view_start": "以全局管理员身份查看 {{hall}}",
       "view_end": "以全局管理员身份查看 {{hall}} · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
     }
+  },
+  "earthGods": {
+    "title": "土地公",
+    "create": "新建土地公",
+    "jurisdiction": "管辖地",
+    "parent_city_god": "上级城隍",
+    "no_parent": "—",
+    "register_death": "以土地公名义登记死亡",
+    "report_label": "土地公所报 · 选填",
+    "register_hint": "登记后发给{{city_god}}初审，并进「待发勾魂牒」名单。",
+    "officers": "名下官员",
+    "no_officers": "没有名下官员",
+    "officers_hint": "名下官员与殿管理员能以这位土地公的名义登记死亡。",
+    "edit": "编辑",
+    "delete": "删除",
+    "delete_confirm": "删除{{name}}？他登记过的死亡照旧留着。",
+    "saved_toast": "土地公已保存",
+    "deleted_toast": "土地公已删除",
+    "empty": "还没有土地公",
+    "row_actions": "{{name}} 的操作",
+    "soul": "灵魂",
+    "death_date": "死亡日期",
+    "death_location": "死于何处",
+    "registered_toast": "已登记{{name}}的死亡",
+    "register_failed": "没有登记成功：{{reason}}",
+    "error": {
+      "name_taken": "本殿已有同名的土地公",
+      "invalid_city_god": "上级城隍须是本殿的城隍",
+      "invalid_officer": "有官员不能办这类案子",
+      "not_tudi_officer": "只有这位土地公的名下官员或殿管理员能登记",
+      "tudi_gods_diyu_only": "只有地府的殿能设土地公"
+    },
+    "register_submit": "登记死亡"
+  },
+  "captureDue": {
+    "title": "待发勾魂牒",
+    "scope": "阳寿已到 · 全殿",
+    "soul": "灵魂",
+    "origin": "籍贯",
+    "fated": "阳寿",
+    "escort": "建议鬼差",
+    "issue": "发牒",
+    "empty": "没有阳寿已到、待发勾魂牒的灵魂"
   }
 }

@@ -787,12 +787,19 @@
       "HUANHUN_CLIFF": "Cliff of Returning Souls",
       "ordinal": "Station {{n}} / 13",
       "move_label": "Move to",
-      "move": "Move",
+      "move": "Move…",
       "moved": "Moved to {{station}}",
       "error": {
         "not_diyu": "Only a soul of Diyu walks the thirteen stations.",
         "alive": "A living soul is not on the road."
-      }
+      },
+      "move_title": "Move station · {{name}}",
+      "move_current": "Now: station {{n}} · {{station}}",
+      "move_to": "Move to",
+      "move_body": "Moving changes only the recorded station; it goes into the soul ledger page.",
+      "not_on_road": "Thirteen stations · not on the road",
+      "move_confirm": "Move",
+      "here_mark": "now"
     },
     "birth_continent": {
       "label": "Continent of birth",
@@ -836,7 +843,34 @@
         "warrant_open": "This soul already has an open capture warrant.",
         "wrong_status": "The warrant can't do that now; refresh and try again.",
         "reason_required": "Write a reason to cancel."
-      }
+      },
+      "escort_hint": "More merit than demerit: {{merit_escort}}. More demerit than merit: {{demerit_escort}}.",
+      "revoke_reason_required": "Give a reason for revoking",
+      "go_review": "Go to first review →",
+      "overdue": "{{n}} days over",
+      "due_on": "Fated date reached · {{date}}",
+      "cancel_open": "Cancel…",
+      "hand_over_city_god": "Hand over to the City God",
+      "handed_line": "Handed to {{city_god}} on {{date}}",
+      "cancelled_line": "Cancelled · {{reason}}"
+    },
+    "timeline": {
+      "earthly_paradise": "By way of the Earthly Paradise · drank of Lethe and Eunoë"
+    },
+    "diyu_station_desc": {
+      "TUDI_TEMPLE": "The soul reports first at the Earth God's temple; the Earth God tells the City God and sends it on its way.",
+      "YELLOW_SPRINGS_ROAD": "The road every soul must take to the underworld.",
+      "WANGXIANG_TERRACE": "Where the soul looks back on the world of the living and sees home one last time.",
+      "EVIL_DOG_VILLAGE": "Here dogs bar the way and bite those who did evil in life.",
+      "GOLDEN_ROOSTER_HILL": "Here those who made bad karma in life are tested.",
+      "WILD_GHOST_VILLAGE": "Where lonely and wandering ghosts gather.",
+      "MIHUN_HALL": "The soul drinks the water of bewilderment, and its mind is cleared.",
+      "OFFERING_PAVILION": "Where the soul receives the paper money its family burns for it above.",
+      "GHOST_FORT": "A shelter for lonely souls with nowhere else to go.",
+      "FENGDU_CITY": "The soul enters the City of Fengdu, comes under the underworld's rule, and awaits the Ten Courts.",
+      "EIGHTEEN_HELLS": "Where those found guilty are punished.",
+      "LOTUS_TERRACE": "Where the soul is delivered and lifted out of the sea of suffering.",
+      "HUANHUN_CLIFF": "The last pass before rebirth, after drinking Mengpo's soup."
     }
   },
   "common": {
@@ -4027,7 +4061,11 @@
       "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
       "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth."
-    }
+    },
+    "next_continent": "Continent of the next life · optional",
+    "next_continent_same": "Same as this life",
+    "next_continent_hint": "Leave it to keep this life's continent.",
+    "next_continent_unset": "Not specified"
   },
   "social": {
     "title": "Social",
@@ -4606,7 +4644,9 @@
       "ledger_hint": "Open an item to read it",
       "station": "Where you are",
       "station_at": "Station {{n}} / 13",
-      "continent": "Continent of birth"
+      "continent": "Continent of birth",
+      "stations_card": "To the underworld · thirteen stations",
+      "station_here": "You are at {{station}}: {{desc}}"
     },
     "past_lives": {
       "title": "Past lives",
@@ -7803,5 +7843,48 @@
       "view_start": "Viewed {{hall}} as global admin",
       "view_end": "Viewed {{hall}} as global admin · {{minutes}} min · {{pages}} pages"
     }
+  },
+  "earthGods": {
+    "title": "Earth Gods",
+    "create": "New Earth God",
+    "jurisdiction": "Places",
+    "parent_city_god": "City God above",
+    "no_parent": "—",
+    "register_death": "Record a death as reported by an Earth God",
+    "report_label": "Earth God's report · optional",
+    "register_hint": "Once recorded, it goes to {{city_god}} for first review and onto the list awaiting a summons.",
+    "officers": "Officers",
+    "no_officers": "No officers",
+    "officers_hint": "This Earth God's officers, and hall administrators, can record a death in its name.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "delete_confirm": "Delete {{name}}? The deaths it recorded stay.",
+    "saved_toast": "Earth God saved",
+    "deleted_toast": "Earth God deleted",
+    "empty": "No Earth Gods yet",
+    "row_actions": "Actions for {{name}}",
+    "soul": "Soul",
+    "death_date": "Date of death",
+    "death_location": "Place of death",
+    "registered_toast": "Death of {{name}} recorded",
+    "register_failed": "Not recorded: {{reason}}",
+    "error": {
+      "name_taken": "This hall already has an Earth God by that name",
+      "invalid_city_god": "The City God above must be one of this hall's",
+      "invalid_officer": "Some officers can't take these cases",
+      "not_tudi_officer": "Only this Earth God's officers, or a hall administrator, can record it",
+      "tudi_gods_diyu_only": "Only halls of the Chinese Diyu can have Earth Gods"
+    },
+    "register_submit": "Record the death"
+  },
+  "captureDue": {
+    "title": "Awaiting a capture warrant",
+    "scope": "Fated date reached · whole hall",
+    "soul": "Soul",
+    "origin": "Origin",
+    "fated": "Fated date",
+    "escort": "Suggested escort",
+    "issue": "Issue",
+    "empty": "No soul has reached its fated date without a warrant"
   }
 }

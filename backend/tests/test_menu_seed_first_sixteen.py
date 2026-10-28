@@ -293,3 +293,18 @@ def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tena
     }
     assert {"申诉复核", "城隍初审", "城隍"} <= _seen_by("JUDGE", cn_tenant)
     assert not {"申诉复核", "城隍初审", "城隍"} & _seen_by("VIEWER", cn_tenant)
+
+
+def test_the_capture_due_and_earth_god_entries(cn_tenant):
+    """menus/0028(第五十七批):待发勾魂牒在「灵魂业务」里排在城隍初审(18)前面,只给能发牒的人(`soul.die`);
+    土地公在「系统设置」里紧跟城隍(25),和城隍一样是 `judgment.read`。"""
+    seeded_menus()
+    rows = {m.path: m for m in Menu.objects.filter(path__in=("/judgment/capture-due", "/death-sync/tudi-gods"),
+                                                      is_deleted=False)}
+    assert {p: (r.name, r.parent.name, r.permission, r.order) for p, r in rows.items()} == {
+        "/judgment/capture-due": ("待发勾魂牒", "灵魂业务", "soul.die", 17),
+        "/death-sync/tudi-gods": ("土地公", "系统设置", "judgment.read", 26),
+    }
+    assert rows["/judgment/capture-due"].order < Menu.objects.get(path="/city-god-cases", is_deleted=False).order
+    assert {"待发勾魂牒", "土地公"} <= _seen_by("JUDGE", cn_tenant)
+    assert not {"待发勾魂牒", "土地公"} & _seen_by("VIEWER", cn_tenant)
