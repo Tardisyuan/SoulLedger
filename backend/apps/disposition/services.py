@@ -8,6 +8,10 @@ from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.souls.models import Civilization, Soul
 
 
+class _TransitionRefusedError(Exception):
+    """无节点处置执行时灵魂的转移被拒:抛出以回滚同一保存点里已写的执行标记。"""
+
+
 class DispositionService:
     """
     Handles disposition creation and execution.
@@ -818,9 +822,7 @@ class DispositionService:
         The order is now: decide, then record. The whole method is atomic so a
         refusal cannot leave the flag behind.
         """
-        from django.db import transaction
 
-        from apps.souls.models import SoulState
 
         # Not every soul has a next life to be waiting for. This used to send
         # every executed disposition to REINCARNATING, which put an Egyptian
@@ -866,28 +868,86 @@ class DispositionService:
         if SentencePlanService.node_for_disposition(disposition) is not None:
             return DispositionService._execute_plan_node(disposition, soul)
 
+        try:
+            return DispositionService._execute_without_node(disposition, soul)
+        except _TransitionRefusedError:
+            # 转移被拒:上面那个事务(保存点)已回滚,执行标记也没留下;内存里的对象对齐回去。
+            disposition.refresh_from_db()
+            return False
+
+    @staticmethod
+    def _execute_without_node(disposition, soul) -> bool:
+        from django.db import transaction
+
+        from apps.disposition.expiry import serving
+        from apps.souls.models import SoulState
+
         with transaction.atomic():
-            # 没有受刑计划节点的处置(阶段 1 之前、且没回填到的存量):照旧直接转移。
+            # 没有受刑计划节点的处置(阶段 1 之前、且没回填到的存量):照旧直接转移 —— 除非刑期还没满:
+            # 执行 = 开始服刑,灵魂留在 DISPOSED、留在那个界域,期满(`finish_serving`)才做下面这次转移
+            # (用户 2026-10-29)。
             # 原属文明,不是管辖文明:暂居不改变灵魂有没有下一世。暂居中的灵魂走
             # 上面那条分支,到这里的灵魂 home 与 tenant 相同 —— 除非是迁移 0036
             # 之前被单程调拨过的存量灵魂,那时两者已经被回填成同一个。
-            # 永久刑期 = 不转生(2026-09-29 用户决定;与 `SentencePlanService._complete` 同一条)。
-            if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not disposition.is_eternal:
-                moved = soul.transition_to(
-                    SoulState.REINCARNATING, "Disposition executed"
-                )
-            else:
-                moved = soul.transition_to(
-                    SoulState.SETTLED,
-                    "Disposition executed; this cosmology has no next life",
-                )
-            if not moved:
+            if soul.current_state != SoulState.DISPOSED:
                 # The soul is not in a state this disposition can act on. Say so
                 # instead of recording an execution that did not happen.
                 return False
-
             DispositionService._mark_executed(disposition)
+            if serving(disposition):
+                return True
+            if not DispositionService._move_on(disposition, soul, "Disposition executed"):
+                raise _TransitionRefusedError()
             DispositionService._leave_served_realm(disposition, soul)
+        return True
+
+    @staticmethod
+    def _move_on(disposition, soul, reason) -> bool:
+        """没有计划节点的处置服完:可转世的文明 → REINCARNATING,否则(或永久刑期)→ SETTLED。"""
+        from apps.souls.models import SoulState
+
+        # 永久刑期 = 不转生(2026-09-29 用户决定;与 `SentencePlanService._complete` 同一条)。
+        if soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and not disposition.is_eternal:
+            return soul.transition_to(SoulState.REINCARNATING, reason)
+        return soul.transition_to(SoulState.SETTLED, f"{reason}; this cosmology has no next life")
+
+    @staticmethod
+    def finish_serving(disposition) -> bool:
+        """受刑中的处置刑满(每日期满检查、官员「期满释放」、炼狱复核通过):灵魂离开那一站,往下走。
+
+        * 挂在计划节点上:节点 COMPLETED / WAITING(`SentencePlanService.on_term_served`),离开界域,`advance` ——
+          下一站,或计划完成而灵魂候转世 / 终局。暂居地刑满暂留时记 `DISPATCH_RETURN_BLOCKED`,与执行时同一条。
+        * 没有节点(存量):执行时推迟的那次转移在这里做,可转世的再记 `REINCARNATION_TRIGGERED`。
+        灵魂行锁下;在调用方的事务里。不在受刑中(节点已不是 ACTIVE、灵魂不在 DISPOSED)什么都不写,返回 False。"""
+        from django.db import transaction
+
+        from apps.sentence_plan.services import SentencePlanService
+        from apps.souls.models import Soul, SoulState
+
+        with transaction.atomic():
+            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=disposition.soul_id)
+            if SentencePlanService.node_for_disposition(disposition) is not None:
+                node = SentencePlanService.on_term_served(locked, disposition)
+                if node is None:
+                    return False
+                DispositionService._leave_served_realm(disposition, locked, node)
+                if node.status == "WAITING" and locked.is_residing:
+                    from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
+                    from apps.judgment.models import open_judgments
+
+                    open_ids = list(open_judgments(locked).values_list("pk", flat=True))
+                    DispatchService.record_blocked_return(locked, ResidenceReturnBlockedError(open_ids), disposition)
+                SentencePlanService.advance(locked)
+                return True
+            if (locked.is_deleted or locked.is_residing or locked.current_state != SoulState.DISPOSED
+                    or disposition.tenant_id != locked.tenant_id or disposition.is_eternal):
+                return False
+            if not DispositionService._move_on(disposition, locked, "Disposition term served"):
+                return False
+            DispositionService._leave_served_realm(disposition, locked)
+            from apps.reincarnation.services import ReincarnationService
+
+            ReincarnationService.execute(disposition)
         return True
 
     @staticmethod
@@ -934,7 +994,8 @@ class DispositionService:
 
         if disposition.is_eternal or disposition.destination_realm_id is None:
             return
-        if node is not None and node.status == SentenceNodeStatus.WAITING:
+        # 受刑中(节点仍 ACTIVE,用户 2026-10-29)同理:刑期没满,人还在那里;刑满时 `finish_serving` 再调这里。
+        if node is not None and node.status in (SentenceNodeStatus.WAITING, SentenceNodeStatus.ACTIVE):
             return
         SoulPathService.leave(soul, realm=disposition.destination_realm)
 
@@ -942,8 +1003,8 @@ class DispositionService:
     def _execute_plan_node(disposition: Disposition, soul) -> bool:
         """原属地、挂在受刑计划节点上的处置(docs/ARCHITECTURE-sentence-plan.md §3.3)。
 
-        **不再直接推 REINCARNATING / SETTLED**:标节点(COMPLETED / WAITING / ETERNAL),然后
-        `advance` —— 没有下一站时由它完成计划并做那次转移,有下一站时由它发起调拨。
+        **不再直接推 REINCARNATING / SETTLED**:标节点(COMPLETED / WAITING / ETERNAL,有刑期且没满则仍 ACTIVE =
+        受刑中),然后 `advance` —— 没有下一站时由它完成计划并做那次转移,有下一站时由它发起调拨,受刑中则等。
         拒绝(返回 False,什么都不写):灵魂不在 DISPOSED,或此刻不在原属地。
         """
         from django.db import transaction

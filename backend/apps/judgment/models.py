@@ -22,6 +22,30 @@ class Verdict(models.TextChoices):
     RETRY = "RETRY", "Retry / Appeal"
 
 
+def hears_again(civilization, verdict) -> bool:
+    """这个裁决不是一个去处,而是「这件案子再审一次」(用户 2026-10-29,四文明统一)。
+
+    * RETRY,任何文明:原审结案另开一案(`weighing.open_retrial`),不建处置、不动计划与灵魂状态。
+    * PURGATORY,欧洲以外:地府的 `DY_00_PURGATORY` 是待审所,希腊的草地是「还没被送走」(docs/02_希腊 §5.2:
+      PURGATORY / RETRY 留在 `EU_PLATO_MEADOW`,「不是第三条路」),埃及的 Duat 入口是天平摇摆(02 §5.3)——
+      三处都不是刑罚,只是没判完;docs/11 第八步「不服判决 → …… → 重新审理」是同一个动作。
+    * 欧洲的 PURGATORY 是真正的去处:炼狱收确定得救者、按刑期涤罪后升天堂(docs/01_欧洲 §1.2),照旧发落。
+
+    重开审判与申诉改判本身就是「再审」,所以在那里这些裁决被拒绝(`sentence_plan.requests._refuse_undecided`)。"""
+    if verdict == Verdict.RETRY:
+        return True
+    return verdict == Verdict.PURGATORY and civilization != "EUROPEAN"
+
+
+def acquitted_to_rebirth(civilization, verdict) -> bool:
+    """地府判无罪:不发落、不建刑期节点,结案(流程走完)后直接候转世(用户 2026-10-29)。
+
+    docs/11 §3.1 第六步「无罪 → 直接投胎」;docs/05 §2.1「第一殿初判 · 善人 → 直接批准投胎」;
+    §3.3「善人径投」(《玉历》一殿)。此前 PASSED 去 `DY_01_HEAVEN`,种子把它标成永久(`is_eternal=True`),
+    执行后灵魂成了 SETTLED,永不转世 —— 与这三处都相反。souls/0051 回填了那批灵魂。"""
+    return verdict == Verdict.PASSED and civilization == "CHINESE"
+
+
 class JudgmentMethod(models.TextChoices):
     STANDARD = "STANDARD", "Standard Trial (Chinese/European/Greek)"
     HEART_WEIGHING = "HEART_WEIGHING", "Heart Weighing (Egyptian)"

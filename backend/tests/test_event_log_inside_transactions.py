@@ -114,7 +114,8 @@ def observe(path, context) -> Seen:
 def _conclude_original(event_type):
     def path():
         soul, case = plan.open_case(_cn())
-        return (lambda: Judgment.all_objects.get(pk=case.pk).conclude("PASSED", ""),
+        # FAILED:地府判无罪不建处置(2026-10-29),DISPOSITION_CREATED 那一格要一份。
+        return (lambda: Judgment.all_objects.get(pk=case.pk).conclude("FAILED", ""),
                 lambda: Judgment.all_objects.get(pk=case.pk).is_final, event_type)
     return path
 

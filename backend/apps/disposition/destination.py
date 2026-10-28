@@ -52,7 +52,11 @@ def realm_held(realm_id, *, exclude_soul_id=None) -> int:
 def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.STANDARD) -> frozenset:
     """这个文明、这个裁决(与审法)下,自动分派可能送去的全部 realm_code。"""
     from apps.disposition.services import DispositionService as D
+    from apps.judgment.models import acquitted_to_rebirth, hears_again
 
+    # 重审与地府判无罪不发落(用户 2026-10-29):没有门可选,结案时给了发落就拒绝(`judgment/services.py`)。
+    if hears_again(civilization, verdict) or acquitted_to_rebirth(civilization, verdict):
+        return frozenset()
     # soul=None:四个路由函数里只有欧洲的「引用过的最深一圈」读灵魂,None 时它不读,
     # 而那条路能到的圈,严重度阶梯本来就全部能到。
     routers = {

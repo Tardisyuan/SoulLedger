@@ -177,6 +177,47 @@ def reopen_if_term_extended(disposition, today: datetime.date | None = None) -> 
     return True
 
 
+def _term_ended(disposition, today):
+    """`(算得出期满日, 已满)`。"""
+    start = effective_term_start(
+        (disposition.term_start_year, disposition.term_start_month, disposition.term_start_day),
+        disposition.executed_at,
+    )
+    if term_end(start, disposition.sentence_years, disposition.lost_days) is None:
+        return False, False
+    return True, term_has_ended(start, disposition.sentence_years, today, disposition.lost_days)
+
+
+def serving(disposition, today: datetime.date | None = None) -> bool:
+    """受刑中:已执行、不是永久、还没记期满,且有一个还没到的期满日(用户 2026-10-29:执行即开始服刑,
+    刑满才能转世)。没记刑期(`sentence_years` 为空)的没有期满日可等,不算受刑中 —— 执行即服完,照旧。"""
+    if not disposition.is_executed or disposition.is_eternal or disposition.expired_at is not None:
+        return False
+    has_end, ended = _term_ended(disposition, today or timezone.localdate())
+    return has_end and not ended
+
+
+def releasable(disposition, today: datetime.date | None = None) -> bool:
+    """官员可以「期满释放」:已执行、不是永久、还没记期满,期满日已到。与每日检查同一条判定。"""
+    if not disposition.is_executed or disposition.is_eternal or disposition.expired_at is not None:
+        return False
+    has_end, ended = _term_ended(disposition, today or timezone.localdate())
+    return has_end and ended
+
+
+def expire_one(row, now, actor: str = "system") -> None:
+    """记下这一行期满:`expired_at`、`DISPOSITION_EXPIRED`、欧洲炼狱升天堂,然后结束受刑中的那一站并推进
+    (`DispositionService.finish_serving`)。调用方持有这一行的锁与事务;任何一步失败整行回滚。"""
+    from apps.disposition.services import DispositionService
+    from apps.events.services import log_disposition_expired
+
+    row.expired_at = now
+    row.save(update_fields=["expired_at"])
+    log_disposition_expired(row, actor)
+    ascend_from_purgatory(row, via="TERM_SERVED")
+    DispositionService.finish_serving(row)
+
+
 def candidates(tenant_id, today: datetime.date):
     """这个租户里**可能**今天期满的处置(SQL 粗筛;精确判定在 `term_has_ended`)。
 
@@ -259,11 +300,11 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
     `DISPOSITION_EXPIRED`。调用方负责设置租户 contextvar(见 tasks.py),
     审计行才归得到租户。
 
-    不动灵魂状态:期满的灵魂在等轮回,推进它是转生那一步的事。唯一的例外是欧洲炼狱:期满即升天堂
-    (`ascend_from_purgatory`,同一事务;用户 2026-10-27 决定)。
+    期满即刑满(用户 2026-10-29):受刑中的计划节点在同一事务里结束,计划往下走 —— 下一站、或计划完成而灵魂
+    候转世(`expire_one` → `DispositionService.finish_serving`)。欧洲炼狱期满先升天堂(`ascend_from_purgatory`,
+    用户 2026-10-27 决定)。celery beat 没部署时,官员在处置页点「期满释放」走同一个 `expire_one`。
     """
     from apps.disposition.models import Disposition
-    from apps.events.services import log_disposition_expired
 
     if today is None:
         today = timezone.localdate()
@@ -295,10 +336,7 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
                 )
                 if row is None:
                     continue
-                row.expired_at = now
-                row.save(update_fields=["expired_at"])
-                log_disposition_expired(row)
-                ascend_from_purgatory(row, via="TERM_SERVED")
+                expire_one(row, now)
                 expired += 1
         except Exception:
             logger.exception("disposition expiry: row %s of tenant %s left unexpired", pk, tenant.code)

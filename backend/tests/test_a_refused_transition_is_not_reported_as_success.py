@@ -81,7 +81,8 @@ def test_a_case_on_a_soul_under_judgment_still_concludes(admin, tenant):
     judgment = _judgment(tenant, SoulState.JUDGING)
     response = admin.post(
         f"/api/v1/judgment/{judgment.id}/conclude/",
-        {"verdict": Verdict.PASSED, "notes": ""},
+        # FAILED:地府判无罪结案后直接候转世(2026-10-29),这里断的是「走到 DISPOSED」。
+        {"verdict": Verdict.FAILED, "notes": ""},
         format="json",
     )
     assert response.status_code == 200, (response.status_code, response.data)

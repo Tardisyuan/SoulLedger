@@ -109,12 +109,14 @@ def _nothing_written(case):
 def test_the_allowed_sets_are_the_whole_routing_image():
     D = DispositionService
     assert allowed_realm_codes("CHINESE", "FAILED") == frozenset(D.CHINESE_HELL_TIERS.values())
-    assert allowed_realm_codes("CHINESE", "PASSED") == {D.CHINESE_HEAVEN}
-    assert allowed_realm_codes("CHINESE", "PURGATORY") == {D.CHINESE_PURGATORY}
+    # 地府判无罪不发落(用户 2026-10-29);「再审」的裁决(RETRY,欧洲以外的 PURGATORY)也不发落:没有门可选。
+    assert allowed_realm_codes("CHINESE", "PASSED") == frozenset()
+    assert allowed_realm_codes("CHINESE", "PURGATORY") == frozenset()
+    assert allowed_realm_codes("GREEK", "PURGATORY") == frozenset()
+    assert allowed_realm_codes("EUROPEAN", "PURGATORY") >= {D.EU_PURGATORY}  # 欧洲的炼狱是真正的去处
     assert allowed_realm_codes("EUROPEAN", "FAILED") == frozenset(D.EU_HELL_CIRCLES.values()) | {D.EU_ANTINFERNO}
-    assert allowed_realm_codes("EGYPTIAN", "RETRY", "HEART_WEIGHING") == {D.EG_DUAT_ENTRY}
-    # Every Egyptian case is weighed: the method column no longer widens the set (docs/01 §3.3).
-    assert allowed_realm_codes("EGYPTIAN", "RETRY", "STANDARD") == {D.EG_DUAT_ENTRY}
+    assert allowed_realm_codes("EGYPTIAN", "RETRY", "HEART_WEIGHING") == frozenset()
+    assert allowed_realm_codes("EGYPTIAN", "PASSED", "HEART_WEIGHING") == {D.EG_AARU}
     assert allowed_realm_codes("GREEK", "FAILED") == {D.GR_TARTARUS}
     assert allowed_realm_codes("UNKNOWN", "FAILED") == frozenset()
 
@@ -137,10 +139,22 @@ def test_omitted_is_the_automatic_routing_untouched(cn_judge, cn_realms):
 
 
 def test_omitted_copies_eternal_off_the_routed_realm(cn_judge, cn_realms, cn_tenant):
+    # 原来读 PASSED → 天道(夹具里标成永久);地府 PASSED 不再发落(2026-10-29),改让自动分派到的第二殿是永久的。
+    Realm.objects.filter(pk=cn_realms["hell2"].pk).update(is_eternal=True)
     case = _case(cn_tenant)
-    assert _conclude(cn_judge, case, verdict="PASSED").status_code == 200
+    assert _conclude(cn_judge, case).status_code == 200
     d = Disposition.all_objects.get(judgment=case)
-    assert (d.destination_realm_id, d.is_eternal, d.sentence_years) == (cn_realms["heaven"].pk, True, None)
+    assert (d.destination_realm_id, d.is_eternal, d.sentence_years) == (cn_realms["hell2"].pk, True, None)
+
+
+def test_an_acquittal_in_diyu_writes_no_disposition(cn_judge, cn_realms, cn_tenant):
+    """地府判无罪不发落(用户 2026-10-29):不建处置;给了发落就 400 `passed_has_no_destination`。"""
+    case = _case(cn_tenant)
+    refused = _conclude(cn_judge, case, verdict="PASSED", destination_realm_id=str(cn_realms["heaven"].pk))
+    assert (refused.status_code, refused.data["code"]) == (400, "passed_has_no_destination")
+    _nothing_written(case)
+    assert _conclude(cn_judge, case, verdict="PASSED").status_code == 200
+    assert not Disposition.all_objects.filter(judgment=case).exists()
 
 
 # ── 选中的门 ────────────────────────────────────────────────────────────────
@@ -203,9 +217,9 @@ def test_an_unknown_realm_is_refused(cn_judge, cn_realms, cn_tenant):
 
 
 def test_a_realm_the_verdict_cannot_route_to_is_refused(cn_judge, cn_realms, cn_tenant):
-    """PASSED 只能上天;送去第五殿被拒。这一条守的是裁决过滤。"""
+    """FAILED 只能下殿;送上天被拒。这一条守的是裁决过滤。(原来用 PASSED → 第五殿;地府 PASSED 不再发落,2026-10-29。)"""
     case = _case(cn_tenant)
-    response = _conclude(cn_judge, case, verdict="PASSED", destination_realm_id=str(cn_realms["hell5"].pk))
+    response = _conclude(cn_judge, case, verdict="FAILED", destination_realm_id=str(cn_realms["heaven"].pk))
     assert (response.status_code, response.data["code"]) == (400, "realm_not_allowed")
     _nothing_written(case)
 
@@ -226,15 +240,22 @@ def test_a_departed_soul_frees_its_seat(cn_judge, cn_realms, cn_tenant):
 
 
 def test_the_soul_already_standing_there_does_not_count_against_itself(cn_judge, cn_realms, cn_tenant):
-    """待审所判 PURGATORY:灵魂本来就在那扇门里,不占第二个位子。"""
-    purgatory = cn_realms["purgatory"]
-    purgatory.capacity = 1
-    purgatory.save()
+    """灵魂本来就在那扇门里,不占第二个位子。(原来用待审所判 PURGATORY;地府的 PURGATORY 现在是再审、
+    不发落,2026-10-29 —— 改用一殿。)"""
+    hell = cn_realms["hell5"]  # capacity 1
     case = _case(cn_tenant)
     SoulPathEntry.all_objects.create(
-        soul=case.soul, realm=purgatory, sequence=1, entered_at=timezone.now(), tenant=cn_tenant)
-    response = _conclude(cn_judge, case, verdict="PURGATORY", destination_realm_id=str(purgatory.pk))
+        soul=case.soul, realm=hell, sequence=1, entered_at=timezone.now(), tenant=cn_tenant)
+    response = _conclude(cn_judge, case, verdict="FAILED", destination_realm_id=str(hell.pk))
     assert response.status_code == 200, response.data
+
+
+def test_a_diyu_purgatory_verdict_takes_no_destination(cn_judge, cn_realms, cn_tenant):
+    """地府的 PURGATORY 是再审(`hears_again`,2026-10-29):给了发落就 400 `retry_has_no_destination`。"""
+    case = _case(cn_tenant)
+    response = _conclude(cn_judge, case, verdict="PURGATORY", destination_realm_id=str(cn_realms["purgatory"].pk))
+    assert (response.status_code, response.data["code"]) == (400, "retry_has_no_destination")
+    _nothing_written(case)
 
 
 @pytest.mark.parametrize("body, code", [
@@ -300,9 +321,9 @@ def test_options_are_filtered_by_verdict(cn_judge, cn_realms, cn_tenant, eu_tena
     assert str(failed.data["default_realm_id"]) == str(cn_realms["hell2"].pk)
     assert failed.data["default_term_years"] is None
 
+    # 地府判无罪不发落(2026-10-29):没有可选的门,也没有默认。
     passed = _options(cn_judge, case, "PASSED")
-    assert [o["realm_code"] for o in passed.data["options"]] == ["DY_01_HEAVEN"]
-    assert str(passed.data["default_realm_id"]) == str(cn_realms["heaven"].pk)
+    assert passed.data["options"] == [] and passed.data["default_realm_id"] is None
 
 
 def test_not_applicable_is_the_rest_of_the_tenants_realms_and_conclude_refuses_them(

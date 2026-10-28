@@ -58,8 +58,13 @@ def bench(case, stops, *, conclusion="PASS"):
     return CrossTenantJudgment.objects.get(pk=cj.pk)
 
 
-def planned(home, stops=(), *, name="客魂", verdict=Verdict.PASSED):
-    """原属审判结案 → 计划。`stops` 同 `bench`;空 = 退化情况(只有原属节点)。返回 (soul, plan)。"""
+def planned(home, stops=(), *, name="客魂", verdict=None):
+    """原属审判结案 → 计划。`stops` 同 `bench`;空 = 退化情况(只有原属节点)。返回 (soul, plan)。
+
+    `verdict` 默认 PASSED;**地府的原属默认 FAILED**(2026-10-29):地府判无罪不建刑期节点、直接候转世
+    (`acquitted_to_rebirth`),而这里的夹具要的是「有一个原属节点 1」的计划。"""
+    if verdict is None:
+        verdict = Verdict.FAILED if home.code == "CN_DIYU" else Verdict.PASSED
     soul, case = open_case(home, name=name)
     if stops:
         bench(case, stops)
@@ -91,7 +96,25 @@ _LIVE = ("PENDING", "DISPATCHING", "ACTIVE", "WAITING", "COMPLETED", "ETERNAL", 
 
 
 def serve(soul, plan, order):
-    """执行第 `order` 站挂着的处置(原属或执行地)。返回 execute 的结果。"""
+    """执行第 `order` 站挂着的处置(原属或执行地),**并服满**。返回 execute 的结果。
+
+    2026-10-29 起执行 = 开始服刑:有刑期的站执行后仍 ACTIVE(受刑中),期满才往下走。这里的调用方要的是
+    「这一站走完了」(此前执行即走完),所以有刑期时紧接着记期满(`expire_one`,与每日检查、「期满释放」同一个写入)。
+    只想执行、留在受刑中的,用 `execute_only`。"""
+    from django.utils import timezone
+
+    from apps.disposition.expiry import expire_one, serving
+
+    if not execute_only(soul, plan, order):
+        return False
+    row = Disposition.all_objects.get(pk=node(plan, order).disposition_id)
+    if serving(row):
+        expire_one(row, timezone.now())
+    return True
+
+
+def execute_only(soul, plan, order):
+    """执行第 `order` 站挂着的处置,不服满(有刑期的站留在受刑中)。返回 execute 的结果。"""
     n = node(plan, order)
     return DispositionService.execute(Disposition.all_objects.get(pk=n.disposition_id))
 
@@ -127,5 +150,5 @@ def records(soul, **filters):
 
 __all__ = [
     "DispatchStatus", "arrive", "at_stop", "bench", "node", "officer", "open_case", "planned", "realm",
-    "records", "returned_events", "serve", "stop_realm", "tenant",
+    "records", "returned_events", "serve", "execute_only", "stop_realm", "tenant",
 ]

@@ -4,7 +4,6 @@ Integration tests for soul lifecycle: ALIVE -> JUDGING -> DISPOSED -> REINCARNAT
 import pytest
 
 from apps.disposition.models import Disposition
-from apps.disposition.services import DispositionService
 from apps.judgment.models import Judgment, Verdict
 from apps.realms.models import Realm
 from apps.reincarnation.services import ReincarnationService
@@ -74,30 +73,18 @@ class TestSoulLifecycle:
         judgment.save(update_fields=["court"])
         assert not judgment.is_final
 
-        # 4. Conclude judgment → PASSED
-        # DY_01_HEAVEN is not eternal in the seed: 福尽仍入轮回
-        # (docs/07_六道轮回详解.md §二), so a PASSED soul goes round the wheel.
+        # 4. Conclude judgment → PASSED. 地府判无罪不发落、不建刑期节点(用户 2026-10-29,docs/11 第六步
+        # 「无罪 → 直接投胎」):没有审批流程时结案即候转世。此前这里先建去 DY_01_HEAVEN 的处置、再执行。
         judgment.conclude(Verdict.PASSED, "Excellent karma, enter paradise")
         soul.refresh_from_db()
 
         assert judgment.is_final
         assert judgment.verdict == Verdict.PASSED
-        assert soul.current_state == SoulState.DISPOSED
-
-        # 5. Get disposition
-        disposition = Disposition.objects.filter(soul=soul).first()
-        assert disposition is not None, f"No disposition for soul {soul.id}"
-        assert disposition.destination_realm is not None
-        assert disposition.destination_realm.realm_code == "DY_01_HEAVEN"
-        assert not disposition.is_executed
-
-        # 6. Execute disposition
-        DispositionService.execute(disposition)
-        disposition.refresh_from_db()
-        soul.refresh_from_db()
-
-        assert disposition.is_executed
         assert soul.current_state == SoulState.REINCARNATING
+
+        # 5–6. No disposition to execute.
+        assert not Disposition.objects.filter(soul=soul).exists()
+        disposition = None
 
         # 7. Complete reincarnation
         reincarnation = ReincarnationService.complete_rebirth(

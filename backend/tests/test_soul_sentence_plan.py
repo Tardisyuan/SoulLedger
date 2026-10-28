@@ -49,7 +49,8 @@ def _planned_soul(home, stops, name="受刑魂"):
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=home)
     if stops:
         plan.bench(case, stops)
-    case.conclude("PASSED", "")
+    # 地府判无罪不建原属节点(2026-10-29):地府的原属判 FAILED,别处照旧 PASSED。
+    case.conclude("FAILED" if home.code == "CN_DIYU" else "PASSED", "")
     plan.walk_weighing(case)  # 埃及:处置等称心流程走完(apps/judgment/weighing.py)
     soul.refresh_from_db()
     return soul, SentencePlan.all_objects.get(soul=soul), client
@@ -222,7 +223,7 @@ def test_an_eternal_station_rewrites_the_plan_as_final(cn, eg):
     soul = account.soul
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
     plan.bench(case, [(eg, plan.stop_realm(eg, eternal=True), 10)])
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     soul.refresh_from_db()
     p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)

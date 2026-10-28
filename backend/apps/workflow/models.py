@@ -721,6 +721,11 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             weighing.reweigh_after_rejection(self)
         if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
             self._purgatory_review_passed(now)
+        if status == ApprovalWorkflowStatus.COMPLETED and self.judgment_id and self.case_type != CaseType.APPEAL:
+            # 地府判无罪没有处置可执行:原审流程走完,那份没有节点的计划就完成 → 灵魂候转世(用户 2026-10-29)。
+            from apps.sentence_plan.services import SentencePlanService
+
+            SentencePlanService.on_origin_flow_completed(self.judgment_id)
 
     def _purgatory_review_passed(self, now) -> None:
         """炼狱复核 approved (天堂准入): the soul's purgatory counts as served and it goes up to heaven
@@ -737,6 +742,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         if disposition is not None and ascend_from_purgatory(disposition, via="PURGATORY_REVIEW"):
             if disposition.expired_at is None:
                 Disposition.all_objects.filter(pk=disposition.pk).update(expired_at=now)
+            # 复核通过算服满(同上):受刑中的那一站结束,计划往下走(用户 2026-10-29)。
+            from apps.disposition.services import DispositionService
+
+            DispositionService.finish_serving(disposition)
 
     def _fail_target(self, node: "ApprovalNode") -> "ApprovalNode | None":
         """Where `on_fail` jumps, or None (the FAIL then ends the flow REJECTED).
