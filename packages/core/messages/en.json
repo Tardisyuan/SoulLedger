@@ -7237,11 +7237,13 @@
       "REJECTED": "Rejected · verdict stands",
       "CURRENT": "Being heard",
       "AHEAD": "Not reached",
-      "AWAITING_FINAL": "All stations passed · awaiting the final judge"
+      "AWAITING_FINAL": "All stations passed · awaiting the final judge",
+      "NOT_HEARD": "Not heard"
     },
     "escalate_hint": "The last review upheld the verdict. If you still disagree, you can escalate.",
-    "ladder_final_pending": "Final judge · decision pending",
-    "final_decide": "Give the final decision"
+    "ladder_final_pending": "Decision pending",
+    "escalate_reason_label": "Further reasons · optional",
+    "escalate_last": "This is the last appeal for this judgment; there can be none after it."
   },
   "cityGods": {
     "title": "City Gods",
