@@ -813,6 +813,7 @@
     },
     "capture": {
       "title": "Capture",
+      "unavailable": "Capture status can't be read right now",
       "due_hint": "The fated date has come: a capture warrant can be issued. Handing over registers the death and sends the case to the City God.",
       "escort_label": "Escort",
       "escort": {

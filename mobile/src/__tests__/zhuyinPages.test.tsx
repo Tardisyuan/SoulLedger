@@ -13,11 +13,11 @@ import { AccessibilityInfo, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { Sheet, SHEET_CLOSE_DRAG_PT, SHEET_CLOSE_SPEED_PT_PER_MS, sheetReleaseCloses, useSheetGestures } from "../feedback";
-import { I18nProvider } from "../i18n";
+import { I18nProvider, translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
-import { LIFE_OPEN_PREFIX } from "../screens/life";
+import { LIFE_OPEN_PREFIX, stageWordFit } from "../screens/life";
 import { SessionProvider } from "../session";
 import { GUTTER_PT, space, themeFor, v3 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
@@ -106,6 +106,25 @@ describe("the bottom sheet's release (交互与动效 第 2 轮 原型 06)", () 
     fireEvent.press(screen.getByTestId("open"));
     await act(async () => {});
     expect(screen.getByText("内容")).toBeTruthy();
+  });
+});
+
+// 华为真机 10-29: EN 「Reincarnating」 broke as 「Reincarnatin / g」 under the fifth circle.
+describe("the life path's stage words never break inside a word", () => {
+  const word = (locale: "en" | "zh-Hans" | "egy") => translate(locale, "soul_app.soul_states.REINCARNATING");
+
+  it("a single word keeps to one line and shrinks to fit", () => {
+    expect(word("en")).toBe("Reincarnating");
+    expect(stageWordFit(word("en"))).toEqual({ numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 });
+  });
+
+  it("a phrase (egy 「Em Wehem Mesut」) still wraps at its spaces onto two lines, as before", () => {
+    expect(word("egy")).toMatch(/\s/);
+    expect(stageWordFit(word("egy"))).toEqual({ numberOfLines: 2 });
+  });
+
+  it("Chinese is one line, never asked to wrap", () => {
+    expect(stageWordFit(word("zh-Hans")).numberOfLines).toBe(1);
   });
 });
 

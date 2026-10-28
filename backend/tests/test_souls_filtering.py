@@ -148,6 +148,15 @@ class TestSoulFiltering:
         assert len(results) == 1
         assert results[0]["name"] == "Dante"
 
+    @pytest.mark.parametrize("typed", ["QU33Q9FW5F", "QU3 3Q9F W5F", "qu3 3q9f w5f", "3Q9F"])
+    def test_search_by_soul_code(self, create_souls, typed):
+        """官员端搜索框写「姓名、编号或案号」:编号照显示的 3-4-3 空格分组输入、小写、只输一段,都命中。"""
+        Soul.objects.filter(pk=self.chinese_judging.pk).update(soul_code="QU33Q9FW5F")
+        Soul.objects.filter(pk=self.eu_soul.pk).update(soul_code="ABC2345DEF")
+        response = self.client.get("/api/v1/souls/", {"search": typed})
+        assert response.status_code == 200
+        assert [s["name"] for s in response.data["results"]] == ["杜甫"]
+
     def test_ordering_by_name_asc(self, create_souls):
         """GET /api/v1/souls/?ordering=name returns souls sorted by name ascending."""
         response = self.client.get("/api/v1/souls/", {"ordering": "name"})

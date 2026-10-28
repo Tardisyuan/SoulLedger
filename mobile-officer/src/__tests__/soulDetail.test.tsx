@@ -4,6 +4,7 @@
  */
 import type { LoginUser } from "@soulledger/core/api/auth";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import { platform } from "@soulledger/core/platform";
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
@@ -392,6 +393,21 @@ describe("十三站与勾魂 (Design 第五十七批 六)", () => {
     await screen.findByTestId("soul-identity");
     await waitFor(() => expect(mockWarrants).toHaveBeenCalled());
     expect(screen.getByTestId("soul-diyu-station").props.children).toBe("不在路上");
+    expect(screen.queryByTestId("soul-capture")).toBeNull();
+    expect(screen.queryByTestId("soul-capture-unavailable")).toBeNull();
+  });
+
+  it("a failed warrant fetch says so in grey, not the silence of 「no warrant」 (华为真机 10-29)", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, diyu_station: "WANGXIANG_TERRACE" } });
+    mockWarrants.mockRejectedValue(new Error("network"));
+    await openSoul();
+    await screen.findByTestId("soul-identity");
+    const line = await screen.findByTestId("soul-capture-unavailable");
+    expect(line.props.children).toBe("勾魂状态暂时读不到");
+    // Grey: not the ink the other facts' values are written in.
+    const colour = (el: { props: { style?: unknown } }) => (StyleSheet.flatten(el.props.style as never) as { color?: string }).color;
+    expect(colour(line)).toBeTruthy();
+    expect(colour(line)).not.toBe(colour(screen.getByTestId("soul-diyu-station")));
     expect(screen.queryByTestId("soul-capture")).toBeNull();
   });
 

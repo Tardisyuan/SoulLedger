@@ -1219,6 +1219,9 @@ export function DataRows({ children, style }: { children: ReactNode; style?: Sty
  * Label and value. A label longer than 18 characters (EN / egy) puts the value
  * on its own line instead of squeezing both. A mono value (a time, a code) keeps to one
  * line (S4): cut with …, long-press for all of it.
+ * EN / egy labels sit in a fixed-width column, so the values start on one line whatever the
+ * label's length (华为真机 10-29: a long label pushed its value right of the others). Chinese
+ * labels are two to four characters and keep the content-width column they always had.
  */
 export function DataRow({
   label,
@@ -1232,6 +1235,7 @@ export function DataRow({
   testID?: string;
 }) {
   const { compact } = useLayout();
+  const { locale } = useI18n();
   // Two lines for a long label (EN / egy), and for every row on a narrow screen (handoff 2c).
   const stacked = compact || stacksLabel(label);
   const value =
@@ -1248,7 +1252,7 @@ export function DataRow({
     );
   return (
     <View testID={testID} style={stacked ? styles.rowStacked : styles.row}>
-      <Txt variant="caption" tone="subtle" style={stacked ? undefined : styles.rowLabel}>
+      <Txt variant="caption" tone="subtle" style={stacked ? undefined : locale === "zh-Hans" ? styles.rowLabel : styles.rowLabelFixed}>
         {label}
       </Txt>
       <View style={stacked ? undefined : styles.fill}>{value}</View>
@@ -1581,6 +1585,8 @@ export const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: space[4], alignItems: "flex-start" },
   rowStacked: { flexDirection: "column", gap: space[1] },
   rowLabel: { minWidth: 56, maxWidth: "45%" },
+  // Up to 18 caption characters (LABEL_STACK_THRESHOLD) stay beside the value; past 40% they wrap at a space.
+  rowLabelFixed: { width: "40%" },
   // Square since v2 (A2: only the lamp and a drawer handle are pills).
   badge: {
     alignSelf: "flex-start",

@@ -595,6 +595,15 @@ const PATH_WORD: Record<LifePathStep, string> = {
 };
 
 /**
+ * How a stage word fits its fifth of the row. A phrase may wrap, at its spaces, onto two lines; a
+ * single word (「Reincarnating」) keeps to one line and shrinks instead — given two lines it broke
+ * as 「Reincarnatin / g」 (华为真机 10-29). Chinese words are one token too, two or three characters
+ * that fit at full size, so for them nothing changes.
+ */
+export const stageWordFit = (word: string) =>
+  /\s/.test(word.trim()) ? { numberOfLines: 2 } : { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 };
+
+/**
  * v3 .life-stages: five 30pt circles on one line. Passed: solid ink with ✓; here: ink inside a
  * canvas ring and an ink outline, its word in ink 600; ahead: an outline and its number. v3
  * paints "here" in the civilization's colour; this page keeps that colour to the band, the seal
@@ -635,7 +644,7 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
             </View>
             <Txt
               testID={`path-${step}-word`}
-              numberOfLines={2}
+              {...stageWordFit(word(step))}
               style={[styles.stageWord, { color: where === "here" ? t.ink : t.inkMuted, fontFamily: family.ui[where === "here" ? 600 : 400] }]}
             >
               {word(step)}
