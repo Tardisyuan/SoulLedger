@@ -7226,7 +7226,18 @@
     "escalate": "Escalate",
     "escalate_title": "Escalate to the appeal court",
     "escalate_body": "The last review upheld the verdict. Escalated, the appeal goes station by station through this realm's appeal court: any station that rejects it upholds the verdict, and if it passes every station the final judge decides. It can't be withdrawn while the court hears it, and it counts as one appeal.",
-    "ladder": "Appeal court · {{name}}"
+    "ladder": "Appeal court · {{name}}",
+    "escalated_tag": "Escalated",
+    "ladder_progress": "Station {{n}} of {{total}}",
+    "ladder_station": "Station {{n}} · {{name}}",
+    "ladder_final": "Final judge · {{name}}",
+    "ladder_state": {
+      "PASSED": "Passed on",
+      "REJECTED": "Rejected · verdict stands",
+      "CURRENT": "Being heard",
+      "AHEAD": "Not reached"
+    },
+    "escalate_hint": "The last review upheld the verdict. If you still disagree, you can escalate."
   },
   "cityGods": {
     "title": "City Gods",
