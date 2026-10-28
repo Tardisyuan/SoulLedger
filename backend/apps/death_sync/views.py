@@ -54,6 +54,8 @@ class DeathRegistrationFilter(django_filters.FilterSet):
     search = django_filters.CharFilter(method="filter_search")
     received_after = django_filters.DateFilter(field_name="request_timestamp", lookup_expr="date__gte")
     received_before = django_filters.DateFilter(field_name="request_timestamp", lookup_expr="date__lte")
+    # 某位土地公登记的(apps/death_sync/tudi_views.py)。
+    tudi_god = django_filters.UUIDFilter(field_name="tudi_god_id")
 
     class Meta:
         model = DeathRegistrationRequest

@@ -34,7 +34,7 @@ class DeathRegistrationRequestSerializer(serializers.ModelSerializer):
         model = DeathRegistrationRequest
         fields = [
             'id', 'status', 'source_system', 'idempotency_key',
-            'source_reference_id', 'soul', 'judgment',
+            'source_reference_id', 'soul', 'judgment', 'tudi_god',
             'error_code', 'error_message', 'retry_count', 'max_retries',
             'request_timestamp', 'processing_duration_ms',
         ]

@@ -247,6 +247,10 @@ class MeProfileSerializer(serializers.Serializer):
     death_date = HistoricalDateField(prefix="death", read_only=True)
     origin_location = serializers.CharField()
     origin_region = serializers.ChoiceField(choices=Soul.OriginRegion.choices, allow_blank=True)
+    #: 地府十三站(docs/06 §一):自己此刻在哪一站;空 = 不在路上(别的文明恒为空)。
+    diyu_station = serializers.ChoiceField(choices=Soul.DiyuStation.choices, allow_blank=True)
+    #: 四大部洲(docs/07 §人道):这一世生在哪一洲;空 = 不详。
+    birth_continent = serializers.ChoiceField(choices=Soul.Continent.choices, allow_blank=True)
     merit_score = serializers.IntegerField()
     demerit_score = serializers.IntegerField()
     account = serializers.SerializerMethodField()

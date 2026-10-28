@@ -355,3 +355,61 @@ class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.participant_tenant.code} - {self.role} for {self.judgment.title}"
+
+
+# ── 勾魂(2026-10-28,只在地府)────────────────────────────────────────
+#
+# docs/01 §二 第五层、02「黑白无常」「牛头马面」、08 §4.1「缉拿鬼魂:派遣黑白无常等勾魂」:
+# 阳寿尽 → 城隍发勾魂牒 → 鬼差拘到 → 交接(登记死亡,案子交城隍初审)。规则在 `apps/dispatch/capture.py`。
+# 放在派遣这一侧:它是「派差」,与调拨同一个 app,但不是跨殿调拨,不占 `unique_active_dispatch`。
+
+
+class CaptureStatus(models.TextChoices):
+    ISSUED = "ISSUED", "已发牒"
+    CAPTURED = "CAPTURED", "已拘到"
+    HANDED_OVER = "HANDED_OVER", "已交接"
+    CANCELLED = "CANCELLED", "已撤销"
+
+
+#: 牒还没了结:同一个灵魂同时只能有一张。
+OPEN_CAPTURE = (CaptureStatus.ISSUED, CaptureStatus.CAPTURED)
+
+
+class CaptureEscort(models.TextChoices):
+    """派哪一对鬼差。docs/02:黑白无常「负责难度相对较低的勾魂任务」;牛头马面「地位高于黑白无常,处理更凶恶的亡魂」。"""
+
+    WUCHANG = "WUCHANG", "黑白无常"
+    NIUTOU_MAMIAN = "NIUTOU_MAMIAN", "牛头马面"
+
+
+class CaptureWarrant(AuditUserFields, models.Model):
+    """一张勾魂牒。`city_god` = 发牒的城隍(按灵魂出身地配,与收案同一条规则;本殿没有城隍时为空)。
+    交接时登记死亡(`Soul.die`),`judgment` 指向那一刻开的审判。"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="capture_warrants")
+    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="capture_warrants")
+    city_god = models.ForeignKey("judgment.CityGod", on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="capture_warrants")
+    escort = models.CharField(max_length=16, choices=CaptureEscort.choices, default=CaptureEscort.WUCHANG)
+    status = models.CharField(max_length=16, choices=CaptureStatus.choices, default=CaptureStatus.ISSUED)
+    issued_at = models.DateTimeField(auto_now_add=True)
+    captured_at = models.DateTimeField(null=True, blank=True)
+    handed_over_at = models.DateTimeField(null=True, blank=True)
+    judgment = models.ForeignKey("judgment.Judgment", on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="capture_warrants")
+    cancel_reason = models.TextField(blank=True, default="")
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    class Meta:
+        ordering = ["-issued_at"]
+        constraints = [
+            UniqueConstraint(fields=["soul"], condition=Q(is_deleted=False) & Q(status__in=OPEN_CAPTURE),
+                             name="one_open_capture_warrant_per_soul"),
+        ]
+        indexes = [models.Index(fields=["tenant", "status"])]
+
+    def __str__(self):
+        return f"Capture {self.soul_id} ({self.status})"

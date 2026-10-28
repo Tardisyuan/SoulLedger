@@ -25,6 +25,10 @@ class RetryRefusedError(Exception):
         self.code = code
 
 
+#: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key).
+TUDI_SOURCE = "TUDI"
+
+
 class DeathSyncService:
     """
     Core service for processing inbound death registrations.
@@ -164,10 +168,13 @@ class DeathSyncService:
                 apply_contacts(soul, payload.get("contact_email", ""), payload.get("contact_phone", ""))
 
                 # Call soul.die() - the domain service handles state transition
+                # 土地公登记的报给他的上级城隍(apps/death_sync/tudi.py);外部系统的按出身地配。
+                tudi = request_record.tudi_god
                 judgment = soul.die(
                     death_date=payload.get("death_date"),
                     location=payload.get("death_location", ""),
                     account_origin="DEATH_SYNC",
+                    city_god=tudi.city_god if tudi is not None else None,
                 )
 
                 if judgment is None:
@@ -217,6 +224,21 @@ class DeathSyncService:
             request_record.judgment = None
             request_record.save()
             return request_record
+
+    @staticmethod
+    def register_by_tudi(tudi, payload, idempotency_key=None):
+        """土地公登记一条死亡(`POST /death-sync/tudi-gods/{id}/register-death/`):同一张表、同一条处理,
+        `api_key` 为空,`source_system` 是 "TUDI"。重复的 `idempotency_key` 与外部登记一样抛 IntegrityError。"""
+        request_record = DeathRegistrationRequest(
+            tenant=tudi.tenant,
+            tudi_god=tudi,
+            idempotency_key=idempotency_key or f"tudi_{tudi.pk}_{uuid.uuid4().hex}",
+            source_system=TUDI_SOURCE,
+            source_reference_id=payload.get("source_reference", ""),
+            source_payload=payload,
+            status=DeathRegistrationStatus.PENDING,
+        )
+        return DeathSyncService._process(request_record, tudi.tenant, payload, timezone.now())
 
     @staticmethod
     def retry_failed(registration_id, tenant):

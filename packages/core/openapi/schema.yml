@@ -4209,6 +4209,11 @@ paths:
           * `FAILED` - Processing Failed
           * `DUPLICATE` - Duplicate - Already Processed
           * `PARTIAL` - Partially Processed (batch)
+      - in: query
+        name: tudi_god
+        schema:
+          type: string
+          format: uuid
       tags:
       - v1
       security:
@@ -4340,6 +4345,193 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationSummary'
+          description: ''
+  /api/v1/death-sync/tudi-gods/:
+    get:
+      operationId: v1_death_sync_tudi_gods_list
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTudiGodList'
+          description: ''
+    post:
+      operationId: v1_death_sync_tudi_gods_create
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TudiGod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TudiGod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TudiGod'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TudiGod'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TudiRefusal'
+          description: ''
+  /api/v1/death-sync/tudi-gods/{id}/:
+    get:
+      operationId: v1_death_sync_tudi_gods_retrieve
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tudi god.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TudiGod'
+          description: ''
+    patch:
+      operationId: v1_death_sync_tudi_gods_partial_update
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tudi god.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTudiGod'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTudiGod'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTudiGod'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TudiGod'
+          description: ''
+    delete:
+      operationId: v1_death_sync_tudi_gods_destroy
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tudi god.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/death-sync/tudi-gods/{id}/register-death/:
+    post:
+      operationId: v1_death_sync_tudi_gods_register_death_create
+      description: 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this tudi god.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TudiRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TudiRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TudiRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationRequest'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TudiRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationRequest'
           description: ''
   /api/v1/death-sync/webhook-deliveries/:
     get:
@@ -4645,6 +4837,261 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/dispatch/capture-warrants/:
+    get:
+      operationId: v1_dispatch_capture_warrants_list
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+        description: Only this soul's warrants.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CANCELLED
+          - CAPTURED
+          - HANDED_OVER
+          - ISSUED
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCaptureWarrantList'
+          description: ''
+    post:
+      operationId: v1_dispatch_capture_warrants_create
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureIssue'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CaptureIssue'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CaptureIssue'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureWarrant'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+  /api/v1/dispatch/capture-warrants/{id}/:
+    get:
+      operationId: v1_dispatch_capture_warrants_retrieve
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this capture warrant.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureWarrant'
+          description: ''
+  /api/v1/dispatch/capture-warrants/{id}/cancel/:
+    post:
+      operationId: v1_dispatch_capture_warrants_cancel_create
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this capture warrant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CaptureCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CaptureCancel'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureWarrant'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+  /api/v1/dispatch/capture-warrants/{id}/capture/:
+    post:
+      operationId: v1_dispatch_capture_warrants_capture_create
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this capture warrant.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureWarrant'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+  /api/v1/dispatch/capture-warrants/{id}/hand-over/:
+    post:
+      operationId: v1_dispatch_capture_warrants_hand_over_create
+      description: 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this capture warrant.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureHandOver'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CaptureHandOver'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CaptureHandOver'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureWarrant'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureRefusal'
+          description: ''
+  /api/v1/dispatch/capture-warrants/due/:
+    get:
+      operationId: v1_dispatch_capture_warrants_due_list
+      description: 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(最多 200 个,阳寿早的在前)。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaptureDueSoul'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/:
     get:
       operationId: v1_dispatch_cross_tenant_judgments_list
@@ -6308,6 +6755,9 @@ paths:
         schema:
           type: string
           enum:
+          - CAPTURE_HANDED_OVER
+          - CAPTURE_WARRANT_CANCELLED
+          - CAPTURE_WARRANT_ISSUED
           - CITY_GOD_RECEIVED
           - CITY_GOD_RETURNED
           - CITY_GOD_SENT_ON
@@ -6323,6 +6773,7 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - DIYU_STATION_CHANGED
           - DUAT_PASSAGE_CHANGED
           - JUDGMENT_APPEAL_DECIDED
           - JUDGMENT_APPEAL_FILED
@@ -6360,6 +6811,7 @@ paths:
           - SETTLEMENT_CORRECTED
           - SOUL_ACCOUNT_CREATED
           - SOUL_ACCOUNT_RETIRED
+          - SOUL_CAPTURED
           - SOUL_CREATED
           - STATE_CHANGED
           - USER_FOLLOWED
@@ -6428,6 +6880,11 @@ paths:
           * `PURGATORY_ASCENDED` - Purgatory Ascended
           * `OFFICER_HANDOVER` - Officer Handover
           * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+          * `DIYU_STATION_CHANGED` - Diyu Station Changed
+          * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+          * `SOUL_CAPTURED` - Soul Captured
+          * `CAPTURE_HANDED_OVER` - Capture Handed Over
+          * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -6536,6 +6993,9 @@ paths:
         schema:
           type: string
           enum:
+          - CAPTURE_HANDED_OVER
+          - CAPTURE_WARRANT_CANCELLED
+          - CAPTURE_WARRANT_ISSUED
           - CITY_GOD_RECEIVED
           - CITY_GOD_RETURNED
           - CITY_GOD_SENT_ON
@@ -6551,6 +7011,7 @@ paths:
           - DISPATCH_STATUS_CHANGED
           - DISPOSITION_CREATED
           - DISPOSITION_EXPIRED
+          - DIYU_STATION_CHANGED
           - DUAT_PASSAGE_CHANGED
           - JUDGMENT_APPEAL_DECIDED
           - JUDGMENT_APPEAL_FILED
@@ -6588,6 +7049,7 @@ paths:
           - SETTLEMENT_CORRECTED
           - SOUL_ACCOUNT_CREATED
           - SOUL_ACCOUNT_RETIRED
+          - SOUL_CAPTURED
           - SOUL_CREATED
           - STATE_CHANGED
           - USER_FOLLOWED
@@ -6656,6 +7118,11 @@ paths:
           * `PURGATORY_ASCENDED` - Purgatory Ascended
           * `OFFICER_HANDOVER` - Officer Handover
           * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+          * `DIYU_STATION_CHANGED` - Diyu Station Changed
+          * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+          * `SOUL_CAPTURED` - Soul Captured
+          * `CAPTURE_HANDED_OVER` - Capture Handed Over
+          * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -19604,6 +20071,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/Soul'
           description: ''
+  /api/v1/souls/{id}/station/:
+    post:
+      operationId: v1_souls_station_create
+      description: |-
+        挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
+        可以往回挪。拒绝:`not_diyu` / `alive`(409)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Soul.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulStationMove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulStationMove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulStationMove'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Soul'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulStationRefusal'
+          description: ''
   /api/v1/souls/{id}/transition/:
     post:
       operationId: v1_souls_transition_create
@@ -23717,6 +24227,164 @@ components:
           - $ref: '#/components/schemas/BlankEnum'
         fallbacks:
           type: boolean
+    CaptureCancel:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+      required:
+      - reason
+    CaptureDueSoul:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        soul_code:
+          type: string
+          nullable: true
+        origin_location:
+          type: string
+        fated_death_date:
+          type: string
+          format: date
+        karmic_balance:
+          type: integer
+        suggested_escort:
+          $ref: '#/components/schemas/CaptureEscortEnum'
+      required:
+      - fated_death_date
+      - id
+      - karmic_balance
+      - name
+      - origin_location
+      - soul_code
+      - suggested_escort
+    CaptureEscortEnum:
+      enum:
+      - WUCHANG
+      - NIUTOU_MAMIAN
+      type: string
+      description: |-
+        * `WUCHANG` - 黑白无常
+        * `NIUTOU_MAMIAN` - 牛头马面
+    CaptureHandOver:
+      type: object
+      properties:
+        location:
+          type: string
+          maxLength: 255
+    CaptureIssue:
+      type: object
+      properties:
+        soul:
+          type: string
+          format: uuid
+        escort:
+          $ref: '#/components/schemas/CaptureEscortEnum'
+      required:
+      - soul
+    CaptureRefusal:
+      type: object
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+      required:
+      - code
+      - detail
+    CaptureStatusEnum:
+      enum:
+      - ISSUED
+      - CAPTURED
+      - HANDED_OVER
+      - CANCELLED
+      type: string
+      description: |-
+        * `ISSUED` - 已发牒
+        * `CAPTURED` - 已拘到
+        * `HANDED_OVER` - 已交接
+        * `CANCELLED` - 已撤销
+    CaptureWarrant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+          nullable: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        escort:
+          allOf:
+          - $ref: '#/components/schemas/CaptureEscortEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CaptureStatusEnum'
+          readOnly: true
+        issued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        captured_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        handed_over_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        judgment:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        cancel_reason:
+          type: string
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - cancel_reason
+      - captured_at
+      - city_god
+      - city_god_name
+      - create_time
+      - escort
+      - handed_over_at
+      - id
+      - issued_at
+      - judgment
+      - soul
+      - soul_code
+      - soul_name
+      - status
     CaseAttachment:
       type: object
       properties:
@@ -24652,6 +25320,18 @@ components:
           maxLength: 6
       required:
       - password
+    ContinentEnum:
+      enum:
+      - DONGSHENG
+      - NANZHAN
+      - XINIU
+      - BEIJULU
+      type: string
+      description: |-
+        * `DONGSHENG` - 东胜神洲
+        * `NANZHAN` - 南瞻部洲
+        * `XINIU` - 西牛贺洲
+        * `BEIJULU` - 北俱卢洲
     Conversation:
       type: object
       properties:
@@ -25418,6 +26098,11 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        tudi_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         error_code:
           type: string
           readOnly: true
@@ -25452,6 +26137,7 @@ components:
       - source_reference_id
       - source_system
       - status
+      - tudi_god
     DeathRegistrationRequestStatusEnum:
       enum:
       - PENDING
@@ -26006,6 +26692,36 @@ components:
         * `pending` - 待执行
         * `executing` - 执行中
         * `expired` - 期满
+    DiyuStationEnum:
+      enum:
+      - TUDI_TEMPLE
+      - YELLOW_SPRINGS_ROAD
+      - WANGXIANG_TERRACE
+      - EVIL_DOG_VILLAGE
+      - GOLDEN_ROOSTER_HILL
+      - WILD_GHOST_VILLAGE
+      - MIHUN_HALL
+      - OFFERING_PAVILION
+      - GHOST_FORT
+      - FENGDU_CITY
+      - EIGHTEEN_HELLS
+      - LOTUS_TERRACE
+      - HUANHUN_CLIFF
+      type: string
+      description: |-
+        * `TUDI_TEMPLE` - 土地庙
+        * `YELLOW_SPRINGS_ROAD` - 黄泉路
+        * `WANGXIANG_TERRACE` - 望乡台
+        * `EVIL_DOG_VILLAGE` - 恶狗村
+        * `GOLDEN_ROOSTER_HILL` - 金鸡山
+        * `WILD_GHOST_VILLAGE` - 野鬼村
+        * `MIHUN_HALL` - 迷魂殿
+        * `OFFERING_PAVILION` - 供养阁
+        * `GHOST_FORT` - 鬼界堡
+        * `FENGDU_CITY` - 酆都城
+        * `EIGHTEEN_HELLS` - 十八层地狱
+        * `LOTUS_TERRACE` - 莲花台
+        * `HUANHUN_CLIFF` - 还魂崖
     DrinkSoup:
       type: object
       properties:
@@ -26861,6 +27577,11 @@ components:
       - PURGATORY_ASCENDED
       - OFFICER_HANDOVER
       - DUAT_PASSAGE_CHANGED
+      - DIYU_STATION_CHANGED
+      - CAPTURE_WARRANT_ISSUED
+      - SOUL_CAPTURED
+      - CAPTURE_HANDED_OVER
+      - CAPTURE_WARRANT_CANCELLED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -26923,6 +27644,11 @@ components:
         * `PURGATORY_ASCENDED` - Purgatory Ascended
         * `OFFICER_HANDOVER` - Officer Handover
         * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+        * `DIYU_STATION_CHANGED` - Diyu Station Changed
+        * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+        * `SOUL_CAPTURED` - Soul Captured
+        * `CAPTURE_HANDED_OVER` - Capture Handed Over
+        * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -31024,6 +31750,14 @@ components:
           oneOf:
           - $ref: '#/components/schemas/OriginRegionEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        diyu_station:
+          oneOf:
+          - $ref: '#/components/schemas/DiyuStationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        birth_continent:
+          oneOf:
+          - $ref: '#/components/schemas/ContinentEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         merit_score:
           type: integer
         demerit_score:
@@ -31043,12 +31777,14 @@ components:
       required:
       - account
       - assistant_enabled
+      - birth_continent
       - birth_date
       - birth_name
       - civilization
       - current_state
       - death_date
       - demerit_score
+      - diyu_station
       - home_civilization
       - home_tenant
       - is_residing
@@ -33089,6 +33825,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLog'
+    PaginatedCaptureWarrantList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptureWarrant'
     PaginatedCityGodCaseList:
       type: object
       required:
@@ -34149,6 +34908,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TenantMfaRoleRow'
+    PaginatedTudiGodList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TudiGod'
     PaginatedUserManagementList:
       type: object
       required:
@@ -36087,6 +36869,15 @@ components:
         birth_name:
           type: string
           maxLength: 255
+        diyu_station:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/DiyuStationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        birth_continent:
+          oneOf:
+          - $ref: '#/components/schemas/ContinentEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         baptism:
           allOf:
           - $ref: '#/components/schemas/BaptismEnum'
@@ -36370,6 +37161,55 @@ components:
             maximum: 100000
             minimum: 0
             nullable: true
+    PatchedTudiGod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        regions:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 100
+        city_god:
+          type: string
+          format: uuid
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        officer_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        officers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TudiOfficer'
+          readOnly: true
+        registration_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedUser:
       type: object
       description: |-
@@ -38416,6 +39256,10 @@ components:
           maxLength: 100
         rebirth_form:
           $ref: '#/components/schemas/RebirthFormEnum'
+        rebirth_continent:
+          oneOf:
+          - $ref: '#/components/schemas/ContinentEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         cycle_count:
           type: integer
           minimum: 1
@@ -39992,6 +40836,15 @@ components:
         birth_name:
           type: string
           maxLength: 255
+        diyu_station:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/DiyuStationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        birth_continent:
+          oneOf:
+          - $ref: '#/components/schemas/ContinentEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         baptism:
           allOf:
           - $ref: '#/components/schemas/BaptismEnum'
@@ -40081,6 +40934,7 @@ components:
       - current_state
       - date_problems
       - demerit_score
+      - diyu_station
       - home_civilization
       - home_tenant
       - id
@@ -41775,6 +42629,24 @@ components:
       - count
       - label
       - state
+    SoulStationMove:
+      type: object
+      description: '`POST /souls/{id}/station/`:挪到十三站的哪一站(docs/06 §一)。'
+      properties:
+        station:
+          $ref: '#/components/schemas/DiyuStationEnum'
+      required:
+      - station
+    SoulStationRefusal:
+      type: object
+      properties:
+        code:
+          type: string
+        error:
+          type: string
+      required:
+      - code
+      - error
     SoulTokenPair:
       type: object
       properties:
@@ -42731,6 +43603,123 @@ components:
       - side
       - tokens
       - tools_called
+    TudiGod:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        regions:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 100
+        city_god:
+          type: string
+          format: uuid
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        officer_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        officers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TudiOfficer'
+          readOnly: true
+        registration_count:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - city_god_name
+      - create_time
+      - id
+      - name
+      - officers
+      - registration_count
+      - tenant
+      - update_time
+    TudiOfficer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    TudiRefusal:
+      type: object
+      properties:
+        code:
+          type: string
+        error:
+          type: string
+      required:
+      - code
+      - error
+    TudiRegistrationRequest:
+      type: object
+      description: 与外部登记同一组字段,外加可选的 `idempotency_key`(重复提交答同一条登记)。灵魂只认 `soul_lookup.soul_id`。
+      properties:
+        soul_lookup:
+          type: object
+          additionalProperties: {}
+        death_date:
+          type: string
+          format: date
+        death_location:
+          type: string
+          default: ''
+          maxLength: 500
+        cause_of_death:
+          type: string
+          default: ''
+          maxLength: 500
+        source_reference:
+          type: string
+          default: ''
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          default: ''
+        contact_phone:
+          type: string
+          default: ''
+          maxLength: 20
+          pattern: ^\+?[1-9]\d{6,14}$
+        metadata:
+          type: object
+          additionalProperties: {}
+        idempotency_key:
+          type: string
+          maxLength: 200
+      required:
+      - death_date
     UnavailableReading:
       type: object
       description: |-

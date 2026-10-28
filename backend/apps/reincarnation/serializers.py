@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from apps.core.tenant_fields import tenant_scoped
 from apps.reincarnation.models import SIX_PATHS, RebirthForm, Reincarnation
+from apps.souls.models import Soul
 
 
 class RebirthRequestSerializer(serializers.Serializer):
@@ -54,6 +55,8 @@ class RebirthRequestSerializer(serializers.Serializer):
         max_length=Reincarnation._meta.get_field("new_identity").max_length,
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+    #: 人道生在哪一洲(docs/07 §人道「四大部洲」);只有地府转人道可以给,别的 400 `rebirth_continent_not_applicable`。
+    rebirth_continent = serializers.ChoiceField(choices=Soul.Continent.choices, required=False, allow_blank=True)
 
     def validate_rebirth_form(self, value):
         """Refuses everything outside SIX_PATHS rather than naming OTHER, so
@@ -87,7 +90,7 @@ class ReincarnationSerializer(serializers.ModelSerializer):
         model = Reincarnation
         fields = [
             "id", "soul", "soul_name", "soul_code", "disposition", "target_realm",
-            "rebirth_form", "cycle_count", "previous_realm", "new_identity",
+            "rebirth_form", "rebirth_continent", "cycle_count", "previous_realm", "new_identity",
             "notes", "reincarnated_at",
         ]
 

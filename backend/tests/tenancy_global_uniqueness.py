@@ -49,6 +49,8 @@ UNIQUE_KEYS = {
     'chat.InboxOfficerState:chat_one_inbox_state_per_officer': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'dispatch.CrossTenantJudgment:judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'dispatch.CrossTenantJudgmentParticipant:unique_cross_judgment_node_order': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'death_sync.TudiGod:unique_tudi_god_name_per_hall': ('PER_TENANT', 'unique per tenant only (tenant is in the key); NOT global'),
+    'dispatch.CaptureWarrant:one_open_capture_warrant_per_soul': ('PER_PARENT', 'one open (ISSUED / CAPTURED) capture warrant per soul'),
     'dispatch.DispatchRecord:unique_active_dispatch': ('PER_PARENT', 'one live PROPOSED/APPROVED dispatch per soul, spanning source and target tenant'),
     'disposition.Disposition:judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.EvidenceAdmission:unique_admission_judgment_record': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
