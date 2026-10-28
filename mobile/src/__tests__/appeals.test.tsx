@@ -1,14 +1,15 @@
 /**
  * 审判申诉(第五十二批 A-1 ~ A-4):卡片底部的申诉行、各轮与撤回确认、整页表单。
  */
-import type { MeAppealableJudgment, MeJudgmentAppeal } from "@soulledger/core/api/soul";
+import { appealRefusalKey, type MeAppealableJudgment, type MeJudgmentAppeal } from "@soulledger/core/api/soul";
 import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { I18nProvider } from "../i18n";
+import { ToastProvider } from "../feedback";
+import { I18nProvider, translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { stubApi } from "./stubApi";
@@ -256,6 +257,29 @@ it("withdrawing the first of two says one is left; the second says none is", () 
   wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[round({ id: "a2", round: 2 })]} focused onChanged={() => {}} />);
   fireEvent.press(screen.getByTestId("appeal-withdraw-a2"));
   expect(screen.getByTestId("appeal-withdraw-body").props.children).toBe("撤回也算一次。这是第二次，撤回后这件审判不能再申诉。");
+});
+
+it("a refused withdrawal (already decided / in the appeal flow) is said in words, not as the generic unknown-code line", async () => {
+  stubApi({ "POST /me/judgment-appeals/a1/withdraw/": { status: 409, data: { code: "appeal_closed", detail: "This appeal is DECIDED." } } });
+  render(
+    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+      <I18nProvider>
+        <ToastProvider>
+          <NavigationContainer>
+            <AppealLine row={row({ rounds_used: 1 })} rounds={[round()]} focused onChanged={() => {}} />
+          </NavigationContainer>
+        </ToastProvider>
+      </I18nProvider>
+    </SafeAreaProvider>
+  );
+  fireEvent.press(screen.getByTestId("appeal-withdraw-a1"));
+  fireEvent.press(screen.getByTestId("appeal-withdraw-confirm"));
+  const toast = await screen.findByTestId("toast");
+  expect(toast.props.children).toBe(translate("zh-Hans", "appeals.refusal.appeal_closed"));
+  expect(toast.props.children).not.toBe("appeals.refusal.appeal_closed");
+  expect(toast.props.children).not.toContain("appeal_closed");
+  expect(appealRefusalKey("ladder_running")).toBe("appeals.refusal.ladder_running");
+  expect(translate("en", "appeals.refusal.ladder_running")).not.toBe("appeals.refusal.ladder_running");
 });
 
 it("the form refuses an empty reason locally, then sends the reason and goes back", async () => {

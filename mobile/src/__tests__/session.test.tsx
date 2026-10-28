@@ -250,6 +250,37 @@ describe("a stored session", () => {
     expect(screen.queryByText("这一世没有转生申请")).toBeNull();
   });
 
+  it("returning to the life tab also re-reads the profile (/me/) the page head is drawn from", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/rebirth-applications/": {
+        status: 200,
+        data: { can_apply: false, reason: "application_open", cooldown_until: null, results: [] },
+      },
+    });
+    renderApp();
+    await screen.findByTestId("section-applications-toggle");
+    const profileReads = () => calls.filter((c) => c.url === "/me/").length;
+    const before = profileReads();
+    await pressTab("tab-Applications");
+    await screen.findByTestId("eligibility");
+    expect(profileReads()).toBe(before);
+    await pressTab("tab-Life");
+    await waitFor(() => expect(profileReads()).toBe(before + 1));
+  });
+
+  it("a soul outside Diyu never asks for /me/wangsi/ (枉死城 is Diyu's alone)", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const greek = { ...PROFILE, civilization: "GREEK", home_civilization: "GREEK", welcomed_civilizations: ["GREEK"] };
+    const calls = stubApi({ "/me/": { status: 200, data: greek }, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await screen.findByTestId("section-applications-toggle");
+    expect(calls.some((c) => c.url === "/me/life/")).toBe(true);
+    expect(calls.some((c) => c.url === "/me/wangsi/")).toBe(false);
+  });
+
   it("sign-out clears the secure store and returns to login", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const calls = stubApi({

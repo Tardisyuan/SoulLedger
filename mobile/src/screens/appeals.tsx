@@ -174,8 +174,10 @@ function Round({
       toast(t("appeals.withdrawn_toast"));
       onWithdrawn();
     } catch (error) {
+      // 撤回被拒(已有结论 / 已进申诉流程)有专门的一句;其余照通用分类。
+      const refusal = appealRefusalKey(soulErrorCode(error));
       const m = soulErrorMessage(error);
-      toast(t(m.key, m.params), "failure");
+      toast(refusal ? t(refusal) : t(m.key, m.params), "failure");
     } finally {
       setBusy(false);
     }
