@@ -536,11 +536,18 @@ class JudgmentDestinationOptionSerializer(serializers.ModelSerializer):
     """One realm the 「戊 · 发落」 picker may offer for a candidate verdict."""
     name = serializers.SerializerMethodField()
     occupancy = serializers.IntegerField(read_only=True)
+    # 判官不写刑期时这扇门填的默认年数(2026-10-29,`disposition.default_terms`);永久或没有默认为 null。
+    default_term_years = serializers.SerializerMethodField()
 
     class Meta:
         model = Realm
-        fields = ["id", "name", "realm_code", "kind", "capacity", "occupancy", "is_eternal"]
+        fields = ["id", "name", "realm_code", "kind", "capacity", "occupancy", "is_eternal", "default_term_years"]
         read_only_fields = fields
+
+    def get_default_term_years(self, obj) -> int | None:
+        from apps.disposition.default_terms import default_term_years
+
+        return default_term_years(obj.realm_code, is_eternal=obj.is_eternal)
 
     def get_name(self, obj) -> str:
         return obj.get_localized_name(locale_from_context(self.context))
@@ -551,7 +558,8 @@ class JudgmentDestinationsSerializer(serializers.Serializer):
 
     `default_realm_id` is where automatic routing would send the soul (null when
     that realm is not among the options, e.g. an unmapped tenant);
-    `default_term_years` is null because an automatic conclusion records no term.
+    `default_term_years` is the default term of that realm, written onto the disposition when the judge
+    gives none (2026-10-29, `apps.disposition.default_terms`); null when eternal or without a default.
     `not_applicable` is the rest of the tenant's realms for this civilization —
     ones this verdict cannot reach, listed so the picker can show them disabled
     with the reason; `conclude` refuses them (`realm_not_allowed`).

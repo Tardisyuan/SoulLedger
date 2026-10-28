@@ -182,6 +182,9 @@ class DispositionService:
             realm = cls.route_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
         if is_eternal is None:
             is_eternal = realm.is_eternal if realm else False
+        # 没写刑期的按界域的默认刑期(用户 2026-10-29;表与出处见 `default_terms`),判官可改。
+        from apps.disposition.default_terms import fill
+        sentence_years = fill(sentence_years, realm.realm_code if realm else "", is_eternal=is_eternal)
 
         with transaction.atomic():
             disposition = Disposition.objects.create(

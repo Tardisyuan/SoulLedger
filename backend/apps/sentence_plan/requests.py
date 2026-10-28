@@ -551,9 +551,14 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     refuse_passed_if_untruthful(judgment, verdict)
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
+    from apps.disposition.default_terms import default_term_years
+
     content = {
         "realm_code": realm.realm_code if realm else "", "is_eternal": realm.is_eternal if realm else False,
-        "memory_reset": (realm.memory_reset_mechanism if realm else None) or "NONE", "sentence_years": None,
+        "memory_reset": (realm.memory_reset_mechanism if realm else None) or "NONE",
+        # 改判后的那一站按新界域的默认刑期(2026-10-29,`default_terms`)。
+        "sentence_years": default_term_years(realm.realm_code if realm else "",
+                                             is_eternal=realm.is_eternal if realm else False),
     }
 
     def reroute(disposition):
@@ -562,7 +567,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         disposition.destination_realm = realm
         disposition.is_eternal = content["is_eternal"]
         disposition.memory_reset = content["memory_reset"]
-        disposition.sentence_years = None
+        disposition.sentence_years = content["sentence_years"]
         disposition.save(update_fields=["destination_realm", "is_eternal", "memory_reset", "sentence_years",
                                         "update_time", "update_user", "version"])
         SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
