@@ -2165,6 +2165,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/tudi-gods/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        get: operations["v1_death_sync_tudi_gods_list"];
+        put?: never;
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        post: operations["v1_death_sync_tudi_gods_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/tudi-gods/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        get: operations["v1_death_sync_tudi_gods_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        delete: operations["v1_death_sync_tudi_gods_destroy"];
+        options?: never;
+        head?: never;
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        patch: operations["v1_death_sync_tudi_gods_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/death-sync/tudi-gods/{id}/register-death/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。 */
+        post: operations["v1_death_sync_tudi_gods_register_death_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/webhook-deliveries/": {
         parameters: {
             query?: never;
@@ -2281,6 +2335,109 @@ export interface paths {
         head?: never;
         /** @description CRUD for webhook configurations (API key authenticated). */
         patch: operations["v1_death_sync_webhooks_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        get: operations["v1_dispatch_capture_warrants_list"];
+        put?: never;
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        post: operations["v1_dispatch_capture_warrants_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        get: operations["v1_dispatch_capture_warrants_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        post: operations["v1_dispatch_capture_warrants_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/{id}/capture/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        post: operations["v1_dispatch_capture_warrants_capture_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/{id}/hand-over/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。 */
+        post: operations["v1_dispatch_capture_warrants_hand_over_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/capture-warrants/due/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(最多 200 个,阳寿早的在前)。 */
+        get: operations["v1_dispatch_capture_warrants_due_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dispatch/cross-tenant-judgments/": {
@@ -8916,6 +9073,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/{id}/station/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
+         *     可以往回挪。拒绝:`not_diyu` / `alive`(409)。
+         */
+        post: operations["v1_souls_station_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/souls/{id}/transition/": {
         parameters: {
             query?: never;
@@ -10849,6 +11026,70 @@ export interface components {
             effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
             fallbacks?: boolean;
         };
+        CaptureCancel: {
+            reason: string;
+        };
+        CaptureDueSoul: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            soul_code: string | null;
+            origin_location: string;
+            /** Format: date */
+            fated_death_date: string;
+            karmic_balance: number;
+            suggested_escort: components["schemas"]["CaptureEscortEnum"];
+        };
+        /**
+         * @description * `WUCHANG` - 黑白无常
+         *     * `NIUTOU_MAMIAN` - 牛头马面
+         * @enum {string}
+         */
+        CaptureEscortEnum: "WUCHANG" | "NIUTOU_MAMIAN";
+        CaptureHandOver: {
+            location?: string;
+        };
+        CaptureIssue: {
+            /** Format: uuid */
+            soul: string;
+            escort?: components["schemas"]["CaptureEscortEnum"];
+        };
+        CaptureRefusal: {
+            code: string;
+            detail: string;
+        };
+        /**
+         * @description * `ISSUED` - 已发牒
+         *     * `CAPTURED` - 已拘到
+         *     * `HANDED_OVER` - 已交接
+         *     * `CANCELLED` - 已撤销
+         * @enum {string}
+         */
+        CaptureStatusEnum: "ISSUED" | "CAPTURED" | "HANDED_OVER" | "CANCELLED";
+        CaptureWarrant: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_name: string;
+            readonly soul_code: string | null;
+            /** Format: uuid */
+            readonly city_god: string | null;
+            readonly city_god_name: string | null;
+            readonly escort: components["schemas"]["CaptureEscortEnum"];
+            readonly status: components["schemas"]["CaptureStatusEnum"];
+            /** Format: date-time */
+            readonly issued_at: string;
+            /** Format: date-time */
+            readonly captured_at: string | null;
+            /** Format: date-time */
+            readonly handed_over_at: string | null;
+            /** Format: uuid */
+            readonly judgment: string | null;
+            readonly cancel_reason: string;
+            /** Format: date-time */
+            readonly create_time: string;
+        };
         CaseAttachment: {
             /** Format: uuid */
             readonly id: string;
@@ -11325,6 +11566,14 @@ export interface components {
             password: string;
             code?: string;
         };
+        /**
+         * @description * `DONGSHENG` - 东胜神洲
+         *     * `NANZHAN` - 南瞻部洲
+         *     * `XINIU` - 西牛贺洲
+         *     * `BEIJULU` - 北俱卢洲
+         * @enum {string}
+         */
+        ContinentEnum: "DONGSHENG" | "NANZHAN" | "XINIU" | "BEIJULU";
         Conversation: {
             /** Format: uuid */
             readonly id: string;
@@ -11653,6 +11902,8 @@ export interface components {
             readonly soul: string | null;
             /** Format: uuid */
             readonly judgment: string | null;
+            /** Format: uuid */
+            readonly tudi_god: string | null;
             readonly error_code: string;
             readonly error_message: string;
             readonly retry_count: number;
@@ -11917,6 +12168,23 @@ export interface components {
          * @enum {string}
          */
         DispositionSectionEnum: "pending" | "executing" | "expired";
+        /**
+         * @description * `TUDI_TEMPLE` - 土地庙
+         *     * `YELLOW_SPRINGS_ROAD` - 黄泉路
+         *     * `WANGXIANG_TERRACE` - 望乡台
+         *     * `EVIL_DOG_VILLAGE` - 恶狗村
+         *     * `GOLDEN_ROOSTER_HILL` - 金鸡山
+         *     * `WILD_GHOST_VILLAGE` - 野鬼村
+         *     * `MIHUN_HALL` - 迷魂殿
+         *     * `OFFERING_PAVILION` - 供养阁
+         *     * `GHOST_FORT` - 鬼界堡
+         *     * `FENGDU_CITY` - 酆都城
+         *     * `EIGHTEEN_HELLS` - 十八层地狱
+         *     * `LOTUS_TERRACE` - 莲花台
+         *     * `HUANHUN_CLIFF` - 还魂崖
+         * @enum {string}
+         */
+        DiyuStationEnum: "TUDI_TEMPLE" | "YELLOW_SPRINGS_ROAD" | "WANGXIANG_TERRACE" | "EVIL_DOG_VILLAGE" | "GOLDEN_ROOSTER_HILL" | "WILD_GHOST_VILLAGE" | "MIHUN_HALL" | "OFFERING_PAVILION" | "GHOST_FORT" | "FENGDU_CITY" | "EIGHTEEN_HELLS" | "LOTUS_TERRACE" | "HUANHUN_CLIFF";
         DrinkSoup: {
             /** Format: uuid */
             soul_id: string;
@@ -12341,10 +12609,15 @@ export interface components {
          *     * `PURGATORY_ASCENDED` - Purgatory Ascended
          *     * `OFFICER_HANDOVER` - Officer Handover
          *     * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+         *     * `DIYU_STATION_CHANGED` - Diyu Station Changed
+         *     * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+         *     * `SOUL_CAPTURED` - Soul Captured
+         *     * `CAPTURE_HANDED_OVER` - Capture Handed Over
+         *     * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -14141,6 +14414,8 @@ export interface components {
             } | null;
             origin_location: string;
             origin_region: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
+            diyu_station: components["schemas"]["DiyuStationEnum"] | components["schemas"]["BlankEnum"];
+            birth_continent: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
             merit_score: number;
             demerit_score: number;
             readonly account: components["schemas"]["MeAccount"];
@@ -15109,6 +15384,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["AuditLog"][];
         };
+        PaginatedCaptureWarrantList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CaptureWarrant"][];
+        };
         PaginatedCityGodCaseList: {
             /** @example 123 */
             count: number;
@@ -15762,6 +16052,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["TenantMfaRoleRow"][];
+        };
+        PaginatedTudiGodList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TudiGod"][];
         };
         PaginatedUserManagementList: {
             /** @example 123 */
@@ -16734,6 +17039,8 @@ export interface components {
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
+            readonly diyu_station?: components["schemas"]["DiyuStationEnum"] | components["schemas"]["BlankEnum"];
+            birth_continent?: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
             /**
              * @description Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
              *
@@ -16884,6 +17191,23 @@ export interface components {
             rebirth_monthly_quota?: {
                 [key: string]: number | null;
             };
+        };
+        PatchedTudiGod: {
+            /** Format: uuid */
+            readonly id?: string;
+            readonly tenant?: number;
+            name?: string;
+            regions?: string[];
+            /** Format: uuid */
+            city_god?: string | null;
+            readonly city_god_name?: string | null;
+            officer_ids?: number[];
+            readonly officers?: components["schemas"]["TudiOfficer"][];
+            readonly registration_count?: number;
+            /** Format: date-time */
+            readonly create_time?: string;
+            /** Format: date-time */
+            readonly update_time?: string;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -17938,6 +18262,7 @@ export interface components {
             disposition?: string | null;
             target_realm: string;
             rebirth_form?: components["schemas"]["RebirthFormEnum"];
+            rebirth_continent?: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
             /** @description Which turn of the wheel this is; the first rebirth is 1. */
             cycle_count?: number;
             previous_realm?: string;
@@ -18619,6 +18944,8 @@ export interface components {
             origin_region?: components["schemas"]["OriginRegionEnum"] | components["schemas"]["BlankEnum"];
             duat_passage?: components["schemas"]["DuatPassageEnum"] | components["schemas"]["BlankEnum"];
             birth_name?: string;
+            readonly diyu_station: components["schemas"]["DiyuStationEnum"] | components["schemas"]["BlankEnum"];
+            birth_continent?: components["schemas"]["ContinentEnum"] | components["schemas"]["BlankEnum"];
             /**
              * @description Whether this soul was baptised. Limbo (Inf. IV) is the only circle this reaches, and it is not a punishment — Virgil is there. UNRECORDED means nobody asked, which is every row written before this column existed.
              *
@@ -19418,6 +19745,14 @@ export interface components {
             /** Format: double */
             average_balance: number | null;
         };
+        /** @description `POST /souls/{id}/station/`:挪到十三站的哪一站(docs/06 §一)。 */
+        SoulStationMove: {
+            station: components["schemas"]["DiyuStationEnum"];
+        };
+        SoulStationRefusal: {
+            code: string;
+            error: string;
+        };
         SoulTokenPair: {
             access: string;
             refresh: string;
@@ -19869,6 +20204,56 @@ export interface components {
              * @enum {string}
              */
             event: "done";
+        };
+        TudiGod: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly tenant: number;
+            name: string;
+            regions?: string[];
+            /** Format: uuid */
+            city_god?: string | null;
+            readonly city_god_name: string | null;
+            officer_ids?: number[];
+            readonly officers: components["schemas"]["TudiOfficer"][];
+            readonly registration_count: number;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        TudiOfficer: {
+            id: number;
+            name: string;
+        };
+        TudiRefusal: {
+            code: string;
+            error: string;
+        };
+        /** @description 与外部登记同一组字段,外加可选的 `idempotency_key`(重复提交答同一条登记)。灵魂只认 `soul_lookup.soul_id`。 */
+        TudiRegistrationRequest: {
+            soul_lookup?: {
+                [key: string]: unknown;
+            };
+            /** Format: date */
+            death_date: string;
+            /** @default  */
+            death_location: string;
+            /** @default  */
+            cause_of_death: string;
+            /** @default  */
+            source_reference: string;
+            /**
+             * Format: email
+             * @default
+             */
+            contact_email: string;
+            /** @default  */
+            contact_phone: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+            idempotency_key?: string;
         };
         /**
          * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
@@ -20363,6 +20748,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             missing?: string[];
+            ferry_passage?: string;
             grievance_status?: string;
             grievance_level?: string;
         };
@@ -24257,6 +24643,7 @@ export interface operations {
                  *     * `PARTIAL` - Partially Processed (batch)
                  */
                 status?: "ACCEPTED" | "DUPLICATE" | "FAILED" | "PARTIAL" | "PENDING" | "PROCESSED";
+                tudi_god?: string;
             };
             header?: never;
             path?: never;
@@ -24362,6 +24749,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationSummary"];
+                };
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTudiGodList"];
+                };
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TudiGod"];
+                "application/x-www-form-urlencoded": components["schemas"]["TudiGod"];
+                "multipart/form-data": components["schemas"]["TudiGod"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TudiGod"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TudiRefusal"];
+                };
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this tudi god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TudiGod"];
+                };
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this tudi god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this tudi god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTudiGod"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTudiGod"];
+                "multipart/form-data": components["schemas"]["PatchedTudiGod"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TudiGod"];
+                };
+            };
+        };
+    };
+    v1_death_sync_tudi_gods_register_death_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this tudi god. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TudiRegistrationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TudiRegistrationRequest"];
+                "multipart/form-data": components["schemas"]["TudiRegistrationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeathRegistrationRequest"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TudiRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeathRegistrationRequest"];
                 };
             };
         };
@@ -24601,6 +25162,232 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description Only this soul's warrants. */
+                soul?: string;
+                status?: "CANCELLED" | "CAPTURED" | "HANDED_OVER" | "ISSUED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCaptureWarrantList"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptureIssue"];
+                "application/x-www-form-urlencoded": components["schemas"]["CaptureIssue"];
+                "multipart/form-data": components["schemas"]["CaptureIssue"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureWarrant"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this capture warrant. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureWarrant"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this capture warrant. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptureCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["CaptureCancel"];
+                "multipart/form-data": components["schemas"]["CaptureCancel"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureWarrant"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_capture_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this capture warrant. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureWarrant"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_hand_over_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this capture warrant. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CaptureHandOver"];
+                "application/x-www-form-urlencoded": components["schemas"]["CaptureHandOver"];
+                "multipart/form-data": components["schemas"]["CaptureHandOver"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureWarrant"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRefusal"];
+                };
+            };
+        };
+    };
+    v1_dispatch_capture_warrants_due_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureDueSoul"][];
                 };
             };
         };
@@ -25869,9 +26656,14 @@ export interface operations {
                  *     * `PURGATORY_ASCENDED` - Purgatory Ascended
                  *     * `OFFICER_HANDOVER` - Officer Handover
                  *     * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+                 *     * `DIYU_STATION_CHANGED` - Diyu Station Changed
+                 *     * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+                 *     * `SOUL_CAPTURED` - Soul Captured
+                 *     * `CAPTURE_HANDED_OVER` - Capture Handed Over
+                 *     * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -25988,9 +26780,14 @@ export interface operations {
                  *     * `PURGATORY_ASCENDED` - Purgatory Ascended
                  *     * `OFFICER_HANDOVER` - Officer Handover
                  *     * `DUAT_PASSAGE_CHANGED` - Duat Passage Changed
+                 *     * `DIYU_STATION_CHANGED` - Diyu Station Changed
+                 *     * `CAPTURE_WARRANT_ISSUED` - Capture Warrant Issued
+                 *     * `SOUL_CAPTURED` - Soul Captured
+                 *     * `CAPTURE_HANDED_OVER` - Capture Handed Over
+                 *     * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -37198,6 +37995,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Soul"];
+                };
+            };
+        };
+    };
+    v1_souls_station_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Soul. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulStationMove"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulStationMove"];
+                "multipart/form-data": components["schemas"]["SoulStationMove"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Soul"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulStationRefusal"];
                 };
             };
         };

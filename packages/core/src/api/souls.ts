@@ -15,6 +15,14 @@ export type SoulOriginRegion = "EUROPE" | "ASIA" | "";
 /** `Soul.DuatPassage`(埃及未得审判的情形,docs/01 §4.2);"" = 葬仪如常。 */
 export type SoulDuatPassage = "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL" | "";
 
+/** 地府十三站(docs/06 §一);"" = 不在路上。次序与「第几站」在 `domain/diyuStations.ts`。 */
+export { DIYU_STATIONS, diyuStationOrdinal } from "../domain/diyuStations";
+export type SoulDiyuStation = Schemas["DiyuStationEnum"] | "";
+
+/** 四大部洲(`Continent`,docs/07 §人道);"" = 不详。只在地府。 */
+export const CONTINENTS = ["DONGSHENG", "NANZHAN", "XINIU", "BEIJULU"] as const satisfies readonly Schemas["ContinentEnum"][];
+export type SoulContinent = "DONGSHENG" | "NANZHAN" | "XINIU" | "BEIJULU" | "";
+
 /** `Soul.Baptism`(只欧洲;未受洗 / 生于基督之前且没有更重的罪 → Limbo,review E-2)。 */
 export type SoulBaptism = "UNRECORDED" | "BAPTISED" | "UNBAPTISED" | "BEFORE_CHRIST";
 
@@ -50,6 +58,8 @@ export interface SoulInput {
   neutral_in_life?: boolean | null;
   /** 只希腊:未葬 / 无渡资。 */
   ferry_passage?: SoulFerryPassage;
+  /** 只地府:这一世生在四大部洲的哪一洲;"" = 不详。 */
+  birth_continent?: SoulContinent;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
@@ -181,6 +191,10 @@ export interface Soul extends SoulBase, ArchiveFields {
   neutral_in_life?: boolean | null;
   /** 只希腊:未葬 / 无渡资。 */
   ferry_passage?: SoulFerryPassage;
+  /** 地府十三站:此刻在哪一站;"" = 不在路上。只读,挪站走 `soulsApi.moveStation`。 */
+  diyu_station?: SoulDiyuStation;
+  /** 地府四大部洲:这一世生在哪一洲;"" = 不详。 */
+  birth_continent?: SoulContinent;
 }
 
 /**
@@ -429,6 +443,9 @@ export const soulsApi = {
     }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
+  /** 挪到十三站的某一站(只地府、不在世;409 `not_diyu` / `alive`)。 */
+  moveStation: (id: string, station: Schemas["DiyuStationEnum"]) =>
+    api.post<Soul>(`/souls/${id}/station/`, { station }),
   /** ADMIN 更正:SETTLED → DISPOSED,必须带原因;不是状态流转,后端单独记 SETTLEMENT_CORRECTED 事件。
       400 的 `error` 是后端的那句话(没有原因 / 不是 SETTLED)。 */
   correctSettlement: (id: string, reason: string) =>

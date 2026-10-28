@@ -105,6 +105,25 @@ def assert_may_be_reborn(soul, disposition=None):
                              f"The soul's rebirth application is {latest.status}, not approved.")
 
 
+class RebirthContinentNotApplicable(APIException):
+    """四大部洲只在人道(docs/07 §人道「四大部洲」),也只在地府:别的道、别的文明指定部洲是 400,不写任何东西。"""
+
+    status_code = 400
+    default_code = "rebirth_continent_not_applicable"
+
+    def __init__(self, continent):
+        super().__init__({"code": "rebirth_continent_not_applicable", "rebirth_continent": continent,
+                          "detail": "Only a soul of Diyu reborn into the human path is born in one of the four "
+                                    "continents; omit rebirth_continent."})
+
+
+def assert_continent_applies(soul, rebirth_form, continent) -> None:
+    from apps.reincarnation.models import RebirthForm
+
+    if continent and (rebirth_form != RebirthForm.HUMAN or not needs_soup(soul)):
+        raise RebirthContinentNotApplicable(continent)
+
+
 def needs_soup(soul) -> bool:
     """按**原属**文明(与转世资格 `assert_rebirth_capable` 同一个依据):暂居他乡的地府灵魂照样要饮。"""
     from apps.souls.models import Civilization
@@ -130,6 +149,10 @@ def drink_soup(soul):
         soul.soup_taken_at = timezone.now()
         soul.save(update_fields=["soup_taken_at"])
         EventService.log(soul, "MENGPO_SOUP_TAKEN", {"taken_at": soul.soup_taken_at.isoformat()})
+        # 十三站的末站:还魂崖,流程第一步就是喝孟婆汤(docs/06 §二 第十三站)。
+        from apps.souls import stations
+
+        stations.arrive(soul, Soul.DiyuStation.HUANHUN_CLIFF, via="soup")
     return soul
 
 
@@ -250,6 +273,7 @@ class ReincarnationService:
         new_identity: str = "",
         rebirth_form: str | None = None,
         notes: str = "",
+        rebirth_continent: str = "",
     ):
         """
         Complete a reincarnation cycle:
@@ -305,6 +329,7 @@ class ReincarnationService:
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
             assert_may_be_reborn(soul, disposition)
             rebirth_form = rebirth_form_for(soul, rebirth_form)
+            assert_continent_applies(soul, rebirth_form, rebirth_continent)
 
             # 孟婆汤(2026-10-25):地府的灵魂要先饮过。拒绝时灵魂留在 REINCARNATING(与配额满同一条等候线)。
             from django.conf import settings
@@ -347,6 +372,7 @@ class ReincarnationService:
                 previous_realm=previous_realm,
                 new_identity=new_identity or soul.name,
                 notes=notes,
+                rebirth_continent=rebirth_continent,
                 tenant=soul.tenant,
             )
 
@@ -389,6 +415,9 @@ class ReincarnationService:
             soul.death_date = None
             soul.origin_location = ""
             soul.soup_taken_at = None  # 每世一次:下一世转世前要再饮
+            # 新的一世不在十三站上;生在哪一洲由这次转世定(人道才有,其余空 = 不详)。
+            soul.diyu_station = ""
+            soul.birth_continent = rebirth_continent
             soul.save()
             # The cached summary describes the life that just ended.
             LedgerService._invalidate_cache(soul)

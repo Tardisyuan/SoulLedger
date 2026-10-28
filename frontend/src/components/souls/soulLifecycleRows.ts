@@ -316,6 +316,9 @@ export interface SystemEventLabels {
   };
   /** 城隍收案带 `transferred_from_name` 时的半句「由某某改交」(第五十三批 T-1)。可选,同 `appeal`。 */
   transferredFrom?: (cityGod: string) => string;
+  /** 地府十三站换站的去处「望乡台」、勾魂牒的鬼差「黑白无常」(2026-10-28)。可选,同 `appeal`。 */
+  station?: (raw: string | null) => string;
+  escort?: (raw: string | null) => string;
 }
 
 /**
@@ -340,6 +343,8 @@ export function makeSystemEventLabels(t: Translate): SystemEventLabels {
       newVerdict: (raw) => `${t("appeals.new_verdict")} ${verdict(raw)}`,
     },
     transferredFrom: (cityGod) => t("cityGodCases.transferred_from", { city_god: cityGod }),
+    station: via("souls.diyu_station"),
+    escort: via("souls.capture.escort"),
   };
 }
 
@@ -389,6 +394,19 @@ export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): st
       if (typeof p.transferred_from_name === "string" && p.transferred_from_name && labels.transferredFrom) {
         parts.push(labels.transferredFrom(p.transferred_from_name));
       }
+      return parts.join(" · ");
+    }
+    case "DIYU_STATION_CHANGED":
+      // 「十三站换站 · 望乡台」:只写去处;从哪来在上一行。
+      return labels.station && typeof p.to === "string" && p.to ? `${event} · ${labels.station(p.to)}` : event;
+    case "CAPTURE_WARRANT_ISSUED":
+    case "SOUL_CAPTURED":
+    case "CAPTURE_HANDED_OVER":
+    case "CAPTURE_WARRANT_CANCELLED": {
+      // 「发勾魂牒 · 黑白无常 · 杭州府城隍」;经办官员与撤销理由不在事件里。
+      const parts = [event];
+      if (labels.escort && typeof p.escort === "string") parts.push(labels.escort(p.escort));
+      if (typeof p.city_god_name === "string" && p.city_god_name) parts.push(p.city_god_name);
       return parts.join(" · ");
     }
     default:

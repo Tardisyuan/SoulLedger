@@ -4,6 +4,7 @@ URL configuration for death_sync app.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from apps.death_sync.tudi_views import TudiGodViewSet
 from apps.death_sync.views import (
     AdminWebhookDeliveryViewSet,
     AdminWebhookViewSet,
@@ -25,6 +26,8 @@ router.register(
     r'registrations', DeathRegistrationReadViewSet, basename='death-registration'
 )
 router.register(r'webhooks', WebhookViewSet, basename='webhook')
+# 土地公(只在地府):基层登记亡魂,报上级城隍。
+router.register(r'tudi-gods', TudiGodViewSet, basename='tudi-god')
 # Browser-facing management of the same rows, plus their delivery log.
 # `webhooks/` is the external system's self-service door (API key only) and
 # answers 401 to every JWT; these two are the operator's (JWT, ADMIN).

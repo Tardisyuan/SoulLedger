@@ -59,6 +59,11 @@ export {
   type SoulInput,
   type SoulOriginRegion,
   type SoulDuatPassage,
+  type SoulDiyuStation,
+  type SoulContinent,
+  DIYU_STATIONS,
+  CONTINENTS,
+  diyuStationOrdinal,
   type SoulBaptism,
   type SoulFerryPassage,
   type SoulSinGravity,
@@ -209,6 +214,7 @@ export { organizationsApi, organizationNotEmptyOf, type Organization, type Organ
 export { notificationsApi, type Notification, type NotificationEmailStatus } from "./notifications";
 
 // Dispatch
+export { captureWarrantsApi, type CaptureWarrant, type CaptureStatus, type CaptureEscort, type CaptureDueSoul, type CaptureRefusal } from "./dispatch";
 export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type DispatchDraftInput, type DispatchRealmOption, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
 
 // Social
@@ -276,6 +282,10 @@ export {
   type AdminWebhookUpdate,
   type WebhookDelivery,
   type WebhookDeliveryStatus,
+  tudiGodsApi,
+  type TudiGod,
+  type TudiGodInput,
+  type TudiRegistrationInput,
 } from "./death-sync";
 
 // Recycle bin
