@@ -112,3 +112,25 @@ test("a case that is not weighed draws nothing", async () => {
   await waitFor(() => expect(list).toHaveBeenCalled());
   expect(screen.queryByTestId("negative-confessions")).toBeNull();
 });
+
+test("while one row saves, only that row is frozen; the others stay recordable", async () => {
+  list.mockResolvedValue(listing());
+  record.mockReturnValue(new Promise(() => {})); // 一直在存
+  renderIt();
+  await waitFor(() => expect(screen.getAllByTestId("confession-row")).toHaveLength(2));
+  fireEvent.click(screen.getAllByRole("radio", { name: "judgment.confessions.truthful" })[0]);
+  await waitFor(() => expect(record).toHaveBeenCalled());
+  const [first, second] = screen.getAllByTestId("confession-row");
+  await waitFor(() =>
+    within(first).getAllByRole("radio").forEach((r) => expect(r).toBeDisabled())
+  );
+  within(second).getAllByRole("radio").forEach((r) => expect(r).toBeEnabled());
+});
+
+test("the tally sentence stays readable by a screen reader at any width (sr-only below md, never display:none)", async () => {
+  list.mockResolvedValue(listing());
+  renderIt();
+  const sentence = await screen.findByText(/judgment\.confessions\.tally/);
+  expect(sentence).toHaveClass("max-md:sr-only");
+  expect(sentence).not.toHaveClass("max-md:hidden");
+});

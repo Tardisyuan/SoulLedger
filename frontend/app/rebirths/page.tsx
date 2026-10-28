@@ -75,7 +75,8 @@ function RebirthsContent() {
           value={form}
           options={[
             { value: "", label: t("rebirths.all_forms") },
-            ...SIX_PATHS.map((f) => ({ value: f, label: t(`reincarnation.forms.${f}`) })),
+            // 六道之外(OTHER)不是第七道,但旧记录里有 —— 筛得出它们(配额条同样有这一格)。
+            ...[...SIX_PATHS, "OTHER"].map((f) => ({ value: f, label: t(`reincarnation.forms.${f}`) })),
           ]}
           clearLabel={t("filter.clear_one", { name: t("rebirths.col_form") })}
           onChange={(v) => change(() => setForm(v))}

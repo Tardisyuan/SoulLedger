@@ -27,6 +27,7 @@ jest.mock("react", () => {
 });
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
+import { PLACEMENT_REFUSALS } from "@/src/components/judgment/JudgmentPlacement";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn() },
@@ -230,5 +231,59 @@ describe("原审判", () => {
     renderPage();
     await screen.findByRole("button", { name: tZh("sentence_plan.cross.open") });
     expect(screen.queryByTestId("judgment-cross-link")).toBeNull();
+  });
+});
+
+describe("结案的拒绝(客户端审查 2026-10-29 #1 / #7)", () => {
+  it("发落的每个拒绝码都有中文,含地府判无罪不发落(passed_has_no_destination,#4)", () => {
+    expect(PLACEMENT_REFUSALS).toContain("passed_has_no_destination");
+    for (const code of PLACEMENT_REFUSALS) {
+      expect(tZh(`judgment.placement.errors.${code}`)).not.toBe(`judgment.placement.errors.${code}`);
+    }
+  });
+
+  const refuse = (data: Record<string, unknown>) =>
+    judgmentApi.conclude.mockRejectedValue(Object.assign(new Error("409"), { response: { status: 409, data } }));
+
+  it("服务端说还不能结案(conclude_refusal):「落判」置灰并写出原因;能结案时没有这句", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ ...AMENDMENT, conclude_refusal: "duat_unfinished" }) });
+    const a = renderPage();
+    const toConfirm = await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
+    expect(toConfirm).toBeDisabled();
+    expect(screen.getByTestId("desk-held-reason")).toHaveTextContent(tZh("judgment.claim.duat_unfinished"));
+    a.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ ...AMENDMENT, conclude_refusal: "" }) });
+    renderPage();
+    await screen.findByTestId("amendment-plan-changes");
+    expect(screen.queryByTestId("desk-held-reason")).toBeNull();
+  });
+
+  it("候审未到被拒:走认领的那句译文,不是通用句", async () => {
+    refuse({ error: "Charon ferries only the buried who can pay.", code: "unferried" });
+    renderPage();
+    await screen.findByTestId("amendment-plan-changes");
+    await conclude();
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.unferried"), "error"));
+  });
+
+  it("原审要走流程(approval_flow_required / weighing_flow_required):各有一句译文", async () => {
+    refuse({ error: "An original judgment is concluded through its approval workflow", code: "approval_flow_required" });
+    renderPage();
+    await screen.findByTestId("amendment-plan-changes");
+    await conclude();
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.weighing.errors.approval_flow_required"), "error")
+    );
+    expect(tZh("judgment.weighing.errors.weighing_flow_required")).not.toBe("judgment.weighing.errors.weighing_flow_required");
+  });
+
+  it("认不出的码:通用句,不回显后端英文", async () => {
+    refuse({ error: "Something went wrong in English", code: "no_such_code" });
+    renderPage();
+    await screen.findByTestId("amendment-plan-changes");
+    await conclude();
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.detail.conclude_error"), "error"));
+    expect(mockShowToast).not.toHaveBeenCalledWith("Something went wrong in English", "error");
   });
 });

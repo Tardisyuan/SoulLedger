@@ -105,6 +105,23 @@ describe("枉死城 (D-2 / D-2b)", () => {
     await waitFor(() => expect(decide).toHaveBeenCalledWith("j-1", true, "查实", false));
   });
 
+  it("审完申诉:案子、处置、灵魂三处缓存都失效(释放 / 超度改的不只是案子)", async () => {
+    decide.mockResolvedValue({});
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = jest.spyOn(qc, "invalidateQueries");
+    render(
+      <QueryClientProvider client={qc}>
+        <WangsiPanel judgment={judgment({ grievance_level: "MAJOR", grievance_status: "FILED" })} editable />
+      </QueryClientProvider>
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "judgment.wangsi.decision_note" }), { target: { value: "不实" } });
+    fireEvent.click(screen.getByTestId("wangsi-reject"));
+    await waitFor(() => expect(decide).toHaveBeenCalled());
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
+    const keys = spy.mock.calls.map(([f]) => JSON.stringify((f as { queryKey: unknown }).queryKey));
+    expect(keys).toEqual([JSON.stringify(["judgments"]), JSON.stringify(["dispositions"]), JSON.stringify(["souls"])]);
+  });
+
   it("判不实后回到可提交,上一条记录灰字留在提交框下面", () => {
     renderIt(
       <WangsiPanel

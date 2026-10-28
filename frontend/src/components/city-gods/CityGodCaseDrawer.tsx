@@ -4,6 +4,7 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cityGodCasesApi, cityGodKeys, type CityGod, type CityGodCase } from "@soulledger/core/api";
+import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { Button } from "@/src/components/ui/Button";
@@ -41,6 +42,9 @@ export function CityGodCaseDrawer({ caseId, gods, canTransfer, onClose }: Props)
 
   const done = (message: string, close = false) => {
     void qc.invalidateQueries({ queryKey: cityGodKeys.all });
+    // 解送 / 退回改的是这件案子(十殿队列、审判台)和灵魂的站(十三站行程)。
+    void qc.invalidateQueries({ queryKey: judgmentKeys.all });
+    void qc.invalidateQueries({ queryKey: soulKeys.all });
     showToast(message, "success");
     setMode(null);
     setNote("");

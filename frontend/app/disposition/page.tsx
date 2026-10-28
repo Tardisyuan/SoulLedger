@@ -9,7 +9,7 @@ import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
 import { releaseRefusalOf, type DispositionListParams, type DispositionSection } from "@soulledger/core/api/disposition";
-import { dispositionKeys } from "@soulledger/core/query_keys";
+import { dispositionKeys, soulKeys } from "@soulledger/core/query_keys";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { DomainText, MissingValue } from "@/src/components/ui/DomainValue";
@@ -120,7 +120,9 @@ export default function DispositionPage() {
     mutationFn: (id: string) => dispositionApi.execute(id),
     onSuccess: () => {
       showToast(t("disposition.executed_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispositions"] });
+      // 执行 / 释放改的是灵魂的状态与所在界域:灵魂列表与详情也要重取(同 souls/[id] 的 refreshSoulViews)。
+      queryClient.invalidateQueries({ queryKey: dispositionKeys.all });
+      queryClient.invalidateQueries({ queryKey: soulKeys.all });
       setShowExecuteModal(null);
     },
     onError: (err: unknown) => {
@@ -134,12 +136,14 @@ export default function DispositionPage() {
     mutationFn: (id: string) => dispositionApi.release(id),
     onSuccess: () => {
       showToast(t("disposition.release_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["dispositions"] });
+      // 执行 / 释放改的是灵魂的状态与所在界域:灵魂列表与详情也要重取(同 souls/[id] 的 refreshSoulViews)。
+      queryClient.invalidateQueries({ queryKey: dispositionKeys.all });
+      queryClient.invalidateQueries({ queryKey: soulKeys.all });
       setReleaseTarget(null);
     },
     onError: (err: unknown) => {
       const code = releaseRefusalOf(err);
-      showToast(code ? t(`disposition.release_error.${code}`) : t("disposition.execute_error"), "error");
+      showToast(t(`disposition.release_error.${code ?? "generic"}`), "error");
       setReleaseTarget(null);
     },
   });

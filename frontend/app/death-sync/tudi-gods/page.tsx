@@ -17,11 +17,14 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { TudiGodEditor } from "@/src/components/tudi-gods/TudiGodEditor";
 import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
+import { mayRegisterUnder } from "@/src/components/tudi-gods/tudiDisplay";
+import { useTenant } from "@/src/contexts/TenantContext";
 
 /*
  * 系统设置 › 土地公(Design 第五十七批 S-5),和「城隍」并列,照城隍管理:列表 + 右侧抽屉。
  * 四栏:土地公 · 管辖地 · 上级城隍(上级被删时灰字「—」)· 名下官员。看是 `judgment.read`,
- * 增改删 `judgment.assign`(接口自己查);行菜单「以土地公名义登记死亡」(S-6)要 `soul.die`,土地公预填。
+ * 增改删 `judgment.assign`(接口自己查);行菜单「以土地公名义登记死亡」(S-6)要 `soul.die`,且是这位土地公名下的官员
+ * 或持 `judgment.assign`(同后端 `register_death`),土地公预填。
  * ponytail: 只取第一页(20 位);一殿的土地公多过一页再加分页。
  */
 
@@ -33,6 +36,8 @@ function TudiGodsContent() {
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission("judgment.assign");
   const canRegister = hasPermission("soul.die");
+  const { user } = useTenant();
+  const registrable = (g: TudiGod) => canRegister && mayRegisterUnder(g, user?.id, canEdit);
   const [editing, setEditing] = useState<TudiGod | "new" | null>(null);
   const [registering, setRegistering] = useState<TudiGod | null>(null);
   const list = useQuery({ queryKey: [...tudiGodKeys.all, "list"], queryFn: () => tudiGodsApi.list().then((r) => r.data.results) });
@@ -87,7 +92,7 @@ function TudiGodsContent() {
                 <ActionsMenu
                   menuLabel={t("earthGods.row_actions", { name: g.name })}
                   primary={canEdit ? { label: t("earthGods.edit"), onSelect: () => setEditing(g) } : undefined}
-                  items={canRegister ? [{ key: "register", label: t("earthGods.register_death"), onSelect: () => setRegistering(g) }] : []}
+                  items={registrable(g) ? [{ key: "register", label: t("earthGods.register_death"), onSelect: () => setRegistering(g) }] : []}
                 />
               </td>
             )}

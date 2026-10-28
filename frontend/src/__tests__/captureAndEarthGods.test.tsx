@@ -15,6 +15,8 @@ const mockCancel = jest.fn();
 const mockCapture = jest.fn();
 const mockTudiList = jest.fn();
 const mockRegister = jest.fn();
+const mockCaseGet = jest.fn();
+const mockSendOn = jest.fn();
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
@@ -51,11 +53,19 @@ jest.mock("@soulledger/core/api", () => ({
     list: (...a: unknown[]) => mockTudiList(...a),
     registerDeath: (...a: unknown[]) => mockRegister(...a),
   },
+  cityGodCasesApi: {
+    get: (...a: unknown[]) => mockCaseGet(...a),
+    sendOn: (...a: unknown[]) => mockSendOn(...a),
+    returnCase: jest.fn(),
+    transfer: jest.fn(),
+  },
 }));
 
 import { CapturePanel, daysOverdue } from "@/src/components/souls/detail/CapturePanel";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
+import { mayRegisterUnder } from "@/src/components/tudi-gods/tudiDisplay";
+import { CityGodCaseDrawer } from "@/src/components/city-gods/CityGodCaseDrawer";
 
 const wrap = (node: React.ReactNode) =>
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{node}</QueryClientProvider>);
@@ -78,7 +88,7 @@ const warrant = (status: string, extra: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockList.mockResolvedValue({ data: { results: [], count: 0, next: null, previous: null } });
-  mockDue.mockResolvedValue({ data: [] });
+  mockDue.mockResolvedValue({ data: { count: 0, results: [] } });
 });
 
 describe("daysOverdue", () => {
@@ -94,7 +104,7 @@ describe("daysOverdue", () => {
 
 describe("勾魂卡(S-4)", () => {
   it("阳寿已到:▪ 发勾魂牒 → □ 拘到 → □ 交接城隍;鬼差默认选建议那位并写出规则;发的是那一位", async () => {
-    mockDue.mockResolvedValue({ data: [{ id: "s1", suggested_escort: "NIUTOU_MAMIAN" }] });
+    mockDue.mockResolvedValue({ data: { count: 1, results: [{ id: "s1", suggested_escort: "NIUTOU_MAMIAN" }] } });
     mockIssue.mockResolvedValue({ data: {} });
     wrap(<CapturePanel soul={SOUL} canAct />);
     expect(await screen.findByTestId("soul-capture-status")).toHaveTextContent("阳寿已到 · 1664-06-17");
@@ -187,14 +197,18 @@ describe("下一世部洲(S-3)", () => {
 });
 
 describe("以土地公名义登记死亡(S-6)", () => {
-  const TUDI = { id: "t1", name: "虞山土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [] };
+  // 登记的人(id 1)是虞山土地名下的官员,不是尚湖土地的,也不持 judgment.assign。
+  const TUDI = { id: "t1", name: "虞山土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [{ id: 1, name: "judge" }] };
+  const OTHER = { id: "t2", name: "尚湖土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [{ id: 9, name: "别人" }] };
 
   it("从灵魂详情来:选土地公,标题下写土地公 · 上级城隍,发的是一条带幂等键的登记;「土地公所报」进 cause_of_death", async () => {
-    mockTudiList.mockResolvedValue({ data: { results: [TUDI] } });
+    mockTudiList.mockResolvedValue({ data: { results: [TUDI, OTHER] } });
     mockRegister.mockResolvedValue({ data: { status: "PROCESSED", error_code: "" } });
     const onClose = jest.fn();
     wrap(<TudiRegisterDeathDialog soul={{ id: "s1", name: "钱谦益" }} onClose={onClose} />);
     await screen.findByRole("option", { name: "虞山土地" });
+    // 不是名下官员、又不持 judgment.assign:那位土地公不列(选了也是 403 not_tudi_officer)
+    expect(screen.queryByRole("option", { name: "尚湖土地" })).toBeNull();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "t1" } });
     expect(screen.getByTestId("tudi-register-subtitle")).toHaveTextContent("虞山土地 · 常熟县城隍");
     expect(screen.getByText("登记后发给常熟县城隍初审。")).toBeInTheDocument();
@@ -220,5 +234,77 @@ describe("以土地公名义登记死亡(S-6)", () => {
     expect(refusal).toHaveTextContent("没有登记成功：灵魂已不在阳世");
     expect(refusal).not.toHaveTextContent("SOUL_NOT_ALIVE");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("同一把幂等键再发被 409(已有那条):按那条登记收尾,当成功,不写拒绝", async () => {
+    mockRegister.mockRejectedValue({ response: { status: 409, data: { id: "r1", status: "PROCESSED", error_code: "" } } });
+    const onClose = jest.fn();
+    wrap(<TudiRegisterDeathDialog soul={{ id: "s1", name: "钱谦益" }} tudi={TUDI as never} onClose={onClose} />);
+    fireEvent.click(screen.getByTestId("tudi-register-submit"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mockShowToast).toHaveBeenCalledWith("已登记钱谦益的死亡", "success");
+    expect(screen.queryByTestId("tudi-register-refusal")).toBeNull();
+  });
+
+  it("别的 409 / 403(不是一条登记):照旧写拒绝,不关弹层", async () => {
+    mockRegister.mockRejectedValue({ response: { status: 403, data: { code: "not_tudi_officer" } } });
+    const onClose = jest.fn();
+    wrap(<TudiRegisterDeathDialog soul={{ id: "s1", name: "钱谦益" }} tudi={TUDI as never} onClose={onClose} />);
+    fireEvent.click(screen.getByTestId("tudi-register-submit"));
+    expect(await screen.findByTestId("tudi-register-refusal")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("mayRegisterUnder(土地公登记入口的规则,同 tudi_views.register_death)", () => {
+  const god = { officers: [{ id: 1 }] };
+  it("名下官员能,别人不能;持 judgment.assign 的谁都能", () => {
+    expect(mayRegisterUnder(god, 1, false)).toBe(true);
+    expect(mayRegisterUnder(god, 2, false)).toBe(false);
+    expect(mayRegisterUnder(god, undefined, false)).toBe(false);
+    expect(mayRegisterUnder(god, 2, true)).toBe(true);
+  });
+});
+
+describe("缓存:勾魂与城隍初审的动作让别的键族也失效(客户端审查 2026-10-29 #19)", () => {
+  it("勾魂卡的动作(这里是撤销):灵魂、审判之外,城隍初审的键族也失效", async () => {
+    mockList.mockResolvedValue({ data: { results: [warrant("CAPTURED")] } });
+    mockCancel.mockResolvedValue({ data: {} });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = jest.spyOn(qc, "invalidateQueries");
+    render(
+      <QueryClientProvider client={qc}>
+        <CapturePanel soul={SOUL} canAct />
+      </QueryClientProvider>
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "撤销…" }));
+    fireEvent.change(screen.getByLabelText(/撤销理由/), { target: { value: "查无此人" } });
+    fireEvent.click(screen.getByRole("button", { name: "撤销勾魂牒" }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ["city-gods"] }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["souls"] });
+  });
+
+  it("城隍解送:城隍、审判、灵魂三族都失效", async () => {
+    mockCaseGet.mockResolvedValue({
+      data: {
+        id: "j1", case_number: "J-1", city_god: "cg1", city_god_name: "常熟县城隍", city_god_status: "PENDING", can_act: true,
+        city_god_note: "", created_at: "2026-10-29T00:00:00Z", matched_region: null, origin_location: "", registered_via: "",
+        returned_at: null, sent_on_at: null, soul_name: "钱谦益", soul_birth_year: null, soul_death_year: null, soul_fated_death_year: null,
+      },
+    });
+    mockSendOn.mockResolvedValue({ data: {} });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = jest.spyOn(qc, "invalidateQueries");
+    render(
+      <QueryClientProvider client={qc}>
+        <CityGodCaseDrawer caseId="j1" gods={[]} canTransfer={false} onClose={jest.fn()} />
+      </QueryClientProvider>
+    );
+    fireEvent.click(await screen.findByTestId("city-god-send-on"));
+    fireEvent.click(screen.getByTestId("city-god-case-confirm"));
+    await waitFor(() => expect(mockSendOn).toHaveBeenCalledWith("j1", ""));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ["souls"] }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["city-gods"] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["judgments"] });
   });
 });

@@ -82,6 +82,12 @@ describe("十三站行程条(第五十七批 S-1)", () => {
     expect(document.querySelector('[data-station="EIGHTEEN_HELLS"]')).toHaveAttribute("title", "十八层地狱");
     expect(document.querySelector('[data-station="WANGXIANG_TERRACE"]')).toHaveAttribute("aria-current", "step");
     expect(screen.queryByTestId("soul-diyu-station-move")).toBeNull();
+    // 藏起的站名是 sr-only(读屏念得到),不是 display:none(`hidden`)。
+    const hiddenName = Array.from(document.querySelectorAll('[data-station="EIGHTEEN_HELLS"] span')).find(
+      (el) => el.textContent === "十八层地狱"
+    );
+    expect(hiddenName).toHaveClass("sr-only", "xl:not-sr-only");
+    expect(hiddenName).not.toHaveClass("hidden");
   });
 
   it("不在路上(在世 / 已转世)不画条,只一行灰字", () => {

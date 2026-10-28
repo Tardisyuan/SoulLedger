@@ -33,7 +33,8 @@ test.describe("待发勾魂牒", () => {
 
   test("按阳寿先后列出,过期写「超 N 天」,「发牒」开抽屉、按建议的鬼差发", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
-    api.on("GET", "/dispatch/capture-warrants/due/", DUE);
+    // 页头写后端的总数(`count`),不是返回的行数:列表最多 200 行。
+    api.on("GET", "/dispatch/capture-warrants/due/", { count: 250, results: DUE });
     api.on("POST", "/dispatch/capture-warrants/", (call) => ({
       status: 201,
       body: {
@@ -46,7 +47,7 @@ test.describe("待发勾魂牒", () => {
 
     await page.goto("/judgment/capture-due");
     await expect(page.locator("h1")).toContainText("待发勾魂牒");
-    await expect(page.getByTestId("capture-due-count")).toHaveText("3");
+    await expect(page.getByTestId("capture-due-count")).toHaveText("250");
 
     // 次序就是后端给的阳寿先后(页面不另排);第一行阳寿最早。
     const fated = page.locator('[data-testid^="capture-due-fated-"]');
@@ -239,9 +240,9 @@ test.describe("灵魂详情 · 勾魂卡", () => {
     const api = await setupAuthenticatedPage(page);
     const alive = { ...SOUL_DETAIL, current_state: "ALIVE", death_date: null, fated_death_date: { year: 2020, month: 1, day: 1 }, diyu_station: "" };
     api.on("GET", SOUL_PATH, alive);
-    api.on("GET", "/dispatch/capture-warrants/due/", [
+    api.on("GET", "/dispatch/capture-warrants/due/", { count: 1, results: [
       { id: SOUL_ID, name: SOUL_DETAIL.name, soul_code: null, origin_location: "钱塘", fated_death_date: "2020-01-01", karmic_balance: 42, suggested_escort: "WUCHANG" },
-    ]);
+    ] });
     const WARRANT_ID = "b2b2b2b2-0000-4000-8000-0000000000aa";
     let warrants: Record<string, unknown>[] = [];
     const warrant = (status: string, extra: Record<string, unknown> = {}) => ({

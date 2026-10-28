@@ -1743,7 +1743,7 @@ export class ApiMock {
     this.on("GET", "/dispatch/cross-tenant-judgments/", paginated([]));
     // 勾魂卡(第五十七批 S-4):每个地府灵魂的详情页都取它的勾魂牒;`due/` 只在阳寿已到时取。没有牒 = 卡片不画。
     this.on("GET", "/dispatch/capture-warrants/", paginated([]));
-    this.on("GET", "/dispatch/capture-warrants/due/", []);
+    this.on("GET", "/dispatch/capture-warrants/due/", { count: 0, results: [] });
     // Not a list endpoint: see SOUL_INHERITANCE. (The paragraph above still
     // holds for the other five.)
     this.on("GET", "/ledger/inheritance/:id/", SOUL_INHERITANCE);
