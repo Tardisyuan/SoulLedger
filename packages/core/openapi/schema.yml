@@ -22298,12 +22298,14 @@ components:
       - REJECTED
       - CURRENT
       - AHEAD
+      - AWAITING_FINAL
       type: string
       description: |-
         * `PASSED` - PASSED
         * `REJECTED` - REJECTED
         * `CURRENT` - CURRENT
         * `AHEAD` - AHEAD
+        * `AWAITING_FINAL` - AWAITING_FINAL
     AppealLadderStation:
       type: object
       properties:

@@ -224,7 +224,7 @@ def _ladder_running(appeal):
 
 
 #: 站梯一站的状态(`ladder`)。
-LADDER_STATES = ("PASSED", "REJECTED", "CURRENT", "AHEAD")
+LADDER_STATES = ("PASSED", "REJECTED", "CURRENT", "AHEAD", "AWAITING_FINAL")
 
 
 def ladder(appeal):
@@ -234,10 +234,14 @@ def ladder(appeal):
     一站 = 一个人工节点;自动节点(通知、结束)不是一站,被跳过的(SKIPPED)也不算 —— 没有人审,也不会再审。
     状态:CURRENT 流程正停在这站 · PASSED 已过(通过,或超时转交越过)· REJECTED 驳回 · AHEAD 还没到。
     流程已结束时剩下的 AHEAD 就是「不再审」(驳回截断,或灵魂被吞噬时流程被结束),由客户端照 `workflow_status` 写。
-    终审站:最后一个 FINAL 类型的站,没有就最后一站(与 `segments.mark_required` 同一条规则)。"""
+    终审站:最后一个 FINAL 类型的站,没有就最后一站(与 `segments.mark_required` 同一条规则)。
+    AWAITING_FINAL(Design 第五十五批补充 U-6 / E-3「站梯走完 · 待终审」):只给终审站 —— 前面各站都已 PASSED,
+    且终审站是当前站,或流程已走完(COMPLETED)而申诉还没有结论(`on_ladder_finished` 让终审官员成为复核人,
+    等他 `decide`)。"""
     from apps.workflow.models import (
         AUTOMATIC_KINDS,
         TERMINAL_WORKFLOW_STATUSES,
+        ApprovalWorkflowStatus,
         NodeStatus,
         NodeType,
     )
@@ -267,6 +271,12 @@ def ladder(appeal):
             state = "AHEAD"
         stations.append({"order": position, "node": node.pk, "name": node.node_name, "is_final": node.pk == final_pk,
                          "state": state, "note": (node.notes or None) if state in ("PASSED", "REJECTED") else None})
+    awaiting = (appeal.status in OPEN_APPEAL_STATUSES
+                and (running or workflow.status == ApprovalWorkflowStatus.COMPLETED))
+    for station in stations:
+        if (awaiting and station["is_final"] and station["state"] in ("CURRENT", "PASSED")
+                and all(s["state"] == "PASSED" for s in stations[:station["order"] - 1])):
+            station["state"], station["note"] = "AWAITING_FINAL", None
     return {"current": current, "total": len(stations), "stations": stations}
 
 
