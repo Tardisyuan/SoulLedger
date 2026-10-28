@@ -149,10 +149,16 @@ def test_issue_capture_hand_over_registers_the_death_with_the_city_god(cn_tenant
         == [1, 1, 1]
 
 
-def test_great_evil_gets_ox_head_and_horse_face(cn_tenant):
+@pytest.mark.parametrize("merit, demerit, escort", [
+    (0, 1, "NIUTOU_MAMIAN"),   # 过多于功,哪怕只多一分(用户 2026-10-29 定,与 `escort_hint` 同一句话)
+    (0, 600, "NIUTOU_MAMIAN"),
+    (5, 5, "WUCHANG"),         # 功过相抵:不是「过多于功」
+    (10, 0, "WUCHANG"),
+])
+def test_more_demerit_than_merit_gets_ox_head_and_horse_face(cn_tenant, merit, demerit, escort):
     soul = _due(cn_tenant)
-    Soul.all_objects.filter(pk=soul.pk).update(demerit_score=600)
-    assert capture.issue(Soul.objects.get(pk=soul.pk)).escort == "NIUTOU_MAMIAN"
+    Soul.all_objects.filter(pk=soul.pk).update(merit_score=merit, demerit_score=demerit)
+    assert capture.issue(Soul.objects.get(pk=soul.pk)).escort == escort
 
 
 def test_issue_refusals(cn_tenant, eu_tenant):

@@ -215,7 +215,7 @@ describe("groups and a starting value (第五十七批 D-1)", () => {
           { value: "a", label: "诱拐人口", group: "第二殿" },
           { value: "b", label: "伤人肢体", group: "第二殿" },
           { value: "c", label: "杀生", group: "第九殿" },
-        ] as SelectOption[]}
+        ] as unknown as SelectOption[]}
       />
     );
     await type("人");

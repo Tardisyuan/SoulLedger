@@ -215,7 +215,7 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
             <Segmented
               label={t("cityGods.rank")}
               value={rank}
-              options={CITY_GOD_RANKS.map((r) => ({ value: r, label: t(`cityGods.ranks.${r}`) }))}
+              options={[...CITY_GOD_RANKS.map((r) => ({ value: r as string, label: t(`cityGods.ranks.${r}`) })), { value: "", label: t("cityGods.rank_none") }]}
               onChange={(r) => {
                 setRank(r);
                 setRefusal(null);

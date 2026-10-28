@@ -681,6 +681,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {judgment.judgment_method === "HEART_WEIGHING" && (
             <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canExecute} />
           )}
+          {/* 全案时灵魂栏整栏隐藏,枉死城块随之不见;在供词下面另放一份(用户 2026-10-29 定)。一次只渲染一份。 */}
+          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
           {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
           {fullCase && notesShown && (
             <div className="mt-6 border-t border-[oklch(var(--color-line))] pt-3">
@@ -893,7 +895,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </MetaRow>
           </dl>
           {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
-          {judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
+          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
 
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
