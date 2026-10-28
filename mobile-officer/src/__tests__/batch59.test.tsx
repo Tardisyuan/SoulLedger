@@ -2,7 +2,7 @@
  * 第五十九批(官员 App M-1 ~ M-6):审判详情的罪目与审批流程一块、灵魂详情的服刑一行与期满释放、
  * 待办里的「枉死申诉」一组与它的审核页、没有城隍时的 toast。
  */
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { TODO_GROUPS, deskPath, isTodoKind, noCityGod } from "../rules";
 import { JudgmentFlowBlock, flowWaitingText } from "../screens/judgmentFlow";
@@ -11,6 +11,9 @@ import { TodoTab } from "../screens/todo";
 import { WangsiReview, wangsiMode } from "../screens/wangsi";
 import { ToastProvider } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
+
+// The bottom sheet animates closed after a confirm; let it land before the test ends (act warnings otherwise).
+const settleSheet = () => act(async () => new Promise((r) => setTimeout(r, 400)));
 
 const mockJudgment = jest.fn();
 const mockUpdate = jest.fn();
@@ -119,6 +122,7 @@ describe("枉死申诉 review", () => {
     expect(screen.getByText("提前释放钱谦益？")).toBeTruthy();
     fireEvent.press(screen.getByTestId("wangsi-confirm"));
     await waitFor(() => expect(mockDecide).toHaveBeenCalledWith("j-1", true, "查实", false));
+    await settleSheet();
   });
 
   it("超度 confirms with the 'still at the city god' line and sends deliver", async () => {
@@ -131,6 +135,7 @@ describe("枉死申诉 review", () => {
     expect(screen.getByTestId("wangsi-sends-on")).toBeTruthy();
     fireEvent.press(screen.getByTestId("wangsi-confirm"));
     await waitFor(() => expect(mockDecide).toHaveBeenCalledWith("j-1", true, "查实", true));
+    await settleSheet();
   });
 
   it("轻: both 属实 are greyed with the reason between them; 不属实 still goes", async () => {
@@ -321,6 +326,7 @@ describe("serving (M-2 / M-2b)", () => {
     expect(mockRelease).not.toHaveBeenCalled();
     fireEvent.press(screen.getByTestId("soul-release-confirm"));
     await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("d-1"));
+    await settleSheet();
   });
 
   it("due but without disposition.execute: the line, no button; without disposition.read: nothing is asked", async () => {
