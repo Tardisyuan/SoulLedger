@@ -2345,7 +2345,8 @@
         "eternal_not_allowed": "Not executed: this destination cannot hold an eternal sentence",
         "destination_not_applicable": "Not executed: this case has no placement",
         "term_not_applicable": "Egyptian outcomes take no term: neither the Field of Reeds nor the second death is served.",
-        "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude."
+        "retry_has_no_destination": "A RETRY sends the soul nowhere: the case is heard again. Clear the placement and conclude.",
+        "passed_has_no_destination": "Acquitted in Diyu, the soul is not placed: once the case is concluded (and its approval flow completes) it awaits rebirth. Clear the placement and conclude."
       },
       "draft": "Draft · not submitted",
       "filtered_by": "Filtered by the verdict “{{verdict}}”; full realms and ones it cannot reach are listed but cannot be chosen.",
@@ -2489,7 +2490,6 @@
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
         "not_city_god_officer": "Only this City God's officers or a hall administrator can review it.",
         "not_pending": "This case is concluded.",
-        "at_city_god": "The case is still with the city god; send it on before delivering the soul.",
         "deliver_needs_upheld": "Only an upheld grievance can deliver the soul."
       },
       "release_title": "Release {{name}} early?",
@@ -2501,6 +2501,7 @@
       "deliver_title": "Deliver {{name}}?",
       "deliver_body": "Upheld and delivered: {{name}} leaves the City of Wrongful Death for the Lotus Terrace, and the case is concluded without a hearing.",
       "delivered_line": "Untimely · delivered on {{date}}",
+      "deliver_sends_on": "The case is still with the City God for first review; delivering sends it on in the same step.",
       "uphold_late": "Upheld (finding only)",
       "late_hint": "The fated day has passed or the case is concluded, so the soul has already left the city: the review only records a finding."
     },
@@ -4048,7 +4049,16 @@
     "start_unrecorded": "Start not recorded",
     "days_left": "{{n}} days left",
     "expired_on": "Served {{date}}",
-    "arrange_reincarnation": "Arrange rebirth"
+    "arrange_reincarnation": "Arrange rebirth",
+    "serving_until": "Serving · until {{date}}",
+    "release": "Release at term end",
+    "release_confirm": "Release at term end?",
+    "release_warning": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
+    "release_success": "Released at term end",
+    "release_error": {
+      "term_not_ended": "The term has not ended yet; it cannot be released.",
+      "not_serving": "This disposition is not being served."
+    }
   },
   "reincarnation": {
     "form_label": "Rebirth form",
@@ -4069,12 +4079,17 @@
       "soup_not_taken": "{{name}} hasn't taken Mengpo's soup: souls of Diyu take it before rebirth. The soul stays awaiting rebirth.",
       "plan_in_progress": "{{name}}'s sentence plan is not finished; no rebirth yet.",
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
-      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth."
+      "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
+      "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
+      "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path."
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
     "next_continent_hint": "Leave it to keep this life's continent.",
-    "next_continent_unset": "Not specified"
+    "next_continent_unset": "Not specified",
+    "desired_form": "The soul asks for: {{form}}",
+    "form_reason": "Reason for another path",
+    "form_reason_hint": "This differs from what the soul asked for: give the reason; it is kept with the rebirth."
   },
   "social": {
     "title": "Social",
@@ -4743,7 +4758,7 @@
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
       "offline": "Offline",
-      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete",
+      "sentence_in_progress": "Your sentence plan is not finished (a term not yet served counts). You can apply once it is complete",
       "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
       "shortening_pending": "A cooldown shortening request is already pending",
       "shortening_used": "This cooldown has already been asked to be shortened once",
@@ -6317,7 +6332,7 @@
       "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
       "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later",
       "retry_with_open_cross": "A cross-realm judgment is open on this case; conclude it before hearing the case again.",
-      "retry_not_a_destination": "A European RETRY is not a destination: give a final verdict, or open a new judgment.",
+      "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory).",
       "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again."
@@ -7519,7 +7534,7 @@
       "appeal_closed": "This appeal has already been decided or withdrawn",
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
       "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
-      "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment.",
+      "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: amend to a final verdict, or open a new judgment.",
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",

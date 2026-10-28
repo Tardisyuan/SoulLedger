@@ -6651,6 +6651,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Disposition'
           description: ''
+  /api/v1/disposition/{id}/release/:
+    post:
+      operationId: v1_disposition_release_create
+      description: |-
+        期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
+
+        celery beat 没部署,每日期满检查不会自己跑 —— 这是刑满之后灵魂往下走(下一站、或候转世)的人手入口。
+        与每日检查同一条判定(`expiry.releasable`)、同一个写入(`expiry.expire_one`:`expired_at`、
+        `DISPOSITION_EXPIRED`、欧洲炼狱升天堂、受刑中的那一站结束并推进),同一个事务。权限同「执行」。
+        409 `not_serving`:没执行、永久刑、已记期满,或没有期满日;409 `term_not_ended`:期满日还没到。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Disposition.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disposition'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/disposition/{id}/unarchive/:
     post:
       operationId: v1_disposition_unarchive_create
@@ -15509,7 +15545,9 @@ paths:
       description: |-
         Create a new reincarnation for a soul and immediately complete it.
         POST /reincarnation/reborn/
-        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
+        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN",
+                "rebirth_form_reason": "..." }
+        `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
       tags:
       - v1
       requestBody:
@@ -27043,6 +27081,9 @@ components:
           type: string
           nullable: true
           readOnly: true
+        can_release:
+          type: boolean
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -27062,6 +27103,7 @@ components:
       - archive_reason
       - archived_at
       - archived_by_name
+      - can_release
       - created_at
       - executed_at
       - expired_at
@@ -36725,6 +36767,9 @@ components:
           type: string
           nullable: true
           readOnly: true
+        can_release:
+          type: boolean
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -37679,6 +37724,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        desired_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -41679,6 +41728,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        desired_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -41703,6 +41756,7 @@ components:
       - current_state
       - date_problems
       - demerit_score
+      - desired_rebirth_form
       - diyu_station
       - ferry_century_passed
       - home_civilization

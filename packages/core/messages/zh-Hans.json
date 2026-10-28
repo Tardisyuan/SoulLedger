@@ -2345,7 +2345,8 @@
         "eternal_not_allowed": "执行失败：该目的地不收永恒之刑",
         "destination_not_applicable": "执行失败：此案不设发落",
         "term_not_applicable": "埃及的去处不服刑：芦苇原与第二死都没有刑期。",
-        "retry_has_no_destination": "「重审」不发落：这件案子会另开一案再审，清空发落再结案。"
+        "retry_has_no_destination": "「重审」不发落：这件案子会另开一案再审，清空发落再结案。",
+        "passed_has_no_destination": "地府判无罪不发落：结案（审批流程走完）后直接候转世，清空发落再结案。"
       },
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
@@ -2489,7 +2490,6 @@
         "grievance_not_major": "冤情等级须为「重」或「极重」才能提前释放。",
         "not_city_god_officer": "只有这位城隍名下的官员或殿管理员能审核。",
         "not_pending": "这件案子已结案。",
-        "at_city_god": "案子还在城隍处，先解送再超度。",
         "deliver_needs_upheld": "只有属实的申诉才能超度。"
       },
       "release_title": "提前释放{{name}}？",
@@ -2501,6 +2501,7 @@
       "deliver_title": "超度{{name}}？",
       "deliver_body": "属实并超度：{{name}}离开枉死城，到莲花台，免审结案。",
       "delivered_line": "枉死 · {{date}} 已超度",
+      "deliver_sends_on": "案子还在城隍初审，超度时一并解送。",
       "uphold_late": "属实（只记结论）",
       "late_hint": "阳寿已到或案子已结，亡魂已出城：审核只记结论，不再释放或超度。"
     },
@@ -4048,7 +4049,16 @@
     "start_unrecorded": "起算未记录",
     "days_left": "余 {{n}} 天",
     "expired_on": "期满 {{date}}",
-    "arrange_reincarnation": "安排轮回"
+    "arrange_reincarnation": "安排轮回",
+    "serving_until": "服刑中 · 至 {{date}}",
+    "release": "期满释放",
+    "release_confirm": "确认期满释放？",
+    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就候转世（或终局）。不可撤销。",
+    "release_success": "已期满释放",
+    "release_error": {
+      "term_not_ended": "期满日还没到，不能释放。",
+      "not_serving": "这份处置不在服刑中。"
+    }
   },
   "reincarnation": {
     "form_label": "轮回形态",
@@ -4069,12 +4079,17 @@
       "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂留在候转世。",
       "plan_in_progress": "{{name}}的受刑计划还没走完，不能转世。",
       "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
-      "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。"
+      "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。",
+      "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
+      "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。"
     },
     "next_continent": "下一世部洲 · 选填",
     "next_continent_same": "同本世",
     "next_continent_hint": "不选就沿用本世的部洲。",
-    "next_continent_unset": "不指定"
+    "next_continent_unset": "不指定",
+    "desired_form": "灵魂所愿：{{form}}",
+    "form_reason": "改道原因",
+    "form_reason_hint": "与灵魂所愿不同：写明原因，记入转世记录。"
   },
   "social": {
     "title": "动态",
@@ -4743,7 +4758,7 @@
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
       "offline": "已离线",
-      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生",
+      "sentence_in_progress": "受刑计划尚未完成（刑期未满也算），完成后才能申请转生",
       "not_in_cooldown": "只有在冷却期内才能申请缩短冷却",
       "shortening_pending": "已有一份待决的缩短冷却申请",
       "shortening_used": "这段冷却期已申请过一次缩短",
@@ -6317,7 +6332,7 @@
       "soul_away": "灵魂不在原属地，不能重新发起",
       "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试",
       "retry_with_open_cross": "这件案子挂着未结的联审，先结联审再判「重审」。",
-      "retry_not_a_destination": "欧洲的「重审」不是去处：请给出终局裁决，或另开一件审判。",
+      "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请给出终局裁决，或另开一件审判。",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判待定（炼狱）。",
       "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
@@ -7519,7 +7534,7 @@
       "appeal_closed": "这份申诉已有结论或已撤回",
       "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。",
       "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论",
-      "retry_not_a_destination": "欧洲的「重审」不是去处：请改判为终局裁决，或另开一件审判。",
+      "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请改判为终局裁决，或另开一件审判。",
       "not_final_judge": "只有终审官员能作出结论",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能改判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能改判下地狱。",

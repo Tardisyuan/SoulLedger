@@ -65,6 +65,8 @@ export interface Disposition extends ArchiveFields {
   soul_reborn?: boolean;
   /** 第十殿按结案时功过给的六道建议(docs/07 §四);地府以外为 null。官员可改。 */
   suggested_rebirth_form?: Schemas["Disposition"]["suggested_rebirth_form"];
+  /** 「期满释放」可点:已执行、不是永久、没记期满,期满日已到(与每日期满检查同一条判定,2026-10-29)。 */
+  can_release?: boolean;
 }
 
 export const dispositionApi = {
@@ -79,4 +81,14 @@ export const dispositionApi = {
   archive: (id: string, reason = "") => api.post<Disposition>(`/disposition/${id}/archive/`, { reason }),
   unarchive: (id: string) => api.post<Disposition>(`/disposition/${id}/unarchive/`),
   execute: (id: string, data?: object) => api.post<Disposition>(`/disposition/${id}/execute/`, data),
+  /** 期满释放(`disposition.execute`,2026-10-29):记期满,受刑中的那一站结束、灵魂往下走。
+   *  409 `term_not_ended` / `not_serving`。 */
+  release: (id: string) => api.post<Disposition>(`/disposition/${id}/release/`),
 };
+
+/** 期满释放被拒的 code;别的错误为 null。 */
+export function releaseRefusalOf(error: unknown): "term_not_ended" | "not_serving" | null {
+  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  const c = r?.data?.code;
+  return r?.status === 409 && (c === "term_not_ended" || c === "not_serving") ? c : null;
+}
