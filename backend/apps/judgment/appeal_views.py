@@ -132,6 +132,8 @@ class MeAppealableJudgmentSerializer(serializers.Serializer):
     refusal_code = serializers.CharField(allow_null=True)
     #: 能否上诉到本文明的多站申诉流程(上一轮一次复核维持原判、还有次数)。
     can_escalate = serializers.BooleanField()
+    #: 上诉时要过的各站名(按顺序,上诉确认页列出);不能上诉时为空。
+    escalation_stations = serializers.ListField(child=serializers.CharField())
 
 
 class MeJudgmentAppealListSerializer(serializers.Serializer):
@@ -225,12 +227,14 @@ class MeJudgmentAppealsView(SoulAPIView):
         rows = []
         for judgment in judgments:
             refusal = appeals.appeal_refusal(judgment, account)
+            can_escalate = refusal is None and appeals.escalation_refusal(judgment, account) is None
             rows.append({
                 "judgment_id": judgment.pk, "case_number": judgment.case_number, "verdict": judgment.verdict,
                 "concluded_at": judgment.concluded_at, "deadline": appeals.deadline(judgment),
                 "rounds_used": judgment.appeals.filter(is_deleted=False).count(),
                 "can_appeal": refusal is None, "refusal_code": refusal.code if refusal else None,
-                "can_escalate": refusal is None and appeals.escalation_refusal(judgment, account) is None,
+                "can_escalate": can_escalate,
+                "escalation_stations": appeals.escalation_stations(judgment) if can_escalate else [],
             })
         mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related(
             "judgment", "workflow").prefetch_related("workflow__nodes")

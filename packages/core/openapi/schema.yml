@@ -30600,12 +30600,17 @@ components:
           nullable: true
         can_escalate:
           type: boolean
+        escalation_stations:
+          type: array
+          items:
+            type: string
       required:
       - can_appeal
       - can_escalate
       - case_number
       - concluded_at
       - deadline
+      - escalation_stations
       - judgment_id
       - refusal_code
       - rounds_used
