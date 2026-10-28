@@ -32,6 +32,7 @@ from apps.workflow.models import (
     ApprovalNode,
     ApprovalWorkflow,
     ApprovalWorkflowStatus,
+    NodeKind,
     NodeStatus,
     TimeoutAction,
 )
@@ -72,14 +73,17 @@ def process_due(now=None, tenant_id=None) -> dict:
     for workflow in candidates(tenant_id):
         if not _due(workflow.current_node, now):
             continue
-        # One workflow whose AUTO_REJECT event row cannot be written is rolled back whole (the rejection with
-        # it): logged with the original exception, counted, and left due for the next run. It does not stop the
-        # others.
+        # One workflow whose timeout cannot be applied (its AUTO_REJECT event row, or a hook the rejection runs,
+        # refused) is rolled back whole (the rejection with it): logged with the original exception, counted, and
+        # recorded as failed on the node in a transaction of its own (`_record_failure`), so it fires once per
+        # activation like any timeout — it used to stay due and fail again every 5 minutes, forever. The hall's
+        # administrators are told; the node waits for a person. It does not stop the others.
         try:
             action = _fire(workflow.pk, now)
-        except Exception:
+        except Exception as exc:
             logger.exception("workflow timeout: workflow %s left untouched", workflow.pk)
             counts["failed"] = counts.get("failed", 0) + 1  # only present when something failed
+            _record_failure(workflow.pk, workflow.current_node_id, now, exc)
             continue
         counts[action or "skipped"] += 1
     return {str(k): v for k, v in counts.items()}
@@ -96,6 +100,47 @@ def process_due_for_tenant(tenant, now=None) -> dict:
         return process_due(now=now, tenant_id=tenant.pk)
     finally:
         clear_current_tenant()
+
+
+def _record_failure(workflow_pk, node_pk, now, exc) -> None:
+    """The timeout of `node_pk` could not be applied: write `timed_out_at` and a `timeout_failed` entry, in a
+    transaction of its own (the failed one is gone), and tell the hall's administrators after commit."""
+    if node_pk is None:
+        return
+    try:
+        with transaction.atomic():
+            ApprovalWorkflow._base_manager.select_for_update().filter(pk=workflow_pk).first()
+            node = ApprovalNode.objects.select_for_update().filter(pk=node_pk).first()
+            if node is None or node.timed_out_at is not None:
+                return
+            node.timed_out_at = now
+            node.decision_history = [*(node.decision_history or []), {
+                "event": "timeout_failed", "action": node.timeout_action, "at": now.isoformat(),
+                "error": type(exc).__name__, "code": getattr(exc, "code", None),
+            }]
+            node.save(update_fields=["timed_out_at", "decision_history"])
+            transaction.on_commit(lambda: _tell_admins(workflow_pk, node_pk))
+    except Exception:
+        logger.exception("workflow timeout: could not record the failure on node %s", node_pk)
+
+
+def _tell_admins(workflow_pk, node_pk) -> None:
+    from apps.events.services import EventService
+    from apps.judgment.city_gods import _hall_admins
+    from apps.notifications import messages
+    from apps.workflow.services import WorkflowService
+
+    workflow = ApprovalWorkflow._base_manager.select_related("soul").get(pk=workflow_pk)
+    node = ApprovalNode.objects.get(pk=node_pk)
+    kind = "workflow_timeout_failed"
+    params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name, "node": node.node_name,
+              "kind": kind, "category": "approval_timeout"}
+    title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
+    from apps.authentication.models import User
+
+    for user in User.objects.filter(pk__in=_hall_admins(workflow.tenant_id)):
+        EventService.notify_user(user=user, title=title, message=message, notification_type="WORKFLOW_ASSIGNED",
+                                 **WorkflowService.notice_target(workflow), params=params)
 
 
 def _fire(workflow_pk, now) -> str | None:
@@ -129,8 +174,17 @@ def _fire(workflow_pk, now) -> str | None:
                 }
                 for index, slot in enumerate(node.signers_json or [])
             ]
+        elif action == TimeoutAction.AUTO_REJECT and node.kind == NodeKind.COUNTERSIGN:
+            # 会签: the timeout refuses for the slots still unsigned; signed ones stand, as ESCALATE keeps them
+            # (2026-10-29). The node then fails by the countersign rule like any other refusal would decide it.
+            signed = {sig["signer"] for sig in node.signatures_json or []}
+            node.signatures_json = [*(node.signatures_json or []), *(
+                {"signer": index, "user_id": None, "user_name": "", "verdict": AUTO_REJECT_VERDICT, "passed": False,
+                 "notes": "超时自动驳回", "at": now.isoformat(), "timeout": True}
+                for index in range(len(node.signers_json or [])) if index not in signed)]
         node.decision_history = [*(node.decision_history or []), entry]
         node.save(update_fields=[
+            "signatures_json",
             "timed_out_at", "decision_history", "approver_type", "approver_role", "approver_actor",
             "signers_json",
         ])

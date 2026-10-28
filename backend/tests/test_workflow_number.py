@@ -102,7 +102,8 @@ def test_judgment_conclude_with_create_workflow_numbers_it(cn_tenant):
 @pytest.mark.django_db
 def test_the_appeal_workflow_numbers_it(cn_tenant):
     original = WorkflowService.start_workflow(_soul(cn_tenant), case_type=CaseType.ROUTINE, tenant=cn_tenant)
-    appeal = WorkflowService.create_appeal_workflow(original)
+    appeal = WorkflowService.start_workflow(_soul(cn_tenant), case_type=CaseType.APPEAL, tenant=cn_tenant,
+                                            is_appeal=True)
     assert (original.number, appeal.number) == ("WF-0001", "WF-0002")
 
 

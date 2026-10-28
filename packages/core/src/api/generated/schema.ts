@@ -9984,11 +9984,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Manually advance workflow to next pending node.
+         * @description Manually advance workflow to the next stop.
          *
-         *     Moves the pointer only; the node being left is not decided and stays
-         *     PENDING, so it can be returned to. Getting *past* an undecided node is
-         *     `escalate`, which records the skip.
+         *     Moves the pointer only: the stop being left is marked SKIPPED (nobody decided it) and the next one is where
+         *     a PASS would have gone. Like `escalate` it demands a written reason and leaves an audit record naming who
+         *     moved the flow past which stop and why (2026-10-29).
          */
         post: operations["v1_workflows_advance_create"];
         delete?: never;
@@ -20959,7 +20959,7 @@ export interface components {
             /** @default  */
             reason: string;
         };
-        /** @description `POST /workflows/{id}/segments/{order}/use-default/`. */
+        /** @description `POST /workflows/{id}/segments/{order}/use-default/` and `POST /workflows/{id}/advance/`. */
         WorkflowReason: {
             reason: string;
         };
@@ -39494,13 +39494,10 @@ export interface operations {
                 /**
                  * @description * `PENDING` - 待审批
                  *     * `IN_PROGRESS` - 审批中
-                 *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
-                 *     * `APPEAL` - 申诉中
-                 *     * `EXCEPTION` - 异常处理
                  *     * `COMPLETED` - 流程完成
                  */
-                status?: "APPEAL" | "APPROVED" | "COMPLETED" | "EXCEPTION" | "IN_PROGRESS" | "PENDING" | "REJECTED";
+                status?: "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;
@@ -39687,9 +39684,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApprovalWorkflow"];
-                "application/x-www-form-urlencoded": components["schemas"]["ApprovalWorkflow"];
-                "multipart/form-data": components["schemas"]["ApprovalWorkflow"];
+                "application/json": components["schemas"]["WorkflowReason"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowReason"];
+                "multipart/form-data": components["schemas"]["WorkflowReason"];
             };
         };
         responses: {
@@ -39699,6 +39696,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -40006,13 +40023,10 @@ export interface operations {
                 /**
                  * @description * `PENDING` - 待审批
                  *     * `IN_PROGRESS` - 审批中
-                 *     * `APPROVED` - 已批准
                  *     * `REJECTED` - 已拒绝
-                 *     * `APPEAL` - 申诉中
-                 *     * `EXCEPTION` - 异常处理
                  *     * `COMPLETED` - 流程完成
                  */
-                status?: "APPEAL" | "APPROVED" | "COMPLETED" | "EXCEPTION" | "IN_PROGRESS" | "PENDING" | "REJECTED";
+                status?: "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;

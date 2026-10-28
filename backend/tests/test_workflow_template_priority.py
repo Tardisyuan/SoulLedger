@@ -283,26 +283,14 @@ def test_an_explicit_priority_outranks_the_template(seeded):
 
 @pytest.mark.django_db
 def test_a_template_that_says_nothing_leaves_the_entry_point_s_floor(seeded):
-    """No stored template, no explicit value: 0 for a judgment, 1 for an appeal.
+    """No stored template, no explicit value: 0 for a judgment.
 
-    The appeal floor is not new — `create_appeal_workflow` has always defaulted
-    to 1 — and it is asserted here so that widening the parameter to
-    `int | None` cannot have quietly moved it to 0 for every appeal.
+    (It also asserted 1 for an appeal through `create_appeal_workflow`; that door had no production caller and was
+    removed on 2026-10-29.)
     """
     tenant = _tenant(Civilization.CHINESE)
     judgment = _judgment(Civilization.CHINESE, tenant, "无模板魂")
     assert WorkflowService.create_from_judgment(judgment).priority == 0
-
-    # Built without a judgment: `ApprovalWorkflow.judgment` is a OneToOne, so
-    # an appeal cannot be chained onto a workflow that has one.
-    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
-
-    original = ApprovalWorkflow.objects.create(
-        soul=Soul.objects.create(name="被驳回的魂", tenant=tenant),
-        workflow_name="原流程", case_type=CaseType.ROUTINE,
-        status=ApprovalWorkflowStatus.REJECTED, tenant=tenant,
-    )
-    assert WorkflowService.create_appeal_workflow(original).priority == 1
 
 
 # ── the migration table against the presets ───────────────────────────

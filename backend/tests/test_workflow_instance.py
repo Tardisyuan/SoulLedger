@@ -440,7 +440,7 @@ class TestApprovalWorkflowAPI:
         # returned True. Every call reported success and moved nothing, on the
         # only route out of a stalled workflow.
         response = authenticated_client.post(
-            f"/api/v1/workflows/{wf.id}/advance/",
+            f"/api/v1/workflows/{wf.id}/advance/", {"reason": "卡住了"},
             format="json"
         )
         assert response.status_code == 400, (
@@ -470,7 +470,7 @@ class TestApprovalWorkflowAPI:
         wf.save()
 
         response = authenticated_client.post(
-            f"/api/v1/workflows/{wf.id}/advance/", format="json"
+            f"/api/v1/workflows/{wf.id}/advance/", {"reason": "卡住了"}, format="json"
         )
         assert response.status_code == 200, response.data
         wf.refresh_from_db()

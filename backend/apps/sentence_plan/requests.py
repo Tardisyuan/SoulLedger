@@ -435,7 +435,11 @@ def conclude_reopened(judgment):
     nodes = _lock_nodes(plan)
     _refuse_undecided(soul, judgment.verdict)
     if acquitted_to_rebirth(soul.home_civilization, judgment.verdict):
-        # 地府判无罪不加刑期节点(用户 2026-10-29,docs/11 第六步):计划照常走完剩下的站,随后的 `advance` 收尾。
+        # 地府判无罪不加刑期节点(用户 2026-10-29,docs/11 第六步),而且原判的原属刑期就此撤下(2026-10-29,
+        # 与申诉改判无罪同一套):受刑中的那一站记期满、COMPLETED;还没执行的原属站 REMOVED、处置由系统作废。
+        # 外地站不动(那是联审的站)。计划照常走完剩下的站,随后的 `advance` 收尾。此前这里直接 return,
+        # 原判的刑期照样执行。
+        _acquit_home_stops(soul, plan, nodes, judgment)
         return
     live = [n for n in nodes if n.status in LIVE_NODE_STATUSES]
     started = [n for n in live if n.status != SentenceNodeStatus.PENDING]
@@ -455,6 +459,62 @@ def conclude_reopened(judgment):
     live.append(new_node)
     _assert_eternal_last(live)
     plan_amended(soul, plan, {home_code}, judgment_id=judgment.pk, added=[new_node])
+
+
+def _end_serving(soul, plan, executed):
+    """受刑中的站(处置已执行、节点仍 ACTIVE)改判即止:期满记在处置上(`assert_may_be_reborn` 才不再当它没服完),
+    节点 COMPLETED,离开那个界域。`executed` 是 `[(节点, 已执行的处置)]`。申诉改判与重开审判改判无罪共用。"""
+    from apps.disposition.services import DispositionService
+
+    now = timezone.now()
+    for node, served in executed:
+        if node.status == SentenceNodeStatus.ACTIVE:
+            served.expired_at = now
+            served.save(update_fields=["expired_at"])
+            node.status = SentenceNodeStatus.COMPLETED
+            node.completed_at = now
+            _save(node, "status", "completed_at")
+            SentencePlanService._node_finished(soul, plan, node)
+            DispositionService._leave_served_realm(served, soul, node)
+
+
+def _withdraw_stop(soul, node, reason, why):
+    """撤下一站还没执行的刑:节点 REMOVED,它的处置(若已建)由系统作废,灵魂离开那一站的界域(处置建好时
+    进的,`_activate_home_node`)。"""
+    from apps.core.recycle_bin import system_void
+    from apps.disposition.models import Disposition
+    from apps.realms.path import SoulPathService
+
+    node.status = SentenceNodeStatus.REMOVED
+    node.reason = reason
+    _save(node, "status", "reason")
+    if node.disposition_id is None:
+        return
+    disposition = Disposition.all_objects.select_related("destination_realm").filter(pk=node.disposition_id).first()
+    system_void(Disposition.all_objects.filter(pk=node.disposition_id), why)
+    if disposition is not None and disposition.destination_realm is not None:
+        SoulPathService.leave(soul, realm=disposition.destination_realm)
+
+
+def _acquit_home_stops(soul, plan, nodes, judgment):
+    """重开审判改判地府无罪:原属的刑期就此撤下(见 `conclude_reopened`)。调用方持有灵魂、计划、节点的锁。"""
+    from apps.disposition.models import Disposition
+
+    dispositions = {
+        d.pk: d for d in Disposition.all_objects.select_for_update(of=("self",))
+        .filter(pk__in=[n.disposition_id for n in nodes if n.is_home and n.disposition_id], is_deleted=False)
+    }
+    executed = [(n, dispositions[n.disposition_id]) for n in nodes
+                if n.disposition_id in dispositions and dispositions[n.disposition_id].is_executed]
+    serving = [n for n, _ in executed if n.status == SentenceNodeStatus.ACTIVE]
+    _end_serving(soul, plan, executed)
+    done = {n.pk for n, _ in executed}
+    withdrawn = [n for n in nodes if n.is_home and n.pk not in done
+                 and n.status in (SentenceNodeStatus.PENDING, SentenceNodeStatus.ACTIVE)]
+    for node in withdrawn:
+        _withdraw_stop(soul, node, f"重开审判改判:{judgment.verdict}", f"reopen_acquitted:{judgment.pk}")
+    if serving or withdrawn:
+        plan_amended(soul, plan, {plan.tenant.code}, judgment_id=judgment.pk)
 
 
 # ── 申诉改判(apps/judgment/appeals.py,用户 2026-10-24 决定)───────────────
@@ -525,7 +585,10 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     found = (SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
              .order_by("-create_time").values_list("pk", flat=True).first())
     if found is None:
-        own = Disposition.all_objects.select_for_update(of=("self",)).filter(judgment_id=judgment.pk).first()
+        # Not a voided one (2026-10-29): a refused flow withdraws its disposition (`weighing.reweigh_after_rejection`)
+        # and the appeal must not reroute or count as served what no longer stands.
+        own = Disposition.all_objects.select_for_update(of=("self",)).filter(
+            judgment_id=judgment.pk, is_deleted=False).first()
         if own is None:
             return []
         if own.is_executed:
@@ -553,19 +616,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING).exists():
         raise PlanChangeRefusedError("The sentence plan is in retrial, held, or awaiting a request; decide later",
                                      "plan_busy", status=409, plan_status=plan.status)
-    now = timezone.now()
-    for node, served in executed:
-        if node.status == SentenceNodeStatus.ACTIVE:
-            # 受刑中:改判即止(见 docstring)。期满记在处置上,`assert_may_be_reborn` 才不再当它没服完。
-            from apps.disposition.services import DispositionService
-
-            served.expired_at = now
-            served.save(update_fields=["expired_at"])
-            node.status = SentenceNodeStatus.COMPLETED
-            node.completed_at = now
-            _save(node, "status", "completed_at")
-            SentencePlanService._node_finished(soul, plan, node)
-            DispositionService._leave_served_realm(served, soul, node)
+    _end_serving(soul, plan, executed)
     done = {n.pk for n, _ in executed}
     in_place = None
     for node in nodes:
@@ -592,10 +643,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     added = []
     if acquitted:
         if in_place is not None:
-            in_place.status = SentenceNodeStatus.REMOVED
-            in_place.reason = f"申诉改判:{verdict}"
-            _save(in_place, "status", "reason")
-            system_void(Disposition.all_objects.filter(pk=in_place.disposition_id), why)
+            _withdraw_stop(soul, in_place, f"申诉改判:{verdict}", why)
     elif in_place is not None:
         reroute(dispositions[in_place.disposition_id])
         for field, value in content.items():

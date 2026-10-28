@@ -23,15 +23,50 @@ class ApprovalWorkflowStatus(models.TextChoices):
 #: 走到这里流程就结束了,不再接受任何节点决策。
 #:
 #: `APPROVED` / `APPEAL` / `EXCEPTION` **不在这里,因为它们在整个代码库里从未被
-#: 赋值过** —— 声明了、迁移了、`WorkflowFilter.status` 还把它们当筛选值提供
-#: (于是那三个选项永远匹配不到任何行),而没有一条路径写入它们。
-#: 把它们塞进这个元组会让这段注释开始撒谎:它们不是"终态",它们是**不可达状态**。
-#: 要么让它们可达,要么删掉;在那之前,`test_workflow_reachable_states.py` 把
-#: "哪些可达"这件事本身钉住,所以增删任何一个都得有人明确决定。
+#: 赋值过** —— 它们不是"终态",是**不可达状态**。枚举成员与迁移保留(删成员要迁移,
+#: 存量库里也没有这些值),但 `WorkflowFilter.status` 不再把它们当筛选值提供
+#: (`REACHABLE_WORKFLOW_STATUSES`,2026-10-29;此前那三个选项永远匹配不到任何行)。
+#: 哪些可达由 `tests/test_workflow_engine_review_fixes.py::test_the_status_filter_offers_only_reachable_states`
+#: 钉住,增删任何一个都得有人明确决定。
 TERMINAL_WORKFLOW_STATUSES = frozenset({
     "COMPLETED",
     "REJECTED",
 })
+
+#: The states a workflow can actually be in (see above): what the list filter offers.
+REACHABLE_WORKFLOW_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED")
+
+#: Whether a flow started by hand (`POST /workflows/start/`, `manually_started`) that names a judgment acts on
+#: that judgment when it ends — a refusal withdrawing the sentence and opening the case again
+#: (`weighing.reweigh_after_rejection`), a completion moving an acquitted soul's plan on
+#: (`SentencePlanService.on_origin_flow_completed`) — and holds its disposition until it completes
+#: (`weighing.unfinished_flow`). Only the conclusion's own flow (`create_from_judgment`) decides the judgment.
+#: Pending a product decision (review item G, 2026-10-29); False is the conservative technical guard.
+MANUAL_FLOWS_DECIDE_THE_JUDGMENT = False
+
+#: `end_reason`s the engine writes when it ends a flow REJECTED without anybody refusing anything. Such an ending
+#: does not withdraw the judgment's conclusion (`_finish`): nobody judged the case wrong.
+#: BRANCH_SKIPPED — the branch the case selects leads to a station that was picked away (`_pass_successor`).
+END_REASON_BRANCH_SKIPPED = "BRANCH_SKIPPED"
+SYSTEM_END_REASONS = frozenset({END_REASON_BRANCH_SKIPPED, "SOUL_DEVOURED"})
+
+
+def judgment_deciding(queryset):
+    """`queryset` of workflows narrowed to those that decide their judgment (`ApprovalWorkflow.decides_judgment`,
+    in SQL), for the readers that ask "has this judgment's flow completed"."""
+    return queryset if MANUAL_FLOWS_DECIDE_THE_JUDGMENT else queryset.filter(manually_started=False)
+
+
+class _NowhereToAdvanceError(Exception):
+    """`advance_to_next` found no stop to move to: roll back the skip it wrote."""
+
+
+class VerdictRefusedError(ValueError):
+    """`complete_node` does not take this verdict; nothing was written. `code` is the API's refusal code."""
+
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
 
 #: How many times one workflow may be sent back by 驳回到 (`ApprovalNode.reject_to`).
 #:
@@ -256,6 +291,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     # Blank for every ordinary ending; "RETURN_LIMIT" when a FAIL would have
     # sent it back past MAX_REJECT_RETURNS.
     end_reason = models.CharField(max_length=20, blank=True, default="")
+    # Started by hand (`POST /workflows/start/`), not by a conclusion. A hand-started flow that names a judgment
+    # does not decide that judgment (`MANUAL_FLOWS_DECIDE_THE_JUDGMENT`).
+    manually_started = models.BooleanField(default=False)
 
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -299,6 +337,12 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # 发号与写入同一个事务:写入失败,号跟着回滚,不留空号。
                 self.number = format_workflow_number(JudgmentCaseCounter.bump(WORKFLOW_NUMBER_KEY))
             super().save(*args, **kwargs)
+
+    @property
+    def decides_judgment(self) -> bool:
+        """Whether this flow's ending acts on its judgment (`_finish`) and holds its disposition
+        (`weighing.unfinished_flow`): a judgment's own flow, not one started by hand naming it."""
+        return self.judgment_id is not None and (not self.manually_started or MANUAL_FLOWS_DECIDE_THE_JUDGMENT)
 
     def get_next_node(self) -> "ApprovalNode | None":
         """Get the next pending node in the workflow."""
@@ -394,11 +438,19 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             #
             # An empty list still means "no constraint" — that is the default
             # and most nodes carry it. This only enforces a list somebody
-            # actually wrote.
+            # actually wrote. Nodes built from a template carry `[]` (2026-10-29): writing all five verdicts on
+            # every node made this check unable to refuse anything.
+            if verdict == "SKIPPED":
+                # Whether SKIPPED stays a verdict is pending (review item F). Until then it is refused: as a
+                # decision it is neither PASSED nor CONFIRMED, so it used to end the whole flow REJECTED.
+                raise VerdictRefusedError(
+                    "SKIPPED is not a decision; pass or refuse the node, or escalate past it",
+                    "skipped_not_a_verdict")
             if node.required_verdicts and verdict not in node.required_verdicts:
-                raise ValueError(
+                raise VerdictRefusedError(
                     f"Node {node.node_name} accepts {node.required_verdicts}; "
-                    f"got {verdict}"
+                    f"got {verdict}",
+                    "verdict_not_accepted",
                 )
 
             passed = verdict in ["PASSED", "CONFIRMED"]
@@ -561,7 +613,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     def _advance_from(self, node: "ApprovalNode", now) -> None:
         successor = self._pass_successor(node)
         if successor is BRANCH_SKIPPED:
-            self._finish(ApprovalWorkflowStatus.REJECTED, now)
+            self._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason=END_REASON_BRANCH_SKIPPED)
         elif successor is None:
             self._finish(ApprovalWorkflowStatus.COMPLETED, now)
         else:
@@ -635,7 +687,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             transaction.on_commit(lambda n=notified: self._send_notify_node(n))
             successor = self._pass_successor(node)
             if successor is BRANCH_SKIPPED:
-                self._finish(ApprovalWorkflowStatus.REJECTED, now)
+                self._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason=END_REASON_BRANCH_SKIPPED)
                 return
             if successor is None:
                 self._finish(ApprovalWorkflowStatus.COMPLETED, now)
@@ -703,6 +755,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         self.status = status
         self.completed_at = now
         self.end_reason = end_reason
+        # Saved before the hooks below run (2026-10-29): they read the flow back from the database
+        # (`sentence_plan.services._origin_flow_open`, `weighing.unfinished_flow`) and used to find it IN_PROGRESS.
+        # Same transaction as the caller's, so a hook that refuses still undoes this save.
+        self.save(update_fields=["status", "current_node", "completed_at", "end_reason", "updated_at"])
         # A flow that merged a cross-realm judgment ends it: COMPLETED = PASS, REJECTED = FAIL (第四十三批 rule 7).
         # Same transaction; raises `segments.CrossConclusionRefusedError` when the bench cannot conclude yet.
         from apps.workflow import segments
@@ -713,16 +769,19 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             from apps.judgment import appeals
 
             appeals.on_ladder_finished(self, status, end_reason)
-        elif status == ApprovalWorkflowStatus.REJECTED and self.judgment_id:
+        elif (status == ApprovalWorkflowStatus.REJECTED and self.decides_judgment
+              and end_reason not in SYSTEM_END_REASONS):
             # A refused original judgment's flow opens the case again (Egyptian weighing 2026-10-27, every
             # civilization 2026-10-29); a no-op for any other flow. Not for an appeal ladder: a refused appeal
-            # closes as upheld (above).
+            # closes as upheld (above). Not when the engine ended the flow on nobody's refusal
+            # (`SYSTEM_END_REASONS`): only a person refusing withdraws the conclusion. RETURN_LIMIT is a person's
+            # FAIL past the cap, so it does.
             from apps.judgment import weighing
 
             weighing.reweigh_after_rejection(self)
         if status == ApprovalWorkflowStatus.COMPLETED and self.case_type == CaseType.PURGATORY_REVIEW:
             self._purgatory_review_passed(now)
-        if status == ApprovalWorkflowStatus.COMPLETED and self.judgment_id and self.case_type != CaseType.APPEAL:
+        if status == ApprovalWorkflowStatus.COMPLETED and self.decides_judgment and self.case_type != CaseType.APPEAL:
             # 地府判无罪没有处置可执行:原审流程走完,那份没有节点的计划就完成 → 灵魂候转世(用户 2026-10-29)。
             from apps.sentence_plan.services import SentencePlanService
 
@@ -863,7 +922,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         """Take this workflow's row lock and re-read it. Call inside atomic()."""
         self.refresh_from_db(from_queryset=ApprovalWorkflow._base_manager.select_for_update())
 
-    def advance_to_next(self) -> bool:
+    def advance_to_next(self, user=None, reason: str = "") -> bool:
         """Move `current_node` on to the next pending node, if there is one.
 
         This used to be a no-op that reported success. `get_next_node()`
@@ -882,35 +941,62 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
 
         Excluding the current node is the whole fix. The node we are standing
         on is not somewhere to advance *to*.
+
+        Under the workflow's row lock, re-read (2026-10-29, as `escalate_current_node`): it ran with neither, so
+        two advances, or an advance beside a decision, each moved the pointer from a stale copy.
+
+        The next stop is where a PASS on the stop moved past would go (`_pass_successor`: branches, `on_pass`,
+        then order), not the next one by order: in a graph template the order is not the path, and advancing by
+        order walked into a branch the case does not take. Nowhere to go (the stop is the last, or its branch
+        leads to a skipped station) answers False and changes nothing — advance never ends a flow.
         """
-        if self.current_node_id is None and self._fallback_current() is None:
-            return False  # nothing left, or standing at a gate: only the realm's pick moves it on
-        candidates = self.nodes.filter(status=NodeStatus.PENDING)
-        if self.current_node_id:
-            candidates = candidates.exclude(id=self.current_node_id)
-        next_node = candidates.order_by("node_order").first()
-        if next_node is None:
-            return False
+        from django.db import transaction
         from django.utils import timezone
 
-        # The stop moved past is SKIPPED, not left PENDING: the order-based default in `_pass_successor`
-        # ("the first PENDING node") handed it straight back once the new stop was decided, and the flow walked
-        # backwards (2026-10-18, tests/test_workflow_pointer_never_goes_back.py). Same as `_skip_jumped`.
-        if self.current_node_id:
-            self.nodes.filter(pk=self.current_node_id, status=NodeStatus.PENDING).update(
-                status=NodeStatus.SKIPPED, decided_at=timezone.now()
-            )
+        with transaction.atomic():
+            self._lock_and_reload()
+            if self.status in TERMINAL_WORKFLOW_STATUSES:
+                return False
+            now = timezone.now()
+            if self.current_node_id is None:
+                # No pointer yet (a hand-built flow): point it at the stop the flow stands on, as before.
+                next_node = self._fallback_current()
+                if next_node is None:
+                    return False  # nothing left, or standing at a gate: only the realm's pick moves it on
+            else:
+                stuck = ApprovalNode.objects.select_for_update().filter(pk=self.current_node_id).first()
+                if stuck is None or stuck.status != NodeStatus.PENDING:
+                    return False
+                try:
+                    with transaction.atomic():
+                        # The stop moved past is SKIPPED, not left PENDING: the order-based default in
+                        # `_pass_successor` ("the first PENDING node") handed it straight back once the new stop was
+                        # decided, and the flow walked backwards (2026-10-18,
+                        # tests/test_workflow_pointer_never_goes_back.py). Same as `_skip_jumped`.
+                        stuck.status = NodeStatus.SKIPPED
+                        stuck.decided_at = now
+                        if user is not None:
+                            stuck.approver = user
+                        if reason:
+                            stuck.notes = reason[:500]
+                        stuck.save(update_fields=["status", "decided_at", "approver", "notes"])
+                        next_node = self._pass_successor(stuck)
+                        if next_node is None or next_node is BRANCH_SKIPPED:
+                            raise _NowhereToAdvanceError
+                        self._skip_jumped(stuck, next_node, now)
+                except _NowhereToAdvanceError:
+                    return False
 
-        # `_make_current`, not `_enter`: advance moves the pointer and decides
-        # nothing, so it does not run an automatic node either — pointing it at
-        # 结束 must not complete a flow whose current step nobody decided.
-        # A stop in a segment its realm has not picked is not pointed at either: the flow waits at the gate.
-        gate = self._unpicked_segment(next_node)
-        if gate is not None:
-            self._stop_at_gate(gate, timezone.now())
-        else:
-            self._make_current(next_node, timezone.now())
-        self.save(update_fields=["current_node", "status"])
+            # `_make_current`, not `_enter`: advance moves the pointer and decides
+            # nothing, so it does not run an automatic node either — pointing it at
+            # 结束 must not complete a flow whose current step nobody decided.
+            # A stop in a segment its realm has not picked is not pointed at either: the flow waits at the gate.
+            gate = self._unpicked_segment(next_node)
+            if gate is not None:
+                self._stop_at_gate(gate, now)
+            else:
+                self._make_current(next_node, now)
+            self.save(update_fields=["current_node", "status", "updated_at"])
         return True
 
     def escalate_current_node(self, user=None, reason: str = "") -> bool:
@@ -959,16 +1045,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 update_fields=["status", "decided_at", "approver", "notes"]
             )
 
-            next_node = (
-                self.nodes.filter(status=NodeStatus.PENDING)
-                .exclude(pk=node.pk)
-                .order_by("node_order")
-                .first()
-            )
-            if next_node:
-                self._enter(next_node, timezone.now())
-            else:
-                self._finish(ApprovalWorkflowStatus.COMPLETED, timezone.now())
+            # Routed as a PASS on the escalated node (2026-10-29): branches, `on_pass`, then order. Taking the next
+            # node by order walked a graph template into a branch the case does not take. Nothing left completes
+            # the flow, as a PASS on the last stop does.
+            self._advance_from(node, timezone.now())
             self.save()
         return True
 
