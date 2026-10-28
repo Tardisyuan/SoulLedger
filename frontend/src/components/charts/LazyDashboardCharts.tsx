@@ -31,10 +31,11 @@ function HatchDefs({ colours }: { colours: string[] }) {
   );
 }
 
-/** Cell props for one datum under a pattern: `hatch` / `outline` are hollow, the rest solid. */
+/** Cell props for one datum under a pattern: `hatch` / `outline` / `void` are hollow, the rest solid. */
 function patternFill(colour: string, pattern: ChartPattern | undefined) {
   if (pattern === "hatch") return { fill: `url(#${hatchId(colour)})`, stroke: colour, strokeWidth: HATCH.stroke };
   if (pattern === "outline") return { fill: "none", stroke: colour, strokeWidth: HATCH.stroke };
+  if (pattern === "void") return { fill: "none", stroke: colour, strokeWidth: HATCH.stroke, strokeDasharray: "3 3" };
   return { fill: colour };
 }
 

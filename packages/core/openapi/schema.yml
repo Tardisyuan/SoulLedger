@@ -14239,6 +14239,7 @@ paths:
         schema:
           type: string
           enum:
+          - ANNIHILATION
           - BLISS
           - HELL
           - NEUTRAL
@@ -14248,6 +14249,7 @@ paths:
           * `PURGATORY` - Purgatory / Intermediate
           * `BLISS` - Heaven / Bliss
           * `NEUTRAL` - Neutral / Between
+          * `ANNIHILATION` - Annihilation / Ceased to exist
       - name: search
         required: false
         in: query
@@ -14385,6 +14387,7 @@ paths:
         schema:
           type: string
           enum:
+          - ANNIHILATION
           - BLISS
           - HELL
           - NEUTRAL
@@ -14394,6 +14397,7 @@ paths:
           * `PURGATORY` - Purgatory / Intermediate
           * `BLISS` - Heaven / Bliss
           * `NEUTRAL` - Neutral / Between
+          * `ANNIHILATION` - Annihilation / Ceased to exist
       - name: search
         required: false
         in: query
@@ -37944,12 +37948,14 @@ components:
       - PURGATORY
       - BLISS
       - NEUTRAL
+      - ANNIHILATION
       type: string
       description: |-
         * `HELL` - Hell / Punishment
         * `PURGATORY` - Purgatory / Intermediate
         * `BLISS` - Heaven / Bliss
         * `NEUTRAL` - Neutral / Between
+        * `ANNIHILATION` - Annihilation / Ceased to exist
     RebirthAppeal:
       type: object
       properties:
