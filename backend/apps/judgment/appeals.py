@@ -157,11 +157,15 @@ def escalation_stations(judgment):
     """上诉确认页(Design 第五十五批 U-2)要列的站名:上诉时会建的那条 APPEAL 流程的人工节点名,按顺序。
     模板与 `_start_ladder` 同一个来源(`WorkflowService._resolve_template`)。"""
     from apps.workflow.models import AUTOMATIC_KINDS, CaseType
+    from apps.workflow.node_shape import normalize_template_node
     from apps.workflow.services import WorkflowService
 
     template, _ = WorkflowService._resolve_template(judgment.civilization, CaseType.APPEAL, judgment.tenant)
-    nodes = sorted(template["nodes"], key=lambda n: n.get("order") or 0)
-    return [n["name"] for n in nodes if n.get("kind") not in AUTOMATIC_KINDS]
+    # Normalized first, as `WorkflowService` does: a hall's saved template stores `node_name` / `node_order`, the
+    # built-in presets `name` / `order` (apps/workflow/node_shape.py) — reading `name` raised KeyError, a 500.
+    nodes = sorted((normalize_template_node(n, i) for i, n in enumerate(template["nodes"], start=1)),
+                   key=lambda n: n["node_order"])
+    return [n["node_name"] for n in nodes if n.get("kind") not in AUTOMATIC_KINDS]
 
 
 def file(account, judgment_id, *, reason, evidence="", escalate=False):
