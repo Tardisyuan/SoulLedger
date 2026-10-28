@@ -77,7 +77,10 @@ class RebirthBlocked(APIException):
     default_code = "rebirth_blocked"
 
     def __init__(self, code, detail, **extra):
-        super().__init__({"code": code, "error": detail, "detail": detail, **extra})
+        super().__init__(detail)
+        # 原样保留:`APIException` 会把每个叶子转成字符串,`term_end` 的 `{year, month, day}` 就成了 "2029"。
+        # 与 `city_gods.NoCityGodError` 同一个做法。
+        self.detail = {"code": code, "error": detail, "detail": detail, **extra}
 
 
 class RebirthFormNotApplicable(APIException):
