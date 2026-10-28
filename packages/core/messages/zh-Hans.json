@@ -1312,6 +1312,7 @@
       "published": "已发布 v{{n}}",
       "publish_rejected": "发布被拒:{{n}} 项校验未过",
       "publish_failed": "发布失败",
+      "case_type_not_for_civilization": "这个文明没有这种案件类型，换一个案件类型再保存。",
       "version": {
         "draft": "草稿 v{{n}}",
         "published": "已发布 v{{n}}",
@@ -1514,6 +1515,9 @@
       "escalate_success": "已越级推进，理由已记入审计",
       "escalate_error": "越级推进失败",
       "escalate_needs_reason": "越级推进必须写明理由",
+      "advance_reason_label": "推进理由（必填，会写入审计）",
+      "advance_reason_placeholder": "为什么不经决定就越过当前这一站",
+      "advance_needs_reason": "推进必须写明理由",
       "approver_name_absent": "节点只带审批人主键,后端未返回姓名",
       "reason_for_soul": "给灵魂的驳回理由",
       "reason_for_soul_hint": "此理由对灵魂可见;内部备注不可见。最多 2000 字。",
@@ -4091,6 +4095,7 @@
       "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
       "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。",
       "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
+      "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转世。",
       "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。"
     },
     "next_continent": "下一世部洲 · 选填",
@@ -5842,6 +5847,10 @@
     "workflow_timeout_escalated": {
       "title": "审批超时",
       "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"
+    },
+    "workflow_timeout_failed": {
+      "title": "审批超时处理失败",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」超时，但超时动作没能执行，流程停在这一站，请人工处理。"
     },
     "cross_judgment_concluded": {
       "title": "跨域审判已结案",

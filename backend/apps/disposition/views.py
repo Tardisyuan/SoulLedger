@@ -20,7 +20,7 @@ from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSec
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
 from apps.reincarnation.models import Reincarnation
-from apps.workflow.models import ApprovalWorkflow
+from apps.workflow.models import ApprovalWorkflow, judgment_deciding
 
 
 class DispositionFilter(filters.FilterSet):
@@ -112,7 +112,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         ),
         # 原审的审批流程走到哪了(serializer 的 `flow_waiting`):一个子查询,不是每行一次。没有流程为 null。
         judgment_flow_status=Subquery(
-            ApprovalWorkflow.objects.filter(judgment_id=OuterRef("judgment_id")).values("status")[:1]
+            judgment_deciding(ApprovalWorkflow.objects.filter(judgment_id=OuterRef("judgment_id"))).values("status")[:1]
         ),
     ).alias(
         # 期满日的排序键(`?ordering=term_end`):SQL 里算,分页之外的行也排得对。
@@ -311,9 +311,13 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         from django.utils import timezone
 
         from apps.disposition.expiry import expire_one, releasable, serving
+        from apps.sentence_plan.services import _lock_soul
 
         disposition = self.get_object()
         with transaction.atomic():
+            # The soul first, then the disposition (2026-10-29): the order an appeal's amendment takes (soul →
+            # plan → nodes → dispositions). Disposition-first here could deadlock against it.
+            _lock_soul(disposition.soul)
             locked = (
                 Disposition.objects.select_for_update(of=("self",))
                 .select_related("soul", "destination_realm").filter(pk=disposition.pk).first()

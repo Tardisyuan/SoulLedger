@@ -19,7 +19,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.perm.filters import DataScopeFilter
 from apps.workflow import decision_codes, segments
 from apps.workflow.filters import WorkflowFilter
-from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
+from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, VerdictRefusedError, WorkflowTemplate
 from apps.workflow.serializers import (
     ApprovalNodeSerializer,
     ApprovalWorkflowExportSerializer,
@@ -101,8 +101,13 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
         from apps.workflow import versioning
+        from apps.workflow.serializers import template_pair_refusal
 
         template = self.get_object()
+        # A template saved before the pair was checked on save (2026-10-29) is refused here too.
+        refusal = template_pair_refusal(template.civilization, template.case_type)
+        if refusal is not None:
+            return Response(refusal, status=status.HTTP_400_BAD_REQUEST)
         try:
             versioning.publish(template, user=request.user)
         except versioning.NothingToPublishError:
@@ -213,6 +218,23 @@ _SEGMENT_ORDER = OpenApiParameter("order", int, OpenApiParameter.PATH, descripti
 
 def _refused(exc):
     return Response({"code": exc.code, "error": str(exc), **exc.extra}, status=exc.status)
+
+
+def _hook_refusals() -> tuple:
+    """The business refusals a decision's end-of-flow hooks raise (`ApprovalWorkflow._finish`: the cross-realm
+    bench, the appeal, the withdrawn conclusion, the sentence plan). Each carries a stable `code`; the decision
+    that met one is rolled back whole and answered 409 with that code (2026-10-29). Anything else is a defect
+    and stays a 500."""
+    from apps.judgment.claims import ClaimRefusedError
+    from apps.judgment.weighing import WeighingRefusedError
+    from apps.sentence_plan.requests import PlanChangeRefusedError
+
+    return (segments.CrossConclusionRefusedError, ClaimRefusedError, WeighingRefusedError, PlanChangeRefusedError)
+
+
+def _hook_refused(exc):
+    return Response({**getattr(exc, "extra", {}), "code": exc.code, "error": str(exc)},
+                    status=status.HTTP_409_CONFLICT)
 
 
 class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -464,6 +486,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     soul, case_type=case_type, tenant=tenant, template=template, judgment=judgment,
                     priority=data.get("priority"), notes=reason, exclusive=True,
                     skip_node_orders=data.get("skip_node_orders") or (), picked_by=request.user,
+                    manually_started=True,
                 )
                 AuditLog.objects.create(
                     tenant=tenant,
@@ -520,22 +543,53 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             resource="workflow",
         )
 
+    @extend_schema(request=WorkflowReasonSerializer, responses={200: ApprovalWorkflowSerializer,
+                                                                400: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT})
     @action(detail=True, methods=["post"])
     def advance(self, request, pk=None):
         """
-        Manually advance workflow to next pending node.
+        Manually advance workflow to the next stop.
 
-        Moves the pointer only; the node being left is not decided and stays
-        PENDING, so it can be returned to. Getting *past* an undecided node is
-        `escalate`, which records the skip.
+        Moves the pointer only: the stop being left is marked SKIPPED (nobody decided it) and the next one is where
+        a PASS would have gone. Like `escalate` it demands a written reason and leaves an audit record naming who
+        moved the flow past which stop and why (2026-10-29).
         """
         workflow = self.get_object()
-        if workflow.advance_to_next():
-            return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
-        return Response(
-            {"error": "No next node available or workflow already completed"},
-            status=status.HTTP_400_BAD_REQUEST,
+        reason = (request.data.get("reason") or "").strip()
+        if not reason:
+            return Response(
+                {"code": "reason_required", "error": "reason is required", "detail": "推进必须说明理由"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        node = workflow.current_node  # None on a hand-built flow with no pointer: advance only sets it
+        try:
+            advanced = workflow.advance_to_next(user=request.user, reason=reason)
+        except _hook_refusals() as exc:
+            return _hook_refused(exc)
+        if not advanced:
+            return Response(
+                {"error": "No next node available or workflow already completed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.audit.models import AuditAction, AuditLog
+
+        AuditLog.objects.create(
+            tenant=getattr(workflow, "tenant", None),
+            user=request.user if request.user.is_authenticated else None,
+            action=AuditAction.EXECUTE,
+            resource="workflow.advance",
+            resource_id=str(workflow.id),
+            description=f"推进：{getattr(node, 'node_name', '-')} — {reason}"[:500],
+            changes={
+                "skipped_node": str(getattr(node, "id", "")) or None,
+                "skipped_node_name": getattr(node, "node_name", None),
+                "reason": reason,
+                "advanced_to": str(workflow.current_node_id) if workflow.current_node_id else None,
+            },
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
+        return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def escalate(self, request, pk=None):
@@ -569,9 +623,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # `skipped_node` and `advanced_to` were measured to be the same id.
         try:
             escalated = workflow.escalate_current_node(user=request.user, reason=reason)
-        except segments.CrossConclusionRefusedError as exc:
-            # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment.
-            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except _hook_refusals() as exc:
+            # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment (or the
+            # judgment the flow decides): a refusal there rolls the escalation back.
+            return _hook_refused(exc)
         if not escalated:
             return Response(
                 {"error": "No pending node to escalate past"},
@@ -736,17 +791,19 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                         # The application's status follows the workflow in the SAME transaction (lock order:
                         # workflow, node, then application; see rebirth.sync_from_workflow).
                         rebirth.sync_from_workflow(workflow.pk)
-        except segments.CrossConclusionRefusedError as exc:
+        except _hook_refusals() as exc:
             # The last stop of a flow that merged a cross-realm judgment ends that judgment (第四十三批), and it
-            # cannot end yet — a participating realm has not filled its sentence stop. Nothing was recorded.
-            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_409_CONFLICT)
-        except ValueError as exc:
+            # cannot end yet — a participating realm has not filled its sentence stop; or another end-of-flow hook
+            # refused (`_hook_refusals`). Nothing was recorded.
+            return _hook_refused(exc)
+        except VerdictRefusedError as exc:
             # `complete_node` raises when the node declares
-            # `required_verdicts` and this verdict is not in it. A 400 rather
-            # than a 500: the client sent a verdict this node does not accept,
-            # and it can see which ones it does.
+            # `required_verdicts` and this verdict is not in it (`verdict_not_accepted`), or for SKIPPED
+            # (`skipped_not_a_verdict`). A 400 rather than a 500: the client sent a verdict this node does not
+            # accept, and it can see which ones it does.
             return Response(
                 {
+                    "code": exc.code,
                     "error": "This node does not accept that verdict.",
                     "detail": str(exc),
                     "required_verdicts": node.required_verdicts,
@@ -892,7 +949,14 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response({"error": "Workflow already exists for this judgment"}, status=status.HTTP_400_BAD_REQUEST)
 
         case_type = request.data.get("case_type")
-        is_appeal = request.data.get("is_appeal", False)
+        if request.data.get("is_appeal") or case_type == "APPEAL":
+            # An APPEAL flow built here had no appeal behind it, so finishing it did nothing (2026-10-29). Appeals
+            # go up their flow from the soul's side (`apps/judgment/appeals.py::file(escalate=True)`).
+            return Response(
+                {"code": "appeal_not_from_judgment",
+                 "error": "An appeal flow is opened by the soul's appeal, not from a judgment"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         # `.get("priority")`, NOT `.get("priority", 0)`. The default turned every
         # request that omitted the field into an explicit "normal", which
         # `WorkflowService._resolve_priority` cannot tell from a caller who
@@ -907,7 +971,6 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             workflow = WorkflowService.create_from_judgment(
                 judgment,
                 case_type=case_type,
-                is_appeal=is_appeal,
                 priority=priority,
             )
         except ValueError as e:

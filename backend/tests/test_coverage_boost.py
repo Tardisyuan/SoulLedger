@@ -174,23 +174,6 @@ class TestWorkflowServiceCivilizations:
         with pytest.raises(ValueError, match="not valid for civilization"):
             WorkflowService.create_from_judgment(j)
 
-    def test_create_appeal_workflow(self, cn_tenant_obj):
-        """create_appeal_workflow creates appeal from existing workflow.
-        The original workflow must NOT have a judgment FK (OneToOne constraint)."""
-        soul = self._make_soul(cn_tenant_obj, "Original Soul")
-        # Create original workflow without judgment (judgment is nullable)
-        original_wf = ApprovalWorkflow.objects.create(
-            soul=soul, workflow_name="Original WF",
-            case_type=CaseType.ROUTINE, tenant=cn_tenant_obj,
-            status=ApprovalWorkflowStatus.REJECTED,
-        )
-        appeal_wf = WorkflowService.create_appeal_workflow(original_wf, priority=2)
-        assert appeal_wf.is_appeal is True
-        assert appeal_wf.priority == 2
-        assert appeal_wf.original_workflow == original_wf
-        assert "申诉" in appeal_wf.workflow_name
-        assert appeal_wf.judgment is None  # No judgment on original
-
     def test_get_workflow_stats_empty(self, cn_tenant_obj):
         soul = self._make_soul(cn_tenant_obj, "Stats Soul")
         j = self._make_judgment(soul, cn_tenant_obj)

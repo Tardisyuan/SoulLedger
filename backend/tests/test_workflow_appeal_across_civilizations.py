@@ -70,10 +70,10 @@ from rest_framework.test import APIClient
 
 from apps.authentication.models import User
 from apps.judgment.models import Judgment
-from apps.souls.models import CIVILIZATION_TENANT, UNKNOWN_CIVILIZATION, Civilization, Soul
+from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul
 from apps.tenants.managers import clear_current_tenant
 from apps.tenants.models import Tenant
-from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, CaseType
+from apps.workflow.models import ApprovalWorkflow, CaseType
 from apps.workflow.services import VALID_CASE_TYPES_BY_CIVILIZATION, WorkflowService
 
 #: Written out rather than derived from `Civilization`, for the reason every
@@ -162,45 +162,18 @@ def test_appeal_is_valid_in_every_civilization():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("civilization", CIVILIZATIONS)
-def test_an_appeal_is_created_through_the_endpoint(seeded, civilization):
-    """THE case: `POST create_from_judgment` with `is_appeal: true`, nothing else.
-
-    Before the fix the European and Egyptian runs answered::
-
-        400 {'error': "Case type 'APPEAL' is not valid for civilization
-             'EUROPEAN'. Valid types: CANONIZATION, HERESY_TRIAL,
-             PURGATORY_REVIEW, ROUTINE"}
-
-    No `case_type` is sent, because that is the shape that broke: the endpoint
-    forwards `request.data.get("case_type")` and the service then chooses
-    APPEAL for itself. A test that passed `case_type=APPEAL` explicitly would
-    exercise the same validator but would not be the request a user makes.
-    """
+def test_the_endpoint_no_longer_builds_an_appeal_flow(seeded, civilization):
+    """`POST create_from_judgment` with `is_appeal: true` used to build an APPEAL flow (this case asserted the 201).
+    No appeal stood behind such a flow, so finishing it changed nothing (review 2026-10-29): appeals go up their
+    flow from the soul's side (`appeals.file(escalate=True)`). The door now refuses, writing nothing."""
     tenant = _tenant(civilization)
     client = APIClient(**_bearer(_admin(tenant, f"appeal_{civilization}")))
     judgment = _judgment(civilization, tenant, f"{civilization} 申诉魂")
-
-    response = client.post(
-        "/api/v1/workflows/create_from_judgment/",
-        {"judgment_id": str(judgment.id), "is_appeal": True},
-        format="json",
-    )
-
-    assert response.status_code == 201, response.data
-    assert response.data["case_type"] == CaseType.APPEAL, response.data
-    assert response.data["is_appeal"] is True, response.data
-
-    # …and what landed is a workflow, not a 201-shaped shell. Read unfiltered
-    # so a tenant contextvar cannot make an empty result look like a pass.
-    workflow = ApprovalWorkflow.all_objects.get(pk=response.data["id"])
-    assert workflow.tenant_id == tenant.id
-    assert workflow.case_type == CaseType.APPEAL
-    assert workflow.nodes.count() > 0, (
-        "the appeal workflow was created with no nodes at all, which cannot be "
-        "advanced, approved or escalated — a stuck row is not the fix"
-    )
-    assert workflow.current_node is not None
-    assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
+    for body in ({"is_appeal": True}, {"case_type": CaseType.APPEAL}):
+        response = client.post(
+            "/api/v1/workflows/create_from_judgment/", {"judgment_id": str(judgment.id), **body}, format="json")
+        assert response.status_code == 400 and response.data["code"] == "appeal_not_from_judgment", response.data
+    assert not ApprovalWorkflow.all_objects.filter(judgment=judgment).exists()
 
 
 @pytest.mark.django_db
@@ -234,14 +207,12 @@ def test_a_greek_appeal_is_refused_at_both_doors(seeded):
     judgment = _judgment(Civilization.GREEK, tenant, "希腊申诉魂")
     response = client.post("/api/v1/workflows/create_from_judgment/",
                            {"judgment_id": str(judgment.id), "is_appeal": True}, format="json")
-    assert response.status_code == 400 and response.data["code"] == "no_appeal_above_minos", response.data
+    assert response.status_code == 400 and response.data["code"] == "appeal_not_from_judgment", response.data
+    with pytest.raises(NoAppealAboveMinosError):
+        WorkflowService.create_from_judgment(judgment, is_appeal=True)
     response = client.post("/api/v1/workflows/start/",
                            {"soul": str(judgment.soul_id), "case_type": CaseType.APPEAL, "reason": "申诉"}, format="json")
     assert response.status_code == 400 and response.data["code"] == "no_appeal_above_minos", response.data
-    original = ApprovalWorkflow.objects.create(soul=judgment.soul, workflow_name="原流程", case_type=CaseType.ROUTINE,
-                                               status=ApprovalWorkflowStatus.REJECTED, tenant=tenant)
-    with pytest.raises(NoAppealAboveMinosError):
-        WorkflowService.create_appeal_workflow(original)
     assert ApprovalWorkflow.all_objects.filter(soul=judgment.soul, case_type=CaseType.APPEAL).count() == 0
 
 
@@ -263,75 +234,3 @@ def test_create_from_judgment_builds_an_appeal_without_being_told_the_case_type(
     assert workflow.case_type == CaseType.APPEAL
     assert workflow.is_appeal is True
     assert workflow.nodes.count() > 0
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("civilization", CIVILIZATIONS)
-def test_both_doors_answer_the_same_way_for_the_same_soul(seeded, civilization):
-    """`create_from_judgment` and `create_appeal_workflow`, one soul, one answer.
-
-    This is the case the whole change is for. Before it, the two doors gave
-    opposite answers for a European or Egyptian soul: one raised ValueError and
-    the other built a workflow. Asserting both here means that removing APPEAL
-    from a set, or dropping the new validation out of `create_appeal_workflow`,
-    breaks the agreement rather than restoring the silent disagreement.
-
-    The two workflows are built from two different souls because
-    `ApprovalWorkflow.judgment` is a OneToOne — chaining them onto one judgment
-    raises `UNIQUE constraint failed` from the database, which is a fact about
-    the schema and not about case types. Same reason
-    `tests/test_coverage_boost.py::test_create_appeal_workflow` builds its
-    original without a judgment at all.
-    """
-    tenant = _tenant(civilization)
-
-    through_judgment = WorkflowService.create_from_judgment(
-        _judgment(civilization, tenant, f"{civilization} 门一"), is_appeal=True
-    )
-
-    original = ApprovalWorkflow.objects.create(
-        soul=Soul.objects.create(name=f"{civilization} 门二", tenant=tenant),
-        workflow_name="原流程", case_type=CaseType.ROUTINE,
-        status=ApprovalWorkflowStatus.REJECTED, tenant=tenant,
-    )
-    through_appeal_door = WorkflowService.create_appeal_workflow(original)
-
-    assert through_judgment.case_type == CaseType.APPEAL
-    assert through_appeal_door.case_type == CaseType.APPEAL
-    assert through_judgment.is_appeal is through_appeal_door.is_appeal is True
-    assert through_appeal_door.original_workflow_id == original.id
-
-
-@pytest.mark.django_db
-def test_create_appeal_workflow_now_refuses_what_create_from_judgment_refuses(db):
-    """The one behaviour the added validation actually changes.
-
-    A soul whose tenant code is not in `TENANT_CIVILIZATION` has
-    `civilization == UNKNOWN_CIVILIZATION`, which is in no set. Before, this
-    door built an appeal workflow with **no nodes** — `WORKFLOW_TEMPLATES` has
-    no `(UNKNOWN, APPEAL)` entry, so the node loop never ran and the row was
-    left PENDING with `current_node=None`, un-advanceable and un-approvable.
-    `create_from_judgment` has always raised for the same soul; now both do.
-
-    Recorded as a case rather than as a line in the report because it is the
-    only difference, and because a future reader deciding to drop the
-    validation should be told which row it prevents.
-    """
-    clear_current_tenant()
-    tenant = Tenant.objects.create(code="UNKNOWN_CIV", display_name="Unknown")
-    soul = Soul.objects.create(name="无籍之魂", tenant=tenant)
-    assert soul.civilization == UNKNOWN_CIVILIZATION
-
-    original = ApprovalWorkflow.objects.create(
-        soul=soul, workflow_name="原流程", case_type=CaseType.ROUTINE,
-        status=ApprovalWorkflowStatus.REJECTED, tenant=tenant,
-    )
-
-    before = ApprovalWorkflow.all_objects.count()
-    with pytest.raises(ValueError, match="not valid for civilization"):
-        WorkflowService.create_appeal_workflow(original)
-
-    # Absence: it refused *before* writing, so there is no half-built appeal
-    # left behind for someone to find later.
-    assert ApprovalWorkflow.all_objects.count() == before
-    assert ApprovalWorkflow.all_objects.filter(original_workflow=original).count() == 0

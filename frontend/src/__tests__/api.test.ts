@@ -559,8 +559,8 @@ describe('API Client — @soulledger/core/api', () => {
 
     it('advance() should POST /workflows/:id/advance/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
-      workflowApi.advance('wf-1');
-      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/advance/');
+      workflowApi.advance('wf-1', { reason: '卡住了' });
+      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/advance/', { reason: '卡住了' });
     });
 
     // approve_node is a detail action on ApprovalWorkflowViewSet

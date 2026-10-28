@@ -1,1 +1,9 @@
-[]
+[
+  "workflow.editor.case_type_not_for_civilization",
+  "reincarnation.error.disposition_not_executed",
+  "workflow.detail.advance_reason_label",
+  "workflow.detail.advance_reason_placeholder",
+  "workflow.detail.advance_needs_reason",
+  "official_notify.workflow_timeout_failed.title",
+  "official_notify.workflow_timeout_failed.body"
+]

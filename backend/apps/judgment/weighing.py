@@ -62,6 +62,16 @@ def weigh(judgment, verdict) -> tuple[str, int]:
             reading["heart_weight"])
 
 
+#: What a retrial carries over from the case it hears again (2026-10-29): the case's facts as registered — the
+#: offence the court routes by (地府 罪目) and the 枉死城 columns (横死, held until the fated date, the cause, the
+#: grievance and its decision). Not the evidence admitted nor the confessions heard: whether those follow the case
+#: is pending a product decision (review item E), so the new hearing starts without them.
+RETRIAL_CARRIES = (
+    "offence", "untimely", "held_until", "wrongful_death_cause",
+    "grievance_level", "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
+)
+
+
 def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=JudgmentMethod.HEART_WEIGHING) -> Judgment:
     """The new weighing a wavering scale (or a refused flow) calls for: same soul, life, court, kind and plan.
 
@@ -72,6 +82,7 @@ def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=Judgment
         realm=judgment.realm, court=judgment.court, kind=judgment.kind,
         amends_plan_id=judgment.amends_plan_id, cycle=judgment.cycle,
         judgment_method=method, retrial_of=judgment,
+        **{field: getattr(judgment, field) for field in RETRIAL_CARRIES},
     )
     from apps.events.services import EventService
 
@@ -104,6 +115,19 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     dispositions = Disposition.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
     if soul.current_state != SoulState.DISPOSED or dispositions.filter(is_executed=True).exists():
         return None
+    # The withdrawn conclusion's appeals go with it (2026-10-29): an appeal still open would otherwise amend a
+    # verdict that no longer stands. Voided like a devoured soul's (`appeals.void_open_appeals`), same transaction.
+    from apps.judgment import appeals
+
+    appeals.void_open_appeals(soul, judgment_id=judgment.pk, because="case_reopened",
+                              end_reason=appeals.END_REASON_REOPENED)
+    # The soul leaves the station the withdrawn disposition put it in (2026-10-29): its path went there when the
+    # disposition was written (`SoulPathService.enter`) and must not stay open once the disposition is void.
+    from apps.realms.path import SoulPathService
+
+    for realm in {d.destination_realm for d in dispositions.select_related("destination_realm")}:
+        if realm is not None:
+            SoulPathService.leave(soul, realm=realm)
     # A system void, not a deletion: out of the recycle bin and never restorable (user 2026-10-27).
     plan_ids = list(SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
                     .values_list("pk", flat=True))
@@ -113,7 +137,10 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     system_void(dispositions, why, void)
     # The state machine's system-only edge (Soul.SYSTEM_ONLY_TRANSITIONS); it writes STATE_CHANGED itself.
     if not soul.transition_to(SoulState.JUDGING, "Approval flow rejected", system="weighing_rejected"):
-        raise RuntimeError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was rejected")
+        # A business refusal, not a crash (2026-10-29): the decision that refused the flow is rolled back and
+        # answered 409 with this code (`workflow/views.py::_hook_refusals`).
+        raise WeighingRefusedError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was "
+                                   f"rejected", "soul_cannot_reopen", status=409)
     return open_retrial(judgment, reason="REJECTED", method=judgment.judgment_method)
 
 
@@ -143,7 +170,9 @@ def unfinished_flow(disposition, flow_status=_UNREAD) -> str | None:
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
     if flow_status is _UNREAD:
-        flow_status = ApprovalWorkflow.objects.filter(judgment=judgment).values_list("status", flat=True).first()
+        # A flow started by hand naming the judgment does not hold it (`ApprovalWorkflow.decides_judgment`).
+        flow = ApprovalWorkflow.objects.filter(judgment=judgment).first()
+        flow_status = flow.status if flow is not None and flow.decides_judgment else None
     if flow_status is None or flow_status == ApprovalWorkflowStatus.COMPLETED:
         return None
     prefix = "weighing" if applies(judgment) else "approval"
