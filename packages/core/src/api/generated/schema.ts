@@ -3523,7 +3523,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
+        /**
+         * @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+         *     `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+         *     「复核中」只列有复核人的。
+         */
         get: operations["v1_judgment_appeals_list"];
         put?: never;
         post?: never;
@@ -3540,7 +3544,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。 */
+        /**
+         * @description 本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+         *     `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+         *     「复核中」只列有复核人的。
+         */
         get: operations["v1_judgment_appeals_retrieve"];
         put?: never;
         post?: never;
@@ -10092,6 +10100,29 @@ export interface components {
             latest: string;
             store_url: string;
         };
+        /** @description `appeals.ladder`:上诉那条流程的站梯。流程已结束时剩下的 AHEAD = 不再审。 */
+        AppealLadder: {
+            current: number | null;
+            total: number;
+            stations: components["schemas"]["AppealLadderStation"][];
+        };
+        /**
+         * @description * `PASSED` - PASSED
+         *     * `REJECTED` - REJECTED
+         *     * `CURRENT` - CURRENT
+         *     * `AHEAD` - AHEAD
+         * @enum {string}
+         */
+        AppealLadderStateEnum: "PASSED" | "REJECTED" | "CURRENT" | "AHEAD";
+        AppealLadderStation: {
+            order: number;
+            /** Format: uuid */
+            node: string;
+            name: string;
+            is_final: boolean;
+            state: components["schemas"]["AppealLadderStateEnum"];
+            note: string | null;
+        };
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -12894,6 +12925,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly ladder: components["schemas"]["AppealLadder"] | null;
             /** Format: uuid */
             readonly soul: string;
             readonly soul_name: string;
@@ -12910,6 +12942,7 @@ export interface components {
         JudgmentAppealCreate: {
             /** Format: uuid */
             judgment: string;
+            /** @default  */
             reason: string;
             /** @default  */
             evidence: string;
@@ -13792,6 +13825,7 @@ export interface components {
             can_appeal: boolean;
             refusal_code: string | null;
             can_escalate: boolean;
+            escalation_stations: string[];
         };
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
@@ -13888,6 +13922,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly ladder: components["schemas"]["AppealLadder"] | null;
         };
         MeJudgmentAppealList: {
             judgments: components["schemas"]["MeAppealableJudgment"][];
@@ -26673,6 +26708,7 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                reviewer__isnull?: boolean;
                 /** @description A search term. */
                 search?: string;
                 /**
