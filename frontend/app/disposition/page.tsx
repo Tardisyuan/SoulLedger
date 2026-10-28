@@ -8,7 +8,7 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
-import type { DispositionListParams, DispositionSection } from "@soulledger/core/api/disposition";
+import { releaseRefusalOf, type DispositionListParams, type DispositionSection } from "@soulledger/core/api/disposition";
 import { dispositionKeys } from "@soulledger/core/query_keys";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -66,6 +66,8 @@ export default function DispositionPage() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
+  // 期满释放(2026-10-29):celery beat 没部署,刑期满了由官员在这里记期满,灵魂往下走。
+  const [releaseTarget, setReleaseTarget] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
   // 「显示已归档」只在处置列表(后端 `show_archived` 只有它认)。已归档的行调灰一级,状态写「□ 已归档」。
   const [showArchived, setShowArchived] = useState(false);
@@ -125,6 +127,20 @@ export default function DispositionPage() {
       // 原审的审批流程没走完 / 被驳回(埃及:称心流程,或天平摇摆)时不执行(409,apps/judgment/weighing.py),说清是哪一条。
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
       showToast(flowWaitingText(code) ?? t("disposition.execute_error"), "error");
+    },
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: (id: string) => dispositionApi.release(id),
+    onSuccess: () => {
+      showToast(t("disposition.release_success"), "success");
+      queryClient.invalidateQueries({ queryKey: ["dispositions"] });
+      setReleaseTarget(null);
+    },
+    onError: (err: unknown) => {
+      const code = releaseRefusalOf(err);
+      showToast(code ? t(`disposition.release_error.${code}`) : t("disposition.execute_error"), "error");
+      setReleaseTarget(null);
     },
   });
 
@@ -267,10 +283,10 @@ export default function DispositionPage() {
         {pager("pending")}
       </Section>
 
-      {/* ── 乙 · 执行中:期限条,没有动作 ─────────────────────────────────── */}
+      {/* ── 乙 · 执行中(服刑中):期限条;期满日已到而每日检查没跑到的,行尾「期满释放」 ───────── */}
       <Section {...sectionProps("executing")}>
         {running.map(({ d, term }) => (
-          <Row key={d.id} archived={d.is_archived} testId="disposition-running-row" cols="md:grid-cols-[1.3fr_1.1fr_2fr_8rem]">
+          <Row key={d.id} archived={d.is_archived} testId="disposition-running-row" cols="md:grid-cols-[1.3fr_1.1fr_2fr_12rem]">
             {soulLink(d)}
             {realm(d)}
             <TermBar term={term} />
@@ -279,7 +295,19 @@ export default function DispositionPage() {
               <span>
                 {term.kind === "running" && term.fraction > 0.9 && <span aria-hidden="true">◐ </span>}
                 {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
+                {d.term_end && (
+                  <span data-testid="disposition-serving-until" className="block">
+                    {t("disposition.serving_until", { date: formatHistoricalDate(d.term_end) ?? "" })}
+                  </span>
+                )}
               </span>
+              {d.can_release && !d.is_archived && (
+                <RequirePermission permissions="disposition.execute">
+                  <Button type="button" variant="secondary" size="sm" data-testid="disposition-release" onClick={() => setReleaseTarget(d.id)}>
+                    {t("disposition.release")}
+                  </Button>
+                </RequirePermission>
+              )}
               {rowMenu(d)}
             </span>
           </Row>
@@ -335,6 +363,15 @@ export default function DispositionPage() {
         confirmLoading={executeMutation.isPending}
         onCancel={() => setShowExecuteModal(null)}
         onConfirm={() => showExecuteModal && executeMutation.mutate(showExecuteModal)}
+      />
+      <ConfirmDialog
+        isOpen={releaseTarget !== null}
+        title={t("disposition.release_confirm")}
+        message={t("disposition.release_warning")}
+        confirmText={t("disposition.release")}
+        confirmLoading={releaseMutation.isPending}
+        onCancel={() => setReleaseTarget(null)}
+        onConfirm={() => releaseTarget && releaseMutation.mutate(releaseTarget)}
       />
     </PageShell>
   );

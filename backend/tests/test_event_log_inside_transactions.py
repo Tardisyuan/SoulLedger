@@ -119,7 +119,8 @@ def observe(path, context) -> Seen:
 def _conclude_original(event_type):
     def path():
         soul, case = plan.open_case(_cn())
-        return (lambda: Judgment.all_objects.get(pk=case.pk).conclude("PASSED", ""),
+        # FAILED:地府判无罪不建处置(2026-10-29),DISPOSITION_CREATED 那一格要一份。
+        return (lambda: Judgment.all_objects.get(pk=case.pk).conclude("FAILED", ""),
                 lambda: Judgment.all_objects.get(pk=case.pk).is_final, event_type)
     return path
 
@@ -559,27 +560,6 @@ def _cross_conclude_appends_stops():
             "SENTENCE_PLAN_AMENDED")
 
 
-def _cross_pass_reopens_finished_plan():
-    """2026-10-18:跨域审判 PASS 时计划已经刑满 —— 计划重开、灵魂 REINCARNATING → DISPOSED(STATE_CHANGED)
-    与审判的 CONCLUDED 同一事务(`append_cross_stops` → `_reopen` → `Soul.transition_to`)。"""
-    from apps.dispatch.models import CrossTenantJudgment
-    from apps.dispatch.services import CrossTenantJudgmentService
-    from apps.sentence_plan.models import SentencePlan
-    from tests.test_workflow_segments import World, _template, merged
-
-    w = World()
-    w.cn, w.eg = _cn(), plan.tenant("EG_DUAT")
-    _template(w.cn, "CHINESE")
-    _template(w.eg, "EGYPTIAN")
-    soul, _case, cj, _wf = merged(w, [w.eg])
-    p = SentencePlan.all_objects.get(soul=soul)
-    plan.serve(soul, p, 1)  # 原属那一站执行完:计划刑满,灵魂等转世
-    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None,
-                                                        by_workflow=True),
-            lambda: SentencePlan.all_objects.get(pk=p.pk).status == "ACTIVE",
-            "STATE_CHANGED")
-
-
 def _station_move():
     """十三站(apps/souls/stations.py):官员挪站,DIYU_STATION_CHANGED 与那一列同进退。"""
     from apps.souls import stations
@@ -617,7 +597,7 @@ def _capture(step):
 
 
 def _wangsi(step):
-    """枉死城的冤情申诉(apps/judgment/wangsi.py):提出 / 属实 / 不属实,事件与申诉那几列同进退。"""
+    """枉死城的冤情申诉(apps/judgment/wangsi.py):提出 / 属实 / 超度 / 不属实,事件与申诉那几列同进退。"""
     from apps.judgment import wangsi
     from apps.judgment.models import GrievanceLevel, GrievanceStatus
 
@@ -636,6 +616,9 @@ def _wangsi(step):
         if step == "uphold":
             return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=True, note="属实"),
                     lambda: status() == GrievanceStatus.UPHELD, "WANGSI_GRIEVANCE_UPHELD")
+        if step == "deliver":
+            return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=True, note="属实", deliver=True),
+                    lambda: status() == GrievanceStatus.DELIVERED, "WANGSI_GRIEVANCE_DELIVERED")
         return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=False, note="不属实"),
                 lambda: status() == GrievanceStatus.REJECTED, "WANGSI_GRIEVANCE_REJECTED")
     return path
@@ -645,6 +628,7 @@ PATHS = {
     "wangsi_file/WANGSI_GRIEVANCE_FILED": _wangsi("file"),
     "wangsi_uphold/WANGSI_GRIEVANCE_UPHELD": _wangsi("uphold"),
     "wangsi_reject/WANGSI_GRIEVANCE_REJECTED": _wangsi("reject"),
+    "wangsi_deliver/WANGSI_GRIEVANCE_DELIVERED": _wangsi("deliver"),
     "die/DIYU_STATION_CHANGED": _die("DIYU_STATION_CHANGED"),
     "station_move/DIYU_STATION_CHANGED": _station_move,
     "capture_issue/CAPTURE_WARRANT_ISSUED": _capture("issue"),
@@ -652,7 +636,6 @@ PATHS = {
     "capture_hand_over/CAPTURE_HANDED_OVER": _capture("hand_over"),
     "capture_cancel/CAPTURE_WARRANT_CANCELLED": _capture("cancel"),
     "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
-    "cross_pass_reopens_plan/STATE_CHANGED": _cross_pass_reopens_finished_plan,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack

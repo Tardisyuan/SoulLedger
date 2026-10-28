@@ -2152,8 +2152,7 @@ export interface paths {
          * @description How many of this tenant's registrations need a human.
          *
          *     FAILED is the only anomalous state a row is ever written in: PENDING
-         *     and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
-         *     its job, and PARTIAL is a batch-level answer no row carries. The status
+         *     is in flight and DUPLICATE is the idempotency check doing its job. The status
          *     goes on the wire so the dashboard links to the same filter it counted.
          */
         get: operations["v1_death_sync_registrations_summary_retrieve"];
@@ -3050,6 +3049,30 @@ export interface paths {
          *     POST /disposition/{id}/execute/
          */
         post: operations["v1_disposition_execute_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disposition/{id}/release/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
+         *
+         *     celery beat 没部署,每日期满检查不会自己跑 —— 这是刑满之后灵魂往下走(下一站、或候转世)的人手入口。
+         *     与每日检查同一条判定(`expiry.releasable`)、同一个写入(`expiry.expire_one`:`expired_at`、
+         *     `DISPOSITION_EXPIRED`、欧洲炼狱升天堂、受刑中的那一站结束并推进),同一个事务。权限同「执行」。
+         *     409 `not_serving`:没执行、永久刑、已记期满,或没有期满日;409 `term_not_ended`:期满日还没到。
+         */
+        post: operations["v1_disposition_release_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4234,7 +4257,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+         * @description 审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`);
+         *     再带 `deliver=true` 是超度:出城到莲花台、免审结案(案子还在城隍处 409 `at_city_god`)。
+         *     阳寿已到或案子已结后仍可审,只记结论(属实记 UPHELD_LATE;此时超度 409 `not_in_wangsi`)。
          *     没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。
          */
         post: operations["v1_judgment_wangsi_decide_create"];
@@ -6955,7 +6980,9 @@ export interface paths {
         /**
          * @description Create a new reincarnation for a soul and immediately complete it.
          *     POST /reincarnation/reborn/
-         *     Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
+         *     Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN",
+         *             "rebirth_form_reason": "..." }
+         *     `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
          */
         post: operations["v1_reincarnation_reborn_create"];
         delete?: never;
@@ -11932,14 +11959,12 @@ export interface components {
         };
         /**
          * @description * `PENDING` - Pending Validation
-         *     * `ACCEPTED` - Accepted - Processing
          *     * `PROCESSED` - Processed Successfully
          *     * `FAILED` - Processing Failed
          *     * `DUPLICATE` - Duplicate - Already Processed
-         *     * `PARTIAL` - Partially Processed (batch)
          * @enum {string}
          */
-        DeathRegistrationRequestStatusEnum: "PENDING" | "ACCEPTED" | "PROCESSED" | "FAILED" | "DUPLICATE" | "PARTIAL";
+        DeathRegistrationRequestStatusEnum: "PENDING" | "PROCESSED" | "FAILED" | "DUPLICATE";
         /**
          * @description 200 body of `registrations/summary/`. Doc-only.
          *
@@ -12174,6 +12199,7 @@ export interface components {
             readonly soul_reborn: boolean;
             readonly suggested_rebirth_form: string | null;
             readonly flow_waiting: string | null;
+            readonly can_release: boolean;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -12636,10 +12662,11 @@ export interface components {
          *     * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
          *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
          *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+         *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_DELIVERED" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -12953,10 +12980,12 @@ export interface components {
         /**
          * @description * `FILED` - 已申诉
          *     * `UPHELD` - 属实 · 提前释放
+         *     * `UPHELD_LATE` - 属实 · 期满出城
+         *     * `DELIVERED` - 属实 · 超度
          *     * `REJECTED` - 不属实
          * @enum {string}
          */
-        GrievanceStatusEnum: "FILED" | "UPHELD" | "REJECTED";
+        GrievanceStatusEnum: "FILED" | "UPHELD" | "UPHELD_LATE" | "DELIVERED" | "REJECTED";
         /**
          * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
          *
@@ -16690,6 +16719,7 @@ export interface components {
             readonly soul_reborn?: boolean;
             readonly suggested_rebirth_form?: string | null;
             readonly flow_waiting?: string | null;
+            readonly can_release?: boolean;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17121,6 +17151,7 @@ export interface components {
             readonly is_eval_identity?: boolean;
             /** Format: date-time */
             readonly soup_taken_at?: string | null;
+            readonly desired_rebirth_form?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -19027,6 +19058,7 @@ export interface components {
             readonly is_eval_identity: boolean;
             /** Format: date-time */
             readonly soup_taken_at: string | null;
+            readonly desired_rebirth_form: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -20780,6 +20812,8 @@ export interface components {
         WangsiDecision: {
             upheld: boolean;
             note: string;
+            /** @default false */
+            deliver: boolean;
         };
         WangsiGrievance: {
             plea: string;
@@ -24687,13 +24721,11 @@ export interface operations {
                 search?: string;
                 /**
                  * @description * `PENDING` - Pending Validation
-                 *     * `ACCEPTED` - Accepted - Processing
                  *     * `PROCESSED` - Processed Successfully
                  *     * `FAILED` - Processing Failed
                  *     * `DUPLICATE` - Duplicate - Already Processed
-                 *     * `PARTIAL` - Partially Processed (batch)
                  */
-                status?: "ACCEPTED" | "DUPLICATE" | "FAILED" | "PARTIAL" | "PENDING" | "PROCESSED";
+                status?: "DUPLICATE" | "FAILED" | "PENDING" | "PROCESSED";
                 tudi_god?: string;
             };
             header?: never;
@@ -26584,6 +26616,38 @@ export interface operations {
             };
         };
     };
+    v1_disposition_release_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Disposition. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disposition"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_disposition_unarchive_create: {
         parameters: {
             query?: never;
@@ -26715,9 +26779,10 @@ export interface operations {
                  *     * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
                  *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
                  *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+                 *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -26842,9 +26907,10 @@ export interface operations {
                  *     * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
                  *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
                  *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+                 *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */

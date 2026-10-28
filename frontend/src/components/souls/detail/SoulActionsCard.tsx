@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { Button } from "@/src/components/ui/Button";
-import { SelectField } from "@/src/components/ui/Field";
+import { SelectField, TextField } from "@/src/components/ui/Field";
 import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
+import { formatHistoricalDate } from "@/lib/utils";
 
 /** 四大部洲(docs/07 §人道),`Soul.Continent` 的次序。 */
 const CONTINENTS = ["DONGSHENG", "NANZHAN", "XINIU", "BEIJULU"] as const;
@@ -25,10 +26,14 @@ export function SoulActionsCard({
   nextContinent = "",
   onNextContinentChange,
   suggestedRebirthForm,
+  desiredRebirthForm = null,
+  formReason = "",
+  onFormReasonChange,
   onRebirthFormChange,
   onDie,
   onStartJudgment,
   onReincarnate,
+  onRelease,
   quota,
   quotaRefusal,
   soupRefused,
@@ -48,10 +53,16 @@ export function SoulActionsCard({
   onNextContinentChange?: (value: string) => void;
   /** 第十殿按功过给的六道建议(处置的 `suggested_rebirth_form`);地府以外为 null。 */
   suggestedRebirthForm?: RebirthFormValue | null;
+  /** 本世已批准的转生申请里灵魂选的道(2026-10-29);默认选它,改了要写原因。没有为 null。 */
+  desiredRebirthForm?: RebirthFormValue | null;
+  formReason?: string;
+  onFormReasonChange?: (value: string) => void;
   onRebirthFormChange: (value: RebirthFormValue) => void;
   onDie: () => void;
   onStartJudgment: () => void;
   onReincarnate: (dispositionId: string) => void;
+  /** 期满释放(2026-10-29):执行了、刑期已满的处置;没有就不画按钮。 */
+  onRelease?: (dispositionId: string) => void;
   /** 办转世被 409 `rebirth_quota_full` 拒了(并发时配额刚被别人用完):同一句话留在这里,不弹 toast。 */
   quotaRefusal?: RebirthQuotaFull | null;
   /** 本月配额(`/reincarnation/quota/`,页面在有转世可办时才取);没有就不标、不拦。 */
@@ -70,6 +81,10 @@ export function SoulActionsCard({
       : chosen && quotaIsFull(chosen)
         ? { rebirth_form: chosen.rebirth_form, used: chosen.used, limit: chosen.limit as number }
         : null;
+
+  // 选的道与灵魂所愿不同:要写原因才能办(服务端 400 `rebirth_form_reason_required` 同一条)。
+  const needsReason = !!desiredRebirthForm && !!rebirthForm && rebirthForm !== desiredRebirthForm;
+  const reasonMissing = needsReason && !formReason.trim();
 
   return (
     <section aria-labelledby="soul-actions-title" data-print-hide="" className="min-w-0 space-y-4 bg-[oklch(var(--color-surface-1))] p-6">
@@ -105,6 +120,22 @@ export function SoulActionsCard({
               </RequirePermission>
             </div>
           )}
+          {soul?.current_state === "DISPOSED" &&
+            // 服刑中(执行了、没记期满、有期满日;2026-10-29):刑满才往下走。期满日已到的给「期满释放」。
+            dispositions
+              .filter((d) => d.is_executed && !d.expired_at && !d.is_eternal && d.term_end)
+              .map((d) => (
+                <div key={`serving-${d.id}`} data-testid="soul-serving" className="space-y-2 text-center text-sm text-[oklch(var(--color-ink-muted))]">
+                  <p>{t("disposition.serving_until", { date: formatHistoricalDate(d.term_end) ?? "" })}</p>
+                  {d.can_release && onRelease && (
+                    <RequirePermission permissions="disposition.execute">
+                      <Button type="button" variant="secondary" size="sm" onClick={() => onRelease(d.id)} disabled={!!actionLoading}>
+                        {t("disposition.release")}
+                      </Button>
+                    </RequirePermission>
+                  )}
+                </div>
+              ))}
           {soul?.current_state === "DISPOSED" && (
             <RequirePermission permissions="reincarnation.reborn">
               {/* The form is chosen before the destination realm, not
@@ -144,6 +175,24 @@ export function SoulActionsCard({
                       ]}
                     />
                   )}
+                  {desiredRebirthForm && (
+                    <p data-testid="rebirth-desired" className="mt-2 text-xs text-[oklch(var(--color-ink))]">
+                      {t("reincarnation.desired_form", { form: t(`reincarnation.forms.${desiredRebirthForm}`) })}
+                    </p>
+                  )}
+                  {needsReason && onFormReasonChange && (
+                    <TextField
+                      id="rebirth-form-reason"
+                      className="mt-3"
+                      label={t("reincarnation.form_reason")}
+                      description={t("reincarnation.form_reason_hint")}
+                      required
+                      maxLength={500}
+                      value={formReason}
+                      onChange={(e) => onFormReasonChange(e.target.value)}
+                      disabled={!!actionLoading}
+                    />
+                  )}
                   {suggestedRebirthForm && (
                     <p data-testid="rebirth-suggestion" className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">
                       {t("souls.detail.rebirth_suggestion", { form: t(`reincarnation.forms.${suggestedRebirthForm}`) })}
@@ -173,7 +222,7 @@ export function SoulActionsCard({
                   size="lg"
                   className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
-                  disabled={!!actionLoading || !!full || (sixPaths && !rebirthForm)}
+                  disabled={!!actionLoading || !!full || (sixPaths && !rebirthForm) || reasonMissing}
                 >
                   {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                 </Button>

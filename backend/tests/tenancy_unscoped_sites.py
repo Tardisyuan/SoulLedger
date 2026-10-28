@@ -50,7 +50,7 @@ SITES = [
     ('apps/reincarnation/services.py', 'assert_may_be_reborn', 'Disposition.all_objects', 1, 'PK', "the soul's own dispositions, by its pk"),
     ('apps/souls/stations.py', 'arrive', 'Soul.all_objects', 2, 'PK', "reads and updates the station column of the one soul the caller passed in, by its pk (the caller reached it through a scoped path or holds its lock)"),
     ('apps/souls/stations.py', 'move', 'Soul.all_objects', 1, 'LOCK', 'locks the soul the station view already reached through get_object(), by its pk'),
-    ('apps/dispatch/capture.py', 'issue', 'Soul.all_objects', 2, 'LOCK', 'locks / re-reads the soul the capture view resolved with tenant= of the request, by its pk'),
+    ('apps/dispatch/capture.py', 'issue', 'Soul.all_objects', 2, 'LOCK', 'locks / re-reads the soul the capture view resolved through scope_to_tenant (the same scope as due/), by its pk'),
     ('apps/dispatch/capture.py', '_lock', 'CaptureWarrant.all_objects', 1, 'LOCK', 'locks the warrant the capture viewset already reached through get_object(), by its pk'),
     ('apps/dispatch/capture.py', 'hand_over', 'Soul.all_objects', 1, 'PK', "the warrant's own soul, by its FK (the warrant was reached through get_object())"),
     ('apps/dispatch/capture.py', 'void_on_death', 'CaptureWarrant.all_objects', 1, 'PK', "the open warrants of the one soul dying in this transaction, by soul_id; is_deleted=False is in the filter"),
@@ -312,7 +312,6 @@ SITES = [
     ('apps/workflow/tasks.py', 'pick_reminders_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant'),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'Judgment.all_objects', 1, 'PK', "the bench's own judgment by its judgment_id (the convening hall's)"),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'SentencePlan.all_objects', 1, 'PK', "the plan that judgment opened (origin_judgment_id); the plan's tenant is that judgment's home hall"),
-    ('apps/sentence_plan/requests.py', '_finished_plan', 'SentencePlan.all_objects', 1, 'PK', "the finished plan that judgment opened (origin_judgment_id), reopened when its cross-realm judgment concludes PASS; the plan's tenant is that judgment's home hall"),
     ('apps/sentence_plan/services.py', 'SentencePlanService.open_cross_judgment', 'CrossTenantJudgment._base_manager', 1, 'CROSS', 'joint judgment attached to one judgment, still open'),
 ]
 

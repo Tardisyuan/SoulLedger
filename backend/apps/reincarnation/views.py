@@ -106,7 +106,9 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         """
         Create a new reincarnation for a soul and immediately complete it.
         POST /reincarnation/reborn/
-        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
+        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN",
+                "rebirth_form_reason": "..." }
+        `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
         """
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
@@ -114,7 +116,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
             ReincarnationService,
             assert_continent_applies,
             assert_may_be_reborn,
-            rebirth_form_for,
+            resolve_rebirth_form,
         )
         from apps.souls.models import Soul, SoulState
 
@@ -171,8 +173,10 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         # request was never malformed, only in conflict with the soul's state.
         LedgerService.assert_rebirth_capable(soul)
         assert_may_be_reborn(soul, disposition)
-        rebirth_form_for(soul, rebirth_form)  # 希腊灵魂指定了六道:400,在动状态之前
-        assert_continent_applies(soul, rebirth_form_for(soul, rebirth_form), rebirth_continent)  # 同上:部洲只在人道
+        # 希腊灵魂指定了六道、改了灵魂所愿却没写原因:400,在动状态之前。没指定就按灵魂已批准的申请(2026-10-29)。
+        rebirth_form_reason = payload.validated_data.get("rebirth_form_reason", "")
+        chosen_form, _, _ = resolve_rebirth_form(soul, rebirth_form, rebirth_form_reason)
+        assert_continent_applies(soul, chosen_form, rebirth_continent)  # 同上:部洲只在人道
 
         if soul.current_state != SoulState.REINCARNATING:
             moved = soul.transition_to(
@@ -187,6 +191,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
             new_identity=new_identity,
             rebirth_form=rebirth_form,
             rebirth_continent=rebirth_continent,
+            rebirth_form_reason=rebirth_form_reason,
         )
 
         return Response(ReincarnationSerializer(reincarnation).data, status=status.HTTP_201_CREATED)

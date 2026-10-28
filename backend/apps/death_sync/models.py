@@ -18,7 +18,8 @@ class TudiGod(AuditUserFields, models.Model):
     docs/08 §五(城隍 →「土地公(乡镇级)」)、§七(土地公「管理一方土地和亡灵」)、§九(「基层管理员」);
     06 §二 第一站土地庙:「通报当地城隍,有新亡魂到来」「记录亡魂基本信息(死亡时间、死因)」。
     `regions` 是他管的地名(乡镇),只作展示与筛选;登记时报给 `city_god`(上级城隍),不再按出身地另配。
-    `city_god` 可空:本殿还没有城隍时,登记照样做,案子按出身地配(与死亡同步一样)。
+    `city_god` 可空:没填时按出身地配(与死亡同步一样);本殿连兜底城隍都没有就不开案,登记记为 FAILED
+    `NO_CITY_GOD`(用户 2026-10-29,`city_gods.NoCityGodError`),设了兜底城隍后可重试。
     `officers` = 以这位土地公名义登记的官员(殿管理员也能登)。
     """
 
@@ -134,12 +135,12 @@ class ExternalApiKey(AuditUserFields, models.Model):
 
 
 class DeathRegistrationStatus(models.TextChoices):
+    """ACCEPTED 与 PARTIAL 已删(2026-10-29 用户决定):历史上从来没有代码写过它们(按提交记录搜索为空),
+    筛选里却列着。迁移 death_sync 的 drop_unwritten_statuses 把可能存在的旧行改成最接近的状态。"""
     PENDING = "PENDING", "Pending Validation"
-    ACCEPTED = "ACCEPTED", "Accepted - Processing"
     PROCESSED = "PROCESSED", "Processed Successfully"
     FAILED = "FAILED", "Processing Failed"
     DUPLICATE = "DUPLICATE", "Duplicate - Already Processed"
-    PARTIAL = "PARTIAL", "Partially Processed (batch)"
 
 
 class DeathRegistrationRequest(AuditUserFields, models.Model):

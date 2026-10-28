@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { HistoricalDate } from "../domain/dates";
 import type { PaginatedResponse } from "./users";
 import type { components } from "./generated/schema";
 
@@ -47,11 +48,30 @@ export function soupNotTakenOf(error: unknown): boolean {
   return r?.status === 409 && r.data?.code === "soup_not_taken";
 }
 
-/** 409 `reborn` / `complete` answers when the business forbids the rebirth (2026-10-27); the soul stays where it was. */
-export function rebirthBlockedOf(error: unknown): "plan_in_progress" | "eternal_sentence" | "rebirth_not_approved" | null {
+/** 409 `reborn` / `complete` answers when the business forbids the rebirth (2026-10-27); the soul stays where it was.
+ *  `term_not_served` (2026-10-29) also carries `term_end` — see `rebirthTermEndOf`. */
+export function rebirthBlockedOf(
+  error: unknown
+): "plan_in_progress" | "eternal_sentence" | "rebirth_not_approved" | "term_not_served" | null {
   const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
   const c = r?.data?.code;
-  return r?.status === 409 && (c === "plan_in_progress" || c === "eternal_sentence" || c === "rebirth_not_approved") ? c : null;
+  return r?.status === 409 &&
+    (c === "plan_in_progress" || c === "eternal_sentence" || c === "rebirth_not_approved" || c === "term_not_served")
+    ? c
+    : null;
+}
+
+/** The `term_end` of a 409 `term_not_served`, or null. */
+export function rebirthTermEndOf(error: unknown): HistoricalDate | null {
+  const d = (error as { response?: { data?: { code?: string; term_end?: HistoricalDate } } })?.response?.data;
+  return d?.code === "term_not_served" && d.term_end ? d.term_end : null;
+}
+
+/** 400 `rebirth_form_reason_required` (2026-10-29): the chosen path differs from the soul's approved wish and
+ *  no reason was given. Returns the wished path, or null. */
+export function rebirthReasonRequiredOf(error: unknown): string | null {
+  const r = (error as { response?: { status?: number; data?: { code?: string; desired_form?: string } } })?.response;
+  return r?.status === 400 && r.data?.code === "rebirth_form_reason_required" ? (r.data.desired_form ?? "") : null;
 }
 
 /** The refusal code of `drinkSoup` (409: `not_diyu` / `not_reincarnating` / `soup_already_taken`), else null. */

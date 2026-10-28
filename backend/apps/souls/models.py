@@ -617,17 +617,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 SoulState.SETTLED,
                 SoulState.LOST,
             ],
-            # Back to DISPOSED only when a finished sentence plan is reopened (2026-10-18 user decision): a
-            # cross-realm judgment concluded PASS after the plan completed adds its stops to that plan
-            # (apps/sentence_plan/requests.py::append_cross_stops). Not reachable through
-            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there).
-            SoulState.REINCARNATING: [SoulState.ALIVE, SoulState.DISPOSED],
-            # SETTLED has exactly one exit, back to DISPOSED, and one writer of it: a cross-realm judgment
-            # concluded PASS after the soul's sentence plan finished reopens that plan and appends the
-            # foreign stops (apps/sentence_plan/requests.py::append_cross_stops; 2026-10-18 user decision).
-            # The plan is unfinished business, so the case was not closed after all. Not reachable through
-            # `POST /souls/{id}/transition/` (apps/souls/views.py refuses it there), and correcting a
-            # mistaken settlement is still `correct_settlement`, its own event.
+            # REINCARNATING → DISPOSED and SETTLED → DISPOSED were removed (user 2026-10-29): their one writer
+            # reopened a sentence plan that finished before a merged cross-realm judgment ended, and an original
+            # judgment's disposition now waits for its approval flow, which ends that judgment first.
+            SoulState.REINCARNATING: [SoulState.ALIVE],
+            # SETTLED is terminal. Correcting a mistaken settlement is `correct_settlement`, its own event.
             #
             # SETTLED deliberately does not keep LOST reachable the way
             # DISPOSED does. LOST means the disposition was
@@ -638,7 +632,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # bookkeeping problem, not a change in what became of the soul.
             # Letting an administrative mistake re-open a cosmologically closed
             # case is exactly the lie this state exists to stop telling.
-            SoulState.SETTLED: [SoulState.DISPOSED],
+            SoulState.SETTLED: [],
             # Recalled: found again, back in transit to the realm its disposition named (2026-10-24 user
             # decision: a minimal way in and out, no pursuit workflow). Both moves need a written reason
             # (apps/souls/views.py::transition); the STATE_CHANGED event and the audit row keep it.
@@ -817,10 +811,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
 
         Deliberately does not go through transition_to/can_transition_to —
-        SETTLED's only transition (back to DISPOSED) belongs to reopening a
-        finished sentence plan (see the comment there on why re-opening a
-        cosmologically closed case must never look like an ordinary
-        transition). This is a correction, not
+        SETTLED is terminal in the state machine (see the comment there on why
+        re-opening a cosmologically closed case must never look like an
+        ordinary transition). This is a correction, not
         a transition: ADMIN-only (enforced by the view's permission
         codename, not here), requires a reason, and is logged as its own
         SETTLEMENT_CORRECTED event so the lifecycle timeline never renders

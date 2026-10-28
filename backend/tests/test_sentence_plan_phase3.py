@@ -466,7 +466,7 @@ def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(
     soul = account.soul
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
     plan.bench(case, [(eg, plan.stop_realm(eg), 5), (eu, plan.stop_realm(eu), 7)])
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     plan.walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)
@@ -509,7 +509,7 @@ def test_cancelling_pushes_the_pardon_not_the_completion(cn, eg, enqueued):  # n
     soul = account.soul
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
     plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")
     p = SentencePlan.all_objects.get(soul=soul)
     PushDelivery.objects.all().delete()
     assert _cancel(plan.officer("cn_mod", "MODERATOR", cn), p, reason="SECRET-REASON").status_code == 200

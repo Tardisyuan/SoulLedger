@@ -19,7 +19,15 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { rebirthBlockedOf, rebirthQuotaFullOf, soupNotTakenOf, soupRefusalOf, type RebirthQuotaFull } from "@soulledger/core/api/reincarnation";
+import {
+  rebirthBlockedOf,
+  rebirthQuotaFullOf,
+  rebirthReasonRequiredOf,
+  rebirthTermEndOf,
+  soupNotTakenOf,
+  soupRefusalOf,
+  type RebirthQuotaFull,
+} from "@soulledger/core/api/reincarnation";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict } from "@soulledger/core/api";
@@ -27,6 +35,7 @@ import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
 import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
+import { releaseRefusalOf } from "@soulledger/core/api/disposition";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import type { RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
@@ -125,6 +134,8 @@ export default function SoulDetailPage() {
   const [pickedRebirthForm, setRebirthForm] = useState<RebirthFormValue | null>(null);
   // 下一世部洲(第五十七批 S-3):只人道。"" = 同本世(本世登记了就照发本世的;后端收到空串会记成「不详」)。
   const [nextContinent, setNextContinent] = useState("");
+  // 改了灵魂所愿的道要写原因(2026-10-29),随转世请求发出、记进转世事件。
+  const [formReason, setFormReason] = useState("");
   // 办转世被配额拒了(409 rebirth_quota_full):那句话留在操作卡里,换一道就清掉。
   const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
   // 办转世被 409 `soup_not_taken` 拒了(地府的灵魂还没饮汤):灵魂留在轮回中,操作卡里的孟婆汤那一块写说明。
@@ -241,7 +252,12 @@ export default function SoulDetailPage() {
   // 六道只属于地府(按原属文明,同后端 `rebirth_form_for`;2026-10-27 G-2):希腊的再生是饮忘川后回来,
   // 没有道可选,不显示选择器、不发 `rebirth_form`(后端记成 OTHER「六道之外」,发了一道反而 400)。
   const sixPaths = (soul?.home_civilization ?? soul?.civilization) === "CHINESE";
-  const rebirthForm: RebirthFormValue | null = sixPaths ? (pickedRebirthForm ?? suggestedRebirthForm ?? null) : null;
+  // 灵魂本世已批准的转生申请里选的道(2026-10-29):默认选它,其次才是第十殿的建议。
+  const desiredRebirthForm = (sixPaths ? soul?.desired_rebirth_form ?? null : null) as RebirthFormValue | null;
+  const rebirthForm: RebirthFormValue | null = sixPaths
+    ? (pickedRebirthForm ?? desiredRebirthForm ?? suggestedRebirthForm ?? null)
+    : null;
+  const formOverridden = !!desiredRebirthForm && !!rebirthForm && rebirthForm !== desiredRebirthForm;
   const reincarnations = useMemo(() => [...(reincarnationsQuery.data?.results ?? NO_REINCARNATIONS), ...moreReincarnations.rows], [reincarnationsQuery.data, moreReincarnations.rows]);
   const events = useMemo(() => [...(eventsQuery.data?.results ?? NO_EVENTS), ...moreEvents.rows], [eventsQuery.data, moreEvents.rows]);
   const loadedAll =
@@ -404,6 +420,7 @@ export default function SoulDetailPage() {
 
   async function handleReincarnate(dispositionId: string) {
     if (sixPaths && !rebirthForm) return;
+    if (formOverridden && !formReason.trim()) return;
     setActionLoading("reincarnate");
     setQuotaRefusal(null);
     try {
@@ -412,6 +429,7 @@ export default function SoulDetailPage() {
         disposition_id: dispositionId,
         new_identity: `${soul?.name} (rebirth)`,
         ...(sixPaths && rebirthForm ? { rebirth_form: rebirthForm } : {}),
+        ...(formOverridden ? { rebirth_form_reason: formReason.trim() } : {}),
         ...(sixPaths && rebirthForm === "HUMAN" && (nextContinent || soul?.birth_continent)
           ? { rebirth_continent: nextContinent || soul?.birth_continent }
           : {}),
@@ -437,11 +455,40 @@ export default function SoulDetailPage() {
       }
       const blocked = rebirthBlockedOf(e);
       if (blocked) {
-        showToast(t(`reincarnation.error.${blocked}`, { name: soul?.name ?? "" }), "error");
+        const end = rebirthTermEndOf(e);
+        showToast(
+          t(`reincarnation.error.${blocked}`, { name: soul?.name ?? "", date: end ? formatHistoricalDate(end) ?? "" : "" }),
+          "error"
+        );
+        return;
+      }
+      const wished = rebirthReasonRequiredOf(e);
+      if (wished !== null) {
+        showToast(
+          t("reincarnation.error.rebirth_form_reason_required", {
+            name: soul?.name ?? "",
+            form: wished ? t(`reincarnation.forms.${wished}`) : "",
+          }),
+          "error"
+        );
         return;
       }
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function handleRelease(dispositionId: string) {
+    setActionLoading("release");
+    try {
+      await dispositionApi.release(dispositionId);
+      refreshSoulViews();
+      showToast(t("disposition.release_success"), "success");
+    } catch (e: unknown) {
+      const code = releaseRefusalOf(e);
+      showToast(code ? t(`disposition.release_error.${code}`) : t("disposition.execute_error"), "error");
     } finally {
       setActionLoading("");
     }
@@ -808,6 +855,9 @@ export default function SoulDetailPage() {
               nextContinent={nextContinent}
               onNextContinentChange={setNextContinent}
               suggestedRebirthForm={suggestedRebirthForm}
+              desiredRebirthForm={desiredRebirthForm}
+              formReason={formReason}
+              onFormReasonChange={setFormReason}
               onRebirthFormChange={(form) => {
                 setRebirthForm(form);
                 setQuotaRefusal(null);
@@ -819,6 +869,7 @@ export default function SoulDetailPage() {
               onDie={handleDie}
               onStartJudgment={handleStartJudgment}
               onReincarnate={handleReincarnate}
+              onRelease={handleRelease}
             />
           )}
         </div>

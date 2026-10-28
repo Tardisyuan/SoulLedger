@@ -4196,19 +4196,15 @@ paths:
         schema:
           type: string
           enum:
-          - ACCEPTED
           - DUPLICATE
           - FAILED
-          - PARTIAL
           - PENDING
           - PROCESSED
         description: |-
           * `PENDING` - Pending Validation
-          * `ACCEPTED` - Accepted - Processing
           * `PROCESSED` - Processed Successfully
           * `FAILED` - Processing Failed
           * `DUPLICATE` - Duplicate - Already Processed
-          * `PARTIAL` - Partially Processed (batch)
       - in: query
         name: tudi_god
         schema:
@@ -4332,8 +4328,7 @@ paths:
         How many of this tenant's registrations need a human.
 
         FAILED is the only anomalous state a row is ever written in: PENDING
-        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
-        its job, and PARTIAL is a batch-level answer no row carries. The status
+        is in flight and DUPLICATE is the idempotency check doing its job. The status
         goes on the wire so the dashboard links to the same filter it counted.
       tags:
       - v1
@@ -6656,6 +6651,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Disposition'
           description: ''
+  /api/v1/disposition/{id}/release/:
+    post:
+      operationId: v1_disposition_release_create
+      description: |-
+        期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
+
+        celery beat 没部署,每日期满检查不会自己跑 —— 这是刑满之后灵魂往下走(下一站、或候转世)的人手入口。
+        与每日检查同一条判定(`expiry.releasable`)、同一个写入(`expiry.expire_one`:`expired_at`、
+        `DISPOSITION_EXPIRED`、欧洲炼狱升天堂、受刑中的那一站结束并推进),同一个事务。权限同「执行」。
+        409 `not_serving`:没执行、永久刑、已记期满,或没有期满日;409 `term_not_ended`:期满日还没到。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Disposition.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disposition'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/disposition/{id}/unarchive/:
     post:
       operationId: v1_disposition_unarchive_create
@@ -6816,6 +6847,7 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_DELIVERED
           - WANGSI_GRIEVANCE_FILED
           - WANGSI_GRIEVANCE_REJECTED
           - WANGSI_GRIEVANCE_UPHELD
@@ -6891,6 +6923,7 @@ paths:
           * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+          * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7060,6 +7093,7 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_DELIVERED
           - WANGSI_GRIEVANCE_FILED
           - WANGSI_GRIEVANCE_REJECTED
           - WANGSI_GRIEVANCE_UPHELD
@@ -7135,6 +7169,7 @@ paths:
           * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+          * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -9717,7 +9752,9 @@ paths:
     post:
       operationId: v1_judgment_wangsi_decide_create
       description: |-
-        审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+        审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`);
+        再带 `deliver=true` 是超度:出城到莲花台、免审结案(案子还在城隍处 409 `at_city_god`)。
+        阳寿已到或案子已结后仍可审,只记结论(属实记 UPHELD_LATE;此时超度 409 `not_in_wangsi`)。
         没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。
       parameters:
       - in: path
@@ -15508,7 +15545,9 @@ paths:
       description: |-
         Create a new reincarnation for a soul and immediately complete it.
         POST /reincarnation/reborn/
-        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
+        Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN",
+                "rebirth_form_reason": "..." }
+        `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
       tags:
       - v1
       requestBody:
@@ -26542,19 +26581,15 @@ components:
     DeathRegistrationRequestStatusEnum:
       enum:
       - PENDING
-      - ACCEPTED
       - PROCESSED
       - FAILED
       - DUPLICATE
-      - PARTIAL
       type: string
       description: |-
         * `PENDING` - Pending Validation
-        * `ACCEPTED` - Accepted - Processing
         * `PROCESSED` - Processed Successfully
         * `FAILED` - Processing Failed
         * `DUPLICATE` - Duplicate - Already Processed
-        * `PARTIAL` - Partially Processed (batch)
     DeathRegistrationSummary:
       type: object
       description: |-
@@ -27050,6 +27085,9 @@ components:
           type: string
           nullable: true
           readOnly: true
+        can_release:
+          type: boolean
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -27069,6 +27107,7 @@ components:
       - archive_reason
       - archived_at
       - archived_by_name
+      - can_release
       - created_at
       - executed_at
       - expired_at
@@ -27991,6 +28030,7 @@ components:
       - WANGSI_GRIEVANCE_FILED
       - WANGSI_GRIEVANCE_UPHELD
       - WANGSI_GRIEVANCE_REJECTED
+      - WANGSI_GRIEVANCE_DELIVERED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -28061,6 +28101,7 @@ components:
         * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
         * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
         * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+        * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -28689,11 +28730,15 @@ components:
       enum:
       - FILED
       - UPHELD
+      - UPHELD_LATE
+      - DELIVERED
       - REJECTED
       type: string
       description: |-
         * `FILED` - 已申诉
         * `UPHELD` - 属实 · 提前释放
+        * `UPHELD_LATE` - 属实 · 期满出城
+        * `DELIVERED` - 属实 · 超度
         * `REJECTED` - 不属实
     GuiltAndPenaltyReading:
       type: object
@@ -36731,6 +36776,9 @@ components:
           type: string
           nullable: true
           readOnly: true
+        can_release:
+          type: boolean
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -37685,6 +37733,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        desired_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -41685,6 +41737,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        desired_rebirth_form:
+          type: string
+          nullable: true
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -41709,6 +41765,7 @@ components:
       - current_state
       - date_problems
       - demerit_score
+      - desired_rebirth_form
       - diyu_station
       - ferry_century_passed
       - home_civilization
@@ -45503,6 +45560,9 @@ components:
         note:
           type: string
           maxLength: 2000
+        deliver:
+          type: boolean
+          default: false
       required:
       - note
       - upheld

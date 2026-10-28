@@ -57,6 +57,8 @@ class RebirthRequestSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
     #: 人道生在哪一洲(docs/07 §人道「四大部洲」);只有地府转人道可以给,别的 400 `rebirth_continent_not_applicable`。
     rebirth_continent = serializers.ChoiceField(choices=Soul.Continent.choices, required=False, allow_blank=True)
+    #: 选的道与灵魂已批准申请里的意愿不同时必填(400 `rebirth_form_reason_required`);记进转世事件(2026-10-29)。
+    rebirth_form_reason = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
     def validate_rebirth_form(self, value):
         """Refuses everything outside SIX_PATHS rather than naming OTHER, so

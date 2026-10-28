@@ -137,7 +137,8 @@ class TestArchiveGuard:
             name="Concluded Soul", tenant=self.tenant, current_state=SoulState.JUDGING
         )
         self.judgment = Judgment.objects.create(soul=self.soul, civilization=Civilization.CHINESE)
-        self.judgment.conclude("PASSED", "Lived well")
+        # FAILED:地府判无罪不发落(2026-10-29),这里要一份处置。
+        self.judgment.conclude("FAILED", "Lived well")
         self.disposition = Disposition.objects.get(judgment=self.judgment)
 
     def test_soul_with_concluded_judgment_refuses_delete(self):

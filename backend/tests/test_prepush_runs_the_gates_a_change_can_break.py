@@ -663,15 +663,15 @@ class TestWhatPytestIsInvokedWith:
         assert "-o faulthandler_exit_on_timeout=true" in joined, args
 
     def test_the_tests_keep_their_order_and_the_slowest_are_named(self, hook, checkouts, fake_backend):
-        """--ff and --dist worksteal both reorder the suite; tests that depend on the order then fail
-        (2026-10-28: 9 and 11 red with them on the full suite at -n 8, 0 without)."""
+        """No --ff. --dist worksteal is on (2026-10-29): plain -n left the slow migration round trips on one
+        worker at the end; the order dependence that made it red on 10-28 was fixed in the root conftest."""
         main, _ = checkouts
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert "--ff" not in args and "--failed-first" not in args, args
         assert "--durations=10" in args, args
         # The stand-in python has no xdist, so -n never reaches this line here: read the script for it.
         text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
-        assert 'XDIST="-n $PYTEST_WORKERS"' in text and "--dist worksteal\"" not in text
+        assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
 
     def test_an_ordinary_run_reuses_the_sqlite_template(self, hook, checkouts, fake_backend):
         main, _ = checkouts

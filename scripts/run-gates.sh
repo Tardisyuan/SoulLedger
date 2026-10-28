@@ -1034,11 +1034,14 @@ PROBE_PY
     # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
     XDIST=""
     if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
-        # NOT --dist worksteal, and no --ff below: both reorder the tests, and some realtime tests
-        # (test_realtime_bus, test_websocket_m12, test_workflow_events, test_scheduler_realtime_events)
-        # and test_testdb_name depend on the order. 2026-10-28 on the unRAID box, full suite, -n 8:
-        # with them 9 and 11 failed (a different set each run); with plain -n 8, 8061 passed, 0 failed.
-        XDIST="-n $PYTEST_WORKERS"
+        # --dist worksteal: an idle worker takes tests from a busy one. Plain -n hands out chunks up front,
+        # and the slow migration round trips (1–2 min each) ended up queued on one worker: the full run sat
+        # at 99% for 30–40 minutes on one busy worker with seven idle (2026-10-29, twice).
+        # It was off from 2026-10-28 because reordering turned realtime tests red (9 and 11 failures). The
+        # cause was test_event_bus emptying the process-wide handler registry; the root conftest now restores
+        # it after every test (6d2c21dd), and two worksteal full runs then passed 8076/8076.
+        # Still no --ff: it reorders across runs for no gain once the suite is this short.
+        XDIST="-n $PYTEST_WORKERS --dist worksteal"
         echo "    (pytest-xdist: $XDIST)"
     fi
     # A full run (--full, GATES_FULL=1, a push to main) migrates for real instead of

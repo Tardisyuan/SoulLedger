@@ -829,7 +829,7 @@ def test_a_soul_serving_its_plan_abroad_may_not_apply_until_the_plan_completes(
     soul = account.soul
     judgment = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
     plan.bench(judgment, [(eg, plan.stop_realm(eg), 5)])
-    judgment.conclude("PASSED", "")
+    judgment.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     plan.walk_flow(judgment)  # 原审的处置等审批流程走完才执行(2026-10-29)
     p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)
