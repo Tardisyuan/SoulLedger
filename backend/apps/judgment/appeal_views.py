@@ -169,7 +169,9 @@ _REFUSALS = {403: JudgmentClaimRefusalSerializer, 404: JudgmentClaimRefusalSeria
 
 class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin,
                             mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。"""
+    """本殿的申诉。`?status=PENDING` 是待复核队列;`?status__in=UPHELD,AMENDED` 是「已结案」一个页签。
+    `reviewer__isnull`:上诉的流程跑着时是 IN_REVIEW 而没有复核人 —— 网页把它放进「待复核」页签(第五十五批 E-1),
+    「复核中」只列有复核人的。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
@@ -177,7 +179,7 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer", "workflow").prefetch_related(
         "workflow__nodes").all()
     serializer_class = JudgmentAppealSerializer
-    filterset_fields = {"status": ["exact", "in"]}
+    filterset_fields = {"status": ["exact", "in"], "reviewer": ["isnull"]}
 
     def _answer(self, run):
         appeal = self.get_object()  # 别的殿的申诉在这里就是 404
