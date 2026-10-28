@@ -118,21 +118,15 @@ def _tenant(civilization: str) -> Tenant:
     return Tenant.objects.get(code=CIVILIZATION_TENANT[civilization])
 
 
-def _rejected_original(civilization, tenant, name):
-    """A workflow to appeal against, built without a judgment.
+def _appeal_door(civilization, tenant, name):
+    """The production door of an appeal flow: `appeals._start_ladder` → `start_workflow(case_type=APPEAL)`.
 
-    `ApprovalWorkflow.judgment` is a OneToOne, so an original *with* one cannot
-    be followed by a second workflow on the same judgment —
-    `tests/test_workflow_appeal_across_civilizations.py` records the same
-    constraint.
+    `WorkflowService.create_appeal_workflow`, the door these tests were written against, had no production caller
+    and built flows apart from `start_workflow`; it was removed on 2026-10-29. The same assertions now hold the
+    door that is used.
     """
-    return ApprovalWorkflow.objects.create(
-        soul=Soul.objects.create(name=name, tenant=tenant),
-        workflow_name="原流程",
-        case_type=CaseType.ROUTINE,
-        status=ApprovalWorkflowStatus.REJECTED,
-        tenant=tenant,
-    )
+    soul = Soul.objects.create(name=name, tenant=tenant)
+    return WorkflowService.start_workflow(soul, case_type=CaseType.APPEAL, tenant=tenant, is_appeal=True)
 
 
 # ── the case: four civilizations, one door ───────────────────────────
@@ -140,7 +134,7 @@ def _rejected_original(civilization, tenant, name):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("civilization", CIVILIZATIONS)
-def test_create_appeal_workflow_builds_nodes_for_every_civilization(
+def test_the_appeal_door_builds_nodes_for_every_civilization(
     seeded, civilization
 ):
     """THE regression. Before the fix, EUROPEAN and EGYPTIAN came back empty.
@@ -152,9 +146,7 @@ def test_create_appeal_workflow_builds_nodes_for_every_civilization(
         CHINESE:  nodes=4 status=IN_PROGRESS current_node=魏征 · 察查司
     """
     tenant = _tenant(civilization)
-    original = _rejected_original(civilization, tenant, f"{civilization} 申诉魂")
-
-    appeal = WorkflowService.create_appeal_workflow(original)
+    appeal = _appeal_door(civilization, tenant, f"{civilization} 申诉魂")
 
     # Read unfiltered, so a tenant contextvar cannot make an empty result look
     # like a pass.
@@ -187,9 +179,7 @@ def test_both_doors_build_the_same_appeal_flow(seeded, civilization):
         verdict="REJECTED", is_final=True, tenant=tenant,
     )
     through_judgment = WorkflowService.create_from_judgment(judgment, is_appeal=True)
-    through_appeal_door = WorkflowService.create_appeal_workflow(
-        _rejected_original(civilization, tenant, f"{civilization} 门二申诉魂")
-    )
+    through_appeal_door = _appeal_door(civilization, tenant, f"{civilization} 门二申诉魂")
 
     def shape(workflow):
         return [
@@ -244,11 +234,9 @@ def test_the_appeal_door_reads_the_tenant_s_own_stored_template(seeded):
         }],
     )
 
-    appeal = WorkflowService.create_appeal_workflow(
-        _rejected_original(Civilization.EUROPEAN, tenant, "自定模板申诉魂")
-    )
+    appeal = _appeal_door(Civilization.EUROPEAN, tenant, "自定模板申诉魂")
 
-    assert appeal.workflow_name == "申诉: 原流程"  # the name still names the original
+    assert appeal.workflow_name == "本租户自定申诉流程"
     assert [node.node_name for node in appeal.nodes.all()] == ["Christ · 终审"], (
         "the stored template was ignored; the hardcoded table answered instead"
     )
@@ -336,9 +324,7 @@ def test_the_new_appeal_nodes_designate_the_gods_the_cast_supplies(
     `TEMPLATE_NODES_WITHOUT_AN_APPROVER`.
     """
     tenant = _tenant(civilization)
-    appeal = WorkflowService.create_appeal_workflow(
-        _rejected_original(civilization, tenant, f"{civilization} 名册申诉魂")
-    )
+    appeal = _appeal_door(civilization, tenant, f"{civilization} 名册申诉魂")
 
     actual = [
         (node.node_name, node.approver_type,

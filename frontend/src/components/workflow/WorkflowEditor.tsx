@@ -268,6 +268,25 @@ const FIT_OPTIONS = { padding: { top: "64px", bottom: "64px", left: "24px", righ
 const TOOL_SELECT =
   "flex shrink-0 items-center gap-2 h-(--control-h-sm) pl-3 pr-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))]";
 
+/**
+ * The case types each civilization has — the backend's `VALID_CASE_TYPES_BY_CIVILIZATION`
+ * (`backend/apps/workflow/templates.py`), which a template save refuses outside of with 400
+ * `case_type_not_for_civilization` (2026-10-29). The picker lists only these, so a template no workflow can be
+ * built for is not offered. `backend/tests/test_workflow_preset_case_types.py` reads this table as text and holds
+ * it equal to the backend's: keep one `CIV: ["A", "B"],` line per civilization.
+ */
+const CASE_TYPES_BY_CIVILIZATION: Record<CivilizationOption, readonly string[]> = {
+  CHINESE: ["ROUTINE", "APPEAL", "CROSS_REALM", "SPECIAL"],
+  EUROPEAN: ["CANONIZATION", "PURGATORY_REVIEW", "HERESY_TRIAL", "ROUTINE", "APPEAL"],
+  EGYPTIAN: ["HEART_WEIGHING", "DIVINE_TRIAL", "ROUTINE", "APPEAL"],
+  GREEK: ["ROUTINE"],
+};
+
+/** The save / publish refusal code for a case type the civilization does not have. */
+function caseTypeRefused(error: unknown): boolean {
+  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "case_type_not_for_civilization";
+}
+
 export interface WorkflowTemplateInput {
   name: string;
   description: string;
@@ -345,6 +364,7 @@ export default function WorkflowEditor({
   // relabels somebody else's flow, and saving would file Aeacus, Rhadamanthus
   // and Plato's Minos under the Chinese ten courts.
   const [templateCiv, setTemplateCiv] = useState<CivilizationOption>("CHINESE");
+  const caseTypes = CASE_TYPES_BY_CIVILIZATION[templateCiv];
   const [templateCaseType, setTemplateCaseType] = useState("ROUTINE");
   // 0=普通 by default, the same floor the model column has.
   const [templatePriority, setTemplatePriority] = useState(0);
@@ -651,8 +671,8 @@ export default function WorkflowEditor({
       showToast(t("workflow.editor.saved"), "success");
       finish();
     },
-    onError: () => {
-      showToast(t("workflow.editor.save_failed"), "error");
+    onError: (error: unknown) => {
+      showToast(t(caseTypeRefused(error) ? "workflow.editor.case_type_not_for_civilization" : "workflow.editor.save_failed"), "error");
     },
   });
 
@@ -676,7 +696,9 @@ export default function WorkflowEditor({
       showToast(
         Array.isArray(issues)
           ? t("workflow.editor.publish_rejected", { n: String(issues.length) })
-          : t("workflow.editor.publish_failed"),
+          : caseTypeRefused(error)
+            ? t("workflow.editor.case_type_not_for_civilization")
+            : t("workflow.editor.publish_failed"),
         "error"
       );
     },
@@ -1610,7 +1632,12 @@ export default function WorkflowEditor({
           </span>
           <select
             value={templateCiv}
-            onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
+            onChange={(e) => {
+              const civ = e.target.value as typeof templateCiv;
+              setTemplateCiv(civ);
+              // A case type the new civilization does not have falls back to ROUTINE, which every one has.
+              if (!CASE_TYPES_BY_CIVILIZATION[civ].includes(templateCaseType)) setTemplateCaseType("ROUTINE");
+            }}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
             className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
@@ -1639,16 +1666,17 @@ export default function WorkflowEditor({
                 `backend/tests/test_workflow_preset_case_types.py` reads them as
                 text to prove every preset's case type is selectable. A `.map`
                 over a const array leaves that test nothing to read (it went
-                red after the v3 A1 change did exactly that). */}
-            <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
-            <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
-            <option value="CROSS_REALM">{t("workflow.case_types.CROSS_REALM")}</option>
-            <option value="SPECIAL">{t("workflow.case_types.SPECIAL")}</option>
-            <option value="CANONIZATION">{t("workflow.case_types.CANONIZATION")}</option>
-            <option value="PURGATORY_REVIEW">{t("workflow.case_types.PURGATORY_REVIEW")}</option>
-            <option value="HERESY_TRIAL">{t("workflow.case_types.HERESY_TRIAL")}</option>
-            <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>
-            <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>
+                red after the v3 A1 change did exactly that). Each is shown only when the selected civilization
+                has that case type (`CASE_TYPES_BY_CIVILIZATION`, 2026-10-29). */}
+            {caseTypes.includes("ROUTINE") && <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>}
+            {caseTypes.includes("APPEAL") && <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>}
+            {caseTypes.includes("CROSS_REALM") && <option value="CROSS_REALM">{t("workflow.case_types.CROSS_REALM")}</option>}
+            {caseTypes.includes("SPECIAL") && <option value="SPECIAL">{t("workflow.case_types.SPECIAL")}</option>}
+            {caseTypes.includes("CANONIZATION") && <option value="CANONIZATION">{t("workflow.case_types.CANONIZATION")}</option>}
+            {caseTypes.includes("PURGATORY_REVIEW") && <option value="PURGATORY_REVIEW">{t("workflow.case_types.PURGATORY_REVIEW")}</option>}
+            {caseTypes.includes("HERESY_TRIAL") && <option value="HERESY_TRIAL">{t("workflow.case_types.HERESY_TRIAL")}</option>}
+            {caseTypes.includes("HEART_WEIGHING") && <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>}
+            {caseTypes.includes("DIVINE_TRIAL") && <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>}
           </select>
         </label>
         {/* Priority as a 0 / 1 / 2 segment, v3 A1. A radio group, so arrow keys

@@ -45,6 +45,7 @@ MESSAGES = {
         "workflow_node_passed": {"title": "流程通知", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"},
         "workflow_timeout_reminder": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，请尽快处理。"},
         "workflow_timeout_escalated": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"},
+        "workflow_timeout_failed": {"title": "审批超时处理失败", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」超时，但超时动作没能执行，流程停在这一站，请人工处理。"},
         "workflow_pick_nodes": {"title": "请为本域选站", "body": "{{soul}} · {{realm}}发起的审批流程，本域排第 {{order}}。轮到本域之前请选好。"},
         "workflow_pick_waiting": {"title": "流程在等本域选站", "body": "{{soul}} · {{realm}}的站已走完，选好本域这一段才能继续。"},
         "workflow_pick_overdue": {"title": "{{realm}}超过 3 天未选站", "body": "{{soul}} · 审批流程停在{{realm}}门口已 {{n}} 天。可以再提醒，或按默认流程走。"},
@@ -108,6 +109,7 @@ MESSAGES = {
         "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
         "workflow_timeout_reminder": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours. Please handle it soon."},
         "workflow_timeout_escalated": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."},
+        "workflow_timeout_failed": {"title": "Approval timeout failed", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} timed out, but its timeout action could not be carried out. The flow waits at that step; please handle it by hand."},
         "workflow_pick_nodes": {"title": "Pick this realm's stations", "body": "{{soul}} · approval flow from {{realm}}; this realm is no. {{order}}. Pick before your turn."},
         "workflow_pick_waiting": {"title": "A flow is waiting for this realm to pick", "body": "{{soul}} · {{realm}}'s stations are done; it continues once this realm picks."},
         "workflow_pick_overdue": {"title": "{{realm}} hasn't picked in 3 days", "body": "{{soul}} · the flow has waited at {{realm}} for {{n}} days. Remind again, or go with the default flow."},
@@ -250,6 +252,7 @@ VARIANTS = {
     # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。
     # 第四十三批:选站待办、门口等待、逾期、加减站、撤回(apps/workflow/segments.py)也走 WORKFLOW_ASSIGNED。
     "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated",
+                          "workflow_timeout_failed",
                           "workflow_pick_nodes", "workflow_pick_waiting", "workflow_pick_overdue",
                           "workflow_nodes_adjusted", "workflow_pick_withdrawn"},
     "cross_judgment_concluded": {"cross_judgment_concluded_fail", "cross_judgment_cancelled"},

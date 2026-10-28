@@ -115,14 +115,12 @@ def test_every_way_of_opening_a_diyu_case_is_refused_without_a_city_god(hall, cn
     assert (record.status, record.error_code, record.judgment_id) == ("FAILED", "NO_CITY_GOD", None)
     assert untouched(tudi_soul)
 
+    # 勾魂:发牒时就拒(2026-10-29),同一个 409 `no_city_god`;此前发牒、拘到都照走,到交接才拒。
     captured = alive("勾魂")
-    warrant = capture.issue(captured)
-    assert warrant.city_god is None
-    capture.capture(warrant.pk)
     with pytest.raises(city_gods.NoCityGodError):
-        capture.hand_over(warrant.pk)
+        capture.issue(captured)
     assert untouched(captured)
-    assert CaptureWarrant.objects.get(pk=warrant.pk).status == "CAPTURED"  # 交接整笔回滚,牒还在拘到那一步
+    assert not CaptureWarrant.objects.filter(soul=captured).exists()
 
     # 设了兜底城隍,同一条土地公登记重试就过(NO_CITY_GOD 可重试,`RETRYABLE_ERRORS`)。
     CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)

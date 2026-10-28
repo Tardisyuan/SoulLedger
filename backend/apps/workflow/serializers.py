@@ -6,6 +6,7 @@ from datetime import timedelta
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 
 from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import tenant_scoped
@@ -146,6 +147,32 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
         return super().to_representation(instance)
 
 
+class TemplatePairRefusedError(APIException):
+    """400 with `template_pair_refusal`'s body as it is (a `ValidationError` would wrap each value in a list, and
+    clients branch on a scalar `code`)."""
+
+    status_code = 400
+    default_code = "case_type_not_for_civilization"
+
+    def __init__(self, body):
+        super().__init__(body)
+
+
+#: The refusal code of a template whose case type its civilization does not have.
+CASE_TYPE_NOT_FOR_CIVILIZATION = "case_type_not_for_civilization"
+
+
+def template_pair_refusal(civilization, case_type) -> dict | None:
+    """The 400 body for a template pair no workflow can be built for, or None. Shared by save and publish."""
+    from apps.workflow.services import WorkflowService
+
+    message = WorkflowService.validate_civilization_case_type(civilization, case_type)
+    if message is None:
+        return None
+    return {"code": CASE_TYPE_NOT_FOR_CIVILIZATION, "case_type": [message],
+            "civilization": civilization, "case_type_value": case_type}
+
+
 class WorkflowTemplateSerializer(serializers.ModelSerializer):
     """Serializer for WorkflowTemplate.
 
@@ -210,6 +237,22 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             working_nodes(instance), many=True
         ).data
         return data
+
+    def validate(self, attrs):
+        """A template's (civilization, case type) must be a pair a workflow can be built for
+        (`VALID_CASE_TYPES_BY_CIVILIZATION`, 2026-10-29). Saved unchecked, a mismatched template was stored and
+        then never used: every workflow of that pair is refused at `start_workflow`."""
+        def value(field):
+            if field in attrs:
+                return attrs[field]
+            if self.instance is not None:
+                return getattr(self.instance, field)
+            return WorkflowTemplate._meta.get_field(field).default  # what a create without it stores
+
+        refusal = template_pair_refusal(value("civilization"), value("case_type"))
+        if refusal is not None:
+            raise TemplatePairRefusedError(refusal)
+        return attrs
 
     def _save_nodes(self, template, nodes):
         from apps.workflow.versioning import save_draft
@@ -999,7 +1042,7 @@ class WorkflowAdjustSerializer(serializers.Serializer):
 
 
 class WorkflowReasonSerializer(serializers.Serializer):
-    """`POST /workflows/{id}/segments/{order}/use-default/`."""
+    """`POST /workflows/{id}/segments/{order}/use-default/` and `POST /workflows/{id}/advance/`."""
 
     reason = serializers.CharField(max_length=1000)
 

@@ -1312,6 +1312,7 @@
       "published": "Published v{{n}}",
       "publish_rejected": "Publish refused: {{n}} checks failing",
       "publish_failed": "Publish failed",
+      "case_type_not_for_civilization": "This civilization has no such case type; pick another case type and save again.",
       "version": {
         "draft": "Draft v{{n}}",
         "published": "Published v{{n}}",
@@ -1514,6 +1515,9 @@
       "escalate_success": "Escalated; the reason has been recorded",
       "escalate_error": "Escalation failed",
       "escalate_needs_reason": "Escalation requires a written reason",
+      "advance_reason_label": "Reason to advance (required, recorded in the audit log)",
+      "advance_reason_placeholder": "Why the current step is passed without a decision",
+      "advance_needs_reason": "Advancing needs a reason",
       "approver_name_absent": "the node carries the approver's primary key; the backend sends no name",
       "reason_for_soul": "Rejection reason for the soul",
       "reason_for_soul_hint": "The soul will see this reason; internal notes stay hidden. Up to 2000 characters.",
@@ -4091,6 +4095,7 @@
       "eternal_sentence": "{{name}} serves an eternal sentence; there is no next life.",
       "rebirth_not_approved": "{{name}}'s rebirth application was rejected or is still under review; no rebirth.",
       "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
+      "disposition_not_executed": "{{name}} still has a disposition that has not been executed; execute it and let the term run out before the rebirth.",
       "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path."
     },
     "next_continent": "Continent of the next life · optional",
@@ -5842,6 +5847,10 @@
     "workflow_timeout_escalated": {
       "title": "Approval overdue",
       "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."
+    },
+    "workflow_timeout_failed": {
+      "title": "Approval timeout failed",
+      "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} timed out, but its timeout action could not be carried out. The flow waits at that step; please handle it by hand."
     },
     "cross_judgment_concluded": {
       "title": "Cross-realm judgment concluded",

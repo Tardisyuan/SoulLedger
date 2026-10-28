@@ -311,23 +311,28 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
     now = timezone.now()
 
     due = [
-        pk
-        for pk, y, m, d, executed_at, years, lost_days in candidates(tenant.pk, today).values_list(
-            "pk", "term_start_year", "term_start_month", "term_start_day", "executed_at", "sentence_years",
-            "lost_days",
+        (pk, soul_id)
+        for pk, soul_id, y, m, d, executed_at, years, lost_days in candidates(tenant.pk, today).values_list(
+            "pk", "soul_id", "term_start_year", "term_start_month", "term_start_day", "executed_at",
+            "sentence_years", "lost_days",
         ).iterator(chunk_size=EXPIRY_CHUNK)
         if term_has_ended(effective_term_start((y, m, d), executed_at), years, today, lost_days)
     ]
 
     expired = 0
     failed = []
-    for pk in due:
+    from apps.souls.models import Soul
+
+    for pk, soul_id in due:
         # One row's failure (today: its DISPOSITION_EXPIRED event could not be written, which rolls the row's
         # expiry back with it) must neither pass silently nor stop the other rows. It is logged with the
         # original exception, counted, and reported in the result; the row stays due and is retried by the next
         # run (idempotent).
         try:
             with transaction.atomic():
+                # The soul first, then the row: the lock order of an appeal's amendment (soul → plan → nodes →
+                # dispositions) and of the officer's release (`views.release`), 2026-10-29.
+                Soul.all_objects.select_for_update(of=("self",)).filter(pk=soul_id).first()
                 row = (
                     Disposition.objects.select_for_update(of=("self",))
                     .select_related("soul", "destination_realm")

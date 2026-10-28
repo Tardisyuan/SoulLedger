@@ -874,3 +874,35 @@ describe("WorkflowEditor · below 1024 px", () => {
     expect(within(inspector).queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * The case-type picker lists only the case types the selected civilization has (2026-10-29): the backend refuses a
+ * template outside `VALID_CASE_TYPES_BY_CIVILIZATION` with 400 `case_type_not_for_civilization`, so the editor
+ * must not offer one. Switching to a civilization without the chosen case type falls back to ROUTINE.
+ */
+describe("WorkflowEditor · case types follow the civilization", () => {
+  const caseTypeSelect = () => screen.getByRole("combobox", { name: "Case Type" });
+  const civilizationSelect = () => screen.getByRole("combobox", { name: "Civilization" });
+  const offered = () => within(caseTypeSelect()).getAllByRole("option").map((o) => (o as HTMLOptionElement).value);
+
+  it("offers the Chinese case types only, then the Greek one only", () => {
+    renderWithProviders(<WorkflowEditor />);
+    expect(offered()).toEqual(["ROUTINE", "APPEAL", "CROSS_REALM", "SPECIAL"]);
+    fireEvent.change(civilizationSelect(), { target: { value: "GREEK" } });
+    expect(offered()).toEqual(["ROUTINE"]);
+  });
+
+  it("a case type the new civilization lacks falls back to ROUTINE, and that is what is saved", async () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    renderWithProviders(<WorkflowEditor />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "SPECIAL" } });
+    fireEvent.change(civilizationSelect(), { target: { value: "EGYPTIAN" } });
+    expect((caseTypeSelect() as HTMLSelectElement).value).toBe("ROUTINE");
+    expect(offered()).not.toContain("SPECIAL");
+    fireEvent.click(screen.getByText(/Save Template/));
+    await waitFor(() => expect(workflowApi.templates.create).toHaveBeenCalled());
+    expect(workflowApi.templates.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ civilization: "EGYPTIAN", case_type: "ROUTINE" })
+    );
+  });
+});

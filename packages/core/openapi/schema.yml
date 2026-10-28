@@ -21965,20 +21965,14 @@ paths:
         schema:
           type: string
           enum:
-          - APPEAL
-          - APPROVED
           - COMPLETED
-          - EXCEPTION
           - IN_PROGRESS
           - PENDING
           - REJECTED
         description: |-
           * `PENDING` - 待审批
           * `IN_PROGRESS` - 审批中
-          * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
-          * `APPEAL` - 申诉中
-          * `EXCEPTION` - 异常处理
           * `COMPLETED` - 流程完成
       tags:
       - v1
@@ -22161,11 +22155,11 @@ paths:
     post:
       operationId: v1_workflows_advance_create
       description: |-
-        Manually advance workflow to next pending node.
+        Manually advance workflow to the next stop.
 
-        Moves the pointer only; the node being left is not decided and stays
-        PENDING, so it can be returned to. Getting *past* an undecided node is
-        `escalate`, which records the skip.
+        Moves the pointer only: the stop being left is marked SKIPPED (nobody decided it) and the next one is where
+        a PASS would have gone. Like `escalate` it demands a written reason and leaves an audit record naming who
+        moved the flow past which stop and why (2026-10-29).
       parameters:
       - in: path
         name: id
@@ -22180,13 +22174,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowReason'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowReason'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
+              $ref: '#/components/schemas/WorkflowReason'
         required: true
       security:
       - jwtAuth: []
@@ -22196,6 +22190,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/workflows/{id}/approve_node/:
     post:
@@ -22567,20 +22575,14 @@ paths:
         schema:
           type: string
           enum:
-          - APPEAL
-          - APPROVED
           - COMPLETED
-          - EXCEPTION
           - IN_PROGRESS
           - PENDING
           - REJECTED
         description: |-
           * `PENDING` - 待审批
           * `IN_PROGRESS` - 审批中
-          * `APPROVED` - 已批准
           * `REJECTED` - 已拒绝
-          * `APPEAL` - 申诉中
-          * `EXCEPTION` - 异常处理
           * `COMPLETED` - 流程完成
       tags:
       - v1
@@ -45870,7 +45872,8 @@ components:
       - version
     WorkflowReason:
       type: object
-      description: '`POST /workflows/{id}/segments/{order}/use-default/`.'
+      description: '`POST /workflows/{id}/segments/{order}/use-default/` and `POST
+        /workflows/{id}/advance/`.'
       properties:
         reason:
           type: string
