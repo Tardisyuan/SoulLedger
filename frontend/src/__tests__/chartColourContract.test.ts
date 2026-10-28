@@ -68,7 +68,11 @@ describe("charts are a gray-blue ramp plus patterns (规范 v2 A5)", () => {
 
   it("every data colour is a ramp step — no status, plaque or accent colour", () => {
     for (const table of DATA_TABLES) {
-      for (const token of Object.values(CHART_TOKENS[table])) expect(token).toMatch(/^--color-chart-[1-6]$/);
+      for (const [key, token] of Object.entries(CHART_TOKENS[table])) {
+        // ANNIHILATION's placeholder box is ink-muted: it never holds data (Design 55).
+        if (table === "REALM_COLORS" && key === "ANNIHILATION") expect(token).toBe("--color-ink-muted");
+        else expect(token).toMatch(/^--color-chart-[1-6]$/);
+      }
     }
   });
 
