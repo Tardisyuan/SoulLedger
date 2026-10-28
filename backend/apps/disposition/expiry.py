@@ -233,11 +233,19 @@ def ascend_from_purgatory(disposition, *, via: str) -> bool:
         logger.warning("purgatory: hall %s has no %s; soul %s stays", disposition.tenant_id,
                        DispositionService.EU_HEAVEN, soul.pk)
         return False
+    # 先经地上乐园(2026-10-28,docs/03 §5.1;Purg. XXVIII-XXXIII):山顶饮 Lethe 忘罪、饮 Eunoè 忆善,
+    # 「纯净、准备好登上群星」,然后才升天堂。行程上留下这一站;租户没有这一行(未重跑种子)就直接升,照旧。
+    summit = realm_by_code(DispositionService.EU_EARTHLY_PARADISE, tenant_id=disposition.tenant_id)
     with transaction.atomic():
+        if summit is not None and summit.pk != realm.pk:
+            SoulPathService.enter(soul, summit, tenant_id=disposition.tenant_id)
         SoulPathService.enter(soul, heaven, tenant_id=disposition.tenant_id)
         EventService.log(soul, "PURGATORY_ASCENDED", {
             "disposition_id": str(disposition.pk), "from_realm": realm.realm_code, "realm": heaven.realm_code,
             "via": via,
+            # 经过的山顶与两道水(Lethe 在前,Eunoè 在后);没经过山顶时两项都空。
+            "through": summit.realm_code if summit is not None else "",
+            "waters": ["LETHE", "EUNOE"] if summit is not None else [],
         })
     return True
 

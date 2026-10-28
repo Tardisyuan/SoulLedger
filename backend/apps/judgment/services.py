@@ -272,6 +272,14 @@ class JudgmentConclusionService:
                     "A cross-realm judgment is open on this case; conclude it before hearing the case again",
                     "retry_with_open_cross", status=409)
 
+            # 欧洲 大罪 / 小罪(2026-10-28,docs/01 §1.2-1.3、03 §二):未悔的大罪下地狱,小罪与已告解的大罪进炼狱。
+            # 与已采信的证据不符的裁决拒绝(400 `mortal_sin_unrepented` / `no_mortal_sin`),什么都没写。
+            if (judgment.kind != JudgmentKind.AMENDMENT
+                    and judgment.soul.civilization == Civilization.EUROPEAN):
+                from apps.disposition.services import DispositionService
+                DispositionService.refuse_against_gravity(
+                    judgment.soul, verdict, excluded=EvidenceAdmissionService.not_admitted_ids(judgment))
+
             # An Egyptian original that is not weighed again runs the weighing flow (Thoth, the tribunal,
             # Horus, Osiris — or Ammit): execution waits for it (docs/02 §2.1, §5.1–5.2).
             if weighed is not None and not wavering and judgment.kind == JudgmentKind.ORIGINAL:

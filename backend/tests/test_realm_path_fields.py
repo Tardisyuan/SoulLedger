@@ -87,6 +87,8 @@ def test_european_rows_carry_region_and_level_where_dante_gives_one(seeded):
     assert (eu["EU_EARTHLY_PARADISE"].region, eu["EU_EARTHLY_PARADISE"].level) == (CommediaRegion.PURGATORIO, 8)
     # 有 region、没有 level:渡口在地狱篇里,但不在任何一层上;山与天堂是整体。
     assert (eu["EU_ACHERON"].region, eu["EU_ACHERON"].level) == (CommediaRegion.INFERNO, None)
+    # 前庭(Inf. III,2026-10-28)同理:在地狱之门内、阿刻戎之前,不在九圈任何一层上。
+    assert (eu["EU_ANTINFERNO"].region, eu["EU_ANTINFERNO"].level) == (CommediaRegion.INFERNO, None)
     assert (eu["EU_PURGATORY"].region, eu["EU_PURGATORY"].level) == (CommediaRegion.PURGATORIO, None)
     assert (eu["EU_HEAVEN"].region, eu["EU_HEAVEN"].level) == (CommediaRegion.PARADISO, None)
     # 没有 ring / bolgia 被种成 realm,所以 sublevel 一行都没有。

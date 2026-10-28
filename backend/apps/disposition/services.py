@@ -54,6 +54,20 @@ class DispositionService:
     # European realms
     EU_HEAVEN = "EU_HEAVEN"
     EU_PURGATORY = "EU_PURGATORY"
+    # 2026-10-28: the vestibule (Inf. III) for the neutrals, and the seven terraces by the sin purged on each
+    # (Purg. X-XXVII, docs/03 §五). `tier` on the terrace rows is the same number as `purgatorio_terrace` on the
+    # EU-DS-T1..T7 articles a deed cites.
+    EU_ANTINFERNO = "EU_ANTINFERNO"
+    EU_EARTHLY_PARADISE = "EU_EARTHLY_PARADISE"
+    EU_PURGATORY_TERRACES = {
+        1: "EU_PURGATORY_T1_PRIDE",
+        2: "EU_PURGATORY_T2_ENVY",
+        3: "EU_PURGATORY_T3_WRATH",
+        4: "EU_PURGATORY_T4_SLOTH",
+        5: "EU_PURGATORY_T5_AVARICE",
+        6: "EU_PURGATORY_T6_GLUTTONY",
+        7: "EU_PURGATORY_T7_LUST",
+    }
     EU_HELL_CIRCLES = {
         1: "EU_HELL_1ST",   # Limbo
         2: "EU_HELL_2ND",   # Lust
@@ -505,6 +519,10 @@ class DispositionService:
             kinds = [c for c in kinds if c is not None]
             if kinds:
                 return cls.EU_HELL_CIRCLES[max(kinds)]
+            # The neutrals (Inf. III): outside the nine circles, so before the ladder — and after any cited
+            # circle, because a soul with a classified deed did not live "without infamy".
+            if soul is not None and soul.neutral_in_life:
+                return cls.EU_ANTINFERNO
 
             # culpa / 15 → circle 1-9. A stopgap ladder on the right number,
             # not Dante's basis; see §2 and §3 above. culpa is a demerit total
@@ -521,7 +539,68 @@ class DispositionService:
         # heard again instead (`JudgmentConclusionService`), and a reopen or an
         # appeal to RETRY is refused (`sentence_plan.requests`): purgatory holds
         # only the saved (docs/01 §1.2) and ascends to heaven when served.
+        #
+        # BY TERRACE WHERE THE SIN IS CITED (2026-10-28, docs/03 §五). A deed filed under one of the seven
+        # EU-DS-T* articles (`SoulRecord.statute`) names the sin, and the article names its terrace. The soul
+        # starts on the LOWEST terrace it owes — the climb is bottom to top (Purg. X-XXVII) — and the summit
+        # (`ascend_from_purgatory`) is reached by finishing it. No cited capital sin: the mountain, as before.
+        if verdict == Verdict.PURGATORY:
+            terrace = cls._lowest_cited_terrace(soul, excluded)
+            if terrace is not None:
+                return cls.EU_PURGATORY_TERRACES[terrace]
         return cls.EU_PURGATORY
+
+    @classmethod
+    def _cited_demerits(cls, soul: Soul, excluded=()):
+        """This life's DEMERIT records the case admits (all of them for a caller without a case)."""
+        return soul.current_life_records().filter(record_type="DEMERIT").exclude(pk__in=list(excluded))
+
+    @classmethod
+    def _lowest_cited_terrace(cls, soul: Soul, excluded=()) -> int | None:
+        """The lowest Purgatorio terrace any admitted DEMERIT deed's DEADLY_SIN article names, or None.
+
+        Read off the article's `payload_json["purgatorio_terrace"]` (statutes_european), never off the code —
+        the same rule `_deepest_cited_circle` follows. soul=None (the `allowed_realm_codes` sweep) has no deeds.
+        """
+        if soul is None:
+            return None
+        terraces = [
+            terrace
+            for terrace in cls._cited_demerits(soul, excluded).filter(statute__corpus="DEADLY_SIN")
+            .values_list("statute__payload_json__purgatorio_terrace", flat=True)
+            if isinstance(terrace, int) and terrace in cls.EU_PURGATORY_TERRACES
+        ]
+        return min(terraces) if terraces else None
+
+    @classmethod
+    def refuse_against_gravity(cls, soul: Soul, verdict: str, excluded=()) -> None:
+        """Mortal or venial decides hell or purgatory (docs/01 §1.2-1.3, docs/03 §二). Raises on a mismatch.
+
+        * An admitted mortal sin unrepented at death (`SinGravity.MORTAL`) is self-exclusion from God
+          (CCC 1033): PASSED or PURGATORY is refused, 400 `mortal_sin_unrepented`.
+        * FAILED needs a mortal sin when every admitted demerit is classified and none is unrepented-mortal
+          (venial sins "do not bring eternal death", a confessed mortal sin's eternal punishment is remitted):
+          400 `no_mortal_sin`. An unclassified demerit, a denial of immortality (the sixth circle's belief) or
+          a neutral life (the vestibule) leaves FAILED as it was — nothing here says what those weigh.
+        RETRY is not checked: an original RETRY hears the case again, and elsewhere it is refused already.
+        Only European souls; the caller checks the civilization.
+        """
+        from apps.sentence_plan.requests import PlanChangeRefusedError
+        from apps.souls.record_models import SinGravity
+
+        if verdict == Verdict.RETRY:
+            return
+        gravities = list(cls._cited_demerits(soul, excluded).values_list("sin_gravity", flat=True))
+        mortal = SinGravity.MORTAL in gravities
+        if mortal and verdict in (Verdict.PASSED, Verdict.PURGATORY):
+            raise PlanChangeRefusedError(
+                "An admitted mortal sin unrepented at death excludes heaven and purgatory; the verdict is FAILED",
+                "mortal_sin_unrepented")
+        if (verdict == Verdict.FAILED and gravities and not mortal and "" not in gravities
+                and not soul.denied_immortality and not soul.neutral_in_life):
+            raise PlanChangeRefusedError(
+                "Every admitted sin is venial or absolved; they are purged, not damned — the verdict is PURGATORY",
+                "no_mortal_sin")
 
     @classmethod
     def _deepest_cited_circle(cls, soul: Soul, excluded=()) -> int | None:

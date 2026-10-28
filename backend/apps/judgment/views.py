@@ -27,6 +27,7 @@ from apps.judgment import attachments as _attachments  # noqa: F401  (注册 pos
 from apps.judgment import claims
 from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
+from apps.judgment.confession_views import NegativeConfessionActionsMixin
 from apps.judgment.models import AT_CITY_GOD, Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
@@ -196,7 +197,7 @@ def _enter_judgment_realm(soul, judgment):
 COMMENTS_CAP = 500
 
 
-class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
     Tenant-isolated via TenantPermission.
@@ -264,6 +265,9 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         # officer who may conclude may do these, and nobody else. Same
         # codename, same tenant scoping through `get_object`.
         'rule_evidence': ['judgment.execute'],
+        # 42 条否定告白(埃及称心):看是读,逐条记录是对案子动手,与采信证据同一码名。
+        'negative_confessions': ['judgment.read'],
+        'record_negative_confession': ['judgment.execute'],
         'save_draft': ['judgment.execute'],
         # 认领 / 释放 / 暂缓 / 撤销暂缓是办案人对自己手上的案子做的事,与结案同一码名。
         # 替别人释放或暂缓不另立码名:动作体里要求 `judgment.assign`(见 `_may_override`)。

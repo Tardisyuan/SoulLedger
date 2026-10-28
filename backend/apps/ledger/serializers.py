@@ -214,6 +214,8 @@ class LedgerRecordSummarySerializer(serializers.Serializer):
     life_stage = serializers.CharField(allow_blank=True)
     evidence_source = serializers.CharField(allow_blank=True)
     evidence_note = serializers.CharField(allow_blank=True)
+    #: 欧洲 大罪 / 小罪(SoulRecord.SinGravity);空串 = 没记。
+    sin_gravity = serializers.CharField(allow_blank=True)
 
 
 class LedgerSummarySerializer(serializers.Serializer):

@@ -421,6 +421,8 @@ class LedgerService:
                 "life_stage": r.life_stage,
                 "evidence_source": r.evidence_source,
                 "evidence_note": r.evidence_note,
+                # 欧洲 大罪 / 小罪(SoulRecord.sin_gravity);空串 = 没记。编辑表单据此回填,不然一存就抹掉。
+                "sin_gravity": r.sin_gravity,
             })
 
         total_merit = round(merit)

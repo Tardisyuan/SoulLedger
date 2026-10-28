@@ -51,6 +51,7 @@ UNIQUE_KEYS = {
     'dispatch.CrossTenantJudgmentParticipant:unique_cross_judgment_node_order': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'dispatch.DispatchRecord:unique_active_dispatch': ('PER_PARENT', 'one live PROPOSED/APPROVED dispatch per soul, spanning source and target tenant'),
     'disposition.Disposition:judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'judgment.NegativeConfession:unique_confession_judgment_statute': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.EvidenceAdmission:unique_admission_judgment_record': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.JudgmentCitation:unique_citation_judgment_statute': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'judgment.JudgmentAppeal:unique_appeal_round': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),

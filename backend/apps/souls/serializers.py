@@ -217,6 +217,8 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             # Which Inferno article a deed belongs under — see
             # SoulRecord.inferno_article and DispositionService.
             "inferno_article",
+            # 欧洲 大罪 / 小罪(SoulRecord.sin_gravity),结案时与裁决核对。
+            "sin_gravity",
             # Which life the deed belongs to (0 = first). Stamped by
             # SoulRecord.save from the soul's life_index; a client writing it
             # would put a deed in a life the reincarnation history says the
@@ -409,8 +411,19 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             self._check_against_soul(attrs, soul)
             self._check_statute_against_soul(attrs, soul)
             self._check_dedication(attrs, soul)
+            self._check_sin_gravity(attrs, soul)
         self._check_granularity_pair(attrs)
         return attrs
+
+    def _check_sin_gravity(self, attrs, soul) -> None:
+        """大罪 / 小罪 is a European distinction about a sin (docs/03 §二): only a European DEMERIT carries it."""
+        gravity = attrs.get("sin_gravity", getattr(self.instance, "sin_gravity", "") if self.instance else "")
+        if not gravity:
+            return
+        record_type = attrs.get("record_type", getattr(self.instance, "record_type", None))
+        if soul.civilization != "EUROPEAN" or record_type != "DEMERIT":
+            raise serializers.ValidationError(
+                {"sin_gravity": ["Only a European demerit record is mortal or venial."]})
 
     def _check_granularity_pair(self, attrs) -> None:
         """The two granularity inputs travel together or not at all.
@@ -460,6 +473,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             self._check_against_soul(self.validated_data, soul)
             self._check_statute_against_soul(self.validated_data, soul)
             self._check_dedication(self.validated_data, soul)
+            self._check_sin_gravity(self.validated_data, soul)
         return super().save(**kwargs)
 
     @staticmethod
@@ -547,6 +561,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     origin_region = serializers.ChoiceField(choices=Soul.OriginRegion.choices, allow_blank=True, required=False)
     # 埃及未得审判的情形(docs/01 §4.2,`Soul.duat_passage`)。空 = 葬仪如常。
     duat_passage = serializers.ChoiceField(choices=Soul.DuatPassage.choices, allow_blank=True, required=False)
+    # 希腊:未葬 / 无渡资者滞留阿刻戎岸边(`Soul.ferry_passage`)。空 = 已葬且有渡资。
+    ferry_passage = serializers.ChoiceField(choices=Soul.FerryPassage.choices, allow_blank=True, required=False)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -574,7 +590,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "duat_passage", "birth_name",
-            "baptism", "denied_immortality",
+            "baptism", "denied_immortality", "neutral_in_life", "ferry_passage",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
@@ -616,6 +632,12 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             if attrs.get("denied_immortality") is not None:
                 raise serializers.ValidationError(
                     {"denied_immortality": ["Only a European soul records a denial of immortality."]})
+            if attrs.get("neutral_in_life") is not None:
+                raise serializers.ValidationError(
+                    {"neutral_in_life": ["Only a European soul records a neutral life (Inferno III)."]})
+        # Charon's bank is Greek (2026-10-28, docs/01_希腊冥府整体架构.md §2.3).
+        if attrs.get("ferry_passage") and self.instance is not None and self.instance.civilization != "GREEK":
+            raise serializers.ValidationError({"ferry_passage": ["Only a Greek soul waits on the bank of Acheron."]})
         # An early death is decided at death: `Soul.die` concludes the case PASSED unweighed on the spot. After
         # death the case already went down another road (embalming, the hall, or the Duat entry), and turning it
         # into an early death now would mean voiding that case and concluding a new one — not a field edit.

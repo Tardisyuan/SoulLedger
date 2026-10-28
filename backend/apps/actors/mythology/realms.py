@@ -251,14 +251,14 @@ EUROPEAN_REALMS = [
     # error: it put the river on every terrace. It stands on
     # EU_EARTHLY_PARADISE now, which is where Dante puts it.)
     #
-    # NOT DISPOSITION DESTINATIONS. No verdict routes to a terrace and this
-    # change does not add one, for the same reason EU_PLATO_MEADOW is not a
-    # destination: the router has verdict and karma to work with, and a terrace
-    # is chosen by WHICH sin, which nothing in a Judgment currently records.
-    # Routing by karma magnitude would reproduce the circle-severity ladder that
-    # made "seven sins over nine circles" look plausible in the first place.
-    # tests/test_purgatorio_terraces.py asserts the absence, so adding a route
-    # has to be a decision rather than a drift.
+    # DESTINATIONS BY SIN, NEVER BY MAGNITUDE (2026-10-28). A terrace is chosen
+    # by WHICH sin: a deed filed under an EU-DS-T* article (`SoulRecord.statute`)
+    # names it, and `DispositionService._route_european` sends a PURGATORY soul
+    # to the lowest terrace it cites (the climb is bottom to top). No cited
+    # capital sin → the mountain, as before. Routing by karma magnitude would
+    # reproduce the circle-severity ladder that made "seven sins over nine
+    # circles" look plausible; tests/test_purgatorio_terraces.py asserts the
+    # ladder still reaches no terrace.
     #
     # NO LETHE ON THE WAY UP. All eleven European realms carried
     # memory_reset_mechanism=LETHE, which is wrong for the nine circles (Dante's
@@ -427,6 +427,25 @@ EUROPEAN_REALMS = [
     # Not a disposition destination. `DispositionService` routes no verdict
     # here, deliberately: a soul is not sentenced to the ferry, it passes
     # through it.
+    # --------------------------------------------------------------------
+    # THE VESTIBULE (Antinferno, Inf. III), 2026-10-28. Inside the gate,
+    # before Acheron, outside the nine circles: the neutrals (ignavi), who lived
+    # "without infamy and without praise", with the angels who sided neither with
+    # God nor with Lucifer. Heaven will not have them and deep hell does not
+    # receive them (Inf. III.40-42). It was the one place in docs/03 §三's
+    # diagram with no row (the EU-INF-C1 article recorded it as a
+    # `transcription_gap`). A destination: `_route_european` sends a FAILED soul
+    # recorded `Soul.neutral_in_life` here. HELL rather than NEUTRAL because it
+    # is a punishment (stung by wasps and hornets, worms at their feet) and it
+    # does not end; `tier` 0 because it is above the first circle and is none.
+    # name_egy is blank: Design has given no egy word yet (egyPendingKeys.json).
+    ("EU_ANTINFERNO", "地狱前庭", "地狱前庭", "The Vestibule of Hell", "",
+     RealmType.HELL, 0,
+     "The vestibule inside the gate of hell, before Acheron (Inferno III): the "
+     "neutrals who lived without infamy and without praise, chasing a banner, "
+     "stung by wasps and hornets. Outside the nine circles; Limbo is the first "
+     "circle, not this.",
+     "NONE", True, None),
     ("EU_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
      "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
@@ -971,6 +990,7 @@ REALM_TOPOLOGY = {
         for n, c in enumerate(_CIRCLES, start=1)
     },
     "EU_ACHERON": {"region": CommediaRegion.INFERNO},
+    "EU_ANTINFERNO": {"region": CommediaRegion.INFERNO},
     "EU_PURGATORY": {"region": CommediaRegion.PURGATORIO},
     **{
         code: {"region": CommediaRegion.PURGATORIO, "level": n}
