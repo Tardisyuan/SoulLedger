@@ -22265,6 +22265,59 @@ components:
       - latest
       - min_supported
       - store_url
+    AppealLadder:
+      type: object
+      description: '`appeals.ladder`:上诉那条流程的站梯。流程已结束时剩下的 AHEAD = 不再审。'
+      properties:
+        current:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+        stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppealLadderStation'
+      required:
+      - current
+      - stations
+      - total
+    AppealLadderStateEnum:
+      enum:
+      - PASSED
+      - REJECTED
+      - CURRENT
+      - AHEAD
+      type: string
+      description: |-
+        * `PASSED` - PASSED
+        * `REJECTED` - REJECTED
+        * `CURRENT` - CURRENT
+        * `AHEAD` - AHEAD
+    AppealLadderStation:
+      type: object
+      properties:
+        order:
+          type: integer
+        node:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_final:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/AppealLadderStateEnum'
+        note:
+          type: string
+          nullable: true
+      required:
+      - is_final
+      - name
+      - node
+      - note
+      - order
+      - state
     ApprovalNode:
       type: object
       description: |-
@@ -28519,6 +28572,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        ladder:
+          allOf:
+          - $ref: '#/components/schemas/AppealLadder'
+          nullable: true
+          readOnly: true
         soul:
           type: string
           format: uuid
@@ -28567,6 +28625,7 @@ components:
       - judgment
       - judgment_concluded_at
       - judgment_notes
+      - ladder
       - new_verdict
       - original_officer_ids
       - original_verdict
@@ -30803,6 +30862,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        ladder:
+          allOf:
+          - $ref: '#/components/schemas/AppealLadder'
+          nullable: true
+          readOnly: true
       required:
       - case_number
       - compensations
@@ -30814,6 +30878,7 @@ components:
       - id
       - judgment
       - judgment_concluded_at
+      - ladder
       - new_verdict
       - original_verdict
       - reason

@@ -112,6 +112,62 @@ def test_a_completed_flow_hands_the_amendment_to_the_final_judge(case):
     assert Judgment.all_objects.get(pk=case["judgment"].pk).verdict == "PASSED"
 
 
+def _ladder(case, appeal_id):
+    """The ladder as the soul sees it (the list) and as the officer sees it (the detail): the same structure."""
+    mine = next(r for r in case["client"].get(MINE).data["results"] if r["id"] == appeal_id)
+    officer = officer_client(case["reviewer"]).get(f"{HALL}{appeal_id}/").data
+    assert mine["ladder"] == officer["ladder"]
+    return mine["ladder"]
+
+
+def _states(ladder):
+    return [(s["order"], s["state"], s["note"]) for s in ladder["stations"]]
+
+
+def test_a_single_review_has_no_ladder(case):
+    appeal_id = _file(case).data["id"]
+    assert _ladder(case, appeal_id) is None
+
+
+def test_the_ladder_mid_flow_names_each_station_and_the_current_one(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    _drive(JudgmentAppeal.all_objects.get(pk=appeal_id).workflow, ["PASSED"], case["reviewer"])
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (2, 4)
+    assert [s["name"] for s in ladder["stations"]] == ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
+    assert [s["is_final"] for s in ladder["stations"]] == [False, False, False, True]
+    assert _states(ladder) == [(1, "PASSED", "PASSED 意见"), (2, "CURRENT", None), (3, "AHEAD", None),
+                               (4, "AHEAD", None)]
+    # No reviewer, no approver: the soul is not told who heard it (same as the single review).
+    assert not {"approver", "approver_name", "reviewer"} & set(ladder["stations"][0])
+
+
+def test_a_rejecting_station_cuts_the_ladder(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    # Station 1 refuses: the flow ends there (a later station may carry a 驳回到 back instead, which re-opens it).
+    _drive(JudgmentAppeal.all_objects.get(pk=appeal_id).workflow, ["FAILED"], case["reviewer"])
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (None, 4)
+    # The stations after it stay AHEAD; with the flow ended, the client writes 不再审 for them.
+    assert _states(ladder) == [(1, "REJECTED", "FAILED 意见"), (2, "AHEAD", None), (3, "AHEAD", None),
+                               (4, "AHEAD", None)]
+    assert next(r for r in case["client"].get(MINE).data["results"] if r["id"] == appeal_id)[
+        "workflow_status"] == "REJECTED"
+
+
+def test_a_finished_ladder_is_passed_to_the_end(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    workflow = JudgmentAppeal.all_objects.get(pk=appeal_id).workflow
+    _drive(workflow, ["PASSED"] * 3, case["reviewer"])
+    _drive(workflow, ["PASSED"], sp.officer("fengdu", "JUDGE", case["judgment"].tenant))
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (None, 4)
+    assert [s["state"] for s in ladder["stations"]] == ["PASSED"] * 4
+
+
 def test_a_greek_appeal_flow_is_refused_not_built(gr_tenant):
     soul = Soul.objects.create(name="希腊申诉魂", tenant=gr_tenant)
     assert soul.civilization == "GREEK"

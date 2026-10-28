@@ -10092,6 +10092,29 @@ export interface components {
             latest: string;
             store_url: string;
         };
+        /** @description `appeals.ladder`:上诉那条流程的站梯。流程已结束时剩下的 AHEAD = 不再审。 */
+        AppealLadder: {
+            current: number | null;
+            total: number;
+            stations: components["schemas"]["AppealLadderStation"][];
+        };
+        /**
+         * @description * `PASSED` - PASSED
+         *     * `REJECTED` - REJECTED
+         *     * `CURRENT` - CURRENT
+         *     * `AHEAD` - AHEAD
+         * @enum {string}
+         */
+        AppealLadderStateEnum: "PASSED" | "REJECTED" | "CURRENT" | "AHEAD";
+        AppealLadderStation: {
+            order: number;
+            /** Format: uuid */
+            node: string;
+            name: string;
+            is_final: boolean;
+            state: components["schemas"]["AppealLadderStateEnum"];
+            note: string | null;
+        };
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -12894,6 +12917,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly ladder: components["schemas"]["AppealLadder"] | null;
             /** Format: uuid */
             readonly soul: string;
             readonly soul_name: string;
@@ -13888,6 +13912,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly ladder: components["schemas"]["AppealLadder"] | null;
         };
         MeJudgmentAppealList: {
             judgments: components["schemas"]["MeAppealableJudgment"][];

@@ -634,6 +634,8 @@ SPECTACULAR_SETTINGS = {
         "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
         "JudgmentAppealStatusEnum": "apps.judgment.models.AppealStatus.choices",
+        # 站梯一站的 `state`:字段名太通用,钉住免得和下一个同名字段互相改名。
+        "AppealLadderStateEnum": "apps.judgment.appeals.LADDER_STATES",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
         "UserRoleEnum": "apps.authentication.models.UserRole.choices",
         "PasswordResetRefusalCodeEnum": "apps.authentication.serializers.PASSWORD_RESET_REFUSAL_CODES",

@@ -31,6 +31,28 @@ class AppealCompensationSerializer(serializers.Serializer):
         return (obj.evidence_json or {}).get("station_order")
 
 
+class AppealLadderStationSerializer(serializers.Serializer):
+    #: 第几站(从 1 起,只数人工节点)。
+    order = serializers.IntegerField()
+    #: 审批节点 id:「在审批流程里查看 →」落到这里。
+    node = serializers.UUIDField()
+    #: 审批流程的节点名。
+    name = serializers.CharField()
+    is_final = serializers.BooleanField()
+    state = serializers.ChoiceField(choices=appeals.LADDER_STATES)
+    #: 这站的结论原文(节点的 notes);只有已决的站(PASSED / REJECTED)有。
+    note = serializers.CharField(allow_null=True)
+
+
+class AppealLadderSerializer(serializers.Serializer):
+    """`appeals.ladder`:上诉那条流程的站梯。流程已结束时剩下的 AHEAD = 不再审。"""
+
+    #: 流程正停在第几站;流程结束后为 null。
+    current = serializers.IntegerField(allow_null=True)
+    total = serializers.IntegerField()
+    stations = AppealLadderStationSerializer(many=True)
+
+
 class _AppealBase(serializers.ModelSerializer):
     case_number = serializers.CharField(source="judgment.case_number", read_only=True)
     current_verdict = serializers.CharField(source="judgment.verdict", read_only=True)
@@ -41,10 +63,18 @@ class _AppealBase(serializers.ModelSerializer):
     workflow_status = serializers.CharField(source="workflow.status", read_only=True, allow_null=True, default=None)
     workflow_name = serializers.CharField(source="workflow.workflow_name", read_only=True, allow_null=True,
                                           default=None)
+    #: 上诉时的站梯(`appeals.ladder`);一次复核为 null。不带审批人。
+    ladder = serializers.SerializerMethodField()
 
     FIELDS = ("id", "judgment", "case_number", "round", "reason", "evidence", "status", "original_verdict",
               "new_verdict", "current_verdict", "judgment_concluded_at", "decision_note", "decided_at",
-              "create_time", "compensations", "workflow", "workflow_number", "workflow_status", "workflow_name")
+              "create_time", "compensations", "workflow", "workflow_number", "workflow_status", "workflow_name",
+              "ladder")
+
+    @extend_schema_field(AppealLadderSerializer(allow_null=True))
+    def get_ladder(self, obj):
+        ladder = appeals.ladder(obj)
+        return None if ladder is None else AppealLadderSerializer(ladder).data
 
     @extend_schema(responses=AppealCompensationSerializer(many=True))
     def get_compensations(self, obj) -> list:
@@ -144,7 +174,8 @@ class JudgmentAppealViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "judgment"
     extra_permissions = {"claim": ["judgment.execute"], "decide": ["judgment.execute"]}
-    queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer", "workflow").all()
+    queryset = JudgmentAppeal.objects.select_related("judgment", "soul", "reviewer", "workflow").prefetch_related(
+        "workflow__nodes").all()
     serializer_class = JudgmentAppealSerializer
     filterset_fields = {"status": ["exact", "in"]}
 
@@ -200,7 +231,7 @@ class MeJudgmentAppealsView(SoulAPIView):
                 "can_escalate": refusal is None and appeals.escalation_refusal(judgment, account) is None,
             })
         mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related(
-            "judgment", "workflow")
+            "judgment", "workflow").prefetch_related("workflow__nodes")
         return Response({"judgments": MeAppealableJudgmentSerializer(rows, many=True).data,
                          "results": MeJudgmentAppealSerializer(mine, many=True).data})
 
