@@ -41,7 +41,7 @@ const cut: AppealLadder = {
 };
 
 it("draws each station with its glyph, the final one as 终审, and the human conclusion beside it", () => {
-  render(<AppealLadderView appeal={{ ladder: running, workflow_status: "IN_PROGRESS" }} />);
+  render(<AppealLadderView appeal={{ ladder: running, workflow_status: "IN_PROGRESS", status: "IN_REVIEW" }} />);
   const first = screen.getByTestId("appeal-station-1");
   expect(first).toHaveTextContent("■");
   expect(first).toHaveTextContent(tZh("appeals.ladder_station", { n: "1", name: "主教区" }));
@@ -55,7 +55,7 @@ it("draws each station with its glyph, the final one as 终审, and the human co
 });
 
 it("after a rejection the stations beyond it are not 'not reached': no state is written for them", () => {
-  render(<AppealLadderView appeal={{ ladder: cut, workflow_status: "REJECTED" }} />);
+  render(<AppealLadderView appeal={{ ladder: cut, workflow_status: "REJECTED", status: "UPHELD" }} />);
   expect(screen.getByTestId("appeal-station-2")).toHaveTextContent("✕");
   expect(screen.getByTestId("appeal-station-2")).toHaveTextContent(tZh("appeals.ladder_state.REJECTED"));
   const after = screen.getByTestId("appeal-station-3");
@@ -63,8 +63,20 @@ it("after a rejection the stations beyond it are not 'not reached': no state is 
   expect(after).not.toHaveTextContent(tZh("appeals.ladder_state.AHEAD"));
 });
 
+it("a passed final station says the appeal's result, not 'passed on'", () => {
+  const done: AppealLadder = { current: null, total: 2, stations: [station(1, "主教区", "PASSED"), station(2, "梵蒂冈", "PASSED", "改判", true)] };
+  const { unmount } = render(<AppealLadderView appeal={{ ladder: done, workflow_status: "COMPLETED", status: "AMENDED" }} />);
+  expect(screen.getByTestId("appeal-station-2")).toHaveTextContent(tZh("appeals.status.AMENDED"));
+  expect(screen.getByTestId("appeal-station-2")).not.toHaveTextContent(tZh("appeals.ladder_state.PASSED"));
+  unmount();
+  // Before the final judge decides, nothing is written there.
+  render(<AppealLadderView appeal={{ ladder: done, workflow_status: "COMPLETED", status: "IN_REVIEW" }} />);
+  expect(screen.getByTestId("appeal-station-2")).not.toHaveTextContent(tZh("appeals.ladder_state.PASSED"));
+  expect(screen.getByTestId("appeal-station-1")).toHaveTextContent(tZh("appeals.ladder_state.PASSED"));
+});
+
 it("a single review has no ladder to draw", () => {
-  const { container } = render(<AppealLadderView appeal={{ ladder: null, workflow_status: null }} />);
+  const { container } = render(<AppealLadderView appeal={{ ladder: null, workflow_status: null, status: "PENDING" }} />);
   expect(container).toBeEmptyDOMElement();
 });
 
