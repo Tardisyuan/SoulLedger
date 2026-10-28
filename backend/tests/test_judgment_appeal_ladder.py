@@ -69,6 +69,15 @@ def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
     assert detail["judgment_appeal"]["id"] == response.data["id"]
 
 
+def test_an_escalation_may_leave_the_reason_out_a_single_review_may_not(case):
+    blank = {"judgment": str(case["judgment"].pk), "reason": "  "}
+    assert case["client"].post(MINE, blank, format="json").status_code == 400
+    _upheld_once(case)
+    response = case["client"].post(MINE, {**blank, "escalate": True}, format="json")
+    assert response.status_code == 201, response.data
+    assert response.data["reason"] == ""
+
+
 def test_while_the_flow_runs_nobody_claims_decides_or_withdraws(case):
     _upheld_once(case)
     appeal_id = _escalate(case).data["id"]

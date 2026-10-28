@@ -12942,6 +12942,7 @@ export interface components {
         JudgmentAppealCreate: {
             /** Format: uuid */
             judgment: string;
+            /** @default  */
             reason: string;
             /** @default  */
             evidence: string;

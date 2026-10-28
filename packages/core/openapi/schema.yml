@@ -28658,6 +28658,7 @@ components:
           format: uuid
         reason:
           type: string
+          default: ''
           maxLength: 2000
         evidence:
           type: string
@@ -28668,7 +28669,6 @@ components:
           default: false
       required:
       - judgment
-      - reason
     JudgmentAppealDecide:
       type: object
       properties:
