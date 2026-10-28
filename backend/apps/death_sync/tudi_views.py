@@ -140,6 +140,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         except IntegrityError:
             raise serializers.ValidationError({"name": {"code": "name_taken"}}) from None
 
+    @extend_schema(responses={204: None})
     def destroy(self, request, *args, **kwargs):
         self.get_object().soft_delete(user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)

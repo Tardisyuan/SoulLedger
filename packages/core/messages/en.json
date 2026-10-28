@@ -334,7 +334,12 @@
       "MENGPO_SOUP_TAKEN": "Drank the soup of forgetting",
       "PURGATORY_ASCENDED": "Rose from purgatory to heaven",
       "OFFICER_HANDOVER": "Case handed to another officer",
-      "DUAT_PASSAGE_CHANGED": "Duat passage changed"
+      "DUAT_PASSAGE_CHANGED": "Duat passage changed",
+      "DIYU_STATION_CHANGED": "Moved to another station",
+      "CAPTURE_WARRANT_ISSUED": "Capture warrant issued",
+      "SOUL_CAPTURED": "Captured by the escorts",
+      "CAPTURE_HANDED_OVER": "Capture handed over",
+      "CAPTURE_WARRANT_CANCELLED": "Capture warrant cancelled"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -737,6 +742,75 @@
       "YES": "Yes",
       "NO": "No",
       "help": "Held in life that the soul dies with the body (the Epicureans, Inf. X): when condemned, the sixth circle (heresy), unless a cited sin lies deeper. Not blasphemy, which is the seventh circle."
+    },
+    "diyu_station": {
+      "label": "Thirteen stations",
+      "NONE": "Not on the road",
+      "TUDI_TEMPLE": "Earth God's Temple",
+      "YELLOW_SPRINGS_ROAD": "Road of the Yellow Springs",
+      "WANGXIANG_TERRACE": "Terrace for Viewing Home",
+      "EVIL_DOG_VILLAGE": "Village of Vicious Dogs",
+      "GOLDEN_ROOSTER_HILL": "Golden Rooster Hill",
+      "WILD_GHOST_VILLAGE": "Village of Wild Ghosts",
+      "MIHUN_HALL": "Hall of Bewilderment",
+      "OFFERING_PAVILION": "Pavilion of Offerings",
+      "GHOST_FORT": "Fort of the Ghost Realm",
+      "FENGDU_CITY": "City of Fengdu",
+      "EIGHTEEN_HELLS": "Eighteen Hells",
+      "LOTUS_TERRACE": "Lotus Terrace",
+      "HUANHUN_CLIFF": "Cliff of Returning Souls",
+      "ordinal": "Station {{n}} / 13",
+      "move_label": "Move to",
+      "move": "Move",
+      "moved": "Moved to {{station}}",
+      "error": {
+        "not_diyu": "Only a soul of Diyu walks the thirteen stations.",
+        "alive": "A living soul is not on the road."
+      }
+    },
+    "birth_continent": {
+      "label": "Continent of birth",
+      "NONE": "Unknown",
+      "DONGSHENG": "Pūrvavideha (East)",
+      "NANZHAN": "Jambudvīpa (South)",
+      "XINIU": "Aparagodānīya (West)",
+      "BEIJULU": "Uttarakuru (North)",
+      "help": "Which of the four continents this life was born in. A rebirth into the human path sets the next life's continent."
+    },
+    "capture": {
+      "title": "Capture",
+      "due_hint": "The fated date has come: a capture warrant can be issued. Handing over registers the death and sends the case to the City God.",
+      "escort_label": "Escort",
+      "escort": {
+        "SUGGESTED": "Suggested by karma",
+        "WUCHANG": "Black and White Impermanence",
+        "NIUTOU_MAMIAN": "Ox Head and Horse Face"
+      },
+      "status": {
+        "ISSUED": "Issued",
+        "CAPTURED": "Captured",
+        "HANDED_OVER": "Handed over",
+        "CANCELLED": "Cancelled"
+      },
+      "city_god": "issued by {{name}}",
+      "issue": "Issue capture warrant",
+      "capture": "Captured",
+      "hand_over": "Hand over",
+      "cancel": "Cancel",
+      "cancel_reason": "Reason for cancelling",
+      "cancel_confirm": "Cancel the warrant",
+      "issued_toast": "Capture warrant issued for {{name}}",
+      "captured_toast": "{{name}} captured",
+      "handed_over_toast": "{{name}} handed over; death registered",
+      "cancelled_toast": "Capture warrant for {{name}} cancelled",
+      "error": {
+        "not_diyu": "Only a soul of Diyu is fetched by the ghost escorts.",
+        "not_alive": "This soul is no longer alive.",
+        "lifespan_not_ended": "The fated date has not come, or is not recorded.",
+        "warrant_open": "This soul already has an open capture warrant.",
+        "wrong_status": "The warrant can't do that now; refresh and try again.",
+        "reason_required": "Write a reason to cancel."
+      }
     }
   },
   "common": {
@@ -4378,7 +4452,10 @@
       "stage": "Stage {{at}} / {{total}}",
       "balance": "Balance, this life",
       "ledger": "This life's ledger",
-      "ledger_hint": "Open an item to read it"
+      "ledger_hint": "Open an item to read it",
+      "station": "Where you are",
+      "station_at": "Station {{n}} / 13",
+      "continent": "Continent of birth"
     },
     "past_lives": {
       "title": "Past lives",

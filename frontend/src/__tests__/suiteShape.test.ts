@@ -176,6 +176,8 @@ const COLLECTED_FILES = [
   "SoulCredentialsPage.test.tsx",
   "SoulInboxPage.test.tsx",
   "SoulInfoCard.infernoFacts.test.tsx",
+  // 2026-10-28 地府十三站与出身部洲(身份栏),换站与勾魂的时间线一行。
+  "DiyuRows.test.tsx",
   "SentencePlanPanels.test.tsx",
   "SentenceNodeRetry.test.tsx",
   "SentencePlanForms.test.tsx",

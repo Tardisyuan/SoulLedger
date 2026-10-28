@@ -150,6 +150,13 @@ export const EVENT_LABELS: Record<string, string> = {
   OFFICER_HANDOVER: "Case handed to another officer",
   DUAT_PASSAGE_CHANGED: "Duat passage changed",
 
+  // Diyu thirteen stations / capture warrants (2026-10-28)
+  DIYU_STATION_CHANGED: "Moved to another station",
+  CAPTURE_WARRANT_ISSUED: "Capture warrant issued",
+  SOUL_CAPTURED: "Captured by the escorts",
+  CAPTURE_HANDED_OVER: "Capture handed over",
+  CAPTURE_WARRANT_CANCELLED: "Capture warrant cancelled",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };

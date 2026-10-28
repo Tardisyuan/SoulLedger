@@ -284,3 +284,26 @@ export const crossTenantJudgmentsApi = {
   cancel: (id: string, reason: string) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/cancel/`, { reason }),
 };
+
+/** 勾魂牒(只地府,`/dispatch/capture-warrants/`):阳寿尽 → 发牒 → 拘到 → 交接(登记死亡)。 */
+export type CaptureWarrant = components["schemas"]["CaptureWarrant"];
+export type CaptureStatus = "ISSUED" | "CAPTURED" | "HANDED_OVER" | "CANCELLED";
+/** 黑白无常 / 牛头马面(docs/02)。 */
+export type CaptureEscort = "WUCHANG" | "NIUTOU_MAMIAN";
+/** `due/` 的一行:阳寿已到、还在世、没有未了结勾魂牒的灵魂。 */
+export type CaptureDueSoul = components["schemas"]["CaptureDueSoul"];
+/** 拒绝的 `code`:not_diyu / not_alive / lifespan_not_ended / warrant_open / wrong_status / reason_required。 */
+export type CaptureRefusal = components["schemas"]["CaptureRefusal"];
+
+export const captureWarrantsApi = {
+  list: (params: { soul?: string; status?: CaptureStatus; page?: string } = {}) =>
+    api.get<PaginatedResponse<CaptureWarrant>>("/dispatch/capture-warrants/", { params }),
+  due: () => api.get<CaptureDueSoul[]>("/dispatch/capture-warrants/due/"),
+  issue: (body: { soul: string; escort?: CaptureEscort }) =>
+    api.post<CaptureWarrant>("/dispatch/capture-warrants/", body),
+  capture: (id: string) => api.post<CaptureWarrant>(`/dispatch/capture-warrants/${id}/capture/`),
+  handOver: (id: string, body: { location?: string } = {}) =>
+    api.post<CaptureWarrant>(`/dispatch/capture-warrants/${id}/hand-over/`, body),
+  cancel: (id: string, reason: string) =>
+    api.post<CaptureWarrant>(`/dispatch/capture-warrants/${id}/cancel/`, { reason }),
+};
