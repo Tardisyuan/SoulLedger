@@ -49,7 +49,9 @@ describe("each locale gets its own month name", () => {
   });
 
   it("zh-Hans", () => {
-    expect(formatHistoricalDate({ year: -44, month: 3, day: 15 }, "zh-Hans")).toBe("44 BCE · 3月15日");
+    expect(formatHistoricalDate({ year: -44, month: 3, day: 15 }, "zh-Hans")).toBe("前44年 · 3月15日");
+    expect(formatHistoricalDate({ year: 2026, month: 10, day: 28 }, "zh-Hans")).toBe("2026年 · 10月28日");
+    expect(formatHistoricalDate({ year: 1066, month: null, day: null }, "zh-Hans")).toBe("1066年");
   });
 
   it("egy writes Abed + number, no era word for CE and Tepy Er Kristos for BCE (Design batch 60)", () => {
@@ -70,7 +72,7 @@ describe("each locale gets its own month name", () => {
     for (const locale of SUPPORTED_LOCALES) {
       for (let month = 1; month <= 12; month += 1) {
         const out = formatHistoricalDate({ year: 1066, month, day: null }, locale);
-        expect(out).toMatch(locale === "egy" ? /^1066 · Abed \d+$/ : /^1066 CE · .+$/);
+        expect(out).toMatch(locale === "egy" ? /^1066 · Abed \d+$/ : locale === "zh-Hans" ? /^1066年 · .+$/ : /^1066 CE · .+$/);
       }
     }
   });
