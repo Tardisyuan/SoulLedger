@@ -40,6 +40,9 @@ class TodoItemSerializer(serializers.Serializer):
     city_god_name = serializers.CharField(required=False, help_text="仅城隍初审:城隍名。")
     origin_location = serializers.CharField(required=False, allow_blank=True, help_text="仅城隍初审:出身地。")
     untimely = serializers.BooleanField(required=False, help_text="仅城隍初审:枉死。")
+    # 仅「枉死申诉」(kind = wangsi,第五十九批 M-3):`title` 是灵魂名,`id` 是审判;`city_god_name` 同上。
+    grievance_level = serializers.CharField(required=False, allow_blank=True,
+                                            help_text="仅枉死申诉:冤情等级 NONE / MINOR / MAJOR / SEVERE,未登记为空串。")
 
 
 class TodoGroupSerializer(serializers.Serializer):
@@ -61,6 +64,9 @@ class TodoSerializer(serializers.Serializer):
         help_text="待我选站(第四十三批):其他殿发起的审批流程里本域那一段还没选站的,在门口等的在前。计入角标。")
     city_god = TodoGroupSerializer(
         help_text="城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。")
+    wangsi = TodoGroupSerializer(
+        help_text="枉死申诉(第五十九批):我名下城隍的枉死案子里待审的申诉(先申诉的在前)。需 `judgment.execute`;"
+                  "计入角标,不推送。")
 
 
 class FactHallSerializer(serializers.Serializer):

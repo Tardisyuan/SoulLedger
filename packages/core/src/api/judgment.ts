@@ -198,6 +198,8 @@ export interface JudgmentDetail extends Judgment {
   admitted_balance: AdmittedBalance;
   /** The joint judgment hung on this one (one-to-one), or null. Detail only. */
   cross_judgment_id?: string | null;
+  /** 原审的审批流程走到第几站、处置是否因此还不能执行(`waiting`,`disposition.flow_waiting.*` 的码);没有流程为 null。 */
+  flow_progress?: Schemas["JudgmentFlowProgress"] | null;
 }
 
 export interface EvidenceRulingPayload {
