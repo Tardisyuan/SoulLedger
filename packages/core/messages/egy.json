@@ -7332,7 +7332,9 @@
     },
     "wangsi": {
       "row_meta": "{{city_god}} · Khet {{level}}",
-      "review_title": "Nehet · {{name}}"
+      "review_title": "Nehet · {{name}}",
+      "note_required": "Sesh Wesheb Tepy",
+      "level_saves": "Setep: Sau Emu"
     },
     "judgment": {
       "flow_progress": "Wat Hesy · Sekhet {{n}} / {{total}}"
