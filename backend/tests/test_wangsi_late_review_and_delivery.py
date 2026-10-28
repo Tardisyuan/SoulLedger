@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from apps.disposition.models import Disposition
 from apps.events.models import SoulEvent
 from apps.judgment import wangsi
 from apps.judgment.models import CityGod, GrievanceLevel, GrievanceStatus, Judgment
@@ -91,24 +92,42 @@ def test_delivery_takes_the_soul_to_the_lotus_terrace_and_concludes_without_a_he
     assert case.grievance_status == GrievanceStatus.DELIVERED and case.held_until is None
     assert (case.verdict, case.is_final) == ("PASSED", True)
     assert soul.diyu_station == Soul.DiyuStation.LOTUS_TERRACE
-    assert soul.current_state != SoulState.JUDGING
+    # 地府判无罪不发落、直接候转世(2026-10-29):免审结案、不走审批流,所以当场 REINCARNATING。
+    assert soul.current_state == SoulState.REINCARNATING
+    assert not Disposition.all_objects.filter(judgment_id=case.pk).exists()
     assert [e.payload["status"] for e in _events(soul, "WANGSI_GRIEVANCE_DELIVERED")] == ["DELIVERED"]
     assert not _events(soul, "WANGSI_GRIEVANCE_UPHELD")
 
 
-def test_delivery_needs_upheld_and_a_case_sent_on_by_the_city_god(cn_tenant, admin_user):
+def test_delivery_needs_upheld(cn_tenant, admin_user):
     _soul, case = _filed(cn_tenant, admin_user)
     with pytest.raises(wangsi.WangsiRefusedError) as refused:
         wangsi.decide_grievance(case.pk, admin_user, upheld=False, note="x", deliver=True)
     assert (refused.value.code, refused.value.status) == ("deliver_needs_upheld", 400)
 
+
+@pytest.mark.parametrize("at_city_god", ["PENDING", "RETURNED"])
+def test_delivery_sends_a_case_still_with_the_city_god_on_first(cn_tenant, admin_user, at_city_god):
+    """用户 2026-10-29:城隍初审中的案子,超度时同一事务里先解送(CITY_GOD_SENT_ON 照记),再超度。
+    此前是 409 `at_city_god`。"""
+    soul, case = _filed(cn_tenant, admin_user)
+    god = CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
+    Judgment.all_objects.filter(pk=case.pk).update(city_god=god, city_god_status=at_city_god)
+    wangsi.decide_grievance(case.pk, admin_user, upheld=True, note="属实", deliver=True)
+    case = Judgment.all_objects.get(pk=case.pk)
+    assert (case.city_god_status, case.sent_on_by_id) == ("SENT_ON", admin_user.pk)
+    assert (case.grievance_status, case.verdict) == (GrievanceStatus.DELIVERED, "PASSED")
+    assert _events(soul, "CITY_GOD_SENT_ON") and _events(soul, "WANGSI_GRIEVANCE_DELIVERED")
+
+
+def test_a_refused_delivery_does_not_send_the_case_on(cn_tenant, admin_user):
+    """超度被拒(等级不够)时什么都没写,解送也没有。"""
+    _soul, case = _filed(cn_tenant, admin_user, level=GrievanceLevel.MINOR)
     god = CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
     Judgment.all_objects.filter(pk=case.pk).update(city_god=god, city_god_status="PENDING")
-    with pytest.raises(wangsi.WangsiRefusedError) as refused:
+    with pytest.raises(wangsi.WangsiRefusedError):
         wangsi.decide_grievance(case.pk, admin_user, upheld=True, note="属实", deliver=True)
-    assert refused.value.code == "at_city_god"
-    case = Judgment.all_objects.get(pk=case.pk)
-    assert (case.grievance_status, case.verdict) == (GrievanceStatus.FILED, None)
+    assert Judgment.all_objects.get(pk=case.pk).city_god_status == "PENDING"
 
 
 def test_the_decide_endpoint_takes_deliver(cn_tenant, admin_user):

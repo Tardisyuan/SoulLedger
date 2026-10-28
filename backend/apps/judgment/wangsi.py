@@ -12,9 +12,9 @@
   - 属实 · 超度(DELIVERED,2026-10-29 用户决定;§4.2「请道士/僧人做法事 · 超度」、§4.3 度化超拔、§6.2
     「属实则提前释放/超度」):同样只给「重」「极重」。亡魂出城、到第十二站莲花台(§4.3「地藏王菩萨定期在莲花台
     度化枉死城亡魂」),免审:案子当场按 PASSED 结案、不走审批流 —— 与埃及早夭者「不受审,直入芦苇原」
-    (`Soul._after_egyptian_death`)同一个出口,不另起一套。PASSED 在地府路由到天道(`_route_chinese`),处置照常由
-    官员执行,之后的转世走现有路径。案子还在城隍处(PENDING / RETURNED)时拒绝(409 `at_city_god`):结案的
-    规矩对超度一样适用,先解送。
+    (`Soul._after_egyptian_death`)同一个出口,不另起一套。地府判无罪不发落、直接候转世(`acquitted_to_rebirth`,
+    用户 2026-10-29),所以超度出城即候转世。案子还在城隍处(PENDING / RETURNED)时同一事务里先解送(`city_gods.send_on`,
+    用户 2026-10-29),再超度 —— 此前是 409 `at_city_god` 要官员先去解送。
   - 不属实(REJECTED):照旧押到阳寿那一天。
 * 阳寿到了(或案子已结)而申诉还是 FILED(2026-10-29 审查):仍可审核,只记结论 —— 已经出城,没有什么可提前释放,
   也不能再超度(409 `not_in_wangsi`)。属实记成 UPHELD_LATE(「属实 · 期满出城」),不看冤情等级:等级只决定
@@ -130,9 +130,12 @@ def decide_grievance(pk, user, *, upheld: bool, note: str, deliver: bool = False
                 "Only a major or severe grievance releases the soul early; record the grievance level first.",
                 "grievance_not_major", grievance_level=judgment.grievance_level)
         if deliver and judgment.city_god_status in AT_CITY_GOD:
-            raise WangsiRefusedError(
-                "This case is still with the city god (城隍初审); send it on before delivering the soul.",
-                "at_city_god", city_god_status=judgment.city_god_status)
+            # 还在城隍初审:超度时顺带解送(用户 2026-10-29),同一事务、同一套规则(`city_gods.send_on`,
+            # CITY_GOD_SENT_ON 照记)。能审这件申诉的人(`may_decide`:城隍名下官员或持 `judgment.assign`)
+            # 正是能解送它的人(`city_gods.may_act`),所以此前的 409 `at_city_god` 不会再出现,已删。
+            from apps.judgment import city_gods
+
+            judgment = city_gods.send_on(judgment.pk, user, note="超度时一并解送(docs/10 §4.3)")
         if not upheld:
             judgment.grievance_status = GrievanceStatus.REJECTED
         elif deliver:

@@ -860,7 +860,6 @@ export const WANGSI_ERROR_CODES = [
   "grievance_not_major",
   "not_city_god_officer",
   "not_pending",
-  "at_city_god",
   "deliver_needs_upheld",
 ] as const;
 
