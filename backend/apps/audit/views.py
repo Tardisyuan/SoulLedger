@@ -15,7 +15,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import record_export
+from apps.core.exports import EXPORT_MAX_ROWS, record_export
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -85,9 +85,8 @@ class AuditLogFilter(filters.FilterSet):
 TIMELINE_MAX_LIMIT = 500
 TIMELINE_DEFAULT_LIMIT = 50
 
-#: 导出一次最多多少行。超过就是 400,不是截断的文件:一份悄悄少了行的审计导出,
-#: 比没有导出更糟(与 `/ledger/journal/export/` 的 MONTH_TOO_LARGE 同一立场)。
-EXPORT_MAX_ROWS = 50_000
+# 导出上限 `EXPORT_MAX_ROWS` 与其他导出同一个(`apps.core.exports`)。超过就是 400,不是截断的文件:
+# 一份悄悄少了行的审计导出,比没有导出更糟(与 `/ledger/journal/export/` 的 MONTH_TOO_LARGE 同一立场)。
 
 
 def _parse_date_param(params, name):

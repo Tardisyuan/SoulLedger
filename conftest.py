@@ -116,6 +116,31 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
     clear_tenant_cache()
 
 
+@pytest.fixture(autouse=True)
+def _restore_event_handlers():
+    """Put the process-wide handler registry back as each test found it.
+
+    `EventBus()` is a new object but `handler_registry` is the module singleton,
+    so `EventBus().reset()` (test_event_bus.py) emptied it for the rest of the
+    worker: no UserNotification, no SoulEvent. Serially a later
+    `configure_default_handlers()` call happened to refill it; under
+    `--dist worksteal` (2026-10-28, unRAID, two runs) the same six notification
+    and appeal tests failed on whichever worker ran test_reset last.
+    """
+    from apps.events.handlers.registry import handler_registry as reg
+
+    saved = (
+        {k: list(v) for k, v in reg._handlers.items()},
+        {k: list(v) for k, v in reg._domain_handlers.items()},
+        list(reg._global_handlers),
+    )
+    yield
+    reg.reset()
+    reg._handlers.update(saved[0])
+    reg._domain_handlers.update(saved[1])
+    reg._global_handlers.extend(saved[2])
+
+
 @pytest.fixture(scope="session")
 def django_db_modify_db_settings(django_db_modify_db_settings, request):
     """Give each run its own PostgreSQL test database (`test_soulledger_<hex>`),
