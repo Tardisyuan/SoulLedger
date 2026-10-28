@@ -4196,19 +4196,15 @@ paths:
         schema:
           type: string
           enum:
-          - ACCEPTED
           - DUPLICATE
           - FAILED
-          - PARTIAL
           - PENDING
           - PROCESSED
         description: |-
           * `PENDING` - Pending Validation
-          * `ACCEPTED` - Accepted - Processing
           * `PROCESSED` - Processed Successfully
           * `FAILED` - Processing Failed
           * `DUPLICATE` - Duplicate - Already Processed
-          * `PARTIAL` - Partially Processed (batch)
       - in: query
         name: tudi_god
         schema:
@@ -4332,8 +4328,7 @@ paths:
         How many of this tenant's registrations need a human.
 
         FAILED is the only anomalous state a row is ever written in: PENDING
-        and ACCEPTED are in flight, DUPLICATE is the idempotency check doing
-        its job, and PARTIAL is a batch-level answer no row carries. The status
+        is in flight and DUPLICATE is the idempotency check doing its job. The status
         goes on the wire so the dashboard links to the same filter it counted.
       tags:
       - v1
@@ -6816,6 +6811,7 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_DELIVERED
           - WANGSI_GRIEVANCE_FILED
           - WANGSI_GRIEVANCE_REJECTED
           - WANGSI_GRIEVANCE_UPHELD
@@ -6891,6 +6887,7 @@ paths:
           * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+          * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7060,6 +7057,7 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_DELIVERED
           - WANGSI_GRIEVANCE_FILED
           - WANGSI_GRIEVANCE_REJECTED
           - WANGSI_GRIEVANCE_UPHELD
@@ -7135,6 +7133,7 @@ paths:
           * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+          * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -9717,7 +9716,9 @@ paths:
     post:
       operationId: v1_judgment_wangsi_decide_create
       description: |-
-        审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+        审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`);
+        再带 `deliver=true` 是超度:出城到莲花台、免审结案(案子还在城隍处 409 `at_city_god`)。
+        阳寿已到或案子已结后仍可审,只记结论(属实记 UPHELD_LATE;此时超度 409 `not_in_wangsi`)。
         没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。
       parameters:
       - in: path
@@ -26542,19 +26543,15 @@ components:
     DeathRegistrationRequestStatusEnum:
       enum:
       - PENDING
-      - ACCEPTED
       - PROCESSED
       - FAILED
       - DUPLICATE
-      - PARTIAL
       type: string
       description: |-
         * `PENDING` - Pending Validation
-        * `ACCEPTED` - Accepted - Processing
         * `PROCESSED` - Processed Successfully
         * `FAILED` - Processing Failed
         * `DUPLICATE` - Duplicate - Already Processed
-        * `PARTIAL` - Partially Processed (batch)
     DeathRegistrationSummary:
       type: object
       description: |-
@@ -27986,6 +27983,7 @@ components:
       - WANGSI_GRIEVANCE_FILED
       - WANGSI_GRIEVANCE_UPHELD
       - WANGSI_GRIEVANCE_REJECTED
+      - WANGSI_GRIEVANCE_DELIVERED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -28056,6 +28054,7 @@ components:
         * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
         * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
         * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
+        * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -28684,11 +28683,15 @@ components:
       enum:
       - FILED
       - UPHELD
+      - UPHELD_LATE
+      - DELIVERED
       - REJECTED
       type: string
       description: |-
         * `FILED` - 已申诉
         * `UPHELD` - 属实 · 提前释放
+        * `UPHELD_LATE` - 属实 · 期满出城
+        * `DELIVERED` - 属实 · 超度
         * `REJECTED` - 不属实
     GuiltAndPenaltyReading:
       type: object
@@ -45494,6 +45497,9 @@ components:
         note:
           type: string
           maxLength: 2000
+        deliver:
+          type: boolean
+          default: false
       required:
       - note
       - upheld
