@@ -146,7 +146,9 @@ class DispatchService:
         * `is_eternal` 不是排除条件:永久的界域(第九层)正是设计稿举的例子。
         * 文明也要对上(同 `submit_sentence`):租户对上而文明不对的行是数据错误,不给选。
         """
-        from apps.realms.models import Realm
+        from django.db.models import Case, IntegerField, Value, When
+
+        from apps.realms.models import REALM_TYPE_DISPLAY_ORDER, Realm
         from apps.souls.models import UNKNOWN_CIVILIZATION
 
         # `Tenant.civilization`,不是 `TENANT_CIVILIZATION[code]`:后者只认四个种子殿,管理员新建的殿
@@ -156,7 +158,12 @@ class DispatchService:
             return Realm.all_objects.none()
         return Realm.all_objects.filter(
             tenant_id=target_tenant.pk, civilization=civilization, is_deleted=False,
-        ).order_by("realm_type", "tier", "realm_code")
+        ).annotate(
+            type_rank=Case(
+                *[When(realm_type=t, then=Value(i)) for i, t in enumerate(REALM_TYPE_DISPLAY_ORDER)],
+                default=Value(len(REALM_TYPE_DISPLAY_ORDER)), output_field=IntegerField(),
+            ),
+        ).order_by("type_rank", "tier", "realm_code")
 
     @staticmethod
     def check_target_realm(target_tenant, realm):

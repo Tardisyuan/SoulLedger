@@ -14249,7 +14249,7 @@ paths:
           * `PURGATORY` - Purgatory / Intermediate
           * `BLISS` - Heaven / Bliss
           * `NEUTRAL` - Neutral / Between
-          * `ANNIHILATION` - Annihilation / Ceased to exist
+          * `ANNIHILATION` - Annihilation
       - name: search
         required: false
         in: query
@@ -14397,7 +14397,7 @@ paths:
           * `PURGATORY` - Purgatory / Intermediate
           * `BLISS` - Heaven / Bliss
           * `NEUTRAL` - Neutral / Between
-          * `ANNIHILATION` - Annihilation / Ceased to exist
+          * `ANNIHILATION` - Annihilation
       - name: search
         required: false
         in: query
@@ -37955,7 +37955,7 @@ components:
         * `PURGATORY` - Purgatory / Intermediate
         * `BLISS` - Heaven / Bliss
         * `NEUTRAL` - Neutral / Between
-        * `ANNIHILATION` - Annihilation / Ceased to exist
+        * `ANNIHILATION` - Annihilation
     RebirthAppeal:
       type: object
       properties:

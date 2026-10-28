@@ -329,7 +329,9 @@
       "CITY_GOD_SENT_ON": "Chenghuang Hab Er Wesekhet 1 Er 10",
       "CITY_GOD_RETURNED": "Chenghuang Khesef Er Khemen",
       "MENGPO_SOUP_TAKEN": "Mu Mengpo Swri Seth",
-      "PURGATORY_ASCENDED": "Per Em Ta Hesmen · Er Pet"
+      "PURGATORY_ASCENDED": "Per Em Ta Hesmen · Er Pet",
+      "OFFICER_HANDOVER": "Sab Redi Seth",
+      "DUAT_PASSAGE_CHANGED": "Shem Duat Khemen Seth"
     },
     "civilizations": {
       "CHINESE": "Sherer",
@@ -720,6 +722,21 @@
       "NAMELESS": "Nen Ren",
       "IMPROPER_BURIAL": "Qeres Nen Maat",
       "help": "Qeres Maat: Wet Hru 70, Er Khet Ba Shem Er Weret Maaty; Tepy: Nen Shesep. Mut Em Ankh Nedjes: Nen Wedja, Er Sekhet Aaru. Nen Ren: Nen Aq Er Duat. Qeres Nen Maat (Khat Nen Neb, Nen Heka): Shem Nen Khetem. Wedja 2: Em Smen Djet."
+    },
+    "baptism": {
+      "label": "Mu Kristos",
+      "UNRECORDED": "Nen Sesh Djer",
+      "BAPTISED": "Shesep Mu Kristos",
+      "UNBAPTISED": "Nen Shesep Mu Kristos",
+      "BEFORE_CHRIST": "Mesut Tepy Er Kristos",
+      "help": "Nen Shesep Mu Kristos Er Mesut Tepy Er Kristos, Nen Isfet Dens: Duat 1 · Limbo (Nen Shepet). Isfet Dens: Wedja Er Isfet Pen. Shesep Mu Kristos: Nen Er Limbo."
+    },
+    "denied_immortality": {
+      "label": "Djed: Ba Mut Hena Khat",
+      "UNRECORDED": "Nen Sesh Djer",
+      "YES": "Iu",
+      "NO": "Nen",
+      "help": "Djed Em Ankh: Ba Mut Hena Khat (Medu Dante 10). Wedja Nen Menkh: Duat 6 · Haeresis; Isfet Djed Em Duat Khery: Er Isfet Pen. Nen Sebi Netjer: Sebi Netjer Em Duat 7."
     }
   },
   "common": {
@@ -2185,7 +2202,8 @@
         "term_conflict": "Nen Iri: Renpet Wa, Djet Wa",
         "eternal_not_allowed": "Nen Iri: Nen Djet Em Ta Pen",
         "destination_not_applicable": "Nen Iri: Sep Pen Nen Wat Er Ta",
-        "term_not_applicable": "Ta Kemet: Nen Renpet · Sekhet Aaru Hena Mut Sen."
+        "term_not_applicable": "Ta Kemet: Nen Renpet · Sekhet Aaru Hena Mut Sen.",
+        "retry_has_no_destination": "«Wehem Wedja»: Nen Wat · Sep Mawy. Fekh Wat Er Ta, Er Khet Khetem."
       },
       "draft": "Sesh · Nen Hab",
       "filtered_by": "Setep Em «{{verdict}}»; Nen Aq Hena Nen Er: Maa Wa.",
@@ -2504,7 +2522,8 @@
       "HELL": "Duat",
       "PURGATORY": "Ta Hesmen",
       "BLISS": "Aaru",
-      "NEUTRAL": "Ta Ahau"
+      "NEUTRAL": "Ta Ahau",
+      "ANNIHILATION": "Ba Pehwy"
     },
     "codes": {
       "DY_01_HEAVEN": "Tianjie",
@@ -3005,7 +3024,10 @@
       "done": "Kheperu Sesen Seth {{n}}",
       "failed": "Nen Sesen Kheperu",
       "skipped_note": "Sab Hery Hena Djes-Ek: Nen Em Iri Neb.",
-      "open_work": "Nen Khetem Sab Neb: Sab {{n}} Em Sep Em Iri. Khetem Em Sep Wa, Redi Tepy."
+      "open_work": "Nen Khetem Sab Neb: Sab {{n}} Em Sep Em Iri. Khetem Em Sep Wa, Redi Tepy.",
+      "open_work_partial": "Khetem Seth {{done}}. Sab {{n}}: Sep Em Iri · Nen Khetem. Khetem Em Sep Wa, Redi Tepy.",
+      "held_row": "{{name}} · Sep Em Iri {{n}}",
+      "held_region": "Sab · Nen Khetem"
     },
     "reset_password": {
       "action": "Wehem Sekhem",
@@ -4429,7 +4451,9 @@
       "shortening_pending": "Dbh Khebi Wa Em Wedja",
       "shortening_used": "Dbh Khebi Sep Wa Seth",
       "reported": "Smi Em Djes-Ef Seth.",
-      "go_home": "Er Pesh Tepy"
+      "go_home": "Er Pesh Tepy",
+      "desired_form_required": "Setep Wat Wehem Mesut Tepy",
+      "rebirth_form_not_applicable": "Nen Wat 6 Em Taui-Ek: Nen Setep Wat"
     },
     "lexicon": {
       "eg": {
@@ -5978,7 +6002,9 @@
       "not_refused": "Hab-Ba Sekhet Pen Nen Khesef, Nen Sehen",
       "not_next": "Sekhet Em Hat Nen Tepy Djer; Iri Sekhet Pen Tepy",
       "soul_away": "Ba Nen Em Per Tepy; Nen Wehem Hab-Ba",
-      "dispatch_not_started": "Hab-Ba Nen Per (Mi: Hab-Ba Em Djeret Ky Em Hab). Wehem Iri Er Khet."
+      "dispatch_not_started": "Hab-Ba Nen Per (Mi: Hab-Ba Em Djeret Ky Em Hab). Wehem Iri Er Khet.",
+      "retry_with_open_cross": "Wedja Ta Ky Nen Khetem Djer: Khetem Tepy, Er Khet «Wehem Wedja».",
+      "retry_not_a_destination": "Duat Europa: «Wehem Wedja» Nen Ta. Djed Wedja Pehwy, Er Iri Wedja Mawy."
     },
     "cross": {
       "title": "Sekhet Wetep",
@@ -7187,7 +7213,8 @@
       "not_reviewer": "Sab Shesep Wa: Djed Wedja",
       "appeal_closed": "Nehet Khetem Er Sehen Seth",
       "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen».",
-      "ladder_running": "Nehet Em Wat Nehet: Nen Shesep, Nen Djed Er Khet Khetem"
+      "ladder_running": "Nehet Em Wat Nehet: Nen Shesep, Nen Djed Er Khet Khetem",
+      "retry_not_a_destination": "Duat Europa: «Wehem Wedja» Nen Ta. Khemen Er Wedja Pehwy, Er Iri Wedja Mawy."
     },
     "decide": {
       "foreign_title": "Sekhet Em Taui Ky · Wedja Taui Ky",

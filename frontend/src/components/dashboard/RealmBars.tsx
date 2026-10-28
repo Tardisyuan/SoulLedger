@@ -13,7 +13,7 @@ import { REALM_PATTERNS, type ChartPattern } from "@/lib/chart-colors";
  *   中立 outline 只有 1px 边
  *   不存在 void  1px 虚线边(埃及第二死,不是一个地方;A5 之外补的)
  *
- * 全部用梯度第 1 档 —— 去向没有先后,图案就是区分,不另加颜色。纯 CSS,不再拉 recharts:
+ * 四种用梯度第 1 档 —— 去向没有先后,图案就是区分,不另加颜色;`void` 用 ink-muted:它的在押数恒为 0,只是个占位框,用图表色会让人以为那里有数据。纯 CSS,不再拉 recharts:
  * 这张图要的「数在柱上、名在柱下」是四个 div 就能画的东西。
  */
 export const PATTERN_CLASS: Record<ChartPattern, string> = {
@@ -22,7 +22,7 @@ export const PATTERN_CLASS: Record<ChartPattern, string> = {
   hatch:
     "border border-[oklch(var(--color-chart-1))] bg-[repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px,transparent_1.5px_6px)]",
   outline: "border border-[oklch(var(--color-chart-1))]",
-  void: "border border-dashed border-[oklch(var(--color-chart-1))]",
+  void: "border border-dashed border-[oklch(var(--color-ink-muted))]",
 };
 
 export interface RealmBar {
@@ -65,12 +65,12 @@ export function RealmBars({ bars }: { bars: RealmBar[] }) {
           {bars.map((b) => (
             <div key={b.key} data-realm-bar={b.key} className="flex h-full min-w-8 flex-col items-center justify-end gap-0.5">
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{b.count}</span>
-              {b.count > 0 && (
+              {(b.count > 0 || patternOf(b.realmType) === "void") && (
                 <span
                   aria-hidden="true"
                   data-pattern={patternOf(b.realmType)}
                   className={`block w-full ${PATTERN_CLASS[patternOf(b.realmType)]}`}
-                  style={{ height: `${(b.count / max) * MAX_BAR}px` }}
+                  style={{ height: `${(b.count / max) * MAX_BAR}px`, minHeight: b.count > 0 ? undefined : 8 }}
                 />
               )}
             </div>
