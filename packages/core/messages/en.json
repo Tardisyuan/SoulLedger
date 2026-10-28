@@ -7214,7 +7214,8 @@
       "appeal_closed": "This appeal has already been decided or withdrawn",
       "verdict_unchanged": "The new verdict is the same as the original. To keep it, choose Uphold the verdict.",
       "ladder_running": "This appeal is before the appeal court; it can't be claimed or decided until the court is done",
-      "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment."
+      "retry_not_a_destination": "A European RETRY is not a destination: amend to a final verdict, or open a new judgment.",
+      "not_final_judge": "Only the final judge can decide"
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",
@@ -7235,9 +7236,12 @@
       "PASSED": "Passed on",
       "REJECTED": "Rejected · verdict stands",
       "CURRENT": "Being heard",
-      "AHEAD": "Not reached"
+      "AHEAD": "Not reached",
+      "AWAITING_FINAL": "All stations passed · awaiting the final judge"
     },
-    "escalate_hint": "The last review upheld the verdict. If you still disagree, you can escalate."
+    "escalate_hint": "The last review upheld the verdict. If you still disagree, you can escalate.",
+    "ladder_final_pending": "Final judge · decision pending",
+    "final_decide": "Give the final decision"
   },
   "cityGods": {
     "title": "City Gods",

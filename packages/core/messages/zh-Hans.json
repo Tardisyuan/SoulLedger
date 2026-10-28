@@ -7214,7 +7214,8 @@
       "appeal_closed": "这份申诉已有结论或已撤回",
       "verdict_unchanged": "新裁决和原判相同。要维持，请选「维持原判」。",
       "ladder_running": "这份申诉在申诉流程里，流程走完前不能认领或作结论",
-      "retry_not_a_destination": "欧洲的「重审」不是去处：请改判为终局裁决，或另开一件审判。"
+      "retry_not_a_destination": "欧洲的「重审」不是去处：请改判为终局裁决，或另开一件审判。",
+      "not_final_judge": "只有终审官员能作出结论"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",
@@ -7235,9 +7236,12 @@
       "PASSED": "通过，送往下一站",
       "REJECTED": "驳回 · 维持原判",
       "CURRENT": "审理中",
-      "AHEAD": "未到"
+      "AHEAD": "未到",
+      "AWAITING_FINAL": "站梯走完 · 待终审"
     },
-    "escalate_hint": "上一次复核维持了原判。还不服，可以上诉。"
+    "escalate_hint": "上一次复核维持了原判。还不服，可以上诉。",
+    "ladder_final_pending": "终审 · 待作出结论",
+    "final_decide": "作出终审结论"
   },
   "cityGods": {
     "title": "城隍",
