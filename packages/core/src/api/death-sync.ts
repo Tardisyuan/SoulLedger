@@ -80,3 +80,32 @@ export const deathSyncApi = {
   redeliverWebhook: (deliveryId: string) =>
     api.post<WebhookDelivery>(`/death-sync/webhook-deliveries/${deliveryId}/redeliver/`),
 };
+
+/** 土地公(只地府,`/death-sync/tudi-gods/`):基层登记亡魂,报给上级城隍。 */
+export type TudiGod = components["schemas"]["TudiGod"];
+export type TudiGodInput = {
+  name: string;
+  regions?: string[];
+  /** 上级城隍(本殿的);null = 没有,案子按出身地配。 */
+  city_god?: string | null;
+  officer_ids?: number[];
+};
+/** 以土地公名义登记一条死亡;灵魂只认 id。死因与地点写进登记(加密存放)。 */
+export type TudiRegistrationInput = {
+  soul_lookup: { soul_id: string };
+  death_date: string;
+  death_location?: string;
+  cause_of_death?: string;
+  idempotency_key?: string;
+};
+
+export const tudiGodsApi = {
+  list: (params: { page?: string } = {}) =>
+    api.get<PaginatedResponse<TudiGod>>("/death-sync/tudi-gods/", { params }),
+  create: (body: TudiGodInput) => api.post<TudiGod>("/death-sync/tudi-gods/", body),
+  update: (id: string, body: Partial<TudiGodInput>) => api.patch<TudiGod>(`/death-sync/tudi-gods/${id}/`, body),
+  remove: (id: string) => api.delete(`/death-sync/tudi-gods/${id}/`),
+  /** 201 = 一条登记(PROCESSED 或 FAILED 带 error_code);403 `not_tudi_officer`;409 = 同一个幂等键已有的那条。 */
+  registerDeath: (id: string, body: TudiRegistrationInput) =>
+    api.post<DeathRegistration>(`/death-sync/tudi-gods/${id}/register-death/`, body),
+};

@@ -69,6 +69,7 @@ import { AppealLine, roundsOf } from "./appeals";
 import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
+import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -703,7 +704,7 @@ export function useScrollToLanding(landing: SentenceLanding | undefined) {
 }
 
 export function MyLifeScreen() {
-  const { t, locale } = useI18n();
+  const { t, locale, enumLabel } = useI18n();
   const { state, refreshProfile } = useSession();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   // A sentence push landed here (受刑 1d): highlighted until the page is left, then forgotten —
@@ -780,6 +781,20 @@ export function MyLifeScreen() {
               {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
             </DataRow>
             <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
+            {/* 地府(2026-10-28):十三站(docs/06)只在路上时画;出身部洲(docs/07)不详也画。别的文明都不画。
+                ponytail: 临时是两行数据,等 Design 画十三站的行程条。 */}
+            {me.civilization === "CHINESE" && me.diyu_station ? (
+              <DataRow label={t("soul_app.life.station")} testID="life-station">
+                {`${enumText(enumLabel("souls.diyu_station", me.diyu_station), t)} · ${t("soul_app.life.station_at", {
+                  n: String(diyuStationOrdinal(me.diyu_station) ?? "?"),
+                })}`}
+              </DataRow>
+            ) : null}
+            {me.civilization === "CHINESE" ? (
+              <DataRow label={t("soul_app.life.continent")} testID="life-continent">
+                {me.birth_continent ? enumText(enumLabel("souls.birth_continent", me.birth_continent), t) : unrecorded}
+              </DataRow>
+            ) : null}
           </DataRows>
         </Block>
         {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}

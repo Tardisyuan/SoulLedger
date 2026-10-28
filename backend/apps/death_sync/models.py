@@ -9,6 +9,39 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import AuditUserFields
+from apps.tenants.managers import TenantManager
+
+
+class TudiGod(AuditUserFields, models.Model):
+    """一位土地公(2026-10-28,只在地府):基层登记亡魂的一级,上面是城隍。
+
+    docs/08 §五(城隍 →「土地公(乡镇级)」)、§七(土地公「管理一方土地和亡灵」)、§九(「基层管理员」);
+    06 §二 第一站土地庙:「通报当地城隍,有新亡魂到来」「记录亡魂基本信息(死亡时间、死因)」。
+    `regions` 是他管的地名(乡镇),只作展示与筛选;登记时报给 `city_god`(上级城隍),不再按出身地另配。
+    `city_god` 可空:本殿还没有城隍时,登记照样做,案子按出身地配(与死亡同步一样)。
+    `officers` = 以这位土地公名义登记的官员(殿管理员也能登)。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="tudi_gods")
+    name = models.CharField(max_length=100)
+    regions = models.JSONField(default=list, blank=True)
+    city_god = models.ForeignKey("judgment.CityGod", on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="tudi_gods")
+    officers = models.ManyToManyField("authentication.User", blank=True, related_name="tudi_gods")
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "name"], condition=models.Q(is_deleted=False),
+                                    name="unique_tudi_god_name_per_hall"),
+        ]
+
+    def __str__(self):
+        return self.name
 
 
 class ExternalApiKey(AuditUserFields, models.Model):
@@ -125,6 +158,15 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name='registrations',
+    )
+    # 土地公登记(2026-10-28,apps/death_sync/tudi.py):官员以一位土地公的名义登记的死亡,`api_key` 为空、
+    # `source_system` 是 "TUDI"。与外部系统的登记同一张表、同一条处理(`DeathSyncService._process`)。
+    tudi_god = models.ForeignKey(
+        "death_sync.TudiGod",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registrations",
     )
 
     # Idempotency

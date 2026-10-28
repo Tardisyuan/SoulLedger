@@ -563,6 +563,10 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     duat_passage = serializers.ChoiceField(choices=Soul.DuatPassage.choices, allow_blank=True, required=False)
     # 希腊:未葬 / 无渡资者滞留阿刻戎岸边(`Soul.ferry_passage`)。空 = 已葬且有渡资。
     ferry_passage = serializers.ChoiceField(choices=Soul.FerryPassage.choices, allow_blank=True, required=False)
+    # 地府十三站(docs/06 §一,`Soul.diyu_station`):只读,挪站走 `POST /souls/{id}/station/`。空 = 不在路上。
+    diyu_station = serializers.ChoiceField(choices=Soul.DiyuStation.choices, allow_blank=True, read_only=True)
+    # 四大部洲(docs/07 §人道,`Soul.birth_continent`):这一世生在哪一洲,官员登记。空 = 不详。只在地府。
+    birth_continent = serializers.ChoiceField(choices=Soul.Continent.choices, allow_blank=True, required=False)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -590,6 +594,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "fated_death_date", "origin_location", "origin_region", "duat_passage", "birth_name",
+            "diyu_station", "birth_continent",
             "baptism", "denied_immortality", "neutral_in_life", "ferry_passage",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
@@ -625,6 +630,9 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 "The fated date of death must be a full date (year, month and day) of the Common Era."]})
         if attrs.get("duat_passage") and self.instance is not None and self.instance.civilization != "EGYPTIAN":
             raise serializers.ValidationError({"duat_passage": ["Only an Egyptian soul has a Duat passage."]})
+        if attrs.get("birth_continent") and self._civilization_of(attrs) != "CHINESE":
+            raise serializers.ValidationError({"birth_continent": ["Only a soul of Diyu is born in one of the four "
+                                                                   "continents."]})
         # Limbo and the sixth circle are Dante's (2026-10-27, review E-2): the two facts only a European soul records.
         if self.instance is not None and self.instance.civilization != "EUROPEAN":
             if attrs.get("baptism", Soul.Baptism.UNRECORDED) != Soul.Baptism.UNRECORDED:
@@ -654,6 +662,14 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             _date_after_write(attrs, self.instance, "death"),
         ))
         return attrs
+
+    def _civilization_of(self, attrs) -> str | None:
+        """更新时是这个灵魂的管辖文明;新建时是请求所在殿的文明(与 `Soul.save` 取租户同一个来源)。"""
+        if self.instance is not None:
+            return self.instance.civilization
+        request = self.context.get("request")
+        tenant = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+        return tenant.civilization if tenant is not None else None
 
     def create(self, validated_data):
         """Turn `Soul.save`'s "Tenant is required" into a 400 (BD-07).
@@ -952,3 +968,14 @@ class SoulImportFileErrorSerializer(serializers.Serializer):
     columns = serializers.ListField(child=serializers.CharField(), required=False)
     max_rows = serializers.IntegerField(required=False)
     max_bytes = serializers.IntegerField(required=False)
+
+
+class SoulStationMoveSerializer(serializers.Serializer):
+    """`POST /souls/{id}/station/`:挪到十三站的哪一站(docs/06 §一)。"""
+
+    station = serializers.ChoiceField(choices=Soul.DiyuStation.choices)
+
+
+class SoulStationRefusalSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    error = serializers.CharField()

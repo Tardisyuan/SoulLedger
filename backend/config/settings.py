@@ -674,6 +674,12 @@ SPECTACULAR_SETTINGS = {
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
         "CooldownShorteningStatusEnum": "apps.soul_accounts.models.CooldownShorteningStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
+        # 地府四项(2026-10-28):十三站、四大部洲、勾魂的鬼差与牒的状态,各在几个字段名下出现(`station` /
+        # `diyu_station`、`birth_continent` / `rebirth_continent`、`escort` / `suggested_escort`),钉住一个名字。
+        "DiyuStationEnum": "apps.souls.models.DiyuStation.choices",
+        "ContinentEnum": "apps.souls.models.Continent.choices",
+        "CaptureEscortEnum": "apps.dispatch.models.CaptureEscort.choices",
+        "CaptureStatusEnum": "apps.dispatch.models.CaptureStatus.choices",
         # apps.soul_assist:两端各有一个 `screen` 选项集。灵魂端的保留原名(mobile 与 core 引用
         # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。
         "ScreenEnum": "apps.soul_assist.models.SCREENS",

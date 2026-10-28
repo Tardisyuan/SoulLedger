@@ -334,7 +334,12 @@
       "MENGPO_SOUP_TAKEN": "饮孟婆汤",
       "PURGATORY_ASCENDED": "出炼狱，升天堂",
       "OFFICER_HANDOVER": "经办官员交接",
-      "DUAT_PASSAGE_CHANGED": "杜阿特行程改记"
+      "DUAT_PASSAGE_CHANGED": "杜阿特行程改记",
+      "DIYU_STATION_CHANGED": "十三站换站",
+      "CAPTURE_WARRANT_ISSUED": "发勾魂牒",
+      "SOUL_CAPTURED": "鬼差拘到",
+      "CAPTURE_HANDED_OVER": "勾魂交接",
+      "CAPTURE_WARRANT_CANCELLED": "勾魂牒撤销"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -759,6 +764,75 @@
       "MORTAL_ABSOLVED": "大罪 · 已告解",
       "VENIAL": "小罪",
       "help": "未悔的大罪只能判不通过（下地狱）；小罪与已告解的大罪不能判下地狱，进炼狱涤罪。未分的不核对。"
+    },
+    "diyu_station": {
+      "label": "十三站",
+      "NONE": "不在路上",
+      "TUDI_TEMPLE": "土地庙",
+      "YELLOW_SPRINGS_ROAD": "黄泉路",
+      "WANGXIANG_TERRACE": "望乡台",
+      "EVIL_DOG_VILLAGE": "恶狗村",
+      "GOLDEN_ROOSTER_HILL": "金鸡山",
+      "WILD_GHOST_VILLAGE": "野鬼村",
+      "MIHUN_HALL": "迷魂殿",
+      "OFFERING_PAVILION": "供养阁",
+      "GHOST_FORT": "鬼界堡",
+      "FENGDU_CITY": "酆都城",
+      "EIGHTEEN_HELLS": "十八层地狱",
+      "LOTUS_TERRACE": "莲花台",
+      "HUANHUN_CLIFF": "还魂崖",
+      "ordinal": "第 {{n}} / 13 站",
+      "move_label": "挪到",
+      "move": "挪站",
+      "moved": "已挪到{{station}}",
+      "error": {
+        "not_diyu": "只有地府的亡魂走十三站。",
+        "alive": "在世的灵魂不在路上。"
+      }
+    },
+    "birth_continent": {
+      "label": "出身部洲",
+      "NONE": "不详",
+      "DONGSHENG": "东胜神洲",
+      "NANZHAN": "南瞻部洲",
+      "XINIU": "西牛贺洲",
+      "BEIJULU": "北俱卢洲",
+      "help": "这一世生在四大部洲的哪一洲。转世到人道时由转世那一笔改写成下一世的部洲。"
+    },
+    "capture": {
+      "title": "勾魂",
+      "due_hint": "阳寿已到，可以发勾魂牒。交接时登记死亡，案子交城隍初审。",
+      "escort_label": "鬼差",
+      "escort": {
+        "SUGGESTED": "按功过建议",
+        "WUCHANG": "黑白无常",
+        "NIUTOU_MAMIAN": "牛头马面"
+      },
+      "status": {
+        "ISSUED": "已发牒",
+        "CAPTURED": "已拘到",
+        "HANDED_OVER": "已交接",
+        "CANCELLED": "已撤销"
+      },
+      "city_god": "{{name}}发牒",
+      "issue": "发勾魂牒",
+      "capture": "拘到",
+      "hand_over": "交接",
+      "cancel": "撤销",
+      "cancel_reason": "撤销理由",
+      "cancel_confirm": "撤销勾魂牒",
+      "issued_toast": "已为{{name}}发勾魂牒",
+      "captured_toast": "{{name}}已拘到",
+      "handed_over_toast": "{{name}}已交接，死亡已登记",
+      "cancelled_toast": "{{name}}的勾魂牒已撤销",
+      "error": {
+        "not_diyu": "只有地府的灵魂由鬼差勾魂。",
+        "not_alive": "这个灵魂已经不在世。",
+        "lifespan_not_ended": "阳寿未到，或没有登记阳寿。",
+        "warrant_open": "这个灵魂已有一张未了结的勾魂牒。",
+        "wrong_status": "勾魂牒此刻不能这样办，刷新后再试。",
+        "reason_required": "撤销要写理由。"
+      }
     }
   },
   "common": {
@@ -4493,7 +4567,10 @@
       "stage": "本世阶段 {{at}} / {{total}}",
       "balance": "本世余额",
       "ledger": "本世账目",
-      "ledger_hint": "展开一项查看"
+      "ledger_hint": "展开一项查看",
+      "station": "所在之站",
+      "station_at": "第 {{n}} / 13 站",
+      "continent": "出身部洲"
     },
     "past_lives": {
       "title": "前世",

@@ -30,7 +30,10 @@ from django.db.models import Max
 from django.utils import timezone
 
 from apps.realms.models import Realm, SoulPathEntry
-from apps.souls.models import Civilization
+from apps.souls.models import Civilization, Soul
+
+#: 地府十殿的界域代码前缀(apps/actors/mythology/realms.py)。
+COURT_PREFIX = "DY_COURT_"
 
 # Where a soul stands the moment it dies, before any court has taken its case.
 # Codes verified against apps/actors/mythology/realms.py (the seed).
@@ -78,13 +81,19 @@ class SoulPathService:
                 current.left_at = at
                 current.save(update_fields=["left_at"])
             last = SoulPathEntry.all_objects.filter(soul_id=soul.pk).aggregate(n=Max("sequence"))["n"]
-            return SoulPathEntry.all_objects.create(
+            entry = SoulPathEntry.all_objects.create(
                 soul_id=soul.pk,
                 realm=realm,
                 sequence=(last or 0) + 1,
                 entered_at=at,
                 tenant_id=tenant_id if tenant_id is not None else realm.tenant_id,
             )
+            if realm.realm_code.startswith(COURT_PREFIX):
+                # 地府十三站:进了十殿任一殿就是到了酆都城(docs/06 §二「十殿阎罗在此处理政务」)。只往前走。
+                from apps.souls import stations
+
+                stations.arrive(soul, Soul.DiyuStation.FENGDU_CITY, via="court")
+            return entry
 
     @classmethod
     def enter_on_death(cls, soul, *, at=None):

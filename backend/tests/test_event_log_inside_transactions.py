@@ -575,7 +575,49 @@ def _cross_pass_reopens_finished_plan():
             "STATE_CHANGED")
 
 
+def _station_move():
+    """十三站(apps/souls/stations.py):官员挪站,DIYU_STATION_CHANGED 与那一列同进退。"""
+    from apps.souls import stations
+
+    soul = Soul.objects.create(name="挪站", tenant=_cn())
+    soul.die()
+    lead = plan.officer(f"st_{soul.pk.hex[:8]}", "MODERATOR", _cn())
+    return (lambda: stations.move(Soul.all_objects.get(pk=soul.pk), "WANGXIANG_TERRACE", lead),
+            lambda: Soul.all_objects.get(pk=soul.pk).diyu_station == "WANGXIANG_TERRACE", "DIYU_STATION_CHANGED")
+
+
+def _capture(step):
+    """勾魂牒(apps/dispatch/capture.py):发牒 / 拘到 / 交接 / 撤销,各自的事件与它描述的那一笔同进退。"""
+    from apps.dispatch import capture
+    from apps.dispatch.models import CaptureWarrant
+
+    def path():
+        soul = Soul.objects.create(name="阳寿尽", tenant=_cn(), fated_death_year=2000, fated_death_month=1,
+                                   fated_death_day=1)
+        if step == "issue":
+            return (lambda: capture.issue(Soul.all_objects.get(pk=soul.pk)),
+                    lambda: CaptureWarrant.all_objects.filter(soul=soul).exists(), "CAPTURE_WARRANT_ISSUED")
+        warrant = capture.issue(soul)
+        if step == "capture":
+            return (lambda: capture.capture(warrant.pk),
+                    lambda: CaptureWarrant.all_objects.get(pk=warrant.pk).status == "CAPTURED", "SOUL_CAPTURED")
+        if step == "cancel":
+            return (lambda: capture.cancel(warrant.pk, "牒发错了"),
+                    lambda: CaptureWarrant.all_objects.get(pk=warrant.pk).status == "CANCELLED",
+                    "CAPTURE_WARRANT_CANCELLED")
+        capture.capture(warrant.pk)
+        return (lambda: capture.hand_over(warrant.pk),
+                lambda: Soul.all_objects.get(pk=soul.pk).current_state == SoulState.JUDGING, "CAPTURE_HANDED_OVER")
+    return path
+
+
 PATHS = {
+    "die/DIYU_STATION_CHANGED": _die("DIYU_STATION_CHANGED"),
+    "station_move/DIYU_STATION_CHANGED": _station_move,
+    "capture_issue/CAPTURE_WARRANT_ISSUED": _capture("issue"),
+    "capture/SOUL_CAPTURED": _capture("capture"),
+    "capture_hand_over/CAPTURE_HANDED_OVER": _capture("hand_over"),
+    "capture_cancel/CAPTURE_WARRANT_CANCELLED": _capture("cancel"),
     "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
     "cross_pass_reopens_plan/STATE_CHANGED": _cross_pass_reopens_finished_plan,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,

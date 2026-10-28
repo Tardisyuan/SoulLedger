@@ -118,6 +118,29 @@ CIVILIZATION_TENANT = {
 UNKNOWN_CIVILIZATION = "UNKNOWN"
 
 
+class DiyuStation(models.TextChoices):
+    TUDI_TEMPLE = "TUDI_TEMPLE", "土地庙"
+    YELLOW_SPRINGS_ROAD = "YELLOW_SPRINGS_ROAD", "黄泉路"
+    WANGXIANG_TERRACE = "WANGXIANG_TERRACE", "望乡台"
+    EVIL_DOG_VILLAGE = "EVIL_DOG_VILLAGE", "恶狗村"
+    GOLDEN_ROOSTER_HILL = "GOLDEN_ROOSTER_HILL", "金鸡山"
+    WILD_GHOST_VILLAGE = "WILD_GHOST_VILLAGE", "野鬼村"
+    MIHUN_HALL = "MIHUN_HALL", "迷魂殿"
+    OFFERING_PAVILION = "OFFERING_PAVILION", "供养阁"
+    GHOST_FORT = "GHOST_FORT", "鬼界堡"
+    FENGDU_CITY = "FENGDU_CITY", "酆都城"
+    EIGHTEEN_HELLS = "EIGHTEEN_HELLS", "十八层地狱"
+    LOTUS_TERRACE = "LOTUS_TERRACE", "莲花台"
+    HUANHUN_CLIFF = "HUANHUN_CLIFF", "还魂崖"
+
+
+class Continent(models.TextChoices):
+    DONGSHENG = "DONGSHENG", "东胜神洲"
+    NANZHAN = "NANZHAN", "南瞻部洲"
+    XINIU = "XINIU", "西牛贺洲"
+    BEIJULU = "BEIJULU", "北俱卢洲"
+
+
 class SoulState(models.TextChoices):
     ALIVE = "ALIVE", "Alive"
     JUDGING = "JUDGING", "Under Judgment"
@@ -220,6 +243,19 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         NO_FARE = "NO_FARE", "无渡资"
 
     ferry_passage = models.CharField(max_length=10, choices=FerryPassage.choices, blank=True, default="")
+
+    #: 地府十三站(2026-10-28,docs/06 §一 总览表):亡魂此刻走到哪一站。空 = 不在路上(在世、或还没有记录)。
+    #: 次序取 §一 总览表(docs/09 §4.3 引的也是它),不取 §二 详解章的编号 —— 06 §一 自己说两套都无出处、
+    #: 「若要落地,请在产品侧选定一套」。第四站用 06 §〇 的正名「恶狗村」。只在地府;只经 `apps/souls/stations.py` 写。
+    DiyuStation = DiyuStation  # module level, so drf-spectacular can name it (config/settings.py)
+
+    diyu_station = models.CharField(max_length=20, choices=DiyuStation.choices, blank=True, default="")
+
+    #: 四大部洲(2026-10-28,docs/07 §人道「四大部洲」):这一世生在哪一洲。空 = 不详。官员登记;转世到人道时
+    #: 由转世那一笔改写成下一世的部洲(`Reincarnation.rebirth_continent`)。只在地府。
+    Continent = Continent
+
+    birth_continent = models.CharField(max_length=10, choices=Continent.choices, blank=True, default="")
     birth_name = models.CharField(max_length=255, blank=True)  # name at birth
     description = models.TextField(blank=True)
 
@@ -746,6 +782,17 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
                 SoulPathService.enter_on_death(locked_soul)
 
+                # 地府十三站的第一站:土地庙(docs/06 §二)。不论哪条路登记的死亡;别的文明不写。
+                from apps.souls import stations
+
+                stations.arrive(locked_soul, Soul.DiyuStation.TUDI_TEMPLE, via="death")
+
+                # 勾魂牒(apps/dispatch/capture.py):经别的路登记了死亡,还开着的牒就此作废;
+                # 正在交接的那一张在调用 die() 之前已经写成 HANDED_OVER,不在其中。
+                from apps.dispatch import capture
+
+                capture.void_on_death(locked_soul)
+
             # Inside the transaction: the event row is part of the transition's record, and a failed insert
             # must roll the transition back. (It used to be written after the lock was released; the bus only
             # writes a row, it makes no external call.)
@@ -805,8 +852,12 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         self.current_state = locked_soul.current_state
         return True
 
-    def die(self, death_date=None, location: str = "", account_origin: str = "OFFICER") -> "Judgment | None":
-        """Mark soul as dead, transition to JUDGING, and create a Judgment record."""
+    def die(self, death_date=None, location: str = "", account_origin: str = "OFFICER",
+            city_god=None) -> "Judgment | None":
+        """Mark soul as dead, transition to JUDGING, and create a Judgment record.
+
+        `city_god`: the city god this death was reported to (土地公登记 reports to its own city god,
+        apps/death_sync/tudi.py); None = matched by the birthplace as before."""
         from django.db import transaction
 
         if self.current_state != SoulState.ALIVE:
@@ -860,7 +911,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 civilization=self.civilization,
                 tenant=self.tenant,
                 judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
-                **self.opening_fields(to_legacy_date(self.death_year, self.death_month, self.death_day)),
+                **self.opening_fields(to_legacy_date(self.death_year, self.death_month, self.death_day),
+                                      city_god=city_god),
             )
             city_gods.received(judgment)
             if self.civilization == Civilization.EGYPTIAN:
@@ -945,7 +997,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         judgment.save(update_fields=["realm"])
         SoulPathService.enter(self, hall, tenant_id=self.tenant_id)
 
-    def opening_fields(self, died) -> dict:
+    def opening_fields(self, died, city_god=None) -> dict:
         """The columns a first-instance case of this death carries: 枉死城 (died before the fated date, Diyu only)
         and 城隍初审 (Diyu: the city god of the birthplace takes it first). `Soul.die` and a case opened by hand
         for a living soul (`JudgmentViewSet.perform_create`, 2026-10-27) both go through here."""
@@ -953,7 +1005,12 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
         fated = to_legacy_date(self.fated_death_year, self.fated_death_month, self.fated_death_day)
         untimely = bool(self.civilization == Civilization.CHINESE and fated and died and died < fated)
-        return {"untimely": untimely, "held_until": fated if untimely else None, **city_gods.initial_fields(self),
+        review = city_gods.initial_fields(self)
+        if (city_god is not None and self.civilization == Civilization.CHINESE
+                and city_god.tenant_id == self.tenant_id and not city_god.is_deleted):
+            # 土地公报给自己的上级城隍(docs/08 §五、06 §二 第一站「通报当地城隍」),不按出身地另配。
+            review = {**review, "city_god": city_god, "city_god_status": "PENDING"}
+        return {"untimely": untimely, "held_until": fated if untimely else None, **review,
                 **self._duat_fields(died)}
 
     def _duat_fields(self, died) -> dict:

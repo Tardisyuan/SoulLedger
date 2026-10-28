@@ -49,6 +49,8 @@ from apps.souls.serializers import (
     SoulRegionUpdateCommitSerializer,
     SoulRegionUpdatePreviewSerializer,
     SoulSerializer,
+    SoulStationMoveSerializer,
+    SoulStationRefusalSerializer,
     SoulTransitionSerializer,
 )
 
@@ -98,6 +100,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'update_record': ['soul.update'],
         'records': ['soul.read'],
         'path': ['soul.read'],
+        # 挪十三站(apps/souls/stations.py):与状态转换同一个码名 —— 都是把灵魂挪到别处。
+        'station': ['soul.transition'],
         # Acknowledging a warning mutates the record (three new columns),
         # the same way add_record mutates the soul's records — so it is
         # gated the same way add_record is, rather than inventing a new
@@ -133,7 +137,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     #: The actions whose response is a SoulSerializer / SoulListSerializer, or (`records`) every record.
     _ACTIONS_THAT_SERIALIZE_SOULS = frozenset({
         "list", "retrieve", "update", "partial_update", "archive", "unarchive", "correct_settlement", "die",
-        "transition", "records",
+        "transition", "records", "station",
     })
 
     def get_queryset(self):
@@ -824,6 +828,22 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             residence_read=residence_read_allowed(self),
         ).order_by("sequence")
         return Response(SoulPathEntrySerializer(entries, many=True).data)
+
+    @extend_schema(request=SoulStationMoveSerializer, responses={200: SoulSerializer, 409: SoulStationRefusalSerializer})
+    @action(detail=True, methods=["post"])
+    def station(self, request, pk=None):
+        """挪到地府十三站的某一站(docs/06 §一;规则在 `apps/souls/stations.py`)。地府的、不在世的灵魂;
+        可以往回挪。拒绝:`not_diyu` / `alive`(409)。"""
+        from apps.souls import stations
+
+        body = SoulStationMoveSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        soul = self.get_object()
+        try:
+            soul = stations.move(soul, body.validated_data["station"], request.user)
+        except stations.StationRefusedError as exc:
+            return Response({"code": exc.code, "error": exc.detail}, status=status.HTTP_409_CONFLICT)
+        return Response(SoulSerializer(soul, context=self.get_serializer_context()).data)
 
     @extend_schema(
         parameters=[

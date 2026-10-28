@@ -91,6 +91,14 @@ const ENUM_FIELDS = [
   // the hall, drawn through judgment.duat_stage.* / souls.duat_passage.*.
   "duat_stage",
   "duat_passage",
+  // Added 2026-10-28: the Diyu thirteen stations (`Soul.diyu_station`, souls.diyu_station.*), the four
+  // continents (`birth_continent` / `rebirth_continent`, souls.birth_continent.*) and the capture
+  // warrant's escort (souls.capture.escort.*).
+  "diyu_station",
+  "birth_continent",
+  "rebirth_continent",
+  "escort",
+  "suggested_escort",
   // Added 2026-10-27 (review E-2): `Soul.baptism`, drawn through souls.baptism.*.
   "baptism",
   // Added 2026-10-28: `Soul.ferry_passage` (Greek, UNBURIED / NO_FARE) and `SoulRecord.sin_gravity`

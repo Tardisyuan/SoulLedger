@@ -95,6 +95,9 @@ class Reincarnation(AuditUserFields, models.Model):
         validators=[MinValueValidator(1)],
         help_text="Which turn of the wheel this is; the first rebirth is 1.",
     )
+    #: 转进人道时生在哪一洲(docs/07 §人道「四大部洲」,只在地府)。空 = 不详,或不是人道。
+    #: 转世那一笔同时把它写成灵魂下一世的 `Soul.birth_continent`。
+    rebirth_continent = models.CharField(max_length=10, choices=Soul.Continent.choices, blank=True, default="")
     previous_realm = models.CharField(max_length=100, blank=True)
     new_identity = models.CharField(max_length=255, blank=True, help_text="Name in new life")
     notes = models.TextField(blank=True)

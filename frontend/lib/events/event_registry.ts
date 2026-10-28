@@ -114,6 +114,12 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     // 官员交接(backend/apps/judgment/handover.py::commit)与杜阿特行程改动(Soul.follow_duat_passage)。
     OFFICER_HANDOVER: handleSoulEvent,
     DUAT_PASSAGE_CHANGED: handleSoulEvent,
+    // 地府十三站(backend/apps/souls/stations.py)与勾魂牒(backend/apps/dispatch/capture.py)。
+    DIYU_STATION_CHANGED: handleSoulEvent,
+    CAPTURE_WARRANT_ISSUED: handleSoulEvent,
+    SOUL_CAPTURED: handleSoulEvent,
+    CAPTURE_HANDED_OVER: handleSoulEvent,
+    CAPTURE_WARRANT_CANCELLED: handleSoulEvent,
   },
 
   // Workflow domain
@@ -293,6 +299,12 @@ export const BACKEND_EVENT_TYPES = [
   // Officer handover; Duat passage changed after death (Egyptian only)
   "OFFICER_HANDOVER",
   "DUAT_PASSAGE_CHANGED",
+  // Diyu thirteen stations; capture warrants (Diyu only)
+  "DIYU_STATION_CHANGED",
+  "CAPTURE_WARRANT_ISSUED",
+  "SOUL_CAPTURED",
+  "CAPTURE_HANDED_OVER",
+  "CAPTURE_WARRANT_CANCELLED",
   // Scheduler (only the failure is an EventType; see REALTIME_ONLY below)
   "SCHEDULER_RUN_FAILED",
 ] as const;
@@ -308,7 +320,8 @@ export const SOUL_EVENT_GROUPS = {
   lifecycle: [
     "SOUL_CREATED", "STATE_CHANGED", "KARMA_RECALCULATED", "SETTLEMENT_CORRECTED", "RECORD_ADDED",
     "JUDGMENT_INITIATED", "CITY_GOD_RECEIVED", "CITY_GOD_RETURNED", "CITY_GOD_SENT_ON", "DUAT_PASSAGE_CHANGED",
-    "OFFICER_HANDOVER",
+    "OFFICER_HANDOVER", "CAPTURE_WARRANT_ISSUED", "SOUL_CAPTURED", "CAPTURE_HANDED_OVER",
+    "CAPTURE_WARRANT_CANCELLED", "DIYU_STATION_CHANGED",
     "JUDGMENT_CONCLUDED", "JUDGMENT_APPEAL_FILED", "JUDGMENT_APPEAL_WITHDRAWN",
     "JUDGMENT_APPEAL_DECIDED", "DISPOSITION_CREATED", "DISPOSITION_EXPIRED",
     "REINCARNATION_TRIGGERED", "MENGPO_SOUP_TAKEN", "REINCARNATION_COMPLETED", "PURGATORY_ASCENDED",
