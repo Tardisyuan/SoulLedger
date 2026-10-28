@@ -3055,6 +3055,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/disposition/{id}/release/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
+         *
+         *     celery beat 没部署,每日期满检查不会自己跑 —— 这是刑满之后灵魂往下走(下一站、或候转世)的人手入口。
+         *     与每日检查同一条判定(`expiry.releasable`)、同一个写入(`expiry.expire_one`:`expired_at`、
+         *     `DISPOSITION_EXPIRED`、欧洲炼狱升天堂、受刑中的那一站结束并推进),同一个事务。权限同「执行」。
+         *     409 `not_serving`:没执行、永久刑、已记期满,或没有期满日;409 `term_not_ended`:期满日还没到。
+         */
+        post: operations["v1_disposition_release_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/disposition/{id}/unarchive/": {
         parameters: {
             query?: never;
@@ -6956,7 +6980,9 @@ export interface paths {
         /**
          * @description Create a new reincarnation for a soul and immediately complete it.
          *     POST /reincarnation/reborn/
-         *     Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
+         *     Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN",
+         *             "rebirth_form_reason": "..." }
+         *     `rebirth_form` 省略 = 灵魂已批准申请里的意愿(没有申请时地府为人道);与意愿不同须写 `rebirth_form_reason`。
          */
         post: operations["v1_reincarnation_reborn_create"];
         delete?: never;
@@ -12172,6 +12198,7 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn: boolean;
             readonly suggested_rebirth_form: string | null;
+            readonly can_release: boolean;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -16690,6 +16717,7 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
             readonly suggested_rebirth_form?: string | null;
+            readonly can_release?: boolean;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17121,6 +17149,7 @@ export interface components {
             readonly is_eval_identity?: boolean;
             /** Format: date-time */
             readonly soup_taken_at?: string | null;
+            readonly desired_rebirth_form?: string | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -19027,6 +19056,7 @@ export interface components {
             readonly is_eval_identity: boolean;
             /** Format: date-time */
             readonly soup_taken_at: string | null;
+            readonly desired_rebirth_form: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -26580,6 +26610,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Disposition"];
+                };
+            };
+        };
+    };
+    v1_disposition_release_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Disposition. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disposition"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
