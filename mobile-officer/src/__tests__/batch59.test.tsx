@@ -153,6 +153,37 @@ describe("枉死申诉 review", () => {
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("j-1", { grievance_level: "SEVERE" }));
   });
 
+  // 华为真机 10-29 第二轮: the greyed buttons gave no reason, and the level saved on a tap with no word.
+  it("an empty note says why the three are grey, and the line goes once a note is written", async () => {
+    judge();
+    review();
+    expect(await screen.findByText("先写审核意见")).toBeTruthy();
+    expect(disabled("wangsi-reject")).toBe(true);
+    fireEvent.changeText(screen.getByTestId("wangsi-note"), "   ");
+    expect(screen.getByTestId("wangsi-note-required")).toBeTruthy(); // blanks are still empty
+    fireEvent.changeText(screen.getByTestId("wangsi-note"), "查实");
+    expect(screen.queryByTestId("wangsi-note-required")).toBeNull();
+    expect(disabled("wangsi-reject")).toBe(false);
+  });
+
+  it("the four-way level says a tap saves it; read-only and decided cases do not", async () => {
+    judge();
+    const first = review();
+    expect(await screen.findByText("点选即保存")).toBeTruthy();
+    first.unmount();
+    judge({ grievance_status: "REJECTED" });
+    review();
+    expect(await screen.findByTestId("wangsi-status")).toBeTruthy();
+    expect(screen.queryByTestId("wangsi-level-saves")).toBeNull();
+    expect(screen.queryByTestId("wangsi-note-required")).toBeNull();
+  });
+
+  it("the release gate's sentence uses full-width punctuation", async () => {
+    judge({ grievance_level: "MINOR" });
+    review();
+    expect(await screen.findByText("冤情等级为「重」或「极重」时，属实即提前释放。")).toBeTruthy();
+  });
+
   it("阳寿已到: only 不属实 / 属实(只记结论), under the late hint; no release, no 超度", async () => {
     judge({ held_until: PAST, grievance_level: "MINOR" });
     mockDecide.mockResolvedValue({ data: {} });
