@@ -18,7 +18,7 @@ import { workflowApi } from "@soulledger/core/api/workflow";
 import { TENANT_CODE_TO_CIVILIZATION, realmLabel } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
 
-export const TODO_KINDS: readonly TodoKind[] = ["city_god", "pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
+export const TODO_KINDS: readonly TodoKind[] = ["wangsi", "city_god", "pick", "approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
 
 /** Kinds that are only read on the phone (Design 第四十批 O-f): no detail, the group's bar says 「在电脑上处理」. */
 export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
@@ -47,6 +47,8 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
  * flow. Its rows open the pick page (`screens/pick.tsx`), keyed by the workflow.
  */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
+  // 枉死申诉(第五十九批 M-3):只给城隍名下官员,排在城隍初审上面 —— 申诉的主体还押在城里,等的是人。
+  { field: "wangsi", kind: "wangsi", label: "officer_app.todo.groups.wangsi" },
   // 城隍初审(第五十三批 M-1):只给名下官员,退回补正的在前(后端排)。案子先过城隍再到十殿,所以排第一。
   { field: "city_god", kind: "city_god", label: "officer_app.todo.groups.city_god" },
   { field: "pick_nodes", kind: "pick", label: "officer_app.todo.groups.pick_nodes" },
@@ -477,6 +479,7 @@ export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: str
     case "sentence_change":
       return "/sentence-requests";
     case "judgment":
+    case "wangsi":
       return `/judgment/${target.id}`;
     case "soul":
       return `/souls/${target.id}`;
@@ -492,6 +495,14 @@ export function deskUrl(target: Parameters<typeof deskPath>[0]): string {
 /** 403 means the role cannot see the area: the "denied" state, not an error. */
 export function isDenied(error: unknown): boolean {
   return (error as { response?: { status?: number } })?.response?.status === 403;
+}
+
+/**
+ * 409 `no_city_god`(第五十九批 M-6):本殿没有可收案的城隍。App 只 toast 网页那句 `judgment.error.no_city_god`,
+ * 不给按钮 —— 设城隍只在网页上。
+ */
+export function noCityGod(error: unknown): boolean {
+  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "no_city_god";
 }
 
 /** How long the pushed row's highlight takes to go (spec §五). */

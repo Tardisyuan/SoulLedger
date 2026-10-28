@@ -29,6 +29,8 @@ import { SoulDetail, SoulLink } from "./soulDetail";
 import { TodoFactsView } from "./todoFacts";
 import { PickStations, WorkflowSegmentsFor } from "./pick";
 import { CityGodCase } from "./cityGod";
+import { JudgmentFlowBlock } from "./judgmentFlow";
+import { WangsiReview } from "./wangsi";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -36,8 +38,11 @@ export type DetailTarget =
   | { type: "judgment"; id: string }
   | { type: "soul"; id: string };
 
-/** Opened over the detail: a soul, a judgment, or 改选 from a workflow's segments (O-3), keyed by the workflow. */
-type Over = Exclude<DetailTarget, { type: "todo" }> | { type: "pick"; id: string };
+/**
+ * Opened over the detail: a soul, a judgment, 改选 from a workflow's segments (O-3), keyed by the workflow, or a
+ * judgment's approval flow (「查看审批流程」, 第五十九批 M-1), keyed by the workflow too.
+ */
+type Over = Exclude<DetailTarget, { type: "todo" }> | { type: "pick"; id: string } | { type: "flow"; id: string };
 
 export function Detail({
   target,
@@ -81,6 +86,7 @@ export function Detail({
   const openSoul = (id: string) => push({ type: "soul", id });
   const openJudgment = (id: string) => push({ type: "judgment", id });
   const openPick = (id: string) => push({ type: "pick", id });
+  const openFlow = (id: string) => push({ type: "flow", id });
   // A pick made from over the detail: back to it, which loads its segments again (a new key), and the list behind reloads.
   const [picked, setPicked] = useState(0);
   return (
@@ -101,16 +107,18 @@ export function Detail({
         {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
         {target.type === "todo" && target.kind === "pick" ? <PickStations id={target.id} onDone={() => { onSettled(); onBack(); }} /> : null}
         {target.type === "todo" && target.kind === "city_god" ? <CityGodCase key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
-        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" ? (
+        {target.type === "todo" && target.kind === "wangsi" ? <WangsiReview key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" && target.kind !== "pick" && target.kind !== "city_god" && target.kind !== "wangsi" ? (
           <TodoDetail key={picked} kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} />
         ) : null}
-        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} /> : null}
+        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
         {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
       </View>
       </GoneContext.Provider>
       <GoneContext.Provider value={over}>
       {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
-      {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} /> : null}
+      {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
+      {top?.type === "flow" ? <TodoDetail key={`over-${stack.length}`} kind="approval" id={top.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} /> : null}
       {top?.type === "pick" ? (
         <PickStations
           key={`over-${stack.length}`}
@@ -327,7 +335,7 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
   );
 }
 
-function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: string) => void }) {
+function JudgmentDetail({ id, onOpenSoul, onOpenFlow }: { id: string; onOpenSoul: (id: string) => void; onOpenFlow?: (workflowId: string) => void }) {
   const { t, locale } = useI18n();
   const { state } = useSession();
   const me = state.status === "signedIn" ? state.user.id : null;
@@ -361,6 +369,8 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
               {data.reassign_reason ? <Txt variant="body">{t("officer_app.dispatch_status.reason", { reason: data.reassign_reason })}</Txt> : null}
             </View>
           ) : null}
+          {/* 第五十九批 M-1:罪目一行与审批流程那一块,只读;执行只在网页上,这里不画执行按钮。 */}
+          <JudgmentFlowBlock data={data} onOpenFlow={onOpenFlow} />
           <JudgmentCase data={data} onOpenRecord={setRecord} />
           <JudgmentComments id={id} concludedAt={data.concluded_at} readOnly={!!data.deferred_at && data.claimed_by === me} />
           <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
