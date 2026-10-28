@@ -388,7 +388,7 @@ test.describe("审判台 · 地府", () => {
     expect(api.countOf("POST", "/judgment/wangsi/:id/decide/")).toBe(0);
     await confirm.getByRole("button", { name: "属实 · 提前释放", exact: true }).click();
 
-    await expect.poll(() => api.lastCall("POST", "/judgment/wangsi/:id/decide/")?.body).toEqual({ upheld: true, note: "确系被害" });
+    await expect.poll(() => api.lastCall("POST", "/judgment/wangsi/:id/decide/")?.body).toEqual({ upheld: true, deliver: false, note: "确系被害" });
     expect(api.lastCall("POST", "/judgment/wangsi/:id/decide/")?.path).toBe(`/judgment/wangsi/${OPENED_JUDGMENT.id}/decide/`);
     await expect(confirm).toBeHidden();
     await expect(block.getByTestId("wangsi-head-line")).toContainText("已提前释放");
