@@ -55,7 +55,7 @@ const MONTH_NAMES_EN = [
 ] as const;
 
 /**
- * `egy` reuses the English names, spelled as an alias rather than a fallback.
+ * `egy` used to reuse the English names until Design batch 60 (2026-10-29) gave `Abed 1` … `Abed 12`.
  *
  * `messages/egy.json` carries no month names — it is an English base with the
  * Egyptian terminology substituted in, which is the same reason
@@ -79,7 +79,9 @@ const MONTH_NAMES: Record<Locale, readonly string[]> = {
   // 否则只是把不一致挪了个位置。
   "zh-Hans": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
   en: MONTH_NAMES_EN,
-  egy: MONTH_NAMES_EN,
+  // Design 第六十批(2026-10-29):`Abed` + 数字,同中文「3月」的结构。不用埃及历月名(Thoth 约从公历 9 月中起),
+  // 免得读者以为日期换了历法 —— 日期本身仍是公历。
+  egy: ["Abed 1", "Abed 2", "Abed 3", "Abed 4", "Abed 5", "Abed 6", "Abed 7", "Abed 8", "Abed 9", "Abed 10", "Abed 11", "Abed 12"],
 };
 
 /**
@@ -91,7 +93,7 @@ const MONTH_NAMES: Record<Locale, readonly string[]> = {
 const MONTH_DAY: Record<Locale, (monthName: string, day: number) => string> = {
   "zh-Hans": (monthName, day) => `${monthName}${day}日`,
   en: (monthName, day) => `${monthName} ${day}`,
-  egy: (monthName, day) => `${monthName} ${day}`,
+  egy: (monthName, day) => `${monthName} Hru ${day}`,
 };
 
 /**
@@ -119,7 +121,11 @@ export function formatHistoricalDate(
 
   // Format year with BCE/CE suffix
   let yearStr: string;
-  if (year <= 0) {
+  if (locale === "egy") {
+    // Design 第六十批:公元不加词(同中文);公元前写 `Tepy Er Kristos`(在基督之前,同受洗那组「生于基督之前」)。
+    // 年份前不加 `Renpet`:`Renpet 1066` 在词表里读作「1066 年的时长」。
+    yearStr = year <= 0 ? `${Math.abs(year)} Tepy Er Kristos` : `${year}`;
+  } else if (year <= 0) {
     // BCE: year -1 is "1 BCE", year -44 is "44 BCE"
     yearStr = `${Math.abs(year)} BCE`;
   } else {
