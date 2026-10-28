@@ -827,7 +827,7 @@
       },
       "city_god": "issued by {{name}}",
       "issue": "Issue capture warrant",
-      "capture": "Captured",
+      "capture": "Mark captured",
       "hand_over": "Hand over",
       "cancel": "Revoke",
       "cancel_reason": "Reason for cancelling",
@@ -2472,7 +2472,7 @@
       "unset": "Not recorded",
       "grievance": "Grievance",
       "plea": "The grievance",
-      "plea_hint": "Recorded on the soul's behalf; the city god's officers or a hall administrator review it.",
+      "plea_hint": "Recorded on the soul's behalf; the City God's officers or a hall administrator review it.",
       "file": "File grievance",
       "decision_note": "Review note",
       "uphold": "Upheld · release early",
@@ -2484,7 +2484,7 @@
         "grievance_open": "This case already has a grievance.",
         "no_grievance_filed": "No grievance is awaiting review.",
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
-        "not_city_god_officer": "Only this city god's officers or a hall administrator can review it.",
+        "not_city_god_officer": "Only this City God's officers or a hall administrator can review it.",
         "not_pending": "This case is concluded."
       },
       "release_title": "Release {{name}} early?",
@@ -5901,7 +5901,7 @@
     },
     "officer_handover_received": {
       "title": "Work handed over to you",
-      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} city gods, {{letters}} letters."
+      "body": "{{by}} handed {{from}}'s work to you: {{judgments}} judgments, {{appeals}} appeals, {{city_gods}} City Gods, {{letters}} letters."
     }
   },
   "social_moderation": {
@@ -7579,10 +7579,10 @@
     "rank": "Rank",
     "rank_none": "Unranked",
     "ranks": {
-      "PROVINCE": "Provincial city god",
-      "PREFECTURE": "Prefectural city god",
-      "DEPARTMENT": "Departmental city god",
-      "COUNTY": "County city god"
+      "PROVINCE": "Provincial City God",
+      "PREFECTURE": "Prefectural City God",
+      "DEPARTMENT": "Departmental City God",
+      "COUNTY": "County City God"
     },
     "rank_titles": {
       "PROVINCE": "King Mingling",
@@ -7591,7 +7591,7 @@
       "COUNTY": "Earl Xianyou"
     },
     "bureaus_label": "Bureaus",
-    "bureaus_hint": "Tick the bureaus this city god actually has. Higher ranks usually have more.",
+    "bureaus_hint": "Tick the bureaus this City God actually has. Higher ranks usually have more.",
     "bureau_count": "{{count}} bureaus",
     "ministries": {
       "HEAD": "General office",
@@ -7608,15 +7608,15 @@
       "DIANJI": "Bureau of Registers",
       "JIBU": "Bureau of Deeds",
       "DUGUAN": "Bureau of Constables",
-      "CAIBO": "Bureau of Offerings",
+      "CAIBO": "Bureau of Wealth",
       "TUDI": "Bureau of Land",
       "LIANGMO": "Bureau of Grain",
-      "KAOJIE": "Bureau of Life Spans",
+      "KAOJIE": "Bureau of Calamities",
       "JISI": "Bureau of Sacrifices",
       "YIZHU": "Bureau of Ceremonies",
       "HUOFU": "Bureau of Fortune",
       "MINGYI": "Bureau of Grave Goods",
-      "BINGZHANG": "Bureau of Implements",
+      "BINGZHANG": "Bureau of Arms",
       "XINGXUN": "Bureau of Interrogation",
       "JUBU": "Bureau of Arrests",
       "XUNCHA": "Bureau of Patrols",
