@@ -96,6 +96,15 @@ def _bundle(locale: str) -> dict:
     return json.loads((MESSAGES / f"{locale}.json").read_text(encoding="utf-8"))["realms"]
 
 
+def _egy_pending(namespace: str) -> set[str]:
+    """Realm codes whose egy name Design has not given yet (`egyPendingKeys.json`, the list every other
+    egy-parity guard reads). egy may lack exactly these; the page then reads zh-Hans (lazy bundle)."""
+    pending = json.loads(
+        (REPO_ROOT / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json").read_text(encoding="utf-8"))
+    prefix = f"realms.{namespace}."
+    return {key[len(prefix):] for key in pending if key.startswith(prefix)}
+
+
 def test_the_seed_still_has_realms_to_check():
     """Non-vacuity. Every other test here is trivially green over an empty set."""
     codes = _seeded_realm_codes()
@@ -113,7 +122,8 @@ def test_every_bundle_still_has_the_two_namespaces():
 @pytest.mark.parametrize("locale", LOCALES)
 @pytest.mark.parametrize("namespace", NAMESPACES)
 def test_every_seeded_realm_is_nameable_in_every_bundle(locale, namespace):
-    missing = sorted(c for c in _seeded_realm_codes() if c not in _bundle(locale)[namespace])
+    waiting = _egy_pending(namespace) if locale == "egy" else set()
+    missing = sorted(c for c in _seeded_realm_codes() - waiting if c not in _bundle(locale)[namespace])
     assert not missing, (
         f"{locale}.json is missing realms.{namespace} for {len(missing)} seeded "
         f"realm(s): {missing}. The page renders the key itself for these."

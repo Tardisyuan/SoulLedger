@@ -1124,6 +1124,50 @@ class EvidenceAdmission(AuditUserFields, models.Model):
         return f"{self.judgment_id} {'admits' if self.admitted else 'excludes'} {self.record_id}"
 
 
+class NegativeConfession(AuditUserFields, models.Model):
+    """One of the 42 denials of BD 125B, as heard in one weighed case (docs/02_奥西里斯审判详解.md §2.2, §四).
+
+    The deceased denies, before each of the 42 assessors in turn, one wrong; the officer records whether the
+    denial was true. `statute` is that assessor's EG-NC-NN article (the clause itself lives on the assessor,
+    `Statute.derived_text`), so the text is never copied here.
+
+    NO ROW MEANS NOT YET HEARD. Per judgment, like `EvidenceAdmission`: a retrial weighs again and hears the
+    confession again. Frozen with the case once it is concluded (`apps/judgment/confessions.py`), so what stands
+    beside `weighing_result` is what was heard before the scale was read.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="negative_confessions")
+    statute = models.ForeignKey("judgment.Statute", on_delete=models.PROTECT, related_name="confessions_heard")
+    #: True = the denial is true (如实); False = it is not (不实). Null = heard, not yet decided.
+    truthful = models.BooleanField(null=True, blank=True)
+    note = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="negative_confessions",
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["judgment", "statute"],
+                condition=models.Q(is_deleted=False),
+                name="unique_confession_judgment_statute",
+            ),
+        ]
+        indexes = [models.Index(fields=["tenant", "created_at"])]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.judgment_id} {self.statute_id} {self.truthful}"
+
+
 class JudgmentComment(AuditUserFields, models.Model):
     """评议: a note one officer leaves on a judgment for the others who can read it.
 

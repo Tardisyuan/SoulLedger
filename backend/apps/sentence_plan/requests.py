@@ -523,6 +523,12 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     from apps.realms.models import realm_by_code
 
     _refuse_european_retry(soul, verdict)
+    from apps.souls.models import Civilization
+
+    if soul.home_civilization == Civilization.EUROPEAN:
+        # 大罪 / 小罪(docs/01 §1.2-1.3):改判同样不能把未悔的大罪判进炼狱,也不能把只有小罪的判下地狱。
+        from apps.disposition.services import DispositionService
+        DispositionService.refuse_against_gravity(soul, verdict)
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
     content = {

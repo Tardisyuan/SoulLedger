@@ -133,3 +133,28 @@ def test_a_retry_takes_no_destination(eu):
         case.conclude("RETRY", destination_realm_id=purgatory.pk)
     assert refused.value.code == "retry_has_no_destination"
     assert not Judgment.objects.filter(retrial_of=case).exists()
+
+
+def test_the_way_up_passes_through_the_earthly_paradise(eu):
+    """2026-10-28, docs/03 §5.1 (Purg. XXVIII-XXXIII): the summit first — Lethe, then Eunoè — then heaven."""
+    tenant, _purgatory, _heaven = eu
+    _realm(tenant, "EU_EARTHLY_PARADISE", "EUROPEAN", "PURGATORY")
+    terrace = _realm(tenant, "EU_PURGATORY_T6_GLUTTONY", "EUROPEAN", "PURGATORY")
+    soul, _ = _served(tenant, "EUROPEAN", terrace)
+    assert expire_for_tenant(tenant, TODAY)["expired"] == 1
+    assert _where(soul) == "EU_HEAVEN"
+    left = set(SoulPathEntry.all_objects.filter(soul_id=soul.pk, left_at__isnull=False)
+               .values_list("realm__realm_code", flat=True))
+    assert {"EU_PURGATORY_T6_GLUTTONY", "EU_EARTHLY_PARADISE"} <= left
+    payload = SoulEvent.objects.get(soul=soul, event_type="PURGATORY_ASCENDED").payload
+    assert (payload["from_realm"], payload["through"], payload["waters"]) == (
+        "EU_PURGATORY_T6_GLUTTONY", "EU_EARTHLY_PARADISE", ["LETHE", "EUNOE"])
+
+
+def test_a_hall_without_the_summit_row_still_ascends(eu):
+    """Not reseeded yet: straight up, as before, and the event says it did not pass the summit."""
+    tenant, purgatory, _heaven = eu
+    soul, _ = _served(tenant, "EUROPEAN", purgatory)
+    expire_for_tenant(tenant, TODAY)
+    payload = SoulEvent.objects.get(soul=soul, event_type="PURGATORY_ASCENDED").payload
+    assert _where(soul) == "EU_HEAVEN" and (payload["through"], payload["waters"]) == ("", [])

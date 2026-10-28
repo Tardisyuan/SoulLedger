@@ -24,7 +24,16 @@ def test_every_seeded_realm_name_egy_is_the_language_pack_name():
     names = json.loads(PACK.read_text(encoding="utf-8"))["realms"]["names"]
     seeded = [row for table in (CHINESE_REALMS, EUROPEAN_REALMS, GREEK_REALMS, EGYPTIAN_REALMS) for row in table]
     assert len(seeded) > 40  # 不是空扫
-    mismatched = {row[0]: (row[4], names.get(row[0])) for row in seeded if row[4] != names.get(row[0])}
+    # A realm whose egy name Design has not given yet (egyPendingKeys.json) is seeded with a blank name_egy,
+    # never an invented one; the pack has no key for it.
+    pending = {
+        key.removeprefix("realms.names.")
+        for key in json.loads((PACK.parents[3] / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json")
+                              .read_text(encoding="utf-8"))
+        if key.startswith("realms.names.")
+    }
+    expected = {row[0]: ("" if row[0] in pending else names.get(row[0])) for row in seeded}
+    mismatched = {row[0]: (row[4], expected[row[0]]) for row in seeded if row[4] != expected[row[0]]}
     assert mismatched == {}
 
 
