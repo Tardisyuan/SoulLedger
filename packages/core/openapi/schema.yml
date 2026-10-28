@@ -6816,6 +6816,9 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_FILED
+          - WANGSI_GRIEVANCE_REJECTED
+          - WANGSI_GRIEVANCE_UPHELD
           - WORKFLOW_APPROVED
           - WORKFLOW_ASSIGNED
           - WORKFLOW_CREATED
@@ -6885,6 +6888,9 @@ paths:
           * `SOUL_CAPTURED` - Soul Captured
           * `CAPTURE_HANDED_OVER` - Capture Handed Over
           * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
+          * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
+          * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
+          * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7054,6 +7060,9 @@ paths:
           - STATE_CHANGED
           - USER_FOLLOWED
           - USER_UNFOLLOWED
+          - WANGSI_GRIEVANCE_FILED
+          - WANGSI_GRIEVANCE_REJECTED
+          - WANGSI_GRIEVANCE_UPHELD
           - WORKFLOW_APPROVED
           - WORKFLOW_ASSIGNED
           - WORKFLOW_CREATED
@@ -7123,6 +7132,9 @@ paths:
           * `SOUL_CAPTURED` - Soul Captured
           * `CAPTURE_HANDED_OVER` - Capture Handed Over
           * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
+          * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
+          * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
+          * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -12701,6 +12713,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/wangsi/:
+    get:
+      operationId: v1_me_wangsi_list
+      description: 本人本世枉死的案子(新的在前)。不是枉死的案子不在这里。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeWangsiCase'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+    post:
+      operationId: v1_me_wangsi_create
+      description: 提出冤情申诉。别人的或不是本世的案子 → 404 `not_found`;其余拒绝与官员端相同。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeWangsiFile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MeWangsiFile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MeWangsiFile'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeWangsiCase'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
           description: ''
   /api/v1/me/welcomed/:
     post:
@@ -27904,6 +27983,9 @@ components:
       - SOUL_CAPTURED
       - CAPTURE_HANDED_OVER
       - CAPTURE_WARRANT_CANCELLED
+      - WANGSI_GRIEVANCE_FILED
+      - WANGSI_GRIEVANCE_UPHELD
+      - WANGSI_GRIEVANCE_REJECTED
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -27971,6 +28053,9 @@ components:
         * `SOUL_CAPTURED` - Soul Captured
         * `CAPTURE_HANDED_OVER` - Capture Handed Over
         * `CAPTURE_WARRANT_CANCELLED` - Capture Warrant Cancelled
+        * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
+        * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
+        * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -32501,6 +32586,80 @@ components:
       - hall_names
       - seal_glyphs
       - visit
+    MeWangsiCase:
+      type: object
+      description: 灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。
+      properties:
+        judgment_id:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        held:
+          type: boolean
+          readOnly: true
+        wrongful_death_cause:
+          allOf:
+          - $ref: '#/components/schemas/WrongfulDeathCauseEnum'
+          readOnly: true
+        grievance_level:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceLevelEnum'
+          readOnly: true
+        grievance_status:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceStatusEnum'
+          readOnly: true
+        grievance_plea:
+          type: string
+          readOnly: true
+        grievance_note:
+          type: string
+          readOnly: true
+        grievance_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        can_file:
+          type: boolean
+          readOnly: true
+        refusal_code:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - can_file
+      - case_number
+      - grievance_decided_at
+      - grievance_level
+      - grievance_note
+      - grievance_plea
+      - grievance_status
+      - held
+      - held_until
+      - judgment_id
+      - refusal_code
+      - wrongful_death_cause
+    MeWangsiFile:
+      type: object
+      properties:
+        judgment:
+          type: string
+          format: uuid
+        plea:
+          type: string
+          maxLength: 2000
+      required:
+      - judgment
+      - plea
     MeWelcomed:
       type: object
       properties:

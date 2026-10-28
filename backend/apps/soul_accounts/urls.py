@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.judgment import appeal_views
+from apps.judgment import appeal_views, wangsi_views
 from apps.soul_accounts import contact_email, device_login_views, export_views, me_views, mfa_views, session_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
@@ -65,4 +65,5 @@ me_urlpatterns = [
     path("judgment-appeals/", appeal_views.MeJudgmentAppealsView.as_view(), name="me-judgment-appeals"),
     path("judgment-appeals/<uuid:appeal_id>/withdraw/", appeal_views.MeJudgmentAppealWithdrawView.as_view(),
          name="me-judgment-appeal-withdraw"),
+    path("wangsi/", wangsi_views.MeWangsiView.as_view(), name="me-wangsi"),
 ]

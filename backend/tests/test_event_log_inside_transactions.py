@@ -611,7 +611,35 @@ def _capture(step):
     return path
 
 
+def _wangsi(step):
+    """枉死城的冤情申诉(apps/judgment/wangsi.py):提出 / 属实 / 不属实,事件与申诉那几列同进退。"""
+    from apps.judgment import wangsi
+    from apps.judgment.models import GrievanceLevel, GrievanceStatus
+
+    def path():
+        fated = timezone.localdate() + datetime.timedelta(days=400)
+        soul = Soul.objects.create(name="枉死", tenant=_cn(), fated_death_year=fated.year,
+                                   fated_death_month=fated.month, fated_death_day=fated.day)
+        judgment = soul.die(death_date=timezone.localdate())
+        Judgment.all_objects.filter(pk=judgment.pk).update(grievance_level=GrievanceLevel.MAJOR)
+        admin = plan.officer(f"ws_{soul.pk.hex[:8]}", "ADMIN", _cn())
+        status = lambda: Judgment.all_objects.get(pk=judgment.pk).grievance_status  # noqa: E731
+        if step == "file":
+            return (lambda: wangsi.file_grievance(judgment.pk, admin, "为人所害"),
+                    lambda: status() == GrievanceStatus.FILED, "WANGSI_GRIEVANCE_FILED")
+        wangsi.file_grievance(judgment.pk, admin, "为人所害")
+        if step == "uphold":
+            return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=True, note="属实"),
+                    lambda: status() == GrievanceStatus.UPHELD, "WANGSI_GRIEVANCE_UPHELD")
+        return (lambda: wangsi.decide_grievance(judgment.pk, admin, upheld=False, note="不属实"),
+                lambda: status() == GrievanceStatus.REJECTED, "WANGSI_GRIEVANCE_REJECTED")
+    return path
+
+
 PATHS = {
+    "wangsi_file/WANGSI_GRIEVANCE_FILED": _wangsi("file"),
+    "wangsi_uphold/WANGSI_GRIEVANCE_UPHELD": _wangsi("uphold"),
+    "wangsi_reject/WANGSI_GRIEVANCE_REJECTED": _wangsi("reject"),
     "die/DIYU_STATION_CHANGED": _die("DIYU_STATION_CHANGED"),
     "station_move/DIYU_STATION_CHANGED": _station_move,
     "capture_issue/CAPTURE_WARRANT_ISSUED": _capture("issue"),

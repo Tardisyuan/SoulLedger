@@ -21,6 +21,7 @@ import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, daysLeft, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
 import type { JudgmentAppealParams } from "./appeals";
+import type { WangsiGrievanceParams } from "./wangsi";
 import { publishVoiceNumber } from "../voiceCache";
 import { radius, space } from "../theme";
 import {
@@ -77,6 +78,8 @@ export type AppStackParams = {
   /** 审判申诉的表单(第五十二批 A-2),从本世 › 审判那件卡片的「申诉 ›」进。 */
   // One definition, in the screen: two copies drifted twice in one day (stations, then civilization).
   JudgmentAppeal: JudgmentAppealParams;
+  /** 枉死城的冤情申诉表单(地府),从本世 › 审判那件枉死案子卡片的「申诉 ›」进。 */
+  WangsiGrievance: WangsiGrievanceParams;
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
   Settings: undefined;

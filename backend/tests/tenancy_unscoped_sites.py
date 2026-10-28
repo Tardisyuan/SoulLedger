@@ -157,6 +157,7 @@ SITES = [
     ('apps/judgment/appeals.py', 'decide', 'JudgmentAppeal.all_objects', 1, 'PK', 'reads the appeal by pk (reached through the scoped viewset) for its soul, before the soul-first lock order'),
     ('apps/judgment/appeals.py', 'file', 'Judgment.all_objects', 1, 'FILTERED', "filtered to the signed-in soul's own judgment (soul_id); a judgment of another soul is a 404"),
     ('apps/judgment/appeals.py', 'file', 'JudgmentAppeal.all_objects', 1, 'PK', 'counts the rounds of the judgment just locked'),
+    ('apps/judgment/wangsi.py', 'file_grievance', 'Judgment.all_objects', 1, 'FILTERED', "soul app path only: filtered to the signed-in soul's own judgment of this life (soul_id + cycle); another soul's is a 404"),
     ('apps/judgment/appeals.py', 'withdraw', 'JudgmentAppeal.all_objects', 1, 'FILTERED', "filtered to the signed-in soul's own appeal (soul_id); another soul's is a 404"),
     ('apps/judgment/city_gods.py', '_lock', 'Judgment.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path (the city-god case viewset get_object()); all_objects only skips the soft-delete filter'),
     ('apps/judgment/city_god_views.py', 'CityGodCaseViewSet.transfer', 'CityGod.all_objects', 1, 'PK', "the target city god by pk; city_gods.transfer refuses it (400 invalid_city_god) unless it is live and in the case's own hall"),

@@ -55,7 +55,7 @@ export interface CityGodFieldRefusal {
   name?: string;
 }
 
-const FIELD_CODES = ["name_taken", "region_taken", "default_taken", "invalid_officer"];
+const FIELD_CODES = ["name_taken", "region_taken", "default_taken", "invalid_officer", "city_god_has_tudi_gods"];
 
 export function cityGodFieldRefusal(err: unknown): CityGodFieldRefusal | null {
   const body = bodyOf(err);

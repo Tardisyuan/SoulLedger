@@ -245,8 +245,8 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     ferry_passage = models.CharField(max_length=10, choices=FerryPassage.choices, blank=True, default="")
 
     #: 地府十三站(2026-10-28,docs/06 §一 总览表):亡魂此刻走到哪一站。空 = 不在路上(在世、或还没有记录)。
-    #: 次序取 §一 总览表(docs/09 §4.3 引的也是它),不取 §二 详解章的编号 —— 06 §一 自己说两套都无出处、
-    #: 「若要落地,请在产品侧选定一套」。第四站用 06 §〇 的正名「恶狗村」。只在地府;只经 `apps/souls/stations.py` 写。
+    #: 次序取 §一 总览表(2026-10-28 用户定;06 §二 详解章与 docs/09 §4.3 已改成同一套)。
+    #: 第四站用 06 §〇 的正名「恶狗村」。只在地府;只经 `apps/souls/stations.py` 写。
     DiyuStation = DiyuStation  # module level, so drf-spectacular can name it (config/settings.py)
 
     diyu_station = models.CharField(max_length=20, choices=DiyuStation.choices, blank=True, default="")

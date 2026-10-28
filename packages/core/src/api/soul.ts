@@ -89,6 +89,8 @@ export type MeJudgmentAppeal = Omit<Schemas["MeJudgmentAppeal"], "compensations"
   compensations: AppealCompensation[];
 };
 export type MeJudgmentAppealList = { judgments: MeAppealableJudgment[]; results: MeJudgmentAppeal[] };
+/** 枉死城(地府):本人本世一件枉死的案子,还押与否、冤情申诉到哪一步(`GET /me/wangsi/`)。 */
+export type MeWangsiCase = Schemas["MeWangsiCase"];
 export type MeReincarnation = Schemas["MeReincarnation"];
 /** 「我的受刑」:本人本世的计划,节点状态已按画布 1a 合并成灵魂看的几档(REMOVED 不出现)。 */
 export type MeSentencePlan = Schemas["MeSentencePlan"];
@@ -336,6 +338,11 @@ export const soulApi = {
   /** 待复核、复核中都可以撤回;撤回也算一次。409 `appeal_closed`。 */
   withdrawJudgmentAppeal: (id: string) =>
     soulHttp.post<MeJudgmentAppeal>(`/me/judgment-appeals/${id}/withdraw/`).then((r) => r.data),
+  /** 本人本世枉死的案子(新的在前);不是地府、没有枉死的案子是空表。 */
+  wangsi: () => soulHttp.get<MeWangsiCase[]>("/me/wangsi/").then((r) => r.data),
+  /** 枉死城的冤情申诉。404 `not_found`;409 `not_pending` / `not_in_wangsi` / `grievance_open`。 */
+  fileWangsiGrievance: (judgment: string, plea: string) =>
+    soulHttp.post<MeWangsiCase>("/me/wangsi/", { judgment, plea }).then((r) => r.data),
   applications: () =>
     soulHttp.get<MeRebirthApplicationList>("/me/rebirth-applications/").then((r) => r.data),
   application: (id: string) =>
