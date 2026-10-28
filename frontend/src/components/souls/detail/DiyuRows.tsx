@@ -86,6 +86,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
                 {where === "passed" ? "■" : where === "current" ? "▪" : "□"}
               </span>
               <span
+                title={name(s)}
                 className={cn(
                   "w-full truncate text-2xs",
                   where === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "hidden text-[oklch(var(--color-ink-muted))] xl:block",

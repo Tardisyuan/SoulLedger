@@ -134,7 +134,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
             required
             value={tudiId}
             onChange={(e) => setTudiId(e.target.value)}
-            options={[{ value: "", label: "—" }, ...(gods.data ?? []).map((g) => ({ value: g.id, label: g.name }))]}
+            options={[{ value: "", label: t("common.value.unrecorded") }, ...(gods.data ?? []).map((g) => ({ value: g.id, label: g.name }))]}
           />
         )}
         {soul ? (

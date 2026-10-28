@@ -284,7 +284,7 @@ function LiveWarrant({ warrant, soulName, canAct }: { warrant: CaptureWarrant; s
             </Button>
             <Button
               size="sm"
-              variant="danger"
+              variant="primary"
               disabled={busy}
               onClick={() => {
                 setTried(true);
