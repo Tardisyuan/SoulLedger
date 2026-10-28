@@ -507,7 +507,8 @@ const styles = StyleSheet.create({
   actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
-  segmentTight: { fontSize: 13, lineHeight: 18 },
+  // tabular-nums (Design 第六十一批): a count going from 「· 0」 to 「· 12」 does not shift the segment widths.
+  segmentTight: { fontSize: 13, lineHeight: 18, fontVariant: ["tabular-nums"] },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
   chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
