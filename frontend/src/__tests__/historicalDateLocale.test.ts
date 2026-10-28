@@ -29,7 +29,7 @@ describe("the default locale is not English", () => {
   });
 
   it("renders a Chinese month for a caller that passes no locale", () => {
-    expect(formatHistoricalDate(CRUCIFIXION)).toBe("1066 CE · 3月15日");
+    expect(formatHistoricalDate(CRUCIFIXION)).toBe("1066年 · 3月15日");
   });
 
   it("renders no English month for a caller that passes no locale", () => {
@@ -97,16 +97,19 @@ describe("months outside 1-12", () => {
   it("fall back to the year rather than rolling over or printing undefined", () => {
     // `new Date(2000, 12)` was January of the following year, so month 13
     // used to render as "January".
-    expect(formatHistoricalDate({ year: 1066, month: 13, day: null })).toBe("1066 CE");
-    expect(formatHistoricalDate({ year: 1066, month: 0, day: 5 })).toBe("1066 CE");
+    expect(formatHistoricalDate({ year: 1066, month: 13, day: null })).toBe("1066年");
+    expect(formatHistoricalDate({ year: 1066, month: 0, day: 5 })).toBe("1066年");
   });
 });
 
 describe("the year half is untouched", () => {
-  it("still writes BCE/CE and omits an absent month", () => {
-    expect(formatHistoricalDate({ year: 1066, month: null, day: null })).toBe("1066 CE");
-    expect(formatHistoricalDate({ year: -44, month: null, day: null })).toBe("44 BCE");
-    expect(formatHistoricalDate({ year: 0, month: null, day: null })).toBe("0 BCE");
+  it("writes the era per locale and omits an absent month", () => {
+    // 中文(默认):公元「1066年」、公元前「前44年」(用户 2026-10-29);English 照旧 CE / BCE。
+    expect(formatHistoricalDate({ year: 1066, month: null, day: null })).toBe("1066年");
+    expect(formatHistoricalDate({ year: -44, month: null, day: null })).toBe("前44年");
+    expect(formatHistoricalDate({ year: 0, month: null, day: null })).toBe("前0年");
+    expect(formatHistoricalDate({ year: 1066, month: null, day: null }, "en")).toBe("1066 CE");
+    expect(formatHistoricalDate({ year: -44, month: null, day: null }, "en")).toBe("44 BCE");
     expect(formatHistoricalDate(null)).toBeNull();
     expect(formatHistoricalDate(undefined)).toBeNull();
   });
