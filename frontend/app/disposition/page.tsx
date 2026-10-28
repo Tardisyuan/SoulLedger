@@ -239,7 +239,15 @@ export default function DispositionPage() {
             {soulLink(d)}
             <VerdictBadge verdict={d.verdict} />
             {realm(d)}
-            <span className="text-[oklch(var(--color-ink-muted))]">{termLabel(termState(d, now), t)}</span>
+            <span className="text-[oklch(var(--color-ink-muted))]">
+              {termLabel(termState(d, now), t)}
+              {/* 没写刑期时服务端按界域填的默认值(2026-10-29):标出来,判官知道这是默认、可改。 */}
+              {d.default_term_years != null && d.sentence_years === d.default_term_years && (
+                <span data-testid="disposition-term-default" className="block text-xs">
+                  {t("disposition.term_default", { n: String(d.default_term_years) })}
+                </span>
+              )}
+            </span>
             <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">{formatDate(d.created_at)}</span>
             <span className="flex items-center justify-end gap-2">
               {archivedMark(d)}

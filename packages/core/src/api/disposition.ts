@@ -67,6 +67,8 @@ export interface Disposition extends ArchiveFields {
   suggested_rebirth_form?: Schemas["Disposition"]["suggested_rebirth_form"];
   /** 「期满释放」可点:已执行、不是永久、没记期满,期满日已到(与每日期满检查同一条判定,2026-10-29)。 */
   can_release?: boolean;
+  /** 这扇门没写刑期时的默认年数(2026-10-29);永久或没有默认为 null。等于 `sentence_years` 时页面标「默认 · 可改」。 */
+  default_term_years?: number | null;
 }
 
 export const dispositionApi = {

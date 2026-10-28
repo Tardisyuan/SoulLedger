@@ -803,16 +803,20 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         options = []
         not_applicable = []
         default_realm_id = None
+        default_term = None
         if judgment.kind == JudgmentKind.ORIGINAL:
             options = list(destination_options(judgment, verdict))
             not_applicable = list(inapplicable_destinations(judgment, verdict))
             default = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
             if default is not None and any(r.pk == default.pk for r in options):
                 default_realm_id = default.pk
+                from apps.disposition.default_terms import default_term_years
+
+                default_term = default_term_years(default.realm_code, is_eternal=default.is_eternal)
         return Response({
             "verdict": verdict,
             "default_realm_id": default_realm_id,
-            "default_term_years": None,
+            "default_term_years": default_term,
             "options": JudgmentDestinationOptionSerializer(
                 options, many=True, context=self.get_serializer_context()).data,
             "not_applicable": JudgmentDestinationOptionSerializer(
