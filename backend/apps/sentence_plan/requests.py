@@ -527,8 +527,11 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
 
     if soul.home_civilization == Civilization.EUROPEAN:
         # 大罪 / 小罪(docs/01 §1.2-1.3):改判同样不能把未悔的大罪判进炼狱,也不能把只有小罪的判下地狱。
+        # 与下面 `_route_home_realm(..., judgment=judgment)` 读同一套已采信证据(结案处同样传 excluded)。
         from apps.disposition.services import DispositionService
-        DispositionService.refuse_against_gravity(soul, verdict)
+        from apps.judgment.services import EvidenceAdmissionService
+        DispositionService.refuse_against_gravity(
+            soul, verdict, excluded=EvidenceAdmissionService.not_admitted_ids(judgment))
     # 埃及否定告白(docs/02 §2.2、§四):原审有一条记为「不实」,申诉也不能改判 PASSED。
     from apps.judgment.confessions import refuse_passed_if_untruthful
 

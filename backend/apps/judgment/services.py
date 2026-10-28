@@ -274,8 +274,13 @@ class JudgmentConclusionService:
 
             # 欧洲 大罪 / 小罪(2026-10-28,docs/01 §1.2-1.3、03 §二):未悔的大罪下地狱,小罪与已告解的大罪进炼狱。
             # 与已采信的证据不符的裁决拒绝(400 `mortal_sin_unrepented` / `no_mortal_sin`),什么都没写。
+            # 读的文明与这件案子的路由同一个(2026-10-29 审查):原审按管辖文明路由(`DispositionService._route_to_realm`
+            # 读 `soul.civilization`),重开审判按原属文明路由(`conclude_reopened` → `_route_home_realm`)。
+            # 此前两种都读管辖文明,暂居他乡的欧洲灵魂重开时核对与路由不是同一套宇宙观。
+            gravity_civilization = (judgment.soul.home_civilization if judgment.kind == JudgmentKind.REOPEN
+                                    else judgment.soul.civilization)
             if (judgment.kind != JudgmentKind.AMENDMENT
-                    and judgment.soul.civilization == Civilization.EUROPEAN):
+                    and gravity_civilization == Civilization.EUROPEAN):
                 from apps.disposition.services import DispositionService
                 DispositionService.refuse_against_gravity(
                     judgment.soul, verdict, excluded=EvidenceAdmissionService.not_admitted_ids(judgment))
