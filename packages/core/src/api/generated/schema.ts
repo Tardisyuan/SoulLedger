@@ -12199,6 +12199,7 @@ export interface components {
             readonly soul_reborn: boolean;
             readonly suggested_rebirth_form: string | null;
             readonly can_release: boolean;
+            readonly default_term_years: number | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13593,13 +13594,15 @@ export interface components {
             readonly capacity: number | null;
             readonly occupancy: number;
             readonly is_eternal: boolean;
+            readonly default_term_years: number | null;
         };
         /**
          * @description `GET /judgment/{id}/destinations/?candidate_verdict=` — schema-only envelope.
          *
          *     `default_realm_id` is where automatic routing would send the soul (null when
          *     that realm is not among the options, e.g. an unmapped tenant);
-         *     `default_term_years` is null because an automatic conclusion records no term.
+         *     `default_term_years` is the default term of that realm, written onto the disposition when the judge
+         *     gives none (2026-10-29, `apps.disposition.default_terms`); null when eternal or without a default.
          *     `not_applicable` is the rest of the tenant's realms for this civilization —
          *     ones this verdict cannot reach, listed so the picker can show them disabled
          *     with the reason; `conclude` refuses them (`realm_not_allowed`).
@@ -16718,6 +16721,7 @@ export interface components {
             readonly soul_reborn?: boolean;
             readonly suggested_rebirth_form?: string | null;
             readonly can_release?: boolean;
+            readonly default_term_years?: number | null;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;

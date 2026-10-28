@@ -467,9 +467,12 @@ class SentencePlanService:
         if node.status != SentenceNodeStatus.DISPATCHING:
             return None
         realm = realm_by_code(node.realm_code, tenant_code=node.tenant_code)
+        # 参与方没写年数的站按界域的默认刑期(2026-10-29,`default_terms`)。
+        from apps.disposition.default_terms import fill
         disposition = Disposition.objects.create(
             soul_id=soul.pk, tenant_id=record.target_tenant_id, destination_realm=realm,
-            sentence_years=node.sentence_years, is_eternal=node.is_eternal,
+            sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
+            is_eternal=node.is_eternal,
             memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
             notes=f"受刑计划 {plan.pk} 节点 {node.order}",
         )
@@ -718,9 +721,11 @@ class SentencePlanService:
             candidate = Judgment.all_objects.filter(pk=node.added_by_judgment_id, tenant_id=plan.tenant_id).first()
             if candidate is not None and not Disposition.all_objects.filter(judgment=candidate).exists():
                 judgment = candidate
+        from apps.disposition.default_terms import fill
         disposition = Disposition.objects.create(
             soul_id=soul.pk, tenant_id=plan.tenant_id, judgment=judgment, destination_realm=realm,
-            sentence_years=node.sentence_years, is_eternal=node.is_eternal,
+            sentence_years=fill(node.sentence_years, node.realm_code, is_eternal=node.is_eternal),
+            is_eternal=node.is_eternal,
             memory_reset=node.memory_reset or MemoryResetMechanism.NONE, sentence_node_id=node.pk,
             notes=f"受刑计划 {plan.pk} 节点 {node.order}",
         )

@@ -37,5 +37,7 @@
   "reincarnation.desired_form",
   "reincarnation.form_reason",
   "reincarnation.form_reason_hint",
-  "judgment.wangsi.deliver_sends_on"
+  "judgment.wangsi.deliver_sends_on",
+  "judgment.placement.term_default",
+  "disposition.term_default"
 ]
