@@ -109,6 +109,8 @@ JUDICIAL_PERSONNEL = {
     "崔府君": ("JUDGE", "崔判官", "DY_COURT_05_YANLUO"),
     "地藏王菩萨": ("OVERSEER", "地藏王菩萨", "DY_COURT_01_QINGUANG"),
     "酆都大帝": ("JUDGE", "北阴酆都大帝", "DY_COURT_01_QINGUANG"),
+    # 2026-10-28: the fourth of the 「四大判官」, beside 崔府君 (docs/02 §四).
+    "陆判": ("JUDGE", "陆判官", "DY_COURT_05_YANLUO"),
 }
 
 # --------------------------------------------------------------------------
@@ -173,6 +175,12 @@ GREEK_CAST = {
     "Aeacus": ("JUDGE", "EU_PLATO_MEADOW"),
     "Rhadamanthus": ("JUDGE", "EU_PLATO_MEADOW"),
     "Minos": ("JUDGE", "EU_PLATO_MEADOW"),
+    # 2026-10-28. Both on the crossing as an engineering placement — neither
+    # the asphodel meadow (Od. 24.1-14) nor the gate of Hades (Theog. 769-773,
+    # Apollodorus 2.5.12) is modelled. The Greek Cerberus is a second row; the
+    # EUROPEAN one in GRECO_ROMAN_CAST above stays in the third circle.
+    "Hermes": ("CONDUIT", "GR_ACHERON"),
+    "Cerberus": ("GUARDIAN", "GR_ACHERON"),
 }
 
 # The Greek places, under GREEK. EU_PLATO_MEADOW keeps its EU_ code: a
@@ -265,6 +273,21 @@ CHINESE_ATTENDANTS = {
     "黑无常": ("CONDUIT", "DY_00_PURGATORY"),
     "判官": ("JUDGE", "DY_COURT_05_YANLUO"),
     "钟馗": ("EXECUTOR", "DY_COURT_05_YANLUO"),
+    # The 2026-10-28 additions (docs/01 第一、二、五层; docs/02 §一、§二、§六).
+    # Every realm here is the admitted compromise recorded in actors_chinese.py:
+    # none of their seats (罗酆山, 泰山, the five mountains, 鬼门关) is modelled.
+    "后土": ("OVERSEER", "DY_COURT_01_QINGUANG"),
+    "东岳大帝": ("OVERSEER", "DY_COURT_01_QINGUANG"),
+    "谛听": ("GUARDIAN", "DY_COURT_01_QINGUANG"),
+    "神荼": ("GUARDIAN", "DY_00_PURGATORY"),
+    "郁垒": ("GUARDIAN", "DY_00_PURGATORY"),
+    "赵文和": ("OVERSEER", "DY_00_PURGATORY"),
+    "杜子仁": ("OVERSEER", "DY_00_PURGATORY"),
+    "张衡": ("OVERSEER", "DY_00_PURGATORY"),
+    "周文": ("OVERSEER", "DY_00_PURGATORY"),
+    "枷锁将军": ("GUARDIAN", "DY_00_PURGATORY"),
+    "日游神": ("CONDUIT", "DY_00_PURGATORY"),
+    "夜游神": ("CONDUIT", "DY_00_PURGATORY"),
 }
 
 # Norse is out of this system entirely (no judgment concept: destination
@@ -1349,7 +1372,7 @@ def test_greek_cast_present_with_correct_roles_and_realms(seeded):
     fault = _placement_faults("GREEK", GREEK_CAST, "The Greek cast")
     assert fault is None, (
         f"{fault}\nconsolidate_eu_pantheon.GREEK_EXPECTED audits exactly these "
-        f"four and must say the same thing this table does."
+        f"rows and must say the same thing this table does."
     )
 
 

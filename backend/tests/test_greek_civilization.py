@@ -65,8 +65,11 @@ ACHERON = "GR_ACHERON"
 MOVED_ACTORS = ["Aeacus", "Hades", "Rhadamanthus"]
 #: Plato's Minos, added by the split. The Greek Charon, added by the basis
 #: change — both are second rows beside a EUROPEAN one holding Dante's reading
-#: of the same name, and neither took anything away from it.
-ADDED_ACTORS = ["Minos", "Charon"]
+#: of the same name, and neither took anything away from it. Hermes and the
+#: Greek Cerberus, added 2026-10-28 by the owner's decision (docs/02_希腊冥府
+#: 审判与人物详解.md §2.2, §2.6); Cerberus is a second row beside Dante's in
+#: the same way, and Dante's stays EUROPEAN (DANTE_BORROWED below).
+ADDED_ACTORS = ["Minos", "Charon", "Hermes", "Cerberus"]
 
 #: The three the split deliberately left behind, because every anchor their
 #: rows cite is Dante's rather than a Greek author's.
