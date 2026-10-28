@@ -16,7 +16,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LogoutProvider, useAskLogout } from "../feedback";
 import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform, persistentStore } from "../platform";
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
@@ -263,6 +264,31 @@ describe("long labels", () => {
     expect(flat(screen.getByTestId("long")).flexDirection).toBe("column");
     // 第二十八批 S4: a mono value keeps to one line (cut with …, long-press reads it whole).
     expect(screen.getByText("2026-09-09 16:40").props.numberOfLines).toBe(1);
+  });
+
+  // 华为真机 10-29: in EN / egy a longer label pushed its value right of the other rows' values.
+  it.each(["en", "egy"])("%s: every side-by-side label has the same fixed width, so the values form one column", (locale) => {
+    persistentStore.set(LOCALE_COOKIE, locale);
+    try {
+      wrap(
+        <>
+          <DataRow label="Born">1 CE</DataRow>
+          <DataRow label="Place of origin">Thebes</DataRow>
+        </>
+      );
+      const widths = ["Born", "Place of origin"].map((l) => flat(screen.getByText(l)));
+      expect(widths[0].width).toBe("40%");
+      expect(widths[1]).toMatchObject({ width: widths[0].width });
+      expect(widths[0].maxWidth).toBeUndefined();
+    } finally {
+      persistentStore.remove(LOCALE_COOKIE);
+    }
+  });
+
+  it("zh-Hans keeps the content-width label column (two to four characters; no change asked)", () => {
+    wrap(<DataRow label="籍贯">江苏 · 扬州</DataRow>);
+    expect(flat(screen.getByText("籍贯"))).toMatchObject({ minWidth: 56, maxWidth: "45%" });
+    expect(flat(screen.getByText("籍贯")).width).toBeUndefined();
   });
 });
 

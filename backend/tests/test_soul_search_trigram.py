@@ -12,10 +12,13 @@ from django.db import connection
 from apps.souls.filters import SoulFilter
 
 migration = importlib.import_module("apps.souls.migrations.0047_soul_search_trigram")
+# 0052 adds soul_code (the officer app searches by 灵魂编号); the two together cover search_fields.
+soul_code_migration = importlib.import_module("apps.souls.migrations.0052_soul_code_search_trigram")
+SEARCHED = migration.SEARCHED + soul_code_migration.SEARCHED
 
 
 def test_every_searched_column_is_indexed():
-    assert list(migration.SEARCHED) == list(SoulFilter.search_fields)
+    assert list(SEARCHED) == list(SoulFilter.search_fields)
 
 
 def test_the_index_expression_is_what_icontains_compiles_to():
@@ -32,7 +35,7 @@ def test_the_indexes_exist_on_postgresql():
     with connection.cursor() as cursor:
         cursor.execute("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'souls_soul'")
         found = dict(cursor.fetchall())
-    for column in migration.SEARCHED:
+    for column in SEARCHED:
         definition = found.get(migration.index_name(column), "")
         # PostgreSQL prints the cast only where it does something: `upper((name)::text)` for a varchar
         # column, `upper(description)` for a text one (text::text is dropped at parse time, for the

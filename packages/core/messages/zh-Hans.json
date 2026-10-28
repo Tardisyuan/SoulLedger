@@ -813,6 +813,7 @@
     },
     "capture": {
       "title": "勾魂",
+      "unavailable": "勾魂状态暂时读不到",
       "due_hint": "阳寿已到，可以发勾魂牒。交接时登记死亡，案子交城隍初审。",
       "escort_label": "鬼差",
       "escort": {
