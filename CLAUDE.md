@@ -289,6 +289,13 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     搬过去时撞到的三处 Linux/macOS 差异(都已修):GNU `mktemp` 要 `XXXXXX`;rsync 保留 Mac 的 uid 时 git 在容器里拒认仓库
     (门禁测试设了 `GIT_CONFIG_NOSYSTEM`);外层的 `GATES_*` 环境串进门禁测试起的子门禁(`_clean_env` 现在去掉全部 `GATES_*`)。
     10-28 本机全量推送那次 15 条实时类测试红(`test_realtime_bus` 等)，空闲时本机与 unRAID 都 34/34 过 —— 交换区满时的超时，不是代码。
+  - **E2E 也在 unRAID 上跑(2026-10-28 用户决定)**:`scripts/run-gates.sh --e2e`(chromium)、`--e2e=all`(三个)、
+    `--e2e=chromium,mobile-chrome`(列表)。镜像 `sl-gates-e2e:1` = `sl-gates-all:1` + Playwright 1.63 的 chromium / firefox;
+    先 `next build`,4 个 worker、`--retries=1`(重试才过的按名字报 flaky,不藏),`--reporter=line`(html 报告器失败时会起服务等人看，
+    在容器里会挂住)。没有 `GATES_REMOTE` 就拒绝，不在本机跑。日志在 unRAID 的 `sl-gates/tmp/<checkout>/e2e-<project>.log`。
+    实测(10-28,同一棵树):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
+    (本机 10-27:3.6 / 7.9 / 4.5 分钟)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
+    所以用一次重试并点名，不加 skip。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。
 - **后端 pytest 按 app 选(2026-10-27 用户决定)**:`scripts/select-backend-tests.py` 选「在该 app 目录下 /
