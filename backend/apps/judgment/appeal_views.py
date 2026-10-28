@@ -143,10 +143,16 @@ class MeJudgmentAppealListSerializer(serializers.Serializer):
 
 class JudgmentAppealCreateSerializer(serializers.Serializer):
     judgment = serializers.UUIDField()
-    reason = serializers.CharField(max_length=2000, trim_whitespace=True)
+    #: 一次复核必填;上诉时选填 —— 第一次申诉已经写过理由(Design 第五十五批 U-2)。
+    reason = serializers.CharField(max_length=2000, trim_whitespace=True, required=False, allow_blank=True, default="")
     evidence = serializers.CharField(max_length=4000, required=False, allow_blank=True, default="")
     #: true:上诉到多站申诉流程(`appeals.escalation_refusal` 的条件),而不是再一次一次复核。
     escalate = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        if not attrs["escalate"] and not attrs["reason"]:
+            raise serializers.ValidationError({"reason": "A reason is required."})
+        return attrs
 
 
 class JudgmentAppealDecideSerializer(serializers.Serializer):
