@@ -4,9 +4,6 @@
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
-// The bottom sheet animates closed after a confirm; let it land before the test ends (act warnings otherwise).
-const settleSheet = () => act(async () => new Promise((r) => setTimeout(r, 400)));
-
 import { TODO_GROUPS, deskPath, isTodoKind, noCityGod } from "../rules";
 import { JudgmentFlowBlock, flowWaitingText } from "../screens/judgmentFlow";
 import { ServingFact, defaultTermOf, servingOf } from "../screens/servingFact";
@@ -14,6 +11,9 @@ import { TodoTab } from "../screens/todo";
 import { WangsiReview, wangsiMode } from "../screens/wangsi";
 import { ToastProvider } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
+
+// The bottom sheet animates closed after a confirm; let it land before the test ends (act warnings otherwise).
+const settleSheet = () => act(async () => new Promise((r) => setTimeout(r, 400)));
 
 const mockJudgment = jest.fn();
 const mockUpdate = jest.fn();
