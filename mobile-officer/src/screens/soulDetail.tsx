@@ -258,11 +258,10 @@ function CaptureFact({ soulId }: { soulId: string }) {
   const latest = [...(data ?? [])].sort((a, b) => b.issued_at.localeCompare(a.issued_at))[0];
   if (!latest && error) return <Fact testID="soul-capture-unavailable" label={t("souls.capture.title")} value={t("souls.capture.unavailable")} muted />;
   if (!latest) return null;
-  const label = (ns: string, raw: string) => {
-    const x = enumLabel(ns, raw);
-    return x.state === "known" ? x.label : raw;
-  };
-  const value = [label("souls.capture.status", latest.status), label("souls.capture.escort", latest.escort), latest.city_god_name]
+  // enumLabel called with the literal namespace, so messages.test.ts sees both namespaces.
+  const status = enumLabel("souls.capture.status", latest.status);
+  const escort = enumLabel("souls.capture.escort", latest.escort);
+  const value = [status.state === "known" ? status.label : latest.status, escort.state === "known" ? escort.label : latest.escort, latest.city_god_name]
     .filter(Boolean)
     .join(" · ");
   return <Fact testID="soul-capture" label={t("souls.capture.title")} value={value} />;

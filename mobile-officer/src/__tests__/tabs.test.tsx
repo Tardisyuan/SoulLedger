@@ -403,6 +403,8 @@ describe("the judgments tab's segments", () => {
     expect(screen.getByTestId("queue-group-unclaimed").props.accessibilityState).toMatchObject({ selected: true });
     fireEvent.press(screen.getByTestId("queue-group-others"));
     expect(onGroup).toHaveBeenCalledWith("others");
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ group: "others" }));
+    await act(async () => {});
   });
 
   it("a case opened under 待认领 returns to 待认领, not 我手上", async () => {
