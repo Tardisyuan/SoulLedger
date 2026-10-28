@@ -110,7 +110,7 @@ def test_a_soul_files_its_own_grievance_and_sees_where_it_stands(cn_tenant):
     assert (res.data["grievance_status"], res.data["can_file"], res.data["refusal_code"]) == (
         "FILED", False, "grievance_open")
     assert [e.payload for e in _events(account.soul, "WANGSI_GRIEVANCE_FILED")] == [{
-        "judgment_id": str(case.pk), "status": "FILED", "grievance_level": "", "via": "soul"}]
+        "judgment_id": str(case.pk), "status": "FILED", "grievance_level": "", "via": "soul", "soul_id": str(account.soul.id)}]
 
     again = client.post(WANGSI_ME, {"judgment": str(case.pk), "plea": "再提"}, format="json")
     assert (again.status_code, again.data["code"]) == (409, "grievance_open")
@@ -141,7 +141,7 @@ def test_the_decision_lands_on_the_timeline(cn_tenant, admin_user):
     wangsi.file_grievance(case.pk, admin_user, "冤")
     wangsi.decide_grievance(case.pk, admin_user, upheld=True, note="属实")
     assert [e.payload for e in _events(account.soul, "WANGSI_GRIEVANCE_UPHELD")] == [{
-        "judgment_id": str(case.pk), "status": "UPHELD", "grievance_level": "SEVERE"}]
+        "judgment_id": str(case.pk), "status": "UPHELD", "grievance_level": "SEVERE", "soul_id": str(account.soul.id)}]
     assert _events(account.soul, "WANGSI_GRIEVANCE_FILED")[0].payload["via"] == "officer"
     row = client.get(WANGSI_ME).data[0]
     assert (row["held"], row["grievance_status"], row["grievance_note"]) == (False, "UPHELD", "属实")
