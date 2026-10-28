@@ -195,5 +195,18 @@
   "souls.capture.error.reason_required",
   "soul_app.life.station",
   "soul_app.life.station_at",
-  "soul_app.life.continent"
+  "soul_app.life.continent",
+  "judgment.grievance_statuses.UPHELD_LATE",
+  "judgment.grievance_statuses.DELIVERED",
+  "souls.events.WANGSI_GRIEVANCE_DELIVERED",
+  "judgment.wangsi.deliver",
+  "judgment.wangsi.deliver_title",
+  "judgment.wangsi.deliver_body",
+  "judgment.wangsi.delivered_line",
+  "judgment.wangsi.uphold_late",
+  "judgment.wangsi.late_hint",
+  "judgment.wangsi.error.at_city_god",
+  "judgment.wangsi.error.deliver_needs_upheld",
+  "soul_app.wangsi.status.UPHELD_LATE",
+  "soul_app.wangsi.status.DELIVERED"
 ]

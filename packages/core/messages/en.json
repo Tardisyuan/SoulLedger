@@ -342,7 +342,8 @@
       "CAPTURE_WARRANT_CANCELLED": "Capture warrant revoked",
       "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of Wrongful Death",
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
-      "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld"
+      "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld",
+      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -2463,7 +2464,9 @@
     "grievance_statuses": {
       "FILED": "Filed · awaiting review",
       "UPHELD": "Upheld · released early",
-      "REJECTED": "Not upheld"
+      "REJECTED": "Not upheld",
+      "UPHELD_LATE": "Upheld · after release",
+      "DELIVERED": "Upheld · delivered"
     },
     "wangsi": {
       "title": "City of Wrongful Death",
@@ -2485,13 +2488,21 @@
         "no_grievance_filed": "No grievance is awaiting review.",
         "grievance_not_major": "Only a major or severe grievance releases the soul early.",
         "not_city_god_officer": "Only this city god's officers or a hall administrator can review it.",
-        "not_pending": "This case is concluded."
+        "not_pending": "This case is concluded.",
+        "at_city_god": "The case is still with the city god; send it on before delivering the soul.",
+        "deliver_needs_upheld": "Only an upheld grievance can deliver the soul."
       },
       "release_title": "Release {{name}} early?",
       "release_body": "Upheld: {{name}} leaves the City of Wrongful Death, and the judgment can be claimed now instead of on {{date}}.",
       "release_irreversible": "This can't be undone.",
       "release_gate": "Only a grievance of {{level}} or above can be upheld",
-      "released_line": "Untimely · released early on {{date}}"
+      "released_line": "Untimely · released early on {{date}}",
+      "deliver": "Upheld · deliver",
+      "deliver_title": "Deliver {{name}}?",
+      "deliver_body": "Upheld and delivered: {{name}} leaves the City of Wrongful Death for the Lotus Terrace, and the case is concluded without a hearing.",
+      "delivered_line": "Untimely · delivered on {{date}}",
+      "uphold_late": "Upheld (finding only)",
+      "late_hint": "The fated day has passed or the case is concluded, so the soul has already left the city: the review only records a finding."
     },
     "confessions": {
       "title": "The forty-two denials",
@@ -5520,7 +5531,9 @@
       "status": {
         "FILED": "Grievance filed · awaiting the City God",
         "UPHELD": "Grievance upheld · released early",
-        "REJECTED": "Grievance not upheld · held until the fated day"
+        "REJECTED": "Grievance not upheld · held until the fated day",
+        "UPHELD_LATE": "Grievance upheld · you had already left on the fated day",
+        "DELIVERED": "Grievance upheld · delivered to the Lotus Terrace"
       },
       "note_label": "The City God's note",
       "plea_label": "Your grievance",

@@ -847,8 +847,9 @@ export const cityGodCasesApi = {
  */
 export const wangsiApi = {
   fileGrievance: (id: string, plea: string) => api.post<Judgment>(`/judgment/wangsi/${id}/grievance/`, { plea }),
-  decideGrievance: (id: string, upheld: boolean, note: string) =>
-    api.post<Judgment>(`/judgment/wangsi/${id}/decide/`, { upheld, note }),
+  /** `deliver`:属实且超度(出城到莲花台、免审结案),只与 `upheld` 同用。 */
+  decideGrievance: (id: string, upheld: boolean, note: string, deliver = false) =>
+    api.post<Judgment>(`/judgment/wangsi/${id}/decide/`, { upheld, note, deliver }),
 };
 
 /** 申诉动作被拒时有文案的 `code`(`judgment.wangsi.error.<code>`)。 */
@@ -859,6 +860,8 @@ export const WANGSI_ERROR_CODES = [
   "grievance_not_major",
   "not_city_god_officer",
   "not_pending",
+  "at_city_god",
+  "deliver_needs_upheld",
 ] as const;
 
 /** 初审动作被拒时有文案的 `code`(`cityGodCases.error.<code>`)。 */

@@ -9,10 +9,19 @@
   docs/10 §4.2「向城隍申诉 · 地方层面调查核实」。
   - 属实(UPHELD):只在冤情等级为「重」「极重」时可以(§4.2「若确属冤死且冤情重大 → 可提前释放」),
     否则 409 `grievance_not_major`。属实即提前释放:`held_until` 清空,案子当即可以认领、结案。
+  - 属实 · 超度(DELIVERED,2026-10-29 用户决定;§4.2「请道士/僧人做法事 · 超度」、§4.3 度化超拔、§6.2
+    「属实则提前释放/超度」):同样只给「重」「极重」。亡魂出城、到第十二站莲花台(§4.3「地藏王菩萨定期在莲花台
+    度化枉死城亡魂」),免审:案子当场按 PASSED 结案、不走审批流 —— 与埃及早夭者「不受审,直入芦苇原」
+    (`Soul._after_egyptian_death`)同一个出口,不另起一套。PASSED 在地府路由到天道(`_route_chinese`),处置照常由
+    官员执行,之后的转世走现有路径。案子还在城隍处(PENDING / RETURNED)时拒绝(409 `at_city_god`):结案的
+    规矩对超度一样适用,先解送。
   - 不属实(REJECTED):照旧押到阳寿那一天。
+* 阳寿到了(或案子已结)而申诉还是 FILED(2026-10-29 审查):仍可审核,只记结论 —— 已经出城,没有什么可提前释放,
+  也不能再超度(409 `not_in_wangsi`)。属实记成 UPHELD_LATE(「属实 · 期满出城」),不看冤情等级:等级只决定
+  放不放人,这里不放人。不这样,FILED 会永远挂着:审核要求还押,而 `filing_refusal` 又不许再提。
 * 拒绝一律 `WangsiRefusedError`(与认领同一形状),在任何写入之前抛出。
 
-事件(2026-10-28):提出 / 属实(提前释放)/ 不属实各一条 `WANGSI_GRIEVANCE_*`,记在灵魂时间线上,与那一笔同一事务。
+事件(2026-10-28):提出 / 属实(提前释放或期满后属实,payload 的 status 分得开)/ 超度 / 不属实各一条 `WANGSI_GRIEVANCE_*`,记在灵魂时间线上,与那一笔同一事务。
 payload:judgment_id、status、冤情等级;提出另带 via(officer / soul)。不带申诉原文、审核批语与经办官员。
 """
 from django.db import transaction
@@ -33,7 +42,8 @@ def is_held(judgment: Judgment) -> bool:
 
 
 def _assert_held(judgment: Judgment) -> None:
-    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted:
+    # 与 `claims._assert_pending` 同一组列:已归档的案子也不再接申诉(2026-10-29 审查)。
+    if judgment.verdict is not None or judgment.is_final or judgment.is_deleted or judgment.is_archived:
         raise WangsiRefusedError("This judgment is no longer pending.", "not_pending")
     if not is_held(judgment):
         raise WangsiRefusedError("This soul is not held in 枉死城.", "not_in_wangsi")
@@ -92,10 +102,16 @@ def file_grievance(pk, user, plea: str, *, account=None) -> Judgment:
     return judgment
 
 
-def decide_grievance(pk, user, *, upheld: bool, note: str) -> Judgment:
+def decide_grievance(pk, user, *, upheld: bool, note: str, deliver: bool = False) -> Judgment:
+    """`deliver`:属实且超度(只在还押时)。到期 / 已结案后仍可审核,只记结论(见模块说明)。"""
+    from apps.judgment.models import AT_CITY_GOD
+
     with transaction.atomic():
         judgment = _lock(pk)
-        _assert_held(judgment)
+        if judgment.is_deleted or judgment.is_archived:
+            raise WangsiRefusedError("This judgment is no longer pending.", "not_pending")
+        if not judgment.untimely:
+            raise WangsiRefusedError("This soul is not held in 枉死城.", "not_in_wangsi")
         if judgment.grievance_status != GrievanceStatus.FILED:
             raise WangsiRefusedError("No grievance is awaiting review.", "no_grievance_filed",
                                      grievance_status=judgment.grievance_status)
@@ -103,17 +119,51 @@ def decide_grievance(pk, user, *, upheld: bool, note: str) -> Judgment:
             raise WangsiRefusedError(
                 "Only the city god's officers, or a hall administrator, can review this grievance.",
                 "not_city_god_officer", status=403)
-        if upheld and judgment.grievance_level not in GRIEVANCE_RELEASE_LEVELS:
+        held = judgment.verdict is None and not judgment.is_final and is_held(judgment)
+        if deliver and not upheld:
+            raise WangsiRefusedError("Only an upheld grievance can deliver the soul.", "deliver_needs_upheld",
+                                     status=400)
+        if deliver and not held:
+            raise WangsiRefusedError("This soul has already left 枉死城; it cannot be delivered.", "not_in_wangsi")
+        if upheld and held and judgment.grievance_level not in GRIEVANCE_RELEASE_LEVELS:
             raise WangsiRefusedError(
                 "Only a major or severe grievance releases the soul early; record the grievance level first.",
                 "grievance_not_major", grievance_level=judgment.grievance_level)
-        judgment.grievance_status = GrievanceStatus.UPHELD if upheld else GrievanceStatus.REJECTED
+        if deliver and judgment.city_god_status in AT_CITY_GOD:
+            raise WangsiRefusedError(
+                "This case is still with the city god (城隍初审); send it on before delivering the soul.",
+                "at_city_god", city_god_status=judgment.city_god_status)
+        if not upheld:
+            judgment.grievance_status = GrievanceStatus.REJECTED
+        elif deliver:
+            judgment.grievance_status = GrievanceStatus.DELIVERED
+        elif held:
+            judgment.grievance_status = GrievanceStatus.UPHELD
+        else:
+            judgment.grievance_status = GrievanceStatus.UPHELD_LATE
         judgment.grievance_note = note
         judgment.grievance_decided_at = timezone.now()
         fields = ["grievance_status", "grievance_note", "grievance_decided_at"]
-        if upheld:
-            judgment.held_until = None  # 提前释放:`claims._assert_not_held` 不再拦
+        if upheld and held:
+            judgment.held_until = None  # 提前释放 / 超度出城:`claims._assert_not_held` 不再拦
             fields.append("held_until")
         _save(judgment, *fields)
-        _event(judgment, "WANGSI_GRIEVANCE_UPHELD" if upheld else "WANGSI_GRIEVANCE_REJECTED")
+        if deliver:
+            _event(judgment, "WANGSI_GRIEVANCE_DELIVERED")
+            _deliver(judgment)
+        else:
+            _event(judgment, "WANGSI_GRIEVANCE_UPHELD" if upheld else "WANGSI_GRIEVANCE_REJECTED")
     return judgment
+
+
+def _deliver(judgment: Judgment) -> None:
+    """超度:到莲花台,免审结案(PASSED,不走审批流)。在调用方的事务里;结案拒绝则整笔回滚。"""
+    from apps.judgment.models import Verdict
+    from apps.judgment.services import JudgmentConclusionService
+    from apps.souls import stations
+    from apps.souls.models import Soul
+
+    stations.arrive(judgment.soul, Soul.DiyuStation.LOTUS_TERRACE, via="wangsi_delivered")
+    JudgmentConclusionService.conclude_judgment(
+        judgment, Verdict.PASSED, notes="Delivered from 枉死城 at the Lotus Terrace (docs/10 §4.3).",
+        create_workflow=False)
