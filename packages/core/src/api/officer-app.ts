@@ -40,6 +40,8 @@ export type TodoItemExtra = {
   city_god_name?: string;
   origin_location?: string;
   untimely?: boolean;
+  /** 枉死申诉(kind = wangsi,第五十九批 M-3):冤情等级(未登记为空串);城隍名在 `city_god_name`。 */
+  grievance_level?: string;
 };
 export type FactHistory = components["schemas"]["FactHistory"];
 export type FactAttachment = components["schemas"]["FactAttachment"];
@@ -53,9 +55,10 @@ export type Cosigner = components["schemas"]["Cosigner"];
  * has no `item()` detail either: it is decided on the desk. `pick` (待我选站, 第四十三批) has no `item()` detail:
  * its id is the workflow's, read through `workflowApi.get` and picked through `workflowApi.pickSegment`.
  * `city_god` (城隍初审, 第五十三批) has no `item()` detail: its id is the judgment's, read through
- * `cityGodCasesApi.get` and decided through `sendOn` / `returnCase`.
+ * `cityGodCasesApi.get` and decided through `sendOn` / `returnCase`. `wangsi` (枉死申诉, 第五十九批) has no `item()`
+ * detail either: its id is the judgment's, read through `judgmentApi.get` and decided through `wangsiApi.decideGrievance`.
  */
-export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change" | "pick" | "city_god";
+export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter" | "sentence_change" | "pick" | "city_god" | "wangsi";
 
 /**
  * Why a decision (approve / reject) did not go through. `code` on the error body of

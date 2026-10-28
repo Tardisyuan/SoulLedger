@@ -6944,7 +6944,8 @@
         "letters": "待回书信",
         "unassigned_letters": "未分配的书信",
         "pick_nodes": "待我选站",
-        "city_god": "城隍初审"
+        "city_god": "城隍初审",
+        "wangsi": "枉死申诉"
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。",
@@ -7298,7 +7299,9 @@
       "judgment_meta": "第 {{n}} 世 · {{verdict}} · {{status}}",
       "current_stop": "◐ 现在在这一站",
       "no_disposition": "还没有处置",
-      "open_label": "打开{{name}}的灵魂详情"
+      "open_label": "打开{{name}}的灵魂详情",
+      "term_due": "刑期已满 · {{date}}",
+      "term_default": "默认 {{n}} 年"
     },
     "reassign": {
       "title": "改派给",
@@ -7337,6 +7340,13 @@
       "empty_title": "还没有数",
       "empty_body": "认领并结掉第一件案子后，这里就有数了。",
       "load_failed": "数没取到"
+    },
+    "wangsi": {
+      "row_meta": "{{city_god}} · 冤情 {{level}}",
+      "review_title": "枉死申诉 · {{name}}"
+    },
+    "judgment": {
+      "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站"
     }
   },
   "print": {

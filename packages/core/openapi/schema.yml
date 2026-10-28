@@ -14042,6 +14042,7 @@ paths:
           - rebirth
           - sentence_change
           - unassigned_letter
+          - wangsi
         description: 只要这一组(加载更多)
       - in: query
         name: offset
@@ -30584,6 +30585,11 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        flow_progress:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentFlowProgress'
+          nullable: true
+          readOnly: true
       required:
       - admitted_balance
       - amends_plan_id
@@ -30619,6 +30625,7 @@ components:
       - evidence_admissions
       - evidence_count
       - ferry_barred
+      - flow_progress
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -30715,6 +30722,32 @@ components:
       description: |-
         * `draft_conflict` - draft_conflict
         * `concluded` - concluded
+    JudgmentFlowProgress:
+      type: object
+      description: 审判详情上的审批流程一行(Design 第五十九批 M-1,官员 App 只读)。
+      properties:
+        workflow:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: '`ApprovalWorkflowStatus`:IN_PROGRESS / COMPLETED / REJECTED
+            …'
+        index:
+          type: integer
+          description: 走到第几站(只数要人决定的节点,同 `officer_app.facts`);没有当前节点时是最后决定的那站。
+        total:
+          type: integer
+        waiting:
+          type: string
+          nullable: true
+          description: 处置为什么还不能执行:`weighing.unfinished_flow` 的码;没有处置、已执行或不被拦时为 null。
+      required:
+      - index
+      - status
+      - total
+      - waiting
+      - workflow
     JudgmentKindEnum:
       enum:
       - ORIGINAL
@@ -44040,6 +44073,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/TodoGroup'
           description: 城隍初审(第五十三批):我名下城隍的待初审与退回补正(退回的在前)。需 `judgment.execute`;计入角标。
+        wangsi:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 枉死申诉(第五十九批):我名下城隍的枉死案子里待审的申诉(先申诉的在前)。需 `judgment.execute`;计入角标,不推送。
       required:
       - approvals
       - city_god
@@ -44050,6 +44087,7 @@ components:
       - rebirths
       - sentence_changes
       - unassigned_letters
+      - wangsi
     TodoFacts:
       type: object
       description: O-01:批准前要看清的申请内容。按类给字段,没有的不出现。
@@ -44201,6 +44239,9 @@ components:
         untimely:
           type: boolean
           description: 仅城隍初审:枉死。
+        grievance_level:
+          type: string
+          description: 仅枉死申诉:冤情等级 NONE / MINOR / MAJOR / SEVERE,未登记为空串。
       required:
       - created_at
       - id

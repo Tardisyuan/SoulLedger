@@ -26,6 +26,7 @@ import { MoreRow, useMoreRows, type Page } from "../paged";
 import { useSession } from "../session";
 import { GUTTER, Notice, OneLine, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
+import { ServingFact } from "./servingFact";
 
 const NO_PERMISSIONS: string[] = [];
 
@@ -229,6 +230,7 @@ function IdentityTab({ soul }: { soul: Soul }) {
       <Fact testID="soul-origin-region" label={t("souls.origin_region.label")} value={originRegionLabel(t, soul.origin_region, locale)} />
       <Fact label={t("souls.detail.death")} value={dateText(soul.death_date)} />
       {soul.birth_name && soul.birth_name !== soul.name ? <Fact label={t("officer_app.soul.birth_name")} value={soul.birth_name} /> : null}
+      <ServingFact soulId={soul.id} />
       {diyu ? <StationFact soul={soul} /> : null}
       {diyu ? <CaptureFact soulId={soul.id} /> : null}
       {soul.description ? <Fact wide label={t("souls.detail.profile.description")} value={soul.description} /> : null}

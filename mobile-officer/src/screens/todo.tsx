@@ -271,11 +271,21 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
           [extra.city_god_name, extra.origin_location].filter(Boolean).join(" · "),
         ]
       : null;
+  // 枉死申诉(第五十九批 M-3):城隍 · 冤情等级 / 已申诉 · 待审 · 月-日。
+  const wangsi =
+    item.kind === "wangsi"
+      ? [
+          t("officer_app.wangsi.row_meta", { city_god: extra.city_god_name ?? "", level: extra.grievance_level ? t(`judgment.grievance_levels.${extra.grievance_level}`) : t("judgment.wangsi.unset") }),
+          `${t("judgment.grievance_statuses.FILED")} · ${formatWhen(item.created_at).slice(5, 10)}`,
+        ]
+      : null;
   const lines = pick
     ? [{ one: pick.meta }, { one: pick.wait }]
-    : cityGod
-      ? cityGod.filter(Boolean).map((one) => ({ one }))
-      : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
+    : wangsi
+      ? wangsi.map((one) => ({ one }))
+      : cityGod
+        ? cityGod.filter(Boolean).map((one) => ({ one }))
+        : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
