@@ -860,12 +860,16 @@ EGYPTIAN_REALMS = [
     # the backend suite and compares it against the constant, so the two sides
     # cannot drift apart again without a red test.
     #
-    # realm_type stays HELL for the same reason and under protest: of
-    # {HELL, PURGATORY, BLISS, NEUTRAL} none means "ceased to exist", and
-    # NEUTRAL ("between") would be a worse lie than HELL — it would file
-    # annihilation next to the ferry crossing as another waypoint.
+    # realm_type is ANNIHILATION (user 2026-10-28; docs/01_埃及冥界整体架构.md
+    # §2.2, docs/02_奥西里斯审判详解.md §5.2: the second death is an outcome,
+    # not a place). It was HELL "under protest" because none of {HELL,
+    # PURGATORY, BLISS, NEUTRAL} means "ceased to exist"; the enum now has a
+    # member that does. realms/0025 moves rows already seeded. Backend routing
+    # never read the type — DispositionService, appeals and the soul-account
+    # retirement all key on the realm_code — so only labels, the realm badge and
+    # the dashboard pattern change.
     ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "Ammit - Mut Sen",
-     RealmType.HELL, 10,
+     RealmType.ANNIHILATION, 10,
      "Not a place and not a residence: the outcome recorded when the heart is "
      "heavier than the feather and Ammit devours it. Egyptian sources call this "
      "the second death — the person ceases to exist, is not punished, and does "

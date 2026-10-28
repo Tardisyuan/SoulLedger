@@ -20,5 +20,6 @@
   "judgment.placement.errors.retry_has_no_destination",
   "sentence_plan.errors.retry_with_open_cross",
   "sentence_plan.errors.retry_not_a_destination",
-  "appeals.error.retry_not_a_destination"
+  "appeals.error.retry_not_a_destination",
+  "realms.types.ANNIHILATION"
 ]

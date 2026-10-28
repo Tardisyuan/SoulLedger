@@ -252,7 +252,7 @@ describe("the scan is looking at something", () => {
   it("parses a known map's keys, not just its name", () => {
     const realms = OBJECT_CONSTS.find((e) => e.file === "app/realms/page.tsx" && e.name === "REALM_TYPE_CONFIG");
     expect(realms).toBeDefined();
-    expect(realms!.keys).toEqual(["HELL", "PURGATORY", "BLISS", "NEUTRAL"]);
+    expect(realms!.keys).toEqual(["HELL", "PURGATORY", "BLISS", "NEUTRAL", "ANNIHILATION"]);
     expect(isEnumKeyed(realms!)).toBe(true);
   });
 
@@ -322,6 +322,8 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
       PURGATORY: "--color-verdict-purgatory",
       BLISS: "--color-verdict-passed",
       NEUTRAL: "--color-ink-tertiary",
+      // The second death is what a FAILED weighing produces (user 2026-10-28).
+      ANNIHILATION: "--color-verdict-failed",
     };
     expect(Object.keys(byRealm)).toEqual(realms.keys);
 
@@ -351,10 +353,10 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
     // while the wrong one sits beside it.
     expect(utilities(lineFor("NEUTRAL")!).text).toEqual(["--color-ink-muted", "1"]);
 
-    // And the other three DO tint at the depth the light-mode tokens were
+    // And the other four DO tint at the depth the light-mode tokens were
     // measured against — 10%, the cap dataGridToneContract.test.ts enforces on
     // the shared badge tones. A realm badge is the same kind of badge.
-    for (const realm of ["HELL", "PURGATORY", "BLISS"]) {
+    for (const realm of ["HELL", "PURGATORY", "BLISS", "ANNIHILATION"]) {
       expect(utilities(lineFor(realm)!).text).toEqual([byRealm[realm], "1"]);
     }
   });

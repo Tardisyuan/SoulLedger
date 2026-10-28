@@ -2522,7 +2522,8 @@
       "HELL": "Hell",
       "PURGATORY": "Purgatory",
       "BLISS": "Bliss",
-      "NEUTRAL": "Neutral"
+      "NEUTRAL": "Neutral",
+      "ANNIHILATION": "Ceased to exist"
     },
     "codes": {
       "DY_01_HEAVEN": "天堂",

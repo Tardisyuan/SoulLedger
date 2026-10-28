@@ -2522,7 +2522,8 @@
       "HELL": "地狱",
       "PURGATORY": "炼狱",
       "BLISS": "天堂",
-      "NEUTRAL": "中立"
+      "NEUTRAL": "中立",
+      "ANNIHILATION": "不存在"
     },
     "codes": {
       "DY_01_HEAVEN": "天堂",

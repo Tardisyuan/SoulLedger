@@ -11,6 +11,7 @@ import { REALM_PATTERNS, type ChartPattern } from "@/lib/chart-colors";
  *   天界 half    1px 边 + 点阵(半色调)
  *   地狱 hatch   1px 边 + 45° 斜线
  *   中立 outline 只有 1px 边
+ *   不存在 void  1px 虚线边(埃及第二死,不是一个地方;A5 之外补的)
  *
  * 全部用梯度第 1 档 —— 去向没有先后,图案就是区分,不另加颜色。纯 CSS,不再拉 recharts:
  * 这张图要的「数在柱上、名在柱下」是四个 div 就能画的东西。
@@ -21,6 +22,7 @@ export const PATTERN_CLASS: Record<ChartPattern, string> = {
   hatch:
     "border border-[oklch(var(--color-chart-1))] bg-[repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px,transparent_1.5px_6px)]",
   outline: "border border-[oklch(var(--color-chart-1))]",
+  void: "border border-dashed border-[oklch(var(--color-chart-1))]",
 };
 
 export interface RealmBar {
@@ -30,7 +32,7 @@ export interface RealmBar {
   realmType: string;
 }
 
-const LEGEND_ORDER = ["PURGATORY", "BLISS", "HELL", "NEUTRAL"] as const;
+const LEGEND_ORDER = ["PURGATORY", "BLISS", "HELL", "NEUTRAL", "ANNIHILATION"] as const;
 
 export function patternOf(realmType: string): ChartPattern {
   return REALM_PATTERNS[realmType] ?? "solid";

@@ -356,7 +356,7 @@ class SoulsByRealmSerializer(serializers.Serializer):
     realm_code = serializers.CharField()
     realm_name = serializers.CharField()
     civilization = serializers.CharField()
-    #: `Realm.realm_type`(HELL / PURGATORY / BLISS / NEUTRAL)—— 前端按它选图案。
+    #: `Realm.realm_type`(HELL / PURGATORY / BLISS / NEUTRAL / ANNIHILATION)—— 前端按它选图案。
     realm_type = serializers.ChoiceField(choices=RealmType.choices)
     count = serializers.IntegerField()
     #: 容量;null = 未记录。

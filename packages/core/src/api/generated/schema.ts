@@ -17455,9 +17455,10 @@ export interface components {
          *     * `PURGATORY` - Purgatory / Intermediate
          *     * `BLISS` - Heaven / Bliss
          *     * `NEUTRAL` - Neutral / Between
+         *     * `ANNIHILATION` - Annihilation / Ceased to exist
          * @enum {string}
          */
-        RealmTypeEnum: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
+        RealmTypeEnum: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL" | "ANNIHILATION";
         RebirthAppeal: {
             /** @default  */
             statement: string;
@@ -32527,8 +32528,9 @@ export interface operations {
                  *     * `PURGATORY` - Purgatory / Intermediate
                  *     * `BLISS` - Heaven / Bliss
                  *     * `NEUTRAL` - Neutral / Between
+                 *     * `ANNIHILATION` - Annihilation / Ceased to exist
                  */
-                realm_type?: "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
+                realm_type?: "ANNIHILATION" | "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
                 /** @description A search term. */
                 search?: string;
                 tier_max?: number;
@@ -32618,8 +32620,9 @@ export interface operations {
                  *     * `PURGATORY` - Purgatory / Intermediate
                  *     * `BLISS` - Heaven / Bliss
                  *     * `NEUTRAL` - Neutral / Between
+                 *     * `ANNIHILATION` - Annihilation / Ceased to exist
                  */
-                realm_type?: "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
+                realm_type?: "ANNIHILATION" | "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
                 /** @description A search term. */
                 search?: string;
                 tier_max?: number;

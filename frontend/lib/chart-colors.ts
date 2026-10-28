@@ -27,7 +27,7 @@ export type ChartChromeKey = "grid" | "axis" | "tick" | "tooltipBg" | "tooltipBo
  * A5 的四种图案。recharts 里 `half` 是梯度第 4 档的实底,另外三种都用第 1 档;
  * 仪表盘「按界域」的 CSS 柱(`RealmBars`,Design A4)把 `half` 画成第 1 档的点阵半色调。
  */
-export type ChartPattern = "solid" | "half" | "hatch" | "outline";
+export type ChartPattern = "solid" | "half" | "hatch" | "outline" | "void";
 
 export interface ChartColors {
   /** Soul lifecycle states (`Soul.current_state`) — the ordered gray-blue ramp. */
@@ -55,6 +55,7 @@ export const CHART_TOKENS: { [K in keyof ChartColors]: Record<string, string> } 
     BLISS: "--color-chart-4",
     HELL: "--color-chart-1",
     NEUTRAL: "--color-chart-1",
+    ANNIHILATION: "--color-chart-1",
   },
   CHART_SERIES: {
     balance: "--color-chart-1",
@@ -74,13 +75,16 @@ export const CHART_TOKENS: { [K in keyof ChartColors]: Record<string, string> } 
 
 /**
  * 去向(realm type)→ 图案。A5 画的是「实底 / 半色 / 斜线 / 空框」四种,彼此没有先后,
- * 所以四个界各取一种、互不重复(contract test 钉住)。
+ * 所以四个界各取一种、互不重复(contract test 钉住)。第五种 `void`(虚线框)给
+ * ANNIHILATION(埃及第二死,用户 2026-10-28):那不是一个地方,框里什么都没有,连边都是断的。
+ * A5 没画这一种,是这里补的,等 Design 定稿。
  */
 export const REALM_PATTERNS: Record<string, ChartPattern> = {
   PURGATORY: "solid",
   BLISS: "half",
   HELL: "hatch",
   NEUTRAL: "outline",
+  ANNIHILATION: "void",
 };
 
 /**
@@ -120,6 +124,7 @@ const DARK: ChartColors = {
     BLISS: "oklch(0.740999 0.045000 249.5047)",
     HELL: "oklch(0.946168 0.032488 229.2456)",
     NEUTRAL: "oklch(0.946168 0.032488 229.2456)",
+    ANNIHILATION: "oklch(0.946168 0.032488 229.2456)",
   },
   CHART_SERIES: {
     balance: "oklch(0.946168 0.032488 229.2456)",
@@ -151,6 +156,7 @@ const LIGHT: ChartColors = {
     BLISS: "oklch(0.509215 0.044595 251.0144)",
     HELL: "oklch(0.259075 0.045425 251.0858)",
     NEUTRAL: "oklch(0.259075 0.045425 251.0858)",
+    ANNIHILATION: "oklch(0.259075 0.045425 251.0858)",
   },
   CHART_SERIES: {
     balance: "oklch(0.259075 0.045425 251.0858)",
