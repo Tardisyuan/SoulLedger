@@ -6,8 +6,15 @@ import pytest
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
 from apps.souls.models import Soul, SoulState
+from tests.city_god_support import default_city_god, die_and_send_on, sent_on
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def _hall_has_a_city_god(cn_tenant):
+    """地府开案要有城隍收案(2026-10-29);这里测的是阳寿,案子收下就解送。"""
+    default_city_god(cn_tenant)
 
 
 def _soul(tenant, fated):
@@ -20,7 +27,7 @@ def _soul(tenant, fated):
 
 def test_dying_before_the_fated_date_holds_the_judgment(cn_tenant, judge_user):
     fated = date.today() + timedelta(days=400)
-    judgment = _soul(cn_tenant, fated).die(death_date=date.today())
+    judgment = die_and_send_on(_soul(cn_tenant, fated), death_date=date.today())
     assert judgment.untimely is True and judgment.held_until == fated
     with pytest.raises(ClaimRefusedError) as refused:
         claims.claim(judgment.pk, judge_user)
@@ -53,7 +60,7 @@ def test_a_case_opened_by_hand_for_a_living_soul_is_held_too(cn_tenant, admin_us
     assert res.status_code == 201, res.data
     from apps.judgment.models import Judgment
 
-    judgment = Judgment.all_objects.get(pk=res.data["id"])
+    judgment = sent_on(Judgment.all_objects.get(pk=res.data["id"]))
     assert judgment.untimely is True and judgment.held_until == fated
     with pytest.raises(ClaimRefusedError) as refused:
         claims.claim(judgment.pk, judge_user)
@@ -61,9 +68,9 @@ def test_a_case_opened_by_hand_for_a_living_soul_is_held_too(cn_tenant, admin_us
 
 
 def test_no_fated_date_or_a_timely_death_is_judged_as_usual(cn_tenant, judge_user):
-    plain = _soul(cn_tenant, None).die(death_date=date.today())
+    plain = die_and_send_on(_soul(cn_tenant, None), death_date=date.today())
     assert plain.untimely is False and plain.held_until is None
-    late = _soul(cn_tenant, date.today() - timedelta(days=1)).die(death_date=date.today())
+    late = die_and_send_on(_soul(cn_tenant, date.today() - timedelta(days=1)), death_date=date.today())
     assert late.untimely is False
     claims.claim(late.pk, judge_user)
 
@@ -73,7 +80,7 @@ def test_a_held_judgment_cannot_be_concluded_by_any_path(cn_tenant):
     went straight through."""
     from apps.judgment.services import JudgmentConclusionService
 
-    judgment = _soul(cn_tenant, date.today() + timedelta(days=30)).die(death_date=date.today())
+    judgment = die_and_send_on(_soul(cn_tenant, date.today() + timedelta(days=30)), death_date=date.today())
     with pytest.raises(ClaimRefusedError) as refused:
         JudgmentConclusionService.conclude_judgment(judgment, "PASSED")
     assert refused.value.code == "held_until_fated_date"

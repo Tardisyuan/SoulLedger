@@ -28,6 +28,7 @@ from apps.judgment.models import (
     WrongfulDeathCause,
 )
 from apps.souls.models import Soul, SoulState
+from tests.city_god_support import default_city_god, die_and_send_on
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOMAIN = REPO_ROOT / "packages" / "core" / "src" / "domain"
@@ -69,9 +70,16 @@ def _soul(tenant, fated=None):
     return soul
 
 
+@pytest.fixture
+def cn_tenant(cn_tenant):
+    """地府开案要有城隍收案(用户 2026-10-29):本殿的兜底城隍;案子收下就解送(这里测的不是初审)。"""
+    default_city_god(cn_tenant)
+    return cn_tenant
+
+
 @pytest.mark.django_db
 def test_the_router_reads_the_judgments_offence(cn_tenant):
-    judgment = _soul(cn_tenant).die(death_date=date.today())
+    judgment = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     judgment.offence = ChineseOffence.BONES_FOR_MEDICINE
     judgment.save(update_fields=["offence"])
     code = DispositionService._route_to_realm(judgment.soul, Verdict.FAILED, judgment=judgment)
@@ -82,7 +90,7 @@ def test_the_router_reads_the_judgments_offence(cn_tenant):
 def test_an_officer_records_the_offence_and_it_cannot_change_after_conclusion(cn_tenant, admin_user):
     from tests.soul_account_support import officer_client
 
-    judgment = _soul(cn_tenant).die(death_date=date.today())
+    judgment = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     client = officer_client(admin_user)
     url = f"/api/v1/judgment/{judgment.pk}/"
     res = client.patch(url, {"offence": "SEPARATING_KIN"}, format="json")
@@ -98,7 +106,7 @@ def test_an_officer_records_the_offence_and_it_cannot_change_after_conclusion(cn
 
 @pytest.fixture
 def held(cn_tenant):
-    return _soul(cn_tenant, date.today() + timedelta(days=400)).die(death_date=date.today())
+    return die_and_send_on(_soul(cn_tenant, date.today() + timedelta(days=400)), death_date=date.today())
 
 
 @pytest.mark.django_db
@@ -111,7 +119,7 @@ def test_cause_and_level_are_recorded_only_on_an_untimely_case(cn_tenant, admin_
                        format="json")
     assert res.status_code == 200, res.data
     assert (res.data["wrongful_death_cause"], res.data["grievance_level"]) == ("VICTIM", "SEVERE")
-    timely = _soul(cn_tenant).die(death_date=date.today())
+    timely = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     res = client.patch(f"/api/v1/judgment/{timely.pk}/", {"grievance_level": "MAJOR"}, format="json")
     assert res.status_code == 400 and "grievance_level" in res.data
 
@@ -147,7 +155,7 @@ def test_a_minor_grievance_cannot_release_and_a_rejected_one_stays_held(admin_us
 
 @pytest.mark.django_db
 def test_only_a_case_still_held_takes_a_grievance(cn_tenant, admin_user):
-    timely = _soul(cn_tenant).die(death_date=date.today())
+    timely = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     with pytest.raises(wangsi.WangsiRefusedError) as refused:
         wangsi.file_grievance(timely.pk, admin_user, "冤")
     assert refused.value.code == "not_in_wangsi"

@@ -2,8 +2,9 @@
 
 流程
 * 收案:`Soul.die` 开审判时问 `initial_fields`,按灵魂的出身地(`origin_location`)交给本殿匹配的城隍,
-  状态 PENDING;没有匹配就交本殿的兜底城隍(`is_default`);连兜底也没有就没有这一站,直接进十殿(与过去一样)。
-  别的文明不经城隍。官员手开的审判(`POST /judgment/`)也不经城隍:那是已经在十殿立的案。
+  状态 PENDING;没有匹配就交本殿的兜底城隍(`is_default`);连兜底也没有就**不许开案**(用户 2026-10-29,
+  `NoCityGodError` 409 `no_city_god`):死亡登记、手开审判(`POST /judgment/` 给在世的灵魂)、勾魂交接、死亡同步与
+  土地公登记一律拒绝,整笔回滚(`Soul.opening_fields` 里抛,调用方的事务一起撤)。别的文明不经城隍。
 * 初审:分在这位城隍名下的官员(或持 `judgment.assign` 的殿管理员)
   - 解送(SENT_ON,批语可空):案子进十殿的队列,此后照常认领、结案。横死的仍按 `held_until` 押在枉死城。
   - 退回补正(RETURNED,批语必填):缺资料,案子留在城隍处;通知本殿管理员。补好之后同一位城隍解送。
@@ -20,6 +21,7 @@
 """
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import APIException
 
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodStatus, Judgment
@@ -29,6 +31,20 @@ _BOOKKEEPING = ("version", "update_user", "update_time")
 
 class CityGodRefusedError(ClaimRefusedError):
     """初审此刻不接受这个动作。"""
+
+
+class NoCityGodError(CityGodRefusedError, APIException):
+    """本殿没有能收这件案子的城隍(没有匹配、也没有兜底),地府不许开案(用户 2026-10-29)。
+
+    也是 `APIException`:`Soul.die` 的调用方很多(死亡登记、勾魂交接、手开审判……),各个视图不必各接一遍,
+    DRF 自己答 409 `{"error", "code": "no_city_god"}`。在任何调用方的事务里抛出,整笔回滚。"""
+
+    status_code = 409
+
+    def __init__(self):
+        message = ("No city god of this hall can take the case: set a default city god under City gods first")
+        CityGodRefusedError.__init__(self, message, "no_city_god")
+        self.detail = {"error": message, "code": "no_city_god"}
 
 
 # ── 收案 ────────────────────────────────────────────────────────────────

@@ -57,13 +57,77 @@ def test_the_most_specific_region_named_last_wins(hall, cn_tenant):
     assert event.payload["city_god_name"] == "杭州府城隍"
 
 
-def test_no_match_goes_to_the_default_city_god_or_straight_to_the_courts(hall, cn_tenant):
-    plain = _dead(cn_tenant, "四川成都")
-    assert plain.city_god is None and plain.city_god_status == ""
-    assert not SoulEvent.objects.filter(soul=plain.soul, event_type="CITY_GOD_RECEIVED").exists()
+def test_no_match_goes_to_the_default_city_god_and_without_one_no_case_is_opened(hall, cn_tenant):
+    """用户 2026-10-29:没有匹配也没有兜底城隍时不许开案(409 `no_city_god`),整笔回滚 —— 此前直接进十殿。"""
+    from apps.realms.models import SoulPathEntry
+    from apps.soul_accounts.models import SoulAccount
+
+    soul = Soul.objects.create(name="无城隍", tenant=cn_tenant, current_state=SoulState.ALIVE,
+                               origin_location="四川成都")
+    with pytest.raises(city_gods.NoCityGodError) as refused:
+        soul.die(death_date=date.today())
+    assert refused.value.code == "no_city_god" and refused.value.status_code == 409
+    soul = Soul.objects.get(pk=soul.pk)
+    assert soul.current_state == SoulState.ALIVE and soul.death_year is None
+    assert not Judgment.all_objects.filter(soul=soul).exists()
+    assert not SoulAccount.objects.filter(soul=soul).exists()
+    assert not SoulPathEntry.all_objects.filter(soul=soul).exists()
+    assert not SoulEvent.objects.filter(soul=soul).exists()
+
     default = CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)
     assert _dead(cn_tenant, "四川成都").city_god == default
     assert _dead(cn_tenant, "").city_god == default
+
+
+def test_every_way_of_opening_a_diyu_case_is_refused_without_a_city_god(hall, cn_tenant):
+    """死亡登记(`/souls/{id}/die/`)、手开审判(`POST /judgment/` 给在世的灵魂)、土地公登记(与外部死亡同步同一条
+    `DeathSyncService._process`)、勾魂交接:一律拒绝,什么都没写。手开那条走的是 `Soul.opening_fields`,不经
+    `Soul.die` 的预检。"""
+    from apps.death_sync.models import TudiGod
+    from apps.death_sync.services import DeathSyncService
+    from apps.dispatch import capture
+    from apps.dispatch.models import CaptureWarrant
+
+    lead = officer_client(hall["lead"])
+
+    def alive(name):
+        return Soul.objects.create(name=name, tenant=cn_tenant, current_state=SoulState.ALIVE,
+                                   origin_location="四川成都", fated_death_year=2000, fated_death_month=1,
+                                   fated_death_day=1)
+
+    def untouched(soul):
+        soul = Soul.objects.get(pk=soul.pk)
+        return soul.current_state == SoulState.ALIVE and not Judgment.all_objects.filter(soul=soul).exists()
+
+    died = alive("登记")
+    res = lead.post(f"/api/v1/souls/{died.pk}/die/", {"death_date": "2026-09-01"}, format="json")
+    assert (res.status_code, res.data["code"]) == (409, "no_city_god") and untouched(died)
+
+    opened = alive("手开")
+    res = lead.post("/api/v1/judgment/", {"soul": str(opened.pk), "court": "第一殿"}, format="json")
+    assert (res.status_code, res.data["code"]) == (409, "no_city_god") and untouched(opened)
+
+    tudi_soul = alive("土地")
+    tudi = TudiGod.objects.create(tenant=cn_tenant, name="石桥村土地", regions=["石桥"])
+    record = DeathSyncService.register_by_tudi(tudi, {"soul_lookup": {"soul_id": str(tudi_soul.pk)},
+                                                      "death_date": "2026-10-01"})
+    assert (record.status, record.error_code, record.judgment_id) == ("FAILED", "NO_CITY_GOD", None)
+    assert untouched(tudi_soul)
+
+    captured = alive("勾魂")
+    warrant = capture.issue(captured)
+    assert warrant.city_god is None
+    capture.capture(warrant.pk)
+    with pytest.raises(city_gods.NoCityGodError):
+        capture.hand_over(warrant.pk)
+    assert untouched(captured)
+    assert CaptureWarrant.objects.get(pk=warrant.pk).status == "CAPTURED"  # 交接整笔回滚,牒还在拘到那一步
+
+    # 设了兜底城隍,同一条土地公登记重试就过(NO_CITY_GOD 可重试,`RETRYABLE_ERRORS`)。
+    CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)
+    retried = DeathSyncService.retry_failed(record.pk, cn_tenant)
+    assert (retried.status, retried.error_code) == ("PROCESSED", "")
+    assert Judgment.all_objects.get(soul=tudi_soul).city_god.name == "酆都城隍"
 
 
 def test_the_city_gods_officers_are_told_after_commit(assigned, cn_tenant, django_capture_on_commit_callbacks):

@@ -25,6 +25,14 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
+def _diyu_has_a_city_god(cn_tenant):
+    """地府开案要有城隍收案(用户 2026-10-29):本殿先有一位兜底城隍。"""
+    from tests.city_god_support import default_city_god
+
+    default_city_god(cn_tenant)
+
+
+@pytest.fixture(autouse=True)
 def _fresh_soul_login_counter():
     clear_soul_login_counters()
     yield

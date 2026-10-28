@@ -50,7 +50,12 @@ CONTEXTS = (BARE, WRAPPED, PROBE)
 
 
 def _cn():
-    return plan.tenant("CN_DIYU")
+    """地府殿,带一位兜底城隍:没有城隍收案就不许开案(用户 2026-10-29)。"""
+    from tests.city_god_support import default_city_god
+
+    tenant = plan.tenant("CN_DIYU")
+    default_city_god(tenant)
+    return tenant
 
 
 # ── the injection ──────────────────────────────────────────────────────────────────────────────────────────

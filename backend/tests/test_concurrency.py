@@ -279,6 +279,9 @@ class TestSoulStateTransitionConcurrency:
             current_state=SoulState.ALIVE,
             birth_date="1990-01-01",
         )
+        from tests.city_god_support import default_city_god
+
+        default_city_god(cn_tenant)  # 地府开案要有城隍收案(2026-10-29)
 
         results = {"a": None, "b": None}
 
