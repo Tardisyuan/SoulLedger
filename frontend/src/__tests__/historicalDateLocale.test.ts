@@ -70,7 +70,7 @@ describe("each locale gets its own month name", () => {
     for (const locale of SUPPORTED_LOCALES) {
       for (let month = 1; month <= 12; month += 1) {
         const out = formatHistoricalDate({ year: 1066, month, day: null }, locale);
-        expect(out).toMatch(/^1066 CE · .+$/);
+        expect(out).toMatch(locale === "egy" ? /^1066 · Abed \d+$/ : /^1066 CE · .+$/);
       }
     }
   });
