@@ -354,6 +354,8 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     grievance_plea = models.TextField(blank=True, default="")
     grievance_note = models.TextField(blank=True, default="")
     grievance_decided_at = models.DateTimeField(null=True, blank=True)
+    #: 这一次申诉提出的时刻(`wangsi.file_grievance` 写)。官员端待办按它排、显示它 —— `update_time` 随改冤情等级也会动。
+    grievance_filed_at = models.DateTimeField(null=True, blank=True)
     #: 罪目(地府):自动选殿按它(`DispositionService._route_chinese`);空 = 没填,退回按严重度。
     offence = models.CharField(max_length=30, choices=ChineseOffence.choices, blank=True, default="")
     #: 埃及入殿前的一段(review P2-9,docs/02 §1.1、01 §4.2),死亡登记时由 `Soul.opening_fields` 写:

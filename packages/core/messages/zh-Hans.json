@@ -2395,7 +2395,9 @@
         "wavering_with_open_cross": "这件案子挂着未结的联审，先结联审再重称。",
         "weighing_in_progress": "称心流程还没走完：托特、神庭、荷鲁斯、奥西里斯（或阿米特）走完之后才执行。",
         "weighing_rejected": "称心流程被驳回：这件案子要重开或申诉，不能直接执行。",
-        "weighing_wavers": "天平摇摆的旧处置不执行：另开一次称量。"
+        "weighing_wavers": "天平摇摆的旧处置不执行：另开一次称量。",
+        "approval_flow_required": "原审须经审批流程结案，不能直接结案。",
+        "weighing_flow_required": "埃及的案子须经称心流程结案，不能直接结案。"
       }
     },
     "duat_stage": {
@@ -4067,7 +4069,8 @@
     "release_success": "已期满释放",
     "release_error": {
       "term_not_ended": "期满日还没到，不能释放。",
-      "not_serving": "这份处置不在服刑中。"
+      "not_serving": "这份处置不在服刑中。",
+      "generic": "释放失败"
     },
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
@@ -4096,7 +4099,8 @@
       "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。",
       "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
       "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转世。",
-      "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。"
+      "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。",
+      "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。"
     },
     "next_continent": "下一世部洲 · 选填",
     "next_continent_same": "同本世",
@@ -4778,7 +4782,8 @@
       "shortening_pending": "已有一份待决的缩短冷却申请",
       "shortening_used": "这段冷却期已申请过一次缩短",
       "desired_form_required": "请先选一个希望转生的形态",
-      "rebirth_form_not_applicable": "你的文明转世不分六道，不用选形态"
+      "rebirth_form_not_applicable": "你的文明转世不分六道，不用选形态",
+      "invalid_days": "天数不在可选的范围内。"
     },
     "lexicon": {
       "eg": {
@@ -6931,7 +6936,8 @@
       "hint": "别人拿到你的手机，也做不了决定",
       "unavailable": "这部手机还没设锁屏密码，开不了。先在系统设置里设一个。",
       "failed": "没有认出{{bio}}，还没批准。再点一次确认重试。",
-      "failed_reject": "没有认出{{bio}}，还没驳回。再点一次确认重试。"
+      "failed_reject": "没有认出{{bio}}，还没驳回。再点一次确认重试。",
+      "prompt": "批准或驳回前，确认是你本人。"
     },
     "update_required": {
       "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
@@ -7514,7 +7520,9 @@
       "past_life_read_only": "前世的审判只能查看，不能申诉",
       "no_appeal_above_minos": "米诺斯的判决是终裁，其上无可申诉",
       "soul_devoured": "灵魂已被阿米特吞噬，不复存在，无从申诉",
-      "not_escalatable": "上一次复核维持原判之后才能上诉"
+      "not_escalatable": "上一次复核维持原判之后才能上诉",
+      "appeal_closed": "这份申诉已有结论或已撤回，不能再撤回。",
+      "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",

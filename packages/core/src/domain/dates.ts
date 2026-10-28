@@ -152,6 +152,15 @@ export function formatHistoricalDate(
   return yearStr;
 }
 
+/**
+ * An ISO calendar day (`YYYY-MM-DD`, the shape `Judgment.held_until` comes in) in the same words as
+ * `formatHistoricalDate` — 「2027年 · 12月1日」, not the raw string. Anything else comes back as given.
+ */
+export function formatIsoDay(iso: string | null | undefined, locale: Locale = DEFAULT_LOCALE): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
+  return m ? (formatHistoricalDate({ year: +m[1], month: +m[2], day: +m[3] }, locale) ?? "") : (iso ?? "");
+}
+
 /** Local calendar date as `YYYY-MM-DD` — the shape `Judgment.held_until` comes in. */
 function localIsoDate(now: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");

@@ -2429,8 +2429,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(最多 200 个,阳寿早的在前)。 */
-        get: operations["v1_dispatch_capture_warrants_due_list"];
+        /** @description 阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(`results` 最多 200 个,阳寿早的在前;`count` 是总数)。 */
+        get: operations["v1_dispatch_capture_warrants_due_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11074,6 +11074,11 @@ export interface components {
         CaptureCancel: {
             reason: string;
         };
+        /** @description `due/`:`results` 最多 200 行;`count` 是全部待发的数(页头写它,不写截断后的行数)。 */
+        CaptureDueList: {
+            count: number;
+            results: components["schemas"]["CaptureDueSoul"][];
+        };
         CaptureDueSoul: {
             /** Format: uuid */
             id: string;
@@ -13312,6 +13317,8 @@ export interface components {
             readonly held_until: string | null;
             readonly duat_stage: components["schemas"]["DuatStageEnum"];
             readonly ferry_barred: string;
+            readonly wangsi_held: boolean;
+            readonly conclude_refusal: string;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -13652,6 +13659,8 @@ export interface components {
             readonly held_until: string | null;
             readonly duat_stage: components["schemas"]["DuatStageEnum"];
             readonly ferry_barred: string;
+            readonly wangsi_held: boolean;
+            readonly conclude_refusal: string;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -16853,6 +16862,8 @@ export interface components {
             readonly held_until?: string | null;
             readonly duat_stage?: components["schemas"]["DuatStageEnum"];
             readonly ferry_barred?: string;
+            readonly wangsi_held?: boolean;
+            readonly conclude_refusal?: string;
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;
@@ -25472,14 +25483,9 @@ export interface operations {
             };
         };
     };
-    v1_dispatch_capture_warrants_due_list: {
+    v1_dispatch_capture_warrants_due_retrieve: {
         parameters: {
-            query?: {
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
-                /** @description A search term. */
-                search?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -25491,7 +25497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaptureDueSoul"][];
+                    "application/json": components["schemas"]["CaptureDueList"];
                 };
             };
         };

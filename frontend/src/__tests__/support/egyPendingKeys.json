@@ -5,5 +5,13 @@
   "workflow.detail.advance_reason_placeholder",
   "workflow.detail.advance_needs_reason",
   "official_notify.workflow_timeout_failed.title",
-  "official_notify.workflow_timeout_failed.body"
+  "official_notify.workflow_timeout_failed.body",
+  "judgment.weighing.errors.approval_flow_required",
+  "judgment.weighing.errors.weighing_flow_required",
+  "reincarnation.error.rebirth_continent_not_applicable",
+  "soul_app.errors.invalid_days",
+  "appeals.refusal.appeal_closed",
+  "appeals.refusal.ladder_running",
+  "disposition.release_error.generic",
+  "officer_app.biometric.prompt"
 ]

@@ -210,11 +210,11 @@ def test_capture_api_is_tenant_scoped_and_lists_due_souls(cn_tenant, eu_tenant):
     client = officer_client(lead)
     mine, theirs = _due(cn_tenant, name="本殿"), _due(eu_tenant, name="他殿")
     due = client.get(WARRANTS + "due/").data
-    assert [row["id"] for row in due] == [mine.pk]
+    assert [row["id"] for row in due["results"]] == [mine.pk] and due["count"] == 1
     assert client.post(WARRANTS, {"soul": str(theirs.pk)}, format="json").status_code == 404
     res = client.post(WARRANTS, {"soul": str(mine.pk)}, format="json")
     assert res.status_code == 201
-    assert client.get(WARRANTS + "due/").data == []
+    assert client.get(WARRANTS + "due/").data == {"count": 0, "results": []}
     pk = res.data["id"]
     assert client.post(f"{WARRANTS}{pk}/hand-over/", {}, format="json").status_code == 409
     assert client.post(f"{WARRANTS}{pk}/cancel/", {"reason": ""}, format="json").status_code == 400
@@ -232,7 +232,7 @@ def test_an_admin_without_a_tenant_can_issue_what_due_lists(cn_tenant):
     admin = get_user_model().objects.create_user(username="cap_admin", role="ADMIN", tenant=None)
     client = officer_client(admin)
     soul = _due(cn_tenant)
-    assert [row["id"] for row in client.get(WARRANTS + "due/").data] == [soul.pk]
+    assert [row["id"] for row in client.get(WARRANTS + "due/").data["results"]] == [soul.pk]
     res = client.post(WARRANTS, {"soul": str(soul.pk)}, format="json")
     assert res.status_code == 201, res.data
 

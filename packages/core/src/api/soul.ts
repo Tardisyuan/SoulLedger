@@ -417,6 +417,9 @@ export const APPEAL_REFUSAL_CODES = [
   "soul_devoured",
   // 上诉到申诉流程:上一轮要是一次复核、维持原判(2026-10-27)。
   "not_escalatable",
+  // 撤回被拒(apps/judgment/appeals.py `withdraw`):已有结论 / 已撤回,或已进申诉流程。
+  "appeal_closed",
+  "ladder_running",
 ] as const;
 
 export function appealRefusalKey(code: string | null | undefined): string | null {
@@ -453,6 +456,8 @@ export const SOUL_ERROR_CODES = [
   "not_in_cooldown",
   "shortening_pending",
   "shortening_used",
+  // 缩短冷却期:希望的天数不在 0 到剩余天数之间(apps/soul_accounts/rebirth.py,400)。
+  "invalid_days",
   "past_life_read_only",
   "not_found",
   "network",

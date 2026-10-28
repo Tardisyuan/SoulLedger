@@ -292,13 +292,15 @@ export type CaptureStatus = "ISSUED" | "CAPTURED" | "HANDED_OVER" | "CANCELLED";
 export type CaptureEscort = "WUCHANG" | "NIUTOU_MAMIAN";
 /** `due/` 的一行:阳寿已到、还在世、没有未了结勾魂牒的灵魂。 */
 export type CaptureDueSoul = components["schemas"]["CaptureDueSoul"];
+/** `due/` 的整份回答:`results` 最多 200 行,`count` 是全部待发的数。 */
+export type CaptureDueList = components["schemas"]["CaptureDueList"];
 /** 拒绝的 `code`:not_diyu / not_alive / lifespan_not_ended / warrant_open / wrong_status / reason_required。 */
 export type CaptureRefusal = components["schemas"]["CaptureRefusal"];
 
 export const captureWarrantsApi = {
   list: (params: { soul?: string; status?: CaptureStatus; page?: string } = {}) =>
     api.get<PaginatedResponse<CaptureWarrant>>("/dispatch/capture-warrants/", { params }),
-  due: () => api.get<CaptureDueSoul[]>("/dispatch/capture-warrants/due/"),
+  due: () => api.get<CaptureDueList>("/dispatch/capture-warrants/due/"),
   issue: (body: { soul: string; escort?: CaptureEscort }) =>
     api.post<CaptureWarrant>("/dispatch/capture-warrants/", body),
   capture: (id: string) => api.post<CaptureWarrant>(`/dispatch/capture-warrants/${id}/capture/`),

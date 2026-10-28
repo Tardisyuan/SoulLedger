@@ -60,6 +60,17 @@ class CaptureDueSoulSerializer(serializers.Serializer):
     suggested_escort = serializers.ChoiceField(choices=CaptureEscort.choices)
 
 
+#: `due/` 一次最多给的行数;`count` 不受它限。
+DUE_LIMIT = 200
+
+
+class CaptureDueListSerializer(serializers.Serializer):
+    """`due/`:`results` 最多 200 行;`count` 是全部待发的数(页头写它,不写截断后的行数)。"""
+
+    count = serializers.IntegerField()
+    results = CaptureDueSoulSerializer(many=True)
+
+
 class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin,
                             mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。"""
@@ -133,13 +144,14 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         warrant = capture_service.cancel(self.get_object().pk, body.validated_data["reason"])
         return Response(CaptureWarrantSerializer(warrant).data)
 
-    @extend_schema(responses=CaptureDueSoulSerializer(many=True))
+    @extend_schema(responses=CaptureDueListSerializer)
     @action(detail=False, methods=["get"], pagination_class=None)
     def due(self, request):
-        """阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(最多 200 个,阳寿早的在前)。"""
-        souls = capture_service.due_souls(scope_to_tenant(Soul.objects.all(), request))[:200]
-        return Response([{
+        """阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(`results` 最多 200 个,阳寿早的在前;`count` 是总数)。"""
+        due = capture_service.due_souls(scope_to_tenant(Soul.objects.all(), request))
+        souls = due[:DUE_LIMIT]
+        return Response({"count": due.count(), "results": [{
             "id": s.pk, "name": s.name, "soul_code": s.soul_code, "origin_location": s.origin_location,
             "fated_death_date": f"{s.fated_death_year:04d}-{s.fated_death_month:02d}-{s.fated_death_day:02d}",
             "karmic_balance": s.karmic_balance, "suggested_escort": capture_service.suggested_escort(s),
-        } for s in souls])
+        } for s in souls]})

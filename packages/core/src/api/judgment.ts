@@ -116,6 +116,13 @@ export interface Judgment extends ArchiveFields {
    * UNBURIED / NO_FARE;能过河(已葬有渡资、或未葬满百年)是 ""。队列据此不画「认领」(第五十七批 G-1)。
    */
   ferry_barred?: "" | "UNBURIED" | "NO_FARE";
+  /** 此刻还押在枉死城(`wangsi.is_held`,服务端日期):官员端「还押 / 已到期」读它,不拿本机日期比 `held_until`。 */
+  wangsi_held?: boolean;
+  /**
+   * 此刻为什么不能结案(`claims.assert_concludable` 的码),能结案是 ""。审判台据此置灰「落判」,
+   * 拒绝文案走 `claimRefusalMessage`(同一组码)。
+   */
+  conclude_refusal?: "" | "at_city_god" | "held_until_fated_date" | "embalming" | "duat_unfinished" | "unferried";
   /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
