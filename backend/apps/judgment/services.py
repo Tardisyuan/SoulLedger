@@ -252,21 +252,30 @@ class JudgmentConclusionService:
                     "A cross-realm judgment is open on this case; conclude it before weighing again",
                     "wavering_with_open_cross", status=409)
 
-            # 欧洲 RETRY:重开一案,不进炼狱。炼狱只收确定得救者(docs/01_欧洲天堂地狱整体架构.md §1.2,
-            # CCC 1030-1031),而 RETRY 说的是这件案子还没判定 —— 送进炼狱,期满 `ascend_from_purgatory`
-            # 就把一个没判定的灵魂送上了天堂。照埃及天平摇摆的做法(见下):不建处置、不动计划与灵魂状态。
-            # PURGATORY 裁决照旧送炼狱。重开 / 申诉改判成 RETRY 在 sentence_plan/requests.py 拒绝。
-            from apps.judgment.models import Verdict
+            # 重审(用户 2026-10-29 四文明统一,`hears_again`):RETRY,及欧洲以外的 PURGATORY,重开一案。
+            # 照埃及天平摇摆的做法(见下):不建处置、不动计划与灵魂状态。欧洲原来就这样(炼狱只收确定得救者,
+            # docs/01_欧洲 §1.2,RETRY 送进炼狱期满就升了天堂);地府的待审所、希腊的草地同样不是刑罚,
+            # 只是「还没被送走」(docs/02_希腊 §5.2),docs/11 第八步「重新审理」。欧洲的 PURGATORY 照旧送炼狱。
+            # 重开 / 申诉改判成这些裁决在 sentence_plan/requests.py 拒绝(那两条路本身就是再审)。
+            from apps.judgment.models import acquitted_to_rebirth, hears_again
             from apps.souls.models import Civilization
 
-            eu_retry = (verdict == Verdict.RETRY and judgment.kind == JudgmentKind.ORIGINAL
-                        and judgment.soul.civilization == Civilization.EUROPEAN)
-            if eu_retry and (destination_realm_id is not None or term_years is not None or eternal is not None):
+            retry = judgment.kind == JudgmentKind.ORIGINAL and hears_again(judgment.soul.civilization, verdict)
+            # 地府判无罪(`acquitted_to_rebirth`):不发落、不建刑期节点,流程走完直接候转世(docs/11 第六步)。
+            acquitted = (judgment.kind == JudgmentKind.ORIGINAL
+                         and acquitted_to_rebirth(judgment.soul.civilization, verdict))
+            if acquitted and (destination_realm_id is not None or term_years is not None or eternal is not None):
+                from apps.disposition.destination import DestinationRefusedError
+                raise DestinationRefusedError(
+                    "Acquitted in Diyu: the soul goes straight to rebirth, with no destination or term",
+                    "passed_has_no_destination")
+            if retry and not wavering and (
+                    destination_realm_id is not None or term_years is not None or eternal is not None):
                 from apps.disposition.destination import DestinationRefusedError
                 raise DestinationRefusedError(
                     "A RETRY verdict hears the case again and sends the soul nowhere yet",
                     "retry_has_no_destination")
-            if eu_retry and open_cross is not None:
+            if retry and not wavering and open_cross is not None:
                 from apps.sentence_plan.requests import PlanChangeRefusedError
                 raise PlanChangeRefusedError(
                     "A cross-realm judgment is open on this case; conclude it before hearing the case again",
@@ -340,11 +349,11 @@ class JudgmentConclusionService:
 
             # 天平摇摆(02 §5.3):托特记下,再称一次。不建处置、不动计划、不动灵魂状态 —— 灵魂留在审判中,
             # 新的一件案子回到队列(用户 2026-10-27:不自动发落,不能落成 SETTLED 而不在任何一站)。
-            if wavering or eu_retry:
+            if wavering or retry:
                 if wavering:
                     weighing.open_retrial(judgment)
                 else:
-                    weighing.open_retrial(judgment, reason=Verdict.RETRY.value, method=judgment.judgment_method)
+                    weighing.open_retrial(judgment, reason=str(verdict), method=judgment.judgment_method)
                 from apps.events.services import EventService
                 EventService.log_judgment_concluded(judgment)
                 return True
@@ -375,7 +384,7 @@ class JudgmentConclusionService:
 
             # Step 2: Create disposition (cross-context: judgment → disposition)
             from apps.disposition.services import DispositionService
-            disposition = DispositionService.create_from_judgment(judgment, **placement)
+            disposition = None if acquitted else DispositionService.create_from_judgment(judgment, **placement)
 
             # Step 2b: the sentence plan this conclusion opens — one home node,
             # carrying the disposition just made (docs/ARCHITECTURE-sentence-plan.md).

@@ -83,7 +83,8 @@ def _open_case(tenant, name="案主"):
 
 def _concluded(tenant, name="案主"):
     case = _open_case(tenant, name)
-    case.conclude(Verdict.PASSED, "")
+    # FAILED:地府判无罪不建原属节点、直接候转世(2026-10-29),这些测试要的是有一个原属节点的计划。
+    case.conclude(Verdict.FAILED, "")
     case.refresh_from_db()
     return case
 

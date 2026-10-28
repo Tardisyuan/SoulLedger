@@ -475,7 +475,8 @@ def test_a_greek_retry_on_the_meadow_is_not_a_second_visit(seeded):
     soul, case = plan.open_case(gr, name="再审")
     SoulPathService.enter(soul, meadow, tenant_id=gr.pk)
     case.conclude(Verdict.RETRY, "")
-    assert Disposition.all_objects.get(judgment=case).destination_realm_id == meadow.pk
+    # 2026-10-29:RETRY 重开一案,不建处置;灵魂仍站在草地上,行程不多一站。
+    assert not Disposition.all_objects.filter(judgment=case).exists()
     [entry] = _path(soul)
     assert (entry.realm_id, entry.left_at) == (meadow.pk, None)
 

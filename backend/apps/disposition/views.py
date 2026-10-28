@@ -93,6 +93,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     permission_codename = "disposition"
     extra_permissions = {
         'execute': ['disposition.execute'],
+        'release': ['disposition.execute'],
         'export': ['disposition.read'],
         'create': ['disposition.execute'],
         'update': ['disposition.execute'],
@@ -249,7 +250,10 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             # (docs/ARCHITECTURE-sentence-plan.md §3.3,原来在这里的那次调用挪过去了)。
             on_plan = SentencePlanService.node_for_disposition(disposition) is not None
             executed = DispositionService.execute(disposition)
-            if executed and not on_plan:
+            from apps.disposition.expiry import serving
+
+            # 刑期没满的不在这里推转世:执行即开始服刑,期满(每日检查 / `release`)才往下走(用户 2026-10-29)。
+            if executed and not on_plan and not serving(disposition):
                 # Souls whose cosmology has a next life go on to be reborn. The
                 # call is unconditional on cosmology on purpose:
                 # `ReincarnationService.execute` answers False for the terminal
@@ -288,6 +292,36 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             )
 
         return Response(DispositionSerializer(disposition).data)
+
+    @extend_schema(request=None, responses={200: DispositionSerializer, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"])
+    def release(self, request, pk=None):
+        """期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
+
+        celery beat 没部署,每日期满检查不会自己跑 —— 这是刑满之后灵魂往下走(下一站、或候转世)的人手入口。
+        与每日检查同一条判定(`expiry.releasable`)、同一个写入(`expiry.expire_one`:`expired_at`、
+        `DISPOSITION_EXPIRED`、欧洲炼狱升天堂、受刑中的那一站结束并推进),同一个事务。权限同「执行」。
+        409 `not_serving`:没执行、永久刑、已记期满,或没有期满日;409 `term_not_ended`:期满日还没到。"""
+        from django.db import transaction
+        from django.utils import timezone
+
+        from apps.disposition.expiry import expire_one, releasable, serving
+
+        disposition = self.get_object()
+        with transaction.atomic():
+            locked = (
+                Disposition.objects.select_for_update(of=("self",))
+                .select_related("soul", "destination_realm").filter(pk=disposition.pk).first()
+            )
+            if locked is None:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            if not releasable(locked):
+                code = "term_not_ended" if serving(locked) else "not_serving"
+                return Response({"error": "This disposition cannot be released", "code": code},
+                                status=status.HTTP_409_CONFLICT)
+            expire_one(locked, timezone.now(), actor=request.user.username)
+        locked.refresh_from_db()
+        return Response(DispositionSerializer(locked, context=self.get_serializer_context()).data)
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete a disposition, or refuse with a clear reason when

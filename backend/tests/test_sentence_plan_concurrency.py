@@ -208,7 +208,7 @@ def _completion_and_submit(cn, eg, run):
     soul = account.soul
     case = Judgment.objects.create(soul=soul, civilization=soul.civilization, tenant=cn)
     plan.bench(case, [(eg, plan.stop_realm(eg), 5)])
-    case.conclude("PASSED", "")
+    case.conclude("FAILED", "")  # 地府判无罪不建原属节点(2026-10-29)
     p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)
     plan.arrive(soul, p, 2)

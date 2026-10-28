@@ -37,7 +37,8 @@ def _completion(soul):
 
 
 @pytest.mark.parametrize("home_code, realm_code, civ", [
-    ("CN_DIYU", "DY_01_HEAVEN", "CHINESE"),
+    # 地府原属默认 FAILED(严重度 0 → 第二殿;判无罪不再建刑期节点,2026-10-29)。
+    ("CN_DIYU", "DY_COURT_02_CHUJIANG", "CHINESE"),
     ("GR_HADES", "GR_ISLES_OF_THE_BLESSED", "GREEK"),
 ])
 def test_a_home_eternal_term_settles_the_soul_and_opens_no_rebirth(home_code, realm_code, civ):
@@ -68,7 +69,7 @@ def test_a_home_eternal_term_settles_the_soul_and_opens_no_rebirth(home_code, re
 
 def test_a_home_non_eternal_term_still_opens_rebirth():
     cn = plan.tenant("CN_DIYU")
-    plan.realm("DY_01_HEAVEN", "CHINESE")
+    plan.realm("DY_COURT_02_CHUJIANG", "CHINESE")
     soul, p = plan.planned(cn)
     plan.serve(soul, p, 1)
     soul.refresh_from_db()
