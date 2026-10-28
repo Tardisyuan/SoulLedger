@@ -207,4 +207,122 @@ CHINESE_ACTORS = [
      "北阴酆都大帝", "北阴酆都大帝", "Great Emperor of Fengdu", "Fengdu",
      "北阴大帝 - head of the whole underworld from 罗酆山 (酆都城), superior of the "
      "ten kings in the Daoist pantheon; hears the last instance of an appeal"),
+    # ------------------------------------------------------------------
+    # THE 2026-10-28 ADDITIONS (owner's decision). Every row below is a figure
+    # docs/01_地府整体架构.md and docs/02_地府人物详解.md already list and the
+    # seed did not have. None of them is a 《玉历宝钞》 office; the docs file them
+    # under the Daoist / folk pantheon and say so, and the descriptions carry the
+    # same caveats the docs do rather than upgrading them.
+    #
+    # REALMS ARE COMPROMISES, THE SAME ONES 地藏王菩萨 AND 酆都大帝 MAKE. None of
+    # 罗酆山, 泰山, 桃止山, 嶓冢山, 罗浮山, 抱犊山 or 鬼门关 is a realm this system
+    # models, and no realm was invented for them:
+    #   * the supreme deities (后土, 东岳) and 地藏's mount 谛听 go to the intake
+    #     court, where 地藏 and 酆都大帝 already stand;
+    #   * 鬼门关 is the passage from the living world into the underworld, before
+    #     any court — the nearest modelled place is DY_00_PURGATORY, so the gate
+    #     pair 神荼/郁垒 stands there, and so do the four other 鬼帝 (their
+    #     mountains are not modelled either) and the 鬼差 who work the arrest
+    #     side, beside 牛头马面 and 黑白无常.
+    #
+    # ROLES. 后土 and 东岳 are OVERSEER like 地藏: neither tries a case, and the
+    # docs give them none. Of the 五方鬼帝, the gate pair is GUARDIAN; the other
+    # four 「管辖」 a quarter's ghost domain, which is OVERSEER's meaning in this
+    # schema (administration of a realm). 陆判 is JUDGE beside 崔府君. 谛听 is
+    # GUARDIAN as the least-wrong value, the same compromise Ma'at carries: it
+    # discerns true from false testimony and decides nothing, and ActorRole has
+    # no word for that. 枷锁将军 is GUARDIAN with 牛头马面 (custody, not
+    # punishment). 日游神/夜游神 are CONDUIT with 黑白无常: they work the living
+    # world's side; for 日游神, whose doc line is patrol-and-record, CONDUIT is
+    # again the least-wrong value.
+    #
+    # 五方鬼帝 ARE SIX ROWS. docs/02 §二 lists two eastern emperors (神荼 and 郁垒
+    # together hold 鬼门关 — 「特有配置」, docs/01 第二层). Where the docs give two
+    # candidates for one seat (赵文和/王真人, 张衡/杨云), the row takes the first
+    # and the description names the second; 中央鬼帝 is the docs' 周文, whose name
+    # the docs themselves call disputed.
+    # ------------------------------------------------------------------
+    ("后土", "后土", "Houtu", "Houtu", ActorRole.OVERSEER, "DY_COURT_01_QINGUANG",
+     "后土皇地祇", "后土皇地祇", "Sovereign Earth Goddess", "Houtu",
+     "后土皇地祇 - source of both the living and the dead, keeper of birth, death "
+     "and rebirth, of the earth and the underworld; one of the Daoist 四御, "
+     "called 「大地之母」 and held to be the underworld's founder (docs/01 第一层; "
+     "docs/02 §一.1). Above 酆都大帝 and 东岳大帝 in the docs' ordering. REALM IS A "
+     "COMPROMISE: she has no seat this system models, so she is filed at the "
+     "intake court beside 地藏王菩萨 and 酆都大帝"),
+    ("东岳大帝", "东岳大帝", "Emperor of the Eastern Peak", "Dongyue", ActorRole.OVERSEER,
+     "DY_COURT_01_QINGUANG",
+     "东岳泰山天齐仁圣大帝", "东岳泰山天齐仁圣大帝", "Great Emperor of Mount Tai", "Dongyue",
+     "泰山神 - holds authority over the birth of all things and protects the souls "
+     "going round the wheel of rebirth; very high in popular cult (docs/01 第一层; "
+     "docs/02 §一.3). NOT 泰山王: the seventh court's king is a different seat, "
+     "and that row's own note records that 《玉历》 does not give the seventh "
+     "court Mount Tai. REALM IS A COMPROMISE: Mount Tai is not a modelled realm"),
+    ("谛听", "谛听", "Diting", "Diting", ActorRole.GUARDIAN, "DY_COURT_01_QINGUANG",
+     "谛听", "谛听", "Diting - Mount of Ksitigarbha", "Diting",
+     "地藏王菩萨's mount - discerns true from false in a soul's testimony and helps "
+     "deliver the dead; white, between dog and lion in form (docs/02 §一). A "
+     "subordinate, not a deity in its own right, and a figure of Chinese folk "
+     "tradition and 《西游记》, not of Buddhist scripture - the docs say so. Filed "
+     "with 地藏 at the intake court. GUARDIAN is the least-wrong role: it decides "
+     "nothing"),
+    ("神荼", "神荼", "Shentu", "Shentu", ActorRole.GUARDIAN, "DY_00_PURGATORY",
+     "东方鬼帝", "东方鬼帝", "Ghost Emperor of the East", "Shentu",
+     "Ghost Emperor of the East - holds 鬼门关 on 桃止山 and drives out malignant "
+     "ghosts; with 郁垒 one of the two ancient door gods who bind ghosts with reed "
+     "rope (docs/02 §二, which gives 《山海经》 as the earliest record). 鬼门关 is "
+     "not modelled; filed at the holding pen, the nearest place before the first "
+     "court"),
+    ("郁垒", "郁垒", "Yulei", "Yulei", ActorRole.GUARDIAN, "DY_00_PURGATORY",
+     "东方鬼帝", "东方鬼帝", "Ghost Emperor of the East", "Yulei",
+     "Ghost Emperor of the East - keeps 鬼门关 together with 神荼; the east is the "
+     "one quarter with two emperors (docs/01 第二层; docs/02 §二). Placement as "
+     "for 神荼"),
+    ("赵文和", "赵文和", "Zhao Wenhe", "Zhaowenhe", ActorRole.OVERSEER, "DY_00_PURGATORY",
+     "西方鬼帝", "西方鬼帝", "Ghost Emperor of the West", "Zhaowenhe",
+     "Ghost Emperor of the West - governs the western ghost domain from 嶓冢山 "
+     "(docs/02 §二). The seat has a second candidate, 王真人; the docs list both. "
+     "嶓冢山 is not modelled; filed at the holding pen"),
+    ("杜子仁", "杜子仁", "Du Ziren", "Duziren", ActorRole.OVERSEER, "DY_00_PURGATORY",
+     "南方鬼帝", "南方鬼帝", "Ghost Emperor of the South", "Duziren",
+     "Ghost Emperor of the South - governs the southern ghost domain from 罗浮山 "
+     "and subdues violent souls (docs/02 §二). 罗浮山 is not modelled; filed at "
+     "the holding pen"),
+    ("张衡", "张衡", "Zhang Heng", "Zhangheng", ActorRole.OVERSEER, "DY_00_PURGATORY",
+     "北方鬼帝", "北方鬼帝", "Ghost Emperor of the North", "Zhangheng",
+     "Ghost Emperor of the North - sits at 罗酆山 in 酆都 and keeps the underworld's "
+     "punishments (docs/02 §二). The seat has a second candidate, 杨云; the docs "
+     "list both. 罗酆山 is not modelled; filed at the holding pen"),
+    ("周文", "周文", "Zhou Wen", "Zhouwen", ActorRole.OVERSEER, "DY_00_PURGATORY",
+     "中央鬼帝", "中央鬼帝", "Ghost Emperor of the Centre", "Zhouwen",
+     "Ghost Emperor of the Centre - on 抱犊山, coordinates the other four quarters "
+     "and keeps the balance of yin and yang (docs/02 §二). The docs record few "
+     "sources for this seat and call its holder's name disputed. 抱犊山 is not "
+     "modelled; filed at the holding pen"),
+    # 陆判 — the fourth of the 「四大判官」, which docs/01 第四层 and docs/02 §四
+    # call a modern folk compilation. The name is 陆判, not 陆之道: 《聊斋志异·陆判》
+    # says only 「陆判」「陆公」, and 陆之道 is a later folk name (docs/02 §四). The
+    # 阴律司 office has no source either and appears in neither the 城隍 24 司 nor
+    # the 东岳庙 76 司 lists; the description says so. Same court as 崔府君 and 魏征.
+    ("陆判", "陆判", "Judge Lu", "Lupan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
+     "陆判官", "陆判官", "Judge Lu", "Lupan",
+     "Underworld judge of 《聊斋志异·陆判》, where the text calls him only 陆判 or "
+     "陆公 (the name 陆之道 is a later folk addition). Popular lists of the 四大判官 "
+     "give him the 阴律司, revising the underworld's laws - an office with no "
+     "source, absent from the 城隍 twenty-four bureaus (docs/02 §四)"),
+    ("枷锁将军", "枷锁将军", "General of Cangue and Chains", "Jiasuo", ActorRole.GUARDIAN,
+     "DY_00_PURGATORY",
+     "枷锁将军", "枷锁将军", "General of Cangue and Chains", "Jiasuo",
+     "Puts the cangue and chains on the dead so they cannot escape; has charge of "
+     "the gravest offenders (docs/01 第五层; docs/02 §六). Custody rather than "
+     "punishment, so GUARDIAN with 牛头马面"),
+    ("日游神", "日游神", "Day Patrol God", "Riyou", ActorRole.CONDUIT, "DY_00_PURGATORY",
+     "日游神", "日游神", "Day Patrol God", "Riyou",
+     "Patrols the living world by day and records good and evil (docs/01 第五层; "
+     "docs/02 §六). CONDUIT with 黑白无常 as the least-wrong role: ActorRole has no "
+     "term for patrol-and-record"),
+    ("夜游神", "夜游神", "Night Patrol God", "Yeyou", ActorRole.CONDUIT, "DY_00_PURGATORY",
+     "夜游神", "夜游神", "Night Patrol God", "Yeyou",
+     "Patrols the living world by night and seizes wandering souls (docs/01 第五层; "
+     "docs/02 §六) - the arrest side of the underworld, with 黑白无常"),
 ]

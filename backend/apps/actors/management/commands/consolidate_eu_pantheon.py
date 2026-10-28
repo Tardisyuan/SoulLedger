@@ -159,6 +159,9 @@ GREEK_EXPECTED = {
     "Aeacus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
     "Rhadamanthus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
     "Minos": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
+    # 2026-10-28; see their rows in actors_greek.py for the GR_ACHERON compromise.
+    "Hermes": (ActorRole.CONDUIT, "GR_ACHERON"),
+    "Cerberus": (ActorRole.GUARDIAN, "GR_ACHERON"),
 }
 
 DEFAULT_BACKUP_DIR = Path(__file__).resolve().parents[4] / "scripts" / "backups"

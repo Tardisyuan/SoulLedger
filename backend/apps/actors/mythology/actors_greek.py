@@ -35,8 +35,11 @@ levels at all. Two offices, two texts, two rows — matched on
 ``unique_actor_tenant_civ_name``, so they are distinct rows by construction
 rather than by luck.
 
-THIS IS THE ONLY NEW NAME, AND THE BAR IT HAD TO CLEAR. Nothing else was added
-while writing this table, and the gaps are real: Plato's fork needs no fourth
+THIS WAS THE ONLY NEW NAME WHEN THE TABLE WAS WRITTEN, AND THE BAR IT HAD TO
+CLEAR. Nothing else was added at the split. Since then the Greek Charon (the
+Aeneid 6 crossing) and, on 2026-10-28 by the owner's decision, Hermes and the
+Greek Cerberus have joined — each with a sourced passage naming the job; see
+their rows. The other gaps are still real: Plato's fork needs no fourth
 judge, Persephone is not seeded, the five rivers are not seeded, and Thanatos
 and Hypnos are not seeded. The rule this repository learned from the forty-two
 assessors — thirty-five of whom were names assembled because the template said
@@ -200,6 +203,49 @@ GREEK_ACTORS = [
      "a different underworld, in a cosmology that has levels where this one has "
      "a fork. Homer's Minos (Odyssey 11.568-571) is a third office and is not "
      "seeded"),
+    # HERMES AND THE GREEK CERBERUS — ADDED 2026-10-28 BY THE OWNER'S DECISION.
+    # Both stood in the docs' mapping tables as 「系统未建模」 (docs/01_希腊冥府
+    # 整体架构.md §五, docs/02_希腊冥府审判与人物详解.md §5.1); each has a sourced
+    # passage giving it a specific job on the road to judgment, which is the bar
+    # the header sets.
+    #
+    # BOTH STAND ON GR_ACHERON, AND FOR BOTH IT IS A COMPROMISE. Hermes in Od.
+    # 24.1-14 leads the souls to the asphodel meadow, and Cerberus keeps the gate
+    # of Hades' house (Theog. 769-773) or "the gates of Acheron" (Apollodorus
+    # 2.5.12) or a cave just past the crossing (Aen. 6.417-425). None of those
+    # places is modelled — Asphodel is excluded on purpose (GREEK_REALMS' header)
+    # and no house of Hades exists, which is why Hades himself is on the meadow.
+    # The crossing is the one modelled place on the way in, so both are filed
+    # there, as Hades is filed on the meadow: an engineering placement, labelled.
+    #
+    # The Dante Cerberus stays EUROPEAN in EU_HELL_3RD, untouched; this is a
+    # second row for the Greek office, as the Greek Charon is beside Dante's.
+    ("Hermes", "赫尔墨斯", "Hermes", "Hermes", ActorRole.CONDUIT, "GR_ACHERON",
+     "引魂者赫尔墨斯", "引魂者赫尔墨斯", "Hermes - Guide of Souls", "Hermes",
+     "Leads the souls of the dead down to the underworld: Odyssey 24.1-14, the "
+     "suitors' souls following Cyllenian Hermes and his golden wand - a passage "
+     "the ancient scholia report Aristarchus athetized, giving as his first "
+     "reason that in Homer Hermes is not a guide of souls. The title Psychopompos "
+     "for Hermes is first securely dated in Diodorus 1.96.6 (1st c. BCE); the word "
+     "itself is older, used of Charon in Euripides, Alcestis 361. Also the god who "
+     "goes down and back freely, sent by Zeus to fetch Persephone (Hymn to Demeter "
+     "334-337). He does not appear in Frogs, and in Aeneid 6 the guide is the "
+     "Sibyl. PLACEMENT IS AN ENGINEERING CHOICE: the meadow of asphodel he leads "
+     "them to is not modelled, so he stands at the crossing, the first modelled "
+     "place on the way in"),
+    ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "GR_ACHERON",
+     "冥府门犬刻耳柏洛斯", "冥府门犬刻耳柏洛斯", "Cerberus - Hound of the Gate", "Kerberos",
+     "THIS ROW IS THE GREEK CERBERUS, not Dante's. He keeps the entrance of the "
+     "underworld, fawning on those who go in and devouring any who try to leave "
+     "(Hesiod, Theogony 769-773); Hesiod gives him fifty heads (Theogony 311-312), "
+     "Apollodorus three dog heads, a dragon's tail and snakes along his back, at "
+     "the gates of Acheron (2.5.12), and Virgil a cave beyond the crossing where "
+     "the Sibyl drugs him with a honeyed cake (Aeneid 6.417-425). Homer does not "
+     "name him (Iliad 8.366-368, Odyssey 11.623-626). The hundred heads often "
+     "credited to Pindar are not supported: Pindar's hundred-headed beast is "
+     "Typhon. A separate EUROPEAN row carries Dante's Cerberus over the gluttons "
+     "of the third circle (Inferno VI). PLACEMENT IS AN ENGINEERING CHOICE: no "
+     "gate of Hades is modelled, so he stands at the crossing"),
 ]
 
 # --------------------------------------------------------------------------
