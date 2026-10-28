@@ -99,8 +99,10 @@ describe("勾魂卡(S-4)", () => {
     wrap(<CapturePanel soul={SOUL} canAct />);
     expect(await screen.findByTestId("soul-capture-status")).toHaveTextContent("阳寿已到 · 1664-06-17");
     expect(screen.getByTestId("capture-steps")).toHaveTextContent("▪ 发勾魂牒→□ 拘到→□ 交接城隍");
-    const select = (await screen.findByLabelText("鬼差")) as HTMLSelectElement;
-    await waitFor(() => expect(select.value).toBe("NIUTOU_MAMIAN"));
+    // 取到建议后下拉按 key 重挂(新的 <select>),所以每次重新取,不握着第一次渲染的那个。
+    const escortSelect = () => screen.getByLabelText("鬼差") as HTMLSelectElement;
+    await waitFor(() => expect(escortSelect().value).toBe("NIUTOU_MAMIAN"));
+    const select = escortSelect();
     expect(select.selectedOptions[0].textContent).toBe("牛头马面 · 按功过建议");
     expect(screen.getByTestId("capture-escort-hint")).toHaveTextContent("功多于过，建议黑白无常；过多于功，建议牛头马面。");
     fireEvent.click(screen.getByRole("button", { name: "发勾魂牒" }));
@@ -195,7 +197,7 @@ describe("以土地公名义登记死亡(S-6)", () => {
     await screen.findByRole("option", { name: "虞山土地" });
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "t1" } });
     expect(screen.getByTestId("tudi-register-subtitle")).toHaveTextContent("虞山土地 · 常熟县城隍");
-    expect(screen.getByText("登记后发给常熟县城隍初审，并进「待发勾魂牒」名单。")).toBeInTheDocument();
+    expect(screen.getByText("登记后发给常熟县城隍初审。")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/死亡日期/), { target: { value: "1664-06-17" } });
     fireEvent.change(screen.getByLabelText(/死于何处/), { target: { value: "常熟 · 虞山" } });
     fireEvent.change(screen.getByLabelText(/土地公所报/), { target: { value: "病故于虞山" } });

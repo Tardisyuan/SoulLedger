@@ -34,6 +34,7 @@ import { soulsApi } from "@soulledger/core/api";
 const mockShowToast = jest.fn();
 
 jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
   soulsApi: {
     create: jest.fn().mockResolvedValue({ data: { id: "s-new" } }),
     update: jest.fn().mockResolvedValue({ data: { id: "s-1" } }),

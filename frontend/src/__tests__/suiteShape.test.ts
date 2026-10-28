@@ -178,6 +178,10 @@ const COLLECTED_FILES = [
   "SoulInfoCard.infernoFacts.test.tsx",
   // 2026-10-28 地府十三站与出身部洲(身份栏),换站与勾魂的时间线一行。
   "DiyuRows.test.tsx",
+  // 2026-10-28 枉死城案卷字段、城隍「下属诸司」(第五十七批 D-3)、埃及四十二条否定告白。
+  "DiyuCaseFields.test.tsx",
+  "CityGodBureauPicker.test.tsx",
+  "NegativeConfessionPanel.test.tsx",
   // 2026-10-28 第五十七批:勾魂卡、下一世部洲、以土地公名义登记死亡、待发勾魂牒的「超 N 天」。
   "captureAndEarthGods.test.tsx",
   "SentencePlanPanels.test.tsx",

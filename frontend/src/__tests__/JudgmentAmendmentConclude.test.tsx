@@ -33,8 +33,9 @@ jest.mock("@soulledger/core/api", () => ({
   soulsApi: { get: jest.fn() },
   realmsApi: { list: jest.fn() },
   crossTenantJudgmentsApi: { create: jest.fn() },
+  workflowApi: { flowPreview: jest.fn() },
 }));
-const { judgmentApi, soulsApi, realmsApi } = jest.requireMock("@soulledger/core/api") as Record<
+const { judgmentApi, soulsApi, realmsApi, workflowApi } = jest.requireMock("@soulledger/core/api") as Record<
   string,
   Record<string, jest.Mock>
 >;
@@ -94,12 +95,13 @@ function renderPage() {
   );
 }
 
-async function conclude() {
+/** 原审一律带审批流程(d4d2bb27,2026-10-29),确认层那一键是「落判并发起」;加减项审判不强制,仍是「盖印并结案」。 */
+async function conclude(button = "judgment.desk.stamp") {
   const passed = (await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!;
   fireEvent.click(passed);
-  // v3:主按钮进盖印确认层,层里「盖印并结案」才发 conclude/。
+  // v3:主按钮进盖印确认层,层里那一键才发 conclude/。
   fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
-  fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.desk.stamp") }));
+  fireEvent.click(await screen.findByRole("button", { name: tZh(button) }));
   await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
   return judgmentApi.conclude.mock.calls[0];
 }
@@ -111,6 +113,8 @@ beforeEach(() => {
   judgmentApi.conclude.mockResolvedValue({ data: judgment({ ...AMENDMENT, is_final: true, verdict: "PASSED" }) });
   soulsApi.get.mockResolvedValue({ data: { id: "s-1", name: "李四", tenant_code: "EG_DUAT", home_tenant: { code: "CN_DIYU", display_name: "地府" } } });
   planApi.get.mockResolvedValue({ data: plan });
+  // 本域没有可跳过的站:确认层不进选站那一步(与 JudgmentDesk.test 同一份默认)。
+  workflowApi.flowPreview.mockResolvedValue({ data: { name: "十殿审判流程", nothing_to_pick: true, stations: [], foreign: [] } });
   realmsApi.list.mockResolvedValue({ data: { results: [{ realm_code: "EG_AARU", is_eternal: false }] } });
 });
 
@@ -183,7 +187,7 @@ describe("原审判", () => {
     expect(await screen.findByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeInTheDocument();
     expect(screen.queryByTestId("amendment-plan-changes")).toBeNull();
     expect(planApi.get).not.toHaveBeenCalled();
-    expect(await conclude()).toEqual([ID, { verdict: "PASSED", notes: "", create_workflow: false }]);
+    expect(await conclude("judgment.detail.conclude_with_workflow")).toEqual([ID, { verdict: "PASSED", notes: "", create_workflow: true }]);
   });
 
   it("别的文明、没有 cross_judgment.create、已结案:都没有「开联审」", async () => {

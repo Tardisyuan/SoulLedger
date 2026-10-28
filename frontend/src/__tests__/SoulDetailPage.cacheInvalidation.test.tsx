@@ -94,6 +94,7 @@ const mockSoulsGet = jest.fn();
 const mockSoulsKarma = jest.fn();
 const mockSoulsUpdate = jest.fn();
 jest.mock("@soulledger/core/api", () => ({
+  ...jest.requireActual("@soulledger/core/api"),
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
     karma: (...args: unknown[]) => mockSoulsKarma(...args),

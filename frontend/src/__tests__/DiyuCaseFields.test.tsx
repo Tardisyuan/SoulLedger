@@ -102,7 +102,7 @@ describe("枉死城 (D-2 / D-2b)", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("judgment.wangsi.release_irreversible");
     fireEvent.click(within(dialog).getByRole("button", { name: "judgment.wangsi.uphold" }));
-    await waitFor(() => expect(decide).toHaveBeenCalledWith("j-1", true, "查实"));
+    await waitFor(() => expect(decide).toHaveBeenCalledWith("j-1", true, "查实", false));
   });
 
   it("判不实后回到可提交,上一条记录灰字留在提交框下面", () => {
