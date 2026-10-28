@@ -167,14 +167,18 @@ if [ -n "$E2E" ]; then
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1" 2>/dev/null \
         || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
+    # Its own synced tree and its own lock (2026-10-29): E2E builds .next and runs browsers in a tree of its
+    # own, so it no longer waits for — or rsyncs under — a gate run on the same box. 8 CPUs here + 12 for a
+    # gate run = the box's 20; the two used to queue on run.lock one after the other.
+    RWORK="$RDIR/work/$RID-e2e"
     echo "$P: E2E on $GATES_REMOTE ($RWORK): ${E2E//,/ }"
     remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 1; }
     ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || exit 1
     ENAME="sl-e2e-$RID-$$"
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $ENAME" >/dev/null 2>&1' EXIT
     trap 'exit 130' INT TERM
-    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $ENAME \
-        --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} --shm-size 2g \
+    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/e2e.lock docker run --rm --init --name $ENAME \
+        --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
         -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS=$DEPS -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG bash -c '$REMOTE_DEPS
           cd frontend && npm run build > /sl-tmp/e2e-build.log 2>&1 || { tail -30 /sl-tmp/e2e-build.log; echo \"e2e: next build failed\"; exit 1; }
