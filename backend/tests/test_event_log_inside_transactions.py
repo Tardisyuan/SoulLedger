@@ -50,7 +50,12 @@ CONTEXTS = (BARE, WRAPPED, PROBE)
 
 
 def _cn():
-    return plan.tenant("CN_DIYU")
+    """地府殿,带一位兜底城隍:没有城隍收案就不许开案(用户 2026-10-29)。"""
+    from tests.city_god_support import default_city_god
+
+    tenant = plan.tenant("CN_DIYU")
+    default_city_god(tenant)
+    return tenant
 
 
 # ── the injection ──────────────────────────────────────────────────────────────────────────────────────────
@@ -555,27 +560,6 @@ def _cross_conclude_appends_stops():
             "SENTENCE_PLAN_AMENDED")
 
 
-def _cross_pass_reopens_finished_plan():
-    """2026-10-18:跨域审判 PASS 时计划已经刑满 —— 计划重开、灵魂 REINCARNATING → DISPOSED(STATE_CHANGED)
-    与审判的 CONCLUDED 同一事务(`append_cross_stops` → `_reopen` → `Soul.transition_to`)。"""
-    from apps.dispatch.models import CrossTenantJudgment
-    from apps.dispatch.services import CrossTenantJudgmentService
-    from apps.sentence_plan.models import SentencePlan
-    from tests.test_workflow_segments import World, _template, merged
-
-    w = World()
-    w.cn, w.eg = _cn(), plan.tenant("EG_DUAT")
-    _template(w.cn, "CHINESE")
-    _template(w.eg, "EGYPTIAN")
-    soul, _case, cj, _wf = merged(w, [w.eg])
-    p = SentencePlan.all_objects.get(soul=soul)
-    plan.serve(soul, p, 1)  # 原属那一站执行完:计划刑满,灵魂等转世
-    return (lambda: CrossTenantJudgmentService.conclude(CrossTenantJudgment.all_objects.get(pk=cj.pk), "PASS", None,
-                                                        by_workflow=True),
-            lambda: SentencePlan.all_objects.get(pk=p.pk).status == "ACTIVE",
-            "STATE_CHANGED")
-
-
 def _station_move():
     """十三站(apps/souls/stations.py):官员挪站,DIYU_STATION_CHANGED 与那一列同进退。"""
     from apps.souls import stations
@@ -652,7 +636,6 @@ PATHS = {
     "capture_hand_over/CAPTURE_HANDED_OVER": _capture("hand_over"),
     "capture_cancel/CAPTURE_WARRANT_CANCELLED": _capture("cancel"),
     "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
-    "cross_pass_reopens_plan/STATE_CHANGED": _cross_pass_reopens_finished_plan,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack

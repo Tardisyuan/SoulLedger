@@ -857,7 +857,7 @@ class DispositionService:
             # nothing, when the soul cannot make that move".
             return False
 
-        # 埃及:称心流程走完才执行(docs/02 §5.1–5.2;apps/judgment/weighing.py)。
+        # 原审的审批流程走完才执行(用户 2026-10-29;埃及是称心流程,docs/02 §5.1–5.2;apps/judgment/weighing.py)。
         from apps.judgment.weighing import unfinished_flow
 
         if unfinished_flow(disposition) is not None:

@@ -330,10 +330,11 @@ class TestSettledIsTerminal:
         assert soul.can_transition_to(SoulState.REINCARNATING)
         assert soul.can_transition_to(SoulState.LOST)
 
-    def test_nothing_leaves_settled_but_the_plan_reopen(self):
+    def test_nothing_leaves_settled(self):
+        """SETTLED is terminal (2026-10-29: the plan-reopen edge back to DISPOSED was removed)."""
         soul = self._soul(SoulState.SETTLED)
         for state in SoulState.values:
-            assert soul.can_transition_to(state) is (state == SoulState.DISPOSED), state
+            assert soul.can_transition_to(state) is False, state
 
     def test_settled_is_not_reachable_from_anywhere_but_disposed(self):
         for state in SoulState.values:
@@ -435,8 +436,8 @@ class TestCorrectSettlement:
 
     def test_correction_does_not_reopen_settled_via_the_transition_endpoint(self):
         """The escape hatch is the dedicated method, not a loosened state
-        machine — SETTLED -> DISPOSED exists only for reopening a plan, and
-        `POST /souls/{id}/transition/` refuses it."""
+        machine — SETTLED has no transition, so `POST /souls/{id}/transition/`
+        refuses it."""
         soul = self._settled_soul()
         resp = self.admin_client.post(
             f"{BASE}/{soul.pk}/transition/", {"new_state": SoulState.DISPOSED, "reason": "x"}, format="json"

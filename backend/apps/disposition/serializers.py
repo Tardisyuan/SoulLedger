@@ -57,6 +57,20 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
     # 第十殿的六道建议(用户 2026-10-27,docs/07 §四):地府的处置按结案时的功过快照给一条去向,转世时官员可改。
     # 别的文明没有六道,为 null。
     suggested_rebirth_form = serializers.SerializerMethodField()
+    # 为什么现在还不能执行(用户 2026-10-29:原审的审批流程走完才执行):`weighing.unfinished_flow` 的码,
+    # 与 `POST …/execute/` 的 409 同一个;能执行或已执行为 null。页面据此把「执行」置灰并写明原因。
+    flow_waiting = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_flow_waiting(self, obj) -> str | None:
+        if obj.is_executed:
+            return None
+        from apps.judgment.weighing import unfinished_flow
+
+        # 列表的 queryset 注解了流程状态(`judgment_flow_status`,views.py);单条响应没有注解,才退回一次查询。
+        if hasattr(obj, "judgment_flow_status"):
+            return unfinished_flow(obj, flow_status=obj.judgment_flow_status)
+        return unfinished_flow(obj)
 
     # 「期满释放」可点:已执行、不是永久、还没记期满,期满日已到(与每日检查同一条判定,`expiry.releasable`)。
     # 页面不自己比日期。受刑中(执行了、期满日未到)的行显示「服刑中 · 至 `term_end`」。
@@ -129,7 +143,7 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
             "expired_at", "term_end", "section", "verdict", "soul_state", "soul_reborn",
-            "suggested_rebirth_form", "can_release", "default_term_years",
+            "suggested_rebirth_form", "flow_waiting", "can_release", "default_term_years",
             *ARCHIVE_FIELDS,
         ]
         # This serializer had no `read_only_fields` at all. Measured

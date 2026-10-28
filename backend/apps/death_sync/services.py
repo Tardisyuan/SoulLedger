@@ -16,6 +16,9 @@ from apps.souls.models import Soul, SoulState
 
 logger = logging.getLogger(__name__)
 
+#: `retry_failed` reruns these; the other codes are answers about the data, the same on a rerun.
+RETRYABLE_ERRORS = ("INTERNAL_ERROR", "NO_CITY_GOD")
+
 
 class RetryRefusedError(Exception):
     """A registration that may not be retried; `code` goes on the 409."""
@@ -126,6 +129,8 @@ class DeathSyncService:
         Shared by `register_death` (a new, unsaved row) and `retry_failed`
         (an existing FAILED row, already locked by the caller).
         """
+        from apps.judgment.city_gods import NoCityGodError
+
         lookup_data = payload.get("soul_lookup", {})
 
         # The `except` used to sit INSIDE the atomic block. After the first
@@ -214,6 +219,14 @@ class DeathSyncService:
 
         except IntegrityError:
             raise
+        except NoCityGodError as e:
+            # 本殿没有能收案的城隍(用户 2026-10-29):不开案,死亡与开号随事务一起撤。设好兜底城隍后可以重试。
+            request_record.status = DeathRegistrationStatus.FAILED
+            request_record.error_code = "NO_CITY_GOD"
+            request_record.error_message = str(e)
+            request_record.judgment = None
+            request_record.save()
+            return request_record
         except Exception as e:
             logger.exception(f"Death registration failed: {e}")
             request_record.status = DeathRegistrationStatus.FAILED
@@ -249,7 +262,8 @@ class DeathSyncService:
         through the create serializer, because it was stored as JSON and
         `death_date` has to be a date again.
 
-        Only INTERNAL_ERROR is retried (user decision 2026-10-16): the other
+        Only INTERNAL_ERROR is retried (user decision 2026-10-16), and NO_CITY_GOD (2026-10-29: the hall
+        sets a default city god, then the same registration goes through): the other
         reasons (SOUL_NOT_FOUND, SOUL_NOT_ALIVE, INVALID_TRANSITION, ...) are
         answers about the data, and running it again gives the same answer.
 
@@ -268,7 +282,7 @@ class DeathSyncService:
             )
             if record.status != DeathRegistrationStatus.FAILED:
                 raise RetryRefusedError("NOT_FAILED")
-            if record.error_code != "INTERNAL_ERROR":
+            if record.error_code not in RETRYABLE_ERRORS:
                 raise RetryRefusedError("NOT_RETRYABLE")
             if record.retry_count >= record.max_retries:
                 raise RetryRefusedError("MAX_RETRIES")

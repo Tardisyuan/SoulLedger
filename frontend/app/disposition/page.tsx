@@ -54,6 +54,9 @@ const SECTION_TITLE: Record<DispositionSection, string> = {
   expired: "disposition.section_expired",
 };
 const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", executing: "乙", expired: "丙" };
+/** `apps/judgment/weighing.py::unfinished_flow` 的码:前两个在 `disposition.flow_waiting`,埃及的在 `judgment.weighing.errors`。 */
+const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected"];
+const FLOW_WAITING_WEIGHING = ["weighing_in_progress", "weighing_rejected", "weighing_wavers"];
 
 export default function DispositionPage() {
   const { t, formatDate } = useI18n();
@@ -103,6 +106,16 @@ export default function DispositionPage() {
   const running = (executingQ.data?.results ?? []).map((d) => ({ d, term: termState(d, now) }));
   const expired = expiredQ.data?.results ?? [];
 
+  /** `flow_waiting` / 执行 409 的码 → 原因;不是这几个码为 null。 */
+  const flowWaitingText = (code: string | null | undefined) =>
+    !code
+      ? null
+      : FLOW_WAITING_APPROVAL.includes(code)
+        ? t(`disposition.flow_waiting.${code}`)
+        : FLOW_WAITING_WEIGHING.includes(code)
+          ? t(`judgment.weighing.errors.${code}`)
+          : null;
+
   const executeMutation = useMutation({
     mutationFn: (id: string) => dispositionApi.execute(id),
     onSuccess: () => {
@@ -111,10 +124,9 @@ export default function DispositionPage() {
       setShowExecuteModal(null);
     },
     onError: (err: unknown) => {
-      // 埃及:称心流程没走完 / 被驳回 / 天平摇摆时不执行(409,apps/judgment/weighing.py),说清是哪一条。
+      // 原审的审批流程没走完 / 被驳回(埃及:称心流程,或天平摇摆)时不执行(409,apps/judgment/weighing.py),说清是哪一条。
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      const weighing = code && ["weighing_in_progress", "weighing_rejected", "weighing_wavers"].includes(code);
-      showToast(weighing ? t(`judgment.weighing.errors.${code}`) : t("disposition.execute_error"), "error");
+      showToast(flowWaitingText(code) ?? t("disposition.execute_error"), "error");
     },
   });
 
@@ -255,9 +267,21 @@ export default function DispositionPage() {
                 <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("disposition.eternal")}</span>
               ) : (
                 <RequirePermission permissions="disposition.execute">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setShowExecuteModal(d.id)}>
-                    {t("disposition.execute")}
-                  </Button>
+                  {/* 原审的审批流程没走完(或被驳回)不能执行:置灰,原因写在旁边(用户 2026-10-29)。 */}
+                  {d.flow_waiting ? (
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span data-testid="disposition-flow-waiting" className="text-xs text-[oklch(var(--color-ink-muted))]">
+                        {flowWaitingText(d.flow_waiting)}
+                      </span>
+                      <Button type="button" variant="secondary" size="sm" disabled>
+                        {t("disposition.execute")}
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setShowExecuteModal(d.id)}>
+                      {t("disposition.execute")}
+                    </Button>
+                  )}
                 </RequirePermission>
               )}
               {rowMenu(d)}

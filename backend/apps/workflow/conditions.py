@@ -87,8 +87,20 @@ def case_facts(workflow) -> dict:
     """The facts a condition may read, for one workflow. Read at decision time."""
     soul = workflow.soul
     judgment = workflow.judgment
+    # 本案采信后的余额(用户 2026-10-29):一殿「功过两平径送十殿」读的是这件案子采信的功过,不是灵魂一生的总账
+    # (未采信的记录不算,别的一世的也不算)。结案时冻结在 `concluded_balance`;没结案的(手动发起的流程)现算。
+    # 案子不是这一世的(None)= 没有这个 fact,条件不成立;没有审判的流程才读灵魂的余额。
+    if judgment is not None:
+        if judgment.is_final:
+            balance = judgment.concluded_balance
+        else:
+            from apps.judgment.services import EvidenceAdmissionService
+
+            balance = EvidenceAdmissionService.admitted_net(judgment)
+    else:
+        balance = soul.karmic_balance
     return {
-        "balance": soul.karmic_balance,
+        "balance": balance,
         "civilization": soul.civilization,
         "verdict": judgment.verdict if judgment is not None else None,
         "origin_region": soul.origin_region or UNKNOWN_REGION,

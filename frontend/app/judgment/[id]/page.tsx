@@ -264,7 +264,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const weighing = judgment?.admitted_balance?.weighing ?? null;
   const weighedCase = judgment?.judgment_method === "HEART_WEIGHING" && judgment?.kind !== "AMENDMENT";
   const weighingForced = weighedCase && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
-  const withWorkflow = createWorkflow || crossForced || weighingForced;
+  /* 原审一律走审批流程(用户 2026-10-29,四文明):流程走完才执行处置,驳回就重开一案。服务端同样拒收不带流程的原审结案
+     (400 `approval_flow_required`)。重开、申诉改判、加减项不是原审,照旧可选。 */
+  const originalForced = (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
+  const withWorkflow = createWorkflow || crossForced || weighingForced || originalForced;
   /** W-1a 选站:确认层第 2 步里取消勾选的站(站序)。确认层的步数也在这里(⌘⏎ 按步走)。 */
   const [skipOrders, setSkipOrders] = useState<Set<string>>(new Set());
   const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
@@ -1256,7 +1259,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   id={createWorkflowId}
                   type="checkbox"
                   checked={withWorkflow}
-                  disabled={crossForced || weighingForced}
+                  disabled={crossForced || weighingForced || originalForced}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
                   className="mt-1 h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
                 />
@@ -1267,7 +1270,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                       ? t("judgment.weighing.workflow_forced")
                       : crossForced
                         ? t("workflow.pick.cross_forced")
-                        : t("judgment.detail.create_workflow_hint")}
+                        : originalForced
+                          ? t("judgment.detail.workflow_forced_original")
+                          : t("judgment.detail.create_workflow_hint")}
                   </span>
                 </label>
               </div>

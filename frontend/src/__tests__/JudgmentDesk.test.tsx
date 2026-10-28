@@ -122,10 +122,11 @@ const notesBox = () => screen.getByLabelText(tZh("judgment.detail.notes")) as HT
 /** v3:引用签、律条检索、先例在资料舱的「律条引用」标签里;默认打开的是功过记录。 */
 const openLawTab = async () => fireEvent.click(await screen.findByRole("tab", { name: tZh("judgment.desk.tab_law") }));
 const toConfirm = () => screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") });
-/** v3 落判两步:主按钮进盖印确认层,层里「盖印并结案」才发 conclude/。 */
+/** v3 落判两步:主按钮进盖印确认层,层里的落判键才发 conclude/。原审一律带审批流程(2026-10-29),所以那一键是
+ *  「落判并发起」;本域无站可选(下面默认的 `nothing_to_pick`)时没有「下一步」。 */
 const concludeViaLayer = async () => {
   fireEvent.click(toConfirm());
-  fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.desk.stamp") }));
+  fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }));
 };
 
 beforeEach(() => {
@@ -148,6 +149,8 @@ beforeEach(() => {
   judgmentApi.uncite.mockResolvedValue({ data: {} });
   judgmentApi.ruleEvidence.mockResolvedValue({ data: {} });
   judgmentApi.saveDraft.mockResolvedValue({ data: {} });
+  // 原审一律带审批流程(2026-10-29):默认本域无站可选,确认层一步落判;要选站的测试自己换成带站的预览。
+  workflowApi.flowPreview.mockResolvedValue({ data: { name: "十殿审判流程", nothing_to_pick: true, stations: [], foreign: [] } });
   judgmentApi.precedents.mockResolvedValue({ data: [] });
   judgmentApi.defer.mockResolvedValue({ data: {} });
   judgmentApi.destinations.mockImplementation((_id: string, verdict: string) =>
@@ -208,11 +211,11 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
     expect(judgmentApi.conclude.mock.calls[0]).toEqual([
       ID,
-      { verdict: "PURGATORY", notes: "功过相抵,暂入救济门", create_workflow: false },
+      { verdict: "PURGATORY", notes: "功过相抵,暂入救济门", create_workflow: true },
     ]);
   });
 
-  it("勾上审批流,确认层先「下一步」到选站(W-1a),那里的落判键写成「落判并发起」;不勾是「盖印并结案」", async () => {
+  it("原审的审批流勾上且锁住(2026-10-29);确认层先「下一步」到选站(W-1a),那里的落判键写成「落判并发起」", async () => {
     workflowApi.flowPreview.mockResolvedValue({
       data: {
         name: "十殿审判流程",
@@ -225,20 +228,18 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     });
     renderPage();
     await screen.findAllByRole("radio");
+    const box = screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(box.disabled).toBe(true);
+    expect(screen.getByText(tZh("judgment.detail.workflow_forced_original"))).toBeInTheDocument();
+    expect(screen.queryByText(tZh("judgment.detail.create_workflow_hint"))).toBeNull();
+
     fireEvent.keyDown(document.body, { key: "1" });
     fireEvent.click(toConfirm());
-    let layer = await screen.findByTestId("confirm-layer");
-    expect(within(layer).getByRole("button", { name: tZh("judgment.desk.stamp") })).toBeInTheDocument();
-    expect(within(layer).queryByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") })).toBeNull();
-    fireEvent.click(within(layer).getByRole("button", { name: tZh("judgment.desk.back_to_check") }));
-    await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
-
-    fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }));
-    fireEvent.click(toConfirm());
-    layer = await screen.findByTestId("confirm-layer");
+    const layer = await screen.findByTestId("confirm-layer");
     expect(within(layer).queryByRole("button", { name: tZh("judgment.desk.stamp") })).toBeNull();
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
-    fireEvent.click(within(layer).getByRole("button", { name: tZh("workflow.pick.next") }));
+    fireEvent.click(await within(layer).findByRole("button", { name: tZh("workflow.pick.next") }));
     await within(layer).findByTestId("station-picker");
     expect(workflowApi.flowPreview).toHaveBeenCalledWith({ judgment: ID });
     fireEvent.click(await within(layer).findByRole("checkbox", { name: /1 · 分流/ }));
@@ -259,7 +260,6 @@ describe("裁决键 1–4 与 ⌘⏎", () => {
     renderPage();
     await screen.findAllByRole("radio");
     fireEvent.keyDown(document.body, { key: "1" });
-    fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(tZh("judgment.detail.create_workflow")) }));
     await waitFor(() => expect(workflowApi.flowPreview).toHaveBeenCalledWith({ judgment: ID }));
     fireEvent.click(toConfirm());
     const layer = await screen.findByTestId("confirm-layer");
@@ -863,7 +863,7 @@ describe("戊 · 发落", () => {
     await screen.findByLabelText(tZh("judgment.placement.destination"));
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
-    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({ verdict: "FAILED", notes: "", create_workflow: false });
+    expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({ verdict: "FAILED", notes: "", create_workflow: true });
     // 落定后确认层翻成「已写入记录」;「完成」关层,回到页面上。
     fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.desk.done") }));
 
@@ -873,7 +873,7 @@ describe("戊 · 发落", () => {
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(2));
     expect(judgmentApi.conclude.mock.calls[1][1]).toEqual({
-      verdict: "FAILED", notes: "", create_workflow: false, destination_realm_id: "r-9", term_years: 12,
+      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-9", term_years: 12,
     });
   });
 
@@ -905,7 +905,7 @@ describe("戊 · 发落", () => {
     await conclude();
     await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
     expect(judgmentApi.conclude.mock.calls[0][1]).toEqual({
-      verdict: "FAILED", notes: "", create_workflow: false, destination_realm_id: "r-a", eternal: true,
+      verdict: "FAILED", notes: "", create_workflow: true, destination_realm_id: "r-a", eternal: true,
     });
   });
 
@@ -1347,7 +1347,7 @@ describe("v3 · 盖印确认层", () => {
     expect(layer).toHaveTextContent("第五殿");
     expect(layer).toHaveTextContent(tZh("judgment.desk.irreversible"));
 
-    fireEvent.keyDown(within(layer).getByRole("button", { name: tZh("judgment.desk.stamp") }), { key: "Escape" });
+    fireEvent.keyDown(await within(layer).findByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") }), { key: "Escape" });
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
     expect(radio("FAILED").checked).toBe(true);
@@ -1361,7 +1361,7 @@ describe("v3 · 盖印确认层", () => {
     const layer = await screen.findByTestId("confirm-layer");
     expect(await within(layer).findByText(tZh("judgment.desk.recorded"))).toBeInTheDocument();
     expect(within(layer).getByRole("img", { name: tZh("seal.aria", { court: "第五殿" }) })).toBeInTheDocument();
-    expect(within(layer).queryByRole("button", { name: tZh("judgment.desk.stamp") })).toBeNull();
+    expect(within(layer).queryByRole("button", { name: tZh("judgment.detail.conclude_with_workflow") })).toBeNull();
     fireEvent.click(within(layer).getByRole("button", { name: tZh("judgment.desk.done") }));
     await waitFor(() => expect(screen.queryByTestId("confirm-layer")).toBeNull());
   });

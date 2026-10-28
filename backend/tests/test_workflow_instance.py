@@ -544,14 +544,21 @@ class TestJudgmentWorkflowIntegration:
         assert workflow.soul == judgment.soul
         assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
 
-    def test_conclude_without_create_workflow(self, judgment):
-        """Judgment.conclude with create_workflow=False (default) doesn't create workflow."""
+    def test_an_original_judgment_always_concludes_with_its_workflow(self, judgment):
+        """用户 2026-10-29:原审一律建审批流程 —— 不说(None)就建,明说不要(False)被拒,什么都不写。"""
+        from apps.judgment.weighing import WeighingRefusedError
+
+        with pytest.raises(WeighingRefusedError) as refused:
+            judgment.conclude("PASSED", "Test verdict", create_workflow=False)
+        assert refused.value.code == "approval_flow_required"
+        judgment.refresh_from_db()
+        assert judgment.is_final is False and not ApprovalWorkflow.objects.filter(judgment=judgment).exists()
+
         judgment.conclude("PASSED", "Test verdict")
 
         assert judgment.is_final is True
-
-        # No workflow should be created
-        assert not hasattr(judgment, "approval_workflow") or judgment.approval_workflow is None
+        workflow = ApprovalWorkflow.objects.get(judgment=judgment)
+        assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
 
     def test_judgment_api_conclude_with_workflow(self, cn_tenant, soul, django_user_model):
         """API conclude endpoint supports create_workflow parameter."""

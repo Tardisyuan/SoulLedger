@@ -357,8 +357,9 @@ export default function SoulDetailPage() {
         // causes is not a confirmation.
         showToast(t("souls.detail.mark_dead_success"), "success");
       } catch (e: unknown) {
-        const err = e as { response?: { data?: { error?: string } }; message?: string };
-        showToast(err?.response?.data?.error || "Failed", "error");
+        const err = e as { response?: { data?: { error?: string; code?: string } }; message?: string };
+        // 本殿没有能收案的城隍(409 `no_city_god`,2026-10-29):死亡不登记,说清要先设兜底城隍。
+        showToast(noCityGod(err) ?? (err?.response?.data?.error || "Failed"), "error");
       } finally {
         setActionLoading("");
       }
@@ -405,11 +406,16 @@ export default function SoulDetailPage() {
         : (await judgmentApi.create({ soul: soul.id, civilization: soul.civilization })).data.id;
       router.push(`/judgment/${id}`);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
-      showToast(err?.response?.data?.error || err?.message || "Failed", "error");
+      const err = e as { response?: { data?: { error?: string; code?: string } }; message?: string };
+      showToast(noCityGod(err) ?? (err?.response?.data?.error || err?.message || "Failed"), "error");
     } finally {
       setActionLoading("");
     }
+  }
+
+  /** 409 `no_city_god`(本殿没有能收案的城隍)→ 那句说明;别的错误为 null。 */
+  function noCityGod(err: { response?: { data?: { code?: string } } }) {
+    return err?.response?.data?.code === "no_city_god" ? t("judgment.error.no_city_god") : null;
   }
 
   async function handleReincarnate(dispositionId: string) {

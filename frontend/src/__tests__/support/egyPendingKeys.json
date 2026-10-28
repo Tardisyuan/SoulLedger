@@ -39,5 +39,10 @@
   "reincarnation.form_reason_hint",
   "judgment.wangsi.deliver_sends_on",
   "judgment.placement.term_default",
-  "disposition.term_default"
+  "disposition.term_default",
+  "judgment.error.no_city_god",
+  "judgment.detail.workflow_forced_original",
+  "disposition.flow_waiting.approval_in_progress",
+  "disposition.flow_waiting.approval_rejected",
+  "death_sync.error.NO_CITY_GOD"
 ]

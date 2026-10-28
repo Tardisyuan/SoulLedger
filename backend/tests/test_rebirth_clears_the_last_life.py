@@ -17,6 +17,14 @@ from apps.tenants.models import Tenant
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _diyu_has_a_city_god(cn_tenant):
+    """地府开案要有城隍收案(用户 2026-10-29):本殿先有一位兜底城隍。"""
+    from tests.city_god_support import default_city_god
+
+    default_city_god(cn_tenant)
+
+
 def _reborn(tenant, continent="", **fields):
     # 地府转世前要饮孟婆汤(`needs_soup`);这里只测转世那一笔,直接记作已饮。
     soul = Soul.objects.create(name="前世", tenant=tenant, current_state=SoulState.REINCARNATING,

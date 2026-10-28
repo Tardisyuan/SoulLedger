@@ -368,7 +368,11 @@ def test_judgment_0024_round_trip(migration_round_trip):
 
 @pytest.fixture
 def cn(seeded):
-    return plan.tenant("CN_DIYU")
+    from tests.city_god_support import default_city_god
+
+    tenant = plan.tenant("CN_DIYU")
+    default_city_god(tenant)  # 地府开案要有城隍收案(2026-10-29)
+    return tenant
 
 
 @pytest.mark.django_db

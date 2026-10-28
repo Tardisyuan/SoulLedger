@@ -9,11 +9,15 @@ from apps.realms.models import Realm
 from apps.reincarnation.services import ReincarnationService
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.city_god_support import default_city_god, sent_on
+from tests.sentence_plan_support import walk_flow
 
 
 @pytest.fixture
 def cn_tenant(db):
-    return Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+    tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+    default_city_god(tenant)  # 地府开案要有城隍收案(2026-10-29)
+    return tenant
 
 
 @pytest.fixture
@@ -68,18 +72,22 @@ class TestSoulLifecycle:
         # beside it; the stray open case went unnoticed until the sentence plan
         # (docs/ARCHITECTURE-sentence-plan.md §3.3) started asking "is any case
         # still open?" before completing — an open case now holds the plan.
-        judgment = Judgment.objects.get(soul=soul)
+        judgment = sent_on(Judgment.objects.get(soul=soul))  # 城隍解送十殿
         judgment.court = "First Court Qinguang"
         judgment.save(update_fields=["court"])
         assert not judgment.is_final
 
         # 4. Conclude judgment → PASSED. 地府判无罪不发落、不建刑期节点(用户 2026-10-29,docs/11 第六步
-        # 「无罪 → 直接投胎」):没有审批流程时结案即候转世。此前这里先建去 DY_01_HEAVEN 的处置、再执行。
+        # 「无罪 → 直接投胎」):审批流程走完即候转世。此前这里先建去 DY_01_HEAVEN 的处置、再执行。
         judgment.conclude(Verdict.PASSED, "Excellent karma, enter paradise")
         soul.refresh_from_db()
 
         assert judgment.is_final
         assert judgment.verdict == Verdict.PASSED
+        # 原审一律走审批流程(2026-10-29):流程走完之前灵魂在 DISPOSED,没有原属节点的计划等着流程。
+        assert soul.current_state == SoulState.DISPOSED
+        walk_flow(judgment)
+        soul.refresh_from_db()
         assert soul.current_state == SoulState.REINCARNATING
 
         # 5–6. No disposition to execute.

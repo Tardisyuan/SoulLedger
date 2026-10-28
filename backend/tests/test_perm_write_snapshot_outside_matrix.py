@@ -435,6 +435,9 @@ def snapshot_tenants(db):
 
     clear_current_tenant()
     home, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})
+    from tests.city_god_support import default_city_god
+
+    default_city_god(home)  # 地府开案要有城隍收案(2026-10-29)
     other, _ = Tenant.objects.get_or_create(
         code="EU_HEAVEN_HELL", defaults={"display_name": "European Heaven/Hell"}
     )
