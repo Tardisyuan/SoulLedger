@@ -13,7 +13,7 @@ from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.events.models import SoulEvent
 from apps.judgment.models import ChineseOffence, Judgment, JudgmentMethod
-from apps.judgment.weighing import WeighingRefusedError, unfinished_flow
+from apps.judgment.weighing import unfinished_flow
 from apps.souls.models import Soul, SoulState
 from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
 from apps.workflow.services import FIVE_HEINOUS_SKIP_REASON
