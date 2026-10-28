@@ -54,6 +54,16 @@ def test_recording_one_denial_and_changing_it(seeded, admin_user):
     assert NegativeConfession.objects.get(judgment=case).create_user_id == admin_user.pk
 
 
+@pytest.mark.parametrize("ordinal", ["0", "43", "99999999999999999999"])
+def test_an_ordinal_outside_the_42_is_unknown_not_a_crash(seeded, admin_user, ordinal):
+    """Past the integer column's range PostgreSQL raised on the lookup (a 500); SQLite found nothing."""
+    case = _case()
+    res = officer_client(admin_user).put(f"/api/v1/judgment/{case.pk}/negative-confessions/{ordinal}/",
+                                         {"truthful": True}, format="json")
+    assert res.status_code == 404 and res.data["code"] == "unknown_clause", res.data
+    assert not NegativeConfession.objects.filter(judgment=case).exists()
+
+
 def test_a_concluded_case_is_frozen(seeded, admin_user):
     case = _case()
     Judgment.objects.filter(pk=case.pk).update(verdict="PASSED", is_final=True)
