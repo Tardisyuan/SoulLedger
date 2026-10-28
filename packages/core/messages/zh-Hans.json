@@ -339,7 +339,10 @@
       "CAPTURE_WARRANT_ISSUED": "发勾魂牒",
       "SOUL_CAPTURED": "鬼差拘到",
       "CAPTURE_HANDED_OVER": "勾魂交接",
-      "CAPTURE_WARRANT_CANCELLED": "勾魂牒撤销"
+      "CAPTURE_WARRANT_CANCELLED": "勾魂牒撤销",
+      "WANGSI_GRIEVANCE_FILED": "枉死城申诉",
+      "WANGSI_GRIEVANCE_UPHELD": "申诉属实 · 提前释放",
+      "WANGSI_GRIEVANCE_REJECTED": "申诉不属实"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -5435,6 +5438,29 @@
       "reacted_two": "{{name}} 等 {{n}} 人对你的帖子表态",
       "lamp_two": "{{name}} 等 {{n}} 人为你的帖子点了长明灯",
       "followed_two": "{{name}} 等 {{n}} 人关注了你"
+    },
+    "wangsi": {
+      "file": "申诉",
+      "file_title": "枉死城申诉",
+      "held": "押在枉死城 · 阳寿到 {{date}} 才受审",
+      "released": "已出枉死城",
+      "status": {
+        "FILED": "已申诉 · 待城隍核实",
+        "UPHELD": "申诉属实 · 已提前释放",
+        "REJECTED": "申诉不属实 · 照旧押到阳寿那一天"
+      },
+      "note_label": "城隍批语",
+      "plea_label": "冤情",
+      "plea_required": "写下你的冤情",
+      "file_body": "城隍会调查核实。冤情重大且属实的，提前出枉死城受审；不属实就照旧押到阳寿那一天，之后可以再提。",
+      "submit": "提交申诉",
+      "submitted_toast": "申诉已提交",
+      "errors": {
+        "not_found": "找不到这件案子",
+        "not_pending": "这件案子已经不在审了",
+        "not_in_wangsi": "你已不在枉死城，不用申诉",
+        "grievance_open": "这件案子已经申诉过，等城隍核实"
+      }
     }
   },
   "soul_push": {
@@ -7466,7 +7492,9 @@
       "name_taken": "本殿已有一位叫「{{name}}」的城隍",
       "invalid_officer": "这位官员不在本殿能办案的名单里",
       "city_god_has_open_cases": "{{name}}名下还有 {{count}} 件没解送，先解送或改交再删",
-      "city_gods_diyu_only": "只有地府的殿能设城隍"
+      "city_gods_diyu_only": "只有地府的殿能设城隍",
+      "city_god_has_tudi_gods": "{{city_god}}名下有土地公，而土地公的上级只能是县城隍；先把土地公改交别的城隍再改级别",
+      "tudi_city_god_not_county": "土地公的上级只能是县城隍"
     },
     "no_officers": "名下没有官员：这位城隍的案子只有殿管理员能办",
     "default_regions": "没写中任何一位的案子",
@@ -7482,10 +7510,10 @@
       "COUNTY": "县城隍"
     },
     "rank_titles": {
-      "PROVINCE": "威灵公",
-      "PREFECTURE": "绥靖侯",
-      "DEPARTMENT": "显佑伯",
-      "COUNTY": "显正伯"
+      "PROVINCE": "承天鉴国司民升福明灵王",
+      "PREFECTURE": "威灵公",
+      "DEPARTMENT": "灵佑侯",
+      "COUNTY": "显佑伯"
     },
     "bureaus_label": "下属诸司",
     "bureaus_hint": "按这位城隍实际设的司勾选。级别越高,诸司通常越齐全。",

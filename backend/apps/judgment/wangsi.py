@@ -3,7 +3,8 @@
 
 流程
 * 只对**还押在枉死城**的案子:枉死(`untimely`)、未结案、`held_until` 还没到。
-* 提出(FILED):官员替亡魂记下申诉的内容(必填)。不属实之后可以再提;已提、已属实的不能再提。
+* 提出(FILED):官员替亡魂记下申诉的内容(必填),或亡魂自己在灵魂 App 里提(`/me/wangsi/`,只能是自己本世的案子,
+  别人的一律 404 `not_found`)。两条路同一个函数、同一套规则。不属实之后可以再提;已提、已属实的不能再提。
 * 审核:这件案子城隍名下的官员,或持 `judgment.assign` 的人(没交城隍的案子只有后者)——
   docs/10 §4.2「向城隍申诉 · 地方层面调查核实」。
   - 属实(UPHELD):只在冤情等级为「重」「极重」时可以(§4.2「若确属冤死且冤情重大 → 可提前释放」),
@@ -11,8 +12,8 @@
   - 不属实(REJECTED):照旧押到阳寿那一天。
 * 拒绝一律 `WangsiRefusedError`(与认领同一形状),在任何写入之前抛出。
 
-不记事件:没有新的事件类型(加一个要动 events 的迁移与前端几道镜像),改动由审计信号逐列记下。
-ponytail: 灵魂时间线上看不到「提前释放」;要看就加 `WANGSI_GRIEVANCE_*` 事件类型。
+事件(2026-10-28):提出 / 属实(提前释放)/ 不属实各一条 `WANGSI_GRIEVANCE_*`,记在灵魂时间线上,与那一笔同一事务。
+payload:judgment_id、status、冤情等级;提出另带 via(officer / soul)。不带申诉原文、审核批语与经办官员。
 """
 from django.db import transaction
 from django.utils import timezone
@@ -38,6 +39,18 @@ def _assert_held(judgment: Judgment) -> None:
         raise WangsiRefusedError("This soul is not held in 枉死城.", "not_in_wangsi")
 
 
+def filing_refusal(judgment: Judgment) -> WangsiRefusedError | None:
+    """此刻能不能提申诉;不能时是要抛的那个拒绝。官员端、灵魂端、灵魂端的列表(`can_file`)都读它。"""
+    try:
+        _assert_held(judgment)
+    except WangsiRefusedError as exc:
+        return exc
+    if judgment.grievance_status in (GrievanceStatus.FILED, GrievanceStatus.UPHELD):
+        return WangsiRefusedError("A grievance is already filed for this case.", "grievance_open",
+                                  grievance_status=judgment.grievance_status)
+    return None
+
+
 def may_decide(user, judgment: Judgment) -> bool:
     from apps.judgment import city_gods
     from apps.perm.checker import check_permission
@@ -51,18 +64,31 @@ def _save(judgment: Judgment, *fields: str) -> None:
     judgment.save(update_fields=[*fields, *_BOOKKEEPING])
 
 
-def file_grievance(pk, user, plea: str) -> Judgment:
+def _event(judgment: Judgment, event_type: str, **extra) -> None:
+    from apps.events.services import EventService
+
+    EventService.log(judgment.soul, event_type, {
+        "judgment_id": str(judgment.pk), "status": judgment.grievance_status,
+        "grievance_level": judgment.grievance_level, **extra,
+    })
+
+
+def file_grievance(pk, user, plea: str, *, account=None) -> Judgment:
+    """`account`:亡魂自己提(灵魂 App)。案子必须是这个账号的灵魂本世的,否则当作不存在(404)。"""
     with transaction.atomic():
+        if account is not None and not Judgment.all_objects.filter(
+                pk=pk, soul_id=account.soul_id, cycle=account.cycle, is_deleted=False).exists():
+            raise WangsiRefusedError("No such judgment.", "not_found", status=404)
         judgment = _lock(pk)
-        _assert_held(judgment)
-        if judgment.grievance_status in (GrievanceStatus.FILED, GrievanceStatus.UPHELD):
-            raise WangsiRefusedError("A grievance is already filed for this case.", "grievance_open",
-                                     grievance_status=judgment.grievance_status)
+        refusal = filing_refusal(judgment)
+        if refusal is not None:
+            raise refusal
         judgment.grievance_status = GrievanceStatus.FILED
         judgment.grievance_plea = plea
         judgment.grievance_note = ""
         judgment.grievance_decided_at = None
         _save(judgment, "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at")
+        _event(judgment, "WANGSI_GRIEVANCE_FILED", via="soul" if account is not None else "officer")
     return judgment
 
 
@@ -89,4 +115,5 @@ def decide_grievance(pk, user, *, upheld: bool, note: str) -> Judgment:
             judgment.held_until = None  # 提前释放:`claims._assert_not_held` 不再拦
             fields.append("held_until")
         _save(judgment, *fields)
+        _event(judgment, "WANGSI_GRIEVANCE_UPHELD" if upheld else "WANGSI_GRIEVANCE_REJECTED")
     return judgment
