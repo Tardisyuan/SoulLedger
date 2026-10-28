@@ -1,11 +1,35 @@
 """
 Reincarnation service — executes rebirth cycles.
 """
+import datetime
+
+from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from apps.disposition.models import Disposition
 from apps.ledger.services import LedgerService
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import Continent, Soul, SoulState
+
+#: 四大部洲人寿(docs/07 §人道「四大部洲」表,与《俱舍论》一致;南瞻部洲「寿不定,今百岁」)。
+CONTINENT_LIFESPAN_YEARS = {
+    Continent.DONGSHENG: 250,
+    Continent.NANZHAN: 100,
+    Continent.XINIU: 500,
+    Continent.BEIJULU: 1000,
+}
+
+
+def continent_fated_death(continent: str, born: datetime.date):
+    """生在 `continent` 的这一世默认阳寿 (year, month, day);没有部洲(不详 / 非人道)返回 None。
+    2 月 29 日出生、到期那年不闰,落在 2 月 28 日 —— 宁早一天不晚一天,与 Soul.die 比较的是完整日期。"""
+    years = CONTINENT_LIFESPAN_YEARS.get(continent)
+    if years is None:
+        return None
+    try:
+        end = born.replace(year=born.year + years)
+    except ValueError:
+        end = born.replace(year=born.year + years, day=28)
+    return end.year, end.month, end.day
 
 
 class RebirthQuotaFull(APIException):
@@ -418,6 +442,24 @@ class ReincarnationService:
             # 新的一世不在十三站上;生在哪一洲由这次转世定(人道才有,其余空 = 不详)。
             soul.diyu_station = ""
             soul.birth_continent = rebirth_continent
+            # 一世一记的事实随上一世一起结束(2026-10-29 审查):阳寿、埃及的入殿情形、希腊的渡河情形、
+            # 欧洲的受洗 / 否认灵魂不朽 / 中立者,以及审判归哪位判官的出身地区。留着它们,新一世一出生就进
+            # 待发勾魂牒名单、下一世按旧阳寿判枉死、按旧 duat_passage 直入芦苇原、按旧 ferry_passage 拦在岸边。
+            # baptism 等三项模型注释说是「关于这个人的事实」而不是「关于某件事」—— 那是相对于一世里的各条
+            # 记录说的(一世之内不该两条记录各说一样);这三项都是「在世时」的事实(受洗、生前所信、生前所为),
+            # 下一世是另一个人,另受洗、另有所信。不清的只有 soul_code、home 租户、功过承继这类跨世的东西。
+            soul.fated_death_year = soul.fated_death_month = soul.fated_death_day = None
+            soul.duat_passage = ""
+            soul.ferry_passage = ""
+            soul.origin_region = ""
+            soul.baptism = Soul.Baptism.UNRECORDED
+            soul.denied_immortality = None
+            soul.neutral_in_life = None
+            # 四大部洲各有人寿(docs/07 §人道表):生在某洲,阳寿默认 = 出生日 + 该洲人寿,官员仍可改。
+            # 出生日取转世完成这一天 —— 这里不写 birth_*,那几列仍是上一世的出生日,拿它算会差一整世。
+            fated = continent_fated_death(rebirth_continent, timezone.localdate())
+            if fated:
+                soul.fated_death_year, soul.fated_death_month, soul.fated_death_day = fated
             soul.save()
             # The cached summary describes the life that just ended.
             LedgerService._invalidate_cache(soul)
