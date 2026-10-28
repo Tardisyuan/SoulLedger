@@ -55,6 +55,9 @@ export function untimelyLine(judgment: Judgment, t: Translate, formatDate: Forma
   if (judgment.grievance_status === "UPHELD" && judgment.grievance_decided_at) {
     return t("judgment.wangsi.released_line", { date: formatDate(judgment.grievance_decided_at) });
   }
+  if (judgment.grievance_status === "DELIVERED" && judgment.grievance_decided_at) {
+    return t("judgment.wangsi.delivered_line", { date: formatDate(judgment.grievance_decided_at) });
+  }
   if (isHeldUntilFatedDate(judgment)) {
     return [t("judgment.untimely"), t("judgment.held_until", { date: judgment.held_until as string }), t("judgment.in_city")].join(" · ");
   }
@@ -141,7 +144,8 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
   const [plea, setPlea] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  // 二次确认的是哪一种属实:提前释放,还是超度(出城到莲花台、免审结案)。
+  const [confirming, setConfirming] = useState<false | "release" | "deliver">(false);
   const held = isHeldUntilFatedDate(judgment);
   const status = judgment.grievance_status ?? "";
   const level = judgment.grievance_level ?? "";
@@ -162,7 +166,8 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
     onError: onRefused,
   });
   const decide = useMutation({
-    mutationFn: (upheld: boolean) => wangsiApi.decideGrievance(judgment.id, upheld, note.trim()),
+    mutationFn: ({ upheld, deliver = false }: { upheld: boolean; deliver?: boolean }) =>
+      wangsiApi.decideGrievance(judgment.id, upheld, note.trim(), deliver),
     onSuccess: () => { setNote(""); setError(null); setConfirming(false); void refresh(); },
     onError: (err) => { setConfirming(false); onRefused(err); },
   });
@@ -251,6 +256,28 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
             {lastRecord}
           </div>
         )}
+        {/* 阳寿已到或已结案而申诉还挂着:仍可审,只记结论(后端 UPHELD_LATE),不看冤情等级、没有超度。 */}
+        {editable && !held && status === "FILED" && (
+          <div className="mt-2 space-y-2">
+            <textarea
+              aria-label={t("judgment.wangsi.decision_note")}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              maxLength={2000}
+              className={fieldControl({ size: "sm" })}
+            />
+            <p className={HINT} data-testid="wangsi-late-hint">{t("judgment.wangsi.late_hint")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-uphold-late" disabled={!note.trim()} loading={decide.isPending && decide.variables?.upheld === true} onClick={() => decide.mutate({ upheld: true })}>
+                {t("judgment.wangsi.uphold_late")}
+              </Button>
+              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-reject" disabled={!note.trim()} loading={decide.isPending && decide.variables?.upheld === false} onClick={() => decide.mutate({ upheld: false })}>
+                {t("judgment.wangsi.reject")}
+              </Button>
+            </div>
+          </div>
+        )}
         {editable && held && status === "FILED" && (
           <div className="mt-2 space-y-2">
             <textarea
@@ -268,11 +295,21 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
                 variant="primary"
                 data-testid="wangsi-uphold"
                 disabled={!note.trim() || !canRelease}
-                onClick={() => setConfirming(true)}
+                onClick={() => setConfirming("release")}
               >
                 {`${t("judgment.wangsi.uphold")}…`}
               </Button>
-              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-reject" disabled={!note.trim()} loading={decide.isPending && !confirming} onClick={() => decide.mutate(false)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                data-testid="wangsi-deliver"
+                disabled={!note.trim() || !canRelease}
+                onClick={() => setConfirming("deliver")}
+              >
+                {`${t("judgment.wangsi.deliver")}…`}
+              </Button>
+              <Button type="button" size="sm" variant="secondary" data-testid="wangsi-reject" disabled={!note.trim()} loading={decide.isPending && !confirming} onClick={() => decide.mutate({ upheld: false })}>
                 {t("judgment.wangsi.reject")}
               </Button>
             </div>
@@ -290,11 +327,15 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
       <ConfirmDialog
         isOpen={confirming}
         variant="info"
-        title={t("judgment.wangsi.release_title", { name: judgment.soul_name })}
-        message={`${t("judgment.wangsi.release_body", { name: judgment.soul_name, date: judgment.held_until ?? "" })} ${t("judgment.wangsi.release_irreversible")}`}
-        confirmText={t("judgment.wangsi.uphold")}
+        title={confirming === "deliver"
+          ? t("judgment.wangsi.deliver_title", { name: judgment.soul_name })
+          : t("judgment.wangsi.release_title", { name: judgment.soul_name })}
+        message={`${confirming === "deliver"
+          ? t("judgment.wangsi.deliver_body", { name: judgment.soul_name })
+          : t("judgment.wangsi.release_body", { name: judgment.soul_name, date: judgment.held_until ?? "" })} ${t("judgment.wangsi.release_irreversible")}`}
+        confirmText={confirming === "deliver" ? t("judgment.wangsi.deliver") : t("judgment.wangsi.uphold")}
         confirmLoading={decide.isPending}
-        onConfirm={() => decide.mutate(true)}
+        onConfirm={() => decide.mutate({ upheld: true, deliver: confirming === "deliver" })}
         onCancel={() => setConfirming(false)}
       />
     </section>

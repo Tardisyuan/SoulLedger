@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment import wangsi
+from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer, JudgmentSerializer
 from apps.soul_accounts.me_views import SoulAPIView
@@ -27,6 +28,8 @@ class WangsiGrievanceSerializer(serializers.Serializer):
 class WangsiDecisionSerializer(serializers.Serializer):
     upheld = serializers.BooleanField()
     note = serializers.CharField(max_length=2000, trim_whitespace=True)
+    #: 属实且超度(只与 `upheld=true` 同用):出城到莲花台,免审结案。
+    deliver = serializers.BooleanField(required=False, default=False)
 
 
 class WangsiRefusalSerializer(JudgmentClaimRefusalSerializer):
@@ -51,7 +54,7 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
         judgment = self.get_object()
         try:
             run(judgment.pk)
-        except wangsi.WangsiRefusedError as exc:
+        except ClaimRefusedError as exc:  # 超度会结案:结案那一侧的拒绝(同一形状)也原样答复
             return Response(exc.as_payload(), status=exc.status)
         return Response(JudgmentSerializer(Judgment.objects.get(pk=judgment.pk),
                                            context=self.get_serializer_context()).data)
@@ -67,13 +70,15 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
     @extend_schema(request=WangsiDecisionSerializer, responses=_RESPONSES)
     @action(detail=True, methods=["post"])
     def decide(self, request, pk=None):
-        """审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`)。
+        """审核:`upheld=true` 属实即提前释放(冤情等级须为重 / 极重,否则 409 `grievance_not_major`);
+        再带 `deliver=true` 是超度:出城到莲花台、免审结案(案子还在城隍处 409 `at_city_god`)。
+        阳寿已到或案子已结后仍可审,只记结论(属实记 UPHELD_LATE;此时超度 409 `not_in_wangsi`)。
         没有待审的申诉 → 409 `no_grievance_filed`;不是城隍名下官员也没有 `judgment.assign` → 403。"""
         body = WangsiDecisionSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         return self._answer(lambda pk: wangsi.decide_grievance(pk, request.user, upheld=data["upheld"],
-                                                               note=data["note"]))
+                                                               note=data["note"], deliver=data["deliver"]))
 
 
 # ── 灵魂 ────────────────────────────────────────────────────────────────
