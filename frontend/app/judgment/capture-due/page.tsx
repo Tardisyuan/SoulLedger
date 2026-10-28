@@ -21,7 +21,7 @@ import { CaptureIssueStep, daysOverdue } from "@/src/components/souls/detail/Cap
 
 /*
  * 待发勾魂牒(Design 第五十七批 S-7):侧栏「灵魂业务」里排在「城隍初审」前面(流程:勾魂 → 初审 → 十殿)。
- * `capture-warrants/due/`:阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂,后端已按阳寿先后排(最多 200)。
+ * `capture-warrants/due/`:阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂,后端已按阳寿先后排(最多 200 行;页头的数是 `count`,全部待发的数)。
  * 过期写「超 N 天」,灰字,不用红色。行尾「发牒」是次按钮,打开勾魂卡的发牒步骤(右侧抽屉),不在列表里直接发。
  */
 
@@ -32,7 +32,8 @@ function CaptureDueContent() {
   const canIssue = hasPermission("soul.die");
   const [issuing, setIssuing] = useState<CaptureDueSoul | null>(null);
   const list = useQuery({ queryKey: soulKeys.captureDue(), queryFn: () => captureWarrantsApi.due().then((r) => r.data) });
-  const rows = list.data ?? [];
+  const rows = list.data?.results ?? [];
+  // 页头写后端的总数:列表最多 200 行,行数不是待发的数。
 
   const columns: DataTableColumn[] = [
     { key: "soul", header: t("captureDue.soul"), pinned: true },
@@ -53,7 +54,7 @@ function CaptureDueContent() {
       }
       subtitle={
         <span className="text-sm text-[oklch(var(--color-ink-muted))]">
-          <span className="font-mono tabular-nums" data-testid="capture-due-count">{rows.length}</span> · {t("captureDue.scope")}
+          <span className="font-mono tabular-nums" data-testid="capture-due-count">{list.data?.count ?? 0}</span> · {t("captureDue.scope")}
         </span>
       }
     >

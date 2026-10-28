@@ -82,7 +82,7 @@ export function NegativeConfessionPanel({ judgmentId, canRecord }: { judgmentId:
               value={current}
               options={CHOICES.map((choice) => ({ value: choice, label: t(LABEL[choice]) }))}
               onChange={(choice) => send(row, choice === "null" ? null : choice === "true", note)}
-              disabled={record.isPending}
+              disabled={record.isPending && record.variables?.ordinal === row.ordinal} // 只冻正在存的那一行
               fill="narrow"
               tall="narrow"
               className="mt-1"
@@ -121,7 +121,8 @@ export function NegativeConfessionPanel({ judgmentId, canRecord }: { judgmentId:
             <span className="inline-flex items-center gap-3">
               {tally && (
                 <span data-testid="confession-tally">
-                  <span className="max-md:hidden">
+                  {/* 窄屏只给眼睛看短的三个数;整句在窄屏 sr-only,读屏任何宽度都念得到。 */}
+                  <span className="max-md:sr-only">
                     {t("judgment.confessions.tally", {
                       truthful: String(tally.truthful), untruthful: String(tally.untruthful), unheard: String(tally.unheard),
                     })}

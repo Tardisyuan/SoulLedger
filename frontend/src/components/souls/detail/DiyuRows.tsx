@@ -89,7 +89,7 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
                 title={name(s)}
                 className={cn(
                   "w-full truncate text-2xs",
-                  where === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "hidden text-[oklch(var(--color-ink-muted))] xl:block",
+                  where === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "sr-only text-[oklch(var(--color-ink-muted))] xl:not-sr-only", // 窄屏只藏起来给眼睛,读屏照样念出每一站
                 )}
               >
                 {name(s)}

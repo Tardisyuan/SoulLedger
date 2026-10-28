@@ -20,8 +20,9 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: SOUL_ID }),
 }));
 
+const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: jest.fn() }),
+  useToast: () => ({ showToast: mockShowToast }),
 }));
 
 // t() returns the key unchanged, matching this codebase's real missing-key
@@ -171,6 +172,21 @@ describe("SoulDetailPage — rebirth form selection", () => {
         rebirth_form: "HUNGRY_GHOST",
       })
     );
+    // 不带 new_identity:服务端缺省用原名。此前写死「Test Soul (rebirth)」,而它会写回 soul.name。
+    expect(mockReborn.mock.calls[0][0]).not.toHaveProperty("new_identity");
+  });
+
+  it("a 400 rebirth_continent_not_applicable is said in the user's language, not echoed in English", async () => {
+    mockReborn.mockRejectedValue({
+      response: { status: 400, data: { code: "rebirth_continent_not_applicable", detail: "Only a soul of Diyu…" } },
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("radio", { name: "HUNGRY_GHOST" }));
+    fireEvent.click(screen.getByRole("button", { name: /souls\.detail\.reincarnate/ }));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith("reincarnation.error.rebirth_continent_not_applicable", "error")
+    );
+    expect(mockShowToast).not.toHaveBeenCalledWith(expect.stringContaining("Only a soul"), "error");
   });
 
   it("a Diyu soul with no suggestion has nothing preselected: the officer picks before the rebirth (user 2026-10-27)", async () => {

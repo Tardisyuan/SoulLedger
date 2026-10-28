@@ -17,6 +17,7 @@ import {
   EVENT_LABELS,
   handleDeathSyncEvent,
   handleDispatchEvent,
+  handleDispositionEvent,
   handleNotificationEvent,
   handleSchedulerEvent,
   handleSocialEvent,
@@ -66,9 +67,9 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     RECORD_ADDED: handleSoulEvent,
     JUDGMENT_INITIATED: handleSoulEvent,
     JUDGMENT_CONCLUDED: handleSoulEvent,
-    DISPOSITION_CREATED: handleSoulEvent,
+    DISPOSITION_CREATED: handleDispositionEvent,
     // The daily expiry check (backend apps/disposition/expiry.py).
-    DISPOSITION_EXPIRED: handleSoulEvent,
+    DISPOSITION_EXPIRED: handleDispositionEvent,
     REINCARNATION_TRIGGERED: handleSoulEvent,
     // complete_rebirth (apps/reincarnation/services.py): the soul starts its next life.
     REINCARNATION_COMPLETED: handleSoulStateChanged,

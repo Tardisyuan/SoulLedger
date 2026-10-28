@@ -30,7 +30,7 @@ import {
 } from "@soulledger/core/api/reincarnation";
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
-import { isArchivableConflict } from "@soulledger/core/api";
+import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
@@ -43,6 +43,7 @@ import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
 import { CapturePanel } from "@/src/components/souls/detail/CapturePanel";
 import { DiyuStationStrip } from "@/src/components/souls/detail/DiyuRows";
 import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
+import { mayRegisterUnder } from "@/src/components/tudi-gods/tudiDisplay";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
@@ -113,7 +114,7 @@ export default function SoulDetailPage() {
   // key is missing" is answered once for the app instead of once per page.
   const { t, tf, locale } = useI18n();
   const { showToast } = useToast();
-  const { tenantCode } = useTenant();
+  const { tenantCode, user } = useTenant();
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -121,7 +122,7 @@ export default function SoulDetailPage() {
   const [lostDialog, setLostDialog] = useState<"mark" | "recall" | null>(null);
   // 「发起审批…」(W-11):⋯ 菜单里,持 `workflow.create` 才有;弹层里灵魂已填好且锁定。
   const [isStartWorkflowOpen, setIsStartWorkflowOpen] = useState(false);
-  // 「以土地公名义登记死亡」(第五十七批 S-6):⋯ 菜单里,只地府、在世、持 `soul.die`。
+  // 「以土地公名义登记死亡」(第五十七批 S-6):⋯ 菜单里,只地府、在世、持 `soul.die`,且能以某位土地公名义登记(下面 `mayRegisterByTudi`)。
   const [isTudiRegisterOpen, setIsTudiRegisterOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const { hasPermission } = usePermissions();
@@ -207,6 +208,17 @@ export default function SoulDetailPage() {
   });
 
   const soul = soulQuery.data ?? null;
+  // 「以土地公名义登记死亡」:除 `soul.die` 外,后端还要是某位土地公名下的官员或持 `judgment.assign`
+  // (`tudi_views.register_death`)。不持 assign 时取土地公列表(与弹层同一个键)看自己名下有没有。
+  const tudiCandidate = soul?.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("soul.die");
+  const canAssignJudgment = hasPermission("judgment.assign");
+  const tudiGods = useQuery({
+    queryKey: [...tudiGodKeys.all, "list"],
+    queryFn: () => tudiGodsApi.list().then((r) => r.data.results),
+    enabled: tudiCandidate && !canAssignJudgment,
+  });
+  const mayRegisterByTudi =
+    tudiCandidate && (canAssignJudgment || (tudiGods.data ?? []).some((g) => mayRegisterUnder(g, user?.id, false)));
   const accountChain = useSoulAccountChain(id, hasPermission("soul_account.read"));
   const ledger = ledgerQuery.data ?? null;
   const records = recordsQuery.data ?? NO_RECORDS;
@@ -427,7 +439,8 @@ export default function SoulDetailPage() {
       await reincarnationApi.reborn({
         soul_id: soul?.id,
         disposition_id: dispositionId,
-        new_identity: `${soul?.name} (rebirth)`,
+        // 不传 new_identity:服务端缺省用灵魂原名(`ReincarnationService.reborn`)。此前写死英文「名 (rebirth)」,
+        // 而那个值会写回 `soul.name` —— 每转一世名字后面多一截英文。
         ...(sixPaths && rebirthForm ? { rebirth_form: rebirthForm } : {}),
         ...(formOverridden ? { rebirth_form_reason: formReason.trim() } : {}),
         ...(sixPaths && rebirthForm === "HUMAN" && (nextContinent || soul?.birth_continent)
@@ -473,8 +486,9 @@ export default function SoulDetailPage() {
         );
         return;
       }
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
-      showToast(err?.response?.data?.error || err?.message || "Failed", "error");
+      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      // 四大部洲只在地府的人道(400);其余认不出的码写通用句,不回显后端英文。
+      showToast(code === "rebirth_continent_not_applicable" ? t("reincarnation.error.rebirth_continent_not_applicable") : t("common.error"), "error");
     } finally {
       setActionLoading("");
     }
@@ -488,7 +502,7 @@ export default function SoulDetailPage() {
       showToast(t("disposition.release_success"), "success");
     } catch (e: unknown) {
       const code = releaseRefusalOf(e);
-      showToast(code ? t(`disposition.release_error.${code}`) : t("disposition.execute_error"), "error");
+      showToast(t(`disposition.release_error.${code ?? "generic"}`), "error");
     } finally {
       setActionLoading("");
     }
@@ -736,7 +750,7 @@ export default function SoulDetailPage() {
       onRecall={soul.current_state === "LOST" && canTransition ? () => setLostDialog("recall") : undefined}
       onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
       onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}
-      onRegisterByTudi={soul.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("soul.die") ? () => setIsTudiRegisterOpen(true) : undefined}
+      onRegisterByTudi={mayRegisterByTudi ? () => setIsTudiRegisterOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
     />

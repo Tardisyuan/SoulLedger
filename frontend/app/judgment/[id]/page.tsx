@@ -166,8 +166,15 @@ const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RE
  */
 const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
 
-/** 埃及称心的结案拒绝(apps/judgment/weighing.py),各有一句译文 `judgment.weighing.errors.*`。 */
-const WEIGHING_REFUSALS = ["verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross"] as const;
+/** 埃及称心的结案拒绝(apps/judgment/weighing.py),各有一句译文 `judgment.weighing.errors.*`。
+ * 后两个是 `JudgmentService.conclude` 抛的同一类错:原审要走审批 / 称心流程,不能直接结案。 */
+const WEIGHING_REFUSALS = [
+  "verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross",
+  "approval_flow_required", "weighing_flow_required",
+] as const;
+
+/** `claims.assert_concludable` 的拒绝码(结案与认领同一组),译文在 `claimRefusalMessage` 里。 */
+const CONCLUDE_REFUSALS = ["at_city_god", "held_until_fated_date", "embalming", "duat_unfinished", "unferried"] as const;
 
 /*
  * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
@@ -324,13 +331,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         showToast(t(`judgment.weighing.errors.${code}`), "error");
         return;
       }
+      // 候审未到(枉死城 / 木乃伊 / 到不了殿 / 未渡河 / 还在城隍那里):与认领的拒绝同一组码、同一句译文。
+      if (code && (CONCLUDE_REFUSALS as readonly string[]).includes(code)) {
+        queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(id) }); // 规则在服务端:重取 `conclude_refusal`,键就灰了
+        showToast(claimRefusalMessage(err, t), "error");
+        return;
+      }
       // 第四十三批的选站拒绝(终审 / 驳回目标 / 跨域审判要流程):译好的一句,不是后端的英文。
       const segmentRefusal = segmentRefusalText(t, segmentRefusalOf(err));
       if (segmentRefusal) {
         showToast(segmentRefusal, "error");
         return;
       }
-      showToast(e?.response?.data?.error || t("judgment.detail.conclude_error"), "error");
+      showToast(t("judgment.detail.conclude_error"), "error"); // 认不出的码不回显后端英文
     },
   });
 
@@ -411,6 +424,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const canExecute = hasPermission("judgment.execute");
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
   const atCityGod = isAtCityGod(judgment?.city_god_status);
+  // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
+  const concludeHeld = !!judgment?.conclude_refusal && !atCityGod;
   const buttonOn = useMenuButtonConfig();
   const archiveMutation = useArchiveJudgment();
   const unarchiveMutation = useUnarchiveJudgment();
@@ -490,7 +505,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         VERDICTS.map((member, i) => [String(i + 1), () => { if (!confirming) chooseVerdict(member); }])
       ),
       "mod+Enter": () => {
-        if (!canExecute || atCityGod || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
+        if (!canExecute || atCityGod || concludeHeld || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
         if (confirming && withWorkflow && !noPick && confirmStep === 1) setConfirmStep(2);
         else if (confirming) handleConclude();
         else openConfirm();
@@ -1138,7 +1153,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   size="lg"
                   className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
                   onClick={openConfirm}
-                  disabled={!selectedVerdict || crossBlocked || atCityGod}
+                  disabled={!selectedVerdict || crossBlocked || atCityGod || concludeHeld}
                 >
                   {t("judgment.desk.to_confirm")}
                   <Kbd>⌘⏎</Kbd>
@@ -1150,6 +1165,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   <Link href={`/city-god-cases?city_god=${judgment.city_god ?? ""}`} className="underline underline-offset-2">
                     {t("cityGodCases.go_to_review")}
                   </Link>
+                </p>
+              )}
+              {concludeHeld && (
+                <p data-testid="desk-held-reason" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  {claimRefusalMessage({ response: { data: { code: judgment.conclude_refusal, held_until: judgment.held_until } } }, t)}
                 </p>
               )}
               <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>

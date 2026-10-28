@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, wangsiApi, WANGSI_ERROR_CODES, type Judgment } from "@soulledger/core/api";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import {
   GRIEVANCE_LEVELS,
   GRIEVANCE_RELEASE_LEVELS,
@@ -37,7 +37,9 @@ const HINT = "mt-1 text-xs text-[oklch(var(--color-ink-muted))]";
 
 function useRefresh() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
+  // 属实提前释放 / 超度会改灵魂与处置(`wangsi._deliver`),不只是这件案子。
+  return () =>
+    Promise.all([judgmentKeys.all, dispositionKeys.all, soulKeys.all].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 }
 
 function refusalCode(err: unknown): string | undefined {

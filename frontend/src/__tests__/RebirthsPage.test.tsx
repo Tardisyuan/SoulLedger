@@ -4,7 +4,7 @@
  * 只发后端已有的筛选(`rebirth_form` 单值、`cycle_count`);「第几世」写「第 n → n+1 世」;
  * 行链到灵魂详情上这一次转生的锚点;没开过号的灵魂不印编号。
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import RebirthsPage from "@/app/rebirths/page";
@@ -129,6 +129,15 @@ describe("转生登记簿", () => {
     await waitFor(() =>
       expect(mockedList).toHaveBeenLastCalledWith({ page: "1", rebirth_form: "ANIMAL", cycle_count: "3" }),
     );
+  });
+
+  it("形态筛选有「六道之外」(OTHER,旧记录),选它发 rebirth_form=OTHER", async () => {
+    renderPage();
+    await screen.findByRole("link", { name: "周阿满" });
+    const select = screen.getByRole("combobox", { name: tZh("rebirths.col_form") });
+    expect(within(select).getByRole("option", { name: tZh("reincarnation.forms.OTHER") })).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "OTHER" } });
+    await waitFor(() => expect(mockedList).toHaveBeenLastCalledWith({ page: "1", rebirth_form: "OTHER" }));
   });
 
   it("没有记录时说还没有", async () => {

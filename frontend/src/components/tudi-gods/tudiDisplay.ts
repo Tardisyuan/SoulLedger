@@ -28,3 +28,11 @@ export function tudiRefusalMessage(err: unknown, t: T): string {
   if (code === "tudi_city_god_not_county") return t("cityGods.error.tudi_city_god_not_county");
   return code ? t(`earthGods.error.${code}`) : t("common.error");
 }
+
+/**
+ * 能不能以这位土地公的名义登记死亡:除了 `soul.die`(调用方查),后端还要「他名下的官员,或持 `judgment.assign`」
+ * (`tudi_views.register_death`,否则 403 `not_tudi_officer`)。入口按同一条规则画,不让人点了才被拒。
+ */
+export function mayRegisterUnder(god: { officers: { id: number }[] }, userId: number | undefined, canAssign: boolean): boolean {
+  return canAssign || (userId !== undefined && god.officers.some((o) => o.id === userId));
+}

@@ -10,7 +10,9 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, TextField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { showToast } from "@/src/components/ui/Toast";
-import { tudiRefusalMessage } from "./tudiDisplay";
+import { mayRegisterUnder, tudiRefusalMessage } from "./tudiDisplay";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 
 /*
  * 以土地公名义登记死亡(第五十七批 S-6):和「记录身故」是同一件事(灵魂进审判、开案、到十三站的土地庙),
@@ -21,6 +23,8 @@ import { tudiRefusalMessage } from "./tudiDisplay";
  */
 
 const REPORT_MAX = 500;
+
+type RegisterResult = Awaited<ReturnType<typeof tudiGodsApi.registerDeath>>["data"];
 
 interface Props {
   /** 从灵魂详情来:灵魂已定。 */
@@ -69,8 +73,27 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
     value: s.id,
     label: s.name,
   }));
+  // 只列能以其名义登记的土地公(名下官员,或持 judgment.assign):其余的选了也是 403 not_tudi_officer。
+  const { user } = useTenant();
+  const canAssign = usePermissions().hasPermission("judgment.assign");
+  const registrable = (gods.data ?? []).filter((g) => mayRegisterUnder(g, user?.id, canAssign));
   const chosen = tudi ?? gods.data?.find((g) => g.id === tudiId);
   const soulName = soul?.name ?? souls.data?.results.find((s) => s.id === soulId)?.name ?? "";
+
+  function settle(data: RegisterResult) {
+    if (data.status === "FAILED") {
+      // `death_sync.error.<码>` 是这张表的拒绝原因;认不出的码写通用句,不把码本身放上屏幕。
+      const key = `death_sync.error.${data.error_code}`;
+      const reason = data.error_code && t(key) !== key ? t(key) : t("common.error");
+      setRefusal(t("earthGods.register_failed", { reason }));
+      return;
+    }
+    void qc.invalidateQueries({ queryKey: soulKeys.all });
+    void qc.invalidateQueries({ queryKey: judgmentKeys.all });
+    void qc.invalidateQueries({ queryKey: tudiGodKeys.all });
+    showToast(t("earthGods.registered_toast", { name: soulName }), "success");
+    onClose();
+  }
 
   const register = useMutation({
     mutationFn: () =>
@@ -81,21 +104,13 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
         cause_of_death: report.trim(),
         idempotency_key: idempotencyKey,
       }),
-    onSuccess: ({ data }) => {
-      if (data.status === "FAILED") {
-        // `death_sync.error.<码>` 是这张表的拒绝原因;认不出的码写通用句,不把码本身放上屏幕。
-        const key = `death_sync.error.${data.error_code}`;
-        const reason = data.error_code && t(key) !== key ? t(key) : t("common.error");
-        setRefusal(t("earthGods.register_failed", { reason }));
-        return;
-      }
-      void qc.invalidateQueries({ queryKey: soulKeys.all });
-      void qc.invalidateQueries({ queryKey: judgmentKeys.all });
-      void qc.invalidateQueries({ queryKey: tudiGodKeys.all });
-      showToast(t("earthGods.registered_toast", { name: soulName }), "success");
-      onClose();
+    onSuccess: ({ data }) => settle(data),
+    onError: (err) => {
+      // 同一把幂等键再发一次(连点、超时后重试):后端 409 并答已有的那条登记 —— 那是同一次登记,按它的结果收尾。
+      const res = (err as { response?: { status?: number; data?: RegisterResult } })?.response;
+      if (res?.status === 409 && res.data?.id) return settle(res.data);
+      setRefusal(tudiRefusalMessage(err, t));
     },
-    onError: (err) => setRefusal(tudiRefusalMessage(err, t)),
   });
 
   const subtitle = chosen ? [chosen.name, chosen.city_god_name].filter(Boolean).join(" · ") : "";
@@ -134,7 +149,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
             required
             value={tudiId}
             onChange={(e) => setTudiId(e.target.value)}
-            options={[{ value: "", label: t("common.value.unrecorded") }, ...(gods.data ?? []).map((g) => ({ value: g.id, label: g.name }))]}
+            options={[{ value: "", label: t("common.value.unrecorded") }, ...registrable.map((g) => ({ value: g.id, label: g.name }))]}
           />
         )}
         {soul ? (

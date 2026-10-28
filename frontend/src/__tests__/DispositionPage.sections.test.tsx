@@ -6,7 +6,7 @@
  * 的行仍在「执行中」(条满、余 0 天),**不许**被前端挪进期满。期满段带 `soul_reborn=false`。
  * 此外:待执行有判决列(字形 ✓ ✕ ◇ ↺),行尾动作只在待执行与期满(规则 15),永恒画虚线框。
  */
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DispositionPage from "@/app/disposition/page";
 import { dispositionApi } from "@soulledger/core/api";
@@ -181,6 +181,25 @@ describe("处置页按服务端分三段", () => {
       expect(within(r).queryAllByRole("button").filter((b) => b.getAttribute("aria-haspopup") !== "menu")).toEqual([]);
       expect(within(r).queryByRole("link", { name: "disposition.arrange_reincarnation" })).toBeNull();
     }
+  });
+
+  it("执行成功:处置与灵魂两处缓存都失效(灵魂的状态与界域跟着变)", async () => {
+    (dispositionApi.execute as jest.Mock).mockResolvedValue({ data: {} });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = jest.spyOn(client, "invalidateQueries");
+    render(
+      <QueryClientProvider client={client}>
+        <DispositionPage />
+      </QueryClientProvider>
+    );
+    await screen.findByText("Soul p");
+    const [pending] = screen.getAllByTestId("disposition-pending-row");
+    fireEvent.click(within(pending).getByRole("button", { name: "disposition.execute" }));
+    fireEvent.click(await screen.findByRole("button", { name: "disposition.confirm_execute" }));
+    await waitFor(() => expect(dispositionApi.execute).toHaveBeenCalledWith("p"));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ["souls"] }));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["dispositions"] });
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: ["judgments"] });
   });
 
   it("期满与逾期是状态,不用警示色:字形 ◐ + 墨色(2026-10-03 用户定)", async () => {

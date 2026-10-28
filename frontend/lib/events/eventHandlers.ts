@@ -42,6 +42,7 @@
  */
 import { getLocale } from "@soulledger/core/platform";
 import {
+  dispositionKeys,
   notificationKeys,
   schedulerKeys,
   socialKeys,
@@ -188,6 +189,13 @@ export function handleSoulStateChanged(_payload: SoulEventPayload, ctx: EventCon
 export function handleSoulEvent(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   return { success: true, invalidatedKeys: ["souls"] };
+}
+
+/** 处置生成 / 期满:灵魂的时间线之外,处置列表(/disposition 的三段)也变了 —— 它在另一个键族下。 */
+export function handleDispositionEvent(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+  handleSoulEvent(payload, ctx);
+  ctx.queryClient.invalidateQueries({ queryKey: dispositionKeys.all });
+  return { success: true, invalidatedKeys: ["souls", "dispositions"] };
 }
 
 export function handleWorkflowEvent(payload: WorkflowEventPayload, ctx: EventContext): HandlerResult {

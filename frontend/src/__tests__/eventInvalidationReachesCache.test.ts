@@ -44,6 +44,7 @@ import {
   type EventPayload,
 } from "@/lib/events/event_registry";
 import {
+  dispositionKeys,
   judgmentKeys,
   notificationKeys,
   schedulerKeys,
@@ -81,6 +82,7 @@ const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
   { label: "soul list", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.list() },
   { label: "workflow detail", owner: "app/workflow/[id]/page.tsx", key: workflowKeys.detail("w1") },
   { label: "judgment detail", owner: "app/judgment/[id]/page.tsx", key: judgmentKeys.detail("j1") },
+  { label: "disposition section", owner: "app/disposition/page.tsx", key: dispositionKeys.list({ section: "pending" }) },
   { label: "notification list", owner: "app/notifications/page.tsx", key: notificationKeys.list() },
   { label: "unread badge", owner: "src/components/layout/AppLayout.tsx", key: notificationKeys.unreadCount },
   { label: "post feed", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.posts.feed() },
@@ -151,6 +153,16 @@ describe("a realtime push reaches the cache", () => {
     {
       name: "STATE_CHANGED refreshes the soul list and that soul's detail",
       payload: { domain: "soul", event: "STATE_CHANGED", soul_id: "s1" } as EventPayload,
+      reaches: ["soul detail", "soul list"],
+    },
+    {
+      name: "DISPOSITION_CREATED / _EXPIRED refresh the soul and the /disposition sections (another key family)",
+      payload: { domain: "soul", event: "DISPOSITION_EXPIRED", soul_id: "s1" } as EventPayload,
+      reaches: ["soul detail", "soul list", "disposition section"],
+    },
+    {
+      name: "a plain soul event does not touch the disposition sections",
+      payload: { domain: "soul", event: "RECORD_ADDED", soul_id: "s1" } as EventPayload,
       reaches: ["soul detail", "soul list"],
     },
     {

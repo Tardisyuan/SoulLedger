@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   captureWarrantsApi,
+  cityGodKeys,
   type CaptureEscort,
   type CaptureWarrant,
   type Soul,
@@ -65,6 +66,8 @@ function useCaptureFeedback(soulName: string) {
     done: (key: string) => () => {
       void queryClient.invalidateQueries({ queryKey: soulKeys.all });
       void queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
+      // 交接城隍开出的案子落在城隍初审的列表里(另一个键族)。
+      void queryClient.invalidateQueries({ queryKey: cityGodKeys.all });
       showToast(t(key, { name: soulName }), "success");
     },
   };
@@ -163,7 +166,7 @@ export function CapturePanel({ soul, canAct }: { soul: Soul; canAct: boolean }) 
     queryFn: async () => (await captureWarrantsApi.due()).data,
     enabled: mayIssue,
   });
-  const suggested = due.data?.find((d) => d.id === soul.id)?.suggested_escort ?? null;
+  const suggested = due.data?.results.find((d) => d.id === soul.id)?.suggested_escort ?? null;
   if (!latest && !mayIssue) return null;
 
   const status = open ? (
