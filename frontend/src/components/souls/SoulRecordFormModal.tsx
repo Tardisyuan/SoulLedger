@@ -117,6 +117,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
   const [clause, setClause] = useState("");
   const [evidenceSource, setEvidenceSource] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("");
+  const [sinGravity, setSinGravity] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [saved, setSaved] = useState<SoulRecordEntry | null>(null);
 
@@ -137,11 +138,14 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     setStatuteId(record?.statute_snapshot?.statute_id ?? "");
     setClause(record ? clauseText(record.statute_clause) : "");
     setEvidenceSource(record?.evidence_source ?? "");
+    setSinGravity(record?.sin_gravity ?? "");
     // 超度回向的来源就是事目;旧记录没写 evidence_note 时从事目取。
     setEvidenceNote(record?.evidence_note || (record?.category === "DEDICATION" ? record.description : ""));
   }, [isOpen, record]);
 
   const dedication = category === "DEDICATION";
+  // 欧洲的过分大罪 / 小罪(2026-10-28,docs/03 §二):结案时与裁决核对。别的文明、功、回向都不画、不发。
+  const hasGravity = civilization === "EUROPEAN" && recordType === "DEMERIT" && !dedication;
   const dedicationAllowed = !soulState || DEDICATION_STATES.includes(soulState);
 
   const own = (statutes.data ?? []).filter((s) => s.civilization === civilization);
@@ -202,6 +206,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
       life_stage: lifeStage,
       evidence_source: evidenceSource,
       evidence_note: evidenceNote.trim(),
+      ...(hasGravity ? { sin_gravity: sinGravity } : {}),
       ...(dateTouched || (!record && dateYear.trim())
         ? {
             event_date: dateYear.trim()
@@ -400,6 +405,21 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             options={clauseOptions}
           />
         </div>
+        {hasGravity && (
+          <div className="space-y-1">
+            <SelectField
+              label={t("souls.sin_gravity.label")}
+              value={sinGravity}
+              onChange={(e) => setSinGravity(e.target.value)}
+              disabled={pending}
+              options={(["", "MORTAL", "MORTAL_ABSOLVED", "VENIAL"] as const).map((v) => ({
+                value: v,
+                label: t(`souls.sin_gravity.${v || "NONE"}`),
+              }))}
+            />
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("souls.sin_gravity.help")}</p>
+          </div>
+        )}
         <TextField
           label={t("ledger.book.form.occurrence_count")}
           type="number"

@@ -18,6 +18,12 @@ export type SoulDuatPassage = "EARLY_DEATH" | "NAMELESS" | "IMPROPER_BURIAL" | "
 /** `Soul.Baptism`(只欧洲;未受洗 / 生于基督之前且没有更重的罪 → Limbo,review E-2)。 */
 export type SoulBaptism = "UNRECORDED" | "BAPTISED" | "UNBAPTISED" | "BEFORE_CHRIST";
 
+/** `Soul.FerryPassage`(只希腊,docs/01_希腊冥府整体架构.md §2.3);"" = 已葬且有渡资。有值时滞留阿刻戎岸边,原审不能认领。 */
+export type SoulFerryPassage = "UNBURIED" | "NO_FARE" | "";
+
+/** `SoulRecord.SinGravity`(只欧洲的过,docs/03 §二);"" = 未分。结案时与裁决核对。 */
+export type SoulSinGravity = "MORTAL" | "MORTAL_ABSOLVED" | "VENIAL" | "";
+
 export interface SoulInput {
   name: string;
   // Derived, not re-listed. This union was written out by hand when
@@ -40,6 +46,10 @@ export interface SoulInput {
   /** 只欧洲:受洗(Limbo)与否认灵魂不灭(第六圈);null = 未记录。 */
   baptism?: SoulBaptism;
   denied_immortality?: boolean | null;
+  /** 只欧洲:中立者(Inf. III,判有罪且没有引用更深的圈时入地狱前庭);null = 未记录。 */
+  neutral_in_life?: boolean | null;
+  /** 只希腊:未葬 / 无渡资。 */
+  ferry_passage?: SoulFerryPassage;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
@@ -167,6 +177,10 @@ export interface Soul extends SoulBase, ArchiveFields {
   /** 欧洲(review E-2):受洗决定 Limbo;否认灵魂不灭决定第六圈。别的文明恒为 UNRECORDED / null。 */
   baptism?: SoulBaptism;
   denied_immortality?: boolean | null;
+  /** 只欧洲:中立者(Inf. III,判有罪且没有引用更深的圈时入地狱前庭);null = 未记录。 */
+  neutral_in_life?: boolean | null;
+  /** 只希腊:未葬 / 无渡资。 */
+  ferry_passage?: SoulFerryPassage;
 }
 
 /**
@@ -199,6 +213,8 @@ export interface SoulRecordEntry {
   life_stage?: string;
   evidence_source?: string;
   evidence_note?: string;
+  /** 只欧洲的过:大罪 / 小罪;"" = 未分。 */
+  sin_gravity?: SoulSinGravity;
 }
 
 // Backward-compatible alias. NOTE: this is an alias for the *soul*, not for a

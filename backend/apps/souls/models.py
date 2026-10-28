@@ -211,6 +211,15 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         IMPROPER_BURIAL = "IMPROPER_BURIAL", "葬仪不当"
 
     duat_passage = models.CharField(max_length=20, choices=DuatPassage.choices, blank=True, default="")
+    #: 希腊(2026-10-28):卡戎只渡已葬者(Aen. 6.298-330;Il. 23.71-74 帕特洛克罗斯的魂未葬不得过河),也收一枚
+    #: 奥波尔(Lucian, De luctu 10)—— docs/01_希腊冥府整体架构.md §2.3。空 = 已葬且有渡资:照常过河受审。
+    #: 有值时灵魂滞留阿刻戎岸边(死亡登记时它已在 GR_ACHERON),案子不能认领、不能结案
+    #: (`claims._assert_not_held`,409 `unferried`)。只有希腊读它。
+    class FerryPassage(models.TextChoices):
+        UNBURIED = "UNBURIED", "未葬"
+        NO_FARE = "NO_FARE", "无渡资"
+
+    ferry_passage = models.CharField(max_length=10, choices=FerryPassage.choices, blank=True, default="")
     birth_name = models.CharField(max_length=255, blank=True)  # name at birth
     description = models.TextField(blank=True)
 
@@ -269,6 +278,18 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             "body (Inf. X.13-15) — the specific claim Dante's sixth circle "
             "punishes. NOT a general heresy flag, and not blasphemy, which is "
             "Inf. XIV. Null means unrecorded."
+        ),
+    )
+
+    #: The vestibule of hell (Inf. III, docs/03_七宗罪与地狱惩罚.md §三): the ignavi, who lived "without infamy
+    #: and without praise" — neither for God nor against him. Like the two facts above, a fact about a person and
+    #: not a deed: there is nothing they did to cite. A FAILED European soul with it set and no cited circle goes
+    #: to EU_ANTINFERNO rather than onto the culpa ladder (`DispositionService._route_european`). Null = unrecorded.
+    neutral_in_life = models.BooleanField(
+        null=True, blank=True, default=None,
+        help_text=(
+            "Whether this soul lived neither for God nor against him — Dante's neutrals (Inf. III), who are "
+            "outside the nine circles. European only. Null means unrecorded."
         ),
     )
 

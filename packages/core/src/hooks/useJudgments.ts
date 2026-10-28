@@ -2,7 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi } from "../api/index";
-import type { EvidenceRulingPayload, JudgmentDetail, JudgmentDraftPayload, JudgmentVerdict } from "../api/judgment";
+import type {
+  EvidenceRulingPayload,
+  JudgmentDetail,
+  JudgmentDraftPayload,
+  JudgmentVerdict,
+  NegativeConfessionWrite,
+} from "../api/judgment";
 import type { JudgmentBatchPayload, JudgmentQueueCountsParams } from "../api/index";
 import { notify } from "../platform/index";
 import { judgmentKeys } from "../query_keys";
@@ -201,6 +207,27 @@ export function useRuleEvidence(id: string) {
       judgmentApi.ruleEvidence(id, recordId, data).then((res) => res.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: judgmentKeys.detail(id) });
+    },
+  });
+}
+
+/** 42 条否定告白(埃及称心):列表与合计。不称心的案子返回 `applies=false`。 */
+export function useNegativeConfessions(id: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: judgmentKeys.negativeConfessions(id),
+    queryFn: () => judgmentApi.negativeConfessions(id),
+    enabled: !!id && (options?.enabled ?? true),
+  });
+}
+
+/** 记一条告白;成功后用响应(整张表)替换缓存。拒绝的 `code` 由调用方译。 */
+export function useRecordNegativeConfession(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ordinal, data }: { ordinal: number; data: NegativeConfessionWrite }) =>
+      judgmentApi.recordNegativeConfession(id, ordinal, data),
+    onSuccess: (list) => {
+      qc.setQueryData(judgmentKeys.negativeConfessions(id), list);
     },
   });
 }

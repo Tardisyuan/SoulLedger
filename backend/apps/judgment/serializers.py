@@ -733,6 +733,8 @@ class JudgmentClaimRefusalSerializer(serializers.Serializer):
     claimed_by_name = serializers.CharField(required=False)
     id = serializers.UUIDField(required=False)
     missing = serializers.ListField(child=serializers.UUIDField(), required=False)
+    # `unferried`(希腊,未葬 / 无渡资滞留阿刻戎岸边):是哪一种,`Soul.FerryPassage`。
+    ferry_passage = serializers.CharField(required=False)
 
 
 class JudgmentCourtSerializer(serializers.Serializer):

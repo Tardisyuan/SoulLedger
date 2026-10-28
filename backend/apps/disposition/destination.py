@@ -14,7 +14,7 @@ from functools import cache
 
 from django.db.models import Count, Q
 
-from apps.judgment.models import JudgmentMethod
+from apps.judgment.models import JudgmentMethod, Verdict
 from apps.realms.models import Realm, SoulPathEntry
 from apps.souls.models import Civilization
 
@@ -68,6 +68,11 @@ def allowed_realm_codes(civilization, verdict, judgment_method=JudgmentMethod.ST
     if civilization == Civilization.EUROPEAN:
         # 受洗与否是欧洲路由的另一个输入(Limbo,2026-10-27 E-2):两种都扫一遍。
         codes |= {D._route_european(None, verdict, s, unbaptised=True) for s in _SEVERITY_SWEEP}
+        # 前庭与七层山也读灵魂(中立者、所犯罪种,2026-10-28),soul=None 的扫描走不到,这里补上它们能到的门。
+        if verdict == Verdict.FAILED:
+            codes |= {D.EU_ANTINFERNO}
+        elif verdict == Verdict.PURGATORY:
+            codes |= set(D.EU_PURGATORY_TERRACES.values())
     return codes - {""}
 
 

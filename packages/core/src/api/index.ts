@@ -60,6 +60,8 @@ export {
   type SoulOriginRegion,
   type SoulDuatPassage,
   type SoulBaptism,
+  type SoulFerryPassage,
+  type SoulSinGravity,
   type Soul,
   type SoulListItem,
   type SoulRecord,

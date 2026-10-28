@@ -33,6 +33,13 @@ TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 SITES = [
     ('apps/authentication/views.py', 'UserViewSet.import_csv', 'User.all_objects', 1, 'GLOBAL', 'existence probe of a username, which is unique across the whole table; nothing is read back'),
     ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'global admin with no hall names one hall by its globally unique code for the invite (ADMIN only)'),
+    ('apps/judgment/confessions.py', 'clauses', 'Statute.all_objects', 1, 'FILTERED', "the 42 articles of the case's own hall: filtered by judgment.tenant_id"),
+    ('apps/judgment/confessions.py', 'heard', 'NegativeConfession.all_objects', 1, 'PK', 'the rows of one case, by its FK'),
+    ('apps/judgment/confessions.py', 'tally', 'Statute.all_objects', 1, 'FILTERED', "counts the articles of the case's own hall: filtered by judgment.tenant_id"),
+    ('apps/judgment/confessions.py', 'tally', 'NegativeConfession.all_objects', 1, 'PK', 'the rows of one case, by its FK'),
+    ('apps/judgment/confessions.py', 'record', 'Judgment.all_objects', 1, 'LOCK', 'locks the one judgment the caller reached through the scoped viewset'),
+    ('apps/judgment/confessions.py', 'record', 'Statute.all_objects', 1, 'FILTERED', "one article of the locked case's own hall: filtered by its tenant_id"),
+    ('apps/judgment/confessions.py', 'record', 'NegativeConfession.all_objects', 1, 'PK', 'the row of the locked case for that article, by the two FKs'),
     ('apps/judgment/handover.py', '_target_takes_appeal', 'Judgment.all_objects', 1, 'PK', 'the judgment of an appeal already filtered to the handover hall, by its FK'),
     ('apps/judgment/handover.py', 'commit', 'JudgmentAppeal.all_objects', 1, 'LOCK', 'locks the appeals whose pks come from a query filtered by the handover hall'),
     ('apps/judgment/handover.py', '_log_per_soul', 'Judgment.all_objects', 1, 'PK', 'the soul ids of judgments this handover just moved; their pks came from a query filtered by the handover hall'),

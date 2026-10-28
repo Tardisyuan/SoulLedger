@@ -43,6 +43,8 @@ export function claimRefusalMessage(err: unknown, t: T): string {
   // 埃及入殿前(review P2-9):木乃伊 70 天未满,或灵魂到不了两真之殿。
   if (code === "embalming" && e.response?.data?.held_until) return t("judgment.claim.embalming", { date: e.response.data.held_until });
   if (code === "duat_unfinished") return t("judgment.claim.duat_unfinished");
+  // 希腊(2026-10-28):未葬或无渡资,滞留阿刻戎岸边。
+  if (code === "unferried") return t("judgment.claim.unferried");
   // 城隍初审中(第五十三批):解送之前十殿不能认领、改派、暂缓、结案。
   if (code === "at_city_god") return t("judgment.error.at_city_god");
   if (code &&(REFUSAL_CODES as readonly string[]).includes(code)) return t(`judgment.claim.refused.${code}`);

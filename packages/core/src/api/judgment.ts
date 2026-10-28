@@ -176,6 +176,12 @@ export type EvidenceAdmission = Schemas["EvidenceAdmission"];
  */
 export type AdmittedBalance = Schemas["AdmittedBalance"];
 export type EvidenceRulingResult = Schemas["EvidenceRulingResult"];
+/** 42 条否定告白(埃及称心,2026-10-28;backend/apps/judgment/confession_views.py)。 */
+export type NegativeConfessionList = Schemas["NegativeConfessionList"];
+export type NegativeConfessionRow = Schemas["NegativeConfessionRow"];
+export type NegativeConfessionWrite = Schemas["NegativeConfessionWrite"];
+/** 记一条被拒时有文案的 `code`(`judgment.confessions.errors.<code>`)。 */
+export const CONFESSION_ERROR_CODES = ["concluded", "not_weighed", "unknown_clause"] as const;
 export type JudgmentDraft = Schemas["JudgmentDraft"];
 /** 409 body of `saveDraft`: `draft_conflict` carries what beat you in `current`. */
 export type JudgmentDraftConflict = Schemas["JudgmentDraftConflict"];
@@ -274,6 +280,8 @@ export interface JudgmentClaimRefusal {
   missing?: string[];
   /** On `held_until_fated_date` (枉死城) or `embalming` (埃及木乃伊 70 天): the ISO date the case can first be claimed. */
   held_until?: string;
+  /** On `unferried` (希腊,滞留阿刻戎岸边):`Soul.FerryPassage`,UNBURIED / NO_FARE。 */
+  ferry_passage?: string;
   /** 申诉改判(`foreign_stops_choice_required`):联审带进来、还没开始的外地站的站序。 */
   foreign_orders?: number[];
 }
@@ -615,6 +623,12 @@ export const judgmentApi = {
   /** Admit / not admit one ledger record as evidence. 409 once concluded. */
   ruleEvidence: (id: string, recordId: string, data: EvidenceRulingPayload) =>
     api.put<EvidenceRulingResult>(`/judgment/${id}/evidence/${recordId}/`, data),
+  /** 42 条否定告白:按判官次序 42 行 + 合计;不称心的案子 `applies=false`、空列表。 */
+  negativeConfessions: (id: string) =>
+    api.get<NegativeConfessionList>(`/judgment/${id}/negative-confessions/`).then((r) => r.data),
+  /** 记一条(judgment.execute):truthful true 如实 / false 不实 / null 未记。409 结案后,400 不称心,404 无此判官。 */
+  recordNegativeConfession: (id: string, ordinal: number, data: NegativeConfessionWrite) =>
+    api.put<NegativeConfessionList>(`/judgment/${id}/negative-confessions/${ordinal}/`, data).then((r) => r.data),
   /** Autosave the verdict text and chosen verdict. Idempotent; 409 on a stale version. */
   saveDraft: (id: string, data: JudgmentDraftPayload) =>
     api.patch<JudgmentDraft>(`/judgment/${id}/draft/`, data),
@@ -773,6 +787,9 @@ export const APPEAL_ERROR_CODES = [
   "ladder_running",
   // 欧洲申诉改判成「重审」:不是去处(apps/sentence_plan/requests.py)。
   "retry_not_a_destination",
+  // 欧洲 大罪 / 小罪(2026-10-28):改判与已采信的罪不符。
+  "mortal_sin_unrepented",
+  "no_mortal_sin",
 ] as const;
 
 // ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────
