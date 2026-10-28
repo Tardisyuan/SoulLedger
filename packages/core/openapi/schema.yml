@@ -30606,10 +30606,13 @@ components:
           type: array
           items:
             type: string
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
       required:
       - can_appeal
       - can_escalate
       - case_number
+      - civilization
       - concluded_at
       - deadline
       - escalation_stations

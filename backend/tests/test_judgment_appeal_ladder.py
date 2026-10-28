@@ -49,6 +49,8 @@ def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
     assert row["can_escalate"] is True
     # The confirmation page lists the stations the flow will have, before it is built.
     assert row["escalation_stations"] == ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
+    # U-2 names the flow by the judgment's own civilization — the one whose flow is built.
+    assert row["civilization"] == "CHINESE"
 
     response = _escalate(case)
     assert response.status_code == 201, response.data

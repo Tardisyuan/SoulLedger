@@ -15,6 +15,7 @@ from apps.judgment import appeals
 from apps.judgment.models import AppealStatus, Judgment, JudgmentAppeal, JudgmentKind, Verdict
 from apps.judgment.serializers import JudgmentClaimRefusalSerializer
 from apps.soul_accounts.me_views import SoulAPIView
+from apps.souls.models import Civilization
 from apps.soul_accounts.serializers import SoulErrorSerializer
 
 # ── 序列化 ──────────────────────────────────────────────────────────────
@@ -134,6 +135,8 @@ class MeAppealableJudgmentSerializer(serializers.Serializer):
     can_escalate = serializers.BooleanField()
     #: 上诉时要过的各站名(按顺序,上诉确认页列出);不能上诉时为空。
     escalation_stations = serializers.ListField(child=serializers.CharField())
+    #: 审判本身的文明(上诉建的就是这个文明的申诉流程,`appeals.escalation_stations`);U-2「申诉流程 · 文明名」用它。
+    civilization = serializers.ChoiceField(choices=Civilization.choices)
 
 
 class MeJudgmentAppealListSerializer(serializers.Serializer):
@@ -241,6 +244,7 @@ class MeJudgmentAppealsView(SoulAPIView):
                 "can_appeal": refusal is None, "refusal_code": refusal.code if refusal else None,
                 "can_escalate": can_escalate,
                 "escalation_stations": appeals.escalation_stations(judgment) if can_escalate else [],
+                "civilization": judgment.civilization,
             })
         mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related(
             "judgment", "workflow").prefetch_related("workflow__nodes")

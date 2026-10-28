@@ -9,7 +9,6 @@ import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
-import { SessionContext } from "../session";
 import { installMobilePlatform } from "../platform";
 import { AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { stubApi } from "./stubApi";
@@ -53,6 +52,7 @@ const row = (over: Record<string, unknown> = {}): MeAppealableJudgment => ({
   refusal_code: null,
   can_escalate: false,
   escalation_stations: [],
+  civilization: "EUROPEAN",
   ...over,
 }) as MeAppealableJudgment;
 const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
@@ -123,7 +123,7 @@ it("after an upheld review, 「上诉 ›」 opens the same form for the appeal 
   const stations = ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"];
   const first = wrap(<AppealLine row={row({ rounds_used: 1, can_escalate: true, escalation_stations: stations })} rounds={[]} onChanged={() => {}} />);
   fireEvent.press(screen.getByTestId(`appeal-escalate-${J}`));
-  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, escalate: true, stations }));
+  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, escalate: true, stations, civilization: "EUROPEAN" }));
   first.unmount();
   wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
   expect(screen.queryByTestId(`appeal-escalate-${J}`)).toBeNull();
@@ -137,14 +137,9 @@ it("U-1: the escalation takes the 「申诉 ›」 line's place — the hint on 
 });
 
 it("U-2: the escalation form lists the stations under 申诉流程 · 文明名, the last one as 终审, and sends without a reason", async () => {
-  mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "梵蒂冈"] };
+  mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "梵蒂冈"], civilization: "EUROPEAN" };
   const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
-  const session = { state: { status: "signedIn", profile: { home_civilization: "EUROPEAN" } } } as never;
-  wrap(
-    <SessionContext.Provider value={session}>
-      <JudgmentAppealScreen />
-    </SessionContext.Provider>
-  );
+  wrap(<JudgmentAppealScreen />);
   expect(screen.getByTestId("appeal-stations").props.children).toBe("主教区 → 总主教区 → 终审 · 梵蒂冈");
   expect(screen.getByText("申诉流程 · 欧洲")).toBeTruthy();
   expect(screen.getByText("补充理由 · 选填")).toBeTruthy();

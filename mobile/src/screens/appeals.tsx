@@ -35,13 +35,12 @@ import {
 } from "@soulledger/core/api/soul";
 import { appealsLeftAfterWithdraw, finalStationName } from "@soulledger/core/domain/appeals";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
-import { SessionContext } from "../session";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useDiscardGuard } from "./discardGuard";
@@ -306,6 +305,7 @@ export function AppealLine({
                   deadline: row.deadline,
                   escalate: true,
                   stations: row.escalation_stations,
+                  civilization: row.civilization,
                 })
               }
             />
@@ -374,6 +374,8 @@ export type JudgmentAppealParams = {
   escalate?: boolean;
   /** 上诉时要过的各站名(`escalation_stations`),确认页列出。 */
   stations?: string[];
+  /** 审判本身的文明(上诉建的就是它的申诉流程):「申诉流程 · 文明名」。 */
+  civilization?: string;
 };
 
 /** A-2: the form, a whole page — a 2000-character reason does not fit a sheet with the keyboard up. */
@@ -383,9 +385,6 @@ export function JudgmentAppealScreen() {
   const { gutter } = useLayout();
   const verdict = useVerdict();
   const theme = useTheme();
-  // 「申诉流程 · 文明名」:这一世的审判在本籍文明审(同申请,见 applications.tsx `useResidence`)。
-  const session = useContext(SessionContext);
-  const civilization = session?.state.status === "signedIn" ? session.state.profile.home_civilization : null;
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const params = useRoute<RouteProp<{ JudgmentAppeal: JudgmentAppealParams }, "JudgmentAppeal">>().params;
   const [reason, setReason] = useState("");
@@ -425,7 +424,7 @@ export function JudgmentAppealScreen() {
         <DataRows>
           <DataRow label={t("appeals.original_verdict")}>{`${params.caseNumber} · ${verdict(params.verdict)}`}</DataRow>
           {params.escalate && params.stations?.length ? (
-            <DataRow label={t("appeals.ladder", { name: enumText(enumLabel("souls.civilizations", civilization), t) })}>
+            <DataRow label={t("appeals.ladder", { name: enumText(enumLabel("souls.civilizations", params.civilization), t) })}>
               <Txt testID="appeal-stations" variant="body">
                 {/* 55b:最后一站是终审,写成「终审 · 站名」(55c:站名去掉末尾的「 · 终审」)。 */}
                 {params.stations
