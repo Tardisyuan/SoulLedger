@@ -439,7 +439,7 @@ EUROPEAN_REALMS = [
     # is a punishment (stung by wasps and hornets, worms at their feet) and it
     # does not end; `tier` 0 because it is above the first circle and is none.
     # name_egy is blank: Design has given no egy word yet (egyPendingKeys.json).
-    ("EU_ANTINFERNO", "地狱前庭", "地狱前庭", "The Vestibule of Hell", "",
+    ("EU_ANTINFERNO", "地狱前庭", "地狱前庭", "The Vestibule of Hell", "Duat · Antinferno",
      RealmType.HELL, 0,
      "The vestibule inside the gate of hell, before Acheron (Inferno III): the "
      "neutrals who lived without infamy and without praise, chasing a banner, "
