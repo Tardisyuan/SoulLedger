@@ -821,7 +821,8 @@
         "warrant_open": "Ba Pen: Medu Ini Ba Em Iri.",
         "wrong_status": "Medu Ini Ba: Nen Iri Emu. Wehem Ini, Er Khet Wehem Iri.",
         "reason_required": "Sesh Khet Em Tepy"
-      }
+      },
+      "unavailable": "Medu Ini Ba: Nen Ini Emu"
     },
     "timeline": {
       "earthly_paradise": "Shem Em Pet Em Ta · Swri Mu Lethe Hena Mu Eunoe"

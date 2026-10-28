@@ -52,12 +52,13 @@ describe("each locale gets its own month name", () => {
     expect(formatHistoricalDate({ year: -44, month: 3, day: 15 }, "zh-Hans")).toBe("44 BCE · 3月15日");
   });
 
-  it("egy reuses the English names, the way BCP47_FOR_LOCALE and INTL_LOCALE do", () => {
-    // `messages/egy.json` carries no month names — it is an English base with
-    // the Egyptian terminology substituted in. Asserted rather than assumed so
-    // that a real civil-calendar month list arriving one day is a deliberate
-    // edit here, not a silent divergence.
-    expect(formatHistoricalDate(CRUCIFIXION, "egy")).toBe(formatHistoricalDate(CRUCIFIXION, "en"));
+  it("egy writes Abed + number, no era word for CE and Tepy Er Kristos for BCE (Design batch 60)", () => {
+    expect(formatHistoricalDate(CRUCIFIXION, "egy")).toBe("1066 · Abed 3 Hru 15");
+    expect(formatHistoricalDate({ year: -44, month: 3, day: 15 }, "egy")).toBe("44 Tepy Er Kristos · Abed 3 Hru 15");
+    expect(formatHistoricalDate({ year: 2026, month: 10, day: 28 }, "egy")).toBe("2026 · Abed 10 Hru 28");
+    expect(formatHistoricalDate({ year: 1066, month: 3, day: null }, "egy")).toBe("1066 · Abed 3");
+    // and no English left in it
+    expect(formatHistoricalDate(CRUCIFIXION, "egy")).not.toMatch(/CE|March/);
   });
 
   it("has a month name for every supported locale and every month", () => {
