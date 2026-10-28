@@ -26,9 +26,10 @@ const REFUSALS = ["not_found", "not_pending", "not_in_wangsi", "grievance_open"]
 
 export type WangsiGrievanceParams = { judgment: string; caseNumber: string; heldUntil: string | null };
 
-/** 卡片底部那一行的状态句。 */
+/** 卡片底部那一行的状态句。没有申诉时按后端的 `refusal_code`:案子已不在审(结案 / 归档)不说「押在枉死城」。 */
 export function wangsiStatusKey(row: MeWangsiCase): string {
   if (row.grievance_status) return `soul_app.wangsi.status.${row.grievance_status}`;
+  if (row.refusal_code === "not_pending") return "soul_app.wangsi.errors.not_pending";
   return row.held ? "soul_app.wangsi.held" : "soul_app.wangsi.released";
 }
 

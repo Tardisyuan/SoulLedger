@@ -76,6 +76,15 @@ it("a filed grievance shows its step and no second button; a decided one shows t
   expect(screen.getByText("确属冤死")).toBeTruthy();
 });
 
+it("no grievance: the line follows the server's refusal_code — a case no longer pending does not say 「押在枉死城」", () => {
+  const first = wrap(<WangsiLine row={row({ held: true, can_file: false, refusal_code: "not_pending" })} />);
+  expect(screen.getByTestId(`wangsi-status-${J}`).props.children).toBe("这件案子已经不在审了");
+  expect(screen.queryByTestId(`wangsi-file-${J}`)).toBeNull();
+  first.unmount();
+  wrap(<WangsiLine row={row({ held: false, can_file: false, refusal_code: "not_in_wangsi" })} />);
+  expect(screen.getByTestId(`wangsi-status-${J}`).props.children).toBe("已出枉死城");
+});
+
 it("no row, no line", () => {
   wrap(<WangsiLine row={undefined} />);
   expect(screen.queryByTestId(`wangsi-line-${J}`)).toBeNull();

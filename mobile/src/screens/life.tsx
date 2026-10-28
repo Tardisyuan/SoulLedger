@@ -1,4 +1,4 @@
-import { soulApi, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
+import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
@@ -785,12 +785,19 @@ export function MyLifeScreen() {
   const life = useRemote(soulApi.life);
   // 第五十二批:申诉行。失败就不画(审判卡片照旧),下次回到这页再取。
   const appeals = useRemote(soulApi.judgmentAppeals);
-  // 枉死城申诉行:同上,失败就不画。
-  const wangsi = useRemote(soulApi.wangsi);
+  // 枉死城申诉行:同上,失败就不画。枉死城只在地府:别的文明不请求 /me/wangsi/。
+  const diyu = state.status === "signedIn" && state.profile.civilization === "CHINESE";
+  const fetchWangsi = useCallback(() => (diyu ? soulApi.wangsi() : Promise.resolve<MeWangsiCase[]>([])), [diyu]);
+  const wangsi = useRemote(fetchWangsi);
   const residence = useResidence();
+  const toast = useToast();
   useReloadOnRefocus(life.reload);
   useReloadOnRefocus(appeals.reload);
   useReloadOnRefocus(wangsi.reload);
+  // 页头(阳寿、状态、所在)读的是会话里的档案:别的页改了它(审判结案、转世),回到这页也要重取。
+  // 回到前台的重取失败不吵(下次再取);下拉刷新失败要说(见 `refresh`)。
+  const reloadProfile = useCallback(() => refreshProfile().catch(() => {}), [refreshProfile]);
+  useReloadOnRefocus(reloadProfile);
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   const scroll = useScrollToLanding(landing);
@@ -821,7 +828,10 @@ export function MyLifeScreen() {
     void appeals.reload();
     void wangsi.reload();
     setRefreshes((n) => n + 1);
-    refreshProfile().catch(() => {});
+    refreshProfile().catch((e: unknown) => {
+      const m = soulErrorMessage(e);
+      toast(t(m.key, m.params), "failure");
+    });
   };
 
   return (
