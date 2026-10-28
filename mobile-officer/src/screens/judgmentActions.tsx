@@ -8,7 +8,7 @@
  * 有人请求改派时主按钮就是「改派给…」;没有就只有 ⋯。改派的选人底页与转信同一个(`PeoplePickerSheet`)。
  */
 import { judgmentApi, type AssignableOfficer, type Judgment } from "@soulledger/core/api/judgment";
-import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 
@@ -58,7 +58,7 @@ export function JudgmentActionBar({
   /** 「在电脑上继续」。 */
   onDesk: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const theme = useTheme();
   const toast = useToast();
   const { offline } = useOnline();
@@ -169,7 +169,7 @@ export function JudgmentActionBar({
           ) : state === "unclaimed" && canExecute && isHeldUntilFatedDate(data) ? (
             // 枉死城(第五十一批):候至阳寿那天,不放一个点了必然被拒的「认领」。
             <Txt variant="caption" tone="muted" testID="judgment-claim-held" style={{ flex: 1 }}>
-              {`${t("judgment.held_until", { date: data.held_until as string })} · ${t("judgment.claim.held_short")}`}
+              {`${t("judgment.held_until", { date: formatIsoDay(data.held_until, locale) })} · ${t("judgment.claim.held_short")}`}
             </Txt>
           ) : state === "unclaimed" && canExecute ? (
             <ActionButton testID="judgment-claim" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.queue.claim")} onPress={claim} style={{ flex: 1 }} />

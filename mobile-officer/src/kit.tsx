@@ -289,15 +289,18 @@ export function Segmented<K extends string>({
   value,
   onChange,
   testID,
+  disabled = false,
 }: {
   options: readonly { key: K; label: string }[];
   value: K;
   onChange: (key: K) => void;
   testID?: string;
+  /** 正在保存 / 没网:每一段都不可按,读屏也念「不可用」(不只是按了没反应)。 */
+  disabled?: boolean;
 }) {
   const t = useTheme();
   return (
-    <View testID={testID} accessibilityRole="tablist" style={[styles.segmented, { borderColor: t.inkSubtle }]}>
+    <View testID={testID} accessibilityRole="tablist" style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
       {options.map(({ key, label }) => {
         const on = key === value;
         return (
@@ -305,7 +308,8 @@ export function Segmented<K extends string>({
             key={key}
             testID={testID ? `${testID}-${key}` : undefined}
             accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
+            accessibilityState={{ selected: on, disabled }}
+            disabled={disabled}
             onPress={() => onChange(key)}
             style={[styles.segment, { backgroundColor: on ? t.ink : "transparent" }]}
           >

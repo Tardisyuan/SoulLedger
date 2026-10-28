@@ -4,7 +4,7 @@
  * says so: 「◇ 待宣判 · 请在官员台」.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
-import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
@@ -36,7 +36,7 @@ export function QueueTab({
   initialGroup?: Group;
   onGroup?: (group: Group) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const toast = useToast();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -117,10 +117,10 @@ export function QueueTab({
               // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
               ...(row.stale_since ? [{ one: `◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}` }] : []),
               ...(row.untimely
-                ? [{ one: [`▢ ${t("judgment.untimely")}`, ...(held ? [t("judgment.held_until", { date: row.held_until as string })] : [])].join(" · ") }]
+                ? [{ one: [`▢ ${t("judgment.untimely")}`, ...(held ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [])].join(" · ") }]
                 : []),
               ...(row.duat_stage
-                ? [{ one: [`▢ ${t(`judgment.duat_stage.${row.duat_stage}`)}`, ...(held ? [t("judgment.held_until", { date: row.held_until as string })] : [])].join(" · ") }]
+                ? [{ one: [`▢ ${t(`judgment.duat_stage.${row.duat_stage}`)}`, ...(held ? [t("judgment.held_until", { date: formatIsoDay(row.held_until, locale) })] : [])].join(" · ") }]
                 : []),
             ].filter(Boolean)}
             onPress={() => onOpen(row.id)}

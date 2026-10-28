@@ -13,7 +13,7 @@ import { View } from "react-native";
 
 import { ActionButton } from "../kit";
 import { useCan } from "../session";
-import { Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 
 /** 正在服的那一份:已执行、未期满、不是永久、有期满日。 */
 export function servingOf(rows: readonly Disposition[]): Disposition | null {
@@ -35,6 +35,8 @@ function Serving({ soulId }: { soulId: string }) {
   const theme = useTheme();
   const toast = useToast();
   const canRelease = useCan("disposition.execute");
+  // 没网时不释放(同审判台的认领 / 改派):按钮置灰,原因写在下面。
+  const { offline } = useOnline();
   const load = useCallback(
     () => Promise.resolve().then(() => dispositionApi.list({ soul: soulId, section: "executing" })).then((r) => servingOf(r.data.results)),
     [soulId]
@@ -57,7 +59,8 @@ function Serving({ soulId }: { soulId: string }) {
       })
       .catch((e: unknown) => {
         const code = releaseRefusalOf(e);
-        toast(t(code ? `disposition.release_error.${code}` : "disposition.execute_error"), "failure");
+        // 认不出的失败说「释放失败」,不说「执行处置失败」(那是另一个动作)。
+        toast(t(`disposition.release_error.${code ?? "generic"}`), "failure");
         setConfirming(false);
         void reload();
       })
@@ -71,7 +74,18 @@ function Serving({ soulId }: { soulId: string }) {
       </Txt>
       {years != null ? <Txt variant="caption" tone="muted" testID="soul-serving-default">{t("officer_app.soul.term_default", { n: String(years) })}</Txt> : null}
       {due && canRelease && !d.is_archived ? (
-        <ActionButton testID="soul-release" kind="primary" title={t("disposition.release")} onPress={() => setConfirming(true)} style={{ marginTop: space[2], minHeight: 48 }} />
+        <>
+          <ActionButton
+            testID="soul-release"
+            kind="primary"
+            disabled={offline}
+            accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined}
+            title={t("disposition.release")}
+            onPress={() => setConfirming(true)}
+            style={{ marginTop: space[2], minHeight: 48 }}
+          />
+          {offline ? <Txt variant="caption" tone="muted" testID="soul-release-offline">{t("officer_app.offline.no_decide")}</Txt> : null}
+        </>
       ) : null}
       <Sheet open={confirming} onClose={() => setConfirming(false)} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
         <View testID="soul-release-sheet" style={{ padding: space[5], gap: space[4] }}>
