@@ -45,14 +45,15 @@ export function useBioWord(): { start: string; inside: string } {
 export const confirmWished = () => platform().persistent.get(CONFIRM_KEY) !== "0";
 export const setConfirmWished = (on: boolean) => (on ? platform().persistent.remove(CONFIRM_KEY) : platform().persistent.set(CONFIRM_KEY, "0"));
 
-/** The reason the system shows with its check. A system string, not in the language bundles (as the soul app's). */
-const PROMPT = "批准或驳回前，确认是你本人。";
-
-/** True when the decision may go ahead: the switch is off, the phone cannot check, or the system check passed. */
-export async function decisionAllowed(): Promise<boolean> {
+/**
+ * True when the decision may go ahead: the switch is off, the phone cannot check, or the system check passed.
+ * `promptMessage` is the reason the system shows with its check, in the app's language
+ * (`officer_app.biometric.prompt`) — it was a fixed Chinese string, shown to an English-language officer too.
+ */
+export async function decisionAllowed(promptMessage: string): Promise<boolean> {
   if (!confirmWished() || !(await canCheck())) return true;
   try {
-    return (await LocalAuthentication.authenticateAsync({ promptMessage: PROMPT })).success;
+    return (await LocalAuthentication.authenticateAsync({ promptMessage })).success;
   } catch {
     return false;
   }

@@ -188,7 +188,8 @@ describe("the other tabs have the same four states", () => {
     renderOfficer(<QueueTab onOpen={() => {}} />);
     fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
     const held = await screen.findByTestId("queue-row-j7");
-    expect(within(held).getByText("▢ 枉死 · 候至 2999-11-03")).toBeTruthy();
+    expect(within(held).getByText("▢ 枉死 · 候至 2999年 · 11月3日")).toBeTruthy();
+    expect(within(held).queryByText(/2999-11-03/)).toBeNull();
     expect(screen.getByTestId("queue-held-j7")).toHaveTextContent("到期后可认领");
     expect(screen.queryByTestId("queue-claim-j7")).toBeNull();
     const past = screen.getByTestId("queue-row-j8");

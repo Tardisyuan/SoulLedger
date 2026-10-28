@@ -10,6 +10,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { CONFIRM_KEY } from "../deviceCheck";
 import { MeTab } from "../screens/me";
 import { CosignSheet, DecisionSheet } from "../screens/sheets";
+import { translate } from "../shared";
 import { renderOfficer } from "./harness";
 
 const mockSubmit = jest.fn();
@@ -53,6 +54,9 @@ describe.each(["approval", "rebirth", "reassignment"])("%s", (kind) => {
     fireEvent.press(screen.getByTestId("decision-confirm"));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(authenticate).toHaveBeenCalledTimes(1);
+    // 系统弹框的理由走语言包(这里是中文那份),不是写死在代码里的一句
+    expect(authenticate).toHaveBeenCalledWith({ promptMessage: translate("zh-Hans", "officer_app.biometric.prompt") });
+    expect(translate("en", "officer_app.biometric.prompt")).not.toBe(translate("zh-Hans", "officer_app.biometric.prompt"));
     expect(mockSubmit).toHaveBeenCalledTimes(1);
   });
 

@@ -97,7 +97,7 @@ export function DecisionSheet({
     setBusy(true);
     setFailure(null);
     setUnrecognised(false);
-    decisionAllowed()
+    decisionAllowed(t("officer_app.biometric.prompt"))
       .then((allowed) => {
         if (!allowed) {
           setUnrecognised(true);

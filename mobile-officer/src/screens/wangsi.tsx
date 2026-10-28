@@ -8,14 +8,14 @@
  */
 import { judgmentApi, wangsiApi, WANGSI_ERROR_CODES, type Judgment } from "@soulledger/core/api/judgment";
 import { GRIEVANCE_LEVELS, GRIEVANCE_RELEASE_LEVELS } from "@soulledger/core/domain/diyuCase";
-import { isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
+import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
 import { ActionButton, Segmented, StateView, detailStateOf } from "../kit";
 import { noCityGod } from "../rules";
 import { useCan } from "../session";
-import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 
 type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -25,17 +25,27 @@ export function wangsiRefusalText(e: unknown, t: T): string {
   return code && (WANGSI_ERROR_CODES as readonly string[]).includes(code) ? t(`judgment.wangsi.error.${code}`) : t("common.error");
 }
 
+/** 此刻还押在枉死城:服务端按它的日期算好的 `wangsi_held`;只有老的服务端没给时才退回本机日期。 */
+export function wangsiHeld(j: Pick<Judgment, "held_until" | "wangsi_held">, now?: Date): boolean {
+  return j.wangsi_held ?? isHeldUntilFatedDate(j, now);
+}
+
 /** 这件案子此刻能做哪些审核动作:`held` 三个、`late` 两个(只记结论)、`none` 没有待审的申诉。 */
-export function wangsiMode(j: Pick<Judgment, "grievance_status" | "held_until" | "verdict" | "is_final">, now?: Date): "held" | "late" | "none" {
+export function wangsiMode(
+  j: Pick<Judgment, "grievance_status" | "held_until" | "wangsi_held" | "verdict" | "is_final">,
+  now?: Date
+): "held" | "late" | "none" {
   if (j.grievance_status !== "FILED") return "none";
-  return !j.verdict && !j.is_final && isHeldUntilFatedDate(j, now) ? "held" : "late";
+  return !j.verdict && !j.is_final && wangsiHeld(j, now) ? "held" : "late";
 }
 
 export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled: () => void; onDone: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const theme = useTheme();
   const toast = useToast();
   const canAct = useCan("judgment.execute");
+  // 没网时不审(同审判台的认领 / 改派):这期间案卷可能已经变了。
+  const { offline } = useOnline();
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
   const { data: j, error, reload } = useRemote(load);
   const [note, setNote] = useState("");
@@ -84,15 +94,16 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
   };
 
   const fact = (label: string, value: string, testID?: string) => (
-    <View style={{ gap: space[1] }}>
+    <View style={{ flex: 1, gap: space[1] }}>
       <Txt variant="caption" tone="subtle">{label}</Txt>
       <Txt variant="body" testID={testID}>{value}</Txt>
     </View>
   );
   const cause = j.wrongful_death_cause ? t(`judgment.wrongful_death_causes.${j.wrongful_death_cause}`) : t("judgment.wangsi.unset");
-  const held = isHeldUntilFatedDate(j) ? [t("judgment.held_until", { date: j.held_until ?? "" }), t("judgment.in_city")].join(" ") : t("judgment.untimely");
+  const heldDay = formatIsoDay(j.held_until, locale);
+  const held = wangsiHeld(j) ? [t("judgment.held_until", { date: heldDay }), t("judgment.in_city")].join(" ") : t("judgment.untimely");
   const sendsOn = j.city_god_status === "PENDING" || j.city_god_status === "RETURNED";
-  const locked = !canAct || busy;
+  const locked = !canAct || busy || offline;
 
   return (
     <Screen testID="wangsi-review" edges={["left", "right"]}>
@@ -100,6 +111,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
         <Txt variant="caption" tone="muted">{[j.case_number, j.city_god_name].filter(Boolean).join(" · ")}</Txt>
         <Txt variant="title">{t("officer_app.wangsi.review_title", { name: j.soul_name })}</Txt>
         <View style={{ flexDirection: "row", gap: space[5] }}>
+          {/* 两格各占一半(`fact` 的 flex:1):英文的「Held until …」长,不给 flex 时挤出屏外。 */}
           {fact(t("judgment.wangsi.cause"), cause, "wangsi-cause")}
           {fact(t("judgment.wangsi.title"), held, "wangsi-held")}
         </View>
@@ -118,6 +130,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
               testID="wangsi-level"
               value={level}
               onChange={setLevel}
+              disabled={busy || offline}
               options={GRIEVANCE_LEVELS.map((key) => ({ key, label: t(`judgment.grievance_levels.${key}`) }))}
             />
           )}
@@ -132,6 +145,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
             {/* 意见没写时三个按钮都灰;原因写在按钮上方,不让人猜(华为真机 10-29 第二轮)。 */}
             {noteMissing && canAct ? <Txt variant="caption" tone="muted" testID="wangsi-note-required">{t("officer_app.wangsi.note_required")}</Txt> : null}
             {mode === "late" ? <Txt variant="body" tone="muted" testID="wangsi-late-hint">{t("judgment.wangsi.late_hint")}</Txt> : null}
+            {offline && canAct ? <Txt variant="caption" tone="muted" testID="wangsi-offline">{t("officer_app.offline.no_decide")}</Txt> : null}
             <ActionButton testID="wangsi-reject" kind="ink-outline" disabled={locked || noteMissing} title={t("judgment.wangsi.reject")} onPress={() => decide(false)} style={{ minHeight: 48 }} />
             {mode === "late" ? (
               <ActionButton testID="wangsi-uphold-late" kind="primary" disabled={locked || noteMissing} title={t("judgment.wangsi.uphold_late")} onPress={() => decide(true)} style={{ minHeight: 48 }} />
@@ -169,7 +183,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
           <Txt variant="body">
             {confirming === "deliver"
               ? t("judgment.wangsi.deliver_body", { name: j.soul_name })
-              : t("judgment.wangsi.release_body", { name: j.soul_name, date: j.held_until ?? "" })}
+              : t("judgment.wangsi.release_body", { name: j.soul_name, date: heldDay })}
           </Txt>
           {confirming === "deliver" && sendsOn ? <Txt variant="body" testID="wangsi-sends-on">{t("judgment.wangsi.deliver_sends_on")}</Txt> : null}
           <Txt variant="caption" tone="muted">{t("judgment.wangsi.release_irreversible")}</Txt>

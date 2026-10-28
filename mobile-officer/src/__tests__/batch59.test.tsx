@@ -9,7 +9,8 @@ import { JudgmentFlowBlock, flowWaitingText } from "../screens/judgmentFlow";
 import { ServingFact, defaultTermOf, servingOf } from "../screens/servingFact";
 import { TodoTab } from "../screens/todo";
 import { WangsiReview, wangsiMode } from "../screens/wangsi";
-import { ToastProvider } from "../shared";
+import { OnlineContext } from "../../../mobile/src/online";
+import { ToastProvider, translate } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
 // The bottom sheet animates closed after a confirm; let it land before the test ends (act warnings otherwise).
@@ -100,6 +101,11 @@ describe("wangsiMode", () => {
     expect(wangsiMode({ grievance_status: "FILED", held_until: PAST, verdict: null, is_final: false })).toBe("late");
     expect(wangsiMode({ grievance_status: "FILED", held_until: FUTURE, verdict: null, is_final: true })).toBe("late");
     expect(wangsiMode({ grievance_status: "REJECTED", held_until: FUTURE, verdict: null, is_final: false })).toBe("none");
+  });
+
+  it("the server's wangsi_held wins over the phone's date, both ways (客户端审查 #12)", () => {
+    expect(wangsiMode({ grievance_status: "FILED", held_until: PAST, wangsi_held: true, verdict: null, is_final: false })).toBe("held");
+    expect(wangsiMode({ grievance_status: "FILED", held_until: FUTURE, wangsi_held: false, verdict: null, is_final: false })).toBe("late");
   });
 });
 
@@ -208,6 +214,39 @@ describe("枉死申诉 review", () => {
     fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
     fireEvent.press(screen.getByTestId("wangsi-reject"));
     expect(await screen.findByText("只有这位城隍名下的官员或殿管理员能审核。")).toBeTruthy();
+  });
+
+  it("the held day is written out, not the ISO value", async () => {
+    judge({ wangsi_held: true });
+    review();
+    const held = await screen.findByTestId("wangsi-held");
+    expect(held.props.children).toContain("2999年 · 11月3日");
+    expect(held.props.children).not.toContain(FUTURE);
+  });
+
+  it("offline: no decision and no level change, and the reason is written (客户端审查 #11)", async () => {
+    judge({ wangsi_held: true });
+    renderOfficer(
+      <OnlineContext.Provider value={{ offline: true, back: 0 }}>
+        <WangsiReview id="j-1" onSettled={jest.fn()} onDone={jest.fn()} />
+      </OnlineContext.Provider>
+    );
+    fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
+    expect(screen.getByTestId("wangsi-offline").props.children).toBe(translate("zh-Hans", "officer_app.offline.no_decide"));
+    expect(disabled("wangsi-reject")).toBe(true);
+    expect(disabled("wangsi-uphold")).toBe(true);
+    expect(disabled("wangsi-level-MINOR")).toBe(true);
+    fireEvent.press(screen.getByTestId("wangsi-level-MINOR"));
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("online: the same screen has no offline line and the actions are live once a note is written", async () => {
+    judge({ wangsi_held: true });
+    review();
+    fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
+    expect(screen.queryByTestId("wangsi-offline")).toBeNull();
+    expect(disabled("wangsi-reject")).toBeFalsy();
+    expect(disabled("wangsi-level-MINOR")).toBeFalsy();
   });
 
   it("already decided: the status, no actions", async () => {
@@ -326,6 +365,37 @@ describe("serving (M-2 / M-2b)", () => {
     expect(mockRelease).not.toHaveBeenCalled();
     fireEvent.press(screen.getByTestId("soul-release-confirm"));
     await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("d-1"));
+    await settleSheet();
+  });
+
+  it("offline: 期满释放 is greyed with the reason beneath, and pressing it opens nothing (客户端审查 #11)", async () => {
+    mockDispositions.mockResolvedValue({ data: { results: [{ ...SERVING, can_release: true }], count: 1, next: null } });
+    renderOfficer(
+      <OnlineContext.Provider value={{ offline: true, back: 0 }}>
+        <ServingFact soulId="s-1" />
+      </OnlineContext.Provider>,
+      withPerms(["disposition.read", "disposition.execute"])
+    );
+    expect(await screen.findByTestId("soul-release")).toBeTruthy();
+    expect(disabled("soul-release")).toBe(true);
+    expect(screen.getByTestId("soul-release-offline")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("soul-release"));
+    expect(screen.queryByTestId("soul-release-confirm")).toBeNull();
+  });
+
+  it("a release that fails for another reason says 释放失败, not the execute sentence (客户端审查 #30)", async () => {
+    mockDispositions.mockResolvedValue({ data: { results: [{ ...SERVING, can_release: true }], count: 1, next: null } });
+    mockRelease.mockRejectedValue(httpError(500, {}));
+    renderOfficer(
+      <ToastProvider>
+        <ServingFact soulId="s-1" />
+      </ToastProvider>,
+      withPerms(["disposition.read", "disposition.execute"])
+    );
+    fireEvent.press(await screen.findByTestId("soul-release"));
+    fireEvent.press(screen.getByTestId("soul-release-confirm"));
+    expect(await screen.findByText(translate("zh-Hans", "disposition.release_error.generic"))).toBeTruthy();
+    expect(screen.queryByText(translate("zh-Hans", "disposition.execute_error"))).toBeNull();
     await settleSheet();
   });
 
