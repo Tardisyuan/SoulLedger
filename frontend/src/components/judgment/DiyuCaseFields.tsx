@@ -331,7 +331,11 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
           ? t("judgment.wangsi.deliver_title", { name: judgment.soul_name })
           : t("judgment.wangsi.release_title", { name: judgment.soul_name })}
         message={`${confirming === "deliver"
-          ? t("judgment.wangsi.deliver_body", { name: judgment.soul_name })
+          ? t("judgment.wangsi.deliver_body", { name: judgment.soul_name }) +
+            // 还在城隍初审:服务端超度时同一事务里先解送(2026-10-29),这里说一声。
+            (judgment.city_god_status === "PENDING" || judgment.city_god_status === "RETURNED"
+              ? ` ${t("judgment.wangsi.deliver_sends_on")}`
+              : "")
           : t("judgment.wangsi.release_body", { name: judgment.soul_name, date: judgment.held_until ?? "" })} ${t("judgment.wangsi.release_irreversible")}`}
         confirmText={confirming === "deliver" ? t("judgment.wangsi.deliver") : t("judgment.wangsi.uphold")}
         confirmLoading={decide.isPending}
