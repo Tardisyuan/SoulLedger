@@ -108,8 +108,8 @@ const MONTH_DAY: Record<Locale, (monthName: string, day: number) => string> = {
  *
  * @example
  * formatHistoricalDate({ year: -44, month: 3, day: 15 }, "en") // "44 BCE · March 15"
- * formatHistoricalDate({ year: -44, month: 3, day: 15 }) // "44 BCE · 3月15日"
- * formatHistoricalDate({ year: 1066, month: null, day: null }) // "1066 CE"
+ * formatHistoricalDate({ year: -44, month: 3, day: 15 }) // "前44年 · 3月15日"
+ * formatHistoricalDate({ year: 1066, month: null, day: null }) // "1066年"
  */
 export function formatHistoricalDate(
   date: HistoricalDate | null | undefined,
@@ -121,7 +121,10 @@ export function formatHistoricalDate(
 
   // Format year with BCE/CE suffix
   let yearStr: string;
-  if (locale === "egy") {
+  if (locale === "zh-Hans") {
+    // 用户 2026-10-29:中文公元写「2026年」、公元前写「前44年」,不再带 CE / BCE(英文不动)。
+    yearStr = year <= 0 ? `前${Math.abs(year)}年` : `${year}年`;
+  } else if (locale === "egy") {
     // Design 第六十批:公元不加词(同中文);公元前写 `Tepy Er Kristos`(在基督之前,同受洗那组「生于基督之前」)。
     // 年份前不加 `Renpet`:`Renpet 1066` 在词表里读作「1066 年的时长」。
     yearStr = year <= 0 ? `${Math.abs(year)} Tepy Er Kristos` : `${year}`;
