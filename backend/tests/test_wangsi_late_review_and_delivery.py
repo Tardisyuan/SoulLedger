@@ -117,3 +117,21 @@ def test_the_decide_endpoint_takes_deliver(cn_tenant, admin_user):
                                           {"upheld": True, "note": "属实", "deliver": True}, format="json")
     assert res.status_code == 200, res.data
     assert (res.data["grievance_status"], res.data["verdict"]) == ("DELIVERED", "PASSED")
+
+
+# ── PATCH 不覆盖并发的审核 ───────────────────────────────────────────────
+
+
+def test_a_patch_loaded_before_a_decision_does_not_undo_it(cn_tenant, admin_user):
+    """PATCH 只写它带的列:请求开始时读到的旧行不再把 grievance_status / held_until 写回去。"""
+    from apps.judgment.serializers import JudgmentSerializer
+
+    _soul, case = _filed(cn_tenant, admin_user)
+    stale = Judgment.all_objects.get(pk=case.pk)  # PATCH 先读了这一行
+    wangsi.decide_grievance(case.pk, admin_user, upheld=True, note="属实")  # 期间审核落定
+    serializer = JudgmentSerializer(stale, data={"wrongful_death_cause": "VICTIM"}, partial=True)
+    assert serializer.is_valid(), serializer.errors
+    serializer.save()
+    case = Judgment.all_objects.get(pk=case.pk)
+    assert (case.grievance_status, case.held_until) == (GrievanceStatus.UPHELD, None)
+    assert case.wrongful_death_cause == "VICTIM"
