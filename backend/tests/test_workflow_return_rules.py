@@ -323,8 +323,10 @@ def test_the_seed_overwrites_a_changed_row_only_with_update(halls):
 
 def _judged(tenant, **soul_fields):
     soul = Soul.objects.create(name="正式模板魂", tenant=tenant, **soul_fields)
+    # 一殿分流读本案采信后的余额(2026-10-29),结案时冻结在 `concluded_balance`:这里与灵魂的功过相同。
     judgment = Judgment.objects.create(
-        soul=soul, civilization=soul.civilization, court="—", verdict="PASSED", is_final=True, tenant=tenant)
+        soul=soul, civilization=soul.civilization, court="—", verdict="PASSED", is_final=True, tenant=tenant,
+        concluded_balance=soul_fields.get("merit_score", 0) - soul_fields.get("demerit_score", 0))
     return WorkflowService.create_from_judgment(judgment)
 
 
