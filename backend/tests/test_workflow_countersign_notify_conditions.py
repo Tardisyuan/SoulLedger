@@ -35,7 +35,7 @@ def _signers(*roles):
     return [{"label": f"{r} 会签", "approver_type": "ROLE", "approver_role": r} for r in roles]
 
 
-def _workflow(tenant, nodes, *, merit=0, demerit=0, verdict="PASSED"):
+def _workflow(tenant, nodes, *, merit=0, demerit=0, verdict="PASSED", balance=None):
     template = WorkflowTemplate.objects.create(
         name="会签测试", civilization="CHINESE", case_type="ROUTINE", tenant=tenant,
     )
@@ -47,6 +47,8 @@ def _workflow(tenant, nodes, *, merit=0, demerit=0, verdict="PASSED"):
     judgment = Judgment.objects.create(
         soul=soul, civilization=soul.civilization, court="—",
         verdict=verdict, is_final=True, tenant=tenant,
+        # `balance` 读本案采信后的余额(2026-10-29),结案时冻结在这一列;默认就是这位灵魂的功过。
+        concluded_balance=merit - demerit if balance is None else balance,
     )
     return WorkflowService.create_from_judgment(judgment)
 
@@ -203,6 +205,28 @@ def test_a_balance_condition_picks_the_branch(cn_tenant):
     assert _run_passes(zero) == ["来源殿审批", "余额 < 0 ?", "目标文明判官"]
     assert zero.nodes.get(node_order=3).status == NodeStatus.SKIPPED
     assert zero.nodes.get(node_order=5).status == NodeStatus.TRAVERSED
+
+
+@pytest.mark.django_db
+def test_the_balance_fact_is_the_cases_admitted_balance_not_the_souls(cn_tenant):
+    """用户 2026-10-29:一殿分流读本案采信后的余额。灵魂一生的总账是负的,本案采信的是 0:走「余额 ≥ 0」那一边;
+    反过来也一样 —— 读错了主体,两条都会走到另一边。"""
+    souls_negative = _workflow(cn_tenant, BRANCHED, merit=1, demerit=5, balance=0)
+    assert _run_passes(souls_negative) == ["来源殿审批", "余额 < 0 ?", "目标文明判官"]
+
+    case_negative = _workflow(cn_tenant, BRANCHED, merit=5, demerit=1, balance=-3)
+    assert _run_passes(case_negative) == ["来源殿审批", "余额 < 0 ?", "会签 · 两文明判官"]
+
+
+@pytest.mark.django_db
+def test_a_case_from_another_life_has_no_balance_fact(cn_tenant):
+    """`concluded_balance` 为 None(案子不是这一世的):没有这个 fact,条件不成立,不退回灵魂的余额。"""
+    from apps.workflow.conditions import case_facts
+
+    wf = _workflow(cn_tenant, BRANCHED, merit=1, demerit=5)
+    Judgment.all_objects.filter(pk=wf.judgment_id).update(concluded_balance=None)
+    wf.refresh_from_db()
+    assert case_facts(wf)["balance"] is None
 
 
 # A LINEAR template (no 结束, no branch) with an on_pass jump: 2026-09-26 product
