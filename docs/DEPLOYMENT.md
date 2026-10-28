@@ -82,6 +82,13 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 
   beat 没跑时审批**不会**因超时自动处理,节点会一直停在待办。
 
+- **处置期满与欧洲炼狱升天也靠 beat。** `disposition.expire_due_for_tenant`(按租户,默认 `30 2 * * *`,
+  `backend/apps/scheduler/registry.py`;任务在 `backend/apps/disposition/tasks.py`)把刑期走完的处置标为期满,
+  并把炼狱期满的欧洲灵魂经地上乐园升到天堂(`backend/apps/disposition/expiry.py::ascend_from_purgatory`,
+  `via=TERM_SERVED`)。beat 没跑时这两件事都不会自动发生:可在 `/scheduler` 手动运行,或
+  `$DC exec backend python manage.py expire_dispositions`;单个欧洲灵魂也可以走「炼狱复核」流程
+  (`CaseType.PURGATORY_REVIEW`,流程批准即视为期满升天,`backend/apps/workflow/models.py`)。
+
 - 调度存在数据库里(`DatabaseScheduler`),清单在 `backend/apps/scheduler/registry.py`。
   backend 的启动命令每次都会跑 `python manage.py setup_scheduled_tasks`:按
   (任务 × 活跃租户) 补齐缺失的 PeriodicTask 行,任务名与参数以清单为准,**保留**运维

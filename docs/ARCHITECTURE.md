@@ -154,6 +154,18 @@ Query Keys:
 Query-key factories live beside the hooks and API modules that use them. Never
 hardcode key strings — see CONVENTIONS.md.
 
+Workflow presets:
+
+`packages/core/src/config/workflow-templates.ts` holds the **editor presets** the `/workflow` page offers
+(`frontend/app/workflow/page.tsx`). They are not the backend's flow table
+(`backend/apps/workflow/templates.py`, keyed by `(civilization, CaseType)`; its header explains the split):
+a preset only reaches the backend when someone saves it as a `WorkflowTemplate` row. Several presets have no
+case type of their own in `CaseType` — `CHINESE_WANG_SI` (枉死城流程), `CHINESE_ABYSS`, `CHINESE_EMERGENCY` file
+under `SPECIAL`, `CHINESE_REINCARNATION` under `ROUTINE` — and none of them drives a business rule. In particular
+`CHINESE_WANG_SI` is **not connected** to the 枉死城 mechanism: holding a soul until its fated date, the grievance
+and early release live on the judgment itself (`Judgment.untimely` / `held_until` / `grievance_*`,
+`backend/apps/judgment/wangsi.py`, `claims.py`), and nothing there reads the preset.
+
 ---
 
 # Data Flow
