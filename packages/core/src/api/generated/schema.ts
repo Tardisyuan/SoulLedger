@@ -13827,6 +13827,7 @@ export interface components {
             refusal_code: string | null;
             can_escalate: boolean;
             escalation_stations: string[];
+            civilization: components["schemas"]["CivilizationEnum"];
         };
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
