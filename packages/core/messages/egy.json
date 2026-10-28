@@ -7226,7 +7226,18 @@
     "escalate": "Seshem Er Hery",
     "escalate_title": "Seshem Er Wat Nehet",
     "escalate_body": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery: Wat Nehet Em Taui Pen, Sekhet Neb; Sekhet Wa Khesef = Wedja Tepy Smen. Sekhet Neb Menkh: Wedja Pehwy Djed. Em Iri: Nen Sehen · Nehet Wa.",
-    "ladder": "Wat Nehet · {{name}}"
+    "ladder": "Wat Nehet · {{name}}",
+    "escalated_tag": "Seshem Er Hery",
+    "ladder_progress": "Sekhet {{n}} / {{total}}",
+    "ladder_station": "Sekhet {{n}} · {{name}}",
+    "ladder_final": "Wedja Pehwy · {{name}}",
+    "ladder_state": {
+      "PASSED": "Menkh · Er Sekhet Khery",
+      "REJECTED": "Khesef · Wedja Tepy Smen",
+      "CURRENT": "Em Maa",
+      "AHEAD": "Nen Shem Djer"
+    },
+    "escalate_hint": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery Wenen."
   },
   "cityGods": {
     "title": "Chenghuang",

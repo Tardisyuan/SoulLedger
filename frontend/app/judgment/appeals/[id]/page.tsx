@@ -22,11 +22,15 @@ import { StatusBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { AppealDecideDialog } from "@/src/components/judgment/AppealDecideDialog";
 import { APPEAL_STATUS_TONES, appealRefusalMessage } from "@/src/components/judgment/appealDisplay";
+import { AppealLadderView, EscalatedTag, ladderOver } from "@/src/components/judgment/AppealLadder";
 
 /*
  * 复核页(Design 第五十二批 W-2):左原判、右申诉,各占一半,标签行对齐,方便横着比。
  * 判词、理由、新证据、复核意见都是人写的话:衬线(DESIGN.md「Things a person said」)。
  * 作出原判的官员(`original_officer_ids`)的「认领复核」置灰,原因写在按钮正下方。认领后换成「作出结论」。
+ *
+ * 上诉(第五十五批 E-2):右边换成站梯,申诉理由移到下面。流程跑着时「认领复核」置灰,原因
+ * `appeals.error.ladder_running` 写在按钮下;每站的复核在审批流程里办,这页只读。走完后终审那位官员是复核人,照常作出结论。
  */
 
 const LABEL = "text-xs text-[oklch(var(--color-ink-subtle))]";
@@ -112,8 +116,24 @@ function AppealReviewContent({ id }: { id: string }) {
   const original = !!user && appeal.original_officer_ids.includes(user.id);
   const mine = !!user && appeal.reviewer === user.id;
   // 上诉到申诉流程的那一轮:流程跑着时谁都不能认领;走完而终审站没有记下官员时,照常认领(2026-10-27)。
-  const ladderOver = !appeal.workflow || appeal.workflow_status === "COMPLETED" || appeal.workflow_status === "REJECTED";
-  const claimable = appeal.status === "PENDING" || (appeal.status === "IN_REVIEW" && !appeal.reviewer && !!appeal.workflow && ladderOver);
+  const over = !appeal.workflow || ladderOver(appeal);
+  const running = !over && appeal.status === "IN_REVIEW";
+  const claimable = appeal.status === "PENDING" || (appeal.status === "IN_REVIEW" && !appeal.reviewer && !!appeal.workflow);
+  const claimReason = running ? t("appeals.error.ladder_running") : original ? t("appeals.claim_disabled_original") : null;
+  const filed = (
+    <PageSection title={t("appeals.file")}>
+      <Row label={t("appeals.col.filed_at")}>
+        <span className="font-mono text-xs">{formatDateTime(appeal.create_time)}</span>
+      </Row>
+      <Row label={t("appeals.reason_label")}>
+        <p className={PROSE}>{appeal.reason}</p>
+      </Row>
+      {/* 「新证据 · 选填」是灵魂表单上的标签;官员这边只要前半句。 */}
+      <Row label={t("appeals.evidence_label").split(" · ")[0]}>
+        <p className={PROSE}>{appeal.evidence || <MissingValue kind="unrecorded" />}</p>
+      </Row>
+    </PageSection>
+  );
 
   return (
     <PageShell
@@ -128,12 +148,12 @@ function AppealReviewContent({ id }: { id: string }) {
         <RequirePermission permissions="judgment.execute">
           {claimable && (
             <div className="flex flex-col items-end gap-1">
-              <Button type="button" data-testid="appeal-claim" disabled={original} loading={claim.isPending} onClick={() => claim.mutate()}>
+              <Button type="button" data-testid="appeal-claim" disabled={!!claimReason} loading={claim.isPending} onClick={() => claim.mutate()}>
                 {t("appeals.claim")}
               </Button>
-              {original && (
+              {claimReason && (
                 <p data-testid="appeal-claim-reason" className="text-xs text-[oklch(var(--color-ink-muted))] max-w-xs text-right">
-                  {t("appeals.claim_disabled_original")}
+                  {claimReason}
                 </p>
               )}
             </div>
@@ -148,6 +168,7 @@ function AppealReviewContent({ id }: { id: string }) {
     >
       <p className="flex flex-wrap items-center gap-2 text-sm mb-4">
         <StatusBadge namespace="appeals.status" value={appeal.status} tone={APPEAL_STATUS_TONES[appeal.status]} />
+        {appeal.workflow && <EscalatedTag />}
         <span>{t("appeals.round", { round: String(appeal.round) })}</span>
         <span className={LABEL}>·</span>
         <Link href={`/souls/${appeal.soul}`} className="underline underline-offset-2">{appeal.soul_name}</Link>
@@ -176,19 +197,18 @@ function AppealReviewContent({ id }: { id: string }) {
             <p className={PROSE}>{appeal.judgment_notes || <MissingValue kind="unrecorded" />}</p>
           </Row>
         </PageSection>
-        <PageSection title={t("appeals.file")}>
-          <Row label={t("appeals.col.filed_at")}>
-            <span className="font-mono text-xs">{formatDateTime(appeal.create_time)}</span>
-          </Row>
-          <Row label={t("appeals.reason_label")}>
-            <p className={PROSE}>{appeal.reason}</p>
-          </Row>
-          {/* 「新证据 · 选填」是灵魂表单上的标签;官员这边只要前半句。 */}
-          <Row label={t("appeals.evidence_label").split(" · ")[0]}>
-            <p className={PROSE}>{appeal.evidence || <MissingValue kind="unrecorded" />}</p>
-          </Row>
-        </PageSection>
+        {appeal.ladder ? (
+          <PageSection title={t("appeals.ladder", { name: appeal.workflow_name ?? "" })}>
+            <AppealLadderView appeal={appeal} />
+            <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}`} className="mt-3 inline-block text-sm underline underline-offset-2">
+              {t("crossJudgments.flow.view")}
+            </Link>
+          </PageSection>
+        ) : (
+          filed
+        )}
       </div>
+      {appeal.ladder && <div className="mt-6">{filed}</div>}
       {(appeal.status === "UPHELD" || appeal.status === "AMENDED") && (
         <div className="mt-6">
           <Decision appeal={appeal} />

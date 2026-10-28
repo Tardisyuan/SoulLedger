@@ -711,6 +711,13 @@ export const judgmentApi = {
 export type JudgmentAppealStatus = Schemas["JudgmentAppealStatusEnum"];
 export type JudgmentAppeal = Omit<Schemas["JudgmentAppeal"], "compensations"> & { compensations: AppealCompensation[] };
 export type JudgmentAppealDecidePayload = Schemas["JudgmentAppealDecide"];
+/**
+ * 上诉的站梯(第五十五批;`appeals.ladder`):一次复核为 null。一站 = 一个人工审批节点,按顺序;
+ * 流程已结束(`workflow_status` 是 COMPLETED / REJECTED)时剩下的 AHEAD 写「不再审」。不带审批人。
+ */
+export type AppealLadder = Schemas["AppealLadder"];
+export type AppealLadderStation = Schemas["AppealLadderStation"];
+export type AppealLadderState = Schemas["AppealLadderStateEnum"];
 
 export const judgmentAppealKeys = {
   all: ["judgment-appeals"] as const,

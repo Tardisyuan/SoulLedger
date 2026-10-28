@@ -43,8 +43,12 @@ def test_escalation_needs_a_round_upheld_on_review(case):
 
 
 def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
+    assert case["client"].get(MINE).data["judgments"][0]["escalation_stations"] == []
     _upheld_once(case)
-    assert case["client"].get(MINE).data["judgments"][0]["can_escalate"] is True
+    row = case["client"].get(MINE).data["judgments"][0]
+    assert row["can_escalate"] is True
+    # The confirmation page lists the stations the flow will have, before it is built.
+    assert row["escalation_stations"] == ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
 
     response = _escalate(case)
     assert response.status_code == 201, response.data
@@ -63,6 +67,15 @@ def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
     assert row["workflow_number"] == workflow.number and row["workflow_status"] == "IN_PROGRESS"
     detail = reviewer.get(f"/api/v1/workflows/{workflow.pk}/").data
     assert detail["judgment_appeal"]["id"] == response.data["id"]
+
+
+def test_an_escalation_may_leave_the_reason_out_a_single_review_may_not(case):
+    blank = {"judgment": str(case["judgment"].pk), "reason": "  "}
+    assert case["client"].post(MINE, blank, format="json").status_code == 400
+    _upheld_once(case)
+    response = case["client"].post(MINE, {**blank, "escalate": True}, format="json")
+    assert response.status_code == 201, response.data
+    assert response.data["reason"] == ""
 
 
 def test_while_the_flow_runs_nobody_claims_decides_or_withdraws(case):
@@ -110,6 +123,72 @@ def test_a_completed_flow_hands_the_amendment_to_the_final_judge(case):
     assert response.status_code == 200, response.data
     assert response.data["status"] == "AMENDED" and response.data["new_verdict"] == "PASSED"
     assert Judgment.all_objects.get(pk=case["judgment"].pk).verdict == "PASSED"
+
+
+def _ladder(case, appeal_id):
+    """The ladder as the soul sees it (the list) and as the officer sees it (the detail): the same structure."""
+    mine = next(r for r in case["client"].get(MINE).data["results"] if r["id"] == appeal_id)
+    officer = officer_client(case["reviewer"]).get(f"{HALL}{appeal_id}/").data
+    assert mine["ladder"] == officer["ladder"]
+    return mine["ladder"]
+
+
+def _states(ladder):
+    return [(s["order"], s["state"], s["note"]) for s in ladder["stations"]]
+
+
+def test_a_single_review_has_no_ladder(case):
+    appeal_id = _file(case).data["id"]
+    assert _ladder(case, appeal_id) is None
+
+
+def test_the_ladder_mid_flow_names_each_station_and_the_current_one(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    _drive(JudgmentAppeal.all_objects.get(pk=appeal_id).workflow, ["PASSED"], case["reviewer"])
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (2, 4)
+    assert [s["name"] for s in ladder["stations"]] == ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
+    assert [s["is_final"] for s in ladder["stations"]] == [False, False, False, True]
+    assert _states(ladder) == [(1, "PASSED", "PASSED 意见"), (2, "CURRENT", None), (3, "AHEAD", None),
+                               (4, "AHEAD", None)]
+    # No reviewer, no approver: the soul is not told who heard it (same as the single review).
+    assert not {"approver", "approver_name", "reviewer"} & set(ladder["stations"][0])
+
+
+def test_a_rejecting_station_cuts_the_ladder(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    # Station 1 refuses: the flow ends there (a later station may carry a 驳回到 back instead, which re-opens it).
+    _drive(JudgmentAppeal.all_objects.get(pk=appeal_id).workflow, ["FAILED"], case["reviewer"])
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (None, 4)
+    # The stations after it stay AHEAD; with the flow ended, the client writes 不再审 for them.
+    assert _states(ladder) == [(1, "REJECTED", "FAILED 意见"), (2, "AHEAD", None), (3, "AHEAD", None),
+                               (4, "AHEAD", None)]
+    assert next(r for r in case["client"].get(MINE).data["results"] if r["id"] == appeal_id)[
+        "workflow_status"] == "REJECTED"
+
+
+def test_a_finished_ladder_is_passed_to_the_end(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    workflow = JudgmentAppeal.all_objects.get(pk=appeal_id).workflow
+    _drive(workflow, ["PASSED"] * 3, case["reviewer"])
+    _drive(workflow, ["PASSED"], sp.officer("fengdu", "JUDGE", case["judgment"].tenant))
+    ladder = _ladder(case, appeal_id)
+    assert (ladder["current"], ladder["total"]) == (None, 4)
+    assert [s["state"] for s in ladder["stations"]] == ["PASSED"] * 4
+
+
+def test_a_running_ladder_waits_in_the_unclaimed_queue_not_under_review(case):
+    _upheld_once(case)
+    appeal_id = _escalate(case).data["id"]
+    reviewer = officer_client(case["reviewer"])
+    waiting = reviewer.get(HALL, {"status__in": "PENDING,IN_REVIEW", "reviewer__isnull": "true"}).data["results"]
+    in_review = reviewer.get(HALL, {"status": "IN_REVIEW", "reviewer__isnull": "false"}).data["results"]
+    assert [r["id"] for r in waiting] == [appeal_id]
+    assert in_review == []
 
 
 def test_a_greek_appeal_flow_is_refused_not_built(gr_tenant):
