@@ -35,6 +35,8 @@ NO_ORM_TARGETS = {
     ("0009_drop_dead_cross_tenant_permission_table.py", "noop_reverse"): "does nothing",
     ("0047_soul_search_trigram.py", "forward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
     ("0047_soul_search_trigram.py", "backward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
+    ("0052_soul_code_search_trigram.py", "forward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
+    ("0052_soul_code_search_trigram.py", "backward"): "PostgreSQL DDL through schema_editor.execute only, already bound to the migrated database",
 }
 
 #: (file name, function, kind) -> reason.

@@ -470,8 +470,12 @@ class JudgmentDetailSerializer(JudgmentSerializer):
         waiting = None
         if disposition is not None and not disposition.is_executed and not getattr(disposition, "is_deleted", False):
             waiting = unfinished_flow(disposition, flow_status=wf.status)
+        # A finished flow reads 「第 n / 共 n 站」: a flow that skipped stations (五逆, a balanced PASS jumping to
+        # the tenth court) last decides a node in the middle, and 「第 2 / 10 站 · 已完成」 reads as stuck.
+        index = len(steps) if wf.status == "COMPLETED" else next(
+            (i for i, n in enumerate(steps, 1) if n.pk == at), len(steps))
         return {"workflow": wf.pk, "status": wf.status,
-                "index": next((i for i, n in enumerate(steps, 1) if n.pk == at), len(steps)),
+                "index": index,
                 "total": len(steps), "waiting": waiting}
 
     @extend_schema_field(AdmittedBalanceSerializer)
