@@ -223,8 +223,9 @@ test.describe("灵魂详情 · 十三站", () => {
     const strip = page.getByTestId("soul-diyu-station");
     await expect(strip.locator("li[data-station]")).toHaveCount(13);
     await expect(strip.locator('li[aria-current="step"]').getByText("望乡台")).toBeVisible();
-    // 其余只留方块,站名藏起来(悬浮看 title)。
-    await expect(strip.locator('li[data-station="TUDI_TEMPLE"]').getByText("土地庙")).toBeHidden();
+    // 其余只留方块,站名只给读屏(sr-only,悬浮看 title)。sr-only 在 Playwright 里算 visible,所以量宽度。
+    const hiddenName = await strip.locator('li[data-station="TUDI_TEMPLE"]').getByText("土地庙").boundingBox();
+    expect(hiddenName!.width, "非当前站名在 393 宽下仍占位").toBeLessThanOrEqual(1);
     await expect(strip.locator('li[data-station="TUDI_TEMPLE"]')).toHaveAttribute("title", "土地庙");
     const list = strip.locator("ol");
     const overflow = await list.evaluate((el) => el.scrollWidth - el.clientWidth);
