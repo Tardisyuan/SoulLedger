@@ -146,7 +146,7 @@ CHINESE_REALMS = [
     ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Wesekhet 4 · Wuguan",
      RealmType.HELL, 4,
      "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
-    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Wesekhet 5 · Yanluo",
+    ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yanluo", "Wesekhet 5 · Yanluo",
      RealmType.HELL, 5,
      "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind "
      "the act: malice, ingratitude, envy, miserliness. The 望乡台 stands here",
