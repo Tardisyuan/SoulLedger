@@ -273,6 +273,15 @@ class TestLogin:
         assert replay.status_code == 400 and replay.data["code"] == "expired"
         assert SoulMfa.objects.get(account=soul).failed_attempts == 1  # 重放计次
 
+    def test_a_pending_token_is_spent_by_its_first_success(self, soul):
+        secret, codes = _enable(soul)
+        pending = _pending(soul)
+        assert _verify(pending, code=_code(secret)).status_code == 200
+        again = _verify(pending, recovery_code=codes[0])
+        assert (again.status_code, again.data["code"]) == (401, "pending_invalid")
+        # A fresh pending token still takes that recovery code: it was not spent by the refusal.
+        assert _verify(_pending(soul), recovery_code=codes[0]).status_code == 200
+
     def test_the_code_used_to_enable_cannot_be_replayed_to_log_in(self, soul):
         secret, _ = _enable(soul, forget_step=False)
         replay = _verify(_pending(soul), code=_code(secret))

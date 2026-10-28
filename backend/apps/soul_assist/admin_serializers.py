@@ -26,6 +26,38 @@ class PriceSerializer(serializers.Serializer):
         return attrs
 
 
+def _endpoint_must_be_public(url):
+    """管理页填的地址不许指向内网 / 本机,除非主机在 `ASSISTANT_PRIVATE_HOSTS_ALLOWED` 里或是 env 里配的那两个地址的主机。
+    判定与 webhook 同一个(`is_global`)。解析不出的主机名放过:连接时它一样连不上,而测试与离线环境里这类名字很多。"""
+    import socket
+    from urllib.parse import urlparse
+
+    from django.conf import settings
+
+    from apps.death_sync.webhook_service import _require_public_ip
+
+    host = (urlparse(url).hostname or "").lower()
+    if not host:
+        return url
+    allowed = set(settings.ASSISTANT_PRIVATE_HOSTS_ALLOWED)
+    allowed |= {(urlparse(u).hostname or "").lower()
+                for u in (settings.ASSISTANT_BASE_URL, settings.ASSISTANT_EMBEDDING_URL) if u}
+    if host in allowed:
+        return url
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except (socket.gaierror, UnicodeError):
+        return url
+    try:
+        for address in addresses:
+            _require_public_ip(address)
+    except ValueError:
+        raise serializers.ValidationError(
+            "这个地址指向内网或本机;要用就让运维把主机加进 ASSISTANT_PRIVATE_HOSTS_ALLOWED。",
+            code="private_address") from None
+    return url
+
+
 class CandidateSerializer(serializers.Serializer):
     """一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
     `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。"""
@@ -38,6 +70,9 @@ class CandidateSerializer(serializers.Serializer):
     model = serializers.CharField(max_length=200, min_length=1, required=False)
     effort = serializers.ChoiceField(choices=config.EFFORTS, allow_blank=True, required=False)
     fallbacks = serializers.BooleanField(required=False)
+
+    def validate_base_url(self, value):
+        return _endpoint_must_be_public(value) if value else value
 
     def validate(self, attrs):
         preset = platforms.PLATFORMS.get(attrs.get("platform"))
@@ -457,6 +492,9 @@ class EmbeddingCandidateSerializer(serializers.Serializer):
     embedding_url = serializers.URLField(max_length=500, required=False)
     embedding_model = serializers.CharField(max_length=200, min_length=1, required=False)
     embedding_dims = serializers.IntegerField(min_value=1, max_value=16000, allow_null=True, required=False)
+
+    def validate_embedding_url(self, value):
+        return _endpoint_must_be_public(value)
 
 
 class EmbeddingUpdateSerializer(EmbeddingCandidateSerializer):

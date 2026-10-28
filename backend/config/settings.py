@@ -530,6 +530,11 @@ ASSISTANT_HISTORY_TURNS = int(os.getenv("ASSISTANT_HISTORY_TURNS", "20"))
 # 地址是局域网里的 Ollama;上线前要换成部署内可达的服务(§7.8)。
 ASSISTANT_EMBEDDING_URL = os.getenv("ASSISTANT_EMBEDDING_URL", "http://192.168.2.2:11434")
 ASSISTANT_EMBEDDING_MODEL = os.getenv("ASSISTANT_EMBEDDING_MODEL", "qwen3-embedding:4b-q4_K_M")
+# 管理页能填的供应商 / 向量地址默认只许指向公网(防 SSRF:管理员账号被盗时拿它探内网)。
+# 这里列出的主机名或 IP 例外(逗号分隔),例如本机或内网的 Ollama。上面两个 env 地址的主机自动算在内。
+ASSISTANT_PRIVATE_HOSTS_ALLOWED = [
+    h.strip().lower() for h in os.getenv("ASSISTANT_PRIVATE_HOSTS_ALLOWED", "").split(",") if h.strip()
+]
 # 截断维度(Ollama 的 `dimensions`);空 = 模型原生维度(qwen3-embedding 为 2560)。
 ASSISTANT_EMBEDDING_DIMS = int(os.getenv("ASSISTANT_EMBEDDING_DIMS") or 0) or None
 ASSISTANT_RETRIEVAL_K = int(os.getenv("ASSISTANT_RETRIEVAL_K", "5"))

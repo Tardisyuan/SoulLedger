@@ -131,7 +131,7 @@ def _run_delivery_task(delivery):
 
         return _R()
 
-    with patch("apps.events.tasks.requests.post", side_effect=fake_post), patch(
+    with patch("requests.Session.post", side_effect=fake_post), patch(
         "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
         lambda url: None,
     ):
@@ -392,10 +392,11 @@ def test_an_event_bus_delivery_does_not_follow_a_redirect(wired):
         recorded = _record(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))
         assert len(recorded) == 1, "handler 没有记下投递;探针什么都证明不了"
 
+        # Both address checks off (the servers are on loopback): this test is about redirects only.
         with patch(
             "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
             lambda url: None,
-        ):
+        ), patch("apps.death_sync.webhook_service._require_public_ip", lambda *a, **k: None):
             deliver_event_webhook.apply(args=[str(recorded[0].id)])
 
     assert len(outer_hits) >= 1, "第一个地址一次都没收到 —— 投递根本没发出去"

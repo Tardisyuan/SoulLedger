@@ -278,3 +278,20 @@ def test_no_tenant_on_the_request_is_refused_by_both_rules(both_sides):
         )
         is False
     )
+
+
+@pytest.mark.django_db
+def test_the_target_tenant_cannot_rewrite_the_proposers_reason(both_sides):
+    """Reachability is not authority for CRUD either: the target decides, it does not edit the source's reason."""
+    record = both_sides["record"]
+    record.reason = "original"
+    record.save(update_fields=["reason"])
+    url = f"{BASE}/records/{record.pk}/"
+    resp = both_sides["client_b"].patch(url, {"reason": "rewritten by target"}, format="json")
+    assert resp.status_code == 403, resp.status_code
+    record.refresh_from_db()
+    assert record.reason == "original"
+    resp = both_sides["client_a"].patch(url, {"reason": "clarified by source"}, format="json")
+    assert resp.status_code == 200, resp.content
+    record.refresh_from_db()
+    assert record.reason == "clarified by source"

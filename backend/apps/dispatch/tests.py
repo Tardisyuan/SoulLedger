@@ -622,6 +622,18 @@ class TestCrossTenantJudgmentParticipate:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         assert jug.participants.count() == 1
 
+    def test_participant_cannot_edit_or_delete_the_initiators_judgment(self):
+        jug = self._create_judgment()
+        CrossTenantJudgmentService.add_participant(jug, self.tenant_b, None, "ADVISOR")
+        url = f"{BASE}/cross-tenant-judgments/{jug.pk}/"
+        assert self.client_b.patch(url, {"title": "hijacked"}, format="json").status_code == 403
+        assert self.client_b.put(url, {"title": "hijacked", "description": "x"}, format="json").status_code == 403
+        assert self.client_b.delete(url).status_code == 403
+        jug.refresh_from_db()
+        assert jug.title == "Participate Test" and not jug.is_deleted
+        # 发起方照旧能改。
+        assert self.client_a.patch(url, {"title": "Renamed"}, format="json").status_code == 200
+
     def test_uninvolved_tenant_cannot_participate(self):
         tenant_c = Tenant.objects.get_or_create(
             code="CJ_T5", defaults={"display_name": "Random"}

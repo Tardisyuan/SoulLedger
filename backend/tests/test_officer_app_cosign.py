@@ -44,6 +44,18 @@ def test_the_designated_approver_adds_a_colleague_and_it_is_audited_and_notified
     assert sent == [([colleague.pk], {"kind": "approval", "id": str(wf.pk)})]
 
 
+def test_the_cosign_audit_records_the_client_not_the_proxy(cn_tenant, judge_user, colleague, settings):
+    """Behind nginx REMOTE_ADDR is the proxy; the audit row takes the validated client address
+    the rest of the codebase uses (`apps.core.client_ip.get_client_ip`)."""
+    settings.TRUSTED_PROXY_COUNT = 1
+    wf, _ = _plain_workflow(cn_tenant)
+    res = officer_client(judge_user).post(_cosign_url(wf), {"user_id": colleague.pk}, format="json",
+                                          REMOTE_ADDR="10.0.0.2", HTTP_X_FORWARDED_FOR="203.0.113.7, 10.0.0.9")
+    assert res.status_code == 201, res.data
+    row = AuditLog.objects.get(resource="workflow.cosign", resource_id=str(wf.pk))
+    assert row.ip_address == "203.0.113.7"
+
+
 def test_the_approver_cannot_pass_until_the_cosigner_has_signed_and_a_refusal_is_never_held(
         cn_tenant, judge_user, colleague):
     wf, node = _plain_workflow(cn_tenant)

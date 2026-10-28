@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import record_export
+from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
@@ -330,6 +330,7 @@ class LedgerJournalExportView(APIView):
         except JournalParamError as exc:
             return _journal_param_error(exc)
 
+        refuse_if_too_many(period)
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f"attachment; filename=ledger_journal_{month}.csv"
         writer = csv.writer(response)
@@ -692,6 +693,14 @@ class LedgerExportStatsView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        tenant = getattr(request, 'tenant', None) or getattr(user, 'tenant', None)
+        qs = (
+            Soul.objects.select_related("tenant").filter(tenant=tenant)
+            if tenant
+            else Soul.objects.none()
+        )
+        refuse_if_too_many(qs)
+
         response = HttpResponse(content_type="text/csv")
         # Matches the name the dashboard's blob download writes. The anchor's
         # download attribute wins over this header for the in-app path, so the
@@ -712,7 +721,7 @@ class LedgerExportStatsView(APIView):
         # it as None. Reading the user's own tenant column is the same answer
         # by a route that cannot be skipped -- the same fallback used in
         # apps/dispatch/views.py and apps/workflow/serializers.py.
-        tenant = getattr(request, 'tenant', None) or getattr(user, 'tenant', None)
+        # (`tenant` / `qs` above.)
         # Scoped to the requester's tenant, ADMIN included -- matching
         # LedgerOverviewStatsView above, which sits on the same dashboard.
         #
@@ -729,11 +738,6 @@ class LedgerExportStatsView(APIView):
         # Unified downward deliberately: a reader of either function would draw
         # the wrong conclusion about the other, and the exemption is least
         # defensible on the endpoint that produces a file.
-        qs = (
-            Soul.objects.select_related("tenant").filter(tenant=tenant)
-            if tenant
-            else Soul.objects.none()
-        )
         # Use iterator() to stream results without loading all into memory
         rows = 0
         for soul in qs.iterator(chunk_size=1000):

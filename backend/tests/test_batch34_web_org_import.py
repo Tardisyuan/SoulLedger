@@ -124,6 +124,23 @@ class TestUserImportPreview:
         res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload("email\nx@y.z\n")}, format="multipart")
         assert (res.status_code, res.data["code"]) == (400, "missing_columns")
 
+    def test_the_soul_imports_size_and_row_limits_hold_here_too(self, admin_client):
+        from apps.souls.importer import MAX_BYTES, MAX_ROWS
+
+        rows = "".join(f"u{i},,VIEWER\n" for i in range(MAX_ROWS + 1))
+        res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload("username,password,role\n" + rows),
+                                                               "dry_run": "1"}, format="multipart")
+        assert (res.status_code, res.data["code"], res.data["max_rows"]) == (400, "too_many_rows", MAX_ROWS)
+        # Exactly the ceiling is still read row by row (a 200 preview, not a file-level refusal).
+        rows = "".join(f"u{i},,VIEWER\n" for i in range(MAX_ROWS))
+        res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload("username,password,role\n" + rows),
+                                                               "dry_run": "1"}, format="multipart")
+        assert res.status_code == 200 and res.data["total"] == MAX_ROWS
+        big = "username\n" + "x" * MAX_BYTES
+        res = admin_client.post("/api/v1/users/import_csv/", {"file": _upload(big)}, format="multipart")
+        assert (res.status_code, res.data["code"]) == (400, "file_too_large")
+        assert not User.objects.filter(username__startswith="u0").exists()
+
 
 @pytest.mark.django_db
 class TestArchiveRoundTrip:

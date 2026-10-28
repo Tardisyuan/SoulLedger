@@ -233,6 +233,11 @@ class TestRecycleBinListing:
         )
         self.menu = Menu.objects.create(name="Deleted Menu", path="/gone", roles=["ADMIN"])
 
+    def test_a_non_admin_with_no_tenant_context_sees_no_tenant_rows(self):
+        self.soul.delete_with_cascade(user=self.admin)
+        assert any(e["entity_type"] == "soul" for e in list_bin_entries(tenant=self.tenant, is_admin=False))
+        assert not any(e["entity_type"] == "soul" for e in list_bin_entries(tenant=None, is_admin=False))
+
     def test_bin_lists_soul_as_one_entry_with_dependent_count_not_as_separate_rows(self):
         self.soul.delete_with_cascade(user=self.admin)
         entries = list_bin_entries(tenant=self.tenant, is_admin=True)

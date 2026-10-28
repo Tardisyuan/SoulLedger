@@ -267,15 +267,19 @@ def disable(user, *, request=None, actor=None):
 
 
 def admin_reset(user, *, actor, reason, request=None):
-    """管理员重置:验证器、恢复码、「不再询问」设备令牌全清,并吊销该用户所有刷新令牌。
-    理由进审计行的 changes。"""
-    from apps.soul_accounts.services import _revoke_refresh_tokens
+    """管理员重置:验证器、恢复码、「不再询问」设备令牌全清,并结束该用户全部会话。
+    理由进审计行的 changes。
+
+    `passwords.end_sessions` 而不只是吊销刷新令牌:后者留着手里的访问令牌一直有效到过期,
+    而重置两步验证的前提往往是「手机丢了 / 账号可能落在别人手里」。`session_version` 加一
+    让已签发的访问令牌与已连上的 socket 当场作废,登录设备表同步。"""
+    from .passwords import end_sessions
 
     was_enabled = is_enabled(user)
     with transaction.atomic():
         OfficerMfa.objects.filter(user=user).delete()
         MfaRememberedDevice.objects.filter(user=user).delete()
-        _revoke_refresh_tokens(user)
+        end_sessions(user)
     audit(
         AuditAction.EXECUTE, user, f"管理员重置两步验证:{reason}", actor=actor, request=request,
         changes={"mfa_enabled": [was_enabled, False], "reason": reason, "sessions_revoked": True},
@@ -288,6 +292,27 @@ def admin_reset(user, *, actor, reason, request=None):
 class PendingToken(Token):
     token_type = "mfa_pending"
     lifetime = PENDING_TOKEN_LIFETIME
+
+
+# 待验证凭据一次性:验码成功即把它的 jti 记进缓存(到它过期为止),同一张凭据再来答 `pending_invalid`。
+# 此前 5 分钟内它可以反复换令牌 —— 偷看到一次凭据加下一个动态码(或一枚恢复码)就够再登一次。
+# 官员与灵魂两种凭据共用这一份(jti 是随机串,不会撞)。
+
+def _pending_used_key(jti) -> str:
+    return f"mfa_pending_used:{jti}"
+
+
+def pending_used(jti) -> bool:
+    from django.core.cache import cache
+
+    return not jti or cache.get(_pending_used_key(jti)) is not None
+
+
+def claim_pending(jti) -> bool:
+    """原子地占用这张凭据;已被占用(或没有 jti)→ False。`cache.add` 在 Redis 上是 SET NX。"""
+    from django.core.cache import cache
+
+    return bool(jti) and cache.add(_pending_used_key(jti), 1, timeout=int(PENDING_TOKEN_LIFETIME.total_seconds()) + 60)
 
 
 def _lock_remaining(mfa) -> int:

@@ -122,6 +122,8 @@ def verify_view(request):
         pending = mfa.PendingToken(data["pending_token"])
     except TokenError:
         return _refuse("pending_invalid", status.HTTP_401_UNAUTHORIZED)
+    if mfa.pending_used(pending.get("jti")):
+        return _refuse("pending_invalid", status.HTTP_401_UNAUTHORIZED)
     user = get_user_model().objects.filter(pk=pending["user_id"], is_active=True).first()
     row = mfa.get_mfa(user) if user is not None else None
     if user is None or user.role == UserRole.SOUL or row is None or not row.enabled:
@@ -138,6 +140,9 @@ def verify_view(request):
             failure_reason=f"mfa_{outcome['code']}",
         )
         return _refuse_outcome(outcome)
+    if not mfa.claim_pending(pending.get("jti")):
+        # 两个请求拿同一张凭据同时验过了码:只有先占到的那个拿令牌。
+        return _refuse("pending_invalid", status.HTTP_401_UNAUTHORIZED)
 
     LoginLog.objects.create(user=user, username=user.username, status="SUCCESS", ip_address=ip_address, user_agent=user_agent)
     device = mfa.remember_device(user) if data.get("remember_device") else ""

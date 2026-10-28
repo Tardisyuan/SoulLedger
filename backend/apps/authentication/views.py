@@ -514,7 +514,10 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
         from django.http import HttpResponse
 
+        from apps.core.exports import refuse_if_too_many
+
         qs = self.get_queryset()
+        refuse_if_too_many(qs)
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="users.csv"'
         writer = csv.writer(response)
@@ -562,6 +565,13 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if not tenant:
             return Response({'error': 'No tenant found'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # The soul import's limits (2 MB / 1000 rows): each row here costs a password hash and
+        # several queries inside this request, so an unbounded file was an unbounded request.
+        from apps.souls.importer import MAX_BYTES, MAX_ROWS
+
+        if file.size > MAX_BYTES:
+            return Response({'error': 'File is too large', 'code': 'file_too_large', 'max_bytes': MAX_BYTES},
+                            status=status.HTTP_400_BAD_REQUEST)
         # `utf-8-sig`: the downloadable template starts with a BOM so Excel opens it as UTF-8.
         try:
             decoded_file = file.read().decode('utf-8-sig')
@@ -577,6 +587,10 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 {'error': 'Missing column: username', 'code': 'missing_columns', 'columns': ['username']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        all_rows = list(reader)
+        if len(all_rows) > MAX_ROWS:
+            return Response({'error': f'More than {MAX_ROWS} rows', 'code': 'too_many_rows', 'max_rows': MAX_ROWS},
+                            status=status.HTTP_400_BAD_REQUEST)
         # `dry_run=1`: the same row checks, nothing written -- the web import
         # dialog's preview step (batch 34 W-5), shaped like the soul import's.
         dry_run = str(request.query_params.get('dry_run') or request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
@@ -586,7 +600,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         rows = []
         seen_usernames, seen_emails = set(), set()
 
-        for i, row in enumerate(reader):
+        for i, row in enumerate(all_rows):
             n = i + 2
             username = (row.get('username') or '').strip()
             email = (row.get('email') or '').strip()
@@ -735,6 +749,18 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 #: The login brute-force limiter: failures per client IP inside one window.
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 900
+#: ...and per username, across all IPs (same window). The IP counter alone let
+#: many addresses guess one officer's password at 5 tries each; the soul login
+#: (`soul_accounts/me_views.py`) has had both layers since 2026-09-17.
+LOGIN_MAX_ATTEMPTS_PER_USERNAME = 20
+
+
+def _username_rate_key(username):
+    """Hashed, as in `soul_accounts.me_views._rate_keys`: key names show up in Redis MONITOR / backups."""
+    import hashlib
+
+    digest = hashlib.sha256(str(username).strip().lower().encode()).hexdigest()[:32]
+    return f"login_rate:user:{digest}"
 
 
 def _get_client_ip(request):
@@ -787,6 +813,12 @@ class LoginView(TokenObtainPairView):
         # `/login` needs it to say 「M 分钟后再试」 rather than a bare refusal.
         until_key = f"login_rate_until:{ip_address}"
         attempts = cache.get(rate_key, 0)
+        username = request.data.get('username', '')
+        user_key = _username_rate_key(username)
+        user_until_key = f"{user_key}:until"
+        user_attempts = cache.get(user_key, 0)
+        if user_attempts >= LOGIN_MAX_ATTEMPTS_PER_USERNAME:
+            attempts, until_key = LOGIN_MAX_ATTEMPTS, user_until_key
         if attempts >= LOGIN_MAX_ATTEMPTS:
             until = cache.get(until_key)
             retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
@@ -799,11 +831,13 @@ class LoginView(TokenObtainPairView):
         def _count_failure():
             cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
             cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
-            return max(0, LOGIN_MAX_ATTEMPTS - (attempts + 1))
+            cache.set(user_key, user_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(user_until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
+            return max(0, min(LOGIN_MAX_ATTEMPTS - (attempts + 1),
+                              LOGIN_MAX_ATTEMPTS_PER_USERNAME - (user_attempts + 1)))
 
         # Capture request metadata before authentication
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
-        username = request.data.get('username', '')
 
         from .models import LoginLog
         try:
@@ -811,9 +845,11 @@ class LoginView(TokenObtainPairView):
             if response.status_code == 200 and response.data.get("mfa_required"):
                 # 密码对了,还要验码:计数清掉(第二步有自己的锁),登录日志等验码通过再写。
                 cache.delete(rate_key)
+                cache.delete(user_key)
             elif response.status_code == 200:
                 # Login success - clear rate limit counter
                 cache.delete(rate_key)
+                cache.delete(user_key)
                 user = response.data.get('user', {})
                 user_id = user.get('id')
                 LoginLog.objects.create(
@@ -842,7 +878,10 @@ class LoginView(TokenObtainPairView):
                 status='FAILED',
                 ip_address=ip_address,
                 user_agent=user_agent,
-                failure_reason=str(e)[:200],
+                # Only the class name for anything but wrong credentials: an
+                # unexpected exception's message can carry SQL, paths or the
+                # submitted values, and LoginLog is readable from the admin UI.
+                failure_reason=(str(e) if isinstance(e, AuthenticationFailed) else type(e).__name__)[:200],
             )
             if isinstance(e, AuthenticationFailed):
                 # Wrong credentials: the same `detail` as before, plus how many

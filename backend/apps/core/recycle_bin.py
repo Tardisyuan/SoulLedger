@@ -231,8 +231,9 @@ def list_bin_entries(tenant=None, is_admin=False):
         qs = manager.filter(is_deleted=True).exclude(delete_reason__startswith=SYSTEM_VOID_PREFIX)
         if bin_type.listable is not None:
             qs = qs.filter(bin_type.listable)
-        if not is_admin and tenant is not None and hasattr(bin_type.model, "tenant_id"):
-            qs = qs.filter(tenant=tenant)
+        if not is_admin and hasattr(bin_type.model, "tenant_id"):
+            # Fail closed: a non-ADMIN with no tenant context used to get every tenant's rows.
+            qs = qs.filter(tenant=tenant) if tenant is not None else qs.none()
         for row in qs.order_by("-deleted_at"):
             cascade_id = row.delete_cascade_id
             dependent_count = cascade_dependent_count(cascade_id, row) if cascade_id else 0

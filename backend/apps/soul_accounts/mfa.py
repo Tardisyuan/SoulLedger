@@ -53,6 +53,14 @@ def pending_method(raw) -> str:
         return "password"
 
 
+def pending_jti(raw) -> str:
+    """待验证凭据的 jti;读不出是空串(`core.pending_used("")` 答已用)。"""
+    try:
+        return SoulMfaPendingToken(raw).get("jti") or ""
+    except Exception:  # noqa: BLE001 -- 调用方已用 `account_from_pending` 验过它
+        return ""
+
+
 def account_from_pending(raw) -> SoulAccount | None:
     """凭据对、账号仍是当前世、用户仍启用 → 账号;否则 None(调用方统一答 `pending_invalid`)。"""
     from rest_framework_simplejwt.exceptions import TokenError

@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
+from apps.core.client_ip import get_client_ip
 from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
@@ -478,7 +479,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                         "judgment": str(judgment.pk) if judgment else None,
                         "reason": reason,
                     },
-                    ip_address=request.META.get("REMOTE_ADDR"),
+                    ip_address=get_client_ip(request),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
         except segments.SegmentRefusedError as refused:
@@ -593,7 +594,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 "reason": reason,
                 "advanced_to": str(getattr(workflow.current_node, "id", "")) or None,
             },
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
 

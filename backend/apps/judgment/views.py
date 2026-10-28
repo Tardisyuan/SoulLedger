@@ -15,6 +15,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
+from apps.core.client_ip import get_client_ip
 from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
@@ -1217,7 +1218,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             resource="judgment.comment", resource_id=str(judgment.id),
             description=f"评议:{judgment.case_number}"[:500],
             changes={"comment": str(comment.id), "length": len(comment.body)},
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
         return Response(JudgmentCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
