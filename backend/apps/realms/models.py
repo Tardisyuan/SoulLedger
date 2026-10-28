@@ -48,7 +48,12 @@ class RealmType(models.TextChoices):
     NEUTRAL = "NEUTRAL", "Neutral / Between"
     #: Not a place: the soul ceases to exist (Egyptian second death, user 2026-10-28;
     #: docs/01_埃及冥界整体架构.md §2.2, docs/02_奥西里斯审判详解.md §5.2).
-    ANNIHILATION = "ANNIHILATION", "Annihilation / Ceased to exist"
+    ANNIHILATION = "ANNIHILATION", "Annihilation"
+
+
+#: 按类型排序时的显示顺序:天堂 → 炼狱 → 中立 → 地狱 → 湮灭(Design 第五十五批)。
+#: 枚举字符串的字母序给不出这个顺序,所以显式列出;不要改枚举值。
+REALM_TYPE_DISPLAY_ORDER = ("BLISS", "PURGATORY", "NEUTRAL", "HELL", "ANNIHILATION")
 
 
 class RealmKind(models.TextChoices):

@@ -6,7 +6,7 @@ import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Castle, Cloud, Flame, CircleDot, CircleOff } from "lucide-react";
+import { Castle, Cloud, Flame, CircleDot } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
@@ -60,9 +60,9 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string }> = {
  * rather than ink-tertiary because ink-tertiary on a 10% tint of itself is
  * under the 4.5:1 floor (2.56:1 light).
  *
- * ANNIHILATION (Egyptian second death, user 2026-10-28) is not a place but it is
- * what a FAILED weighing produces, so it takes the failed verdict token; the
- * icon (a struck-out circle), not the colour, is what sets it apart from HELL.
+ * ANNIHILATION (Egyptian second death) wears NEUTRAL's neutral tint and the ≡
+ * glyph the roadmap and the realm tree already use for 「终结 / 永恒」: the type says
+ * what the realm IS, not the outcome of a verdict, so it takes no verdict colour.
  *
  * src/__tests__/statusTokenLayering.test.ts holds this map to the rule. It reads
  * these five entries AS TEXT, one line per key, and parses the
@@ -74,7 +74,7 @@ const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: stri
   PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-purgatory)/0.1)] border-[oklch(var(--color-verdict-purgatory)/0.3)] text-[oklch(var(--color-verdict-purgatory))]' },
   BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-passed)/0.1)] border-[oklch(var(--color-verdict-passed)/0.3)] text-[oklch(var(--color-verdict-passed))]' },
   NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
-  ANNIHILATION: { icon: <CircleOff className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-failed)/0.1)] border-[oklch(var(--color-verdict-failed)/0.3)] text-[oklch(var(--color-verdict-failed))]' },
+  ANNIHILATION: { icon: <span aria-hidden="true">≡</span>, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
 };
 
 /** One row of the tree table: a realm and how deep it sits under `parent_realm`. */
@@ -84,11 +84,20 @@ interface TreeRow {
 }
 
 /**
- * Depth-first over `parent_realm`, in the API's order at each level. A parent
+ * Depth-first over `parent_realm`, in type order (天堂 → … → 湮灭), then the API's order, at each level. A parent
  * outside this list (another civilization, or deleted) makes the realm a root —
  * and a cycle cannot hang the page: a realm is emitted at most once.
  */
-function treeRows(realms: Realm[]): TreeRow[] {
+/** 天堂 → 炼狱 → 中立 → 地狱 → 湮灭。枚举字符串的字母序不是这个顺序;未知类型排在最后。 */
+const TYPE_ORDER = ["BLISS", "PURGATORY", "NEUTRAL", "HELL", "ANNIHILATION"];
+const typeRank = (r: Realm) => {
+  const i = TYPE_ORDER.indexOf(r.realm_type);
+  return i < 0 ? TYPE_ORDER.length : i;
+};
+
+function treeRows(unsorted: Realm[]): TreeRow[] {
+  // Stable sort: within a type the API's (tier) order is kept.
+  const realms = [...unsorted].sort((a, b) => typeRank(a) - typeRank(b));
   const ids = new Set(realms.map((r) => r.id));
   const children = new Map<string, Realm[]>();
   const roots: Realm[] = [];

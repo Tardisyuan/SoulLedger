@@ -17455,7 +17455,7 @@ export interface components {
          *     * `PURGATORY` - Purgatory / Intermediate
          *     * `BLISS` - Heaven / Bliss
          *     * `NEUTRAL` - Neutral / Between
-         *     * `ANNIHILATION` - Annihilation / Ceased to exist
+         *     * `ANNIHILATION` - Annihilation
          * @enum {string}
          */
         RealmTypeEnum: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL" | "ANNIHILATION";
@@ -32528,7 +32528,7 @@ export interface operations {
                  *     * `PURGATORY` - Purgatory / Intermediate
                  *     * `BLISS` - Heaven / Bliss
                  *     * `NEUTRAL` - Neutral / Between
-                 *     * `ANNIHILATION` - Annihilation / Ceased to exist
+                 *     * `ANNIHILATION` - Annihilation
                  */
                 realm_type?: "ANNIHILATION" | "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
                 /** @description A search term. */
@@ -32620,7 +32620,7 @@ export interface operations {
                  *     * `PURGATORY` - Purgatory / Intermediate
                  *     * `BLISS` - Heaven / Bliss
                  *     * `NEUTRAL` - Neutral / Between
-                 *     * `ANNIHILATION` - Annihilation / Ceased to exist
+                 *     * `ANNIHILATION` - Annihilation
                  */
                 realm_type?: "ANNIHILATION" | "BLISS" | "HELL" | "NEUTRAL" | "PURGATORY";
                 /** @description A search term. */

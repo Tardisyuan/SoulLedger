@@ -322,8 +322,8 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
       PURGATORY: "--color-verdict-purgatory",
       BLISS: "--color-verdict-passed",
       NEUTRAL: "--color-ink-tertiary",
-      // The second death is what a FAILED weighing produces (user 2026-10-28).
-      ANNIHILATION: "--color-verdict-failed",
+      // The second death is a type, not a verdict outcome: it wears NEUTRAL's tint (Design 55).
+      ANNIHILATION: "--color-ink-tertiary",
     };
     expect(Object.keys(byRealm)).toEqual(realms.keys);
 
@@ -352,11 +352,12 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
     // Asserted as an equality, so "the right token is present" cannot pass
     // while the wrong one sits beside it.
     expect(utilities(lineFor("NEUTRAL")!).text).toEqual(["--color-ink-muted", "1"]);
+    expect(utilities(lineFor("ANNIHILATION")!).text).toEqual(["--color-ink-muted", "1"]);
 
     // And the other four DO tint at the depth the light-mode tokens were
     // measured against — 10%, the cap dataGridToneContract.test.ts enforces on
     // the shared badge tones. A realm badge is the same kind of badge.
-    for (const realm of ["HELL", "PURGATORY", "BLISS", "ANNIHILATION"]) {
+    for (const realm of ["HELL", "PURGATORY", "BLISS"]) {
       expect(utilities(lineFor(realm)!).text).toEqual([byRealm[realm], "1"]);
     }
   });
