@@ -53,6 +53,26 @@ def _execute(client, disposition_id):
     return lambda: client.post(f"/api/v1/disposition/{disposition_id}/execute/", {}, format="json").status_code
 
 
+def _release(client, disposition_id):
+    return lambda: client.post(f"/api/v1/disposition/{disposition_id}/release/", {}, format="json").status_code
+
+
+def _term_over(soul, p, order):
+    """执行第 `order` 站(2026-10-29:执行 = 开始服刑,有刑期的站仍 ACTIVE),再把起算日退到刑期之前,
+    让这一站可以「期满释放」。刑满回归 / 计划完成现在发生在释放那一笔,所以下面并发的是 `release`。"""
+    from django.utils import timezone
+
+    from apps.disposition.models import Disposition
+
+    assert plan.execute_only(soul, p, order)
+    stop = plan.node(p, order)
+    assert stop.status == "ACTIVE"
+    row = Disposition.all_objects.get(pk=stop.disposition_id)
+    Disposition.all_objects.filter(pk=row.pk).update(
+        term_start_year=timezone.localdate().year - (row.sentence_years or 0) - 1, term_start_month=1, term_start_day=1)
+    return stop
+
+
 # ── 1. 两个官员并发执行原属处置 → 恰一条调拨、一个 DISPATCHING 节点 ────────────────
 
 
@@ -84,11 +104,11 @@ def test_two_officers_executing_the_home_disposition_at_once_dispatch_once():
 
 def _serve_while_opening(cn, eg, run):
     soul, p, record = plan.at_stop(cn, eg)
-    stop = plan.node(p, 2)
+    stop = _term_over(soul, p, 2)
     executor = _client(plan.officer("pg2_exec", "ADMIN", eg))
     judge = _client(plan.officer("pg2_judge", "JUDGE", eg))
     results = run({
-        "serve": _execute(executor, stop.disposition_id),
+        "serve": _release(executor, stop.disposition_id),
         "open": lambda: judge.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json").status_code,
     })
     soul.refresh_from_db()
@@ -127,11 +147,12 @@ def test_serving_a_stop_and_opening_a_case_there_at_once_never_strands_the_case(
 
 def _stop_served_twice(cn, eg, run):
     soul, p, record = plan.at_stop(cn, eg)
-    stop = plan.node(p, 2)
+    stop = _term_over(soul, p, 2)
     a = _client(plan.officer("pg5_a", "ADMIN", eg))
     b = _client(plan.officer("pg5_b", "ADMIN", eg))
-    results = run({"a": _execute(a, stop.disposition_id), "b": _execute(b, stop.disposition_id)})
-    assert sorted(results.values()) == [200, 400], results
+    # 执行已在 `_term_over` 里;刑满后两位官员同时「期满释放」,后到的那位 409 `not_serving`。
+    results = run({"a": _release(a, stop.disposition_id), "b": _release(b, stop.disposition_id)})
+    assert sorted(results.values()) == [200, 409], results
     assert plan.node(p, 2).status == "COMPLETED"
     assert SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_NODE_COMPLETED", payload__order=2).count() == 1
     assert len(plan.returned_events(soul)) == 1
@@ -213,10 +234,10 @@ def _completion_and_submit(cn, eg, run):
     p = SentencePlan.all_objects.get(soul=soul)
     plan.serve(soul, p, 1)
     plan.arrive(soul, p, 2)
-    stop = plan.node(p, 2)
+    stop = _term_over(soul, p, 2)
     executor = _client(plan.officer("pg4_exec", "ADMIN", eg))
     results = run({
-        "serve": _execute(executor, stop.disposition_id),
+        "serve": _release(executor, stop.disposition_id),
         "apply": lambda: soul_client.post("/api/v1/me/rebirth-applications/", {"desired_form": "HUMAN"},
                                           format="json").status_code,
     })
@@ -401,7 +422,9 @@ def _open_twice_on_one_soul(cn, *, threaded):
     """复查之一:两件开审都过了无锁的「没有未结案审判」,后进锁的那件必须被拒。"""
     from apps.judgment.models import open_judgments
     from apps.souls.models import Soul, SoulState
+    from tests.city_god_support import default_city_god
 
+    default_city_god(cn)  # 地府开案要有城隍收案(no_city_god,2026-10-29)
     soul = Soul.objects.create(name="g7 双开", tenant=cn, current_state=SoulState.ALIVE)
     first = _client(plan.officer("g7a_first", "JUDGE", cn))
     second = _client(plan.officer("g7a_second", "JUDGE", cn))
@@ -430,12 +453,12 @@ def test_two_cases_past_the_unlocked_check_at_once_open_exactly_one():
 def _open_while_it_goes_home(cn, eg, *, threaded):
     """复查之二:执行地开审过了无锁的「灵魂在本租户」,随即刑满回归 —— 开审必须在锁下被拒。"""
     soul, p, record = plan.at_stop(cn, eg)
-    stop = plan.node(p, 2)
+    stop = _term_over(soul, p, 2)
     executor = _client(plan.officer("g7b_exec", "ADMIN", eg))
     judge = _client(plan.officer("g7b_judge", "JUDGE", eg))
     results = _open_after(
         lambda: judge.post("/api/v1/judgment/", {"soul": str(soul.pk)}, format="json").status_code,
-        _execute(executor, stop.disposition_id),
+        _release(executor, stop.disposition_id),
         threaded=threaded,
     )
     soul.refresh_from_db()

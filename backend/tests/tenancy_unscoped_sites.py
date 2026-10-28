@@ -218,7 +218,7 @@ SITES = [
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'SentenceNode.all_objects', 1, 'CODE', "lookup by a globally unique code, then checked against the caller's civilization/tenant"),
     ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentenceNode.all_objects', 1, 'PK', 're-reads the one node by pk that was just locked through its plan'),
     ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentencePlanRequest.all_objects', 1, 'PK', 'pending-request probe by the locked plan'),
-    ('apps/sentence_plan/requests.py', 'amend_for_appeal', 'Disposition.all_objects', 2, 'CROSS', "locks the appealed judgment's own disposition, or the dispositions its plan's stops reference by id -- a foreign stop's disposition lives in that hall; it is only read (executed or not), and only home dispositions are rewritten"),
+    ('apps/sentence_plan/requests.py', 'amend_for_appeal', 'Disposition.all_objects', 4, 'CROSS', "locks the appealed judgment's own disposition, or the dispositions its plan's stops reference by id -- a foreign stop's disposition lives in that hall; it is only read (executed or not), and only home dispositions are rewritten; the two system_void calls (Diyu acquittal on appeal) void by pk the judgment's own disposition or the home in-place node's disposition, both already locked above"),
     ('apps/sentence_plan/requests.py', 'amend_for_appeal', 'SentencePlan.all_objects', 1, 'PK', 'the plan the appealed judgment opened (origin_judgment_id); its tenant is that judgment\'s home hall'),
     ('apps/sentence_plan/requests.py', 'amend_for_appeal', 'SentencePlanRequest.all_objects', 1, 'PK', 'pending-request probe by the locked plan'),
     ('apps/sentence_plan/services.py', 'awaiting_redispatch_plan_ids', 'SentenceNode.all_objects', 1, 'FILTERED', 'nodes of the plans in the caller-scoped queryset passed in (plan_id__in), nothing else'),
@@ -312,6 +312,11 @@ SITES = [
     ('apps/workflow/tasks.py', 'pick_reminders_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant'),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'Judgment.all_objects', 1, 'PK', "the bench's own judgment by its judgment_id (the convening hall's)"),
     ('apps/sentence_plan/requests.py', 'append_cross_stops', 'SentencePlan.all_objects', 1, 'PK', "the plan that judgment opened (origin_judgment_id); the plan's tenant is that judgment's home hall"),
+    ('apps/disposition/services.py', 'DispositionService.finish_serving', 'Soul.all_objects', 1, 'LOCK', "locks the served disposition's own soul, by its FK (the disposition was reached through get_object(), the daily expiry sweep's per-tenant query, or the purgatory review)"),
+    ('apps/reincarnation/services.py', '_unserved_term', 'Disposition.all_objects', 1, 'PK', "the soul's own executed dispositions, by soul_id of the soul being reborn; only read for a term end date"),
+    ('apps/sentence_plan/services.py', 'SentencePlanService.on_origin_flow_completed', 'SentencePlan.all_objects', 1, 'PK', "the plan the just-completed workflow's judgment opened (origin_judgment_id); the plan's tenant is that judgment's home hall"),
+    ('apps/sentence_plan/services.py', 'SentencePlanService.on_term_served', 'SentenceNode.all_objects', 1, 'LOCK', 'locks, by its pk, the node node_for_disposition found for the served disposition, under the plan lock'),
+    ('apps/sentence_plan/services.py', '_origin_flow_open', 'ApprovalWorkflow._base_manager', 1, 'PK', "existence probe of the workflow of the plan's own origin judgment (judgment_id FK); nothing is read back"),
     ('apps/sentence_plan/services.py', 'SentencePlanService.open_cross_judgment', 'CrossTenantJudgment._base_manager', 1, 'CROSS', 'joint judgment attached to one judgment, still open'),
 ]
 
@@ -331,6 +336,7 @@ BY_ID_SITES = [
     ('apps/chat/views.py', 'OfficerInboxViewSet.assign', 'User', 1, "inbox.assign -> is_assignable(target, conversation.tenant_id) refuses another hall's officer"),
     ('apps/dispatch/views.py', 'CrossTenantJudgmentViewSet.participate', 'Actor', 1, "cross-hall by design: the seat's deity belongs to the invited civilization; add_participant validates it"),
     ('apps/disposition/views.py', 'DispositionViewSet.execute', 'Disposition', 1, 'locks the disposition already reached through get_object(), by its pk'),
+    ('apps/disposition/views.py', 'DispositionViewSet.release', 'Disposition', 1, 'locks the disposition already reached through get_object(), by its pk'),
     ('apps/judgment/attachment_views.py', 'CaseAttachmentActionsMixin._attachment', 'CaseAttachment', 1, 'also filtered by judgment=, a judgment already reached through get_object()'),
     ('apps/judgment/attachment_views.py', 'CaseAttachmentFileView.get', 'CaseAttachment', 1, 'ids come from a signed URL bound to viewer and tenant; may_view re-checks permission and tenant'),
     ('apps/judgment/attachment_views.py', 'CaseAttachmentFileView.get', 'User', 1, 'viewer id comes from the same signed URL; may_view re-checks it'),

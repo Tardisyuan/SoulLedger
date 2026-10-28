@@ -2,10 +2,9 @@
 
 - 受刑计划没走完、或本世有未赦免的永久刑期 → `reborn` 409,灵魂与计划原地不动;
 - 本世最近一份转生申请驳回 / 未决 → 409 `rebirth_not_approved`;已批准照常(仍受配额);没申请过的官员照样能办;
-- 孟婆汤按原属文明判断,重开计划清掉已饮的记录;
+- 孟婆汤按原属文明判断(重开已结束计划的那条路径 2026-10-29 删除);
 - `disposition_id` 只认这个灵魂自己的处置。
 """
-from types import SimpleNamespace
 
 import pytest
 
@@ -116,17 +115,3 @@ def test_the_soup_follows_the_home_civilization(cn_tenant, eu_tenant, settings):
         ReincarnationService.complete_rebirth(soul=soul)
     drink_soup(soul)  # not refused as `not_diyu`
     assert Soul.all_objects.get(pk=soul.pk).soup_taken_at is not None
-
-
-def test_reopening_the_plan_clears_the_soup(cn_tenant):
-    from django.utils import timezone
-
-    from apps.sentence_plan.requests import _reopen
-
-    soul = Soul.objects.create(name="重开", tenant=cn_tenant, current_state=SoulState.REINCARNATING)
-    Soul.all_objects.filter(pk=soul.pk).update(soup_taken_at=timezone.now())
-    soul = Soul.all_objects.get(pk=soul.pk)
-    plan = SentencePlan.all_objects.create(soul=soul, tenant=cn_tenant, status=SentencePlanStatus.COMPLETED)
-    assert _reopen(soul, plan, [], SimpleNamespace(pk="j"))
-    soul = Soul.all_objects.get(pk=soul.pk)
-    assert soul.current_state == SoulState.DISPOSED and soul.soup_taken_at is None

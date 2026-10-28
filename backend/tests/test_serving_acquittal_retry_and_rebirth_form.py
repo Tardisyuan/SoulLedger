@@ -367,7 +367,10 @@ def test_an_eternal_realm_and_a_realm_outside_the_table_get_no_default():
 
 
 def test_the_desk_and_the_list_say_what_the_default_is(cn, admin_user):
-    sp.realm("DY_COURT_02_CHUJIANG", "CHINESE")
+    from apps.realms.models import Realm
+
+    # 发落选单只列本案租户的界域(`destination._tenant_realms`):夹具建的 realm 没有租户,挂到本殿。
+    Realm.all_objects.filter(pk=sp.realm("DY_COURT_02_CHUJIANG", "CHINESE").pk).update(tenant=cn)
     _soul, case = sp.open_case(cn)
     client = officer_client(admin_user)
     desk = client.get(f"/api/v1/judgment/{case.pk}/destinations/", {"candidate_verdict": "FAILED"}).data

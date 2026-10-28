@@ -35,7 +35,7 @@ class TestQueryPerformance:
         assert query_count <= 10, f"Expected <= 10 queries, got {query_count}"
 
     def test_soul_detail_query_count(self, api_client, admin_user, cn_tenant):
-        """Soul detail should use <= 6 queries (no N+1)."""
+        """Soul detail should use <= 7 queries (no N+1)."""
         from rest_framework_simplejwt.tokens import RefreshToken
         token = RefreshToken.for_user(admin_user)
         if admin_user.tenant:
@@ -52,8 +52,10 @@ class TestQueryPerformance:
 
         # 6, not 5: `is_eval_identity` (2026-09-29) reads the assistant config row once per request
         # (apps/soul_assist/eval_identities.py::tagged_ids) — one query, not one per row.
+        # 7, not 6: `desired_rebirth_form` (2026-10-29) reads the soul's approved rebirth application once
+        # (apps/reincarnation/services.py::approved_desired_form); detail only, the list serializer has no such field.
         query_count = len(ctx)
-        assert query_count <= 6, f"Expected <= 6 queries, got {query_count}"
+        assert query_count <= 7, f"Expected <= 7 queries, got {query_count}"
 
 
 @pytest.mark.django_db
