@@ -7237,11 +7237,13 @@
       "REJECTED": "驳回 · 维持原判",
       "CURRENT": "审理中",
       "AHEAD": "未到",
-      "AWAITING_FINAL": "站梯走完 · 待终审"
+      "AWAITING_FINAL": "站梯走完 · 待终审",
+      "NOT_HEARD": "不再审"
     },
     "escalate_hint": "上一次复核维持了原判。还不服，可以上诉。",
-    "ladder_final_pending": "终审 · 待作出结论",
-    "final_decide": "作出终审结论"
+    "ladder_final_pending": "待作出结论",
+    "escalate_reason_label": "补充理由 · 选填",
+    "escalate_last": "这是这件审判的最后一次申诉，之后不能再申诉。"
   },
   "cityGods": {
     "title": "城隍",

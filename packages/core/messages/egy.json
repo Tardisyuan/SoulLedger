@@ -7237,11 +7237,13 @@
       "REJECTED": "Khesef · Wedja Tepy Smen",
       "CURRENT": "Em Maa",
       "AHEAD": "Nen Shem Djer",
-      "AWAITING_FINAL": "Sekhet Neb Menkh · Em Smen Wedja Pehwy"
+      "AWAITING_FINAL": "Sekhet Neb Menkh · Em Smen Wedja Pehwy",
+      "NOT_HEARD": "Sni Seth"
     },
     "escalate_hint": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery Wenen.",
-    "ladder_final_pending": "Wedja Pehwy · Nen Djed Djer",
-    "final_decide": "Djed Wedja Pehwy"
+    "ladder_final_pending": "Nen Djed Djer",
+    "escalate_reason_label": "Khet Mawy · Nen Em Tepy",
+    "escalate_last": "Nehet Pehwy: Er Khet Nen Nehet."
   },
   "cityGods": {
     "title": "Chenghuang",
