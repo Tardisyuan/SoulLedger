@@ -9,6 +9,7 @@ import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
+import { SessionContext } from "../session";
 import { installMobilePlatform } from "../platform";
 import { AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { stubApi } from "./stubApi";
@@ -135,11 +136,21 @@ it("U-1: the escalation takes the 「申诉 ›」 line's place — the hint on 
   expect(screen.queryByTestId(`appeal-deadline-${J}`)).toBeNull();
 });
 
-it("U-2: the escalation form lists the stations, the last one as 终审, and sends without a reason", async () => {
+it("U-2: the escalation form lists the stations under 申诉流程 · 文明名, the last one as 终审, and sends without a reason", async () => {
   mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "梵蒂冈"] };
   const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
-  wrap(<JudgmentAppealScreen />);
+  const session = { state: { status: "signedIn", profile: { home_civilization: "EUROPEAN" } } } as never;
+  wrap(
+    <SessionContext.Provider value={session}>
+      <JudgmentAppealScreen />
+    </SessionContext.Provider>
+  );
   expect(screen.getByTestId("appeal-stations").props.children).toBe("主教区 → 总主教区 → 终审 · 梵蒂冈");
+  expect(screen.getByText("申诉流程 · 欧洲")).toBeTruthy();
+  expect(screen.getByText("补充理由 · 选填")).toBeTruthy();
+  expect(screen.queryByText("理由")).toBeNull();
+  expect(screen.getByTestId("appeal-escalate-last").props.children).toBe("这是这件审判的最后一次申诉，之后不能再申诉。");
+  expect(StyleSheet.flatten(screen.getByTestId("appeal-escalate-last").props.style).backgroundColor).toBeTruthy();
   expect(screen.getByTestId("appeal-file-body").props.children).toContain("这一次也算一次申诉");
   fireEvent.press(screen.getByTestId("appeal-submit"));
   await screen.findByTestId("appeal-submit");
@@ -149,7 +160,7 @@ it("U-2: the escalation form lists the stations, the last one as 终审, and sen
 });
 
 it("U-3: a round in the flow carries the 上诉 tag, its progress, and a station per node with the human conclusion", () => {
-  const live = escalated([station(1, "魏征 · 察查司", "PASSED", "理由成立"), station(2, "原殿阎王 · 复核", "CURRENT"), station(3, "酆都大帝", "AHEAD", null, true)]);
+  const live = escalated([station(1, "魏征 · 察查司", "PASSED", "理由成立"), station(2, "原殿阎王 · 复核", "CURRENT"), station(3, "酆都大帝 · 终审", "AHEAD", null, true)]);
   wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[live]} focused onChanged={() => {}} />);
   expect(screen.getByTestId("appeal-escalated-tag")).toBeTruthy();
   // 终审 is not counted among the stations (55b).
@@ -172,14 +183,15 @@ it("U-6: all stations passed — the round says 站梯走完 · 待终审 and th
   });
   wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[waiting]} focused onChanged={() => {}} />);
   expect(screen.getByTestId("appeal-progress-a2").props.children).toBe("站梯走完 · 待终审");
-  expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("终审 · 待作出结论");
+  expect(screen.getByText("终审 · 梵蒂冈")).toBeTruthy();
+  expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("待作出结论");
   expect(within(screen.getByTestId("appeal-station-a2-3")).getByText("◇")).toBeTruthy();
   expect(StyleSheet.flatten(screen.getByTestId("appeal-station-a2-3").props.style).backgroundColor).toBeTruthy();
   expect(StyleSheet.flatten(screen.getByTestId("appeal-station-a2-2").props.style).backgroundColor).toBeUndefined();
   expect(screen.queryByText("▪")).toBeNull();
 });
 
-it("U-4: a rejecting station ends the ladder — the stations after it are not 'not reached'", () => {
+it("U-4: a rejecting station ends the ladder — the stations after it say 不再审, not 'not reached'", () => {
   const cut = escalated([station(1, "主教区", "PASSED"), station(2, "总主教区", "REJECTED", "原判依据充分，维持。"), station(3, "梵蒂冈", "AHEAD", null, true)], {
     status: "UPHELD",
     workflow_status: "REJECTED",
@@ -187,7 +199,9 @@ it("U-4: a rejecting station ends the ladder — the stations after it are not '
   });
   wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[cut]} focused onChanged={() => {}} />);
   expect(screen.getByTestId("appeal-station-state-a2-2").props.children).toBe("驳回 · 维持原判");
-  expect(screen.queryByTestId("appeal-station-state-a2-3")).toBeNull();
+  expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("不再审");
+  expect(within(screen.getByTestId("appeal-station-a2-3")).getByText("□")).toBeTruthy();
+  expect(screen.queryByText("未到")).toBeNull();
   expect(screen.queryByTestId("appeal-progress-a2")).toBeNull();
 });
 

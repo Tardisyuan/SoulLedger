@@ -22,3 +22,13 @@ export interface AppealCompensation {
 export function appealsLeftAfterWithdraw(roundsFiled: number): number {
   return Math.max(0, APPEAL_MAX_ROUNDS - roundsFiled);
 }
+
+/**
+ * 终审那一站的名字,给 `appeals.ladder_final`「终审 · {{name}}」用(第五十五批 55c):节点名本身多带
+ * 「 · 终审」(`workflow/templates.py`:「酆都大帝 · 终审」「Christ · 终审」),原样套会成「终审 · 酆都大帝 · 终审」。
+ * 只去掉末尾那一段;没有就原样。
+ */
+export function finalStationName(name: string): string {
+  const suffix = " · 终审";
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
+}

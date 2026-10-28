@@ -37,13 +37,10 @@ export function AppealDecideDialog({
   appeal,
   isOpen,
   onClose,
-  final = false,
 }: {
   appeal: JudgmentAppeal;
   isOpen: boolean;
   onClose: () => void;
-  /** 上诉站梯走完后的终审结论(第五十五批补充 E-3):同一个弹层,只换标题。 */
-  final?: boolean;
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -103,8 +100,8 @@ export function AppealDecideDialog({
       isOpen={isOpen}
       onClose={onClose}
       wide
-      // 「终审结论 · 案号」没有自己的词条:借「作出终审结论」接案号(第五十六批之后可换)。
-      title={final ? `${t("appeals.final_decide")} · ${appeal.case_number}` : t("appeals.decide_title", { case: appeal.case_number })}
+      // 上诉站梯走完后的终审结论(55c E-3)也是这个标题:同一个弹层,不另起。
+      title={t("appeals.decide_title", { case: appeal.case_number })}
       footer={
         <div className="flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>

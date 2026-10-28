@@ -1,14 +1,16 @@
 "use client";
 
 import type { AppealLadder, AppealLadderStation, JudgmentAppeal } from "@soulledger/core/api";
+import { finalStationName } from "@soulledger/core/domain/appeals";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 /*
  * 上诉的站梯与方标(Design 第五十五批 E-1 / E-2,补充 55b E-3)。字形照路线图图例:■ 已过 · ▪ 当前 · □ 未到 · ✕ 驳回 ·
  * ◇ 待作出结论(与灵魂状态「审判中」、裁决「待定」同一个字形)。
  * 终审(`is_final` 那一站)不画在站梯里,而是站梯下面虚线隔开的单独一行(55b):未到 · 不再审 · ◇ 待作出结论(浅底)·
- * ■ 维持原判 / 改判。
- * 流程结束后剩下的 AHEAD 是「不再审」—— 那句文案词表里还没有,先只画灰的 □、不写状态,免得读成「还在等」。
+ * ■ 维持原判 / 改判。站名「终审 · {{name}}」,name 去掉节点名末尾的「 · 终审」(`finalStationName`,55c),
+ * 状态(`ladder_final_pending`「待作出结论」)写在右侧。
+ * 流程结束后剩下的 AHEAD 是「不再审」(第五十六批 U-4 `ladder_state.NOT_HEARD`):灰的 □ 加这句,和「未到」分得开。
  * 每站的结论是人写的(衬线),不写复核人(同申诉)。
  */
 
@@ -26,6 +28,12 @@ export const finalStation = (ladder: AppealLadder | null | undefined) => ladder?
 /** 站梯走完 · 待终审。 */
 export const awaitingFinal = (ladder: AppealLadder | null | undefined) => finalStation(ladder)?.state === "AWAITING_FINAL";
 
+/** 「查看审批流程 →」的锚点(第五十六批 W-1):流程停在的那一站(含待终审的终审站)`#node-<节点 id>`;没有就空串。 */
+export function ladderAnchor(ladder: AppealLadder | null | undefined) {
+  const station = ladder?.stations.find((s) => s.state === "CURRENT" || s.state === "AWAITING_FINAL");
+  return station ? `#node-${station.node}` : "";
+}
+
 /** 「上诉」方标:2px ink 框,申诉那一行没有。 */
 export function EscalatedTag() {
   const { t } = useI18n();
@@ -38,7 +46,7 @@ export function EscalatedTag() {
 
 export function stationName(station: AppealLadderStation, t: T) {
   return station.is_final
-    ? t("appeals.ladder_final", { name: station.name })
+    ? t("appeals.ladder_final", { name: finalStationName(station.name) })
     : t("appeals.ladder_station", { n: String(station.order), name: station.name });
 }
 
@@ -49,7 +57,7 @@ export function ladderCurrentText(ladder: AppealLadder | null, t: T) {
   if (!ladder || !station) return null;
   const total = ladder.stations.filter((s) => !s.is_final).length;
   return [
-    station.is_final ? t("appeals.ladder_final", { name: station.name }) : t("appeals.ladder_progress", { n: String(station.order), total: String(total) }),
+    station.is_final ? t("appeals.ladder_final", { name: finalStationName(station.name) }) : t("appeals.ladder_progress", { n: String(station.order), total: String(total) }),
     ...(station.is_final ? [] : [station.name]),
     t("appeals.ladder_state.CURRENT"),
   ].join(" · ");
@@ -64,7 +72,7 @@ export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "lad
     const notHeard = over && s.state === "AHEAD";
     // The final station passing hands the appeal to the final judge: what it says is the appeal's own result.
     const state = notHeard
-      ? null
+      ? t("appeals.ladder_state.NOT_HEARD")
       : s.state === "AWAITING_FINAL"
         ? t("appeals.ladder_final_pending")
         : s.is_final && s.state === "PASSED"

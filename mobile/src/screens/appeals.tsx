@@ -11,11 +11,15 @@
  *         右边「上诉 ›」;不能上诉时不画这一行(`not_escalatable` 只给后端兜底)。
  *     U-2 同一张整页表单(`escalate`),多一块各站名(`escalation_stations`),理由选填,后果说明用 `escalate_body`;不能撤回。
  *     U-3 ~ U-5 那一轮前一枚「上诉」方标,下面一条站梯(■ 已过 · ▪ 当前 · □ 未到 · ✕ 驳回),每站的结论用 `Quote`;
- *         驳回之后的站不写状态(「不再审」还没有词条)。终审站通过后写这一轮的结果(维持 / 改判),改判照 A-4。
+ *         驳回之后的站(含终审)灰 □ +「不再审」(第五十六批 `ladder_state.NOT_HEARD`)。终审站通过后写这一轮的结果
+ *         (维持 / 改判),改判照 A-4。
  *   第五十五批补充(55b):终审(`is_final`)不在站梯里,而是站梯下面虚线隔开的单独一行;U-2 的各站名最后一个写成「终审 · 站名」;
  *     进度「第 n / 站数 站」不数终审。
- *     U-6 站梯走完 · 待终审(`AWAITING_FINAL`):轮次行右侧写 `ladder_state.AWAITING_FINAL`,终审一行 ◇ 浅底 +
- *         `ladder_final_pending`。
+ *     U-6 站梯走完 · 待终审(`AWAITING_FINAL`):轮次行右侧写 `ladder_state.AWAITING_FINAL`,终审一行 ◇ 浅底,
+ *         右侧 `ladder_final_pending`「待作出结论」(55c:只写状态,站名在左)。
+ *   55c:终审站名「终审 · {{name}}」的 name 去掉节点名末尾的「 · 终审」(`finalStationName`)。
+ *   第五十六批 U-2:各站名那一行的标签是 `appeals.ladder`「申诉流程 · 文明名」;理由的标签 `escalate_reason_label`;
+ *     提交按钮正上方浅底一句 `escalate_last`。
  *
  * 数据是 `GET /me/judgment-appeals/`:`judgments` 只列本世已结案的原审,所以没有这一行的审判
  * (未结案、复审、前世)不画申诉行。
@@ -29,14 +33,15 @@ import {
   type MeJudgmentAppeal,
   type MeJudgmentAppealList,
 } from "@soulledger/core/api/soul";
-import { appealsLeftAfterWithdraw } from "@soulledger/core/domain/appeals";
+import { appealsLeftAfterWithdraw, finalStationName } from "@soulledger/core/domain/appeals";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
+import { SessionContext } from "../session";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useDiscardGuard } from "./discardGuard";
@@ -82,7 +87,7 @@ function Ladder({ round }: { round: MeJudgmentAppeal }) {
     const faint = s.state === "AHEAD";
     // The final station passing hands the appeal to the final judge: its result is the round's own.
     const state = notHeard
-      ? null
+      ? t("appeals.ladder_state.NOT_HEARD")
       : s.state === "AWAITING_FINAL"
         ? t("appeals.ladder_final_pending")
         : s.is_final && s.state === "PASSED"
@@ -102,7 +107,7 @@ function Ladder({ round }: { round: MeJudgmentAppeal }) {
         <View style={styles.fill}>
           <View style={styles.entryLine}>
             <Txt variant="body" tone={faint ? "subtle" : "ink"} style={styles.fill}>
-              {s.is_final ? t("appeals.ladder_final", { name: s.name }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
+              {s.is_final ? t("appeals.ladder_final", { name: finalStationName(s.name) }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
             </Txt>
             {state ? (
               <Txt testID={`appeal-station-state-${round.id}-${s.order}`} variant="caption" tone="muted">
@@ -373,10 +378,14 @@ export type JudgmentAppealParams = {
 
 /** A-2: the form, a whole page — a 2000-character reason does not fit a sheet with the keyboard up. */
 export function JudgmentAppealScreen() {
-  const { t } = useI18n();
+  const { t, enumLabel } = useI18n();
   const toast = useToast();
   const { gutter } = useLayout();
   const verdict = useVerdict();
+  const theme = useTheme();
+  // 「申诉流程 · 文明名」:这一世的审判在本籍文明审(同申请,见 applications.tsx `useResidence`)。
+  const session = useContext(SessionContext);
+  const civilization = session?.state.status === "signedIn" ? session.state.profile.home_civilization : null;
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const params = useRoute<RouteProp<{ JudgmentAppeal: JudgmentAppealParams }, "JudgmentAppeal">>().params;
   const [reason, setReason] = useState("");
@@ -416,10 +425,12 @@ export function JudgmentAppealScreen() {
         <DataRows>
           <DataRow label={t("appeals.original_verdict")}>{`${params.caseNumber} · ${verdict(params.verdict)}`}</DataRow>
           {params.escalate && params.stations?.length ? (
-            <DataRow label={t("appeals.escalate")}>
+            <DataRow label={t("appeals.ladder", { name: enumText(enumLabel("souls.civilizations", civilization), t) })}>
               <Txt testID="appeal-stations" variant="body">
-                {/* 55b:最后一站是终审,写成「终审 · 站名」。 */}
-                {params.stations.map((name, i) => (i === params.stations!.length - 1 ? t("appeals.ladder_final", { name }) : name)).join(" → ")}
+                {/* 55b:最后一站是终审,写成「终审 · 站名」(55c:站名去掉末尾的「 · 终审」)。 */}
+                {params.stations
+                  .map((name, i) => (i === params.stations!.length - 1 ? t("appeals.ladder_final", { name: finalStationName(name) }) : name))
+                  .join(" → ")}
               </Txt>
             </DataRow>
           ) : null}
@@ -427,7 +438,7 @@ export function JudgmentAppealScreen() {
         <View>
           <Input
             testID="appeal-reason"
-            label={t("appeals.reason_label")}
+            label={t(params.escalate ? "appeals.escalate_reason_label" : "appeals.reason_label")}
             value={reason}
             onChangeText={(v) => {
               setReason(v);
@@ -450,6 +461,11 @@ export function JudgmentAppealScreen() {
           {t("appeals.deadline", { date: appealDay(params.deadline) })}
         </Txt>
         {error ? <FieldError testID="appeal-error" text={error} /> : null}
+        {params.escalate ? (
+          <Txt testID="appeal-escalate-last" variant="body" style={[styles.last, { backgroundColor: theme.s2 }]}>
+            {t("appeals.escalate_last")}
+          </Txt>
+        ) : null}
         <Button testID="appeal-submit" title={t("appeals.submit")} busy={busy} onPress={() => void submit()} />
         <Button testID="appeal-cancel" kind="secondary" title={t("soul_app.common.cancel")} onPress={() => navigation.goBack()} />
       </View>
@@ -470,6 +486,7 @@ const styles = StyleSheet.create({
   ladder: { gap: 8, marginTop: 4 },
   station: { flexDirection: "row", gap: 8 },
   awaiting: { paddingHorizontal: 8, paddingVertical: 4 },
+  last: { paddingHorizontal: 12, paddingVertical: 8 },
   finalRow: { borderTopWidth: 1, borderStyle: "dashed", paddingTop: 8, marginTop: 4 },
   entryLine: { flexDirection: "row", alignItems: "baseline", gap: 8 },
 });
