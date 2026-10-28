@@ -6,8 +6,12 @@
  *   A-2 整页表单(`JudgmentAppealScreen`):理由 2000 字,新证据选填;有未提交内容时离开先确认。
  *   A-3 各轮:新的一轮在上;复核意见是人写的话,用 `Quote`(serif);不写复核人;待复核 / 复核中可撤回。
  *   A-4 推送落地(`focused`):自动展开最新一轮,改判时写「原判 → 新判」与补偿各站。
- *   上诉(2026-10-27):上一轮一次复核维持原判、还有次数时(`can_escalate`),同一行多一个「上诉 ›」,
- *       走同一张表单(`escalate`),交本文明的申诉流程逐站复核;那一轮写流程名,不能撤回。
+ *   上诉(2026-10-27;Design 第五十五批 U-1 ~ U-5):
+ *     U-1 上一轮一次复核维持原判、还有次数时(`can_escalate`),原来「申诉 ›」那一行换成左边一句 `escalate_hint`、
+ *         右边「上诉 ›」;不能上诉时不画这一行(`not_escalatable` 只给后端兜底)。
+ *     U-2 同一张整页表单(`escalate`),多一块各站名(`escalation_stations`),理由选填,后果说明用 `escalate_body`;不能撤回。
+ *     U-3 ~ U-5 那一轮前一枚「上诉」方标,下面一条站梯(■ 已过 · ▪ 当前 · □ 未到 · ✕ 驳回),每站的结论用 `Quote`;
+ *         驳回之后的站不写状态(「不再审」还没有词条)。终审站通过后写这一轮的结果(维持 / 改判),改判照 A-4。
  *
  * 数据是 `GET /me/judgment-appeals/`:`judgments` 只列本世已结案的原审,所以没有这一行的审判
  * (未结案、复审、前世)不画申诉行。
@@ -47,6 +51,63 @@ export function roundsOf(list: MeJudgmentAppealList, judgment: string): MeJudgme
 }
 
 const OPEN = ["PENDING", "IN_REVIEW"];
+const GLYPH = { PASSED: "■", CURRENT: "▪", AHEAD: "□", REJECTED: "✕" } as const;
+const DECIDED = ["UPHELD", "AMENDED"];
+
+/** 「上诉」方标:2px ink 框,申诉那一轮没有。 */
+function EscalatedTag() {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <View testID="appeal-escalated-tag" style={[styles.tag, { borderColor: theme.ink }]}>
+      <Txt variant="caption">{t("appeals.escalated_tag")}</Txt>
+    </View>
+  );
+}
+
+/** U-3 ~ U-5:上诉那一轮的站梯。不写复核人(同申诉)。 */
+function Ladder({ round }: { round: MeJudgmentAppeal }) {
+  const { t } = useI18n();
+  const ladder = round.ladder;
+  if (!ladder) return null;
+  const over = round.workflow_status === "COMPLETED" || round.workflow_status === "REJECTED";
+  return (
+    <View testID={`appeal-stations-${round.id}`} style={styles.ladder}>
+      {ladder.stations.map((s) => {
+        const notHeard = over && s.state === "AHEAD";
+        const faint = s.state === "AHEAD";
+        // The final station passing hands the appeal to the final judge: its result is the round's own.
+        const state = notHeard
+          ? null
+          : s.is_final && s.state === "PASSED"
+            ? DECIDED.includes(round.status)
+              ? t(`appeals.status.${round.status}`)
+              : null
+            : t(`appeals.ladder_state.${s.state}`);
+        return (
+          <View key={s.node} testID={`appeal-station-${round.id}-${s.order}`} style={styles.station}>
+            <Txt variant="body" tone={faint ? "subtle" : "ink"}>
+              {GLYPH[s.state]}
+            </Txt>
+            <View style={styles.fill}>
+              <View style={styles.entryLine}>
+                <Txt variant="body" tone={faint ? "subtle" : "ink"} style={styles.fill}>
+                  {s.is_final ? t("appeals.ladder_final", { name: s.name }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
+                </Txt>
+                {state ? (
+                  <Txt testID={`appeal-station-state-${round.id}-${s.order}`} variant="caption" tone="muted">
+                    {state}
+                  </Txt>
+                ) : null}
+              </View>
+              {s.note ? <Quote text={s.note} /> : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 function useVerdict() {
   const { enumLabel, t } = useI18n();
@@ -112,6 +173,7 @@ function Round({
           {t("appeals.ladder", { name: round.workflow_name })}
         </Txt>
       ) : null}
+      <Ladder round={round} />
       {round.status === "AMENDED" ? (
         <DataRows>
           <DataRow label={t("appeals.original_verdict")}>{verdict(round.original_verdict)}</DataRow>
@@ -194,26 +256,31 @@ export function AppealLine({
   return (
     <View testID={`appeal-line-${row.judgment_id}`} style={[styles.line, { borderTopColor: theme.hair }]}>
       <View style={styles.entry}>
-        {row.can_appeal ? (
+        {row.can_escalate ? (
+          <>
+            <Txt testID={`appeal-escalate-hint-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
+              {t("appeals.escalate_hint")}
+            </Txt>
+            <SmallButton
+              testID={`appeal-escalate-${row.judgment_id}`}
+              title={`${t("appeals.escalate")} ›`}
+              onPress={() =>
+                navigation.navigate("JudgmentAppeal", {
+                  judgment: row.judgment_id,
+                  caseNumber: row.case_number,
+                  verdict: row.verdict,
+                  deadline: row.deadline,
+                  escalate: true,
+                  stations: row.escalation_stations,
+                })
+              }
+            />
+          </>
+        ) : row.can_appeal ? (
           <>
             <Txt testID={`appeal-deadline-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
               {t("appeals.deadline", { date: appealDay(row.deadline) })}
             </Txt>
-            {row.can_escalate ? (
-              <SmallButton
-                testID={`appeal-escalate-${row.judgment_id}`}
-                title={`${t("appeals.escalate")} ›`}
-                onPress={() =>
-                  navigation.navigate("JudgmentAppeal", {
-                    judgment: row.judgment_id,
-                    caseNumber: row.case_number,
-                    verdict: row.verdict,
-                    deadline: row.deadline,
-                    escalate: true,
-                  })
-                }
-              />
-            ) : null}
             <SmallButton
               testID={`appeal-file-${row.judgment_id}`}
               title={`${t("appeals.file")} ›`}
@@ -241,9 +308,15 @@ export function AppealLine({
           onPress={() => setToggled(!open)}
           style={styles.entry}
         >
+          {latest.workflow ? <EscalatedTag /> : null}
           <Txt variant="body" style={styles.fill}>
             {`${t("appeals.round", { round: String(latest.round) })} · ${t(`appeals.status.${latest.status}`)}`}
           </Txt>
+          {latest.ladder?.current ? (
+            <Txt testID={`appeal-progress-${latest.id}`} variant="value" tone="muted">
+              {t("appeals.ladder_progress", { n: String(latest.ladder.current), total: String(latest.ladder.total) })}
+            </Txt>
+          ) : null}
           <Txt variant="caption" tone="subtle">
             {open ? "▲" : "▼"}
           </Txt>
@@ -265,6 +338,8 @@ export type JudgmentAppealParams = {
   deadline: string;
   /** 上诉到本文明的申诉流程,而不是再一次一次复核。 */
   escalate?: boolean;
+  /** 上诉时要过的各站名(`escalation_stations`),确认页列出。 */
+  stations?: string[];
 };
 
 /** A-2: the form, a whole page — a 2000-character reason does not fit a sheet with the keyboard up. */
@@ -285,7 +360,8 @@ export function JudgmentAppealScreen() {
 
   const submit = async () => {
     if (busy) return;
-    if (!reason.trim()) return setMissing(true);
+    // 上诉的理由选填:第一次申诉已经写过(U-2)。
+    if (!reason.trim() && !params.escalate) return setMissing(true);
     setBusy(true);
     setError(null);
     try {
@@ -310,6 +386,13 @@ export function JudgmentAppealScreen() {
       <View style={[styles.form, { paddingHorizontal: gutter }]}>
         <DataRows>
           <DataRow label={t("appeals.original_verdict")}>{`${params.caseNumber} · ${verdict(params.verdict)}`}</DataRow>
+          {params.escalate && params.stations?.length ? (
+            <DataRow label={t("appeals.escalate")}>
+              <Txt testID="appeal-stations" variant="body">
+                {params.stations.join(" → ")}
+              </Txt>
+            </DataRow>
+          ) : null}
         </DataRows>
         <View>
           <Input
@@ -353,4 +436,8 @@ const styles = StyleSheet.create({
   compensation: { gap: 2, marginTop: 4 },
   form: { paddingVertical: 24, gap: 20 },
   count: { alignSelf: "flex-end", marginTop: 4 },
+  tag: { borderWidth: 2, paddingHorizontal: 4 },
+  ladder: { gap: 8, marginTop: 4 },
+  station: { flexDirection: "row", gap: 8 },
+  entryLine: { flexDirection: "row", alignItems: "baseline", gap: 8 },
 });
