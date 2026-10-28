@@ -76,6 +76,20 @@ class LifeStage(models.TextChoices):
     OLD_AGE = "OLD_AGE", "Old age"
 
 
+class SinGravity(models.TextChoices):
+    """Mortal or venial (docs/03_七宗罪与地狱惩罚.md §二; docs/01_欧洲天堂地狱整体架构.md §1.2-1.3).
+
+    Only a European DEMERIT record carries it. A mortal sin unrepented at death is what sends a soul to hell
+    (CCC 1033, docs/01 §1.3); a venial sin, or a mortal one confessed and absolved, leaves only the temporal
+    punishment that purgatory purges (CCC 1030-1031, docs/01 §1.2). So the third member is not a third gravity:
+    it is a mortal sin whose eternal punishment was remitted, which is the distinction the hell / purgatory
+    decision actually turns on. Blank = unclassified, and the verdict is not checked against it.
+    """
+    MORTAL = "MORTAL", "大罪 · 未悔"
+    MORTAL_ABSOLVED = "MORTAL_ABSOLVED", "大罪 · 已告解"
+    VENIAL = "VENIAL", "小罪"
+
+
 class EvidenceSource(models.TextChoices):
     """Where the record of a deed came from (司录 / witness / the soul's own
     account / other). Display only: the judgment desk's 采信 toggle is a ruling
@@ -266,6 +280,15 @@ class SoulRecord(AuditUserFields, models.Model):
             "in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, "
             "first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, "
             "which leaves the European router on its culpa ladder for this deed."
+        ),
+    )
+
+    # 欧洲:大罪 / 小罪(2026-10-28)。`DispositionService.refuse_against_gravity` reads it at conclusion.
+    sin_gravity = models.CharField(
+        max_length=16, choices=SinGravity.choices, blank=True, default="",
+        help_text=(
+            "European DEMERIT only: MORTAL (unrepented at death), MORTAL_ABSOLVED (confessed and absolved) "
+            "or VENIAL. Blank = unclassified."
         ),
     )
 

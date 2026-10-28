@@ -469,40 +469,29 @@ def test_sloth_still_says_the_hell_reading_is_disputed(seeded):
 
 
 @pytest.mark.django_db
-def test_no_verdict_is_routed_to_a_terrace(seeded):
-    """The terraces are reference data, and that is a decision, not an oversight.
+def test_no_magnitude_routes_to_a_terrace(seeded):
+    """A terrace is chosen by WHICH sin, never by how much (2026-10-28 changed what this test pins).
 
-    A terrace is chosen by *which* sin. Nothing in a Judgment records that — the
-    router has a verdict and a karma number — so routing to a terrace would have
-    to pick one by karma magnitude, rebuilding the severity ladder that made
-    "seven sins over nine circles" look plausible in the first place. If a route
-    is ever added it should be added on purpose, and this test is what makes
-    that a decision instead of a drift.
+    It used to assert that no verdict reaches a terrace at all, because nothing recorded a sin. Now a deed
+    filed under an EU-DS-T* article names one (`SoulRecord.statute`), and `_route_european` sends a PURGATORY
+    soul to the lowest terrace it cites. What must stay true is that the culpa ladder — the magnitude — still
+    reaches no terrace: with no soul (no citations) every culpa lands on the mountain.
     """
-    from apps.disposition.services import DispositionService
+    from apps.disposition.services import DispositionService as D
+    from apps.judgment.models import Verdict
 
-    routable = {
-        DispositionService.CHINESE_PURGATORY,
-        DispositionService.CHINESE_HEAVEN,
-        DispositionService.EU_HEAVEN,
-        DispositionService.EU_PURGATORY,
-        DispositionService.EG_AARU,
-        DispositionService.EG_ANNIHILATION,
-        DispositionService.EG_DUAT_ENTRY,
-        *DispositionService.CHINESE_HELL_TIERS.values(),
-        *DispositionService.EU_HELL_CIRCLES.values(),
-    }
-    routed = sorted(
-        terrace["realm_code"]
-        for terrace in TERRACES.values()
-        if terrace["realm_code"] in routable
-    )
-    assert routed == [], (
-        f"DispositionService now sends souls to {routed}. That is a behaviour "
-        f"change: purgatorial suffering is remedial and terrace-specific, and "
-        f"the router has no sin to select on. Update this test with the reason "
-        f"if the change is intended."
-    )
+    by_magnitude = {D._route_european(None, verdict, culpa)
+                    for verdict in Verdict.values for culpa in range(0, 200, 5)}
+    routed = sorted(t["realm_code"] for t in TERRACES.values() if t["realm_code"] in by_magnitude)
+    assert routed == [], f"the culpa ladder now reaches {routed}; a terrace is chosen by the sin cited"
+
+
+@pytest.mark.django_db
+def test_the_router_names_each_terrace_by_the_number_its_article_carries(seeded):
+    """The router's terrace table is a second copy of the realm codes; it must agree with the hand-written one."""
+    from apps.disposition.services import DispositionService as D
+
+    assert {n: t["realm_code"] for n, t in TERRACES.items()} == D.EU_PURGATORY_TERRACES
 
 
 @pytest.mark.django_db
