@@ -88,8 +88,9 @@ export function DiyuStationStrip({ soul, canMove }: { soul: Soul; canMove: boole
               <span
                 title={name(s)}
                 className={cn(
-                  "w-full truncate text-2xs",
-                  where === "current" ? "font-semibold text-[oklch(var(--color-ink))]" : "sr-only text-[oklch(var(--color-ink-muted))] xl:not-sr-only", // 窄屏只藏起来给眼睛,读屏照样念出每一站
+                  "truncate text-2xs",
+                  // w-full 只给看得见的站名:和 sr-only 写在一起时它压过 sr-only 的 1px 宽,隐藏的站名照样撑满 393px
+                  where === "current" ? "w-full font-semibold text-[oklch(var(--color-ink))]" : "sr-only text-[oklch(var(--color-ink-muted))] xl:not-sr-only xl:w-full", // 窄屏只藏起来给眼睛,读屏照样念出每一站
                 )}
               >
                 {name(s)}
