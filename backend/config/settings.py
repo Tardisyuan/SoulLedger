@@ -634,6 +634,10 @@ SPECTACULAR_SETTINGS = {
         "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
         "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
         "JudgmentAppealStatusEnum": "apps.judgment.models.AppealStatus.choices",
+        # 地府:罪目、城隍级别与司(2026-10-28)。`offence` / `rank` / `bureaus` 是通用的字段名,钉住免得下一个同名字段改名。
+        "ChineseOffenceEnum": "apps.judgment.models.ChineseOffence.choices",
+        "CityGodRankEnum": "apps.judgment.models.CityGodRank.choices",
+        "CityGodBureauEnum": "apps.judgment.models.CityGodBureau.choices",
         # 站梯一站的 `state`:字段名太通用,钉住免得和下一个同名字段互相改名。
         "AppealLadderStateEnum": "apps.judgment.appeals.LADDER_STATES",
         "ActorRoleEnum": "apps.actors.models.ActorRole.choices",

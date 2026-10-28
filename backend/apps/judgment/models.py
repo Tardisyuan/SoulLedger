@@ -65,6 +65,119 @@ class CityGodStatus(models.TextChoices):
 AT_CITY_GOD = (CityGodStatus.PENDING, CityGodStatus.RETURNED)
 
 
+class ChineseOffence(models.TextChoices):
+    """罪目(地府):十殿按罪行类型分殿,不按轻重(docs/01_地府整体架构.md「第三层:十殿阎罗」表,
+    docs/11_地府审判制度与冥律.md §2.2「审判范围(《玉历》罪目)」、§3.1 第四步「根据罪行类型分配至对应殿位」)。
+
+    成员就是二至九殿所掌的罪类,殿号在 `OFFENCE_COURT`。一殿(孽镜台、读生死簿)与十殿(六桥、发放投生)
+    不掌刑,没有罪目。五逆不经各殿、直入阿鼻(docs/11 §3.3),落在九殿。
+    """
+    ABDUCTION = "ABDUCTION", "拐骗少年男女"
+    SEIZING_PROPERTY = "SEIZING_PROPERTY", "欺占他人财物"
+    MAIMING = "MAIMING", "损坏人耳目手足"
+    DEFYING_ELDERS = "DEFYING_ELDERS", "忤逆尊长"
+    INCITING_LITIGATION = "INCITING_LITIGATION", "教唆兴讼"
+    BETRAYING_TRUST = "BETRAYING_TRUST", "背恩失节"
+    WITHHOLDING_DUES = "WITHHOLDING_DUES", "抗粮赖租"
+    TRADE_FRAUD = "TRADE_FRAUD", "交易欺诈"
+    RESENTMENT = "RESENTMENT", "怨怼"
+    INGRATITUDE = "INGRATITUDE", "忘恩"
+    ENVY = "ENVY", "嫉妒"
+    MISERLINESS = "MISERLINESS", "悭吝"
+    CURSING_HEAVEN = "CURSING_HEAVEN", "怨天尤地"
+    SACRILEGE = "SACRILEGE", "亵渎神佛"
+    DISRESPECTING_SCRIPT = "DISRESPECTING_SCRIPT", "不敬字纸经书"
+    BONES_FOR_MEDICINE = "BONES_FOR_MEDICINE", "取骸合药"
+    SEPARATING_KIN = "SEPARATING_KIN", "离散骨肉"
+    NEGLECTING_PARENTS = "NEGLECTING_PARENTS", "亲存不养"
+    UNBURIED_PARENTS = "UNBURIED_PARENTS", "亲殁不葬"
+    MURDER = "MURDER", "杀人"
+    ARSON = "ARSON", "放火"
+    POISONING = "POISONING", "制毒"
+    FIVE_HEINOUS = "FIVE_HEINOUS", "五逆"
+
+
+#: 罪目 → 殿号(`Realm.tier`,`DispositionService.CHINESE_HELL_TIERS` 的键)。
+OFFENCE_COURT = {
+    ChineseOffence.ABDUCTION: 2, ChineseOffence.SEIZING_PROPERTY: 2, ChineseOffence.MAIMING: 2,
+    ChineseOffence.DEFYING_ELDERS: 3, ChineseOffence.INCITING_LITIGATION: 3, ChineseOffence.BETRAYING_TRUST: 3,
+    ChineseOffence.WITHHOLDING_DUES: 4, ChineseOffence.TRADE_FRAUD: 4,
+    ChineseOffence.RESENTMENT: 5, ChineseOffence.INGRATITUDE: 5, ChineseOffence.ENVY: 5,
+    ChineseOffence.MISERLINESS: 5,
+    ChineseOffence.CURSING_HEAVEN: 6, ChineseOffence.SACRILEGE: 6, ChineseOffence.DISRESPECTING_SCRIPT: 6,
+    ChineseOffence.BONES_FOR_MEDICINE: 7, ChineseOffence.SEPARATING_KIN: 7,
+    ChineseOffence.NEGLECTING_PARENTS: 8, ChineseOffence.UNBURIED_PARENTS: 8,
+    ChineseOffence.MURDER: 9, ChineseOffence.ARSON: 9, ChineseOffence.POISONING: 9,
+    ChineseOffence.FIVE_HEINOUS: 9,
+}
+
+
+class WrongfulDeathCause(models.TextChoices):
+    """枉死城的死因分类(docs/10_枉死城详解.md §2.2 五类、§6.1 `death_cause`)。产品设定,文档已注明无一手依据。"""
+    ACCIDENT = "ACCIDENT", "意外身亡"
+    VICTIM = "VICTIM", "刑事被害"
+    SUICIDE = "SUICIDE", "自杀"
+    WAR = "WAR", "战争死亡"
+    OTHER = "OTHER", "其他"
+
+
+class GrievanceLevel(models.TextChoices):
+    """冤情等级(docs/10 §6.1 'none','minor','major','severe')。"""
+    NONE = "NONE", "无冤情"
+    MINOR = "MINOR", "轻"
+    MAJOR = "MAJOR", "重"
+    SEVERE = "SEVERE", "极重"
+
+
+class GrievanceStatus(models.TextChoices):
+    """枉死城的冤情申诉(docs/10 §4.2、§6.2):提出 → 审核 → 属实则提前释放。"""
+    FILED = "FILED", "已申诉"
+    UPHELD = "UPHELD", "属实 · 提前释放"
+    REJECTED = "REJECTED", "不属实"
+
+
+#: docs/10 §4.2「若确属冤死且冤情重大 → 可提前释放」:只有这两级的冤情,申诉属实才放人。
+GRIEVANCE_RELEASE_LEVELS = (GrievanceLevel.MAJOR, GrievanceLevel.SEVERE)
+
+
+class CityGodRank(models.TextChoices):
+    """城隍四级(docs/08_城隍体系详解.md §二),与人间地方行政对应。"""
+    PROVINCE = "PROVINCE", "都省城隍"
+    PREFECTURE = "PREFECTURE", "府城隍"
+    DEPARTMENT = "DEPARTMENT", "州城隍"
+    COUNTY = "COUNTY", "县城隍"
+
+
+class CityGodBureau(models.TextChoices):
+    """城隍下属的司(docs/08 §三):阴阳司为首,其下仿六部各四司,共二十四司。值是司名的拼音。
+    按部分组的表在 `packages/core/src/domain/cityGods.ts::CITY_GOD_BUREAU_GROUPS`(只用于显示)。"""
+    YINYANG = "YINYANG", "阴阳司"
+    GONGCAO = "GONGCAO", "功曹司"
+    DIANJI = "DIANJI", "典籍司"
+    JIBU = "JIBU", "记簿司"
+    DUGUAN = "DUGUAN", "都官司"
+    CAIBO = "CAIBO", "财帛司"
+    TUDI = "TUDI", "土地司"
+    LIANGMO = "LIANGMO", "粮秣司"
+    KAOJIE = "KAOJIE", "考劫司"
+    JISI = "JISI", "祭祀司"
+    YIZHU = "YIZHU", "仪注司"
+    HUOFU = "HUOFU", "祸福司"
+    MINGYI = "MINGYI", "冥衣司"
+    BINGZHANG = "BINGZHANG", "兵杖司"
+    XINGXUN = "XINGXUN", "刑讯司"
+    JUBU = "JUBU", "拘捕司"
+    XUNCHA = "XUNCHA", "巡察司"
+    XINGFA = "XINGFA", "刑罚司"
+    ANBU = "ANBU", "案簿司"
+    QUANDIAN = "QUANDIAN", "权典司"
+    XUMING = "XUMING", "续命司"
+    YINGZAO = "YINGZAO", "营造司"
+    QIAODAO = "QIAODAO", "桥道司"
+    CIJI = "CIJI", "祠祭司"
+    SHUYUN = "SHUYUN", "输运司"
+
+
 def open_judgments(soul):
     """这个灵魂**未结案**的审判,不分租户。
 
@@ -205,6 +318,16 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     #: `held_until` is that date, and the judgment cannot be claimed before it.
     untimely = models.BooleanField(default=False)
     held_until = models.DateField(null=True, blank=True)
+    #: 枉死城(docs/10):死因分类与冤情等级由官员登记(PATCH,只在枉死的案子上);冤情申诉经
+    #: `apps/judgment/wangsi.py` 写。申诉属实且冤情重大 → 提前释放:`held_until` 清空,案子当即可以认领。
+    wrongful_death_cause = models.CharField(max_length=10, choices=WrongfulDeathCause.choices, blank=True, default="")
+    grievance_level = models.CharField(max_length=10, choices=GrievanceLevel.choices, blank=True, default="")
+    grievance_status = models.CharField(max_length=10, choices=GrievanceStatus.choices, blank=True, default="")
+    grievance_plea = models.TextField(blank=True, default="")
+    grievance_note = models.TextField(blank=True, default="")
+    grievance_decided_at = models.DateTimeField(null=True, blank=True)
+    #: 罪目(地府):自动选殿按它(`DispositionService._route_chinese`);空 = 没填,退回按严重度。
+    offence = models.CharField(max_length=30, choices=ChineseOffence.choices, blank=True, default="")
     #: 埃及入殿前的一段(review P2-9,docs/02 §1.1、01 §4.2),死亡登记时由 `Soul.opening_fields` 写:
     #: EMBALMING = 木乃伊 70 天,`held_until` 是那一天;NAMELESS / IMPROPER_BURIAL 永远候着(不入冥界 /
     #: 走不完旅程),不能认领、不能结案;EARLY_DEATH 不称心,`Soul.die` 当场送芦苇原。空 = 不涉及。
@@ -1178,6 +1301,10 @@ class CityGod(AuditUserFields, models.Model):
     regions = models.JSONField(default=list, blank=True)
     is_default = models.BooleanField(default=False)
     officers = models.ManyToManyField("authentication.User", blank=True, related_name="city_gods")
+    #: 四级之一(docs/08 §二);空 = 未定级(这一列之前建的城隍)。
+    rank = models.CharField(max_length=12, choices=CityGodRank.choices, blank=True, default="")
+    #: 这位城隍设了哪些司(`CityGodBureau` 的值);docs/08:「级别越高,下属二十四司配置越齐全」—— 按实际配置记,不按级别推。
+    bureaus = models.JSONField(default=list, blank=True)
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()

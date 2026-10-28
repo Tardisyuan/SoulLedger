@@ -134,6 +134,12 @@ export {
   type CityGodWrite,
   type CityGodCase,
   type CityGodStatus,
+  wangsiApi,
+  WANGSI_ERROR_CODES,
+  type ChineseOffence,
+  type WrongfulDeathCause,
+  type GrievanceLevel,
+  type GrievanceStatus,
 } from "./judgment";
 
 // Ledger

@@ -3,7 +3,7 @@ Disposition service — creates disposition from judgment verdict.
 Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition, MemoryResetMechanism
-from apps.judgment.models import Judgment, JudgmentMethod, Verdict
+from apps.judgment.models import OFFENCE_COURT, Judgment, JudgmentMethod, Verdict
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.souls.models import Civilization, Soul
 
@@ -38,6 +38,11 @@ class DispositionService:
     # was doing duty as a karma bucket and as a court number simultaneously,
     # and whichever meaning you read it with, some other file disagreed. `tier`
     # is the court number now and nothing else; the bucket lives here.
+    #
+    # 2026-10-28: the severity band is now the FALLBACK. A case with a 罪目
+    # (`Judgment.offence`) goes to the court that tries that kind of offence
+    # (`apps.judgment.models.OFFENCE_COURT`, same keys as this map); only a
+    # case without one is still sorted by severity. See `_route_chinese`.
     CHINESE_HELL_MIN_TIER = 2
     CHINESE_HELL_MAX_TIER = 9
     CHINESE_HELL_TIERS = {
@@ -252,7 +257,8 @@ class DispositionService:
                 unoffset_demerit = admitted["unoffset_demerit"]
             else:
                 unoffset_demerit = LedgerService.get_unoffset_demerit(soul)
-            return cls._route_chinese(soul, verdict, karma, unoffset_demerit)
+            return cls._route_chinese(soul, verdict, karma, unoffset_demerit,
+                                      offence=judgment.offence if judgment is not None else "")
         elif civilization == Civilization.EUROPEAN:
             # `karma` is deliberately not passed. European culpa is the demerit
             # total alone (apps/ledger/readings.py::_european_reading), so the
@@ -297,6 +303,7 @@ class DispositionService:
         verdict: str,
         karma: int,
         unoffset_demerit: float | None = None,
+        offence: str = "",
     ) -> str:
         """
         Route Chinese soul based on verdict and severity.
@@ -359,6 +366,15 @@ class DispositionService:
             # +95 from -95 — and 不可折 severity, being a demerit total, has no
             # sign to lose. A soul with no recorded fault has no recorded
             # severity, which is precisely the case the floor is for.
+            #
+            # 罪目先行(docs/11 §3.1 第四步「根据罪行类型分配至对应殿位」;docs/01 十殿表):十殿按所掌的罪类分,
+            # 不是一条轻重阶梯。案子填了罪目(`Judgment.offence`)就去掌那一类的殿,与业力多少无关。
+            # 没填罪目时才退回下面按严重度的分档 —— 那是罪目这一列出现之前的读法,存量的案子、
+            # 不带 judgment 的调用(`allowed_realm_codes` 的扫描)都走它。两条路能到的殿都是二至九殿,
+            # 所以允许集合不变。
+            court = OFFENCE_COURT.get(offence)
+            if court is not None:
+                return cls.CHINESE_HELL_TIERS[court]
             severity = abs(karma) if unoffset_demerit is None else unoffset_demerit
             tier = min(
                 cls.CHINESE_HELL_MAX_TIER,

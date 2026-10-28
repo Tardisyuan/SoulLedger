@@ -210,6 +210,10 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "workflow",
             # 埃及称心的结果,结案时冻结;天平摇摆而再称的案子指回上一件(apps/judgment/weighing.py)。
             "weighing_result", "heart_weight", "retrial_of",
+            # 罪目(地府,自动选殿按它)与枉死城(docs/10)。罪目、死因、冤情等级可由 PATCH 写(`validate` 守规则);
+            # 申诉那几列只读,只经 `/judgment/wangsi/{id}/grievance|decide/` 写(apps/judgment/wangsi.py)。
+            "offence", "wrongful_death_cause", "grievance_level",
+            "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
@@ -224,6 +228,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "stale_since",
             "cycle", "judgment_method", "weighing_result", "heart_weight", "retrial_of",
             "city_god", "city_god_status", "city_god_note", "sent_on_at",
+            "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
         ]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
@@ -330,7 +335,28 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             })
         if "soul" in attrs:
             attrs["civilization"] = attrs["soul"].civilization
+        self._validate_chinese_case_fields(attrs)
         return attrs
+
+    def _validate_chinese_case_fields(self, attrs):
+        """罪目只在地府的案子上;死因与冤情等级只在枉死的案子上;已结案的案子三者都不再改
+        (罪目在结案时已决定了去哪一殿,事后改它只会让记录与处置对不上)。空串总是可以写回。"""
+        instance = self.instance
+        errors = {}
+        concluded = instance is not None and (instance.verdict is not None or instance.is_final)
+        civilization = attrs.get("civilization") or (instance.civilization if instance else None)
+        untimely = bool(instance and instance.untimely)
+        for field in ("offence", "wrongful_death_cause", "grievance_level"):
+            if field not in attrs:
+                continue
+            if concluded and attrs[field] != getattr(instance, field):
+                errors[field] = "This judgment is concluded."
+            elif attrs[field] and field == "offence" and civilization != Civilization.CHINESE:
+                errors[field] = "Only a 地府 (Chinese) case has an offence category."
+            elif attrs[field] and field != "offence" and not untimely:
+                errors[field] = "Only an untimely death (枉死) has a cause and a grievance level."
+        if errors:
+            raise serializers.ValidationError(errors)
 
 
 class EvidenceAdmissionSerializer(serializers.ModelSerializer):

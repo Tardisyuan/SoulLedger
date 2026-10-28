@@ -8,6 +8,7 @@ from apps.judgment.appeal_views import JudgmentAppealViewSet
 from apps.judgment.city_god_views import CityGodCaseViewSet, CityGodViewSet
 from apps.judgment.handover_views import HandoverCommitView, HandoverPreviewView
 from apps.judgment.views import JudgmentViewSet, StatuteViewSet
+from apps.judgment.wangsi_views import WangsiViewSet
 
 router = routers.DefaultRouter()
 # `statutes` MUST be registered before the judgment viewset. JudgmentViewSet is
@@ -22,6 +23,7 @@ router.register("statutes", StatuteViewSet, basename="statute")
 router.register("appeals", JudgmentAppealViewSet, basename="judgment-appeal")
 router.register("city-gods", CityGodViewSet, basename="city-god")
 router.register("city-god-cases", CityGodCaseViewSet, basename="city-god-case")
+router.register("wangsi", WangsiViewSet, basename="judgment-wangsi")
 router.register("", JudgmentViewSet, basename="judgment")
 # 交接在路由之前:空前缀的详情路由会把 `handover/` 当成一件审判的 pk。
 urlpatterns = [
