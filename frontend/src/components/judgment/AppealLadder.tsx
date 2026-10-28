@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 /*
  * 上诉的站梯与方标(Design 第五十五批 E-1 / E-2)。字形照路线图图例:■ 已过 · ▪ 当前 · □ 未到 · ✕ 驳回。
  * 流程结束后剩下的 AHEAD 是「不再审」—— 那句文案词表里还没有,先只画灰的 □、不写状态,免得读成「还在等」。
- * 每站的结论是人写的(衬线),不写复核人(同申诉)。
+ * 每站的结论是人写的(衬线),不写复核人(同申诉)。终审站通过时写这份申诉的结果(维持 / 改判),不写「送往下一站」。
  */
 
 const GLYPH: Record<AppealLadderStation["state"], string> = { PASSED: "■", CURRENT: "▪", AHEAD: "□", REJECTED: "✕" };
@@ -42,7 +42,7 @@ export function ladderCurrentText(ladder: AppealLadder | null, t: (key: string, 
   ].join(" · ");
 }
 
-export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "ladder" | "workflow_status"> }) {
+export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "ladder" | "workflow_status" | "status"> }) {
   const { t } = useI18n();
   if (!appeal.ladder) return null;
   const over = ladderOver(appeal);
@@ -50,6 +50,14 @@ export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "lad
     <ol data-testid="appeal-ladder" className="space-y-2">
       {appeal.ladder.stations.map((s) => {
         const notHeard = over && s.state === "AHEAD";
+        // The final station passing hands the appeal to the final judge: what it says is the appeal's own result.
+        const state = notHeard
+          ? null
+          : s.is_final && s.state === "PASSED"
+            ? appeal.status === "UPHELD" || appeal.status === "AMENDED"
+              ? t(`appeals.status.${appeal.status}`)
+              : null
+            : t(`appeals.ladder_state.${s.state}`);
         return (
           <li
             key={s.node}
@@ -61,7 +69,7 @@ export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "lad
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className={s.state === "CURRENT" ? "font-medium" : undefined}>{stationName(s, t)}</span>
-                {!notHeard && <span className="text-xs">{t(`appeals.ladder_state.${s.state}`)}</span>}
+                {state && <span className="text-xs">{state}</span>}
               </div>
               {s.note && <p className="font-serif whitespace-pre-wrap">{s.note}</p>}
             </div>
