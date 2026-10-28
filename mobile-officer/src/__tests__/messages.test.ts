@@ -85,3 +85,14 @@ describe("the three bundles agree", () => {
     }
   });
 });
+
+// 华为真机 10-29 第二轮: 「…「极重」时,属实即…」 showed a half-width comma inside Chinese. The trees
+// the wangsi review reads are held to full-width punctuation next to Han characters.
+describe("the wangsi review's Chinese uses full-width punctuation", () => {
+  const HALF_BY_HAN = /[一-鿿」』）][,;:?!]|[,;:?!][一-鿿「『（]/;
+  it.each(["officer_app.wangsi", "judgment.wangsi"])("%s", (tree) => {
+    const strings = flatten(at(zh, tree), tree);
+    expect(Object.keys(strings).length).toBeGreaterThan(0);
+    expect(Object.entries(strings).filter(([, s]) => HALF_BY_HAN.test(s))).toEqual([]);
+  });
+});

@@ -7343,7 +7343,9 @@
     },
     "wangsi": {
       "row_meta": "{{city_god}} · grievance {{level}}",
-      "review_title": "Grievance · {{name}}"
+      "review_title": "Grievance · {{name}}",
+      "note_required": "Write the review note first",
+      "level_saves": "Tap a level to save it"
     },
     "judgment": {
       "flow_progress": "Approval workflow · station {{n}} of {{total}}"
