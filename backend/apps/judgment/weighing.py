@@ -83,16 +83,17 @@ def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=Judgment
 
 
 def reweigh_after_rejection(flow) -> Judgment | None:
-    """A station refused the weighing flow: weigh again, the same path as a wavering scale (user 2026-10-27).
+    """A station refused an original judgment's approval flow: the case is heard again (user 2026-10-27 for the
+    Egyptian weighing; 2026-10-29 for every civilization's original judgment).
 
     The refused conclusion placed nothing yet — its disposition cannot execute before the flow completes
     (`unfinished_flow`) — so it is withdrawn: the disposition and the sentence plan it opened are voided by the system (soft-deleted, not
-    in the recycle bin, not restorable), the soul takes the system-only edge DISPOSED → JUDGING, and a new weighing (`retrial_of`) is opened with
-    JUDGMENT_INITIATED. Same transaction as the decision that rejected the flow. Returns None, leaving the old
-    way out (reopen or appeal), when the soul was already placed or the case is not an original weighing.
+    in the recycle bin, not restorable), the soul takes the system-only edge DISPOSED → JUDGING, and a new case (`retrial_of`, same
+    method) is opened with JUDGMENT_INITIATED. Same transaction as the decision that rejected the flow. Returns None, leaving the old
+    way out (reopen or appeal), when the soul was already placed or the case is not a concluded original.
     """
     judgment = flow.judgment
-    if judgment is None or not applies(judgment) or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
+    if judgment is None or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
         return None
     from apps.core.recycle_bin import system_void
     from apps.disposition.models import Disposition
@@ -111,19 +112,24 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     system_void(SentencePlan.all_objects.filter(pk__in=plan_ids), why, void)
     system_void(dispositions, why, void)
     # The state machine's system-only edge (Soul.SYSTEM_ONLY_TRANSITIONS); it writes STATE_CHANGED itself.
-    if not soul.transition_to(SoulState.JUDGING, "Weighing flow rejected", system="weighing_rejected"):
-        raise RuntimeError(f"Soul {soul.pk} could not go back to JUDGING after its weighing was rejected")
-    return open_retrial(judgment, reason="REJECTED")
+    if not soul.transition_to(SoulState.JUDGING, "Approval flow rejected", system="weighing_rejected"):
+        raise RuntimeError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was rejected")
+    return open_retrial(judgment, reason="REJECTED", method=judgment.judgment_method)
 
 
-def unfinished_flow(disposition) -> str | None:
-    """Why this disposition may not execute yet, or None (docs/02 §2.1, §5.1–5.2).
+_UNREAD = object()
 
-    Thoth reads, the tribunal confirms, Horus leads, Osiris receives — or Ammit devours — and only then is
-    the soul placed. So an Egyptian disposition waits for its weighing flow to be COMPLETED: one still
-    running is `weighing_in_progress`, a refused one normally withdraws its disposition and opens a new
-    weighing (`reweigh_after_rejection`); one that could not (the soul already placed) is `weighing_rejected`
-    (reopen or appeal the case). A case concluded without a flow (before this rule, or a reopened one) is not held.
+
+def unfinished_flow(disposition, flow_status=_UNREAD) -> str | None:
+    """Why this disposition may not execute yet, or None (user 2026-10-29; Egypt: docs/02 §2.1, §5.1–5.2).
+
+    An original judgment's disposition waits for its approval flow to be COMPLETED. Egypt's is the weighing flow
+    (Thoth reads, the tribunal confirms, Horus leads, Osiris receives — or Ammit devours): `weighing_in_progress`
+    / `weighing_rejected`; every other civilization's: `approval_in_progress` / `approval_rejected`. A refused flow
+    normally withdraws its disposition and opens a new case (`reweigh_after_rejection`); the `…_rejected` code is
+    the one that could not (the soul already placed: reopen or appeal). A case concluded without a flow (before
+    this rule, an early death, or not an original) is not held. `flow_status` is the flow's status when the caller
+    already read it (the list's `judgment_flow_status` annotation; None = no flow).
     """
     judgment = disposition.judgment
     # A wavering scale sends the soul nowhere (02 §5.3): a disposition written before that rule, parked at
@@ -132,11 +138,13 @@ def unfinished_flow(disposition) -> str | None:
     if (judgment is not None and judgment.civilization == "EGYPTIAN"
             and realm is not None and realm.realm_code == "EG_DUAT_ENTRY"):
         return "weighing_wavers"
-    if judgment is None or not applies(judgment):
+    if judgment is None or judgment.kind != JudgmentKind.ORIGINAL:
         return None
     from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
-    flow = ApprovalWorkflow.objects.filter(judgment=judgment).only("status").first()
-    if flow is None or flow.status == ApprovalWorkflowStatus.COMPLETED:
+    if flow_status is _UNREAD:
+        flow_status = ApprovalWorkflow.objects.filter(judgment=judgment).values_list("status", flat=True).first()
+    if flow_status is None or flow_status == ApprovalWorkflowStatus.COMPLETED:
         return None
-    return "weighing_rejected" if flow.status == ApprovalWorkflowStatus.REJECTED else "weighing_in_progress"
+    prefix = "weighing" if applies(judgment) else "approval"
+    return f"{prefix}_rejected" if flow_status == ApprovalWorkflowStatus.REJECTED else f"{prefix}_in_progress"

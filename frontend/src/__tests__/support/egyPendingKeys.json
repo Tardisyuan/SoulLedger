@@ -195,5 +195,10 @@
   "souls.capture.error.reason_required",
   "soul_app.life.station",
   "soul_app.life.station_at",
-  "soul_app.life.continent"
+  "soul_app.life.continent",
+  "judgment.error.no_city_god",
+  "judgment.detail.workflow_forced_original",
+  "disposition.flow_waiting.approval_in_progress",
+  "disposition.flow_waiting.approval_rejected",
+  "death_sync.error.NO_CITY_GOD"
 ]

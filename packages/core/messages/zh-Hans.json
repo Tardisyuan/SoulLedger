@@ -2054,7 +2054,8 @@
       "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
       "conclude_with_workflow": "落判并发起",
       "current_realm": "所在界域",
-      "method": "审判方式"
+      "method": "审判方式",
+      "workflow_forced_original": "原审必走审批流程：流程走完才能执行处置；流程被驳回就重开一案。"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -2363,7 +2364,8 @@
     "close_blocked_body": "{{name}} · {{date}} 召集 · 已入席 {{joined}} / {{total}}。召集人结束或取消后，这里就能结案。",
     "close_blocked_link": "去跨域审判 ›",
     "error": {
-      "at_city_god": "城隍初审中，解送后才能认领、结案"
+      "at_city_god": "城隍初审中，解送后才能认领、结案",
+      "no_city_god": "本殿没有可收案的城隍，先在城隍管理里设一位兜底城隍。"
     },
     "at_city_god": "城隍初审中",
     "weighing": {
@@ -3721,7 +3723,8 @@
       "SOUL_NOT_ALIVE": "灵魂已不在阳世",
       "INVALID_TRANSITION": "状态不允许转入审判",
       "INTERNAL_ERROR": "系统内部错误",
-      "VALIDATION_ERROR": "登记内容不合格式"
+      "VALIDATION_ERROR": "登记内容不合格式",
+      "NO_CITY_GOD": "本殿没有可收案的城隍"
     },
     "retry": {
       "action": "重试",
@@ -4039,7 +4042,11 @@
     "start_unrecorded": "起算未记录",
     "days_left": "余 {{n}} 天",
     "expired_on": "期满 {{date}}",
-    "arrange_reincarnation": "安排轮回"
+    "arrange_reincarnation": "安排轮回",
+    "flow_waiting": {
+      "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
+      "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。"
+    }
   },
   "reincarnation": {
     "form_label": "轮回形态",
@@ -7544,8 +7551,8 @@
   },
   "cityGods": {
     "title": "城隍",
-    "empty": "本殿还没有设城隍。没设城隍时，死亡登记直接进十殿。",
-    "explain": "出身地写了好几处地名时，交给写在最后的那个；一个都没写中，交兜底城隍；没有兜底，直接进十殿。",
+    "empty": "本殿还没有设城隍。没有城隍收案时，死亡登记会被拒绝：先设一位兜底城隍。",
+    "explain": "出身地写了好几处地名时，交给写在最后的那个；一个都没写中，交兜底城隍；没有兜底，不能开案。",
     "name": "名字",
     "regions": "管的地名",
     "regions_hint": "一个地名一个，回车加入；只写地名本身，例如「临安」，不写「县」「府」也可以。",

@@ -2054,7 +2054,8 @@
       "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
       "conclude_with_workflow": "Rule and open workflow",
       "current_realm": "Realm",
-      "method": "Method"
+      "method": "Method",
+      "workflow_forced_original": "An original judgment always runs its approval workflow: the disposition is executed once it finishes; a refused workflow reopens the case."
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -2363,7 +2364,8 @@
     "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it's ended or cancelled, you can close here.",
     "close_blocked_link": "Go to cross-realm judgment ›",
     "error": {
-      "at_city_god": "With the City God for first review; it can be claimed and concluded once sent on"
+      "at_city_god": "With the City God for first review; it can be claimed and concluded once sent on",
+      "no_city_god": "No City God of this hall can take the case: set a default City God under City Gods first."
     },
     "at_city_god": "With the City God",
     "weighing": {
@@ -3721,7 +3723,8 @@
       "SOUL_NOT_ALIVE": "Soul is no longer alive",
       "INVALID_TRANSITION": "State does not allow judgment",
       "INTERNAL_ERROR": "Internal error",
-      "VALIDATION_ERROR": "Invalid registration data"
+      "VALIDATION_ERROR": "Invalid registration data",
+      "NO_CITY_GOD": "No City God of this hall can take the case"
     },
     "retry": {
       "action": "Retry",
@@ -4039,7 +4042,11 @@
     "start_unrecorded": "Start not recorded",
     "days_left": "{{n}} days left",
     "expired_on": "Served {{date}}",
-    "arrange_reincarnation": "Arrange rebirth"
+    "arrange_reincarnation": "Arrange rebirth",
+    "flow_waiting": {
+      "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
+      "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed."
+    }
   },
   "reincarnation": {
     "form_label": "Rebirth form",
@@ -7544,8 +7551,8 @@
   },
   "cityGods": {
     "title": "City Gods",
-    "empty": "No City Gods in this hall yet. Without one, registered deaths go straight to the Ten Courts.",
-    "explain": "If the place of origin names several places, the last one named decides. If none matches, the default City God takes it; with no default, the case goes straight to the Ten Courts.",
+    "empty": "No City Gods in this hall yet. Without one, a registered death is refused: set a default City God first.",
+    "explain": "If the place of origin names several places, the last one named decides. If none matches, the default City God takes it; with no default, no case can be opened.",
     "name": "Name",
     "regions": "Places",
     "regions_hint": "One place per entry; press Enter to add. The bare name is enough, e.g. Lin'an.",

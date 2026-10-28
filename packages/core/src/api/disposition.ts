@@ -65,6 +65,8 @@ export interface Disposition extends ArchiveFields {
   soul_reborn?: boolean;
   /** 第十殿按结案时功过给的六道建议(docs/07 §四);地府以外为 null。官员可改。 */
   suggested_rebirth_form?: Schemas["Disposition"]["suggested_rebirth_form"];
+  /** 为什么现在还不能执行(原审的审批流程没走完 / 被驳回 / 天平摇摆),与执行的 409 同一个码;能执行为 null。 */
+  flow_waiting?: Schemas["Disposition"]["flow_waiting"];
 }
 
 export const dispositionApi = {

@@ -37,6 +37,7 @@ from apps.sentence_plan.models import (
 )
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.sentence_plan_support import walk_flow
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -84,6 +85,7 @@ def _open_case(tenant, name="案主"):
 def _concluded(tenant, name="案主"):
     case = _open_case(tenant, name)
     case.conclude(Verdict.PASSED, "")
+    walk_flow(case)  # 原审的处置等审批流程走完才执行(2026-10-29)
     case.refresh_from_db()
     return case
 
