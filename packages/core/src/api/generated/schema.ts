@@ -13824,6 +13824,7 @@ export interface components {
             can_appeal: boolean;
             refusal_code: string | null;
             can_escalate: boolean;
+            escalation_stations: string[];
         };
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {

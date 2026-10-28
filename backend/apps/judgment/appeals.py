@@ -153,6 +153,17 @@ def escalation_refusal(judgment, account):
     return None
 
 
+def escalation_stations(judgment):
+    """上诉确认页(Design 第五十五批 U-2)要列的站名:上诉时会建的那条 APPEAL 流程的人工节点名,按顺序。
+    模板与 `_start_ladder` 同一个来源(`WorkflowService._resolve_template`)。"""
+    from apps.workflow.models import AUTOMATIC_KINDS, CaseType
+    from apps.workflow.services import WorkflowService
+
+    template, _ = WorkflowService._resolve_template(judgment.civilization, CaseType.APPEAL, judgment.tenant)
+    nodes = sorted(template["nodes"], key=lambda n: n.get("order") or 0)
+    return [n["name"] for n in nodes if n.get("kind") not in AUTOMATIC_KINDS]
+
+
 def file(account, judgment_id, *, reason, evidence="", escalate=False):
     soul = account.soul
     with transaction.atomic():

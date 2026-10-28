@@ -43,8 +43,12 @@ def test_escalation_needs_a_round_upheld_on_review(case):
 
 
 def test_an_upheld_review_can_be_taken_up_the_chinese_appeal_flow(case):
+    assert case["client"].get(MINE).data["judgments"][0]["escalation_stations"] == []
     _upheld_once(case)
-    assert case["client"].get(MINE).data["judgments"][0]["can_escalate"] is True
+    row = case["client"].get(MINE).data["judgments"][0]
+    assert row["can_escalate"] is True
+    # The confirmation page lists the stations the flow will have, before it is built.
+    assert row["escalation_stations"] == ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"]
 
     response = _escalate(case)
     assert response.status_code == 201, response.data
