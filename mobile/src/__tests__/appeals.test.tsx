@@ -14,12 +14,12 @@ import { stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
+const BASE_PARAMS = { judgment: "11111111-1111-1111-1111-111111111111", caseNumber: "CN-2026-0007", verdict: "FAILED", deadline: "2026-11-08T12:00:00Z" };
+let mockParams: Record<string, unknown> = BASE_PARAMS;
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, addListener: () => () => {}, dispatch: jest.fn() }),
-  useRoute: () => ({
-    params: { judgment: "11111111-1111-1111-1111-111111111111", caseNumber: "CN-2026-0007", verdict: "FAILED", deadline: "2026-11-08T12:00:00Z" },
-  }),
+  useRoute: () => ({ params: mockParams }),
 }));
 
 function wrap(children: ReactNode) {
@@ -34,6 +34,7 @@ function wrap(children: ReactNode) {
 
 beforeEach(() => {
   installMobilePlatform();
+  mockParams = BASE_PARAMS;
   mockNavigate.mockClear();
   mockGoBack.mockClear();
 });
@@ -49,6 +50,7 @@ const row = (over: Record<string, unknown> = {}): MeAppealableJudgment => ({
   can_appeal: true,
   refusal_code: null,
   can_escalate: false,
+  escalation_stations: [],
   ...over,
 }) as MeAppealableJudgment;
 const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
@@ -71,8 +73,30 @@ const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
   workflow_number: null,
   workflow_status: null,
   workflow_name: null,
+  ladder: null,
   ...over,
 }) as MeJudgmentAppeal;
+
+type Station = NonNullable<MeJudgmentAppeal["ladder"]>["stations"][number];
+const station = (order: number, name: string, state: Station["state"], note: string | null = null, is_final = false): Station => ({
+  order,
+  node: `n${order}`,
+  name,
+  is_final,
+  state,
+  note,
+});
+const escalated = (stations: Station[], over: Record<string, unknown> = {}) =>
+  round({
+    id: "a2",
+    round: 2,
+    status: "IN_REVIEW",
+    workflow: "w1",
+    workflow_name: "申诉审判流程",
+    workflow_status: "IN_PROGRESS",
+    ladder: { current: stations.find((s) => s.state === "CURRENT")?.order ?? null, total: stations.length, stations },
+    ...over,
+  });
 
 it("an appealable judgment shows its deadline as a day and an 「申诉 ›」 that opens the form", () => {
   wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
@@ -94,12 +118,73 @@ it("a Greek judgment offers no appeal and says Minos is final (docs/02 希腊 §
 });
 
 it("after an upheld review, 「上诉 ›」 opens the same form for the appeal flow; without it there is no button", () => {
-  const first = wrap(<AppealLine row={row({ rounds_used: 1, can_escalate: true })} rounds={[]} onChanged={() => {}} />);
+  const stations = ["魏征 · 察查司", "原殿阎王 · 复核", "上级殿阎王", "酆都大帝 · 终审"];
+  const first = wrap(<AppealLine row={row({ rounds_used: 1, can_escalate: true, escalation_stations: stations })} rounds={[]} onChanged={() => {}} />);
   fireEvent.press(screen.getByTestId(`appeal-escalate-${J}`));
-  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, escalate: true }));
+  expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, escalate: true, stations }));
   first.unmount();
   wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
   expect(screen.queryByTestId(`appeal-escalate-${J}`)).toBeNull();
+});
+
+it("U-1: the escalation takes the 「申诉 ›」 line's place — the hint on the left, no second 申诉 beside it", () => {
+  wrap(<AppealLine row={row({ rounds_used: 1, can_escalate: true })} rounds={[]} onChanged={() => {}} />);
+  expect(screen.getByTestId(`appeal-escalate-hint-${J}`).props.children).toBe("上一次复核维持了原判。还不服，可以上诉。");
+  expect(screen.queryByTestId(`appeal-file-${J}`)).toBeNull();
+  expect(screen.queryByTestId(`appeal-deadline-${J}`)).toBeNull();
+});
+
+it("U-2: the escalation form lists the stations and sends without a reason", async () => {
+  mockParams = { ...BASE_PARAMS, escalate: true, stations: ["主教区", "总主教区", "终审 · 梵蒂冈"] };
+  const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
+  wrap(<JudgmentAppealScreen />);
+  expect(screen.getByTestId("appeal-stations").props.children).toBe("主教区 → 总主教区 → 终审 · 梵蒂冈");
+  expect(screen.getByTestId("appeal-file-body").props.children).toContain("这一次也算一次申诉");
+  fireEvent.press(screen.getByTestId("appeal-submit"));
+  await screen.findByTestId("appeal-submit");
+  await new Promise((r) => setTimeout(r, 0));
+  expect(screen.queryByText("请写理由")).toBeNull();
+  expect(calls[0]?.body).toEqual({ judgment: J, reason: "", evidence: "", escalate: true });
+});
+
+it("U-3: a round in the flow carries the 上诉 tag, its progress, and a station per node with the human conclusion", () => {
+  const live = escalated([station(1, "魏征 · 察查司", "PASSED", "理由成立"), station(2, "原殿阎王 · 复核", "CURRENT"), station(3, "酆都大帝", "AHEAD", null, true)]);
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[live]} focused onChanged={() => {}} />);
+  expect(screen.getByTestId("appeal-escalated-tag")).toBeTruthy();
+  expect(screen.getByTestId("appeal-progress-a2").props.children).toBe("第 2 / 3 站");
+  expect(screen.getByText("第 1 站 · 魏征 · 察查司")).toBeTruthy();
+  expect(screen.getByTestId("appeal-station-state-a2-1").props.children).toBe("通过，送往下一站");
+  expect(screen.getByText("理由成立")).toBeTruthy();
+  expect(screen.getByTestId("appeal-station-state-a2-2").props.children).toBe("审理中");
+  expect(screen.getByText("终审 · 酆都大帝")).toBeTruthy();
+  expect(screen.getByTestId("appeal-station-state-a2-3").props.children).toBe("未到");
+  expect(screen.queryByTestId("appeal-withdraw-a2")).toBeNull();
+});
+
+it("U-4: a rejecting station ends the ladder — the stations after it are not 'not reached'", () => {
+  const cut = escalated([station(1, "主教区", "PASSED"), station(2, "总主教区", "REJECTED", "原判依据充分，维持。"), station(3, "梵蒂冈", "AHEAD", null, true)], {
+    status: "UPHELD",
+    workflow_status: "REJECTED",
+    decision_note: "原判依据充分，维持。",
+  });
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[cut]} focused onChanged={() => {}} />);
+  expect(screen.getByTestId("appeal-station-state-a2-2").props.children).toBe("驳回 · 维持原判");
+  expect(screen.queryByTestId("appeal-station-state-a2-3")).toBeNull();
+  expect(screen.queryByTestId("appeal-progress-a2")).toBeNull();
+});
+
+it("U-5: the final judge's amendment: the final station says 已改判, the round 原判 → 新判 and its compensation", () => {
+  const done = escalated([station(1, "主教区", "PASSED"), station(2, "梵蒂冈", "PASSED", "改判", true)], {
+    status: "AMENDED",
+    workflow_status: "COMPLETED",
+    new_verdict: "PASSED",
+    decision_note: "终审改判",
+    compensations: [{ id: "c1", weight: 3, order: 1, description: "x" }],
+  });
+  wrap(<AppealLine row={row({ rounds_used: 2 })} rounds={[done]} focused onChanged={() => {}} />);
+  expect(screen.getByTestId("appeal-station-state-a2-2").props.children).toBe("已改判");
+  expect(screen.getByTestId("appeal-change-a2").props.children).toBe("不过 → 通过");
+  expect(screen.getByText("第 1 站 · 功德 3")).toBeTruthy();
 });
 
 it("a round in the appeal flow names the flow and cannot be withdrawn", () => {
