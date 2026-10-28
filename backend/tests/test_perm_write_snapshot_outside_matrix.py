@@ -476,8 +476,13 @@ def _reincarnation(tenant, soul):
     return Reincarnation.objects.create(soul=soul, target_realm="人间", tenant=tenant)
 
 
-def _dispatch_record(home, other, soul, status="PROPOSED"):
-    """A record proposed BY `other` TO `home`.
+def _dispatch_record(home, other, soul, status="PROPOSED", from_home=False):
+    """A record proposed BY `other` TO `home` (or, with `from_home`, BY `home` TO `other`).
+
+    `from_home` is for the CRUD PATCH probes: only the proposing tenant may
+    edit a dispatch (2026-10-29), so a PATCH on a record addressed TO home is
+    a 403 from that party check and would measure it instead of the codename
+    gate or the serializer's read-only fields.
 
     Built in this direction on purpose. The view's own checks require the
     caller's tenant to be the target before approve/reject/execute will run,
@@ -488,9 +493,10 @@ def _dispatch_record(home, other, soul, status="PROPOSED"):
     """
     from apps.dispatch.models import DispatchRecord
 
+    source, target = (home, other) if from_home else (other, home)
     return DispatchRecord.objects.create(
-        source_tenant=other,
-        target_tenant=home,
+        source_tenant=source,
+        target_tenant=target,
         soul=soul,
         status=status,
         reason="write-snapshot fixture",
@@ -603,7 +609,7 @@ def test_dispatch_record_partial_update(role_clients, snapshot_tenants, role):
 
     clients, _ = role_clients
     home, other = snapshot_tenants
-    record = _dispatch_record(home, other, _soul(other, f"wsnap-dp-{role}"))
+    record = _dispatch_record(home, other, _soul(home, f"wsnap-dp-{role}"), from_home=True)
     response = clients[role].patch(
         f"/api/v1/dispatch/records/{record.id}/", {"reason": f"REWRITTEN_BY_{role}"}, format="json"
     )
@@ -1644,7 +1650,7 @@ DB_PATH_PROBES = {
     # dispatch.manage — JUDGE and VIEWER refused; GUARDIAN through.
     "PATCH /dispatch/records/{id}/": (
         lambda client, ctx: client.patch(
-            f"/api/v1/dispatch/records/{ctx['dispatch'].id}/", {"reason": "dbpath"}, format="json"
+            f"/api/v1/dispatch/records/{ctx['own_dispatch'].id}/", {"reason": "dbpath"}, format="json"
         ),
         DISPATCH_RECORD_PATCH,
     ),
@@ -1683,6 +1689,9 @@ def test_enforced_writes_agree_through_the_db_path(
     ctx = {
         "reincarnation": _reincarnation(home, soul),
         "dispatch": _dispatch_record(home, other, _soul(other, f"dbpath-d-{role}-{uuid.uuid4().hex[:8]}")),
+        "own_dispatch": _dispatch_record(
+            home, other, _soul(home, f"dbpath-o-{role}-{uuid.uuid4().hex[:8]}"), from_home=True
+        ),
         "judgment": _cross_tenant_judgment(home),
         "notification": _notification(users[role]),
     }
@@ -1796,14 +1805,21 @@ def test_guardian_denied_the_three_decisions_now_stays_denied_through_patch(
     assert denied.status_code == 403, f"GUARDIAN is supposed to lack {codename}"
     assert DispatchRecord.objects.get(pk=record.pk).status == start_status
 
+    # The PATCH goes to a record home proposed: only the proposer may edit (2026-10-29).
+    own = _dispatch_record(
+        home, other, _soul(home, f"bypass-own-{narrow_action}"), status=start_status, from_home=True
+    )
     blocked = guardian.patch(
-        f"/api/v1/dispatch/records/{record.id}/", {"status": forged_status}, format="json"
+        f"/api/v1/dispatch/records/{own.id}/", {"status": forged_status}, format="json"
     )
     assert blocked.status_code == 400, (
         f"If this is 200 again, `status` became writable on "
         f"DispatchRecordSerializer and the {codename} bypass has reopened."
     )
-    after = DispatchRecord.objects.get(pk=record.pk)
+    assert guardian.patch(
+        f"/api/v1/dispatch/records/{record.id}/", {"status": forged_status}, format="json"
+    ).status_code == 403, "the target tenant may decide a dispatch, not edit it"
+    after = DispatchRecord.objects.get(pk=own.pk)
     assert after.status == start_status
     assert after.decided_at is None
     assert after.executed_at is None
@@ -1835,14 +1851,21 @@ def test_patch_can_no_longer_forge_an_executed_dispatch(role_clients, snapshot_t
     )
     assert denied.status_code == 403, "GUARDIAN is supposed to lack dispatch.execute"
 
+    # PATCH as the proposer (only the proposer may edit since 2026-10-29); as the target it is a 403.
+    own = _dispatch_record(home, other, _soul(home, "bypass-executed-own"), status=DispatchStatus.APPROVED,
+                           from_home=True)
     blocked = clients["GUARDIAN"].patch(
-        f"/api/v1/dispatch/records/{record.id}/",
+        f"/api/v1/dispatch/records/{own.id}/",
         {"status": DispatchStatus.EXECUTED},
         format="json",
     )
     assert blocked.status_code == 400, (
         "If this is 200 again, `status` became writable and the bypass has reopened."
     )
+    assert DispatchRecord.objects.get(pk=own.pk).status == DispatchStatus.APPROVED
+    assert clients["GUARDIAN"].patch(
+        f"/api/v1/dispatch/records/{record.id}/", {"status": DispatchStatus.EXECUTED}, format="json"
+    ).status_code == 403
     assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.APPROVED
     assert Soul.objects.get(pk=soul.pk).tenant_id == other.id, (
         "The soul did not move — correct now for a boring reason (the PATCH "
@@ -1911,7 +1934,7 @@ def test_patch_can_no_longer_skip_the_status_state_machine(role_clients, snapsho
     clients, _users = role_clients
     home, other = snapshot_tenants
     record = _dispatch_record(
-        home, other, _soul(other, "bypass-illegal-transition"), status=DispatchStatus.REJECTED
+        home, other, _soul(home, "bypass-illegal-transition"), status=DispatchStatus.REJECTED, from_home=True
     )
     assert not record.can_transition_to(DispatchStatus.EXECUTED), (
         "This test's premise is that the state machine forbids REJECTED -> "
@@ -1944,7 +1967,7 @@ def test_dispatched_by_can_no_longer_be_forged_through_patch(role_clients, snaps
 
     clients, users = role_clients
     home, other = snapshot_tenants
-    record = _dispatch_record(home, other, _soul(other, "bypass-attribution"))
+    record = _dispatch_record(home, other, _soul(home, "bypass-attribution"), from_home=True)
     assert record.dispatched_by_id is None
 
     blocked = clients["GUARDIAN"].patch(
