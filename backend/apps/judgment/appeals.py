@@ -208,6 +208,53 @@ def _ladder_running(appeal):
                               workflow=str(appeal.workflow_id))
 
 
+#: 站梯一站的状态(`ladder`)。
+LADDER_STATES = ("PASSED", "REJECTED", "CURRENT", "AHEAD")
+
+
+def ladder(appeal):
+    """站梯(Design 第五十五批):上诉那条流程的各站,按顺序;一次复核为 None。只读预取好的节点
+    (`workflow__nodes`),不另查。不带审批人(同申诉不说复核人)。
+
+    一站 = 一个人工节点;自动节点(通知、结束)不是一站,被跳过的(SKIPPED)也不算 —— 没有人审,也不会再审。
+    状态:CURRENT 流程正停在这站 · PASSED 已过(通过,或超时转交越过)· REJECTED 驳回 · AHEAD 还没到。
+    流程已结束时剩下的 AHEAD 就是「不再审」(驳回截断,或灵魂被吞噬时流程被结束),由客户端照 `workflow_status` 写。
+    终审站:最后一个 FINAL 类型的站,没有就最后一站(与 `segments.mark_required` 同一条规则)。"""
+    from apps.workflow.models import (
+        AUTOMATIC_KINDS,
+        TERMINAL_WORKFLOW_STATUSES,
+        NodeStatus,
+        NodeType,
+    )
+
+    if appeal.workflow_id is None:
+        return None
+    workflow = appeal.workflow
+    nodes = sorted((n for n in workflow.nodes.all()
+                    if n.kind not in AUTOMATIC_KINDS and n.status != NodeStatus.SKIPPED),
+                   key=lambda n: n.node_order)
+    running = workflow.status not in TERMINAL_WORKFLOW_STATUSES
+    # ponytail: the first PENDING node stands in for an unset pointer, like `_fallback_current`, minus its
+    # segment-awaiting-pick check (appeal flows have no segments).
+    current_pk = (workflow.current_node_id or next((n.pk for n in nodes if n.status == NodeStatus.PENDING), None)
+                  if running else None)
+    finals = [n for n in nodes if n.node_type == NodeType.FINAL]
+    final_pk = (finals or nodes)[-1].pk if nodes else None
+    stations, current = [], None
+    for position, node in enumerate(nodes, start=1):
+        if node.pk == current_pk:
+            state, current = "CURRENT", position
+        elif node.status == NodeStatus.REJECTED:
+            state = "REJECTED"
+        elif node.status in (NodeStatus.APPROVED, NodeStatus.ESCALATED, NodeStatus.TRAVERSED):
+            state = "PASSED"
+        else:
+            state = "AHEAD"
+        stations.append({"order": position, "node": node.pk, "name": node.node_name, "is_final": node.pk == final_pk,
+                         "state": state, "note": (node.notes or None) if state in ("PASSED", "REJECTED") else None})
+    return {"current": current, "total": len(stations), "stations": stations}
+
+
 def on_ladder_finished(workflow, status, end_reason=""):
     """`ApprovalWorkflow._finish` 调,同一事务。驳回(或被撤掉)= 维持原判,直接结;走完 = 申诉成立,
     终审那位官员成为复核人,申诉留在 IN_REVIEW 等他照常 `decide`。"""
