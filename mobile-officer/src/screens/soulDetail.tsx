@@ -210,11 +210,11 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
   );
 }
 
-function Fact({ label, value, wide, testID }: { label: string; value: string; wide?: boolean; testID?: string }) {
+function Fact({ label, value, wide, testID, muted }: { label: string; value: string; wide?: boolean; testID?: string; muted?: boolean }) {
   return (
     <View style={{ width: wide ? "100%" : "47%", gap: space[1] }}>
       <Txt variant="caption" tone="muted">{label}</Txt>
-      <Txt variant="body" testID={testID}>{value}</Txt>
+      <Txt variant="body" tone={muted ? "muted" : undefined} testID={testID}>{value}</Txt>
     </View>
   );
 }
@@ -245,12 +245,16 @@ function StationFact({ soul }: { soul: Soul }) {
   return <Fact testID="soul-diyu-station" label={t("souls.diyu_station.label")} value={value} />;
 }
 
-/** 勾魂状态(第五十七批 六):最近一张勾魂牒的状态与鬼差,只读,接口同网页(`capture-warrants/?soul=`)。没有牒就不画。 */
+/**
+ * 勾魂状态(第五十七批 六):最近一张勾魂牒的状态与鬼差,只读,接口同网页(`capture-warrants/?soul=`)。没有牒就不画。
+ * 拉取失败时画一行灰字「勾魂状态暂时读不到」—— 不然和「没有牒」看起来一样(华为真机 10-29)。
+ */
 function CaptureFact({ soulId }: { soulId: string }) {
   const { t, enumLabel } = useI18n();
   const load = useCallback(() => captureWarrantsApi.list({ soul: soulId }).then((r) => r.data.results), [soulId]);
-  const { data } = useRemote(load);
+  const { data, error } = useRemote(load);
   const latest = [...(data ?? [])].sort((a, b) => b.issued_at.localeCompare(a.issued_at))[0];
+  if (!latest && error) return <Fact testID="soul-capture-unavailable" label={t("souls.capture.title")} value={t("souls.capture.unavailable")} muted />;
   if (!latest) return null;
   const label = (ns: string, raw: string) => {
     const x = enumLabel(ns, raw);
