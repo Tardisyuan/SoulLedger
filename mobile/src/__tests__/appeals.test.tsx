@@ -146,6 +146,9 @@ it("U-2: the escalation form lists the stations under 申诉流程 · 文明名,
   expect(screen.queryByText("理由")).toBeNull();
   expect(screen.getByTestId("appeal-escalate-last").props.children).toBe("这是这件审判的最后一次申诉，之后不能再申诉。");
   expect(StyleSheet.flatten(screen.getByTestId("appeal-escalate-last").props.style).backgroundColor).toBeTruthy();
+  // The submit button says 上诉, not 提交申诉.
+  expect(screen.getByTestId("appeal-submit").props.accessibilityLabel).toBe("上诉");
+  expect(screen.queryByText("提交申诉")).toBeNull();
   expect(screen.getByTestId("appeal-file-body").props.children).toContain("这一次也算一次申诉");
   fireEvent.press(screen.getByTestId("appeal-submit"));
   await screen.findByTestId("appeal-submit");
@@ -258,6 +261,8 @@ it("withdrawing the first of two says one is left; the second says none is", () 
 it("the form refuses an empty reason locally, then sends the reason and goes back", async () => {
   const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
   wrap(<JudgmentAppealScreen />);
+  expect(screen.getByTestId("appeal-submit").props.accessibilityLabel).toBe("提交申诉");
+  expect(screen.queryByTestId("appeal-escalate-last")).toBeNull();
   fireEvent.press(screen.getByTestId("appeal-submit"));
   expect(await screen.findByText("请写理由")).toBeTruthy();
   expect(calls).toEqual([]);
