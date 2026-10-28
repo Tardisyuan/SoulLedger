@@ -49,7 +49,8 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   /** How many times 驳回到 sent it back (capped at 3). */
   return_count?: number;
   /** "RETURN_LIMIT" when a FAIL would have exceeded the cap; "SOUL_DEVOURED" when the soul of an appeal flow was devoured by Ammit; "CROSS_CANCELLED" when cancelling the merged
-   *  cross-realm judgment ended it; "" otherwise. */
+   *  cross-realm judgment ended it; "BRANCH_SKIPPED" when the branch the case selects led to a station picked away;
+   *  "CASE_REOPENED" when the appealed judgment's own flow was refused and the case opened again; "" otherwise. */
   end_reason?: string;
   /** 第四十三批: one row per realm (order 1 = this realm); empty for a workflow built before segments. */
   segments?: WorkflowSegment[];
@@ -482,7 +483,8 @@ export const workflowApi = {
    */
   flowPreview: (params: { judgment: string } | { soul: string; case_type?: string; template?: string; judgment?: string }) =>
     api.get<FlowPreview>("/workflows/flow-preview/", { params }),
-  advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),
+  /** 推进到下一站:被越过的那一站记 SKIPPED,要写理由并留审计(2026-10-29),400 `reason_required`。 */
+  advance: (id: string, body: { reason: string }) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`, body),
   /**
    * ApprovalWorkflowViewSet.escalate — 越级推进,`workflow.escalate` 码名。
    *

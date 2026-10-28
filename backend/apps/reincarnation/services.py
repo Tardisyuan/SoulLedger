@@ -191,6 +191,21 @@ def assert_may_be_reborn(soul, disposition=None):
     if (disposition is not None and disposition.is_eternal and not pardoned.filter(
             disposition_id=disposition.pk).exists()) or eternal.exists():
         raise RebirthBlocked("eternal_sentence", "An eternal sentence has no next life.")
+    # A disposition of this life that was never executed (2026-10-29): a soul concluded before sentence plans, or
+    # one whose plan is gone, has no plan to stop it, and a DISPOSED soul went to rebirth with its sentence unserved.
+    # Not owed: a void one (withdrawn by the system) or a pardoned one (its node ABORTED / CANCELLED / REMOVED).
+    # Read under the soul's row lock: an execution in flight holds it (`DispositionService.execute`), and this waits
+    # for it instead of refusing a disposition that is being executed (tests/test_concurrency.py,
+    # TestReincarnationTriggerHoldsTheDispositionLock). Inside `complete_rebirth` the lock is already held.
+    from django.db import transaction
+
+    with transaction.atomic():
+        Soul.all_objects.select_for_update(of=("self",)).filter(pk=soul.pk).first()
+        unexecuted = Disposition.all_objects.filter(soul_id=soul.pk, cycle=soul.life_index, is_executed=False,
+                                                    is_deleted=False).exclude(pk__in=pardoned).exists()
+    if unexecuted:
+        raise RebirthBlocked("disposition_not_executed",
+                             "The soul has a disposition of this life that has not been executed.")
     latest = soul.rebirth_applications.filter(cycle=soul.life_index).order_by("-created_at").first()
     if latest is not None and latest.status != RebirthApplicationStatus.APPROVED:
         raise RebirthBlocked("rebirth_not_approved",

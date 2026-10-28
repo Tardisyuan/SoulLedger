@@ -639,13 +639,16 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 or attrs.get("fated_death_day") is None):
             raise serializers.ValidationError({"fated_death_date": [
                 "The fated date of death must be a full date (year, month and day) of the Common Era."]})
-        if attrs.get("duat_passage") and self.instance is not None and self.instance.civilization != "EGYPTIAN":
+        # The civilization these facts are checked against is `_civilization_of` on create too (2026-10-29): the
+        # checks below read `self.instance` only, so a new soul could be created with any of them in any hall.
+        civilization = self._civilization_of(attrs)
+        if attrs.get("duat_passage") and civilization != "EGYPTIAN":
             raise serializers.ValidationError({"duat_passage": ["Only an Egyptian soul has a Duat passage."]})
-        if attrs.get("birth_continent") and self._civilization_of(attrs) != "CHINESE":
+        if attrs.get("birth_continent") and civilization != "CHINESE":
             raise serializers.ValidationError({"birth_continent": ["Only a soul of Diyu is born in one of the four "
                                                                    "continents."]})
         # Limbo and the sixth circle are Dante's (2026-10-27, review E-2): the two facts only a European soul records.
-        if self.instance is not None and self.instance.civilization != "EUROPEAN":
+        if civilization != "EUROPEAN":
             if attrs.get("baptism", Soul.Baptism.UNRECORDED) != Soul.Baptism.UNRECORDED:
                 raise serializers.ValidationError({"baptism": ["Only a European soul records baptism."]})
             if attrs.get("denied_immortality") is not None:
@@ -655,7 +658,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 raise serializers.ValidationError(
                     {"neutral_in_life": ["Only a European soul records a neutral life (Inferno III)."]})
         # Charon's bank is Greek (2026-10-28, docs/01_希腊冥府整体架构.md §2.3).
-        if attrs.get("ferry_passage") and self.instance is not None and self.instance.civilization != "GREEK":
+        if attrs.get("ferry_passage") and civilization != "GREEK":
             raise serializers.ValidationError({"ferry_passage": ["Only a Greek soul waits on the bank of Acheron."]})
         # An early death is decided at death: `Soul.die` concludes the case PASSED unweighed on the spot. After
         # death the case already went down another road (embalming, the hall, or the Duat entry), and turning it

@@ -90,25 +90,41 @@ def void_for_devoured(soul):
     """吞噬执行时调(`DispositionService._mark_executed`,同一事务):还开着的申诉作废 —— 不补偿、不改判,
     事件照记;挂着的申诉流程随之结束(REJECTED,`end_reason=SOUL_DEVOURED`)。申诉先作废,
     所以流程结束时 `on_ladder_finished` 找不到开着的申诉,不会再按「维持原判」结一次。"""
+    void_open_appeals(soul, because="soul_devoured", end_reason=END_REASON_DEVOURED)
+
+
+def void_open_appeals(soul, *, because, end_reason, judgment_id=None):
+    """作废这个灵魂(给了 `judgment_id` 就只那件审判)还开着的申诉,并结束它们挂着的申诉流程。调用方在事务里。
+
+    锁序:申诉流程 → 申诉(2026-10-29)。审批一站走完时是流程先锁(`complete_node`),然后 `_finish` →
+    `on_ladder_finished` 才锁申诉;这里原先反过来(申诉 → 流程),两边同时走就互相等 —— 死锁。所以先只读出
+    要动的申诉流程,按主键顺序锁住,再锁申诉。灵魂行(调用方已锁)在两者之前,与审批那条路径不冲突:
+    审批申诉流程不锁灵魂,原审流程驳回(`reweigh_after_rejection`)是 原审流程 → 灵魂 → 申诉流程 → 申诉。"""
     from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES, ApprovalWorkflow, ApprovalWorkflowStatus
 
+    open_appeals = JudgmentAppeal.all_objects.filter(soul_id=soul.pk, is_deleted=False,
+                                                     status__in=OPEN_APPEAL_STATUSES)
+    if judgment_id is not None:
+        open_appeals = open_appeals.filter(judgment_id=judgment_id)
+    flow_ids = sorted(open_appeals.exclude(workflow_id=None).values_list("workflow_id", flat=True))
+    flows = {w.pk: w for w in ApprovalWorkflow.all_objects.select_for_update().filter(pk__in=flow_ids).order_by("pk")}
     now = timezone.now()
-    for appeal in JudgmentAppeal.all_objects.select_for_update(of=("self",)).filter(
-            soul_id=soul.pk, is_deleted=False, status__in=OPEN_APPEAL_STATUSES):
+    for appeal in open_appeals.select_for_update(of=("self",)):
         appeal.status = AppealStatus.VOID
         appeal.decided_at = now
         appeal.save(update_fields=["status", "decided_at", "update_time", "update_user", "version"])
         _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=None, compensation_record_ids=[],
-               voided_because="soul_devoured")
-        if appeal.workflow_id is not None:
-            workflow = ApprovalWorkflow.all_objects.select_for_update().filter(pk=appeal.workflow_id).first()
-            if workflow is not None and workflow.status not in TERMINAL_WORKFLOW_STATUSES:
-                workflow._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason=END_REASON_DEVOURED)
-                workflow.save()
+               voided_because=because)
+        workflow = flows.get(appeal.workflow_id)
+        if workflow is not None and workflow.status not in TERMINAL_WORKFLOW_STATUSES:
+            workflow._finish(ApprovalWorkflowStatus.REJECTED, now, end_reason=end_reason)
+            workflow.save()
 
 
 #: 灵魂被吞噬而结束的申诉流程写在 `end_reason` 上。
 END_REASON_DEVOURED = "SOUL_DEVOURED"
+#: 原审流程被驳回、案子重开(`weighing.reweigh_after_rejection`)时,那件审判的申诉流程写在 `end_reason` 上。
+END_REASON_REOPENED = "CASE_REOPENED"
 
 
 # ── 灵魂 ────────────────────────────────────────────────────────────────
@@ -289,12 +305,25 @@ def on_ladder_finished(workflow, status, end_reason=""):
         workflow_id=workflow.pk, is_deleted=False, status__in=OPEN_APPEAL_STATUSES).first()
     if appeal is None:
         return
+    from apps.workflow.models import AUTOMATIC_KINDS, NodeStatus
+
     last = workflow.nodes.filter(decided_at__isnull=False).order_by("-decided_at").first()
+    if status == ApprovalWorkflowStatus.COMPLETED and not end_reason:
+        # 走完:复核人是最后一位**批准**的人工站审批人(2026-10-29)。此前取「最后决定的人」,那可能是越级推进
+        # 越过终审站的人(节点 ESCALATED),或空;而结果是原判官员时同样不能复核(`original_officers`)——
+        # 这两种都置空,申诉留在待认领队列里由别人认领。
+        final = (workflow.nodes.filter(status=NodeStatus.APPROVED).exclude(kind__in=AUTOMATIC_KINDS)
+                 .order_by("-decided_at").first())
+        reviewer = final.approver_id if final is not None else None
+        if reviewer in original_officers(Judgment.all_objects.get(pk=appeal.judgment_id)):
+            reviewer = None
+        appeal.reviewer_id = reviewer
+        appeal.claimed_at = timezone.now() if reviewer is not None else None
+        appeal.save(update_fields=["reviewer", "claimed_at", "update_time", "update_user", "version"])
+        return
     appeal.reviewer_id = last.approver_id if last is not None else None
     appeal.claimed_at = timezone.now()
     appeal.save(update_fields=["reviewer", "claimed_at", "update_time", "update_user", "version"])
-    if status == ApprovalWorkflowStatus.COMPLETED and not end_reason:
-        return
     _settle(appeal.soul, appeal, AppealStatus.UPHELD, (last.notes if last is not None else "") or "")
 
 

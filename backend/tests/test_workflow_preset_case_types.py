@@ -496,3 +496,49 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
             f"accept ({presets[key]} for {civilization_of[key]}). That trades a "
             f"400 at save time for a ValueError at routing time."
         )
+
+
+# ── the editor's per-civilization table, and the save that enforces it (2026-10-29) ──
+
+#: `  CHINESE: ["ROUTINE", "APPEAL", ...],` — one line per civilization in `CASE_TYPES_BY_CIVILIZATION`.
+_EDITOR_CASE_TYPE_ROW = re.compile(r'^\s+([A-Z]+): \[((?:"[A-Z_]+"(?:, )?)+)\],$', re.MULTILINE)
+
+
+def test_the_editor_offers_exactly_the_case_types_each_civilization_has():
+    """The picker hides the case types a civilization does not have; its table must be the backend's, or the editor
+    either offers a pair the save refuses (400 `case_type_not_for_civilization`) or hides one the backend takes."""
+    text = EDITOR_TSX.read_text(encoding="utf-8")
+    block = text[text.index("const CASE_TYPES_BY_CIVILIZATION"):]
+    block = block[:block.index("};")]
+    table = {civ: set(re.findall(r'"([A-Z_]+)"', values)) for civ, values in _EDITOR_CASE_TYPE_ROW.findall(block)}
+    assert table == {civ.value: {c.value for c in types} for civ, types in VALID_CASE_TYPES_BY_CIVILIZATION.items()}
+
+
+@pytest.mark.django_db
+def test_a_template_for_a_case_type_its_civilization_has_not_is_refused(seeded):  # noqa: F811
+    """Save (create, and a PATCH of either half) and publish refuse the pair `start_workflow` would refuse."""
+    from apps.workflow import versioning
+
+    tenant = _tenant(Civilization.CHINESE)
+    client = APIClient(**_bearer(_admin(tenant, "case_type_pair_admin")))
+    base = {"name": "错配", "description": "", "is_active": True, "nodes": []}
+    response = client.post("/api/v1/workflow/templates/",
+                           {**base, "civilization": "CHINESE", "case_type": "HEART_WEIGHING"}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "case_type_not_for_civilization", response.data
+    assert not WorkflowTemplate.all_objects.filter(name="错配").exists()
+
+    response = client.post("/api/v1/workflow/templates/",
+                           {**base, "civilization": "CHINESE", "case_type": "SPECIAL"}, format="json")
+    assert response.status_code == 201, response.data
+    pk = response.data["id"]
+    response = client.patch(f"/api/v1/workflow/templates/{pk}/", {"civilization": "GREEK"}, format="json")
+    assert response.status_code == 400 and response.data["code"] == "case_type_not_for_civilization", response.data
+    assert WorkflowTemplate.all_objects.get(pk=pk).civilization == "CHINESE"
+
+    # A row stored before the check (straight through the ORM) is refused at publish, with a draft in hand.
+    stale = WorkflowTemplate.objects.create(name="旧错配", civilization="GREEK", case_type="SPECIAL", tenant=tenant)
+    versioning.save_draft(stale, [{"id": "n1", "node_name": "审", "node_type": "TRIAL", "node_order": 1}])
+    response = client.post(f"/api/v1/workflow/templates/{stale.pk}/publish/", format="json")
+    assert response.status_code == 400 and response.data["code"] == "case_type_not_for_civilization", response.data
+    stale.refresh_from_db()
+    assert stale.published_version_id is None

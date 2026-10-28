@@ -7,6 +7,7 @@
   案子交他的上级城隍初审。答一条登记(与 `/death-sync/registrations/` 同一形状);失败也是一条 FAILED 的登记。
 """
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -50,9 +51,16 @@ class TudiGodSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(TudiOfficerSerializer(many=True))
     def get_officers(self, obj) -> list:
-        return [{"id": u.pk, "name": u.display_name or u.username} for u in obj.officers.order_by("username")]
+        # Sorted here, not `.order_by()`: that is a new query per row and bypasses the viewset's prefetch.
+        return [{"id": u.pk, "name": u.display_name or u.username}
+                for u in sorted(obj.officers.all(), key=lambda u: u.username)]
 
     def get_registration_count(self, obj) -> int:
+        # The list annotates it (`TudiGodViewSet.queryset`, one query for the page, 2026-10-29); a row saved by
+        # create / update is not re-read through that queryset, so it counts once.
+        annotated = getattr(obj, "registration_total", None)
+        if annotated is not None:
+            return annotated
         return DeathRegistrationRequest.objects.filter(tudi_god=obj).count()
 
     def _tenant(self):
@@ -111,7 +119,11 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         **{a: ["judgment.assign"] for a in ("create", "update", "partial_update", "destroy")},
         "register_death": ["soul.die"],
     }
-    queryset = TudiGod.objects.select_related("city_god").prefetch_related("officers").all()
+    queryset = TudiGod.objects.select_related("city_god").prefetch_related("officers").annotate(
+        # Not one COUNT per row (the serializer's fallback): the same rows `DeathRegistrationRequest.objects` counts,
+        # i.e. not soft-deleted ones.
+        registration_total=Count("registrations", filter=Q(registrations__is_deleted=False), distinct=True),
+    ).order_by(*TudiGod._meta.ordering)  # an aggregate drops Meta.ordering, and the list is paginated
     serializer_class = TudiGodSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 

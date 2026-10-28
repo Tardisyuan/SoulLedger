@@ -6,7 +6,12 @@ from django.db.models import DateTimeField, F, Func, Q
 from django.utils import timezone
 
 from apps.souls.models import Civilization
-from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+from apps.workflow.models import (
+    REACHABLE_WORKFLOW_STATUSES,
+    ApprovalWorkflow,
+    ApprovalWorkflowStatus,
+    NodeStatus,
+)
 
 
 class _AddHours(Func):
@@ -36,7 +41,10 @@ class WorkflowFilter(filters.FilterSet):
     search = filters.CharFilter(method="filter_search")
 
     # Exact match filters
-    status = filters.ChoiceFilter(choices=ApprovalWorkflowStatus.choices)
+    # Only the states a workflow can be in (`REACHABLE_WORKFLOW_STATUSES`): APPROVED / APPEAL / EXCEPTION are
+    # declared and never written, so offering them was three options that match nothing.
+    status = filters.ChoiceFilter(
+        choices=[(v, label) for v, label in ApprovalWorkflowStatus.choices if v in REACHABLE_WORKFLOW_STATUSES])
     case_type = filters.CharFilter()
     # `ApprovalWorkflow` 没有 `civilization` 列 —— 它派生在 `Soul` 上,而 Soul 又
     # 从租户 code 推。声明式过滤器**不看 `Meta.fields` 也会生效**,所以这个字段

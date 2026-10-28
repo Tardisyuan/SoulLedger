@@ -247,6 +247,7 @@ const COLLECTED_FILES = [
   "WebSocketContext.test.tsx",
   "WebSocketContext.tokenRefresh.test.tsx",
   "WelcomePage.test.tsx",
+  "WorkflowDetailPage.advanceReason.test.tsx",
   "WorkflowDetailPage.cosigner.test.tsx",
   "WorkflowDetailPage.linearPreview.test.tsx",
   "WorkflowDetailPage.reasonForSoul.test.tsx",

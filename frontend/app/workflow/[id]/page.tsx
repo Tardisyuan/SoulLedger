@@ -115,6 +115,9 @@ export default function WorkflowDetailPage() {
   const [activeTab, setActiveTab] = useState<"nodes" | "history">("nodes");
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
+  // 推进也要写理由(2026-10-29):后端把被越过的那一站记 SKIPPED 并写审计,与越级推进同一个要求。
+  const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [advanceReason, setAdvanceReason] = useState("");
 
   // Fetch workflow detail.
   //
@@ -166,7 +169,7 @@ export default function WorkflowDetailPage() {
 
   // Advance mutation
   const advanceMutation = useMutation({
-    mutationFn: () => workflowApi.advance(id),
+    mutationFn: (reason: string) => workflowApi.advance(id, { reason }),
     onSuccess: (response) => {
       // 比对返回体里的 current_node,而不是无条件报成功。
       //
@@ -181,6 +184,8 @@ export default function WorkflowDetailPage() {
       } else {
         showToast(t("workflow.detail.advance_success"), "success");
       }
+      setAdvanceReason("");
+      setAdvanceOpen(false);
       refetch();
     },
     onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
@@ -646,8 +651,8 @@ export default function WorkflowDetailPage() {
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="workflow.advance">
-                  <Button type="button" variant="secondary" onClick={() => advanceMutation.mutate()} loading={advanceMutation.isPending}>
-                    {advanceMutation.isPending ? t("workflow.detail.advancing") : t("workflow.detail.advance")}
+                  <Button type="button" variant="secondary" onClick={() => setAdvanceOpen((v) => !v)} aria-expanded={advanceOpen}>
+                    {t("workflow.detail.advance")}
                   </Button>
                 </RequirePermission>
                 {/* 越级推进。MODERATOR 持有 `workflow.escalate` 而**不**持有
@@ -659,6 +664,37 @@ export default function WorkflowDetailPage() {
                   </Button>
                 </RequirePermission>
               </div>
+
+              {advanceOpen && (
+                <RequirePermission permissions="workflow.advance">
+                  <div className="space-y-2">
+                    <TextAreaField
+                      id="advance-reason"
+                      label={t("workflow.detail.advance_reason_label")}
+                      value={advanceReason}
+                      onChange={(e) => setAdvanceReason(e.target.value)}
+                      placeholder={t("workflow.detail.advance_reason_placeholder")}
+                      rows={3}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          if (!advanceReason.trim()) {
+                            showToast(t("workflow.detail.advance_needs_reason"), "error");
+                            return;
+                          }
+                          advanceMutation.mutate(advanceReason.trim());
+                        }}
+                        loading={advanceMutation.isPending}
+                      >
+                        {advanceMutation.isPending ? t("workflow.detail.advancing") : t("workflow.detail.advance")}
+                      </Button>
+                    </div>
+                  </div>
+                </RequirePermission>
+              )}
 
               {escalateOpen && (
                 <RequirePermission permissions="workflow.escalate">

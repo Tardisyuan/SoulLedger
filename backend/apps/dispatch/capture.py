@@ -79,8 +79,14 @@ def issue(soul, escort=None) -> CaptureWarrant:
             raise CaptureRefused("lifespan_not_ended", "The soul's fated date has not come (or is not recorded).")
         if CaptureWarrant.objects.filter(soul=locked, status__in=OPEN_CAPTURE).exists():
             raise CaptureRefused("warrant_open", "This soul already has an open capture warrant.")
+        # The hand-over opens the case at the city god (`Soul.die` → `city_gods.initial_fields`), which refuses a
+        # hall with no city god to take it. Refused here, at issue, with the same 409 `no_city_god` (2026-10-29):
+        # it used to be issued, served, and refused only at the hand-over.
+        city_god = city_gods.match(locked.tenant_id, locked.origin_location)
+        if city_god is None:
+            raise city_gods.NoCityGodError()
         warrant = CaptureWarrant.objects.create(
-            tenant_id=locked.tenant_id, soul=locked, city_god=city_gods.match(locked.tenant_id, locked.origin_location),
+            tenant_id=locked.tenant_id, soul=locked, city_god=city_god,
             escort=escort or suggested_escort(locked))
         _event(warrant, "CAPTURE_WARRANT_ISSUED")
     return warrant

@@ -212,15 +212,23 @@ def _leave_waiting_station(soul, node):
         DispositionService._leave_served_realm(disposition, soul)
 
 
+def _holds_home_stop(nodes):
+    """A home stop still to serve or being served (PENDING / ACTIVE): its disposition is what waits for the origin
+    flow (`weighing.unfinished_flow`). A plan without one — 地府判无罪, or an appeal / reopening that acquitted and
+    took the home stop off (REMOVED) — has nothing else to hold it, so it waits on the flow itself (2026-10-29:
+    a REMOVED home stop used to count, and the acquitted soul went to rebirth with the flow still open)."""
+    return any(n.is_home and n.status in (SentenceNodeStatus.PENDING, SentenceNodeStatus.ACTIVE) for n in nodes)
+
+
 def _origin_flow_open(plan):
     """生成这份计划的原审判挂着一个还没走完(不是 COMPLETED)的审批流程。"""
-    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, judgment_deciding
 
     if plan.origin_judgment_id is None:
         return False
-    return ApprovalWorkflow._base_manager.filter(
+    return judgment_deciding(ApprovalWorkflow._base_manager.filter(
         judgment_id=plan.origin_judgment_id, is_deleted=False,
-    ).exclude(status=ApprovalWorkflowStatus.COMPLETED).exists()
+    )).exclude(status=ApprovalWorkflowStatus.COMPLETED).exists()
 
 
 def _route_home_realm(soul, verdict, judgment_method, judgment=None):
@@ -604,7 +612,7 @@ class SentencePlanService:
         # 在原属地:① 无未结案审判 ② 无待决请求 ③ 有无未执行节点(图 1 下的三项检查)。
         if has_open or has_pending_request:
             return False
-        if not any(n.is_home for n in nodes) and _origin_flow_open(plan):
+        if not _holds_home_stop(nodes) and _origin_flow_open(plan):
             # 地府判无罪的计划没有原属节点(`acquitted_to_rebirth`):没有处置要执行来挡住它,就等结案的审批
             # 流程走完(原审要流程走完才算数),由 `on_origin_flow_completed` 接着走 —— 完成,或调往联审的外地站。
             return False
@@ -646,7 +654,7 @@ class SentencePlanService:
         soul = _lock_soul(Soul(pk=found[1]))
         plan = _lock_plan(found[0])
         nodes = _lock_nodes(plan)
-        if (plan.status != SentencePlanStatus.ACTIVE or any(n.is_home for n in nodes) or soul.is_residing
+        if (plan.status != SentencePlanStatus.ACTIVE or _holds_home_stop(nodes) or soul.is_residing
                 or open_judgments(soul).exists()):
             return False
         nxt = next((n for n in nodes if n.status == SentenceNodeStatus.PENDING), None)
@@ -688,6 +696,10 @@ class SentencePlanService:
             moved = ReincarnationService.execute(home_disposition)
         elif rebirth:
             moved = soul.transition_to(SoulState.REINCARNATING, f"Sentence plan {plan.pk} completed")
+            if moved:
+                # No disposition to execute (地府判无罪, or an acquittal took the home stop off): the timeline still
+                # records that the soul now awaits rebirth, as `ReincarnationService.execute` does (2026-10-29).
+                record_event(soul, EventType.REINCARNATION_TRIGGERED, {"disposition_id": None, "destination_realm": None})
         else:
             moved = soul.transition_to(
                 SoulState.SETTLED, f"Sentence plan {plan.pk} completed; this cosmology has no next life",
