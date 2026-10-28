@@ -69,6 +69,8 @@ def courts(db):
     )[0]
     cn_judge = User.objects.create_user(username="jt_cn_judge", password="x", role="JUDGE", tenant=cn)
     cn_admin = User.objects.create_user(username="jt_cn_admin", password="x", role="ADMIN", tenant=cn)
+    from tests.city_god_support import default_city_god
+    default_city_god(cn)  # 地府开案要有城隍收案(no_city_god)
     return {
         "cn": cn,
         "eu": eu,

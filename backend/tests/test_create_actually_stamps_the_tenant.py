@@ -83,6 +83,8 @@ class TestCreateStampsTheTenant:
     def test_a_judgment_created_by_a_judge_carries_the_tenant(
         self, api_client, auth_headers, cn_tenant, cn_soul
     ):
+        from tests.city_god_support import default_city_god
+        default_city_god(cn_tenant)  # 地府开案要有城隍收案(no_city_god)
         res = api_client.post(
             "/api/v1/judgment/",
             {"soul": str(cn_soul.id), "civilization": cn_soul.civilization},

@@ -11,6 +11,7 @@
 import uuid
 
 import pytest
+from django.utils import timezone
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
@@ -237,8 +238,19 @@ def test_the_disposition_endpoint_serves_the_stop(cn, eg):
     stop = _node(p, 2)
     officer = _officer("eg_mod", "MODERATOR", eg)
 
-    response = officer_client(officer).post(f"/api/v1/disposition/{stop.disposition_id}/execute/", {}, format="json")
+    client = officer_client(officer)
+    response = client.post(f"/api/v1/disposition/{stop.disposition_id}/execute/", {}, format="json")
 
+    assert response.status_code == 200, response.data
+    # 2026-10-29:执行 = 开始服刑。这一站有 10 年刑期,灵魂留在执行地受刑,节点仍 ACTIVE。
+    soul.refresh_from_db()
+    assert soul.tenant_id == eg.pk and _node(p, 2).status == "ACTIVE"
+    response = client.post(f"/api/v1/disposition/{stop.disposition_id}/release/", {}, format="json")
+    assert response.status_code == 409 and response.data["code"] == "term_not_ended", response.data
+    # 刑期满了(起算日退到 11 年前),官员「期满释放」:这一站结束,灵魂回原属地,计划完成。
+    Disposition.all_objects.filter(pk=stop.disposition_id).update(
+        term_start_year=timezone.localdate().year - 11, term_start_month=1, term_start_day=1)
+    response = client.post(f"/api/v1/disposition/{stop.disposition_id}/release/", {}, format="json")
     assert response.status_code == 200, response.data
     soul.refresh_from_db()
     assert soul.tenant_id == cn.pk and soul.current_state == SoulState.REINCARNATING

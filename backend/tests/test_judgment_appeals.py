@@ -165,8 +165,11 @@ def test_uphold_leaves_the_verdict_and_tells_the_soul(case):
 # ── 改判 ────────────────────────────────────────────────────────────────
 
 
-def test_amend_reroutes_an_unexecuted_disposition_in_place_and_compensates_nothing(case):
+def test_amend_to_a_diyu_acquittal_withdraws_the_unexecuted_stop_and_compensates_nothing(case):
+    """改判成地府无罪(用户 2026-10-29,`acquitted_to_rebirth`):不发落、不建刑期站 —— 未执行的原属站撤下
+    (节点 REMOVED、处置由系统作废),计划随之完成,灵魂候转世。此前就地改道到 PASSED 的 realm。"""
     judgment, soul = case["judgment"], case["soul"]
+    sp.walk_flow(judgment)  # 原审的审批流程走完(2026-10-29),计划才能完成
     disposition = Disposition.all_objects.get(judgment=judgment)
     assert not disposition.is_executed
     _file(case)
@@ -175,20 +178,22 @@ def test_amend_reroutes_an_unexecuted_disposition_in_place_and_compensates_nothi
     assert response.data["status"] == "AMENDED" and response.data["compensations"] == []
     judgment.refresh_from_db()
     assert judgment.verdict == "PASSED"
-    disposition.refresh_from_db()
-    passed_realm = _realm_for(soul, Verdict.PASSED)
-    assert disposition.destination_realm_id == passed_realm.pk
+    disposition = Disposition.all_objects.get(pk=disposition.pk)
+    assert disposition.is_deleted and disposition.delete_reason.endswith(f"appeal_acquitted:{judgment.pk}")
     home = SentenceNode.all_objects.get(plan__origin_judgment_id=judgment.pk, order=1)
-    assert home.status == "ACTIVE" and home.realm_code == passed_realm.realm_code
+    assert home.status == "REMOVED"
+    assert SentencePlan.all_objects.get(pk=home.plan_id).status == "COMPLETED"
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.REINCARNATING
     assert not SoulRecord.objects.filter(soul=soul, category=RecordCategory.COMPENSATION).exists()
     assert JudgmentAppeal.objects.get().original_verdict == "FAILED"
 
 
 def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_tenant):
-    """原属已执行(→ 补偿)、外地站调拨被拒退回 PENDING(→ 减项),追加一个按新裁决路由的原属站并激活。"""
+    """原属已执行(→ 补偿)、外地站调拨被拒退回 PENDING(→ 减项)。新裁决是地府无罪(2026-10-29,
+    `acquitted_to_rebirth`):不追加原属站,计划完成,灵魂候转世。"""
     away = sp.tenant("EG_DUAT")
     soul, plan = sp.planned(cn_tenant, [(away, sp.stop_realm(away), 5)], verdict=Verdict.FAILED)
-    passed_realm = _realm_for(soul, Verdict.PASSED)
     sp.serve(soul, plan, 1)
     record = DispatchRecord.all_objects.get(pk=sp.node(plan, 2).dispatch_record_id)
     DispatchService.reject(record, sp.officer("eg", "MODERATOR", away), "不收")
@@ -222,10 +227,10 @@ def test_amend_compensates_an_executed_stop_and_replaces_the_pending_ones(cn_ten
     assert [(n.order, n.tenant_code, n.status) for n in nodes] == [
         (1, "CN_DIYU", "COMPLETED"),   # 已执行的不动
         (2, "EG_DUAT", "REMOVED"),     # 按原判排的未执行站;不再占序号
-        (2, "CN_DIYU", "ACTIVE"),      # 按新裁决的原属站;推进:灵魂在家,立刻激活
-    ]
-    assert nodes[2].realm_code == passed_realm.realm_code
-    assert SentencePlan.all_objects.get(pk=plan.pk).status == "ACTIVE"
+    ]                                  # 地府无罪:不加刑期站
+    assert SentencePlan.all_objects.get(pk=plan.pk).status == "COMPLETED"
+    soul.refresh_from_db()
+    assert soul.current_state == SoulState.REINCARNATING
 
 
 def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
@@ -250,7 +255,13 @@ def test_amend_waits_while_the_soul_is_in_transit_and_writes_nothing(cn_tenant):
 def test_amend_after_the_plan_finished_only_compensates(case):
     judgment, soul = case["judgment"], case["soul"]
     sp.walk_flow(judgment)  # 原审的处置等审批流程走完才执行(2026-10-29)
-    DispositionService.execute(Disposition.all_objects.get(judgment=judgment))
+    disposition = Disposition.all_objects.get(judgment=judgment)
+    DispositionService.execute(disposition)
+    # 执行 = 开始服刑(2026-10-29);服满(与每日检查、「期满释放」同一个写入)计划才走完。
+    from apps.disposition.expiry import expire_one, serving
+    disposition = Disposition.all_objects.get(pk=disposition.pk)
+    if serving(disposition):
+        expire_one(disposition, timezone.now())
     plan = SentencePlan.all_objects.get(origin_judgment_id=judgment.pk)
     assert plan.status == "COMPLETED"
     soul.refresh_from_db()

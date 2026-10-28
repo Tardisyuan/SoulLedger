@@ -617,9 +617,8 @@ def test_tartarus_asserts_neither_perpetuity_nor_a_term(make_greek_soul):
     )
     assert disposition.destination_realm.realm_code == TARTARUS
     assert disposition.is_eternal is False
-    assert disposition.sentence_years is None, (
-        "a term was written for a Greek soul. Republic X 615a-b gives one — a "
-        "thousand years — but GR_TARTARUS is seeded from Gorgias 524a, and "
-        "reading the two as one geography is the thing verify-greek.md §6 "
-        "refuses. If this was decided on purpose, say so on the realm row."
-    )
+    # 用户 2026-10-29 拍板:执行即服刑、刑满才转世,没写刑期的处置取界域默认刑期 —— 希腊两处取《理想国》
+    # 615a-b 的一千年,出处写在 `apps/disposition/default_terms.py`(一张表,不是界域上的一列)。上面那段
+    # 「不该猜」的顾虑由那份文件的出处说明承担;这里钉住数值来自那张表、且没写回界域。
+    from apps.disposition.default_terms import GREEK_JOURNEY_YEARS
+    assert disposition.sentence_years == GREEK_JOURNEY_YEARS

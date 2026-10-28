@@ -64,6 +64,7 @@ def test_no_match_goes_to_the_default_city_god_and_without_one_no_case_is_opened
 
     soul = Soul.objects.create(name="无城隍", tenant=cn_tenant, current_state=SoulState.ALIVE,
                                origin_location="四川成都")
+    events_before = list(SoulEvent.objects.filter(soul=soul).values_list("pk", flat=True))  # SOUL_CREATED
     with pytest.raises(city_gods.NoCityGodError) as refused:
         soul.die(death_date=date.today())
     assert refused.value.code == "no_city_god" and refused.value.status_code == 409
@@ -72,7 +73,7 @@ def test_no_match_goes_to_the_default_city_god_and_without_one_no_case_is_opened
     assert not Judgment.all_objects.filter(soul=soul).exists()
     assert not SoulAccount.objects.filter(soul=soul).exists()
     assert not SoulPathEntry.all_objects.filter(soul=soul).exists()
-    assert not SoulEvent.objects.filter(soul=soul).exists()
+    assert list(SoulEvent.objects.filter(soul=soul).values_list("pk", flat=True)) == events_before
 
     default = CityGod.objects.create(tenant=cn_tenant, name="酆都城隍", is_default=True)
     assert _dead(cn_tenant, "四川成都").city_god == default

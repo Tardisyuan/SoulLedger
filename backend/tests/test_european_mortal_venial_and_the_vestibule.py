@@ -156,7 +156,7 @@ def test_the_vestibule_is_seeded_eternal_hell_outside_the_circles():
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
     row = Realm.all_objects.get(realm_code="EU_ANTINFERNO")
     assert (row.civilization, row.realm_type, row.tier, row.is_eternal) == ("EUROPEAN", "HELL", 0, True)
-    assert row.name_egy == ""  # Design has not given the egy word: pending, not invented
+    assert row.name_egy == "Duat · Antinferno"  # Design 第五十七批 c 给了这个词(e4179591)
 
 
 def test_the_vestibule_comes_before_the_first_circle_in_the_placement_list():

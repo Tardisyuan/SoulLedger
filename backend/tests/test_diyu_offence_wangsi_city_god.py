@@ -181,7 +181,8 @@ def test_the_endpoints_answer_the_whole_judgment(admin_user, held):
     res = client.post(f"/api/v1/judgment/wangsi/{held.pk}/decide/", {"upheld": True, "note": "属实"}, format="json")
     assert res.status_code == 200 and res.data["held_until"] is None, res.data
     res = client.post(f"/api/v1/judgment/wangsi/{held.pk}/decide/", {"upheld": True, "note": "再审"}, format="json")
-    assert res.status_code == 409 and res.data["code"] == "not_in_wangsi"
+    # 到期 / 出城后仍可审(fda5396a),所以第二次被拒的原因是「没有待审的申诉」,不是「不在枉死城」。
+    assert res.status_code == 409 and res.data["code"] == "no_grievance_filed"
 
 
 # ── C. 城隍四级与诸司 ──────────────────────────────────────────────────

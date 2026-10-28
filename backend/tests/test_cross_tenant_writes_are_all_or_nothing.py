@@ -194,8 +194,22 @@ def test_a_manual_return_home_is_all_or_nothing(cn, eg, django_capture_on_commit
 
 
 def test_the_automatic_return_when_a_stop_is_served_is_all_or_nothing(cn, eg, django_capture_on_commit_callbacks):
+    """2026-10-29:执行即开始服刑,自动回原属地发生在刑满那一笔(每日期满检查 / 官员「期满释放」,同一个
+    `expire_one`,各自一个事务),不再在执行那一笔里。所以先执行(受刑中),守的是期满那一个事务。"""
+    from django.utils import timezone
+
+    from apps.disposition.expiry import expire_one
+    from apps.disposition.models import Disposition
+
     soul, p, record = plan.at_stop(cn, eg)
-    _guard("return_auto", soul.pk, lambda: plan.serve(soul, p, 2), TABLES["return_auto"], django_capture_on_commit_callbacks)
+    assert plan.execute_only(soul, p, 2)
+    pk = plan.node(p, 2).disposition_id
+
+    def release():
+        with transaction.atomic():
+            expire_one(Disposition.all_objects.select_for_update().get(pk=pk), timezone.now())
+
+    _guard("return_auto", soul.pk, release, TABLES["return_auto"], django_capture_on_commit_callbacks)
 
 
 # Tables each path writes inside its transaction, measured by the dry run (audit rows and notifications come
