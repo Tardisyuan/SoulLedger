@@ -56,16 +56,16 @@ deliberately not kept here.
 | `auth/` | officer | login / officer-login / refresh / logout / profile, password reset, email verification, two-step `auth/mfa/*` (verify, status, setup, confirm, complete, recovery-codes, disable), `login-logs/` |
 | `users/` | officer (ADMIN) | user management, `reset-mfa`, batch activate, CSV import/export |
 | `tenants/` | officer | halls (tenants): `{code}/`, `{code}/settings/`, `{code}/mfa-roles/`, `{code}/seal-glyphs/` |
-| `souls/` | officer | souls, records, `die`, `transition`, import/export, `batch-recycle` |
-| `judgment/` | officer | judgments, `statutes/`, queue, draft, precedents, citations |
+| `souls/` | officer | souls, records, `die`, `transition`, `station`, import/export, `batch-recycle` |
+| `judgment/` | officer | judgments, `statutes/`, queue, draft, precedents, citations, `negative-confessions/`, `city-gods/`, `city-god-cases/`, `wangsi/`, `appeals/`, `handover/` |
 | `disposition/` | officer | dispositions (`execute`, `archive`, export) |
 | `ledger/` | officer | ledger balance / journal / stats (formerly `karma`) |
-| `reincarnation/` | officer | reincarnation records |
+| `reincarnation/` | officer | reincarnation records (read-only), `reborn/`, `drink-soup/`, `quota/` |
 | `realms/`, `actors/`, `events/` | officer | realms (+ `occupancy/`), mythology actors, soul event log |
 | `sentence-plans/` | officer | sentence plans, `cancel`, `requests/{id}/decide|withdraw`, node `retry-dispatch` |
 | `workflows/`, `nodes/`, `workflow/templates/` | officer | approval workflows, nodes, templates (these three sit directly under `/api/v1/`, no common prefix) |
-| `dispatch/` | officer | dispatch records and `cross-tenant-judgments/` |
-| `death-sync/` | API key (`register/`) / officer ADMIN | external death registration, API keys, webhooks, `health/` |
+| `dispatch/` | officer | dispatch `records/`, `cross-tenant-judgments/`, `capture-warrants/` (勾魂牒) |
+| `death-sync/` | API key (`register/`) / officer ADMIN | external death registration, API keys, webhooks, `health/`, `tudi-gods/` (officer) |
 | `perm/`, `menus/`, `audit-logs/`, `organizations/`, `notifications/`, `recycle-bin/` | officer | RBAC, menus, audit, organization tree, notifications, global recycle bin |
 | `scheduler/` | officer | `jobs/` (+ `{id}/run/`, `rebuild/`) and `runs/` |
 | `officer-app/` | officer | officer mobile app: `todo/`, `items/{kind}/{id}/` (+ `cosigners/`), `signer-candidates/`, `push-tokens/` |
@@ -76,7 +76,7 @@ deliberately not kept here.
 | `social-moderation/` | officer (`social.moderate`) | `reports/`, `posts/`, `comments/`, `sensitive-words/`, `mutes/`, `handled/` |
 | `soul-accounts/` | officer | soul accounts, `credentials/` (+ `{id}/print-slip/`), `rebirth-applications/`, `cooldown-shortenings/`, `accounts/{id}/reset-mfa/` |
 | `soul-auth/` | none / soul | `login/`, `refresh/`, `logout/`, `mfa/verify/`, `device-login/` (+ `revoke/`) |
-| `me/` | soul | the soul's own data: `me/`, `password/`, `life/`, `past-lives/`, `sentence-plan/`, `rebirth-applications/`, `mfa/*`, `device-login/`, `push-tokens/`, `notification-settings/`, `notifications/`, `assist/`, `chat/*`, `social/*` |
+| `me/` | soul | the soul's own data: `me/`, `password/`, `life/`, `past-lives/`, `sentence-plan/`, `rebirth-applications/`, `wangsi/`, `mfa/*`, `device-login/`, `push-tokens/`, `notification-settings/`, `notifications/`, `assist/`, `chat/*`, `social/*` |
 | `social-media/{id}/`, `chat-images/{id}/` | signed URL | file outlets for post images and letter images; visibility is re-checked on every request |
 | `app-version/` | none | client version check |
 
@@ -88,6 +88,17 @@ deliberately not kept here.
 | GET | /souls/{id}/ | Get soul detail |
 | PUT | /souls/{id}/ | Update soul |
 | DELETE | /souls/{id}/ | Delete soul |
+| POST | /souls/{id}/station/ | 地府十三站: move the soul to `{"station": "<DiyuStation>"}` (`soul.transition`; may move backwards). 409 `not_diyu` / `alive`. Answers the soul |
+
+Soul fields added 2026-10-28 (`backend/apps/souls/models.py`, `serializers.py`):
+`diyu_station` (read-only; written only by `apps/souls/stations.py` and the station action),
+`birth_continent` (四大部洲, 地府 only, officer-recorded; rewritten by a human rebirth),
+`neutral_in_life` (European only, Inferno III; null = unrecorded; 400 on any other civilization),
+`ferry_passage` (Greek: `UNBURIED` / `NO_FARE`, blank = may cross) with read-only `ferry_century_passed`
+(an unburied soul dead a hundred years may cross, `apps/souls/acheron.py`).
+A ledger record (`SoulRecord`) carries `sin_gravity` (`MORTAL` / `MORTAL_ABSOLVED` / `VENIAL`; European DEMERIT
+only, else 400), checked against the verdict at conclusion (`DispositionService.refuse_against_gravity`:
+400 `mortal_sin_unrepented` / `no_mortal_sin`).
 
 ### Judgment
 | Method | Endpoint | Description |
@@ -102,6 +113,20 @@ deliberately not kept here.
 | GET | /judgment/{id}/precedents/ | Ranked precedent list (unpaginated, list filters do not apply) |
 | GET/POST | /judgment/{id}/citations/ | The statutes a judgment is founded on / cite one (`{"statute": "<uuid>", "note": ""}`) |
 | DELETE | /judgment/{id}/citations/{statute_id}/ | Withdraw a citation from an unconcluded judgment |
+| GET | /judgment/{id}/negative-confessions/ | Egyptian: the 42 denials of a weighed case with what was heard, plus a tally (`judgment.read`, unpaginated) |
+| PUT | /judgment/{id}/negative-confessions/{ordinal}/ | Record one denial (`{"truthful": true\|false\|null, "note": ""}`, `judgment.execute`). 400 `not_weighed`, 404 `unknown_clause`, 409 `concluded`. Answers the whole listing |
+| POST | /judgment/wangsi/{id}/grievance/ | 枉死城: file a grievance (`{"plea": ""}`, `judgment.execute`). 409 `not_pending` / `not_in_wangsi` / `grievance_open` |
+| POST | /judgment/wangsi/{id}/decide/ | Review it (`{"upheld": bool, "note": ""}`, `judgment.execute`, and a 城隍 officer of the case or `judgment.assign`, else 403 `not_city_god_officer`). 409 `no_grievance_filed` / `grievance_not_major`; upheld on a major/severe grievance clears `held_until` |
+| GET/POST/PATCH/DELETE | /judgment/city-gods/ | The hall's 城隍 (`judgment.read`; writes `judgment.assign`). Fields include `rank` (`PROVINCE` / `PREFECTURE` / `DEPARTMENT` / `COUNTY`) and `bureaus` (subset of the 二十四司 `CityGodBureau`); a 城隍 with 土地公 under it cannot leave `COUNTY` (400 `city_god_has_tudi_gods`) |
+
+`/judgment/wangsi/` only sees this hall's untimely (`untimely=True`) cases; others are 404
+(`backend/apps/judgment/wangsi_views.py`, rules in `wangsi.py`). Both answer the whole judgment.
+
+Judgment fields added 2026-10-28: `offence` (地府 罪目 `ChineseOffence`; routes the case to its court,
+`DispositionService._route_chinese`; 地府 only, frozen once concluded), `wrongful_death_cause` /
+`grievance_level` (枉死 cases only) and the read-only `grievance_*` columns, and read-only `ferry_barred`
+(Greek original trial: `UNBURIED` / `NO_FARE` while the soul cannot cross Acheron, blank otherwise —
+`apps/judgment/claims.py::ferry_barred`; claiming such a case is 409 `unferried`).
 
 Paths verified 2026-09-26 against `backend/apps/judgment/views.py` (`@action` `url_path`s) and
 `backend/apps/judgment/urls.py` (the viewset is registered at the `judgment/` root). Not exhaustive —
@@ -132,10 +157,50 @@ civilization. Anything displayed to a user should come from `reading`. See
 `backend/apps/ledger/readings.py`.
 
 ### Reincarnation
+
+`ReincarnationViewSet` is read-only (`backend/apps/reincarnation/views.py:61`): there is no
+`POST /reincarnation/`. Rows are written only by the two actions below.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /reincarnation/ | List reincarnation records |
-| POST | /reincarnation/ | Create reincarnation |
+| GET | /reincarnation/{id}/ | One record |
+| GET | /reincarnation/quota/ | This month's rebirth quota per path (`reincarnation.read`) |
+| POST | /reincarnation/reborn/ | Rebirth a soul and complete it at once (`reincarnation.reborn`) |
+| POST | /reincarnation/drink-soup/ | 孟婆汤 (`{"soul_id": "..."}`, `reincarnation.manage`) |
+
+A record carries `rebirth_continent` (四大部洲); `reborn` accepts it only for a 地府 rebirth into the human
+path, else 400 `rebirth_continent_not_applicable`.
+
+### Dispatch: capture warrants (勾魂牒, 地府 only)
+
+`backend/apps/dispatch/capture_views.py`, rules in `capture.py`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /dispatch/capture-warrants/ | List (`?soul=`, `?status=`; `soul.read`) |
+| GET | /dispatch/capture-warrants/{id}/ | One warrant (`soul.read`) |
+| GET | /dispatch/capture-warrants/due/ | Living 地府 souls whose fated date has come and who have no open warrant (max 200, unpaginated; `soul.read`) |
+| POST | /dispatch/capture-warrants/ | Issue (`{"soul": "<uuid>", "escort"?}`, `soul.die`). 404 `not_found`; 400 `invalid_escort`; 409 `not_diyu` / `not_alive` / `lifespan_not_ended` / `warrant_open` |
+| POST | /dispatch/capture-warrants/{id}/capture/ | Captured (`soul.die`); 409 `wrong_status` |
+| POST | /dispatch/capture-warrants/{id}/hand-over/ | Hand over = register the death (`{"location"?}`, `soul.die`); 409 `wrong_status` / `not_alive` |
+| POST | /dispatch/capture-warrants/{id}/cancel/ | Revoke (`{"reason": ""}`, `soul.die`); 400 `reason_required`, 409 `wrong_status` |
+
+### Death sync: 土地公 (地府 only)
+
+`backend/apps/death_sync/tudi_views.py`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST/PATCH/DELETE | /death-sync/tudi-gods/ | The hall's 土地公 (`judgment.read`; writes `judgment.assign`; delete is soft). 400 `tudi_gods_diyu_only`; `city_god` must be this hall's and, if ranked, `COUNTY` (`tudi_city_god_not_county`) |
+| POST | /death-sync/tudi-gods/{id}/register-death/ | Register a death in this 土地公's name (`soul.die`, and his officer or `judgment.assign`, else 403 `not_tudi_officer`). Same body as an external registration, `soul_lookup.soul_id` required, optional `idempotency_key` (a repeat is 409 with the existing row). Answers a registration |
+
+### Me: 枉死城 (soul token)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /me/wangsi/ | This soul's untimely cases in the current life: held or not, grievance state, `can_file` / `refusal_code` |
+| POST | /me/wangsi/ | File a grievance (`{"judgment": "<uuid>", "plea": ""}`); 404 `not_found` for another soul's or another life's case, other refusals as the officer side. 201 with the case |
 
 ### Users (Admin)
 | Method | Endpoint | Description |
