@@ -724,19 +724,19 @@
       "help": "Qeres Maat: Wet Hru 70, Er Khet Ba Shem Er Weret Maaty; Tepy: Nen Shesep. Mut Em Ankh Nedjes: Nen Wedja, Er Sekhet Aaru. Nen Ren: Nen Aq Er Duat. Qeres Nen Maat (Khat Nen Neb, Nen Heka): Shem Nen Khetem. Wedja 2: Em Smen Djet."
     },
     "baptism": {
-      "label": "Mu Kristos",
+      "label": "Baptisma",
       "UNRECORDED": "Nen Sesh Djer",
-      "BAPTISED": "Shesep Mu Kristos",
-      "UNBAPTISED": "Nen Shesep Mu Kristos",
+      "BAPTISED": "Shesep Baptisma",
+      "UNBAPTISED": "Nen Shesep Baptisma",
       "BEFORE_CHRIST": "Mesut Tepy Er Kristos",
-      "help": "Nen Shesep Mu Kristos Er Mesut Tepy Er Kristos, Nen Isfet Dens: Duat 1 · Limbo (Nen Shepet). Isfet Dens: Wedja Er Isfet Pen. Shesep Mu Kristos: Nen Er Limbo."
+      "help": "Nen Shesep Baptisma Er Mesut Tepy Er Kristos, Nen Isfet Dens: Duat 1 · Limbo (Nen Shepet). Isfet Dens: Wedja Er Isfet Pen. Shesep Baptisma: Nen Er Limbo."
     },
     "denied_immortality": {
       "label": "Djed: Ba Mut Hena Khat",
       "UNRECORDED": "Nen Sesh Djer",
       "YES": "Iu",
       "NO": "Nen",
-      "help": "Djed Em Ankh: Ba Mut Hena Khat (Medu Dante 10). Wedja Nen Menkh: Duat 6 · Haeresis; Isfet Djed Em Duat Khery: Er Isfet Pen. Nen Sebi Netjer: Sebi Netjer Em Duat 7."
+      "help": "Djed Em Ankh: Ba Mut Hena Khat (Epicurei, Inf. X). Wedja Nen Menkh: Duat 6 · Haeresis; Isfet Djed Em Duat Khery: Er Isfet Pen. Nen Sebi Netjer: Sebi Netjer Em Duat 7."
     }
   },
   "common": {
@@ -6928,7 +6928,7 @@
       "reassign_request": "{{name}}: Dbh Hab Ky · {{time}}",
       "attach_camera": "Iri Tut",
       "attach_library": "Setep Em Per Tut",
-      "attach_file": "Setep Sesh",
+      "attach_file": "Setep PDF",
       "attach_uploading": "Em Hab {{percent}}%",
       "attach_cancel": "Sehen Hab",
       "attach_by": "{{name}} · {{time}}",
@@ -7214,7 +7214,8 @@
       "appeal_closed": "Nehet Khetem Er Sehen Seth",
       "verdict_unchanged": "Wedja Mawy Mi Wedja Tepy: Setep «Wedja Tepy Smen».",
       "ladder_running": "Nehet Em Wat Nehet: Nen Shesep, Nen Djed Er Khet Khetem",
-      "retry_not_a_destination": "Duat Europa: «Wehem Wedja» Nen Ta. Khemen Er Wedja Pehwy, Er Iri Wedja Mawy."
+      "retry_not_a_destination": "Duat Europa: «Wehem Wedja» Nen Ta. Khemen Er Wedja Pehwy, Er Iri Wedja Mawy.",
+      "not_final_judge": "Sab Wedja Pehwy Wa: Djed Wedja"
     },
     "decide": {
       "foreign_title": "Sekhet Em Taui Ky · Wedja Taui Ky",
@@ -7235,9 +7236,12 @@
       "PASSED": "Menkh · Er Sekhet Khery",
       "REJECTED": "Khesef · Wedja Tepy Smen",
       "CURRENT": "Em Maa",
-      "AHEAD": "Nen Shem Djer"
+      "AHEAD": "Nen Shem Djer",
+      "AWAITING_FINAL": "Sekhet Neb Menkh · Em Smen Wedja Pehwy"
     },
-    "escalate_hint": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery Wenen."
+    "escalate_hint": "Maa Pehwy: Wedja Tepy Smen. Seshem Er Hery Wenen.",
+    "ladder_final_pending": "Wedja Pehwy · Nen Djed Djer",
+    "final_decide": "Djed Wedja Pehwy"
   },
   "cityGods": {
     "title": "Chenghuang",
