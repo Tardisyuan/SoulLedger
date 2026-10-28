@@ -130,9 +130,13 @@ class GrievanceLevel(models.TextChoices):
 
 
 class GrievanceStatus(models.TextChoices):
-    """枉死城的冤情申诉(docs/10 §4.2、§6.2):提出 → 审核 → 属实则提前释放。"""
+    """枉死城的冤情申诉(docs/10 §4.2、§6.2):提出 → 审核 → 属实则提前释放 / 超度(规则在 `apps/judgment/wangsi.py`)。"""
     FILED = "FILED", "已申诉"
     UPHELD = "UPHELD", "属实 · 提前释放"
+    #: 阳寿已到(或案子已结)之后才审:属实,但已出城,没有放人这一步(2026-10-29)。
+    UPHELD_LATE = "UPHELD_LATE", "属实 · 期满出城"
+    #: 属实且超度:出城到莲花台,免审结案(docs/10 §4.3,2026-10-29 用户决定)。
+    DELIVERED = "DELIVERED", "属实 · 超度"
     REJECTED = "REJECTED", "不属实"
 
 
@@ -322,7 +326,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     #: `apps/judgment/wangsi.py` 写。申诉属实且冤情重大 → 提前释放:`held_until` 清空,案子当即可以认领。
     wrongful_death_cause = models.CharField(max_length=10, choices=WrongfulDeathCause.choices, blank=True, default="")
     grievance_level = models.CharField(max_length=10, choices=GrievanceLevel.choices, blank=True, default="")
-    grievance_status = models.CharField(max_length=10, choices=GrievanceStatus.choices, blank=True, default="")
+    grievance_status = models.CharField(max_length=12, choices=GrievanceStatus.choices, blank=True, default="")
     grievance_plea = models.TextField(blank=True, default="")
     grievance_note = models.TextField(blank=True, default="")
     grievance_decided_at = models.DateTimeField(null=True, blank=True)

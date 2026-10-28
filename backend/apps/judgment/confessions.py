@@ -55,6 +55,10 @@ def tally(judgment) -> dict | None:
     return {"truthful": truthful, "untruthful": untruthful, "unheard": total - truthful - untruthful, "total": total}
 
 
+#: BD 125B: one denial before each of the 42 assessors.
+ASSESSORS = 42
+
+
 def record(judgment, ordinal: int, truthful, note: str = "") -> NegativeConfession:
     """Record (or change) what was heard at one assessor. 409 `concluded` once the verdict is in;
     400 `not_weighed` on a case that is not weighed; 404 `unknown_clause` for an ordinal the hall has not seeded."""
@@ -65,9 +69,11 @@ def record(judgment, ordinal: int, truthful, note: str = "") -> NegativeConfessi
                                          "concluded", status=409)
         if not weighing.applies(locked):
             raise ConfessionRefusedError("Only a weighed Egyptian case hears the 42 denials.", "not_weighed")
+        # The route takes any `\d+`; past the column's range PostgreSQL raises (a 500) where SQLite just finds
+        # nothing. BD 125B has 42 assessors, so anything outside 1..42 is unknown before it reaches the query.
         statute = Statute.all_objects.filter(
             tenant_id=locked.tenant_id, corpus=StatuteCorpus.NEGATIVE_CONFESSION, ordinal=ordinal, is_deleted=False,
-        ).first()
+        ).first() if 1 <= ordinal <= ASSESSORS else None
         if statute is None:
             raise ConfessionRefusedError(f"No assessor {ordinal} in this hall.", "unknown_clause", status=404)
         row = NegativeConfession.all_objects.filter(judgment=locked, statute=statute, is_deleted=False).first()

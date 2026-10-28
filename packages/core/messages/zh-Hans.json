@@ -342,7 +342,8 @@
       "CAPTURE_WARRANT_CANCELLED": "勾魂牒撤销",
       "WANGSI_GRIEVANCE_FILED": "枉死城申诉",
       "WANGSI_GRIEVANCE_UPHELD": "申诉属实 · 提前释放",
-      "WANGSI_GRIEVANCE_REJECTED": "申诉不属实"
+      "WANGSI_GRIEVANCE_REJECTED": "申诉不属实",
+      "WANGSI_GRIEVANCE_DELIVERED": "申诉属实 · 超度至莲花台"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -2463,7 +2464,9 @@
     "grievance_statuses": {
       "FILED": "已申诉 · 待审",
       "UPHELD": "属实 · 已提前释放",
-      "REJECTED": "不属实"
+      "REJECTED": "不属实",
+      "UPHELD_LATE": "属实 · 期满出城",
+      "DELIVERED": "属实 · 已超度"
     },
     "wangsi": {
       "title": "枉死城",
@@ -2485,13 +2488,21 @@
         "no_grievance_filed": "没有待审的申诉。",
         "grievance_not_major": "冤情等级须为「重」或「极重」才能提前释放。",
         "not_city_god_officer": "只有这位城隍名下的官员或殿管理员能审核。",
-        "not_pending": "这件案子已结案。"
+        "not_pending": "这件案子已结案。",
+        "at_city_god": "案子还在城隍处，先解送再超度。",
+        "deliver_needs_upheld": "只有属实的申诉才能超度。"
       },
       "release_title": "提前释放{{name}}？",
       "release_body": "属实：{{name}}离开枉死城，这桩审判现在就可以认领，不再候到 {{date}}。",
       "release_irreversible": "释放后不能收回。",
       "release_gate": "冤情到「{{level}}」或以上才能判属实",
-      "released_line": "枉死 · {{date}} 已提前释放"
+      "released_line": "枉死 · {{date}} 已提前释放",
+      "deliver": "属实 · 超度",
+      "deliver_title": "超度{{name}}？",
+      "deliver_body": "属实并超度：{{name}}离开枉死城，到莲花台，免审结案。",
+      "delivered_line": "枉死 · {{date}} 已超度",
+      "uphold_late": "属实（只记结论）",
+      "late_hint": "阳寿已到或案子已结，亡魂已出城：审核只记结论，不再释放或超度。"
     },
     "confessions": {
       "title": "四十二条否定告白",
@@ -3604,11 +3615,9 @@
     "reference": "外部编号",
     "status": {
       "PENDING": "待验证",
-      "ACCEPTED": "已受理",
       "PROCESSED": "已处理",
       "FAILED": "处理失败",
-      "DUPLICATE": "重复",
-      "PARTIAL": "部分处理"
+      "DUPLICATE": "重复"
     },
     "source_system": "来源系统",
     "status_label": "状态",
@@ -5520,7 +5529,9 @@
       "status": {
         "FILED": "已申诉 · 待城隍核实",
         "UPHELD": "申诉属实 · 已提前释放",
-        "REJECTED": "申诉不属实 · 照旧押到阳寿那一天"
+        "REJECTED": "申诉不属实 · 照旧押到阳寿那一天",
+        "UPHELD_LATE": "申诉属实 · 阳寿已到时已出城",
+        "DELIVERED": "申诉属实 · 已超度，往莲花台"
       },
       "note_label": "城隍批语",
       "plea_label": "冤情",

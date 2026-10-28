@@ -11,5 +11,18 @@
   "souls.diyu_station.FENGDU_CITY",
   "souls.diyu_station.EIGHTEEN_HELLS",
   "souls.diyu_station.LOTUS_TERRACE",
-  "souls.diyu_station.HUANHUN_CLIFF"
+  "souls.diyu_station.HUANHUN_CLIFF",
+  "judgment.grievance_statuses.UPHELD_LATE",
+  "judgment.grievance_statuses.DELIVERED",
+  "souls.events.WANGSI_GRIEVANCE_DELIVERED",
+  "judgment.wangsi.deliver",
+  "judgment.wangsi.deliver_title",
+  "judgment.wangsi.deliver_body",
+  "judgment.wangsi.delivered_line",
+  "judgment.wangsi.uphold_late",
+  "judgment.wangsi.late_hint",
+  "judgment.wangsi.error.at_city_god",
+  "judgment.wangsi.error.deliver_needs_upheld",
+  "soul_app.wangsi.status.UPHELD_LATE",
+  "soul_app.wangsi.status.DELIVERED"
 ]

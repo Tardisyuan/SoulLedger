@@ -3580,11 +3580,9 @@
     "reference": "Medu Ahet",
     "status": {
       "PENDING": "Nen Maa Djer",
-      "ACCEPTED": "Shesep Seth",
       "PROCESSED": "Iri Seth",
       "FAILED": "Nen Iri",
-      "DUPLICATE": "Sen Medu",
-      "PARTIAL": "Redu Seth"
+      "DUPLICATE": "Sen Medu"
     },
     "source_system": "Tepy Hemsu",
     "status_label": "Kheperu",
