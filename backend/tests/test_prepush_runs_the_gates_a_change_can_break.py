@@ -1375,3 +1375,54 @@ class TestTheWholeRunOnAnotherMachine:
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "recorded a selective pass" in proc.stdout, proc.stdout
         assert (tmp_path / "passed-selective").read_text().rstrip().endswith("\tbackend/x.py")
+
+
+class TestEndToEndOnAnotherMachine:
+    """`run-gates.sh --e2e` (2026-10-28, user decision): Playwright runs on GATES_REMOTE, never here."""
+
+    def _bin(self, tmp_path: Path, image_ok=True) -> Path:
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        (b / "ssh").write_text(
+            "#!/bin/bash\n"
+            'case "$*" in\n'
+            f'  *"docker image inspect"*) exit {0 if image_ok else 1} ;;\n'
+            '  *"docker rm -f"*) exit 0 ;;\n'
+            f'  *"docker run"*) printf "%s" "$*" > "{tmp_path}/remote-run"; exit 0 ;;\n'
+            "esac\nexit 0\n")
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        for f in ("ssh", "rsync"):
+            (b / f).chmod(0o755)
+        return b
+
+    def _run(self, repo, tmp_path, *args, remote="fake-host", **kw):
+        b = self._bin(tmp_path, **kw)
+        env = _clean_env(**({"GATES_REMOTE": remote} if remote else {}))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), *args], cwd=repo, env=env,
+                              capture_output=True, text=True, timeout=120)
+
+    def test_without_a_remote_machine_it_refuses(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._run(main, tmp_path, "--e2e", remote=None)
+        assert proc.returncode == 2 and "never on this one" in proc.stdout, proc.stdout
+
+    def test_e2e_runs_chromium_there(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._run(main, tmp_path, "--e2e")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        remote = (tmp_path / "remote-run").read_text()
+        assert "PROJECTS='chromium'" in remote and "playwright test" in remote and "--retries=1" in remote, remote
+        assert "npm run build" in remote and "sl-gates-e2e:1" in remote and "flock" in remote, remote
+        assert "$(echo $PROJECTS" in remote, "the loop must reach the remote unexpanded"
+
+    def test_all_means_the_three_projects(self, checkouts, tmp_path):
+        main, _ = checkouts
+        self._run(main, tmp_path, "--e2e=all")
+        assert "PROJECTS='chromium,firefox,mobile-chrome'" in (tmp_path / "remote-run").read_text()
+
+    def test_an_unreachable_machine_runs_nothing_here(self, checkouts, tmp_path):
+        main, _ = checkouts
+        proc = self._run(main, tmp_path, "--e2e", image_ok=False)
+        assert proc.returncode == 1 and "does not run on this machine" in proc.stdout, proc.stdout
+        assert not (tmp_path / "remote-run").exists()

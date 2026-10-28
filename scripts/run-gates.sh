@@ -72,12 +72,14 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-2}"
 VITEST_WORKERS="${VITEST_WORKERS:-2}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0
+PREPUSH=0; MODE=auto; BASE=""; REAL_PG=0; E2E=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --prepush)  PREPUSH=1 ;;
         --full)     MODE=full ;;
         --real-pg)  REAL_PG=1 ;;
+        --e2e)      E2E=chromium ;;
+        --e2e=*)    E2E="${1#--e2e=}"; [ "$E2E" = all ] && E2E="chromium,firefox,mobile-chrome" ;;
         --affected) MODE=auto ;;
         --base)     BASE="${2:?--base needs a ref}"; shift ;;
         -h|--help)  sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
@@ -122,6 +124,74 @@ fi
 if [ -n "$PREPUSH_ENV" ]; then
     echo "$P: per-machine settings from $PREPUSH_ENV"
     . "$PREPUSH_ENV"
+fi
+
+# ── THE REMOTE MACHINE (GATES_REMOTE): shared by the delegated gates and --e2e ─────────────────
+RDIR="${GATES_REMOTE_DIR:-/mnt/cache/appdata/sl-gates}"
+RIMG="${GATES_REMOTE_IMAGE:-sl-gates-all:1}"
+RID="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
+RWORK="$RDIR/work/$RID"
+# remote_sync — this tree to $GATES_REMOTE:$RWORK. Owned by the remote user, not this machine's uid:
+# git there refuses a repository another user owns once the tests turn the system config off
+# (GIT_CONFIG_NOSYSTEM), and four gate tests went red. node_modules, the venv, caches and the Next
+# build survive the --delete.
+remote_sync() {
+    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
+        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
+            --filter='P frontend/.next/' --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/"
+}
+# Installed once per lockfile change, in the synced tree, by whichever container runs first. The hash
+# names the BASE image (RIMG), so the E2E image built on it does not force a reinstall.
+DEPS=$( { git ls-files -z -- package-lock.json '*package.json' backend/requirements.lock backend/requirements-dev.txt .nvmrc | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
+REMOTE_DEPS='
+          if [ "$(cat .sl-deps 2>/dev/null)" != "$SL_DEPS" ]; then
+            echo "    (installing node_modules and backend/.venv for these lockfiles — once per lockfile change)"
+            { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
+              && git checkout -- package-lock.json && rm -rf backend/.venv && python3 -m venv backend/.venv \
+              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt; } >/tmp/deps.log 2>&1 \
+              || { tail -20 /tmp/deps.log; echo "gates: could not install the dependencies"; exit 1; }
+            echo "$SL_DEPS" > .sl-deps
+          fi'
+
+# ── --e2e: PLAYWRIGHT ON THE REMOTE MACHINE (2026-10-28, user decision) ─────────────────────────
+#
+# `--e2e` runs chromium, `--e2e=all` the three projects, `--e2e=chromium,mobile-chrome` a list — the
+# project rule in CLAUDE.md (everyday chromium; layout adds mobile-chrome; all three before main).
+# It builds (`next build`) and runs `playwright test` in the image GATES_REMOTE_E2E_IMAGE (the gate
+# image plus Playwright 1.63's chromium and firefox), 4 workers, one retry: a test green on the retry
+# is reported as flaky, by name, not hidden. Measured 2026-10-28 on the unRAID box: build 31 s,
+# chromium 236 passed in 70 s, firefox 236 in 88 s, mobile-chrome 228 + 1 flaky in 115 s — against
+# 3.6 / 7.9 / 4.5 minutes here on 10-27. Never on this machine: no GATES_REMOTE, no E2E.
+if [ -n "$E2E" ]; then
+    [ -n "${GATES_REMOTE:-}" ] || { echo "$P: --e2e runs on the machine GATES_REMOTE names (.prepush.env), never on this one"; exit 2; }
+    EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
+    ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $EIMG >/dev/null 2>&1" 2>/dev/null \
+        || { echo "$P: $GATES_REMOTE is unreachable, or has no $EIMG image — E2E does not run on this machine"; exit 1; }
+    echo "$P: E2E on $GATES_REMOTE ($RWORK): ${E2E//,/ }"
+    remote_sync || { echo "$P: could not rsync this tree to $GATES_REMOTE:$RWORK"; exit 1; }
+    ssh -o BatchMode=yes "$GATES_REMOTE" "mkdir -p $RDIR/tmp/$RID" || exit 1
+    ENAME="sl-e2e-$RID-$$"
+    trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $ENAME" >/dev/null 2>&1' EXIT
+    trap 'exit 130' INT TERM
+    ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $ENAME \
+        --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} --shm-size 2g \
+        -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS=$DEPS -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
+        -e PROJECTS='$E2E' $EIMG bash -c '$REMOTE_DEPS
+          cd frontend && npm run build > /sl-tmp/e2e-build.log 2>&1 || { tail -30 /sl-tmp/e2e-build.log; echo \"e2e: next build failed\"; exit 1; }
+          rc=0
+          for p in \$(echo \$PROJECTS | tr , \" \"); do
+            T=\$(date +%s)
+            npx playwright test --project=\$p --reporter=line --retries=1 > /sl-tmp/e2e-\$p.log 2>&1 || rc=1
+            echo \"  → \$p (\$(( \$(date +%s) - T ))s)\"
+            grep -E \"^ +[0-9]+ (passed|failed|flaky|skipped)\" /sl-tmp/e2e-\$p.log | sed \"s/^ */    /\"
+            grep -E \"^ +\\[\$p\\] ›\" /sl-tmp/e2e-\$p.log | sed \"s/^ */      /\"
+          done
+          exit \$rc'"
+    ERC=$?
+    trap - EXIT
+    [ "$ERC" -eq 0 ] && { echo "$P: E2E ok on $GATES_REMOTE"; exit 0; }
+    echo "$P: E2E failed on $GATES_REMOTE (exit $ERC). Logs: $GATES_REMOTE:$RDIR/tmp/$RID/e2e-<project>.log"
+    exit 1
 fi
 
 # No backend/.env → no SECRET_KEY → config/settings.py refuses to load, and
@@ -569,24 +639,14 @@ fi
 # on this machine is what froze it (user decision). Retry when it is up; to run here on purpose,
 # comment GATES_REMOTE out of .prepush.env; `SKIP_PREPUSH=1 git push` skips the hook.
 if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
-    RDIR="${GATES_REMOTE_DIR:-/mnt/cache/appdata/sl-gates}"
-    RIMG="${GATES_REMOTE_IMAGE:-sl-gates-all:1}"
     [ -n "${GATES_REMOTE_DB_URL:-}" ] || fail "GATES_REMOTE is set without GATES_REMOTE_DB_URL (.prepush.env). Not running the gates on this machine."
     ssh -o ConnectTimeout=5 -o BatchMode=yes "$GATES_REMOTE" "docker image inspect $RIMG >/dev/null 2>&1" 2>/dev/null \
         || fail "$GATES_REMOTE is unreachable, or has no $RIMG image. Not running the gates on this machine (GATES_REMOTE is set) — try again when it is up, or SKIP_PREPUSH=1 git push."
-    RID="$(basename "$ROOT")-$(printf '%s' "$ROOT" | shasum | cut -c1-8)"
-    RWORK="$RDIR/work/$RID"
-    # Owned by the remote user, not this machine's uid: git there refuses a repository another user
-    # owns once the tests turn the system config off (GIT_CONFIG_NOSYSTEM), and four gate tests went red.
     echo "$P: on $GATES_REMOTE ($RWORK) — this machine only syncs and waits"
     T_SYNC=$(date +%s)
-    { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
-        | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
-            --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
-        || fail "could not rsync this tree to $GATES_REMOTE:$RWORK"
+    remote_sync || fail "could not rsync this tree to $GATES_REMOTE:$RWORK"
     printf '%s\n' "$CHANGED" | ssh -o BatchMode=yes "$GATES_REMOTE" "cat > $RWORK/.sl-changed" || fail "could not hand the change list to $GATES_REMOTE"
     echo "    (synced in $(( $(date +%s) - T_SYNC ))s)"
-    DEPS=$( { git ls-files -z -- package-lock.json '*package.json' backend/requirements.lock backend/requirements-dev.txt .nvmrc | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
     RFLAGS="--prepush"; [ "$MODE" = full ] && RFLAGS="$RFLAGS --full"; [ "$REAL_PG" = 1 ] && RFLAGS="$RFLAGS --real-pg"
     RNAME="sl-gates-$RID-$$"
     trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $RNAME" >/dev/null 2>&1' EXIT
