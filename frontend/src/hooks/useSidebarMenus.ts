@@ -41,8 +41,8 @@ function normalizeMenus(items: SidebarMenu[]): SidebarMenu[] {
   return prune(items.filter((m) => m.parent == null));
 }
 
-/** 只有地府有城隍(第五十三批):别的文明的殿不出现这两项。接口照样只在地府能建城隍,这里只是不摆一扇进去是空的门。 */
-const DIYU_ONLY_PATHS = new Set(["/city-gods", "/city-god-cases"]);
+/** 只有地府有城隍(第五十三批)、土地公与勾魂(第五十七批):别的文明的殿不出现这几项。接口照样只在地府能建城隍,这里只是不摆一扇进去是空的门。 */
+const DIYU_ONLY_PATHS = new Set(["/city-gods", "/city-god-cases", "/death-sync/tudi-gods", "/judgment/capture-due"]);
 
 export function hideOutsideDiyu(menus: SidebarMenu[], civilization: string | undefined): SidebarMenu[] {
   if (!civilization || civilization === "CHINESE") return menus;

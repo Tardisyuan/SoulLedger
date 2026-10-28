@@ -32,6 +32,8 @@ import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard"
 import type { RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
 import { CapturePanel } from "@/src/components/souls/detail/CapturePanel";
+import { DiyuStationStrip } from "@/src/components/souls/detail/DiyuRows";
+import { TudiRegisterDeathDialog } from "@/src/components/tudi-gods/TudiRegisterDeathDialog";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
@@ -110,6 +112,8 @@ export default function SoulDetailPage() {
   const [lostDialog, setLostDialog] = useState<"mark" | "recall" | null>(null);
   // 「发起审批…」(W-11):⋯ 菜单里,持 `workflow.create` 才有;弹层里灵魂已填好且锁定。
   const [isStartWorkflowOpen, setIsStartWorkflowOpen] = useState(false);
+  // 「以土地公名义登记死亡」(第五十七批 S-6):⋯ 菜单里,只地府、在世、持 `soul.die`。
+  const [isTudiRegisterOpen, setIsTudiRegisterOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const { hasPermission } = usePermissions();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -119,6 +123,8 @@ export default function SoulDetailPage() {
   // is 苦乐参半 and the ordinary case — but it is now a default, not a fact.
   // null until the officer picks: then the 第十殿's suggestion (below, once the dispositions are in) stands.
   const [pickedRebirthForm, setRebirthForm] = useState<RebirthFormValue | null>(null);
+  // 下一世部洲(第五十七批 S-3):只人道。"" = 同本世(本世登记了就照发本世的;后端收到空串会记成「不详」)。
+  const [nextContinent, setNextContinent] = useState("");
   // 办转世被配额拒了(409 rebirth_quota_full):那句话留在操作卡里,换一道就清掉。
   const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
   // 办转世被 409 `soup_not_taken` 拒了(地府的灵魂还没饮汤):灵魂留在轮回中,操作卡里的孟婆汤那一块写说明。
@@ -400,6 +406,9 @@ export default function SoulDetailPage() {
         disposition_id: dispositionId,
         new_identity: `${soul?.name} (rebirth)`,
         ...(sixPaths && rebirthForm ? { rebirth_form: rebirthForm } : {}),
+        ...(sixPaths && rebirthForm === "HUMAN" && (nextContinent || soul?.birth_continent)
+          ? { rebirth_continent: nextContinent || soul?.birth_continent }
+          : {}),
       });
       // 转生会写出一条新的处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
@@ -674,6 +683,7 @@ export default function SoulDetailPage() {
       onRecall={soul.current_state === "LOST" && canTransition ? () => setLostDialog("recall") : undefined}
       onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
       onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}
+      onRegisterByTudi={soul.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("soul.die") ? () => setIsTudiRegisterOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
     />
@@ -765,13 +775,17 @@ export default function SoulDetailPage() {
         />
       )}
 
+      {/* 十三站行程条(第五十七批 S-1):身份栏之上满宽,只地府;不在路上只一行灰字。 */}
+      {soul && !loading && (
+        <DiyuStationStrip soul={soul} canMove={canTransition && !readOnlyAway && !archived} />
+      )}
+
       {/* v3 三栏(原型 `.soul-detail-grid`):身份 | 账页 | 功过。
           1024:身份 | 账页,功过接在身份栏下面(原型是落到两栏之下占满一行 —— 中栏比原型长得多,那样会把功过推到页底,见报告「需要拍板」);768:身份 | 功过,账页占第二行;
           768 以下单栏,按身份、功过、账页的顺序(原型注 03)。 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[190px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[220px_minmax(0,1fr)_220px]">
         <div className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
-          <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay}
-            canMoveStation={canTransition && !readOnlyAway && !archived} />
+          <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay} />
           {soul && soul.civilization === "CHINESE" && !readOnlyAway && !archived && (
             <CapturePanel soul={soul} canAct={hasPermission("soul.die")} />
           )}
@@ -785,6 +799,8 @@ export default function SoulDetailPage() {
               reincarnations={reincarnations}
               sixPaths={sixPaths}
               rebirthForm={rebirthForm}
+              nextContinent={nextContinent}
+              onNextContinentChange={setNextContinent}
               suggestedRebirthForm={suggestedRebirthForm}
               onRebirthFormChange={(form) => {
                 setRebirthForm(form);
@@ -914,6 +930,10 @@ export default function SoulDetailPage() {
           onClose={() => setIsStartWorkflowOpen(false)}
           lockedSoul={soul}
         />
+      )}
+
+      {soul && isTudiRegisterOpen && (
+        <TudiRegisterDeathDialog soul={soul} onClose={() => setIsTudiRegisterOpen(false)} />
       )}
 
       {/* Custom Confirm Dialog */}

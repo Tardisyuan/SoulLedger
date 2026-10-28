@@ -283,6 +283,7 @@ export {
   type WebhookDelivery,
   type WebhookDeliveryStatus,
   tudiGodsApi,
+  tudiGodKeys,
   type TudiGod,
   type TudiGodInput,
   type TudiRegistrationInput,

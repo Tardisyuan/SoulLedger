@@ -67,6 +67,8 @@ export interface SystemGroupRow extends BaseRow {
   count: number;
   actor: string;
   items: SoulEvent[];
+  /** 标题下面一行小字(第五十七批 E-3:升天堂经地上乐园)。没有就不画。 */
+  note?: string;
 }
 
 export interface FutureRow extends BaseRow {
@@ -319,6 +321,8 @@ export interface SystemEventLabels {
   /** 地府十三站换站的去处「望乡台」、勾魂牒的鬼差「黑白无常」(2026-10-28)。可选,同 `appeal`。 */
   station?: (raw: string | null) => string;
   escort?: (raw: string | null) => string;
+  /** 「经地上乐园 · 饮忘川、忆善河」(第五十七批 E-3)。可选,同 `appeal`。 */
+  earthlyParadise?: string;
 }
 
 /**
@@ -345,6 +349,7 @@ export function makeSystemEventLabels(t: Translate): SystemEventLabels {
     transferredFrom: (cityGod) => t("cityGodCases.transferred_from", { city_god: cityGod }),
     station: via("souls.diyu_station"),
     escort: via("souls.capture.escort"),
+    earthlyParadise: t("souls.timeline.earthly_paradise"),
   };
 }
 
@@ -451,6 +456,16 @@ export function buildLostMoveMarkers(
     });
 }
 
+/**
+ * 标题下的一行小字。目前只有一种:自炼狱升天堂经过了山顶的地上乐园(`payload.through` 有值,
+ * `disposition/expiry.py`;没经过时为空串)—— 不另起事件,写在这一行下面(Design 第五十七批 E-3)。
+ */
+export function systemEventNote(e: SoulEvent, labels: SystemEventLabels): string | undefined {
+  const p = e.payload as Record<string, unknown>;
+  if (e.event_type === "PURGATORY_ASCENDED" && typeof p.through === "string" && p.through) return labels.earthlyParadise;
+  return undefined;
+}
+
 export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels): SystemGroupRow[] {
   // 失踪的进出已经是一条官员行(buildLostMoveMarkers),系统事件里不再重复一次。
   return groupSystemEvents(events.filter((e) => !isLostMove(e))).map((g) => ({
@@ -460,6 +475,7 @@ export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels):
     sortKey: toSortMs(g.date),
     dateLabel: isoDateLabel(g.date),
     title: describeSystemEvent(g.items[0], labels),
+    note: systemEventNote(g.items[0], labels),
     rawEventType: g.eventType,
     count: g.items.length,
     actor: g.actor,
