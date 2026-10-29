@@ -115,6 +115,7 @@ const COLLECTED_FILES = [
   "UsersPage.mfaColumn.test.tsx",
   "TenantSettingsDialog.mfaRoles.test.tsx",
   "brandTokensMatchIcon.test.ts",
+  "draftAutosaveReadOnly.test.tsx",
   "draftSavedFlash.test.tsx",
   "judgmentFullCaseMotion.test.ts",
   // 2026-10-24 第五十二批 审判申诉:距截止、被拒的读法、时间线三种事件。
@@ -325,6 +326,7 @@ const COLLECTED_FILES = [
   // 2026-10-17 第四十批 W-b:配置页只列接上的按钮(取代 editFailure 那份:通用增改表单已拿掉);配置读法与关掉的按钮。
   "MenuButtonsPage.test.tsx",
   "menuButtonConfig.test.tsx",
+  "menuButtonGates.test.ts",
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "menuTranslationCoverage.test.ts",

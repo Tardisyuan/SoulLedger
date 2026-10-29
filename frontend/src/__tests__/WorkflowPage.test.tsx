@@ -195,7 +195,7 @@ describe("WorkflowPage permission gates", () => {
   });
 
   it("hides the create button from a user without workflow.create", async () => {
-    mockSession.user = { role: "JUDGE", permissions: ["workflow.update", "workflow.delete"] };
+    mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.update", "workflow.delete"] };
     renderPage();
 
     await screen.findByText("Custom Tribunal");
@@ -203,7 +203,7 @@ describe("WorkflowPage permission gates", () => {
   });
 
   it("hides the edit button from a user without workflow.update", async () => {
-    mockSession.user = { role: "JUDGE", permissions: ["workflow.create", "workflow.delete"] };
+    mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.create", "workflow.delete"] };
     renderPage();
 
     fireEvent.click(await screen.findByText("Custom Tribunal"));
@@ -213,7 +213,7 @@ describe("WorkflowPage permission gates", () => {
   });
 
   it("hides the delete button from a user without workflow.delete", async () => {
-    mockSession.user = { role: "JUDGE", permissions: ["workflow.create", "workflow.update"] };
+    mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.create", "workflow.update"] };
     renderPage();
 
     fireEvent.click(await screen.findByText("Custom Tribunal"));
@@ -222,7 +222,7 @@ describe("WorkflowPage permission gates", () => {
   });
 
   it("leaves a permissionless user with the read-only view button only", async () => {
-    mockSession.user = { role: "VIEWER", permissions: [] };
+    mockSession.user = { role: "VIEWER", permissions: ["workflow.read"] };
     renderPage();
 
     fireEvent.click(await screen.findByText("Custom Tribunal"));

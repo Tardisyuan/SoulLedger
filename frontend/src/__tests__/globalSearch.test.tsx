@@ -122,8 +122,8 @@ describe("全局搜索", () => {
     renderSearch();
     await open();
     await search("魂");
+    await waitFor(() => expect(soulsApi.list).toHaveBeenCalledWith({ search: "魂" }));
     await waitFor(() => expect(groups()).toEqual(["soul", "page"]));
-    expect(soulsApi.list).toHaveBeenCalledWith({ search: "魂" });
     expect(judgmentApi.list).not.toHaveBeenCalled();
     expect(judgmentApi.statutes).not.toHaveBeenCalled();
   });

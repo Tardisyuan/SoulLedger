@@ -123,8 +123,9 @@ describe("access", () => {
 
     mockPath = "/death-sync";
     renderRoute(<DeathSyncPage />);
-    await waitFor(() => expect(deathSyncApi.registrations).toHaveBeenCalled());
-    expect(screen.getByRole("link", { name: tZh("death_sync.tabs.registrations") })).toBeInTheDocument();
+    // 页级门(rbac-web L-1):登记读接口是 IsAdmin,非管理员整页 403,一个请求都不发,也没有页签。
+    expect(screen.getByText(tZh("permission.denied_title"))).toBeInTheDocument();
+    expect(deathSyncApi.registrations).not.toHaveBeenCalled();
     expect(screen.queryByRole("link", { name: tZh("death_sync.tabs.webhooks") })).toBeNull();
   });
 
