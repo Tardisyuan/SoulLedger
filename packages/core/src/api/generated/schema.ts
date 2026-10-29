@@ -14358,6 +14358,17 @@ export interface components {
             escalation_stations: string[];
             civilization: components["schemas"]["CivilizationEnum"];
         };
+        MeCaptureWarrant: {
+            status: components["schemas"]["MeCaptureWarrantStatusEnum"];
+            /** Format: date-time */
+            issued_at: string;
+        };
+        /**
+         * @description * `ISSUED` - ISSUED
+         *     * `CAPTURED` - CAPTURED
+         * @enum {string}
+         */
+        MeCaptureWarrantStatusEnum: "ISSUED" | "CAPTURED";
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
             /** Format: uuid */
@@ -14406,6 +14417,12 @@ export interface components {
             executed_at: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        MeGreekFerry: {
+            ferry_passage: components["schemas"]["FerryPassageEnum"];
+            crossed: boolean;
+            /** Format: date */
+            crosses_on: string | null;
         };
         MeJudge: {
             name: string;
@@ -14467,6 +14484,12 @@ export interface components {
             rebirth_applications: components["schemas"]["MeRebirthApplication"][];
             reincarnation: components["schemas"]["MeReincarnation"] | null;
         };
+        MeNegativeConfession: {
+            truthful: number;
+            untruthful: number;
+            unheard: number;
+            total: number;
+        };
         /** @description instance 是灵魂;本世账号经 context["account"] 传入。 */
         MeProfile: {
             soul_code: string;
@@ -14499,6 +14522,12 @@ export interface components {
             readonly account: components["schemas"]["MeAccount"];
             readonly welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
             readonly assistant_enabled: boolean;
+            readonly capture_warrant: components["schemas"]["MeCaptureWarrant"] | null;
+            readonly greek_ferry: components["schemas"]["MeGreekFerry"] | null;
+            readonly european_vestibule: components["schemas"]["MeVestibule"] | null;
+            readonly negative_confession: components["schemas"]["MeNegativeConfession"] | null;
+            /** Format: date-time */
+            readonly wangsi_delivered_at: string | null;
         };
         MeRealm: {
             realm_code: string;
@@ -14609,6 +14638,10 @@ export interface components {
             readonly visit: {
                 [key: string]: string;
             };
+        };
+        MeVestibule: {
+            /** Format: date-time */
+            entered_at: string;
         };
         /** @description 灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。 */
         MeWangsiCase: {
@@ -15070,9 +15103,10 @@ export interface components {
          *     * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
          *     * `CITY_GOD_CASE_RECEIVED` - City God Case Received
          *     * `CITY_GOD_CASE_RETURNED` - City God Case Returned
+         *     * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED" | "CITY_GOD_CASE_RECEIVED" | "CITY_GOD_CASE_RETURNED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED" | "CITY_GOD_CASE_RECEIVED" | "CITY_GOD_CASE_RETURNED" | "WANGSI_GRIEVANCE_FILED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerAssistAsk: {

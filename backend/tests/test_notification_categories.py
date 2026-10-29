@@ -86,6 +86,7 @@ def _send(user, kind, **params):
     ("DISPATCH_CANCELLED", "dispatch"),
     ("SOUL_INBOX_ASSIGNED", "letter_handoff"),
     ("CITY_GOD_CASE_RECEIVED", "city_god"),
+    ("WANGSI_GRIEVANCE_FILED", "city_god"),
 ])
 def test_site_off_suppresses_exactly_that_category(judge_user, kind, category):
     _set(judge_user, **{category: {"site": False}})

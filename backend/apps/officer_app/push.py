@@ -11,6 +11,7 @@ ticket 成功的留一行 `OfficerPushDelivery`,`check_receipts` 满 15 分钟�
 触发点(「有东西落进四组之一」):`WorkflowService.announce`(新节点轮到某人,含转生申请)、
 `DispatchService._notify_target_tenant`(调拨提案)、`rebirth.request_cooldown_shortening`
 (缩短冷却申请)。三处都只调 `notify_users(用户们)`,由本模块重算计数。
+枉死申诉:`judgment.wangsi._notify_filed`(提出申诉,推给城隍名下官员)。
 书信:`chat.inbox.push_to_assignee`(会话被分派 / 改派给他;已分派给他的会话来了灵魂的新信,同会话 10 分钟静默)。
 """
 import logging
@@ -101,7 +102,7 @@ def _locale(user):
 #: 没有 `target` 的推送(只有计数)不属于任何一类,照发。
 CATEGORY_OF_TARGET = {"approval": "approval", "rebirth": "approval", "cooldown": "approval",
                       "reassignment": "dispatch", "letter": "letter_handoff", "pick": "approval",
-                      "city_god": "city_god"}
+                      "city_god": "city_god", "wangsi": "city_god"}
 
 
 def send_to_user(user, sender=None, target=None):
