@@ -221,6 +221,11 @@ function LedgerBody({
       <p className={MONO_LABEL} data-testid="ledger-formula">
         {t("ledger.journal.formula", { souls: String(data.soul_count), records: String(data.record_count) })}
       </p>
+      {data.totals_whole_hall && (
+        <p className={MONO_LABEL} data-testid="ledger-totals-whole-hall">
+          {t("ledger.journal.totals_whole_hall")}
+        </p>
+      )}
 
       {data.record_count === 0 ? (
         /* C15「空」:给一条出路 —— 有筛选就清筛选,没有就去上一月。 */

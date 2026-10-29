@@ -982,7 +982,7 @@ def can_adjust_any(workflow, request):
 
 
 def history(workflow, request=None):
-    """「选站」「加减站」两类记录(审计行),时间顺序。别的域的人名不给。"""
+    """「选站」「加减站」两类记录(审计行),时间顺序。别的域的人名与理由不给(理由:决定 24,用户 2026-10-29)。"""
     from apps.audit.models import AuditLog
 
     viewer = viewer_tenant_id(request, workflow)
@@ -1000,7 +1000,7 @@ def history(workflow, request=None):
             "at": row.timestamp,
             "restored": changes.get("restored", []),
             "skipped": changes.get("skipped", []),
-            "reason": changes.get("reason", ""),
+            "reason": changes.get("reason", "") if viewer is None or viewer == row.tenant_id else "",
         })
     return out
 

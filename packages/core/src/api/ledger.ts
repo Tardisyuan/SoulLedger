@@ -367,6 +367,8 @@ export interface LedgerJournal {
   closing: number;
   soul_count: number;
   record_count: number;
+  /** 明细按数据范围收窄、合计仍是全殿时为 true。 */
+  totals_whole_hall: boolean;
   categories: LedgerJournalCategory[];
   page: number;
   page_size: number;

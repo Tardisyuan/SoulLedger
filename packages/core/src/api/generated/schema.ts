@@ -14191,6 +14191,8 @@ export interface components {
             closing: number;
             soul_count: number;
             record_count: number;
+            /** @description 明细只列数据范围里的灵魂,而四柱、类目与户数 / 条数是全殿的。 */
+            totals_whole_hall: boolean;
             categories: components["schemas"]["LedgerJournalCategory"][];
             page: number;
             page_size: number;

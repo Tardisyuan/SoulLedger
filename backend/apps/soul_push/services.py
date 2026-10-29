@@ -118,9 +118,11 @@ def rule_for(event_type, payload, account):
         return ("rebirth", kind, f"cooldown-shortening:{request_id}:{payload['status']}", {"screen": "Applications"})
     if event_type == "JUDGMENT_CONCLUDED":
         judgment_id = payload.get("judgment_id")
+        if not judgment_id or _delivered_from_wangsi(judgment_id):
+            return None
         # `judgment_id`:落地时高亮本世「审判」里那一件(第四十批 S-e)。
         return ("judgment", "judgment_result", f"judgment:{judgment_id}",
-                {"screen": "Life", "judgment_id": str(judgment_id)}) if judgment_id else None
+                {"screen": "Life", "judgment_id": str(judgment_id)})
     if event_type == "STATE_CHANGED" and payload.get("action") in RESIDENCE_ACTIONS:
         action = payload["action"]
         # 调拨记录 id 是这次暂居的业务主键;回归时记录可能不存在(数据修正过的灵魂,dispatch_id=None),
@@ -145,10 +147,23 @@ APPEAL_KINDS = {"UPHELD": "appeal_upheld", "AMENDED": "appeal_amended"}
 
 #: 枉死城冤情申诉的结论(apps/judgment/wangsi.py;2026-10-29 用户决定推给灵魂)。按 payload 的 `status` 分四种:
 #: 属实 · 提前释放 / 属实(期满后才审,没有可放的)/ 属实 · 超度 / 不属实。提出申诉不推(灵魂自己或官员替它刚做的)。
-#: 落点与审判结论同一处:本世里那件审判。超度同时会结案,另有一条 `judgment_result` —— 两条各说各的事。
+#: 落点与审判结论同一处:本世里那件审判。超度同时会结案:那一次结案不再推 `judgment_result`
+#: (用户 2026-10-29),`wangsi_delivered` 已经说了结果(`_delivered_from_wangsi`)。
 WANGSI_EVENTS = frozenset({"WANGSI_GRIEVANCE_UPHELD", "WANGSI_GRIEVANCE_DELIVERED", "WANGSI_GRIEVANCE_REJECTED"})
 WANGSI_STATUS_KINDS = {"UPHELD": "wangsi_upheld", "UPHELD_LATE": "wangsi_upheld_late",
                        "DELIVERED": "wangsi_delivered", "REJECTED": "wangsi_rejected"}
+
+
+def _delivered_from_wangsi(judgment_id) -> bool:
+    """这件审判是超度结的案(`wangsi._deliver`:先记 DELIVERED、推 `wangsi_delivered`,再结案)。
+    DELIVERED 只由超度写,超度必结案;同一件审判的结案推送本来就按 `judgment:{id}` 去重只有一条。"""
+    from apps.judgment.models import GrievanceStatus, Judgment
+
+    try:
+        judgment_pk = uuid.UUID(str(judgment_id))
+    except ValueError:
+        return False  # 非法 id 不查(PostgreSQL 上会中止事务),照旧推
+    return Judgment.all_objects.filter(pk=judgment_pk, grievance_status=GrievanceStatus.DELIVERED).exists()
 
 
 def _wangsi_rule(payload):

@@ -725,6 +725,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         from django.db import transaction
 
         old = instance.duat_passage
+        self._require_assign_to_move_an_open_case(instance, old, validated_data.get("duat_passage", old))
         try:
             with transaction.atomic():
                 soul = super().update(instance, validated_data)
@@ -732,6 +733,23 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"duat_passage": exc.messages}) from exc
         return soul
+
+    def _require_assign_to_move_an_open_case(self, instance, old, new):
+        """Moving an open case (what `follow_duat_passage` does) is reassigning work: `judgment.assign`, not just
+        `soul.update` (user 2026-10-29, rbac-be1 L11). With no open case the edit stays a plain soul field."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from apps.judgment.models import DUAT_BARRED, Judgment, JudgmentKind
+        from apps.perm.checker import check_permission
+
+        if old == new or (old not in DUAT_BARRED and new not in DUAT_BARRED):
+            return
+        has_open_case = Judgment.objects.filter(
+            soul=instance, kind=JudgmentKind.ORIGINAL, verdict__isnull=True, is_final=False, is_deleted=False,
+        ).exists()
+        request = self.context.get("request")
+        if has_open_case and not check_permission(getattr(request, "user", None), "judgment.assign"):
+            raise PermissionDenied("Changing the Duat passage moves this soul's open case; that needs judgment.assign.")
 
     def get_merit_score(self, obj) -> int | None:
         if _is_viewer(self.context):

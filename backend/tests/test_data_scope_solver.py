@@ -186,6 +186,35 @@ def test_a_workflow_awaiting_my_role_is_visible_outside_my_orgs(w):
     assert _names(w.user, ApprovalWorkflow, field="workflow_name") == {"待我"}
 
 
+def test_a_pending_cosigner_and_an_open_countersign_slot_count_as_awaiting_me(w):
+    """用户 2026-10-29:加签人(未签)、会签候选人(还有一格)也算「待我审批」,与 todo 的 `can_approve` 同口径。"""
+    from apps.workflow.models import NodeKind
+
+    scope("JUDGE", "ORG")
+
+    def flow(name, **node):
+        s = Soul.objects.create(name=name, tenant=w.tenant, owner_org=w.b)
+        wf = ApprovalWorkflow.objects.create(soul=s, workflow_name=name, case_type="STANDARD",
+                                             status=ApprovalWorkflowStatus.IN_PROGRESS, tenant=w.tenant)
+        wf.current_node = ApprovalNode.objects.create(workflow=wf, node_name="初审", node_order=1,
+                                                      node_type="EVALUATION", status=NodeStatus.PENDING, **node)
+        wf.save(update_fields=["current_node"])
+
+    def cosigner(signed_at):
+        return [{"user_id": w.user.pk, "user_name": "甲", "added_by_id": None, "added_at": None, "signed_at": signed_at}]
+
+    flow("加签未签", approver_type="ROLE", approver_role="MODERATOR", cosigners_json=cosigner(None))
+    flow("加签已签", approver_type="ROLE", approver_role="MODERATOR", cosigners_json=cosigner("2026-10-29T00:00:00"))
+    flow("会签有我", kind=NodeKind.COUNTERSIGN, approver_type="SYSTEM",
+         signers_json=[{"approver_type": "ROLE", "approver_role": "JUDGE"}])
+    flow("会签已签", kind=NodeKind.COUNTERSIGN, approver_type="SYSTEM",
+         signers_json=[{"approver_type": "ROLE", "approver_role": "JUDGE"}],
+         signatures_json=[{"signer": 0, "user_id": w.user.pk, "passed": True}])
+    flow("会签没我", kind=NodeKind.COUNTERSIGN, approver_type="SYSTEM",
+         signers_json=[{"approver_type": "ROLE", "approver_role": "MODERATOR"}])
+    assert _names(w.user, ApprovalWorkflow, field="workflow_name") == {"加签未签", "会签有我"}
+
+
 def test_users_and_orgs_follow_the_org_scope(w):
     scope("JUDGE", "ORG_CHILD")
     User.objects.create_user(username="ds_child", password="x", role="JUDGE", tenant=w.tenant, organization=w.a1)

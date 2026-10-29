@@ -436,17 +436,10 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(DeathRegistrationRequestSerializer(result, context=self.get_serializer_context()).data)
 
     def get_queryset(self):
-        # `admin_bypass=False`: an ADMIN sees their own tenant's registrations,
-        # not everyone's. `apps/core/tenant.py` does name ADMIN as the globally
-        # exempt role, and that exemption was left in place where it is
-        # long-standing -- but this endpoint is new, and the same call made on
-        # 2026-08-30 for `/ledger/stats/export/` applies: a screen that lists
-        # names and death dates is the last place to hand one tenant another's
-        # rows by default. Nothing has ever depended on the wider behaviour
-        # here, so there is nothing to migrate.
-        return scope_to_tenant(
-            super().get_queryset(), self.request, admin_bypass=False
-        )
+        # 无殿 ADMIN 看全部(用户 2026-10-29,rbac-be2 D3)。此前 `admin_bypass=False`:那时任何 ADMIN 都豁免,
+        # 所以收成「只看本殿」;而无殿 ADMIN 没有殿,结果是一张空表。现在豁免本身只给无殿 ADMIN
+        # (`is_tenant_exempt`),绑了殿的 ADMIN 照旧只看本殿。
+        return scope_to_tenant(super().get_queryset(), self.request)
 
 
 class WebhookViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
