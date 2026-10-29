@@ -10,6 +10,7 @@
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 
 import { currentOwner } from "./owner";
 import { useI18n } from "./shared";
@@ -95,7 +96,32 @@ export class NotConfirmed extends Error {
 export async function confirmedDecision<T>(promptMessage: string, send: () => Promise<T>): Promise<T> {
   const result = await decisionAllowed(promptMessage);
   if (result !== "ok") throw new NotConfirmed(result);
+  await foreground();
   return send();
+}
+
+/**
+ * Resolves once the app is in front again (at most `ms` later). Android pauses the activity behind the system's
+ * check (AppState `background`) and calls back with the result while the prompt is still closing -- before the
+ * activity resumes. A release sent at that moment on the Honor/EMUI phone (phone QA 10-29c, o13b) never reached
+ * the server and came back with no response, which the screen reported as 释放失败. Waiting for `active` sends it
+ * from the foreground. Inferred from the device behaviour, not reproduced in jest (it cannot pause an activity).
+ * ponytail: a fixed 2 s cap; if a phone resumes later the send goes anyway and a no-response error says 网络错误.
+ */
+export function foreground(ms = 2000): Promise<void> {
+  // Only a known paused state waits: `unknown` / unset (a start, jest) is treated as in front.
+  if (AppState.currentState !== "background" && AppState.currentState !== "inactive") return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      sub?.remove();
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") done();
+    });
+  });
 }
 
 /** The key of the line a screen shows when `confirmedDecision` threw; null when the error was the server's. */

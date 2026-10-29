@@ -16,6 +16,7 @@ import { useCan } from "../session";
 import { Input, Notice, Screen, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 function refusalKey(e: unknown): string {
+  if (!(e as { response?: unknown } | null)?.response) return "officer_app.confirm.reasons.network";
   const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
   return code && (CITY_GOD_CASE_ERROR_CODES as readonly string[]).includes(code) ? `cityGodCases.error.${code}` : "judgment.claim.refused.generic";
 }

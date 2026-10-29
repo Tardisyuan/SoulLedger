@@ -65,6 +65,12 @@ function Serving({ soulId }: { soulId: string }) {
           toast(t(unconfirmed, { bio: bio.start }), "failure");
           return;
         }
+        if (!(e as { response?: unknown } | null)?.response) {
+          // No answer at all (o13b: the check passed, nothing reached the server). Not 释放失败: say 网络错误 and
+          // keep the sheet, so one more tap tries again; a release that did land answers that tap with not_serving.
+          toast(t("officer_app.confirm.reasons.network"), "failure");
+          return;
+        }
         const code = releaseRefusalOf(e);
         // 认不出的失败说「释放失败」,不说「执行处置失败」(那是另一个动作)。
         toast(t(`disposition.release_error.${code ?? "generic"}`), "failure");
