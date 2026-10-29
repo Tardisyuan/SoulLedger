@@ -175,7 +175,8 @@ describe("冥河渡口", () => {
     expect(screen.getByTestId("life-ferry-date")).toHaveTextContent(`可渡之日 · ${zhDay(on)}`);
     // The line is drawn and spoken, never printed: no digits on it.
     const line = screen.getByTestId("life-ferry-line");
-    expect(line.props.accessibilityLabel).toMatch(/^已在岸边等了 \d+ 年，共 100 年$/);
+    // Waited + still to wait = a hundred (each rounded down on its own gave 18 + 81 on the phone, 2026-10-30).
+    expect(line.props.accessibilityLabel).toBe("已在岸边等了 82 年，共 100 年");
     expect(within(line).queryByText(/\d/)).toBeNull();
   });
 
