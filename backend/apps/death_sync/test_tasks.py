@@ -76,3 +76,21 @@ class TestCleanupOldRequestsForTenantIsolation:
         assert not DeathRegistrationRequest.objects.filter(pk=self.old_a.pk).exists()
         assert DeathRegistrationRequest.objects.filter(pk=self.old_b.pk).exists()
         assert result["deleted"] == 1
+
+    def test_the_window_comes_from_the_setting_when_the_job_names_none(self, settings):
+        """The registry no longer passes `days`; the setting decides, and 0 keeps everything."""
+        from apps.scheduler import registry
+
+        assert "days" not in registry.get("death_sync.cleanup_old_requests_for_tenant").kwargs
+
+        settings.DEATH_SYNC_REQUEST_RETENTION_DAYS = 0
+        assert cleanup_old_requests_for_tenant(str(self.tenant_a.id))["deleted"] == 0
+        assert DeathRegistrationRequest.objects.filter(pk=self.old_a.pk).exists()
+
+        settings.DEATH_SYNC_REQUEST_RETENTION_DAYS = 101  # the rows are 100 days old
+        assert cleanup_old_requests_for_tenant(str(self.tenant_a.id))["deleted"] == 0
+
+        settings.DEATH_SYNC_REQUEST_RETENTION_DAYS = 99
+        assert cleanup_old_requests_for_tenant(str(self.tenant_a.id))["deleted"] == 1
+        assert not DeathRegistrationRequest.objects.filter(pk=self.old_a.pk).exists()
+        assert DeathRegistrationRequest.objects.filter(pk=self.old_b.pk).exists()
