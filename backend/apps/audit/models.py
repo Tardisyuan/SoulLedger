@@ -72,5 +72,13 @@ class AuditLog(AuditUserFields, models.Model):
             models.Index(fields=["trace_id"]),
         ]
 
+    def save(self, *args, **kwargs):
+        # 二十来处 `AuditLog.objects.create(...)` 不传 trace_id;在这里补上当前请求 / 任务的 id(apps/core/trace.py)。
+        if not self.trace_id:
+            from apps.core.trace import get_trace_id
+
+            self.trace_id = get_trace_id()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user} {self.action} {self.resource} at {self.timestamp}"

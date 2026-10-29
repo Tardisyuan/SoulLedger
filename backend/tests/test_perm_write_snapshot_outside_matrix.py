@@ -1617,6 +1617,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "realms.manage",
         # perm/0027 (2026-10-11, 灵魂端两步验证). Same reasoning as the scheduler pair.
         "souls.mfa_reset",
+        # perm/0028 (2026-10-29, 在线会话). Same reasoning as the scheduler pair.
+        "session.manage",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",

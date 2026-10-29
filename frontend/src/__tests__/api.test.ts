@@ -176,6 +176,31 @@ describe('API Client — @soulledger/core/api', () => {
     });
   });
 
+  // ── Request interceptor: request id and idempotency key (2026-10-29) ─────
+  describe('request interceptor — X-Request-ID and Idempotency-Key', () => {
+    it('stamps a request id on every request, a fresh one each time', () => {
+      const a = (applyRequestInterceptor({ headers: {}, method: 'get' }).headers as Record<string, string>)['X-Request-ID'];
+      const b = (applyRequestInterceptor({ headers: {}, method: 'get' }).headers as Record<string, string>)['X-Request-ID'];
+      expect(a).toMatch(/^[0-9a-f]{32}$/);
+      expect(b).toMatch(/^[0-9a-f]{32}$/);
+      expect(a).not.toBe(b);
+    });
+
+    it('stamps an idempotency key on writes only', () => {
+      const read = applyRequestInterceptor({ headers: {}, method: 'get' }).headers as Record<string, string | undefined>;
+      const write = applyRequestInterceptor({ headers: {}, method: 'post' }).headers as Record<string, string | undefined>;
+      expect(read['Idempotency-Key']).toBeUndefined();
+      expect(write['Idempotency-Key']).toMatch(/^[0-9a-f]{32}$/);
+    });
+
+    it('keeps what the caller (or the first attempt of a retried request) already set', () => {
+      const headers = { 'X-Request-ID': 'first-attempt-id', 'Idempotency-Key': 'outbox-txn' };
+      const out = applyRequestInterceptor({ headers, method: 'post' }).headers as Record<string, string>;
+      expect(out['X-Request-ID']).toBe('first-attempt-id');
+      expect(out['Idempotency-Key']).toBe('outbox-txn');
+    });
+  });
+
   // ── Response interceptor: 401 handling ───────────────────────────────────
   describe('response interceptor — 401 handling', () => {
     it('should attempt token refresh on 401 with refresh cookie', async () => {

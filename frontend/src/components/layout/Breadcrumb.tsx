@@ -17,6 +17,7 @@ import { menuGlossParts } from "@/src/lib/menuI18n";
 /** Routes named by their full path; the audit sub-pages take their tab's name (2026-10-17). */
 const PATH_LABELS: Record<string, string> = {
   "/audit/logins": "audit.tabs.logins",
+  "/audit/sessions": "audit.tabs.sessions",
   "/audit/permissions": "audit.tabs.permissions",
   "/audit/stats": "audit.tabs.stats",
   "/events": "nav.soul_events",

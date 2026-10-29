@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.client_ip import get_client_ip
 from apps.core.exports import export_csv
+from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
@@ -894,6 +895,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
 
     @extend_schema(request=None, responses=_CLAIM_RESPONSES)
     @action(detail=True, methods=["post"])
+    @idempotent
     def claim(self, request, pk=None):
         """认领这件案子。已被别人认领 → 409 `already_claimed`;重复认领自己的 → 200,不写。"""
         return self._claim_response(lambda pk: claims.claim(pk, request.user))
@@ -1202,6 +1204,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
 
     @extend_schema(request=JudgmentCommentSerializer, responses={201: JudgmentCommentSerializer})
     @comments.mapping.post
+    @idempotent
     def add_comment(self, request, pk=None):
         """Leave a comment. `POST /api/v1/judgment/{id}/comments/` `{"body": "..."}` (1..2000 chars)."""
         from apps.audit.models import AuditAction, AuditLog
@@ -1403,6 +1406,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         responses={200: JudgmentSerializer, 409: JudgmentClaimRefusalSerializer},
     )
     @action(detail=True, methods=["post"])
+    @idempotent
     def conclude(self, request, pk=None):
         """
         Conclude a judgment with a verdict.

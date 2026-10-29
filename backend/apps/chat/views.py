@@ -46,6 +46,7 @@ from apps.chat.serializers import (
     OfficerInboxSerializer,
     OfficerReplySerializer,
 )
+from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.throttling import ClientIPIdentMixin
@@ -175,6 +176,7 @@ class MeChatMessagesView(ChatView):
                    responses={201: MessageSentSerializer, 403: ChatErrorSerializer,
                               409: ChatErrorSerializer, 429: ChatErrorSerializer,
                               503: ChatErrorSerializer})
+    @idempotent
     def post(self, request, conversation_id):
         body = MessageSendSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -403,6 +405,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
                    responses={201: MessageSentSerializer, 409: ChatErrorSerializer,
                               503: ChatErrorSerializer})
     @action(detail=True, methods=["post"])
+    @idempotent
     def reply(self, request, pk=None):
         conversation = self.get_object()
         body = OfficerReplySerializer(data=request.data)

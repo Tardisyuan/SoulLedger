@@ -16,6 +16,8 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
+            # `apps.core.trace.TraceIdFilter` 补上的;没挂那个 filter 的 handler 上没有。
+            "trace_id": getattr(record, "trace_id", "-"),
         }
         if record.exc_info:
             entry["exc_info"] = self.formatException(record.exc_info)
