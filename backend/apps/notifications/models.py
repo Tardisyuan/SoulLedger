@@ -57,6 +57,8 @@ class NotificationType(models.TextChoices):
     # 城隍初审(apps/judgment/city_gods.py):收案 → 名下官员(没有就是本殿管理员);退回补正 → 本殿管理员。
     CITY_GOD_CASE_RECEIVED = "CITY_GOD_CASE_RECEIVED", "City God Case Received"
     CITY_GOD_CASE_RETURNED = "CITY_GOD_CASE_RETURNED", "City God Case Returned"
+    # 枉死城有人提了冤情申诉 → 城隍名下官员(没有就是本殿管理员),apps/judgment/wangsi.py::_notify_filed。
+    WANGSI_GRIEVANCE_FILED = "WANGSI_GRIEVANCE_FILED", "Wangsi Grievance Filed"
 
 
 class UserNotification(AuditUserFields, models.Model):

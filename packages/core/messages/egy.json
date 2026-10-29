@@ -4053,7 +4053,7 @@
       "term_not_ended": "Renpet Nen Khetem Djer: Nen Per.",
       "not_serving": "Wetep Pen: Nen Em Shepet."
     },
-    "term_default": "Tepy: Renpet {{n}} · Khemen Wenen",
+    "term_default": "Tepy: Renpet {{n}}",
     "flow_waiting": {
       "approval_in_progress": "Wat Hesy Em Iri: Er Khet Iri.",
       "approval_rejected": "Wat Hesy Khesef Seth: Wen Mawy Er Nehet · Nen Iri."

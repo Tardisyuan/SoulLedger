@@ -290,6 +290,7 @@ export function Segmented<K extends string>({
   onChange,
   testID,
   disabled = false,
+  role = "tablist",
 }: {
   options: readonly { key: K; label: string }[];
   value: K;
@@ -297,18 +298,21 @@ export function Segmented<K extends string>({
   testID?: string;
   /** 正在保存 / 没网:每一段都不可按,读屏也念「不可用」(不只是按了没反应)。 */
   disabled?: boolean;
+  /** 切换视图的分段是 tablist(默认);在几个值里选一个(冤情等级)是 radiogroup,读屏念「单选按钮 · 已选」。 */
+  role?: "tablist" | "radiogroup";
 }) {
   const t = useTheme();
+  const radio = role === "radiogroup";
   return (
-    <View testID={testID} accessibilityRole="tablist" style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
+    <View testID={testID} accessibilityRole={role} style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
       {options.map(({ key, label }) => {
         const on = key === value;
         return (
           <Pressable
             key={key}
             testID={testID ? `${testID}-${key}` : undefined}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on, disabled }}
+            accessibilityRole={radio ? "radio" : "tab"}
+            accessibilityState={radio ? { checked: on, disabled } : { selected: on, disabled }}
             disabled={disabled}
             onPress={() => onChange(key)}
             style={[styles.segment, { backgroundColor: on ? t.ink : "transparent" }]}

@@ -11,7 +11,7 @@ import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 
 import { Detail } from "../screens/detail";
 import { karmaView, planStops, signed, soulTabs } from "../soulView";
-import { OFFICER, renderOfficer } from "./harness";
+import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockSoul = jest.fn();
 const mockRecords = jest.fn();
@@ -441,5 +441,26 @@ describe("lost banner (第五十批 M-1)", () => {
   it("is absent when the soul is not LOST", async () => {
     await openSoul();
     expect(screen.queryByTestId("soul-lost-banner")).toBeNull();
+  });
+});
+
+// 官员 7(2026-10-29):审判看得到、流程不在本殿范围(跨域、本殿没有自己那一段)时 item 答 404。
+describe("查看审批流程 when the flow is not readable from this hall", () => {
+  it("says why instead of 「已不在」, and does not grey the row the judgment came from", async () => {
+    mockJudgment.mockResolvedValue({
+      data: { id: "j1", case_number: "C-1", soul: "s1", soul_name: "周阿满", court: "第一殿", is_final: false,
+              flow_progress: { workflow: "wf-9", status: "IN_PROGRESS", index: 2, total: 5, waiting: null } },
+    });
+    mockItem.mockRejectedValue(httpError(404, { detail: "Not found." }));
+    const onGone = jest.fn();
+    renderOfficer(<Detail target={{ type: "judgment", id: "j1" }} from="搜索" onBack={() => {}} onSettled={() => {}} onGone={onGone} />);
+    fireEvent.press(await screen.findByTestId("judgment-flow-open"));
+    expect(await screen.findByTestId("flow-not-here")).toBeTruthy();
+    expect(mockItem).toHaveBeenCalledWith("approval", "wf-9");
+    expect(screen.getByText("这条审批流程由别的殿主办，本殿在其中没有一段，这里看不到详情；进度见上一页。")).toBeTruthy();
+    expect(screen.queryByTestId("state-gone")).toBeNull();
+    expect(onGone).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("detail-back"));
+    expect(screen.getByTestId("judgment-detail")).toBeTruthy();
   });
 });

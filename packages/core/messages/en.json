@@ -4062,7 +4062,7 @@
     "expired_on": "Served {{date}}",
     "arrange_reincarnation": "Arrange rebirth",
     "serving_until": "Serving · until {{date}}",
-    "term_default": "Default {{n}} years · can be changed",
+    "term_default": "Default {{n}} years",
     "release": "Release at term end",
     "release_confirm": "Release at term end?",
     "release_warning": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
@@ -5615,6 +5615,22 @@
       "title": "Appeal reviewed: the verdict was changed",
       "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see the new verdict."
     },
+    "wangsi_upheld": {
+      "title": "Grievance upheld: released early",
+      "body": "Your grievance was found true and you have been released early from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+    },
+    "wangsi_upheld_late": {
+      "title": "Grievance upheld",
+      "body": "Your grievance was found true. Open Soul Ledger to read the reviewer's note."
+    },
+    "wangsi_delivered": {
+      "title": "Grievance upheld: delivered",
+      "body": "Your grievance was found true and you have been delivered from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+    },
+    "wangsi_rejected": {
+      "title": "Grievance not upheld",
+      "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer's note."
+    },
     "disposition_executed": {
       "title": "Disposition carried out",
       "body": "Your disposition has been carried out. Open Soul Ledger to see it."
@@ -5928,6 +5944,10 @@
     "city_god_case_returned": {
       "title": "Case returned for correction",
       "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
+    },
+    "wangsi_grievance_filed": {
+      "title": "New grievance in the City of the Wrongfully Dead",
+      "body": "{{soul}} has filed a grievance, waiting for review."
     },
     "workflow_pick_nodes": {
       "title": "Pick this realm's stations",
@@ -7363,7 +7383,8 @@
       "level_saves": "Tap a level to save it"
     },
     "judgment": {
-      "flow_progress": "Approval workflow · station {{n}} of {{total}}"
+      "flow_progress": "Approval workflow · station {{n}} of {{total}}",
+      "flow_not_here": "This approval flow is run by another hall and has no segment of yours, so its details are not shown here; its progress is on the previous page."
     }
   },
   "print": {
