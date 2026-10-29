@@ -73,6 +73,22 @@ class TestOrganizationWrites:
         names = [u["username"] for u in res.data.get("results", res.data)]
         assert names == ["b34_in"]
 
+    def test_users_list_organization_includes_sub_organizations(self, admin_client, cn_admin_user, tree):
+        """用户页机构树筛选含下级(2026-10-29):点根,叶子上的人也在;别的分支不在。"""
+        root, child, leaf, other = tree
+        t = cn_admin_user.tenant
+        User.objects.create_user(username="b34_root", password="x", role="VIEWER", tenant=t, organization=root)
+        User.objects.create_user(username="b34_leaf", password="x", role="VIEWER", tenant=t, organization=leaf)
+        User.objects.create_user(username="b34_other", password="x", role="VIEWER", tenant=t, organization=other)
+
+        def names(org):
+            res = admin_client.get(f"/api/v1/users/?organization={org.id}")
+            return sorted(u["username"] for u in res.data.get("results", res.data))
+
+        assert names(root) == ["b34_leaf", "b34_root"]
+        assert names(child) == ["b34_leaf"]
+        assert names(other) == ["b34_other"]
+
 
 def _upload(body: str):
     return SimpleUploadedFile("users.csv", body.encode("utf-8"), content_type="text/csv")
