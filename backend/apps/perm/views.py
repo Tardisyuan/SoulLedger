@@ -34,7 +34,6 @@ from .models import (
     Permission,
     Role,
     RolePermission,
-    RowLevelDataScope,
 )
 from .serializers import (
     InitRolesResultSerializer,
@@ -728,11 +727,10 @@ def copy_role(request, pk):
     POST /api/v1/perm/roles/<pk>/copy/
     复制为新角色：新 code、同一组授权（仅 ADMIN）
 
-    Copies the source's RolePermission rows — permission, `conditions` and
-    `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
-    2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-    the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
-    short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+    Copies the source's RolePermission rows — what the matrix shows for it — and
+    (maintainer decision, 2026-09-25) its FieldPermission rows, so a copy sees the
+    same fields the source does, and its RoleDataScope rows (数据范围 B4). Not copied:
+    ADMIN's short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
     """
     try:
         source = Role.objects.get(pk=pk)
@@ -748,10 +746,7 @@ def copy_role(request, pk):
         return Response({"error": taken}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
-        role = serializer.save(
-            scope=serializer.validated_data.get("scope", source.scope),
-            organization=serializer.validated_data.get("organization", source.organization),
-        )
+        role = serializer.save()
         grants = list(RolePermission.objects.filter(role=source).select_related("permission"))
         # A copy is never ADMIN, so ADMIN-only codenames are left behind
         # (apps/perm/matrix.py::ADMIN_ONLY_CODENAMES).
@@ -762,12 +757,7 @@ def copy_role(request, pk):
         grants = [g for g in grants if g.permission.codename not in refused]
         # bulk_create sends no post_save — so the audit row and the cache
         # invalidation are both written here, as in assign_role_permissions.
-        RolePermission.objects.bulk_create([
-            RolePermission(
-                role=role, permission=g.permission, conditions=g.conditions, data_scope=g.data_scope
-            )
-            for g in grants
-        ])
+        RolePermission.objects.bulk_create([RolePermission(role=role, permission=g.permission) for g in grants])
         # Plain rows with no signal receivers of their own; copied field for
         # field (every column but the key and the role).
         field_rules = [
@@ -778,15 +768,6 @@ def copy_role(request, pk):
             for f in FieldPermission.objects.filter(role=source)
         ]
         FieldPermission.objects.bulk_create(field_rules)
-        row_scopes = [
-            RowLevelDataScope(
-                role=role, civilization=s.civilization, model_name=s.model_name,
-                filter_conditions=s.filter_conditions, scope_type=s.scope_type,
-                priority=s.priority, is_active=s.is_active,
-            )
-            for s in RowLevelDataScope.objects.filter(role=source)
-        ]
-        RowLevelDataScope.objects.bulk_create(row_scopes)
         # The role's data scope (数据范围 B4) goes with it: a copy of a hall-only judge stays hall-only.
         from .data_scope_api import replace_role_config, role_config
 
@@ -804,7 +785,6 @@ def copy_role(request, pk):
                 "copied_from": source.name,
                 "permissions": {"old": [], "new": sorted(g.permission.codename for g in grants)},
                 "field_permissions": len(field_rules),
-                "row_level_scopes": len(row_scopes),
                 "data_scope": scope_config,
             },
             description=f"Role {name} created as a copy of {source.name}"[:500],

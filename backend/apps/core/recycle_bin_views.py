@@ -47,11 +47,10 @@ RECYCLE_BIN_KINDS = ["reference", "domain"]
 
 
 class RecycleBinLocationSerializer(serializers.Serializer):
-    """`civilization` (a soul: the value is the civilization code),
-    `organization` (an ORG role: the organization's name) or `parent` (a menu
-    or role under another: the parent's name)."""
+    """`civilization` (a soul: the value is the civilization code) or `parent`
+    (a menu under another: the parent's name). A role has none since 数据范围 B7."""
 
-    kind = serializers.ChoiceField(choices=["civilization", "organization", "parent"])
+    kind = serializers.ChoiceField(choices=["civilization", "parent"])
     value = serializers.CharField()
 
 

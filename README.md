@@ -106,7 +106,7 @@ Redis 7                        →  :6379   （Channel Layer + Celery broker）
 
 **权限**：六种角色（ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，
 `backend/apps/authentication/models.py:56-67`；SOUL 是灵魂本人，不可分配、进不了官员接口）叠加 codename 权限，再加
-`DataScope`（行可见性）与 `FieldPermission`（字段可见性）。API 侧由
+`RoleDataScope`（行可见性，五种数据范围）与 `FieldPermission`（字段可见性）。API 侧由
 `CodenameViewSetMixin` 强制；前端用 `RequirePermission` / `RequireButton` 做 UI 门控。
 前端门控只是外观，真正的检查在后端。`/permissions` 页面是一张角色×codename 矩阵而非
 逐角色选择器，保存前会做三层校验（越权、悖论式的人数/授权不一致等），每个角色带
@@ -508,7 +508,7 @@ backend/
     actors/         判官、守卫、引渡者，以及四文明的语料与种子
     realms/         冥界地理
     dispatch/       跨域调度（含跨租户会审）
-    perm/           RBAC：Permission、Role、DataScope、FieldPermission
+    perm/           RBAC：Permission、Role、RoleDataScope、FieldPermission
     tenants/        Tenant 模型、殿的设置、TenantManager（只过滤软删除）
     authentication/ JWT 认证、User 模型、角色、登录日志
     workflow/       审批流程引擎

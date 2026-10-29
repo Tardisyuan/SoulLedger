@@ -48,7 +48,7 @@
 | 类别 | 数 | 说明 |
 |---|---|---|
 | 直接带 `Tenant` 外键 | **39** | 44 条租户外键列:`Soul` 两条(`tenant`、`home_tenant`)、`DispatchRecord` 三条(`source_tenant`、`target_tenant`、`tenant`)、联审与参与方各两条 |
-| 不带租户列 | **37** | 其中 **16 个经父表间接属于某租户**(`SentenceNode`→`SentencePlan`、`PostMedia`→`Post`、`SoulAccount`/`PushDevice`/`ChatIdentity`/`InitialCredential`/`RebirthApplication`…→`Soul` 等);其余 21 个不属于任何租户,其中**真全局**的有:`Tenant`、`Menu`、`MenuButton`、`Permission`、`DataScope`、`Role`、`RolePermission`、`RowLevelDataScope`、`FieldPermission`、`UserNotification`、`NotificationEmail`、`JudgmentCaseCounter`、`UserProfile`、`HelpChunk`,另有 `LoginLog`、助手的会话 / 消息 / 配置 / 评测各表 |
+| 不带租户列 | **37**(当时的数;2026-10-29 数据范围 B7 删了其中两张旧权限表) | 其中 **16 个经父表间接属于某租户**(`SentenceNode`→`SentencePlan`、`PostMedia`→`Post`、`SoulAccount`/`PushDevice`/`ChatIdentity`/`InitialCredential`/`RebirthApplication`…→`Soul` 等);其余 21 个不属于任何租户,其中**真全局**的有:`Tenant`、`Menu`、`MenuButton`、`Permission`、`Role`、`RolePermission`、`FieldPermission`、`UserNotification`、`NotificationEmail`、`JudgmentCaseCounter`、`UserProfile`、`HelpChunk`,另有 `LoginLog`、助手的会话 / 消息 / 配置 / 评测各表 |
 | 租户外键列可空 | 27 列 | 含 `Soul.tenant`、`Judgment.tenant`、`User.tenant`:「无租户」是合法状态 |
 | 租户外键 `PROTECT` | 3 | `SoulEvent`、`AuditLog`、`chat.Conversation`:租户行删不掉 |
 

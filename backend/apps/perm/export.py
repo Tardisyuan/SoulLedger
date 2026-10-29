@@ -26,13 +26,13 @@ def export_permissions():
 
     # Export roles
     roles = list(
-        Role.objects.values('name', 'display_name', 'description', 'scope')
+        Role.objects.values('name', 'display_name', 'description')
     )
 
     # Export role-permission assignments
     role_permissions = list(
         RolePermission.objects.select_related('role', 'permission')
-        .values('role__name', 'permission__codename', 'conditions')
+        .values('role__name', 'permission__codename')
     )
     # Flatten field names
     for rp in role_permissions:
@@ -100,15 +100,14 @@ def _snapshot():
     """The three tables an overwrite rewrites, as ``{natural key: values}``.
 
     The natural keys are the ones the merge itself uses for ``get_or_create``
-    (role + permission / role + model + field / role + model + scope type), so
+    (role + permission / role + model + field / role + resource), so
     "the same entry before and after" means what the importer means by it. The
     values are what would differ if the entry were rebuilt with other content.
     """
     return {
         'role_permissions': {
-            (role, codename): conditions
-            for role, codename, conditions in RolePermission.objects.values_list(
-                'role__name', 'permission__codename', 'conditions')
+            (role, codename): None  # a grant has no content beyond its key (数据范围 B7 dropped `conditions`)
+            for role, codename in RolePermission.objects.values_list('role__name', 'permission__codename')
         },
         'field_permissions': {
             (role, model, field): (visible, read_only, editable)
@@ -250,7 +249,7 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
             # Files exported before the field existed carry no description: blank, not an error.
             'description': role_data.get('description', ''),
         }
-        role, created = Role.revive_or_create(role_data['name'], scope=role_data.get('scope', 'ORG'), **labels)
+        role, created = Role.revive_or_create(role_data['name'], **labels)
         if created:
             made('roles')
         else:
@@ -280,11 +279,7 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
         ):
             skip('role_permissions', key, SKIP_ROLE_FORBIDDEN)
         else:
-            _, created = RolePermission.objects.get_or_create(
-                role=role,
-                permission=perm,
-                defaults={'conditions': rp_data.get('conditions', {})}
-            )
+            _, created = RolePermission.objects.get_or_create(role=role, permission=perm)
             if created:
                 made('role_permissions')
             else:

@@ -121,7 +121,7 @@ write, not so queries filter themselves.
 **Permissions.** Six roles (ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL,
 `backend/apps/authentication/models.py:56-67`; SOUL is the soul itself, never assignable
 and kept out of every officer endpoint) over
-codename-based permissions, plus `DataScope` for row visibility and
+codename-based permissions, plus `RoleDataScope` for row visibility and
 `FieldPermission` for per-field visibility. API enforcement is via
 `CodenameViewSetMixin`; the frontend mirrors it with `RequirePermission` /
 `RequireButton` for UI gating. The frontend gate is cosmetic — the backend check
@@ -549,7 +549,7 @@ backend/
     actors/         Judges, guardians, psychopomps, plus the four corpora and their seeds
     realms/         Afterlife geography
     dispatch/       Cross-realm transfers (includes cross-tenant joint judgment)
-    perm/           RBAC: Permission, Role, DataScope, FieldPermission
+    perm/           RBAC: Permission, Role, RoleDataScope, FieldPermission
     tenants/        Tenant model, court settings, TenantManager (soft deletes only)
     authentication/ JWT auth, User model, roles, login log
     workflow/       Approval workflow engine

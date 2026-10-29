@@ -133,7 +133,7 @@ def org_ids(user, resource, cache=None):
         return None
     by_role = _rows(user, cache)
     if not by_role:
-        return None  # 没有角色 = 没有配置行 = 全部(与旧的 RowLevelDataScope 一样;权限检查另管)
+        return None  # 没有角色 = 没有配置行 = 全部(权限检查另管)
     ids = set()
     for rows in by_role.values():
         row = rows.get(resource) or rows.get("")

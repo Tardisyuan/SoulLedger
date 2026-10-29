@@ -359,6 +359,14 @@ def _scope_rows(manager):
     )
 
 
+def _latest_without_row_scopes():
+    """Back to the latest schema. perm/0031 (数据范围 B7) refuses while the scope table has rows, and these
+    tests leave some, so empty it at the last state that still has the table first."""
+    state = migrate_to([("perm", "0030_split_business_codenames")])
+    state.get_model("perm", "RowLevelDataScope")._base_manager.all().delete()
+    migrate_to_latest()
+
+
 HAND_WRITTEN_SCOPE = (
     "ACTOR", "Soul", "WRITE", 99, True, '{"current_state": ["APPEALING"]}'
 )
@@ -417,7 +425,7 @@ def test_perm_0008_forward_actually_inserts_through_a_real_migrate():
             "when run by a real migrate at 0008's own historical state"
         )
     finally:
-        migrate_to_latest()
+        _latest_without_row_scopes()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -484,135 +492,10 @@ def test_perm_0008_reverse_stops_at_a_hand_written_scope():
             f"the reverse did not put the table back: {after_reverse} != {baseline}"
         )
     finally:
-        migrate_to_latest()
-
-
-@pytest.mark.django_db
-def test_perm_0008_reverse_deletes_what_it_seeded_and_no_more():
-    """The same claim with a forward that actually writes.
-
-    The current model class has the ``uuid.uuid4`` default the historical one
-    lacks, so calling the two functions directly is the only way to see the
-    seeded rows exist at all — and therefore the only way to show that the
-    reverse removes *those* while leaving the hand-written ACTOR rule standing.
-    """
-    from django.apps import apps
-
-    from apps.perm.models import Role, RowLevelDataScope
-
-    roles = {
-        name: Role.all_objects.get_or_create(
-            name=name, defaults={"display_name": name}
-        )[0]
-        for name in ("ACTOR", "GUARDIAN", "VIEWER")
-    }
-    RowLevelDataScope.objects.all().delete()
-    RowLevelDataScope.objects.create(
-        role=roles["ACTOR"],
-        model_name="Soul",
-        filter_conditions={"current_state": ["APPEALING"]},
-        scope_type="WRITE",
-        priority=99,
-        is_active=True,
-    )
-
-    PERM_0008.seed_sample_data_scopes(apps, SCHEMA_EDITOR)
-
-    seeded = _scope_rows(RowLevelDataScope.objects)
-    assert HAND_WRITTEN_SCOPE in seeded
-    assert len(seeded) == 3, (
-        f"expected GUARDIAN and VIEWER seeded and ACTOR skipped, got {seeded}"
-    )
-
-    PERM_0008.reverse_seed(apps, SCHEMA_EDITOR)
-
-    assert _scope_rows(RowLevelDataScope.objects) == [HAND_WRITTEN_SCOPE], (
-        "the reverse deleted the hand-written ACTOR scope it never created"
-    )
-
-
-@pytest.mark.django_db
-def test_perm_0008_seeded_scopes_table_matches_the_forward():
-    """``SEEDED_SCOPES`` is the table the *reverse* deletes by.
-
-    The forward does not read that constant — it still spells the three rows
-    out longhand — so nothing in the language keeps the two in step. This test
-    is that guarantee: run the real forward on an empty scope table and require
-    the rows it produces to be precisely what ``SEEDED_SCOPES`` describes.
-
-    What it is guarding against has changed. While the forward could not insert
-    (no ``id`` default at 0008's historical state), this was the *only* place
-    the forward's output was observable at all: it calls the function against
-    the current model classes, which do carry the default, so it was reading a
-    forward that no real ``migrate`` had ever been able to run. It kept the
-    reverse's delete-by-description in step with a write that never happened —
-    worth having, since the reverse did run and did delete, but a step removed
-    from the database.
-
-    Now the forward inserts for real, and
-    ``test_perm_0008_forward_actually_inserts_through_a_real_migrate`` makes
-    the same comparison at 0008's own historical state. The two overlap
-    deliberately rather than redundantly: this one pins the forward against
-    today's models (the shape the reverse's own tests exercise), that one pins
-    it against the historical models ``migrate`` actually hands it, and the
-    ``id`` defect was precisely a disagreement between those two.
-    """
-    from django.apps import apps
-
-    from apps.perm.models import Role, RowLevelDataScope
-
-    for name in ("ACTOR", "GUARDIAN", "VIEWER"):
-        Role.all_objects.get_or_create(name=name, defaults={"display_name": name})
-    RowLevelDataScope.objects.all().delete()
-
-    PERM_0008.seed_sample_data_scopes(apps, SCHEMA_EDITOR)
-
-    declared = sorted(
-        (
-            role_name,
-            PERM_0008.SEEDED_MODEL_NAME,
-            PERM_0008.SEEDED_SCOPE_TYPE,
-            priority,
-            True,
-            json.dumps(conditions, sort_keys=True, ensure_ascii=False),
-        )
-        for role_name, conditions, priority in PERM_0008.SEEDED_SCOPES
-    )
-    assert _scope_rows(RowLevelDataScope.objects) == declared, (
-        "the forward and SEEDED_SCOPES have drifted — the reverse now deletes "
-        "by a description of rows the forward no longer writes"
-    )
+        _latest_without_row_scopes()
 
 
 PERM_0017 = import_module("apps.perm.migrations.0017_seed_roles_and_grants")
-
-
-@pytest.mark.django_db(transaction=True)
-def test_perm_0008_sample_scopes_stay_unreachable():
-    """A full ``migrate`` from empty must leave the scope table empty.
-
-    The two tests above establish that the forward *can* insert, which is what
-    makes this one necessary rather than pedantic: fixing the NULL-primary-key
-    defect turned a write that could never happen into one held back by a single
-    guard. This pins the outcome that guard produces on a real install, so any
-    later change that makes the seeding reachable — dropping the
-    ``Role.objects.exists()`` early return, seeding Role rows here, moving 0017
-    ahead of 0008 — has to come through this test rather than through a silent
-    narrowing of two roles' soul lists.
-
-    See the module docstring of the migration for why reachable is the wrong
-    target. The assertion is on the whole table, not on the three rows: a fourth
-    sample scope appearing here is the same event.
-    """
-    migrate_to_latest()
-
-    from apps.perm.models import RowLevelDataScope
-
-    assert _scope_rows(RowLevelDataScope._base_manager.all()) == [], (
-        "perm/0008's sample scopes reached a database migrated from empty. "
-        "They contradict perm/0017 — see that migration's frozen GRANTS, which "
-        "give GUARDIAN and VIEWER an unrestricted soul.read."
-    )
 
 
 def test_perm_0008_sample_scopes_contradict_perm_0017():

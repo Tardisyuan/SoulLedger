@@ -63,10 +63,10 @@ class CodenameViewSetMixin:
 
 class DataScopeViewSetMixin:
     """
-    Mixin that provides tenant isolation + RowLevelDataScope filtering.
+    Mixin that provides tenant isolation + role data scope filtering (apps/perm/data_scope.py).
 
     Combines TenantQuerySetMixin logic (tenant filtering, ADMIN bypass)
-    with DataScopeFilter (row-level data scope rules).
+    with DataScopeFilter (the role data scope).
 
     ViewSets using this mixin do NOT need TenantQuerySetMixin or manual
     tenant filtering in get_queryset().

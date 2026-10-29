@@ -25,9 +25,12 @@ that no role's effective permission set shrinks. Narrowing soul visibility is a
 security decision that belongs in its own migration with its own reasoning, not
 a side effect of restoring a demo.
 
-Both halves are pinned by
-tests/test_migration_reverse_scope.py::test_perm_0008_sample_scopes_stay_unreachable
-and ::test_perm_0008_sample_scopes_contradict_perm_0017.
+The contradiction is pinned by
+tests/test_migration_reverse_scope.py::test_perm_0008_sample_scopes_contradict_perm_0017.
+
+数据范围 B7(perm/0031,2026-10-29)删了这张表:``DataScopeFilter`` 从 B2 起已不读它,
+0031 在表里有任何行时中止迁移(``tests/test_perm_0031_drops_dead_scope_fields.py``),
+所以「样例行从未落进真库」现在由那道中止守着。
 """
 import json
 import uuid
@@ -42,11 +45,10 @@ from django.db import migrations
 # function's docstring) — the rows it describes are unchanged. So the constant
 # the reverse reads is still not the constant the forward writes from, and the
 # pairing is held in step by
-# tests/test_migration_reverse_scope.py::test_perm_0008_seeded_scopes_table_matches_the_forward
-# and ::test_perm_0008_forward_actually_inserts_through_a_real_migrate, which
-# run the forward — against the current models and against 0008's own
-# historical state respectively — and compare what it produced against this
-# table.
+# tests/test_migration_reverse_scope.py::test_perm_0008_forward_actually_inserts_through_a_real_migrate,
+# which runs the forward against 0008's own historical state and compares what
+# it produced against this table. (A twin that ran it against the current
+# models went with the model in 数据范围 B7, perm/0031.)
 SEEDED_MODEL_NAME = 'Soul'
 SEEDED_SCOPE_TYPE = 'READ'
 SEEDED_SCOPES = [
@@ -97,7 +99,8 @@ def seed_sample_data_scopes(apps, schema_editor):
     So the seeding is reachable only where Role rows predate 0008, which today
     is only the round-trip tests. Were it ever reached for real, the GUARDIAN
     and VIEWER rows would narrow those roles' Soul lists to ``DISPOSED`` and
-    ``ALIVE`` respectively through ``apps/perm/filters.py::DataScopeFilter``;
+    ``ALIVE`` respectively through ``apps/perm/filters.py::DataScopeFilter`` (until
+    B2 replaced it with the role data scope, and B7 dropped the table);
     the ACTOR row names a role that exists in neither ``UserRole`` nor
     ``DEFAULT_ROLES`` and would match nobody. That is a decision about
     visibility, not a defect fix, and it is deliberately not taken here — the

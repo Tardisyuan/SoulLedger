@@ -349,7 +349,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         权限变更时间线 — 查询权限相关操作的审计日志。
 
         Query params:
-            resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 8 类权限资源
+            resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 6 类权限资源
             action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
@@ -364,9 +364,8 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         # default timeline (no `?resource=`) was empty. Found 2026-09-12 by the
         # limit test seeding 'role' rows and getting 0 back.
         permission_resources = [
-            'role', 'rolepermission', 'menu', 'menubutton',
-            'fieldpermission', 'rowleveldatascope', 'datascope', 'permission'
-        ]
+            'role', 'rolepermission', 'menu', 'menubutton', 'fieldpermission', 'permission'
+        ]  # the two old scope tables went in 数据范围 B7; a role's data scope is audited as 'role'
 
         # Exact, not icontains (2026-10-17, 用户决定): `role` used to bring back every
         # `rolepermission` row and `menu` every `menubutton` row, so the page had to

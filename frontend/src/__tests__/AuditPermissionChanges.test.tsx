@@ -152,13 +152,13 @@ it("fewer rows than the limit: no 「显示更多」 and no cap note", async () 
   expect(screen.queryByText(tZh("audit.timeline.cap_reached"))).toBeNull();
 });
 
-it("filters: only the eight permission resources; the pick goes to the server as the exact resource", async () => {
+it("filters: only the six permission resources; the pick goes to the server as the exact resource", async () => {
   auditApi.timeline.mockResolvedValue({ data: [log({ resource: "role", resource_id: "3" })] });
   renderRoute();
   await screen.findAllByTestId("timeline-entry");
   const select = screen.getByRole("combobox", { name: tZh("audit.filter_resource") }) as HTMLSelectElement;
   expect(Array.from(select.options).map((o) => o.value)).toEqual([
-    "", "role", "rolepermission", "menu", "menubutton", "fieldpermission", "rowleveldatascope", "datascope", "permission",
+    "", "role", "rolepermission", "menu", "menubutton", "fieldpermission", "permission",
   ]);
   fireEvent.change(select, { target: { value: "role" } });
   await waitFor(() => expect(lastParams()).toEqual({ limit: 50, resource: "role" }));
