@@ -20,11 +20,11 @@ FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
 @pytest.fixture
-def export(api_client, admin_user):
+def export(api_client, cn_admin_user):
     from rest_framework_simplejwt.tokens import RefreshToken
 
-    token = RefreshToken.for_user(admin_user)
-    token["tenant_code"] = admin_user.tenant.code
+    token = RefreshToken.for_user(cn_admin_user)
+    token["tenant_code"] = cn_admin_user.tenant.code
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def run():

@@ -39,7 +39,8 @@ export function MfaSection() {
 
   const setStatus = (next: MfaStatus) => {
     queryClient.setQueryData(MFA_STATUS_KEY, next);
-    if (user) setUser({ ...user, mfa_enabled: next.enabled, mfa_required: next.required });
+    // Turning it on also lifts the server's hold (`mfa_setup_required`); the profile page fills out again.
+    if (user) setUser({ ...user, mfa_enabled: next.enabled, mfa_required: next.required, ...(next.enabled ? { mfa_setup_required: false } : {}) });
   };
 
   const data = status.data;
@@ -152,11 +153,15 @@ export function MfaSection() {
   );
 }
 
-type OwnerMethod = "totp" | "password";
+type OwnerMethod = "totp" | "password" | "recovery";
 
-/** 「确认是本人」的请求体:6 位动态码或密码二选一。关闭与重新生成恢复码共用 —— 后端也是同一个确认、同一把锁。 */
+/** 重新生成恢复码的「确认是本人」:6 位动态码或密码二选一。 */
 const ownerBody = (method: OwnerMethod, code: string, password: string) =>
-  method === "totp" ? ({ method: "totp", code } as const) : ({ method: "password", password } as const);
+  method === "password" ? ({ method: "password", password } as const) : ({ method: "totp", code } as const);
+
+/** 关闭要第二因素本身:6 位动态码或一枚恢复码;只凭密码不行(2026-10-29)。与重新生成同一把锁。 */
+const turnOffBody = (method: OwnerMethod, code: string) =>
+  ({ method: method === "recovery" ? "recovery" : "totp", code: code.trim() } as const);
 
 /** 失败时对话框里说的话:被锁了说锁,其余说「检查动态码或密码」。 */
 function ownerFailure(err: unknown, fallback: string, t: (key: string) => string): string {
@@ -175,6 +180,7 @@ function OwnerConfirmFields({
   onPassword,
   error,
   disabled,
+  secondFactor = false,
 }: {
   label: string;
   method: OwnerMethod;
@@ -185,12 +191,15 @@ function OwnerConfirmFields({
   onPassword: (v: string) => void;
   error: string | null;
   disabled: boolean;
+  /** 关闭用:第二种办法是恢复码而不是密码。 */
+  secondFactor?: boolean;
 }) {
   const { t } = useI18n();
+  const methods: OwnerMethod[] = secondFactor ? ["totp", "recovery"] : ["totp", "password"];
   return (
     <>
       <div role="radiogroup" aria-label={label} className="grid grid-cols-2 border border-[oklch(var(--color-line-strong))]">
-        {(["totp", "password"] as const).map((m) => (
+        {methods.map((m) => (
           <button
             key={m}
             type="button"
@@ -202,7 +211,7 @@ function OwnerConfirmFields({
               method === m ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]" : "text-[oklch(var(--color-ink))]"
             )}
           >
-            {t(m === "totp" ? "mfa.manage.confirm_by_totp" : "mfa.manage.confirm_by_password")}
+            {t(m === "totp" ? "mfa.manage.confirm_by_totp" : m === "recovery" ? "mfa.manage.confirm_by_recovery" : "mfa.manage.confirm_by_password")}
           </button>
         ))}
       </div>
@@ -214,6 +223,8 @@ function OwnerConfirmFields({
       ) : null}
       {method === "totp" ? (
         <CodeInput kind="totp" label={t("mfa.verify.code_label")} value={code} onChange={onCode} disabled={disabled} />
+      ) : method === "recovery" ? (
+        <CodeInput kind="recovery" label={t("mfa.verify.recovery_label")} value={code} onChange={onCode} disabled={disabled} />
       ) : (
         <TextField
           type="password"
@@ -228,7 +239,7 @@ function OwnerConfirmFields({
   );
 }
 
-/** 关闭:动态码或密码确认,危险实心键。错了留在对话框里,提示跟着后端的 code。 */
+/** 关闭:动态码或恢复码确认(只凭密码不行),危险实心键。错了留在对话框里,提示跟着后端的 code。 */
 function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisabled: (s: MfaStatus) => void }) {
   const { t } = useI18n();
   const [method, setMethod] = useState<OwnerMethod>("totp");
@@ -236,15 +247,15 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const disable = useMutation({
-    mutationFn: () => mfaApi.disable(ownerBody(method, code, password)).then((r) => r.data),
+    mutationFn: () => mfaApi.disable(turnOffBody(method, code)).then((r) => r.data),
     onSuccess: (next) => {
       onDisabled(next);
       showToast(t("mfa.manage.disabled_toast"), "success");
       onClose();
     },
-    onError: (err) => setError(ownerFailure(err, t("mfa.manage.disable_failed"), t)),
+    onError: (err) => setError(ownerFailure(err, t("mfa.manage.turn_off_failed"), t)),
   });
-  const ready = method === "totp" ? code.length === 6 : password.length > 0;
+  const ready = method === "totp" ? code.length === 6 : code.trim().length >= 8;
 
   return (
     <BaseModal
@@ -265,12 +276,14 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
       }
     >
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.manage.disable_body")}</p>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.manage.turn_off_body")}</p>
         <OwnerConfirmFields
           label={t("mfa.manage.disable_title")}
+          secondFactor
           method={method}
           onMethod={(m) => {
             setMethod(m);
+            setCode("");
             setError(null);
           }}
           code={code}

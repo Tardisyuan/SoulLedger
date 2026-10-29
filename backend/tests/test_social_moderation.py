@@ -70,8 +70,8 @@ def test_the_word_list_is_per_civilization(cn_tenant, eu_tenant):
     assert eu_client.post(f"{SOCIAL}/feed/", body, format="json").json()["moderation_status"] == "PUBLISHED"
 
 
-def test_adding_and_removing_a_word_is_audited(cn_tenant, admin_user):
-    client = officer_client(admin_user)
+def test_adding_and_removing_a_word_is_audited(cn_tenant, cn_admin_user):
+    client = officer_client(cn_admin_user)
     res = client.post(f"{MODERATION}/sensitive-words/", {"word": " 违禁词 ", "category": "ABUSE"}, format="json")
     assert res.status_code == 201, res.content
     word_id = res.json()["id"]
@@ -165,27 +165,27 @@ def test_a_soul_cannot_report_what_it_cannot_see(cn_tenant, eu_tenant):
         ("restore", ModerationStatus.HIDDEN, "PUBLISHED"),
     ],
 )
-def test_content_actions_move_the_status_and_leave_an_audit_row(cn_tenant, admin_user, action, start, expected):
+def test_content_actions_move_the_status_and_leave_an_audit_row(cn_tenant, cn_admin_user, action, start, expected):
     author, _ = soul(cn_tenant, "作者")
     row = post(author, "一条", Visibility.PUBLIC)
     Post.objects.filter(pk=row.pk).update(moderation_status=start)
 
-    res = officer_client(admin_user).post(f"{MODERATION}/posts/{row.pk}/{action}/", {"reason": "为什么"}, format="json")
+    res = officer_client(cn_admin_user).post(f"{MODERATION}/posts/{row.pk}/{action}/", {"reason": "为什么"}, format="json")
     assert res.status_code == 200, res.content
     row.refresh_from_db()
     assert row.moderation_status == expected
 
     logged = audit_rows(row.pk).first()
     assert logged is not None, f"{action} 没有写审计"
-    assert logged.user_id == admin_user.pk
+    assert logged.user_id == cn_admin_user.pk
     assert logged.changes["moderation_status"] == [start, expected], logged.changes
 
 
-def test_an_invalid_transition_is_refused_rather_than_silently_applied(cn_tenant, admin_user):
+def test_an_invalid_transition_is_refused_rather_than_silently_applied(cn_tenant, cn_admin_user):
     author, _ = soul(cn_tenant, "作者")
     row = post(author, "已发布", Visibility.PUBLIC)
 
-    res = officer_client(admin_user).post(f"{MODERATION}/posts/{row.pk}/approve/", {}, format="json")
+    res = officer_client(cn_admin_user).post(f"{MODERATION}/posts/{row.pk}/approve/", {}, format="json")
     assert res.status_code == 409, res.content
     assert res.json()["code"] == "invalid_transition"
     row.refresh_from_db()
@@ -193,14 +193,14 @@ def test_an_invalid_transition_is_refused_rather_than_silently_applied(cn_tenant
     assert audit_rows(row.pk).count() == 0, "被拒的动作也写了审计"
 
 
-def test_deleting_content_soft_deletes_it_and_closes_its_open_reports(cn_tenant, admin_user):
+def test_deleting_content_soft_deletes_it_and_closes_its_open_reports(cn_tenant, cn_admin_user):
     author, _ = soul(cn_tenant, "作者")
     row = post(author, "要删的", Visibility.PUBLIC)
     reporter, client = soul(cn_tenant, "举报人")
     client.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "ABUSE"},
                 format="json")
 
-    res = officer_client(admin_user).post(f"{MODERATION}/posts/{row.pk}/delete/", {"reason": "违规"}, format="json")
+    res = officer_client(cn_admin_user).post(f"{MODERATION}/posts/{row.pk}/delete/", {"reason": "违规"}, format="json")
     assert res.status_code == 204, res.content
     assert not Post.objects.filter(pk=row.pk).exists()
     assert Post.all_objects.get(pk=row.pk).is_deleted
@@ -222,7 +222,7 @@ def test_an_officer_cannot_moderate_another_civilizations_content(cn_tenant, eu_
     assert row.moderation_status == ModerationStatus.PENDING, "另一个文明的官员改动了这条内容"
 
 
-def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, admin_user, judge_user):
+def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, cn_admin_user, judge_user):
     """官员在 `/api/v1/social/` 的帖子不是朋友圈内容。两个圈子在审核后台也不相交。"""
     officer_post = Post.objects.create(
         author=judge_user, content="官员的帖子", visibility=Visibility.TENANT, tenant=cn_tenant,
@@ -232,7 +232,7 @@ def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, admin_use
     soul_post = post(soul_author, "灵魂的帖子", Visibility.PUBLIC)
     Post.objects.filter(pk=soul_post.pk).update(moderation_status=ModerationStatus.PENDING)
 
-    ids = {r["id"] for r in officer_client(admin_user).get(f"{MODERATION}/posts/").json()["results"]}
+    ids = {r["id"] for r in officer_client(cn_admin_user).get(f"{MODERATION}/posts/").json()["results"]}
     assert str(soul_post.pk) in ids
     assert str(officer_post.pk) not in ids
 
@@ -240,7 +240,7 @@ def test_an_officers_own_social_post_never_enters_the_queue(cn_tenant, admin_use
 # ── 禁言 ─────────────────────────────────────────────────────────────────
 
 
-def test_muting_through_a_report_makes_the_author_read_only(cn_tenant, admin_user):
+def test_muting_through_a_report_makes_the_author_read_only(cn_tenant, cn_admin_user):
     author, author_client = soul(cn_tenant, "作者")
     row = post(author, "被举报的", Visibility.PUBLIC)
     _, reporter = soul(cn_tenant, "举报人")
@@ -248,7 +248,7 @@ def test_muting_through_a_report_makes_the_author_read_only(cn_tenant, admin_use
                   format="json")
     report = Report.objects.get(post=row)
 
-    res = officer_client(admin_user).post(
+    res = officer_client(cn_admin_user).post(
         f"{MODERATION}/reports/{report.pk}/resolve/",
         {"resolution": "MUTE", "mute_days": 7, "note": "辱骂"},
         format="json",
@@ -262,19 +262,19 @@ def test_muting_through_a_report_makes_the_author_read_only(cn_tenant, admin_use
     assert blocked.status_code == 403 and blocked.json()["code"] == "muted"
 
     # 解除之后立刻能写。
-    lift = officer_client(admin_user).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json")
+    lift = officer_client(cn_admin_user).post(f"{MODERATION}/mutes/{mute.pk}/lift/", {}, format="json")
     assert lift.status_code == 200, lift.content
     assert author_client.post(f"{SOCIAL}/feed/", {"content": "再发一条"}, format="json").status_code == 201
 
 
-def test_an_already_resolved_report_cannot_be_resolved_twice(cn_tenant, admin_user):
+def test_an_already_resolved_report_cannot_be_resolved_twice(cn_tenant, cn_admin_user):
     author, _ = soul(cn_tenant, "作者")
     row = post(author, "被举报的", Visibility.PUBLIC)
     _, reporter = soul(cn_tenant, "举报人")
     reporter.post(f"{SOCIAL}/reports/", {"target_type": "POST", "target_id": str(row.pk), "reason": "SPAM"},
                   format="json")
     report = Report.objects.get(post=row)
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
 
     assert client.post(f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "DISMISS"},
                        format="json").status_code == 200
@@ -305,7 +305,7 @@ def test_a_mute_does_not_follow_the_soul_into_its_next_life(cn_tenant):
     assert next_client.post(f"{SOCIAL}/feed/", {"content": "新一世发帖"}, format="json").status_code == 201
 
 
-def test_reporting_a_user_targets_the_user_not_a_piece_of_content(cn_tenant, admin_user):
+def test_reporting_a_user_targets_the_user_not_a_piece_of_content(cn_tenant, cn_admin_user):
     target, _ = soul(cn_tenant, "被举报的人")
     _, client = soul(cn_tenant, "举报人")
 
@@ -318,7 +318,7 @@ def test_reporting_a_user_targets_the_user_not_a_piece_of_content(cn_tenant, adm
     assert report.target_user_id == target.user_id and report.post_id is None and report.comment_id is None
 
     # 对「用户」这种举报,隐藏 / 删除没有对象 —— 答 400 而不是静默成功。
-    officer = officer_client(admin_user)
+    officer = officer_client(cn_admin_user)
     bad = officer.post(f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "HIDE"}, format="json")
     assert bad.status_code == 400, bad.content
     report.refresh_from_db()

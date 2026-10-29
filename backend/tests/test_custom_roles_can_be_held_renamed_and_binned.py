@@ -43,7 +43,7 @@ def world(db):
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
-    admin = User.objects.create_user(username="cr_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="cr_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     scribe = Role.objects.create(name="SCRIBE", display_name="书记")
     perm, _ = Permission.objects.get_or_create(
         codename="ledger.read", defaults={"name": "查看功德", "category": "ledger"}

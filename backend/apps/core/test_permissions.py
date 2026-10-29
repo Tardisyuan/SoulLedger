@@ -144,10 +144,12 @@ class TestTenantPermissionCrossCheck:
         obj.tenant = self.tenant_b
 
         admin = User.objects.create_user(
-            username="tpx_obj_admin", password="x", role="ADMIN", tenant=self.tenant_a
+            username="tpx_obj_admin", password="x", role="ADMIN", tenant=None  # the hall-less ADMIN: only it is global (2026-10-29)
         )
         request = self._request(admin, self.tenant_a)
         assert self.permission.has_object_permission(request, None, obj) is True
+        bound = User.objects.create_user(username="tpx_obj_bound", password="x", role="ADMIN", tenant=self.tenant_a)
+        assert self.permission.has_object_permission(self._request(bound, self.tenant_a), None, obj) is False
 
     def test_exactly_one_role_holds_the_bypass(self):
         """Stated as a count, so a second exemption is visible as a number.
@@ -162,10 +164,13 @@ class TestTenantPermissionCrossCheck:
                 username=f"tpx_count_{role.lower()}",
                 password="x",
                 role=role,
-                tenant=self.tenant_a,
+                tenant=None,  # hall-less: only an ADMIN without a hall is global (2026-10-29)
             )
             if self.permission.has_permission(self._request(user, self.tenant_b), None):
                 bypassing.append(role)
+        bound_admin = User.objects.create_user(username="tpx_count_bound", password="x", role="ADMIN",
+                                               tenant=self.tenant_a)
+        assert not self.permission.has_permission(self._request(bound_admin, self.tenant_b), None)
         assert bypassing == [UserRole.ADMIN], (
             f"roles bypassing the tenant cross-check: {bypassing}. "
             f"Exactly one role is meant to be globally scoped."

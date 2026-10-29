@@ -61,6 +61,11 @@ DEVICE_COOKIE_PATH = "/api/v1/auth/"
 
 ISSUER = "SoulLedger"
 
+#: 「确认是本人」(重新生成恢复码)收的两种办法;关闭两步验证只收第二因素本身(2026-10-29)。
+#: 两组都钉了 OpenAPI 枚举名(config/settings.py ENUM_NAME_OVERRIDES)。
+OWNER_CONFIRM_METHODS = ["totp", "password"]
+SECOND_FACTOR_METHODS = ["totp", "recovery"]
+
 #: `Tenant.settings` 里的键:要求开启两步验证的角色名列表。ADMIN 不在列表里也始终要求。
 MFA_REQUIRED_ROLES_SETTING = "mfa_required_roles"
 
@@ -134,6 +139,26 @@ def is_required(user) -> bool:
     if role == UserRole.ADMIN:
         return True
     return role in required_roles(getattr(user, "tenant", None))
+
+
+#: 必需角色还没开两步验证时,令牌只开这几个口子:设置两步验证、退出、读自己(资料与偏好)、改密码
+#: (首登改密与它会同时成立)。其余官员接口 403 `mfa_setup_required`(用户 2026-10-29 决定 P)。
+MFA_SETUP_ALLOWED = frozenset({
+    ("GET", "/api/v1/auth/mfa/status/"),
+    ("POST", "/api/v1/auth/mfa/setup/"), ("DELETE", "/api/v1/auth/mfa/setup/"),
+    ("POST", "/api/v1/auth/mfa/confirm/"), ("POST", "/api/v1/auth/mfa/complete/"),
+    ("POST", "/api/v1/auth/logout/"),
+    ("GET", "/api/v1/auth/profile/"), ("GET", "/api/v1/auth/profile/preferences/"),
+    ("POST", "/api/v1/auth/change-password/"),
+})
+
+
+def setup_required(user) -> bool:
+    """角色要求两步验证而本人还没开:登录照常成功,但除 `MFA_SETUP_ALLOWED` 外一概 403。
+    `settings.MFA_SETUP_ENFORCED` 只为测试套件存在(根 conftest 默认关掉,专门的测试再打开);生产恒为真。"""
+    from django.conf import settings
+
+    return bool(getattr(settings, "MFA_SETUP_ENFORCED", True)) and is_required(user) and not is_enabled(user)
 
 
 def status_of(user) -> dict:
@@ -387,8 +412,8 @@ def _verify_locked(mfa, *, code, recovery_code, request) -> dict:
 
 
 def confirm_owner(mfa, user, *, method, code="", password="", request=None) -> dict:
-    """敏感动作(关闭、重新生成恢复码)前的「确认是本人」:6 位数字(`method=totp`,不收恢复码)或密码。
-    官员与灵魂、关闭与重新生成共用这一处 —— 校验方式、原因码、错误计数、锁定都在这里。
+    """重新生成恢复码前的「确认是本人」:6 位数字(`method=totp`,不收恢复码)或密码。
+    (关闭不走这里:它要第二因素本身,见 `confirm_second_factor`。)官员与灵魂共用这一处 —— 校验方式、原因码、错误计数、锁定都在这里。
     错误数字与错误密码**记进同一把锁**(连续 5 次锁 15 分钟);锁着时连对的也不行。
     → {"code": "ok"} 或 {"code": wrong|expired|locked|wrong_password, …}。"""
     if method == "totp":
@@ -402,6 +427,15 @@ def confirm_owner(mfa, user, *, method, code="", password="", request=None) -> d
         if not user.check_password(password or ""):
             return _count_failure(mfa, "wrong_password", request=request)
         return {"code": "ok"}
+
+
+def confirm_second_factor(mfa, *, method, code="", request=None) -> dict:
+    """关闭两步验证前的确认:必须是第二因素本身 —— 当前的 6 位动态码(`method=totp`)或一枚未用的恢复码
+    (`method=recovery`,用掉即作废)。只凭密码不行(用户 2026-10-29 决定 Q:偷到密码的人不能顺手关掉它)。
+    官员与灵魂共用;计数与锁定同登录第二步。"""
+    if method == "recovery":
+        return verify_login_code(mfa, recovery_code=code or "", request=request)
+    return verify_login_code(mfa, code=code or "", request=request)
 
 
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────

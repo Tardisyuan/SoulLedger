@@ -32,7 +32,7 @@ from .serializers import (
 def is_global_admin(user) -> bool:
     """ADMIN with no hall of their own. Only this person may read across halls in the audit log
     (list, export and the 「殿」 filter); an ADMIN bound to a hall sees that hall's rows only."""
-    return is_tenant_exempt(user) and getattr(user, "tenant_id", None) is None
+    return is_tenant_exempt(user)
 
 
 def _hall_scope(qs, request):

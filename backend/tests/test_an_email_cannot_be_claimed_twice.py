@@ -47,12 +47,12 @@ def as_attacker(attacker):
 
 
 @pytest.fixture
-def as_admin(admin_user):
+def as_admin(cn_admin_user):
     from rest_framework_simplejwt.tokens import RefreshToken
 
     client = APIClient()
-    token = RefreshToken.for_user(admin_user)
-    token["tenant_code"] = admin_user.tenant.code
+    token = RefreshToken.for_user(cn_admin_user)
+    token["tenant_code"] = cn_admin_user.tenant.code
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client
 

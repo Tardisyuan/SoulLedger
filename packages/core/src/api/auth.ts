@@ -50,6 +50,9 @@ export interface LoginUser {
   /** 首次登录 / 管理员重置 / 密码超期:登录成功,但除改密码外的接口 403 `password_change_required`,
    *  客户端把人带到改密码页。可选:旧缓存的会话里没有。 */
   password_change_required?: boolean;
+  /** 角色要求两步验证而本人没开(2026-10-29 起服务端强制):除设置两步验证 / 退出 / 读自己外的接口 403
+   *  `mfa_setup_required`,客户端把人带到设置页。可选:旧缓存的会话里没有。 */
+  mfa_setup_required?: boolean;
 }
 
 /** 200 body of POST /auth/login/ (backend/apps/authentication/serializers.py:94). */
@@ -97,6 +100,9 @@ export interface MfaVerifyRequest {
  */
 /** 「确认是本人」: the 6-digit code or the password. A recovery code does not count. */
 export type MfaOwnerConfirmation = { method: "totp"; code: string } | { method: "password"; password: string };
+/** Turning it off takes the second factor itself — the 6-digit code or one recovery code. The password alone
+ *  does not (2026-10-29): someone who has the password must not be able to remove the factor that stops them. */
+export type MfaTurnOff = { method: "totp" | "recovery"; code: string };
 
 export const mfaApi = {
   verify: (data: MfaVerifyRequest) => api.post<LoginResponse>("/auth/mfa/verify/", data, { withCredentials: true }),
@@ -113,9 +119,9 @@ export const mfaApi = {
   confirm: (code: string) => api.post<MfaRecoveryCodes>("/auth/mfa/confirm/", { code }),
   /** Step 4 完成 — the only call that turns it on. */
   complete: () => api.post<MfaStatus>("/auth/mfa/complete/"),
-  /** The same confirmation as `disable` (the 6-digit code or the password, one lock); the old set stays good until it passes. */
+  /** The 6-digit code or the password (the same lock as `disable`); the old set stays good until it passes. */
   regenerateRecoveryCodes: (data: MfaOwnerConfirmation) => api.post<MfaRecoveryCodes>("/auth/mfa/recovery-codes/", data),
-  disable: (data: MfaOwnerConfirmation) => api.post<MfaStatus>("/auth/mfa/disable/", data),
+  disable: (data: MfaTurnOff) => api.post<MfaStatus>("/auth/mfa/disable/", data),
 };
 
 /** 401 body of POST /auth/login/ for wrong credentials: tries left before 429. */
@@ -144,6 +150,7 @@ export interface AuthProfile {
   mfa_enabled?: boolean;
   mfa_required?: boolean;
   password_change_required?: boolean;
+  mfa_setup_required?: boolean;
   /** Same list as the login payload's `user.permissions`. Optional: older payloads lack it. */
   permissions?: string[];
 }

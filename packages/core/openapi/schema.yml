@@ -840,6 +840,8 @@ paths:
   /api/v1/assist-admin/halls/:
     get:
       operationId: assist_admin_halls_list
+      description: Every hall for the hall-less ADMIN; a hall's ADMIN sees its own
+        row only (2026-10-29).
       tags:
       - v1
       security:
@@ -856,6 +858,8 @@ paths:
   /api/v1/assist-admin/halls/{tenant_id}/:
     patch:
       operationId: assist_admin_hall_update
+      description: The per-hall switch. A hall's ADMIN may flip its own hall's only;
+        another hall's is 404 (2026-10-29).
       parameters:
       - in: path
         name: tenant_id
@@ -2008,20 +2012,20 @@ paths:
   /api/v1/auth/mfa/disable/:
     post:
       operationId: v1_auth_mfa_disable_create
-      description: 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。
+      description: 关闭:`method=totp` 验一个动态码,`method=recovery` 验一枚恢复码。只凭密码不行。错了计入同一个锁。
       tags:
       - v1
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaDisableRequest'
+              $ref: '#/components/schemas/MfaTurnOffRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MfaDisableRequest'
+              $ref: '#/components/schemas/MfaTurnOffRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MfaDisableRequest'
+              $ref: '#/components/schemas/MfaTurnOffRequest'
         required: true
       security:
       - jwtAuth: []
@@ -2044,10 +2048,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/MfaRefusal'
           description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
   /api/v1/auth/mfa/recovery-codes/:
     post:
       operationId: v1_auth_mfa_recovery_codes_create
-      description: 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。
+      description: 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。
       tags:
       - v1
       requestBody:
@@ -11355,13 +11365,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SoulMfaDisableRequest'
+              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SoulMfaDisableRequest'
+              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SoulMfaDisableRequest'
+              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
         required: true
       security:
       - soulJwtAuth: []
@@ -11394,7 +11404,7 @@ paths:
     post:
       operationId: v1_me_mfa_recovery_codes_create
       description: |-
-        重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
+        重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
         没带 / 错了 → 旧码原样有效。
       tags:
       - v1
@@ -17534,9 +17544,10 @@ paths:
     post:
       operationId: v1_social_moderation_sensitive_words_copy_from_create
       description: |-
-        从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
         这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
         不该借它看见别处的词。回包只有计数,不含词本身。
+        目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
       tags:
       - v1
       requestBody:
@@ -33477,14 +33488,6 @@ components:
           type: string
       required:
       - event_id
-    MethodEnum:
-      enum:
-      - totp
-      - password
-      type: string
-      description: |-
-        * `totp` - totp
-        * `password` - password
     MfaCodeRequest:
       type: object
       properties:
@@ -33496,13 +33499,21 @@ components:
       type: object
       properties:
         method:
-          $ref: '#/components/schemas/MethodEnum'
+          $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
         code:
           type: string
         password:
           type: string
       required:
       - method
+    MfaOwnerConfirmMethodEnum:
+      enum:
+      - totp
+      - password
+      type: string
+      description: |-
+        * `totp` - totp
+        * `password` - password
     MfaRecoveryCodes:
       type: object
       properties:
@@ -33548,6 +33559,14 @@ components:
       - mfa_required
       - pending_token
       - username
+    MfaSecondFactorMethodEnum:
+      enum:
+      - totp
+      - recovery
+      type: string
+      description: |-
+        * `totp` - totp
+        * `recovery` - recovery
     MfaSetupRequest:
       type: object
       description: |-
@@ -33593,6 +33612,17 @@ components:
       - last_used_method
       - recovery_codes_remaining
       - required
+    MfaTurnOffRequest:
+      type: object
+      description: 关闭:6 位动态码(`totp`)或一枚恢复码(`recovery`)。密码不再算数(2026-10-29)。
+      properties:
+        method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        code:
+          type: string
+      required:
+      - code
+      - method
     MfaVerifyRequest:
       type: object
       properties:
@@ -38598,6 +38628,9 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
+        mfa_setup_required:
+          type: boolean
+          readOnly: true
         permissions:
           type: array
           items:
@@ -41308,9 +41341,13 @@ components:
       type: object
       description: |-
         Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
-        civilization by code. The target is the caller's current civilization.
+        civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
+        `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
       properties:
         source_tenant:
+          type: string
+          maxLength: 50
+        target_tenant:
           type: string
           maxLength: 50
       required:
@@ -43118,7 +43155,7 @@ components:
       type: object
       properties:
         method:
-          $ref: '#/components/schemas/MethodEnum'
+          $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
         code:
           type: string
           maxLength: 32
@@ -43230,6 +43267,18 @@ components:
       - last_used_at
       - last_used_method
       - recovery_codes_remaining
+    SoulMfaTurnOffRequest:
+      type: object
+      description: 关闭:6 位数字(`totp`)或一枚恢复码(`recovery`)。只凭密码不行(2026-10-29)。
+      properties:
+        method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        code:
+          type: string
+          maxLength: 32
+      required:
+      - code
+      - method
     SoulMfaVerifyRequest:
       type: object
       properties:
@@ -45465,6 +45514,9 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
+        mfa_setup_required:
+          type: boolean
+          readOnly: true
         permissions:
           type: array
           items:
@@ -45476,6 +45528,7 @@ components:
       - is_active
       - mfa_enabled
       - mfa_required
+      - mfa_setup_required
       - organization
       - password_change_required
       - permissions
@@ -45517,13 +45570,13 @@ components:
       description: |-
         User serializer for creation with password handling.
 
-        Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
+        Callers other than the hall-less ADMIN (an ADMIN bound to a hall included) are constrained two ways (see ROLE_HIERARCHY above):
         - `tenant` is forced to the caller's own tenant — a client-supplied
           value for another tenant is rejected rather than silently honored.
         - `role` can never be more privileged than the caller's own role, which
           is what blocks a non-ADMIN from creating an ADMIN account (themselves
           or anyone else).
-        ADMIN keeps its existing unrestricted behavior (any tenant, any role).
+        The hall-less ADMIN keeps the unrestricted behavior (any tenant, any role).
       properties:
         id:
           type: integer
@@ -46040,10 +46093,14 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
+        mfa_setup_required:
+          type: boolean
+          readOnly: true
       required:
       - id
       - mfa_enabled
       - mfa_required
+      - mfa_setup_required
       - password_change_required
       - permissions
       - tenant

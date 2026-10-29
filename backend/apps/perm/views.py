@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
-from apps.core.permissions import IsAdminPermission
+from apps.core.permissions import IsAdminPermission, IsGlobalAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
 from apps.perm.matrix import (
@@ -105,7 +105,7 @@ def list_permissions(request):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def create_permission(request):
     """
     POST /api/v1/perm/permissions/create/
@@ -153,7 +153,7 @@ def create_permission(request):
     responses={204: None, 404: ErrorResponseSerializer},
 )
 @api_view(["PUT", "DELETE"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def update_delete_permission(request, pk):
     """
     PUT /api/v1/perm/permissions/<pk>/
@@ -300,7 +300,7 @@ def get_all_role_permissions(request):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def assign_role_permissions(request):
     """
     POST /api/v1/perm/role-permissions/assign/
@@ -507,7 +507,7 @@ def list_roles(request):
     responses={201: RoleSerializer, 400: ErrorResponseSerializer},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def create_role(request):
     """
     POST /api/v1/perm/roles/create/
@@ -556,7 +556,7 @@ def _role_name_taken(name):
     responses={204: None, 400: RoleDeleteRefusalSerializer, 404: ErrorResponseSerializer},
 )
 @api_view(["PUT", "DELETE"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def update_delete_role(request, pk):
     """
     PUT /api/v1/perm/roles/<pk>/
@@ -638,7 +638,7 @@ def update_delete_role(request, pk):
     responses={201: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def copy_role(request, pk):
     """
     POST /api/v1/perm/roles/<pk>/copy/
@@ -731,7 +731,7 @@ def copy_role(request, pk):
     responses={200: MatrixChangesResultSerializer, 400: OpenApiTypes.OBJECT},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def apply_matrix_changes(request):
     """
     POST /api/v1/perm/role-permissions/changes/
@@ -790,7 +790,7 @@ def matrix_impact(request):
 
 @extend_schema(request=None, responses={200: InitRolesResultSerializer})
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def init_roles(request):
     """
     POST /api/v1/perm/roles/init/
@@ -871,7 +871,7 @@ def _audit_import(request, overwrite, stats):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
 def import_permissions(request):
     """
     POST /api/v1/perm/import/

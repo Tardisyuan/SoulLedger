@@ -79,7 +79,7 @@ class JudgmentAPITest(TestCase):
             username="judge_admin",
             password="admin123",
             role="ADMIN",
-            tenant=self.tenant_cn,
+            tenant=None,
         )
         self.judge_user = User.objects.create_user(
             username="judge",

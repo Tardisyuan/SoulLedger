@@ -16,6 +16,7 @@ from apps.authentication import impersonation
 from apps.authentication.impersonation_models import Impersonation
 from apps.authentication.models import User
 from apps.core.permissions import IsAdminPermission
+from apps.core.tenant import is_tenant_exempt
 
 
 class ImpersonateStartSerializer(serializers.Serializer):
@@ -62,7 +63,8 @@ class ImpersonateStartView(APIView):
         data = ImpersonateStartSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         target = User.objects.select_related("tenant").filter(pk=data.validated_data["user_id"]).first()
-        if target is None:
+        # 殿管理员限本殿(2026-10-29):绑了殿的 ADMIN 只能代看本殿的人;别殿的人对它不存在。
+        if target is None or (not is_tenant_exempt(request.user) and target.tenant_id != request.user.tenant_id):
             raise NotFound()
         if target.pk == request.user.pk:
             return _fail("impersonate_self", "不能代看自己。")

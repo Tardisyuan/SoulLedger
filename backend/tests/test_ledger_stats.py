@@ -5,6 +5,7 @@ import pytest
 
 from apps.audit.models import AuditAction, AuditLog
 from apps.souls.models import Soul, SoulState
+from tests.conftest import sign_in
 
 
 @pytest.mark.django_db
@@ -12,11 +13,11 @@ class TestLedgerStatsOverview:
     """Test GET /api/v1/ledger/stats/overview/"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, api_client, admin_user, cn_tenant):
+    def setup(self, api_client, cn_admin_user, cn_tenant):
         self.client = api_client
-        self.admin_user = admin_user
+        self.cn_admin_user = cn_admin_user
         self.tenant = cn_tenant
-        self.client.force_authenticate(user=admin_user)
+        sign_in(self.client, cn_admin_user)
 
     def test_overview_requires_admin(self, api_client, judge_user):
         """Non-admin users should get 403."""
@@ -40,7 +41,7 @@ class TestLedgerStatsOverview:
         """Overview includes recent audit log entries."""
         # Create an audit log entry
         AuditLog.objects.create(
-            user=self.admin_user,
+            user=self.cn_admin_user,
             tenant=self.tenant,
             action=AuditAction.CREATE,
             resource="soul",
@@ -112,11 +113,11 @@ class TestLedgerStatsExport:
     """Test GET /api/v1/ledger/stats/export/"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, api_client, admin_user, cn_tenant):
+    def setup(self, api_client, cn_admin_user, cn_tenant):
         self.client = api_client
-        self.admin_user = admin_user
+        self.cn_admin_user = cn_admin_user
         self.tenant = cn_tenant
-        self.client.force_authenticate(user=admin_user)
+        sign_in(self.client, cn_admin_user)
 
     def test_export_requires_admin(self, api_client, judge_user):
         """Non-admin users should get 403."""

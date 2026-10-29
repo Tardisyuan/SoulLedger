@@ -95,8 +95,12 @@ def test_nothing_changed_writes_nothing(admin_user, cn_tenant, path, body):
     assert _rows() == []
 
 
-def test_actor_and_hall_are_the_editor_and_the_edited_hall(eu_admin_user, cn_tenant, eu_tenant):
-    """EU 的 ADMIN 改 CN 的殿:`user` 是 EU 管理员,`tenant` 是被改的 CN 殿,不是管理员自己的。"""
+def test_actor_and_hall_are_the_editor_and_the_edited_hall(admin_user, eu_admin_user, cn_tenant, eu_tenant):
+    """全局 ADMIN 改 CN 的殿:`user` 是那位管理员,`tenant` 是被改的 CN 殿,不是管理员自己的(他没有殿)。
+    EU 的 ADMIN 改不了 CN 的殿(2026-10-29 起殿管理员限本殿):404,不写审计。"""
+    assert _patch(eu_admin_user, cn_tenant, "settings", {"hall_name": "第五殿"}).status_code == 404
+    assert _rows() == []
+    eu_admin_user = admin_user
     resp = _patch(eu_admin_user, cn_tenant, "settings", {"hall_name": "第五殿"})
     assert resp.status_code == 200, resp.data
     (row,) = _rows()

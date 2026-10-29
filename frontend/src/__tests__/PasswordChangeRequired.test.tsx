@@ -69,6 +69,23 @@ describe("PasswordChangeRedirect", () => {
   });
 });
 
+describe("two-step verification owed (403 mfa_setup_required, 2026-10-29)", () => {
+  it("sends every other page to /profile too", () => {
+    mockUser = { ...mockUser, password_change_required: false, mfa_setup_required: true };
+    render(<PasswordChangeRedirect />);
+    expect(mockReplace).toHaveBeenCalledWith("/profile");
+  });
+
+  it("the profile page says why and keeps the two-step section, without the sections that would 403", async () => {
+    mockUser = { ...mockUser, password_change_required: false, mfa_setup_required: true };
+    renderProfile(false);
+    expect(await screen.findByTestId("mfa-must-setup")).toHaveTextContent("profile.mfa_must_setup");
+    expect(screen.getByText("mfa.title")).toBeInTheDocument();
+    expect(screen.queryByText("profile.devices.title")).not.toBeInTheDocument();
+    expect(screen.queryByText("profile.notifications.title")).not.toBeInTheDocument();
+  });
+});
+
 describe("the profile page while the password is owed", () => {
   it("shows the reason and the form, with no cancel and none of the sections that would 403", async () => {
     renderProfile();

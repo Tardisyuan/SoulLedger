@@ -49,7 +49,7 @@ def world(db):
         perm, _ = Permission.objects.get_or_create(codename=codename, defaults={"name": codename, "category": "sys"})
         RolePermission.objects.get_or_create(role=admin_role, permission=perm)
     other, _ = Role.objects.get_or_create(name="LOCKOUT_PROBE", defaults={"display_name": "probe"})
-    admin = User.objects.create_user(username="lock_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="lock_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     return {"tenant": tenant, "admin": admin, "admin_role": admin_role, "other": other}
 
 

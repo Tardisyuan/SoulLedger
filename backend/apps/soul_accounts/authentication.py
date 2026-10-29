@@ -65,7 +65,18 @@ class OfficerJWTAuthentication(JWTAuthentication):
                 impersonation.enforce(request, *result)
             else:
                 self._enforce_password_change(request, result[0])
+                self._enforce_mfa_setup(request, result[0])
         return result
+
+    @staticmethod
+    def _enforce_mfa_setup(request, user):
+        """角色要求两步验证而本人没开:只放行设置两步验证、退出、读自己,其余 403 `mfa_setup_required`
+        (与上面改密码同一个形状;规则在 `apps/authentication/mfa.py::setup_required`)。"""
+        from apps.authentication import mfa
+
+        if (request.method, request.path) in mfa.MFA_SETUP_ALLOWED or not mfa.setup_required(user):
+            return
+        raise PermissionDenied({"detail": "请先开启两步验证。", "code": "mfa_setup_required"})
 
     @staticmethod
     def _enforce_password_change(request, user):

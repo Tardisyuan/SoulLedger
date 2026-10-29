@@ -634,7 +634,7 @@ def test_a_finished_plan_cannot_be_cancelled(cn, judges):
     assert p.status == "COMPLETED" and p.cancel_reason == ""
 
 
-def test_admin_of_another_tenant_can_cancel(cn, eg, eu, judges):
+def test_the_global_admin_can_cancel(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
-    admin = plan.officer("eu_admin", "ADMIN", eu)
+    admin = plan.officer("g_admin", "ADMIN", None)  # only the hall-less ADMIN crosses halls (2026-10-29)
     assert _c(admin).post(f"{PLANS}{p.pk}/cancel/", {"reason": "修数据"}, format="json").status_code == 200

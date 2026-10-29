@@ -87,11 +87,11 @@ def test_the_router_reads_the_judgments_offence(cn_tenant):
 
 
 @pytest.mark.django_db
-def test_an_officer_records_the_offence_and_it_cannot_change_after_conclusion(cn_tenant, admin_user):
+def test_an_officer_records_the_offence_and_it_cannot_change_after_conclusion(cn_tenant, cn_admin_user):
     from tests.soul_account_support import officer_client
 
     judgment = die_and_send_on(_soul(cn_tenant), death_date=date.today())
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
     url = f"/api/v1/judgment/{judgment.pk}/"
     res = client.patch(url, {"offence": "SEPARATING_KIN"}, format="json")
     assert res.status_code == 200 and res.data["offence"] == "SEPARATING_KIN", res.data
@@ -110,10 +110,10 @@ def held(cn_tenant):
 
 
 @pytest.mark.django_db
-def test_cause_and_level_are_recorded_only_on_an_untimely_case(cn_tenant, admin_user, held):
+def test_cause_and_level_are_recorded_only_on_an_untimely_case(cn_tenant, cn_admin_user, held):
     from tests.soul_account_support import officer_client
 
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
     res = client.patch(f"/api/v1/judgment/{held.pk}/",
                        {"wrongful_death_cause": WrongfulDeathCause.VICTIM, "grievance_level": GrievanceLevel.SEVERE},
                        format="json")
@@ -125,57 +125,57 @@ def test_cause_and_level_are_recorded_only_on_an_untimely_case(cn_tenant, admin_
 
 
 @pytest.mark.django_db
-def test_an_upheld_major_grievance_releases_the_soul_early(admin_user, judge_user, held):
+def test_an_upheld_major_grievance_releases_the_soul_early(cn_admin_user, judge_user, held):
     Judgment.all_objects.filter(pk=held.pk).update(grievance_level=GrievanceLevel.MAJOR)
-    wangsi.file_grievance(held.pk, admin_user, "为人所害")
+    wangsi.file_grievance(held.pk, cn_admin_user, "为人所害")
     with pytest.raises(wangsi.WangsiRefusedError) as again:
-        wangsi.file_grievance(held.pk, admin_user, "再提")
+        wangsi.file_grievance(held.pk, cn_admin_user, "再提")
     assert again.value.code == "grievance_open"
-    wangsi.decide_grievance(held.pk, admin_user, upheld=True, note="属实")
+    wangsi.decide_grievance(held.pk, cn_admin_user, upheld=True, note="属实")
     held.refresh_from_db()
     assert held.grievance_status == GrievanceStatus.UPHELD and held.held_until is None and held.untimely
     claims.claim(held.pk, judge_user)  # 不再拦
 
 
 @pytest.mark.django_db
-def test_a_minor_grievance_cannot_release_and_a_rejected_one_stays_held(admin_user, judge_user, held):
+def test_a_minor_grievance_cannot_release_and_a_rejected_one_stays_held(cn_admin_user, judge_user, held):
     Judgment.all_objects.filter(pk=held.pk).update(grievance_level=GrievanceLevel.MINOR)
-    wangsi.file_grievance(held.pk, admin_user, "冤")
+    wangsi.file_grievance(held.pk, cn_admin_user, "冤")
     with pytest.raises(wangsi.WangsiRefusedError) as refused:
-        wangsi.decide_grievance(held.pk, admin_user, upheld=True, note="属实")
+        wangsi.decide_grievance(held.pk, cn_admin_user, upheld=True, note="属实")
     assert refused.value.code == "grievance_not_major"
-    wangsi.decide_grievance(held.pk, admin_user, upheld=False, note="不属实")
+    wangsi.decide_grievance(held.pk, cn_admin_user, upheld=False, note="不属实")
     held.refresh_from_db()
     assert held.grievance_status == GrievanceStatus.REJECTED and held.held_until is not None
     with pytest.raises(ClaimRefusedError) as still:
         claims.claim(held.pk, judge_user)
     assert still.value.code == "held_until_fated_date"
-    wangsi.file_grievance(held.pk, admin_user, "补了证据再提")  # 不属实之后可以再提
+    wangsi.file_grievance(held.pk, cn_admin_user, "补了证据再提")  # 不属实之后可以再提
 
 
 @pytest.mark.django_db
-def test_only_a_case_still_held_takes_a_grievance(cn_tenant, admin_user):
+def test_only_a_case_still_held_takes_a_grievance(cn_tenant, cn_admin_user):
     timely = die_and_send_on(_soul(cn_tenant), death_date=date.today())
     with pytest.raises(wangsi.WangsiRefusedError) as refused:
-        wangsi.file_grievance(timely.pk, admin_user, "冤")
+        wangsi.file_grievance(timely.pk, cn_admin_user, "冤")
     assert refused.value.code == "not_in_wangsi"
 
 
 @pytest.mark.django_db
-def test_an_officer_without_assign_cannot_decide_a_case_with_no_city_god(admin_user, judge_user, held):
+def test_an_officer_without_assign_cannot_decide_a_case_with_no_city_god(cn_admin_user, judge_user, held):
     Judgment.all_objects.filter(pk=held.pk).update(grievance_level=GrievanceLevel.SEVERE)
-    wangsi.file_grievance(held.pk, admin_user, "冤")
+    wangsi.file_grievance(held.pk, cn_admin_user, "冤")
     with pytest.raises(wangsi.WangsiRefusedError) as refused:
         wangsi.decide_grievance(held.pk, judge_user, upheld=True, note="属实")
     assert refused.value.code == "not_city_god_officer" and refused.value.status == 403
 
 
 @pytest.mark.django_db
-def test_the_endpoints_answer_the_whole_judgment(admin_user, held):
+def test_the_endpoints_answer_the_whole_judgment(cn_admin_user, held):
     from tests.soul_account_support import officer_client
 
     Judgment.all_objects.filter(pk=held.pk).update(grievance_level=GrievanceLevel.SEVERE)
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
     res = client.post(f"/api/v1/judgment/wangsi/{held.pk}/grievance/", {"plea": "冤"}, format="json")
     assert res.status_code == 200 and res.data["grievance_status"] == "FILED", res.data
     res = client.post(f"/api/v1/judgment/wangsi/{held.pk}/decide/", {"upheld": True, "note": "属实"}, format="json")
@@ -189,10 +189,10 @@ def test_the_endpoints_answer_the_whole_judgment(admin_user, held):
 
 
 @pytest.mark.django_db
-def test_a_city_god_carries_a_rank_and_its_bureaus_in_enum_order(cn_tenant, admin_user):
+def test_a_city_god_carries_a_rank_and_its_bureaus_in_enum_order(cn_tenant, cn_admin_user):
     from tests.soul_account_support import officer_client
 
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
     res = client.post("/api/v1/judgment/city-gods/", {
         "name": "杭州府城隍", "rank": CityGodRank.PREFECTURE,
         "bureaus": ["XINGFA", "YINYANG", "XINGFA"],

@@ -13,7 +13,7 @@ import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { AppState, BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
-import { IdentityBand, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
+import { ActionButton, IdentityBand, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
@@ -164,6 +164,20 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
         <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
         <ChangePasswordScreen required onBack={() => {}} />
+      </View>
+    );
+  }
+  // The role requires two-step verification and it is off: the server answers 403 `mfa_setup_required` to
+  // everything else, so only the setup screen (and signing out from it) until it is on.
+  if (user.mfa_setup_required) {
+    return (
+      <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
+        <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
+        <StandingBanner testID="mfa-setup-required">{t("profile.mfa_must_setup")}</StandingBanner>
+        <MfaScreen onBack={() => {}} onLocked={setLocked} />
+        <View style={{ padding: 16 }}>
+          <ActionButton testID="mfa-hold-signout" kind="outline" title={t("officer_app.me.logout")} onPress={signOut} />
+        </View>
       </View>
     );
   }

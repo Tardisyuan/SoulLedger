@@ -27,6 +27,8 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   // 密码须先改(首次登录 / 管理员重置 / 超期):只剩改密码这一节,别的节要调的接口此刻都是 403。
   const mustChange = user?.password_change_required === true;
+  // 角色要求两步验证而没开(2026-10-29):只剩开启两步验证这一节(改密码仍可用),别的节此刻都是 403。
+  const mustSetupMfa = !mustChange && user?.mfa_setup_required === true;
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -53,6 +55,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (mustChange && serverSaysChanged && user) setUser({ ...user, password_change_required: false });
   }, [mustChange, serverSaysChanged, user, setUser]);
+  // Same for the two-step hold: the server's profile says whether it still applies.
+  const serverSaysMfaDone = profile?.mfa_setup_required === false;
+  useEffect(() => {
+    if (mustSetupMfa && serverSaysMfaDone && user) setUser({ ...user, mfa_setup_required: false });
+  }, [mustSetupMfa, serverSaysMfaDone, user, setUser]);
 
   // Update profile mutation
   const updateMutation = useMutation({
@@ -154,6 +161,12 @@ export default function ProfilePage() {
         <p role="alert" data-testid="password-must-change" className="mb-6 border-b border-t-2 border-b-[oklch(var(--color-line))] border-t-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm text-[oklch(var(--color-warning))]">
           <span aria-hidden="true">! </span>
           {t("profile.password_must_change")}
+        </p>
+      ) : null}
+      {mustSetupMfa ? (
+        <p role="alert" data-testid="mfa-must-setup" className="mb-6 border-b border-t-2 border-b-[oklch(var(--color-line))] border-t-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm text-[oklch(var(--color-warning))]">
+          <span aria-hidden="true">! </span>
+          {t("profile.mfa_must_setup")}
         </p>
       ) : null}
 
@@ -307,6 +320,7 @@ export default function ProfilePage() {
       {mustChange ? null : (
       <>
       {/* 通知:类别 × 站内 / 邮件(apps/notifications/categories.py)。通知页右上角的齿轮跳到这里。 */}
+      {mustSetupMfa ? null : (
       <section id={NOTIFICATION_PREFS_ANCHOR}>
         <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">丙 · </span>
@@ -314,6 +328,7 @@ export default function ProfilePage() {
         </h2>
         <NotificationPreferences hasAddress={email !== ""} />
       </section>
+      )}
 
       {/* 两步验证(A12):状态、向导、恢复码、关闭。组件自己拉 /auth/mfa/status/。 */}
       <section>
@@ -323,6 +338,9 @@ export default function ProfilePage() {
         </h2>
         <MfaSection />
       </section>
+
+      {mustSetupMfa ? null : (
+      <>
 
       {/* 登录设备(Design 第二十八批 W2):一台设备一行;「不认识的设备」的出路是改密码,所以带一个直达那一节的入口。 */}
       <section>
@@ -345,6 +363,8 @@ export default function ProfilePage() {
           <SingleKeyShortcutsToggle />
         </div>
       </section>
+      </>
+      )}
       </>
       )}
     </PageShell>

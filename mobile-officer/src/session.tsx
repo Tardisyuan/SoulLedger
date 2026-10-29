@@ -13,7 +13,7 @@
  * platform's: access in memory, refresh in the secure store.
  */
 import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } from "@soulledger/core/api/auth";
-import { onPasswordChangeRequired } from "@soulledger/core/api/client";
+import { onMfaSetupRequired, onPasswordChangeRequired } from "@soulledger/core/api/client";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
@@ -125,6 +125,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             display_name: profile.display_name,
             role: profile.role,
             password_change_required: profile.password_change_required ?? prev.user.password_change_required,
+            mfa_setup_required: profile.mfa_setup_required ?? prev.user.mfa_setup_required,
             permissions: Array.isArray(profile.permissions) ? profile.permissions : prev.user.permissions,
           };
           platform().persistent.set(USER_KEY, JSON.stringify(user));
@@ -210,7 +211,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const setMfaEnabled = useCallback((enabled: boolean) => {
     setState((prev) => {
       if (prev.status !== "signedIn") return prev;
-      const user = { ...prev.user, mfa_enabled: enabled };
+      // Turning it on lifts the server's hold (`mfa_setup_required`); turning it off does not set it — the next 403 does.
+      const user = { ...prev.user, mfa_enabled: enabled, mfa_setup_required: enabled ? false : prev.user.mfa_setup_required };
       platform().persistent.set(USER_KEY, JSON.stringify(user));
       return { status: "signedIn", user };
     });
@@ -239,6 +241,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     onPasswordChangeRequired(() => setPasswordChangeRequired(true));
     return () => onPasswordChangeRequired(null);
   }, [setPasswordChangeRequired]);
+
+  // A 403 `mfa_setup_required`: the role requires two-step verification and it is off (e.g. a hall setting changed
+  // while the app was open). The shell then shows only the setup screen.
+  useEffect(() => {
+    onMfaSetupRequired(() =>
+      setState((prev) => {
+        if (prev.status !== "signedIn" || prev.user.mfa_setup_required) return prev;
+        const user = { ...prev.user, mfa_setup_required: true };
+        platform().persistent.set(USER_KEY, JSON.stringify(user));
+        return { status: "signedIn", user };
+      })
+    );
+    return () => onMfaSetupRequired(null);
+  }, []);
 
   const value = useMemo<Session>(
     () => ({ state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName }),

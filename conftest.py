@@ -389,3 +389,10 @@ def pytest_collection_modifyitems(config, items):
 def _soup_not_required_by_default(settings):
     """孟婆汤(2026-10-25)只在专门的测试里打开(`settings.MENGPO_SOUP_REQUIRED = True`);其余转世测试不必先饮汤。"""
     settings.MENGPO_SOUP_REQUIRED = False
+
+
+@pytest.fixture(autouse=True)
+def _mfa_setup_not_enforced_by_default(settings):
+    """必需角色未开两步验证即受限(2026-10-29)只在专门的测试里打开(`settings.MFA_SETUP_ENFORCED = True`,
+    `tests/test_mfa_setup_is_enforced.py`);其余测试里的管理员不必先绑验证器。生产恒为真(config/settings.py)。"""
+    settings.MFA_SETUP_ENFORCED = False

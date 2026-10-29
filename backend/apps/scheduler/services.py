@@ -344,14 +344,15 @@ def overdue_jobs(now=None) -> list[ScheduledJob]:
 # ---------------------------------------------------------------------------
 
 def alert_recipients(job: ScheduledJob):
-    """Every active ADMIN, plus the job's tenant's users who hold scheduler.manage."""
+    """Every active hall-less ADMIN, plus the job's tenant's ADMINs and users who hold scheduler.manage.
+    An ADMIN bound to another hall is not told about this hall's jobs (2026-10-29)."""
     from apps.authentication.models import User
     from apps.perm.checker import check_permission
 
-    users = list(User.objects.filter(role="ADMIN", is_active=True))
+    users = list(User.objects.filter(role="ADMIN", tenant__isnull=True, is_active=True))
     if job.tenant_id is not None:
-        for user in User.objects.filter(tenant_id=job.tenant_id, is_active=True).exclude(role="ADMIN"):
-            if check_permission(user, "scheduler.manage"):
+        for user in User.objects.filter(tenant_id=job.tenant_id, is_active=True):
+            if user.role == "ADMIN" or check_permission(user, "scheduler.manage"):
                 users.append(user)
     return users
 

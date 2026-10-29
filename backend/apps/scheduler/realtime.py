@@ -54,7 +54,8 @@ JOBS_REBUILT = "SCHEDULER_JOBS_REBUILT"
 def _admin_ids() -> list[int]:
     from apps.authentication.models import User
 
-    return list(User.objects.filter(role="ADMIN", is_active=True).values_list("id", flat=True))
+    # A global job is not any hall's: only the hall-less ADMIN sees it (2026-10-29).
+    return list(User.objects.filter(role="ADMIN", tenant__isnull=True, is_active=True).values_list("id", flat=True))
 
 
 def _tenant_code(tenant_id):

@@ -65,6 +65,8 @@ export type SoulMfaVerifyResponse = Schemas["SoulMfaVerifyResponse"];
 /** `remember_device` defaults to false on the server (the generated type makes it required). */
 export type SoulMfaVerifyRequest = Omit<Schemas["SoulMfaVerifyRequest"], "remember_device"> & { remember_device?: boolean };
 export type SoulMfaDisableRequest = Schemas["SoulMfaDisableRequest"];
+/** Turning it off: the 6-digit code or one recovery code; the password alone does not (2026-10-29). */
+export type SoulMfaTurnOffRequest = Schemas["SoulMfaTurnOffRequest"];
 export type SoulDeviceLoginRequest = Schemas["SoulDeviceLoginRequest"];
 /** 「导出我的资料」:最近一次申请。READY 才有 `download_url`;过了有效期读作 EXPIRED。 */
 export type SoulDataExport = Schemas["SoulDataExport"];
@@ -276,12 +278,12 @@ export const soulApi = {
   mfaConfirm: (code: string) =>
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/confirm/", { code }).then((r) => r.data.recovery_codes),
   /**
-   * The same confirmation as `mfaDisable` (the 6-digit code or the password; one lock; a recovery code does not
-   * count). Until it passes the old set stays good; then it is void at once and the new ten are shown once.
+   * The 6-digit code or the password (one lock, shared with `mfaDisable`; a recovery code does not count).
+   * Until it passes the old set stays good; then it is void at once and the new ten are shown once.
    */
   mfaRegenerate: (body: SoulMfaDisableRequest) =>
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/", body).then((r) => r.data.recovery_codes),
-  mfaDisable: (body: SoulMfaDisableRequest) =>
+  mfaDisable: (body: SoulMfaTurnOffRequest) =>
     soulHttp.post<SoulMfaStatus>("/me/mfa/disable/", body).then((r) => r.data),
   /**
    * 改联系邮箱(第四十批 S-b),三步:当前密码(开了两步验证再带 `code`)→ 新邮箱(验证码发到新邮箱)→ 验证码。

@@ -8,6 +8,7 @@ from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchSt
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 
 @pytest.fixture
@@ -316,7 +317,7 @@ class TestDispatchAPI:
 
     def test_dispatch_propose(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user):
         """Test proposing a dispatch via API."""
-        api_client.force_authenticate(user=cn_admin_user)
+        sign_in(api_client, cn_admin_user)
         resp = api_client.post(
             "/api/v1/dispatch/records/",
             {
@@ -339,7 +340,7 @@ class TestDispatchAPI:
             reason="Test",
             tenant=cn_tenant,
         )
-        api_client.force_authenticate(user=eu_admin_user)
+        sign_in(api_client, eu_admin_user)
         resp = api_client.get("/api/v1/dispatch/records/", {"status": "PROPOSED"})
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
@@ -375,13 +376,13 @@ class TestDispatchAPI:
             initiating_tenant=cn_tenant,
             tenant=cn_tenant,
         )
-        api_client.force_authenticate(user=cn_admin_user)
+        sign_in(api_client, cn_admin_user)
         resp = api_client.get("/api/v1/dispatch/cross-tenant-judgments/")
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
     def test_cross_judgment_create(self, api_client, db, cn_tenant, cn_admin_user):
         """Test creating a cross-tenant judgment via API."""
-        api_client.force_authenticate(user=cn_admin_user)
+        sign_in(api_client, cn_admin_user)
         resp = api_client.post(
             "/api/v1/dispatch/cross-tenant-judgments/",
             {

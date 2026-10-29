@@ -1074,10 +1074,15 @@ def test_organization_cross_tenant_isolation(role_clients, snapshot_tenants):
     assert Organization.objects.get(pk=org.pk).name == "wsnap"
     assert not _is_deleted(Organization, org.pk)
 
-    # ADMIN bypasses tenant scoping everywhere else in this codebase; confirm
-    # org is not a silent exception to that in either direction.
+    # The `clients` are all bound to the snapshot hall. Since 2026-10-29 only the hall-less ADMIN crosses
+    # halls; the hall's ADMIN is scoped like everyone else — confirm org follows both halves.
     admin_retrieve = clients["ADMIN"].get(f"/api/v1/organizations/{org.id}/")
-    assert admin_retrieve.status_code == 200, admin_retrieve.status_code
+    assert admin_retrieve.status_code == 404, admin_retrieve.status_code
+    from apps.authentication.models import User
+    from tests.conftest import sign_in
+
+    global_admin = User.objects.create_user(username="wsnap_global", password="x", role="ADMIN", tenant=None)
+    assert sign_in(APIClient(), global_admin).get(f"/api/v1/organizations/{org.id}/").status_code == 200
 
 
 # ---------------------------------------------------------------------------

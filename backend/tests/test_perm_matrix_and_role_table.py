@@ -55,7 +55,7 @@ def world(db):
         RolePermission.objects.get_or_create(role=judge, permission=perms[c])
     scribe = Role.objects.create(name="SCRIBE", display_name="书记")
     RolePermission.objects.create(role=scribe, permission=perms["ledger.read"])
-    admin = User.objects.create_user(username="pm_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="pm_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     return {"tenant": tenant, "perms": perms, "judge": judge, "scribe": scribe,
             "admin": admin, "client": _client(admin)}
 

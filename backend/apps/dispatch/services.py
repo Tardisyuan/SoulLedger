@@ -1151,13 +1151,15 @@ class CrossTenantJudgmentService:
             return False
         if judgment.create_user_id is not None and judgment.create_user_id == user.pk:
             return True
-        role = getattr(user, "role", None)
-        if role not in ("ADMIN", "MODERATOR"):
+        from apps.core.tenant import is_hall_admin, is_tenant_exempt
+
+        # 殿主兼任也算(`extra_roles`);没有殿的只有全局 ADMIN(2026-10-29 统一判定)。
+        if not is_hall_admin(user):
             return False
+        if is_tenant_exempt(user):
+            return True
         tenant = request_tenant or getattr(user, "tenant", None)
-        if tenant is None:
-            return role == "ADMIN"
-        return tenant.pk == judgment.initiating_tenant_id
+        return tenant is not None and tenant.pk == judgment.initiating_tenant_id
 
     @staticmethod
     @transaction.atomic

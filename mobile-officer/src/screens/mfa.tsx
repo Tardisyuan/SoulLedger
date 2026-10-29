@@ -122,19 +122,24 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 }
 
 /**
- * 「确认是本人」:6 位动态码或密码二选一。关闭与重新生成恢复码共用这一块(后端也是同一个确认、同一把锁);
+ * 「确认是本人」:重新生成恢复码是 6 位动态码或密码二选一;关闭(`secondFactor`)是动态码或恢复码 —— 只凭密码关不掉
+ * (2026-10-29)。两处同一把锁;
  * `id` 是两处各自的 testID 前缀。
  */
+type ConfirmMethod = "totp" | "password" | "recovery";
+
 function OwnerConfirm({
-  id, method, onMethod, code, onCode, password, onPassword,
+  id, method, onMethod, code, onCode, password, onPassword, secondFactor = false,
 }: {
   id: string;
-  method: "totp" | "password";
-  onMethod: (m: "totp" | "password") => void;
+  method: ConfirmMethod;
+  onMethod: (m: ConfirmMethod) => void;
   code: string;
   onCode: (v: string) => void;
   password: string;
   onPassword: (v: string) => void;
+  /** Turning it off: the code or a recovery code, never the password (2026-10-29). */
+  secondFactor?: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -145,11 +150,15 @@ function OwnerConfirm({
         onChange={onMethod}
         options={[
           { key: "totp", label: t("mfa.manage.confirm_by_totp") },
-          { key: "password", label: t("mfa.manage.confirm_by_password") },
+          secondFactor
+            ? { key: "recovery", label: t("mfa.manage.confirm_by_recovery") }
+            : { key: "password", label: t("mfa.manage.confirm_by_password") },
         ]}
       />
       {method === "totp" ? (
         <Input testID={`${id}-code`} label={t("mfa.verify.code_label")} value={code} onChangeText={(v) => onCode(digits(v))} mono keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
+      ) : method === "recovery" ? (
+        <Input testID={`${id}-recovery`} label={t("mfa.verify.recovery_label")} value={code} onChangeText={onCode} mono keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} maxLength={9} />
       ) : (
         <Input
           testID={`${id}-password`}
@@ -173,7 +182,7 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [fresh, setFresh] = useState<string[] | null>(null);
-  const [method, setMethod] = useState<"totp" | "password">("totp");
+  const [method, setMethod] = useState<ConfirmMethod>("totp");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
 
@@ -199,24 +208,26 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
     setBusy(true);
     setFailure(null);
     mfaApi
-      .disable(method === "totp" ? { method: "totp", code } : { method: "password", password })
+      .disable({ method: method === "recovery" ? "recovery" : "totp", code: code.trim() })
       .then(
         () => {
           toast(t("mfa.manage.disabled_toast"), "success");
           onDisabled();
         },
-        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.disable_failed")))
+        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.turn_off_failed")))
       )
       .finally(() => setBusy(false));
   };
 
-  const ready = method === "totp" ? code.length === 6 : password.length > 0;
-  const changeMethod = (m: "totp" | "password") => {
+  const ready = method === "totp" ? code.length === 6 : method === "recovery" ? code.trim().length >= 8 : password.length > 0;
+  const changeMethod = (m: ConfirmMethod) => {
     setMethod(m);
+    setCode("");
     setFailure(null);
   };
   const cancel = () => {
     setAsking(null);
+    setMethod("totp");
     setFailure(null);
     setCode("");
     setPassword("");
@@ -251,8 +262,8 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
       ) : asking === "disable" ? (
         <View style={{ gap: space[3] }}>
           <Txt variant="section">{t("mfa.manage.disable_title")}</Txt>
-          <Txt variant="body" tone="muted">{t("mfa.manage.disable_body")}</Txt>
-          <OwnerConfirm id="mfa-disable" method={method} onMethod={changeMethod} code={code} onCode={setCode} password={password} onPassword={setPassword} />
+          <Txt variant="body" tone="muted">{t("mfa.manage.turn_off_body")}</Txt>
+          <OwnerConfirm id="mfa-disable" secondFactor method={method} onMethod={changeMethod} code={code} onCode={setCode} password={password} onPassword={setPassword} />
           <View style={{ flexDirection: "row", gap: space[3] }}>
             <ActionButton testID="mfa-disable-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={cancel} />
             <ActionButton testID="mfa-disable-confirm" kind="ink" title={t("mfa.manage.disable_confirm")} busy={busy} disabled={!ready} onPress={disable} />
