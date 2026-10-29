@@ -103,6 +103,8 @@ backend/scripts/backups/
 # Docker data directories
 # pg_dump output of the production `backup` service (bind-mounted ./backups).
 /backups/
+# rclone.conf for the backup service's off-site copy: holds remote credentials.
+/rclone/
 docker/postgres/
 docker/redis/
 
