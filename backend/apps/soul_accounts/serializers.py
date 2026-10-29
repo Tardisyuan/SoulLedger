@@ -23,7 +23,7 @@ from apps.soul_accounts.models import (
 )
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
-from apps.souls.models import Civilization, Soul
+from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import VISIT_SETTINGS
 
 # ── 灵魂端 ───────────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ class SoulMfaRequiredSerializer(serializers.Serializer):
 
 
 class MeCaptureWarrantSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=["ISSUED", "CAPTURED"])
+    status = serializers.ChoiceField(choices=["ISSUED", "CAPTURED", "HANDED_OVER"])
     issued_at = serializers.DateTimeField()
 
 
@@ -289,7 +289,8 @@ class MeProfileSerializer(serializers.Serializer):
     #: App 据此决定显示不显示「问一问」:设计稿定「未开通就隐藏入口」,所以点开之前就要知道。
     assistant_enabled = serializers.SerializerMethodField()
     # ── 到案前后的进度(2026-10-29 用户决定,App 界面待 Design;不适用时一律 null)──────────────
-    #: 勾魂牒已发、还没交接到案(地府):`{status: ISSUED|CAPTURED, issued_at}`。交接或撤销后为 null。
+    #: 勾魂牒(地府):`{status: ISSUED|CAPTURED|HANDED_OVER, issued_at}`。在世时只给还开着的;死后给最近一张没撤销的
+    #: (死亡登记时一并签发并交接,用户 2026-10-30 定)。撤销的不给。
     capture_warrant = serializers.SerializerMethodField()
     #: 希腊:卡戎不渡(`Soul.ferry_passage` 有值)时 `{ferry_passage, crossed, crosses_on}`;未葬者满百年得渡的那天,
     #: 无渡资者没有这一天(null)。照常过河的为 null。
@@ -303,9 +304,10 @@ class MeProfileSerializer(serializers.Serializer):
 
     @extend_schema_field(MeCaptureWarrantSerializer(allow_null=True))
     def get_capture_warrant(self, soul):
-        from apps.dispatch.models import OPEN_CAPTURE, CaptureWarrant
+        from apps.dispatch.models import OPEN_CAPTURE, CaptureStatus, CaptureWarrant
 
-        row = (CaptureWarrant.all_objects.filter(soul=soul, status__in=OPEN_CAPTURE, is_deleted=False)
+        shown = OPEN_CAPTURE if soul.current_state == SoulState.ALIVE else (*OPEN_CAPTURE, CaptureStatus.HANDED_OVER)
+        row = (CaptureWarrant.all_objects.filter(soul=soul, status__in=shown, is_deleted=False)
                .order_by("-issued_at").values("status", "issued_at").first())
         return MeCaptureWarrantSerializer(row).data if row else None
 

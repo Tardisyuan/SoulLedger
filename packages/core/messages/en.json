@@ -4821,6 +4821,7 @@
         "title": "Capture warrant",
         "ISSUED": "Your fated day has come. The escorts are on their way.",
         "CAPTURED": "The escorts have you and are taking you to the City God.",
+        "HANDED_OVER": "The escorts have handed you to the City God.",
         "step_issued": "Issued",
         "step_captured": "Captured",
         "step_handed": "To the City God",

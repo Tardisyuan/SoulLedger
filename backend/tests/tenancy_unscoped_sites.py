@@ -55,7 +55,7 @@ SITES = [
     ('apps/dispatch/capture.py', 'issue', 'Soul.all_objects', 2, 'LOCK', 'locks / re-reads the soul the capture view resolved through scope_to_tenant (the same scope as due/), by its pk'),
     ('apps/dispatch/capture.py', '_lock', 'CaptureWarrant.all_objects', 1, 'LOCK', 'locks the warrant the capture viewset already reached through get_object(), by its pk'),
     ('apps/dispatch/capture.py', 'hand_over', 'Soul.all_objects', 1, 'PK', "the warrant's own soul, by its FK (the warrant was reached through get_object())"),
-    ('apps/dispatch/capture.py', 'void_on_death', 'CaptureWarrant.all_objects', 1, 'PK', "the open warrants of the one soul dying in this transaction, by soul_id; is_deleted=False is in the filter"),
+    ('apps/dispatch/capture.py', 'close_on_death', 'CaptureWarrant.all_objects', 1, 'PK', "the open warrants of the one soul dying in this transaction, by soul_id; is_deleted=False is in the filter"),
     ('apps/reincarnation/services.py', 'drink_soup', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'Tenant.objects', 1, 'CODE', "the requesting hall by its globally unique code; only its civilization is read (Tenant has no tenant column)"),
     ('apps/sentence_plan/soul_view.py', 'soul_plan', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),

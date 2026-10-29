@@ -11,12 +11,16 @@
 * 交接(`hand_over`):CAPTURED → HANDED_OVER,并在同一事务里登记死亡(`Soul.die`,死亡日 = 拘到那天),
   案子交给发牒的城隍初审 —— 与死亡同步走的是同一个入口,不另开一套。`die()` 拒绝(灵魂已不在世)则整笔回滚。
 * 撤销(`cancel`):ISSUED / CAPTURED → CANCELLED,理由必填。
-* 别的路(死亡同步、土地公、官员手点)先登记了死亡:还开着的牒作废(`void_on_death`,由 `Soul.transition_to` 调)。
+* 别的路(死亡同步、土地公、官员手点)先登记了死亡:勾魂牒随死亡一并签发并记为已交接(`close_on_death`,由
+  `Soul.transition_to` 调;用户 2026-10-30 定)。还开着的牒直接交接;没有牒的地府灵魂补一张。灵魂账号在死亡时才开,
+  此前牒只在 ISSUED / CAPTURED 时给灵魂端看,所以那张卡在真实流程里从来出不来;现在灵魂端看到的是交接完的那张。
 
 没有定时任务自动发牒:celery beat 还没部署。`due_souls` 列出阳寿已到而没有牒的灵魂,由官员发。
 事件与那一笔同一事务(CAPTURE_WARRANT_ISSUED / SOUL_CAPTURED / CAPTURE_HANDED_OVER / CAPTURE_WARRANT_CANCELLED),
 payload 不带经办官员与理由。
 """
+from contextvars import ContextVar
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -24,6 +28,10 @@ from rest_framework.exceptions import APIException
 
 from apps.dispatch.models import OPEN_CAPTURE, CaptureEscort, CaptureStatus, CaptureWarrant
 from apps.souls.models import Civilization, Soul, SoulState
+
+
+#: `hand_over` 正在登记这一次死亡:那张牒已经写成 HANDED_OVER,`close_on_death` 不再补发。
+_handing_over: ContextVar[bool] = ContextVar("capture_handing_over", default=False)
 
 
 class CaptureRefused(APIException):
@@ -116,13 +124,17 @@ def hand_over(pk, location: str = "") -> CaptureWarrant:
     with transaction.atomic():
         warrant = _lock(pk)
         _assert_status(warrant, CaptureStatus.CAPTURED)
-        # 先写成 HANDED_OVER:`die()` 里的 `void_on_death` 只作废还开着的牒。
+        # 先写成 HANDED_OVER,并告诉 `die()` 里的 `close_on_death` 这一张就是本次死亡的牒,不要再补发。
         warrant.status = CaptureStatus.HANDED_OVER
         warrant.handed_over_at = timezone.now()
         warrant.save(update_fields=["status", "handed_over_at", "version", "update_user", "update_time"])
         soul = Soul.all_objects.get(pk=warrant.soul_id)
-        judgment = soul.die(death_date=timezone.localdate(warrant.captured_at), location=location,
-                            account_origin="OFFICER", city_god=warrant.city_god)
+        token = _handing_over.set(True)
+        try:
+            judgment = soul.die(death_date=timezone.localdate(warrant.captured_at), location=location,
+                                account_origin="OFFICER", city_god=warrant.city_god)
+        finally:
+            _handing_over.reset(token)
         if judgment is None:
             raise CaptureRefused("not_alive", f"The soul is {soul.current_state}, not alive.")
         warrant.judgment = judgment
@@ -144,13 +156,29 @@ def cancel(pk, reason: str) -> CaptureWarrant:
     return warrant
 
 
-def void_on_death(soul) -> None:
-    """死亡已经由别的路登记:还开着的牒作废,在调用方(`Soul.transition_to`)的事务里。"""
-    for warrant in CaptureWarrant.all_objects.select_for_update(of=("self",)).filter(
-            soul_id=soul.pk, status__in=OPEN_CAPTURE, is_deleted=False):
-        warrant.status = CaptureStatus.CANCELLED
-        warrant.save(update_fields=["status", "version", "update_user", "update_time"])
-        _event(warrant, "CAPTURE_WARRANT_CANCELLED", via="death")
+def close_on_death(soul) -> None:
+    """死亡已经由别的路登记(在调用方 `Soul.transition_to` 的事务里):勾魂牒随之签发并交接。
+    还开着的牒补上拘到 / 交接时刻;地府灵魂没有牒就补一张(城隍按出身地配,配不到为空)。别的文明不发牒。"""
+    from apps.judgment import city_gods
+
+    if _handing_over.get():
+        return
+    now = timezone.now()
+    open_rows = list(CaptureWarrant.all_objects.select_for_update(of=("self",)).filter(
+        soul_id=soul.pk, status__in=OPEN_CAPTURE, is_deleted=False))
+    if not open_rows and soul.civilization == Civilization.CHINESE:
+        warrant = CaptureWarrant.objects.create(
+            tenant_id=soul.tenant_id, soul=soul, city_god=city_gods.match(soul.tenant_id, soul.origin_location),
+            escort=suggested_escort(soul))
+        _event(warrant, "CAPTURE_WARRANT_ISSUED", via="death")
+        open_rows = [warrant]
+    for warrant in open_rows:
+        warrant.status = CaptureStatus.HANDED_OVER
+        warrant.captured_at = warrant.captured_at or now
+        warrant.handed_over_at = now
+        warrant.save(update_fields=["status", "captured_at", "handed_over_at", "version", "update_user",
+                                    "update_time"])
+        _event(warrant, "CAPTURE_HANDED_OVER", via="death")
 
 
 def _event(warrant, event_type, **extra) -> None:

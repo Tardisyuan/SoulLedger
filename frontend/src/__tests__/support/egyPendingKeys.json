@@ -2,5 +2,6 @@
   "officer_app.biometric.cancelled",
   "officer_app.biometric.failed_any",
   "officer_app.biometric.off_cancelled",
-  "officer_app.me.push_unanswered"
+  "officer_app.me.push_unanswered",
+  "soul_app.life.capture.HANDED_OVER"
 ]

@@ -793,11 +793,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
                 stations.arrive(locked_soul, Soul.DiyuStation.TUDI_TEMPLE, via="death")
 
-                # 勾魂牒(apps/dispatch/capture.py):经别的路登记了死亡,还开着的牒就此作废;
-                # 正在交接的那一张在调用 die() 之前已经写成 HANDED_OVER,不在其中。
+                # 勾魂牒(apps/dispatch/capture.py):经别的路登记了死亡,牒随之签发并交接(用户 2026-10-30 定);
+                # 正在 hand_over 的那一张已经写成 HANDED_OVER,close_on_death 不再补发。
                 from apps.dispatch import capture
 
-                capture.void_on_death(locked_soul)
+                capture.close_on_death(locked_soul)
 
             # Inside the transaction: the event row is part of the transition's record, and a failed insert
             # must roll the transition back. (It used to be written after the lock was released; the bus only

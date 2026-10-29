@@ -186,13 +186,37 @@ def test_issue_refusals(cn_tenant, eu_tenant):
     assert exc.value.detail["code"] == "warrant_open"
 
 
-def test_a_death_registered_another_way_voids_the_open_warrant(cn_tenant):
+def test_a_death_registered_another_way_hands_the_open_warrant_over(cn_tenant):
     soul = _due(cn_tenant)
     warrant = capture.issue(soul)
     soul.die(death_date=date.today())
     warrant.refresh_from_db()
-    assert warrant.status == "CANCELLED"
-    assert _events(soul, "CAPTURE_WARRANT_CANCELLED")[0].payload["via"] == "death"
+    assert warrant.status == "HANDED_OVER" and warrant.captured_at and warrant.handed_over_at
+    assert _events(soul, "CAPTURE_HANDED_OVER")[0].payload["via"] == "death"
+    assert not _events(soul, "CAPTURE_WARRANT_CANCELLED")
+    assert CaptureWarrant.objects.filter(soul=soul).count() == 1
+
+
+def test_a_diyu_death_without_a_warrant_issues_one_handed_over(cn_tenant, eu_tenant):
+    god = CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
+    soul = _due(cn_tenant, origin_location="杭州")
+    soul.die(death_date=date.today())
+    (warrant,) = CaptureWarrant.objects.filter(soul=soul)
+    assert (warrant.status, warrant.city_god, warrant.escort) == ("HANDED_OVER", god, "WUCHANG")
+    assert [len(_events(soul, t)) for t in ("CAPTURE_WARRANT_ISSUED", "CAPTURE_HANDED_OVER")] == [1, 1]
+    eu = _due(eu_tenant)
+    eu.die(death_date=date.today())
+    assert not CaptureWarrant.objects.filter(soul=eu).exists()
+
+
+def test_the_hand_over_path_does_not_issue_a_second_warrant(cn_tenant):
+    CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
+    soul = _due(cn_tenant, origin_location="杭州")
+    warrant = capture.issue(soul)
+    capture.capture(warrant.pk)
+    capture.hand_over(warrant.pk)
+    assert CaptureWarrant.objects.filter(soul=soul).count() == 1
+    assert len(_events(soul, "CAPTURE_HANDED_OVER")) == 1
 
 
 def test_a_failed_hand_over_writes_nothing(cn_tenant):
