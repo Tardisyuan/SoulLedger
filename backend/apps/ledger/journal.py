@@ -183,6 +183,8 @@ def build_journal(
         "closing": opening + received - disbursed,
         "soul_count": counts["souls"],
         "record_count": counts["records"],
+        # 明细只列数据范围里的灵魂、合计仍是全殿时为 true,页面据此注明「合计为全殿」(用户 2026-10-29)。
+        "totals_whole_hall": rows_qs is not period,
         "categories": categories,
         "page": page,
         "page_size": page_size,
