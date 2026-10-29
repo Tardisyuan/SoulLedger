@@ -468,6 +468,7 @@ function PermissionsPageContent() {
               isLoading={rolesQuery.isLoading}
               isError={rolesQuery.isError}
               onRetry={() => rolesQuery.refetch()}
+              canManage={canManagePermissions}
               onOpenMatrix={(role) => {
                 setMobileRole(role);
                 setSegment("matrix");

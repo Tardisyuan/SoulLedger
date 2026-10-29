@@ -42,8 +42,9 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+let mockTenant: { id: number } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] } }),
+  useTenant: () => ({ user: { id: 1, username: "admin", role: "ADMIN", tenant: mockTenant, permissions: [] } }),
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
@@ -109,6 +110,7 @@ function save() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockTenant = null;
   GRANTS = { ADMIN: [1, 2, 3], JUDGE: [1, 2], YIN_CLERK: [1] };
   api.list.mockResolvedValue({ data: PERMS });
   api.roles.list.mockResolvedValue({ data: [ADMIN, JUDGE, CLERK] });
@@ -479,5 +481,19 @@ describe("roles table (E-11b)", () => {
     await waitFor(() =>
       expect(api.roles.update).toHaveBeenCalledWith(3, { name: "YIN_CLERK", display_name: "殿司", description: "各殿收发灵魂来信。" })
     );
+  });
+
+  it("a hall-bound ADMIN reads the drawer but gets no ⋯ (copy / recycle) and no save — those writes are global-ADMIN-only", async () => {
+    mockTenant = { id: 7 };
+    renderPage();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "permissions.segments.roles" }));
+    const row = (await screen.findByText("YIN_CLERK")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "殿司" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText("permissions.roles.workflow_count:2")).toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "permissions.roles.more" })).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "permissions.roles.copy" })).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "common.save" })).toBeNull();
   });
 });
