@@ -56,6 +56,7 @@ const JOURNAL: LedgerJournal = {
   closing: 19692,
   soul_count: 33,
   record_count: 214,
+  totals_whole_hall: false,
   categories: [
     { category: "CHARITY", merit: 1480, demerit: 0 },
     { category: "DECEPTION", merit: 0, demerit: 980 },
@@ -119,6 +120,17 @@ describe("the four pillars", () => {
     // 收入、支出只写数字,不上色:四个数字都是 ink。
     expect(pillars.innerHTML).not.toMatch(/--color-(karma|success|danger|warning)/);
     expect(screen.getByTestId("ledger-formula")).toHaveTextContent("旧管 + 新收 − 开除 = 实在 · 33 户 · 本期 214 条");
+  });
+
+  it("says the totals are the whole hall only when the entries are narrowed to a data scope", async () => {
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    const { unmount } = renderPage();
+    await screen.findByTestId("four-pillars");
+    expect(screen.queryByTestId("ledger-totals-whole-hall")).toBeNull();
+    unmount();
+    mockedJournal.mockResolvedValue({ data: { ...JOURNAL, totals_whole_hall: true } });
+    renderPage();
+    expect(await screen.findByTestId("ledger-totals-whole-hall")).toHaveTextContent("合计为全殿");
   });
 
   it("asks for the current month first and the chosen month after stepping back", async () => {

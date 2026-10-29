@@ -1995,6 +1995,7 @@
       "pillar_disbursed": "开除 · 罪业",
       "pillar_closing": "实在 · 期末",
       "formula": "旧管 + 新收 − 开除 = 实在 · {{souls}} 户 · 本期 {{records}} 条",
+      "totals_whole_hall": "合计为全殿;明细只列你数据范围内的灵魂",
       "col_day": "日",
       "col_soul": "灵魂",
       "col_entry": "条目",

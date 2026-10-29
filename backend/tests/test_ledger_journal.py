@@ -338,8 +338,10 @@ def test_rows_follow_the_data_scope_and_the_totals_stay_the_halls(api_client, ju
     judge_user.organization = mine
     judge_user.save(update_fields=["organization"])
     _login(api_client, judge_user, "ledger.read")
+    assert api_client.get(URL, {"month": "2026-06"}).json()["totals_whole_hall"] is False  # 未配范围:不注明
     scope("JUDGE", "ORG")
     body = api_client.get(URL, {"month": "2026-06"}).json()
+    assert body["totals_whole_hall"] is True  # 页面据此注明「合计为全殿」(用户 2026-10-29)
     assert {r["soul_name"] for r in body["results"]} == {"甲"}  # 乙不在范围里
     assert body["count"] == 1
     assert (body["record_count"], body["soul_count"]) == (3, 2)  # 合计照旧是本殿

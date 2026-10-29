@@ -184,5 +184,6 @@
   "users.second_factor.use_recovery",
   "users.second_factor.use_totp",
   "users.second_factor.wrong",
-  "state.gone_title"
+  "state.gone_title",
+  "ledger.journal.totals_whole_hall"
 ]

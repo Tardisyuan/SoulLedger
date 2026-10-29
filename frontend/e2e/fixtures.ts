@@ -368,6 +368,7 @@ export const LEDGER_JOURNAL = {
   closing: 19692,
   soul_count: 33,
   record_count: 8,
+  totals_whole_hall: false,
   categories: [
     { category: "CHARITY", merit: 1480, demerit: 0 },
     { category: "PIETY", merit: 1210, demerit: 0 },

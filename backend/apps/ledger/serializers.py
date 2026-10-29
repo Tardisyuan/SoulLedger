@@ -430,6 +430,8 @@ class LedgerJournalSerializer(serializers.Serializer):
     closing = serializers.IntegerField()
     soul_count = serializers.IntegerField()
     record_count = serializers.IntegerField()
+    totals_whole_hall = serializers.BooleanField(
+        help_text="明细只列数据范围里的灵魂,而四柱、类目与户数 / 条数是全殿的。")
     categories = LedgerJournalCategorySerializer(many=True)
     page = serializers.IntegerField()
     page_size = serializers.IntegerField()

@@ -31706,6 +31706,9 @@ components:
           type: integer
         record_count:
           type: integer
+        totals_whole_hall:
+          type: boolean
+          description: 明细只列数据范围里的灵魂,而四柱、类目与户数 / 条数是全殿的。
         categories:
           type: array
           items:
@@ -31733,6 +31736,7 @@ components:
       - record_count
       - results
       - soul_count
+      - totals_whole_hall
     LedgerJournalCategory:
       type: object
       description: One category's merit and demerit weight inside the month.
