@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from apps.core.client_ip import get_client_ip
 from apps.core.locale import locale_from_request
 from apps.core.schema import ErrorResponseSerializer
+from apps.events.realtime import push_permission_refresh
 from apps.perm import data_scope
 from apps.perm.matrix import ADMIN_ROLE_NAME
 
@@ -160,5 +161,6 @@ def role_data_scope(request, pk):
                 user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
             )
     # 范围的求解只缓存在请求上(data_scope.request_cache),没有跨请求的缓存要失效;服务器端下一个请求即生效。
-    # TODO(permission push): 「你的权限变了」的服务端推送还没有(决定 10);auth-batch 提供后,在这里推给持该角色的人。
+    # 已开的实时连接按新范围重算(各连接自己判断;B5 的 consumer 在刷新时重取范围)。
+    push_permission_refresh()
     return Response(after)
