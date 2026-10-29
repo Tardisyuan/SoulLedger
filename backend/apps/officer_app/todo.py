@@ -95,8 +95,14 @@ def _judgments_in_scope(scope):
 
 
 def _cooldowns(scope):
-    qs = CooldownShorteningRequest.objects.select_related("soul", "decided_by")
-    return scope_to_tenant(qs, scope, field="soul__home_tenant")
+    """缩短冷却申请跟灵魂的数据范围走(B3b)。调拨、受刑计划变更、书信按设计不套范围。"""
+    from apps.souls.models import Soul
+
+    qs = scope_to_tenant(CooldownShorteningRequest.objects.select_related("soul", "decided_by"), scope,
+                         field="soul__home_tenant")
+    souls = Soul.objects.all()
+    seen = DataScopeFilter.filter_queryset(scope, souls, Soul)
+    return qs if seen is souls else qs.filter(soul__in=seen.values("pk"))
 
 
 def _dispatches(scope):

@@ -671,8 +671,10 @@ class DispatchService:
                 SentencePlanService.on_residence_ended_by_hand(locked, record)
                 SentencePlanService.advance(locked)
 
-        # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。
+        # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。归属机构一起同步:
+        # 调用方之后整行 `save()` 时,旧的 owner_org(暂居殿的根)不能被写回去(数据范围 B3b)。
         soul.tenant_id = locked.tenant_id
+        soul.owner_org_id = locked.owner_org_id
         return record
 
     @staticmethod
