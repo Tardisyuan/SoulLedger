@@ -192,6 +192,8 @@ MESSAGES = {
         "soul_account_provisioning_failed": {"title": "Aq Ba Nen Iri", "body": "{{soul}}: Sesh Mut Seth; Aq Ba Nen Iri. Iri {{command}}: Aq Ba Iri."},
         "city_god_case_received": {"title": "Chenghuang: Sep Mawy · Nen Maa Djer", "body": "{{soul}}: Sep Iyi Er {{city_god}} · Nen Maa Djer."},
         "city_god_case_returned": {"title": "Chenghuang Khesef Er Khemen", "body": "{{city_god}}: Sep {{soul}} Khesef Er Khemen. Sab: {{by}}. Khet: {{reason}}"},
+        "wangsi_grievance_filed": {"title": "Nut Mut Nen Maat · Nehet Mawy", "body": "{{soul}}: Nehet Hab Seth · Em Smen Maa."},
+        "workflow_timeout_failed": {"title": "Wat Hesy: Unut Khetem · Nen Iri", "body": "{{soul}} · {{workflow}}: Unut Khetem Em «{{node}}», Iri Nen Iri. Wat Smen Dy: Iri Em Djeret."},
     },
 }
 
