@@ -1233,6 +1233,29 @@
         "confirm_hint": "Type \"Overwrite\" to confirm"
       },
       "download_skipped": "Download skipped details"
+    },
+    "datascope": {
+      "title": "Data scope",
+      "default": "Default scope",
+      "scope": {
+        "ALL": "All",
+        "ORG_CHILD": "This unit and below",
+        "ORG": "This unit only",
+        "SELF": "Own records only",
+        "DEFINE": "Chosen units"
+      },
+      "admin_fixed": "All (fixed)",
+      "own_always": "Records a user created or was assigned stay visible to them under any scope.",
+      "orgs": "Units",
+      "orgs_for": "{{name}} · units",
+      "orgs_required": "Choose at least one unit",
+      "per_resource": "Set per record type",
+      "follow_default": "Follow default",
+      "save": "Save data scope",
+      "saved": "Data scope saved; it applies once they refresh",
+      "save_error": "Could not save the data scope",
+      "load_error": "Could not load the data scope",
+      "read_only": "Only an administrator outside every hall can change data scope"
     }
   },
   "workflow": {
@@ -3366,7 +3389,8 @@
     "organization_none": "No organization",
     "tenant_pick": "Choose a tenant",
     "organization_column": "Organization · Position",
-    "position": "Position"
+    "position": "Position",
+    "organization_required": "A hall member who is not an administrator must belong to a unit"
   },
   "settings": {
     "title": "Settings",
@@ -7951,5 +7975,10 @@
     "escort": "Suggested escort",
     "issue": "Issue",
     "empty": "No soul has reached its fated date without a warrant"
+  },
+  "org_select": {
+    "no_match": "No matching unit",
+    "implied": "Included via parent",
+    "no_tenant": "No hall"
   }
 }

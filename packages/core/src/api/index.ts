@@ -198,6 +198,9 @@ export {
   type RoleCopyPayload,
 } from "./perm";
 
+// Data scope (per role)
+export { dataScopeApi, DATA_SCOPES, type DataScope, type DataScopeRule, type DataScopeOverride, type RoleDataScopeConfig, type DataScopeResource } from "./dataScope";
+
 // Menus
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton, type MenuButtonConfig } from "./menus";
 
