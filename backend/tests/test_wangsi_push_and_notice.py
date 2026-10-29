@@ -125,6 +125,31 @@ def test_each_conclusion_is_pushed_to_the_soul(cn_tenant, god, admin_user, push_
     assert [str(delivery.pk)] in enqueued
 
 
+def test_a_delivery_closes_the_case_with_one_push_not_two(cn_tenant, god, admin_user, push_on, enqueued,  # noqa: F811
+                                                         django_capture_on_commit_callbacks):
+    """用户 2026-10-29:超度同时结案,只推 `wangsi_delivered`;那次结案的 `judgment_result` 不再推。"""
+    account, case = _held(cn_tenant)
+    assert register(soul_client(account)).status_code == 201
+    with django_capture_on_commit_callbacks(execute=True):
+        wangsi.file_grievance(case.pk, None, "为人所害", account=account)
+        wangsi.decide_grievance(case.pk, admin_user, upheld=True, note="x", deliver=True)
+    case.refresh_from_db()
+    assert case.verdict == "PASSED"  # 确实结了案
+    kinds = list(PushDelivery.objects.filter(account=account).values_list("kind", flat=True))
+    assert kinds.count("wangsi_delivered") == 1 and "judgment_result" not in kinds  # 刑满(sentence_*)另算
+
+
+def test_an_ordinary_conclusion_still_pushes_the_judgment_result(cn_tenant, god, push_on, enqueued,  # noqa: F811
+                                                                 django_capture_on_commit_callbacks):
+    from apps.events.services import EventService
+
+    account, case = _held(cn_tenant)
+    assert register(soul_client(account)).status_code == 201
+    with django_capture_on_commit_callbacks(execute=True):
+        EventService.log_judgment_concluded(case)
+    assert list(PushDelivery.objects.filter(account=account).values_list("kind", flat=True)) == ["judgment_result"]
+
+
 def test_a_second_rejection_after_refiling_is_pushed_again(cn_tenant, god, admin_user, push_on, enqueued,  # noqa: F811
                                                            django_capture_on_commit_callbacks):
     account, case = _held(cn_tenant)
