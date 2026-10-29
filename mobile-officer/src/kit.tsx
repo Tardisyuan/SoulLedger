@@ -34,7 +34,7 @@ export function detailStateOf<T>(r: { data: T | null; error: unknown }): ViewSta
   return viewStateOf(r, () => false, () => false);
 }
 
-/** 「这条已经不在了」: the shared `GoneState`, with the way back from `GoneContext`. */
+/** 「无权查看或已不存在」: the shared `GoneState`, with the way back from `GoneContext`. */
 function GoneView() {
   const gone = useContext(GoneContext);
   const onGone = gone?.onGone;

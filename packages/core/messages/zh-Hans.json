@@ -7684,7 +7684,7 @@
     }
   },
   "state": {
-    "gone_title": "这条已经不在了",
+    "gone_title": "无权查看或已不存在",
     "gone_body": "可能已经删除，或者已经不在你能看的范围里。",
     "gone_back": "回到{{from}}"
   },

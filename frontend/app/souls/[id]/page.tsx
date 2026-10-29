@@ -31,6 +31,8 @@ import {
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
+import { fetchFailureOf } from "@soulledger/core/api/client";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
@@ -581,6 +583,22 @@ export default function SoulDetailPage() {
   const rebirthQuota = useRebirthQuota(soul?.current_state === "DISPOSED" && dispositions.some((d) => !d.is_executed)).data;
 
   // Error state - only show when we have actual data fetch error, not during initial load
+  // 数据范围(B8):灵魂本身读到 404 / 403 是「无权查看或已不存在」,不回显后端那句英文。
+  if (error && !soul && fetchFailureOf(soulQuery.error) === "gone") {
+    return (
+      <PageShell
+        variant="page"
+        title={t("plaque.soul")}
+        backLink={
+          <a href="/souls" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+            {t("souls.detail.back_to_list")}
+          </a>
+        }
+      >
+        <EmptyState title={t("state.gone_title")} reason={t("state.gone_body")} />
+      </PageShell>
+    );
+  }
   if (error && !soul) {
     return (
       <PageShell
@@ -592,7 +610,7 @@ export default function SoulDetailPage() {
           </a>
         }
       >
-        <p className="text-sm text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
+        <p role="alert" className="text-sm text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
       </PageShell>
     );
   }

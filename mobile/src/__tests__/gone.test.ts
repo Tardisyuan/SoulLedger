@@ -1,4 +1,4 @@
-/** 「这条已经不在了」(第四十批 O-c): where 「回到{from}」 points, and which rows a gone detail greys. */
+/** 「无权查看或已不存在」(第四十批 O-c): where 「回到{from}」 points, and which rows a gone detail greys. */
 import { fromRouteOf, landingGoneKey } from "../gone";
 
 describe("fromRouteOf", () => {
