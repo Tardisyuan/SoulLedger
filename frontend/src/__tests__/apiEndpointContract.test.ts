@@ -40,6 +40,18 @@ const OPERATIONS = Object.entries(SCHEMA_PATHS).flatMap(([p, methods]) =>
   methods.map((m) => ({ method: m, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`), path: p })),
 );
 
+// Agreed with the backend but not served yet. Each entry names the batch that will serve it; once the schema
+// has the operation, "pending operations are still unserved" goes red and the entry must be deleted here.
+const PENDING: Record<string, string> = {
+  "get /api/v1/perm/data-scope/resources/": "数据范围 B4 批(local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」)",
+  "get /api/v1/perm/roles/{id}/data-scope/": "数据范围 B4 批(同上)",
+  "put /api/v1/perm/roles/{id}/data-scope/": "数据范围 B4 批(同上)",
+};
+const PENDING_OPS = Object.keys(PENDING).map((k) => {
+  const [method, p] = k.split(" ");
+  return { key: k, method, path: p, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`) };
+});
+
 type Call = { method: string; url: string };
 type Method = (..._args: unknown[]) => unknown;
 let calls: Call[] = [];
@@ -108,10 +120,25 @@ describe("core API methods ask for paths the backend serves", () => {
     for (const [method, fn] of methods) {
       for (const c of await requestsOf(fn, ARGS[`${object}.${method}`])) {
         requested += 1;
-        if (!OPERATIONS.some((op) => op.method === c.method && op.re.test(c.url))) unknown.push(`${method}: ${c.method.toUpperCase()} ${c.url}`);
+        if (OPERATIONS.some((op) => op.method === c.method && op.re.test(c.url))) continue;
+        if (!PENDING_OPS.some((op) => op.method === c.method && op.re.test(c.url))) unknown.push(`${method}: ${c.method.toUpperCase()} ${c.url}`);
       }
     }
     expect(requested).toBeGreaterThan(0);
     expect(unknown).toEqual([]);
+  });
+
+  it("pending operations are still unserved, each says why, and each is still asked for", async () => {
+    const served = (op: (typeof PENDING_OPS)[number]) => {
+      const url = op.path.replace(/\{[^}]+\}/g, PLACEHOLDER);
+      return OPERATIONS.some((o) => o.method === op.method && o.re.test(url));
+    };
+    expect(PENDING_OPS.filter(served).map((op) => op.key)).toEqual([]);
+    expect(Object.entries(PENDING).filter(([, why]) => why.trim().length < 4).map(([k]) => k)).toEqual([]);
+    const asked: Call[] = [];
+    for (const { name, methods } of OBJECTS) {
+      for (const [method, fn] of methods) asked.push(...(await requestsOf(fn, ARGS[`${name.split(":")[1]}.${method}`])));
+    }
+    expect(PENDING_OPS.filter((op) => !asked.some((c) => c.method === op.method && op.re.test(c.url))).map((op) => op.key)).toEqual([]);
   });
 });

@@ -53,7 +53,7 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
   const missingOrgs = (r: DataScopeRule) => r.scope === "DEFINE" && r.orgs.length === 0;
 
   const header = (
-    <h3 id={headingId} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+    <h3 id={headingId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
       {t("permissions.datascope.title")}
     </h3>
   );
@@ -149,6 +149,9 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
       <details className="border-t border-[oklch(var(--color-rule))] pt-2">
         <summary className="cursor-pointer text-sm">{t("permissions.datascope.per_resource")}</summary>
         <div className="mt-2 space-y-3">
+          {resources.isError && (
+            <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">{t("permissions.datascope.load_error")}</p>
+          )}
           {(resources.data ?? []).map((res) => {
             const o = overrideOf(res.key);
             return (

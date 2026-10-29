@@ -1600,6 +1600,11 @@ export class ApiMock {
       if (templates.length) return { status: 400, body: { error: "referenced", code: "role_referenced_by_workflow_templates", templates } };
       return { status: 204, body: null };
     });
+    // 角色抽屉的「数据范围」区(第六十二批 B6;后端接口在 B4 批)。不 mock 时落到默认的分页空页,
+    // 形状不对 —— 2026-10-29 曾让整个抽屉渲染崩掉。
+    this.on("GET", "/perm/data-scope/resources/", [{ key: "soul", label: "灵魂" }]);
+    this.on("GET", "/perm/roles/:id/data-scope/", { default: { scope: "ALL", orgs: [] }, overrides: [] });
+    this.on("PUT", "/perm/roles/:id/data-scope/", (call) => ({ body: call.body }));
 
     // ── Workflow ──
     // WorkflowTemplateViewSet sets pagination_class = None, so the template
