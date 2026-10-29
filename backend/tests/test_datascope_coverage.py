@@ -1,5 +1,5 @@
 """
-Tests for DataScope tenant isolation on remaining ViewSets.
+Tests for data-scope tenant isolation on remaining ViewSets.
 Covers: Reincarnation, Realm, Actor, SoulEvent, WorkflowTemplate.
 
 Every test here lists as a JUDGE, never as ADMIN. Until 2026-09-12 all five

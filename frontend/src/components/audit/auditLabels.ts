@@ -12,7 +12,7 @@ export function auditResourceLabel(t: T, resource: string): string {
 }
 
 /**
- * 权限变更时间线默认看的八类资源，与 `AuditLogViewSet.timeline` 的 `permission_resources` 同一份
+ * 权限变更时间线默认看的六类资源，与 `AuditLogViewSet.timeline` 的 `permission_resources` 同一份
  * (小写，同 `_meta.label_lower`)。
  */
 export const PERMISSION_RESOURCES = [
@@ -21,8 +21,6 @@ export const PERMISSION_RESOURCES = [
   "menu",
   "menubutton",
   "fieldpermission",
-  "rowleveldatascope",
-  "datascope",
   "permission",
 ] as const;
 

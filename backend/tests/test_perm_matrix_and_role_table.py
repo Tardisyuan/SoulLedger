@@ -517,15 +517,13 @@ def test_copy_as_new_role_gets_the_same_grants_under_a_new_code(world, django_ca
 
 
 @pytest.mark.django_db
-def test_copy_also_copies_field_permissions_and_row_level_scopes(world):
-    from apps.perm.models import FieldPermission, RowLevelDataScope
+def test_copy_also_copies_field_permissions(world):
+    from apps.perm.models import FieldPermission
 
     judge = world["judge"]
     FieldPermission.objects.create(role=judge, model_name="Soul", field_name="merit_score",
                                    visible=True, read_only=True, editable=False)
     FieldPermission.objects.create(role=judge, model_name="Soul", field_name="*", visible=False, is_active=False)
-    RowLevelDataScope.objects.create(role=judge, model_name="Soul", civilization="CHINESE",
-                                     filter_conditions={"current_state": "JUDGING"}, scope_type="READ", priority=3)
     other = world["scribe"]
     FieldPermission.objects.create(role=other, model_name="Soul", field_name="name", visible=False)
 
@@ -536,12 +534,7 @@ def test_copy_also_copies_field_permissions_and_row_level_scopes(world):
         return sorted(FieldPermission.objects.filter(role__name=role_name).values_list(
             "model_name", "field_name", "visible", "read_only", "editable", "is_active"))
 
-    def scopes(role_name):
-        return sorted(RowLevelDataScope.objects.filter(role__name=role_name).values_list(
-            "model_name", "civilization", "scope_type", "priority", "is_active", "filter_conditions"), key=str)
-
     assert fields("ASSESSOR") == fields("JUDGE") and len(fields("ASSESSOR")) == 2
-    assert scopes("ASSESSOR") == scopes("JUDGE") and len(scopes("ASSESSOR")) == 1
     # Only the source's rows: SCRIBE's rule is not dragged along.
     assert ("Soul", "name", False, False, True, True) not in fields("ASSESSOR")
     # The source keeps its own rows.

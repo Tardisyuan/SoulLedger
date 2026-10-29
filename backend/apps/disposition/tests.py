@@ -370,7 +370,7 @@ class CreateFromJudgmentTenantTest(TestCase):
     M15/A1 regression coverage: `create_from_judgment` used to call
     `Disposition.objects.create(...)` without a `tenant=` kwarg, leaving the
     row with `tenant=NULL` even though the soul it was created for belonged
-    to a real tenant. A tenant-scoped query (e.g. any DataScope-filtered
+    to a real tenant. A tenant-scoped query (e.g. any data-scope-filtered
     ViewSet, or a service-layer `.filter(tenant=...)`) would silently lose
     that disposition.
     """

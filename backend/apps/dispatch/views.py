@@ -189,7 +189,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         tenant = getattr(self.request, "tenant", None)
         if not tenant:
             return qs.none()
-        # RowLevelDataScope too (BD-10): the mixin this viewset lists never
+        # The data scope too (BD-10): the mixin this viewset lists never
         # runs, because this method replaces it rather than calling super().
         qs = qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
         qs = hide_others_drafts(qs, user)
@@ -826,7 +826,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             qs = qs.filter(
                 Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant)
             ).distinct()
-            # RowLevelDataScope 也要过(rbac-scope 第 9 条):同文件 DispatchRecord 补过,这里覆写后一直没补。
+            # 数据范围也要过(rbac-scope 第 9 条):同文件 DispatchRecord 补过,这里覆写后一直没补。
             return DataScopeFilter.filter_queryset(self.request, qs, CrossTenantJudgment)
         return qs.none()
 

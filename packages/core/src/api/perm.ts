@@ -9,12 +9,9 @@ export interface Permission {
 }
 
 /**
- * RoleSerializer (backend/apps/perm/serializers.py:43).
- *
- * `parent` was declared here but is NOT in the serializer's field list — the
- * Role model has a self-FK (models.py:65) and it is simply never exposed, so
- * the field could only ever read back as undefined. `organization_name` is
- * the one the serializer does add (`source='organization.name'`).
+ * RoleSerializer (backend/apps/perm/serializers.py). A role's data scope is
+ * `dataScopeApi` (RoleDataScope); the old scope / organization / parent
+ * columns went in 数据范围 B7.
  */
 export interface Role {
   id: number;
@@ -22,9 +19,6 @@ export interface Role {
   display_name: string;
   /** 角色表抽屉的「说明」(E-11b)。可空;只 ADMIN 能改。 */
   description: string;
-  scope: string;
-  organization: number | null;
-  organization_name: string | null;
   /**
    * Users currently assigned this role name (active only — User.role is a
    * plain CharField, not a FK, see RoleSerializer.get_user_count). Added for
@@ -169,7 +163,7 @@ export type RoleMembersChange = Schemas["RoleMembersChange"];
 export type RoleMembersChangeResult = Schemas["RoleMembersChangeResult"];
 /** 400 / 403 body of that POST: nobody in the batch was changed; one line per refused user. */
 export type RoleMembersRefused = Schemas["RoleMembersRefused"];
-export type RoleCopyPayload = Pick<Role, "name" | "display_name"> & Partial<Pick<Role, "scope" | "organization">>;
+export type RoleCopyPayload = Pick<Role, "name" | "display_name">;
 
 export const permApi = {
   // Current user's own role permissions (self only — see backend docstring

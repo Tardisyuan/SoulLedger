@@ -19,9 +19,9 @@ export interface RecycleBinEntry {
   id: string | number;
   label: string;
   /**
-   * 原位置, derived from the row's existing fields: a soul's civilization code,
-   * an ORG role's organization name, or a menu's / role's parent name. Null
-   * for a top-level row.
+   * 原位置, derived from the row's existing fields: a soul's civilization code
+   * or a menu's parent name. Null for a top-level row (every role, since
+   * 数据范围 B7 dropped a role's organization and parent).
    */
   location: RecycleBinLocation | null;
   deleted_at: string | null;

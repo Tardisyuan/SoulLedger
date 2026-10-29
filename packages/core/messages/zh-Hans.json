@@ -2741,9 +2741,7 @@
       "rolepermission": "角色权限",
       "menu": "菜单",
       "menubutton": "菜单按钮",
-      "fieldpermission": "字段权限",
-      "rowleveldatascope": "行级数据范围",
-      "datascope": "数据范围"
+      "fieldpermission": "字段权限"
     },
     "timeline": {
       "all_resources": "全部权限资源",

@@ -34,9 +34,9 @@ def _asks_for(view_cls, user, model):
     seen = []
     real = DataScopeFilter.filter_queryset.__func__
 
-    def spy(cls, request, queryset, model_class, scope_type="READ"):
+    def spy(cls, request, queryset, model_class):
         seen.append(model_class)
-        return real(cls, request, queryset, model_class, scope_type)
+        return real(cls, request, queryset, model_class)
 
     raw = APIRequestFactory().get("/")
     raw.tenant = user.tenant

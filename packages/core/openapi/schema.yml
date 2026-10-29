@@ -1322,7 +1322,7 @@ paths:
         权限变更时间线 — 查询权限相关操作的审计日志。
 
         Query params:
-            resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 8 类权限资源
+            resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 6 类权限资源
             action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
@@ -15079,11 +15079,10 @@ paths:
         POST /api/v1/perm/roles/<pk>/copy/
         复制为新角色：新 code、同一组授权（仅 ADMIN）
 
-        Copies the source's RolePermission rows — permission, `conditions` and
-        `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
-        2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-        the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
-        short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+        Copies the source's RolePermission rows — what the matrix shows for it — and
+        (maintainer decision, 2026-09-25) its FieldPermission rows, so a copy sees the
+        same fields the source does, and its RoleDataScope rows (数据范围 B4). Not copied:
+        ADMIN's short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
       parameters:
       - in: path
         name: id
@@ -28838,8 +28837,6 @@ components:
           type: string
         description:
           type: string
-        scope:
-          type: string
       required:
       - display_name
       - name
@@ -28869,7 +28866,6 @@ components:
           type: string
         permission:
           type: string
-        conditions: {}
       required:
       - permission
       - role
@@ -40793,9 +40789,8 @@ components:
     RecycleBinLocation:
       type: object
       description: |-
-        `civilization` (a soul: the value is the civilization code),
-        `organization` (an ORG role: the organization's name) or `parent` (a menu
-        or role under another: the parent's name).
+        `civilization` (a soul: the value is the civilization code) or `parent`
+        (a menu under another: the parent's name). A role has none since 数据范围 B7.
       properties:
         kind:
           $ref: '#/components/schemas/RecycleBinLocationKindEnum'
@@ -40807,12 +40802,10 @@ components:
     RecycleBinLocationKindEnum:
       enum:
       - civilization
-      - organization
       - parent
       type: string
       description: |-
         * `civilization` - civilization
-        * `organization` - organization
         * `parent` - parent
     RecycleBinRestoreRefusal:
       type: object
@@ -41173,21 +41166,6 @@ components:
           maxLength: 100
         description:
           type: string
-        scope:
-          allOf:
-          - $ref: '#/components/schemas/ScopeEnum'
-          description: |-
-            作用域：GLOBAL=全局权限，ORG=组织级权限
-
-            * `GLOBAL` - 全局
-            * `ORG` - 组织级
-        organization:
-          type: integer
-          nullable: true
-          description: ORG角色专属组织，GLOBAL角色此字段为空
-        organization_name:
-          type: string
-          readOnly: true
         user_count:
           type: integer
           readOnly: true
@@ -41216,7 +41194,6 @@ components:
       - is_builtin
       - member_count
       - name
-      - organization_name
       - permission_count
       - update_time
       - user_count
@@ -41233,18 +41210,6 @@ components:
           maxLength: 100
         description:
           type: string
-        scope:
-          allOf:
-          - $ref: '#/components/schemas/ScopeEnum'
-          description: |-
-            作用域：GLOBAL=全局权限，ORG=组织级权限
-
-            * `GLOBAL` - 全局
-            * `ORG` - 组织级
-        organization:
-          type: integer
-          nullable: true
-          description: ORG角色专属组织，GLOBAL角色此字段为空
       required:
       - display_name
       - name
@@ -41612,14 +41577,6 @@ components:
       description: |-
         * `TENANT` - Tenant
         * `GLOBAL` - Global
-    ScopeEnum:
-      enum:
-      - GLOBAL
-      - ORG
-      type: string
-      description: |-
-        * `GLOBAL` - 全局
-        * `ORG` - 组织级
     ScreenEnum:
       enum:
       - applications

@@ -48,21 +48,6 @@ class TestPermissionCacheInvalidation:
         assert cache.get("JUDGE", "soul.read") is None
         assert cache.get("ADMIN", "soul.read") is None
 
-    def test_invalidate_role_clears_descendants(self):
-        """invalidate_role() should clear cache for descendant roles too."""
-        cache = PermissionCache()
-        parent = Role.objects.create(name="PARENT", display_name="Parent")
-        Role.objects.create(name="CHILD", display_name="Child", parent=parent)
-        cache.set("PARENT", "test.inherit", True)
-        cache.set("CHILD", "test.inherit", True)
-
-        cache.invalidate_role("PARENT")
-
-        # Absence, not just the parent's: this is the "cascades to
-        # descendants" behavior `get_descendants()` exists for.
-        assert cache.get("PARENT", "test.inherit") is None
-        assert cache.get("CHILD", "test.inherit") is None
-
     def test_invalidate_role_does_not_clear_unrelated_role(self):
         """A control case: invalidating one role must not clear another's cache."""
         cache = PermissionCache()
