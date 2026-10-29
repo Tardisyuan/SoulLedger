@@ -294,6 +294,9 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     `--e2e=chromium,mobile-chrome`(列表)。镜像 `sl-gates-e2e:1` = `sl-gates-all:1` + Playwright 1.63 的 chromium / firefox;
     先 `next build`,4 个 worker、`--retries=1`(重试才过的按名字报 flaky,不藏),`--reporter=line`(html 报告器失败时会起服务等人看，
     在容器里会挂住)。没有 `GATES_REMOTE` 就拒绝，不在本机跑。日志在 unRAID 的 `sl-gates/tmp/<checkout>/e2e-<project>.log`。
+    **2026-10-29 起 E2E 有自己的同步树(`work/<checkout>-<哈希>-e2e`)和自己的锁(`e2e.lock`,容器默认 8 核 / 16 GB,
+    `GATES_REMOTE_E2E_CPUS` / `GATES_REMOTE_E2E_MEMORY` 覆盖)**,可以和一轮门禁同时跑,不再排在 `run.lock` 后面。
+    安卓调试包与 Metro 也能放到那台上:`scripts/mobile-remote.sh`(本机只剩 adb 装包,`67fa9e90` / `7d4c36e7`)。
     实测(10-28,同一棵树):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
     (本机 10-27:3.6 / 7.9 / 4.5 分钟)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
     所以用一次重试并点名，不加 skip。

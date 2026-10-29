@@ -76,6 +76,8 @@
   (进程内缓存,保存时失效);env 仍作初始值。
 - 接口在 `/api/v1/assist-admin/`,官员令牌 + **只许 ADMIN**(`role == "ADMIN"`,不走可授予的权限码,
   以免被「权限」页误授给别人)。
+  **2026-10-29 起只许没绑殿的 ADMIN**(`is_tenant_exempt`,`admin_views.py::IsAdminRole`);绑殿的 ADMIN 403,
+  唯一例外是每殿开关 `halls/`:它只看得到、只改得了本殿那一行(`IsAnyAdmin`)。
 - 前端新页面(路由待 Design 定),需要 Design 出稿。
 - 门禁:配置保存的审计不含 key(断言缺席);非 ADMIN 403(含 MODERATOR);env 总开关为假时页面开关无效;
   key 在库里是密文(直接查表断言不含明文);评测不绕过数据范围。

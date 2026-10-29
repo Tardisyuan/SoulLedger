@@ -41,7 +41,7 @@ v1 候选(都已有现成的只读接口):
 仓库里**没有**任何面向官员的帮助内容(调研结论),语料要从零写。按角色拆条目,
 `screens` 取前端路由段(`judgment`、`workflow`、`dispatch`……)。
 MODERATOR 不持有 `workflow.approve` / `workflow.advance` / `user.manage`
-(`perm/checker.py:23-25`)—— 这种「为什么我点不了」是高频问题,答案要来自 `check_permission`,
+(`perm/checker.py`:`user.manage` 按角色名禁授;批准 / 推进自 2026-10-29 起按能力禁授 —— 持设计类码的角色不能持审批类码)—— 这种「为什么我点不了」是高频问题,答案要来自 `check_permission`,
 不来自语料措辞(与灵魂端 MUST-3 同一条)。
 
 ## 3. 数据与接口
