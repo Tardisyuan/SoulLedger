@@ -38,8 +38,9 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
    services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
 5. Commit as `type(scope): description` (format and type list: `CLAUDE.md`, section "Git")
 6. Run the push gates with `scripts/run-gates.sh` (what `pre-push` runs; see `CLAUDE.md`), then push and
-   create a Pull Request. CI (backend, frontend, mobile, officer and e2e jobs in `ci.yml`) is
-   `workflow_dispatch`-only, so nothing runs on its own — the local gates are the check
+   create a Pull Request. CI (backend, frontend, mobile, officer and e2e jobs in `ci.yml`) does
+   not run on pushes or pull requests — only daily, on a `v*` tag, and by hand — so the
+   local gates are the per-push check
 
 ## Code Conventions
 

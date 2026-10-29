@@ -59,7 +59,8 @@ class ErrorResponseSerializer(serializers.Serializer):
 #: type. The committed schema was generated on SQLite; CI runs pytest against
 #: PostgreSQL (`.github/workflows/ci.yml`), so
 #: `test_committed_schema_matches_the_backend` fails there — 32 components, 278
-#: lines. Nobody has seen it because that workflow is `workflow_dispatch` only.
+#: lines. Nobody saw it because that workflow was `workflow_dispatch` only (until
+#: 2026-10-30; it now runs daily, on `v*` tags and by hand).
 #:
 #: Zero is deliberately absent from the lower bounds: `PositiveIntegerField`
 #: reports 0 on both engines, so it causes no drift, and it is a real fact about

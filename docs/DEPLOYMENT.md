@@ -365,6 +365,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
 | `BACKUP_OFFSITE_RETENTION_DAYS` | 异地超过这么多天的 `soulledger_*` 被 `rclone delete --min-age` 删掉;`0` = 永不删(交给对象存储的生命周期规则) | 90 |
 | `OPS_ALERT_WEBHOOK_URL` | 告警出口。备份 / 恢复演练失败、定时任务首次失败与逾期都 POST `{"text": …, "content": …}`(Slack / Mattermost 读 `text`,Discord 读 `content`) | 不设 = 只打印 / 只站内通知 |
 
+- **异地目标还没定**(用户 2026-10-30:先不定)。没设 `BACKUP_OFFSITE_REMOTE` 时备份只在本机 `./backups/`,机器坏了备份一起坏。
 - rclone 的远端配置放在 compose 目录的 `./rclone/rclone.conf`(只读挂进容器,已在 `.gitignore`),
   或者用 `RCLONE_CONFIG_<名字>_*` 环境变量。**是 copy 不是 sync**:本机卷被清空后下一次备份不会把异地也清空。
 - 异地失败时本机备份照样留着,脚本非零退出并告警;healthcheck 只看本机文件,所以异地失败**只靠告警**被看见。
@@ -392,14 +393,14 @@ $DC run --rm --no-deps --entrypoint bash backup /scripts/restore-drill.sh /backu
 
 ### RPO / RTO
 
-目标(现在没有生产,是上线时的起点,不是承诺):
+目标(现在没有生产;**用户 2026-10-30 接受 RPO 24 小时 / RTO 2 小时**作为上线时的目标):
 
 | | 目标 | 依据 |
 |--|------|------|
 | RPO(最多丢多久的数据) | **24 小时** | 每天 02:00 一份全量 dump;healthcheck 在最新一份超过 26 小时时转 unhealthy |
 | RTO(多久恢复服务) | **2 小时** | 停服务 + dropdb/createdb + 恢复(演练脚本打印实测耗时)+ 起服务 + 冒烟;媒体与聊天卷另计解包时间 |
 
-RPO 要比 24 小时更短,做法是 **WAL 归档 + 时间点恢复(PITR)**,这里只写做法,**现在不配**:
+RPO 要比 24 小时更短,做法是 **WAL 归档 + 时间点恢复(PITR)**,这里只写做法,**现在不配,上线前再配**(用户 2026-10-30 定):
 
 1. `db` 服务加 `command: postgres -c wal_level=replica -c archive_mode=on -c archive_timeout=300 -c archive_command='…'`,
    `archive_command` 把每段 WAL 送到异地(用 WAL-G / pgBackRest 之类的工具,不要手写 `cp`:要处理失败重试与校验)。
@@ -487,16 +488,16 @@ backend / celery / celery-beat 共用本机构建的 `soulledger-backend` 镜像
 | 灵魂端 / 官员端推送投递 | `PUSH_DELIVERY_RETENTION_DAYS`(90) | 灵魂端不含排队 / 发送中 |
 | 停用的推送设备 | `INACTIVE_PUSH_DEVICE_RETENTION_DAYS`(30) | 按最后出现时间 |
 | 过期的「记住此设备」 | `EXPIRED_MFA_DEVICE_GRACE_DAYS`(1) | 过期后 N 天 |
-| 助手用量(`AssistUsage`) | `ASSIST_USAGE_RETENTION_DAYS`(730) | 用量页与月度上限只读当月 |
+| 助手用量(`AssistUsage`) | `ASSIST_USAGE_RETENTION_DAYS`(730,用户 2026-10-30 定) | 用量页与月度上限只读当月 |
 | Django 会话 | —— | 已过期的(admin 后台的会话) |
 | 朋友圈互动消息 | —— | 90 天(产品文案写死) |
 
 另有各自的任务:审计 / 登录日志(`AUDIT_LOG_RETENTION_DAYS` 365 / `LOGIN_LOG_RETENTION_DAYS` 180,按租户)、
 土地神死亡登记请求(`DEATH_SYNC_REQUEST_RETENTION_DAYS` 90,按租户,`death_sync.cleanup_old_requests_for_tenant`;
-此前写死在任务表参数里)、定时任务执行记录(`SCHEDULER_*`)、灵魂登录记录(90 天)、助手会话(30 天)、个人资料导出(7 天)。
+此前写死在任务表参数里;用户 2026-10-30 定 90 天后删除 —— 它是外部系统的入站请求记录,不是账号数据)、定时任务执行记录(`SCHEDULER_*`)、灵魂登录记录(90 天)、助手会话(30 天)、个人资料导出(7 天)。
 
 **永不删**(用户 2026-10-30 定为保留):`SoulEvent` 事件日志、审判、灵魂、账号,以及其它业务记录。
-它们的归档见 `docs/ARCHITECTURE-annual-archive.md`(设计稿,待定)。
+它们的归档见 `docs/ARCHITECTURE-annual-archive.md`(设计稿;用户 2026-10-30 定**上线前再做**)。
 
 ## 密钥轮换(2026-10-30)
 
@@ -543,4 +544,4 @@ backend、celery、celery-beat 三个容器读同一组变量,一起重建。
 3. 停用旧 webhook(`PATCH {"is_active": false}`,投递历史保留),接收方删掉旧密钥。
 
 要在一个 webhook 上原地轮换(新旧密钥并存一段时间、同时发两个签名),需要新字段、迁移、接口与前端按钮,
-没有实现,列为待定。
+没有实现;用户 2026-10-30 定**上线前再做**。
