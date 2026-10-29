@@ -4109,7 +4109,7 @@
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
       "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
-      "approval_cancelled": "The approval workflow was cancelled with the joint judgment and never finished: it cannot be executed as is."
+      "approval_cancelled": "The approval workflow was cancelled with the joint judgment and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
     }
   },
   "reincarnation": {
@@ -6394,6 +6394,7 @@
       "request_closed": "This request has already been handled",
       "not_home": "Only the home civilization can do this",
       "not_requester": "Only the civilization that filed it can withdraw it",
+      "not_original_judge": "A reopening request is decided by the original judge; when they are no longer on duty, by an officer of the home hall who can reassign cases",
       "node_not_pending": "A stop to be removed has already begun",
       "eternal_not_last": "An eternal term must be the last stop",
       "soul_state": "The soul's current state does not allow the plan to close",

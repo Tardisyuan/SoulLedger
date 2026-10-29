@@ -18,7 +18,7 @@ from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.sentence_plan import requests as plan_requests
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestStatus
 from apps.sentence_plan.serializers import (
@@ -97,7 +97,7 @@ REQUEST_ID = OpenApiParameter("request_id", OpenApiTypes.UUID, OpenApiParameter.
                               description="The SentencePlanRequest on this plan.")
 
 
-class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
+class SentencePlanViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ReadOnlyModelViewSet):
     # 读计划是读案子的一部分:`judgment.read`(ADMIN / JUDGE / MODERATOR)。提 / 决定 / 撤回请求是
     # 对案子的动作:`judgment.execute`,与 `conclude` 同一个码(§2.5)。撤销整份计划另有
     # `sentence_plan.cancel`(ADMIN / MODERATOR,同 `dispatch.return` 的持有者)。

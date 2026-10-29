@@ -3673,6 +3673,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/reopen-cancelled/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Reopen a concluded original case whose approval flow a cancelled cross-realm judgment ended.
+         *
+         *     Such a disposition is held at `approval_cancelled` with no way forward: the flow did not pass, so it does
+         *     not execute, and nobody refused it, so it did not reopen. `judgment.assign` (the hall lead) withdraws the
+         *     conclusion exactly as a refused flow does (`weighing.reweigh_after_rejection`) and a new case is opened;
+         *     201 answers that case. 409 `not_cancelled` when the case's own flow did not end CANCELLED; 409
+         *     `cannot_reopen` when the soul was already placed (then reopen or appeal as before).
+         */
+        post: operations["v1_judgment_reopen_cancelled_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/request-reassign/": {
         parameters: {
             query?: never;
@@ -9054,7 +9079,7 @@ export interface paths {
          *     The same serializer and the same validation as `add_record` — dates against the soul,
          *     the clause/count pair, the statute against the soul's civilization — with the record as
          *     instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
-         *     statute changes. Gated by `soul.update`, like `add_record`.
+         *     statute changes. Gated by `ledger.manage`, like `add_record`; 409 once a concluded case admitted it.
          */
         patch: operations["v1_souls_records_partial_update"];
         trace?: never;
@@ -13098,6 +13123,8 @@ export interface components {
             appeals_returned_to_pool: number;
             city_gods: string[];
             letters: number;
+            /** @description 操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下 */
+            letters_kept: number;
             problems: components["schemas"]["HandoverPreviewProblemsEnum"][];
         };
         /**
@@ -13116,6 +13143,8 @@ export interface components {
             appeals_returned_to_pool: number;
             city_gods: number;
             letters: number;
+            /** @description 操作人不持 soul_inbox.reply:这些书信没有移交,留在交出人名下 */
+            letters_kept: number;
         };
         /** @description One officer a batch deactivation left active because they still hold open work. */
         HeldOfficer: {
@@ -27936,6 +27965,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
+                };
+            };
+        };
+    };
+    v1_judgment_reopen_cancelled_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
                 };
             };
             409: {
