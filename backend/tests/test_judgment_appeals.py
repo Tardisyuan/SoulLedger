@@ -102,6 +102,22 @@ def test_at_most_two_rounds_and_a_withdrawn_one_counts(case):
     assert JudgmentAppeal.objects.filter(judgment=case["judgment"]).count() == 2
 
 
+def test_a_previous_lifes_appeal_cannot_be_withdrawn(case):
+    """RBAC 严查 2026-10-29 L6:`withdraw` 此前只按 soul_id,前世判决上仍开着的申诉也能撤。
+    现在与 `appeal_refusal` 同一条:前世只读,403 `past_life_read_only`。"""
+    filed = _file(case)
+    assert filed.status_code == 201
+    account = case["account"]
+    type(account).objects.filter(pk=account.pk).update(cycle=case["judgment"].cycle + 1)
+
+    refused = case["client"].post(f"{MINE}{filed.data['id']}/withdraw/")
+    assert refused.status_code == 403 and refused.data["code"] == "past_life_read_only", refused.data
+    assert JudgmentAppeal.objects.get(pk=filed.data["id"]).status == "PENDING"
+
+    type(account).objects.filter(pk=account.pk).update(cycle=case["judgment"].cycle)
+    assert case["client"].post(f"{MINE}{filed.data['id']}/withdraw/").status_code == 200
+
+
 def test_an_open_judgment_or_another_souls_judgment_is_refused(case, cn_tenant):
     other_account, other_client = ready_soul(cn_tenant, name="旁人")
     response = other_client.post(MINE, {"judgment": str(case["judgment"].pk), "reason": "x"}, format="json")
