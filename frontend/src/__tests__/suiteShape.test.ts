@@ -135,6 +135,8 @@ const COLLECTED_FILES = [
   "PageSection.test.tsx",
   "PageShell.test.tsx",
   "Pagination.test.tsx",
+  // 2026-10-29 第 8 条:重置密码给一次性链接;对管理员要操作人自己的两步验证码。
+  "PasswordResetDialog.test.tsx",
   "formatAsOf.test.ts",
   "PermissionConfigTransfer.test.tsx",
   "PermissionDenied.test.tsx",
@@ -249,6 +251,8 @@ const COLLECTED_FILES = [
   "UsersPage.multiRole.test.tsx",
   "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
+  // 2026-10-29 第 10 条:服务端推的 permission.refreshed 交给 TenantContext 重取权限。
+  "WebSocketContext.permissionRefresh.test.tsx",
   "WebSocketContext.sessionResume.test.tsx",
   "WebSocketContext.test.tsx",
   "WebSocketContext.tokenRefresh.test.tsx",

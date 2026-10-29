@@ -364,4 +364,12 @@ export interface PlatformAdapter {
    * `baseUrl`.
    */
   wsUrl?: string;
+  /**
+   * The refresh token lives in an httpOnly cookie the API sets, not in `secure` (web only; 2026-10-29
+   * decision 16). When true, every request carries `withCredentials` and `X-Auth-Cookie: 1`, the server
+   * leaves `refresh` out of its answers, and refresh / logout / change-password read the cookie. Script
+   * never sees the token; `secure` then holds only a "signed in" marker for the host's own routing. The
+   * apps leave this unset and keep the token in their keychain.
+   */
+  refreshCookie?: boolean;
 }

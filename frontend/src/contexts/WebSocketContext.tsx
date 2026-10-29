@@ -53,7 +53,7 @@ const WebSocketContext = createContext<WebSocketContextValue>({
 // ── Provider ─────────────────────────────────────────────────────────
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { user } = useTenant();
+  const { user, refreshFromServer } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   // As a string: `AuthUser.id` is a number and the social payload's
@@ -131,6 +131,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       onSessionEnded: () => {
         authApi.profile().catch(() => {});
       },
+      // The server pushes this after the user's role or a grant of their role changed (decision 10): the
+      // socket's own gate is already updated server-side; re-read the permissions the pages gate on.
+      onPermissionsRefreshed: () => {
+        refreshFromServer?.();
+      },
     });
 
     clientRef.current = client;
@@ -140,7 +145,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       client.disconnect();
       clientRef.current = null;
     };
-  }, [user, handleNotification, handleWorkflowEvent, handleGenericEvent]);
+  }, [user, handleNotification, handleWorkflowEvent, handleGenericEvent, refreshFromServer]);
 
   /**
    * A suspended session coming back re-opens the socket.

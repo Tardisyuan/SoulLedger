@@ -220,30 +220,52 @@ export const handoverApi = {
   commit: (from: number, to: number) => api.post<HandoverResult>("/judgment/handover/", { from, to }),
 };
 
+/**
+ * The caller's own second factor, required when the target is another ADMIN (2026-10-29 decision 8): only the
+ * hall-less ADMIN may reset / deactivate / delete / edit another administrator, and each such request carries
+ * a current 6-digit code (`totp`) or one unused recovery code (`recovery`, spent). Without it the server answers
+ * 403 `second_factor_required`; a wrong code is 400 (with `remaining_attempts`), five wrong lock it (429).
+ */
+export interface SecondFactorProof {
+  mfa_method: "totp" | "recovery";
+  mfa_code: string;
+}
+
+/** 200 body of `reset_password`: a one-time link (24 h) to set a new password, for the administrator to hand over. */
+export interface PasswordResetLink {
+  link: string;
+  expires_in: number;
+}
+
 export const usersApi = {
   /** `user.manage`. 201 = new, 200 = re-sent to a still-pending address. 400 `{code, field}`. */
   invite: (data: OfficerInviteInput) => api.post<User>("/users/invite/", data),
   list: (params?: Record<string, string | number | undefined>) => api.get<PaginatedResponse<User>>("/users/", { params }),
   get: (id: string) => api.get<User>(`/users/${id}/`),
   create: (data: CreateUserInput) => api.post<User>("/users/", data),
-  update: (id: string, data: UpdateUserInput) => api.patch<User>(`/users/${id}/`, data),
-  delete: (id: string) => api.delete<void>(`/users/${id}/`),
+  update: (id: string, data: UpdateUserInput, proof?: SecondFactorProof) =>
+    api.patch<User>(`/users/${id}/`, { ...data, ...proof }),
+  /** Soft delete; same closing as deactivate (signed out everywhere). 400 `cannot_delete_self`, 409 `officer_has_open_work`. */
+  delete: (id: string, proof?: SecondFactorProof) => api.delete<void>(`/users/${id}/`, proof ? { data: proof } : undefined),
   activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
   /** An officer still holding open work is a 409 `officer_has_open_work` (`openWorkOf`) unless `handoverTo` names an
    *  active officer of the same hall: then the handover and the deactivation are one transaction (400 `invalid_target`,
    *  409 `handover_blocked` with `problems`, as the handover route). */
-  deactivate: (id: string, handoverTo?: number) =>
-    api.post<User>(`/users/${id}/deactivate/`, handoverTo == null ? {} : { handover_to: handoverTo }),
-  assignRoles: (id: string, data: AssignRolesInput) => api.post<User>(`/users/${id}/assign_roles/`, data),
+  deactivate: (id: string, handoverTo?: number, proof?: SecondFactorProof) =>
+    api.post<User>(`/users/${id}/deactivate/`, { ...(handoverTo == null ? {} : { handover_to: handoverTo }), ...proof }),
+  assignRoles: (id: string, data: AssignRolesInput, proof?: SecondFactorProof) =>
+    api.post<User>(`/users/${id}/assign_roles/`, { ...data, ...proof }),
   batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
   batchDeactivate: (userIds: string[]) => api.post<UserBatchDeactivateResult>("/users/batch_deactivate/", { user_ids: userIds }),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
-  /** `user.manage`. 200 `{password}`: a random password, shown once; the officer must change it at next login and
-   *  every other session of theirs is ended. */
-  resetPassword: (id: string | number) => api.post<{ password: string }>(`/users/${id}/reset_password/`),
+  /** `user.manage`. The old password is void at once and every session ends; 200 `{link, expires_in}`: a one-time
+   *  link (24 h) the administrator hands over, on which the officer sets a password. No password is ever returned. */
+  resetPassword: (id: string | number, proof?: SecondFactorProof) =>
+    api.post<PasswordResetLink>(`/users/${id}/reset_password/`, proof ?? {}),
   /** ADMIN. Clears the authenticator, recovery codes and 「不再询问」 devices, revokes every refresh token;
    *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
-  resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),
+  resetMfa: (id: string | number, reason: string, proof?: SecondFactorProof) =>
+    api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason, ...proof }),
   /** The import's first step: same row checks as `import`, nothing written. */
   // `dry_run` rides in the query: core has no DOM types, so the FormData it is handed can only be passed through.
   importPreview: (data: FormData) =>

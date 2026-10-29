@@ -1,5 +1,12 @@
 import { api } from "./client";
-import { ACCESS_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "../platform/index";
+import {
+  ACCESS_TOKEN_KEY,
+  getRefreshToken,
+  platform,
+  setAccessToken,
+  setRefreshToken,
+  usesRefreshCookie,
+} from "../platform/index";
 import type { components } from "./generated/schema";
 import { trackCredentialChange } from "./credentialChange";
 
@@ -304,7 +311,8 @@ export const authApi = {
   // logout_view (backend/apps/authentication/views.py) blacklists whatever
   // refresh token is in the body; without one it silently no-ops and the
   // token stays valid. Read it from the same cookie the login flow writes to.
-  logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getRefreshToken() }),
+  // On web the token is the httpOnly cookie (sent by the interceptor's credentials); the marker is not a token.
+  logout: () => api.post<{ detail: string }>("/auth/logout/", usesRefreshCookie() ? {} : { refresh: getRefreshToken() }),
   profile: () => api.get<AuthProfile>("/auth/profile/"),
   updateProfile: (data: object) => api.patch<AuthProfile>("/auth/profile/", data),
   /**
@@ -334,13 +342,13 @@ async function changePasswordNow(
     const data = typeof oldPasswordOrData === "string"
       ? { old_password: oldPasswordOrData, new_password: newPassword! }
       : oldPasswordOrData;
-    const refresh = getRefreshToken();
+    const refresh = usesRefreshCookie() ? null : getRefreshToken();
     const res = await api.post<ChangePasswordResponse>("/auth/change-password/", {
       ...data,
       ...(refresh ? { refresh } : {}),
       ...(pushToken ? { token: pushToken } : {}),
     });
-    if (res.data.access && res.data.refresh) {
+    if (res.data.access && (res.data.refresh || usesRefreshCookie())) {
       setAccessToken(res.data.access);
       platform().persistent.remove(ACCESS_TOKEN_KEY); // as `rotateRefreshToken`: no stale 24 h cookie
       setRefreshToken(res.data.refresh);

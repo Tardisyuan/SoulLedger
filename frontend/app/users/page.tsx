@@ -19,6 +19,7 @@ import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { UserImportDialog } from "@/src/components/users/UserImportDialog";
 import { OfficerInviteDialog } from "@/src/components/users/OfficerInviteDialog";
 import { OfficerHandoverDialog, previewTotal } from "@/src/components/users/OfficerHandoverDialog";
+import { useSecondFactor } from "@/src/components/users/SecondFactorPrompt";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -150,9 +151,12 @@ function UsersRoute() {
   };
 
   // Toggle user status mutation
+  // Deactivating another administrator needs the caller's own code (decision 8).
+  const [toggleTarget, setToggleTarget] = useState("");
+  const secondFactor = useSecondFactor(toggleTarget);
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      isActive ? usersApi.activate(id) : usersApi.deactivate(id),
+      isActive ? usersApi.activate(id) : secondFactor.run((proof) => usersApi.deactivate(id, undefined, proof)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       showToast(t("users.status_updated"), "success");
@@ -189,6 +193,7 @@ function UsersRoute() {
         /* 预览不可用 = 交给后端判断 */
       }
     }
+    setToggleTarget(user.username);
     toggleStatusMutation.mutate(
       { id: String(user.id), isActive: false },
       { onError: (error) => openWorkOf(error) && setDeactivateWith(user) },
@@ -502,6 +507,7 @@ function UsersRoute() {
 
       {impersonateUser ? <ImpersonateDialog user={impersonateUser} onClose={() => setImpersonateUser(null)} /> : null}
       {resetPasswordUser ? <PasswordResetDialog user={resetPasswordUser} onClose={() => setResetPasswordUser(null)} /> : null}
+      {secondFactor.prompt}
       {resetMfaUser ? <MfaResetDialog user={resetMfaUser} onClose={() => setResetMfaUser(null)} /> : null}
     </PageShell>
   );

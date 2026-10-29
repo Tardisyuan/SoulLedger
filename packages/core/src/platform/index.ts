@@ -169,8 +169,18 @@ export function getRefreshToken(): string | null {
   return adapter.secure.get(REFRESH_TOKEN_KEY);
 }
 
-export function setRefreshToken(value: string): void {
-  adapter.secure.set(REFRESH_TOKEN_KEY, value);
+export function setRefreshToken(value: string | undefined): void {
+  // Cookie mode: the answer carries no token (it is in the httpOnly cookie); the host stores its marker.
+  if (adapter.refreshCookie) {
+    adapter.secure.set(REFRESH_TOKEN_KEY, "1");
+    return;
+  }
+  if (value) adapter.secure.set(REFRESH_TOKEN_KEY, value);
+}
+
+/** True when the refresh token is an httpOnly cookie the script cannot read (web). See `PlatformAdapter.refreshCookie`. */
+export function usesRefreshCookie(): boolean {
+  return adapter.refreshCookie === true;
 }
 
 /**

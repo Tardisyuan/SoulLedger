@@ -52,46 +52,8 @@ const session: KeyValueStore = {
   },
 };
 
-/**
- * How long the refresh cookie lives — read off the token itself.
- *
- * 「在此设备上保持登录 30 天」 is a claim in the refresh token (`remember`,
- * `backend/apps/authentication/tokens.py`), not a flag this adapter is told
- * about. Reading it here is what keeps the cookie right after a silent
- * refresh: `rotateRefreshToken` writes the rotated token through this same
- * `set`, knowing nothing about how the operator signed in, and the rotated
- * token carries the claim forward.
- *
- * - remembered: `max-age` = the token's own remaining lifetime (30 days on a
- *   fresh token), so cookie and token expire together;
- * - otherwise: no `max-age` and no `expires` — a session cookie, gone when the
- *   browser session ends. The token's own 7-day `exp` stays the upper bound
- *   the server enforces. Until this, every sign-in was a 7-day cookie, i.e.
- *   everybody was "remembered" and the checkbox would have had nothing to
- *   turn on.
- *
- * Only the lifetime is decided here; `path`, `SameSite=Lax` and the
- * protocol-keyed `Secure` in `set` below are unchanged. The payload is read,
- * never trusted: a token this cannot parse gets the session lifetime, the
- * shorter of the two.
- */
-export function refreshCookieLifetime(token: string, nowSeconds = Math.floor(Date.now() / 1000)): string {
-  const claims = readJwtClaims(token);
-  if (claims?.remember !== true || typeof claims.exp !== "number") return "";
-  return `; max-age=${Math.max(0, Math.floor(claims.exp - nowSeconds))}`;
-}
-
-function readJwtClaims(token: string): Record<string, unknown> | null {
-  const payload = token.split(".")[1];
-  if (!payload || typeof atob === "undefined") return null;
-  try {
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const claims: unknown = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")));
-    return claims && typeof claims === "object" ? (claims as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
+/** How long the signed-in marker cookie lives (seconds): the longest a refresh token can (「保持登录 30 天」). */
+export const MARKER_MAX_AGE = 30 * 24 * 3600;
 
 /**
  * The persistent half: a cookie, plus `localStorage` on the read path.
@@ -147,20 +109,21 @@ const persistent: KeyValueStore = {
       return;
     }
     if (typeof document === "undefined") return;
-    // `Secure` wherever `Secure` can work — not unconditional. Secure cookies
-    // are dropped on plain http, which is what `npm run dev` and the Playwright
-    // suite serve, so hardcoding it would log everyone out locally while
-    // looking like a security fix. Keyed on the page's own protocol instead.
+    // 2026-10-29 (decision 16): THE TOKEN IS NO LONGER HERE. The API sets it as an httpOnly, SameSite=Strict
+    // cookie on its own origin (`backend/apps/authentication/refresh_cookie.py`), which no script can read.
+    // What this cookie holds now is only the marker "1" — signed in — for `proxy.ts`, which runs on this
+    // origin and cannot see the API's cookie. Whatever value a caller passes, the token is never written:
+    // a marker that leaked would say nothing an attacker could use.
     //
-    // `HttpOnly` is deliberately absent and has to be: the API is cross-origin
-    // and takes its credential in an `Authorization` header, so JS must be able
-    // to read this value. That is a property of the auth design, not an
-    // oversight.
+    // 30 days, the longest a session can last: if the real cookie dies first, the next API call's refresh
+    // fails and `endSession` removes this marker. `Secure` wherever `Secure` can work (plain-http dev and
+    // Playwright would drop it).
     const secure =
       typeof location !== "undefined" && location.protocol === "https:"
         ? "; Secure"
         : "";
-    document.cookie = `${key}=${value}; path=/${refreshCookieLifetime(value)}; SameSite=Lax${secure}`;
+    void value;
+    document.cookie = `${key}=1; path=/; max-age=${MARKER_MAX_AGE}; SameSite=Lax${secure}`;
   },
   remove(key) {
     if (typeof document === "undefined") return;
@@ -204,6 +167,8 @@ export const webPlatform: PlatformAdapter = {
   // silently — it has to write this line, and writing it is where the decision
   // gets made.
   secure: persistent,
+  // The refresh token is an httpOnly cookie the API sets (decision 16); see `persistent.set` above.
+  refreshCookie: true,
   // The one place `NEXT_PUBLIC_API_URL` is read. It is a Next.js build-time
   // variable, so it belongs to this host and not to `@soulledger/core`, which
   // read it directly in three modules and fell back to localhost when it was

@@ -1955,7 +1955,7 @@ function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": request.headers()["origin"] ?? "*",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "authorization,content-type",
+    "Access-Control-Allow-Headers": "authorization,content-type,x-auth-cookie,x-request-id,idempotency-key,x-imp-page",
     // login and 2FA verify send `withCredentials` (the remembered-device cookie), and the backend
     // answers with CORS_ALLOW_CREDENTIALS = True. Without this header the browser drops the response.
     "Access-Control-Allow-Credentials": "true",

@@ -30,12 +30,15 @@ export default function AcceptInvitePage() {
 
   // 严格模式下 effect 跑两遍:第一遍读到凭据并抹掉地址栏,第二遍读到空参数会误判成失效(同 reset-password)。
   const read = useRef(false);
+  const [reset, setReset] = useState(false);
   useEffect(() => {
     if (read.current) return;
     read.current = true;
     const params = new URLSearchParams(window.location.search);
     const uid = params.get("uid");
     const token = params.get("token");
+    // An administrator's password reset lands here too (decision 8: a one-time link instead of a password).
+    setReset(params.get("kind") === "reset");
     if (uid && token) {
       setCredential({ uid, token });
       setPhase("form");
@@ -80,15 +83,15 @@ export default function AcceptInvitePage() {
 
   const link = "inline-flex min-h-11 items-center text-xs text-[oklch(var(--color-ink))] underline underline-offset-2";
   const box = "rounded-control border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-4 py-3 text-sm";
-  const note = <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.link_note")}</p>;
+  const note = <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t(reset ? "acceptInvite.reset_link_note" : "acceptInvite.link_note")}</p>;
 
   return (
     <LoginShell narrowStatute={false} back={{ href: "/login", label: t("auth.back_to_login") }}>
       {phase === "reading" ? null : phase === "invalid" ? (
         <div className="flex flex-col gap-4" data-testid="accept-invite-invalid">
-          <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("acceptInvite.invalid_title")}</h1>
+          <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t(reset ? "acceptInvite.reset_invalid_title" : "acceptInvite.invalid_title")}</h1>
           <div role="alert" className={box}>
-            <p className="text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.invalid_body")}</p>
+            <p className="text-[oklch(var(--color-ink-muted))]">{t(reset ? "acceptInvite.reset_invalid_body" : "acceptInvite.invalid_body")}</p>
           </div>
           {note}
         </div>
@@ -106,7 +109,7 @@ export default function AcceptInvitePage() {
         <form onSubmit={submit} noValidate className="flex w-full flex-col gap-4" data-testid="accept-invite-form" aria-busy={loading || undefined}>
           <div>
             <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("acceptInvite.title")}</h1>
-            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("acceptInvite.subtitle")}</p>
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t(reset ? "acceptInvite.reset_subtitle" : "acceptInvite.subtitle")}</p>
           </div>
           <PasswordRuleFields
             rules={rules}

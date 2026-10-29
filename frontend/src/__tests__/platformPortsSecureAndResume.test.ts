@@ -126,13 +126,14 @@ describe("the refresh token is routed to `secure`", () => {
 });
 
 describe("web behaviour is unchanged by the split", () => {
-  it("still round-trips the refresh token through the cookie jar", () => {
+  it("keeps only a signed-in marker in the cookie jar; the token itself is the API's httpOnly cookie", () => {
     installWebPlatform();
 
     setRefreshToken("WEB-REFRESH");
 
-    expect(document.cookie).toContain(`${REFRESH_TOKEN_KEY}=WEB-REFRESH`);
-    expect(getRefreshToken()).toBe("WEB-REFRESH");
+    expect(document.cookie).toContain(`${REFRESH_TOKEN_KEY}=1`);
+    expect(document.cookie).not.toContain("WEB-REFRESH");
+    expect(getRefreshToken()).toBe("1");
   });
 });
 

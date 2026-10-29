@@ -216,10 +216,14 @@ describe('API Client — @soulledger/core/api', () => {
         config: { _retry: false, url: '/souls/', headers: {}, method: 'get' },
       });
 
+      // Web (decision 16): the cookie holds only the signed-in marker; the token is the API's httpOnly
+      // cookie, so the body is empty and the request carries credentials + the opt-in header.
       expect(axios.post).toHaveBeenCalledWith(
         expect.stringContaining('/auth/refresh/'),
-        { refresh: 'my-refresh-token' },
+        {},
+        { withCredentials: true, headers: { 'X-Auth-Cookie': '1' } },
       );
+      expect(JSON.stringify((axios.post as jest.Mock).mock.calls)).not.toContain('my-refresh-token');
       expect(sessionStorage.getItem('soulledger_access')).toBe('new-access');
     });
 

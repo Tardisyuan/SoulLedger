@@ -86,10 +86,11 @@ describe("刷新之后 access 的落点", () => {
     expect(cookieJar()["soulledger_access"]).toBeUndefined();
   });
 
-  it("refresh 仍然落在 cookie 里", async () => {
+  it("刷新令牌本身不落进脚本读得到的 cookie,只留「已登录」标记(第 16 条)", async () => {
     document.cookie = "soulledger_refresh=OLD; path=/";
     await rotateRefreshToken("OLD");
-    expect(cookieJar()["soulledger_refresh"]).toBe("NEW-REFRESH");
+    expect(cookieJar()["soulledger_refresh"]).toBe("1");
+    expect(document.cookie).not.toContain("NEW-REFRESH");
   });
 });
 

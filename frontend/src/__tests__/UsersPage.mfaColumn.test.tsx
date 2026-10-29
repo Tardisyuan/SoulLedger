@@ -137,7 +137,7 @@ describe("MfaResetDialog", () => {
     fireEvent.change(screen.getByLabelText(/mfa\.admin\.reset_reason/), { target: { value: "  手机丢了 " } });
     fireEvent.change(screen.getByLabelText(/common\.type_name_to_confirm\(on-user\)/), { target: { value: "on-user" } });
     fireEvent.click(screen.getByTestId("mfa-reset-action"));
-    await waitFor(() => expect(resetMfa).toHaveBeenCalledWith(1, "手机丢了"));
+    await waitFor(() => expect(resetMfa).toHaveBeenCalledWith(1, "手机丢了", undefined));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });
