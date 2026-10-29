@@ -170,6 +170,20 @@ describe("the other tabs have the same four states", () => {
     expect(mockList.mock.calls.filter(([p]) => (p as { group: string }).group === "unclaimed").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("judgments: 重试 after a failed start asks the four counts again too (phone QA 10-29b: offline, both failed)", async () => {
+    mockList.mockRejectedValue(httpError(500));
+    mockCounts.mockRejectedValue(new Error("Network Error"));
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    const retry = await screen.findByTestId("state-retry");
+    expect(mockCounts).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("queue-group-unclaimed")).not.toHaveTextContent(/7/);
+    mockList.mockResolvedValue({ data: { results: [] } });
+    mockCounts.mockResolvedValue({ data: { mine: 0, unclaimed: 7, others: 0, deferred: 0 } });
+    fireEvent.press(retry);
+    await waitFor(() => expect(mockCounts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByTestId("queue-group-unclaimed")).toHaveTextContent(/7/));
+  });
+
   it("judgments: no 认领 button without judgment.execute (it would 403)", async () => {
     mockList.mockResolvedValue(UNCLAIMED);
     renderOfficer(<QueueTab onOpen={() => {}} />, { user: { ...OFFICER, permissions: ["judgment.read"] } });

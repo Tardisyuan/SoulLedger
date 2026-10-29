@@ -9,6 +9,7 @@ import { cityGodCasesApi, CITY_GOD_CASE_ERROR_CODES } from "@soulledger/core/api
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
+import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { formatWhen } from "../format";
 import { ActionButton, StateView, detailStateOf } from "../kit";
 import { useCan } from "../session";
@@ -23,6 +24,7 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   const { t } = useI18n();
   const theme = useTheme();
   const toast = useToast();
+  const bio = useBioWord();
   const load = useCallback(() => cityGodCasesApi.get(id).then((r) => r.data), [id]);
   const { data: c, error, reload } = useRemote(load);
   const [sheet, setSheet] = useState<"send" | "return" | null>(null);
@@ -50,8 +52,8 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
     }
     setBusy(true);
     setFailure(null);
-    const run = sheet === "send" ? cityGodCasesApi.sendOn(id, note.trim()) : cityGodCasesApi.returnCase(id, note.trim());
-    run
+    // 解送 / 退回 are the city god's decision: the phone's own check first, when the officer keeps it on.
+    confirmedDecision(t("officer_app.biometric.prompt"), () => (sheet === "send" ? cityGodCasesApi.sendOn(id, note.trim()) : cityGodCasesApi.returnCase(id, note.trim())))
       .then(() => {
         toast(t(sheet === "send" ? "cityGodCases.sent_on_toast" : "cityGodCases.returned_toast"), "success");
         close();
@@ -60,6 +62,8 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
         else void reload();
       })
       .catch((e: unknown) => {
+        const unconfirmed = notConfirmedKey(e);
+        if (unconfirmed) return setFailure(t(unconfirmed, { bio: bio.start }));
         setFailure(t(refusalKey(e)));
         if (refusalKey(e) === "cityGodCases.error.not_pending") void reload();
       })

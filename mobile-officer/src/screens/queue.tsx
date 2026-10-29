@@ -93,11 +93,12 @@ export function QueueTab({
           {t("officer_app.queue.scope_note")}
         </Txt>
       </View>
-      <RefreshFailed data={data} error={error} onRetry={reload} />
+      {/* Retry asks the counts again too: offline, both failed (phone QA 10-29b: the counts stayed blank). */}
+      <RefreshFailed data={data} error={error} onRetry={() => void refresh()} />
       {view ? (
         <StateView
           state={view}
-          onRetry={reload}
+          onRetry={() => void refresh()}
           role={role}
           area={t("officer_app.areas.queue")}
           emptyTitle={t("officer_app.queue.empty_title")}

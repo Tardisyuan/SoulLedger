@@ -12,6 +12,7 @@ import { formatIsoDay, isHeldUntilFatedDate } from "@soulledger/core/domain/date
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
+import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { ActionButton, Segmented, StateView, detailStateOf } from "../kit";
 import { useCan } from "../session";
 import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
@@ -41,6 +42,7 @@ export function wangsiMode(
 export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled: () => void; onDone: () => void }) {
   const { t, locale } = useI18n();
   const theme = useTheme();
+  const bio = useBioWord();
   const canAct = useCan("wangsi.execute");
   // 没网时不审(同审判台的认领 / 改派):这期间案卷可能已经变了。
   const { offline } = useOnline();
@@ -73,8 +75,8 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
   const decide = (upheld: boolean, deliver = false) => {
     setBusy(true);
     setFailure(null);
-    wangsiApi
-      .decideGrievance(id, upheld, note.trim(), deliver)
+    // A conclusion is a decision: the phone's own check first, when the officer keeps it on (deviceCheck.ts).
+    confirmedDecision(t("officer_app.biometric.prompt"), () => wangsiApi.decideGrievance(id, upheld, note.trim(), deliver))
       .then(() => {
         setConfirming(null);
         onSettled();
@@ -82,6 +84,8 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
       })
       .catch((e: unknown) => {
         setConfirming(null);
+        const unconfirmed = notConfirmedKey(e);
+        if (unconfirmed) return setFailure(t(unconfirmed, { bio: bio.start }));
         refused(e);
         void reload();
       })

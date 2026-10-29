@@ -11,6 +11,7 @@ import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
+import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { ActionButton } from "../kit";
 import { useCan } from "../session";
 import { Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
@@ -34,6 +35,7 @@ function Serving({ soulId }: { soulId: string }) {
   const { t } = useI18n();
   const theme = useTheme();
   const toast = useToast();
+  const bio = useBioWord();
   const canRelease = useCan("disposition.execute");
   // 没网时不释放(同审判台的认领 / 改派):按钮置灰,原因写在下面。
   const { offline } = useOnline();
@@ -50,14 +52,19 @@ function Serving({ soulId }: { soulId: string }) {
   const years = defaultTermOf(d);
   const release = () => {
     setBusy(true);
-    dispositionApi
-      .release(d.id)
+    confirmedDecision(t("officer_app.biometric.prompt"), () => dispositionApi.release(d.id))
       .then(() => {
         toast(t("disposition.release_success"), "success");
         setConfirming(false);
         void reload();
       })
       .catch((e: unknown) => {
+        const unconfirmed = notConfirmedKey(e);
+        if (unconfirmed) {
+          // Nothing was sent: the sheet stays, so another tap tries the check again.
+          toast(t(unconfirmed, { bio: bio.start }), "failure");
+          return;
+        }
         const code = releaseRefusalOf(e);
         // 认不出的失败说「释放失败」,不说「执行处置失败」(那是另一个动作)。
         toast(t(`disposition.release_error.${code ?? "generic"}`), "failure");

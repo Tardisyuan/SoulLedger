@@ -1,1 +1,6 @@
-[]
+[
+  "officer_app.biometric.cancelled",
+  "officer_app.biometric.failed_any",
+  "officer_app.biometric.off_cancelled",
+  "officer_app.me.push_unanswered"
+]

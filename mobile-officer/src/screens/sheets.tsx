@@ -9,7 +9,7 @@ import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDeta
 import { useCallback, useEffect, useState } from "react";
 import { Share, View } from "react-native";
 
-import { decisionAllowed, useBioWord } from "../deviceCheck";
+import { NotConfirmed, confirmedDecision, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import {
   decisionFailure,
@@ -71,7 +71,7 @@ export function DecisionSheet({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureReason | null>(null);
   // The phone's own check was cancelled or did not recognise the officer: nothing was sent.
-  const [unrecognised, setUnrecognised] = useState(false);
+  const [unconfirmed, setUnconfirmed] = useState<NotConfirmed["result"] | null>(null);
   // A node that accepts several passing verdicts asks which one; with one, it is sent as is.
   const passChoices = detail.kind === "approval" || detail.kind === "rebirth" ? passVerdictsOf(detail) : [];
   const [passVerdict, setPassVerdict] = useState<string | null>(null);
@@ -96,21 +96,17 @@ export function DecisionSheet({
     }
     setBusy(true);
     setFailure(null);
-    setUnrecognised(false);
-    decisionAllowed(t("officer_app.biometric.prompt"))
-      .then((allowed) => {
-        if (!allowed) {
-          setUnrecognised(true);
-          return;
-        }
-        return submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined }).then(() => {
-          // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
-          if (detail.kind === "reassignment" && verdict === "approve") toast(t("officer_app.dispatch.approved_next"), "success");
-          onDone();
-          onClose();
-        });
+    setUnconfirmed(null);
+    confirmedDecision(t("officer_app.biometric.prompt"), () =>
+      submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined })
+    )
+      .then(() => {
+        // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
+        if (detail.kind === "reassignment" && verdict === "approve") toast(t("officer_app.dispatch.approved_next"), "success");
+        onDone();
+        onClose();
       })
-      .catch((e: unknown) => setFailure(decisionFailure(e).reason))
+      .catch((e: unknown) => (e instanceof NotConfirmed ? setUnconfirmed(e.result) : setFailure(decisionFailure(e).reason)))
       .finally(() => setBusy(false));
   };
 
@@ -177,7 +173,13 @@ export function DecisionSheet({
           />
         ) : null}
         {failure ? <Notice tone="neg" testID="decision-failure">{t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}</Notice> : null}
-        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}</Notice> : null}
+        {unconfirmed ? (
+          <Notice tone="neg" testID="decision-unrecognised">
+            {unconfirmed === "cancelled"
+              ? t("officer_app.biometric.cancelled")
+              : t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}
+          </Notice>
+        ) : null}
         {cross === "desk" ? (
           // No approval on the phone: approving would turn down the wish for another civilization.
           <View style={{ flexDirection: "row", gap: space[3] }}>

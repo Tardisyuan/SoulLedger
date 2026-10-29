@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type ScrollView, View } from "react-native";
 
-import { canCheck, confirmWished, deviceConfirms, setConfirmWished, useBioWord } from "../deviceCheck";
+import { canCheck, confirmWished, deviceCheck, setConfirmWished, useBioWord, type CheckResult } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
@@ -223,7 +223,9 @@ function PushBlock() {
     setNote(null);
     const granted = perm === "granted" ? perm : await requestPermission();
     setPerm(granted);
-    if (granted !== "granted") setNote(t("officer_app.me.push_denied"));
+    // Not answered yet (EMUI returns before the dialog does) is not "turned off in the system" (phone QA 10-29b).
+    if (granted === "undetermined") setNote(t("officer_app.me.push_unanswered"));
+    else if (granted !== "granted") setNote(t("officer_app.me.push_denied"));
     else {
       const result = await registerDevice();
       if (result.ok) setOn(true);
@@ -262,7 +264,7 @@ function ConfirmBlock() {
   const bio = useBioWord();
   const [possible, setPossible] = useState<boolean | null>(null);
   const [on, setOn] = useState(confirmWished);
-  const [refused, setRefused] = useState(false);
+  const [refused, setRefused] = useState<Exclude<CheckResult, "ok"> | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -274,11 +276,12 @@ function ConfirmBlock() {
   if (possible === null) return null;
 
   const toggle = async () => {
-    if (on && !(await deviceConfirms(t("officer_app.biometric.prompt_off")))) {
-      setRefused(true);
+    const check = on ? await deviceCheck(t("officer_app.biometric.prompt_off")) : "ok";
+    if (check !== "ok") {
+      setRefused(check);
       return;
     }
-    setRefused(false);
+    setRefused(null);
     setConfirmWished(!on);
     setOn(!on);
   };
@@ -294,7 +297,11 @@ function ConfirmBlock() {
           right={<Txt variant="nav">{possible && on ? "✓" : "○"}</Txt>}
         />
       </View>
-      {refused ? <Notice tone="neg">{t("officer_app.biometric.off_failed", { bio: bio.start })}</Notice> : null}
+      {refused ? (
+        <Notice tone="neg" testID="me-confirm-refused">
+          {refused === "cancelled" ? t("officer_app.biometric.off_cancelled") : t("officer_app.biometric.off_failed", { bio: bio.start })}
+        </Notice>
+      ) : null}
     </Block>
   );
 }
