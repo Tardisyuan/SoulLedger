@@ -8,6 +8,7 @@ from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
+from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
 from apps.judgment import snapshot, wangsi
 from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred, may_edit
@@ -340,6 +341,13 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         if _is_viewer(self.context):
             for field in ("karmic_balance", "merit_score", "demerit_score"):
                 data.pop(field, None)
+        # 暂居只读(原属殿读暂居地的案子,决定 24):暂居地经手官员的名字不给,只看案子在哪一殿。
+        viewer = viewer_tenant_id(self.context.get("request"))
+        if viewer is not SEE_ALL and viewer != instance.tenant_id:
+            for field in ("claimed_by", "claimed_by_name", "deferred_by", "deferred_by_name",
+                          "reassign_requested_by", "reassign_requested_by_name"):
+                if field in data:
+                    data[field] = None
         return data
 
     def validate_soul(self, value):

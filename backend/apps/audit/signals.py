@@ -410,6 +410,22 @@ def _get_trace_id(request=None):
     return trace_id
 
 
+def _row_tenant_id(instance, context_tenant):
+    """审计行记在被改的那一行的殿(rbac-scope 第 13 条),不是操作人的租户上下文。
+
+    此前取 contextvar:目标殿执行调拨改了源殿的行,审计记在目标殿;无殿 ADMIN 与 Celery 全局任务改任何殿的行,
+    审计都是 NULL,那一殿的审计页看不到。模型有 `tenant` 外键就用它(为空即全局行,也照记为空);
+    没有的(角色、菜单、殿本身)才退回上下文。
+    """
+    try:
+        field = instance._meta.get_field("tenant")
+    except Exception:
+        field = None
+    if field is not None and getattr(field, "many_to_one", False):
+        return getattr(instance, field.attname, None)
+    return getattr(context_tenant, "pk", None)
+
+
 def _create_audit_log(action, instance, changes=None):
     """Create an AuditLog entry for the given action."""
     # Skip during migrations to avoid schema-not-ready errors
@@ -430,10 +446,11 @@ def _create_audit_log(action, instance, changes=None):
             user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
         trace_id = _get_trace_id(request)
+        tenant_id = _row_tenant_id(instance, tenant)
 
         from django.db import transaction
         transaction.on_commit(lambda: AuditLog.objects.create(
-            tenant=tenant,
+            tenant_id=tenant_id,
             user=user,
             action=action,
             resource=_get_resource_name(instance),
@@ -586,8 +603,9 @@ def create_batch_audit_log(action, instances, changes=None):
         if len(combined_resource_ids) > 100:
             combined_resource_ids = combined_resource_ids[:97] + "..."
 
+        row_tenants = {_row_tenant_id(inst, tenant) for inst in instances}
         AuditLog.objects.create(
-            tenant=tenant,
+            tenant_id=row_tenants.pop() if len(row_tenants) == 1 else getattr(tenant, "pk", None),
             user=user,
             action=action,
             resource=combined_resource,

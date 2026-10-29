@@ -327,3 +327,71 @@ def test_the_reason_is_locked_once_the_target_has_decided(both_sides, decided):
     assert resp.data["code"] == "reason_locked"
     record.refresh_from_db()
     assert record.reason == "what they approved"
+
+
+def _global_admin_client(username="tt_global_admin"):
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    admin = User.objects.create_user(username=username, password="x", role="ADMIN", tenant=None)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(admin).access_token}")
+    return client
+
+
+@pytest.mark.django_db
+def test_a_hall_less_admin_approves_and_executes(both_sides):
+    """决定 25:无殿 ADMIN 做批准 / 执行,目标殿判断视为满足(与取消、建单一致)。此前它没有 request.tenant,永远 403。"""
+    record = both_sides["record"]
+    client = _global_admin_client()
+    resp = client.post(f"{BASE}/records/{record.pk}/approve/", {}, format="json")
+    assert resp.status_code == 200, resp.content
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.APPROVED
+    resp = client.post(f"{BASE}/records/{record.pk}/execute/", {}, format="json")
+    assert resp.status_code == 200, resp.content
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.EXECUTED
+
+
+@pytest.mark.django_db
+def test_a_hall_less_admin_rejects(both_sides):
+    record = both_sides["record"]
+    resp = _global_admin_client().post(f"{BASE}/records/{record.pk}/reject/", {"reason": "no"}, format="json")
+    assert resp.status_code == 200, resp.content
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.REJECTED
+
+
+@pytest.mark.django_db
+def test_an_admin_bound_to_the_source_hall_still_cannot_decide(both_sides):
+    """放行只给无殿 ADMIN:源殿的 ADMIN 不能借 ADMIN 身份替目标殿批自己的提案。"""
+    record = both_sides["record"]
+    admin_a = User.objects.create_user(username="tt_admin_a", password="x", role="ADMIN", tenant=both_sides["a"])
+    client = _jwt_client(admin_a, both_sides["a"])
+    for verb in ("approve", "reject"):
+        resp = client.post(f"{BASE}/records/{record.pk}/{verb}/", {"reason": "x"}, format="json")
+        assert resp.status_code == 403, (verb, resp.status_code)
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.PROPOSED
+
+
+@pytest.mark.django_db
+def test_each_side_reads_the_other_halls_name_not_its_people(both_sides):
+    """决定 24:调拨跨殿读只给对方殿名。发起人是源殿的人、拍板人是目标殿的人,对方读到 null。"""
+    record = both_sides["record"]
+    url = f"{BASE}/records/{record.pk}/"
+    theirs = both_sides["client_b"].get(url).data
+    assert (theirs["dispatched_by"], theirs["dispatched_by_name"]) == (None, None)
+    assert theirs["source_tenant_code"] == "TT_A"
+    ours = both_sides["client_a"].get(url).data
+    assert ours["dispatched_by_name"] == "tt_mod_a"
+
+    approved = both_sides["client_b"].post(f"{url}approve/", {}, format="json").data
+    # 动作的响应同样按请求的殿收(此前这些响应不带请求上下文)。
+    assert approved["decided_by_name"] == "tt_mod_b" and approved["dispatched_by_name"] is None
+    ours = both_sides["client_a"].get(url).data
+    assert (ours["decided_by"], ours["decided_by_name"]) == (None, None)
+    assert ours["dispatched_by_name"] == "tt_mod_a"
+    # 无殿 ADMIN 看全部。
+    full = _global_admin_client("tt_global_reader").get(url).data
+    assert (full["dispatched_by_name"], full["decided_by_name"]) == ("tt_mod_a", "tt_mod_b")

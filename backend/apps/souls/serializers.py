@@ -296,7 +296,11 @@ class SoulRecordSerializer(serializers.ModelSerializer):
 
         from apps.judgment.models import Statute
 
-        statute = Statute.objects.filter(code=code).first()
+        # 本殿的条文(rbac-scope 第 7 条):`Statute.objects` 跟请求的租户上下文走,全局 ADMIN 或没有上下文时
+        # 会取到任意一殿同 code 的条文,下面的报错再把那一殿的条款原文回显出来。按灵魂的殿查,不知道殿就查不到。
+        soul = self.context.get("soul") or getattr(self.instance, "soul", None)
+        tenant_id = getattr(soul, "tenant_id", None) or self.context.get("tenant_id")
+        statute = Statute.all_objects.filter(tenant_id=tenant_id, code=code).first() if tenant_id else None
         if statute is None:
             raise serializers.ValidationError(
                 f"No statute with code {code!r}. A citation that resolves to "
