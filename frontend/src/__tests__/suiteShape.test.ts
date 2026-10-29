@@ -314,6 +314,7 @@ const COLLECTED_FILES = [
   "crossJudgmentsColumnMenu.test.tsx",
   "dataGridToneContract.test.ts",
   "dangerButtonPlacement.test.ts",
+  "datascopeOwnerOrg.test.tsx",
   "dialogsAreNotHandRolled.test.ts",
   "designGuardContract.test.ts",
   "rootAttributes.test.tsx",

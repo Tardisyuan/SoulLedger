@@ -6,6 +6,7 @@ import { organizationsApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 
 /**
@@ -51,7 +52,7 @@ export function OwnerOrgField({
     <div className="flex flex-col gap-2 text-sm" data-testid="owner-org">
       <div className="flex items-center gap-2">
         <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("org.owner_label")}</span>
-        <span>{orgName || "—"}</span>
+        <span>{orgName || <MissingValue kind="unrecorded" />}</span>
         {canChange && !editing && (
           <Button size="sm" variant="ghost" onClick={() => { setPicked(orgId ?? null); setEditing(true); }}>
             {t("org.owner_change")}
