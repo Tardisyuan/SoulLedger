@@ -55,9 +55,9 @@ const STATS = {
   roles: { created: 0, skipped: 1 },
   role_permissions: { created: 1, skipped: 0 },
   field_permissions: { created: 0, skipped: 0 },
-  data_scopes: { created: 0, skipped: 0 },
+  role_data_scopes: { created: 0, skipped: 0 },
   updated: 0,
-  removed: { role_permissions: 0, field_permissions: 0, data_scopes: 0, total: 0 },
+  removed: { role_permissions: 0, field_permissions: 0, role_data_scopes: 0, total: 0 },
   removes_own_permissions: false,
   skipped_details: [
     { section: "roles", key: "R", reason: "already_exists" },
@@ -68,7 +68,7 @@ const STATS = {
 const OVERWRITE_STATS = {
   ...STATS,
   updated: 2,
-  removed: { role_permissions: 3, field_permissions: 1, data_scopes: 1, total: 5 },
+  removed: { role_permissions: 3, field_permissions: 1, role_data_scopes: 1, total: 5 },
 };
 const NOTHING_SKIPPED = {
   ...STATS,

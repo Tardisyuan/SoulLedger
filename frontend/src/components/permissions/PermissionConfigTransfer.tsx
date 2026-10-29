@@ -37,7 +37,7 @@ import { saveBlob } from "@/src/lib/saveBlob";
 /** 导出文件的上限。真实导出远小于此(几十 KB);更大的多半不是这份文件。 */
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 
-const SECTIONS = ["permissions", "roles", "role_permissions", "field_permissions", "data_scopes"] as const;
+const SECTIONS = ["permissions", "roles", "role_permissions", "field_permissions", "role_data_scopes"] as const;
 type Section = (typeof SECTIONS)[number];
 type Counts = Record<Section, number>;
 type Step = 1 | 2 | 3;

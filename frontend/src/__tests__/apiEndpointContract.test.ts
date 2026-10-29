@@ -42,11 +42,7 @@ const OPERATIONS = Object.entries(SCHEMA_PATHS).flatMap(([p, methods]) =>
 
 // Agreed with the backend but not served yet. Each entry names the batch that will serve it; once the schema
 // has the operation, "pending operations are still unserved" goes red and the entry must be deleted here.
-const PENDING: Record<string, string> = {
-  "get /api/v1/perm/data-scope/resources/": "数据范围 B4 批(local-gates/rbac-2026-10-29/datascope-design.md「接口(B4)」)",
-  "get /api/v1/perm/roles/{id}/data-scope/": "数据范围 B4 批(同上)",
-  "put /api/v1/perm/roles/{id}/data-scope/": "数据范围 B4 批(同上)",
-};
+const PENDING: Record<string, string> = {};
 const PENDING_OPS = Object.keys(PENDING).map((k) => {
   const [method, p] = k.split(" ");
   return { key: k, method, path: p, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`) };

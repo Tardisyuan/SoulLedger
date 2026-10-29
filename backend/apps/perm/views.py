@@ -731,7 +731,7 @@ def copy_role(request, pk):
     Copies the source's RolePermission rows — permission, `conditions` and
     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-    the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+    the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
     """
     try:
@@ -787,6 +787,11 @@ def copy_role(request, pk):
             for s in RowLevelDataScope.objects.filter(role=source)
         ]
         RowLevelDataScope.objects.bulk_create(row_scopes)
+        # The role's data scope (数据范围 B4) goes with it: a copy of a hall-only judge stays hall-only.
+        from .data_scope_api import replace_role_config, role_config
+
+        scope_config = role_config(source)
+        replace_role_config(role, scope_config)
         from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(
@@ -800,6 +805,7 @@ def copy_role(request, pk):
                 "permissions": {"old": [], "new": sorted(g.permission.codename for g in grants)},
                 "field_permissions": len(field_rules),
                 "row_level_scopes": len(row_scopes),
+                "data_scope": scope_config,
             },
             description=f"Role {name} created as a copy of {source.name}"[:500],
             ip_address=get_client_ip(request),

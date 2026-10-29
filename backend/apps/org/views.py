@@ -75,12 +75,19 @@ class OrganizationViewSet(
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
 
+    def get_queryset(self):
+        """殿级隔离之后再按数据范围收窄(资源 `org`,数据范围 B4):本机构 / 及下级 / 自定义机构;范围外 404。"""
+        from apps.perm.filters import DataScopeFilter
+
+        return DataScopeFilter.filter_queryset(self.request, super().get_queryset(), Organization)
+
     @extend_schema(responses=OrganizationSerializer(many=True))
     @action(detail=False, methods=["get"], pagination_class=None)
     def tree(self, request):
         """Return organization hierarchy as a tree."""
         orgs = self.get_queryset()
-        roots = orgs.filter(parent__isnull=True)
+        # Tops of what the caller sees: the hall root, or — in a narrowed data scope — each visible unit whose parent is not.
+        roots = orgs.exclude(parent__in=orgs)
         return Response(OrganizationSerializer(roots, many=True).data)
 
     def perform_update(self, serializer):
