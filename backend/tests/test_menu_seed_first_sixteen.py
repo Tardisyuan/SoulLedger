@@ -17,6 +17,7 @@ from tests.soul_account_support import officer_client
 
 seed_module = importlib.import_module("apps.menus.migrations.0021_seed_the_first_sixteen_menus")
 codename_module = importlib.import_module("apps.menus.migrations.0029_first_sixteen_menus_name_their_read_codename")
+split_module = importlib.import_module("apps.menus.migrations.0032_menus_follow_the_split_codenames")
 FIRST_SIXTEEN = [m["path"] for m in seed_module.MENUS]
 
 pytestmark = pytest.mark.django_db
@@ -121,7 +122,8 @@ def test_reverse_removes_only_untouched_seed_rows():
     Menu.all_objects.filter(path="/souls").update(version=2)       # 有人保存过
     Menu.all_objects.filter(path="/users").update(name="成员管理")  # 改过名
 
-    codename_module.unfill(django_apps, SCHEMA_EDITOR)  # 真实回退里 0029 先退
+    split_module.backward(django_apps, SCHEMA_EDITOR)  # 真实回退里 0032 先退(它给 /permissions 写了码)
+    codename_module.unfill(django_apps, SCHEMA_EDITOR)  # 再退 0029
     seed_module.unseed(django_apps, SCHEMA_EDITOR)
 
     left = set(Menu.objects.filter(menu_type="MENU", is_deleted=False).values_list("path", flat=True))
@@ -284,14 +286,15 @@ def test_the_rebirth_group_holds_dispositions_and_the_register(cn_tenant):
 
 
 def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tenant):
-    """menus/0026:申诉复核、城隍初审(灵魂业务)与城隍(系统设置),都是 `judgment.read`。"""
+    """menus/0026:申诉复核、城隍初审(灵魂业务)与城隍(系统设置),当时都是 `judgment.read`;
+    menus/0032(2026-10-29 拆码)把后两条改成 `city_god.read`。默认持有者不变:JUDGE 看得见,VIEWER 看不见。"""
     seeded_menus()
     rows = {m.path: m for m in Menu.objects.filter(path__in=("/judgment/appeals", "/city-god-cases", "/city-gods"),
                                                       is_deleted=False)}
     assert {p: (r.name, r.parent.name, r.permission, r.order) for p, r in rows.items()} == {
         "/judgment/appeals": ("申诉复核", "灵魂业务", "judgment.read", 31),
-        "/city-god-cases": ("城隍初审", "灵魂业务", "judgment.read", 18),
-        "/city-gods": ("城隍", "系统设置", "judgment.read", 25),
+        "/city-god-cases": ("城隍初审", "灵魂业务", "city_god.read", 18),
+        "/city-gods": ("城隍", "系统设置", "city_god.read", 25),
     }
     assert {"申诉复核", "城隍初审", "城隍"} <= _seen_by("JUDGE", cn_tenant)
     assert not {"申诉复核", "城隍初审", "城隍"} & _seen_by("VIEWER", cn_tenant)
@@ -299,13 +302,13 @@ def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tena
 
 def test_the_capture_due_and_earth_god_entries(cn_tenant):
     """menus/0028(第五十七批):待发勾魂牒在「灵魂业务」里排在城隍初审(18)前面,只给能发牒的人(`soul.die`);
-    土地公在「系统设置」里紧跟城隍(25),和城隍一样是 `judgment.read`。"""
+    土地公在「系统设置」里紧跟城隍(25),和城隍一样是 `judgment.read`。menus/0032 改成 `capture.issue` / `tudi.read`。"""
     seeded_menus()
     rows = {m.path: m for m in Menu.objects.filter(path__in=("/judgment/capture-due", "/death-sync/tudi-gods"),
                                                       is_deleted=False)}
     assert {p: (r.name, r.parent.name, r.permission, r.order) for p, r in rows.items()} == {
-        "/judgment/capture-due": ("待发勾魂牒", "灵魂业务", "soul.die", 17),
-        "/death-sync/tudi-gods": ("土地公", "系统设置", "judgment.read", 26),
+        "/judgment/capture-due": ("待发勾魂牒", "灵魂业务", "capture.issue", 17),
+        "/death-sync/tudi-gods": ("土地公", "系统设置", "tudi.read", 26),
     }
     assert rows["/judgment/capture-due"].order < Menu.objects.get(path="/city-god-cases", is_deleted=False).order
     assert {"待发勾魂牒", "土地公"} <= _seen_by("JUDGE", cn_tenant)
@@ -334,8 +337,9 @@ def test_0029_names_the_page_codename_on_the_seeded_rows():
     _wipe()
     seeded_menus()
     got = {m.path: m.permission for m in Menu.objects.filter(path__in=FIRST_SIXTEEN)}
-    assert got == {**dict.fromkeys(FIRST_SIXTEEN, ""), **codename_module.CODENAMES}
-    assert got["/permissions"] == "" and got["/welcome"] == ""  # 故意不写,见迁移文件头
+    # /permissions 由 menus/0032 写上 system.settings(权限页的读接口 2026-10-29 起按这个码判)。
+    assert got == {**dict.fromkeys(FIRST_SIXTEEN, ""), **codename_module.CODENAMES, "/permissions": "system.settings"}
+    assert got["/welcome"] == ""  # 故意不写,见 0029 文件头
 
 
 def test_a_moderator_sees_the_core_pages_and_not_the_admin_ones(cn_tenant):

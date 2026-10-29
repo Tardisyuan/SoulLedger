@@ -4523,6 +4523,7 @@ export interface paths {
          *     功过总账「导出」:本月、同一组筛选下的**全部**流水(不分页),一行一条。
          *     范围、码名与 `LedgerJournalView` 相同 —— 行取自同一个 `journal_records`,所以文件里的
          *     收 / 支之和就是屏幕上的「新收」「开除」。自由文本格一律过 `csv_safe`。
+         *     码是 `ledger.export`(用户 2026-10-29 第 3 条;此前与列表同一个 ledger.read)。
          */
         get: operations["v1_ledger_journal_export_retrieve"];
         put?: never;
@@ -4543,14 +4544,12 @@ export interface paths {
         /**
          * @description GET /ledger/stats/export/
          *
-         *     Admin-only CSV export of all souls with their ledger data.
+         *     CSV export of the caller's hall's souls with their ledger data.
          *
-         *     The `role != 'ADMIN'` check below is still the gate that makes this
-         *     admin-only. `ledger.read` is now genuinely enforced by CodenamePermission,
-         *     but every one of the five roles holds it, so the codename alone would let
-         *     a VIEWER export every soul in the tenant. Replacing the hardcoded check
-         *     needs a codename that says "export" — that is a policy decision and a new
-         *     grant, not part of moving enforcement into DRF.
+         *     Gated by `ledger.export` (user 2026-10-29, items 3 and 33). Until then a
+         *     `role != 'ADMIN'` check in the body was the gate, because `ledger.read` —
+         *     held by all five roles — was the only codename there was; "may export" is
+         *     now its own cell in the matrix.
          */
         get: operations["v1_ledger_stats_export_retrieve"];
         put?: never;
@@ -4571,9 +4570,10 @@ export interface paths {
         /**
          * @description GET /ledger/stats/overview/
          *
-         *     Admin-only overview statistics across all tenants.
+         *     Overview statistics: the hall-less ADMIN across all tenants, everyone else their own.
          *     Returns: total souls, state distribution, tenant totals, ledger range stats,
-         *     recent activity, and souls by realm.
+         *     recent activity, and souls by realm. Gated by `ledger.read` alone since 2026-10-29
+         *     (user item 33): the `role != 'ADMIN'` 403 that sat in the body made the declared code decorative.
          */
         get: operations["v1_ledger_stats_overview_retrieve"];
         put?: never;
@@ -18730,6 +18730,8 @@ export interface components {
             role: string;
             permission_ids: number[];
             expected_version?: number;
+            /** @default false */
+            acknowledge_conflicts: boolean;
         };
         /**
          * @description 200 body of `assign_role_permissions`.
@@ -34021,6 +34023,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             404: {
                 headers: {

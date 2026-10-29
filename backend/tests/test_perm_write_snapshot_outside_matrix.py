@@ -1237,7 +1237,6 @@ def test_recorded_holders_match_role_permissions():
     moves, those docstrings become misleading, and this is what says so.
     """
     assert _holders("reincarnation.manage") == {"ADMIN", "MODERATOR", "JUDGE", "GUARDIAN"}
-    assert _holders("reincarnation.complete") == {"ADMIN", "MODERATOR"}
     assert _holders("reincarnation.reborn") == {"ADMIN", "MODERATOR"}
     assert _holders("dispatch.manage") == {"ADMIN", "MODERATOR", "GUARDIAN"}
     assert _holders("dispatch.approve") == {"ADMIN", "MODERATOR"}
@@ -1575,6 +1574,8 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(
     assert sorted(enforced_families_seeded_in_db) == [
         "dispatch.approve",
         "dispatch.execute",
+        # 2026-10-29(用户第 3 条):导出成了自己的码;perm/0029 落了行,这里的 get_or_create 取到它。
+        "dispatch.export",
         "dispatch.manage",
         "dispatch.read",
         "dispatch.reject",
@@ -1582,7 +1583,7 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(
         # 走 ROLE_PERMISSIONS 字典路径。
         "dispatch.return",
         "notification.read",
-        "reincarnation.complete",
+        # reincarnation.complete 2026-10-29 删出目录(没有路由要它,rbac-be3 L-13)。
         "reincarnation.manage",
         "reincarnation.read",
         "reincarnation.reborn",
@@ -1624,6 +1625,21 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "souls.mfa_reset",
         # perm/0028 (2026-10-29, 在线会话). Same reasoning as the scheduler pair.
         "session.manage",
+        # perm/0029 (2026-10-29, 拆码). The split codenames get rows granted to the old codename's holders.
+        # dispatch.export is in one of this file's families: its export route is not one of the probes
+        # here, and the fixture above seeds it from ROLE_PERMISSIONS like the rest.
+        "audit.export",
+        "capture.execute", "capture.issue", "capture.read",
+        "city_god.execute", "city_god.manage", "city_god.read",
+        "cross_judgment.export",
+        "disposition.export",
+        "dispatch.export",
+        "judgment.export",
+        "ledger.calculate", "ledger.export",
+        "soul.export",
+        "tudi.manage", "tudi.read", "tudi.register",
+        "wangsi.execute", "wangsi.manage", "wangsi.read",
+        "workflow.export",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",

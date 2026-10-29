@@ -38,7 +38,7 @@ from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export
-from apps.core.permissions import IsAdminPermission, TenantPermission
+from apps.core.permissions import CodenamePermission, IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
@@ -144,11 +144,14 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         POST   /api/v1/users/{id}/deactivate/   - 停用用户
         POST   /api/v1/users/{id}/reset_password/ - 重置密码
     """
-    permission_classes = [TenantPermission, IsAdminPermission]
+    # By codename since 2026-10-29 (user item 2): the web page gates on `user.manage`, and so does this.
+    # ADMIN holds it by the checker's short-circuit; MODERATOR may never hold it (ROLE_FORBIDDEN_CODENAMES);
+    # anyone else granted it manages users of their own hall only (`scope_to_tenant` below), never an ADMIN
+    # (`get_queryset`), and assigns nothing above their own rank (`may_assign_role`).
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY, not CRUD. `user.manage` is the only user codename that exists —
-    # it is in DEFAULT_PERMISSIONS and held by ADMIN — and this viewset already
-    # behaves that way: IsAdminPermission above gates reads and writes alike,
-    # so ADMIN can do everything here and nobody else can do anything.
+    # it is in DEFAULT_PERMISSIONS and held by ADMIN — and this viewset
+    # behaves that way: the one codename gates reads and writes alike.
     #
     # The declarations this replaces (user.read, user.create, user.update,
     # user.delete, user.activate, user.deactivate, user.reset_password,
@@ -221,12 +224,14 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # this API ("can create, can't manage"). Bypassing tenant filtering
         # for ADMIN here removes that asymmetry.
         #
-        # Access for non-ADMIN roles is gated today at the HTTP layer by
-        # IsAdminPermission, so in practice only ADMIN reaches this method —
-        # but the filter below is a second line of defense for whenever
-        # that gate is loosened to a permission-codename check instead.
-        # (Scoping itself now lives in apps/core/tenant.py.)
+        # Since 2026-10-29 the HTTP gate is the `user.manage` codename, so a
+        # non-ADMIN holder reaches this method: this filter is what keeps them
+        # in their own hall. (Scoping itself lives in apps/core/tenant.py.)
         qs = scope_to_tenant(qs, self.request)
+        # A non-ADMIN holder of `user.manage` never sees — so never edits, resets, deactivates or deletes — an
+        # ADMIN account (2026-10-29: the codename is grantable now; ADMIN-on-ADMIN rules live with ADMIN).
+        if getattr(self.request.user, 'role', None) != 'ADMIN':
+            qs = qs.exclude(role='ADMIN')
 
         # Apply query params if present
         params = self.request.query_params

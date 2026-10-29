@@ -140,12 +140,28 @@ def test_revoking_a_stray_forbidden_grant_from_moderator_is_allowed(world):
 def test_the_whole_set_assign_refuses_them_for_moderator(world):
     p = world["perms"]
     before = set(RolePermission.objects.filter(role__name="MODERATOR").values_list("permission_id", flat=True))
+    update = Permission.objects.get_or_create(codename="workflow.update", defaults={"name": "x", "category": "workflow"})[0]
     res = world["client"].post(
-        ASSIGN, {"role": "MODERATOR", "permission_ids": [p["soul.read"].pk, p["workflow.advance"].pk]}, format="json"
+        ASSIGN, {"role": "MODERATOR", "permission_ids": [p["soul.read"].pk, update.pk, p["workflow.advance"].pk]},
+        format="json",
+    )
+    assert res.status_code == 400 and res.json()["code"] == "role_forbidden_permission", res.content
+    res = world["client"].post(
+        ASSIGN, {"role": "MODERATOR", "permission_ids": [p["soul.read"].pk, p["user.manage"].pk]}, format="json"
     )
     assert res.status_code == 400 and res.json()["code"] == "role_forbidden_permission", res.content
     after = set(RolePermission.objects.filter(role__name="MODERATOR").values_list("permission_id", flat=True))
     assert after == before
+
+
+def test_approve_is_refused_by_capability_not_by_the_role_name(world):
+    """2026-10-29 第 13 条:同一组码里同时有设计码与审批码才拒;一个不设计流程的殿主集合可以带审批码。"""
+    p = world["perms"]
+    res = world["client"].post(
+        ASSIGN, {"role": "MODERATOR", "permission_ids": [p["soul.read"].pk, p["workflow.advance"].pk]}, format="json"
+    )
+    assert res.status_code == 200, res.content
+    assert _held("MODERATOR", "workflow.advance") and not _held("MODERATOR", "workflow.update")
 
 
 def test_an_import_does_not_grant_them_to_moderator(world):

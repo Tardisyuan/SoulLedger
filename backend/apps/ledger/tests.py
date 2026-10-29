@@ -390,10 +390,12 @@ class TestLedgerOverviewStatsView:
         resp = self.admin_client.get(f"{BASE}/stats/overview/")
         assert resp.data["total_souls"] == 3
 
-    def test_non_admin_gets_403(self):
+    def test_a_viewer_reads_it_by_ledger_read(self):
+        # Was 403 for every non-ADMIN (a `role != 'ADMIN'` check in the body); `ledger.read` since
+        # 2026-10-29 (user item 33). Revoking the codename is covered in tests/test_rbac_codes_by_capability.py.
         resp = self.viewer_client.get(f"{BASE}/stats/overview/")
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
-        assert resp.data["error"] == "FORBIDDEN"
+        assert resp.status_code == status.HTTP_200_OK
+        assert "error" not in resp.data
 
     def test_overview_tenant_scoping(self):
         """Admin with tenant sees only their tenant's souls."""
@@ -446,9 +448,11 @@ class TestLedgerExportStatsView:
         header = content.split("\n")[0]
         assert "Soul ID,Name,Civilization,State" in header
 
-    def test_non_admin_gets_403(self):
+    def test_a_viewer_exports_by_ledger_export(self):
+        # `ledger.export` since 2026-10-29 (user items 3 and 33); perm/0029 grants it to `ledger.read` holders.
         resp = self.viewer_client.get(f"{BASE}/stats/export/")
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp["Content-Type"] == "text/csv"
 
     def test_export_includes_soul_data(self):
         resp = self.admin_client.get(f"{BASE}/stats/export/")

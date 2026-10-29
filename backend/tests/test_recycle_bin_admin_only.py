@@ -126,9 +126,9 @@ def test_the_view_refuses_a_non_admin_even_with_the_grant_in_the_table(world):
 
     assert client.get(BIN).status_code == 200  # read is not ADMIN-only
     res = client.post(f"{BIN}restore/", {"cascade_id": str(menu.delete_cascade_id)}, format="json")
-    assert res.status_code == 403 and "Only ADMIN" in res.json()["error"], res.content
+    assert res.status_code == 403, res.content  # the checker denies ADMIN-only codenames outright now (2026-10-29)
     res = client.post(f"{BIN}hard-delete/", {"entity_type": "menu", "id": menu.pk}, format="json")
-    assert res.status_code == 403 and "Only ADMIN" in res.json()["error"], res.content
+    assert res.status_code == 403, res.content
     assert Menu.all_objects.get(pk=menu.pk).is_deleted
 
     res = world["client"].post(f"{BIN}restore/", {"cascade_id": str(menu.delete_cascade_id)}, format="json")
