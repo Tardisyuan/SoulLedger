@@ -1233,6 +1233,29 @@
         "confirm_hint": "输入「覆盖」以确认"
       },
       "download_skipped": "下载跳过明细"
+    },
+    "datascope": {
+      "title": "数据范围",
+      "default": "默认范围",
+      "scope": {
+        "ALL": "全部",
+        "ORG_CHILD": "本机构及以下",
+        "ORG": "本机构",
+        "SELF": "仅本人",
+        "DEFINE": "自定义机构"
+      },
+      "admin_fixed": "全部(固定)",
+      "own_always": "本人创建或被指派的数据在任何范围下都可见。",
+      "orgs": "机构",
+      "orgs_for": "{{name}} · 机构",
+      "orgs_required": "自定义机构至少选一个",
+      "per_resource": "按业务单独设置",
+      "follow_default": "跟随默认",
+      "save": "保存数据范围",
+      "saved": "数据范围已保存，对方刷新后生效",
+      "save_error": "数据范围保存失败",
+      "load_error": "数据范围读取失败",
+      "read_only": "只有不属于任何殿的管理员能改数据范围"
     }
   },
   "workflow": {
@@ -3366,7 +3389,8 @@
     "organization_none": "不属于任何机构",
     "tenant_pick": "选择租户",
     "organization_column": "机构 · 职务",
-    "position": "职务"
+    "position": "职务",
+    "organization_required": "有殿的非管理员必须属于一个机构"
   },
   "settings": {
     "title": "设置",
@@ -7989,5 +8013,10 @@
     "escort": "建议鬼差",
     "issue": "发牒",
     "empty": "没有阳寿已到、待发勾魂牒的灵魂"
+  },
+  "org_select": {
+    "no_match": "没有匹配的机构",
+    "implied": "含于上级",
+    "no_tenant": "未归殿"
   }
 }
