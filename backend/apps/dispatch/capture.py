@@ -29,7 +29,6 @@ from rest_framework.exceptions import APIException
 from apps.dispatch.models import OPEN_CAPTURE, CaptureEscort, CaptureStatus, CaptureWarrant
 from apps.souls.models import Civilization, Soul, SoulState
 
-
 #: `hand_over` 正在登记这一次死亡:那张牒已经写成 HANDED_OVER,`close_on_death` 不再补发。
 _handing_over: ContextVar[bool] = ContextVar("capture_handing_over", default=False)
 

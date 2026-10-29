@@ -28,7 +28,8 @@ const dayNumber = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d) / 8
 
 /**
  * 到可渡之日还要等多久(第 4 节):按日历的整年往下取整;不满一年写天数(不用月);当天或已过 = 可以渡河。
- * `waited` 是百年里已经过去的比例(0–1),只给细线和读屏用。
+ * `waited` 是百年里已经过去的比例(0–1),只给细线用;读屏的「已等 N 年」写 100 − years,与大字的「还要等 years 年」
+ * 加起来正好一百(各自取整会差一年,真机 2026-10-30 听到 18 + 81)。
  */
 export function ferryWait(crossesOn: string, today: Date): { years: number; days: number; waited: number } {
   const [cy, cm, cd] = ymd(crossesOn);
@@ -157,7 +158,7 @@ export function FerryCard({ ferry, today = new Date() }: { ferry: Ferry | null |
           <View
             testID="life-ferry-line"
             accessible
-            accessibilityLabel={tr("soul_app.life.ferry.waited_aria", { waited: String(Math.floor(wait.waited * 100)) })}
+            accessibilityLabel={tr("soul_app.life.ferry.waited_aria", { waited: String(Math.min(99, 100 - wait.years)) })}
             style={[styles.track, { backgroundColor: t.hair }]}
           >
             <View testID="life-ferry-line-fill" style={[styles.trackFill, { width: `${wait.waited * 100}%`, backgroundColor: t.ink }]} />

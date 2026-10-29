@@ -1,8 +1,8 @@
 """勾魂牒的接口(规则在 `apps/dispatch/capture.py`):`/api/v1/dispatch/capture-warrants/`。
 
-* GET 列表(`?soul=<id>` 只看一个灵魂,`?status=` 按状态)、GET 详情、GET `due/`(阳寿已到、还没有牒的灵魂):`soul.read`。
-* POST 发牒、`{id}/capture/` 拘到、`{id}/hand-over/` 交接(登记死亡)、`{id}/cancel/` 撤销:`soul.die` ——
-  交接就是登记死亡,与 `POST /souls/{id}/die/` 同一个码名。
+* GET 列表(`?soul=<id>` 只看一个灵魂,`?status=` 按状态)、GET 详情、GET `due/`(阳寿已到、还没有牒的灵魂):`capture.read`。
+* POST 发牒与 `{id}/cancel/` 撤销:`capture.issue`;`{id}/capture/` 拘到与 `{id}/hand-over/` 交接(登记死亡):
+  `capture.execute`(2026-10-29 从 soul.read / soul.die 拆出)。
 """
 import uuid
 
