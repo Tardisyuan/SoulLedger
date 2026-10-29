@@ -35,8 +35,8 @@
 # with nothing changed), and recording costs 277 s per full run against 130 s
 # without it.
 #
-# WHY THIS EXISTS. Both GitHub Actions workflows are `workflow_dispatch` only,
-# so nothing in this repository runs automatically. The contract tests that
+# WHY THIS EXISTS. CI runs daily, on v* tags and by hand (2026-10-30; it was
+# `workflow_dispatch` only before), never on a push. The contract tests that
 # accumulated here — the colour pins, the cross-end PAGE_SIZE pin, the seed
 # inventory guard, the suite-shape floor — all exist to catch failures that are
 # silent by nature. A silent failure caught by a check that nobody runs is still
@@ -321,8 +321,8 @@ TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/|^scripts/(run-gates|inst
 # `packages/` had no gate at all, so a commit touching only @soulledger/core ran
 # nothing. That is the whole of the package's boundary: `lib: ["ES2020"]` with
 # no "dom", the `host-globals.d.ts` allowlist, and the `no-restricted-syntax`
-# rule that refuses `process.env`. CI does run them — and both workflows are
-# `workflow_dispatch` only, so in practice nothing did.
+# rule that refuses `process.env`. CI does run them — but only daily, never on
+# the push that broke them.
 #
 # The frontend gate did not cover it either, and this is the part worth writing
 # down: `frontend/tsconfig.json` compiles the package's *sources* under
@@ -791,8 +791,8 @@ if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
         # only reads today's members stays green. Verified by dropping GREEK from
         # the org category choices — this exits 1 and names the missing migration.
         #
-        # It ran only in CI, and both workflows are `workflow_dispatch` now, so
-        # nothing ran it at all.
+        # It ran only in CI, and CI never runs on a push (daily / tag / manual
+        # since 2026-10-30), so a push could land a missing migration.
         #
         # Say what failed only when the output says it. This used to discard the
         # output and call EVERY non-zero exit "a model changed" — so a wrong
