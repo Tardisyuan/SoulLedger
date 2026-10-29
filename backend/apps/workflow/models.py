@@ -18,6 +18,9 @@ class ApprovalWorkflowStatus(models.TextChoices):
     APPEAL = "APPEAL", "申诉中"
     EXCEPTION = "EXCEPTION", "异常处理"
     COMPLETED = "COMPLETED", "流程完成"
+    #: 跨域审判取消让流程中途结束(用户 2026-10-29,审查 C):不是走完、不是通过,不触发任何完成钩子
+    #: (`segments.on_cross_cancelled`)。
+    CANCELLED = "CANCELLED", "已取消"
 
 
 #: 走到这里流程就结束了,不再接受任何节点决策。
@@ -31,10 +34,11 @@ class ApprovalWorkflowStatus(models.TextChoices):
 TERMINAL_WORKFLOW_STATUSES = frozenset({
     "COMPLETED",
     "REJECTED",
+    "CANCELLED",
 })
 
 #: The states a workflow can actually be in (see above): what the list filter offers.
-REACHABLE_WORKFLOW_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED")
+REACHABLE_WORKFLOW_STATUSES = ("PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED", "CANCELLED")
 
 #: Whether a flow started by hand (`POST /workflows/start/`, `manually_started`) that names a judgment acts on
 #: that judgment when it ends — a refusal withdrawing the sentence and opening the case again
@@ -67,6 +71,14 @@ class VerdictRefusedError(ValueError):
     def __init__(self, message, code):
         super().__init__(message)
         self.code = code
+
+
+class EscalationRefusedError(ValueError):
+    """`escalate_current_node` does not move past this stop; nothing was written. `code` is the API's refusal code.
+
+    越级推进最多推到终审那一站(用户 2026-10-29,审查 A):终审本身不能被越过,越级也不能让流程直接走完。"""
+
+    code = "escalate_past_final"
 
 #: How many times one workflow may be sent back by 驳回到 (`ApprovalNode.reject_to`).
 #:
@@ -441,8 +453,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             # actually wrote. Nodes built from a template carry `[]` (2026-10-29): writing all five verdicts on
             # every node made this check unable to refuse anything.
             if verdict == "SKIPPED":
-                # Whether SKIPPED stays a verdict is pending (review item F). Until then it is refused: as a
-                # decision it is neither PASSED nor CONFIRMED, so it used to end the whole flow REJECTED.
+                # SKIPPED is not a verdict (user 2026-10-29, review F): the approval page no longer offers it, and
+                # it stays refused here — as a decision it is neither PASSED nor CONFIRMED, so it used to end the
+                # whole flow REJECTED.
                 raise VerdictRefusedError(
                     "SKIPPED is not a decision; pass or refuse the node, or escalate past it",
                     "skipped_not_a_verdict")
@@ -454,6 +467,15 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 )
 
             passed = verdict in ["PASSED", "CONFIRMED"]
+            if passed and self.decides_judgment:
+                # 五逆不能判 PASSED(用户 2026-10-29,审查 J):结案已拒;这里挡住规则之前结成 PASSED 的案子被批过去。
+                from apps.judgment.models import ChineseOffence, Judgment, Verdict
+
+                if Judgment.all_objects.filter(pk=self.judgment_id, verdict=Verdict.PASSED,
+                                               offence=ChineseOffence.FIVE_HEINOUS).exists():
+                    raise VerdictRefusedError(
+                        "The judgment is PASSED on one of the five heinous crimes; it cannot be approved",
+                        "five_heinous_must_fail")
             now = timezone.now()
 
             # 会签: one signature is not yet the node's decision. It is
@@ -764,6 +786,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from apps.workflow import segments
 
         segments.on_workflow_finished(self, status, end_reason)
+        if status == ApprovalWorkflowStatus.CANCELLED:
+            # Cancelled is neither passed nor refused (review C): no hook below runs for it.
+            return
         if self.case_type == CaseType.APPEAL:
             # A soul's appeal taken up this flow gets its outcome here (apps/judgment/appeals.py, user 2026-10-27).
             from apps.judgment import appeals
@@ -1009,10 +1034,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         (neither did `SKIPPED`). Recording the skip is what makes the audit
         row true and what stops the flow returning to the same node.
 
-        Mirrors `complete_node`'s tail deliberately: a skip is a way of
-        finishing with a node, so escalating the last one completes the
-        workflow rather than failing with "no next node" and leaving the flow
-        stuck on the node the caller was trying to get past.
+        Escalation goes at most as far as the final review (user 2026-10-29, review A): the final itself is
+        refused with `EscalationRefusedError` (`escalate_past_final`), and so is an escalation that would end the
+        flow — escalating the last stop used to complete the workflow nobody decided.
         """
         from django.db import transaction
         from django.utils import timezone
@@ -1034,6 +1058,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             )
             if node is None or node.status != NodeStatus.PENDING:
                 return False
+            if node.kind not in AUTOMATIC_KINDS and (node.is_required or node.node_type == NodeType.FINAL):
+                # The final review is where escalation stops (user 2026-10-29, review A): a segment's final
+                # (`segments.mark_required`) or, on a flow without segments, a FINAL-type stop.
+                raise EscalationRefusedError("The final review cannot be escalated past; decide it instead")
 
             node.status = NodeStatus.ESCALATED
             node.decided_at = timezone.now()
@@ -1049,6 +1077,10 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             # node by order walked a graph template into a branch the case does not take. Nothing left completes
             # the flow, as a PASS on the last stop does.
             self._advance_from(node, timezone.now())
+            if self.status == ApprovalWorkflowStatus.COMPLETED:
+                # A flow with no stop marked final still ends at its last stop: escalating past it would complete
+                # the flow nobody decided. Raised inside the atomic block, so the escalation above is undone.
+                raise EscalationRefusedError("Escalating past the last stop would complete the flow; decide it instead")
             self.save()
         return True
 

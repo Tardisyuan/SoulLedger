@@ -343,7 +343,8 @@
       "WANGSI_GRIEVANCE_FILED": "枉死城申诉",
       "WANGSI_GRIEVANCE_UPHELD": "申诉属实 · 提前释放",
       "WANGSI_GRIEVANCE_REJECTED": "申诉不属实",
-      "WANGSI_GRIEVANCE_DELIVERED": "申诉属实 · 超度至莲花台"
+      "WANGSI_GRIEVANCE_DELIVERED": "申诉属实 · 超度至莲花台",
+      "NEGATIVE_CONFESSION_HEARD": "否定告白记完"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -1550,7 +1551,11 @@
       "not_reached": "未走",
       "last_step": "最近一步",
       "template": "模板",
-      "status": "状态"
+      "status": "状态",
+      "refusals": {
+        "escalate_past_final": "越级推进最多到终审这一站：终审要由审批人判，不能越过。",
+        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。"
+      }
     },
     "verdicts": {
       "passed": "通过",
@@ -1608,7 +1613,8 @@
       "COMPLETED": "流程完成",
       "SKIPPED": "已跳过",
       "ESCALATED": "已升级",
-      "TRAVERSED": "已经过"
+      "TRAVERSED": "已经过",
+      "CANCELLED": "已取消"
     },
     "no_custom_templates": "你还没有保存过自己的模板。",
     "start": {
@@ -1639,7 +1645,8 @@
         "judgment_taken": "这次审判已经有审批了",
         "reason_required": "写一句理由",
         "forbidden": "你没有发起审批的权限",
-        "failed": "没能发起，请重试"
+        "failed": "没能发起，请重试",
+        "origin_flow_open": "这个灵魂的原审审批流程还没走完，走完之后才能发起申诉审批"
       }
     },
     "filter": {
@@ -2084,7 +2091,9 @@
       "conclude_with_workflow": "落判并发起",
       "current_realm": "所在界域",
       "method": "审判方式",
-      "workflow_forced_original": "原审必走审批流程：流程走完才能执行处置；流程被驳回就重开一案。"
+      "workflow_forced_original": "原审必走审批流程：流程走完才能执行处置；流程被驳回就重开一案。",
+      "passed_barred_five_heinous": "罪目是五逆：直入阿鼻，不能判通过。",
+      "passed_barred_untruthful": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -4099,7 +4108,8 @@
     },
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
-      "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。"
+      "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
+      "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。"
     }
   },
   "reincarnation": {
@@ -4125,7 +4135,8 @@
       "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
       "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转世。",
       "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。",
-      "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。"
+      "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。",
+      "origin_flow_open": "{{name}}的原审审批流程还没走完，走完之后才能转世。"
     },
     "next_continent": "下一世部洲 · 选填",
     "next_continent_same": "同本世",
@@ -6404,7 +6415,8 @@
       "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请给出终局裁决，或另开一件审判。",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判待定（炼狱）。",
-      "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
+      "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。",
+      "five_heinous_must_fail": "罪目是五逆：直入阿鼻，不能判通过。"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -7585,7 +7597,8 @@
       "soul_devoured": "灵魂已被阿米特吞噬，不复存在，无从申诉",
       "not_escalatable": "上一次复核维持原判之后才能上诉",
       "appeal_closed": "这份申诉已有结论或已撤回，不能再撤回。",
-      "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。"
+      "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。",
+      "origin_flow_open": "这件审判的审批流程还没走完，走完之后才能申诉或上诉"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",
@@ -7640,7 +7653,8 @@
       "not_final_judge": "只有终审官员能作出结论",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能改判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能改判下地狱。",
-      "untruthful_confession": "原审有否定告白记为「不实」：不能改判通过。"
+      "untruthful_confession": "原审有否定告白记为「不实」：不能改判通过。",
+      "five_heinous_must_fail": "原审罪目是五逆：不能改判通过。"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",

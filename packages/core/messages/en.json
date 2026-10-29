@@ -343,7 +343,8 @@
       "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of Wrongful Death",
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
       "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld",
-      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace"
+      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace",
+      "NEGATIVE_CONFESSION_HEARD": "Negative confession heard"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -1550,7 +1551,11 @@
       "not_reached": "Not reached",
       "last_step": "Latest step",
       "template": "Template",
-      "status": "Status"
+      "status": "Status",
+      "refusals": {
+        "escalate_past_final": "Escalation stops at the final review: the final review has to be decided, not escalated past.",
+        "five_heinous_must_fail": "This judgment is passed on one of the five heinous crimes: it cannot be approved."
+      }
     },
     "verdicts": {
       "passed": "Passed",
@@ -1608,7 +1613,8 @@
       "COMPLETED": "Completed",
       "SKIPPED": "Skipped",
       "ESCALATED": "Escalated",
-      "TRAVERSED": "Passed through"
+      "TRAVERSED": "Passed through",
+      "CANCELLED": "Cancelled"
     },
     "no_custom_templates": "You have not saved any templates of your own yet.",
     "start": {
@@ -1639,7 +1645,8 @@
         "judgment_taken": "This judgment already has an approval",
         "reason_required": "Add a reason",
         "forbidden": "You don't have permission to start approvals",
-        "failed": "Couldn't start, please try again"
+        "failed": "Couldn't start, please try again",
+        "origin_flow_open": "This soul's original approval workflow has not finished; an appeal waits for it"
       }
     },
     "filter": {
@@ -2084,7 +2091,9 @@
       "conclude_with_workflow": "Rule and open workflow",
       "current_realm": "Realm",
       "method": "Method",
-      "workflow_forced_original": "An original judgment always runs its approval workflow: the disposition is executed once it finishes; a refused workflow reopens the case."
+      "workflow_forced_original": "An original judgment always runs its approval workflow: the disposition is executed once it finishes; a refused workflow reopens the case.",
+      "passed_barred_five_heinous": "The offence is one of the five heinous crimes: it cannot be passed.",
+      "passed_barred_untruthful": "A denial was recorded as untrue: the verdict cannot be passed. The scale can be left wavering for a new weighing."
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -4099,7 +4108,8 @@
     },
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
-      "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed."
+      "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
+      "approval_cancelled": "The approval workflow was cancelled with the joint judgment and never finished: it cannot be executed as is."
     }
   },
   "reincarnation": {
@@ -4125,7 +4135,8 @@
       "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
       "disposition_not_executed": "{{name}} still has a disposition that has not been executed; execute it and let the term run out before the rebirth.",
       "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path.",
-      "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents."
+      "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents.",
+      "origin_flow_open": "{{name}}'s original approval workflow has not finished; the rebirth waits for it."
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
@@ -6404,7 +6415,8 @@
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory).",
-      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again."
+      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
+      "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
     "cross": {
       "title": "Sentence plan stops",
@@ -7585,7 +7597,8 @@
       "soul_devoured": "This soul was devoured by Ammit and no longer exists; there is no appeal",
       "not_escalatable": "You can escalate only after a review has upheld the verdict",
       "appeal_closed": "This appeal has already been decided or withdrawn.",
-      "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done."
+      "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done.",
+      "origin_flow_open": "This judgment's approval workflow has not finished; you can appeal once it has"
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",
@@ -7640,7 +7653,8 @@
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
-      "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed."
+      "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
+      "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed."
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",

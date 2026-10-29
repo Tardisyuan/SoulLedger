@@ -301,6 +301,9 @@ class JudgmentConclusionService:
             # 告白只记在称重的案子上(加减项审判没有),所以不用再判文明与种类。
             from apps.judgment.confessions import refuse_passed_if_untruthful
             refuse_passed_if_untruthful(judgment, verdict)
+            # 五逆不能判 PASSED(用户 2026-10-29,审查 J;400 `five_heinous_must_fail`)。
+            from apps.judgment.models import refuse_passed_if_five_heinous
+            refuse_passed_if_five_heinous(judgment, verdict)
 
             # 原审一律走审批流程(用户 2026-10-29,四文明):处置等流程 COMPLETED 才执行
             # (`weighing.unfinished_flow`),流程驳回就撤回处置、重开一案(`weighing.reweigh_after_rejection`)。

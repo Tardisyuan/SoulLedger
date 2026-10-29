@@ -171,6 +171,9 @@ export const EVENT_LABELS: Record<string, string> = {
   WANGSI_GRIEVANCE_REJECTED: "souls.events.WANGSI_GRIEVANCE_REJECTED",
   WANGSI_GRIEVANCE_DELIVERED: "souls.events.WANGSI_GRIEVANCE_DELIVERED",
 
+  // Egyptian negative confession: one summary per full round (2026-10-29)
+  NEGATIVE_CONFESSION_HEARD: "Negative confession heard",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "events.realtime.SCHEDULER_RUN_FAILED",
 };

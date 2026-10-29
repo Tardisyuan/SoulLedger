@@ -6798,6 +6798,7 @@ paths:
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
+          - NEGATIVE_CONFESSION_HEARD
           - NOTIFICATION_CREATED
           - OFFICER_HANDOVER
           - POST_CREATED
@@ -6909,6 +6910,7 @@ paths:
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+          * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7044,6 +7046,7 @@ paths:
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
+          - NEGATIVE_CONFESSION_HEARD
           - NOTIFICATION_CREATED
           - OFFICER_HANDOVER
           - POST_CREATED
@@ -7155,6 +7158,7 @@ paths:
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+          * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -21958,6 +21962,7 @@ paths:
         schema:
           type: string
           enum:
+          - CANCELLED
           - COMPLETED
           - IN_PROGRESS
           - PENDING
@@ -21967,6 +21972,7 @@ paths:
           * `IN_PROGRESS` - 审批中
           * `REJECTED` - 已拒绝
           * `COMPLETED` - 流程完成
+          * `CANCELLED` - 已取消
       tags:
       - v1
       security:
@@ -22568,6 +22574,7 @@ paths:
         schema:
           type: string
           enum:
+          - CANCELLED
           - COMPLETED
           - IN_PROGRESS
           - PENDING
@@ -22577,6 +22584,7 @@ paths:
           * `IN_PROGRESS` - 审批中
           * `REJECTED` - 已拒绝
           * `COMPLETED` - 流程完成
+          * `CANCELLED` - 已取消
       tags:
       - v1
       security:
@@ -23667,6 +23675,7 @@ components:
       - APPEAL
       - EXCEPTION
       - COMPLETED
+      - CANCELLED
       type: string
       description: |-
         * `PENDING` - 待审批
@@ -23676,6 +23685,7 @@ components:
         * `APPEAL` - 申诉中
         * `EXCEPTION` - 异常处理
         * `COMPLETED` - 流程完成
+        * `CANCELLED` - 已取消
     ApproverPreview:
       type: object
       properties:
@@ -28045,6 +28055,7 @@ components:
       - WANGSI_GRIEVANCE_UPHELD
       - WANGSI_GRIEVANCE_REJECTED
       - WANGSI_GRIEVANCE_DELIVERED
+      - NEGATIVE_CONFESSION_HEARD
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -28116,6 +28127,7 @@ components:
         * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
         * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
         * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+        * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object

@@ -160,7 +160,7 @@ class DispatchService:
         """
         from django.db.models import Case, IntegerField, Value, When
 
-        from apps.realms.models import REALM_TYPE_DISPLAY_ORDER, Realm
+        from apps.realms.models import REALM_TYPE_DISPLAY_ORDER, RETIRED_REALM_CODES, Realm
         from apps.souls.models import UNKNOWN_CIVILIZATION
 
         # `Tenant.civilization`,不是 `TENANT_CIVILIZATION[code]`:后者只认四个种子殿,管理员新建的殿
@@ -170,7 +170,7 @@ class DispatchService:
             return Realm.all_objects.none()
         return Realm.all_objects.filter(
             tenant_id=target_tenant.pk, civilization=civilization, is_deleted=False,
-        ).annotate(
+        ).exclude(realm_code__in=RETIRED_REALM_CODES).annotate(  # 不再使用的界域不给选(审查 L)
             type_rank=Case(
                 *[When(realm_type=t, then=Value(i)) for i, t in enumerate(REALM_TYPE_DISPLAY_ORDER)],
                 default=Value(len(REALM_TYPE_DISPLAY_ORDER)), output_field=IntegerField(),
@@ -850,7 +850,8 @@ class CrossTenantJudgmentService:
             tenant=participant_tenant,
             node_order=node_order,
         )
-        if running:
+        if running and role != ParticipantRole.ADVISOR:
+            # 顾问席不走审批段(用户 2026-10-29,审查 D)。
             segments.append_foreign(workflow, participant_tenant)
 
         # Notify initiating tenant, through the bus so the row lands in the

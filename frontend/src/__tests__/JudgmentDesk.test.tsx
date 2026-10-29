@@ -53,6 +53,7 @@ jest.mock("@soulledger/core/api", () => ({
     defer: jest.fn(),
     destinations: jest.fn(),
     previous: jest.fn(),
+    negativeConfessions: jest.fn(),
   },
   soulsApi: { get: jest.fn(), karma: jest.fn() },
   reincarnationApi: { list: jest.fn() },
@@ -153,6 +154,7 @@ beforeEach(() => {
   workflowApi.flowPreview.mockResolvedValue({ data: { name: "十殿审判流程", nothing_to_pick: true, stations: [], foreign: [] } });
   judgmentApi.precedents.mockResolvedValue({ data: [] });
   judgmentApi.defer.mockResolvedValue({ data: {} });
+  judgmentApi.negativeConfessions.mockResolvedValue({ applies: false, concluded: false, items: [], tally: null });
   judgmentApi.destinations.mockImplementation((_id: string, verdict: string) =>
     Promise.resolve({
       data: { verdict, default_realm_id: "r-5", default_term_years: null, options: DESTINATIONS, not_applicable: NOT_APPLICABLE },
@@ -1488,5 +1490,59 @@ describe("埃及:裁决是天平的(docs/02 §5,2026-10-27)", () => {
     expect(await screen.findByTestId("weighing-recorded")).toHaveTextContent(
       tZh("judgment.weighing.recorded", { result: tZh("judgment.weighing.result.HEAVIER"), weight: "5" })
     );
+  });
+});
+
+// ── 「通过」预先置灰并说明(2026-10-29):五逆(审查 J)、否定告白记了「不实」(审查 S)。服务端同样拒收。 ──
+describe("PASSED barred before the server has to refuse it", () => {
+  it("五逆:通过禁选并说明,其余三个照常;别的罪目不禁", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ offence: "FIVE_HEINOUS", draft_verdict: "PASSED" }) });
+    const { unmount } = renderPage();
+    await screen.findAllByRole("radio");
+    expect(radio("PASSED").disabled).toBe(true);
+    for (const v of ["FAILED", "PURGATORY", "RETRY"]) expect(radio(v).disabled).toBe(false);
+    // The saved draft said PASSED; the desk does not stand on a verdict it cannot send.
+    await waitFor(() => expect(radio("PASSED").checked).toBe(false));
+    expect(screen.getByTestId("verdict-passed-barred")).toHaveTextContent(tZh("judgment.detail.passed_barred_five_heinous"));
+    fireEvent.keyDown(document.body, { key: "1" });
+    expect(radio("PASSED").checked).toBe(false);
+    unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: judgment({ offence: "MURDER" }) });
+    renderPage();
+    await screen.findAllByRole("radio");
+    expect(radio("PASSED").disabled).toBe(false);
+    expect(screen.queryByTestId("verdict-passed-barred")).toBeNull();
+  });
+
+  const light = () =>
+    judgment({
+      civilization: "EGYPTIAN", judgment_method: "HEART_WEIGHING", citations: [],
+      admitted_balance: {
+        reading_kind: "THRESHOLD", balance: null, not_admitted_count: 0, not_admitted_net: null, reason_code: "BALANCE_NOT_APPLICABLE",
+        weighing: { heart_weight: 0, counterweight: 1, heavier_than_feather: false, weighed_verdict: "PASSED" },
+      },
+    });
+  const heard = (untruthful: number) => ({
+    applies: true, concluded: false, items: [], tally: { truthful: 42 - untruthful, untruthful, unheard: 0, total: 42 },
+  });
+
+  it("埃及:有一条「不实」,天平给的通过也禁选并说明;没有不实就照常", async () => {
+    judgmentApi.get.mockResolvedValue({ data: light() });
+    judgmentApi.negativeConfessions.mockResolvedValue(heard(1));
+    const { unmount } = renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(radio("PASSED").disabled).toBe(true));
+    expect(radio("PURGATORY").disabled).toBe(false);
+    await waitFor(() => expect(radio("PASSED").checked).toBe(false));
+    expect(screen.getByTestId("verdict-passed-barred")).toHaveTextContent(tZh("judgment.detail.passed_barred_untruthful"));
+    unmount();
+
+    judgmentApi.negativeConfessions.mockResolvedValue(heard(0));
+    renderPage();
+    await screen.findAllByRole("radio");
+    await waitFor(() => expect(radio("PASSED").checked).toBe(true));
+    expect(radio("PASSED").disabled).toBe(false);
+    expect(screen.queryByTestId("verdict-passed-barred")).toBeNull();
   });
 });

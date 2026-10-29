@@ -38,6 +38,8 @@ export function startWorkflowRefusal(error: unknown, t: Translate, civilization?
   const code = typeof data.code === "string" ? data.code : "";
   const failed = { message: t("workflow.start.errors.failed"), field: null };
   if (r?.status === 403) return { message: t("workflow.start.errors.forbidden"), field: null };
+  // 原审的审批流程还没走完时不能发起申诉审批(2026-10-29,审查 B;灵魂端同一个码)。
+  if (r?.status === 400 && code === "origin_flow_open") return { message: t("workflow.start.errors.origin_flow_open"), field: "case_type" };
   if (r?.status === 400 && code === "invalid_case_type") {
     const civ = resolveEnumDisplay(t, "souls.civilizations", civilization).label ?? "";
     return { message: t("workflow.start.errors.case_type_civ", { civ }), field: "case_type" };

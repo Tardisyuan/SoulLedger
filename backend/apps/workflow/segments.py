@@ -235,12 +235,15 @@ def cross_of(workflow):
 
 
 def foreign_realms(cross, own_tenant_id, case_type):
-    """跨域审判的各参与域,按流程里各段的顺序:`node_order`(入席时定的「各域顺序」),没有序号的(顾问)按入席先后
-    排后面。同一个域入席两次只算一段;发起方自己的顾问席不另起一段。每项 (租户, 文明, 该域的默认流程)。
+    """跨域审判的各参与域,按流程里各段的顺序:`node_order`(入席时定的「各域顺序」)。顾问席不另起一段(审查 D)。
+    同一个域入席两次只算一段;发起方自己不另起一段。每项 (租户, 文明, 该域的默认流程)。
     `add_foreign` 与生成之前的选站列表(`flow_preview`)共用,两处的外域段不会不一样。"""
+    from apps.dispatch.models import ParticipantRole
     from apps.workflow.services import WorkflowService
 
-    seats = (cross.participants.filter(is_deleted=False).select_related("participant_tenant")
+    # 顾问席不走审批段(用户 2026-10-29,审查 D):顾问不带站、不定处置,只提意见。
+    seats = (cross.participants.filter(is_deleted=False).exclude(role=ParticipantRole.ADVISOR)
+             .select_related("participant_tenant")
              .order_by(F("node_order").asc(nulls_last=True), "joined_at", "pk"))
     seen = {own_tenant_id}
     for seat in seats:
@@ -738,7 +741,10 @@ def lock_workflow_of(cross):
 
 def on_cross_cancelled(workflow, cross, user, reason):
     """跨域审判取消(第 7 条规则):还没开始的外域段全部跳过(CANCELLED),撤回未选站的待办;流程正在某个外域段里时,
-    那一段当前站与之后的站(含终审)也跳过,流程随即结束。在取消的事务里,调用方已锁流程行。"""
+    那一段当前站与之后的站(含终审)也跳过,流程随即结束。在取消的事务里,调用方已锁流程行。
+    这样结束的流程是 CANCELLED(用户 2026-10-29,审查 C):不算走完、不算通过,不触发完成钩子(`_finish`);
+    原审的处置照旧等着(`weighing.unfinished_flow` 的 `approval_cancelled`)。本域还没走完时取消,外域段跳过,
+    本域照常走到底 —— 那是一次真的走完(COMPLETED,`end_reason` 为空)。"""
     if workflow is None or workflow.status in TERMINAL_WORKFLOW_STATUSES:
         return
     now = timezone.now()
@@ -759,12 +765,12 @@ def on_cross_cancelled(workflow, cross, user, reason):
         segment.version += 1
         segment.save(update_fields=["state", "version"])
     if end_now:
-        workflow._finish(ApprovalWorkflowStatus.COMPLETED, now, end_reason=END_REASON_CANCELLED)
+        workflow._finish(ApprovalWorkflowStatus.CANCELLED, now, end_reason=END_REASON_CANCELLED)
     elif workflow.current_node_id is None:
         # 正站在某个外域段门口(已跳过):往下走;后面没有了就结束。
         nxt = workflow.get_next_node()
         if nxt is None:
-            workflow._finish(ApprovalWorkflowStatus.COMPLETED, now, end_reason=END_REASON_CANCELLED)
+            workflow._finish(ApprovalWorkflowStatus.CANCELLED, now, end_reason=END_REASON_CANCELLED)
         else:
             workflow._enter(nxt, now)
     workflow.save()

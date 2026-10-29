@@ -156,7 +156,7 @@ def test_a_refused_flow_and_a_completed_flow_are_distinguishable(flow, cn_tenant
 
 @pytest.mark.django_db
 def test_which_workflow_statuses_are_reachable_is_stated(flow):
-    """七个声明成员里,只有四个走得到。
+    """八个声明成员里,只有五个走得到。
 
     `APPROVED` / `APPEAL` / `EXCEPTION` 无处赋值,而 `WorkflowFilter.status` 用
     `ApprovalWorkflowStatus.choices` 把它们当筛选值提供 —— 三个永远匹配不到任何行
@@ -164,7 +164,8 @@ def test_which_workflow_statuses_are_reachable_is_stated(flow):
     可达、或者把它删掉,这里就得跟着改,而那是一次明确的决定。
     """
     declared = set(ApprovalWorkflowStatus.values)
-    reachable = {"PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"}
+    # CANCELLED (2026-10-29, review C): a cancelled joint judgment cuts the flow short (`segments.on_cross_cancelled`).
+    reachable = {"PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED", "CANCELLED"}
     unreachable = declared - reachable
 
     assert unreachable == {"APPROVED", "APPEAL", "EXCEPTION"}, (
