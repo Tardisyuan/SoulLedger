@@ -537,6 +537,43 @@ def test_another_realm_does_not_read_the_flows_notes_or_other_stations_opinions(
     assert mine["decision_history"][0]["notes"] == "退回前的意见"
 
 
+def test_a_seat_reads_its_own_sentence_notes_not_another_halls(w):
+    """用户 2026-10-29(决定 24 余项):联审别殿那一席的量刑备注不给,殿名与站照给;召集殿看全部。"""
+    _soul, case = plan.open_case(w.cn)
+    cj = CrossTenantJudgmentService.create("联审", "d", w.cn, None)
+    cj.judgment = case
+    cj.save(update_fields=["judgment"])
+    for order, (realm, notes) in enumerate([(w.eg, "埃及的备注"), (w.eu, "欧洲的备注")], start=2):
+        seat = CrossTenantJudgmentService.add_participant(cj, realm, None, ParticipantRole.CO_JUDGE, node_order=order)
+        CrossTenantJudgmentService.submit_sentence(seat, plan.stop_realm(realm), 5, notes, None)
+
+    def notes_by_hall(user):
+        res = officer_client(user).get(f"{CJ}{cj.pk}/")
+        assert res.status_code == 200, res.data
+        return {p["participant_tenant_code"]: p["sentence_notes"] for p in res.data["participants"]}
+
+    assert notes_by_hall(w.eg_judge) == {w.eg.code: "埃及的备注", w.eu.code: ""}
+    assert notes_by_hall(w.eu_judge) == {w.eg.code: "", w.eu.code: "欧洲的备注"}
+    assert notes_by_hall(w.cn_judge) == {w.eg.code: "埃及的备注", w.eu.code: "欧洲的备注"}
+
+
+def test_another_realm_does_not_read_the_reason_a_station_was_added_or_dropped(w):
+    """用户 2026-10-29(决定 24 余项):加减站的理由 —— 历史记录的 `reason` 与跳过节点的 `skip_reason` ——
+    别殿读时清空;殿名、哪几站照给。本殿读全部。"""
+    _soul, _case, _cj, wf = merged(w, [w.eg])
+    second = _nodes(wf, 1)[1]
+    assert _adjust(w.cn_mod, wf, skip=[second], reason="议罪并入终审").status_code == 200
+
+    theirs = officer_client(w.eg_judge).get(f"{WF}{wf.pk}/").data
+    row = next(h for h in theirs["history"] if h["kind"] == "adjusted")
+    assert row["reason"] == "" and row["realm"] == w.cn.code and row["skipped"] == [second.node_name]
+    assert next(n for n in theirs["nodes"] if n["id"] == str(second.pk))["skip_reason"] == ""
+
+    ours = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
+    assert next(h for h in ours["history"] if h["kind"] == "adjusted")["reason"] == "议罪并入终审"
+    assert next(n for n in ours["nodes"] if n["id"] == str(second.pk))["skip_reason"] == "议罪并入终审"
+
+
 def test_the_pick_task_lands_in_the_realms_todo(w):
     _soul, _case, _cj, wf = merged(w, [w.eg])
     group = officer_client(w.eg_judge).get(TODO).data["pick_nodes"]
