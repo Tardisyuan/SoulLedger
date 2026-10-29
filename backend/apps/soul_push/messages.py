@@ -214,6 +214,10 @@ MESSAGES = {
         "content_restored_post": {"title": "Medu-Ek Wen Wehem", "body": "Medu-Ek Wen Wehem Seth."},
         "comment": {"title": "{{name}}: Wesheb · Medu-Ek", "body": "{{text}}"},
         "reply": {"title": "{{name}}: Wesheb Er Wesheb-Ek", "body": "{{text}}"},
+        "wangsi_upheld": {"title": "Nehet Maat · Per Tepy Seth", "body": "Nehet-Ek Maat: Per Tepy Seth Em Nut Mut Nen Maat. Wen Medjat Ba Er Maa."},
+        "wangsi_upheld_late": {"title": "Nehet Maat", "body": "Nehet-Ek Maat. Wen Medjat Ba Er Maa Wesheb."},
+        "wangsi_delivered": {"title": "Nehet Maat · Seshem Seth", "body": "Nehet-Ek Maat: Seshem Seth Em Nut Mut Nen Maat. Wen Medjat Ba Er Maa."},
+        "wangsi_rejected": {"title": "Nehet Nen Maat", "body": "Nehet-Ek Nen Maat. Wen Medjat Ba Er Maa Wesheb."},
     },
 }
 
