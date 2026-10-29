@@ -1,0 +1,5 @@
+# Migrations of apps/* with an operation Django cannot reverse (RunPython without
+# reverse_code, RunSQL without reverse_sql), one `app.migration_name` per line.
+# Pinned by tests/test_irreversible_migrations_are_listed.py. Rolling an image back
+# past one of these needs a restore, not `migrate` — docs/DEPLOYMENT.md「部署回滚」.
+# Empty on 2026-10-30: every RunPython / RunSQL in the tree has a reverse.

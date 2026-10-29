@@ -403,6 +403,42 @@ def test_failure_alerts_once_on_the_success_to_failure_edge_and_resets_on_succes
 
 
 @pytest.mark.django_db
+def test_the_failure_edge_also_posts_to_the_ops_webhook_once(db, admin_user, settings, monkeypatch):
+    """Gap 14: an in-app notification nobody opens tells nobody. One POST per episode."""
+    import requests
+
+    posts = []
+    monkeypatch.setattr(requests, "post", lambda url, json, timeout: posts.append((url, json)) or SimpleNamespace(raise_for_status=lambda: None))
+    settings.OPS_ALERT_WEBHOOK_URL = "https://hooks.example/ops"
+    _job("tests.scheduler_boom")
+
+    _boom_task.apply(task_id=str(uuid.uuid4()), throw=False)
+    _boom_task.apply(task_id=str(uuid.uuid4()), throw=False)
+
+    assert len(posts) == 1
+    url, body = posts[0]
+    assert url == "https://hooks.example/ops"
+    assert "tests.scheduler_boom" in body["text"] and body["text"] == body["content"]
+
+
+def test_ops_alert_unset_says_so_and_a_failing_post_never_raises(settings, monkeypatch, caplog):
+    import requests
+
+    settings.OPS_ALERT_WEBHOOK_URL = ""
+    monkeypatch.setattr(requests, "post", lambda *a, **k: pytest.fail("posted with no URL configured"))
+    with caplog.at_level("WARNING", logger="apps.scheduler.services"):
+        assert services.ops_alert("boom") is False
+    assert "OPS_ALERT_WEBHOOK_URL not set" in caplog.text
+
+    def refuse(*a, **k):
+        raise requests.ConnectionError("down")
+
+    settings.OPS_ALERT_WEBHOOK_URL = "https://hooks.example/ops"
+    monkeypatch.setattr(requests, "post", refuse)
+    assert services.ops_alert("boom") is False
+
+
+@pytest.mark.django_db
 def test_alert_recipients_are_admins_plus_tenant_holders_of_manage(db, admin_user, judge_user, viewer_user, eu_admin_user, cn_tenant):
     from apps.perm.models import RolePermission
     from tests.perm_support import seeded_permission, seeded_role
