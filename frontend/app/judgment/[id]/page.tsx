@@ -65,6 +65,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
 import { NegativeConfessionPanel } from "@/src/components/judgment/NegativeConfessionPanel";
+import { ReopenCancelledButton } from "@/src/components/judgment/ReopenCancelledButton";
 import {
   EMPTY_DRAFT,
   draftIsEmpty,
@@ -442,6 +443,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+  /* 别人认领中、自己又不持 judgment.assign:编辑控件(案由、草稿、采信、引条文、否认告白、附件、发落)一概不画 ——
+     服务端同一条规则(`claims.assert_may_edit`,序列化器的 `can_edit`)会 403 `not_claimant`。持 judgment.assign 的照常
+     可改,页头另有一句「此操作会留痕」。 */
+  const canEditCase = canExecute && judgment?.can_edit !== false;
+  const overridingClaim =
+    canEditCase && !judgment?.is_final && judgment?.claimed_by != null && judgment.claimed_by !== user?.id;
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
   const atCityGod = isAtCityGod(judgment?.city_god_status);
   // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
@@ -454,6 +461,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   /** 主按钮 / ⌘⏎:先进确认层,落判在层里。与落判同一道门:选了裁决才进。 */
   function openConfirm() {
+    if (!canEditCase) return; // ⌘⏎ 也不进:别人认领的案子结不了(服务端 lock_for_conclude 同一条)
     if (!selectedVerdict) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
@@ -475,10 +483,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     notes,
     verdict: selectedVerdict,
     placement,
-    enabled: !!judgment && !judgment.is_final && canExecute,
+    enabled: !!judgment && !judgment.is_final && canEditCase,
   });
   const chooseVerdict = (member: string) => {
-    if (barredBy(member)) return; // 快捷键也不能选天平没给的、或被拒收的裁决
+    if (barredBy(member) || !canEditCase) return; // 快捷键也不能选天平没给的、或被拒收的裁决;别人认领的也不能选
     verdictTouched.current = true;
     setSelectedVerdict(member);
     draft.markEdited();
@@ -609,7 +617,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const soulName = soulData?.name || judgment.soul_name;
   const citations = judgment.citations ?? [];
   const citedIds = new Set(citations.map((c) => c.statute.id));
-  const canEditGrounds = !isFinal && canExecute;
+  const canEditGrounds = !isFinal && canEditCase;
   const refusalCode = (concludeMutation.error as { response?: { data?: { code?: string } } } | null)?.response?.data
     ?.code;
   const placementRefusal =
@@ -664,6 +672,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {judgment.city_god_name} · <DomainEnum namespace="cityGodCases.status" value={judgment.city_god_status} />
         </span>
       )}
+      {/* 别人认领的案子(fix-be1 遗留):不能改的人看到为什么没有编辑控件;持 judgment.assign 越过的人知道会留痕。 */}
+      {canExecute && !isFinal && judgment.can_edit === false && (
+        <span data-testid="desk-not-claimant" className="basis-full text-[oklch(var(--color-ink-muted))]">
+          {t("judgment.claim.not_yours_readonly", { name: judgment.claimed_by_name ?? "" })}
+        </span>
+      )}
+      {overridingClaim && (
+        <span data-testid="desk-claim-override" role="note" className="basis-full text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">! </span>
+          {t("judgment.claim.override_recorded", { name: judgment.claimed_by_name ?? "" })}
+        </span>
+      )}
       {judgment.city_god_status === "SENT_ON" && judgment.sent_on_at && (
         <span data-testid="desk-sent-on" className="basis-full text-[oklch(var(--color-ink-muted))]">
           <span aria-hidden="true">▷ </span>
@@ -686,9 +706,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const notesShown = isFinal ? judgment.notes : notes;
 
   const showPlacement =
-    !isFinal && isOriginal && canExecute && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY"));
+    !isFinal && isOriginal && canEditCase && !(weighedCase && (selectedVerdict === "PURGATORY" || selectedVerdict === "RETRY"));
   const offenceField =
-    judgment.civilization === "CHINESE" ? <OffenceField judgment={judgment} editable={!isFinal && canExecute} /> : null;
+    judgment.civilization === "CHINESE" ? <OffenceField judgment={judgment} editable={!isFinal && canEditCase} /> : null;
 
   const materials: Record<DeskMaterial, { label: string; node: ReactNode }> = {
     confession: {
@@ -696,7 +716,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       node: (
         <>
           {/* 案由(`summary`):官员写的概述,与下面灵魂的供词是两回事。未结案且持 judgment.execute 才可改;其余只读,空则不画。 */}
-          {!isFinal && canExecute ? (
+          {!isFinal && canEditCase ? (
             <CaseSummaryField id={id} value={judgment.summary ?? ""} />
           ) : judgment.summary ? (
             <div className="mb-4">
@@ -717,10 +737,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           )}
           {/* 埃及称心:四十二条否定告白逐条记录(2026-10-28)。不称心的案子组件自己不画。 */}
           {judgment.judgment_method === "HEART_WEIGHING" && (
-            <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canExecute} />
+            <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canEditCase} />
           )}
           {/* 全案时灵魂栏整栏隐藏,枉死城块随之不见;在供词下面另放一份(用户 2026-10-29 定)。一次只渲染一份。 */}
-          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
+          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canEditCase} />}
           {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
           {fullCase && notesShown && (
             <div className="mt-6 border-t border-[oklch(var(--color-line))] pt-3">
@@ -742,7 +762,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             records={ledgerData?.records}
             admissions={judgment.evidence_admissions ?? []}
             balance={judgment.admitted_balance}
-            canRule={!isFinal && canExecute}
+            canRule={!isFinal && canEditCase}
           />
           {/* `evidence_json` is the case's own free-form record, separate from the ledger
               evidence above; shown only when the case carries any. */}
@@ -814,6 +834,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 {t("records.archive.confirm")}
               </Button>
             )}
+            {/* 原审流程被联审撤销、发落卡住:殿主「重开一案」(fix-be1 遗留)。 */}
+            {judgment.flow_cancelled && hasPermission("judgment.assign") && <ReopenCancelledButton judgmentId={judgment.id} />}
             {/* 判词(结案后的文书)可以打印;未结案的草稿不是文书,不给入口。 */}
             {isFinal && (
               <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
@@ -933,7 +955,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </MetaRow>
           </dl>
           {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
-          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canExecute} />}
+          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canEditCase} />}
 
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}
@@ -1133,7 +1155,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                         name="verdict"
                         value={member}
                         checked={isChosen}
-                        disabled={offScale}
+                        disabled={offScale || !canEditCase}
                         onChange={(event) => chooseVerdict(event.target.value)}
                         className="sr-only"
                       />
@@ -1179,7 +1201,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   size="lg"
                   className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
                   onClick={openConfirm}
-                  disabled={!selectedVerdict || crossBlocked || atCityGod || concludeHeld}
+                  disabled={!selectedVerdict || crossBlocked || atCityGod || concludeHeld || !canEditCase}
                 >
                   {t("judgment.desk.to_confirm")}
                   <Kbd>⌘⏎</Kbd>
@@ -1221,11 +1243,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             title={t("souls.detail.ledger.verdict_words")}
             meta={!isFinal && !draft.conflict ? <DraftSavedAt savedAt={judgment.draft_saved_at} /> : undefined}
           />
-          {isFinal ? (
-            /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。 */
-            judgment.notes ? (
+          {isFinal || !canEditCase ? (
+            /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。不能改的人读草稿。 */
+            notesShown ? (
               <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] max-w-[72ch]">
-                {judgment.notes}
+                {notesShown}
               </blockquote>
             ) : (
               <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-3">
@@ -1352,7 +1374,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         {/* 案卷附件(W4):评议区上面一节。两个 order-last 按 DOM 顺序排,所以放在评议之前。 */}
         {canReadAttachments && (
           <div className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
-            <CaseAttachments judgmentId={id} canWrite={canExecute} />
+            <CaseAttachments judgmentId={id} canWrite={canEditCase} />
           </div>
         )}
         <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />

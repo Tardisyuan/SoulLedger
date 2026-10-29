@@ -2327,7 +2327,9 @@
       "embalming": "这桩审判候至 {{date}}：木乃伊尚未完成，灵魂还没启程前往两真之殿，到那天才能认领。",
       "duat_unfinished": "这桩审判不能认领：灵魂到不了两真之殿。",
       "duat_barred_short": "到不了殿，不能认领",
-      "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。"
+      "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。",
+      "not_yours_readonly": "此案由{{name}}认领，只有认领人能改；你可以查看。",
+      "override_recorded": "你不是认领人（此案由{{name}}认领），此操作会留痕。"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2569,6 +2571,15 @@
     "ferry": {
       "barred_unburied": "未葬，不得过河",
       "barred_no_fare": "无渡资，不得过河"
+    },
+    "reopen_cancelled": {
+      "button": "重开一案",
+      "hint": "原审的审批流程已被撤销，发落停在这里。撤回结案，另开一件新案重审。",
+      "done": "已重开：{{case_number}}",
+      "refusal": {
+        "not_cancelled": "这件案子的审批流程没有被撤销，不能这样重开。",
+        "cannot_reopen": "灵魂已经安置，不能这样重开；请走重开申请或申诉。"
+      }
     }
   },
   "audit": {
@@ -7933,7 +7944,9 @@
     },
     "deactivate_prompt": "{{name}}手上还有在途的事。停用前先移交？",
     "submit_and_deactivate_n": "移交 {{n}} 件并停用",
-    "deactivated_toast": "已移交并停用{{name}}"
+    "deactivated_toast": "已移交并停用{{name}}",
+    "letters_kept": "你没有回信权限，{{n}} 封书信不移交，留在{{name}}名下。",
+    "result_letters_kept": "{{n}} 封书信没有移交，仍在交出人名下（你没有回信权限）。"
   },
   "officerInvite": {
     "action": "邀请官员",
