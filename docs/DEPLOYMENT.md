@@ -336,3 +336,111 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
   2026-09-19 本机实跑过这一套(备份 → stop → dropdb → 卷恢复 → init → pg_restore → start):
   各步 exit 0,服务账号 `@soulledger:…` 与 admin 标记都在,`public` 下没有不属 `synapse` 的表,
   签名密钥前后 sha 相同,`/_matrix/client/versions` 经 nginx 200。
+
+## 指标与集中日志(2026-10-30)
+
+**这一节的变量都还不在 `x-django-env` 里**(见文首):`LOG_FORMAT`、`METRICS_TOKEN`、`METRICS_ALLOWED_IPS`、
+`SECRET_KEY_FALLBACKS`、`ENCRYPTION_KEY_FALLBACKS`、`ASSIST_USAGE_RETENTION_DAYS`、`DEATH_SYNC_REQUEST_RETENTION_DAYS`。
+上线前把要用的加进 `docker-compose.yml` 的 `x-django-env`(写成 `${NAME:-}`)并同时写进 `.env.example`
+(`backend/tests/test_production.py::TestEnvExample` 要求两边一致)。
+
+- **日志格式**:`LOG_FORMAT=json` 每行一个 JSON 对象(`time` / `level` / `logger` / `message` / `trace_id` /
+  `exc_info`,`backend/config/json_logging.py`),给日志采集按行解析;`LOG_FORMAT=text` 是人读的一行。
+  默认:`DEBUG` 关时 json,开时 text;其它取值拒绝启动。`trace_id` 就是响应头 `X-Request-ID`,
+  同一请求的日志、审计行与它派发的 Celery 任务共用一个(`backend/apps/core/trace.py`)。
+  采集:容器日志走 stdout/stderr,用 Docker 的日志驱动或 Promtail / Vector / Fluent Bit 收 `docker logs`,
+  按 JSON 解析即可,不用改代码。
+- **`/metrics/`**(Prometheus 文本格式,`backend/apps/core/metrics.py`,没有新增依赖):
+  - 默认关闭(404)。`METRICS_TOKEN` 设了就认 `Authorization: Bearer <token>`;`METRICS_ALLOWED_IPS`
+    (逗号分隔的地址或 CIDR,写错拒绝启动)设了就认来源地址 —— 来源地址按 `TRUSTED_PROXY_COUNT` 解析
+    (`backend/apps/core/client_ip.py`),随手写的 `X-Forwarded-For` 不算。任一满足即放行,其余一律 404。
+  - nginx **不转发** `/metrics/`(`location /` 指向前端)。Prometheus 在 compose 网络里直接抓 `backend:8000/metrics/`;
+    这时 Host 是 `backend`,要加进 `ALLOWED_HOSTS`。生产的 HTTPS 跳转对 `/metrics/` 豁免(同 `/health/`)。
+    推荐用 token:compose 网络里的来源地址会随容器重建变化。
+  - 指标都是抓取时现算的 gauge(多个 gunicorn worker 的进程内计数器每次抓到的是不同 worker 的那一份,所以不做;
+    请求量与延迟看 nginx):
+
+    | 指标 | 含义 |
+    |---|---|
+    | `soulledger_up` | 恒为 1 |
+    | `soulledger_database_up` | 本进程能否查库 |
+    | `soulledger_redis_up` | Celery broker 能否连上 |
+    | `soulledger_celery_queue_length{queue}` | broker 队列里排队的消息数(队列深度) |
+    | `soulledger_celery_unacked` | worker 已取走、未确认的消息数 |
+    | `soulledger_scheduler_overdue_jobs` | 该跑却没跑的定时任务数(同 `/health/detailed/` 的 `scheduler`) |
+    | `soulledger_scheduler_runs_24h{status}` | 近 24 小时定时任务执行记录,按状态 |
+    | `soulledger_webhook_deliveries_pending` | 待投递的事件 webhook |
+    | `soulledger_push_deliveries_unsent` | 灵魂端推送里排队 / 发送中的 |
+
+    建议告警:`soulledger_celery_queue_length > 100` 持续 10 分钟(worker 跟不上或挂了)、
+    `soulledger_scheduler_overdue_jobs > 0`(beat 挂了)、`soulledger_redis_up == 0`、`up == 0`。
+
+## 数据保留(2026-10-30)
+
+每天 04:25(UTC)的全局任务 `audit.prune_retained_data`(`backend/apps/core/retention.py`)按下表删过期行,
+分批 `_raw_delete`,不写审计行。天数是环境变量,`0`(或留空)= 不清。
+
+| 表 | 变量(默认天数) | 条件 |
+|---|---|---|
+| 事件 webhook 投递 | `EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS`(90) | 不含 PENDING |
+| 站内通知 | `USER_NOTIFICATION_READ_RETENTION_DAYS`(180) | 只删已读;连带它的邮件记录 |
+| 灵魂端 / 官员端推送投递 | `PUSH_DELIVERY_RETENTION_DAYS`(90) | 灵魂端不含排队 / 发送中 |
+| 停用的推送设备 | `INACTIVE_PUSH_DEVICE_RETENTION_DAYS`(30) | 按最后出现时间 |
+| 过期的「记住此设备」 | `EXPIRED_MFA_DEVICE_GRACE_DAYS`(1) | 过期后 N 天 |
+| 助手用量(`AssistUsage`) | `ASSIST_USAGE_RETENTION_DAYS`(730) | 用量页与月度上限只读当月 |
+| Django 会话 | —— | 已过期的(admin 后台的会话) |
+| 朋友圈互动消息 | —— | 90 天(产品文案写死) |
+
+另有各自的任务:审计 / 登录日志(`AUDIT_LOG_RETENTION_DAYS` 365 / `LOGIN_LOG_RETENTION_DAYS` 180,按租户)、
+土地神死亡登记请求(`DEATH_SYNC_REQUEST_RETENTION_DAYS` 90,按租户,`death_sync.cleanup_old_requests_for_tenant`;
+此前写死在任务表参数里)、定时任务执行记录(`SCHEDULER_*`)、灵魂登录记录(90 天)、助手会话(30 天)、个人资料导出(7 天)。
+
+**永不删**(用户 2026-10-30 定为保留):`SoulEvent` 事件日志、审判、灵魂、账号,以及其它业务记录。
+它们的归档见 `docs/ARCHITECTURE-annual-archive.md`(设计稿,待定)。
+
+## 密钥轮换(2026-10-30)
+
+三把密钥都能不停机轮换。顺序永远是:**新旧并存 → 所有进程换上 → 等旧的东西自然失效或重写 → 去掉旧的。**
+backend、celery、celery-beat 三个容器读同一组变量,一起重建。
+
+### SECRET_KEY
+
+签的东西:会话与 CSRF、官员重置密码 / 邮箱验证链接(1 小时)、JWT(access 30 分钟、refresh 7 天)。
+
+1. 生成新 key(≥ 32 字节):`python -c "import secrets; print(secrets.token_urlsafe(48))"`。
+2. `SECRET_KEY=<新>`,`SECRET_KEY_FALLBACKS=<旧>`(多把用逗号分隔),重建三个容器。
+   新签的一律用新 key;旧 key 签的会话、链接与 JWT 照常认(JWT 由 `backend/apps/core/jwt_fallback.py` 补上,
+   SimpleJWT 自己不认 fallback),过期的照样按过期拒。
+3. 等 `JWT_REFRESH_LIFETIME`(默认 7 天)过去 —— 那之后旧 key 签的刷新令牌都已过期或已被轮换掉。
+4. 删掉 `SECRET_KEY_FALLBACKS`,再重建。
+
+不受影响:`MATRIX_USER_SALT`(**不可轮换**,见上文聊天一节)与 `MATRIX_JWT_SECRET` 是各自的密钥。
+会变的:助手审计里「问题的 HMAC」与助手配置的缓存指纹用 `SECRET_KEY` 作 HMAC 键,换 key 之后新旧两段
+哈希不能互相比对(缓存只是失效一次)。
+
+### ENCRYPTION_KEY
+
+加密的列:`WebhookConfig.signing_secret`、`DeathRegistrationRequest.source_payload`、官员 / 灵魂两步验证的
+`secret`、灵魂账号的初始凭据、助手的平台 API key。
+
+1. 生成新 key:`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`。
+2. `ENCRYPTION_KEY=<新>`,`ENCRYPTION_KEY_FALLBACKS=<旧>`,重建三个容器。读时依次试每把 key,写时只用新 key。
+   旧 key 写坏或不是合法 Fernet key 时拒绝启动。
+3. `$DC exec backend python manage.py rotate_encryption_key --dry-run` 看各列要重写多少,
+   再去掉 `--dry-run` 跑一次:逐行读出、用新 key 写回(行锁、`.update()`,不写审计、不改 `update_time`),可重复跑。
+   有任何一个值所有 key 都读不出时,它原样不动、命令以非 0 退出 —— **这时不要去掉旧 key**,先查清那几行。
+4. 命令退出 0 之后删掉 `ENCRYPTION_KEY_FALLBACKS`,再重建。
+5. 新旧两把都要进备份记录:旧备份里的密文只认旧 key。
+
+### Webhook 签名密钥(`WebhookConfig.signing_secret`)
+
+每个出站 webhook 一把,建 webhook 时由服务端生成(`whsec_…`)、只在 201 响应里出现一次
+(`backend/apps/death_sync/views.py`),库里由上面的 `ENCRYPTION_KEY` 加密。**没有「换密钥」接口**,
+一个 webhook 也只存一把。现在能做到不丢投递的办法:
+
+1. 在 `/death-sync` 给同一个 URL 再建一个 webhook,记下新密钥,交给接收方;
+2. 接收方改成两把密钥任一验过即收(按 `X-SoulLedger-Delivery` 去重 —— 过渡期同一事件会各投一次);
+3. 停用旧 webhook(`PATCH {"is_active": false}`,投递历史保留),接收方删掉旧密钥。
+
+要在一个 webhook 上原地轮换(新旧密钥并存一段时间、同时发两个签名),需要新字段、迁移、接口与前端按钮,
+没有实现,列为待定。
