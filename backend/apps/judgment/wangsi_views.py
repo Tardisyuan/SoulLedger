@@ -45,8 +45,9 @@ class WangsiViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSe
     """本殿枉死的案子上的冤情申诉。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "judgment"
-    extra_permissions = {"grievance": ["judgment.execute"], "decide": ["judgment.execute"]}
+    # 枉死城一族(用户 2026-10-29 第 3 条):看 wangsi.read,登记 / 审申诉 wangsi.execute(原 judgment.execute)。
+    permission_codename = "wangsi"
+    extra_permissions = {"grievance": ["wangsi.execute"], "decide": ["wangsi.execute"]}
     queryset = Judgment.objects.filter(untimely=True)
     serializer_class = JudgmentSerializer
 

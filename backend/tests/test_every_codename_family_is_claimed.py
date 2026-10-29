@@ -34,9 +34,10 @@ UNCLAIMED_BY_DESIGN = {
         "在那之前,现状写在这里。"
     ),
     "system": (
-        "`system.settings` 对应的 perm 端点执行的是 `IsAdminPermission`,"
-        "不是这个码名。改成按码名判断是一次策略变更(会让持有它的非 ADMIN 进来),"
-        "留待决定;在那之前这里记录现状。"
+        "**有消费者,只是不经 `permission_codename`。** 2026-10-29 起(用户第 2 条)perm 的函数视图按 "
+        "`system.settings` 判(`apps/perm/views.py::HasSystemSettings` / `CanWriteGlobalSettings`),"
+        "`user.manage` 由 UserViewSet 声明(族名 `user`,目录里归 `system`);本测试只认 "
+        "`permission_codename` 与 `return [...]` 两种写法,看不见前者。"
     ),
     "session": (
         "**有消费者,只是不经 `permission_codename`。** `session.manage` 由三个函数视图"

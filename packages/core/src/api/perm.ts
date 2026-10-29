@@ -127,8 +127,24 @@ export const ADMIN_ROLE_NAME = "ADMIN";
  * The matrix draws these 「! 禁授」 from the start, before anyone tries.
  */
 export const ROLE_FORBIDDEN_CODENAMES: Readonly<Record<string, readonly string[]>> = {
-  MODERATOR: ["user.manage", "workflow.advance", "workflow.approve"],
+  MODERATOR: ["user.manage"],
 };
+/**
+ * 「设计流程的人不审批」按能力,不按角色名(2026-10-29 第 13 条;backend/apps/perm/checker.py 的
+ * `WORKFLOW_DESIGN_CODENAMES` / `WORKFLOW_APPROVE_CODENAMES` / `capability_conflicts`):同一个角色持有设计码,
+ * 就不能再持有审批码;已持审批码的角色不能再被授设计码。ADMIN 不受限。
+ */
+export const WORKFLOW_DESIGN_CODENAMES: readonly string[] = ["workflow.create", "workflow.update"];
+export const WORKFLOW_APPROVE_CODENAMES: readonly string[] = ["workflow.approve", "workflow.advance"];
+
+/** Whether `codename` may not be granted to `role` beside `held` (its other grants, unsaved ticks included). */
+export function capabilityForbids(role: string, codename: string, held: ReadonlySet<string>): boolean {
+  if (role === ADMIN_ROLE_NAME) return false;
+  const holdsDesign = WORKFLOW_DESIGN_CODENAMES.some((c) => held.has(c));
+  if (WORKFLOW_APPROVE_CODENAMES.includes(codename)) return holdsDesign;
+  if (WORKFLOW_DESIGN_CODENAMES.includes(codename)) return !holdsDesign && WORKFLOW_APPROVE_CODENAMES.some((c) => held.has(c));
+  return false;
+}
 export type MatrixChangeResult = Schemas["MatrixChangeResult"];
 export type MatrixChangesResult = Schemas["MatrixChangesResult"];
 /**

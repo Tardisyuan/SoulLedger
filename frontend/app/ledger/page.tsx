@@ -180,9 +180,11 @@ function LedgerPageContent() {
             onChange={(e) => setSearchInput(e.target.value)}
             className={cn(fieldControl({ size: "md" }), "flex-1 min-w-40")}
           />
-          <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
-            {t("ledger.journal.export")}
-          </Button>
+          <RequirePermission permissions="ledger.export">
+            <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
+              {t("ledger.journal.export")}
+            </Button>
+          </RequirePermission>
         </>
       }
     >

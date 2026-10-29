@@ -40,7 +40,7 @@ function CityGodCasesContent() {
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
-  const canTransfer = hasPermission("judgment.assign");
+  const canTransfer = hasPermission("city_god.manage");
   const urlParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("open");
   const [page, setPage] = useState(1);
@@ -181,7 +181,7 @@ function CityGodCasesContent() {
 
 export default function CityGodCasesPage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
+    <RequirePermission permissions="city_god.read" fallback={<PermissionDenied permission="city_god.read" />}>
       <Suspense fallback={null}>
         <CityGodCasesContent />
       </Suspense>

@@ -292,8 +292,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         'queue_counts': ['judgment.read'],
         # 殿筛选的选项:与队列同一个读。
         'courts': ['judgment.read'],
-        # 列表的 CSV:与列表同一个读。
-        'export': ['judgment.read'],
+        # 列表的 CSV:自己的码(用户 2026-10-29 第 3 条;此前与列表同一个读)。
+        'export': ['judgment.export'],
     }
     queryset = (
         Judgment.objects

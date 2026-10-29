@@ -42,7 +42,7 @@ jest.mock("next/navigation", () => ({
 const mockSave = jest.fn();
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockSave(...args) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { role: "OPERATOR", permissions: ["soul.read"] } }),
+  useTenant: () => ({ user: { role: "OPERATOR", permissions: ["soul.read", "soul.export"] } }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

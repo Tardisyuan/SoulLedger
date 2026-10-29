@@ -73,9 +73,9 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
     value: s.id,
     label: s.name,
   }));
-  // 只列能以其名义登记的土地公(名下官员,或持 judgment.assign):其余的选了也是 403 not_tudi_officer。
+  // 只列能以其名义登记的土地公(名下官员,或持 tudi.manage):其余的选了也是 403 not_tudi_officer。
   const { user } = useTenant();
-  const canAssign = usePermissions().hasPermission("judgment.assign");
+  const canAssign = usePermissions().hasPermission("tudi.manage");
   const registrable = (gods.data ?? []).filter((g) => mayRegisterUnder(g, user?.id, canAssign));
   const chosen = tudi ?? gods.data?.find((g) => g.id === tudiId);
   const soulName = soul?.name ?? souls.data?.results.find((s) => s.id === soulId)?.name ?? "";

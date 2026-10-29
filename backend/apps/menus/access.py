@@ -92,8 +92,11 @@ def menu_is_visible_to(menu, user) -> bool:
     if not menu.roles:
         return True
     role = getattr(user, "role", None)
-    # 主角色 + 兼任角色:任何一个被 `roles` 点名就可见。
-    if bool(role) and any(r in menu.roles for r in (role, *(getattr(user, "extra_roles", None) or ()))):
+    # 主角色 + 兼任角色:任何一个被 `roles` 点名就可见。兼任只算还活着的角色 —— 进了回收站的角色不再让人
+    # 看到菜单(rbac-be3 M-9,同 checker)。
+    from apps.perm.checker import _live_extra_roles
+
+    if bool(role) and any(r in menu.roles for r in (role, *_live_extra_roles(user))):
         return True
     if menu.permission:
         from apps.core.permissions import user_has_permission

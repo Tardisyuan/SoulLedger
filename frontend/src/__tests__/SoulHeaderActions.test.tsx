@@ -189,7 +189,7 @@ describe("SoulHeaderActions 的更正结案项", () => {
 });
 
 /**
- * 「发起审批…」(W-11a)与「重算功过」都住在 ⋯ 里。页面只在持有 `workflow.create` / `ledger.manage` 时交来回调;
+ * 「发起审批…」(W-11a)与「重算功过」都住在 ⋯ 里。页面只在持有 `workflow.create` / `ledger.calculate` 时交来回调;
  * 这里守:交了就有;只持 `workflow.create`、不持 `soul.delete` 的人也看得到 ⋯ 且没有删除;方向键按菜单次序走。
  */
 describe("SoulHeaderActions 的发起审批与重算功过项", () => {
@@ -231,7 +231,7 @@ describe("SoulHeaderActions 的发起审批与重算功过项", () => {
   });
 
   it("次序是 重算功过 · 发起审批… · 删除,方向键依次走", async () => {
-    mockHeld.add("ledger.manage");
+    mockHeld.add("ledger.calculate");
     mockHeld.add("workflow.create");
     render(<HarnessWith onRecalculate={jest.fn()} onStartWorkflow={jest.fn()} />);
     await act(async () => {

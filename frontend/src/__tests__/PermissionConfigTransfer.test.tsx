@@ -33,8 +33,11 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const showToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast }) }));
 let mockRole = "ADMIN";
+let mockPermissions: string[] = [];
+// Import writes configuration every hall shares: only the hall-less ADMIN (2026-10-29). Default: that admin.
+let mockTenant: { code: string; display_name: string } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, role: mockRole, tenant: { code: "CN_DIYU", display_name: "x" } } }),
+  useTenant: () => ({ user: { id: 1, role: mockRole, tenant: mockTenant, permissions: mockPermissions } }),
 }));
 
 const exportConfig = permApi.exportConfig as jest.Mock;
@@ -113,6 +116,8 @@ async function toSummary() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRole = "ADMIN";
+  mockPermissions = [];
+  mockTenant = null;
 });
 
 describe("entry points", () => {
@@ -125,10 +130,27 @@ describe("entry points", () => {
     expect(screen.getByRole("menuitem", { name: "permissions.config.import" })).toBeInTheDocument();
   });
 
-  it("shows nothing at all to anyone else (no disabled stub)", () => {
+  it("shows nothing at all to anyone without system.settings (no disabled stub)", () => {
     mockRole = "MODERATOR";
     setup();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("a hall's ADMIN, or a role granted system.settings, exports but gets no import (the server answers 403)", () => {
+    mockTenant = { code: "CN_DIYU", display_name: "x" };
+    setup();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "permissions.config.export" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "permissions.config.import" })).toBeNull();
+  });
+
+  it("a non-admin holding system.settings exports too, still without import", () => {
+    mockRole = "AUDITOR";
+    mockPermissions = ["system.settings"];
+    setup();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "permissions.config.export" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "permissions.config.import" })).toBeNull();
   });
 });
 
@@ -140,7 +162,7 @@ describe("export", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "permissions.config.export" }));
     await waitFor(() => expect(saveBlob).toHaveBeenCalled());
     const [, name, type] = (saveBlob as jest.Mock).mock.calls[0];
-    expect(name).toMatch(/^permissions_CN_DIYU_\d{4}-\d{2}-\d{2}\.json$/);
+    expect(name).toMatch(/^permissions_global_\d{4}-\d{2}-\d{2}\.json$/);
     expect(type).toContain("application/json");
   });
 
@@ -201,7 +223,9 @@ describe("import: the three steps", () => {
     const dialog = screen.getByRole("dialog").textContent ?? "";
     expect(dialog).toContain("permissions.config.import_title:2");
     expect(dialog).toContain("p.json"); // file name ...
-    expect(dialog).toContain("· x"); // ... and the hall's name
+    // ... and where it lands: only the hall-less ADMIN imports (2026-10-29), so it is the global configuration.
+    expect(dialog).toContain("· global");
+    expect(dialog).not.toContain("· x");
     expect(cell("permissions.config.will.add")).toBe("2");
     expect(cell("permissions.config.will.skip")).toBe("3");
     // A merge never updates or deletes: those rows are not there (Design 第十六批).
@@ -237,7 +261,7 @@ describe("import: the three steps", () => {
     fireEvent.click(screen.getByRole("button", { name: "permissions.config.confirm" }));
     fireEvent.click(await screen.findByRole("button", { name: "permissions.config.download_skipped" }));
     const [content, name] = (saveBlob as jest.Mock).mock.calls[0];
-    expect(name).toMatch(/^permissions_skipped_CN_DIYU_\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(name).toMatch(/^permissions_skipped_global_\d{4}-\d{2}-\d{2}\.csv$/);
     expect(content).toContain('section,key,reason\r\n"roles","R","already_exists"');
     expect(content).toContain('"a ""q"".read"'); // quotes are escaped
   });
@@ -308,7 +332,7 @@ describe("import: overwrite", () => {
     const warning = screen.getByTestId("overwrite-warning").textContent ?? "";
     expect(warning).toContain("permissions.config.overwrite.warning:5");
     expect(warning).not.toContain("warning_own");
-    expect(warning).toContain("permissions.config.overwrite.all_halls:x");
+    expect(warning).toContain("permissions.config.overwrite.all_halls:global");
     // Nothing real has been sent.
     expect(importConfig.mock.calls.every((c) => c[1] === true)).toBe(true);
   });
@@ -318,7 +342,7 @@ describe("import: overwrite", () => {
     await toOverwrite();
     expect(dangerButton()).toBeDisabled();
     expect(screen.queryByRole("button", { name: "permissions.config.confirm" })).toBeNull(); // no plain confirm in this mode
-    fireEvent.change(nameField(), { target: { value: "x" } }); // the hall's name no longer unlocks it
+    fireEvent.change(nameField(), { target: { value: "global" } }); // the hall's name no longer unlocks it
     expect(dangerButton()).toBeDisabled();
     fireEvent.click(dangerButton());
     expect(importConfig).toHaveBeenCalledTimes(2); // a disabled button sends nothing
@@ -417,7 +441,7 @@ describe("import: overwrite confirm word in the language packs", () => {
   it("all_halls sits directly above the confirm field", async () => {
     setup();
     await toOverwrite();
-    const sentence = screen.getByText("permissions.config.overwrite.all_halls:x");
+    const sentence = screen.getByText("permissions.config.overwrite.all_halls:global");
     expect(sentence.nextElementSibling?.contains(nameField())).toBe(true);
   });
 });

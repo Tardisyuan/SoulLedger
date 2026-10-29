@@ -46,7 +46,7 @@ def world(db):
     invalidate_all_permissions()
     cn, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
     eg, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "Duat"})
-    _role("EXPORTER", "soul.read")
+    _role("EXPORTER", "soul.read", "soul.export")  # 导出自 2026-10-29 是独立的码
     _role("BLIND", "ledger.read")
     reader = User.objects.create_user(username="ex_reader", password="x", role="EXPORTER", tenant=cn)
     blind = User.objects.create_user(username="ex_blind", password="x", role="BLIND", tenant=cn)

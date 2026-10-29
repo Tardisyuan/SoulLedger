@@ -8,7 +8,7 @@
  * page or filter change and on Esc; a refused batch names the refused souls BY
  * NAME, keeps the selection (nothing was deleted), and leaves the dialog open;
  * without `soul.delete` the bar has no 移入回收站 (the column stays: 导出 needs only
- * `soul.read`). 移交… carries exactly one soul into the dispatch form and, with
+ * `soul.export`, its own code since 2026-10-29). 移交… carries exactly one soul into the dispatch form and, with
  * several ticked, says so and goes nowhere; it is absent without `dispatch.manage`.
  * 导出 sends the ticked ids and hands the body to `saveBlob`.
  *
@@ -67,7 +67,7 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }), use
 const mockSave = jest.fn();
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockSave(...args) }));
 
-let mockUser: Record<string, unknown> = { role: "OPERATOR", permissions: ["soul.read", "soul.delete"] };
+let mockUser: Record<string, unknown> = { role: "OPERATOR", permissions: ["soul.read", "soul.export", "soul.delete"] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -107,7 +107,7 @@ beforeEach(() => {
   mockPush.mockReset();
   mockExport.mockReset();
   mockSave.mockReset();
-  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.delete", "dispatch.manage"] };
+  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.export", "soul.delete", "dispatch.manage"] };
 });
 
 it("the checkbox is its own control, outside the row link, and shows 已选 N", () => {
@@ -211,13 +211,22 @@ it("取消选择 and Esc both clear it", () => {
 });
 
 it("without soul.delete or dispatch.manage the bar offers only 导出 and 取消选择", () => {
-  mockUser = { role: "OPERATOR", permissions: ["soul.read"] };
+  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.export"] };
   renderPage();
   fireEvent.click(box("沈青梧"));
   const b = within(bar() as HTMLElement);
   expect(b.getByRole("button", { name: "souls.batch.export" })).toBeInTheDocument();
   expect(b.queryByRole("button", { name: "souls.detail.confirm_delete_action" })).toBeNull();
   expect(b.queryByRole("button", { name: "souls.batch.transfer" })).toBeNull();
+});
+
+it("without soul.export the bar has no 导出 (reading the list is not enough since 2026-10-29)", () => {
+  mockUser = { role: "OPERATOR", permissions: ["soul.read", "soul.delete"] };
+  renderPage();
+  fireEvent.click(box("沈青梧"));
+  const b = within(bar() as HTMLElement);
+  expect(b.queryByRole("button", { name: "souls.batch.export" })).toBeNull();
+  expect(b.getByRole("button", { name: "souls.detail.confirm_delete_action" })).toBeInTheDocument();
 });
 
 it("移交… with one soul opens the dispatch form carrying it", () => {

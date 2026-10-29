@@ -275,8 +275,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'start': ['workflow.create'],
         # The choices for `start`, so the same people who may start.
         'case_types': ['workflow.create'],
-        # 列表的 CSV:与列表同一个读。
-        'export': ['workflow.read'],
+        # 列表的 CSV:自己的码(用户 2026-10-29 第 3 条)。
+        'export': ['workflow.export'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
         "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
