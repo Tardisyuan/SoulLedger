@@ -97,16 +97,19 @@ def test_dry_run_changes_nothing_but_reports_the_real_counts(cn_tenant):
 
 @pytest.mark.django_db
 def test_warns_for_each_env_feature_that_is_off(cn_tenant, settings):
-    settings.SENTRY_DSN, settings.MATRIX_ENABLED = "", False
+    settings.SENTRY_DSN, settings.MATRIX_ENABLED, settings.OPS_ALERT_WEBHOOK_URL = "", False, ""
     settings.EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     out = _run("--dry-run")
-    for needle in ("SENTRY_DSN is empty", "MATRIX_ENABLED is off", "mail is not delivered", "no celery beat"):
+    for needle in ("SENTRY_DSN is empty", "MATRIX_ENABLED is off", "mail is not delivered", "no celery beat",
+                   "OPS_ALERT_WEBHOOK_URL is empty"):
         assert needle in out, needle
     settings.SENTRY_DSN, settings.MATRIX_ENABLED = "https://x@y/1", True
+    settings.OPS_ALERT_WEBHOOK_URL = "https://hooks.example/ops"
     settings.EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     settings.EMAIL_HOST = "smtp.example.test"
     out = _run("--dry-run")
     assert "SENTRY_DSN" not in out and "MATRIX_ENABLED" not in out and "EMAIL" not in out
+    assert "OPS_ALERT_WEBHOOK_URL" not in out
 
 
 # -- beat guard -------------------------------------------------------------

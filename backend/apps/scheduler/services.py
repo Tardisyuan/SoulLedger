@@ -367,6 +367,27 @@ def _notify(job: ScheduledJob, kind: str, **params) -> None:
     for user in alert_recipients(job):
         notify_user(user, title=title, message=message, related_resource="scheduler", related_id=str(job.pk),
                     params=params)
+    ops_alert(f"{title}: {message}")
+
+
+def ops_alert(text: str) -> bool:
+    """POST one line to OPS_ALERT_WEBHOOK_URL (the same receiver scripts/ops-alert.sh uses).
+
+    Unset → a warning says nobody outside the app was told; a failed POST → logged,
+    never raised: the alert must not turn the task's own outcome into another error.
+    """
+    import requests
+
+    url = getattr(settings, "OPS_ALERT_WEBHOOK_URL", "")
+    if not url:
+        logger.warning("ops alert (OPS_ALERT_WEBHOOK_URL not set; in-app only): %s", text)
+        return False
+    try:
+        requests.post(url, json={"text": text, "content": text}, timeout=10).raise_for_status()
+    except requests.RequestException:
+        logger.exception("ops alert POST to OPS_ALERT_WEBHOOK_URL failed: %s", text)
+        return False
+    return True
 
 
 def record_final_status(run: TaskRun) -> None:
