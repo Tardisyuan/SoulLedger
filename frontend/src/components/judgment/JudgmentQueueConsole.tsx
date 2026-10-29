@@ -615,7 +615,7 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
 /** 键帽:等宽、1px 当前色边。视觉提示,不进按钮的可访问名。 */
 function Keycap({ children }: { children: React.ReactNode }) {
   return (
-    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-2 opacity-70">
+    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-2">
       {children}
     </kbd>
   );

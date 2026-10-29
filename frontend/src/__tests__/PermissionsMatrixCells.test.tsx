@@ -269,6 +269,14 @@ describe("saving", () => {
     const denyMark = denied.querySelector("[data-cell-state]")!;
     expect(denyMark.className).toMatch(/repeating-linear-gradient\(135deg/);
     expect(denyMark.className).not.toMatch(/color-danger/);
+    // Design 第六十三批:字在格子里、垫 canvas 实底(px-1 = 4px)、ink-muted;字本身不压斜纹。
+    const denyWord = denyMark.firstElementChild as HTMLElement;
+    expect(denyWord).toHaveTextContent("permissions.matrix.deny_word");
+    expect(denyWord.className).toContain("bg-[oklch(var(--color-canvas))]");
+    expect(denyWord.className).toContain("px-1");
+    expect(denyWord.className).toContain("text-[oklch(var(--color-ink-muted))]");
+    expect(denyWord.className).not.toMatch(/gradient|ink-subtle/);
+    expect(denyMark.className).not.toMatch(/ink-subtle/);
     expect(denied).toHaveAttribute("aria-checked", "false");
     expect(denied).toHaveAccessibleDescription(/permissions\.matrix\.deny_hint:用户管理 role_forbidden_permission/);
     fireEvent.click(denied);

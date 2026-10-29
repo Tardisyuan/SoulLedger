@@ -85,7 +85,7 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 }));
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
-import { GlobalNav, NAV_MODE_KEY, iconResolver } from "@/src/components/layout/GlobalNav";
+import { BottomBar, GlobalNav, NAV_MODE_KEY, iconResolver } from "@/src/components/layout/GlobalNav";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];
@@ -263,6 +263,23 @@ describe("文明色只落在当前项上", () => {
   it("当前页不在菜单里时,导航里一处 `--color-main` 都没有", () => {
     render(<Nav currentId={null} />);
     expect(mainReaders()).toEqual([]);
+  });
+
+  it("底栏当前项:ink 字 600、8% 底、3px main 顶标;main 不作字色(Design 第六十三批)", () => {
+    render(<BottomBar menus={MENUS} allMenuPaths={ALL_PATHS} currentId={2} />);
+    const bar = screen.getByTestId("bottom-bar");
+    const current = within(bar).getByRole("link", { name: "灵魂" });
+    expect(current).toHaveAttribute("aria-current", "page");
+    expect(current.className).toContain("font-semibold");
+    expect(current.className).toContain("text-[oklch(var(--color-ink))]");
+    expect(current.className).toContain("bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]");
+    expect(current.className).not.toContain("text-[oklch(var(--color-main))]");
+    const marks = within(bar).getAllByTestId("bar-current-mark");
+    expect(marks).toHaveLength(1);
+    expect(current).toContainElement(marks[0]);
+    expect(marks[0].className).toContain("h-[3px]");
+    expect(marks[0].className).toContain("bg-[oklch(var(--color-main))]");
+    expect(within(bar).getByRole("link", { name: "概览" }).className).not.toContain("--color-main");
   });
 });
 

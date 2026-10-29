@@ -609,7 +609,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
             </Button>
             <Button type="submit" variant="primary" loading={reply.isPending} disabled={!draft.body.trim()}>
               {t("soul_inbox.send")}
-              <kbd aria-hidden="true" className="ml-2 font-mono text-2xs opacity-75">
+              <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">
                 ⌘⏎
               </kbd>
             </Button>

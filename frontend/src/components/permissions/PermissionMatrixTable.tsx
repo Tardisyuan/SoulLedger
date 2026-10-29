@@ -69,8 +69,11 @@ const CELL_CLASS: Record<CellState, string> = {
   failed: `${BOX} border border-[oklch(var(--color-danger))] text-sm font-semibold text-[oklch(var(--color-danger))]`,
   conflict: `${BOX} border border-dashed border-[oklch(var(--color-ink))] ring-2 ring-[oklch(var(--color-ink))] text-sm text-[oklch(var(--color-ink))]`,
   lock: "text-2xs text-[oklch(var(--color-ink-subtle))]",
-  deny: `${BOX} text-2xs text-[oklch(var(--color-ink-subtle))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line))_0_1px,transparent_1px_5px)]`,
+  deny: `${BOX} text-2xs bg-[repeating-linear-gradient(135deg,oklch(var(--color-line))_0_1px,transparent_1px_5px)]`,
 };
+
+/** 「禁授」字垫一块 canvas 实底(左右 4px),不压斜纹;斜纹照常铺满整格(Design 第六十三批)。 */
+const DENY_WORD = "bg-[oklch(var(--color-canvas))] px-1 text-[oklch(var(--color-ink-muted))]";
 
 /** The drawn square, also used by the legend. */
 export function PermGlyph({ state, className }: { state: CellState; className?: string }) {
@@ -87,7 +90,7 @@ export function PermGlyph({ state, className }: { state: CellState; className?: 
         className
       )}
     >
-      {word ?? GLYPH[state as keyof typeof GLYPH]}
+      {state === "deny" ? <span className={DENY_WORD}>{word}</span> : (word ?? GLYPH[state as keyof typeof GLYPH])}
     </span>
   );
 }

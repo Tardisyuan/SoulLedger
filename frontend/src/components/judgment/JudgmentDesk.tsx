@@ -30,7 +30,7 @@ export function Kbd({ children }: { children: ReactNode }) {
   return (
     <kbd
       aria-hidden="true"
-      className="font-mono text-2xs border border-current px-2 opacity-70"
+      className="font-mono text-2xs border border-current px-2"
     >
       {children}
     </kbd>

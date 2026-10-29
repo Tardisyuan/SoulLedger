@@ -179,11 +179,14 @@ describe("interaction states are on every variant and every size", () => {
 describe("规范 v2 A1 按钮:主 = 匾色实底,危险 = neg.strong 实底白字", () => {
   it.each(BUTTON_SIZES)("primary/%s is onMain text on the plaque colour", (size) => {
     const classes = classesOf("primary", size);
-    expect(classes).toContain("bg-[oklch(var(--color-main))]");
+    // Design 第六十三批:底是 `--main-fill`(globals.css:深色 = 身份带那一档 main 90% + #111,浅色 = main)。
+    const FILL = "var(--main-fill)";
+    expect(classes).toContain("bg-(--main-fill)");
+    expect(classes).not.toContain("bg-[oklch(var(--color-main))]");
     expect(classes).toContain("text-[oklch(var(--color-on-main))]");
     // Hover / press darken the same fill by 12% / 24% black (A1), not a second colour.
-    expect(classes).toContain("hover:bg-[color-mix(in_oklab,oklch(var(--color-main))_88%,black)]");
-    expect(classes).toContain("active:bg-[color-mix(in_oklab,oklch(var(--color-main))_76%,black)]");
+    expect(classes).toContain(`hover:bg-[color-mix(in_oklab,${FILL}_88%,black)]`);
+    expect(classes).toContain(`active:bg-[color-mix(in_oklab,${FILL}_76%,black)]`);
     // Absence too: no ink fill (v1), no accent fill (retired).
     expect(classes.join(" ")).not.toMatch(/(^|\s)bg-\[oklch\(var\(--color-(ink|accent)/);
   });

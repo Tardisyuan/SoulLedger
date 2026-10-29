@@ -620,18 +620,18 @@ export function ReportsReview() {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button type="button" variant="primary" size="sm" onClick={approve} disabled={busy} aria-keyshortcuts="A">
                 {t("social_moderation.review.approve")}
-                <kbd className="ml-2 font-mono text-2xs opacity-70">A</kbd>
+                <kbd className="ml-2 font-mono text-2xs">A</kbd>
               </Button>
               {canHide && (
                 <Button type="button" variant="warning" size="sm" onClick={hide} disabled={busy} aria-keyshortcuts="H">
                   {t("social_moderation.actions.hide")}
-                  <kbd className="ml-2 font-mono text-2xs opacity-70">H</kbd>
+                  <kbd className="ml-2 font-mono text-2xs">H</kbd>
                 </Button>
               )}
               {selected.report && (
                 <Button type="button" variant="secondary" size="sm" onClick={warn} disabled={busy} aria-keyshortcuts="W">
                   {t("social_moderation.review.warn")}
-                  <kbd className="ml-2 font-mono text-2xs opacity-70">W</kbd>
+                  <kbd className="ml-2 font-mono text-2xs">W</kbd>
                 </Button>
               )}
               <span className="flex-1" />
