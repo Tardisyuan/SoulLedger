@@ -19,7 +19,6 @@ from tests.test_tenant_scoping_contract import _model_for, _registered_viewsets
 pytestmark = pytest.mark.django_db
 
 NOT_YET: dict[str, str] = {
-    "UserViewSet": "用户列表按机构收窄是 B3b(执行点「其余补点」);B2 只动求解器、过滤器与 tenant_scoped。",
     "OrganizationViewSet": "机构树按范围收窄是 B3b;B2 不动视图文件(perm-engine / role-mgmt 并行在改)。",
 }
 

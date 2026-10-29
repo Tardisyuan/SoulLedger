@@ -116,6 +116,11 @@ def notify_password_help(username, ip_address=None, user_agent=""):
         if user.tenant_id
         else []
     )
+    # 数据范围(B5):殿主的范围看不到这个人就不收(ADMIN 不受范围限制)。
+    from apps.perm.data_scope import visible_to
+
+    cache = {}
+    recipients = [r for r in recipients if visible_to(r, user, cache)]
     if not recipients:
         recipients = list(active.filter(role="ADMIN", tenant__isnull=True).order_by("pk"))
 
