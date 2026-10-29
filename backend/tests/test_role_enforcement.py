@@ -39,10 +39,10 @@ class TestGuardianRoleEnforcement:
         assert response.status_code == 403
 
     def test_guardian_can_read_ledger(self, api_client, guardian_user, cn_tenant):
-        """Overview stats endpoint has hardcoded ADMIN check; GUARDIAN gets 403."""
+        """Overview stats is `ledger.read` since 2026-10-29 (item 33; was a hardcoded ADMIN check): GUARDIAN reads it."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.get("/api/v1/ledger/stats/overview/")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_guardian_can_read_dispatch(self, api_client, guardian_user, cn_tenant):
         """GUARDIAN should be able to read dispatch."""

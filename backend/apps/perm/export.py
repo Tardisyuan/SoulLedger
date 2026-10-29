@@ -224,12 +224,17 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
 
     # Import permissions. `revive_or_create`, not `get_or_create`: a binned
     # row with the same natural key comes back rather than gaining a twin.
+    from apps.perm.services import grant_catalogue_defaults
+
     for perm_data in data.get('permissions', []):
-        _, created = Permission.revive_or_create(
+        perm, created = Permission.revive_or_create(
             perm_data['codename'],
             name=perm_data['name'], category=perm_data['category'],
         )
         if created:
+            # A catalogue codename's new row brings its default grants, or creating it would silently
+            # revoke it from every default holder (rbac-be3 M-4). An overwrite then replaces them anyway.
+            grant_catalogue_defaults(perm)
             made('permissions')
         else:
             skip('permissions', perm_data['codename'], SKIP_ALREADY_EXISTS)
@@ -265,7 +270,10 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
             skip('role_permissions', key, SKIP_UNKNOWN_REFERENCE)
         elif admin_only_violations(role.name, [perm.codename]):
             skip('role_permissions', key, SKIP_ADMIN_ONLY)
-        elif role_forbidden_violations(role.name, [perm.codename]):
+        elif role_forbidden_violations(
+            role.name, [perm.codename],
+            RolePermission.objects.filter(role=role).values_list('permission__codename', flat=True),
+        ):
             skip('role_permissions', key, SKIP_ROLE_FORBIDDEN)
         else:
             _, created = RolePermission.objects.get_or_create(

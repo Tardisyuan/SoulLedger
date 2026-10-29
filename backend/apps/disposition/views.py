@@ -96,7 +96,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     extra_permissions = {
         'execute': ['disposition.execute'],
         'release': ['disposition.execute'],
-        'export': ['disposition.read'],
+        'export': ['disposition.export'],
         'create': ['disposition.execute'],
         'update': ['disposition.execute'],
         'partial_update': ['disposition.execute'],

@@ -132,7 +132,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     extra_permissions = {
         'proposed': ['dispatch.read'],
         'history': ['dispatch.read'],
-        'export': ['dispatch.read'],
+        'export': ['dispatch.export'],
         'approve': ['dispatch.approve'],
         'reject': ['dispatch.reject'],
         'execute': ['dispatch.execute'],
@@ -731,7 +731,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
     permission_classes = [CrossJudgmentPartyPermission, CodenamePermission]
     permission_codename = "cross_judgment"
     extra_permissions = {
-        'export': ['cross_judgment.read'],
+        'export': ['cross_judgment.export'],
         'participate': ['cross_judgment.create'],
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],

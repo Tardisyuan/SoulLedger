@@ -7,22 +7,26 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
-from apps.core.permissions import IsAdminPermission, IsGlobalAdminPermission
+from apps.core.permissions import IsGlobalAdminPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
+from apps.perm.checker import check_permission
 from apps.perm.matrix import (
     ADMIN_ALWAYS_ALL,
     ADMIN_ONLY_PERMISSION,
+    CONFLICT_UNACKNOWLEDGED,
+    GRANT,
+    REVOKE,
     ROLE_FORBIDDEN_PERMISSION,
     admin_always_all_violations,
     admin_only_violations,
     role_forbidden_violations,
 )
-from apps.perm.services import get_role_permission_codenames
+from apps.perm.services import CATALOGUE_CODENAMES, get_role_permission_codenames, grant_catalogue_defaults
 
 from .models import (
     DEFAULT_ROLES,
@@ -59,22 +63,42 @@ from .serializers import (
 _get_role_permissions_from_db = get_role_permission_codenames
 
 
-class CanReadPermissionCatalogue(IsAdminPermission):
-    """ADMIN, or whoever holds a codename whose page reads the catalogue (RBAC review L4, 2026-10-29).
+#: The permissions page's code (用户 2026-10-29 第 2 条): reads of roles' grants, the impact probe and the
+#: export go by it, not by `role == "ADMIN"` — the web page gates on the same code.
+SETTINGS_CODENAME = "system.settings"
+
+#: A catalogue codename's row (`DEFAULT_PERMISSIONS`) may be created, with its default grants, but never
+#: deleted or renamed: either would silently move who holds it (rbac-be3 M-4).
+CATALOGUE_PERMISSION = "catalogue_permission"
+
+
+class HasSystemSettings(BasePermission):
+    """Holds `system.settings` (any ADMIN does, by the checker's short-circuit)."""
+
+    def has_permission(self, request, view):
+        return check_permission(request.user, SETTINGS_CODENAME)
+
+
+class CanWriteGlobalSettings(IsGlobalAdminPermission):
+    """Writes to the role / permission configuration, which every hall shares: the code AND no hall —
+    a hall-bound ADMIN, or anyone else granted `system.settings`, reads but does not write (2026-10-29)."""
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and check_permission(request.user, SETTINGS_CODENAME)
+
+
+class CanReadPermissionCatalogue(BasePermission):
+    """Whoever holds a codename whose page reads the catalogue (RBAC review L4, 2026-10-29).
 
     Two pages call `GET /perm/permissions/`: the permissions page (`system.settings`;
-    its writes are ADMIN-only) and the menu editor (`menu.manage`), which uses it only
+    its writes are global-ADMIN-only) and the menu editor (`menu.manage`), which uses it only
     to flag a typed codename that does not exist. Holding either keeps that page whole;
     nobody else needs the list. Was `IsAuthenticated`: every VIEWER read the catalogue.
     """
 
-    PAGE_CODENAMES = ("system.settings", "menu.manage")
+    PAGE_CODENAMES = (SETTINGS_CODENAME, "menu.manage")
 
     def has_permission(self, request, view):
-        if super().has_permission(request, view):
-            return True
-        from apps.perm.checker import check_permission
-
         return any(check_permission(request.user, c) for c in self.PAGE_CODENAMES)
 
 
@@ -105,7 +129,7 @@ def list_permissions(request):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def create_permission(request):
     """
     POST /api/v1/perm/permissions/create/
@@ -132,7 +156,9 @@ def create_permission(request):
             binned.restore()
             serializer = PermissionCreateUpdateSerializer(binned, data=request.data)
             serializer.is_valid(raise_exception=True)
-        permission = serializer.save()
+        with transaction.atomic():
+            permission = serializer.save()
+            grant_catalogue_defaults(permission)
         # Creating a Permission row moves its codename from the dict branch of
         # check_permission to the DB branch — the answer changes without any
         # Role or RolePermission being touched, so the signal in
@@ -150,10 +176,10 @@ def create_permission(request):
 @extend_schema(
     methods=["DELETE"],
     request=None,
-    responses={204: None, 404: ErrorResponseSerializer},
+    responses={204: None, 400: ErrorResponseSerializer, 404: ErrorResponseSerializer},
 )
 @api_view(["PUT", "DELETE"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def update_delete_permission(request, pk):
     """
     PUT /api/v1/perm/permissions/<pk>/
@@ -165,9 +191,36 @@ def update_delete_permission(request, pk):
     except Permission.DoesNotExist:
         return Response({"error": "Permission not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    requested_codename = request.data.get("codename", permission.codename) if request.method == "PUT" else None
+    if permission.codename in CATALOGUE_CODENAMES and (
+        request.method == "DELETE" or requested_codename != permission.codename
+    ):
+        return Response(
+            {"error": f"{permission.codename} is in the permission catalogue; it cannot be deleted or renamed.",
+             "code": CATALOGUE_PERMISSION},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if request.method == "PUT":
+        # Renaming onto a catalogue codename would hand this row's holders a code the catalogue
+        # gives to others (and dodge the grant rules). Refused before validation, which would answer
+        # a different 400 for a catalogue codename that already has a row.
+        if requested_codename != permission.codename and requested_codename in CATALOGUE_CODENAMES:
+            return Response(
+                {"error": f"{requested_codename} is in the permission catalogue; create it instead of "
+                          "renaming another permission onto it.", "code": CATALOGUE_PERMISSION},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = PermissionCreateUpdateSerializer(permission, data=request.data, partial=True)
         if serializer.is_valid():
+            new_codename = serializer.validated_data.get("codename", permission.codename)
+            if new_codename != permission.codename:
+                # Onto another live row: the unique index's 500 (rbac-be3 L-4).
+                if Permission.objects.filter(codename=new_codename).exists():
+                    return Response(
+                        {"error": "Permission with this codename already exists"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             serializer.save()
             # A renamed codename is a new codename to check_permission, and the
             # old one falls back to the dict again. See assign_role_permissions.
@@ -235,7 +288,7 @@ def get_role_permissions(request):
     },
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, HasSystemSettings])
 def get_permissions_for_role(request, name):
     """
     GET /api/v1/perm/roles/<name>/permissions/
@@ -266,7 +319,7 @@ def get_permissions_for_role(request, name):
 
 @extend_schema(request=None, responses={200: RolePermissionsSerializer(many=True)})
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, HasSystemSettings])
 def get_all_role_permissions(request):
     """
     GET /api/v1/perm/role-permissions/all/
@@ -300,7 +353,7 @@ def get_all_role_permissions(request):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def assign_role_permissions(request):
     """
     POST /api/v1/perm/role-permissions/assign/
@@ -311,8 +364,10 @@ def assign_role_permissions(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     role_name = serializer.validated_data["role"]
-    permission_ids = serializer.validated_data["permission_ids"]
+    # A repeated id is one grant, not a second row against the unique index (500, rbac-be3 L-4).
+    permission_ids = list(dict.fromkeys(serializer.validated_data["permission_ids"]))
     expected_version = serializer.validated_data.get("expected_version")
+    acknowledge_conflicts = serializer.validated_data["acknowledge_conflicts"]
 
     # select_for_update: the version check below and the replace-write it
     # guards have to be one atomic unit, or two concurrent requests that both
@@ -381,6 +436,26 @@ def assign_role_permissions(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # The same "who can still approve" check the matrix save makes (rbac-be3 M-6): a whole-set replace
+        # that takes workflow.approve from the only role a template step or a live node names is refused
+        # unless the caller acknowledges it. Computed here, from this request, not from a client preview.
+        if not acknowledge_conflicts:
+            from .matrix import impact_of_changes
+
+            current_ids = set(RolePermission.objects.filter(role=role).values_list("permission_id", flat=True))
+            wanted_ids = set(permission_ids)
+            impact = impact_of_changes(
+                [{"role": role.name, "permission_id": pid, "action": REVOKE} for pid in sorted(current_ids - wanted_ids)]
+                + [{"role": role.name, "permission_id": pid, "action": GRANT} for pid in sorted(wanted_ids - current_ids)]
+            )
+            if impact["conflicts"] or impact["workflow_conflicts"]:
+                return Response(
+                    {"error": "This replace leaves a workflow step with no approver; "
+                              "resend with acknowledge_conflicts",
+                     "code": CONFLICT_UNACKNOWLEDGED, **impact},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         # Both sets, before anything is touched. They are written to a single
         # PERMISSION_CHANGE audit row below.
         #
@@ -428,7 +503,9 @@ def assign_role_permissions(request):
         # TTL. That was invisible while _get_role_permissions_from_db read the
         # database directly; now that it reads through check_permission, the
         # admin's own role editor would show the stale answer straight back.
-        invalidate_role_permissions(role_name)
+        # After commit, not now (rbac-be3 M-5): until then another connection reads
+        # the old grants and would re-cache them for the whole TTL — as the matrix save does.
+        transaction.on_commit(lambda: invalidate_role_permissions(role_name))
 
         if codenames_before != codenames_after:
             from apps.audit.models import AuditAction, AuditLog
@@ -507,7 +584,7 @@ def list_roles(request):
     responses={201: RoleSerializer, 400: ErrorResponseSerializer},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def create_role(request):
     """
     POST /api/v1/perm/roles/create/
@@ -556,7 +633,7 @@ def _role_name_taken(name):
     responses={204: None, 400: RoleDeleteRefusalSerializer, 404: ErrorResponseSerializer},
 )
 @api_view(["PUT", "DELETE"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def update_delete_role(request, pk):
     """
     PUT /api/v1/perm/roles/<pk>/
@@ -593,6 +670,13 @@ def update_delete_role(request, pk):
         # Every non-deleted holder, active or not: a deactivated user still
         # carries the name and would resurrect a phantom role on reactivation.
         holders = User.objects.filter(role=role.name).count()
+        # Additional roles count too (用户 2026-10-29 第 11 条:拒删): a binned role is ignored by the checker,
+        # but a restore — or a later role created under the same name — would silently hand its grants back
+        # to every leftover holder. JSON `contains` is not portable to SQLite, so the list is read here.
+        holders += sum(
+            1 for extras in User.objects.exclude(extra_roles=[]).values_list("extra_roles", flat=True)
+            if role.name in (extras or ())
+        )
         if holders:
             return Response(
                 {
@@ -638,7 +722,7 @@ def update_delete_role(request, pk):
     responses={201: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def copy_role(request, pk):
     """
     POST /api/v1/perm/roles/<pk>/copy/
@@ -672,6 +756,10 @@ def copy_role(request, pk):
         # A copy is never ADMIN, so ADMIN-only codenames are left behind
         # (apps/perm/matrix.py::ADMIN_ONLY_CODENAMES).
         grants = [g for g in grants if not admin_only_violations(role.name, [g.permission.codename])]
+        # Nor what the new role may not hold next to the rest (design vs approve, rbac-be3 L-2): the approve
+        # side is the one left behind, so a copy of a lead stays a lead.
+        refused = role_forbidden_violations(role.name, [g.permission.codename for g in grants])
+        grants = [g for g in grants if g.permission.codename not in refused]
         # bulk_create sends no post_save — so the audit row and the cache
         # invalidation are both written here, as in assign_role_permissions.
         RolePermission.objects.bulk_create([
@@ -731,7 +819,7 @@ def copy_role(request, pk):
     responses={200: MatrixChangesResultSerializer, 400: OpenApiTypes.OBJECT},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def apply_matrix_changes(request):
     """
     POST /api/v1/perm/role-permissions/changes/
@@ -769,7 +857,7 @@ def apply_matrix_changes(request):
     responses={200: MatrixImpactResultSerializer, 400: OpenApiTypes.OBJECT},
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, HasSystemSettings])
 def matrix_impact(request):
     """
     POST /api/v1/perm/role-permissions/impact/
@@ -790,7 +878,7 @@ def matrix_impact(request):
 
 @extend_schema(request=None, responses={200: InitRolesResultSerializer})
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def init_roles(request):
     """
     POST /api/v1/perm/roles/init/
@@ -823,13 +911,18 @@ def init_roles(request):
     responses={(200, "application/json"): PermissionExportSerializer},
 )
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsAdminPermission])
+@permission_classes([IsAuthenticated, HasSystemSettings])
 def export_permissions(request):
     """
     GET /api/v1/perm/export/
     导出所有权限配置为 JSON（仅 ADMIN）
     """
+    from apps.core.exports import record_export
+
     from .export import export_permissions_json_response
+
+    # Every other export writes one; this one carried every role's grants and wrote none (rbac-be3 L-5).
+    record_export(request, resource="permission_config", rows=Permission.objects.count())
     return export_permissions_json_response()
 
 
@@ -871,7 +964,7 @@ def _audit_import(request, overwrite, stats):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsGlobalAdminPermission])
+@permission_classes([IsAuthenticated, CanWriteGlobalSettings])
 def import_permissions(request):
     """
     POST /api/v1/perm/import/

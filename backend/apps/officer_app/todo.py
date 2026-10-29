@@ -173,7 +173,7 @@ def _city_god_items(scope):
 
     from apps.judgment.models import AT_CITY_GOD, CityGodStatus, Judgment
 
-    if not check_permission(scope.user, "judgment.execute"):
+    if not check_permission(scope.user, "city_god.execute"):
         return []
     returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
                           output_field=IntegerField())
@@ -193,7 +193,7 @@ def _wangsi_items(scope):
 
     from apps.judgment.models import GrievanceStatus, Judgment
 
-    if not check_permission(scope.user, "judgment.execute"):
+    if not check_permission(scope.user, "wangsi.execute"):
         return []
     seen = _judgments_in_scope(scope)
     qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)

@@ -88,7 +88,7 @@ class TudiGodSerializer(serializers.ModelSerializer):
 
     def validate_officer_ids(self, value):
         tenant = self._tenant()
-        bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk, codename="soul.die"))
+        bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk, codename="tudi.register"))
         if bad:
             raise serializers.ValidationError({"code": "invalid_officer", "ids": bad})
         return value
@@ -114,10 +114,12 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     """本殿的土地公(只有地府有):基层登记亡魂,报给上级城隍。删除是软删,他登记过的死亡照旧留着。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "judgment"
+    # 土地公一族(用户 2026-10-29 第 3 条):看 tudi.read,增改删 tudi.manage(原 judgment.assign),
+    # 以土地公名义登记 tudi.register(原 soul.die)。
+    permission_codename = "tudi"
     extra_permissions = {
-        **{a: ["judgment.assign"] for a in ("create", "update", "partial_update", "destroy")},
-        "register_death": ["soul.die"],
+        **{a: ["tudi.manage"] for a in ("create", "update", "partial_update", "destroy")},
+        "register_death": ["tudi.register"],
     }
     queryset = TudiGod.objects.select_related("city_god").prefetch_related("officers").annotate(
         # Not one COUNT per row (the serializer's fallback): the same rows `DeathRegistrationRequest.objects` counts,
@@ -168,7 +170,7 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         from apps.perm.checker import check_permission
 
         tudi = self.get_object()
-        if not (check_permission(request.user, "judgment.assign") or tudi.officers.filter(pk=request.user.pk).exists()):
+        if not (check_permission(request.user, "tudi.manage") or tudi.officers.filter(pk=request.user.pk).exists()):
             return Response({"code": "not_tudi_officer",
                              "error": "Only officers assigned to this 土地公, or a hall administrator, can register."},
                             status=status.HTTP_403_FORBIDDEN)
