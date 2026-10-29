@@ -105,3 +105,14 @@ it("a refused batch lists each refused person and says nothing changed", async (
   expect(alert).toHaveTextContent(`cn_new · ${tZh("permissions.members.refused.forbidden")}`);
   expect(mockShowToast).not.toHaveBeenCalledWith(expect.anything(), "success");
 });
+
+it("a hall-less account is grouped and labelled 未归殿, never a bare em dash", async () => {
+  list.mockResolvedValue(page([user(5, "global_admin", "ADMIN", [], null as unknown as typeof cn)]));
+  renderSection();
+  await screen.findByText("main_holder");
+  fireEvent.click(screen.getByRole("button", { name: tZh("permissions.members.grant") }));
+  const form = await screen.findByRole("form", { name: tZh("permissions.members.grant") });
+  const group = await within(form).findByRole("group", { name: tZh("org_select.no_tenant") });
+  expect(within(group).getByRole("checkbox", { name: /global_admin/ })).toBeInTheDocument();
+  expect(within(form).queryByRole("group", { name: "—" })).toBeNull();
+});
