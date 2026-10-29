@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import (
     DrinkSoupResultSerializer,
@@ -59,7 +59,7 @@ def _state_conflict(soul, target_state):
 #     row already *is* a completed rebirth — "complete it" could only mean overwriting a past life.
 # So the one way to rebirth a soul over HTTP is `reborn`. `reincarnation.complete` stays seeded (removing
 # a codename is a grant migration) but no route asks for it any more.
-class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnlyModelViewSet):
+class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission, CodenamePermission]

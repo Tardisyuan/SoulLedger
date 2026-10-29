@@ -64,6 +64,8 @@ export const REFUSAL_CODES = [
   "untruthful_confession",
   // 地府五逆(2026-10-29,审查 J;apps/judgment/models.py::refuse_passed_if_five_heinous):不能判通过。
   "five_heinous_must_fail",
+  // REOPEN 只由原审判官本人(不在职时原属殿持 judgment.assign 的人)决定(2026-10-29 第 20 条)。
+  "not_original_judge",
 ] as const;
 
 export function refusalKey(error: unknown): string {

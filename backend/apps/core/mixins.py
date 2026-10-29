@@ -32,10 +32,14 @@ class TenantCreateMixin:
     Use together with TenantQuerySetMixin.
     """
 
+    def create_tenant(self, serializer):
+        """The tenant the new row is filed under: the request's. A viewset whose row belongs where a related row
+        lives overrides this (judgment / disposition take the soul's hall, rbac-be1 M4)."""
+        return getattr(self.request, "tenant", None)
+
     def perform_create(self, serializer):
         kwargs = {}
-        # Set tenant from request
-        tenant = getattr(self.request, "tenant", None)
+        tenant = self.create_tenant(serializer)
         # During create, serializer.instance is None, so check the model class
         model = getattr(serializer.Meta, "model", None)
         if tenant and model and hasattr(model, "tenant"):

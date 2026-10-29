@@ -227,7 +227,7 @@ export interface SoulLedgerBookProps {
   records: LedgerRecord[];
   /**
    * 有这三样才画「新增一条 / 修改」:灵魂 id、它的文明(只列该文明的律条)、调用方已判过的
-   * `soul.update`(后端对 add_record / 改一条强制同一把码名)。审判台的证据行不传,只读。
+   * `ledger.manage`(后端对 add_record / 改一条强制同一把码名,2026-10-29 起)。审判台的证据行不传,只读。
    */
   edit?: { soulId: string; civilization: string; soulState?: string; soulName?: string };
 }

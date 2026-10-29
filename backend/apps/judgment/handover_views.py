@@ -4,7 +4,8 @@
     POST /api/v1/judgment/handover/           {from, to} → 每类实际移了几件
     GET  /api/v1/judgment/handover/officers/  → 一殿在职官员(交接对话框的人选)
 
-要 `judgment.assign`(殿管理员、殿主;与改派同一码名)。非 ADMIN 只能交接本殿的官员:别的殿的人与不存在的人
+要 `judgment.assign`(殿管理员、殿主;与改派同一码名)。书信另要操作人持 `soul_inbox.reply`,没有就只移交其余几类
+(`letters_kept`,用户 2026-10-29 第 22 条)。非 ADMIN 只能交接本殿的官员:别的殿的人与不存在的人
 答同一个 404。接手人必须是交出人所在殿的在职官员(400 `invalid_target`)。
 """
 from django.contrib.auth import get_user_model
@@ -36,6 +37,7 @@ class HandoverPreviewSerializer(serializers.Serializer):
     appeals_returned_to_pool = serializers.IntegerField(help_text="接手人是原判官员的申诉:退回待复核")
     city_gods = serializers.ListField(child=serializers.CharField())
     letters = serializers.IntegerField()
+    letters_kept = serializers.IntegerField(help_text="操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下")
     problems = serializers.ListField(child=serializers.ChoiceField(["target_cannot_judge", "target_cannot_reply"]))
 
 
@@ -45,6 +47,7 @@ class HandoverResultSerializer(serializers.Serializer):
     appeals_returned_to_pool = serializers.IntegerField()
     city_gods = serializers.IntegerField()
     letters = serializers.IntegerField()
+    letters_kept = serializers.IntegerField(help_text="操作人不持 soul_inbox.reply:这些书信没有移交,留在交出人名下")
 
 
 class _HandoverBase(APIView):
@@ -119,7 +122,7 @@ class HandoverPreviewView(_HandoverBase):
     def post(self, request):
         source, target = self._people(request)
         try:
-            return Response(handover.preview(source, target, source.tenant_id))
+            return Response(handover.preview(source, target, source.tenant_id, actor=request.user))
         except handover.HandoverRefusedError as exc:
             return self._refused(exc)
 

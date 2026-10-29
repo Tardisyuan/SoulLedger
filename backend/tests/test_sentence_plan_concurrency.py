@@ -321,7 +321,9 @@ def _two_tenants_open(cn, eg, eu, run):
     plan.arrive(soul, p, 3)
     req = _client(plan.officer("pg7_eg", "JUDGE", eg)).post(
         f"{PLANS}{p.pk}/requests/", {"kind": "REOPEN", "reason": "新证据"}, format="json").data
-    home = _client(plan.officer("pg7_cn", "JUDGE", cn))
+    original_judge = plan.officer("pg7_cn", "JUDGE", cn)
+    plan.judged_by(p, original_judge)
+    home = _client(original_judge)
     away = _client(plan.officer("pg7_eu", "JUDGE", eu))
     results = run({
         "reopen": lambda: home.post(f"{PLANS}{p.pk}/requests/{req['id']}/decide/", {"decision": "ACCEPT"},

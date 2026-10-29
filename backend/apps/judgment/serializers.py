@@ -368,10 +368,33 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
                 )
                 for f in claim_fields
             })
+        if self.instance is not None:
+            self._validate_fixed_after_creation(attrs)
         if "soul" in attrs:
             attrs["civilization"] = attrs["soul"].civilization
         self._validate_chinese_case_fields(attrs)
         return attrs
+
+    #: 已结案的案子还能改的列(用户 2026-10-29 第 18 条):只有备注。判官、法庭、界域、证据、供词、摘要……
+    #: 都是判决的依据,事后改它们记录就和判决对不上;改错走重开 / 更正结算。
+    _WRITABLE_AFTER_CONCLUSION = frozenset({"notes"})
+
+    def _validate_fixed_after_creation(self, attrs):
+        """M1:案子是关于哪个灵魂的,建后不改 —— 换灵魂会把已采信的证据、引条文、认领一并挪到别人头上,
+        原灵魂停在 JUDGING 却没有案子。第 18 条:已结案的案子除备注外全部冻结。只拦真的改了值的列,
+        原样回传的 PUT 照过。"""
+        instance = self.instance
+        if "soul" in attrs and attrs["soul"].pk != instance.soul_id:
+            raise serializers.ValidationError(
+                {"soul": "A judgment's soul is fixed once the case is opened."}, code="soul_fixed")
+        if instance.verdict is None and not instance.is_final:
+            return
+        changed = sorted(f for f, v in attrs.items()
+                         if f not in self._WRITABLE_AFTER_CONCLUSION and v != getattr(instance, f, v))
+        if changed:
+            raise serializers.ValidationError(
+                {f: "This judgment is concluded; only its notes can change. Reopen or correct the settlement."
+                 for f in changed}, code="judgment_concluded")
 
     def _validate_chinese_case_fields(self, attrs):
         """罪目只在地府的案子上;死因与冤情等级只在枉死的案子上;已结案的案子三者都不再改

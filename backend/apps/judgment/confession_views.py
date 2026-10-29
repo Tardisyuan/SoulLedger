@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
-from apps.judgment import confessions, weighing
+from apps.judgment import claims, confessions, weighing
 
 
 def _locale(request) -> str:
@@ -93,6 +93,7 @@ class NegativeConfessionActionsMixin:
         judgment = self.get_object()
         serializer = NegativeConfessionWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        claims.assert_may_edit(judgment, request, "negative_confession")
         # A custom action is not `perform_*`: set the author for AuditUserFields, as `rule_evidence` does.
         set_current_user(request.user)
         set_current_request(request)
