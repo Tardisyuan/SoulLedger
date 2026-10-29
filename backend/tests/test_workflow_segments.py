@@ -507,6 +507,36 @@ def test_another_realm_sees_the_stations_but_not_the_people(w):
     assert next(n for n in ours["nodes"] if n["id"] == str(decided.pk))["approver"] == w.cn_judge.pk
 
 
+def test_another_realm_does_not_read_the_flows_notes_or_other_stations_opinions(w):
+    """决定 24:参与域读合并流程,召集殿写的 `notes` 与别站的意见原文(节点 notes、会签各人的 notes、
+    退回前的旧意见)都不给;本殿自己读全部。"""
+    _soul, _case, _cj, wf = merged(w, [w.eg])
+    ApprovalWorkflow.all_objects.filter(pk=wf.pk).update(notes="召集殿的流程备注")
+    assert _decide(w.cn_judge, wf).status_code == 200  # notes "x"
+    decided = _nodes(wf, 1)[0]
+    ApprovalNode.objects.filter(pk=decided.pk).update(
+        signatures_json=[{"signer": 0, "user_id": w.cn_judge.pk, "user_name": "甲", "verdict": "PASSED",
+                          "passed": True, "notes": "会签意见原文", "at": "2026-10-29T00:00:00"}],
+        decision_history=[{"round": 1, "status": "APPROVED", "verdict": "PASSED", "approver_id": w.cn_judge.pk,
+                           "approver_name": "甲", "notes": "退回前的意见", "decided_at": None,
+                           "signatures": [{"user_id": 1, "user_name": "乙", "notes": "旧会签意见"}]}])
+
+    theirs = officer_client(w.eg_judge).get(f"{WF}{wf.pk}/").data
+    assert theirs["notes"] == ""
+    node = next(n for n in theirs["nodes"] if n["id"] == str(decided.pk))
+    assert node["notes"] == "" and node["verdict"] == "PASSED"
+    assert [s["notes"] for s in node["signatures_json"]] == [""]
+    assert node["decision_history"][0]["notes"] == ""
+    assert node["decision_history"][0]["signatures"][0]["notes"] == ""
+
+    ours = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
+    assert ours["notes"] == "召集殿的流程备注"
+    mine = next(n for n in ours["nodes"] if n["id"] == str(decided.pk))
+    assert mine["notes"] == "x"
+    assert mine["signatures_json"][0]["notes"] == "会签意见原文"
+    assert mine["decision_history"][0]["notes"] == "退回前的意见"
+
+
 def test_the_pick_task_lands_in_the_realms_todo(w):
     _soul, _case, _cj, wf = merged(w, [w.eg])
     group = officer_client(w.eg_judge).get(TODO).data["pick_nodes"]

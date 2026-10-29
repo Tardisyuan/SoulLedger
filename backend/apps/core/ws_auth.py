@@ -118,7 +118,13 @@ class JWTAuthMiddleware(BaseMiddleware):
 
     @database_sync_to_async
     def _authenticate_and_check_tenant(self, token_str):
+        return self.check_token_sync(token_str)
+
+    @staticmethod
+    def check_token_sync(token_str):
         """认证,并把 token 断言的租户与用户自己的外键对一遍。
+
+        `NotificationConsumer` 的首帧鉴权也调它(rbac-scope 第 14 条),两份鉴权只有这一份规则。
 
         返回 `(user, reject_reason)`;`user` 为 None 时 `reject_reason` 说明原因。
 
@@ -138,7 +144,7 @@ class JWTAuthMiddleware(BaseMiddleware):
         claim 缺失不算冲突 —— 不是每个 token 都带它(见 `TenantMiddleware` 自己的
         回落),而缺失与不一致是两件事。
         """
-        user = self._authenticate_token_sync(token_str)
+        user = JWTAuthMiddleware._authenticate_token_sync(token_str)
         if user is None:
             return None, "Invalid token"
 
@@ -160,7 +166,8 @@ class JWTAuthMiddleware(BaseMiddleware):
             return None, "Token tenant does not match the user's tenant"
         return user, None
 
-    def _authenticate_token_sync(self, token_str):
+    @staticmethod
+    def _authenticate_token_sync(token_str):
         """Validate JWT and return User, or None."""
         try:
             token = AccessToken(token_str)

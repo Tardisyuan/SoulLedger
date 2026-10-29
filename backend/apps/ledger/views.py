@@ -20,7 +20,7 @@ from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.disposition.models import Disposition
-from apps.ledger.journal import JournalParamError, build_journal, journal_records
+from apps.ledger.journal import JournalParamError, build_journal, journal_records, rows_in_data_scope
 from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
@@ -338,7 +338,7 @@ class LedgerJournalExportView(APIView):
             "Recorded At", "Day", "Soul ID", "Soul Name", "Type", "Category",
             "Description", "Statute", "Merit", "Demerit",
         ])
-        rows = period.select_related("soul").order_by("-recorded_at", "-id")
+        rows = rows_in_data_scope(request, period).select_related("soul").order_by("-recorded_at", "-id")
         written = 0
         for r in rows.iterator(chunk_size=1000):
             written += 1
