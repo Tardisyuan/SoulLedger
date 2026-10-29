@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi, soulsApi } from "@soulledger/core/api";
+import { fetchFailureOf } from "@soulledger/core/api/client";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -590,11 +591,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // does not exist, about a record that may well exist and simply could not be
   // fetched. Retry is the useful offer for the first case and misleading for
   // the second, which is why they are two branches.
+  // 数据范围(B8):404 / 403 是「无权查看或已不存在」—— 不给重试,也不说是哪一种(说「无权」等于承认它在)。
   if (error) {
     return (
       <PageShell
       density="document" variant="page" title={t("judgment.title")} backLink={backLink}>
-        <QueryError onRetry={() => refetch()} />
+        {fetchFailureOf(error) === "gone" ? (
+          <EmptyState title={t("state.gone_title")} reason={t("state.gone_body")} />
+        ) : (
+          <QueryError onRetry={() => refetch()} />
+        )}
       </PageShell>
     );
   }

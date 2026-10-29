@@ -191,12 +191,12 @@ describe("each notice lands on the right screen (through the notices tab)", () =
 });
 
 describe("a record I cannot read", () => {
-  // Design 第四十批 O-c:404 与 403 是同一句「这条已经不在了」,不分删了还是没权限,也不给重试。
-  it.each([403, 404])("%s: 「这条已经不在了」, a way back to 通知, and no status line", async (status) => {
+  // Design 第四十批 O-c:404 与 403 是同一句「无权查看或已不存在」,不分删了还是没权限,也不给重试。
+  it.each([403, 404])("%s: 「无权查看或已不存在」, a way back to 通知, and no status line", async (status) => {
     mockGet.mockRejectedValue(httpError(status));
     await openNotice("DISPATCH_APPROVED");
     expect(await screen.findByTestId("state-gone")).toBeTruthy();
-    expect(screen.getByText("这条已经不在了")).toBeTruthy();
+    expect(screen.getByText("无权查看或已不存在")).toBeTruthy();
     expect(screen.queryByTestId("state-retry")).toBeNull();
     expect(screen.queryByTestId("state-denied")).toBeNull();
     expect(screen.queryByTestId("dispatch-status")).toBeNull();

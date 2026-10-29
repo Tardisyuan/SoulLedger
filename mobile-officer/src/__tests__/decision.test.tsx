@@ -334,7 +334,7 @@ describe("an approved dispatch still waits for the receiving hall (O-f)", () => 
 });
 
 describe("a waiting item that is gone (O-c)", () => {
-  it.each([404, 403])("%s: 「这条已经不在了」 and the way back, not the error or the denied state", async (status) => {
+  it.each([404, 403])("%s: 「无权查看或已不存在」 and the way back, not the error or the denied state", async (status) => {
     mockItem.mockRejectedValue(httpError(status));
     const onBack = jest.fn();
     renderOfficer(<Detail target={{ type: "todo", kind: "approval", id: "wf-1" }} from="待办" onBack={onBack} onSettled={() => {}} />);

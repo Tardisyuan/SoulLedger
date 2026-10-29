@@ -183,5 +183,6 @@
   "users.second_factor.title",
   "users.second_factor.use_recovery",
   "users.second_factor.use_totp",
-  "users.second_factor.wrong"
+  "users.second_factor.wrong",
+  "state.gone_title"
 ]

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { fetchFailureOf } from "../client";
 
-/** Design 第四十批 O-c:「这条已经不在了」只给 404 / 403;没有回应是网络,别的回应是可以重试的错误。 */
+/** Design 第四十批 O-c:「无权查看或已不存在」只给 404 / 403;没有回应是网络,别的回应是可以重试的错误。 */
 describe("fetchFailureOf", () => {
   it("reads 404 and 403 as gone, and nothing else", () => {
     expect(fetchFailureOf({ response: { status: 404 } })).toBe("gone");

@@ -729,7 +729,7 @@ export function Empty({ text, testID }: { text: string; testID?: string }) {
 }
 
 /**
- * 「这条已经不在了」(Design 第四十批 O-c, both apps): what a detail showed is deleted or no longer this account's
+ * 「无权查看或已不存在」(Design 第四十批 O-c, both apps): what a detail showed is deleted or no longer this account's
  * to see (`fetchFailureOf` = `gone`). A hollow dashed circle (not the error's solid mark), two lines, and
  * 「回到{from}」 when the screen knows where it came from. Nothing to retry, so no retry.
  */

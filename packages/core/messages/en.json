@@ -7684,7 +7684,7 @@
     }
   },
   "state": {
-    "gone_title": "This is no longer here",
+    "gone_title": "No access, or it no longer exists",
     "gone_body": "It may have been deleted, or it's no longer something you can see.",
     "gone_back": "Back to {{from}}"
   },

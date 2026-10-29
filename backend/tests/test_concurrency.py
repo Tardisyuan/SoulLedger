@@ -1291,6 +1291,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
         # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
         "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",
+        # 2026-10-29 数据范围 B8:1 万灵魂 / 审判 / 审批流、50 机构上,三张列表在两种范围下的 EXPLAIN ANALYZE
+        # (不全表扫、子查询不逐行、耗时上限)。计划与耗时只在 PostgreSQL 上有意义;同文件「范围真的收窄了」那条
+        # 也随模块级 skipif 只在 PG 上跑 —— 它的 SQLite 对应是 test_data_scope_solver.py 的五种范围断言。
+        "tests/test_datascope_b8_pg_performance.py::test_the_scope_actually_narrows_what_the_lists_return",
+        "tests/test_datascope_b8_pg_performance.py::test_the_three_scoped_lists_use_indexes_and_stay_fast",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

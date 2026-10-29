@@ -73,10 +73,33 @@ def _multi_valued(model, path) -> bool:
     return False
 
 
-def _user_q(model, path, user) -> Q:
-    if _multi_valued(model, path):
+def _single_valued_prefix(model, path):
+    """路径开头那段单值外键(`city_god__officers` → `("city_god", CityGod)`);第一跳就多值 → `("", model)`。"""
+    parts = []
+    for name in path.split("__"):
+        field = model._meta.get_field(name)
+        if field.many_to_many or field.one_to_many or not field.is_relation:
+            break
+        parts.append(name)
+        model = field.related_model
+    return "__".join(parts), model
+
+
+def _user_q(model, path, user, cache=None) -> Q:
+    if not _multi_valued(model, path):
+        return Q(**{path: user.pk})
+    prefix, related = _single_valued_prefix(model, path)
+    if not prefix:
         return Q(pk__in=model._base_manager.filter(**{path: user.pk}).values("pk"))
-    return Q(**{path: user.pk})
+    # 多值关系前面有单值外键(城隍 officers):先取出「我在其中」的那几个外键 id(通常 0–2 个),写成
+    # `city_god__in=[…]`。主表上那就是 `= ANY(数组)`,和本机构条件一起走 BitmapOr。写成 `pk__in=(子查询)` 时,
+    # 它是 OR 里的 hashed SubPlan,规划器只能整表扫审判(B8 实测,1 万审判)。
+    rest = path[len(prefix) + 2:]
+    key = ("user_q", related._meta.label, rest, user.pk)
+    cache = {} if cache is None else cache
+    if key not in cache:
+        cache[key] = list(related._base_manager.filter(**{rest: user.pk}).values_list("pk", flat=True))
+    return Q(**{f"{prefix}__in": cache[key]})
 
 
 def _children(user, cache) -> dict:
@@ -155,7 +178,7 @@ def visible_q(user, resource, org_path, user_paths=(), extra_q=None, *, model=No
         return None
     q = Q(**{f"{org_path}__in": ids})
     for path in user_paths:
-        q |= _user_q(model, path, user) if model is not None else Q(**{path: user.pk})
+        q |= _user_q(model, path, user, cache) if model is not None else Q(**{path: user.pk})
     if extra_q is not None:
         q |= extra_q(user)
     return q

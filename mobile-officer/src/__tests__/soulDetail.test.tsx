@@ -272,6 +272,23 @@ describe("header", () => {
     expect(screen.queryByTestId("state-denied")).toBeNull();
   });
 
+  // 数据范围(B8):范围外的灵魂 / 审判,后端一律 404。从推送或列表打开都是同一句「无权查看或已不存在」,
+  // 不是报错、不给重试、不说「没有权限」(那等于承认它在)。
+  it.each([
+    ["soul", () => mockSoul],
+    ["judgment", () => mockJudgment],
+  ] as const)("an out-of-scope %s (404) reads 「无权查看或已不存在」, not the error state", async (type, mock) => {
+    mock().mockRejectedValue(httpError(404));
+    renderOfficer(<Detail target={{ type, id: "x1" }} from="通知" onBack={() => {}} onSettled={() => {}} />);
+    expect(await screen.findByTestId("state-gone")).toBeTruthy();
+    expect(screen.getByText("无权查看或已不存在")).toBeTruthy();
+    expect(screen.getByText("回到通知")).toBeTruthy();
+    expect(screen.queryByText("这条已经不在了")).toBeNull();
+    expect(screen.queryByTestId("state-error")).toBeNull();
+    expect(screen.queryByTestId("state-retry")).toBeNull();
+    expect(screen.queryByTestId("state-denied")).toBeNull();
+  });
+
   it("no 前世 tab or section: the earlier lives are read through the 第几世 groups (Design 第四十批 第四节 3)", async () => {
     await openSoul(["soul.read", "judgment.read", "ledger.read", "disposition.read", "reincarnation.read", "events.read"]);
     expect(screen.queryByText("前世")).toBeNull();

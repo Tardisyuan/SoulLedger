@@ -1,5 +1,5 @@
 /**
- * 「这条已经不在了」 in the soul app (Design 第四十批 O-c, shared with the officer app): a detail whose read answers
+ * 「无权查看或已不存在」 in the soul app (Design 第四十批 O-c, shared with the officer app): a detail whose read answers
  * 404 or 403 (`fetchFailureOf` = `gone`) shows `GoneState` with 「回到{from}」, and the row that opened it is greyed
  * and does nothing once the soul is back on the list -- until the app restarts, as in the officer app.
  *
