@@ -1193,7 +1193,7 @@
       "errors": {
         "not_json": "Djama Pen Nen JSON Maat.",
         "too_large": "Djama Nen Smen: Aa Er {max}.",
-        "bad_structure": "Djama Nen Maat: Er JSON Em Redi Per Smen, Hena Wa Em permissions, roles, role_permissions, field_permissions, data_scopes.",
+        "bad_structure": "Djama Nen Maat: Er JSON Em Redi Per Smen, Hena Wa Em permissions, roles, role_permissions, field_permissions, role_data_scopes.",
         "empty": "Nen Khet Er Ini Em Djama.",
         "overwrite_disabled": "Hemsu Khetem Hedj Hena Ini: Setep Redi Hena."
       },

@@ -89,9 +89,9 @@ test.describe("权限页导入配置", () => {
         overwrite_enabled: false,
         stats: {
           permissions: section, roles: { created: 0, skipped: 0 }, role_permissions: { created: 0, skipped: 1 },
-          field_permissions: { created: 0, skipped: 0 }, data_scopes: { created: 0, skipped: 0 },
+          field_permissions: { created: 0, skipped: 0 }, role_data_scopes: { created: 0, skipped: 0 },
           skipped_details: [{ section: "role_permissions", key: "GUARDIAN:soul.read", reason: "already_exists" }],
-          updated: 0, removed: { role_permissions: 0, field_permissions: 0, data_scopes: 0, total: 0 },
+          updated: 0, removed: { role_permissions: 0, field_permissions: 0, role_data_scopes: 0, total: 0 },
           removes_own_permissions: false,
         },
     });

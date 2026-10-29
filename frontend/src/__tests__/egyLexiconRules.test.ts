@@ -296,7 +296,7 @@ const TECHNICAL: Record<string, string[]> = {
   "permissions.config.import_error": ["{reason}"],
   "permissions.config.file_hint": ["JSON", "{max}"],
   "permissions.config.errors.not_json": ["JSON"],
-  "permissions.config.errors.bad_structure": ["JSON", "permissions", "roles", "role_permissions", "field_permissions", "data_scopes"],
+  "permissions.config.errors.bad_structure": ["JSON", "permissions", "roles", "role_permissions", "field_permissions", "role_data_scopes"],
   // 第十七批:同一批占位符(单花括号,与 zh-Hans 同形)。
   "permissions.config.errors.too_large": ["{max}"],
   "permissions.config.overwrite.warning": ["{n}"],

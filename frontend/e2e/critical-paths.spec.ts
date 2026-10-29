@@ -442,6 +442,39 @@ test.describe("Critical path: permission matrix save", () => {
     ]);
   });
 
+  test("roles: the drawer's data scope saves 本机构 and reads it back from the server", async ({ page }) => {
+    // The real shape both ways (apps/perm/data_scope_api.py): the PUT replaces the config, the GET answers it.
+    let stored = { default: { scope: "ALL", orgs: [] as number[] }, overrides: [] as unknown[] };
+    api.on("GET", "/perm/roles/:id/data-scope/", () => ({ body: stored }));
+    api.on("PUT", "/perm/roles/:id/data-scope/", (call) => {
+      stored = call.body;
+      return { body: stored };
+    });
+    const openGuardian = async () => {
+      await page.locator("tr", { hasText: "GUARDIAN" }).getByRole("button").click();
+      return page.getByRole("dialog");
+    };
+    await page.getByRole("button", { name: /^角色/ }).first().click();
+    let drawer = await openGuardian();
+    const scope = drawer.getByRole("region", { name: "数据范围" });
+    await expect(scope.getByRole("radio", { name: "全部" })).toBeChecked();
+    await scope.getByRole("radio", { name: "本机构", exact: true }).check();
+    await scope.getByRole("button", { name: "保存数据范围" }).click();
+
+    await expect.poll(() => api.lastCall("PUT", "/perm/roles/:id/data-scope/")?.body).toEqual({
+      default: { scope: "ORG", orgs: [] },
+      overrides: [],
+    });
+    await expect(page.getByText("数据范围已保存，对方刷新后生效")).toBeVisible();
+
+    // Reopened: what shows is the server's answer, not the draft.
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    drawer = await openGuardian();
+    await expect(drawer.getByRole("region", { name: "数据范围" }).getByRole("radio", { name: "本机构", exact: true })).toBeChecked();
+    await expect(drawer.getByRole("region", { name: "数据范围" }).getByRole("radio", { name: "全部" })).not.toBeChecked();
+  });
+
   test("roles: a row opens the drawer; a referenced role's delete lists the workflow", async ({ page }) => {
     await page.getByRole("button", { name: /^角色/ }).first().click();
     await page.locator("tr", { hasText: "GUARDIAN" }).getByRole("button").click();

@@ -382,14 +382,13 @@ class ExportedFieldPermissionSerializer(serializers.Serializer):
     editable = serializers.BooleanField(required=False)
 
 
-class ExportedDataScopeSerializer(serializers.Serializer):
+class ExportedRoleDataScopeSerializer(serializers.Serializer):
+    """One RoleDataScope row (数据范围 B4). `resource` "" is the role's default; `orgs` are org codes."""
+
     role = serializers.CharField()
-    civilization = serializers.CharField(allow_null=True, required=False)
-    model_name = serializers.CharField()
-    filter_conditions = serializers.JSONField(required=False)
-    scope_type = serializers.CharField()
-    priority = serializers.IntegerField(required=False)
-    is_active = serializers.BooleanField(required=False)
+    resource = serializers.CharField(allow_blank=True, required=False, default="")
+    scope = serializers.CharField()
+    orgs = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
 
 class StrictBooleanField(serializers.BooleanField):
@@ -419,7 +418,7 @@ class PermissionExportSerializer(serializers.Serializer):
     roles = ExportedRoleSerializer(many=True)
     role_permissions = ExportedRolePermissionSerializer(many=True)
     field_permissions = ExportedFieldPermissionSerializer(many=True)
-    data_scopes = ExportedDataScopeSerializer(many=True)
+    role_data_scopes = ExportedRoleDataScopeSerializer(many=True)
 
 
 class PermissionImportRequestSerializer(serializers.Serializer):
@@ -442,8 +441,8 @@ class PermissionImportRequestSerializer(serializers.Serializer):
     roles = ExportedRoleSerializer(many=True, required=False)
     role_permissions = ExportedRolePermissionSerializer(many=True, required=False)
     field_permissions = ExportedFieldPermissionSerializer(many=True, required=False)
-    data_scopes = ExportedDataScopeSerializer(many=True, required=False)
-    # Deletes FieldPermission / RowLevelDataScope / RolePermission wholesale
+    role_data_scopes = ExportedRoleDataScopeSerializer(many=True, required=False)
+    # Deletes FieldPermission / RoleDataScope / RolePermission wholesale
     # before importing. Read off the same body as the document itself.
     overwrite = StrictBooleanField(required=False, default=False)
     # Run the whole merge and roll it back: same stats, no rows, no cache
@@ -458,11 +457,11 @@ class PermissionImportSectionStatsSerializer(serializers.Serializer):
 
 class PermissionImportSkippedSerializer(serializers.Serializer):
     section = serializers.ChoiceField(
-        choices=["permissions", "roles", "role_permissions", "field_permissions", "data_scopes"]
+        choices=["permissions", "roles", "role_permissions", "field_permissions", "role_data_scopes"]
     )
     key = serializers.CharField()
     reason = serializers.ChoiceField(
-        choices=["already_exists", "admin_only", "role_forbidden", "unknown_reference"]
+        choices=["already_exists", "admin_only", "role_forbidden", "unknown_reference", "invalid"]
     )
 
 
@@ -471,7 +470,7 @@ class PermissionImportRemovedSerializer(serializers.Serializer):
 
     role_permissions = serializers.IntegerField()
     field_permissions = serializers.IntegerField()
-    data_scopes = serializers.IntegerField()
+    role_data_scopes = serializers.IntegerField()
     total = serializers.IntegerField()
 
 
@@ -482,7 +481,7 @@ class PermissionImportStatsSerializer(serializers.Serializer):
     roles = PermissionImportSectionStatsSerializer()
     role_permissions = PermissionImportSectionStatsSerializer()
     field_permissions = PermissionImportSectionStatsSerializer()
-    data_scopes = PermissionImportSectionStatsSerializer()
+    role_data_scopes = PermissionImportSectionStatsSerializer()
     skipped_details = PermissionImportSkippedSerializer(many=True)
     updated = serializers.IntegerField(
         help_text="Overwrite only (0 for a merge): roles whose name / description the file replaced, "

@@ -3,7 +3,7 @@ Permission URL routing
 """
 from django.urls import path
 
-from . import members, views
+from . import data_scope_api, members, views
 
 app_name = "perm"
 
@@ -28,6 +28,8 @@ urlpatterns = [
     path("roles/<int:pk>/", views.update_delete_role, name="detail-role"),
     path("roles/<int:pk>/copy/", views.copy_role, name="copy-role"),
     path("roles/<int:pk>/members/", members.role_members, name="role-members"),
+    path("roles/<int:pk>/data-scope/", data_scope_api.role_data_scope, name="role-data-scope"),
+    path("data-scope/resources/", data_scope_api.data_scope_resources, name="data-scope-resources"),
     path("roles/init/", views.init_roles, name="init-roles"),
     # `init/` (views.init_permissions) removed 2026-08-30. It seeded
     # Permission rows without the matching RolePermission grants, and

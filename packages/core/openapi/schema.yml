@@ -14563,6 +14563,22 @@ paths:
                 items:
                   $ref: '#/components/schemas/Organization'
           description: ''
+  /api/v1/perm/data-scope/resources/:
+    get:
+      operationId: v1_perm_data_scope_resources_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataScopeResource'
+          description: ''
   /api/v1/perm/export/:
     get:
       operationId: v1_perm_export_retrieve
@@ -15066,7 +15082,7 @@ paths:
         Copies the source's RolePermission rows — permission, `conditions` and
         `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
         2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-        the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+        the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
         short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
       parameters:
       - in: path
@@ -15103,6 +15119,75 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/perm/roles/{id}/data-scope/:
+    get:
+      operationId: v1_perm_roles_data_scope_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDataScopeConfig'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    put:
+      operationId: v1_perm_roles_data_scope_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleDataScopeConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleDataScopeConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleDataScopeConfig'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDataScopeConfig'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '404':
           content:
@@ -26883,6 +26968,57 @@ components:
       required:
       - password
       - username
+    DataScopeEnum:
+      enum:
+      - ALL
+      - ORG_CHILD
+      - ORG
+      - SELF
+      - DEFINE
+      type: string
+      description: |-
+        * `ALL` - 全部
+        * `ORG_CHILD` - 本机构及下级
+        * `ORG` - 本机构
+        * `SELF` - 仅本人
+        * `DEFINE` - 自定义机构
+    DataScopeOverride:
+      type: object
+      properties:
+        scope:
+          $ref: '#/components/schemas/DataScopeEnum'
+        orgs:
+          type: array
+          items:
+            type: integer
+          maxItems: 500
+        resource:
+          $ref: '#/components/schemas/ResourceEnum'
+      required:
+      - resource
+      - scope
+    DataScopeResource:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+      required:
+      - key
+      - label
+    DataScopeRule:
+      type: object
+      properties:
+        scope:
+          $ref: '#/components/schemas/DataScopeEnum'
+        orgs:
+          type: array
+          items:
+            type: integer
+          maxItems: 500
+      required:
+      - scope
     DeathRegistrationProgress:
       type: object
       description: '`GET /death-sync/register/{id}/progress/`:只有阶段,没有裁决与批语(`services.progress_of`)。'
@@ -28659,27 +28795,6 @@ components:
         * `WITNESS` - Witness
         * `SELF_ACCOUNT` - Self account
         * `OTHER` - Other
-    ExportedDataScope:
-      type: object
-      properties:
-        role:
-          type: string
-        civilization:
-          type: string
-          nullable: true
-        model_name:
-          type: string
-        filter_conditions: {}
-        scope_type:
-          type: string
-        priority:
-          type: integer
-        is_active:
-          type: boolean
-      required:
-      - model_name
-      - role
-      - scope_type
     ExportedFieldPermission:
       type: object
       properties:
@@ -28728,6 +28843,25 @@ components:
       required:
       - display_name
       - name
+    ExportedRoleDataScope:
+      type: object
+      description: One RoleDataScope row (数据范围 B4). `resource` "" is the role's default;
+        `orgs` are org codes.
+      properties:
+        role:
+          type: string
+        resource:
+          type: string
+          default: ''
+        scope:
+          type: string
+        orgs:
+          type: array
+          items:
+            type: string
+      required:
+      - role
+      - scope
     ExportedRolePermission:
       type: object
       properties:
@@ -39067,14 +39201,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExportedFieldPermission'
-        data_scopes:
+        role_data_scopes:
           type: array
           items:
-            $ref: '#/components/schemas/ExportedDataScope'
+            $ref: '#/components/schemas/ExportedRoleDataScope'
       required:
-      - data_scopes
       - field_permissions
       - permissions
+      - role_data_scopes
       - role_permissions
       - roles
       - version
@@ -39087,13 +39221,13 @@ components:
           type: integer
         field_permissions:
           type: integer
-        data_scopes:
+        role_data_scopes:
           type: integer
         total:
           type: integer
       required:
-      - data_scopes
       - field_permissions
+      - role_data_scopes
       - role_permissions
       - total
     PermissionImportRequest:
@@ -39130,10 +39264,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExportedFieldPermission'
-        data_scopes:
+        role_data_scopes:
           type: array
           items:
-            $ref: '#/components/schemas/ExportedDataScope'
+            $ref: '#/components/schemas/ExportedRoleDataScope'
         overwrite:
           type: boolean
           default: false
@@ -39185,26 +39319,28 @@ components:
       - admin_only
       - role_forbidden
       - unknown_reference
+      - invalid
       type: string
       description: |-
         * `already_exists` - already_exists
         * `admin_only` - admin_only
         * `role_forbidden` - role_forbidden
         * `unknown_reference` - unknown_reference
+        * `invalid` - invalid
     PermissionImportSkippedSectionEnum:
       enum:
       - permissions
       - roles
       - role_permissions
       - field_permissions
-      - data_scopes
+      - role_data_scopes
       type: string
       description: |-
         * `permissions` - permissions
         * `roles` - roles
         * `role_permissions` - role_permissions
         * `field_permissions` - field_permissions
-        * `data_scopes` - data_scopes
+        * `role_data_scopes` - role_data_scopes
     PermissionImportStats:
       type: object
       description: 'Per table: rows created and rows skipped. A merge never updates
@@ -39218,7 +39354,7 @@ components:
           $ref: '#/components/schemas/PermissionImportSectionStats'
         field_permissions:
           $ref: '#/components/schemas/PermissionImportSectionStats'
-        data_scopes:
+        role_data_scopes:
           $ref: '#/components/schemas/PermissionImportSectionStats'
         skipped_details:
           type: array
@@ -39241,11 +39377,11 @@ components:
             what the caller may do. ADMIN bypasses grants, field rules and scopes,
             so this is false for ADMIN.'
       required:
-      - data_scopes
       - field_permissions
       - permissions
       - removed
       - removes_own_permissions
+      - role_data_scopes
       - role_permissions
       - roles
       - skipped_details
@@ -40964,6 +41100,30 @@ components:
           nullable: true
       required:
       - resolution
+    ResourceEnum:
+      enum:
+      - soul
+      - judgment
+      - disposition
+      - reincarnation
+      - soul_event
+      - capture
+      - appeal
+      - workflow
+      - user
+      - org
+      type: string
+      description: |-
+        * `soul` - soul
+        * `judgment` - judgment
+        * `disposition` - disposition
+        * `reincarnation` - reincarnation
+        * `soul_event` - soul_event
+        * `capture` - capture
+        * `appeal` - appeal
+        * `workflow` - workflow
+        * `user` - user
+        * `org` - org
     RevealedCredential:
       type: object
       properties:
@@ -41088,6 +41248,17 @@ components:
       required:
       - display_name
       - name
+    RoleDataScopeConfig:
+      type: object
+      properties:
+        default:
+          $ref: '#/components/schemas/DataScopeRule'
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataScopeOverride'
+      required:
+      - default
     RoleDeleteRefusal:
       type: object
       description: |-

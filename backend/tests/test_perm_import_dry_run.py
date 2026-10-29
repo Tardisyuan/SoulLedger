@@ -18,11 +18,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
-from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
+from apps.perm.models import FieldPermission, Permission, Role, RoleDataScope, RolePermission
 from apps.tenants.models import Tenant
 
 IMPORT = "/api/v1/perm/import/"
-TABLES = (Permission, Role, RolePermission, FieldPermission, RowLevelDataScope, AuditLog)
+TABLES = (Permission, Role, RolePermission, FieldPermission, RoleDataScope, AuditLog)
 
 FILE = {
     "permissions": [
@@ -40,7 +40,13 @@ FILE = {
         {"role": "GHOST", "permission": "dry.read"},  # unknown role
     ],
     "field_permissions": [{"role": "DRY_NEW", "model_name": "soul", "field_name": "name"}],
-    "data_scopes": [{"role": "DRY_NEW", "model_name": "soul", "scope_type": "ALL"}],
+    "role_data_scopes": [
+        {"role": "DRY_NEW", "resource": "", "scope": "ORG"},  # created
+        {"role": "DRY_NEW", "resource": "nope", "scope": "ORG"},  # unknown resource
+        {"role": "ADMIN", "resource": "", "scope": "ORG"},  # ADMIN's scope is fixed
+        {"role": "DRY_NEW", "resource": "soul", "scope": "DEFINE", "orgs": []},  # DEFINE without orgs
+        {"role": "DRY_NEW", "resource": "judgment", "scope": "DEFINE", "orgs": ["NO_SUCH_ORG"]},  # unknown org
+    ],
 }
 
 
@@ -100,13 +106,18 @@ def test_the_stats_count_created_and_skipped_per_section_with_the_reason_for_eac
     assert stats["roles"] == {"created": 1, "skipped": 1}
     assert stats["role_permissions"] == {"created": 1, "skipped": 3}
     assert stats["field_permissions"] == {"created": 1, "skipped": 0}
-    assert stats["data_scopes"] == {"created": 1, "skipped": 0}
+    assert stats["role_data_scopes"] == {"created": 1, "skipped": 4}
     reasons = {(d["section"], d["key"]): d["reason"] for d in stats["skipped_details"]}
     assert reasons[("roles", "JUDGE")] == "already_exists"
     assert reasons[("role_permissions", "JUDGE / recycle_bin.restore")] == "admin_only"
     assert reasons[("role_permissions", "MODERATOR / workflow.approve")] == "role_forbidden"
     assert reasons[("role_permissions", "GHOST / dry.read")] == "unknown_reference"
-    assert len(stats["skipped_details"]) == sum(stats[k]["skipped"] for k in ("permissions", "roles", "role_permissions", "field_permissions", "data_scopes"))
+    assert reasons[("role_data_scopes", "DRY_NEW / nope")] == "invalid"
+    assert reasons[("role_data_scopes", "ADMIN / *")] == "invalid"
+    assert reasons[("role_data_scopes", "DRY_NEW / soul")] == "invalid"
+    assert reasons[("role_data_scopes", "DRY_NEW / judgment")] == "unknown_reference"
+    assert ("role_data_scopes", "DRY_NEW / *") not in reasons
+    assert len(stats["skipped_details"]) == sum(stats[k]["skipped"] for k in ("permissions", "roles", "role_permissions", "field_permissions", "role_data_scopes"))
 
 
 @pytest.mark.django_db(transaction=True)
