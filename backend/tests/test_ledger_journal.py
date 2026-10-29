@@ -317,3 +317,25 @@ class TestExport:
         _login(api_client, judge_user, "ledger.read")
         response = api_client.get(EXPORT, {"month": "2026-13"})
         assert response.status_code == 400 and response.json()["field"] == "month"
+
+
+@pytest.mark.django_db
+def test_rows_follow_the_data_scope_and_the_totals_stay_the_halls(api_client, judge_user, souls):
+    """rbac-scope 第 10 条(本批只做一半):明细行与导出只给数据范围里的灵魂,不回显范围外的灵魂名;
+    四柱、计数仍是本殿全部(数据范围的大改在后续批次)。"""
+    from apps.perm.models import Role, RowLevelDataScope
+
+    a, b = souls
+    Soul.objects.filter(pk=a.pk).update(current_state=SoulState.JUDGING)
+    _login(api_client, judge_user, "ledger.read")
+    RowLevelDataScope.objects.create(
+        role=Role.objects.get_or_create(name="JUDGE")[0], model_name="soul", scope_type="READ",
+        filter_conditions={"current_state": SoulState.JUDGING}, is_active=True,
+    )
+    body = api_client.get(URL, {"month": "2026-06"}).json()
+    assert {r["soul_name"] for r in body["results"]} == {"甲"}  # 乙不在范围里
+    assert body["count"] == 1
+    assert (body["record_count"], body["soul_count"]) == (3, 2)  # 合计照旧是本殿
+    assert (body["opening"], body["received"], body["disbursed"], body["closing"]) == (18, 45, 25, 38)
+    exported = api_client.get(EXPORT, {"month": "2026-06"}).content.decode()
+    assert "甲" in exported and "乙" not in exported

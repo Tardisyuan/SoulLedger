@@ -4,6 +4,7 @@ Serializers for dispatch app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, JudgmentStatus
 from apps.judgment.models import Judgment
 from apps.workflow.serializers import CrossJudgmentWorkflowSummarySerializer
@@ -108,6 +109,20 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "create_time",
             "update_time",
         ]
+
+    def to_representation(self, instance):
+        """跨殿读只给对方殿名(决定 24):发起人、拍板人不是读者本殿的人时,读到的是 null(殿名在
+        source/target_tenant_code 里)。按那个人自己的殿判,不按位置猜:驳回 / 执行是目标殿的人,
+        撤回(cancel)写进 decided_by 的却是源殿的人。"""
+        data = super().to_representation(instance)
+        viewer = viewer_tenant_id(self.context.get("request"))
+        if viewer is SEE_ALL:
+            return data
+        for field in ("dispatched_by", "decided_by"):
+            person = getattr(instance, field)
+            if person is not None and person.tenant_id != viewer:
+                data.update({field: None, f"{field}_name": None})
+        return data
 
     def validate(self, attrs):
         """Reject an attempt to move `status`/`dispatched_by` through CRUD.
