@@ -158,7 +158,12 @@ def eu():
 
 @pytest.fixture(autouse=True)
 def judges(cn, eg, eu):
-    """A judge in every hall, so the notifications the paths send have somebody to land on."""
+    """A judge in every hall, so the notifications the paths send have somebody to land on.
+    Each hall's root unit exists too, as in a migrated database (org/0010): dispatch moves ownership to it."""
+    from apps.org.ownership import tenant_root
+
+    for t in (cn, eg, eu):
+        tenant_root(t)
     return [plan.officer(f"judge_{t.code}", "JUDGE", t) for t in (cn, eg, eu)]
 
 

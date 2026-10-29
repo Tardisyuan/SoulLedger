@@ -71,8 +71,8 @@ def test_an_organization_in_ones_own_tenant_is_refused_too(api_client, viewer, t
     """2026-10-16 起(用户定)组织与职务只有管理员能改:自己租户里的组织也不行。
     400 要点名字段,落库值不变。"""
     a, _, org_a, _ = two_tenants
-    org_a2 = Organization.objects.create(
-        name="A 组织二部", code="ORG_A2", category="CHINESE", level=0, tenant=a
+    org_a2 = Organization.objects.create(  # 每殿一个活根(数据范围 B1):二部挂在 A 组织下
+        name="A 组织二部", code="ORG_A2", category="CHINESE", tenant=a, parent=org_a
     )
     response = client_for(api_client, viewer).patch(
         PROFILE, {"organization": str(org_a2.pk)}, format="json"
@@ -111,9 +111,9 @@ def test_echoing_the_current_values_back_is_not_a_change(api_client, viewer, two
 @pytest.mark.django_db
 def test_an_admin_can_still_set_both(api_client, viewer, two_tenants):
     """管理员走 `PATCH /users/{id}/`(`UserUpdateSerializer`),不受上面的锁影响。"""
-    a, _, _, _ = two_tenants
-    org_a2 = Organization.objects.create(
-        name="A 组织二部", code="ORG_A2", category="CHINESE", level=0, tenant=a
+    a, _, org_a, _ = two_tenants
+    org_a2 = Organization.objects.create(  # 每殿一个活根(数据范围 B1):二部挂在 A 组织下
+        name="A 组织二部", code="ORG_A2", category="CHINESE", tenant=a, parent=org_a
     )
     admin = User.objects.create_user(username="org_admin", password="x", role="ADMIN", tenant=a)
     response = client_for(api_client, admin).patch(

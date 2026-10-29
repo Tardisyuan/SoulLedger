@@ -8,9 +8,10 @@ from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
+from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.disposition.destination import MAX_TERM_YEARS
 from apps.judgment import snapshot, wangsi
-from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred
+from apps.judgment.claims import BATCH_LIMIT, ClaimRefusedError, assert_concludable, ferry_barred, may_edit
 from apps.judgment.models import (
     CitationSnapshotKind,
     EvidenceAdmission,
@@ -179,6 +180,12 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 此刻为什么不能结案(`claims.assert_concludable` 的拒绝码:at_city_god / held_until_fated_date / embalming /
     # duat_unfinished / unferried),能结案是空串。审判台据此置灰「落判」,不在前端重抄一遍规则。
     conclude_refusal = serializers.SerializerMethodField()
+    # 调用者此刻能不能改这件案子(`claims.may_edit`,与 `assert_may_edit` 同一条规则):别人认领中、自己又不持
+    # judgment.assign 是 false,审判台据此藏起编辑控件(fix-be1 遗留,2026-10-29)。没有请求的上下文按 true。
+    can_edit = serializers.SerializerMethodField()
+    # 这件案子自己的审批流以 CANCELLED 结束(跨界联审撤销),发落卡在 approval_cancelled:审判台据此给「重开一案」
+    # (`reopen-cancelled/`,judgment.assign)。与那个动作的前提同一条:流决定这件案子、状态 CANCELLED。
+    flow_cancelled = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -201,7 +208,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage", "ferry_barred",
-            "wangsi_held", "conclude_refusal",
+            "wangsi_held", "conclude_refusal", "can_edit", "flow_cancelled",
             "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
@@ -303,6 +310,17 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             return exc.code
         return ""
 
+    def get_can_edit(self, obj) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return user is None or not user.is_authenticated or may_edit(obj, user)
+
+    def get_flow_cancelled(self, obj) -> bool:
+        from apps.workflow.models import ApprovalWorkflowStatus
+
+        flow = getattr(obj, "approval_workflow", None)
+        return flow is not None and flow.decides_judgment and flow.status == ApprovalWorkflowStatus.CANCELLED
+
     def get_realm_name(self, obj) -> str | None:
         realm = obj.realm
         return realm.get_localized_name(locale_from_context(self.context)) if realm is not None else None
@@ -323,6 +341,13 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         if _is_viewer(self.context):
             for field in ("karmic_balance", "merit_score", "demerit_score"):
                 data.pop(field, None)
+        # 暂居只读(原属殿读暂居地的案子,决定 24):暂居地经手官员的名字不给,只看案子在哪一殿。
+        viewer = viewer_tenant_id(self.context.get("request"))
+        if viewer is not SEE_ALL and viewer != instance.tenant_id:
+            for field in ("claimed_by", "claimed_by_name", "deferred_by", "deferred_by_name",
+                          "reassign_requested_by", "reassign_requested_by_name"):
+                if field in data:
+                    data[field] = None
         return data
 
     def validate_soul(self, value):

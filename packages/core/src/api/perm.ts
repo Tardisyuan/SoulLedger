@@ -146,6 +146,13 @@ export type MatrixWorkflowConflict = Schemas["MatrixWorkflowConflict"];
  * `role_referenced_by_workflow_templates`, `user_count` with `role_in_use`.
  */
 export type RoleDeleteRefusal = Schemas["RoleDeleteRefusal"];
+/** GET /perm/roles/{id}/members/: holders of the role, main-role holders first. */
+export type RoleMembersPage = Schemas["RoleMembersPage"];
+/** POST /perm/roles/{id}/members/ body. `primary` replaces the user's main role; a main role cannot be removed. */
+export type RoleMembersChange = Schemas["RoleMembersChange"];
+export type RoleMembersChangeResult = Schemas["RoleMembersChangeResult"];
+/** 400 / 403 body of that POST: nobody in the batch was changed; one line per refused user. */
+export type RoleMembersRefused = Schemas["RoleMembersRefused"];
 export type RoleCopyPayload = Pick<Role, "name" | "display_name"> & Partial<Pick<Role, "scope" | "organization">>;
 
 export const permApi = {
@@ -174,6 +181,11 @@ export const permApi = {
     delete: (id: number) => api.delete<void>(`/perm/roles/${id}/`),
     /** 复制为新角色: same RolePermission rows, new code. 201 with the new Role. */
     copy: (id: number, data: RoleCopyPayload) => api.post<Role>(`/perm/roles/${id}/copy/`, data),
+    /** ADMIN; a hall's ADMIN sees and changes its own hall's users only. */
+    members: (id: number, params: { search?: string; page?: number }) =>
+      api.get<RoleMembersPage>(`/perm/roles/${id}/members/`, { params }),
+    changeMembers: (id: number, body: RoleMembersChange) =>
+      api.post<RoleMembersChangeResult>(`/perm/roles/${id}/members/`, body),
   },
 
   /**

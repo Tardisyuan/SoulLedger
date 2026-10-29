@@ -689,6 +689,28 @@ def test_the_home_tenant_reads_the_residence_judgment_disposition_events_and_rec
     assert home.get(f"/api/v1/events/{executed[0].pk}/").status_code == 200
 
 
+def test_the_home_tenant_reads_the_residence_case_without_its_officers_names(cn, eg, away):
+    """决定 24:暂居只读给原属殿看案子,不给暂居地经手官员的名字(认领 / 暂缓 / 请求改派的人);暂居地自己照看。"""
+    from apps.judgment.models import Judgment
+
+    eg_judge = _officer("eg_case_judge", "JUDGE", eg)
+    Judgment.all_objects.filter(pk=away["judgment"].pk).update(
+        claimed_by=eg_judge, deferred_by=eg_judge, reassign_requested_by=eg_judge)
+    url = f"/api/v1/judgment/{away['judgment'].pk}/"
+    people = ("claimed_by", "claimed_by_name", "deferred_by", "deferred_by_name",
+              "reassign_requested_by", "reassign_requested_by_name")
+
+    home = officer_client(_officer("cn_case_reader", "JUDGE", cn)).get(url).data
+    assert {f: home[f] for f in people} == dict.fromkeys(people)
+    assert home["verdict"] == "FAILED"  # 案子本身照读
+    listed = [r for r in _rows(officer_client(_officer("cn_case_lister", "JUDGE", cn)).get(
+        f"/api/v1/judgment/?soul={away['soul'].pk}")) if str(r["id"]) == str(away["judgment"].pk)]
+    assert listed and listed[0]["claimed_by_name"] is None
+
+    there = officer_client(_officer("eg_case_reader", "JUDGE", eg)).get(url).data
+    assert there["claimed_by"] == eg_judge.pk and there["claimed_by_name"] == "eg_case_judge"
+
+
 def test_the_home_tenants_export_carries_the_residing_soul_like_its_list(cn, eu, away):
     """`/souls/export/` 与列表同一范围:暂居在外的灵魂在原属的列表里，也在原属导出的文件里;
     无关租户两处都没有。带 `ids`(批量条)与不带(列表页「导出 CSV」)两条路径都看。"""

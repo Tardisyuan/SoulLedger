@@ -104,6 +104,15 @@ class Organization(AuditUserFields):
             models.Index(fields=['parent', 'sort']),
             models.Index(fields=['tenant', 'category']),
         ]
+        constraints = [
+            # 每殿恰好一个活根(数据范围 B1,org/0010 建 `ROOT_<殿码>`):「本殿全部」= 根的子树。
+            # 无殿的机构不受约束(迁移不动它们)。
+            models.UniqueConstraint(
+                fields=['tenant'],
+                condition=models.Q(parent__isnull=True, is_deleted=False, tenant__isnull=False),
+                name='organizations_one_live_root_per_tenant',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.code} - {self.name}"

@@ -664,6 +664,15 @@ def organization_in_tenant(organization, tenant_id):
     return organization
 
 
+def default_officer_organization(tenant, role, organization):
+    """有殿的非管理员必须有机构,缺省本殿根机构(数据范围 B1;建人、改人、CSV 导入、邀请共用)。
+    ADMIN 跳过数据范围,SOUL 不是官员 —— 两者原样返回。"""
+    if organization is not None or tenant is None or role in ('ADMIN', 'SOUL'):
+        return organization
+    from apps.org.ownership import tenant_root
+    return tenant_root(tenant)
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     """User serializer for creation with password handling.
 
@@ -724,6 +733,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError({'password': [{'code': e.code, 'message': ' '.join(e.messages)}
                                                             for e in exc.error_list]}) from None
+        attrs['organization'] = default_officer_organization(
+            attrs.get('tenant'), attrs.get('role', 'VIEWER'), attrs.get('organization'))
         return attrs
 
     def create(self, validated_data):
@@ -767,6 +778,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         if value is None or self.instance is None:
             return value
         return organization_in_tenant(value, self.instance.tenant_id)
+
+    def validate(self, attrs):
+        # 清空机构或从 ADMIN 降级时,有殿的非管理员落回本殿根机构(数据范围 B1)。
+        if self.instance is not None:
+            organization = attrs['organization'] if 'organization' in attrs else self.instance.organization
+            defaulted = default_officer_organization(
+                self.instance.tenant, attrs.get('role', self.instance.role), organization)
+            if defaulted is not organization:
+                attrs['organization'] = defaulted
+        return attrs
 
     def validate_role(self, value):
         request = self.context.get('request')

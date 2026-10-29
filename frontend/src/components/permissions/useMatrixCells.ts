@@ -192,7 +192,7 @@ export function useMatrixCells({
       setFailures(next);
       const notSaved = result.refused + result.failed;
       setLastSave({ saved: result.saved + result.unchanged, notSaved });
-      if (notSaved === 0) showToast(t("permissions.matrix.saved_all", { n: String(result.saved + result.unchanged) }), "success");
+      if (notSaved === 0) showToast(t("permissions.matrix.saved_all_refresh", { n: String(result.saved + result.unchanged) }), "success");
     } catch {
       showToast(t("permissions.matrix.save_error"), "error");
     } finally {

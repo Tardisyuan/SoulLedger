@@ -673,3 +673,34 @@ class FieldPermission(models.Model):
                 "editable": rule.editable,
             }
         return result
+
+
+class RoleDataScope(AuditUserFields):
+    """角色的数据范围(数据范围设计 B1,local-gates/rbac-2026-10-29/datascope-design.md)。
+
+    `resource=""` 是角色的默认范围,其余按业务覆盖(注册表 `apps/perm/data_scope.py`,B2)。
+    DEFINE 求解时包含所列机构的下级。没有配置行 = 全部:本批只建表、不播种,行为不变。
+    """
+    SCOPE_CHOICES = [
+        ('ALL', '全部'),
+        ('ORG_CHILD', '本机构及下级'),
+        ('ORG', '本机构'),
+        ('SELF', '仅本人'),
+        ('DEFINE', '自定义机构'),
+    ]
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='data_scopes')
+    resource = models.CharField(max_length=40, blank=True, default='', help_text="空 = 角色默认")
+    scope = models.CharField(max_length=10, choices=SCOPE_CHOICES)
+    orgs = models.ManyToManyField('org.Organization', blank=True, related_name='+', help_text="DEFINE 的机构")
+
+    class Meta:
+        db_table = 'perm_role_data_scope'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['role', 'resource'], condition=models.Q(is_deleted=False),
+                name='perm_role_data_scope_unique_live',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.role_id}:{self.resource or '*'} → {self.scope}"

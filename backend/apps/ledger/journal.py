@@ -97,6 +97,19 @@ def journal_records(request, *, month: str, civilization: str = "", category: st
     return qs.filter(recorded_at__lt=start), qs.filter(recorded_at__gte=start, recorded_at__lt=end)
 
 
+def rows_in_data_scope(request, qs):
+    """明细行只给数据范围里的灵魂(rbac-scope 第 10 条,与 `ledger/views.py::_scoped_souls` 同一口径);
+    合计(四柱、类目、计数)仍是本殿全部 —— 数据范围的大改在后续批次,这里只收住逐行回显的灵魂名与记录。"""
+    from apps.perm.filters import DataScopeFilter
+    from apps.souls.models import Soul
+
+    souls = Soul.all_objects.all()
+    scoped = DataScopeFilter.filter_queryset(request, souls, Soul)
+    if scoped is souls:
+        return qs  # ADMIN 或没有规则:原样返回同一个查询集,不必加子查询
+    return qs.filter(soul_id__in=scoped.values("pk"))
+
+
 def build_journal(
     request,
     *,
@@ -133,7 +146,8 @@ def build_journal(
         .order_by("category")
     ]
 
-    total = counts["records"]
+    rows_qs = rows_in_data_scope(request, period)
+    total = counts["records"] if rows_qs is period else rows_qs.count()
     if whole_month and total > WHOLE_MONTH_MAX:
         raise JournalParamError(
             "all", f"{total} rows in {month} exceed the whole-month limit of {WHOLE_MONTH_MAX}; narrow the filters"
@@ -141,7 +155,7 @@ def build_journal(
     page_size = max(total, 1) if whole_month else PAGE_SIZE
     offset = (page - 1) * page_size
     rows = (
-        period.select_related("soul")
+        rows_qs.select_related("soul")
         .order_by("-recorded_at", "-id")[offset: offset + page_size]
     )
     results = [
@@ -167,7 +181,7 @@ def build_journal(
         "disbursed": disbursed,
         "closing": opening + received - disbursed,
         "soul_count": counts["souls"],
-        "record_count": total,
+        "record_count": counts["records"],
         "categories": categories,
         "page": page,
         "page_size": page_size,

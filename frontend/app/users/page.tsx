@@ -12,6 +12,7 @@ import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { UserRolesDialog } from "@/src/components/users/UserRolesDialog";
 import { UserRoleChips } from "@/src/components/users/UserRoleChips";
+import { UserOrgFilter } from "@/src/components/users/UserOrgFilter";
 import { UserBatchBar, useUserSelection, type HeldOfficer } from "@/src/components/users/UserBatchBar";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
 import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
@@ -49,7 +50,7 @@ const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
 const USERS_FILTERS_KEY = "soulledger.users.filters";
 /** 列菜单的偏好,一个列表一份。 */
 const USERS_COLUMNS_KEY = "soulledger.users.columns";
-const USERS_FILTER_FIELDS = ["role", "mfa", "ordering"] as const;
+const USERS_FILTER_FIELDS = ["role", "mfa", "status", "ordering"] as const;
 
 export default function UsersPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
@@ -73,8 +74,10 @@ function UsersRoute() {
   // No such account → the normal empty result.
   const searchParams = useSearchParams();
   const located = searchParams.get("username") ?? "";
-  // `?organization=<id>`: 机构页「查看人员」落在这里,只列该机构的直属人员。
-  const organization = searchParams.get("organization") ?? "";
+  // `?organization=<id>`: 机构页「查看人员」落在这里;左侧机构树也改它。服务端含下级机构(2026-10-29)。
+  const [organization, setOrganization] = useState(searchParams.get("organization") ?? "");
+  /** 账号状态:"" 全部 / "true" 启用 / "false" 已停用(服务端 `is_active`)。 */
+  const [statusFilter, setStatusFilter] = useState("");
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
@@ -100,10 +103,11 @@ function UsersRoute() {
   useRememberedFilters(
     USERS_FILTERS_KEY,
     USERS_FILTER_FIELDS,
-    { role: roleFilter, mfa: mfaFilter, ordering },
+    { role: roleFilter, mfa: mfaFilter, status: statusFilter, ordering },
     (saved) => {
       if (saved.role) setRoleFilter(saved.role);
       if (saved.mfa) setMfaFilter(saved.mfa);
+      if (saved.status) setStatusFilter(saved.status);
       if (saved.ordering) setOrdering(saved.ordering);
     },
     Boolean(located)
@@ -113,7 +117,7 @@ function UsersRoute() {
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization }),
+    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization, active: statusFilter }),
     queryFn: async () => {
       const res = await usersApi.list({
         page,
@@ -123,6 +127,7 @@ function UsersRoute() {
         username: located || undefined,
         mfa: mfaFilter || undefined,
         organization: organization || undefined,
+        is_active: statusFilter || undefined,
       });
       return res.data;
     },
@@ -201,7 +206,7 @@ function UsersRoute() {
   };
 
   const users = data?.results ?? [];
-  const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter, organization }), users);
+  const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter, organization, statusFilter }), users);
 
   const allColumns: DataTableColumn[] = [
     { key: "username", header: t("users.username"), sortable: true, pinned: true },
@@ -291,6 +296,20 @@ function UsersRoute() {
               setPage(1);
             }}
           />
+          <FilterChipSelect
+            label={t("users.status")}
+            value={statusFilter}
+            options={[
+              { value: "", label: t("users.status_filter.all") },
+              { value: "true", label: t("users.active") },
+              { value: "false", label: t("users.inactive") },
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("users.status") })}
+            onChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          />
           <ColumnMenu
             className="ml-auto"
             columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
@@ -308,6 +327,17 @@ function UsersRoute() {
       {/* `compact` (~36px rows) because this page is scan-and-find: the operator
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
+      <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+      <aside aria-label={t("users.org_filter.label")}>
+        <UserOrgFilter
+          value={organization ? Number(organization) : null}
+          onChange={(id) => {
+            setOrganization(id == null ? "" : String(id));
+            setPage(1);
+          }}
+        />
+      </aside>
+      <div className="min-w-0">
       <DataTable<User>
         caption={t("users.title")}
         columns={allColumns.filter((c) => show(c.key))}
@@ -447,11 +477,13 @@ function UsersRoute() {
           setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
           setPage(1);
         }}
-        isFiltered={Boolean(search || roleFilter || located || mfaFilter)}
+        isFiltered={Boolean(search || roleFilter || located || mfaFilter || organization || statusFilter)}
         onClearFilters={() => {
           setSearch("");
           setRoleFilter("");
           setMfaFilter("");
+          setStatusFilter("");
+          setOrganization("");
           setPage(1);
           if (located) router.replace("/users");
         }}
@@ -461,6 +493,8 @@ function UsersRoute() {
         totalCount={data?.count}
         onPageChange={setPage}
       />
+      </div>
+      </div>
 
       {canManage && <UserBatchBar selection={selection} onHeld={setHeld} />}
       {canManage && held.length > 0 && (

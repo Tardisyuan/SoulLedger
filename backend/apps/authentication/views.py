@@ -89,6 +89,7 @@ from .serializers import (
     UserRoleSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    default_officer_organization,
     email_already_registered,
     may_assign_role,
     reissue_for_device,
@@ -166,6 +167,52 @@ def _end_everything(user):
     end_sessions(user)
     end_push_registrations(user)
     close_user_sockets(user.pk)
+
+
+def _org_subtree(root_id):
+    """`root_id` and every organization under it, in one query (the tree is small)."""
+    from apps.org.models import Organization
+
+    children = {}
+    for pk, parent in Organization.objects.values_list('pk', 'parent_id'):
+        children.setdefault(parent, []).append(pk)
+    found, todo = {root_id}, [root_id]
+    while todo:
+        for child in children.get(todo.pop(), []):
+            if child not in found:
+                found.add(child)
+                todo.append(child)
+    return found
+
+
+def role_assignment_refusal(caller, user, new_role, extra_roles):
+    """The rules `assign_roles` applies, shared with the role drawer's batch grant
+    (`apps/perm/members.py`, 2026-10-29) so the two ways to give a role cannot drift.
+
+    Returns ``(extras, refusal)``: the de-duplicated extras without the main role, and ``None`` or
+    ``(error message, http status)``."""
+    # Against the Role table, not a restated enum (BP-11): a built-in or a
+    # live row in perm.Role.
+    extras = [r for r in dict.fromkeys(extra_roles) if r != new_role]
+    for name in [new_role, *extras]:
+        if not is_assignable_role(name):
+            return extras, (f'Invalid role {name!r}: not a built-in role and not a live row in the role table.',
+                            status.HTTP_400_BAD_REQUEST)
+    # ADMIN is the bypass and SOUL is the soul app's account: neither can be
+    # combined with anything. The checker ignores them in extra_roles too.
+    if 'ADMIN' in extras:
+        return extras, ('ADMIN cannot be an additional role', status.HTTP_400_BAD_REQUEST)
+    if extras and new_role == 'ADMIN':
+        return extras, ('ADMIN already holds everything; no additional roles', status.HTTP_400_BAD_REQUEST)
+    # Prevent privilege escalation: the caller may not assign any role more
+    # privileged than their own (rank shared with create/update, see
+    # ROLE_HIERARCHY). No `caller_role != 'ADMIN'` short-circuit: ADMIN
+    # ranks 0, so the check never fires for it and still says what it means.
+    # A hall's ADMIN may not appoint an ADMIN either (`may_assign_role`, 2026-10-29); keeping a user's
+    # current role is not an appointment.
+    if any(not may_assign_role(caller, r) for r in [new_role, *extras] if r != user.role):
+        return extras, ('Cannot assign a role more privileged than your own', status.HTTP_403_FORBIDDEN)
+    return extras, None
 
 
 class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
@@ -282,10 +329,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if username:
             qs = qs.filter(username=username)
 
-        # One organization's people (the org page's 「查看人员」); direct members only.
+        # One organization's people and its sub-organizations' (the org page's 「查看人员」, the user page's
+        # org tree; Snowy-style 含下级, 2026-10-29). Users are tenant-scoped above, so the walk need not be.
         organization = params.get('organization', '').strip()
         if organization.isdigit():
-            qs = qs.filter(organization_id=int(organization))
+            qs = qs.filter(organization_id__in=_org_subtree(int(organization)))
 
         # Filter by role
         role = params.get('role', '').strip()
@@ -540,33 +588,10 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if 'role' not in data and 'extra_roles' not in data:
             return Response({'error': 'role or extra_roles is required'}, status=status.HTTP_400_BAD_REQUEST)
         new_role = data.get('role', user.role)
-        # Against the Role table, not a restated enum (BP-11): a built-in or a
-        # live row in perm.Role.
-        extras = list(dict.fromkeys(data.get('extra_roles', user.extra_roles or [])))
-        extras = [r for r in extras if r != new_role]
-        for name in [new_role, *extras]:
-            if not is_assignable_role(name):
-                return Response(
-                    {'error': f'Invalid role {name!r}: not a built-in role and not a live row in the role table.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        # ADMIN is the bypass and SOUL is the soul app's account: neither can be
-        # combined with anything. The checker ignores them in extra_roles too.
-        if 'ADMIN' in extras:
-            return Response({'error': 'ADMIN cannot be an additional role'}, status=status.HTTP_400_BAD_REQUEST)
-        if extras and new_role == 'ADMIN':
-            return Response({'error': 'ADMIN already holds everything; no additional roles'}, status=status.HTTP_400_BAD_REQUEST)
-        # Prevent privilege escalation: the caller may not assign any role more
-        # privileged than their own (rank shared with create/update, see
-        # ROLE_HIERARCHY). No `caller_role != 'ADMIN'` short-circuit: ADMIN
-        # ranks 0, so the check never fires for it and still says what it means.
-        # A hall's ADMIN may not appoint an ADMIN either (`may_assign_role`, 2026-10-29); keeping a user's
-        # current role is not an appointment.
-        if any(not may_assign_role(request.user, r) for r in [new_role, *extras] if r != user.role):
-            return Response(
-                {'error': 'Cannot assign a role more privileged than your own'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        extras, refusal = role_assignment_refusal(
+            request.user, user, new_role, data.get('extra_roles', user.extra_roles or []))
+        if refusal:
+            return Response({'error': refusal[0]}, status=refusal[1])
         # The generic UPDATE audit row carries the role / extra_roles diff.
         user.role = new_role
         user.extra_roles = extras
@@ -772,6 +797,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                             tenant=tenant,
                             display_name=display_name,
                             must_change_password=True,  # an admin chose it: the officer picks their own at first login
+                            organization=default_officer_organization(tenant, role, None),
                         )
                         created += 1
             except Exception as e:

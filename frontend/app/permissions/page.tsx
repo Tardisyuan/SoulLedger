@@ -23,7 +23,7 @@ import {
   type GrantMap,
 } from "@/src/components/permissions/matrixDiff";
 import { MatrixLegend } from "@/src/components/permissions/MatrixLegend";
-import { PermissionMatrixTable, PermLegend, type MatrixCellInfo } from "@/src/components/permissions/PermissionMatrixTable";
+import { PermissionMatrixTable, PermLegend, ruleState, type MatrixCellInfo } from "@/src/components/permissions/PermissionMatrixTable";
 import { MatrixSaveConfirmModal } from "@/src/components/permissions/MatrixSaveConfirmModal";
 import { ImpactConflictBanner, PartialFailBanner, UnsavedBar, conflictCounts } from "@/src/components/permissions/MatrixBanners";
 import { PermissionConfigTransfer } from "@/src/components/permissions/PermissionConfigTransfer";
@@ -213,6 +213,26 @@ function PermissionsPageContent() {
       const set = next[role] ?? new Set<number>();
       if (set.has(permId)) set.delete(permId);
       else set.add(permId);
+      next[role] = set;
+      return next;
+    });
+  }
+
+  /**
+   * 类别整列勾选(rbac-snowy 2026-10-29):一个角色、一个类别里**当前看得见的**码一起授或撤。
+   * 只改待保存的勾选,照旧走「保存改动」与影响预检;服务端按规则定的格(ADMIN「始终」、殿主「禁授」)不动。
+   */
+  function setCategory(role: string, perms: Permission[], on: boolean) {
+    if (isSaving) return;
+    setChecked((prev) => {
+      if (!prev) return prev;
+      const next = cloneGrantMap(prev);
+      const set = new Set(next[role] ?? []);
+      for (const p of perms) {
+        if (ruleState(role, p.codename)) continue;
+        if (on) set.add(p.id);
+        else set.delete(p.id);
+      }
       next[role] = set;
       return next;
     });
@@ -409,6 +429,7 @@ function PermissionsPageContent() {
                 isSaving={isSaving}
                 isVisible={(p) => matchesFilter(p) && (!onlyDifferences || rowHasDifference(p))}
                 onToggle={toggleCell}
+                onSetCategory={setCategory}
                 categoryTally={categoryTally}
                 info={cellInfo}
                 mobileRole={mobileRole}

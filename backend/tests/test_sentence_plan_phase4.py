@@ -269,3 +269,35 @@ def test_the_general_actor_list_still_shows_only_the_callers_tenant(bench):
     rows = bench["c"]["CN_DIYU"].get("/api/v1/actors/", {"tenant_code": "EG_DUAT", "page_size": 500}).data
     names = [r["name"] for r in (rows.get("results", rows) if isinstance(rows, dict) else rows)]
     assert "阎罗王" in names and "Osiris" not in names and "Minos" not in names
+
+
+# ── 跨殿读的字段口径(决定 24)────────────────────────────────────────────
+
+
+def test_a_node_hall_reads_its_own_stop_and_only_the_other_halls_names(cn, eg, eu):
+    """节点方读计划:别殿那一站的理由、别殿提的请求的理由与答复都是空的;自己的、以及站的殿名照给。原属殿看全部。"""
+    from apps.sentence_plan.models import SentenceNode
+
+    _soul, p = planned(cn, [(eg, stop_realm(eg), 5), (eu, stop_realm(eu), 5)], name="跨殿口径")
+    SentenceNode.all_objects.filter(plan=p, tenant_code="EG_DUAT").update(reason="埃及站自己的理由")
+    SentenceNode.all_objects.filter(plan=p, tenant_code="EU_HEAVEN_HELL").update(reason="欧洲站的理由")
+    SentencePlanRequest.all_objects.create(plan=p, from_tenant_code="EU_HEAVEN_HELL", kind="REOPEN", status="REJECTED",
+                                           reason="欧洲请求的理由", decision_reason="原属给欧洲的答复")
+
+    def read(user):
+        body = officer_client(user).get(f"{PLANS}{p.pk}/").data
+        return ({n["tenant_code"]: n["reason"] for n in body["nodes"]},
+                [(r["from_tenant_code"], r["reason"], r["decision_reason"]) for r in body["requests"]])
+
+    eg_nodes, eg_requests = read(officer("plan_eg_reader", "JUDGE", eg))
+    assert eg_nodes["EG_DUAT"] == "埃及站自己的理由"
+    assert eg_nodes["EU_HEAVEN_HELL"] == ""  # 欧洲那一站:只见殿名
+    assert eg_requests == [("EU_HEAVEN_HELL", "", "")]
+
+    eu_nodes, eu_requests = read(officer("plan_eu_reader", "JUDGE", eu))
+    assert (eu_nodes["EU_HEAVEN_HELL"], eu_nodes["EG_DUAT"]) == ("欧洲站的理由", "")
+    assert eu_requests == [("EU_HEAVEN_HELL", "欧洲请求的理由", "原属给欧洲的答复")]  # 自己提的照给
+
+    home_nodes, home_requests = read(officer("plan_cn_reader", "JUDGE", cn))
+    assert (home_nodes["EG_DUAT"], home_nodes["EU_HEAVEN_HELL"]) == ("埃及站自己的理由", "欧洲站的理由")
+    assert home_requests == [("EU_HEAVEN_HELL", "欧洲请求的理由", "原属给欧洲的答复")]
