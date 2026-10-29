@@ -278,6 +278,35 @@ describe("saving", () => {
   });
 });
 
+describe("category select-all (rbac-snowy 2026-10-29)", () => {
+  const toggle = (label: string) => screen.getAllByRole("button", { name: label })[0];
+
+  it("全选 ticks every cell of one role in one category as pending; 全不选 clears them; other roles untouched", async () => {
+    renderPage();
+    await ready();
+    // YIN_CLERK holds soul.read only: the soul group offers 全选.
+    fireEvent.click(toggle("permissions.matrix.category_all_label:soul,YIN_CLERK"));
+    expect(stateOf(cell("YIN_CLERK", "soul.update"))).toBe("grant");
+    expect(stateOf(cell("YIN_CLERK", "soul.read"))).toBe("on");
+    expect(stateOf(cell("YIN_CLERK", "recycle_bin.hard_delete"))).toBe("off");
+    expect(stateOf(cell("JUDGE", "soul.read"))).toBe("on");
+    expect(within(unsavedBar() as HTMLElement).getByText("permissions.matrix.pending_cells:1")).toBeInTheDocument();
+
+    // Now all ticked: the same control turns into 全不选.
+    expect(screen.queryAllByRole("button", { name: "permissions.matrix.category_all_label:soul,YIN_CLERK" })).toHaveLength(0);
+    fireEvent.click(toggle("permissions.matrix.category_none_label:soul,YIN_CLERK"));
+    expect(stateOf(cell("YIN_CLERK", "soul.read"))).toBe("revoke");
+    expect(stateOf(cell("YIN_CLERK", "soul.update"))).toBe("off");
+  });
+
+  it("the ADMIN column has no category toggle (its cells are 「始终」)", async () => {
+    renderPage();
+    await ready();
+    expect(screen.queryAllByRole("button", { name: /category_(all|none)_label:.*,ADMIN$/ })).toHaveLength(0);
+    expect(screen.getAllByRole("button", { name: "permissions.matrix.category_none_label:soul,JUDGE" }).length).toBeGreaterThan(0);
+  });
+});
+
 describe("impact", () => {
   it("names the workflow step that would lose its last approver and marks the causing cell ◇", async () => {
     api.impact.mockResolvedValue({

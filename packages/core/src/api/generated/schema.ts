@@ -6756,6 +6756,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perm/roles/{id}/members/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_perm_roles_members_retrieve"];
+        put?: never;
+        post: operations["v1_perm_roles_members_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perm/roles/create/": {
         parameters: {
             query?: never;
@@ -18732,6 +18748,45 @@ export interface components {
          * @enum {string}
          */
         RoleDeleteRefusalCodeEnum: "builtin_role" | "role_in_use" | "role_referenced_by_workflow_templates";
+        RoleMemberRefusal: {
+            user_id: number;
+            username: string;
+            code: string;
+            error: string;
+        };
+        RoleMembersChange: {
+            action: components["schemas"]["RoleMembersChangeActionEnum"];
+            kind: components["schemas"]["RoleMembersChangeKindEnum"];
+            user_ids: number[];
+        };
+        /**
+         * @description * `add` - add
+         *     * `remove` - remove
+         * @enum {string}
+         */
+        RoleMembersChangeActionEnum: "add" | "remove";
+        /**
+         * @description * `primary` - primary
+         *     * `extra` - extra
+         * @enum {string}
+         */
+        RoleMembersChangeKindEnum: "primary" | "extra";
+        RoleMembersChangeResult: {
+            changed: number;
+            unchanged: number;
+        };
+        RoleMembersPage: {
+            count: number;
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["UserManagement"][];
+        };
+        RoleMembersRefused: {
+            code: string;
+            refusals: components["schemas"]["RoleMemberRefusal"][];
+        };
         RolePermissionAssign: {
             role: string;
             permission_ids: number[];
@@ -34392,6 +34447,91 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    v1_perm_roles_members_retrieve: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                /** @description username / email / name, contains */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleMembersPage"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    v1_perm_roles_members_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleMembersChange"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleMembersChange"];
+                "multipart/form-data": components["schemas"]["RoleMembersChange"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleMembersChangeResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleMembersRefused"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleMembersRefused"];
                 };
             };
             404: {

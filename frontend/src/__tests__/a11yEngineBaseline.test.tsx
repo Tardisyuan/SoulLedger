@@ -709,6 +709,7 @@ const SUBJECTS: Subject[] = [
         isSaving={false}
         isVisible={() => true}
         onToggle={() => {}}
+        onSetCategory={() => {}}
         categoryTally={() => "1/2"}
         /* Every non-plain cell state once — an unsaved grant, a failed cell
            and a conflict — so their accessible descriptions are audited too. */

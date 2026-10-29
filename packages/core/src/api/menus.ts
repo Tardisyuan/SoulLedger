@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, fetchAllPages } from "./client";
 import type { PaginatedResponse } from "./users";
 
 export interface MenuItem {
@@ -59,6 +59,8 @@ export const menusApi = {
   // (backend/apps/menus/views.py:149) — bare, unlike the viewset's own list.
   all: () => api.get<MenuItem[]>("/menus/list-public/"),
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<MenuItem>>("/menus/", { params }),
+  /** Every page of `list`, for the menu editor's whole-tree view. */
+  listAll: (params: Record<string, string> = {}) => fetchAllPages<MenuItem>("/menus/", params),
   get: (id: number) => api.get<MenuItem>(`/menus/${id}/`),
   create: (data: Partial<MenuItem>) => api.post<MenuItem>("/menus/", data),
   update: (id: number, data: Partial<MenuItem>) => api.patch<MenuItem>(`/menus/${id}/`, data),

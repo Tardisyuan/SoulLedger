@@ -15098,6 +15098,94 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/v1/perm/roles/{id}/members/:
+    get:
+      operationId: v1_perm_roles_members_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: username / email / name, contains
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleMembersPage'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    post:
+      operationId: v1_perm_roles_members_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleMembersChange'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleMembersChange'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleMembersChange'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleMembersChangeResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleMembersRefused'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleMembersRefused'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/roles/create/:
     post:
       operationId: v1_perm_roles_create_create
@@ -40983,6 +41071,99 @@ components:
         * `builtin_role` - builtin_role
         * `role_in_use` - role_in_use
         * `role_referenced_by_workflow_templates` - role_referenced_by_workflow_templates
+    RoleMemberRefusal:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        username:
+          type: string
+        code:
+          type: string
+        error:
+          type: string
+      required:
+      - code
+      - error
+      - user_id
+      - username
+    RoleMembersChange:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/RoleMembersChangeActionEnum'
+        kind:
+          $ref: '#/components/schemas/RoleMembersChangeKindEnum'
+        user_ids:
+          type: array
+          items:
+            type: integer
+          maxItems: 200
+          minItems: 1
+      required:
+      - action
+      - kind
+      - user_ids
+    RoleMembersChangeActionEnum:
+      enum:
+      - add
+      - remove
+      type: string
+      description: |-
+        * `add` - add
+        * `remove` - remove
+    RoleMembersChangeKindEnum:
+      enum:
+      - primary
+      - extra
+      type: string
+      description: |-
+        * `primary` - primary
+        * `extra` - extra
+    RoleMembersChangeResult:
+      type: object
+      properties:
+        changed:
+          type: integer
+        unchanged:
+          type: integer
+      required:
+      - changed
+      - unchanged
+    RoleMembersPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserManagement'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    RoleMembersRefused:
+      type: object
+      properties:
+        code:
+          type: string
+        refusals:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleMemberRefusal'
+      required:
+      - code
+      - refusals
     RolePermissionAssign:
       type: object
       properties:

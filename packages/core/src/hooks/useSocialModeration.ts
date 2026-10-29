@@ -156,7 +156,10 @@ export function useUpdateSensitiveWords() {
 }
 
 export function useCopySensitiveWords() {
-  return useModerationWrite(async (sourceTenant: string) => (await socialModerationApi.copyWords(sourceTenant)).data);
+  return useModerationWrite(
+    async ({ source, target }: { source: string; target?: string }) =>
+      (await (target ? socialModerationApi.copyWords(source, target) : socialModerationApi.copyWords(source))).data
+  );
 }
 
 export function useRemoveSensitiveWords() {
