@@ -53,31 +53,31 @@ function MenusPageContent() {
   const [pendingDelete, setPendingDelete] = useState<MenuItemFull | null>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["menus", page, showDeleted],
+    queryKey: ["menus", "all", showDeleted],
     queryFn: async () => {
       // menusApi.all() (GET /menus/list-public/) only ever returns top-level,
       // is_active=True, role-filtered menus — an editor built on that source
       // could never find an inactive or non-top-level row to fix, which
-      // defeats the point of an is_active control. .list() hits the
-      // ModelViewSet directly: ADMIN's get_queryset() returns Menu.objects.all(),
-      // which is what an editor whose job is "say which gate is in force"
+      // defeats the point of an is_active control. The ModelViewSet's list
+      // (every page) is what an editor whose job is "say which gate is in force"
       // needs to see.
-      const res = await menusApi.list({
-        page: String(page),
-        ...(showDeleted ? { show_deleted: "true" } : {}),
-      });
-      return res.data;
+      return menusApi.listAll(showDeleted ? { show_deleted: "true" } : {});
     },
   });
-  const menus = useMemo(() => (data?.results ?? []) as MenuItemFull[], [data]);
-  // 树表行(第三类 D 组答复:「套平表会丢掉层级」)。每页 20 条是后端定死的,
-  // 所以这是**本页之内**的树:父级在别页的子菜单当作本页的根,不画肘线。
-  // ponytail: per-page tree; a whole-tree view needs every page (organizations does that).
-  const treeRows = useMemo(
-    () => flattenTree(menus, (m) => m.id, (m) => m.parent),
-    [menus]
-  );
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+  const menus = useMemo(() => (data ?? []) as MenuItemFull[], [data]);
+  // 树表行(第三类 D 组答复:「套平表会丢掉层级」)。整棵树一次取回,再**按根**分页:
+  // 一页 PAGE_SIZE 个根,每个根带着它的全部下级 —— 此前按后端的页拼树,子项落到下一页就脱离了父项
+  // (rbac-snowy 2026-10-29)。父级不在列表里的(如回收站里的父项未显示)仍当根画。
+  const roots = useMemo(() => {
+    const groups: { item: MenuItemFull; depth: number }[][] = [];
+    for (const row of flattenTree(menus, (m) => m.id, (m) => m.parent)) {
+      if (row.depth === 0 || groups.length === 0) groups.push([]);
+      groups[groups.length - 1].push(row);
+    }
+    return groups;
+  }, [menus]);
+  const totalPages = Math.ceil(roots.length / PAGE_SIZE);
+  const treeRows = useMemo(() => roots.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).flat(), [roots, page]);
 
   // GET /perm/permissions/ — used only to check whether a codename (typed or
   // derived) actually exists, so the editor can flag a guess that won't
@@ -219,7 +219,7 @@ function MenusPageContent() {
         /* Recycle bin (Stage 4 §4.7): absent by default — a deleted row only
            ever renders when this is on. It is a filter over the list, so it
            lives in the filter slot rather than floating above the table. */
-        <FilterChipToggle pressed={showDeleted} onPressedChange={setShowDeleted}>
+        <FilterChipToggle pressed={showDeleted} onPressedChange={(on) => { setShowDeleted(on); setPage(1); }}>
           {t("menus.show_deleted")}
         </FilterChipToggle>
       }
@@ -249,7 +249,7 @@ function MenusPageContent() {
         emptyMessage={t("menus.no_menus")}
         page={page}
         totalPages={totalPages}
-        totalCount={data?.count}
+        totalCount={roots.length}
         onPageChange={setPage}
       />
 

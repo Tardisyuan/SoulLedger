@@ -13,7 +13,9 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { Modal } from "@/src/components/ui/Modal";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
+import { Segmented } from "@/src/components/ui/Segmented";
 import { RoleDataScopeSection } from "./RoleDataScopeSection";
+import { RoleMembersSection } from "./RoleMembersSection";
 
 /**
  * 角色表(E-11b)。行尾不放「编辑 / 删除」:整行点开右侧 480 px 抽屉。代码创建后
@@ -169,6 +171,8 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
   const [copyName, setCopyName] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [refusal, setRefusal] = useState<RoleDeleteRefusal | null>(null);
+  // 页签:详情 / 成员(rbac-snowy 2026-10-29)。切走不丢详情里没保存的字。
+  const [tab, setTab] = useState<"details" | "members">("details");
 
   const save = async () => {
     if (!displayName.trim()) return;
@@ -221,6 +225,18 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
 
   return (
     <div className="space-y-4" data-role-drawer={role.name}>
+      <Segmented
+        label={t("permissions.members.tabs")}
+        value={tab}
+        options={[
+          { value: "details", label: t("permissions.members.tab_details") },
+          { value: "members", label: t("permissions.roles.members") },
+        ]}
+        onChange={(v) => setTab(v as "details" | "members")}
+      />
+      {tab === "members" && <RoleMembersSection role={role} />}
+      {tab === "details" && (
+      <>
       <TextField
         label={t("permissions.display_name_label")}
         value={displayName}
@@ -338,6 +354,8 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
           {t("common.save")}
         </Button>
       </div>
+      </>
+      )}
 
       <Modal
         isOpen={deleting}

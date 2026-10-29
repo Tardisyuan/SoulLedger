@@ -1,7 +1,5 @@
 import type { MenuItem } from "@soulledger/core/api";
 
-export const ROLE_OPTIONS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"];
-
 export const MENU_TYPE_OPTIONS = ["DIRECTORY", "MENU", "BUTTON"] as const;
 export type MenuTypeOption = (typeof MENU_TYPE_OPTIONS)[number];
 
