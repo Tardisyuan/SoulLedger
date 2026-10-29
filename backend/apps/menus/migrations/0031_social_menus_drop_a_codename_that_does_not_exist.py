@@ -29,7 +29,7 @@ def restore(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("menus", "0029_first_sixteen_menus_name_their_read_codename"),
+        ("menus", "0030_add_online_sessions_menu"),
     ]
 
     operations = [
