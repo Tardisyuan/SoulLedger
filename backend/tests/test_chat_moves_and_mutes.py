@@ -145,7 +145,9 @@ def test_dispatch_and_return_leave_soul_to_soul_speech_alone(
         _dispatch(a.soul, cn_tenant, eu_tenant)
     assert can_speak(with_b.room_id, mxid(a)) and can_speak(with_b.room_id, mxid(b))
     assert _send(a_client, with_b.id).status_code == 201
-    opened = _open(a_client, d)  # 既不是原属也不是暂居地:照样可以发请求
+    # 既不是原属也不是暂居地:照样可以发请求(凭按编号查找的凭证 —— 别的文明的 id 不认,第 29 条)
+    ticket = a_client.post("/api/v1/me/chat/lookup/", {"soul_code": d.soul.soul_code}, format="json").data["ticket"]
+    opened = a_client.post(CONVERSATIONS, {"ticket": ticket}, format="json")
     assert opened.status_code == 201 and opened.data["throttled"] is True
 
     a.soul.refresh_from_db()

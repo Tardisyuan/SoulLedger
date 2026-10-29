@@ -64,6 +64,7 @@ describe("signing out", () => {
         <Probe />
       </SessionProvider>
     );
+    mockClear.mockClear(); // a start with no session to resume clears them too (A7); this test is about the sign-out
     fireEvent.press(screen.getByTestId("out"));
     expect(mockClear).toHaveBeenCalledTimes(1);
   });

@@ -7,7 +7,8 @@ import { platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 
-import { CONFIRM_KEY } from "../deviceCheck";
+import { confirmKey } from "../deviceCheck";
+import { USER_KEY } from "../session";
 import { MeTab } from "../screens/me";
 import { CosignSheet, DecisionSheet } from "../screens/sheets";
 import { translate } from "../shared";
@@ -37,7 +38,7 @@ beforeEach(() => {
   auth.__state.level = 1;
   auth.__state.success = true;
   auth.__state.types = [2];
-  platform().persistent.remove(CONFIRM_KEY);
+  platform().persistent.remove(confirmKey());
   mockSubmit.mockResolvedValue(undefined);
 });
 
@@ -126,7 +127,7 @@ describe("a check that does not pass", () => {
 
 describe("when nothing is asked", () => {
   it("the switch is off: submits without the system check", async () => {
-    platform().persistent.set(CONFIRM_KEY, "0");
+    platform().persistent.set(confirmKey(), "0");
     const { onDone } = sheet("approval", "approve");
     fireEvent.press(screen.getByTestId("decision-confirm"));
     await waitFor(() => expect(onDone).toHaveBeenCalled());
@@ -160,12 +161,48 @@ describe("the switch on 我的", () => {
     expect(screen.getByText("别人拿到你的手机，也做不了决定")).toBeTruthy();
     expect(row.props.accessibilityState.disabled).toBeFalsy();
     expect(row).toHaveTextContent(/✓/);
-    expect(platform().persistent.get(CONFIRM_KEY)).toBeNull();
+    expect(platform().persistent.get(confirmKey())).toBeNull();
 
-    fireEvent.press(row);
-    expect(platform().persistent.get(CONFIRM_KEY)).toBe("0");
-    fireEvent.press(screen.getByTestId("me-confirm-bio"));
-    expect(platform().persistent.get(CONFIRM_KEY)).toBeNull();
+    await act(async () => {
+      fireEvent.press(row);
+    });
+    expect(platform().persistent.get(confirmKey())).toBe("0");
+    expect(authenticate).toHaveBeenCalledTimes(1); // turning it off asked the phone (A8)
+    expect(authenticate).toHaveBeenCalledWith({ promptMessage: translate("zh-Hans", "officer_app.biometric.prompt_off") });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("me-confirm-bio"));
+    });
+    expect(platform().persistent.get(confirmKey())).toBeNull();
+    expect(authenticate).toHaveBeenCalledTimes(1); // turning it back on asks nothing
+  });
+
+  it("stays on when the phone does not recognise whoever turns it off (A8)", async () => {
+    auth.__state.success = false;
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    const row = await screen.findByTestId("me-confirm-bio");
+    await act(async () => {
+      fireEvent.press(row);
+    });
+    expect(authenticate).toHaveBeenCalledTimes(1);
+    expect(platform().persistent.get(confirmKey())).toBeNull();
+    expect(screen.getByTestId("me-confirm-bio")).toHaveTextContent(/✓/);
+    expect(screen.getByText("没有认出面容，这项仍然开着。")).toBeTruthy();
+  });
+
+  it("is each officer's own: one turning it off leaves it on for the next", async () => {
+    platform().persistent.set(USER_KEY, JSON.stringify({ id: 41, username: "a" }));
+    platform().persistent.set(confirmKey(), "0");
+    platform().persistent.set(USER_KEY, JSON.stringify({ id: 42, username: "b" }));
+    try {
+      const { onDone } = sheet("approval", "approve");
+      fireEvent.press(screen.getByTestId("decision-confirm"));
+      await waitFor(() => expect(onDone).toHaveBeenCalled());
+      expect(authenticate).toHaveBeenCalledTimes(1); // officer 42 never turned it off
+    } finally {
+      platform().persistent.set(USER_KEY, JSON.stringify({ id: 41, username: "a" }));
+      platform().persistent.remove(confirmKey());
+      platform().persistent.remove(USER_KEY);
+    }
   });
 
   it("names the fingerprint on a phone without face recognition", async () => {
@@ -176,7 +213,7 @@ describe("the switch on 我的", () => {
   });
 
   it("starts off when this phone was told so earlier", async () => {
-    platform().persistent.set(CONFIRM_KEY, "0");
+    platform().persistent.set(confirmKey(), "0");
     renderOfficer(<MeTab onOpen={() => {}} />);
     const row = await screen.findByTestId("me-confirm-bio");
     expect(row).toHaveTextContent(/○/);
@@ -193,6 +230,6 @@ describe("the switch on 我的", () => {
     await act(async () => {
       fireEvent.press(row);
     });
-    expect(platform().persistent.get(CONFIRM_KEY)).toBeNull();
+    expect(platform().persistent.get(confirmKey())).toBeNull();
   });
 });

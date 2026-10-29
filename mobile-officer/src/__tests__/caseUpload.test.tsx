@@ -3,7 +3,8 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { OnlineContext } from "../../../mobile/src/online";
 import { CaseUpload } from "../screens/caseUpload";
-import { httpError, renderOfficer } from "./harness";
+import { JudgmentCase } from "../screens/judgmentCase";
+import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockPick = jest.fn();
 const mockUpload = jest.fn();
@@ -13,9 +14,14 @@ jest.mock("../attachmentPicker", () => ({
 }));
 jest.mock("@soulledger/core/api/judgment", () => ({
   ...jest.requireActual("@soulledger/core/api/judgment"),
-  judgmentApi: { uploadAttachment: (...a: unknown[]) => mockUpload(...a) },
+  judgmentApi: { uploadAttachment: (...a: unknown[]) => mockUpload(...a), attachments: async () => mockAttachmentList() },
+}));
+jest.mock("@soulledger/core/api/souls", () => ({
+  ...jest.requireActual("@soulledger/core/api/souls"),
+  soulsApi: { records: async () => ({ data: [] }) },
 }));
 
+const mockAttachmentList = () => list;
 const list = { items: [], count: 0, total_bytes: 0, max_file_bytes: 20 * 1048576, max_total_bytes: 100 * 1048576, max_count: 30, concluded: false } as never;
 const photo = { uri: "file:///a.jpg", name: "a.jpg", type: "image/jpeg", size: 1000 };
 const ui = (over: Partial<Parameters<typeof CaseUpload>[0]> = {}) => <CaseUpload judgmentId="j1" list={list} canWrite onUploaded={() => {}} {...over} />;
@@ -69,4 +75,20 @@ it("not claimed: one line, no entries; concluded: no entries", () => {
   renderOfficer(ui({ list: { ...(list as object), concluded: true } as never }));
   expect(screen.getByTestId("attach-concluded")).toBeTruthy();
   expect(screen.queryByTestId("attach-camera")).toBeNull();
+});
+
+describe("the entry on the case (RBAC A4): the server's add_attachment wants judgment.execute and nothing else", () => {
+  const judgment = { id: "j1", soul: "s1", cycle: 1, summary: "", claimed_by: OFFICER.id } as never;
+
+  it("the claimant who no longer holds judgment.execute gets no entry", async () => {
+    renderOfficer(<JudgmentCase data={judgment} onOpenRecord={() => {}} />, { user: { ...OFFICER, permissions: ["judgment.read"] } });
+    expect(await screen.findByTestId("attach-need-claim")).toBeTruthy();
+    expect(screen.queryByTestId("attach-camera")).toBeNull();
+  });
+
+  it("an officer holding judgment.execute gets it", async () => {
+    renderOfficer(<JudgmentCase data={{ ...(judgment as object), claimed_by: 999 } as never} onOpenRecord={() => {}} />);
+    expect(await screen.findByTestId("attach-camera")).toBeTruthy();
+    expect(screen.queryByTestId("attach-need-claim")).toBeNull();
+  });
 });

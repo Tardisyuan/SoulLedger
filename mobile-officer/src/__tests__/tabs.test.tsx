@@ -6,7 +6,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 
-import { RefreshFailed, Row } from "../kit";
+import { RefreshFailed, Row, visibleTabs } from "../kit";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, segmentLabel } from "../screens/queue";
 import { SearchTab } from "../screens/search";
@@ -121,7 +121,9 @@ describe("the to-do tab", () => {
     mockTodo.mockRejectedValue(httpError(403));
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByText("□ 没有权限")).toBeTruthy();
-    expect(screen.getByText("你的角色「JUDGE」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+    // The role's name, not its code (decision 30).
+    expect(screen.getByText("你的角色「审判者」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+    expect(screen.queryByText(/「JUDGE」/)).toBeNull();
     expect(screen.queryByTestId("state-retry")).toBeNull();
   });
 });
@@ -338,6 +340,51 @@ describe("the pushed row's highlight (spec §五)", () => {
     renderOfficer(<Row title="x" />);
     await act(async () => {});
     expect(screen.queryByTestId("row-highlight")).toBeNull();
+  });
+});
+
+describe("tabs by permission (decisions 30 / 31)", () => {
+  const VIEWER = { ...OFFICER, role: "VIEWER", permissions: ["soul.read", "reincarnation.read", "ledger.read"] };
+
+  it("a 访客 / 牛头马面 gets 查询, 通知 and 我的 only, and starts on 查询", async () => {
+    renderOfficer(<Shell />, { user: VIEWER });
+    expect(await screen.findByTestId("tab-search-screen")).toBeTruthy();
+    for (const tab of ["search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
+    expect(screen.queryByTestId("tab-todo")).toBeNull();
+    expect(screen.queryByTestId("tab-queue")).toBeNull();
+    // Nothing behind the hidden tabs was asked for.
+    expect(mockTodo).not.toHaveBeenCalled();
+    expect(mockList).not.toHaveBeenCalled();
+  });
+
+  it("a role with judgment.read but none of the to-do codes gets 审判, not 待办", async () => {
+    renderOfficer(<Shell />, { user: { ...OFFICER, role: "AUDITOR", permissions: ["judgment.read"] } });
+    expect(await screen.findByTestId("tab-queue-screen")).toBeTruthy();
+    expect(screen.getByTestId("tab-queue")).toBeTruthy();
+    expect(screen.queryByTestId("tab-todo")).toBeNull();
+    expect(screen.queryByTestId("tab-search")).toBeNull();
+  });
+
+  it("visibleTabs: 待办 for any one of its groups' codes; 通知 / 我的 for everyone", () => {
+    expect(visibleTabs([])).toEqual(["notices", "me"]);
+    expect(visibleTabs(undefined)).toEqual(["notices", "me"]);
+    for (const code of ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute"]) expect(visibleTabs([code])).toContain("todo");
+    expect(visibleTabs(["dispatch.read", "workflow.read"])).not.toContain("todo");
+    expect(visibleTabs(OFFICER.permissions)).toEqual(["todo", "queue", "search", "notices", "me"]);
+  });
+
+  it("the denied page names a role the bundles do not know by its code", async () => {
+    mockTodo.mockRejectedValue(httpError(403));
+    renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />, { user: { ...OFFICER, role: "CLERK_7" } });
+    expect(await screen.findByText("你的角色「CLERK_7」看不到待办。需要时请找本殿管理员。")).toBeTruthy();
+  });
+
+  it("an empty 待办 promises approvals only to someone who can be given one", async () => {
+    mockTodo.mockResolvedValue({ data: EMPTY });
+    renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />, { user: { ...OFFICER, role: "CLERK_7", permissions: ["soul_inbox.reply"] } });
+    expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
+    expect(screen.getByText("有轮到你的事时会推送给你。")).toBeTruthy();
+    expect(screen.queryByText("新的审批、移交和申请会推送给你。")).toBeNull();
   });
 });
 

@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type ScrollView, View } from "react-native";
 
-import { canCheck, confirmWished, setConfirmWished, useBioWord } from "../deviceCheck";
+import { canCheck, confirmWished, deviceConfirms, setConfirmWished, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
@@ -253,12 +253,16 @@ function PushBlock() {
   );
 }
 
-/** 批准、驳回前认面容: a switch, on by default; greyed, with the way out, when the phone has no screen lock. */
+/**
+ * 批准、驳回前认面容: a switch, on by default; greyed, with the way out, when the phone has no screen lock.
+ * Turning it off asks the phone first (A8); a check that does not pass leaves it on and says so.
+ */
 function ConfirmBlock() {
   const { t } = useI18n();
   const bio = useBioWord();
   const [possible, setPossible] = useState<boolean | null>(null);
   const [on, setOn] = useState(confirmWished);
+  const [refused, setRefused] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -269,7 +273,12 @@ function ConfirmBlock() {
   }, []);
   if (possible === null) return null;
 
-  const toggle = () => {
+  const toggle = async () => {
+    if (on && !(await deviceConfirms(t("officer_app.biometric.prompt_off")))) {
+      setRefused(true);
+      return;
+    }
+    setRefused(false);
     setConfirmWished(!on);
     setOn(!on);
   };
@@ -281,10 +290,11 @@ function ConfirmBlock() {
           minHeight={56}
           title={t("officer_app.biometric.setting", { bio: bio.inside })}
           lines={[possible ? t("officer_app.biometric.hint") : t("officer_app.biometric.unavailable")]}
-          onPress={possible ? toggle : undefined}
+          onPress={possible ? () => void toggle() : undefined}
           right={<Txt variant="nav">{possible && on ? "✓" : "○"}</Txt>}
         />
       </View>
+      {refused ? <Notice tone="neg">{t("officer_app.biometric.off_failed", { bio: bio.start })}</Notice> : null}
     </Block>
   );
 }

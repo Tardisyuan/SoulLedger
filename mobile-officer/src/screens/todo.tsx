@@ -40,6 +40,9 @@ export function TodoTab({ onOpen, highlight, gone }: { onOpen: (item: ItemRef) =
   const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
+  // 「新的审批、移交和申请会推送给你」 only to an officer who can be given one (decision 30); others get a sentence that promises nothing they cannot get.
+  const held = state.status === "signedIn" ? (state.user.permissions ?? []) : [];
+  const approver = held.includes("workflow.approve") || held.includes("dispatch.approve");
   // The shell gives this tab a new `key` whenever the list should ask again (back from a detail, a push).
   const load = useCallback(() => officerAppApi.todo().then((r) => r.data), []);
   const { data, error, loading, reload } = useCachedRemote("list:todo", load);
@@ -78,7 +81,7 @@ export function TodoTab({ onOpen, highlight, gone }: { onOpen: (item: ItemRef) =
           role={role}
           area={t("officer_app.areas.todo")}
           emptyTitle={t("officer_app.todo.empty_title")}
-          emptyBody={t("officer_app.todo.empty_body")}
+          emptyBody={t(approver ? "officer_app.todo.empty_body" : "officer_app.todo.empty_body_other")}
         />
       ) : (
         <>

@@ -12,11 +12,13 @@
  * data. It is a read cache: nothing here is ever sent back.
  *
  * WHEN IT GOES. `clearReadCache()` on sign-out and on a session the server ended (session.tsx), beside
- * `clearDrafts()`: the next officer on the phone must not find the last one's cases.
+ * `clearDrafts()`: the next officer on the phone must not find the last one's cases. Stored as
+ * `{ owner, lists, details }` (owner.ts), so whatever a path that did not clear left behind reads as empty.
  */
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { readOwned, writeOwned } from "./owner";
 import { useOnline, useRemote } from "./shared";
 
 export const CACHE_KEY = "officer_read_cache";
@@ -33,12 +35,8 @@ interface Store {
 }
 
 function read(): Store {
-  try {
-    const parsed = JSON.parse(platform().persistent.get(CACHE_KEY) ?? "null") as Partial<Store> | null;
-    return { lists: Array.isArray(parsed?.lists) ? parsed.lists : [], details: Array.isArray(parsed?.details) ? parsed.details : [] };
-  } catch {
-    return { lists: [], details: [] };
-  }
+  const parsed = readOwned<Partial<Store>>(CACHE_KEY);
+  return { lists: Array.isArray(parsed?.lists) ? parsed.lists : [], details: Array.isArray(parsed?.details) ? parsed.details : [] };
 }
 
 export function cacheRead<T>(key: string): { at: number; data: T } | null {
@@ -55,7 +53,7 @@ export function cacheWrite(key: string, data: unknown): number {
   if (key.startsWith("list:")) store.lists = [entry, ...store.lists.filter((e) => e.key !== key)];
   else store.details = [entry, ...store.details.filter((e) => e.key !== key)].slice(0, DETAIL_KEEP);
   try {
-    platform().persistent.set(CACHE_KEY, JSON.stringify(store));
+    writeOwned(CACHE_KEY, store);
   } catch {
     // A full store loses the cache, never the screen.
   }
