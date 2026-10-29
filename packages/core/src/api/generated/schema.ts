@@ -618,7 +618,7 @@ export interface paths {
          *     权限变更时间线 — 查询权限相关操作的审计日志。
          *
          *     Query params:
-         *         resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 8 类权限资源
+         *         resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 6 类权限资源
          *         action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
          *         start_date: 开始日期 (YYYY-MM-DD)
          *         end_date: 结束日期 (YYYY-MM-DD)
@@ -6757,11 +6757,10 @@ export interface paths {
          * @description POST /api/v1/perm/roles/<pk>/copy/
          *     复制为新角色：新 code、同一组授权（仅 ADMIN）
          *
-         *     Copies the source's RolePermission rows — permission, `conditions` and
-         *     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
-         *     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-         *     the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
-         *     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
+         *     Copies the source's RolePermission rows — what the matrix shows for it — and
+         *     (maintainer decision, 2026-09-25) its FieldPermission rows, so a copy sees the
+         *     same fields the source does, and its RoleDataScope rows (数据范围 B4). Not copied:
+         *     ADMIN's short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
          */
         post: operations["v1_perm_roles_copy_create"];
         delete?: never;
@@ -12960,7 +12959,6 @@ export interface components {
             name: string;
             display_name: string;
             description?: string;
-            scope?: string;
         };
         /** @description One RoleDataScope row (数据范围 B4). `resource` "" is the role's default; `orgs` are org codes. */
         ExportedRoleDataScope: {
@@ -12973,7 +12971,6 @@ export interface components {
         ExportedRolePermission: {
             role: string;
             permission: string;
-            conditions?: unknown;
         };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         ExternalApiKey: {
@@ -18588,9 +18585,8 @@ export interface components {
             count: number;
         };
         /**
-         * @description `civilization` (a soul: the value is the civilization code),
-         *     `organization` (an ORG role: the organization's name) or `parent` (a menu
-         *     or role under another: the parent's name).
+         * @description `civilization` (a soul: the value is the civilization code) or `parent`
+         *     (a menu under another: the parent's name). A role has none since 数据范围 B7.
          */
         RecycleBinLocation: {
             kind: components["schemas"]["RecycleBinLocationKindEnum"];
@@ -18598,11 +18594,10 @@ export interface components {
         };
         /**
          * @description * `civilization` - civilization
-         *     * `organization` - organization
          *     * `parent` - parent
          * @enum {string}
          */
-        RecycleBinLocationKindEnum: "civilization" | "organization" | "parent";
+        RecycleBinLocationKindEnum: "civilization" | "parent";
         /**
          * @description 400 body of restore. `code` / `missing_roles` come with a refusal from a
          *     registered restore check (`template_role_missing`: a workflow template in
@@ -18760,16 +18755,6 @@ export interface components {
             name: string;
             display_name: string;
             description?: string;
-            /**
-             * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
-             *
-             *     * `GLOBAL` - 全局
-             *     * `ORG` - 组织级
-             */
-            scope?: components["schemas"]["ScopeEnum"];
-            /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
-            organization?: number | null;
-            readonly organization_name: string;
             readonly user_count: number;
             readonly member_count: number;
             readonly permission_count: number;
@@ -18783,15 +18768,6 @@ export interface components {
             name: string;
             display_name: string;
             description?: string;
-            /**
-             * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
-             *
-             *     * `GLOBAL` - 全局
-             *     * `ORG` - 组织级
-             */
-            scope?: components["schemas"]["ScopeEnum"];
-            /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
-            organization?: number | null;
         };
         RoleDataScopeConfig: {
             default: components["schemas"]["DataScopeRule"];
@@ -18944,12 +18920,6 @@ export interface components {
          * @enum {string}
          */
         ScheduledJobScopeEnum: "TENANT" | "GLOBAL";
-        /**
-         * @description * `GLOBAL` - 全局
-         *     * `ORG` - 组织级
-         * @enum {string}
-         */
-        ScopeEnum: "GLOBAL" | "ORG";
         /**
          * @description * `applications` - applications
          *     * `sentence` - sentence

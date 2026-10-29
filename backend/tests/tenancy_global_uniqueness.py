@@ -29,7 +29,6 @@ UNIQUE_KEYS = {
     'officer_app.OfficerPushDevice:token': ('GLOBAL_VALUE', 'push token of an officer device'),
     'org.Organization:code': ('GLOBAL_VALUE', 'organization code'),
     'org.Organization:organizations_one_live_root_per_tenant': ('PER_TENANT', 'one live root unit per hall (datascope B1); the hall is the key'),
-    'perm.DataScope:code': ('GLOBAL_VALUE', 'data-scope code, global RBAC table'),
     'perm.Permission:unique_permission_codename_alive': ('GLOBAL_VALUE', 'permission codename, global RBAC table'),
     'perm.Role:unique_role_name_alive': ('GLOBAL_VALUE', 'role name, global RBAC table'),
     'perm.RoleDataScope:perm_role_data_scope_unique_live': ('PER_PARENT', 'one live scope row per (role, resource); lives with its global role row'),

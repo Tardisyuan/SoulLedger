@@ -193,7 +193,7 @@ class BinEntryType:
     #: Which soft-deleted rows of this model belong in the bin. None = all of them.
     listable: Q | None = None
     #: Where the row lived (the bin's 「原位置」), read off existing fields:
-    #: `{"kind": "civilization" | "organization" | "parent", "value": str}`,
+    #: `{"kind": "civilization" | "parent", "value": str}`,
     #: or None for a top-level row with nothing above it.
     location: Callable[[object], dict | None] = lambda row: None
 

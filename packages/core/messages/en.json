@@ -2741,9 +2741,7 @@
       "rolepermission": "Role permission",
       "menu": "Menu",
       "menubutton": "Menu button",
-      "fieldpermission": "Field permission",
-      "rowleveldatascope": "Row-level data scope",
-      "datascope": "Data scope"
+      "fieldpermission": "Field permission"
     },
     "timeline": {
       "all_resources": "All permission resources",

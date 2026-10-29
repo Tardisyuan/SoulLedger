@@ -690,8 +690,7 @@ SPECTACULAR_SETTINGS = {
         "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
         # 助手管理「供应商」区块的平台(2026-09-30):`platform` 另有别的选项集用着。
         "AssistPlatformEnum": "apps.soul_assist.platforms.PLATFORM_IDS",
-        "ScopeEnum": "apps.perm.models.Role.SCOPE_CHOICES",
-        # 数据范围五种(B4 接口的 `scope`):与 Role.scope 同名,钉住免得两边都变成带哈希的名字。
+        # 数据范围五种(B4 接口的 `scope`)。Role.scope 在 B7 删了;仍钉住,免得改名成带哈希的名字。
         "DataScopeEnum": "apps.perm.models.RoleDataScope.SCOPE_CHOICES",
         # 两步验证:「确认是本人」(密码或动态码)与「关闭」(动态码或恢复码,2026-10-29)两组都叫 `method`。
         "MfaOwnerConfirmMethodEnum": "apps.authentication.mfa.OWNER_CONFIRM_METHODS",

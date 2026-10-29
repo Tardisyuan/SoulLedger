@@ -137,7 +137,7 @@ are the whole of the isolation"）。
 
 | 规则 | 出处 | 执法 |
 |---|---|---|
-| 继承 `AuditUserFields`（自带 create/update user+time、`version`、软删五字段） | `apps/core/models.py:11-75`；`soft_delete.py:32-51` | `[多数派]`【实跑】**38 个**继承；裸 `models.Model` 5 处，其中 2 个是 mixin，真正的例外是 `perm.RowLevelDataScope:412`、`perm.FieldPermission:467`、`social.UserProfile:288` |
+| 继承 `AuditUserFields`（自带 create/update user+time、`version`、软删五字段） | `apps/core/models.py:11-75`；`soft_delete.py:32-51` | `[多数派]`【实跑】**38 个**继承；裸 `models.Model` 5 处，其中 2 个是 mixin，真正的例外是 `perm.FieldPermission:467`(当时还有一张行级规则表,数据范围 B7 删了)、`social.UserProfile:288` |
 | 参与审判流程的再叠 `ArchivableMixin` | `apps/core/archive.py:32`；souls / judgment / disposition | `[多数派 3/3]` |
 | tenant FK 写法 `ForeignKey("tenants.Tenant", on_delete=CASCADE, related_name=...)` | `apps/souls/models.py:254-259` | `[多数派]`。`null=True` 18/25；非空的是 social 4 表 + death_sync 3 表 |
 | 声明 `all_objects` 在前、`objects = TenantManager()` 在后（前者要当 `_base_manager`） | `apps/judgment/models.py:89-90` | `[多数派 13]`，注释即理由 |

@@ -71,7 +71,7 @@ const PERMS: Permission[] = [
   { id: 3, codename: "recycle_bin.hard_delete", name: "彻底删除", category: "system" } as Permission,
 ];
 const role = (over: Partial<Role>) =>
-  ({ id: 0, name: "", display_name: "", scope: "GLOBAL", organization: null, organization_name: null, user_count: 0, member_count: 0,
+  ({ id: 0, name: "", display_name: "", user_count: 0, member_count: 0,
      permission_count: 0, workflow_template_count: 0, is_builtin: false, version: 1, update_time: "2026-09-01T00:00:00Z", ...over }) as Role;
 const ADMIN = role({ id: 1, name: "ADMIN", display_name: "管理员", is_builtin: true, version: 4 });
 const JUDGE = role({ id: 2, name: "JUDGE", display_name: "判官", is_builtin: true, version: 7, member_count: 14, permission_count: 2 });

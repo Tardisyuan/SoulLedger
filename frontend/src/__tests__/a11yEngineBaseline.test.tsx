@@ -232,17 +232,11 @@ const MATRIX_ROLE_META: Record<string, Role> = {
     id: 1,
     name: "ADMIN",
     display_name: "Administrator",
-    scope: "GLOBAL",
-    organization: null,
-    organization_name: null,
   } as Role,
   JUDGE: {
     id: 2,
     name: "JUDGE",
     display_name: "Judge",
-    scope: "GLOBAL",
-    organization: null,
-    organization_name: null,
   } as Role,
 };
 

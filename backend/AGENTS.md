@@ -91,52 +91,12 @@ class CrossTenantPermission(models.Model):
 
 ## P1 - 权限精细化
 
-### 3. 数据范围权限模型 (DataScope / RowLevelDataScope)
-**状态**: ✅ 完成
+### 3. 数据范围(已替换)
+**状态**: 旧的行级规则表、数据范围定义表与 `RolePermission` 的条件 / 数据范围两列在 2026-10-29 数据范围 B7
+(`apps/perm/migrations/0031_drop_dead_scope_fields.py`)删除;`Role` 的作用域 / 机构 / 父角色三列同批删除。
 
-**目的**: 支持行级访问控制，如 ACTOR 只能处理 PENDING 状态的灵魂
-
-**修改文件**:
-- `apps/perm/models.py` - 新增 `DataScope` 和 `RowLevelDataScope` 模型
-- `apps/perm/migrations/0005_add_conditions_and_data_scope.py` - 迁移
-- `apps/perm/migrations/0006_add_row_level_data_scope.py` - 迁移
-
-**模型设计**:
-```python
-class RowLevelDataScope(models.Model):
-    role = models.ForeignKey('perm.Role', on_delete=models.CASCADE)
-    civilization = models.CharField(max_length=20)  # CHINA/EUROPE/EGYPT
-    model_name = models.CharField(max_length=50)  # Soul, Judgment
-    filter_conditions = models.JSONField(default=dict)
-    scope_type = models.CharField(max_length=10)  # READ/WRITE/DELETE
-    priority = models.IntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-```
-
----
-
-### 4. RolePermission 条件扩展
-**状态**: ✅ 完成
-
-**修改文件**: `apps/perm/models.py`
-
-**新增字段**:
-```python
-class RolePermission(AuditUserFields):
-    # ... 现有字段 ...
-    conditions = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text='权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}'
-    )
-    data_scope = models.ForeignKey(
-        # 计划里写的是 'permissions.DataScope';实际落地的是 apps/perm 里的
-        # DataScope 类(apps/perm/models.py:171 直接引用类对象)。
-        DataScope,
-        on_delete=models.SET_NULL,
-        null=True, blank=True
-    )
-```
+现在的数据范围:`RoleDataScope`(`apps/perm/models.py`)+ 注册表与求解器 `apps/perm/data_scope.py`,
+设计见 `local-gates/rbac-2026-10-29/datascope-design.md`。
 
 ---
 
@@ -238,10 +198,10 @@ const mutation = useMutation({
 
 ~~应用新迁移~~ —— `apps.permissions` 已于 2026-09-03 删除。
 
-上面这段验证命令**在被删之前就已经是坏的**:`DataScope` 从来不在
+上面这段验证命令**在被删之前就已经是坏的**:当时的数据范围模型从来不在
 `apps.permissions.models` 里,它住在 `apps/perm/models.py`。照着跑得到的是
 
-    ImportError: cannot import name 'DataScope' from 'apps.permissions.models'
+    ImportError: cannot import name ... from 'apps.permissions.models'
 
 —— 一句从没有人执行过的「验证安装」。活着的权限 app 是 `apps/perm`:
 
@@ -249,7 +209,7 @@ const mutation = useMutation({
 # 在 backend/ 下;解释器是 backend/.venv,不是 PATH 上的 python(2026-09-26 改,见根 CLAUDE.md 的 Build & Test)
 .venv/bin/python manage.py migrate perm
 # `python -c` 不 setup Django，实跑报 ImproperlyConfigured: Requested setting AUTH_USER_MODEL
-.venv/bin/python manage.py shell -c "from apps.perm.models import DataScope; print('OK')"
+.venv/bin/python manage.py shell -c "from apps.perm.models import RoleDataScope; print('OK')"
 ```
 
 ---
