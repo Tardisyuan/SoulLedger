@@ -14576,9 +14576,10 @@ export interface components {
         /**
          * @description * `ISSUED` - ISSUED
          *     * `CAPTURED` - CAPTURED
+         *     * `HANDED_OVER` - HANDED_OVER
          * @enum {string}
          */
-        MeCaptureWarrantStatusEnum: "ISSUED" | "CAPTURED";
+        MeCaptureWarrantStatusEnum: "ISSUED" | "CAPTURED" | "HANDED_OVER";
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
             /** Format: uuid */

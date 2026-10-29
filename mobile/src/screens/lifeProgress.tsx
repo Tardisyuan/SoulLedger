@@ -65,13 +65,18 @@ function Card({ testID, title, right, children }: { testID: string; title: strin
 }
 
 const CAPTURE_STEPS = ["step_issued", "step_captured", "step_handed"] as const;
+/** 正在第几步;HANDED_OVER = 3,三步都已过。不认识的状态不画(不把原始成员值放到页面上)。 */
+const CAPTURE_AT: Record<string, number | undefined> = { ISSUED: 1, CAPTURED: 2, HANDED_OVER: 3 };
 
-/** 勾魂牒(地府):发牒 → 拘到 → 交城隍,■ 已过 ▪ 正在 □ 未到。交接城隍后字段变 null,卡就没了。 */
+/**
+ * 勾魂牒(地府):发牒 → 拘到 → 交城隍,■ 已过 ▪ 正在 □ 未到。死亡登记时牒一并签发并交接(用户 2026-10-30),
+ * 所以灵魂端通常看到的是 HANDED_OVER:三步全是 ■。
+ */
 export function CaptureCard({ warrant }: { warrant: MeProfile["capture_warrant"] }) {
   const { t: tr } = useI18n();
   const day = useDay();
-  if (!warrant || (warrant.status !== "ISSUED" && warrant.status !== "CAPTURED")) return null;
-  const at = warrant.status === "ISSUED" ? 1 : 2;
+  const at = warrant ? CAPTURE_AT[warrant.status] : undefined;
+  if (!warrant || at === undefined) return null;
   return (
     <Card testID="life-capture" title={tr("soul_app.life.capture.title")}>
       <View testID="life-capture-steps" style={styles.steps}>

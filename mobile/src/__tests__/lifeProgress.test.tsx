@@ -147,8 +147,19 @@ describe("勾魂牒", () => {
     expect(screen.getByTestId("life-capture-status")).toHaveTextContent("鬼差已经拘到你，正送往城隍。");
   });
 
-  it("a status it does not know draws nothing (no raw member on the page)", async () => {
+  it("HANDED_OVER: all three steps past, the hand-over sentence", async () => {
     await openAs({ capture_warrant: { status: "HANDED_OVER", issued_at: "2026-10-27T12:00:00Z" } });
+    const steps = within(screen.getByTestId("life-capture-steps"));
+    expect(steps.getByText("■ 发牒")).toBeTruthy();
+    expect(steps.getByText("→ ■ 拘到")).toBeTruthy();
+    expect(steps.getByText("→ ■ 交城隍")).toBeTruthy();
+    expect(steps.queryByText(/▪|□/)).toBeNull();
+    expect(screen.getByTestId("life-capture-status")).toHaveTextContent("鬼差已把你交给城隍。");
+    expect(screen.getByTestId("life-capture")).not.toHaveTextContent("HANDED_OVER");
+  });
+
+  it("a status it does not know draws nothing (no raw member on the page)", async () => {
+    await openAs({ capture_warrant: { status: "CANCELLED", issued_at: "2026-10-27T12:00:00Z" } });
     expect(screen.queryByTestId("life-capture")).toBeNull();
   });
 });

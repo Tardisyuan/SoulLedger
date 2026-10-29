@@ -47,7 +47,7 @@ def test_an_ordinary_soul_has_every_progress_field_null(cn_tenant):
     assert {name: data[name] for name in FIELDS} == dict.fromkeys(FIELDS)
 
 
-def test_an_open_capture_warrant_shows_until_it_is_handed_over(cn_tenant):
+def test_the_capture_warrant_shows_its_status_and_a_cancelled_one_does_not(cn_tenant):
     account, _ = ready_soul(cn_tenant)
     warrant = CaptureWarrant.all_objects.create(tenant=cn_tenant, soul=account.soul)
     shown = _me(account)["capture_warrant"]
@@ -55,10 +55,20 @@ def test_an_open_capture_warrant_shows_until_it_is_handed_over(cn_tenant):
     CaptureWarrant.all_objects.filter(pk=warrant.pk).update(status=CaptureStatus.CAPTURED)
     assert _me(account)["capture_warrant"]["status"] == "CAPTURED"
     CaptureWarrant.all_objects.filter(pk=warrant.pk).update(status=CaptureStatus.HANDED_OVER)
+    assert _me(account)["capture_warrant"]["status"] == "HANDED_OVER"  # 死后看得到交接完的那张(用户 2026-10-30)
+    CaptureWarrant.all_objects.filter(pk=warrant.pk).update(status=CaptureStatus.CANCELLED)
     assert _me(account)["capture_warrant"] is None
     other, _ = ready_soul(cn_tenant, name="别人")
     CaptureWarrant.all_objects.create(tenant=cn_tenant, soul=other.soul)
     assert _me(account)["capture_warrant"] is None  # 别人的牒不出现在我这里
+
+
+def test_a_diyu_death_registered_any_way_gives_the_soul_its_handed_over_warrant(cn_tenant):
+    soul = Soul.objects.create(name="寿终", tenant=cn_tenant, fated_death_year=2000, fated_death_month=1,
+                               fated_death_day=1)
+    soul.die(death_date=datetime.date.today())
+    account = _account(Soul.all_objects.get(pk=soul.pk))
+    assert _me(account)["capture_warrant"]["status"] == "HANDED_OVER"
 
 
 def test_an_unburied_greek_soul_sees_the_day_it_crosses(gr_tenant):
