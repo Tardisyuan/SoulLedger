@@ -178,7 +178,13 @@ function CreateKeyDialog({ onClose, onCreated }: { onClose: () => void; onCreate
   const create = useMutation({
     mutationFn: (body: ExternalApiKeyCreate) => deathSyncApi.createApiKey(body),
     onSuccess: ({ data }) => onCreated(data),
-    onError: () => showToast(t("death_sync.api_keys.create_failed"), "error"),
+    // 无殿管理员没进殿时后端答 400 `no_tenant`:密钥属于某一殿。
+    onError: (err: unknown) =>
+      showToast(
+        t((err as { response?: { data?: { code?: string } } })?.response?.data?.code === "no_tenant"
+          ? "death_sync.api_keys.create_no_tenant" : "death_sync.api_keys.create_failed"),
+        "error",
+      ),
   });
   const submit = (e: FormEvent) => {
     e.preventDefault();

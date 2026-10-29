@@ -13,5 +13,6 @@
   "appeals.refusal.appeal_closed",
   "appeals.refusal.ladder_running",
   "disposition.release_error.generic",
-  "officer_app.biometric.prompt"
+  "officer_app.biometric.prompt",
+  "death_sync.api_keys.create_no_tenant"
 ]

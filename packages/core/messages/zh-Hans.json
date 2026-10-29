@@ -3670,6 +3670,7 @@
       "revoked_ok": "密钥已撤销",
       "revoke_failed": "撤销失败",
       "create_failed": "创建失败",
+      "create_no_tenant": "请先进入一个殿再新建：密钥属于某一殿",
       "no_keys": "暂无接入密钥",
       "shown_title": "新密钥（仅此一次）",
       "shown_warning": "这是密钥的唯一一次显示。关闭后服务器只保留散列，无法再次查看；请现在复制并交付给外部系统。",
