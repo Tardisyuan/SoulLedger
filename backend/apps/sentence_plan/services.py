@@ -607,6 +607,7 @@ class SentencePlanService:
                 reason=f"sentence plan {plan.pk} node {here.order} served",
             )
             soul.tenant_id = locked.home_tenant_id
+            soul.owner_org_id = locked.owner_org_id  # 与 end_residence 同步回来的归属机构一致(B3b)
             return True
 
         # 在原属地:① 无未结案审判 ② 无待决请求 ③ 有无未执行节点(图 1 下的三项检查)。

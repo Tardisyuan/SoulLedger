@@ -80,12 +80,14 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         """POST /reincarnation/drink-soup/ {soul_id} — 记下这一世已饮孟婆汤(地府,候转世的灵魂;2026-10-25)。
         地府的灵魂没饮过,`reborn` 答 409 `soup_not_taken`。别的殿的灵魂答 404。"""
         from apps.core.tenant import scope_to_tenant
+        from apps.perm.filters import DataScopeFilter
         from apps.reincarnation.services import drink_soup
         from apps.souls.models import Soul
 
         body = DrinkSoupSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=body.validated_data["soul_id"]).first()
+        # 范围外的灵魂与别殿一样答 404(数据范围 B3b)。
+        soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=body.validated_data["soul_id"]).first()
         if soul is None:
             return Response({"error": "NOT_FOUND", "message": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
         soul = drink_soup(soul)
@@ -115,6 +117,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         from apps.core.tenant import scope_to_tenant
         from apps.disposition.models import Disposition
         from apps.ledger.services import LedgerService
+        from apps.perm.filters import DataScopeFilter
         from apps.reincarnation.services import (
             ReincarnationService,
             assert_continent_applies,
@@ -142,7 +145,8 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUse
         # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
         # `scope_to_tenant` fails closed: the hand-rolled `and user_tenant` here skipped the
         # filter for a non-ADMIN with no tenant context and let it reach any hall's soul.
-        soul_qs = scope_to_tenant(Soul.objects.all(), request)
+        # 数据范围(B3b):范围外的灵魂与别殿一样答 404。
+        soul_qs = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul)
 
         try:
             soul = soul_qs.get(id=soul_id)
