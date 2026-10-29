@@ -178,6 +178,8 @@ export interface HandoverPreview {
   appeals_returned_to_pool: number;
   city_gods: string[];
   letters: number;
+  /** 操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下(不计入 `letters`)。 */
+  letters_kept?: number;
   problems: ("target_cannot_judge" | "target_cannot_reply")[];
 }
 
@@ -188,6 +190,8 @@ export interface HandoverResult {
   appeals_returned_to_pool: number;
   city_gods: number;
   letters: number;
+  /** 操作人不持 soul_inbox.reply:这些书信没有移交,留在交出人名下。 */
+  letters_kept?: number;
 }
 
 /** 409 `handover_blocked` carries the same `problems` as the preview. */

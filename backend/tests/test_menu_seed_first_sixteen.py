@@ -17,6 +17,8 @@ from tests.soul_account_support import officer_client
 
 seed_module = importlib.import_module("apps.menus.migrations.0021_seed_the_first_sixteen_menus")
 codename_module = importlib.import_module("apps.menus.migrations.0029_first_sixteen_menus_name_their_read_codename")
+# 0032 收窄了 /dispatch /workflow /disposition /death-sync 的 roles(rbac-web H-1),全新的库最终是它写的值。
+four_module = importlib.import_module("apps.menus.migrations.0032_four_menus_follow_their_page_codename")
 FIRST_SIXTEEN = [m["path"] for m in seed_module.MENUS]
 
 pytestmark = pytest.mark.django_db
@@ -67,8 +69,9 @@ def test_a_fresh_database_gets_a_complete_sidebar():
     assert set(FIRST_SIXTEEN) <= set(live), sorted(set(FIRST_SIXTEEN) - set(live))
     for item in seed_module.MENUS:
         row = live[item["path"]]
+        roles = four_module.CHANGES[item["path"]][2] if item["path"] in four_module.CHANGES else item["roles"]
         assert (row.name, row.icon, row.order, row.roles, row.visible) == (
-            item["name"], item["icon"], item["order"], item["roles"], item["visible"]
+            item["name"], item["icon"], item["order"], roles, item["visible"]
         )
         assert (row.parent.name if row.parent else None) == item["parent"], item["path"]
     # 在侧边栏里的每一页都挂在某个分组下(没有悬空的一级页),不在侧边栏的三条一级、不可见。
@@ -121,7 +124,8 @@ def test_reverse_removes_only_untouched_seed_rows():
     Menu.all_objects.filter(path="/souls").update(version=2)       # 有人保存过
     Menu.all_objects.filter(path="/users").update(name="成员管理")  # 改过名
 
-    codename_module.unfill(django_apps, SCHEMA_EDITOR)  # 真实回退里 0029 先退
+    four_module.backward(django_apps, SCHEMA_EDITOR)  # 真实回退里 0032、0029 先退
+    codename_module.unfill(django_apps, SCHEMA_EDITOR)
     seed_module.unseed(django_apps, SCHEMA_EDITOR)
 
     left = set(Menu.objects.filter(menu_type="MENU", is_deleted=False).values_list("path", flat=True))
@@ -279,8 +283,11 @@ def test_the_rebirth_group_holds_dispositions_and_the_register(cn_tenant):
     assert (disposition.name, disposition.parent.name, disposition.order) == ("处置", "轮回", 10)
     assert (register.name, register.parent.name, register.permission) == ("转生登记簿", "轮回", "reincarnation.read")
     assert register.parent.parent is None and register.parent.menu_type == "DIRECTORY"
-    for role in ("ADMIN", "JUDGE", "GUARDIAN", "VIEWER"):
+    for role in ("ADMIN", "JUDGE", "GUARDIAN"):
         assert {"处置", "转生登记簿"} <= _seen_by(role, cn_tenant), role
+    # VIEWER 不持 disposition.read(menus/0032,rbac-web H-1):处置不画,登记簿照旧,「轮回」组靠它开着。
+    viewer = _seen_by("VIEWER", cn_tenant)
+    assert {"轮回", "转生登记簿"} <= viewer and "处置" not in viewer, viewer
 
 
 def test_the_appeal_and_city_god_entries_are_for_whoever_reads_judgments(cn_tenant):

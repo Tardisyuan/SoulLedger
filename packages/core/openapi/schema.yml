@@ -29817,6 +29817,12 @@ components:
         conclude_refusal:
           type: string
           readOnly: true
+        can_edit:
+          type: boolean
+          readOnly: true
+        flow_cancelled:
+          type: boolean
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -30030,6 +30036,7 @@ components:
       - archive_reason
       - archived_at
       - archived_by_name
+      - can_edit
       - case_number
       - citations
       - city_god
@@ -30058,6 +30065,7 @@ components:
       - duat_stage
       - evidence_count
       - ferry_barred
+      - flow_cancelled
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -30696,6 +30704,12 @@ components:
         conclude_refusal:
           type: string
           readOnly: true
+        can_edit:
+          type: boolean
+          readOnly: true
+        flow_cancelled:
+          type: boolean
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/JudgmentKindEnum'
@@ -30929,6 +30943,7 @@ components:
       - archive_reason
       - archived_at
       - archived_by_name
+      - can_edit
       - case_number
       - citations
       - city_god
@@ -30959,6 +30974,7 @@ components:
       - evidence_admissions
       - evidence_count
       - ferry_barred
+      - flow_cancelled
       - flow_progress
       - grievance_decided_at
       - grievance_note
@@ -37570,6 +37586,12 @@ components:
           readOnly: true
         conclude_refusal:
           type: string
+          readOnly: true
+        can_edit:
+          type: boolean
+          readOnly: true
+        flow_cancelled:
+          type: boolean
           readOnly: true
         kind:
           allOf:

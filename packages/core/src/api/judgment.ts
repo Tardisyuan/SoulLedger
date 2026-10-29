@@ -124,6 +124,13 @@ export interface Judgment extends ArchiveFields {
    */
   conclude_refusal?: "" | "at_city_god" | "held_until_fated_date" | "embalming" | "duat_unfinished" | "unferried";
   /**
+   * 调用者此刻能不能改这件案子(`claims.may_edit`,与 `assert_may_edit` 同一条规则):别人认领中、自己又不持
+   * judgment.assign 是 false —— 审判台藏起编辑控件。没给按 true(只读的旧响应不该把控件藏掉)。
+   */
+  can_edit?: boolean;
+  /** 这件案子自己的审批流以 CANCELLED 结束(联审撤销):审判台给「重开一案」(`reopenCancelled`,judgment.assign)。 */
+  flow_cancelled?: boolean;
+  /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
    * floor `SoulSerializer` keeps.
@@ -697,6 +704,11 @@ export const judgmentApi = {
   /** 10 分钟有效的签名地址;预览与下载各取一次,不缓存。 */
   attachmentLink: (id: string, attachmentId: string) =>
     api.get<CaseAttachmentLink>(`/judgment/${id}/attachments/${attachmentId}/link/`).then((r) => r.data),
+  /**
+   * 「重开一案」(judgment.assign):原审的审批流被撤销(CANCELLED)而发落卡住时,撤回结案、开一件新案。
+   * 201 是新案;409 `not_cancelled`(流程不是 CANCELLED)/ `cannot_reopen`(灵魂已安置,改走重开或申诉)。
+   */
+  reopenCancelled: (id: string) => api.post<Judgment>(`/judgment/${id}/reopen-cancelled/`),
   cite: (id: string, statute: string, note = "") =>
     api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
   uncite: (id: string, statute: string) =>

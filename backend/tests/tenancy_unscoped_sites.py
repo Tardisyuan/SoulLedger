@@ -294,6 +294,8 @@ SITES = [
     ('apps/souls/models.py', 'Soul._arrive_in_the_hall', 'Realm.all_objects', 1, 'FILTERED', "explicit tenant_id=self.tenant_id: the soul's own Hall of Two Truths"),
     ('apps/souls/models.py', 'Soul.transition_to', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/souls/record_models.py', 'SoulRecord._flush_karma_recalculations', 'Soul.all_objects', 1, 'PK', 'marks one soul by pk; the ids are the souls whose records this batch just created through the scoped path'),
+    ('apps/ledger/journal.py', 'rows_in_data_scope', 'Soul.all_objects', 1, 'FILTERED', 'only the IN-subquery that narrows an already hall-scoped journal queryset to the souls in the data scope; returns no row by itself'),
+    ('apps/souls/serializers.py', 'SoulRecordSerializer.validate_statute_clause', 'Statute.all_objects', 1, 'FILTERED', 'Statute looked up by code AND the soul tenant_id, so a citation never resolves against (or echoes) another hall\'s clauses'),
     ('apps/souls/serializers.py', 'SoulRecordSerializer.validate_inferno_article', 'Statute.all_objects', 1, 'FILTERED', 'Statute looked up by code AND the soul tenant_id (Statute.code is unique per (tenant, code))'),
     ('apps/souls/views.py', 'SoulViewSet.batch_recycle', 'Soul.all_objects', 1, 'LOCK', 'locks souls by pk; ids were taken from the scoped queryset (see the view)'),
     ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code (Tenant has no tenant column; the lookup names exactly one row)'),
