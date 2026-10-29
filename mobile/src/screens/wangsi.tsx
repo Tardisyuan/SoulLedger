@@ -10,7 +10,7 @@
  */
 import { soulApi, soulErrorCode, soulErrorMessage, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
-import { useState } from "react";
+import { useState, type Ref } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
@@ -19,6 +19,7 @@ import { Button, FieldError, Input, Quote, Screen, SmallButton, Txt, useLayout, 
 import { appealDay } from "./appeals";
 import type { AppStackParams } from "./applications";
 import { useDiscardGuard } from "./discardGuard";
+import { useDay } from "./lifeProgress";
 
 /** The server's bound (`MeWangsiFileSerializer`). */
 export const WANGSI_PLEA_MAX = 2000;
@@ -33,16 +34,22 @@ export function wangsiStatusKey(row: MeWangsiCase): string {
   return row.held ? "soul_app.wangsi.held" : "soul_app.wangsi.released";
 }
 
-export function WangsiLine({ row }: { row: MeWangsiCase | undefined }) {
+/**
+ * `landingRef`:推送「已超度」落在这一行(第六十二批:超度写在这里时,本世页顶上不另画「已超度」那一行)。
+ * 超度那一句后面带上超度的日子 —— 那一行的日期并进来,同一件事不说两遍。
+ */
+export function WangsiLine({ row, landingRef }: { row: MeWangsiCase | undefined; landingRef?: Ref<View> }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const day = useDay();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   if (!row) return null;
+  const delivered = row.grievance_status === "DELIVERED" && row.grievance_decided_at ? ` · ${day(row.grievance_decided_at)}` : "";
   return (
-    <View testID={`wangsi-line-${row.judgment_id}`} style={[styles.line, { borderTopColor: theme.hair }]}>
+    <View ref={landingRef} testID={`wangsi-line-${row.judgment_id}`} style={[styles.line, { borderTopColor: theme.hair }]}>
       <View style={styles.entry}>
         <Txt testID={`wangsi-status-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
-          {t(wangsiStatusKey(row), { date: appealDay(row.held_until) })}
+          {`${t(wangsiStatusKey(row), { date: appealDay(row.held_until) })}${delivered}`}
         </Txt>
         {row.can_file ? (
           <SmallButton
