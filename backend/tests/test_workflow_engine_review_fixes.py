@@ -262,6 +262,18 @@ def test_advance_over_http_needs_a_reason_and_leaves_an_audit_row(cn):
     assert row.changes["reason"] == "审批人告假" and row.changes["skipped_node"] == str(first)
 
 
+def test_the_advance_audit_row_records_the_client_not_the_proxy(cn, settings):
+    """推进的审计行走 `get_client_ip`(与其它审计行同一处),不是裸 REMOTE_ADDR —— 那是反向代理的地址。"""
+    settings.TRUSTED_PROXY_COUNT = 1
+    flow = _three_stops(cn)
+    judge = officer_client(sp.officer("adv_judge_ip", "ADMIN", cn))
+    res = judge.post(f"/api/v1/workflows/{flow.pk}/advance/", {"reason": "审批人告假"}, format="json",
+                     REMOTE_ADDR="10.0.0.2", HTTP_X_FORWARDED_FOR="203.0.113.9, 10.0.0.2")
+    assert res.status_code == 200, res.data
+    row = AuditLog.objects.get(resource="workflow.advance", resource_id=str(flow.pk))
+    assert row.ip_address == "203.0.113.9" and row.ip_address != "10.0.0.2"
+
+
 # ── 10. Who reviews after a finished ladder ────────────────────────────────────────────────────
 
 

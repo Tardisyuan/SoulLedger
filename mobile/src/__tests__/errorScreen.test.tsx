@@ -10,6 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initCrashReporting } from "../crashReport";
 import { RootErrorBoundary } from "../errorBoundary";
 import { I18nProvider } from "../i18n";
+import { ScreenError } from "../ui";
 
 type Listener = (event: { event_id?: string }, response: unknown) => void;
 const mockListeners: Listener[] = [];
@@ -163,4 +164,21 @@ describe("the screen", () => {
     expect(screen.getByTestId("crash-screen")).toBeTruthy();
     expect(screen.queryByText(REPORTED)).toBeNull();
   });
+});
+
+
+test("a failed request's short id is printed beside the code; without one there is no request line", () => {
+  const { unmount } = render(
+    <I18nProvider>
+      <ScreenError error={{ key: "soul_app.errors.unknown", params: { code: "500" }, requestId: "0a1b2c3d" }} onRetry={() => {}} />
+    </I18nProvider>
+  );
+  expect(screen.getByTestId("error-code")).toHaveTextContent(/^500 · \d\d:\d\d:\d\d · request 0a1b2c3d$/);
+  unmount();
+  render(
+    <I18nProvider>
+      <ScreenError error={{ key: "soul_app.errors.network" }} onRetry={() => {}} />
+    </I18nProvider>
+  );
+  expect(screen.getByTestId("error-code")).not.toHaveTextContent(/request/);
 });

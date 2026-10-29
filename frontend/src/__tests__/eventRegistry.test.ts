@@ -277,6 +277,32 @@ describe("notification events", () => {
     document.cookie = "soulledger-locale=; path=/; max-age=0";
   });
 
+  it("toasts the flat shape too (`EventService.notify_user`), to the recipient only", () => {
+    const flat = {
+      domain: "notification",
+      event: "NOTIFICATION_CREATED",
+      user_id: 7,
+      title: "存下来的标题",
+      message: "存下来的正文",
+      i18n: { en: { title: "Letter handed over", message: "From Meng" } },
+    } as EventPayload;
+
+    const other = makeContext("1");
+    dispatchEvent(flat, other.ctx);
+    expect(other.showToast).not.toHaveBeenCalled();
+    expect(other.invalidateQueries).toHaveBeenCalled();
+
+    const recipient = makeContext("7");
+    dispatchEvent(flat, recipient.ctx);
+    expect(recipient.showToast).toHaveBeenCalledWith("存下来的标题: 存下来的正文", "info", 5000);
+
+    document.cookie = "soulledger-locale=en; path=/";
+    const english = makeContext("7");
+    dispatchEvent(flat, english.ctx);
+    expect(english.showToast).toHaveBeenCalledWith("Letter handed over: From Meng", "info", 5000);
+    document.cookie = "soulledger-locale=; path=/; max-age=0";
+  });
+
   it("does not toast at all when the frame carries no notification body", () => {
     const { ctx, showToast } = makeContext("1");
 

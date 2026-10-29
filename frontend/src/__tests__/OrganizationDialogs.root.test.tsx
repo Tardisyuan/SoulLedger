@@ -53,6 +53,17 @@ test("moving a non-root unit to the top is refused; the root itself can still be
   expect(saveButton()).not.toBeDisabled();
 });
 
+test("the parent field is the shared tree select: the unit itself and its subtree cannot be picked", () => {
+  const child: Organization = { id: 3, name: "孽镜台", code: "D1A", category: "CHINESE", parent: 2, level: 2, sort: 0 } as Organization;
+  render(<OrganizationFormDialog mode={{ kind: "move", org: hall }} organizations={[root, hall, child]} onClose={() => {}} />);
+  expect(screen.getByRole("group", { name: "org.form.parent" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: /第一殿/ })).toBeDisabled();
+  expect(screen.getByRole("radio", { name: /孽镜台/ })).toBeDisabled();
+  expect(screen.getByRole("radio", { name: /中国地府/ })).not.toBeDisabled();
+  expect(screen.getByRole("radio", { name: /中国地府/ })).toBeChecked(); // 现在的上级
+  expect(screen.getByRole("radio", { name: "organization.root" })).not.toBeChecked();
+});
+
 test("a delete refused for owned souls and judgments names those counts, not people", () => {
   mockMutateDelete.mockImplementation((_id, { onError }) =>
     onError({

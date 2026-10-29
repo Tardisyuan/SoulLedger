@@ -300,6 +300,16 @@ class TestRealmDescriptionStaysOffTheCard:
         assert (row["memory_reset_mechanism"], row["cycle_limit"], row["is_judgment_required"]) == ("MENGPO", 3, False)
         assert "description" not in row
 
+    def test_the_list_row_says_whether_the_realm_is_retired(self, api_client, admin_user, cn_tenant):
+        """`is_retired` mirrors `RETIRED_REALM_CODES`: the management page still lists the realm, pickers drop it."""
+        _authenticate(api_client, admin_user)
+        live = self._realm(cn_tenant)
+        Realm.objects.create(realm_code="DY_01_HEAVEN", civilization=Civilization.CHINESE, name_local="天",
+                             name_en="Heaven", realm_type=RealmType.BLISS, tenant=cn_tenant)
+        rows = {r["realm_code"]: r for r in api_client.get("/api/v1/realms/").data["results"]}
+        assert rows["DY_01_HEAVEN"]["is_retired"] is True
+        assert rows[live.realm_code]["is_retired"] is False
+
     def test_the_detail_row_still_carries_it(self, api_client, admin_user, cn_tenant):
         """Not hidden — placed. A maintainer reading one realm still gets it."""
         _authenticate(api_client, admin_user)

@@ -202,8 +202,25 @@ class TestWebhookConfigSerializerFieldName:
     def test_create_no_longer_raises_improperly_configured(self):
         resp = _api_key_client(self.raw_key).post(
             "/api/v1/death-sync/webhooks/",
-            {"url": "https://example.com/new-webhook", "events": []},
+            {"url": "https://8.8.8.8/new-webhook", "events": []},
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
-        assert WebhookConfig.objects.filter(url="https://example.com/new-webhook", tenant=self.key.tenant).exists()
+        assert WebhookConfig.objects.filter(url="https://8.8.8.8/new-webhook", tenant=self.key.tenant).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("url", ["https://127.0.0.1/hook", "https://10.0.0.5/hook", "https://169.254.169.254/x",
+                                 "ftp://8.8.8.8/hook"])
+def test_the_self_service_door_refuses_private_addresses_like_the_admin_one(cn_tenant, url):
+    """rbac-be2 L4:API key 自助写 webhook 也查私网地址(与管理端同一个 `validate_webhook_url_field`)。"""
+    raw, key_hash, key_prefix = ExternalApiKey.generate_key()
+    ExternalApiKey.objects.create(tenant=cn_tenant, name="self-service", system_type="HOSPITAL", key_hash=key_hash,
+                                  key_prefix=key_prefix, can_manage_webhooks=True)
+    client = _api_key_client(raw)
+    resp = client.post("/api/v1/death-sync/webhooks/", {"url": url, "events": []}, format="json")
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.content
+    assert "url" in resp.data
+    assert not WebhookConfig.objects.filter(url=url).exists()
+    ok = client.post("/api/v1/death-sync/webhooks/", {"url": "https://8.8.8.8/ok", "events": []}, format="json")
+    assert ok.status_code == status.HTTP_201_CREATED, ok.content

@@ -62,7 +62,8 @@ export function PlanChangesEditor({
   const civilization = TENANT_CODE_TO_CIVILIZATION[tenantCode];
   const realms = useQuery({
     queryKey: ["realms", "list", { civilization }],
-    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results),
+    // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
+    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results.filter((realm) => !realm.is_retired)),
     enabled: !!civilization,
   });
   const pending = plan.nodes.filter((n) => n.status === "PENDING");

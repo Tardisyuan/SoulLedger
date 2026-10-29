@@ -206,6 +206,21 @@ describe("cross-judgment detail — back to the original judgment", () => {
     expect(judgmentApi.get).not.toHaveBeenCalled();
   });
 
+  it("a hall-bound ADMIN of a participant hall fetches nothing; an ADMIN with no hall gets the links", async () => {
+    mockTenant.user = { id: 3, username: "eu_admin", role: "ADMIN", tenant: { code: "EU_HEAVEN_HELL" } };
+    const bound = renderPage(judgment({ judgment: "j-7" }));
+    await screen.findByText("Joint");
+    expect(screen.queryByTestId("cross-origin")).toBeNull();
+    expect(judgmentApi.get).not.toHaveBeenCalled();
+    bound.unmount();
+
+    judgmentApi.get.mockResolvedValue({ data: { id: "j-7", soul: "s-3", soul_name: "李四" } });
+    mockTenant.user = { id: 4, username: "admin", role: "ADMIN", tenant: null };
+    renderPage(judgment({ judgment: "j-7" }));
+    expect(await screen.findByTestId("cross-origin")).toBeInTheDocument();
+    expect(judgmentApi.get).toHaveBeenCalledWith("j-7");
+  });
+
   it("a plain meeting (no judgment) has no links", async () => {
     renderPage(judgment({ judgment: null }));
 

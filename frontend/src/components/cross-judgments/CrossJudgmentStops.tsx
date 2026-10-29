@@ -47,7 +47,8 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
   const civilization = TENANT_CODE_TO_CIVILIZATION[seat.participant_tenant_code];
   const realms = useQuery({
     queryKey: ["realms", "list", { civilization }],
-    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results),
+    // 不再使用的界域(后端 `RETIRED_REALM_CODES`)不给选。
+    queryFn: () => realmsApi.list({ civilization }).then((r) => r.data.results.filter((realm) => !realm.is_retired)),
     enabled: !!civilization,
   });
   const [realmCode, setRealmCode] = useState(seat.sentence_realm_code);

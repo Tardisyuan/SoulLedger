@@ -40430,9 +40430,13 @@ components:
           type: boolean
           description: Whether this realm requires a formal judgment process before
             entry
+        is_retired:
+          type: boolean
+          readOnly: true
       required:
       - civilization
       - id
+      - is_retired
       - realm_code
       - realm_type
     RealmLocalized:

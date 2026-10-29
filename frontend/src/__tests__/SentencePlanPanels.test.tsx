@@ -276,7 +276,8 @@ describe("联审详情的各站", () => {
       data: { results: [
         { id: "r1", realm_code: "EG_HALL_TWO_TRUTHS", civilization: "EGYPTIAN", is_eternal: false },
         { id: "r2", realm_code: "EG_ANNIHILATION", civilization: "EGYPTIAN", is_eternal: true },
-      ], count: 2 },
+        { id: "r3", realm_code: "EG_RETIRED_FIELD", civilization: "EGYPTIAN", is_eternal: false, is_retired: true },
+      ], count: 3 },
     });
     cjApi.sentence.mockResolvedValue({ data: bench() });
     cjApi.order.mockResolvedValue({ data: bench() });
@@ -308,6 +309,15 @@ describe("联审详情的各站", () => {
         participant: "eg", realm_code: "EG_HALL_TWO_TRUTHS", sentence_years: null, notes: "",
       })
     );
+  });
+
+  it("不再使用的界域(is_retired)不进选单", async () => {
+    as("JUDGE", "EG_DUAT", ...JUDGE);
+    renderWith(<CrossJudgmentStops judgment={bench()} />);
+    const form = screen.getByRole("form", { name: tZh("sentence_plan.cross.fill_title") });
+    await screen.findByRole("option", { name: "真理大厅" });
+    expect(form.querySelector('option[value="EG_HALL_TWO_TRUTHS"]')).not.toBeNull();
+    expect(form.querySelector('option[value="EG_RETIRED_FIELD"]')).toBeNull();
   });
 
   it("填写:刑期不是非负整数就不让提交", async () => {

@@ -39,8 +39,14 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+// Which hall the viewer sits in (rbac-web M-1): the buttons follow the same side the backend checks.
+let mockHall: string | null = "CN_DIYU";
+let mockRole = "MODERATOR";
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "cn_mod", role: "MODERATOR" }, isAdmin: false }),
+  useTenant: () => ({
+    user: { id: 1, username: "cn_mod", role: mockRole, tenant: mockHall ? { code: mockHall } : null },
+    isAdmin: mockRole === "ADMIN",
+  }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key, formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }),
@@ -80,6 +86,8 @@ function renderPage(status: string, extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockHeld = new Set(["dispatch.return", "dispatch.execute"]);
+  mockHall = "CN_DIYU";
+  mockRole = "MODERATOR";
 });
 
 describe("ending a residence", () => {
@@ -142,8 +150,59 @@ describe("ending a residence", () => {
 
 describe("executing a dispatch", () => {
   it("warns about a residence, not an irreversible transfer", async () => {
+    mockHall = "EG_DUAT";
     renderPage("APPROVED", { executed_at: null });
     fireEvent.click(await screen.findByRole("button", { name: "dispatch.execute" }));
     expect(await screen.findByText("dispatch.execute_warning")).toBeInTheDocument();
+  });
+});
+
+// 批准 / 驳回 / 执行只给目标殿,送回只给原属殿(= 发起殿),无殿 ADMIN 两边都有,绑殿 ADMIN 与殿内其他角色一样。
+describe("which hall sees which button", () => {
+  const ALL = ["dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return", "dispatch.manage"];
+  const name = (n: string) => screen.queryByRole("button", { name: n });
+
+  it.each([
+    ["the target hall", "EG_DUAT", "MODERATOR", true],
+    ["the sending hall", "CN_DIYU", "MODERATOR", false],
+    ["a hall-bound ADMIN of the sending hall", "CN_DIYU", "ADMIN", false],
+    ["a third hall's ADMIN", "GR_HADES", "ADMIN", false],
+    ["an ADMIN with no hall", null, "ADMIN", true],
+  ])("PROPOSED, %s: approve / reject %s", async (_who, hall, role, shown) => {
+    mockHeld = new Set(ALL);
+    mockHall = hall;
+    mockRole = role;
+    renderPage("PROPOSED", { executed_at: null });
+    await screen.findByText("孟婆");
+    expect(!!name("dispatch.approve")).toBe(shown);
+    expect(!!name("dispatch.reject")).toBe(shown);
+  });
+
+  it.each([
+    ["EG_DUAT", "MODERATOR", true],
+    ["CN_DIYU", "MODERATOR", false],
+    ["CN_DIYU", "ADMIN", false],
+    [null, "ADMIN", true],
+  ])("APPROVED in %s as %s: execute shown = %s", async (hall, role, shown) => {
+    mockHeld = new Set(ALL);
+    mockHall = hall;
+    mockRole = role;
+    renderPage("APPROVED", { executed_at: null });
+    await screen.findByText("孟婆");
+    expect(!!name("dispatch.execute")).toBe(shown);
+  });
+
+  it.each([
+    ["CN_DIYU", "MODERATOR", true],
+    ["EG_DUAT", "MODERATOR", false],
+    ["EG_DUAT", "ADMIN", false],
+    [null, "ADMIN", true],
+  ])("EXECUTED in %s as %s: return home shown = %s", async (hall, role, shown) => {
+    mockHeld = new Set(ALL);
+    mockHall = hall;
+    mockRole = role;
+    renderPage("EXECUTED");
+    await screen.findByText("孟婆");
+    expect(!!name("dispatch.return_home")).toBe(shown);
   });
 });

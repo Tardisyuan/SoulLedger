@@ -157,9 +157,21 @@ test.describe("Critical path: login and create a soul", () => {
 
 test.describe("Critical path: cross-civilization dispatch approval", () => {
   let api: ApiMock;
+  // Approving is the target hall's (`dispatch/views.py::_not_target_or_403`); the page offers it to that side only.
+  const TARGET_HALL_ADMIN = { ...TEST_USER, tenant: { id: 3, code: PROPOSED_DISPATCH.target_tenant_code, display_name: "埃及杜阿特" } };
 
   test.beforeEach(async ({ page }) => {
     api = await setupAuthenticatedPage(page);
+    await seedAuthState(page, TARGET_HALL_ADMIN);
+  });
+
+  test("the sending hall sees no approve / reject on its own proposal", async ({ page }) => {
+    await seedAuthState(page, TEST_USER); // CN_DIYU, the proposal's source
+    await page.goto(`/dispatch/${PROPOSED_DISPATCH.id}`);
+    await expect(page.locator("h1")).toHaveText("调度详情");
+    await expect(page.getByText(PROPOSED_DISPATCH_DETAIL_ONLY.reason)).toBeVisible();
+    await expect(page.getByRole("button", { name: "批准" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "驳回" })).toHaveCount(0);
   });
 
   test("opens a pending proposal and approves it", async ({ page }) => {

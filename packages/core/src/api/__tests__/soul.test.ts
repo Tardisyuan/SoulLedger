@@ -210,6 +210,14 @@ describe("soulErrorMessage", () => {
   it("does not call a programming error a network failure", () => {
     expect(soulErrorMessage(new TypeError("boom")).key).toBe("soul_app.errors.unknown");
   });
+
+  it("carries the short request id of the failed call, and nothing when the call had none", () => {
+    const stamped = new AxiosError("x", "ERR", undefined, null, {
+      status: 500, data: {}, headers: { "x-request-id": "0123456789abcdef0123456789abcdef" },
+    } as unknown as AxiosResponse);
+    expect(soulErrorMessage(stamped)).toEqual({ key: "soul_app.errors.unknown", params: { code: "500" }, requestId: "01234567" });
+    expect("requestId" in soulErrorMessage(httpError(500))).toBe(false);
+  });
 });
 
 describe("password reset (「忘记密码」)", () => {
