@@ -24,6 +24,7 @@
  */
 import axios from "axios";
 import { getAccessToken, getApiBaseUrl, getLocale } from "../platform/index";
+import { newRequestId } from "./requestStamp";
 import type { components } from "./generated/schema";
 
 type Schemas = components["schemas"];
@@ -93,11 +94,16 @@ export async function* parseAssistStream<E extends { event: string } = AssistStr
  * ./soul-assist, ./officer-assist and ./assist-admin read it like an axios error.
  */
 export class AssistStreamHttpError extends Error {
+  /** Same place axios keeps it, so `requestIdOf` finds the request id of a refused stream too. */
+  readonly config: { headers: Record<string, string> };
+
   constructor(
     readonly status: number,
     readonly data: unknown,
+    requestId = "",
   ) {
     super(`assist stream refused (${status})`);
+    this.config = { headers: requestId ? { "X-Request-ID": requestId } : {} };
   }
 }
 
@@ -184,10 +190,12 @@ export async function streamAssist<E extends { event: string } = AssistStreamEve
   };
   const total = setTimeout(expire, totalMs);
   const first = setTimeout(expire, firstTextMs);
+  // One id for the call, the 401 retry included (as the axios clients do: the retry replays the same config).
+  const requestId = newRequestId();
   const send = () =>
     fetch(`${getApiBaseUrl()}${path}`, {
       method: "POST",
-      headers: headers(),
+      headers: { ...headers(), "X-Request-ID": requestId },
       body: JSON.stringify({ ...body, stream: true }),
       signal: controller.signal,
     });
@@ -206,7 +214,7 @@ export async function streamAssist<E extends { event: string } = AssistStreamEve
       await refresh();
       res = await send();
     }
-    if (!res.ok) throw new AssistStreamHttpError(res.status, await res.json().catch(() => null));
+    if (!res.ok) throw new AssistStreamHttpError(res.status, await res.json().catch(() => null), requestId);
     if (!res.body) throw new Error("assist stream: the response has no readable body");
     started = true;
     const reader = res.body.getReader();

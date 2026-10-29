@@ -15,6 +15,7 @@ import {
   parseAssistStream,
   type AssistStreamEvent,
 } from "../assist-stream";
+import { requestIdOf } from "../requestStamp";
 
 const frame = (data: AssistStreamEvent) => `event: ${data.event}\ndata: ${JSON.stringify(data)}\n\n`;
 
@@ -200,6 +201,8 @@ describe("streamAssist", () => {
     const run = streamAssist({ fetch, path: "/me/assist/", body: {}, controller: controller(), onEvent: () => {} });
     await expect(run).rejects.toBeInstanceOf(AssistStreamHttpError);
     await run.catch((e: unknown) => expect(refusalBody(e)).toMatchObject({ code: "rate_limited" }));
+    // The refusal names its request, in the short form the error details show.
+    await run.catch((e: unknown) => expect(requestIdOf(e)).toBe(requests[0].headers["X-Request-ID"].slice(0, 8)));
   });
 
   it("401: refreshes once and retries with the new token", async () => {
@@ -209,6 +212,9 @@ describe("streamAssist", () => {
     await vi.waitFor(() => expect(requests).toHaveLength(2));
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(requests.map((r) => r.headers.Authorization)).toEqual(["Bearer OLD", "Bearer NEW"]);
+    // Both attempts carry the call's one request id (feat-ops 遗留 4).
+    expect(requests[0].headers["X-Request-ID"]).toMatch(/^[0-9a-f]{32}$/);
+    expect(requests[1].headers["X-Request-ID"]).toBe(requests[0].headers["X-Request-ID"]);
     body.push(frame({ event: "error", kind: "unavailable", text_sent: false, detail: "x" }));
     await expect(run).resolves.toBe("ended");
   });
