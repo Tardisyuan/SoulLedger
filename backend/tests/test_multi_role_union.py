@@ -296,3 +296,46 @@ def test_menu_visibility_counts_extra_roles(world):
     menu = Menu.objects.create(name="判官页", path="/judge-only-mr", roles=["JUDGE"])
     assert not menu_is_visible_to(menu, _user(world, "m_viewer", "VIEWER"))
     assert menu_is_visible_to(menu, _user(world, "m_both", "VIEWER", extra=["JUDGE"]))
+
+
+# --- RBAC review 2026-10-29 ----------------------------------------------------
+
+
+def test_the_profile_carries_the_union_and_follows_a_grant_change(world):
+    """M1: the officer app re-reads `/auth/profile/` on returning to the foreground; the list there is
+    the login payload's (`get_role_permission_codenames`), so a grant made since sign-in shows up."""
+    role = _custom_role("PROFILED")
+    user = _user(world, "p_profiled", "VIEWER", extra=["PROFILED"])
+    client = _client(user)
+    before = client.get("/api/v1/auth/profile/").json()["permissions"]
+    assert "ledger.manage" not in before
+    assert before == get_role_permission_codenames(user.role, user.extra_roles)
+
+    perm, _ = Permission.objects.get_or_create(codename="ledger.manage", defaults={"name": "m", "category": "ledger"})
+    grant = RolePermission.objects.create(role=role, permission=perm)
+    invalidate_all_permissions()
+    assert "ledger.manage" in client.get("/api/v1/auth/profile/").json()["permissions"]
+    grant.delete()
+    invalidate_all_permissions()
+    assert "ledger.manage" not in client.get("/api/v1/auth/profile/").json()["permissions"]
+
+
+def test_a_warm_extra_role_check_runs_no_query_and_a_role_invalidation_clears_it(
+    world, monkeypatch, django_assert_num_queries
+):
+    """L3: an extra role's liveness is cached under (role, pseudo-codename) like a grant. Before, every
+    check for a user with extras paid one Role query even with every grant cached."""
+    from apps.perm.cache import get_permission_cache, invalidate_role_permissions
+
+    monkeypatch.setattr(get_permission_cache(), "_fallback_ttl", 300)  # the memory fallback caches too
+    role = _custom_role("WARMED", "ledger.manage")
+    user = _user(world, "u_warmed", "VIEWER", extra=["WARMED"])
+    assert check_permission(user, "ledger.manage")  # warms grants and liveness
+    assert not check_permission(user, JUDGE_ONLY)
+    with django_assert_num_queries(0):
+        assert check_permission(user, "ledger.manage")
+        assert not check_permission(user, JUDGE_ONLY)  # VIEWER and WARMED both answered from cache
+
+    role.soft_delete()
+    invalidate_role_permissions("WARMED")  # what DELETE /perm/roles/<name>/ calls
+    assert not check_permission(user, "ledger.manage")

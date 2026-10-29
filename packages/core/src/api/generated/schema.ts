@@ -6393,7 +6393,7 @@ export interface paths {
         };
         /**
          * @description GET /api/v1/perm/permissions/
-         *     获取所有权限列表
+         *     获取所有权限列表(ADMIN,或持 system.settings / menu.manage)
          */
         get: operations["v1_perm_permissions_list"];
         put?: never;
@@ -17359,6 +17359,7 @@ export interface components {
             readonly mfa_enabled?: boolean;
             readonly mfa_required?: boolean;
             readonly password_change_required?: boolean;
+            readonly permissions?: string[];
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -20547,6 +20548,7 @@ export interface components {
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
+            readonly permissions: string[];
         };
         /**
          * @description `batch_deactivate`: everyone without open work is deactivated (`updated`); the officers who still hold work

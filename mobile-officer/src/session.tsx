@@ -16,6 +16,7 @@ import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } fr
 import { onPasswordChangeRequired } from "@soulledger/core/api/client";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 
 import { clearDrafts } from "./drafts";
 import { clearOutbox } from "./outbox";
@@ -97,10 +98,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(() => {});
   }, []);
 
-  // A stored session is asked about once: a refused refresh ends it (the handler above); a network
-  // failure keeps the cached identity and lets each tab say what it could not load.
-  useEffect(() => {
-    if (state.status !== "signedIn") return;
+  // The profile is asked about at start and again whenever the app comes back to the foreground: role,
+  // two-step state and the permission list can all change while the app sleeps (an administrator's
+  // grant), and the button gates read `user.permissions` (RBAC review M1). A refused refresh ends the
+  // session (the handler above); a network failure keeps the cached identity and lets each tab say
+  // what it could not load.
+  const refreshProfile = useCallback(() => {
     authApi.profile().then(
       ({ data: profile }) =>
         setState((prev) => {
@@ -112,14 +115,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             display_name: profile.display_name,
             role: profile.role,
             password_change_required: profile.password_change_required ?? prev.user.password_change_required,
+            permissions: Array.isArray(profile.permissions) ? profile.permissions : prev.user.permissions,
           };
           platform().persistent.set(USER_KEY, JSON.stringify(user));
           return { status: "signedIn", user };
         }),
       () => {}
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per process
   }, []);
+
+  useEffect(() => {
+    if (state.status === "signedIn") refreshProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a stored session, once per process
+  }, []);
+
+  const signedIn = state.status === "signedIn";
+  useEffect(() => {
+    if (!signedIn) return;
+    let previous = AppState.currentState;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && previous !== "active") refreshProfile();
+      previous = next;
+    });
+    return () => sub.remove();
+  }, [signedIn, refreshProfile]);
 
   const signIn = useCallback(
     async (username: string, password: string, tenantCode?: string): Promise<SignInResult> => {
