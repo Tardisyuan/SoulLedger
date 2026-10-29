@@ -20,15 +20,15 @@ export interface WiredButton {
 
 export const WIRED_BUTTONS = [
   { id: "souls.create", menu: "/souls", code: "create", permission: "soul.create", label: "souls.create", where: "menu_buttons.where.list_top" },
-  { id: "souls.export", menu: "/souls", code: "export", permission: "soul.read", label: "common.export", where: "menu_buttons.where.list_top" },
+  { id: "souls.export", menu: "/souls", code: "export", permission: "soul.export", label: "common.export", where: "menu_buttons.where.list_top" },
   { id: "souls.edit", menu: "/souls", code: "edit", permission: "soul.update", label: "souls.detail.edit", where: "menu_buttons.where.detail_header" },
   { id: "souls.delete", menu: "/souls", code: "delete", permission: "soul.delete", label: "souls.detail.delete", where: "menu_buttons.where.detail_more" },
-  { id: "judgment.export", menu: "/judgment", code: "export", permission: "judgment.read", label: "common.export", where: "menu_buttons.where.list_top" },
+  { id: "judgment.export", menu: "/judgment", code: "export", permission: "judgment.export", label: "common.export", where: "menu_buttons.where.list_top" },
   { id: "judgment.archive", menu: "/judgment", code: "archive", permission: "judgment.execute", label: "records.archive.confirm", where: "menu_buttons.where.detail_header" },
-  { id: "crossJudgments.export", menu: "/cross-judgments", code: "export", permission: "cross_judgment.read", label: "common.export", where: "menu_buttons.where.list_top" },
-  { id: "disposition.export", menu: "/disposition", code: "export", permission: "disposition.read", label: "common.export", where: "menu_buttons.where.section_top" },
+  { id: "crossJudgments.export", menu: "/cross-judgments", code: "export", permission: "cross_judgment.export", label: "common.export", where: "menu_buttons.where.list_top" },
+  { id: "disposition.export", menu: "/disposition", code: "export", permission: "disposition.export", label: "common.export", where: "menu_buttons.where.section_top" },
   { id: "disposition.archive", menu: "/disposition", code: "archive", permission: "disposition.execute", label: "records.archive.confirm", where: "menu_buttons.where.row_more" },
-  { id: "dispatch.export", menu: "/dispatch", code: "export", permission: "dispatch.read", label: "common.export", where: "menu_buttons.where.section_top" },
+  { id: "dispatch.export", menu: "/dispatch", code: "export", permission: "dispatch.export", label: "common.export", where: "menu_buttons.where.section_top" },
   { id: "dispatch.approve", menu: "/dispatch", code: "approve", permission: "dispatch.approve", label: "dispatch.approve", where: "menu_buttons.where.detail_actions" },
   { id: "dispatch.reject", menu: "/dispatch", code: "reject", permission: "dispatch.reject", label: "dispatch.reject", where: "menu_buttons.where.detail_actions" },
 ] as const satisfies readonly WiredButton[];

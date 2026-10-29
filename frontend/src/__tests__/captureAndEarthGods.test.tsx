@@ -36,7 +36,7 @@ jest.mock("@/src/components/ui/Toast", () => ({
 }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({
-    user: { id: 1, username: "judge", role: "JUDGE", tenant: null, permissions: ["reincarnation.reborn", "soul.die"] },
+    user: { id: 1, username: "judge", role: "JUDGE", tenant: null, permissions: ["reincarnation.reborn", "soul.die", "tudi.register", "capture.issue", "capture.execute"] },
   }),
 }));
 jest.mock("@soulledger/core/api", () => ({
@@ -106,7 +106,7 @@ describe("勾魂卡(S-4)", () => {
   it("阳寿已到:▪ 发勾魂牒 → □ 拘到 → □ 交接城隍;鬼差默认选建议那位并写出规则;发的是那一位", async () => {
     mockDue.mockResolvedValue({ data: { count: 1, results: [{ id: "s1", suggested_escort: "NIUTOU_MAMIAN" }] } });
     mockIssue.mockResolvedValue({ data: {} });
-    wrap(<CapturePanel soul={SOUL} canAct />);
+    wrap(<CapturePanel soul={SOUL} canIssue canExecute />);
     expect(await screen.findByTestId("soul-capture-status")).toHaveTextContent("阳寿已到 · 1664-06-17");
     expect(screen.getByTestId("capture-steps")).toHaveTextContent("▪ 发勾魂牒→□ 拘到→□ 交接城隍");
     // 取到建议后下拉按 key 重挂(新的 <select>),所以每次重新取,不握着第一次渲染的那个。
@@ -122,7 +122,7 @@ describe("勾魂卡(S-4)", () => {
   it("已拘到:主按钮只有「交接城隍」;「撤销…」原地展开,理由必填,空着不发", async () => {
     mockList.mockResolvedValue({ data: { results: [warrant("CAPTURED")] } });
     mockCancel.mockResolvedValue({ data: {} });
-    wrap(<CapturePanel soul={{ ...SOUL, current_state: "ALIVE" } as Soul} canAct />);
+    wrap(<CapturePanel soul={{ ...SOUL, current_state: "ALIVE" } as Soul} canIssue canExecute />);
     expect(await screen.findByRole("button", { name: "交接城隍" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "拘到" })).toBeNull();
     expect(screen.getByTestId("capture-steps")).toHaveTextContent("■ 发勾魂牒→■ 拘到→▪ 交接城隍");
@@ -139,16 +139,27 @@ describe("勾魂卡(S-4)", () => {
 
   it("已交接:三步都过了,一行「日期 交某城隍 · 去初审 →」,链接按这位城隍筛好", async () => {
     mockList.mockResolvedValue({ data: { results: [warrant("HANDED_OVER")] } });
-    wrap(<CapturePanel soul={{ ...SOUL, current_state: "JUDGING" } as Soul} canAct />);
+    wrap(<CapturePanel soul={{ ...SOUL, current_state: "JUDGING" } as Soul} canIssue canExecute />);
     const line = await screen.findByTestId("capture-handed");
     expect(line).toHaveTextContent("2026-10-28 交常熟县城隍 · 去初审 →");
     expect(screen.getByRole("link", { name: "去初审 →" })).toHaveAttribute("href", "/city-god-cases?city_god=cg1");
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("两个码分开(2026-10-29 从 soul.die 拆出):capture.execute 管拘到 / 交接,capture.issue 管发牒 / 撤销", async () => {
+    mockList.mockResolvedValue({ data: { results: [warrant("ISSUED")] } });
+    const { unmount } = wrap(<CapturePanel soul={{ ...SOUL, current_state: "ALIVE" } as Soul} canIssue={false} canExecute />);
+    expect(await screen.findByRole("button", { name: "拘到" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "撤销…" })).toBeNull();
+    unmount();
+    wrap(<CapturePanel soul={{ ...SOUL, current_state: "ALIVE" } as Soul} canIssue canExecute={false} />);
+    expect(await screen.findByRole("button", { name: "撤销…" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "拘到" })).toBeNull();
+  });
+
   it("已撤销:灰字一行理由;阳寿已到就能重新发牒", async () => {
     mockList.mockResolvedValue({ data: { results: [warrant("CANCELLED", { cancel_reason: "查无此人" })] } });
-    wrap(<CapturePanel soul={SOUL} canAct />);
+    wrap(<CapturePanel soul={SOUL} canIssue canExecute />);
     expect(await screen.findByTestId("capture-cancelled")).toHaveTextContent("已撤销 · 查无此人");
     expect(await screen.findByRole("button", { name: "发勾魂牒" })).toBeInTheDocument();
   });
@@ -232,7 +243,7 @@ describe("地府阳寿未到不画「标记死亡」(用户 2026-10-29)", () => 
 });
 
 describe("以土地公名义登记死亡(S-6)", () => {
-  // 登记的人(id 1)是虞山土地名下的官员,不是尚湖土地的,也不持 judgment.assign。
+  // 登记的人(id 1)是虞山土地名下的官员,不是尚湖土地的,也不持 tudi.manage。
   const TUDI = { id: "t1", name: "虞山土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [{ id: 1, name: "judge" }] };
   const OTHER = { id: "t2", name: "尚湖土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [{ id: 9, name: "别人" }] };
 
@@ -242,7 +253,7 @@ describe("以土地公名义登记死亡(S-6)", () => {
     const onClose = jest.fn();
     wrap(<TudiRegisterDeathDialog soul={{ id: "s1", name: "钱谦益" }} onClose={onClose} />);
     await screen.findByRole("option", { name: "虞山土地" });
-    // 不是名下官员、又不持 judgment.assign:那位土地公不列(选了也是 403 not_tudi_officer)
+    // 不是名下官员、又不持 tudi.manage:那位土地公不列(选了也是 403 not_tudi_officer)
     expect(screen.queryByRole("option", { name: "尚湖土地" })).toBeNull();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "t1" } });
     expect(screen.getByTestId("tudi-register-subtitle")).toHaveTextContent("虞山土地 · 常熟县城隍");
@@ -293,7 +304,7 @@ describe("以土地公名义登记死亡(S-6)", () => {
 
 describe("mayRegisterUnder(土地公登记入口的规则,同 tudi_views.register_death)", () => {
   const god = { officers: [{ id: 1 }] };
-  it("名下官员能,别人不能;持 judgment.assign 的谁都能", () => {
+  it("名下官员能,别人不能;持 tudi.manage 的谁都能", () => {
     expect(mayRegisterUnder(god, 1, false)).toBe(true);
     expect(mayRegisterUnder(god, 2, false)).toBe(false);
     expect(mayRegisterUnder(god, undefined, false)).toBe(false);
@@ -309,7 +320,7 @@ describe("缓存:勾魂与城隍初审的动作让别的键族也失效(客户�
     const spy = jest.spyOn(qc, "invalidateQueries");
     render(
       <QueryClientProvider client={qc}>
-        <CapturePanel soul={SOUL} canAct />
+        <CapturePanel soul={SOUL} canIssue canExecute />
       </QueryClientProvider>
     );
     fireEvent.click(await screen.findByRole("button", { name: "撤销…" }));

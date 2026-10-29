@@ -20,7 +20,7 @@ from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User, UserRole
 from apps.menus.models import Menu
 from apps.perm.cache import invalidate_all_permissions
-from apps.perm.checker import ROLE_FORBIDDEN_CODENAMES, check_permission
+from apps.perm.checker import ROLE_FORBIDDEN_CODENAMES, WORKFLOW_APPROVE_CODENAMES, check_permission
 from apps.perm.models import Permission, Role, RolePermission
 from apps.perm.services import get_role_permission_codenames
 from apps.tenants.models import Tenant
@@ -72,7 +72,9 @@ def test_the_premise_two_roles_that_disagree(world):
     assert check_permission(_user(world, "p_judge", "JUDGE"), JUDGE_ONLY)
     assert not check_permission(_user(world, "p_viewer", "VIEWER"), JUDGE_ONLY)
     assert "workflow.approve" not in ROLE_FORBIDDEN_CODENAMES.get("JUDGE", ())
-    assert APPROVE in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]
+    # 殿主不审批:按能力(持 workflow.create / update 的角色不得持审批码,2026-10-29 第 13 条),不再按名字。
+    assert APPROVE in WORKFLOW_APPROVE_CODENAMES and APPROVE not in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]
+    assert not check_permission(_user(world, "p_mod", "MODERATOR"), APPROVE)
 
 
 def test_union_grants_what_either_role_grants(world):
@@ -117,11 +119,11 @@ def test_reported_codenames_follow_the_union(world):
 
 def test_moderator_alone_is_still_refused_its_forbidden_codenames(world):
     mod = _user(world, "h_mod", "MODERATOR")
-    for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]:
+    for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"] | WORKFLOW_APPROVE_CODENAMES:
         assert not check_permission(mod, codename), codename
     # a moderator with extras that grant none of them is refused too
     mod_viewer = _user(world, "h_mod_viewer", "MODERATOR", extra=["VIEWER"])
-    for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]:
+    for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"] | WORKFLOW_APPROVE_CODENAMES:
         assert not check_permission(mod_viewer, codename), codename
 
 

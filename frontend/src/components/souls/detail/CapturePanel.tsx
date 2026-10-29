@@ -154,9 +154,10 @@ export function CaptureIssueStep({
 /**
  * 勾魂卡(Design 第五十七批 S-4;只地府):一张卡片,三步小进度。每一状态只有一个主按钮往下一步走;
  * 「撤销…」始终是描边次按钮,点了在卡片里原地展开必填的理由框,不叠弹层。已交接后收成两行,给「去初审 →」。
- * 已撤销:灰字一行「日期 撤销 · 理由」,阳寿已到就可以重新发牒。`canAct` = 持 `soul.die`(交接就是登记死亡)。
+ * 已撤销:灰字一行「日期 撤销 · 理由」,阳寿已到就可以重新发牒。`canIssue` = 持 `capture.issue`(发牒、撤销),
+ * `canExecute` = 持 `capture.execute`(拘到、交接;交接就是登记死亡)—— 2026-10-29 从 `soul.die` 拆出。
  */
-export function CapturePanel({ soul, canAct }: { soul: Soul; canAct: boolean }) {
+export function CapturePanel({ soul, canIssue, canExecute }: { soul: Soul; canIssue: boolean; canExecute: boolean }) {
   const { t, formatDate } = useI18n();
   const warrants = useQuery({
     queryKey: soulKeys.capture(soul.id),
@@ -165,7 +166,7 @@ export function CapturePanel({ soul, canAct }: { soul: Soul; canAct: boolean }) 
   const rows = [...(warrants.data ?? [])].sort((a, b) => b.issued_at.localeCompare(a.issued_at));
   const latest = rows[0];
   const open = latest && LIVE.has(latest.status) ? latest : undefined;
-  const mayIssue = canAct && soul.current_state === "ALIVE" && lifespanEnded(soul) && !open;
+  const mayIssue = canIssue && soul.current_state === "ALIVE" && lifespanEnded(soul) && !open;
   // 建议的鬼差是后端算的(`due/` 的一行);只在要发牒时取,与「待发勾魂牒」页同一份查询。
   const due = useQuery({
     queryKey: soulKeys.captureDue(),
@@ -190,7 +191,7 @@ export function CapturePanel({ soul, canAct }: { soul: Soul; canAct: boolean }) 
         <span className="text-xs text-[oklch(var(--color-ink-muted))]" data-testid="soul-capture-status">{status}</span>
       </div>
       {open ? (
-        <LiveWarrant key={open.id} warrant={open} soulName={soul.name} canAct={canAct} />
+        <LiveWarrant key={open.id} warrant={open} soulName={soul.name} canIssue={canIssue} canExecute={canExecute} />
       ) : mayIssue ? (
         <>
           <CaptureSteps at={0} />
@@ -225,7 +226,7 @@ export function CapturePanel({ soul, canAct }: { soul: Soul; canAct: boolean }) 
   );
 }
 
-function LiveWarrant({ warrant, soulName, canAct }: { warrant: CaptureWarrant; soulName: string; canAct: boolean }) {
+function LiveWarrant({ warrant, soulName, canIssue, canExecute }: { warrant: CaptureWarrant; soulName: string; canIssue: boolean; canExecute: boolean }) {
   const { t, formatDateTime } = useI18n();
   const feedback = useCaptureFeedback(soulName);
   const [cancelling, setCancelling] = useState(false);
@@ -259,9 +260,9 @@ function LiveWarrant({ warrant, soulName, canAct }: { warrant: CaptureWarrant; s
     <div data-testid="capture-warrant" data-status={warrant.status}>
       <CaptureSteps at={captured ? 2 : 1} />
       <p className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">{meta.join(" · ")}</p>
-      {canAct && !cancelling && (
+      {(canIssue || canExecute) && !cancelling && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {captured ? (
+          {!canExecute ? null : captured ? (
             <Button size="sm" variant="primary" disabled={busy} onClick={() => handOver.mutate()}>
               {t("souls.capture.hand_over_city_god")}
             </Button>
@@ -270,9 +271,11 @@ function LiveWarrant({ warrant, soulName, canAct }: { warrant: CaptureWarrant; s
               {t("souls.capture.capture")}
             </Button>
           )}
-          <Button size="sm" variant="secondary" disabled={busy} onClick={() => setCancelling(true)}>
-            {t("souls.capture.cancel_open")}
-          </Button>
+          {canIssue && (
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => setCancelling(true)}>
+              {t("souls.capture.cancel_open")}
+            </Button>
+          )}
         </div>
       )}
       {cancelling && (

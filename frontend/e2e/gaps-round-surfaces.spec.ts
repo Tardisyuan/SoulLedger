@@ -1,4 +1,4 @@
-import { test, expect, setupAuthenticatedPage, OPENED_JUDGMENT, SOULS } from "./fixtures";
+import { test, expect, setupAuthenticatedPage, seedAuthState, TEST_USER, OPENED_JUDGMENT, SOULS } from "./fixtures";
 import type { Page } from "@playwright/test";
 
 /**
@@ -95,6 +95,8 @@ test.describe("权限页导入配置", () => {
           removes_own_permissions: false,
         },
     });
+    // 导入是写:只给没绑殿的 ADMIN(2026-10-29,CanWriteGlobalSettings);TEST_USER 绑着殿。
+    await seedAuthState(page, { ...TEST_USER, tenant: null });
 
     await page.goto("/permissions");
     await page.getByTestId("app-content").getByRole("button", { name: "更多", exact: true }).click();

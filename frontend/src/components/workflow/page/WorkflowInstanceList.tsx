@@ -182,13 +182,15 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
           </Button>
         ) : null}
         <div className="ml-auto flex items-center justify-end gap-3">
-          <ExportCsvButton
-            size="sm"
-            fetchCsv={() => workflowApi.exportCsv(filterParams)}
-            page={t("workflow.title")}
-            hall={hall}
-            count={data?.count}
-          />
+          <RequirePermission permissions="workflow.export">
+            <ExportCsvButton
+              size="sm"
+              fetchCsv={() => workflowApi.exportCsv(filterParams)}
+              page={t("workflow.title")}
+              hall={hall}
+              count={data?.count}
+            />
+          </RequirePermission>
           <RequirePermission permissions="workflow.create">
             <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
               {t("workflow.start.action")}

@@ -19,11 +19,14 @@ class TestLedgerStatsOverview:
         self.tenant = cn_tenant
         sign_in(self.client, cn_admin_user)
 
-    def test_overview_requires_admin(self, api_client, judge_user):
-        """Non-admin users should get 403."""
+    def test_overview_follows_ledger_read_not_the_role(self, api_client, judge_user, django_user_model):
+        """`ledger.read` since 2026-10-29 (user item 33; was a hardcoded ADMIN check)."""
         api_client.force_authenticate(user=judge_user)
-        response = api_client.get("/api/v1/ledger/stats/overview/")
-        assert response.status_code == 403
+        assert api_client.get("/api/v1/ledger/stats/overview/").status_code == 200
+        bare = django_user_model.objects.create(username="ledgerless_o", role="NOTHING_HELD",
+                                                tenant=judge_user.tenant)
+        api_client.force_authenticate(user=bare)
+        assert api_client.get("/api/v1/ledger/stats/overview/").status_code == 403
 
     def test_overview_returns_structure(self):
         """Overview returns expected fields."""
@@ -119,11 +122,14 @@ class TestLedgerStatsExport:
         self.tenant = cn_tenant
         sign_in(self.client, cn_admin_user)
 
-    def test_export_requires_admin(self, api_client, judge_user):
-        """Non-admin users should get 403."""
+    def test_export_follows_ledger_export_not_the_role(self, api_client, judge_user, django_user_model):
+        """`ledger.export` since 2026-10-29 (user items 3 and 33; was a hardcoded ADMIN check)."""
         api_client.force_authenticate(user=judge_user)
-        response = api_client.get("/api/v1/ledger/stats/export/")
-        assert response.status_code == 403
+        assert api_client.get("/api/v1/ledger/stats/export/").status_code == 200
+        bare = django_user_model.objects.create(username="ledgerless_e", role="NOTHING_HELD",
+                                                tenant=judge_user.tenant)
+        api_client.force_authenticate(user=bare)
+        assert api_client.get("/api/v1/ledger/stats/export/").status_code == 403
 
     def test_export_returns_csv(self):
         """Export returns CSV content type."""

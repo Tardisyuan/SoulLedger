@@ -283,6 +283,9 @@ DEFAULT_PERMISSIONS = [
     # SETTLED 是终态(见 Soul.can_transition_to,2026-10-29 起没有出边),撤销它因此从来不是"流转"，
     # 而是一次需要单独授权、单独审计的更正——ADMIN-only,同 recycle_bin.* 的定位。
     ("soul.correct_settlement", "更正已结案状态", "soul"),
+    # 导出各成一码(用户 2026-10-29 第 3 条):此前每个列表的 CSV 都挂在它的读码上,看得见就带得走。
+    # perm/0030 授给当时持有对应读码的角色,行为不变;此后能不能导出是矩阵上单独的一格。
+    ("soul.export", "导出灵魂", "soul"),
     # judgment 权限
     ("judgment.read", "查看审判", "judgment"),
     ("judgment.create", "创建审判", "judgment"),
@@ -294,22 +297,47 @@ DEFAULT_PERMISSIONS = [
     # MODERATOR 照样持有;但权限矩阵里看不见它、不能单独收回。给已部署的库补行用
     # `manage.py sync_permissions`(只补缺的码名,带默认授予,不碰已有码名的授予)。
     ("judgment.assign", "改派审判", "judgment"),
+    ("judgment.export", "导出审判", "judgment"),
+    # 城隍 / 土地公 / 枉死城 / 勾魂各成一族(用户 2026-10-29 第 3 条拆码)。此前城隍、土地公、枉死城挂在
+    # judgment.read / execute / assign 上,勾魂挂在 soul.read / die 上;perm/0030 按「当时谁持有旧码就给谁新码」授出。
+    # read = 看(原 judgment.read / soul.read);manage = 增改删、改交、替别人办(原 judgment.assign);
+    # execute = 解送 / 退回 / 审申诉(原 judgment.execute)。
+    ("city_god.read", "查看城隍", "city_god"),
+    ("city_god.manage", "管理城隍", "city_god"),
+    ("city_god.execute", "城隍初审", "city_god"),
+    # 土地公登记亡魂原来要 soul.die(登记就是宣告死亡的入口)。
+    ("tudi.read", "查看土地公", "tudi"),
+    ("tudi.manage", "管理土地公", "tudi"),
+    ("tudi.register", "以土地公名义登记死亡", "tudi"),
+    ("wangsi.read", "查看枉死城", "wangsi"),
+    ("wangsi.manage", "代办枉死申诉", "wangsi"),
+    ("wangsi.execute", "审枉死申诉", "wangsi"),
+    # 发牒与撤销 = issue,拘到与交接(登记死亡)= execute,两者原来都是 soul.die。
+    ("capture.read", "查看勾魂牒", "capture"),
+    ("capture.issue", "发勾魂牒", "capture"),
+    ("capture.execute", "执行勾魂", "capture"),
     # disposition 权限（read + execute 二元，没有 disposition.manage）
     ("disposition.read", "查看处置", "disposition"),
     ("disposition.execute", "执行处置", "disposition"),
+    ("disposition.export", "导出处置", "disposition"),
     # ledger 权限（原 karma.*，随 apps.karma → apps.ledger 一并改名，
     # 迁移 0016 负责把已入库的 Permission 行改名而非重建，以保住授权）
     ("ledger.read", "查看功德", "ledger"),
     ("ledger.manage", "管理功德", "ledger"),
+    # 重算从 ledger.manage 拆出(用户 2026-10-29 第 3 条):守护者为写功过记录拿到 ledger.manage(souls/0053),
+    # 不该顺带拿到重算。perm/0030 授给持 ledger.manage 的角色,守护者除外。
+    ("ledger.calculate", "重算功德", "ledger"),
+    # 流水与统计的 CSV(第 33 条:此前统计导出硬编码只给 ADMIN,流水导出挂 ledger.read)。授给持 ledger.read 的角色。
+    ("ledger.export", "导出功德", "ledger"),
     # reincarnation 权限
     ("reincarnation.read", "查看轮回", "reincarnation"),
     ("reincarnation.manage", "管理轮回", "reincarnation"),
-    ("reincarnation.complete", "完成轮回", "reincarnation"),
     ("reincarnation.reborn", "执行转生", "reincarnation"),
     # dashboard 权限
     ("dashboard.read", "查看仪表盘", "dashboard"),
     # audit 权限
     ("audit.read", "查看审计日志", "audit"),
+    ("audit.export", "导出审计日志", "audit"),
     # 在线会话:管理员列出本殿(无殿管理员:全部)的登录会话并强退(apps/authentication/admin_session_views.py)。
     # 只授 ADMIN(2026-10-29 用户决定);perm/0028 落 Permission 行。
     ("session.manage", "管理在线会话", "session"),
@@ -321,6 +349,7 @@ DEFAULT_PERMISSIONS = [
     ("dispatch.approve", "批准调度", "dispatch"),
     ("dispatch.reject", "驳回调度", "dispatch"),
     ("dispatch.execute", "执行调度", "dispatch"),
+    ("dispatch.export", "导出调度", "dispatch"),
     # 调拨是暂居(2026-09-17)。结束暂居 = 灵魂回到原属租户;视图另外要求调用者属于
     # 原属租户(或 ADMIN)。持有者与 execute 相同:ADMIN、MODERATOR。
     # 与同族其余五条一样不由迁移播种(走本文件 ROLE_PERMISSIONS 的字典路径)。
@@ -340,6 +369,7 @@ DEFAULT_PERMISSIONS = [
     ("workflow.approve", "审批工作流", "workflow"),
     ("workflow.advance", "推进工作流", "workflow"),
     ("workflow.escalate", "越级推进工作流", "workflow"),
+    ("workflow.export", "导出工作流", "workflow"),
     # cross-tenant judgment 权限
     #
     # 这段注释曾经写着「这一族目前**没有任何视图声明它**」，并在此基础上论证了
@@ -354,6 +384,7 @@ DEFAULT_PERMISSIONS = [
     # 声明」写成一条会红的断言，所以这类注释不能再只是一句话。
     ("cross_judgment.read", "查看跨域审判", "cross_judgment"),
     ("cross_judgment.create", "创建跨域审判", "cross_judgment"),
+    ("cross_judgment.export", "导出跨域审判", "cross_judgment"),
     # realms 权限
     ("realms.read", "查看领域", "realms"),
     # 只管容量:`PATCH /realms/{id}/` 只收 `capacity`(apps/realms/views.py)。界域的
@@ -422,15 +453,19 @@ DEFAULT_PERMISSIONS = [
 ROLE_PERMISSIONS = {
     "ADMIN": [
         "soul.read", "soul.create", "soul.update", "soul.delete", "soul.die", "soul.transition",
-        "soul.correct_settlement",
-        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign",
-        "ledger.read", "ledger.manage",
-        "reincarnation.read", "reincarnation.manage", "reincarnation.complete", "reincarnation.reborn",
-        "disposition.read", "disposition.execute",
-        "dashboard.read", "audit.read", "notification.read",
+        "soul.correct_settlement", "soul.export",
+        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign", "judgment.export",
+        "city_god.read", "city_god.manage", "city_god.execute",
+        "tudi.read", "tudi.manage", "tudi.register",
+        "wangsi.read", "wangsi.manage", "wangsi.execute",
+        "capture.read", "capture.issue", "capture.execute",
+        "ledger.read", "ledger.manage", "ledger.calculate", "ledger.export",
+        "reincarnation.read", "reincarnation.manage", "reincarnation.reborn",
+        "disposition.read", "disposition.execute", "disposition.export",
+        "dashboard.read", "audit.read", "audit.export", "notification.read",
         "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
-        "dispatch.return", "sentence_plan.cancel",
-        "cross_judgment.read", "cross_judgment.create",
+        "dispatch.export", "dispatch.return", "sentence_plan.cancel",
+        "cross_judgment.read", "cross_judgment.create", "cross_judgment.export",
         "realms.read", "realms.manage", "actors.read",
         "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
@@ -441,6 +476,7 @@ ROLE_PERMISSIONS = {
         "social.moderate",
         "souls.mfa_reset",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
+        "workflow.export",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent
         # and omitted it. The drift was live: apps/core/ws_permissions.py reads
@@ -451,25 +487,30 @@ ROLE_PERMISSIONS = {
         "workflow.escalate",
     ],
     "JUDGE": [
-        "soul.read", "soul.die", "soul.transition",
-        "judgment.read", "judgment.create", "judgment.execute",
+        "soul.read", "soul.die", "soul.transition", "soul.export",
+        "judgment.read", "judgment.create", "judgment.execute", "judgment.export",
+        "city_god.read", "city_god.execute",
+        "tudi.read", "tudi.register",
+        "wangsi.read", "wangsi.execute",
+        "capture.read", "capture.issue", "capture.execute",
         "reincarnation.read", "reincarnation.manage",
-        "ledger.read", "dashboard.read",
-        "disposition.read",
-        "cross_judgment.read", "cross_judgment.create",
+        "ledger.read", "ledger.export", "dashboard.read",
+        "disposition.read", "disposition.export",
+        "cross_judgment.read", "cross_judgment.create", "cross_judgment.export",
         "realms.read", "actors.read",
         "org.read",
         "notification.read", "menu.read",
-        "workflow.read", "workflow.approve", "workflow.advance",
+        "workflow.read", "workflow.approve", "workflow.advance", "workflow.export",
     ],
     "GUARDIAN": [
-        "soul.read", "soul.update", "soul.transition",
+        "soul.read", "soul.update", "soul.transition", "soul.export",
+        "capture.read",
         "reincarnation.read", "reincarnation.manage",
         # ledger.manage: 增改功过记录(souls add_record / update_record)的码,2026-10-29 从 soul.update 挪来,
         # 守护者是原来靠 soul.update 写功过的角色(souls/0053)。
-        "ledger.read", "ledger.manage", "dashboard.read",
-        "disposition.read",
-        "dispatch.read", "dispatch.manage",
+        "ledger.read", "ledger.manage", "ledger.export", "dashboard.read",
+        "disposition.read", "disposition.export",
+        "dispatch.read", "dispatch.manage", "dispatch.export",
         "realms.read", "actors.read",
         "org.read",
         "notification.read", "menu.read",
@@ -484,9 +525,11 @@ ROLE_PERMISSIONS = {
     # be a lead of everywhere.
     #
     # workflow.approve, workflow.advance and user.manage are not merely left
-    # out here: since 2026-09-25 they are a server rule
-    # (apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES) — denied whatever the
-    # grant table says, and refused by the matrix, assign and import.
+    # out here: they are server rules — user.manage by name
+    # (apps/perm/checker.py::ROLE_FORBIDDEN_CODENAMES), approve / advance by
+    # capability since 2026-10-29 (a role holding workflow.create / update may
+    # not hold them, whatever it is called: WORKFLOW_DESIGN_CODENAMES) — denied
+    # whatever the grant table says, and refused by the matrix, assign, copy and import.
     #
     # Deliberately no workflow.approve / workflow.advance. The ten courts exist
     # to divide the decision; a lead who both designs the flow and approves at
@@ -503,27 +546,31 @@ ROLE_PERMISSIONS = {
     # still unsettled.
     "MODERATOR": [
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
-        "workflow.escalate",
-        "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition",
-        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign",
-        "disposition.read", "disposition.execute",
+        "workflow.escalate", "workflow.export",
+        "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition", "soul.export",
+        "judgment.read", "judgment.create", "judgment.execute", "judgment.assign", "judgment.export",
+        "city_god.read", "city_god.manage", "city_god.execute",
+        "tudi.read", "tudi.manage", "tudi.register",
+        "wangsi.read", "wangsi.manage", "wangsi.execute",
+        "capture.read", "capture.issue", "capture.execute",
+        "disposition.read", "disposition.execute", "disposition.export",
         "reincarnation.read", "reincarnation.manage",
-        "reincarnation.reborn", "reincarnation.complete",
-        "ledger.read", "ledger.manage",
+        "reincarnation.reborn",
+        "ledger.read", "ledger.manage", "ledger.calculate", "ledger.export",
         "dispatch.read", "dispatch.manage",
-        "dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return",
+        "dispatch.approve", "dispatch.reject", "dispatch.execute", "dispatch.return", "dispatch.export",
         "sentence_plan.cancel",
-        "cross_judgment.read", "cross_judgment.create",
+        "cross_judgment.read", "cross_judgment.create", "cross_judgment.export",
         "realms.read", "actors.read", "dashboard.read",
         "org.read", "org.manage",
-        "audit.read", "notification.read", "menu.read",
+        "audit.read", "audit.export", "notification.read", "menu.read",
         "soul_account.read", "soul_account.manage",
         "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
     ],
     "VIEWER": [
-        "soul.read", "reincarnation.read",
-        "ledger.read", "dashboard.read",
+        "soul.read", "soul.export", "capture.read", "reincarnation.read",
+        "ledger.read", "ledger.export", "dashboard.read",
         "realms.read", "actors.read",
         "org.read",
         "notification.read", "menu.read",

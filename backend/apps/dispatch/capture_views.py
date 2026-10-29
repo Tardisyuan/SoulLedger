@@ -16,6 +16,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch import capture as capture_service
 from apps.dispatch.models import CaptureEscort, CaptureStatus, CaptureWarrant
+from apps.perm.filters import DataScopeFilter
 from apps.souls.models import Soul
 
 
@@ -71,15 +72,22 @@ class CaptureDueListSerializer(serializers.Serializer):
     results = CaptureDueSoulSerializer(many=True)
 
 
+def _souls(request):
+    """本殿、且在请求人数据范围里的灵魂(发牒与 `due/` 同一口径)。"""
+    return DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul)
+
+
 class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin,
                             mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "soul"
+    # 勾魂一族(用户 2026-10-29 第 3 条;原 soul.read / soul.die):发牒与撤销 capture.issue,拘到与交接 capture.execute。
+    permission_codename = "capture"
     extra_permissions = {
-        "list": ["soul.read"], "retrieve": ["soul.read"], "due": ["soul.read"],
-        "create": ["soul.die"], "capture": ["soul.die"], "hand_over": ["soul.die"], "cancel": ["soul.die"],
+        "due": ["capture.read"],
+        "create": ["capture.issue"], "cancel": ["capture.issue"],
+        "capture": ["capture.execute"], "hand_over": ["capture.execute"],
     }
     queryset = CaptureWarrant.objects.select_related("soul", "city_god").all()
     serializer_class = CaptureWarrantSerializer
@@ -113,7 +121,8 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         body = CaptureIssueSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         # 与 `due/` 同一个范围(2026-10-29 审查):此前按 `tenant=<请求的租户>` 过滤,没有租户的 ADMIN 永远 404。
-        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=body.validated_data["soul"]).first()
+        # 数据范围(B3b):范围外的灵魂与别殿一样 404。
+        soul = _souls(request).filter(pk=body.validated_data["soul"]).first()
         if soul is None:
             return Response({"code": "not_found", "detail": "Soul not found."}, status=status.HTTP_404_NOT_FOUND)
         warrant = capture_service.issue(soul, body.validated_data.get("escort"))
@@ -148,7 +157,7 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     @action(detail=False, methods=["get"], pagination_class=None)
     def due(self, request):
         """阳寿已到、还在世、没有未了结勾魂牒的本殿地府灵魂(`results` 最多 200 个,阳寿早的在前;`count` 是总数)。"""
-        due = capture_service.due_souls(scope_to_tenant(Soul.objects.all(), request))
+        due = capture_service.due_souls(_souls(request))
         souls = due[:DUE_LIMIT]
         return Response({"count": due.count(), "results": [{
             "id": s.pk, "name": s.name, "soul_code": s.soul_code, "origin_location": s.origin_location,

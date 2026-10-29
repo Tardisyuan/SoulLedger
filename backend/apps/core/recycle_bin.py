@@ -250,7 +250,11 @@ def list_bin_entries(tenant=None, is_admin=False):
         qs = manager.filter(is_deleted=True).exclude(delete_reason__startswith=SYSTEM_VOID_PREFIX)
         if bin_type.listable is not None:
             qs = qs.filter(bin_type.listable)
-        if not is_admin and hasattr(bin_type.model, "tenant_id"):
+        if not is_admin:
+            if not hasattr(bin_type.model, "tenant_id"):
+                # Tenantless types (Role, Menu) are global configuration, not one hall's business:
+                # only the global ADMIN lists them (rbac-be3 L-8; a hall's `recycle_bin.read` saw them all).
+                continue
             # Fail closed: a non-ADMIN with no tenant context used to get every tenant's rows.
             qs = qs.filter(tenant=tenant) if tenant is not None else qs.none()
         for row in qs.order_by("-deleted_at"):

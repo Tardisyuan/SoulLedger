@@ -95,8 +95,14 @@ def _judgments_in_scope(scope):
 
 
 def _cooldowns(scope):
-    qs = CooldownShorteningRequest.objects.select_related("soul", "decided_by")
-    return scope_to_tenant(qs, scope, field="soul__home_tenant")
+    """缩短冷却申请跟灵魂的数据范围走(B3b)。调拨、受刑计划变更、书信按设计不套范围。"""
+    from apps.souls.models import Soul
+
+    qs = scope_to_tenant(CooldownShorteningRequest.objects.select_related("soul", "decided_by"), scope,
+                         field="soul__home_tenant")
+    souls = Soul.objects.all()
+    seen = DataScopeFilter.filter_queryset(scope, souls, Soul)
+    return qs if seen is souls else qs.filter(soul__in=seen.values("pk"))
 
 
 def _dispatches(scope):
@@ -173,7 +179,7 @@ def _city_god_items(scope):
 
     from apps.judgment.models import AT_CITY_GOD, CityGodStatus, Judgment
 
-    if not check_permission(scope.user, "judgment.execute"):
+    if not check_permission(scope.user, "city_god.execute"):
         return []
     returned_first = Case(When(city_god_status=CityGodStatus.RETURNED, then=Value(0)), default=Value(1),
                           output_field=IntegerField())
@@ -193,7 +199,7 @@ def _wangsi_items(scope):
 
     from apps.judgment.models import GrievanceStatus, Judgment
 
-    if not check_permission(scope.user, "judgment.execute"):
+    if not check_permission(scope.user, "wangsi.execute"):
         return []
     seen = _judgments_in_scope(scope)
     qs = (scope_to_tenant(Judgment.objects.all() if seen is None else seen, scope)

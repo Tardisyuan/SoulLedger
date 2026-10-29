@@ -343,12 +343,12 @@ class WorkflowPermissionMigrationTest(TestCase):
         self._forward()
         admin_grants = set(
             RolePermission.objects.filter(
-                role=self.admin_role, permission__codename__startswith="workflow."
+                role=self.admin_role, permission__codename__in=self.WORKFLOW_CODENAMES
             ).values_list("permission__codename", flat=True)
         )
         judge_grants = set(
             RolePermission.objects.filter(
-                role=self.judge_role, permission__codename__startswith="workflow."
+                role=self.judge_role, permission__codename__in=self.WORKFLOW_CODENAMES
             ).values_list("permission__codename", flat=True)
         )
         self.assertEqual(admin_grants, set(self.WORKFLOW_CODENAMES))
@@ -430,7 +430,7 @@ class WorkflowPermissionMigrationTest(TestCase):
         # …and the rows 0013 itself wrote are gone all the same.
         self.assertFalse(
             RolePermission.objects.filter(
-                role=self.admin_role, permission__codename__startswith="workflow."
+                role=self.admin_role, permission__codename__in=self.WORKFLOW_CODENAMES
             ).exists()
         )
         self.assertFalse(Permission.objects.filter(codename="workflow.advance").exists())
@@ -456,7 +456,7 @@ class WorkflowPermissionMigrationTest(TestCase):
         )
         self.assertEqual(
             RolePermission.objects.filter(
-                role=self.admin_role, permission__codename__startswith="workflow."
+                role=self.admin_role, permission__codename__in=self.WORKFLOW_CODENAMES
             ).count(),
             6,
         )

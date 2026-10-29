@@ -671,8 +671,10 @@ class DispatchService:
                 SentencePlanService.on_residence_ended_by_hand(locked, record)
                 SentencePlanService.advance(locked)
 
-        # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。
+        # 给 `tenant_id` 赋新值时 Django 会丢掉调用方那份缓存的 `tenant` 对象。归属机构一起同步:
+        # 调用方之后整行 `save()` 时,旧的 owner_org(暂居殿的根)不能被写回去(数据范围 B3b)。
         soul.tenant_id = locked.tenant_id
+        soul.owner_org_id = locked.owner_org_id
         return record
 
     @staticmethod
@@ -1155,17 +1157,19 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     def can_end(judgment, user, request_tenant=None):
-        """结束 / 取消会审的人(第四十批 W-a):召集人(建这场会审的人),或发起殿的管理员
-        (ADMIN / 殿主 MODERATOR,令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
+        """结束 / 取消会审的人(第四十批 W-a):召集人(建这场会审的人),或发起殿里持 `workflow.update` 的人
+        (默认 ADMIN 与殿主;令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
         参与方不在内 —— 他们入席表态,不替召集人收场。结束与取消共用这一道。"""
         if user is None or not getattr(user, "is_authenticated", False):
             return False
         if judgment.create_user_id is not None and judgment.create_user_id == user.pk:
             return True
-        from apps.core.tenant import is_hall_admin, is_tenant_exempt
+        from apps.core.tenant import is_tenant_exempt
+        from apps.perm.checker import check_permission
 
-        # 殿主兼任也算(`extra_roles`);没有殿的只有全局 ADMIN(2026-10-29 统一判定)。
-        if not is_hall_admin(user):
+        # 按码,不按角色名(fix-queue「fix-be1 遗留」/ 第 21 条):与「管流程」同一个码 workflow.update,
+        # 自建角色被授了它也算;此前只认 ADMIN / MODERATOR 两个名字。
+        if not check_permission(user, "workflow.update"):
             return False
         if is_tenant_exempt(user):
             return True

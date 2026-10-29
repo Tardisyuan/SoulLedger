@@ -427,9 +427,11 @@ export default function AuditPage() {
       title={title}
       tabs={<AuditTabs />}
       actions={
-        <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
-          {t("audit.export")}
-        </Button>
+        hasPermission("audit.export") ? (
+          <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
+            {t("audit.export")}
+          </Button>
+        ) : undefined
       }
       filters={
         /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,

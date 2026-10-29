@@ -150,13 +150,12 @@ READ_MATRIX = {
     "/api/v1/ledger/balance/{soul}/": OPEN_TO_ALL,
     "/api/v1/ledger/effective/{soul}/": OPEN_TO_ALL,
     "/api/v1/ledger/inheritance/{soul}/": OPEN_TO_ALL,
-    # Same declared codename as the three above, and CodenamePermission lets
-    # all five roles through it for the same reason. These two are ADMIN_ONLY
-    # purely because the view bodies spell `role != 'ADMIN'` by hand. Retiring
-    # that hardcoded check is step 5 and needs an export codename first: on
-    # `ledger.read` alone a VIEWER would get the full CSV of every soul.
-    "/api/v1/ledger/stats/overview/": ADMIN_ONLY,
-    "/api/v1/ledger/stats/export/": ADMIN_ONLY,
+    # Were ADMIN_ONLY because the view bodies spelled `role != 'ADMIN'` by hand.
+    # Retired 2026-10-29 (user items 3 and 33): the overview is `ledger.read`,
+    # the CSV its own `ledger.export` (perm/0030 grants it to every
+    # `ledger.read` holder), each scoped to the caller's hall.
+    "/api/v1/ledger/stats/overview/": OPEN_TO_ALL,
+    "/api/v1/ledger/stats/export/": OPEN_TO_ALL,
     # ENFORCED (step 4): declares `soul.read`, held by all five roles.
     "/api/v1/souls/": OPEN_TO_ALL,
     # ENFORCED (tranche 2): declares `judgment.read`. Held by ADMIN, MODERATOR
@@ -256,9 +255,10 @@ READ_MATRIX = {
 # rewriting it are different powers, and only these two roles hold the second.
 # Was OPEN_TO_ALL, i.e. any authenticated role could recalculate and persist a
 # soul's scores. That was the defect.
-# 2026-10-29: GUARDIAN holds it too — it is the role that writes merit / demerit records, which moved from
-# `soul.update` to `ledger.manage` (user decision item 19, souls migration 0053).
-LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
+# 2026-10-29: GUARDIAN holds ledger.manage too — it writes merit / demerit records (user decision
+# item 19, souls migration 0053) — so recalculation moved to its own `ledger.calculate` (item 3,
+# perm/0030), which GUARDIAN does not get. The answer per role is the one before either change.
+LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. POST /souls/ declares `soul.create`.
 # Held by ADMIN and MODERATOR. JUDGE, GUARDIAN and VIEWER do not hold it —
@@ -580,7 +580,7 @@ def test_read_matrix_snapshot(role_clients, snapshot_tenant, path, role, expecte
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_ledger_calculate_snapshot(role_clients, snapshot_tenant, role):
-    """ENFORCED: ledger.manage. ADMIN, MODERATOR and GUARDIAN hold it; JUDGE and VIEWER read only."""
+    """ENFORCED: ledger.calculate. ADMIN and MODERATOR hold it; GUARDIAN writes records but does not recalculate."""
     soul = _soul(snapshot_tenant, f"snapshot-calc-{role}")
     response = role_clients[role].post(f"/api/v1/ledger/calculate/{soul.id}/", {}, format="json")
     assert response.status_code == LEDGER_CALCULATE[role]
@@ -959,8 +959,10 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(unseeded_famili
     from apps.perm.models import Permission
 
     # 15 since 2026-09-24: `judgment.assign` (reassigning a queue case) joined
-    # the judgment family and is unseeded like the other three.
-    assert len(unseeded_families_seeded_in_db) == 15, unseeded_families_seeded_in_db
+    # the judgment family and is unseeded like the other three. 20 since
+    # 2026-10-29: soul.export, judgment.export, disposition.export,
+    # ledger.export and ledger.calculate (user item 3, perm/0030).
+    assert len(unseeded_families_seeded_in_db) == 20, unseeded_families_seeded_in_db
     for codename in unseeded_families_seeded_in_db:
         assert Permission.objects.filter(codename=codename).exists(), codename
 
@@ -1035,6 +1037,7 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
         "workflow.create",
         "workflow.delete",
         "workflow.escalate",
+        "workflow.export",
         "workflow.read",
         "workflow.update",
     ], workflow_forced_onto_the_dict_path

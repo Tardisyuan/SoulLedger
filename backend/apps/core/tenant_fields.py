@@ -67,6 +67,13 @@ def same_tenant_or_404_message(value, context, what: str):
         raise serializers.ValidationError(
             f"No such {what} in this tenant."
         )
+    # 数据范围(B2):注册表里的模型,范围外的行与别殿的行一样「不存在」。
+    from apps.perm import data_scope
+
+    if not data_scope.visible_to(user, value, data_scope.request_cache(request)):
+        raise serializers.ValidationError(
+            f"No such {what} in this tenant."
+        )
     return value
 
 

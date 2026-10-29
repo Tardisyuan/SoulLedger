@@ -1,4 +1,4 @@
-/** 城隍初审:解送 / 退回只给持 judgment.execute 的人画(后端 city_god_views 两个动作都要它;RBAC A6)。 */
+/** 城隍初审:解送 / 退回只给持 city_god.execute 的人画(后端 city_god_views 两个动作都要它;RBAC A6;2026-10-29 从 judgment.execute 拆出)。 */
 import { screen } from "@testing-library/react-native";
 
 import { CityGodCase } from "../screens/cityGod";
@@ -19,15 +19,15 @@ jest.mock("@soulledger/core/api/judgment", () => ({
 
 const view = (permissions: string[]) => renderOfficer(<CityGodCase id="cg-1" onSettled={() => {}} onDone={() => {}} />, { user: { ...OFFICER, permissions } });
 
-it("without judgment.execute: the case, but no 解送 / 退回", async () => {
-  view(["judgment.read"]);
+it("without city_god.execute: the case, but no 解送 / 退回 — judgment.execute no longer opens them", async () => {
+  view(["city_god.read", "judgment.execute"]);
   expect(await screen.findByTestId("city-god-case")).toBeTruthy();
   expect(screen.queryByTestId("city-god-send-on")).toBeNull();
   expect(screen.queryByTestId("city-god-return")).toBeNull();
 });
 
-it("with judgment.execute: both", async () => {
-  view(["judgment.read", "judgment.execute"]);
+it("with city_god.execute: both", async () => {
+  view(["city_god.read", "city_god.execute"]);
   expect(await screen.findByTestId("city-god-send-on")).toBeTruthy();
   expect(screen.getByTestId("city-god-return")).toBeTruthy();
 });

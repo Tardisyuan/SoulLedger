@@ -184,13 +184,15 @@ function JudgmentQueuePageContent() {
       {/* 「已结案」没有筛选条;导出放在表上方右端,带当前的搜索 / 灵魂 / 排序(不带页码)。 */}
       <div className="flex items-center justify-end gap-3 py-3">
         {buttonOn("judgment.export") && (
-          <ExportCsvButton
-            size="sm"
-            fetchCsv={() => judgmentApi.exportCsv(exportParams)}
-            page={t("judgment.title")}
-            hall={hall}
-            count={judgmentData?.count}
-          />
+          <RequirePermission permissions="judgment.export">
+            <ExportCsvButton
+              size="sm"
+              fetchCsv={() => judgmentApi.exportCsv(exportParams)}
+              page={t("judgment.title")}
+              hall={hall}
+              count={judgmentData?.count}
+            />
+          </RequirePermission>
         )}
         <ColumnMenu
           columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}

@@ -165,6 +165,10 @@ def reset_credential(account, *, actor=None, request=None):
     """官员重置:新密码、新 72 小时,之前所有未完结的凭据作废。**从不重发旧密码** ——
     旧的明文在发出时就已抹掉,这里也拿不到。"""
     with transaction.atomic():
+        # 锁序 灵魂 → 账号(见 rebirth._lock_account):下面插入的凭据行对灵魂取 KEY SHARE。
+        from apps.souls.models import Soul
+
+        Soul.all_objects.select_for_update(of=("self",)).filter(pk=account.soul_id).first()
         account = SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
         if account.retired_at is not None:
             raise SoulAccountError("该账号已随转世停用,不能重置。", "account_retired")

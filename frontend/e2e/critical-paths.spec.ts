@@ -1,4 +1,4 @@
-import { test, expect, domainEnum, mockApi, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
+import { test, expect, domainEnum, mockApi, seedAuthState, setupAuthenticatedPage, OPENED_JUDGMENT, PROPOSED_DISPATCH, PROPOSED_DISPATCH_DETAIL_ONLY, ROLES, SOULS, TEST_USER, type ApiMock } from "./fixtures";
 
 /**
  * Three end-to-end journeys through the app's highest-stakes screens.
@@ -310,6 +310,9 @@ test.describe("Critical path: permission matrix save", () => {
 
   test.beforeEach(async ({ page }) => {
     api = await setupAuthenticatedPage(page);
+    // Matrix writes are the hall-less ADMIN's only (2026-10-29: roles and grants are shared by every hall);
+    // TEST_USER is a hall's ADMIN, who now reads the matrix but cannot tick it.
+    await seedAuthState(page, { ...TEST_USER, tenant: null });
     await page.goto("/permissions");
     await expect(page.getByRole("heading", { name: "权限矩阵" })).toBeVisible();
   });
