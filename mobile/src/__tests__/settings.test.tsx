@@ -17,7 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
-import { PRIMER_SEEN_KEY, PUSH_TOKEN_KEY, landingOf, registerDevice } from "../push";
+import { PRIMER_SEEN_KEY, PUSH_TOKEN_KEY, landingOf, registerDevice, requestPermission } from "../push";
 import { SessionProvider } from "../session";
 import { PROFILE, application, life, pressTab, settleTabs, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
@@ -792,5 +792,22 @@ describe("the password checklist on the change-password screen (Design 第二十
     expect(screen.queryByTestId("change-password-error")).toBeNull();
     expect(screen.getByTestId("new-password").props.value).toBe("password123");
     expect(screen.getByTestId("confirm-password").props.value).toBe("password123");
+  });
+});
+
+describe("the Android notification channel (RBAC A9)", () => {
+  it("shows nothing of a notification's content on the lock screen", async () => {
+    const { Platform } = jest.requireActual<typeof import("react-native")>("react-native");
+    const os = Platform.OS;
+    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    const channel = jest.spyOn(Notifications, "setNotificationChannelAsync");
+    try {
+      await requestPermission();
+      expect(channel).toHaveBeenCalledWith("default", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE }));
+      expect(channel).not.toHaveBeenCalledWith("default", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC }));
+    } finally {
+      channel.mockRestore();
+      Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+    }
   });
 });

@@ -19,7 +19,7 @@ import { BackHandler, Pressable, type ScrollView, Share, View } from "react-nati
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
-import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, type ItemKind, type Verdict } from "../rules";
+import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
 import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
@@ -333,6 +333,8 @@ function TodoDetail({
 function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void; waitingOn: string | null; offline: boolean }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const { state } = useSession();
+  const may = verdictsAllowed(kind, state.status === "signedIn" ? state.user.permissions : undefined);
   // The added signer has not approved yet: 批准 is greyed and the sentence above says why (and is the
   // button's hint). 驳回 and 加签 are never held.
   const wait = waitingOn !== null ? t("officer_app.detail.wait_cosigner", { name: waitingOn }) : null;
@@ -344,8 +346,12 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
         {kind === "approval" || kind === "rebirth" ? (
           <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} disabled={offline} onPress={() => onPick("cosign")} />
         ) : null}
-        <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} disabled={offline} accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined} onPress={() => onPick("reject")} />
-        <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={offline || wait !== null} accessibilityHint={offline ? t("officer_app.offline.no_decide") : (wait ?? undefined)} onPress={() => onPick("approve")} />
+        {may.reject ? (
+          <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} disabled={offline} accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined} onPress={() => onPick("reject")} />
+        ) : null}
+        {may.approve ? (
+          <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={offline || wait !== null} accessibilityHint={offline ? t("officer_app.offline.no_decide") : (wait ?? undefined)} onPress={() => onPick("approve")} />
+        ) : null}
       </View>
     </View>
   );

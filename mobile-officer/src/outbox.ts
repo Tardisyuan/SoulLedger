@@ -13,13 +13,15 @@
  * queued and ends the run; one that the server answers with an error marks the entry `failed` with a
  * reason (below) and the run goes on to the next. Bodies are never logged.
  *
- * It is cleared with the drafts on sign-out and on a session the server ended (session.tsx).
+ * It is cleared with the drafts on sign-out and on a session the server ended (session.tsx), and it is
+ * stored as `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
  */
 import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
 import { useSyncExternalStore } from "react";
 
 import { clearDraft } from "./drafts";
+import { currentOwner, readOwned, writeOwned } from "./owner";
 
 export const OUTBOX_KEY = "officer_reply_outbox";
 
@@ -47,24 +49,30 @@ function isEntry(e: unknown): e is OutboxEntry {
 }
 
 function readStored(): OutboxEntry[] {
-  try {
-    const parsed = JSON.parse(platform().persistent.get(OUTBOX_KEY) ?? "[]") as unknown;
-    return Array.isArray(parsed) ? parsed.filter(isEntry) : [];
-  } catch {
-    return [];
-  }
+  const items = readOwned<{ items?: unknown }>(OUTBOX_KEY)?.items;
+  return Array.isArray(items) ? items.filter(isEntry) : [];
 }
 
-// A stable snapshot for useSyncExternalStore: replaced, never mutated, on every change.
+// A stable snapshot for useSyncExternalStore: replaced, never mutated, on every change. It is the snapshot of
+// one officer: a different officer signed in now reads the store again (and finds nothing of the last one's).
 let snapshot: OutboxEntry[] | null = null;
+let snapshotOwner: string | null = null;
 const listeners = new Set<() => void>();
 
-export const outboxEntries = (): OutboxEntry[] => (snapshot ??= readStored());
+export const outboxEntries = (): OutboxEntry[] => {
+  const owner = currentOwner();
+  if (snapshot === null || snapshotOwner !== owner) {
+    snapshot = readStored();
+    snapshotOwner = owner;
+  }
+  return snapshot;
+};
 
 function commit(next: OutboxEntry[]): void {
   snapshot = next;
+  snapshotOwner = currentOwner();
   if (next.length === 0) platform().persistent.remove(OUTBOX_KEY);
-  else platform().persistent.set(OUTBOX_KEY, JSON.stringify(next));
+  else writeOwned(OUTBOX_KEY, { items: next });
   listeners.forEach((l) => l());
 }
 
@@ -101,6 +109,7 @@ export function discardReply(id: string): void {
 /** Sign-out / the server ended the session. */
 export function clearOutbox(): void {
   snapshot = [];
+  snapshotOwner = currentOwner();
   platform().persistent.remove(OUTBOX_KEY);
   listeners.forEach((l) => l());
 }

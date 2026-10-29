@@ -10646,9 +10646,10 @@ paths:
       description: |-
         `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
 
-        返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
-        **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
-        互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+        返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)加一次性
+        凭证 `ticket` —— **编号不回显**、UUID 不出库。拿 `ticket`(不是 user_id:别的文明的 id 发起时不认,
+        第 29 条)走 `POST /me/chat/conversations/`,互关与 24 小时请求的规则都在那里,这里不另开一套。
+        被禁言的灵魂可以查,发起时照旧 403 `muted`。
       tags:
       - v1
       requestBody:
@@ -10670,7 +10671,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoulCard'
+                $ref: '#/components/schemas/ChatLookupResult'
           description: ''
         '403':
           content:
@@ -24985,6 +24986,33 @@ components:
           maxLength: 32
       required:
       - soul_code
+    ChatLookupResult:
+      type: object
+      description: 按编号查到的名片(朋友圈同一张白名单)加一次性凭证 `ticket`(由视图放进 context):发起私聊时原样交回。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+        ticket:
+          type: string
+          readOnly: true
+          description: 一次性、约 10 分钟内有效、只认查找的这个账号。
+      required:
+      - avatar
+      - display_name
+      - is_active
+      - ticket
+      - user_id
     ChatSession:
       type: object
       description: '`GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。'
@@ -25893,8 +25921,9 @@ components:
     ConversationCreate:
       type: object
       description: |-
-        两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
-        `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+        两种会话一个端点:私聊给 `ticket`(按编号查找 `POST /me/chat/lookup/` 发的一次性凭证)或
+        `target_user`(user_id —— **只认看得见的人**:同文明、有关注边、已有过私聊,见 `services.nameable_by_id`;
+        别的文明的人只能凭 ticket);`kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
       properties:
         kind:
           allOf:
@@ -25903,6 +25932,9 @@ components:
         target_user:
           type: integer
           minimum: 1
+        ticket:
+          type: string
+          maxLength: 512
     ConversationKindEnum:
       enum:
       - DIRECT

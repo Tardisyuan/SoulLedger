@@ -410,11 +410,12 @@ export function FindSoulScreen() {
     }
   };
 
-  const write = async (userId: number) => {
+  // A soul found by code is opened with the lookup's one-time ticket, a soul from the circle by its id (decision 29).
+  const write = async (userId: number, ticket?: string) => {
     if (opening !== null) return;
     setOpening(userId);
     try {
-      const c = await chat.openDirect(userId);
+      const c = await chat.openDirect(ticket ? { ticket } : userId);
       navigation.navigate("Conversation", { id: c.id });
     } catch (error) {
       setLookup({ state: "error", ...soulChatErrorMessage(error) });
@@ -460,7 +461,7 @@ export function FindSoulScreen() {
             <Pressable
               testID="find-write"
               accessibilityRole="button"
-              onPress={() => void write(lookup.card.user_id)}
+              onPress={() => void write(lookup.card.user_id, lookup.card.ticket)}
               style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
             >
               <Txt style={[styles.writeText, { color: t.onPlaque }]}>{tr("soul_app.chat.find.write")}</Txt>

@@ -24,7 +24,7 @@ def _lookup(client, code):
 
 
 def test_a_soul_in_another_civilization_is_found_by_its_exact_code(cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """跨文明精确命中,拿到的 user_id 直接走现有的发起流程(非互关 → 请求)。
+    """跨文明精确命中,拿到的一次性凭证走现有的发起流程(非互关 → 请求);凭 user_id 不行(第 29 条)。
     变异:`find_by_soul_code` 的候选集从 `_reachable(account)` 换成
     `circle.souls_in(account.soul.tenant)`(朋友圈的同文明集合)→ 404,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
@@ -35,7 +35,9 @@ def test_a_soul_in_another_civilization_is_found_by_its_exact_code(cn_tenant, eu
     assert response.data["user_id"] == b.user_id
     assert response.data["display_name"] == "Beatrice"
 
-    opened = a_client.post(CONVERSATIONS, {"target_user": response.data["user_id"]}, format="json")
+    by_id = a_client.post(CONVERSATIONS, {"target_user": response.data["user_id"]}, format="json")
+    assert by_id.status_code == 404, by_id.data
+    opened = a_client.post(CONVERSATIONS, {"ticket": response.data["ticket"]}, format="json")
     assert opened.status_code == 201, opened.data
     assert opened.data["throttled"] is True
 
@@ -48,7 +50,7 @@ def test_the_card_is_the_circle_whitelist_and_nothing_else(cn_tenant, eu_tenant)
     b, _ = ready_soul(eu_tenant, name="Beatrice")
 
     response = _lookup(a_client, b.soul.soul_code)
-    assert set(response.data) == {"user_id", "display_name", "avatar", "is_active"}
+    assert set(response.data) == {"user_id", "display_name", "avatar", "is_active", "ticket"}
     blob = response.content.decode()
     # 整数主键不当探针:「2」会在 user_id 里误报。UUID、编号、用户名(内含编号)、文明代码才是。
     for leaked in (b.soul.soul_code, str(b.soul_id), b.user.username, eu_tenant.code):
@@ -160,7 +162,7 @@ def test_a_muted_soul_can_look_up_but_not_open(cn_tenant, eu_tenant, matrix):  #
 
     found = _lookup(a_client, b.soul.soul_code)
     assert found.status_code == 200
-    opened = a_client.post(CONVERSATIONS, {"target_user": found.data["user_id"]}, format="json")
+    opened = a_client.post(CONVERSATIONS, {"ticket": found.data["ticket"]}, format="json")
     assert opened.status_code == 403
     assert opened.data["code"] == "muted"
     assert not matrix.rooms
