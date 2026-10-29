@@ -1122,6 +1122,8 @@ export const REBIRTH_WORKFLOW = {
   created_at: "2026-09-17T04:00:00Z",
   updated_at: "2026-09-17T04:00:00Z",
   completed_at: null as string | null,
+  // 后端按 approve_node 同一判断算出的「当前用户能批这一站」;页面的「提交决定」看它。
+  can_approve: true,
 };
 
 // ── Mock engine ───────────────────────────────────────────────────────────

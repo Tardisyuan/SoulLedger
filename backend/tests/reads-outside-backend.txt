@@ -10,6 +10,7 @@ tests/test_annihilation_realm_code.py                            frontend packag
 tests/test_apps_round_idempotency.py                             config
 tests/test_audit_assertions_are_not_vacuous.py                   config pytest.ini
 tests/test_backend_test_selection.py                             config conftest.py frontend pytest.ini scripts
+tests/test_chat_direct_ticket.py                                 config
 tests/test_chat_conversation_state.py                            config
 tests/test_chat_hall_names.py                                    config
 tests/test_chat_image_cleanup_task.py                            config
