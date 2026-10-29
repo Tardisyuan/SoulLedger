@@ -60,6 +60,10 @@ async function ensureAndroidChannel(): Promise<void> {
     await Notifications.setNotificationChannelAsync("default", {
       name: "SoulLedger",
       importance: Notifications.AndroidImportance.DEFAULT,
+      // A letter's sender, a comment's first words, a hall's warning are this soul's own business: the lock screen
+      // says only that something came (RBAC A9; the officer app's channel does the same). Android lets a channel's
+      // visibility be set only when it is created -- a phone that already has the channel keeps what it had.
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
     }).catch(() => {});
   }
 }

@@ -5024,7 +5024,9 @@
         "chat_not_configured": "Letters are not open here.",
         "not_found": "Not found.",
         "invalid_code": "A soul code has 10 characters.",
-        "self": "You cannot write to yourself."
+        "self": "You cannot write to yourself.",
+        "ticket_expired": "This search has expired. Look the code up again.",
+        "ticket_invalid": "Look the code up again."
       },
       "image": {
         "failed": "Could not send",
@@ -6937,7 +6939,9 @@
       "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
       "failed": "{{bio}} not recognised. Not approved yet. Tap Confirm to try again.",
       "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
-      "prompt": "Confirm it is you before approving or rejecting."
+      "prompt": "Confirm it is you before approving or rejecting.",
+      "prompt_off": "Confirm it is you before turning this off.",
+      "off_failed": "{{bio}} not recognised. This is still on."
     },
     "update_required": {
       "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
@@ -6970,7 +6974,8 @@
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
       "group_sentence_change": "Punishment plan changes",
-      "on_desk_only": "Handle on computer"
+      "on_desk_only": "Handle on computer",
+      "empty_body_other": "Anything that comes to you will be pushed to you."
     },
     "queue": {
       "mine": "Mine",

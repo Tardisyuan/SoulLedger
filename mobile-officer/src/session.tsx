@@ -20,12 +20,13 @@ import { AppState } from "react-native";
 
 import { clearDrafts } from "./drafts";
 import { clearOutbox } from "./outbox";
+import { USER_KEY } from "./owner";
 import { clearReadCache } from "./readCache";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
 import { clearVoiceNumbers, setUnauthorizedHandler } from "./shared";
 
-export const USER_KEY = "officer_user";
+export { USER_KEY };
 
 export type SessionState =
   | { status: "booting" }
@@ -76,7 +77,16 @@ export function needsMfaSetup(user: Pick<LoginUser, "mfa_required" | "mfa_enable
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() => {
     const user = getRefreshToken() ? readStoredUser() : null;
-    return user ? { status: "signedIn", user } : { status: "signedOut" };
+    if (user) return { status: "signedIn", user };
+    // No session to resume (the refresh token is gone or unreadable): nothing of whoever was here may stay
+    // for the next officer -- the same clearing as a sign-out (RBAC review A7). Idempotent, so a second
+    // initializer run (StrictMode) is harmless.
+    platform().persistent.remove(USER_KEY);
+    clearVoiceNumbers();
+    clearDrafts();
+    clearOutbox();
+    clearReadCache();
+    return { status: "signedOut" };
   });
 
   const land = useCallback((response: LoginResponse) => {

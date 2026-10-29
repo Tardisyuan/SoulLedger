@@ -4692,9 +4692,10 @@ export interface paths {
         /**
          * @description `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
          *
-         *     返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
-         *     **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
-         *     互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+         *     返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)加一次性
+         *     凭证 `ticket` —— **编号不回显**、UUID 不出库。拿 `ticket`(不是 user_id:别的文明的 id 发起时不认,
+         *     第 29 条)走 `POST /me/chat/conversations/`,互关与 24 小时请求的规则都在那里,这里不另开一套。
+         *     被禁言的灵魂可以查,发起时照旧 403 `muted`。
          */
         post: operations["v1_me_chat_lookup_create"];
         delete?: never;
@@ -11261,6 +11262,17 @@ export interface components {
             /** @description 完整的灵魂编号,大小写不论;不做前缀或模糊匹配。 */
             soul_code: string;
         };
+        /** @description 按编号查到的名片(朋友圈同一张白名单)加一次性凭证 `ticket`(由视图放进 context):发起私聊时原样交回。 */
+        ChatLookupResult: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+            /** @description 一次性、约 10 分钟内有效、只认查找的这个账号。 */
+            readonly ticket: string;
+        };
         /** @description `GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。 */
         ChatSession: {
             homeserver: string;
@@ -11663,13 +11675,15 @@ export interface components {
             readonly refusal: string | null;
         };
         /**
-         * @description 两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
-         *     `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+         * @description 两种会话一个端点:私聊给 `ticket`(按编号查找 `POST /me/chat/lookup/` 发的一次性凭证)或
+         *     `target_user`(user_id —— **只认看得见的人**:同文明、有关注边、已有过私聊,见 `services.nameable_by_id`;
+         *     别的文明的人只能凭 ticket);`kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
          */
         ConversationCreate: {
             /** @default DIRECT */
             kind: components["schemas"]["ConversationKindEnum"];
             target_user?: number;
+            ticket?: string;
         };
         /**
          * @description * `DIRECT` - 灵魂私聊
@@ -29804,7 +29818,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulCard"];
+                    "application/json": components["schemas"]["ChatLookupResult"];
                 };
             };
             403: {

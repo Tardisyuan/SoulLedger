@@ -46,6 +46,7 @@ import {
   soulChatErrorCode,
   soulChatImageErrorCode,
   soulChatRetryAt,
+  type SoulChatTarget,
   type SoulConversation,
   type SoulFeedbackTag,
 } from "@soulledger/core/api/soul-chat";
@@ -120,7 +121,8 @@ export interface Chat {
   loadOlder: (roomId: string) => Promise<void>;
   markRead: (roomId: string, eventId: string) => void;
   openInbox: () => Promise<SoulConversation>;
-  openDirect: (userId: number) => Promise<SoulConversation>;
+  /** A `user_id` the soul can see, or `{ ticket }` from a lookup by code (the only way to a soul in another civilization). */
+  openDirect: (target: SoulChatTarget) => Promise<SoulConversation>;
 }
 
 /** Codes that mean "the service did not answer", not "the service said no". */
@@ -149,7 +151,7 @@ const INERT: Chat = {
   loadOlder: async () => {},
   markRead: noop,
   openInbox: () => soulChatApi.openInbox(),
-  openDirect: (userId) => soulChatApi.openDirect(userId),
+  openDirect: (target) => soulChatApi.openDirect(target),
 };
 
 /** Exported for screen tests, which hand a screen a fixed chat state. */
@@ -490,6 +492,10 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     return () => {
       alive = false;
       wake.current();
+      // Signed out (not merely unmounted or re-run): the Matrix session ends on the server too, so the access
+      // token this process held is dead rather than dropped (RBAC A10). A sign-out has already counted itself
+      // (`clearOutbox` runs before the session's state changes). Best effort: offline, the token simply lapses.
+      if (signOuts !== signOutsSeen.current) void client.current?.logout().catch(() => {});
       client.current = null;
       since.current = null;
     };
@@ -565,8 +571,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         await reload();
         return c;
       },
-      openDirect: async (userId) => {
-        const c = await soulChatApi.openDirect(userId);
+      openDirect: async (target) => {
+        const c = await soulChatApi.openDirect(target);
         await reload();
         return c;
       },

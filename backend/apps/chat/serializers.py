@@ -8,6 +8,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from apps.chat.models import FEEDBACK_TAGS, Conversation, ConversationKind, InboxReplyTemplate
+from apps.social.soul_serializers import SoulCardSerializer
 
 
 class ChatSessionSerializer(serializers.Serializer):
@@ -96,16 +97,29 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 
 class ConversationCreateSerializer(serializers.Serializer):
-    """两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
-    `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。"""
+    """两种会话一个端点:私聊给 `ticket`(按编号查找 `POST /me/chat/lookup/` 发的一次性凭证)或
+    `target_user`(user_id —— **只认看得见的人**:同文明、有关注边、已有过私聊,见 `services.nameable_by_id`;
+    别的文明的人只能凭 ticket);`kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。"""
 
     kind = serializers.ChoiceField(choices=ConversationKind.choices, default=ConversationKind.DIRECT)
     target_user = serializers.IntegerField(required=False, min_value=1)
+    ticket = serializers.CharField(required=False, max_length=512, trim_whitespace=True)
 
     def validate(self, attrs):
-        if attrs["kind"] == ConversationKind.DIRECT and not attrs.get("target_user"):
+        if attrs["kind"] == ConversationKind.DIRECT and not (attrs.get("target_user") or attrs.get("ticket")):
             raise serializers.ValidationError({"target_user": "私聊必须指定对方。"})
+        if attrs.get("target_user") and attrs.get("ticket"):
+            raise serializers.ValidationError({"ticket": "ticket 与 target_user 只给一个。"})
         return attrs
+
+
+class ChatLookupResultSerializer(SoulCardSerializer):
+    """按编号查到的名片(朋友圈同一张白名单)加一次性凭证 `ticket`(由视图放进 context):发起私聊时原样交回。"""
+
+    ticket = serializers.SerializerMethodField(help_text="一次性、约 10 分钟内有效、只认查找的这个账号。")
+
+    def get_ticket(self, user) -> str:
+        return self.context["ticket"]
 
 
 class MessageSendSerializer(serializers.Serializer):
