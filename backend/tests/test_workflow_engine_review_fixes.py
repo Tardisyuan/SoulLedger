@@ -1,9 +1,11 @@
 """审批流程引擎只读审查(2026-10-29)里不需要产品拍板的那些修复,逐条一个(或几个)用例。
 
 条目编号是审查报告的;字母是同日第二批(另两份审查)。要拍板的(E 采信与供述是否随案、F SKIPPED 去留、G 手动流程
-是否给钩子)只做了技术护栏,护栏本身在这里钉住。
+是否给钩子)只做了技术护栏,护栏本身在这里钉住。2026-10-29 用户拍板之后的那几条在
+tests/test_flow_decisions_2026_10_29.py。
 """
 import datetime
+from contextlib import contextmanager
 
 import pytest
 from django.db import connection, transaction
@@ -42,7 +44,23 @@ from tests.test_workflow_timeout_and_reject_to import _age, _node, _workflow
 
 pytestmark = pytest.mark.django_db
 
-case = appeal_base.case  # a Diyu soul (with its /me client) and a judgment concluded FAILED, its flow in progress
+@pytest.fixture
+def case(cn_tenant):
+    """A Diyu soul (with its /me client) and a judgment concluded FAILED, its flow in progress."""
+    return appeal_base.make_case(cn_tenant)
+
+
+@contextmanager
+def _filed_before_rule_b(case):
+    """Appeals filed while the origin flow ran. Refused since 2026-10-29 (review B, `origin_flow_open`), but rows
+    filed before it still exist, and what a refused flow does to them is what these tests pin. The flow reads
+    COMPLETED only while the filing runs."""
+    flow = ApprovalWorkflow.all_objects.get(judgment_id=case["judgment"].pk)
+    ApprovalWorkflow.all_objects.filter(pk=flow.pk).update(status=ApprovalWorkflowStatus.COMPLETED)
+    try:
+        yield
+    finally:
+        ApprovalWorkflow.all_objects.filter(pk=flow.pk).update(status=flow.status)
 
 
 @pytest.fixture
@@ -83,7 +101,8 @@ def test_a_refused_flow_voids_the_open_appeal_and_leaves_the_withdrawn_station(c
     disposition = Disposition.all_objects.get(judgment=judgment)
     realm_id = disposition.destination_realm_id
     assert SoulPathEntry.all_objects.filter(soul_id=case["soul"].pk, realm_id=realm_id, left_at__isnull=True).exists()
-    appeal_id = _file(case).data["id"]
+    with _filed_before_rule_b(case):
+        appeal_id = _file(case).data["id"]
 
     _reject(_origin_flow(judgment))
 
@@ -112,8 +131,9 @@ def test_an_amendment_does_not_reroute_a_voided_disposition(case):
 
 
 def test_a_ladder_on_the_refused_conclusion_ends_with_it(case):
-    _upheld_once(case)
-    appeal_id = _file(case, escalate=True).data["id"]
+    with _filed_before_rule_b(case):
+        _upheld_once(case)
+        appeal_id = _file(case, escalate=True).data["id"]
     _reject(_origin_flow(case["judgment"]))
     appeal = JudgmentAppeal.all_objects.get(pk=appeal_id)
     ladder = ApprovalWorkflow.all_objects.get(pk=appeal.workflow_id)
@@ -132,8 +152,9 @@ def test_voiding_locks_the_appeal_flow_before_it_writes_the_appeal(case):
     """Approving a station locks the flow, then (`on_ladder_finished`) the appeal. Voiding used to lock the appeal and
     only then the flow: two transactions doing both at once wait on each other. On SQLite the order of statements is
     what can be read, so: the workflow is read (locked, on PostgreSQL) before any appeal row is written."""
-    _upheld_once(case)
-    _file(case, escalate=True)
+    with _filed_before_rule_b(case):
+        _upheld_once(case)
+        _file(case, escalate=True)
     soul = Soul.all_objects.get(pk=case["soul"].pk)
     with CaptureQueriesContext(connection) as queries, transaction.atomic():
         appeals.void_open_appeals(soul, because="test", end_reason="TEST")
@@ -245,6 +266,7 @@ def test_advance_over_http_needs_a_reason_and_leaves_an_audit_row(cn):
 
 
 def test_a_ladder_walked_by_the_original_judge_leaves_the_appeal_unclaimed(case):
+    sp.walk_flow(case["judgment"])  # an appeal waits for the origin flow (review B)
     _upheld_once(case)
     appeal = JudgmentAppeal.all_objects.get(pk=_file(case, escalate=True).data["id"])
     flow = _drive(appeal.workflow, ["PASSED"] * 4, case["decider"])
@@ -253,15 +275,23 @@ def test_a_ladder_walked_by_the_original_judge_leaves_the_appeal_unclaimed(case)
     assert appeal.reviewer_id is None and appeal.claimed_at is None
 
 
-def test_an_escalated_final_station_does_not_make_the_escalator_the_reviewer(case):
+def test_the_final_station_of_a_ladder_cannot_be_escalated_past(case):
+    """Escalation stops at the final review (user 2026-10-29, review A): escalating 终审 used to complete the ladder
+    and settle the appeal on a decision nobody made."""
+    from apps.workflow.models import EscalationRefusedError
+
+    sp.walk_flow(case["judgment"])  # an appeal waits for the origin flow (review B)
     _upheld_once(case)
     appeal = JudgmentAppeal.all_objects.get(pk=_file(case, escalate=True).data["id"])
     _drive(appeal.workflow, ["PASSED"] * 3, case["reviewer"])
     escalator = sp.officer("ladder_escalator", "MODERATOR", case["judgment"].tenant)
     flow = ApprovalWorkflow.all_objects.get(pk=appeal.workflow_id)
-    assert flow.escalate_current_node(user=escalator, reason="终审告假")
+    with pytest.raises(EscalationRefusedError):
+        flow.escalate_current_node(user=escalator, reason="终审告假")
+    flow.refresh_from_db()
     appeal.refresh_from_db()
-    assert appeal.reviewer_id == case["reviewer"].pk  # the last one who APPROVED, not who escalated
+    assert flow.status == ApprovalWorkflowStatus.IN_PROGRESS
+    assert appeal.reviewer_id is None
 
 
 # ── 12 / c. What a retrial carries ─────────────────────────────────────────────────────────────
@@ -276,7 +306,7 @@ def test_a_retrial_carries_the_offence_and_the_wangsi_columns_not_the_evidence(c
     retrial = weighing.open_retrial(judgment, reason="REJECTED", method=judgment.judgment_method)
     for field in ("offence", "untimely", "held_until", "wrongful_death_cause", "grievance_plea"):
         assert getattr(retrial, field) == facts[field], field
-    assert retrial.confession == ""  # pending decision E: confessions and admissions do not follow
+    assert retrial.confession == ""  # decided 2026-10-29 (review E / I): confessions and admissions do not follow
 
 
 # ── 13. A timeout that cannot be applied fails once, and someone is told ───────────────────────
@@ -357,7 +387,7 @@ def test_the_divergent_appeal_door_is_gone():
 
 def test_the_status_filter_offers_only_reachable_states():
     offered = {value for value, _ in WorkflowFilter.base_filters["status"].extra["choices"]}
-    assert offered == {"PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"}
+    assert offered == {"PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED", "CANCELLED"}  # CANCELLED: review C
 
 
 # ── 23. A timed-out countersign keeps the signatures already given ─────────────────────────────
@@ -432,7 +462,8 @@ def test_a_reopened_case_acquitted_takes_the_home_sentence_off(cn, executed):
 def test_an_appeal_acquittal_waits_for_the_origin_flow_then_goes_to_rebirth(case):
     from tests.test_judgment_appeals import _claim_and_decide
 
-    assert _file(case).status_code == 201
+    with _filed_before_rule_b(case):
+        assert _file(case).status_code == 201
     response = _claim_and_decide(case, "AMENDED", verdict="PASSED")
     assert response.status_code == 200, response.data
     soul = Soul.objects.get(pk=case["soul"].pk)

@@ -323,6 +323,8 @@ describe("startWorkflowRefusal — 每个错误码对应哪句话、哪一格", 
     [404, { code: "template_not_found" }, "workflow.start.errors.template_invalid", "template"],
     [404, { code: "judgment_not_found" }, "workflow.start.errors.judgment_mismatch", "judgment"],
     [409, { code: "judgment_has_workflow" }, "workflow.start.errors.judgment_taken", "judgment"],
+    // 原审流程没走完不能发起申诉审批(2026-10-29,审查 B)。
+    [400, { code: "origin_flow_open" }, "workflow.start.errors.origin_flow_open", "case_type"],
     [403, { detail: "x" }, "workflow.start.errors.forbidden", null],
     [500, {}, "workflow.start.errors.failed", null],
     [400, { reason: ["This field is required."] }, "workflow.start.errors.failed", null],

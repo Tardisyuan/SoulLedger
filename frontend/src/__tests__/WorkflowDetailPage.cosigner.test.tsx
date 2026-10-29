@@ -145,7 +145,7 @@ describe("会签 progress and the verdicts a node accepts", () => {
     expect(await screen.findByText("1 / 3")).toBeTruthy();
   });
 
-  it("offers only the verdicts the node lists; [] offers all five", async () => {
+  it("offers only the verdicts the node lists; [] offers all four, never SKIPPED (2026-10-29, review F)", async () => {
     workflowApi.get.mockResolvedValue(workflow({ required_verdicts: ["CONFIRMED", "REJECTED"] }));
     const { unmount } = renderPage();
     expect(await screen.findByLabelText(tZh("workflow.verdicts.confirmed"))).toBeTruthy();
@@ -155,6 +155,8 @@ describe("会签 progress and the verdicts a node accepts", () => {
     unmount();
     workflowApi.get.mockResolvedValue(workflow({ required_verdicts: [] }));
     renderPage();
-    expect(await screen.findByLabelText(tZh("workflow.verdicts.skipped"))).toBeTruthy();
+    expect(await screen.findByLabelText(tZh("workflow.verdicts.passed"))).toBeTruthy();
+    for (const v of ["failed", "confirmed", "rejected"]) expect(screen.getByLabelText(tZh(`workflow.verdicts.${v}`))).toBeTruthy();
+    expect(screen.queryByLabelText(tZh("workflow.verdicts.skipped"))).toBeNull();
   });
 });

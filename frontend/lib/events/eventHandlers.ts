@@ -164,6 +164,9 @@ export const EVENT_LABELS: Record<string, string> = {
   WANGSI_GRIEVANCE_REJECTED: "Grievance not upheld",
   WANGSI_GRIEVANCE_DELIVERED: "Grievance upheld · delivered at the Lotus Terrace",
 
+  // Egyptian negative confession: one summary per full round (2026-10-29)
+  NEGATIVE_CONFESSION_HEARD: "Negative confession heard",
+
   // Scheduler events
   SCHEDULER_RUN_FAILED: "Scheduled task run failed",
 };
