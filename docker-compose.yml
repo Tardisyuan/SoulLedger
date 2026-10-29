@@ -136,6 +136,15 @@ services:
     image: soulledger-backend
     command: celery -A config.celery worker --loglevel=info
     environment: *django-env
+    # Unhealthy when this worker no longer answers a broker ping (wedged, or
+    # lost the broker). `docker compose ps` / an external monitor reads it;
+    # compose itself does not restart on unhealthy.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config.celery inspect ping -d celery@$$HOSTNAME --timeout 10"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
     # Healthy backend = migrations applied. Started against db/redis alone,
     # beat raced the first migrate and died on a missing
     # django_celery_beat table (seen 2026-09-12); the worker has the same race.
@@ -145,8 +154,22 @@ services:
 
   celery-beat:
     image: soulledger-backend
-    command: celery -A config.celery beat --loglevel=info
+    # Exactly one beat, on the database scheduler (settings.CELERY_BEAT_SCHEDULER
+    # says the same; the flag keeps this line true if settings drift). Never
+    # `--scale celery-beat=N` and never `worker -B`: two beats publish every job
+    # twice (docs/DEPLOYMENT.md). tests/test_one_beat_on_the_database_scheduler.py
+    # holds every compose file to this.
+    command: celery -A config.celery beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment: *django-env
+    # Healthy while this container holds the single-beat Redis key
+    # (apps/scheduler/beat_guard.py, refreshed every 20 s, TTL 60 s). Lighter
+    # than a Django boot: it reads one cache key.
+    healthcheck:
+      test: ["CMD", "python", "-m", "apps.scheduler.beat_guard"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
     depends_on:
       backend:
         condition: service_healthy
