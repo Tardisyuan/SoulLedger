@@ -301,12 +301,15 @@ class TestMustChangePassword:
 
         assert User.objects.get(username="fresh").must_change_password is True
 
-    def test_admin_resetting_a_password_marks_the_officer(self, admin_user, django_user_model, cn_tenant):
+    def test_admin_resetting_a_password_voids_it_and_returns_a_link(self, admin_user, django_user_model, cn_tenant):
+        """第 8 条:不再回明文;旧密码当场作废,账号回到「待设密码」,返回 24 小时的一次性链接。"""
         user = _officer(django_user_model, cn_tenant)
         res = _client(admin_user).post(f"{USERS}{user.pk}/reset_password/")
         assert res.status_code == 200, res.data
+        assert "password" not in res.data and "/accept-invite?uid=" in res.data["link"]
+        assert res.data["expires_in"] == 24 * 3600
         user.refresh_from_db()
-        assert user.must_change_password is True and user.check_password(res.data["password"])
+        assert not user.has_usable_password() and not user.check_password(OLD)
 
 
 class TestMaxAge:

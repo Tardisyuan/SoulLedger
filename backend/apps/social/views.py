@@ -572,8 +572,14 @@ class UserProfileViewSet(
 
     @action(detail=False, methods=["get"])
     def me(self, request):
-        """Return or create the current user's profile."""
-        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        """Return or create the current user's profile. While viewing as someone (read-only), a missing
+        profile is shown unsaved rather than created for them (2026-10-29 decision 15)."""
+        from apps.authentication.impersonation import impersonating
+
+        if impersonating(request):
+            profile = UserProfile.objects.filter(user=request.user).first() or UserProfile(user=request.user)
+        else:
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
         serializer = UserProfileSerializer(profile, context=self.get_serializer_context())
         return Response(serializer.data)
 

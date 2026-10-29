@@ -903,7 +903,8 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/auth/logout/
-         *     Blacklist the refresh token.
+         *     Blacklist the refresh token: the one in the body (apps), or the web's httpOnly cookie (cleared in the answer).
+         *     The token must be the caller's own (L-6): someone else's is refused and stays valid.
          */
         post: operations["v1_auth_logout_create"];
         delete?: never;
@@ -1224,13 +1225,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * @description POST /api/v1/auth/refresh/
-         *     Returns new access token from refresh token.
-         *
-         *     On this app's `RefreshToken`, so a rotated 「保持登录 30 天」 token is
-         *     issued for 30 days again rather than for SimpleJWT's default 7.
-         */
+        /** @description App 在正文里带 `refresh`;网页不带,用 httpOnly cookie(`refresh_cookie.py`,核 Origin),新令牌写回 cookie。 */
         post: operations["v1_auth_refresh_create"];
         delete?: never;
         options?: never;
@@ -8347,7 +8342,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Return or create the current user's profile. */
+        /**
+         * @description Return or create the current user's profile. While viewing as someone (read-only), a missing
+         *     profile is shown unsaved rather than created for them (2026-10-29 decision 15).
+         */
         get: operations["v1_social_profiles_me_retrieve"];
         put?: never;
         post?: never;
@@ -9676,36 +9674,15 @@ export interface paths {
          */
         get: operations["v1_users_retrieve"];
         /**
-         * @description 用户管理 API
-         *
-         *     仅 ADMIN 角色可访问，支持完整的 CRUD 操作以及激活/停用/重置密码等操作。
-         *
-         *     Endpoints:
-         *         GET    /api/v1/users/           - 获取用户列表
-         *         POST   /api/v1/users/           - 创建新用户
-         *         GET    /api/v1/users/{id}/      - 获取用户详情
-         *         PATCH  /api/v1/users/{id}/      - 更新用户
-         *         DELETE /api/v1/users/{id}/      - 删除用户
-         *         POST   /api/v1/users/{id}/activate/     - 激活用户
-         *         POST   /api/v1/users/{id}/deactivate/   - 停用用户
-         *         POST   /api/v1/users/{id}/reset_password/ - 重置密码
+         * @description 改用户。对另一位管理员:只许没绑殿的 ADMIN + 自己的两步验证码(改邮箱再走邮箱重置 = 接管,所以任何字段都算)。
+         *     `is_active=false` 与 `POST deactivate/` 同一套(第 9 条 / M-2):不能停用自己;手上有在途的事 → 409
+         *     `officer_has_open_work`(交接要走 deactivate 的 `handover_to`);停用后退出全部设备。
          */
         put: operations["v1_users_update"];
         post?: never;
         /**
-         * @description 用户管理 API
-         *
-         *     仅 ADMIN 角色可访问，支持完整的 CRUD 操作以及激活/停用/重置密码等操作。
-         *
-         *     Endpoints:
-         *         GET    /api/v1/users/           - 获取用户列表
-         *         POST   /api/v1/users/           - 创建新用户
-         *         GET    /api/v1/users/{id}/      - 获取用户详情
-         *         PATCH  /api/v1/users/{id}/      - 更新用户
-         *         DELETE /api/v1/users/{id}/      - 删除用户
-         *         POST   /api/v1/users/{id}/activate/     - 激活用户
-         *         POST   /api/v1/users/{id}/deactivate/   - 停用用户
-         *         POST   /api/v1/users/{id}/reset_password/ - 重置密码
+         * @description 删除 = 软删,与停用同一套(第 9 条 / M-2):不能删自己;对管理员同 `update` 的规则;
+         *     手上有在途的事 → 409;删后退出全部设备。
          */
         delete: operations["v1_users_destroy"];
         options?: never;
@@ -9831,7 +9808,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 重置用户密码，返回随机生成的新密码 */
+        /**
+         * @description 重置密码(第 8 条):旧密码当场作废、所有设备退出,返回 24 小时、只能用一次的设置链接,由管理员转交本人。
+         *     不再返回明文密码。对另一位管理员:只许没绑殿的 ADMIN,并带自己的两步验证码(`_admin_target_refusal`)。
+         */
         post: operations["v1_users_reset_password_create"];
         delete?: never;
         options?: never;
@@ -10822,6 +10802,8 @@ export interface components {
          *     against the caller's own rank.
          */
         AssignRoles: {
+            mfa_method?: components["schemas"]["MfaSecondFactorMethodEnum"];
+            mfa_code?: string;
             role?: string;
             extra_roles?: string[];
         };
@@ -16473,13 +16455,13 @@ export interface components {
          */
         PasswordResetRefusalCodeEnum: "rate_limited" | "reset_code_expired" | "reset_code_wrong" | "reset_code_attempts_exceeded" | "weak_password" | "no_soul_account" | "ambiguous_email";
         /**
-         * @description `{"password": "..."}` — the generated password `reset_password` returns.
-         *
-         *     Schema-only. The plaintext is in the response body because this is the only
-         *     time it exists; it is never stored and cannot be read back.
+         * @description `{"link", "expires_in"}` — what `reset_password` returns (2026-10-29 decision 8): a one-time link to set a
+         *     new password, valid `expires_in` seconds (24 h), for the administrator to hand over. No password: the old one
+         *     is void and no administrator ever sees the new one.
          */
         PasswordResetResult: {
-            password: string;
+            link: string;
+            expires_in: number;
         };
         /**
          * @description `WebhookConfig` as the admin tab sees it.
@@ -18848,6 +18830,15 @@ export interface components {
             readonly name_egy: string;
         };
         /**
+         * @description The caller's own second factor, required when the target is another ADMIN (2026-10-29 decision 8;
+         *     `views._admin_target_refusal`): `mfa_method` = totp (the 6-digit code) or recovery (one unused recovery
+         *     code, spent). Same check, counter and lock as turning two-step verification off.
+         */
+        SecondFactorProof: {
+            mfa_method?: components["schemas"]["MfaSecondFactorMethodEnum"];
+            mfa_code?: string;
+        };
+        /**
          * @description `category` 空串 = 未分类(0007 之前加的词);中文名在 i18n 包 `social_moderation.word_category`。
          *     `hits_30d` 只在列表里有值(`moderation.with_recent_hits` 注解),新建返回 0。
          */
@@ -20829,6 +20820,8 @@ export interface components {
          *     transaction (`apps/judgment/handover.py`).
          */
         UserDeactivate: {
+            mfa_method?: components["schemas"]["MfaSecondFactorMethodEnum"];
+            mfa_code?: string;
             handover_to?: number | null;
         };
         /**
@@ -20892,6 +20885,8 @@ export interface components {
         };
         /** @description `POST /users/{id}/reset-mfa/`: the reason is audited, and required. */
         UserMfaReset: {
+            mfa_method?: components["schemas"]["MfaSecondFactorMethodEnum"];
+            mfa_code?: string;
             reason: string;
         };
         /**
@@ -39506,11 +39501,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["UserManagement"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserManagement"];
-                "multipart/form-data": components["schemas"]["UserManagement"];
+                "application/json": components["schemas"]["SecondFactorProof"];
+                "application/x-www-form-urlencoded": components["schemas"]["SecondFactorProof"];
+                "multipart/form-data": components["schemas"]["SecondFactorProof"];
             };
         };
         responses: {
@@ -39520,6 +39515,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PasswordResetResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

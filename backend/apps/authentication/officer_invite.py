@@ -26,13 +26,16 @@ from .passwords import set_officer_password, weak_password_reasons
 logger = logging.getLogger(__name__)
 
 INVITE_TIMEOUT = 7 * 24 * 3600
+#: 管理员重置密码发的一次性设置链接(2026-10-29 用户决定第 8 条:不再回明文):24 小时。
+SETUP_LINK_TIMEOUT = 24 * 3600
 
 
 class InviteTokenGenerator(PasswordResetTokenGenerator):
     key_salt = "apps.authentication.officer_invite.InviteTokenGenerator"
+    timeout = INVITE_TIMEOUT
 
     def check_token(self, user, token):
-        """父类同一套比较,只是有效期读 `INVITE_TIMEOUT` 而不是 `PASSWORD_RESET_TIMEOUT`。"""
+        """父类同一套比较,只是有效期读 `self.timeout` 而不是 `PASSWORD_RESET_TIMEOUT`。"""
         if not (user and token):
             return False
         try:
@@ -42,10 +45,17 @@ class InviteTokenGenerator(PasswordResetTokenGenerator):
         if not any(constant_time_compare(self._make_token_with_timestamp(user, ts, secret), token)
                    for secret in [self.secret, *self.secret_fallbacks]):
             return False
-        return (self._num_seconds(self._now()) - ts) <= INVITE_TIMEOUT
+        return (self._num_seconds(self._now()) - ts) <= self.timeout
+
+
+class SetupLinkTokenGenerator(InviteTokenGenerator):
+    """管理员重置密码的链接:换了盐(邀请链接不能当它用,反之亦然),24 小时。"""
+    key_salt = "apps.authentication.officer_invite.SetupLinkTokenGenerator"
+    timeout = SETUP_LINK_TIMEOUT
 
 
 invite_tokens = InviteTokenGenerator()
+setup_tokens = SetupLinkTokenGenerator()
 
 
 class InviteRefusedError(Exception):
@@ -120,19 +130,40 @@ def invite(email, role, tenant, *, actor, username="", display_name="", request=
     return user, existing is None
 
 
+def issue_setup_link(user, *, actor, request=None) -> tuple[str, int]:
+    """管理员重置密码(第 8 条):旧密码当场作废(设成不可用,账号回到「待设密码」),所有设备退出、推送登记删掉,
+    返回 24 小时、只能用一次的设置链接与有效秒数,由管理员转交本人。明文密码不再经过管理员。
+    令牌哈希里有密码哈希:再重置一次(新的不可用哈希)或本人设好密码,旧链接都失效。调用方负责权限。"""
+    from .passwords import end_push_registrations, end_sessions
+
+    with transaction.atomic():
+        user.set_unusable_password()
+        user.must_change_password = False
+        user.save(update_fields=["password", "must_change_password"])
+        end_sessions(user)
+        end_push_registrations(user)
+        _audit(user, "管理员重置官员密码:旧密码作废、所有设备已退出,发出 24 小时一次性设置链接", request=request,
+               changes={"password_reset": True, "sessions_revoked": True, "setup_link": True, "by": str(actor.pk)})
+    return _link("/accept-invite", user, setup_tokens) + "&kind=reset", SETUP_LINK_TIMEOUT
+
+
 def accept(uid, token, new_password, *, request=None) -> User:
+    """邀请链接或管理员重置的设置链接,同一个接口。只有邀请链接把邮箱记成已验证(信是发到那个邮箱的);
+    重置链接是管理员转交的,证明不了邮箱。"""
     user = user_from_uid(uid)
-    if user is None or not is_pending(user) or not invite_tokens.check_token(user, token):
+    invited = user is not None and invite_tokens.check_token(user, token)
+    if user is None or not is_pending(user) or not (invited or setup_tokens.check_token(user, token)):
         raise ResetRefusedError("invite_link_invalid", "邀请链接无效或已过期,请联系管理员重新邀请")
     reasons = weak_password_reasons(new_password, user)
     if reasons:
         raise ResetRefusedError("weak_password", " ".join(r["message"] for r in reasons), reasons)
     with transaction.atomic():
         set_officer_password(user, new_password)
-        user.email_verified_address = user.email
-        user.email_verified_at = timezone.now()
-        user.save(update_fields=["email_verified_address", "email_verified_at"])
-        _audit(user, "官员通过邀请链接设置了密码", request=request,
-               changes={"invite_accepted": True, "email_verified": [False, True]})
+        if invited:
+            user.email_verified_address = user.email
+            user.email_verified_at = timezone.now()
+            user.save(update_fields=["email_verified_address", "email_verified_at"])
+        _audit(user, "官员通过邀请链接设置了密码" if invited else "官员通过管理员发的设置链接设置了密码", request=request,
+               changes={"invite_accepted": True, "email_verified": [False, True]} if invited else {"setup_link_used": True})
     return user
 

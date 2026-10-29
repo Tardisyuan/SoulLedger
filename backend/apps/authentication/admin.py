@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.admin.utils import unquote
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm as BaseUserChangeForm
+from django.db import transaction
 
 from .models import User
 
@@ -34,3 +36,29 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
         ("SoulLedger", {"fields": ("role", "actor")}),
     )
+
+    #: Changing any of these through the admin ends the user's sessions, as the API does (L-11):
+    #: refresh tokens blacklisted, `session_version` bumped, devices signed out, push registrations dropped.
+    SESSION_ENDING_FIELDS = {"role", "is_active", "password", "extra_roles", "tenant"}
+
+    def save_model(self, request, obj, form, change):
+        with transaction.atomic():
+            super().save_model(request, obj, form, change)
+            if change and self.SESSION_ENDING_FIELDS & set(form.changed_data):
+                _end_sessions(obj)
+
+    def user_change_password(self, request, id, form_url=""):  # noqa: A002 -- Django's own parameter name
+        response = super().user_change_password(request, id, form_url)
+        if request.method == "POST" and response.status_code == 302:  # the form saved and redirected
+            user = self.get_object(request, unquote(id))
+            if user is not None:
+                with transaction.atomic():
+                    _end_sessions(user)
+        return response
+
+
+def _end_sessions(user):
+    from .passwords import end_push_registrations, end_sessions
+
+    end_sessions(user)
+    end_push_registrations(user)
