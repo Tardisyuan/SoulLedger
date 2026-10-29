@@ -8,6 +8,7 @@ What is deliberately NOT here:
   * unread `UserNotification` -- an unread notice is still an open item for someone; only read ones age out.
   * `PENDING` webhook deliveries -- `events.retry_pending_webhooks` still owns them.
   * `QUEUED` / `SENDING` push deliveries -- the push sweep owns them.
+  * judgments, souls, accounts and everything else that is the business record (owner, 2026-10-30: keep).
 
 Deletes are `_raw_delete` in batches (see apps/audit/retention.py: `.delete()` would write an audit row per
 row for the audited models). `_raw_delete` does not cascade, so children are removed first, by hand.
@@ -38,12 +39,15 @@ def _purge_with_children(queryset, children, batch_size):
 
 
 def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
+    from django.contrib.sessions.models import Session
+
     from apps.authentication.models import MfaRememberedDevice
     from apps.events.models import EventWebhookDelivery, EventWebhookStatus
     from apps.notifications.models import NotificationEmail, UserNotification
     from apps.officer_app.models import OfficerPushDelivery, OfficerPushDevice
     from apps.social.models import SocialInteraction
     from apps.soul_accounts.models import SoulMfaDevice
+    from apps.soul_assist.models import AssistUsage
     from apps.soul_push.models import PushDelivery, PushDevice, PushStatus
 
     now = now or timezone.now()
@@ -87,6 +91,13 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     if c := cutoff("EXPIRED_MFA_DEVICE_GRACE_DAYS"):
         result["mfa_remembered_devices"] = _purge(MfaRememberedDevice.objects.filter(expires_at__lt=c), batch_size)
         result["soul_mfa_devices"] = _purge(SoulMfaDevice.objects.filter(expires_at__lt=c), batch_size)
+
+    if c := cutoff("ASSIST_USAGE_RETENTION_DAYS"):
+        result["assist_usage"] = _purge(AssistUsage.objects.filter(created_at__lt=c), batch_size)
+
+    # Django's own session table (the admin site): `clearsessions` was never scheduled, so expired rows stayed.
+    # No setting: an expired session is unusable by definition.
+    result["expired_sessions"] = _purge(Session.objects.filter(expire_date__lt=now), batch_size)
 
     logger.info("data retention: %s", result)
     return result
