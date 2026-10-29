@@ -645,6 +645,10 @@ def test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_mo
     rows = HelpChunk.objects.filter(model="fake-embed", dims=64, locale="zh-Hans", audience="soul")
     with connection.cursor() as cursor:
         cursor.execute("SET LOCAL enable_seqscan = off")
+        # HNSW 是近似检索:这张表只有几十行,默认 ef_search=40 时图上偶尔走不到真正的最近邻
+        # (门禁里偶发得到 'codes')。这条测的是「索引被建出来、被用上、随模型删掉」,不是召回率,
+        # 所以把候选放宽到全表,让近似结果等于精确结果。
+        cursor.execute("SET LOCAL hnsw.ef_search = 1000")
     with CaptureQueriesContext(connection) as ctx:
         assert vectors.nearest(rows, ollama.vector(vectors.QUERY_INSTRUCTION + "申诉", None), 3)[0][1] == \
             "rebirth-appeal"
