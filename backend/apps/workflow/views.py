@@ -607,7 +607,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 "reason": reason,
                 "advanced_to": str(workflow.current_node_id) if workflow.current_node_id else None,
             },
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
         return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
