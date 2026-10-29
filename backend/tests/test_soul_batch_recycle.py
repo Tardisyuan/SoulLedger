@@ -65,7 +65,7 @@ def world(db):
     _grant(reader_role, "soul.read")
     reader = User.objects.create_user(username="br_reader", password="x", role="READER", tenant=cn)
 
-    admin = User.objects.create_user(username="br_admin", password="x", role="ADMIN", tenant=cn)
+    admin = User.objects.create_user(username="br_admin", password="x", role="ADMIN", tenant=None)
 
     souls = [
         Soul.objects.create(name=f"批量{i}", tenant=cn, current_state=SoulState.ALIVE) for i in range(3)

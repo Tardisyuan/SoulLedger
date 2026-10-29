@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.conftest import sign_in
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +67,7 @@ class TestJudgmentAPI:
 
     @pytest.fixture
     def eg_authenticated_client(self, api_client, eg_admin_user):
-        api_client.force_authenticate(user=eg_admin_user)
+        sign_in(api_client, eg_admin_user)
         return api_client
 
     # -------------------------------------------------------------------------

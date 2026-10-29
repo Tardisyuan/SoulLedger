@@ -308,22 +308,34 @@ class SensitiveWordViewSet(
     )
     @action(detail=False, methods=["post"], url_path="copy-from")
     def copy_from(self, request):
-        """从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        """从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
         这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
-        不该借它看见别处的词。回包只有计数,不含词本身。"""
+        不该借它看见别处的词。回包只有计数,不含词本身。
+        目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。"""
         from apps.core.tenant import is_tenant_exempt
         from apps.tenants.models import Tenant
 
-        if not is_tenant_exempt(request.user):
+        user = request.user
+        if getattr(user, "role", None) != "ADMIN" or getattr(user, "hall_view", None):
             raise SocialError("只有管理员可以跨文明复制词表。", "admin_only", 403)
         body = SensitiveWordCopySerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        if self.tenant is None:
-            raise SocialError("没有当前文明。", "no_tenant", 400)
+        target_code = (body.validated_data.get("target_tenant") or "").strip()
+        if is_tenant_exempt(user):
+            target = Tenant.objects.filter(code=target_code).first() if target_code else None
+            if target is None:
+                raise SocialError("请指定目标殿。" if not target_code else "对象不存在。",
+                                  "no_tenant" if not target_code else "not_found", 400 if not target_code else 404)
+        else:
+            target = self.tenant
+            if target is None:
+                raise SocialError("没有当前文明。", "no_tenant", 400)
+            if target_code and target_code != target.code:
+                raise SocialError("对象不存在。", "not_found", 404)
         source = Tenant.objects.filter(code=body.validated_data["source_tenant"]).first()
         if source is None:
             raise SocialError("对象不存在。", "not_found", 404)
-        copied, skipped = mod.copy_sensitive_words(source, self.tenant, actor=request.user, request=request)
+        copied, skipped = mod.copy_sensitive_words(source, target, actor=request.user, request=request)
         return Response({"copied": copied, "skipped": skipped})
 
 

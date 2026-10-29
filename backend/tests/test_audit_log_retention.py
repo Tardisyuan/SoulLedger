@@ -36,8 +36,8 @@ def _alive(model, pks):
 
 
 @pytest.fixture
-def world(db, cn_tenant, eu_tenant, admin_user, eu_admin_user):
-    cn_user = admin_user
+def world(db, cn_tenant, eu_tenant, cn_admin_user, eu_admin_user):
+    cn_user = cn_admin_user  # a CN-hall login: `admin_user` is the hall-less ADMIN since 2026-10-29
     return {
         "cn_old_audit": _audit(cn_tenant, OLD), "cn_new_audit": _audit(cn_tenant, FRESH),
         "eu_old_audit": _audit(eu_tenant, OLD), "none_old_audit": _audit(None, OLD),
@@ -115,11 +115,11 @@ def test_each_window_is_independent(world, cn_tenant, settings):
 
 
 def test_batches_cover_a_backlog_and_deleting_login_rows_writes_no_per_row_audit(
-    cn_tenant, admin_user, settings, django_capture_on_commit_callbacks
+    cn_tenant, cn_admin_user, settings, django_capture_on_commit_callbacks
 ):
     settings.LOGIN_LOG_RETENTION_DAYS = 90
     with django_capture_on_commit_callbacks(execute=True):
-        pks = [_login(admin_user, OLD) for _ in range(5)]
+        pks = [_login(cn_admin_user, OLD) for _ in range(5)]
     audit_rows = AuditLog.all_objects.count()
     # Audit rows are written on commit, so run the callbacks or a per-row post_delete would go unseen.
     with django_capture_on_commit_callbacks(execute=True):

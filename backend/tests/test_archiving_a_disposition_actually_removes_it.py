@@ -26,7 +26,7 @@ def archived(db):
         code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
     )
     user = User.objects.create_user(
-        username="op", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="op", password="x", role=UserRole.ADMIN, tenant=None
     )
     soul = Soul.objects.create(name="待处置", tenant=tenant)
     soul.current_state = SoulState.DISPOSED

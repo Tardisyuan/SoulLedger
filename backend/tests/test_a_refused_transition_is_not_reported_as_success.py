@@ -35,7 +35,7 @@ def tenant(db):
 @pytest.fixture
 def admin(tenant):
     user = User.objects.create_user(
-        username="concluder", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="concluder", password="x", role=UserRole.ADMIN, tenant=None
     )
     client = APIClient()
     client.force_authenticate(user=user)

@@ -32,7 +32,8 @@ def _client(user):
 
     client = APIClient()
     token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
+    if user.tenant_id:  # the hall-less ADMIN carries no hall
+        token["tenant_code"] = user.tenant.code
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client
 
@@ -51,7 +52,7 @@ def w(db):
     cn_mod = User.objects.create_user(username="dr_cn_mod", password="x", role="MODERATOR", tenant=cn)
     cn_mod2 = User.objects.create_user(username="dr_cn_mod2", password="x", role="MODERATOR", tenant=cn)
     eu_mod = User.objects.create_user(username="dr_eu_mod", password="x", role="MODERATOR", tenant=eu)
-    admin = User.objects.create_user(username="dr_admin", password="x", role="ADMIN", tenant=cn)
+    admin = User.objects.create_user(username="dr_admin", password="x", role="ADMIN", tenant=None)
     return {
         "cn": cn, "eu": eu, "cn_mod": cn_mod, "cn_mod2": cn_mod2, "eu_mod": eu_mod, "admin": admin,
         "soul": Soul.objects.create(name="沈青梧", current_state=SoulState.JUDGING, tenant=cn),

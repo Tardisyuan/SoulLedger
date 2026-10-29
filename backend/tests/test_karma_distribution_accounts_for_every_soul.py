@@ -24,7 +24,7 @@ def client_and_tenant(db):
         code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
     )
     user = User.objects.create_user(
-        username="ledger-stats", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="ledger-stats", password="x", role=UserRole.ADMIN, tenant=None
     )
     client = APIClient()
     client.force_authenticate(user=user)

@@ -183,7 +183,7 @@ class TestUserViewSetTenantIsolation:
             username="um_eg_user", password="test12345", role="VIEWER", tenant=self.eg_tenant
         )
         self.admin = User.objects.create_user(
-            username="um_admin", password="test12345", role="ADMIN", tenant=self.eu_tenant
+            username="um_admin", password="test12345", role="ADMIN", tenant=None  # the hall-less ADMIN: only it is global (2026-10-29)
         )
 
     def _queryset_for(self, user, tenant):
@@ -231,7 +231,7 @@ class TestUserCreateSerializerRoleAndTenantGuard:
             username="umc_eu_mod", password="test12345", role="MODERATOR", tenant=self.eu_tenant
         )
         self.admin = User.objects.create_user(
-            username="umc_admin", password="test12345", role="ADMIN", tenant=self.eu_tenant
+            username="umc_admin", password="test12345", role="ADMIN", tenant=None
         )
 
     def test_non_admin_cannot_create_admin(self):
@@ -335,7 +335,7 @@ class TestUserViewSetHTTPAdminCapabilityPreserved:
             code="UMH_EG", defaults={"display_name": "EG HTTP Tenant"}
         )[0]
         self.admin = User.objects.create_user(
-            username="umh_admin", password="test12345", role="ADMIN", tenant=self.eu_tenant
+            username="umh_admin", password="test12345", role="ADMIN", tenant=None  # the hall-less ADMIN: only it is global (2026-10-29)
         )
         self.eg_viewer = User.objects.create_user(
             username="umh_eg_viewer", password="test12345", role="VIEWER", tenant=self.eg_tenant

@@ -408,12 +408,13 @@ def test_alert_recipients_are_admins_plus_tenant_holders_of_manage(db, admin_use
     from tests.perm_support import seeded_permission, seeded_role
 
     job = _job("tests.scheduler_ok", tenant=cn_tenant)
-    assert set(services.alert_recipients(job)) == {admin_user, eu_admin_user}
+    # The hall-less ADMIN, not another hall's ADMIN (2026-10-29).
+    assert set(services.alert_recipients(job)) == {admin_user}
 
     RolePermission.objects.create(
         role=seeded_role("JUDGE"), permission=seeded_permission("scheduler.manage")
     )
-    assert set(services.alert_recipients(job)) == {admin_user, eu_admin_user, judge_user}
+    assert set(services.alert_recipients(job)) == {admin_user, judge_user}
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ from apps.notifications.categories import CATEGORIES
 from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.tasks import email_action_needed_for_tenant, email_action_needed_global
 from apps.tenants.managers import get_current_tenant
+from tests.conftest import sign_in
 from tests.migration_schema_editor import SCHEMA_EDITOR
 
 pytestmark = pytest.mark.django_db
@@ -131,14 +132,16 @@ def test_a_failure_is_recorded_and_shown_on_the_status_endpoint(cn_tenant, api_c
     row = NotificationEmail.objects.get()
     assert row.sent is False and row.error == "smtp down"
 
-    api_client.force_authenticate(user)
+    from tests.conftest import sign_in
+
+    sign_in(api_client, user)  # a hall's ADMIN carries its hall in the JWT (2026-10-29)
     status = api_client.get(STATUS)
     assert status.status_code == 200
     assert status.data["last_failure"]["error"] == "smtp down" and status.data["last_failure"]["at"]
 
     # 别人的失败不显示给我;没失败过是 null。
     other = _officer(cn_tenant, "other")
-    api_client.force_authenticate(other)
+    sign_in(api_client, other)
     assert api_client.get(STATUS).data == {"last_failure": None}
 
 
@@ -256,7 +259,7 @@ def test_turning_a_cell_on_gets_its_own_moment_over_a_backfilled_one(api_client,
     user.preferences = {"email_notifications": False, "email_opted_at": "2026-01-01T00:00:00+00:00",
                         "email_opted_backfilled": True}
     user.save(update_fields=["preferences"])
-    api_client.force_authenticate(user)
+    sign_in(api_client, user)
     assert api_client.patch(PREFS, {"notifications": {"reassign": {"mail": True}}}, format="json").status_code == 200
     user.refresh_from_db()
     assert user.preferences["notifications"]["reassign"]["mail_since"] > "2026-01-01"

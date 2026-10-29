@@ -40,7 +40,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.events.realtime import close_user_sockets
 from apps.notifications import categories as notification_categories
@@ -89,8 +89,8 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
     email_already_registered,
+    may_assign_role,
     reissue_for_device,
-    role_rank,
 )
 
 #: Wrong password-reset codes accepted for one address before the code itself is
@@ -210,8 +210,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # 把明文直接交给官员,绕过全部三道。
         qs = User.objects.select_related('tenant', 'mfa').exclude(role='SOUL')
 
-        # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
-        # every other role is tenant-scoped and must never see another
+        # The hall-less ADMIN is the only global user (apps/core/tenant.py; an ADMIN
+        # bound to a hall is scoped to it, 2026-10-29); every other role is tenant-scoped and must never see another
         # tenant's users. This mirrors the ADMIN bypass used by
         # TenantQuerySetMixin/DataScopeViewSetMixin everywhere else in the
         # codebase — previously this method filtered ADMIN by tenant too
@@ -458,8 +458,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # privileged than their own (rank shared with create/update, see
         # ROLE_HIERARCHY). No `caller_role != 'ADMIN'` short-circuit: ADMIN
         # ranks 0, so the check never fires for it and still says what it means.
-        caller_role = getattr(request.user, 'role', None)
-        if any(role_rank(caller_role) > role_rank(r) for r in [new_role, *extras]):
+        # A hall's ADMIN may not appoint an ADMIN either (`may_assign_role`, 2026-10-29); keeping a user's
+        # current role is not an appointment.
+        if any(not may_assign_role(request.user, r) for r in [new_role, *extras] if r != user.role):
             return Response(
                 {'error': 'Cannot assign a role more privileged than your own'},
                 status=status.HTTP_403_FORBIDDEN,
@@ -484,8 +485,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         body.is_valid(raise_exception=True)
         data = body.validated_data
         tenant = getattr(request, 'tenant', None)
-        if data.get('tenant'):
-            tenant = Tenant.objects.filter(code=data['tenant']).first()
+        # 指定殿只给没绑殿的全局管理员用;绑殿的 ADMIN 只能邀请进本殿(2026-10-29),别殿的 code 与不存在的同样答。
+        if data.get('tenant') and not (tenant is not None and data['tenant'] == tenant.code):
+            tenant = Tenant.objects.filter(code=data['tenant']).first() if is_tenant_exempt(request.user) else None
         if tenant is None:
             return Response({'error': 'No tenant found', 'code': 'no_tenant'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -636,6 +638,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 invite_row = not password and bool(email)
                 if not problems and not password and not email:
                     problems.append(('password', 'password_required', 'password is required'))
+                if not problems and not may_assign_role(request.user, role):
+                    problems.append(('role', 'role_forbidden', f"you may not assign role '{role}'"))
                 if not problems and invite_row and role == 'ADMIN':
                     problems.append(('role', 'role_invalid', 'an ADMIN cannot be invited; give a password'))
                 if not problems and not invite_row:
@@ -736,14 +740,15 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         if getattr(user, 'role', None) != 'ADMIN':
             return qs.none()
+        if is_tenant_exempt(user):
+            return qs
+        # An ADMIN bound to a hall: that hall's users only, nothing when no hall resolves (fail closed).
         tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            # Filter by users in the same tenant
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            tenant_user_ids = User.objects.filter(tenant=tenant).values_list('id', flat=True)
-            qs = qs.filter(user_id__in=tenant_user_ids)
-        return qs
+        if tenant is None:
+            return qs.none()
+        from django.contrib.auth import get_user_model
+        tenant_user_ids = get_user_model().objects.filter(tenant=tenant).values_list('id', flat=True)
+        return qs.filter(user_id__in=tenant_user_ids)
 
 
 #: The login brute-force limiter: failures per client IP inside one window.

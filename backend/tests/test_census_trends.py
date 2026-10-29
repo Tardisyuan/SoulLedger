@@ -47,7 +47,7 @@ def world(db):
         codename="ledger.read", defaults={"name": "ledger.read", "category": "ledger"},
     )
     RolePermission.objects.get_or_create(role=role, permission=perm)
-    admin = User.objects.create_user(username="cen-admin", password="x", role=UserRole.ADMIN, tenant=cn)
+    admin = User.objects.create_user(username="cen-admin", password="x", role=UserRole.ADMIN, tenant=None)
     reader = User.objects.create_user(username="cen-reader", password="x", role="CENSUS_READER", tenant=cn)
     yield cn, eu, admin, reader
     invalidate_all_permissions()

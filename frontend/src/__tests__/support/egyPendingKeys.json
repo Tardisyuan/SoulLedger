@@ -102,5 +102,10 @@
   "workflow.detail.refusals.five_heinous_must_fail",
   "workflow.editor.case_type_not_for_civilization",
   "workflow.start.errors.origin_flow_open",
-  "workflow.status.CANCELLED"
+  "workflow.status.CANCELLED",
+  "mfa.manage.confirm_by_recovery",
+  "mfa.manage.turn_off_body",
+  "mfa.manage.turn_off_failed",
+  "profile.mfa_must_setup",
+  "soul_app.mfa.disable.use_recovery"
 ]

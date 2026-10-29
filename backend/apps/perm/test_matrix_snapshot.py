@@ -365,10 +365,14 @@ POST_CREATE = dict.fromkeys(ROLES, 201)
 # same shape the hardcoded `role != 'ADMIN'` check in perform_create used to
 # produce, which is exactly why the check could be retired rather than
 # reworked — `menu.manage` already drew the line in the same place.
-MENU_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+# 2026-10-29: every client here is bound to `snapshot_tenant`, and an ADMIN bound to a hall may not write
+# configuration shared by every hall (menus, permissions, the matrix) — that is the hall-less ADMIN's
+# (`IsGlobalAdminPermission`, `perm.checker.GLOBAL_ONLY_CODENAMES`). Covered for the global ADMIN in
+# tests/test_hall_admin_is_scoped_to_its_hall.py.
+MENU_CREATE = {"ADMIN": 403, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 # the two that do hold, both by hardcoded role string / IsAdminPermission
 USER_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
-PERM_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+PERM_CREATE = {"ADMIN": 403, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 # ADMIN clears IsAdminPermission; the other four never get that far. That split
 # across two layers is the finding, and it is unchanged.
 #
@@ -380,7 +384,7 @@ PERM_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "V
 # has. The test is transactional so it rolls back, but read that 200 as "ADMIN
 # just cleared a role's entire permission set with an empty list and got no
 # confirmation step", which is the more interesting version of the finding.
-PERM_ASSIGN = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+PERM_ASSIGN = {"ADMIN": 403, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 
 # Every enforced write endpoint whose codenames are UNSEEDED on a migrate-only

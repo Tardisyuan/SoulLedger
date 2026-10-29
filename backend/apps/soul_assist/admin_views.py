@@ -1,6 +1,7 @@
 """`/api/v1/assist-admin/`:助手管理页的后端(docs/ARCHITECTURE-assist-admin.md)。
 
-**只许 ADMIN,按角色判断**(`role == "ADMIN"`),不走可授予的权限码 —— 否则「权限」页能把它
+**只许没绑殿的全局 ADMIN**(`is_tenant_exempt`,2026-10-29 起;绑殿的 ADMIN 403;唯一例外是每殿开关
+`halls/`,绑殿 ADMIN 只看、只改本殿那一行),不走可授予的权限码 —— 否则「权限」页能把它
 误授给别人。MODERATOR 与其余一律 403。官员令牌(`OfficerJWTAuthentication`)。
 每次保存(配置、每殿开关)写一条 `resource="assistant_config"` 的审计;API key 只记「已更换 / 已清除」。
 """
@@ -15,7 +16,7 @@ from rest_framework import exceptions, generics, permissions, status, throttling
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.tenant import ADMIN_ROLE
+from apps.core.tenant import is_tenant_exempt
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_assist import config, corpus, eval_identities, evals, failover, platforms, service, sse, usage, vectors
 from apps.soul_assist.admin_serializers import (
@@ -54,14 +55,30 @@ from apps.soul_assist.serializers import AssistErrorSerializer, stream_event_ser
 
 
 class IsAdminRole(permissions.BasePermission):
+    """The hall-less ADMIN only: provider, keys and every hall's switch are not one hall's settings
+    (user, 2026-10-29 — an ADMIN bound to a hall reads and writes that hall only)."""
+
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated
-                    and getattr(request.user, "role", None) == ADMIN_ROLE)
+        return bool(request.user and request.user.is_authenticated and is_tenant_exempt(request.user))
+
+
+class IsAnyAdmin(permissions.BasePermission):
+    """Any ADMIN not merely viewing a hall: the per-hall switch, where a hall's ADMIN acts on its own hall only."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and getattr(user, "role", None) == "ADMIN"
+                    and not getattr(user, "hall_view", None))
 
 
 class AdminView(APIView):
     authentication_classes = [OfficerJWTAuthentication]
     permission_classes = [IsAdminRole]
+
+
+def _own_hall_id(request):
+    """None for the hall-less ADMIN (every hall); the hall's id for an ADMIN bound to one."""
+    return None if is_tenant_exempt(request.user) else request.user.tenant_id
 
 
 def _error(detail, code, http=status.HTTP_400_BAD_REQUEST):
@@ -193,29 +210,43 @@ class ConfigPriceView(AdminView):
         return Response(PriceReferenceSerializer(platforms.reference_price(data["platform"], data["model"])).data)
 
 
-def _halls():
+def _halls(only=None):
     from apps.souls.models import Soul
     from apps.tenants.models import Tenant
 
+    halls = Tenant.objects.order_by("code")
+    if only is not None:
+        halls = halls.filter(pk=only)
     homed = dict(Soul.objects.order_by().values_list("home_tenant").annotate(n=Count("id")))
     return [{"id": t.pk, "code": t.code, "display_name": t.display_name, "souls_homed": homed.get(t.pk, 0),
              "assistant_enabled": (t.settings or {}).get("assistant_enabled") is True}
-            for t in Tenant.objects.order_by("code")]
+            for t in halls]
 
 
 class HallListView(AdminView):
+    """Every hall for the hall-less ADMIN; a hall's ADMIN sees its own row only (2026-10-29)."""
+
+    permission_classes = [IsAnyAdmin]
+
     @extend_schema(operation_id="assist_admin_halls_list", responses={200: HallSerializer(many=True)})
     def get(self, request):
-        return Response(HallSerializer(_halls(), many=True).data)
+        return Response(HallSerializer(_halls(_own_hall_id(request)), many=True).data)
 
 
 class HallDetailView(AdminView):
+    """The per-hall switch. A hall's ADMIN may flip its own hall's only; another hall's is 404 (2026-10-29)."""
+
+    permission_classes = [IsAnyAdmin]
+
     @extend_schema(operation_id="assist_admin_hall_update", request=HallUpdateSerializer,
                    responses={200: HallSerializer, 404: AssistErrorSerializer})
     def patch(self, request, tenant_id):
         from apps.audit.signals import explicit_audit_for
         from apps.tenants.models import Tenant
 
+        own = _own_hall_id(request)
+        if own is not None and own != tenant_id:
+            return _error("没有这个殿。", "not_found", status.HTTP_404_NOT_FOUND)
         body = HallUpdateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         on = body.validated_data["assistant_enabled"]

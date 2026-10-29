@@ -49,7 +49,7 @@ def test_the_token_is_the_admin_scoped_to_that_hall_and_the_start_is_audited(adm
     _, data = _entering(admin_user, eu_tenant)
     claims = AccessToken(data["access"])
     assert claims["user_id"] == str(admin_user.pk) and claims["tenant_code"] == "EU_HEAVEN_HELL"
-    assert claims["tenant_code"] != admin_user.tenant.code
+    assert admin_user.tenant_id is None  # only the hall-less ADMIN enters a hall (2026-10-29)
     assert claims["imp_id"] == data["impersonation_id"] and "refresh" not in data
     record = Impersonation.objects.get()
     assert (record.hall_id, record.target_id, record.actor_id) == (eu_tenant.pk, admin_user.pk, admin_user.pk)

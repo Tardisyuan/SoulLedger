@@ -189,7 +189,9 @@ def test_only_the_home_hall_and_admin_may_send_it(cn, eg, eu):
     # 原属租户里没有 `judgment.execute` 的角色
     assert _retry(plan.officer("cn_guard", "GUARDIAN", cn), p, 2).status_code == 403
     _untouched(soul, p)
-    assert _retry(plan.officer("eu_admin", "ADMIN", eu), p, 2).status_code == 200
+    # another hall's ADMIN does not see the plan; the hall-less ADMIN may send it (2026-10-29)
+    assert _retry(plan.officer("eu_admin", "ADMIN", eu), p, 2).status_code == 404
+    assert _retry(plan.officer("g_admin", "ADMIN", None), p, 2).status_code == 200
 
 
 def test_a_failed_event_row_rolls_the_whole_retry_back(cn, eg):

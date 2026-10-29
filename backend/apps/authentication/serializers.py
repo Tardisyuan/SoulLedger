@@ -10,6 +10,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
+from apps.core.tenant import is_tenant_exempt
+
 from . import signin_sessions
 from .models import OfficerMfa
 from .passwords import RoleMinimumLengthValidator, password_change_required, weak_password_reasons
@@ -69,6 +71,15 @@ _UNRANKED_ROLE = 999
 def role_rank(role):
     """Return the privilege rank for `role` (lower = more privileged)."""
     return ROLE_HIERARCHY.get(role, _UNRANKED_ROLE)
+
+
+def may_assign_role(caller, role) -> bool:
+    """Whether `caller` may give someone `role`: never a role more privileged than its own, and ADMIN only
+    from the hall-less ADMIN. A hall's ADMIN appointing another ADMIN is not escalation inside the hall, but
+    it is the one role whose holder could later be made global (2026-10-29: hall admins are hall-scoped)."""
+    if role_rank(getattr(caller, 'role', None)) > role_rank(role):
+        return False
+    return role != 'ADMIN' or is_tenant_exempt(caller)
 
 
 # ---------------------------------------------------------------------------
@@ -142,11 +153,18 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
     mfa_required = serializers.SerializerMethodField()
     # 密码须先改(首次登录 / 管理员重置 / 超期):登录照常成功,但除改密码外的接口 403 `password_change_required`。
     password_change_required = serializers.SerializerMethodField()
+    # 必需角色而未开两步验证(2026-10-29):登录照常成功,但除设置两步验证 / 退出 / 读自己外的接口 403 `mfa_setup_required`。
+    mfa_setup_required = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions", "mfa_enabled", "mfa_required",
-                  "password_change_required"]
+                  "password_change_required", "mfa_setup_required"]
+
+    def get_mfa_setup_required(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.setup_required(obj)
 
     def get_password_change_required(self, obj) -> bool:
         return password_change_required(obj)
@@ -451,7 +469,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "permissions"]
+        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "mfa_setup_required", "permissions"]
         read_only_fields = ["id", "is_active", "username", "role", "organization", "position"]
 
     #: Same list as the login payload's `user.permissions` (`UserWithTenantSerializer.get_permissions`):
@@ -469,9 +487,15 @@ class UserSerializer(serializers.ModelSerializer):
     mfa_enabled = serializers.SerializerMethodField()
     mfa_required = serializers.SerializerMethodField()
     password_change_required = serializers.SerializerMethodField()
+    mfa_setup_required = serializers.SerializerMethodField()
 
     def get_password_change_required(self, obj) -> bool:
         return password_change_required(obj)
+
+    def get_mfa_setup_required(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.setup_required(obj)
 
     def get_mfa_enabled(self, obj) -> bool:
         from apps.authentication import mfa
@@ -634,13 +658,13 @@ def organization_in_tenant(organization, tenant_id):
 class UserCreateSerializer(serializers.ModelSerializer):
     """User serializer for creation with password handling.
 
-    Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
+    Callers other than the hall-less ADMIN (an ADMIN bound to a hall included) are constrained two ways (see ROLE_HIERARCHY above):
     - `tenant` is forced to the caller's own tenant — a client-supplied
       value for another tenant is rejected rather than silently honored.
     - `role` can never be more privileged than the caller's own role, which
       is what blocks a non-ADMIN from creating an ADMIN account (themselves
       or anyone else).
-    ADMIN keeps its existing unrestricted behavior (any tenant, any role).
+    The hall-less ADMIN keeps the unrestricted behavior (any tenant, any role).
     """
     password = serializers.CharField(write_only=True, min_length=8)
 
@@ -655,9 +679,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None
-        caller_role = getattr(caller, 'role', None)
 
-        if caller_role != 'ADMIN':
+        # 只有没绑殿的全局 ADMIN 可以把人建在任意殿;绑殿的 ADMIN 与其他角色一样只能建在本殿(2026-10-29)。
+        if not is_tenant_exempt(caller):
             caller_tenant = getattr(request, 'tenant', None) if request is not None else None
             target_tenant = attrs.get('tenant')
             if target_tenant is None:
@@ -672,7 +696,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 )
 
             target_role = attrs.get('role', 'VIEWER')
-            if role_rank(caller_role) > role_rank(target_role):
+            if not may_assign_role(caller, target_role):
                 raise serializers.ValidationError(
                     {'role': 'Cannot assign a role more privileged than your own.'}
                 )
@@ -738,8 +762,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     def validate_role(self, value):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None
-        caller_role = getattr(caller, 'role', None)
-        if caller_role != 'ADMIN' and role_rank(caller_role) > role_rank(value):
+        # Echoing the unchanged role back is not an assignment.
+        if self.instance is not None and value == self.instance.role:
+            return value
+        if not may_assign_role(caller, value):
             raise serializers.ValidationError(
                 'Cannot assign a role more privileged than your own.'
             )

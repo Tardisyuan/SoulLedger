@@ -440,16 +440,19 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 type Asking = "disable" | "regen" | null;
 
+type ConfirmMethod = "totp" | "password" | "recovery";
+
 /**
- * 「确认是本人」:6 位数字,手机不在身边改用密码。关闭与重新生成恢复码共用这一块(后端也是同一个确认、同一把锁),
- * 失败的几种状态(错了几次、锁到几点、网络)也共用 `StepNotice`。`id` 是两个弹层各自的 testID 前缀。
+ * 「确认是本人」:6 位数字,手机不在身边时 —— 重新生成恢复码改用密码,关闭(`secondFactor`)改用一枚恢复码:
+ * 只凭密码关不掉两步验证(2026-10-29)。两处同一把锁,失败的几种状态(错了几次、锁到几点、网络)共用 `StepNotice`。
+ * `password` 一格在恢复码模式下装的是恢复码。`id` 是两个弹层各自的 testID 前缀。
  */
 function OwnerFields({
-  id, method, onMethod, digits, onDigits, password, onPassword, state, onState, busy,
+  id, method, onMethod, digits, onDigits, password, onPassword, state, onState, busy, secondFactor = false,
 }: {
   id: string;
-  method: "totp" | "password";
-  onMethod: (m: "totp" | "password") => void;
+  method: ConfirmMethod;
+  onMethod: (m: ConfirmMethod) => void;
   digits: string;
   onDigits: (v: string) => void;
   password: string;
@@ -457,6 +460,7 @@ function OwnerFields({
   state: StepState;
   onState: (s: StepState) => void;
   busy: boolean;
+  secondFactor?: boolean;
 }) {
   const { t: tr } = useI18n();
   const idle = () => {
@@ -478,10 +482,36 @@ function OwnerFields({
             locked={busy || state.kind === "locked"}
           />
           <TextLink
-            testID={`${id}-use-password`}
-            title={tr("soul_app.mfa.disable.use_password")}
+            testID={secondFactor ? `${id}-use-recovery` : `${id}-use-password`}
+            title={tr(secondFactor ? "soul_app.mfa.disable.use_recovery" : "soul_app.mfa.disable.use_password")}
             onPress={() => {
-              onMethod("password");
+              onPassword("");
+              onMethod(secondFactor ? "recovery" : "password");
+              onState({ kind: "idle" });
+            }}
+          />
+        </>
+      ) : method === "recovery" ? (
+        <>
+          <Input
+            testID={`${id}-recovery`}
+            label={tr("officer_app.mfa.recovery_label")}
+            value={password}
+            onChangeText={(next) => {
+              onPassword(next);
+              idle();
+            }}
+            editable={!busy && state.kind !== "locked"}
+            keyboardType="ascii-capable"
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={9}
+          />
+          <TextLink
+            testID={`${id}-use-code`}
+            title={tr("soul_app.mfa.login.use_code")}
+            onPress={() => {
+              onMethod("totp");
               onState({ kind: "idle" });
             }}
           />
@@ -520,12 +550,12 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
   const t = useTheme();
   const { t: tr } = useI18n();
   const [asking, setAsking] = useState<Asking>(null);
-  const [method, setMethod] = useState<"totp" | "password">("totp");
+  const [method, setMethod] = useState<ConfirmMethod>("totp");
   const [digits, setDigits] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<StepState>({ kind: "idle" });
   const busy = state.kind === "busy";
-  const confirmReady = method === "totp" ? digits.length === 6 : password.length > 0;
+  const confirmReady = method === "totp" ? digits.length === 6 : method === "recovery" ? password.trim().length >= 8 : password.length > 0;
   const left = status.recovery_codes_remaining;
 
   const close = () => {
@@ -554,7 +584,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
   const disable = async () => {
     setState({ kind: "busy" });
     try {
-      await soulApi.mfaDisable(method === "totp" ? { method: "totp", code: digits } : { method: "password", password });
+      await soulApi.mfaDisable(method === "recovery" ? { method: "recovery", code: password.trim() } : { method: "totp", code: digits });
       setPassword("");
       setDigits("");
       onDisabled();
@@ -646,7 +676,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
           {tr("soul_app.mfa.disable.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.disable.body")}</Txt>
-        <OwnerFields id="disable" method={method} onMethod={setMethod} digits={digits} onDigits={setDigits} password={password} onPassword={setPassword} state={state} onState={setState} busy={busy} />
+        <OwnerFields id="disable" secondFactor method={method} onMethod={setMethod} digits={digits} onDigits={setDigits} password={password} onPassword={setPassword} state={state} onState={setState} busy={busy} />
         <ButtonPair>
           <Button testID="disable-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={close} disabled={busy} style={styles.fill} />
           <Button

@@ -37,7 +37,7 @@ def linear(db):
     tenant = Tenant.objects.get_or_create(code="PTR_T", defaults={"display_name": "Pointer"})[0]
     realm = Realm.objects.create(realm_code="PTR_REALM", name_en="P", civilization="CHINESE", tenant=tenant)
     actor = Actor.objects.create(name="判官", role=ActorRole.JUDGE, realm=realm, tenant=tenant)
-    judge = User.objects.create_user(username="ptr_judge", password="x", role="ADMIN", tenant=tenant)
+    judge = User.objects.create_user(username="ptr_judge", password="x", role="ADMIN", tenant=None)
     judge.actor = actor
     judge.save(update_fields=["actor"])
     soul = Soul.objects.create(name="指针", current_state=SoulState.JUDGING, tenant=tenant)

@@ -5,7 +5,7 @@
  */
 import { type InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api, onPasswordChangeRequired } from "../client";
+import { api, onMfaSetupRequired, onPasswordChangeRequired } from "../client";
 import { passwordReasonKeys } from "../auth";
 import { configurePlatform, type KeyValueStore } from "../../platform/index";
 
@@ -49,6 +49,24 @@ describe("onPasswordChangeRequired", () => {
     body = { detail: "forbidden" };
     await expect(api.get("/users/")).rejects.toBeTruthy();
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("onMfaSetupRequired", () => {
+  afterEach(() => onMfaSetupRequired(null));
+
+  it("fires for 403 `mfa_setup_required` only, and not for the password one", async () => {
+    const mfa = vi.fn();
+    const password = vi.fn();
+    onMfaSetupRequired(mfa);
+    onPasswordChangeRequired(password);
+    body = { detail: "请先开启两步验证。", code: "mfa_setup_required" };
+    await expect(api.get("/souls/")).rejects.toBeTruthy();
+    expect(mfa).toHaveBeenCalledTimes(1);
+    expect(password).not.toHaveBeenCalled();
+    body = { detail: "请先修改密码。", code: "password_change_required" };
+    await expect(api.get("/souls/")).rejects.toBeTruthy();
+    expect(mfa).toHaveBeenCalledTimes(1);
   });
 });
 

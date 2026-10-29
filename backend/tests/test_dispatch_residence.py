@@ -428,9 +428,11 @@ def test_a_home_officer_without_the_codename_is_refused(cn, eg):
     assert soul.tenant_id == eg.pk
 
 
-def test_admin_of_another_tenant_can_end_the_residence(cn, eg, eu):
+def test_the_global_admin_can_end_the_residence_and_another_halls_admin_cannot(cn, eg, eu):
     soul, record = _residing(cn, eg)
-    assert _return(_officer("eu_admin", "ADMIN", eu), record).status_code == 200
+    # 2026-10-29: another hall's ADMIN does not see the record; the hall-less ADMIN may act on it.
+    assert _return(_officer("eu_admin", "ADMIN", eu), record).status_code == 404
+    assert _return(_officer("g_admin", "ADMIN", None), record).status_code == 200
     soul.refresh_from_db()
     assert soul.tenant_id == cn.pk
 
@@ -526,7 +528,7 @@ def test_manual_return_with_an_open_judgment_is_409_with_a_code(cn, eg):
 def test_admin_manual_return_is_blocked_too(cn, eg, eu):
     soul, record = _residing(cn, eg)
     _open_judgment(soul, eg)
-    assert _return(_officer("eu_admin", "ADMIN", eu), record).data["code"] == "open_judgment"
+    assert _return(_officer("g_admin", "ADMIN", None), record).data["code"] == "open_judgment"
 
 
 def test_without_a_plan_withdrawing_the_blocking_judgment_no_longer_returns_the_soul(cn, eg):

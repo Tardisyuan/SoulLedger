@@ -7,7 +7,7 @@
     POST   /auth/mfa/confirm/          向导第三步:验一次码 → 恢复码(明文只给这一次)
     POST   /auth/mfa/complete/         向导「完成」:只有这里开启
     POST   /auth/mfa/recovery-codes/   重新生成恢复码(旧码作废)
-    POST   /auth/mfa/disable/          关闭(动态码或密码二选一确认)
+    POST   /auth/mfa/disable/          关闭(动态码或恢复码二选一确认;只凭密码不行)
 
 拒绝体统一是 `{"error", "code", …}`,`code` ∈ wrong / expired / locked / pending_invalid / not_enabled / already_enabled / not_verified。
 """
@@ -78,9 +78,16 @@ class MfaRecoveryCodesSerializer(serializers.Serializer):
 
 
 class MfaDisableRequestSerializer(serializers.Serializer):
-    method = serializers.ChoiceField(choices=["totp", "password"])
+    method = serializers.ChoiceField(choices=mfa.OWNER_CONFIRM_METHODS)
     code = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(required=False, allow_blank=True)
+
+
+class MfaTurnOffRequestSerializer(serializers.Serializer):
+    """关闭:6 位动态码(`totp`)或一枚恢复码(`recovery`)。密码不再算数(2026-10-29)。"""
+
+    method = serializers.ChoiceField(choices=mfa.SECOND_FACTOR_METHODS)
+    code = serializers.CharField(trim_whitespace=True)
 
 
 _MESSAGES = {
@@ -247,7 +254,7 @@ def complete_view(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def recovery_codes_view(request):
-    """重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。"""
+    """重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。"""
     serializer = MfaDisableRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
@@ -262,20 +269,19 @@ def recovery_codes_view(request):
     return Response({"recovery_codes": mfa.regenerate_recovery_codes(row, request=request)})
 
 
-@extend_schema(request=MfaDisableRequestSerializer, responses={200: MfaStatusSerializer, 400: MfaRefusalSerializer, 409: MfaRefusalSerializer})
+@extend_schema(request=MfaTurnOffRequestSerializer,
+               responses={200: MfaStatusSerializer, 400: MfaRefusalSerializer, 409: MfaRefusalSerializer, 429: MfaRefusalSerializer})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def disable_view(request):
-    """关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。"""
-    serializer = MfaDisableRequestSerializer(data=request.data)
+    """关闭:`method=totp` 验一个动态码,`method=recovery` 验一枚恢复码。只凭密码不行。错了计入同一个锁。"""
+    serializer = MfaTurnOffRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
     row = mfa.get_mfa(request.user)
     if row is None or not row.enabled:
         return _refuse("not_enabled", status.HTTP_409_CONFLICT)
-    outcome = mfa.confirm_owner(
-        row, request.user, method=data["method"], code=data.get("code") or "", password=data.get("password") or "",
-        request=request)
+    outcome = mfa.confirm_second_factor(row, method=data["method"], code=data["code"], request=request)
     if outcome["code"] != "ok":
         return _refuse_outcome(outcome)
     mfa.disable(request.user, request=request)

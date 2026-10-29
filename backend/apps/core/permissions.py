@@ -90,7 +90,7 @@ class TenantPermission(permissions.BasePermission):
     Enforce tenant isolation at the DRF permission layer.
 
     - IsAuthenticated: unauthenticated requests are rejected (401)
-    - SYS_ADMIN (role='ADMIN') bypasses tenant filtering (global read)
+    - A hall-less ADMIN bypasses tenant filtering (global); an ADMIN bound to a hall does not
     - All other authenticated users: request must have a valid tenant
     """
 
@@ -182,8 +182,10 @@ class TenantPermission(permissions.BasePermission):
 
 class IsAdminPermission(permissions.BasePermission):
     """
-    Permission class that only allows ADMIN role users.
-    Use this for admin-only endpoints like user management, role management.
+    Permission class that only allows ADMIN role users — a hall's ADMIN included. It answers "is this an
+    administrator", not "of what": pair it with ``TenantPermission`` and a scoped queryset, which keep a
+    hall-bound ADMIN inside its hall. Configuration shared by every hall takes ``IsGlobalAdminPermission``
+    instead (2026-10-29).
     """
 
     def has_permission(self, request, view):
@@ -193,6 +195,20 @@ class IsAdminPermission(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return getattr(request.user, 'role', None) == 'ADMIN'
+
+
+class IsGlobalAdminPermission(permissions.BasePermission):
+    """Only the hall-less ADMIN (`apps/core/tenant.py::is_tenant_exempt`). For configuration that is not one
+    hall's — halls themselves, roles and the permission matrix, the assistant's provider settings: a write
+    there by a hall's ADMIN would change every other hall (user, 2026-10-29). Answers 403."""
+
+    message = "Only a global administrator (not bound to a hall) may do this."
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and is_tenant_exempt(request.user))
+
+    def has_object_permission(self, request, view, obj):
+        return self.has_permission(request, view)
 
 
 class HasValidApiKey(permissions.BasePermission):

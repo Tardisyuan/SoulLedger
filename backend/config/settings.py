@@ -25,6 +25,9 @@ DEBUG = _env_bool("DEBUG", "False")
 # Permission config is global, not per hall, so an overwrite import by any one hall's admin rewrites
 # every hall's. Off by default; turn on once a cross-hall super-admin role exists.
 PERM_IMPORT_OVERWRITE_ENABLED = _env_bool("PERM_IMPORT_OVERWRITE_ENABLED", "False")
+# 必需角色未开两步验证时令牌受限(apps/authentication/mfa.py::setup_required)。不读环境变量:生产没有关它的开关;
+# 只有测试套件在根 conftest 里默认关掉,专门的测试再打开。
+MFA_SETUP_ENFORCED = True
 
 if DEBUG:
     # In DEBUG mode, allow localhost by default
@@ -683,6 +686,9 @@ SPECTACULAR_SETTINGS = {
         # 助手管理「供应商」区块的平台(2026-09-30):`platform` 另有别的选项集用着。
         "AssistPlatformEnum": "apps.soul_assist.platforms.PLATFORM_IDS",
         "ScopeEnum": "apps.perm.models.Role.SCOPE_CHOICES",
+        # 两步验证:「确认是本人」(密码或动态码)与「关闭」(动态码或恢复码,2026-10-29)两组都叫 `method`。
+        "MfaOwnerConfirmMethodEnum": "apps.authentication.mfa.OWNER_CONFIRM_METHODS",
+        "MfaSecondFactorMethodEnum": "apps.authentication.mfa.SECOND_FACTOR_METHODS",
         # apps.soul_accounts:`status` 与 `desired_form` 两个字段名在别处已有别的选项集。
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",

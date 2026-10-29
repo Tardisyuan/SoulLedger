@@ -55,7 +55,7 @@ def seeded(db):
             codename=codename, defaults={"name": codename, "category": "imp"}
         )
         RolePermission.objects.get_or_create(role=role, permission=perm)
-    admin = User.objects.create_user(username="imp_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="imp_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     viewer = User.objects.create_user(username="imp_viewer", password="x", role="VIEWER", tenant=tenant)
     return {"tenant": tenant, "role": role, "admin": admin, "viewer": viewer}
 

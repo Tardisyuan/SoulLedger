@@ -35,7 +35,7 @@ def test_a_hall_officer_sees_only_its_own_halls_holders(django_user_model):
     reader = django_user_model.objects.create_user(username="rc_reader", password="x", role="JUDGE", tenant=a)
     for i in range(3):
         django_user_model.objects.create_user(username=f"rc_b_{i}", password="x", role="JUDGE", tenant=b)
-    admin = django_user_model.objects.create_user(username="rc_admin", password="x", role="ADMIN", tenant=a)
+    admin = django_user_model.objects.create_user(username="rc_admin", password="x", role="ADMIN", tenant=None)
 
     own = django_user_model.objects.filter(role="JUDGE", tenant=a).count()
     everywhere = django_user_model.objects.filter(role="JUDGE").count()

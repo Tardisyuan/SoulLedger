@@ -13,6 +13,14 @@ jest.mock("@soulledger/core/api/auth", () => ({
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
 
+it("shows only the two-step screen (and signing out) while the server holds the session for it", async () => {
+  renderOfficer(<Shell />, { session: sessionOf({ ...OFFICER, mfa_enabled: false, mfa_setup_required: true }) });
+  expect(screen.getByTestId("mfa-setup-required")).toBeTruthy();
+  expect(screen.getByTestId("mfa-hold-signout")).toBeTruthy();
+  expect(screen.queryByTestId("tab-bar")).toBeNull();
+  await screen.findByTestId("mfa-on");
+});
+
 it("shows only the change screen while the password is owed", () => {
   renderOfficer(<Shell />, { session: sessionOf({ ...OFFICER, password_change_required: true }) });
   expect(screen.getByTestId("password-screen")).toBeTruthy();

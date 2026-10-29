@@ -17,6 +17,7 @@ from apps.workflow.models import (
     NodeStatus,
 )
 from apps.workflow.services import WorkflowService
+from tests.conftest import sign_in
 
 
 @pytest.mark.django_db
@@ -569,7 +570,7 @@ class TestJudgmentWorkflowIntegration:
             role="ADMIN",
             tenant=cn_tenant,
         )
-        client.force_authenticate(user=user)
+        sign_in(client, user)
 
         judgment = Judgment.objects.create(
             soul=soul,
