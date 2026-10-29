@@ -150,6 +150,55 @@ describe("TenantContext rehydration", () => {
 
     expect(result.current.user).toBeNull();
     expect(mockMyRolePermissions).not.toHaveBeenCalled();
+    act(() => void window.dispatchEvent(new Event("focus")));
+    expect(mockMyRolePermissions).not.toHaveBeenCalled();
+  });
+});
+
+// rbac-web M-3 / 待拍板 14:窗口聚焦时重取(30 秒节流),并带回此刻的殿、id、兼任角色。
+describe("TenantContext refresh on window focus", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockMyRolePermissions.mockReset();
+    jest.useFakeTimers({ now: new Date("2026-10-29T00:00:00Z") });
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it("refetches on focus after 30 s, not before, and takes the server's hall, id and extra roles", async () => {
+    seedStoredUser("CN_DIYU");
+    mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: ["soul.read"], details: [] } });
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    await waitFor(() => expect(result.current.user?.permissions).toEqual(["soul.read"]));
+    expect(mockMyRolePermissions).toHaveBeenCalledTimes(1);
+
+    act(() => void window.dispatchEvent(new Event("focus")));
+    expect(mockMyRolePermissions).toHaveBeenCalledTimes(1); // throttled: the load-time fetch was just now
+
+    mockMyRolePermissions.mockResolvedValue({
+      data: {
+        role: "JUDGE", permissions: ["soul.read", "dispatch.read"], details: [],
+        id: 1, tenant: { code: "EU_HEAVEN_HELL", display_name: "欧洲" }, extra_roles: ["GUARDIAN"],
+      },
+    });
+    act(() => void jest.advanceTimersByTime(30_001));
+    act(() => void window.dispatchEvent(new Event("focus")));
+    expect(mockMyRolePermissions).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(result.current.user?.permissions).toEqual(["soul.read", "dispatch.read"]));
+    expect(result.current.tenantCode).toBe("EU_HEAVEN_HELL");
+    expect(result.current.user?.extra_roles).toEqual(["GUARDIAN"]);
+  });
+
+  it("a failed focus refetch keeps the last answer instead of closing every gate", async () => {
+    seedStoredUser();
+    mockMyRolePermissions.mockResolvedValue({ data: { role: "JUDGE", permissions: ["soul.read"], details: [] } });
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    await waitFor(() => expect(result.current.user?.permissions).toEqual(["soul.read"]));
+    mockMyRolePermissions.mockRejectedValue(new Error("offline"));
+    act(() => void jest.advanceTimersByTime(30_001));
+    act(() => void window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(mockMyRolePermissions).toHaveBeenCalledTimes(2));
+    expect(result.current.user?.permissions).toEqual(["soul.read"]);
+    expect(result.current.tenantCode).toBe("CN_DIYU");
   });
 });
 

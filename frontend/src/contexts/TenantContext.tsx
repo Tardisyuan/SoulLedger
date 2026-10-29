@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   useEffect,
   type ReactNode,
@@ -64,6 +65,8 @@ export interface AuthUser {
   mfa_required?: boolean;
   /** 首次登录 / 管理员重置 / 密码超期:除改密码外的接口 403,`AppLayout` 把人带去个人中心改密码。 */
   password_change_required?: boolean;
+  /** 兼任的角色(`GET /perm/role-permissions/` 带回)。侧栏缓存键含它:兼了角色,菜单跟着变。 */
+  extra_roles?: string[];
 }
 
 // Safe subset persisted to localStorage (no permissions)
@@ -108,6 +111,8 @@ interface TenantContextValue {
 // ── Constants ────────────────────────────────────────────────────────
 
 const USER_KEY = "soulledger_user";
+/** 窗口聚焦重取权限的最短间隔。 */
+export const PERMISSION_REFRESH_MS = 30_000;
 
 // ── Context ──────────────────────────────────────────────────────────
 
@@ -139,6 +144,67 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     return () => onPasswordChangeRequired(null);
   }, []);
 
+  /**
+   * 重取本人的权限、角色与身份(`GET /perm/role-permissions/`):整页加载时一次,之后窗口聚焦时再一次,
+   * 两次之间至少隔 `PERMISSION_REFRESH_MS`(rbac-web M-3 / 待拍板 14)。此前只在加载时取,管理员改了授权、
+   * 调了殿,对方要自己刷新页面;`tenant` / `id` 更是只来自 24 小时的本地信封,前端的「本殿」判断最长按旧殿算。
+   * 失败时什么也不改:加载时那一次之前权限已清空(门关着,不猜开),聚焦时那一次保留上一份答案。
+   */
+  const lastRefresh = useRef(0);
+  const refreshFromServer = useCallback(() => {
+    lastRefresh.current = Date.now();
+    permApi
+      .myRolePermissions()
+      .then(({ data }) => {
+        setUserState((prev) =>
+          prev
+            ? {
+                ...prev,
+                permissions: data?.permissions ?? [],
+                // The role comes back in the same response and used to be
+                // **dropped on the floor** — only `data.permissions` was
+                // read. `role` therefore stayed whatever the localStorage
+                // envelope said, and that envelope has a 24-hour TTL with
+                // nothing else correcting it.
+                //
+                // That matters more than a stale label, because
+                // `usePermissions.hasPermission` opens with
+                // `if (user?.role === "ADMIN") return true`. An ADMIN
+                // demoted to VIEWER kept sailing through **every**
+                // `<RequirePermission>` in the app for up to 24 hours,
+                // across reloads. The backend answers 403, so nothing is
+                // leaked — what the user gets is a screenful of 403s
+                // instead of a UI that simply does not offer the feature.
+                //
+                // `?? prev.role`: on the one hand a server that omits the
+                // field must not blank the role; on the other, when it
+                // does send one, the server's answer wins.
+                role: (data?.role as AuthUser["role"]) ?? prev.role,
+                // 同一个应答带回此刻的身份;老后端没有这几项时保留原值。
+                id: data?.id ?? prev.id,
+                tenant: data?.tenant !== undefined ? data.tenant : prev.tenant,
+                extra_roles: data?.extra_roles ?? prev.extra_roles,
+              }
+            : prev
+        );
+      })
+      .catch(() => {
+        // Leave permissions as they are — on load they were just emptied (gates closed, not guessed open).
+      });
+  }, []);
+
+  // 窗口聚焦时重取(节流)。没登录不取。
+  const signedIn = user !== null;
+  useEffect(() => {
+    if (!signedIn) return;
+    const onFocus = () => {
+      if (Date.now() - lastRefresh.current < PERMISSION_REFRESH_MS) return;
+      refreshFromServer();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [signedIn, refreshFromServer]);
+
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server
   useEffect(() => {
@@ -159,45 +225,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         // and a stale "yes" is worse than a momentary "no". If the fetch
         // fails, permissions stay empty rather than guessed.
         setUserState({ ...envelope.user, permissions: [] });
-        permApi
-          .myRolePermissions()
-          .then(({ data }) => {
-            setUserState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    permissions: data?.permissions ?? [],
-                    // The role comes back in the same response and used to be
-                    // **dropped on the floor** — only `data.permissions` was
-                    // read. `role` therefore stayed whatever the localStorage
-                    // envelope said, and that envelope has a 24-hour TTL with
-                    // nothing else correcting it.
-                    //
-                    // That matters more than a stale label, because
-                    // `usePermissions.hasPermission` opens with
-                    // `if (user?.role === "ADMIN") return true`. An ADMIN
-                    // demoted to VIEWER kept sailing through **every**
-                    // `<RequirePermission>` in the app for up to 24 hours,
-                    // across reloads. The backend answers 403, so nothing is
-                    // leaked — what the user gets is a screenful of 403s
-                    // instead of a UI that simply does not offer the feature.
-                    //
-                    // `?? prev.role`: on the one hand a server that omits the
-                    // field must not blank the role; on the other, when it
-                    // does send one, the server's answer wins.
-                    role: (data?.role as AuthUser["role"]) ?? prev.role,
-                  }
-                : prev
-            );
-          })
-          .catch(() => {
-            // Leave permissions empty — gates stay closed, not guessed open.
-          });
+        refreshFromServer();
       }
     } catch {
       // ignore
     }
-  }, []);
+  }, [refreshFromServer]);
 
   const setUser = useCallback((u: AuthUser | null) => {
     setUserState(u);

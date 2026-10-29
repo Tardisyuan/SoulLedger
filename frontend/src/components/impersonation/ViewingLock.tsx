@@ -2,10 +2,7 @@
 
 import { useEffect, useId, useSyncExternalStore } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useImpersonation } from "./useImpersonation";
-
-/** 只读类权限码(`*.read` / `*.view` / `*.list`):代看时照常可用。其余按写操作处理。 */
-const READ_ONLY_CODENAME = /\.(read|view|list)$/;
+import { READ_ONLY_CODENAME, useImpersonation } from "./useImpersonation";
 
 // 进殿查看:原因只在页面第一处置灰的地方写一次。按挂载顺序登记,第一个登记的挂着说明;它卸载后由下一个接上。
 let order: string[] = [];

@@ -252,3 +252,19 @@ describe("RecycleBinPage filters", () => {
     expect(screen.queryByText("recycle_bin.empty")).not.toBeInTheDocument();
   });
 });
+
+// rbac-web L-6:门外的列表请求按码发 —— 不持 recycle_bin.read 的人进页不白发一条 403。
+describe("RecycleBinPage list request", () => {
+  it("is not sent without recycle_bin.read, and the page says it is refused", async () => {
+    mockUser = { role: "JUDGE", permissions: [] };
+    renderPage();
+    expect((await screen.findAllByText("recycle_bin.title")).length).toBeGreaterThan(0);
+    expect(recycleBinApi.list).not.toHaveBeenCalled();
+  });
+
+  it("is sent with recycle_bin.read", async () => {
+    mockUser = { role: "JUDGE", permissions: ["recycle_bin.read"] };
+    renderPage();
+    await waitFor(() => expect(recycleBinApi.list).toHaveBeenCalled());
+  });
+});

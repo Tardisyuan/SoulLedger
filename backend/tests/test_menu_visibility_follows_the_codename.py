@@ -143,6 +143,19 @@ def test_a_soft_deleted_child_does_not_hold_its_directory_open(
 
 
 @pytest.mark.django_db
+def test_every_seeded_menu_codename_is_in_the_catalogue():
+    """rbac-web L-8:`/social` 与 `/social/follows` 种的是 `social.read`,目录里没有这个码(menus/0030 清掉)。
+    第二道门读 `permission`,菜单编辑页也把它当码展示 —— 一个不存在的码只会误导。"""
+    from apps.perm.models import DEFAULT_PERMISSIONS
+
+    seeded_menus()
+    catalogue = {row[0] for row in DEFAULT_PERMISSIONS}
+    unknown = sorted({(m.path, m.permission) for m in Menu.objects.exclude(permission="") if m.permission not in catalogue})
+    assert unknown == []
+    assert Menu.objects.filter(path="/social").exists()  # the walk reached the social rows
+
+
+@pytest.mark.django_db
 def test_the_seeded_rows_are_unchanged_by_the_new_doors(viewer_user, judge_user):
     """On the real seeded data the codename door admits nobody `roles` did not
     already admit: every seeded `permission` is empty or held exactly by the

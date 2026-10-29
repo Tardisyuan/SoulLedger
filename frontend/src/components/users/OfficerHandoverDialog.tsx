@@ -7,6 +7,7 @@ import {
   handoverProblemsOf,
   officerRefusalOf,
   usersApi,
+  type HandoverOfficer,
   type HandoverPreview,
   type HandoverResult,
   type User,
@@ -23,7 +24,7 @@ export function previewTotal(p: HandoverPreview): number {
   return p.judgments + p.appeals + p.appeals_returned_to_pool + p.city_gods.length + p.letters;
 }
 
-const name = (u: Pick<User, "username" | "display_name">) => u.display_name || u.username;
+const name = (u: { display_name?: string; username?: string }) => u.display_name || u.username || "";
 
 /**
  * 「移交在途案件」(第五十四批 H-1 ~ H-4):对话框。选好交出人与接手人就自动预览(没有「预览」按钮),
@@ -31,33 +32,34 @@ const name = (u: Pick<User, "username" | "display_name">) => u.display_name || u
  * 有 `problems`(或提交时真收到 409)= 少见的真阻断,danger 框、接手人描红、提交置灰;全 0 = `empty`、提交置灰。
  * 提交按钮写总件数。结果写实际件数:比预览少才有 `result_fewer`,有申诉回池才有 `result_pool`。
  *
+ * 不带 `from`:从审判队列进来(持 judgment.assign 的殿主,rbac-web M-7),交出人也在下拉里选。
+ * 人选来自 `GET /judgment/handover/officers/`(judgment.assign,本殿在职官员),不是 `users/`(ADMIN + user.manage)。
+ *
  * `deactivate`:从「停用」进来(手上有事的官员,后端不带接手人就 409)。交出人锁定,提交走
  * `usersApi.deactivate(from, to)` —— 交接与停用在后端同一个事务里;成功后关掉对话框并提示一句。
  */
-export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { from: User; onClose: () => void; deactivate?: boolean }) {
+export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { from?: User; onClose: () => void; deactivate?: boolean }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [fromId, setFromId] = useState(from.id);
+  const [fromId, setFromId] = useState<number | null>(from?.id ?? null);
   const [toId, setToId] = useState<number | null>(null);
   const [result, setResult] = useState<{ done: HandoverResult; planned: number; to: string } | null>(null);
   const [blocked, setBlocked] = useState<HandoverPreview["problems"] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
-  // 本殿在职官员。后端另按殿与角色校验;这里只是不把不可能的人放进下拉。
+  // 那一殿的在职官员(后端按殿、在职、非灵魂筛好)。全局 ADMIN 从用户页进来时按交出人的殿问;殿内的人问本殿。
   const officersQuery = useQuery({
-    queryKey: [...userKeys.all, "handover-officers", from.tenant?.id ?? null],
-    queryFn: async () => (await usersApi.list({ is_active: "true", page_size: 200 })).data.results,
+    queryKey: [...userKeys.all, "handover-officers", from?.tenant?.id ?? null],
+    queryFn: async () => (await handoverApi.officers(from?.tenant?.id)).data,
   });
-  const officers = (officersQuery.data ?? []).filter(
-    (u) => u.role !== "SOUL" && u.is_active !== false && (u.tenant?.id ?? null) === (from.tenant?.id ?? null),
-  );
-  const source = officers.find((u) => u.id === fromId) ?? (fromId === from.id ? from : undefined);
+  const officers: HandoverOfficer[] = officersQuery.data ?? [];
+  const source = officers.find((u) => u.id === fromId) ?? (from && fromId === from.id ? from : undefined);
   const target = officers.find((u) => u.id === toId);
 
   const previewQuery = useQuery({
     queryKey: ["officer-handover-preview", fromId, toId],
-    queryFn: async () => (await handoverApi.preview(fromId, toId as number)).data,
-    enabled: toId !== null && fromId !== toId,
+    queryFn: async () => (await handoverApi.preview(fromId as number, toId as number)).data,
+    enabled: fromId !== null && toId !== null && fromId !== toId,
     gcTime: 0,
     staleTime: 0,
     retry: false,
@@ -71,11 +73,11 @@ export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { f
     mutationFn: async () =>
       deactivate
         ? (await usersApi.deactivate(String(fromId), toId as number), null)
-        : (await handoverApi.commit(fromId, toId as number)).data,
+        : (await handoverApi.commit(fromId as number, toId as number)).data,
     onSuccess: (done) => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all });
       if (done === null) {
-        showToast(t("officerHandover.deactivated_toast", { name: name(from) }), "success");
+        showToast(t("officerHandover.deactivated_toast", { name: source ? name(source) : "" }), "success");
         onClose();
         return;
       }
@@ -187,18 +189,18 @@ export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { f
         {deactivate && (
           <p role="alert" className="text-sm text-[oklch(var(--color-ink))]" data-testid="handover-deactivate-prompt">
             <span aria-hidden="true">! </span>
-            {t("officerHandover.deactivate_prompt", { name: name(from) })}
+            {t("officerHandover.deactivate_prompt", { name: source ? name(source) : "" })}
           </p>
         )}
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("officerHandover.intro")}</p>
         <SelectField
           label={t("officerHandover.from")}
-          value={String(fromId)}
+          value={fromId === null ? "" : String(fromId)}
           disabled={deactivate}
-          onChange={pick((id) => id !== null && setFromId(id))}
+          onChange={pick(setFromId)}
           options={[
-            ...(officers.some((u) => u.id === from.id) ? [] : [{ value: String(from.id), label: name(from) }]),
-            ...options(toId).slice(1),
+            ...(from && !officers.some((u) => u.id === from.id) ? [{ value: String(from.id), label: name(from) }] : []),
+            ...options(toId).slice(from ? 1 : 0),
           ]}
         />
         <SelectField

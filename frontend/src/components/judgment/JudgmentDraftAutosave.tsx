@@ -11,6 +11,7 @@ import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 import { placementDraftFields, type Placement } from "@/src/components/judgment/JudgmentPlacement";
 import { prefersReducedMotion } from "@/lib/motion";
+import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 
 /**
  * 丁 · 判词的自动保存(`PATCH /judgment/{id}/draft/`),连同 戊 · 发落 的选择(目的地、刑期、永恒):
@@ -47,6 +48,8 @@ export function useDraftAutosave({
   /** 未结案且持 judgment.execute。 */
   enabled: boolean;
 }) {
+  // 代看 / 进殿查看是只读:服务端拒一切写(`impersonation_read_only`),这里就不发 PATCH。
+  const readOnly = useImpersonation() !== null;
   const queryClient = useQueryClient();
   const save = useSaveJudgmentDraft(judgmentId);
   const [editSeq, setEditSeq] = useState(0);
@@ -61,7 +64,7 @@ export function useDraftAutosave({
   const saving = save.isPending;
 
   useEffect(() => {
-    if (!enabled || conflict || saving || status === "concluded" || editSeq <= attempted.current) return;
+    if (!enabled || readOnly || conflict || saving || status === "concluded" || editSeq <= attempted.current) return;
     const timer = setTimeout(() => {
       const cached = queryClient.getQueryData<JudgmentDetail>(judgmentKeys.detail(judgmentId));
       const seq = editSeq;
@@ -99,7 +102,7 @@ export function useDraftAutosave({
     return () => clearTimeout(timer);
     // `save` is a fresh object each render; `saving` is the part of it that matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, conflict, saving, status, editSeq, notes, verdict, placement, judgmentId, queryClient]);
+  }, [enabled, readOnly, conflict, saving, status, editSeq, notes, verdict, placement, judgmentId, queryClient]);
 
   /**
    * 把服务端那一版写进缓存,下一次保存就以它的版本号为底。`whole=false` 只取版本号:

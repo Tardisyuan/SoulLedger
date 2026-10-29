@@ -14,6 +14,15 @@ import { WebhooksPanel } from "@/src/components/death-sync/WebhooksPanel";
    `IsAdminPermission`, same as the keys tab beside it. Non-ADMIN never mounts
    the panel, so no webhook request is made at all. */
 export default function DeathSyncWebhooksRoute() {
+  // 页级门在最外层(rbac-web L-1),与其它页同一个形状。
+  return (
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <DeathSyncWebhooksRouteContent />
+    </RequireAdmin>
+  );
+}
+
+function DeathSyncWebhooksRouteContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   return (
@@ -28,9 +37,7 @@ export default function DeathSyncWebhooksRoute() {
       subtitle={t("death_sync.subtitle")}
       tabs={<DeathSyncTabs />}
     >
-      <RequireAdmin fallback={<PermissionDenied />}>
-        <WebhooksPanel />
-      </RequireAdmin>
+      <WebhooksPanel />
     </PageShell>
   );
 }

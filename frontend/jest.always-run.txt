@@ -46,6 +46,7 @@ src/__tests__/jestRunsNextVendoredReact.test.ts package.json
 src/__tests__/ledgerPaletteContract.test.ts *
 src/__tests__/loginStatutes.test.ts backend config
 src/__tests__/printLayout.test.tsx frontend
+src/__tests__/menuButtonGates.test.ts frontend
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts *
 src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend

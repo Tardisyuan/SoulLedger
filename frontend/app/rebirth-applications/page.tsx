@@ -188,10 +188,13 @@ const TABS = ["applications", "shortenings"] as const;
 
 export default function RebirthApplicationsPage() {
   // `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。
+  // 页级门(rbac-web L-1):两个页签的列表都要 workflow.read。
   return (
-    <Suspense fallback={null}>
-      <RebirthApplicationsTabs />
-    </Suspense>
+    <RequirePermission permissions="workflow.read" fallback={<PermissionDenied permission="workflow.read" />}>
+      <Suspense fallback={null}>
+        <RebirthApplicationsTabs />
+      </Suspense>
+    </RequirePermission>
   );
 }
 

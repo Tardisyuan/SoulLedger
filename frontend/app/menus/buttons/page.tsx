@@ -16,6 +16,8 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { QueryError } from "@/src/components/ui/PageError";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * 菜单按钮配置(第四十批 W-b)。只列真正接上的关键按钮(`WIRED_BUTTONS`),按菜单分组,一行一个:
@@ -26,6 +28,15 @@ import { ListSkeleton } from "@/components/ui/skeleton";
  * 只有持 `menu.manage` 的人能拨开关(后端同一个码);其余人只看。
  */
 export default function MenuButtonsPage() {
+  // 页级门(rbac-web L-1):按钮配置的读接口要 menu.read;拨开关另要 menu.manage。
+  return (
+    <RequirePermission permissions="menu.read" fallback={<PermissionDenied permission="menu.read" />}>
+      <MenuButtonsPageContent />
+    </RequirePermission>
+  );
+}
+
+function MenuButtonsPageContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();

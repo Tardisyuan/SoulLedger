@@ -22,7 +22,7 @@ import { OfficerHandoverDialog, previewTotal } from "@/src/components/users/Offi
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { DataTable, parseOrdering, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * The row `?username=` located: s2 底(选中行),**不加行首色标** —— 规范 v2 B12 把行首色标
@@ -51,10 +52,13 @@ const USERS_FILTER_FIELDS = ["role", "mfa", "ordering"] as const;
 
 export default function UsersPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
+  // 页级门(rbac-web L-1):users/ 是 IsAdmin + user.manage;殿主的交接入口在审判队列。
   return (
-    <Suspense fallback={null}>
-      <UsersRoute />
-    </Suspense>
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <Suspense fallback={null}>
+        <UsersRoute />
+      </Suspense>
+    </RequireAdmin>
   );
 }
 

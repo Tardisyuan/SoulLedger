@@ -134,7 +134,9 @@ export const dispositionKeys = {
  */
 export const menuKeys = {
   all: ["menus"] as const,
-  sidebar: (role?: string, signedIn?: boolean) => ["menus-sidebar", role, signedIn] as const,
+  // 兼任角色也进键(rbac-web 待拍板 14):兼了角色、侧栏能看的菜单就变了,只按主角色缓存会让新菜单晚 5 分钟出现。
+  sidebar: (role?: string, signedIn?: boolean, extraRoles: readonly string[] = []) =>
+    ["menus-sidebar", role, signedIn, [...extraRoles].sort().join(",")] as const,
   /**
    * Both roots a menu write touches. Spread into separate invalidate calls —
    * TanStack matches one key per call, so a single call cannot cover two roots.

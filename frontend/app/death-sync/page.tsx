@@ -22,6 +22,8 @@ import { DeathSyncTabs } from "@/src/components/death-sync/DeathSyncTabs";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * Sync status → badge tone. 规范 v1:徽章无底色,颜色之外配一枚字形(`StatusBadge`)。
@@ -55,10 +57,13 @@ const canRetry = (reg: DeathRegistration) =>
 export default function DeathSyncPage() {
   // useSearchParams needs a Suspense boundary or the route opts out of static
   // rendering (Next.js App Router) — same as app/judgment/queue/page.tsx.
+  // 页级门(rbac-web L-1):死亡登记读接口是 IsAdmin。
   return (
-    <Suspense fallback={null}>
-      <DeathSyncRoute />
-    </Suspense>
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <Suspense fallback={null}>
+        <DeathSyncRoute />
+      </Suspense>
+    </RequireAdmin>
   );
 }
 

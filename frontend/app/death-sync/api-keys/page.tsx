@@ -14,6 +14,15 @@ import { ApiKeysPanel } from "@/src/components/death-sync/ApiKeysPanel";
    `IsAdminPermission`, so the 权限 page cannot grant it. Non-ADMIN never mounts
    the panel, so no keys request is made at all. */
 export default function DeathSyncApiKeysRoute() {
+  // 页级门在最外层(rbac-web L-1),与其它页同一个形状。
+  return (
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <DeathSyncApiKeysRouteContent />
+    </RequireAdmin>
+  );
+}
+
+function DeathSyncApiKeysRouteContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   return (
@@ -28,9 +37,7 @@ export default function DeathSyncApiKeysRoute() {
       subtitle={t("death_sync.subtitle")}
       tabs={<DeathSyncTabs />}
     >
-      <RequireAdmin fallback={<PermissionDenied />}>
-        <ApiKeysPanel />
-      </RequireAdmin>
+      <ApiKeysPanel />
     </PageShell>
   );
 }
