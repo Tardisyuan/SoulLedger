@@ -62,7 +62,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """Leave all joined groups."""
-        for group_attr in ("user_group", "tenant_group"):
+        for group_attr in ("user_group", "tenant_group", "officers_group"):
             if hasattr(self, group_attr):
                 await self.channel_layer.group_discard(
                     getattr(self, group_attr), self.channel_name
@@ -197,6 +197,23 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return
         await self.close(code=WS_CLOSE_SESSION_ENDED)
 
+    async def permission_refresh(self, event):
+        """服务端推的权限刷新(第 10 条 / M-1,`apps/events/realtime.py::push_permission_refresh`)。
+
+        与客户端发 `permission.refresh` 同一个重算;门控 `realtime_event` 读的就是这份集合,所以被降级的人
+        即使客户端什么都不做,从这一刻起也收不到已无权看的事件。发给本人的(`targeted`)总回一帧;广播的只有
+        集合变了才回,前端收到即重取权限。"""
+        if not self.user or not getattr(self.user, "is_authenticated", False):
+            return
+        fresh = await self._resolve_permissions()
+        if not event.get("targeted") and fresh == set(self.permissions):
+            return
+        self._apply_permissions(fresh)
+        await self.send(text_data=json.dumps({
+            "type": "permission.refreshed",
+            "permissions": sorted(self.permissions),
+        }))
+
     # Legacy handler — backward compat with old notification_push
     async def notification_push(self, event):
         """Handle legacy notification_push — forward data to client."""
@@ -213,6 +230,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         # User group (targeted)
         self.user_group = ChannelNaming.user_group(self.user.id)
         await self.channel_layer.group_add(self.user_group, self.channel_name)
+
+        # Every officer socket: grant changes are broadcast here (`push_permission_refresh`).
+        self.officers_group = ChannelNaming.OFFICERS_GROUP
+        await self.channel_layer.group_add(self.officers_group, self.channel_name)
 
         # Tenant group (broadcast)
         tenant_code = getattr(self.tenant, "code", None)

@@ -20,7 +20,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.core.schema import DetailResponseSerializer
 
-from . import mfa, signin_sessions
+from . import mfa, refresh_cookie, signin_sessions
 from .models import LoginLog, UserRole
 from .serializers import LoginResponseSerializer, issue_tokens
 from .views import _get_client_ip
@@ -160,7 +160,7 @@ def verify_view(request):
                                      officer_app=bool(pending.get("officer_app")), session=session))
     if device:
         mfa.set_device_cookie(response, device)
-    return response
+    return refresh_cookie.move_to_cookie(request, response)
 
 
 @extend_schema(responses={200: MfaStatusSerializer})

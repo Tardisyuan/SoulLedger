@@ -151,16 +151,15 @@ class TestUserManagementAPI:
         assert user.check_password("oldpass123")
 
     def test_reset_password(self):
-        """POST /api/v1/users/{id}/reset_password/ returns 200 with new password."""
+        """POST /api/v1/users/{id}/reset_password/ returns a one-time setup link, never a password (decision 8)."""
         user = User.objects.create_user(username="resetpwuser", password="oldpass123", role="VIEWER", tenant=self.cn_tenant)
 
         response = self.client.post(f"/api/v1/users/{user.id}/reset_password/")
         assert response.status_code == 200
-        assert "password" in response.data
-        new_password = response.data["password"]
-        # Verify new password works
+        assert "password" not in response.data
+        assert "link" in response.data
         user.refresh_from_db()
-        assert user.check_password(new_password)
+        assert not user.check_password("oldpass123")
 
     def test_batch_activate_users(self):
         """POST /api/v1/users/batch_activate/ activates multiple users."""

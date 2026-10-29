@@ -730,12 +730,17 @@ def officer_messages(conversation, officer, *, request=None, limit=50, before=No
             "account__user", "account__soul"
         )
     }
+    from apps.authentication.impersonation import impersonating
+
+    # 代看(只读)时读信不留痕:不对账、不记「查看殿司收件箱」—— 那一行会记在被看的人名下(第 15 条)。
+    viewing_as = request is not None and impersonating(request)
     rows = []
     if before:
         timeline = client.messages_before(conversation.room_id, before, limit=limit)
     else:
         timeline = client.recent_messages(conversation.room_id, limit=limit)
-        reconcile_inbox(conversation, timeline, client.service_user)
+        if not viewing_as:
+            reconcile_inbox(conversation, timeline, client.service_user)
     from apps.chat import images
 
     pictures = images.officer_views(conversation, officer, timeline, client.service_user,
@@ -753,7 +758,8 @@ def officer_messages(conversation, officer, *, request=None, limit=50, before=No
             "image": pictures.get(message["event_id"]),
             "timestamp": message["timestamp"],
         })
-    audit("READ", conversation, "查看殿司收件箱", actor=officer, request=request)
+    if not viewing_as:
+        audit("READ", conversation, "查看殿司收件箱", actor=officer, request=request)
     return rows
 
 

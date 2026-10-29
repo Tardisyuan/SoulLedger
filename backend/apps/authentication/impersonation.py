@@ -54,6 +54,12 @@ def is_impersonation(token) -> bool:
     return token is not None and IMP_ID in token
 
 
+def impersonating(request) -> bool:
+    """这一次请求是代看(或进殿查看)。读路径上会顺手写库的地方(标已读、补建资料、对账、读信审计……)
+    见到它就跳过:代看只读,GET 也不能替被看的人留下痕迹(2026-10-29 用户决定第 15 条)。"""
+    return getattr(request, "impersonation", None) is not None
+
+
 def refuse(code, detail):
     return PermissionDenied({"detail": detail, "code": code})
 

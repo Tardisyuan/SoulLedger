@@ -11,7 +11,7 @@ from django.core.cache import cache
 from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import (
     action,
     api_view,
@@ -42,10 +42,10 @@ from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
-from apps.events.realtime import close_user_sockets
+from apps.events.realtime import close_user_sockets, push_permission_refresh
 from apps.notifications import categories as notification_categories
 
-from . import signin_sessions
+from . import refresh_cookie, signin_sessions
 from .officer_reset import _audit
 from .passwords import (
     RoleMinimumLengthValidator,
@@ -75,6 +75,7 @@ from .serializers import (
     PasswordResetResultSerializer,
     PublicCivilizationSerializer,
     ResetPasswordSerializer,
+    SecondFactorProofSerializer,
     SetNewPasswordSerializer,
     TokenRefreshSerializer,
     UserBatchDeactivateResultSerializer,
@@ -126,6 +127,45 @@ def _open_work(user):
 def _open_work_refusal(open_work):
     return Response({'error': 'The officer still holds open work; hand it over first.',
                      'code': 'officer_has_open_work', 'open_work': open_work}, status=status.HTTP_409_CONFLICT)
+
+
+def _admin_target_refusal(request, target):
+    """管理员对另一位管理员的重置 / 停用 / 删除 / 改资料或角色(2026-10-29 用户决定第 8 条):
+    只许**没绑殿**的 ADMIN 做,且这一次请求要带操作人自己的第二因素(`mfa_method` = totp | recovery、`mfa_code`),
+    与关闭两步验证同一套校验、计数与锁定(`mfa.confirm_second_factor`)。目标不是 ADMIN、或是自己 → None(放行)。
+    拒绝时返回 Response:403 `admin_target_global_only` / `second_factor_unavailable`(自己没开两步验证)/
+    `second_factor_required`(没带码),400 wrong / expired(带剩余次数),429 locked。"""
+    from . import mfa
+    from .mfa_views import _refuse_outcome
+
+    if target.role != UserRole.ADMIN or target.pk == request.user.pk:
+        return None
+    if request.user.role != UserRole.ADMIN or request.user.tenant_id is not None:
+        return Response({'error': 'Only the hall-less administrator may act on another administrator.',
+                         'code': 'admin_target_global_only'}, status=status.HTTP_403_FORBIDDEN)
+    row = mfa.get_mfa(request.user)
+    if row is None or not row.enabled:
+        return Response({'error': 'Turn on two-step verification before acting on another administrator.',
+                         'code': 'second_factor_unavailable'}, status=status.HTTP_403_FORBIDDEN)
+    method = request.data.get('mfa_method') or 'totp'
+    code = str(request.data.get('mfa_code') or '').strip()
+    if method not in mfa.SECOND_FACTOR_METHODS or not code:
+        return Response({'error': 'Enter your own two-step verification code.', 'code': 'second_factor_required'},
+                        status=status.HTTP_403_FORBIDDEN)
+    outcome = mfa.confirm_second_factor(row, method=method, code=code, request=request)
+    return None if outcome['code'] == 'ok' else _refuse_outcome(outcome)
+
+
+def _self_refusal(code, message):
+    return Response({'error': message, 'code': code}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _end_everything(user):
+    """停用 = 退出全部设备(第 9 条):刷新令牌拉黑、登录设备退出、`session_version` +1(已签发的 access 立刻失效)、
+    推送登记删掉、已开的实时连接全关。单个停用、批量停用、`PATCH is_active=false`、DELETE 都走这里。调用方负责事务。"""
+    end_sessions(user)
+    end_push_registrations(user)
+    close_user_sockets(user.pk)
 
 
 class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
@@ -288,6 +328,55 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
         return qs
 
+    def update(self, request, *args, **kwargs):
+        """改用户。对另一位管理员:只许没绑殿的 ADMIN + 自己的两步验证码(改邮箱再走邮箱重置 = 接管,所以任何字段都算)。
+        `is_active=false` 与 `POST deactivate/` 同一套(第 9 条 / M-2):不能停用自己;手上有在途的事 → 409
+        `officer_has_open_work`(交接要走 deactivate 的 `handover_to`);停用后退出全部设备。"""
+        target = self.get_object()
+        refused = _admin_target_refusal(request, target)
+        if refused:
+            return refused
+        if target.is_active and 'is_active' in request.data:
+            try:
+                deactivating = serializers.BooleanField().to_internal_value(request.data['is_active']) is False
+            except DRFValidationError:
+                deactivating = False  # 序列化器自己会答 400
+            if deactivating:
+                if target.pk == request.user.pk:
+                    return _self_refusal('cannot_deactivate_self', 'You cannot deactivate your own account.')
+                work = _open_work(target)
+                if work:
+                    return _open_work_refusal({str(target.pk): work})
+        return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        before = serializer.instance
+        was_active, old_roles = before.is_active, (before.role, list(before.extra_roles or []))
+        with transaction.atomic():
+            super().perform_update(serializer)
+            user = serializer.instance
+            if was_active and not user.is_active:
+                _end_everything(user)
+        if (user.role, list(user.extra_roles or [])) != old_roles:
+            push_permission_refresh(user.pk)
+
+    def destroy(self, request, *args, **kwargs):
+        """删除 = 软删,与停用同一套(第 9 条 / M-2):不能删自己;对管理员同 `update` 的规则;
+        手上有在途的事 → 409;删后退出全部设备。"""
+        target = self.get_object()
+        if target.pk == request.user.pk:
+            return _self_refusal('cannot_delete_self', 'You cannot delete your own account.')
+        refused = _admin_target_refusal(request, target)
+        if refused:
+            return refused
+        work = _open_work(target)
+        if work:
+            return _open_work_refusal({str(target.pk): work})
+        with transaction.atomic():
+            self.perform_destroy(target)
+            _end_everything(target)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @extend_schema(request=UserMfaResetSerializer, responses={200: DetailResponseSerializer, 400: OpenApiTypes.OBJECT, 409: ErrorResponseSerializer})
     @action(detail=True, methods=['post'], url_path='reset-mfa')
     def reset_mfa(self, request, pk=None):
@@ -298,6 +387,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user = self.get_object()
         serializer = UserMfaResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        refused = _admin_target_refusal(request, user)
+        if refused:
+            return refused
         if not mfa.is_enabled(user):
             return Response({"error": "该账号未开启两步验证", "code": "not_enabled"}, status=status.HTTP_409_CONFLICT)
         mfa.admin_reset(user, actor=request.user, reason=serializer.validated_data["reason"], request=request)
@@ -326,6 +418,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user = self.get_object()
         body = UserDeactivateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
+        if user.pk == request.user.pk:
+            return _self_refusal('cannot_deactivate_self', 'You cannot deactivate your own account.')
+        refused = _admin_target_refusal(request, user)
+        if refused:
+            return refused
         to = body.validated_data.get('handover_to')
         try:
             with transaction.atomic():
@@ -342,25 +439,26 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     handover.commit(user, target, user.tenant_id, actor=request.user, request=request)
                 user.is_active = False
                 user.save(update_fields=['is_active'])
+                _end_everything(user)
         except handover.HandoverRefusedError as exc:
             return Response(exc.as_payload(), status=exc.status)
-        close_user_sockets(user.pk)  # 已连上的实时连接一并关(握手本来就拒停用账号)
         return Response(UserManagementSerializer(user).data)
 
-    @extend_schema(responses=PasswordResetResultSerializer)
+    @extend_schema(request=SecondFactorProofSerializer,
+                   responses={200: PasswordResetResultSerializer, 400: OpenApiTypes.OBJECT, 403: ErrorResponseSerializer,
+                              429: OpenApiTypes.OBJECT})
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
-        """重置用户密码，返回随机生成的新密码"""
+        """重置密码(第 8 条):旧密码当场作废、所有设备退出,返回 24 小时、只能用一次的设置链接,由管理员转交本人。
+        不再返回明文密码。对另一位管理员:只许没绑殿的 ADMIN,并带自己的两步验证码(`_admin_target_refusal`)。"""
+        from . import officer_invite
+
         user = self.get_object()
-        new_password = secrets.token_urlsafe(12)
-        with transaction.atomic():
-            set_officer_password(user, new_password, must_change=True)
-            # 旧密码的持有者(含已登录的设备)不能留着:与本人改密 / 邮箱重置同一套收尾。
-            end_sessions(user)
-            end_push_registrations(user)
-            _audit(user, "管理员重置官员密码,其所有设备已退出", request=request,
-                   changes={"password_reset": True, "sessions_revoked": True, "by": str(request.user.pk)})
-        return Response({'password': new_password})
+        refused = _admin_target_refusal(request, user)
+        if refused:
+            return refused
+        link, seconds = officer_invite.issue_setup_link(user, actor=request.user, request=request)
+        return Response({'link': link, 'expires_in': seconds})
 
     def _batch_targets(self, user_ids):
         """The users a batch toggle may touch (BP-17).
@@ -402,10 +500,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
             if targets:
                 create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
+            if not active:
+                for target in targets:
+                    _end_everything(target)
         if active:
             return Response({'updated': updated})
-        for target in targets:
-            close_user_sockets(target.pk)
         return Response({'updated': updated, 'held': held})
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)
@@ -435,6 +534,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         body = AssignRolesSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
+        refused = _admin_target_refusal(request, user)
+        if refused:
+            return refused
         if 'role' not in data and 'extra_roles' not in data:
             return Response({'error': 'role or extra_roles is required'}, status=status.HTTP_400_BAD_REQUEST)
         new_role = data.get('role', user.role)
@@ -469,6 +571,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.role = new_role
         user.extra_roles = extras
         user.save(update_fields=['role', 'extra_roles'])
+        # 已开的实时连接按新角色重算权限(第 10 条 / M-1):不断开,推一次 permission.refresh。
+        push_permission_refresh(user.pk)
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(request=OfficerInviteSerializer, responses={201: UserManagementSerializer, 200: UserManagementSerializer,
@@ -864,6 +968,7 @@ class LoginView(TokenObtainPairView):
                     ip_address=ip_address,
                     user_agent=user_agent,
                 )
+                refresh_cookie.move_to_cookie(request, response)
             else:
                 # Login failed (but returned response) - increment rate counter
                 _count_failure()
@@ -934,6 +1039,22 @@ class RefreshView(TokenRefreshView):
     permission_classes = [AllowAny]
     serializer_class = TokenRefreshSerializer
 
+    def post(self, request, *args, **kwargs):
+        """App 在正文里带 `refresh`;网页不带,用 httpOnly cookie(`refresh_cookie.py`,核 Origin),新令牌写回 cookie。"""
+        from rest_framework_simplejwt.exceptions import InvalidToken
+
+        if request.data.get("refresh"):
+            return refresh_cookie.move_to_cookie(request, super().post(request, *args, **kwargs))
+        raw, refusal = refresh_cookie.from_cookie(request)
+        if refusal:
+            return Response({"detail": "Origin not allowed", "code": refusal}, status=status.HTTP_403_FORBIDDEN)
+        serializer = self.get_serializer(data={"refresh": raw} if raw else {})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0]) from exc
+        return refresh_cookie.move_to_cookie(request, Response(serializer.validated_data, status=status.HTTP_200_OK))
+
 
 @extend_schema(
     request=LogoutRequestSerializer,
@@ -949,19 +1070,29 @@ class RefreshView(TokenRefreshView):
 def logout_view(request):
     """
     POST /api/v1/auth/logout/
-    Blacklist the refresh token.
+    Blacklist the refresh token: the one in the body (apps), or the web's httpOnly cookie (cleared in the answer).
+    The token must be the caller's own (L-6): someone else's is refused and stays valid.
     """
+    refresh_token = request.data.get("refresh")
+    from_cookie = False
+    if not refresh_token:
+        refresh_token, refusal = refresh_cookie.from_cookie(request)
+        if refusal:
+            return Response({"detail": "Origin not allowed", "code": refusal}, status=status.HTTP_403_FORBIDDEN)
+        from_cookie = bool(refresh_token)
     try:
-        refresh_token = request.data.get("refresh")
         if refresh_token:
             from . import signin_sessions
 
             token = RefreshToken(refresh_token)
+            if str(token.payload.get("user_id")) != str(request.user.pk):
+                raise TokenError("not this user's token")
             token.blacklist()
             signin_sessions.sign_out(token)
-        return Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
+        response = Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
     except Exception:
-        return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+    return refresh_cookie.clear(response) if from_cookie or refresh_cookie.wants_cookie(request) else response
 
 
 @extend_schema(
@@ -1039,6 +1170,8 @@ def change_password(request):
     user = request.user
     current = None
     raw = serializer.validated_data.get("refresh")
+    if not raw and refresh_cookie.wants_cookie(request):
+        raw, _refusal = refresh_cookie.from_cookie(request)  # Origin 不对 = 没带:这台也退出
     if raw:
         try:
             current = RefreshToken(raw)
@@ -1062,7 +1195,7 @@ def change_password(request):
     body = {"detail": "密码修改成功"}
     if current is not None:
         body.update(reissue_for_device(user, current, keep))
-    return Response(body)
+    return refresh_cookie.move_to_cookie(request, Response(body))
 
 
 def _reset_refusal(error, code, http_status, retry_after=None, **extra):

@@ -264,6 +264,7 @@ CORS_ALLOW_HEADERS = [
     "x-imp-page",  # 代看期间前端随请求带当前页面(apps/authentication/impersonation.py)
     "x-request-id",  # apps/core/trace.py
     "idempotency-key",  # apps/core/idempotency.py
+    "x-auth-cookie",  # 网页要刷新令牌走 httpOnly cookie(apps/authentication/refresh_cookie.py)
 ]
 # 客户端在报错详情里显示请求 id,跨源时得放行才读得到这个响应头。
 CORS_EXPOSE_HEADERS = ["x-request-id"]

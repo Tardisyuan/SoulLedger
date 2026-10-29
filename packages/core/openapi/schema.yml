@@ -1916,7 +1916,8 @@ paths:
       operationId: v1_auth_logout_create
       description: |-
         POST /api/v1/auth/logout/
-        Blacklist the refresh token.
+        Blacklist the refresh token: the one in the body (apps), or the web's httpOnly cookie (cleared in the answer).
+        The token must be the caller's own (L-6): someone else's is refused and stays valid.
       tags:
       - v1
       requestBody:
@@ -2557,12 +2558,8 @@ paths:
   /api/v1/auth/refresh/:
     post:
       operationId: v1_auth_refresh_create
-      description: |-
-        POST /api/v1/auth/refresh/
-        Returns new access token from refresh token.
-
-        On this app's `RefreshToken`, so a rotated 「保持登录 30 天」 token is
-        issued for 30 days again rather than for SimpleJWT's default 7.
+      description: App 在正文里带 `refresh`;网页不带,用 httpOnly cookie(`refresh_cookie.py`,核
+        Origin),新令牌写回 cookie。
       tags:
       - v1
       requestBody:
@@ -18513,7 +18510,9 @@ paths:
   /api/v1/social/profiles/me/:
     get:
       operationId: v1_social_profiles_me_retrieve
-      description: Return or create the current user's profile.
+      description: |-
+        Return or create the current user's profile. While viewing as someone (read-only), a missing
+        profile is shown unsaved rather than created for them (2026-10-29 decision 15).
       tags:
       - v1
       security:
@@ -21328,19 +21327,9 @@ paths:
     put:
       operationId: v1_users_update
       description: |-
-        用户管理 API
-
-        仅 ADMIN 角色可访问，支持完整的 CRUD 操作以及激活/停用/重置密码等操作。
-
-        Endpoints:
-            GET    /api/v1/users/           - 获取用户列表
-            POST   /api/v1/users/           - 创建新用户
-            GET    /api/v1/users/{id}/      - 获取用户详情
-            PATCH  /api/v1/users/{id}/      - 更新用户
-            DELETE /api/v1/users/{id}/      - 删除用户
-            POST   /api/v1/users/{id}/activate/     - 激活用户
-            POST   /api/v1/users/{id}/deactivate/   - 停用用户
-            POST   /api/v1/users/{id}/reset_password/ - 重置密码
+        改用户。对另一位管理员:只许没绑殿的 ADMIN + 自己的两步验证码(改邮箱再走邮箱重置 = 接管,所以任何字段都算)。
+        `is_active=false` 与 `POST deactivate/` 同一套(第 9 条 / M-2):不能停用自己;手上有在途的事 → 409
+        `officer_has_open_work`(交接要走 deactivate 的 `handover_to`);停用后退出全部设备。
       parameters:
       - in: path
         name: id
@@ -21418,19 +21407,8 @@ paths:
     delete:
       operationId: v1_users_destroy
       description: |-
-        用户管理 API
-
-        仅 ADMIN 角色可访问，支持完整的 CRUD 操作以及激活/停用/重置密码等操作。
-
-        Endpoints:
-            GET    /api/v1/users/           - 获取用户列表
-            POST   /api/v1/users/           - 创建新用户
-            GET    /api/v1/users/{id}/      - 获取用户详情
-            PATCH  /api/v1/users/{id}/      - 更新用户
-            DELETE /api/v1/users/{id}/      - 删除用户
-            POST   /api/v1/users/{id}/activate/     - 激活用户
-            POST   /api/v1/users/{id}/deactivate/   - 停用用户
-            POST   /api/v1/users/{id}/reset_password/ - 重置密码
+        删除 = 软删,与停用同一套(第 9 条 / M-2):不能删自己;对管理员同 `update` 的规则;
+        手上有在途的事 → 409;删后退出全部设备。
       parameters:
       - in: path
         name: id
@@ -21637,7 +21615,9 @@ paths:
   /api/v1/users/{id}/reset_password/:
     post:
       operationId: v1_users_reset_password_create
-      description: 重置用户密码，返回随机生成的新密码
+      description: |-
+        重置密码(第 8 条):旧密码当场作废、所有设备退出,返回 24 小时、只能用一次的设置链接,由管理员转交本人。
+        不再返回明文密码。对另一位管理员:只许没绑殿的 ADMIN,并带自己的两步验证码(`_admin_target_refusal`)。
       parameters:
       - in: path
         name: id
@@ -21651,14 +21631,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/SecondFactorProof'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/SecondFactorProof'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/UserManagement'
-        required: true
+              $ref: '#/components/schemas/SecondFactorProof'
       security:
       - jwtAuth: []
       responses:
@@ -21667,6 +21646,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PasswordResetResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/users/batch_activate/:
     post:
@@ -24007,6 +24006,10 @@ components:
         additional roles; the view checks each name against the role table and
         against the caller's own rank.
       properties:
+        mfa_method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        mfa_code:
+          type: string
         role:
           type: string
         extra_roles:
@@ -36341,15 +36344,17 @@ components:
     PasswordResetResult:
       type: object
       description: |-
-        `{"password": "..."}` — the generated password `reset_password` returns.
-
-        Schema-only. The plaintext is in the response body because this is the only
-        time it exists; it is never stored and cannot be read back.
+        `{"link", "expires_in"}` — what `reset_password` returns (2026-10-29 decision 8): a one-time link to set a
+        new password, valid `expires_in` seconds (24 h), for the administrator to hand over. No password: the old one
+        is void and no administrator ever sees the new one.
       properties:
-        password:
+        link:
           type: string
+        expires_in:
+          type: integer
       required:
-      - password
+      - expires_in
+      - link
     PatchedAdminWebhookConfig:
       type: object
       description: |-
@@ -41254,6 +41259,17 @@ components:
       - name_en
       - name_zh
       - role
+    SecondFactorProof:
+      type: object
+      description: |-
+        The caller's own second factor, required when the target is another ADMIN (2026-10-29 decision 8;
+        `views._admin_target_refusal`): `mfa_method` = totp (the 6-digit code) or recovery (one unused recovery
+        code, spent). Same check, counter and lock as turning two-step verification off.
+      properties:
+        mfa_method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        mfa_code:
+          type: string
     SensitiveWord:
       type: object
       description: |-
@@ -45635,6 +45651,10 @@ components:
         unless `handover_to` names the officer of the same hall who takes it; the handover and the deactivation are one
         transaction (`apps/judgment/handover.py`).
       properties:
+        mfa_method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        mfa_code:
+          type: string
         handover_to:
           type: integer
           nullable: true
@@ -45775,6 +45795,10 @@ components:
       type: object
       description: '`POST /users/{id}/reset-mfa/`: the reason is audited, and required.'
       properties:
+        mfa_method:
+          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
+        mfa_code:
+          type: string
         reason:
           type: string
           maxLength: 200

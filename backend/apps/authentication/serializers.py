@@ -555,13 +555,22 @@ class UserMfaRefSerializer(serializers.Serializer):
     last_used_at = serializers.DateTimeField(allow_null=True)
 
 
-class UserMfaResetSerializer(serializers.Serializer):
+class SecondFactorProofSerializer(serializers.Serializer):
+    """The caller's own second factor, required when the target is another ADMIN (2026-10-29 decision 8;
+    `views._admin_target_refusal`): `mfa_method` = totp (the 6-digit code) or recovery (one unused recovery
+    code, spent). Same check, counter and lock as turning two-step verification off."""
+
+    mfa_method = serializers.ChoiceField(choices=["totp", "recovery"], required=False)
+    mfa_code = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+
+
+class UserMfaResetSerializer(SecondFactorProofSerializer):
     """`POST /users/{id}/reset-mfa/`: the reason is audited, and required."""
 
     reason = serializers.CharField(max_length=200, allow_blank=False, trim_whitespace=True)
 
 
-class UserDeactivateSerializer(serializers.Serializer):
+class UserDeactivateSerializer(SecondFactorProofSerializer):
     """`POST /users/{id}/deactivate/`: an officer who still holds open work is refused (409 `officer_has_open_work`)
     unless `handover_to` names the officer of the same hall who takes it; the handover and the deactivation are one
     transaction (`apps/judgment/handover.py`)."""
@@ -955,7 +964,7 @@ class UserRoleSerializer(serializers.Serializer):
     extra_roles = serializers.ListField(child=serializers.CharField())
 
 
-class AssignRolesSerializer(serializers.Serializer):
+class AssignRolesSerializer(SecondFactorProofSerializer):
     """Body of `POST /users/{id}/assign_roles/`. At least one field.
 
     `role` replaces the primary role, `extra_roles` replaces the whole list of
@@ -969,13 +978,12 @@ class AssignRolesSerializer(serializers.Serializer):
 
 
 class PasswordResetResultSerializer(serializers.Serializer):
-    """`{"password": "..."}` — the generated password `reset_password` returns.
+    """`{"link", "expires_in"}` — what `reset_password` returns (2026-10-29 decision 8): a one-time link to set a
+    new password, valid `expires_in` seconds (24 h), for the administrator to hand over. No password: the old one
+    is void and no administrator ever sees the new one."""
 
-    Schema-only. The plaintext is in the response body because this is the only
-    time it exists; it is never stored and cannot be read back.
-    """
-
-    password = serializers.CharField()
+    link = serializers.CharField()
+    expires_in = serializers.IntegerField()
 
 
 # ---------------------------------------------------------------------------

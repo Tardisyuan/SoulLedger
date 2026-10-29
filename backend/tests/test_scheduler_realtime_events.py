@@ -244,6 +244,10 @@ async def test_a_viewer_without_the_codename_receives_nothing_and_with_it_receiv
         assert await comm.receive_nothing(timeout=1.5), "a VIEWER without scheduler.read received a scheduler event"
 
         await _grant_viewer_read()
+        # The grant change is pushed by the server itself (2026-10-29 decision 10): no client message needed.
+        pushed = await comm.receive_json_from(timeout=10)
+        assert pushed["type"] == "permission.refreshed" and "scheduler.read" in pushed["permissions"]
+        # The client's own refresh still answers the same set.
         await comm.send_json_to({"type": "permission.refresh"})
         refreshed = await comm.receive_json_from(timeout=10)
         assert "scheduler.read" in refreshed.get("permissions", [])

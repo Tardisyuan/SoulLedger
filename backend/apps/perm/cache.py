@@ -232,8 +232,18 @@ def get_permission_cache() -> PermissionCache:
 def invalidate_role_permissions(role: str) -> None:
     """Convenience function to invalidate all cached permissions for a role."""
     get_permission_cache().invalidate_role(role)
+    _push_refresh()
 
 
 def invalidate_all_permissions() -> None:
     """Convenience function to clear all permission caches."""
     get_permission_cache().invalidate_all()
+    _push_refresh()
+
+
+def _push_refresh() -> None:
+    """Every grant write ends in one of the two functions above, so open sockets re-resolve from here
+    (2026-10-29 decision 10 / M-1). After commit; a socket whose set did not change hears nothing."""
+    from apps.events.realtime import push_permission_refresh
+
+    push_permission_refresh()
