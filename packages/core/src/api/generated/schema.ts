@@ -13464,6 +13464,8 @@ export interface components {
             readonly ferry_barred: string;
             readonly wangsi_held: boolean;
             readonly conclude_refusal: string;
+            readonly can_edit: boolean;
+            readonly flow_cancelled: boolean;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -13806,6 +13808,8 @@ export interface components {
             readonly ferry_barred: string;
             readonly wangsi_held: boolean;
             readonly conclude_refusal: string;
+            readonly can_edit: boolean;
+            readonly flow_cancelled: boolean;
             readonly kind: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id: string | null;
@@ -17057,6 +17061,8 @@ export interface components {
             readonly ferry_barred?: string;
             readonly wangsi_held?: boolean;
             readonly conclude_refusal?: string;
+            readonly can_edit?: boolean;
+            readonly flow_cancelled?: boolean;
             readonly kind?: components["schemas"]["JudgmentKindEnum"];
             /** Format: uuid */
             readonly amends_plan_id?: string | null;
