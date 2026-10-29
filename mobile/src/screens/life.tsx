@@ -4,7 +4,7 @@ import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -67,6 +67,7 @@ import {
 import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
 import { AppealLine, roundsOf } from "./appeals";
 import { WangsiLine } from "./wangsi";
+import { CaptureCard, ConfessionCard, DeliveredRow, FerryCard, VestibuleCard } from "./lifeProgress";
 import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
@@ -161,6 +162,10 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   );
 }
 
+function WangsiCaseLine({ row, deliveredRef }: { row: MeWangsiCase | undefined; deliveredRef?: Ref<View> }) {
+  return <WangsiLine row={row} landingRef={row?.grievance_status === "DELIVERED" ? deliveredRef : undefined} />;
+}
+
 /**
  * One life's record, in collapsible sections. `sealed` renders a past life:
  * no disclosure buttons, no link into an application, ink one step down.
@@ -179,8 +184,14 @@ export function LifeSections({
   focus,
   appeals,
   wangsi,
+  confession,
+  deliveredRef,
 }: {
   life: MeLife;
+  /** 第六十二批:四十二条否定告白,紧贴审判那一格上方(只有当前这一世传)。 */
+  confession?: ReactNode;
+  /** 推送「已超度」的落点:超度了的那件枉死案子底部那一行。 */
+  deliveredRef?: Ref<View>;
   /** 枉死城:本世枉死的案子(只有当前这一世传)。 */
   wangsi?: MeWangsiCase[] | null;
   /** 第五十二批:本世审判的申诉(只有当前这一世传;前世只能看,不画申诉行)。 */
@@ -224,6 +235,7 @@ export function LifeSections({
           <Empty text={tr("soul_app.life.no_records")} />
         )}
       </Section>
+      {confession}
       <Section title={tr(lexiconKey(lex, "judgments"))} count={count(life.judgments.length)} {...section("judgments")}>
         {life.judgments.length ? (
           life.judgments.map((j, i) => (
@@ -259,7 +271,7 @@ export function LifeSections({
                   onChanged={() => void appeals.reload()}
                 />
               ) : null}
-              {wangsi && !sealed ? <WangsiLine row={wangsi.find((w) => w.judgment_id === j.id)} /> : null}
+              {wangsi && !sealed ? <WangsiCaseLine row={wangsi.find((w) => w.judgment_id === j.id)} deliveredRef={deliveredRef} /> : null}
             </LandingWash>
           ))
         ) : (
@@ -766,6 +778,30 @@ export function useScrollToLanding(landing: SentenceLanding | undefined) {
   return { ref, place };
 }
 
+/**
+ * 第六十二批:推送「已超度」打开本世页,滚到「已超度」那一行(或并进了日期的枉死城那一行),然后不再动 ——
+ * 不闪、不洗底色;减弱动效时不做平滑滚动。每次落地只滚一次。
+ */
+function useScrollToDelivered(scrollRef: RefObject<ScrollView | null>, focus: LifeFocus | undefined) {
+  const reduced = useReducedMotion();
+  const [target, hold] = useState<View | null>(null);
+  const done = useRef<LifeFocus | undefined>(undefined);
+  useEffect(() => {
+    if (!focus?.delivered || !target || done.current === focus) return;
+    const scroller = scrollRef.current;
+    // `getInnerViewRef` is in the runtime (ScrollView.js) but not in the .d.ts (same as passwordRulesView).
+    const inner = (scroller as { getInnerViewRef?: () => unknown } | null)?.getInnerViewRef?.();
+    if (!scroller || !inner) return;
+    done.current = focus;
+    target.measureLayout(
+      inner as never,
+      (_x, y) => scroller.scrollTo({ y: Math.max(0, y - 16), animated: !reduced }),
+      () => {}
+    );
+  }, [focus, target, reduced, scrollRef]);
+  return { hold };
+}
+
 export function MyLifeScreen() {
   const { t, locale, enumLabel } = useI18n();
   const { state, refreshProfile } = useSession();
@@ -801,6 +837,7 @@ export function MyLifeScreen() {
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   const scroll = useScrollToLanding(landing);
+  const delivered = useScrollToDelivered(scroll.ref, focus);
   const soulCode = state.status === "signedIn" ? state.profile.soul_code : "";
   const memo = `${LIFE_OPEN_PREFIX}${soulCode}`;
   const [touched, setTouched] = useState(() => readTouched(memo));
@@ -815,7 +852,14 @@ export function MyLifeScreen() {
     ...lifeSectionsOpen(touched, planState),
     ...(focus?.judgment ? { judgments: true } : {}),
     ...(focus?.disposition ? { dispositions: true } : {}),
+    ...(focus?.delivered ? { judgments: true } : {}),
   };
+  // 第六十二批 D-1:超度若已写在这一世枉死城那一行(审判那格底部,带日期),顶上就不另画「已超度」。
+  // 两份数据都回来(或失败)之后才判断,免得先画后收。
+  const deliveredInLine = wangsi.data?.some(
+    (w) => w.grievance_status === "DELIVERED" && life.data?.judgments.some((j) => j.id === w.judgment_id)
+  );
+  const settled = (life.data || life.error) && (wangsi.data || wangsi.error);
   const toggle = (key: LifeSectionKey) => {
     const next = { ...touched, [key]: !open[key] };
     setTouched(next);
@@ -848,7 +892,12 @@ export function MyLifeScreen() {
         <Homecoming me={me} />
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
         <Now me={me} lex={residence.home} planState={planState} />
+        {/* 第六十二批:位置类的卡在五段条正下方,固定顺序 勾魂牒 → 已超度 → 十三站 → 冥河 → 前庭(不按时间)。 */}
+        <CaptureCard warrant={me.capture_warrant} />
+        {settled && !deliveredInLine ? <DeliveredRow at={me.wangsi_delivered_at} holdRef={delivered.hold} /> : null}
         {me.civilization === "CHINESE" && me.diyu_station ? <StationsCard station={me.diyu_station} /> : null}
+        <FerryCard ferry={me.greek_ferry} />
+        <VestibuleCard vestibule={me.european_vestibule} />
         <Balance me={me} lex={residence.home} />
         <Block>
           <DataRows>
@@ -883,6 +932,8 @@ export function MyLifeScreen() {
               focus={focus}
               appeals={appeals}
               wangsi={wangsi.data}
+              deliveredRef={delivered.hold}
+              confession={<ConfessionCard tally={me.negative_confession} />}
               open={open}
               onToggle={toggle}
               onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}

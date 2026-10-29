@@ -4713,7 +4713,46 @@
       "station_at": "Station {{n}} / 13",
       "continent": "Continent of birth",
       "stations_card": "To the underworld · thirteen stations",
-      "station_here": "You are at {{station}}: {{desc}}"
+      "station_here": "You are at {{station}}: {{desc}}",
+      "capture": {
+        "title": "Capture warrant",
+        "ISSUED": "Your fated day has come. The escorts are on their way.",
+        "CAPTURED": "The escorts have you and are taking you to the City God.",
+        "step_issued": "Issued",
+        "step_captured": "Captured",
+        "step_handed": "To the City God",
+        "issued_on": "Issued · {{date}}"
+      },
+      "ferry": {
+        "title": "The crossing of Acheron",
+        "UNBURIED": "You are unburied, so Charon will not take you across. After a hundred years on the bank, you may cross.",
+        "NO_FARE": "You have no fare, so Charon will not take you across.",
+        "no_date": "There is no crossing day: you may cross once your fare is recorded as paid.",
+        "crosses_on": "Crossing day · {{date}}",
+        "years_left": "{{n}} years to wait",
+        "years_left_one": "{{n}} year to wait",
+        "days_left": "{{n}} days to wait",
+        "days_left_one": "{{n}} day to wait",
+        "may_cross": "A hundred years on the bank: you may cross",
+        "waited_aria": "{{waited}} of 100 years on the bank"
+      },
+      "vestibule": {
+        "title": "The Vestibule of Hell",
+        "body": "You remain in the Vestibule, outside the nine circles. This is where you stay; there is no next stage.",
+        "entered_on": "Entered · {{date}}"
+      },
+      "confession": {
+        "title": "The forty-two denials",
+        "subtitle": "Latest weighing of the heart, this life",
+        "truthful": "True",
+        "untruthful": "False",
+        "unheard": "Not recorded",
+        "partial": "{{recorded}} of {{total}} recorded; the rest are not yet.",
+        "complete": "All {{total}} are recorded.",
+        "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}"
+      },
+      "delivered": "Delivered",
+      "delivered_on": "Delivered · {{date}}"
     },
     "past_lives": {
       "title": "Past lives",
