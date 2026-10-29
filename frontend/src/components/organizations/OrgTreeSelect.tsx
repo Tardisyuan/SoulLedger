@@ -21,6 +21,8 @@ interface Common {
   /** 殿 id → 殿名;有不止一个殿时按殿分组,组头用它。 */
   tenantNames?: ReadonlyMap<number, string>;
   disabled?: boolean;
+  /** 这些行不可选(机构表单的上级:自己和自己的下级,挂过去会成环)。 */
+  disabledIds?: ReadonlySet<number>;
   error?: string;
 }
 type Props =
@@ -33,7 +35,7 @@ type Props =
  * 勾上级时顺手去掉已显式勾选的下级(已被包含,留着只是重复)。
  */
 export function OrgTreeSelect(props: Props) {
-  const { organizations, label, tenantNames, disabled, error } = props;
+  const { organizations, label, tenantNames, disabled, disabledIds, error } = props;
   const { t } = useI18n();
   const name = useId();
   const errorId = `${name}-error`;
@@ -117,17 +119,23 @@ export function OrgTreeSelect(props: Props) {
             {orgTreeRows(orgs).map(({ item: o, depth }) => {
               const viaParent = implied(o.id);
               const checked = selected.has(o.id) || viaParent;
+              const off = disabledIds?.has(o.id) ?? false;
               return (
                 <label
                   key={o.id}
                   style={{ paddingLeft: 12 + depth * 16 }}
-                  className={cn(rowClass, checked && "bg-[oklch(var(--color-surface-2))]", viaParent && "text-[oklch(var(--color-ink-muted))]")}
+                  className={cn(
+                    rowClass,
+                    checked && "bg-[oklch(var(--color-surface-2))]",
+                    viaParent && "text-[oklch(var(--color-ink-muted))]",
+                    off && "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]",
+                  )}
                 >
                   <input
                     type={inputType}
                     name={props.mode === "single" ? name : undefined}
                     checked={checked}
-                    disabled={viaParent}
+                    disabled={viaParent || off}
                     onChange={(e) => toggle(o.id, e.target.checked)}
                   />
                   {o.name}
