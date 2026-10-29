@@ -120,6 +120,19 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   误起了第二个时，按 (任务, 租户) 的单飞锁只挡得住**时间重叠**的那次(记成 SKIPPED);
   跑得快的任务在第二次派发到达前已经结束，仍会执行两次。锁是兜底，不是用法。
   需要 beat 高可用(一台挂了另一台自动接手)时，再换 `celery-redbeat` 这类带分布式锁的调度器。
+  `celery-beat` 的命令写明 `--scheduler django_celery_beat.schedulers:DatabaseScheduler`(与 settings 一致);
+  `backend/tests/test_one_beat_on_the_database_scheduler.py` 守着每个 compose 组合里恰好一个 beat、
+  它在 DatabaseScheduler 上、worker 没带 `-B`。
+- **healthcheck(2026-10-30 起)**:`celery`(worker)用 `celery inspect ping` 探自己;`celery-beat` 用
+  `python -m apps.scheduler.beat_guard`,本容器持有单 beat 锁(Redis 键,20 秒续一次、60 秒过期)才健康 ——
+  被第二个 beat 抢了锁、或 Redis 不通,都转 unhealthy。compose 不会因 unhealthy 自动重启,外部监控盯
+  `docker inspect --format '{{.State.Health.Status}}'`,与 certbot / backup 同一种接法。
+- **上线联调清单**:`$DC up -d backend celery celery-beat` 之后 ——
+  1. `$DC ps` 三个都是 healthy(beat 的 start_period 60 秒);
+  2. `$DC logs celery-beat` 里有 `DatabaseScheduler` 且没有 `refusing to start a second one`;
+  3. `$DC exec backend python manage.py post_deploy` 打印 `beat: DatabaseScheduler configured; running as …`;
+  4. `/scheduler` 里随便手动运行一个全局任务,执行记录出现 SUCCESS(证明 worker 收得到);
+  5. 等过一个 `*/5` 周期,`/health/detailed/` 的 `scheduler` 不是 `"overdue"`;配了 `SENTRY_DSN` 的话 Sentry Crons 出现报到。
 - **beat 挂了怎么发现:** `GET /health/detailed/`(ADMIN)在有任务「该跑却没跑」
   (超过 cron 应触发时间 `SCHEDULER_OVERDUE_GRACE_SECONDS`,默认 600 秒)时,
   `scheduler` 字段为 `"overdue"`、`scheduler_overdue` 列出任务名;**状态码仍是 200、
