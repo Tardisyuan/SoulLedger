@@ -31,14 +31,15 @@ If you discover a security vulnerability, please report it responsibly:
 - **Audit Trail**: All mutations logged via AuditLog signals
 - **Dependency Scanning**: `pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip` and
   `npm audit --audit-level=high` in `ci.yml`; both block, and neither is
-  `continue-on-error`. **Neither runs on its own:** both workflows are
-  `workflow_dispatch`-only (GitHub Actions quota exhausted), and
-  `security.yml`'s weekly cron is off. A scan happens when somebody starts it.
+  `continue-on-error`. **Neither runs on a push:** since 2026-10-30
+  `security.yml` runs weekly (Monday 04:00 UTC) and by hand, and `ci.yml` daily,
+  on a `v*` tag and by hand (GitHub Actions quota). A new advisory is caught within a week.
 - **Sentry**: Error tracking with PII masking
-- **Encryption at rest**: Fernet for `WebhookConfig.signing_secret` and
-  `DeathRegistrationRequest.source_payload`, keyed by `ENCRYPTION_KEY`. With
-  `DEBUG=False` and no key the process refuses to start; with `DEBUG=True` and
-  no key it warns and stores both columns in plaintext.
+- **Encryption at rest**: Fernet for `WebhookConfig.signing_secret`,
+  `DeathRegistrationRequest.source_payload`, the officer and soul two-step `secret`s,
+  a soul account's initial credentials and the assistant's platform API keys, keyed by
+  `ENCRYPTION_KEY`. With `DEBUG=False` and no key the process refuses to start; with
+  `DEBUG=True` and no key it warns and stores those columns in plaintext.
 - **Key rotation without downtime** (procedure: `docs/DEPLOYMENT.md`「密钥轮换」):
   - `SECRET_KEY`: put the old key in `SECRET_KEY_FALLBACKS`. Django verifies sessions and password-reset
     links signed with it; JWTs signed with it also still verify until they expire

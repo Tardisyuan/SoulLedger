@@ -3,8 +3,9 @@ the repository root.
 
 Why this file exists
 --------------------
-`.git/hooks/pre-push` is the only gate in this repository that runs by itself:
-both GitHub Actions workflows are `workflow_dispatch` only. It decides what to
+`.git/hooks/pre-push` is the only gate in this repository that runs on a push:
+neither GitHub Actions workflow runs on pushes (since 2026-10-30 `ci.yml` runs daily
+and on `v*` tags, `security.yml` weekly, both also by hand). It decides what to
 run from the paths a push touches — `frontend/`, `backend/`, `packages/` — and
 until 2026-09-11 nothing tested that decision at all.
 

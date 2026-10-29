@@ -260,7 +260,8 @@ docker compose up    # 根目录 docker-compose.yml：db、redis、backend、cel
 需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入四种
 文明的领域与角色。
 
-生产栈（nginx、TLS 证书首签与续期、备份与恢复）见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
+生产栈（nginx、TLS 证书首签与续期、备份与恢复、异地副本与告警、恢复演练、RPO/RTO、部署回滚、`/metrics/` 与日志格式、
+数据保留、密钥轮换）见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)，上线清单见 [`docs/DEPLOY.md`](docs/DEPLOY.md)。
 
 ### 种子数据
 
@@ -435,9 +436,11 @@ workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出
 
 ## 测试、门禁与 CI
 
-**CI 现在只有 `workflow_dispatch` 触发**——没有任何 push 或 PR 会自动跑它（GitHub Actions
-额度耗尽，`security.yml` 的周 cron 也一并关掉了）。所以「CI 是绿的」在这个仓库里目前不是
-一句自动成立的话，本地门禁才是。`.github/workflows/ci.yml` 定义了五个 job：
+**CI 不在分支推送与 PR 上跑**（GitHub Actions 额度耗尽过，2026-10-30 用户决定）：`ci.yml`
+每天 03:00 UTC 跑 main、推 `v*` tag 时跑、也可手动跑；`security.yml` 每周一 04:00 UTC 与手动。仓库公开，
+Linux runner 不计分钟。
+所以「CI 是绿的」最多说明上一次每天运行时是绿的，每次推送的检查是本地（unRAID）门禁
+`scripts/run-gates.sh`。`.github/workflows/ci.yml` 定义了五个 job：
 
 | Job | 步骤 |
 |---|---|
@@ -586,9 +589,10 @@ SSRF 校验、CSP/HSTS/X-Frame-Options，以及写操作的审计轨迹。
 没有任何视图按它限流**——视图只挂了分钟级那一档。
 
 Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=False` 且未设置时
-拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，`WebhookConfig.signing_secret` 与
-`DeathRegistrationRequest.source_payload` **明文落库**。开发环境看到那条 warning 时，
-库里的这两列就是明文。
+拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，加密列 **明文落库**：`WebhookConfig.signing_secret`、
+`DeathRegistrationRequest.source_payload`、官员与灵魂两步验证的 `secret`、灵魂账号初始凭据、助手平台 API key。
+开发环境看到那条 warning 时，库里的这些列就是明文。`SECRET_KEY` 与 `ENCRYPTION_KEY` 都能不停机轮换
+（`*_FALLBACKS` 与 `manage.py rotate_encryption_key`，步骤见 `docs/DEPLOYMENT.md`「密钥轮换」）。
 
 灵魂端的面容 / 指纹登录不存密码：服务端给这部手机发一个专用凭据，库里只有它的哈希；改密码、官员重置、转生都会吊销它，
 并把原因告诉登录页。登录交付单上的二维码只带灵魂编号（`SL1:<编号>`），不带密码。

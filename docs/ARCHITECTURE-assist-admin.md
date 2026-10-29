@@ -129,6 +129,8 @@
 - **失败不再「什么都不落库」**:新增 `AssistUsage`,每次提问一行 —— ok / empty / unavailable(503)/ busy(并发满,429)/
   rate_limited(429)/ not_configured —— 只有端、殿、模型、token 数,**没有任何原文字段**(测试断言这张表没有文本列)。
   用量页与月度上限只读这张表,不读 `AssistMessage` 与审计行。
+  保留 `ASSIST_USAGE_RETENTION_DAYS`(默认 730 天,用户 2026-10-30 定),由每日的 `audit.prune_retained_data` 删
+  (`backend/apps/core/retention.py`,`docs/DEPLOYMENT.md`「数据保留」)。
 - **花费的单位由管理员定**:价目表(每百万 token 的输入 / 输出 / 可选缓存读取价)在配置里,代码里没有任何供应商价格。
   缓存读取没填价时按输入价算(宁高勿低,上限才不会晚到)。**不在价目表里的模型算不出花费**,用量页列在 `unpriced_models`,
   不当 0;所以「设了月度上限而当前模型没填价」在保存时就拒(`unpriced_model`),否则上限永远不会触发。

@@ -298,7 +298,7 @@ npm run --workspace packages/core test      # vitest，不是 jest
 ### 推送门禁
 
 pre-push 实际跑的是 `scripts/run-gates.sh`（jest 只跑受影响的，其余照旧全跑；`--full` 全跑），
-会话里可直接运行它。细节与数字见 `CLAUDE.md`。CI 只有 `workflow_dispatch` 手动触发。
+会话里可直接运行它。细节与数字见 `CLAUDE.md`。CI 不在推送与 PR 上跑:`ci.yml` 每天、推 `v*` tag 与手动,`security.yml` 每周一与手动(2026-10-30 起)。
 
 ### Git 提交规范
 
