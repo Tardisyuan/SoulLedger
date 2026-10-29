@@ -44,6 +44,7 @@ from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.events.realtime import close_user_sockets, push_permission_refresh
 from apps.notifications import categories as notification_categories
+from apps.perm.filters import DataScopeFilter
 
 from . import refresh_cookie, signin_sessions
 from .officer_reset import _audit
@@ -319,6 +320,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # ADMIN account (2026-10-29: the codename is grantable now; ADMIN-on-ADMIN rules live with ADMIN).
         if getattr(self.request.user, 'role', None) != 'ADMIN':
             qs = qs.exclude(role='ADMIN')
+        # 数据范围(B5):按人的机构收窄,本人恒可见;范围外的人列表里没有,按 id 访问 404。
+        qs = DataScopeFilter.filter_queryset(self.request, qs, User)
 
         # Apply query params if present
         params = self.request.query_params
@@ -404,13 +407,14 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
 
     def perform_update(self, serializer):
         before = serializer.instance
-        was_active, old_roles = before.is_active, (before.role, list(before.extra_roles or []))
+        was_active, old_roles = before.is_active, (before.role, list(before.extra_roles or []), before.organization_id)
         with transaction.atomic():
             super().perform_update(serializer)
             user = serializer.instance
             if was_active and not user.is_active:
                 _end_everything(user)
-        if (user.role, list(user.extra_roles or [])) != old_roles:
+        # 换机构也推:已开连接按新机构重算数据范围(B5)。
+        if (user.role, list(user.extra_roles or []), user.organization_id) != old_roles:
             push_permission_refresh(user.pk)
 
     def destroy(self, request, *args, **kwargs):

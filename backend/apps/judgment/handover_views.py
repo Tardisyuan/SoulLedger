@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt
 from apps.judgment import handover
+from apps.perm.filters import DataScopeFilter
 
 User = get_user_model()
 
@@ -63,6 +64,7 @@ class _HandoverBase(APIView):
         if not is_tenant_exempt(request.user):
             tenant = getattr(request, "tenant", None)
             officers = officers.filter(tenant=tenant) if tenant else officers.none()
+        officers = DataScopeFilter.filter_queryset(request, officers, User)  # 范围外的交出人 = 404(B5)
         source = officers.filter(pk=body.validated_data["from"], tenant__isnull=False).first()
         if source is None:
             raise NotFound()
@@ -109,8 +111,9 @@ class HandoverOfficersView(APIView):
             if tenant is None:
                 return Response([])
             tenant_id = tenant.pk
-        officers = list(User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL")
-                        .order_by("display_name", "username"))
+        officers = User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL")
+        # 数据范围(B5):人选只列请求人看得到的人。
+        officers = list(DataScopeFilter.filter_queryset(request, officers, User).order_by("display_name", "username"))
         labels = dict(Role.objects.filter(name__in={u.role for u in officers}).values_list("name", "display_name"))
         return Response([{"id": u.pk, "display_name": u.display_name or u.username,
                           "role_display": labels.get(u.role) or u.role} for u in officers])

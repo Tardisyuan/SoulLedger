@@ -62,6 +62,12 @@ class WebSocketHandler(DomainEventHandler):
                 message["data"]["_recipients"] = list(envelope.user_ids)
             elif envelope.tenant_code:
                 groups = [ChannelNaming.tenant_group(envelope.tenant_code)]
+                # 殿组里每条连接按自己的数据范围丢弃(B5);标签现在取,事务里看得见这一行。
+                from apps.events.realtime import scope_tag
+
+                tag = scope_tag(envelope.payload)
+                if tag is not None:
+                    message["data"]["_scope"] = tag
             else:
                 groups = []
 
