@@ -147,6 +147,22 @@ def _restore_event_handlers():
     reg._global_handlers.extend(saved[2])
 
 
+@pytest.fixture(autouse=True)
+def _fresh_channel_layer_per_test():
+    """A new channel-layer instance for every test (2026-10-29).
+
+    `RedisChannelLayer` keeps `receive_count` / `receive_lock` on the instance, bound to the event loop of the
+    first receiver. Each async test runs its own loop; a consumer still reading when that loop is torn down
+    leaves the count above zero and the lock held, and the next test's socket fails with "Lock ... is bound to
+    a different event loop". More traffic on the layer (the permission-refresh broadcast, decision 10) made that
+    window common: 17 WebSocket tests red in one full run. Production runs one loop per process.
+    """
+    yield
+    from channels.layers import channel_layers
+
+    channel_layers.backends = {}
+
+
 @pytest.fixture(scope="session")
 def django_db_modify_db_settings(django_db_modify_db_settings, request):
     """Give each run its own PostgreSQL test database (`test_soulledger_<hex>`),
