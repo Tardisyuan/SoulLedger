@@ -1,12 +1,12 @@
-"""A soul's ledger by id obeys the same row-level data scope as the souls list (security review 2026-10-27 #4).
+"""A soul's ledger by id obeys the same data scope as the souls list (security review 2026-10-27 #4).
 
 Before, `/ledger/<kind>/<soul_id>/` filtered by hall only, so a role scoped to some souls could
 read any in-hall soul's ledger by its UUID.
 """
 import pytest
 
-from apps.perm.models import Role, RowLevelDataScope
 from apps.souls.models import Soul, SoulState
+from tests.data_scope_support import org, scope
 from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
@@ -26,10 +26,12 @@ def test_a_soul_outside_the_scope_is_404_and_one_inside_is_not(judge_user, souls
     unscoped = {kind: client.get(f"/api/v1/ledger/{kind}/{outside.pk}/").status_code for kind in KINDS}
     assert all(code == 200 for code in unscoped.values()), unscoped  # the judge can read ledgers at all
 
-    RowLevelDataScope.objects.create(
-        role=Role.objects.get_or_create(name="JUDGE")[0], model_name="soul", scope_type="READ",
-        filter_conditions={"current_state": SoulState.JUDGING}, is_active=True,
-    )
+    mine = org(inside.tenant, "本司")
+    Soul.objects.filter(pk=inside.pk).update(owner_org=mine)
+    Soul.objects.filter(pk=outside.pk).update(owner_org=org(inside.tenant, "他司"))
+    judge_user.organization = mine
+    judge_user.save(update_fields=["organization"])
+    scope("JUDGE", "ORG")
     for kind in KINDS:
         assert client.get(f"/api/v1/ledger/{kind}/{outside.pk}/").status_code == 404, kind
         assert client.get(f"/api/v1/ledger/{kind}/{inside.pk}/").status_code == 200, kind
