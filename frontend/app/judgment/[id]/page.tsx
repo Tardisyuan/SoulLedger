@@ -87,6 +87,7 @@ import {
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useArchiveJudgment, useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useNegativeConfessions, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
+import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -864,6 +865,17 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         record={judgment}
         onUnarchive={canExecute ? () => unarchiveMutation.mutate(id) : undefined}
         pending={unarchiveMutation.isPending}
+      />
+      {/* 所属机构(数据范围 B3a):持 judgment.assign 可改,已结案的也可以。 */}
+      <OwnerOrgField
+        orgId={judgment.owner_org}
+        orgName={judgment.owner_org_name}
+        tenantId={null}
+        canChange={hasPermission("judgment.assign") && !judgment.is_archived}
+        onSave={async (orgId) => {
+          await judgmentApi.update(id, { owner_org: orgId });
+          await queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
+        }}
       />
       <ArchiveDialog
         isOpen={archiveOpen}

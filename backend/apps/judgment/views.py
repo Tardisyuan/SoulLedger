@@ -299,7 +299,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         Judgment.objects
         .select_related(
             "soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "reassign_requested_by", "realm",
-            "approval_workflow", "city_god",
+            "approval_workflow", "city_god", "owner_org",
         )
         .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
@@ -645,7 +645,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # 404ing, because the caller's intent ("work this queue, starting
         # here") is still satisfiable and the alternative is a dead end on a
         # link that was valid when the page rendered.
-        cursor = remaining_qs.select_related("soul", "soul__tenant")
+        cursor = remaining_qs.select_related("soul", "soul__tenant", "soul__owner_org")
         if "after" in request.query_params:
             return self._after_response(payload, remaining_qs, cursor, total, remaining)
         at = request.query_params.get("at")
@@ -772,7 +772,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         judgment = None
         if anchor is not None:
             judgment = (
-                remaining_qs.select_related("soul", "soul__tenant")
+                remaining_qs.select_related("soul", "soul__tenant", "soul__owner_org")
                 .filter(self._before(anchor))
                 .order_by("-not_mine_rank", "-created_at", "-id")
                 .first()
@@ -1019,6 +1019,12 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         users = scope_to_tenant(User.objects.all(), request)
         tenant_id = tenant_ids.pop()
         officers = claims.assignable_officers(users, tenant_id)
+        # 数据范围(B3a):名单只列看得到这批每一件的人 —— 与 `reassign` 里的 `claims.assert_sees` 同一条。
+        from apps.perm.data_scope import q_for
+
+        rows = Judgment._base_manager.filter(pk__in=ids)
+        officers = [o for o in officers
+                    if (q := q_for(o, Judgment)) is None or rows.filter(q).count() == len(tenants)]
         # 「在手」:每人手上认领着、还没结案的件数,与队列同一个 PENDING。一条聚合,不逐人查。
         in_hand = dict(
             Judgment.objects.filter(PENDING, tenant_id=tenant_id, claimed_by__in=officers)

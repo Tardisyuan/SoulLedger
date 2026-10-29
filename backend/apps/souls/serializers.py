@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
@@ -606,6 +607,12 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     soul_code = serializers.CharField(read_only=True, allow_null=True)
     # 本世已批准的转生申请里灵魂选的道(用户 2026-10-29):办转世时默认选它,改了要写原因。没有为 null。
     desired_rebirth_form = serializers.SerializerMethodField()
+    # 所属机构(数据范围 B3a):建时可显式给,缺省按 `default_owner_org`;建后持 soul.update 可改。
+    owner_org = owner_org_field()
+    owner_org_name = serializers.CharField(source="owner_org.name", read_only=True, default=None)
+
+    def validate_owner_org(self, value):
+        return check_owner_org(value, self.context, "soul", self.instance, "soul.update")
 
     def get_desired_rebirth_form(self, obj) -> str | None:
         from apps.reincarnation.services import approved_desired_form
@@ -623,7 +630,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
-            "soup_taken_at", "desired_rebirth_form",
+            "soup_taken_at", "desired_rebirth_form", "owner_org", "owner_org_name",
             *ARCHIVE_FIELDS,
         ]
         read_only_fields = [

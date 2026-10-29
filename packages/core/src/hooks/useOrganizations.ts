@@ -30,7 +30,9 @@ export function useSaveOrganization() {
 export function useDeleteOrganization() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => organizationsApi.delete(id),
+    /** `{ id, moveTo }`:名下灵魂 / 审判先转到 `moveTo` 再删(`DELETE ?move_to=`)。 */
+    mutationFn: (arg: number | { id: number; moveTo: number }) =>
+      typeof arg === "number" ? organizationsApi.delete(arg) : organizationsApi.delete(arg.id, arg.moveTo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ORGANIZATIONS });
       notify("org.deleted", "success");

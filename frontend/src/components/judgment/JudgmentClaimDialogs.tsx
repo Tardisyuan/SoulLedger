@@ -28,6 +28,7 @@ const REFUSAL_CODES = [
   "already_deferred",
   "not_deferred",
   "invalid_assignee",
+  "assignee_out_of_scope",
   "not_found",
   "permission_denied",
 ] as const;

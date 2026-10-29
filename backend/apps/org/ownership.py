@@ -53,3 +53,34 @@ def default_owner_org(tenant, user, court=""):
     if org is not None and org.tenant_id == tenant.pk and not org.is_deleted:
         return org
     return tenant_root(tenant)
+
+
+def owner_org_field():
+    """序列化器上的 `owner_org`:可选、不可为空(要变就换一个机构,不能挂空)。"""
+    from rest_framework import serializers
+
+    return serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(), required=False, allow_null=False)
+
+
+def check_owner_org(value, context, resource, instance=None, codename=None):
+    """显式给的归属机构(数据范围 B3a):与行同殿(新建时 = 请求的殿),且在调用者对 `resource` 的机构范围内。
+    改已有行的归属还要持 `codename`(灵魂 soul.update、审判 judgment.assign)。审计由行的 UPDATE 记下。"""
+    from rest_framework import exceptions, serializers
+
+    from apps.perm import data_scope
+    from apps.perm.checker import check_permission
+
+    request = context.get("request")
+    user = getattr(request, "user", None)
+    if instance is not None and value.pk == instance.owner_org_id:
+        return value  # 原样回传的 PUT
+    if instance is not None and codename and not check_permission(user, codename):
+        raise exceptions.PermissionDenied(f"Changing the owning unit needs {codename}.")
+    tenant_id = instance.tenant_id if instance is not None else getattr(
+        getattr(request, "tenant", None) or getattr(user, "tenant", None), "pk", None)
+    if tenant_id is None or value.tenant_id != tenant_id:
+        raise serializers.ValidationError("No such organization in this hall.")
+    ids = data_scope.org_ids(user, resource, data_scope.request_cache(request))
+    if ids is not None and value.pk not in ids:
+        raise serializers.ValidationError("This organization is outside your data scope.")
+    return value
