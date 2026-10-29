@@ -1503,6 +1503,110 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuditLog'
           description: ''
+  /api/v1/auth/admin/sessions/:
+    get:
+      operationId: v1_auth_admin_sessions_retrieve
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - officer
+          - soul
+        description: officer(默认)或 soul
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: user
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSessionPage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/auth/admin/sessions/{session_id}/revoke/:
+    post:
+      operationId: v1_auth_admin_sessions_revoke_create
+      parameters:
+      - in: path
+        name: session_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/auth/admin/sessions/revoke-user/:
+    post:
+      operationId: v1_auth_admin_sessions_revoke_user_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeUserResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
   /api/v1/auth/change-password/:
     post:
       operationId: v1_auth_change_password_create
@@ -22904,6 +23008,70 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    AdminSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+        username:
+          type: string
+        display_name:
+          type: string
+        tenant_code:
+          type: string
+          nullable: true
+        label:
+          type: string
+        method:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+      required:
+      - created_at
+      - current
+      - display_name
+      - id
+      - ip_address
+      - label
+      - last_seen_at
+      - method
+      - tenant_code
+      - user_id
+      - username
+    AdminSessionPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSession'
+      required:
+      - count
+      - next
+      - previous
+      - results
     AdminWebhookConfig:
       type: object
       description: |-
@@ -40355,6 +40523,20 @@ components:
       - password
       - soul_code
     RevokeOthersResponse:
+      type: object
+      properties:
+        revoked:
+          type: integer
+      required:
+      - revoked
+    RevokeUserRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+      required:
+      - user
+    RevokeUserResponse:
       type: object
       properties:
         revoked:

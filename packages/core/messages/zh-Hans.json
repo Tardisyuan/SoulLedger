@@ -2599,7 +2599,32 @@
       "audit": "审计日志",
       "logins": "登录日志",
       "permissions": "权限变更",
-      "stats": "统计"
+      "stats": "统计",
+      "sessions": "在线会话"
+    },
+    "sessions": {
+      "title": "在线会话",
+      "kind_label": "账号类别",
+      "kind": {
+        "officer": "官员",
+        "soul": "灵魂"
+      },
+      "user": "账号",
+      "device": "设备",
+      "last_seen": "上次活动",
+      "signed_in": "登录时间",
+      "current": "（本机）",
+      "revoke": "强退",
+      "revoke_all": "强退全部设备",
+      "filtered_by": "只看 {{name}}",
+      "empty": "现在没有人在线",
+      "confirm_title": "强退这个会话？",
+      "confirm_message": "{{name}} 在「{{device}}」上会立即退出，要在那台设备上重新登录。",
+      "confirm_all_title": "强退全部会话？",
+      "confirm_all_message": "{{name}} 在所有设备上都会立即退出。",
+      "revoked": "已让 {{name}} 在那台设备上退出",
+      "revoked_all": "已让 {{name}} 在所有设备上退出",
+      "revoke_failed": "没能强退，列表已刷新。"
     },
     "login_log": {
       "title": "登录日志",

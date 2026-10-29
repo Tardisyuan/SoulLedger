@@ -38,6 +38,11 @@ UNCLAIMED_BY_DESIGN = {
         "不是这个码名。改成按码名判断是一次策略变更(会让持有它的非 ADMIN 进来),"
         "留待决定;在那之前这里记录现状。"
     ),
+    "session": (
+        "**有消费者,只是不经 `permission_codename`。** `session.manage` 由三个函数视图"
+        "(apps/authentication/admin_session_views.py)的 `CanManageSessions` 判定,"
+        "本测试只扫 viewset 的声明,看不见它。前端 /audit/sessions 与审计页签按同一个码显隐。"
+    ),
 
 }
 
