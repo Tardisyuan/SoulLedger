@@ -4803,10 +4803,12 @@
         "title": "Medu Ini Ba",
         "ISSUED": "Hru Mut Smen · Sab Ini Em Shem",
         "CAPTURED": "Sab Ini Shesep Seth · Er Chenghuang",
+        "HANDED_OVER": "Sab Ini: Redi Er Chenghuang Seth.",
         "step_issued": "Hab Seth",
         "step_captured": "Shesep Seth",
         "step_handed": "Redi Er Chenghuang",
-        "issued_on": "Hab Seth · {{date}}"
+        "issued_on": "Hab Seth · {{date}}",
+        "handed_line": "Medu Ini Ba · Redi Er Chenghuang · {{date}}"
       },
       "ferry": {
         "title": "Acheron · Shem Itru",
@@ -7325,7 +7327,8 @@
       "notify_categories": "Iru Sedjem",
       "muted_count": "Sedjer · {{n}}",
       "muted_none": "Sedjem Neb",
-      "name_empty": "Ren Nen Shu"
+      "name_empty": "Ren Nen Shu",
+      "push_unanswered": "Sedjem Sab Nen Wen Djer. Hemsu Dbh: Setep «Redi Wenen», Er Khet Wehem Iri."
     },
     "login": {
       "username": "Ren Aq",
@@ -7413,7 +7416,10 @@
       "unavailable": "Medjat Pen Nen Sekhem Djer: Nen Wen. Iri Sekhem Em Smen Ta Tepy.",
       "off_failed": "{{bio}}: Nen Rekh. Wen Djer.",
       "prompt": "Er Tepy Hesy Er Khesef: Smen Djes-Ek.",
-      "prompt_off": "Er Tepy Khetem: Smen Djes-Ek."
+      "prompt_off": "Er Tepy Khetem: Smen Djes-Ek.",
+      "cancelled": "Sehen Seth · Nen Hab. «Smen»: Wehem Iri.",
+      "failed_any": "{{bio}}: Nen Rekh · Nen Hab. «Smen»: Wehem Iri.",
+      "off_cancelled": "Sehen Seth. Wen Djer."
     },
     "offline": {
       "banner": "Nen Em Senb · Pehwy {{time}}",

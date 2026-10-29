@@ -67,7 +67,7 @@ import {
 import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
 import { AppealLine, roundsOf } from "./appeals";
 import { WangsiLine } from "./wangsi";
-import { CaptureCard, ConfessionCard, DeliveredRow, FerryCard, VestibuleCard } from "./lifeProgress";
+import { CaptureCard, CaptureLine, ConfessionCard, DeliveredRow, FerryCard, VestibuleCard } from "./lifeProgress";
 import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
@@ -866,6 +866,11 @@ export function MyLifeScreen() {
     platform().persistent.set(memo, JSON.stringify(next));
   };
   const unrecorded = t("common.value.unrecorded");
+  const stations = me.civilization === "CHINESE" && !!me.diyu_station;
+  const deliveredRow = !!(settled && !deliveredInLine && me.wangsi_delivered_at);
+  // 第六十四批:十三站卡、枉死城那一行、已超度行,任一出现就算「上路了」—— 已交城隍的勾魂牒收成资料行里一行。
+  // 不按站名判断(站名单会变)。
+  const onTheRoad = stations || deliveredRow || !!wangsi.data?.length;
 
   const refresh = () => {
     void life.reload();
@@ -893,9 +898,9 @@ export function MyLifeScreen() {
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
         <Now me={me} lex={residence.home} planState={planState} />
         {/* 第六十二批:位置类的卡在五段条正下方,固定顺序 勾魂牒 → 已超度 → 十三站 → 冥河 → 前庭(不按时间)。 */}
-        <CaptureCard warrant={me.capture_warrant} />
-        {settled && !deliveredInLine ? <DeliveredRow at={me.wangsi_delivered_at} holdRef={delivered.hold} /> : null}
-        {me.civilization === "CHINESE" && me.diyu_station ? <StationsCard station={me.diyu_station} /> : null}
+        {onTheRoad && me.capture_warrant?.status === "HANDED_OVER" ? null : <CaptureCard warrant={me.capture_warrant} />}
+        {deliveredRow ? <DeliveredRow at={me.wangsi_delivered_at} holdRef={delivered.hold} /> : null}
+        {stations ? <StationsCard station={me.diyu_station} /> : null}
         <FerryCard ferry={me.greek_ferry} />
         <VestibuleCard vestibule={me.european_vestibule} />
         <Balance me={me} lex={residence.home} />
@@ -914,6 +919,7 @@ export function MyLifeScreen() {
                 {me.birth_continent ? enumText(enumLabel("souls.birth_continent", me.birth_continent), t) : unrecorded}
               </DataRow>
             ) : null}
+            {onTheRoad ? <CaptureLine warrant={me.capture_warrant} /> : null}
           </DataRows>
         </Block>
         {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
