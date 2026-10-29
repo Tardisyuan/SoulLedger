@@ -1,7 +1,7 @@
 """GitHub Actions 跑在额度上(上线前缺口 19,用户 2026-10-30 定)。
 
-额度曾经耗尽,而这里几乎每次推送都是推 main。所以 workflow 只许按钟点、按 tag、
-按手动触发;不许在分支推送或 PR 上自动跑。每个 job 必须有 `timeout-minutes`
+额度曾经耗尽,而这里几乎每次推送都是推 main。所以 workflow 只许按钟点(最多每天一次)、
+按 tag、按手动触发;不许在分支推送或 PR 上自动跑。每个 job 必须有 `timeout-minutes`
 (默认 360 分钟,一条挂住的测试就能吃掉一个月额度的几分之一),同一 ref 的旧运行被取消。
 """
 from pathlib import Path
@@ -28,8 +28,9 @@ def test_triggers_stay_on_the_budget(name):
         assert set(push) == {"tags"}, f"{name}: push runs on more than tags: {push}"
     for entry in on.get("schedule") or []:
         minute, hour, dom, month, dow = entry["cron"].split()
-        # At most once a week: a fixed minute, hour and weekday.
-        assert minute.isdigit() and hour.isdigit() and dow.isdigit() and dom == month == "*", entry
+        # At most once a day: a fixed minute and hour (daily, or one weekday).
+        assert minute.isdigit() and hour.isdigit() and dom == month == "*", entry
+        assert dow == "*" or dow.isdigit(), entry
     assert data["concurrency"]["cancel-in-progress"] is True
     for job_name, job in data["jobs"].items():
         assert isinstance(job.get("timeout-minutes"), int), f"{name}: {job_name} has no timeout-minutes"

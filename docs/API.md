@@ -13,6 +13,9 @@ http://localhost:8000/api/v1
 ```
 
 Health checks sit outside the versioned prefix: `/health/` and `/health/detailed/`.
+Prometheus metrics are at `/metrics/`, also outside the prefix: 404 unless `METRICS_TOKEN`
+(`Authorization: Bearer …`) or `METRICS_ALLOWED_IPS` admits the caller (`backend/apps/core/metrics.py`;
+metric list in `docs/DEPLOYMENT.md`).
 
 ## Authentication
 All API endpoints require JWT authentication unless noted. There are two token
@@ -221,6 +224,12 @@ amend and approval alike); advisor seats of a cross-realm judgment get no approv
 | POST | /dispatch/capture-warrants/{id}/capture/ | Captured (`capture.execute`); 409 `wrong_status` |
 | POST | /dispatch/capture-warrants/{id}/hand-over/ | Hand over = register the death (`{"location"?}`, `capture.execute`); 409 `wrong_status` / `not_alive` |
 | POST | /dispatch/capture-warrants/{id}/cancel/ | Revoke (`{"reason": ""}`, `capture.issue`); 400 `reason_required`, 409 `wrong_status` |
+
+A 地府 death registered any other way (death sync, 土地公, officer state change) hands every open warrant
+over in the same transaction, or issues one already handed over when the soul had none (city god matched by
+origin, may be null); `capture.py::close_on_death`, user decision 2026-10-30. Other civilizations get no warrant.
+The soul's own `GET /me/` carries `capture_warrant` `{status, issued_at}` (地府, else null): while alive only an
+`ISSUED` / `CAPTURED` one; after death the latest warrant that was not cancelled, so `HANDED_OVER` too.
 
 ### Death sync: 土地公 (地府 only)
 

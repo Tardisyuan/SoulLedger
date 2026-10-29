@@ -2,21 +2,18 @@
 
 > 2026-10-09 起草,基于分支 `chore/deploy-readiness-docs`(从 `feat/v3-modern` 开出)。**只做了部署准备,没有部署任何东西**:
 > 没动服务器、DNS、115 测试机。标 **未核实** 的是没在代码里或本机跑出来证实的说法。
-> 本文是**清单**;各子系统的细节与实测记录在 [`DEPLOYMENT.md`](DEPLOYMENT.md)(TLS 首签、续期、定时任务、Matrix、备份恢复),不重复。
+> 本文是**清单**;各子系统的细节与实测记录在 [`DEPLOYMENT.md`](DEPLOYMENT.md)(TLS 首签、续期、定时任务、Matrix、备份恢复、异地副本与告警、恢复演练、RPO/RTO、部署回滚、指标与日志、数据保留、密钥轮换),不重复。
+> **2026-10-30 复核**:§0.1、§1.1 的 `ENCRYPTION_KEY`、§3、§7、§8、§9 已按当天的代码改过;其余仍是 10-09 的记录。
 > 约定:`DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"`;根 `.env` 由 `scripts/deploy.sh production` 从 `.env.production` 复制(`scripts/deploy.sh:20-34`)。
 > 看环境变量是否合格:`scripts/check-deploy-env.sh .env`(退出码非 0 即有 FAIL;不会打印密钥值)。
 
 ## 0. 先知道的三件事(代码里已核实,会让上线静默出错)
 
-1. **根 `.env` 里的 `DESK_URL`、`CORS_ALLOWED_ORIGINS`、`EMAIL_*`、`SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`、`ASSISTANT_*`、`JWT_*` 都不会传进容器。**
-   `docker-compose.yml:12-37` 的 `x-django-env` 只列了 `DATABASE_URL / REDIS_URL / CELERY_* / SECRET_KEY / ALLOWED_HOSTS / ENCRYPTION_KEY / SENTRY_DSN / TRUSTED_PROXY_COUNT / MEDIA_ROOT / MATRIX_*`,
-   backend、celery、celery-beat 三个服务都用它(`docker-compose.yml:97,122,133`)。没列的变量,`settings.py` 读不到就用默认:
-   `DESK_URL` 落到 `http://localhost:3000`(`settings.py:765`),于是**官员密码重置邮件里的链接指向收件人自己的电脑**(`apps/authentication/officer_reset.py:144`);
-   `EMAIL_HOST` 落到 `localhost:25`(`settings.py:747`),找回密码的验证码发不出去且界面不报错;
-   `SOUL_PUSH_ENABLED` 永远是 `False`(`settings.py:415`),灵魂端推送全部标 `DISABLED`。
-   **上线前必须补**:在 `x-django-env` 里加这些变量(默认值取 `settings.py` 的默认值,未设时行为不变),并同步到 `.env.example`
-   ——`backend/tests/test_production.py::TestEnvExample` 会检查 compose 里每个 `${NAME}` 都在 `.env.example` 里列出。
-   我没能做这个改动(本次的会话权限不允许编辑 `.env.example`)。可直接套用的补丁在本文末「附录 A」。
+1. **根 `.env` 里的 `ASSISTANT_*`、`JWT_*` 不会传进容器。** `docker-compose.yml` 的 `x-django-env` 是 backend、celery、celery-beat
+   三个服务共用的环境;没列的变量 `settings.py` 读不到就用默认。附录 A 那批(`DESK_URL`、`CORS_ALLOWED_ORIGINS`、`EMAIL_*`、
+   `SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`)**已补进去**,2026-10-30 又补了 `OPS_ALERT_WEBHOOK_URL`、`LOG_FORMAT`、`METRICS_*`、
+   `*_KEY_FALLBACKS` 与两项保留天数(`.env.example` 同步,`backend/tests/test_production.py::TestEnvExample` 守着)。
+   还没补的:`ASSISTANT_*`(默认关闭,开「问一问」前要补)与 `JWT_*`(有默认值)。
 2. **生产覆盖文件的 backend 启动命令没有 `seed_mythology`**(`docker-compose.production.yml:62-66`),而基础文件有(`docker-compose.yml:88-93`;compose 合并时 `command` 被整条替换)。
    全新生产库里没有租户、界域、冥界人物。首次上线要手动跑一次(见第 6 节),之后不用。
 3. **没有 `eas.json`,两个 `app.json` 也没有 `extra.eas.projectId`**(`mobile/app.json`、`mobile-officer/app.json`;`ls mobile/eas.json mobile-officer/eas.json` 均不存在)。
@@ -34,7 +31,7 @@
 | `DEBUG` | — | **不要设**(基础文件刻意不写)。设成 true 会关掉 HSTS/SSL 重定向/安全 cookie、放开 CORS(`CORS_ALLOW_ALL_ORIGINS = DEBUG`)、允许 SQLite | `settings.py:23,227,505`;`docker-compose.yml:18-20` |
 | `ALLOWED_HOSTS` | 必 | 空:`ValueError` 拒绝启动。写错:所有请求 400。**必须包含 `backend`**(Synapse 推送回调的主机名),否则书信推送静默失败(回调 400) | `settings.py:31-39`;`docker-compose.yml:168`、`DEPLOYMENT.md` 书信推送一节 |
 | `DESK_URL` | 必(见 §0.1) | 官员重置密码/邮箱验证邮件的链接前缀;默认 `http://localhost:3000`。须为公网 https,无末尾斜杠 | `settings.py:765`;`officer_reset.py:144` |
-| `ENCRYPTION_KEY` | 必 | `DEBUG=False` 且空:`ImproperlyConfigured` 拒绝启动。格式必须是 Fernet(44 字符 urlsafe-base64 以 `=` 结尾),否则同样拒绝。它加密 `WebhookConfig.signing_secret` 与 `DeathRegistrationRequest.source_payload`。**2FA 的 TOTP 密钥不用它**:`ENCRYPTION_KEY` 只被 `apps/death_sync/fields.py`、`encrypted_json.py` 读(grep 全 `apps/` 非测试代码),`apps/authentication/` 里没有引用;TOTP 密钥怎么存:未核实。**一旦有数据后不能换**,换了旧密文读不出。生成:`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` | `settings.py:695-736` |
+| `ENCRYPTION_KEY` | 必 | `DEBUG=False` 且空:`ImproperlyConfigured` 拒绝启动。格式必须是 Fernet(44 字符 urlsafe-base64 以 `=` 结尾),否则同样拒绝。它加密 `WebhookConfig.signing_secret` 与 `DeathRegistrationRequest.source_payload`。2026-10-30 时加密的列还有官员 / 灵魂两步验证的 `secret`、灵魂账号初始凭据、助手平台 API key(`DEPLOYMENT.md`「密钥轮换」)。**可以不停机轮换**:`ENCRYPTION_KEY_FALLBACKS` + `manage.py rotate_encryption_key`,步骤见 `DEPLOYMENT.md`;直接换掉而不留旧 key,旧密文读不出。生成:`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` | `settings.py:695-736` |
 | `DATABASE_URL` | 必 | 生产叠加文件把它指到 `pgbouncer:5432`,由 `DB_PASSWORD` 拼出(`docker-compose.production.yml:48`)。含 `sqlite` 且 `DEBUG=False`:拒绝启动 | `settings.py:170-175` |
 | `DB_PASSWORD` | 必 | compose 的 `:?` 校验,缺了不启动 | `docker-compose.yml:13`;`production.yml:28,45,151` |
 | `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | 必 | 生产叠加文件由 `REDIS_PASSWORD` 拼出(`production.yml:49-51`);不用手写。缺 Redis:权限缓存退回进程内存(默认 TTL 0,每次查库)、WebSocket 与 Celery 全部不可用 | `settings.py:135,388-389` |
@@ -96,7 +93,7 @@
 ## 3. 证书续期与失败告警
 
 - `certbot` 服务每 12 小时 `certbot renew`,成功 touch `/etc/letsencrypt/.renew-ok`,失败打印 `certbot renew FAILED exit=N`;续出新证书时 touch `.deployed`,nginx 容器每 5 分钟看到标记就 reload(`production.yml:181-205,226-238`)。
-- 它的 healthcheck:没有证书、或最近一次成功的 renew 超过 25 小时(`find … -mmin -1500`)→ unhealthy。**但 Docker 的 unhealthy 本身不会通知任何人**(没有任何 compose 服务在看它;是否有外部监控:**未核实**)。上线前接一个外部告警,任选:
+- 它的 healthcheck:没有证书、或最近一次成功的 renew 超过 25 小时(`find … -mmin -1500`)→ unhealthy。**但 Docker 的 unhealthy 本身不会通知任何人**(compose 不看它)。2026-10-30 起备份与定时任务的失败会 POST 到 `OPS_ALERT_WEBHOOK_URL`(`DEPLOYMENT.md`「备份异地副本与告警」),**certbot 没有接**。上线前接一个外部告警,任选:
   1. 监控脚本每小时跑 `docker inspect --format '{{.State.Health.Status}}' $(docker compose -f docker-compose.yml -f docker-compose.production.yml ps -q certbot)`,非 `healthy` 就发消息;
   2. 外部探测证书剩余天数(与 certbot 无关,最可靠):`echo | openssl s_client -connect example.com:443 -servername example.com 2>/dev/null | openssl x509 -noout -enddate`,剩余 < 14 天告警;
   3. 同理盯 `backup` 服务的 healthcheck(见第 8 节)。
@@ -168,19 +165,20 @@
 - 上线后验证:`/scheduler` 页面各行已启用;`GET /health/detailed/`(需 ADMIN 登录)的 `scheduler` 字段不是 `"overdue"`——状态码仍是 200,**探针要读字段**。
 - beat 没起的后果(`DEPLOYMENT.md`):审批节点超时不自动处理、推送回执不核对、余额/普查快照不写、孤儿图片不清理。
 - worker 重启不影响 beat;beat 重启会按数据库继续。
+- 2026-10-30 起 worker 与 beat 都有 healthcheck(beat 持有单 beat 锁才健康),`/metrics/` 有 `soulledger_scheduler_overdue_jobs`,定时任务失败与逾期另 POST `OPS_ALERT_WEBHOOK_URL`。联调清单见 `DEPLOYMENT.md`「定时任务」。
 
 ## 8. 备份
 
-- `backup` 服务(`production.yml:139-169`):启动先备份一次(失败容器退出),之后容器内 cron **每天 02:00**(容器时区,镜像默认 UTC)跑 `scripts/backup-db.sh`,文件在主机 `./backups/`:`soulledger_*.sql.gz`(库)、`soulledger_media_*.tar.gz`(头像媒体)、聊天初始化后再加 `soulledger_synapse_*.dump` 与 `soulledger_synapse_data_*.tar.gz`(签名密钥,丢了等于换了一台 homeserver)。
-- healthcheck:任一应有的最新备份超过 26 小时 → unhealthy。**同证书:没有人会被通知,要接外部告警**(§3)。
-- **备份只在同一台机器的 `./backups/`。** 机器坏了备份一起坏。把 `./backups/` 同步到另一处(对象存储/另一台机器)是上线前要补的,仓库里没有这一步(**未核实**:是否有别的机制)。
+- `backup` 服务(`docker-compose.production.yml`,镜像 `postgres:16-alpine`;2026-10-30 前用 pgvector 镜像时没有 `crond`,每日 cron 从没起来):启动先备份一次(失败容器退出),之后容器内 cron **每天 02:00**(容器时区,镜像默认 UTC)跑 `scripts/backup-db.sh`,文件在主机 `./backups/`:`soulledger_*.sql.gz`(库)、`soulledger_media_*.tar.gz`(头像媒体)、聊天初始化后再加 `soulledger_synapse_*.dump` 与 `soulledger_synapse_data_*.tar.gz`(签名密钥,丢了等于换了一台 homeserver)。
+- healthcheck:任一应有的最新备份超过 26 小时 → unhealthy。备份失败会 POST `OPS_ALERT_WEBHOOK_URL`;**unhealthy 本身仍没有人被通知**(§3)。
+- **异地副本**:设 `BACKUP_OFFSITE_REMOTE` 后每次备份 `rclone copy` 到那里(`DEPLOYMENT.md`「备份异地副本与告警」)。**目标还没定**(用户 2026-10-30),不设时备份只在本机 `./backups/`,机器坏了一起坏。
 - **加密密钥也要备份**:`ENCRYPTION_KEY`、`MATRIX_*` 全部、`MATRIX_USER_SALT`。丢了 `ENCRYPTION_KEY`,库里加密列永久不可读;这些值**不在** `./backups/` 里。
-- 恢复只能进空库,步骤与实测记录见 `DEPLOYMENT.md`「数据库备份与恢复」。**上线前至少在 staging 演练一次完整恢复。**
-- 部署前手动补一份(命令形状从 `production.yml:158` 推出,**我没有运行过**):`$DC exec backup /scripts/backup-db.sh /backups`。
+- 恢复只能进空库,步骤与实测记录见 `DEPLOYMENT.md`「数据库备份与恢复」。**上线前至少在 staging 演练一次完整恢复**:`scripts/restore-drill.sh`(`DEPLOYMENT.md`「恢复演练」)。RPO 24 小时 / RTO 2 小时(用户 2026-10-30 接受),PITR 上线前再配。
+- 部署前手动补一份:`$DC run --rm --no-deps backup /scripts/backup-db.sh /backups`(与 `DEPLOYMENT.md`「部署回滚」第 1 步同一条)。
 
 ## 9. 回滚
 
-代码里没有现成的回滚脚本。可行路径(推断自上面的机制,**整体未演练,未核实**):
+**按 `DEPLOYMENT.md`「部署回滚」做**(2026-10-30:部署前给镜像打 `prev-<sha>` 标签并备份;先在新镜像里倒回迁移再换旧镜像;不可逆迁移登记在 `backend/tests/irreversible_migrations.txt`,当天为空)。仍没有回滚脚本,整套也未演练。下面是 10-09 的原记录:
 
 - **只回滚代码、迁移没变**:`git checkout <上一个 tag>` → `$DC build backend frontend` → `$DC up -d`。镜像是本地构建、标签固定为 `soulledger-backend`(`docker-compose.yml:72`),不是从镜像仓库拉的,所以「回滚」= 重新构建旧提交。如果想要可秒回的回滚,发布时给镜像打带版本的标签并保留旧镜像(目前没有这样做)。
 - **迁移已经跑过**:backend 启动命令只会 `migrate` 向前。要退回:先停 `backend celery celery-beat pgbouncer`,用第 8 节的备份按 `DEPLOYMENT.md` 恢复进空库(会丢失备份之后的数据),再启动旧版本。逐条 `migrate <app> <旧编号>` 的反向迁移:**未核实**哪些迁移可逆(CLAUDE.md 提到 `4033dcc1` 迁移往返测试存在,说明有一部分被往返验证过,但不是全部)。
@@ -247,6 +245,8 @@
 - [ ] 在 staging 做过一次完整恢复演练(§8)
 
 ## 附录 A:让 compose 把缺的变量传进容器的补丁
+
+> **已应用**(现行 `docker-compose.yml` 的 `x-django-env` 里有这些行),留作记录;`ASSISTANT_*` 仍未补。
 
 `docker-compose.yml` 的 `x-django-env` 里,`TRUSTED_PROXY_COUNT` 一行之后加入;默认值与 `settings.py` 的默认一致,所以根 `.env` 没设这些变量时行为和现在完全相同。
 同时在 `.env.example` 里为每个名字加一行(否则 `test_production.py::TestEnvExample` 会红)。
