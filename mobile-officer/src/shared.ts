@@ -36,6 +36,7 @@ export {
   GoneState,
   useReducedMotion,
   useRemote,
+  useReloadOnReconnect,
   useTheme,
 } from "../../mobile/src/ui";
 export { PasswordMatch, PasswordRules, usePasswordForm } from "../../mobile/src/passwordRulesView";

@@ -4,9 +4,12 @@
  * shell (the band shows the hall; the two-step banner stays until it is set up).
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 
+import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { RefreshFailed, Row, visibleTabs } from "../kit";
+import { cacheWrite, clearReadCache } from "../readCache";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab, segmentLabel } from "../screens/queue";
 import { SearchTab } from "../screens/search";
@@ -556,5 +559,47 @@ describe("rows whose detail was gone (O-c)", () => {
     renderOfficer(<QueueTab gone={new Set(["judgment:j-1"])} onOpen={onOpen} />);
     fireEvent.press(await screen.findByTestId("queue-row-j-1"));
     expect(onOpen).not.toHaveBeenCalled();
+  });
+});
+
+// 真机 10-29c(o14–o19):飞行模式进审判页，列表读缓存不报错、所以没有「重试」;四个计数取失败就一直空着，
+// 联网后也不自己回来，只有下拉才找回。现在：取不到的计数写「—」,恢复联网时列表和计数自己重取。
+describe("the judgments tab across a dropped network", () => {
+  const net = { set: (_n: Online) => {} };
+  function Net({ children }: { children: ReactNode }) {
+    const [value, set] = useState<Online>({ offline: true, back: 0 });
+    useEffect(() => {
+      net.set = set;
+    }, []);
+    return <OnlineContext.Provider value={value}>{children}</OnlineContext.Provider>;
+  }
+  beforeEach(() => clearReadCache());
+
+  it("offline from the cache: no error, counts 「—」; back online: the list and the counts are asked again by themselves", async () => {
+    cacheWrite("list:queue:mine", { results: [{ id: "j-old", case_number: "CN-0", soul_name: "旧", court: "一殿", is_final: true }] });
+    mockCounts.mockRejectedValueOnce(new Error("Network Error")).mockResolvedValue({ data: { mine: 3, unclaimed: 0, others: 0, deferred: 0 } });
+    mockList.mockResolvedValue({ data: { results: [{ id: "j-new", case_number: "CN-1", soul_name: "新", court: "一殿", is_final: true }] } });
+    renderOfficer(
+      <Net>
+        <QueueTab onOpen={() => {}} />
+      </Net>
+    );
+    expect(await screen.findByTestId("queue-row-j-old")).toBeTruthy();
+    expect(await within(screen.getByTestId("queue-group-mine")).findByText("我手上 · —")).toBeTruthy();
+    expect(screen.queryByTestId("refresh-failed")).toBeNull();
+    expect(mockList).not.toHaveBeenCalled();
+    expect(mockCounts).toHaveBeenCalledTimes(1);
+
+    await act(async () => net.set({ offline: false, back: 1 }));
+    expect(await screen.findByTestId("queue-row-j-new")).toBeTruthy();
+    expect(await within(screen.getByTestId("queue-group-mine")).findByText("我手上 · 3")).toBeTruthy();
+    expect(screen.queryByText("我手上 · —")).toBeNull();
+    expect(screen.queryByTestId("queue-row-j-old")).toBeNull();
+    expect(mockCounts).toHaveBeenCalledTimes(2);
+  });
+
+  it("「—」 only when the counts failed: still loading is the bare name", () => {
+    expect(segmentLabel("我手上", null)).toBe("我手上 · —");
+    expect(segmentLabel("我手上", undefined)).toBe("我手上");
   });
 });

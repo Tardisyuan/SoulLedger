@@ -19,7 +19,7 @@ import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { readOwned, writeOwned } from "./owner";
-import { useOnline, useRemote } from "./shared";
+import { useOnline, useReloadOnReconnect, useRemote } from "./shared";
 
 export const CACHE_KEY = "officer_read_cache";
 export const DETAIL_KEEP = 20;
@@ -117,7 +117,7 @@ const hasAnswer = (error: unknown): boolean => (error as { response?: unknown } 
  * falls back to the cache too. Reloads by itself when the network returns.
  */
 export function useCachedRemote<T>(key: string, fetcher: () => Promise<T>) {
-  const { offline, back } = useOnline();
+  const { offline } = useOnline();
   const offlineNow = useRef(offline);
   useEffect(() => {
     offlineNow.current = offline;
@@ -134,12 +134,7 @@ export function useCachedRemote<T>(key: string, fetcher: () => Promise<T>) {
     }
   }, [key, fetcher]);
   const { data, error, loading, reload } = useRemote(wrapped);
-  const seen = useRef(back);
-  useEffect(() => {
-    if (back === seen.current) return;
-    seen.current = back;
-    void reload();
-  }, [back, reload]);
+  useReloadOnReconnect(reload);
   const at = data?.at ?? null;
   const [screen] = useState(() => ++nextScreen);
   const missed = data === null && error != null;

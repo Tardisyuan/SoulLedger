@@ -21,6 +21,7 @@ type T = (key: string, vars?: Record<string, string>) => string;
 
 /** 拒绝的 code → 文案;认不得的退回通用一句。 */
 export function wangsiRefusalText(e: unknown, t: T): string {
+  if (!(e as { response?: unknown } | null)?.response) return t("officer_app.confirm.reasons.network");
   const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
   return code && (WANGSI_ERROR_CODES as readonly string[]).includes(code) ? t(`judgment.wangsi.error.${code}`) : t("common.error");
 }

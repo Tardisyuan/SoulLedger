@@ -7,12 +7,13 @@
 import { platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
+import { AppState } from "react-native";
 
 import { confirmKey } from "../deviceCheck";
 import { CityGodCase } from "../screens/cityGod";
 import { ServingFact } from "../screens/servingFact";
 import { WangsiReview } from "../screens/wangsi";
-import { translate } from "../shared";
+import { ToastProvider, translate } from "../shared";
 import { OFFICER, renderOfficer } from "./harness";
 
 const mockDecide = jest.fn();
@@ -140,6 +141,95 @@ describe.each(SCREENS)("$name", ({ sent, failureID, go }) => {
     await go();
     await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
     expect(authenticate).not.toHaveBeenCalled();
+    await settle();
+  });
+});
+
+// 真机 10-29c(o13b):指纹先被拒、再通过，屏上却是「释放失败」,后端没收到请求。认证通过就发;没认出 / 取消说它自己的话;
+// 请求没有任何回应时说「网络错误」,绝不说「释放失败」。
+describe("期满释放 after the check (phone QA 10-29c)", () => {
+  const NETWORK = translate("zh-Hans", "officer_app.confirm.reasons.network");
+  const GENERIC = translate("zh-Hans", "disposition.release_error.generic");
+  const noAnswer = () => Object.assign(new Error("Network Error"), { request: {} });
+  const open = async () => {
+    renderOfficer(
+      <ToastProvider>
+        <ServingFact soulId="s-1" />
+      </ToastProvider>,
+      { user: { ...OFFICER, permissions: ["disposition.read", "disposition.execute"] } }
+    );
+    fireEvent.press(await screen.findByTestId("soul-release"));
+  };
+
+  it("not recognised, then recognised: the first tap sends nothing, the second sends once and says 已期满释放", async () => {
+    authenticate.mockResolvedValueOnce({ success: false, error: "authentication_failed" }).mockResolvedValueOnce({ success: true });
+    await open();
+    fireEvent.press(screen.getByTestId("soul-release-confirm"));
+    expect(await screen.findByText(FAILED)).toBeTruthy();
+    expect(mockRelease).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("soul-release-confirm"));
+    await waitFor(() => expect(mockRelease).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(translate("zh-Hans", "disposition.release_success"))).toBeTruthy();
+    expect(screen.queryByText(GENERIC)).toBeNull();
+    await settle();
+  });
+
+  it.each(["lockout", "timeout", "unknown"])("a check ending in %s sends nothing and says 没有认出, never 释放失败", async (error) => {
+    authenticate.mockResolvedValueOnce({ success: false, error });
+    await open();
+    fireEvent.press(screen.getByTestId("soul-release-confirm"));
+    expect(await screen.findByText(FAILED)).toBeTruthy();
+    expect(screen.queryByText(GENERIC)).toBeNull();
+    expect(mockRelease).not.toHaveBeenCalled();
+    await settle();
+  });
+
+  it("check passed but the request got no answer: 网络错误, the sheet stays, not 释放失败", async () => {
+    mockRelease.mockRejectedValueOnce(noAnswer());
+    await open();
+    fireEvent.press(screen.getByTestId("soul-release-confirm"));
+    expect(await screen.findByText(NETWORK)).toBeTruthy();
+    expect(screen.queryByText(GENERIC)).toBeNull();
+    expect(screen.getByTestId("soul-release-sheet")).toBeTruthy();
+    await settle();
+  });
+
+  it("sends only once the app is in front again: Android calls back while the prompt is closing", async () => {
+    const listeners: ((s: string) => void)[] = [];
+    const change = (s: string) => listeners.forEach((fn) => fn(s));
+    const was = AppState.currentState;
+    (AppState as { currentState: string }).currentState = "background";
+    const listen = jest.spyOn(AppState, "addEventListener").mockImplementation(((_: string, fn: (s: string) => void) => {
+      listeners.push(fn);
+      return { remove: jest.fn() };
+    }) as never);
+    try {
+      await open();
+      fireEvent.press(screen.getByTestId("soul-release-confirm"));
+      await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
+      await act(async () => new Promise((r) => setTimeout(r, 50)));
+      expect(mockRelease).not.toHaveBeenCalled();
+      await act(async () => change("active"));
+      await waitFor(() => expect(mockRelease).toHaveBeenCalledTimes(1));
+    } finally {
+      (AppState as { currentState: string }).currentState = was;
+      listen.mockRestore();
+    }
+    await settle();
+  });
+});
+
+describe("a decision that got no answer says 网络错误, not the generic refusal", () => {
+  const NETWORK = translate("zh-Hans", "officer_app.confirm.reasons.network");
+  const noAnswer = () => Object.assign(new Error("Network Error"), { request: {} });
+  it.each([
+    ["wangsi conclusion", 0, "wangsi-failure", "common.error"],
+    ["city god send-on", 1, "city-god-failure", "judgment.claim.refused.generic"],
+  ] as const)("%s", async (_name, i, failureID, generic) => {
+    SCREENS[i].sent.mockRejectedValueOnce(noAnswer());
+    await SCREENS[i].go();
+    await waitFor(() => expect(screen.getByTestId(failureID).props.children).toBe(NETWORK));
+    expect(screen.queryByText(translate("zh-Hans", generic))).toBeNull();
     await settle();
   });
 });

@@ -13,13 +13,15 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
-import { Screen, Txt, space, useI18n, useOnline, useRemote, useToast } from "../shared";
+import { Screen, Txt, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useToast } from "../shared";
 
 /** 他人手上 / 暂缓 are read-only on the phone: no claim button, the row opens the case. */
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
 
 /** 分段上的「名 · 数」。两位数起去掉「 · 」(用户 2026-10-29):360dp 上四段各自放得下;数字等宽见 `kit` 的 segmentTight。 */
-export function segmentLabel(label: string, count?: number): string {
+export function segmentLabel(label: string, count?: number | null): string {
+  // null: the counts did not load (offline, a failed fetch) -- 「—」, and they are asked again on reconnect.
+  if (count === null) return `${label} · —`;
   if (count == null) return label;
   return count >= 10 ? `${label}${count}` : `${label} · ${count}`;
 }
@@ -56,9 +58,11 @@ export function QueueTab({
   const fetchPage = useCallback((page: number) => judgmentApi.list({ group, page: String(page) }).then((r) => r.data), [group]);
   const { rows: data, more, moreState } = useMoreRows(firstPage, fetchPage);
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
-  // The four counts (a count that fails to load is simply not shown).
+  // The four counts. They are not in the read cache: offline they fail and the segments say 「—」; back online
+  // they are asked again by themselves, like the list (phone QA 10-29c: they stayed blank until a pull).
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
-  const { data: counts, reload: reloadCounts } = useRemote(loadCounts);
+  const { data: counts, error: countsError, reload: reloadCounts } = useRemote(loadCounts);
+  useReloadOnReconnect(reloadCounts);
   // A pull, a claim, a 409: the list and its four counts are asked again together.
   const refresh = () => Promise.all([reload(), reloadCounts()]);
 
@@ -86,7 +90,7 @@ export function QueueTab({
           setGroup(next);
           onGroup?.(next);
         }}
-        options={GROUPS.map((key) => ({ key, label: segmentLabel(t(`officer_app.queue.${key}`), counts?.[key]) }))}
+        options={GROUPS.map((key) => ({ key, label: segmentLabel(t(`officer_app.queue.${key}`), counts ? counts[key] : countsError ? null : undefined) }))}
       />
       <View style={{ paddingHorizontal: space[5], paddingBottom: space[3] }}>
         <Txt variant="caption" tone="muted">
