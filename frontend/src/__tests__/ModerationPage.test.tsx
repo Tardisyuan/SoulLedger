@@ -663,6 +663,40 @@ describe("敏感词 · E-08b", () => {
     );
   });
 
+  it("a hall's ADMIN is not asked for a target: it copies into its own hall", async () => {
+    asAdmin();
+    tenantsMock.list.mockResolvedValue(page([{ id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" }]));
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
+    expect(within(dialog).queryByLabelText(tZh("social_moderation.words.copy_target"))).toBeNull();
+  });
+
+  it("the hall-less ADMIN names the target hall; the source list leaves the target out; both go to the server", async () => {
+    mockUser = { id: 1, username: "g", role: "ADMIN", permissions: [], tenant: null };
+    tenantsMock.list.mockResolvedValue(
+      page([
+        { id: 1, code: "CN_DIYU", display_name: "中国地府" },
+        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" },
+      ])
+    );
+    apiMock.copyWords.mockResolvedValue({ data: { copied: 2, skipped: 0 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
+    const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
+    const target = within(dialog).getByLabelText(tZh("social_moderation.words.copy_target"));
+    const source = within(dialog).getByLabelText(tZh("social_moderation.words.copy_source"));
+    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.words.copy_confirm") });
+    await within(target).findByRole("option", { name: "中国地府" });
+    fireEvent.change(target, { target: { value: "CN_DIYU" } });
+    expect(within(source).queryByRole("option", { name: "中国地府" })).toBeNull();
+    fireEvent.change(source, { target: { value: "EU_HEAVEN_HELL" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(apiMock.copyWords).toHaveBeenCalledWith("EU_HEAVEN_HELL", "CN_DIYU"));
+  });
+
   it("clicking a row opens the edit drawer; an uncategorised word cannot be saved until it gets a category", async () => {
     asRole("social.moderate");
     apiMock.words.mockResolvedValue(page(words));

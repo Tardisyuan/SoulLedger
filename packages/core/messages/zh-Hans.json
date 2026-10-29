@@ -1111,7 +1111,6 @@
       "pending_cells": "{{n}} 处待改",
       "discard": "放弃",
       "unsaved_region": "未保存的改动",
-      "saved_all": "已保存 {{n}} 项",
       "partial_title": "部分保存失败 · 已存 {{saved}} 项，失败 {{failed}} 项",
       "locate": "定位",
       "conflict_title": "冲突提示 {{n}}",
@@ -1147,7 +1146,12 @@
       "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
       "deny_word": "禁授",
       "deny_hint": "殿主不能被授予「{{perm}}」。",
-      "conflict_view": "查看"
+      "conflict_view": "查看",
+      "category_all": "全选",
+      "category_none": "全不选",
+      "category_all_label": "{{role}} 勾选「{{category}}」类的全部权限",
+      "category_none_label": "{{role}} 取消「{{category}}」类的全部权限",
+      "saved_all_refresh": "已保存 {{n}} 项 · 对方刷新页面后生效"
     },
     "segments": {
       "label": "权限分区",
@@ -1260,6 +1264,36 @@
       "save_error": "数据范围保存失败",
       "load_error": "数据范围读取失败",
       "read_only": "只有不属于任何殿的管理员能改数据范围"
+    },
+    "members": {
+      "tabs": "角色页签",
+      "tab_details": "详情",
+      "search": "搜索成员",
+      "list": "持有此角色的人",
+      "empty": "没有人持有此角色。",
+      "load_error": "成员加载失败",
+      "primary": "主角色",
+      "extra": "兼任",
+      "primary_locked": "主角色不能在这里移除：先给此人授别的主角色。",
+      "remove": "移除",
+      "remove_label": "移除 {{name}} 的兼任",
+      "grant": "批量授予",
+      "grant_n": "授予 {{n}} 人",
+      "pick_search": "按用户名或邮箱找人",
+      "pick_empty": "没有匹配的人",
+      "already": "已持有",
+      "kind": "授为",
+      "primary_hint": "授为主角色会替换此人原来的主角色。",
+      "granted": "已授予 {{n}} 人 · 对方刷新页面后生效",
+      "removed": "已移除 {{n}} 人 · 对方刷新页面后生效",
+      "change_error": "没有改成，请重试",
+      "refused_title": "这一批没有改动：下面这些人被拒绝。",
+      "refused": {
+        "not_found": "不在你能管理的范围内",
+        "primary_needs_replacement": "主角色不能直接移除，先授别的主角色",
+        "forbidden": "不能授予比你自己更高的角色",
+        "invalid": "这个角色不能这样授予"
+      }
     }
   },
   "workflow": {
@@ -3439,7 +3473,14 @@
     "tenant_pick": "选择租户",
     "organization_column": "机构 · 职务",
     "position": "职务",
-    "organization_required": "有殿的非管理员必须属于一个机构"
+    "organization_required": "有殿的非管理员必须属于一个机构",
+    "org_filter": {
+      "label": "按机构筛选（含下级）",
+      "all": "全部机构"
+    },
+    "status_filter": {
+      "all": "全部状态"
+    }
   },
   "settings": {
     "title": "设置",
@@ -6261,7 +6302,9 @@
       "copy_source": "源文明",
       "copy_source_placeholder": "— 选择文明 —",
       "copy_confirm": "复制",
-      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的"
+      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的",
+      "copy_target": "复制到",
+      "copy_target_placeholder": "选择目标文明"
     },
     "mutes": {
       "col_soul": "灵魂",
