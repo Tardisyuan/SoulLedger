@@ -1,11 +1,33 @@
 name: CI
 
-# Manual-dispatch only: this repo is out of GitHub Actions minutes, so pushes
-# and pull requests must not spend them. Run it from the Actions tab, or
-# `gh workflow run ci.yml --ref <branch>`. To restore automatic runs, put the
-# `push:`/`pull_request:` triggers below back.
+# Automatic, but on a budget (user decision 2026-10-30). This repo ran out of
+# GitHub Actions minutes, and nearly every push here is a push to main — often
+# dozens a day — so "run on every push" is exactly what spent them. Pushes are
+# gated locally instead (scripts/run-gates.sh, run on unRAID). CI now runs:
+#   - weekly, Monday 03:00 UTC, on main: catches what the selective local gates
+#     can miss (coverage floor, the full real-PostgreSQL suite, all three E2E
+#     engines, npm/pip audit) within a week;
+#   - on a pushed tag `v*`: a release gets a full run before it ships;
+#   - by hand: Actions tab, or `gh workflow run ci.yml --ref <branch>`.
+# Not on push to branches and not on pull_request — that is the spend this
+# replaces. `concurrency` cancels a superseded run on the same ref, and every
+# job has `timeout-minutes`, so one hung test cannot bill the 360-minute default.
+# Estimated cost (2026-10-30, from the job list below, not measured on GitHub):
+# ~120 runner-minutes a run (backend ~60: the whole suite serially on
+# PostgreSQL with migrations and coverage, 53 min serial on the 8-core dev Mac;
+# frontend ~12, mobile ~6, officer ~6, e2e 3 x ~12), so ~520 a month on the
+# weekly schedule plus ~120 per tag. Re-estimate from the first real runs.
+# tests/test_ci_runs_on_a_budget.py holds these triggers.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # Least privilege for the job token (audit IS-19, 2026-09-14). Nothing here
 # writes to the repository, comments, or publishes: every job checks out, runs
@@ -26,6 +48,7 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       # At least 32 bytes: simplejwt signs HS256 with SECRET_KEY, and PyJWT
       # warns (InsecureKeyLengthWarning) on every encode/decode below that —
@@ -102,6 +125,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -191,6 +215,7 @@ jobs:
   # Android SDK and are verified on simulators by hand for now.
   mobile:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -217,6 +242,7 @@ jobs:
   # a change to the soul app's shared files shows here as its own red.
   officer:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -247,6 +273,7 @@ jobs:
   # for it would download a browser it never launches.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: frontend
     strategy:
       fail-fast: false
