@@ -23,8 +23,9 @@ function refusedOf(error: unknown): RoleMembersRefused | null {
 }
 
 const holds = (u: User, role: string) => u.role === role || (u.extra_roles ?? []).includes(role);
-const tenantName = (u: { tenant?: { code?: string; display_name?: string } | null }) =>
-  u.tenant?.display_name || u.tenant?.code || "—";
+// 没绑殿的账号(全局管理员)归在「未归殿」下,与机构选择器同一个词。
+const tenantName = (u: { tenant?: { code?: string; display_name?: string } | null }, none: string) =>
+  u.tenant?.display_name || u.tenant?.code || none;
 
 /**
  * 角色抽屉的「成员」页签(rbac-snowy 2026-10-29,决定第 6 条):谁持有这个角色(主角色在前,兼任另标),
@@ -124,7 +125,7 @@ export function RoleMembersSection({ role }: { role: Role }) {
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium text-[oklch(var(--color-ink))]">{u.username}</span>
                   <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-                    {[tenantName(u), u.organization?.name].filter(Boolean).join(" · ")}
+                    {[tenantName(u, t("org_select.no_tenant")), u.organization?.name].filter(Boolean).join(" · ")}
                     {!u.is_active && ` · ${t("users.inactive")}`}
                   </span>
                 </span>
@@ -173,7 +174,10 @@ function GrantPicker({
     queryFn: async () => (await usersApi.list({ search: q || undefined, ordering: "username" })).data.results,
   });
   const groups = new Map<string, User[]>();
-  for (const u of candidates.data ?? []) groups.set(tenantName(u), [...(groups.get(tenantName(u)) ?? []), u]);
+  for (const u of candidates.data ?? []) {
+    const key = tenantName(u, t("org_select.no_tenant"));
+    groups.set(key, [...(groups.get(key) ?? []), u]);
+  }
   const toggle = (id: number, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev);
