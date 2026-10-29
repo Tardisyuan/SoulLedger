@@ -105,7 +105,7 @@ are the whole of the isolation"）。
 | 5. 行/字段 | `DataScopeFilter`（`apps/perm/filters.py:8-63`）；`FieldPermissionMixin`（`apps/core/field_permissions.py:53-101`） | 逐端点测试 |
 
 **硬规则：fail closed。** 没有租户就是 `qs.none()`，不是"返回全部"。
-**ADMIN 是唯一全局角色**（`apps/core/tenant.py:19-27`）。
+**没绑殿的 ADMIN 是唯一全局角色**（`apps/core/tenant.py::is_tenant_exempt`；2026-10-29 起 `tenant_id` 非空的 ADMIN 与殿内其他角色一样只看本殿）。
 
 ### 3.3 已知缺口（不是待办，是读这份文件时要知道的）
 

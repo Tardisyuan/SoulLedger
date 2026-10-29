@@ -14,6 +14,7 @@ A cross-civilization judgment (sidebar: "Cross-Realm Judgment") is a joint judgm
 The list shows title, initiator and status ("Proposed", "Active", "Concluded", "Cancelled"); on the detail page:
 - Participants: the initiating hall uses "Seat a civilization", choosing the civilization and its role (Advisor, Co-Judge or Chairman) and optionally the deity in the seat (a co-judge or chair must be a judge; any serving deity may sit as an advisor).
 - "Activate judgment": the initiator activates once the participants are seated; none can be added afterwards.
-- Sentence plan stops: the home civilization is always stop one, set by the original judgment when it concludes; each co-judge or chair civilization then has one stop, filled in by its own judges with realm, term and notes; advisors carry none. An eternal term must be last; the order can be changed and saved.
+- Sentence plan stops: the home civilization is always stop one, set by the original judgment when it concludes; each co-judge or chair civilization then has one stop, filled in by its own judges with realm, term and notes; advisors carry none and have no approval stage either. An eternal term must be last; the order can be changed and saved.
 - Verdict: passed or rejected.
+Another hall sees only its own stop and the other halls' names, not their officers, sentence notes or the reasons stops were added or dropped; the original case's details open only for the initiating hall and an administrator who belongs to no hall.
 Viewing needs the cross-realm judgment read permission; opening, seating, filling a stop, activating and concluding need the cross-realm judgment create permission (held by Judges, Realm Leads and Administrators by default).
