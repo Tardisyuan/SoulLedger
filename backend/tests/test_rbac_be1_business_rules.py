@@ -293,7 +293,7 @@ def test_a_non_claimant_cannot_edit_someone_elses_claimed_case(claimed):
 
 
 def test_the_claimant_edits_as_before(claimed):
-    case, holder, _other, _mod = claimed
+    case, holder, _other, mod = claimed
     base = f"/api/v1/judgment/{case.pk}"
     assert holder.patch(f"{base}/", {"summary": "认领人改"}, format="json").status_code == 200
     assert holder.patch(f"{base}/draft/", {"version": 0, "notes": "草稿"}, format="json").status_code == 200
@@ -301,7 +301,9 @@ def test_the_claimant_edits_as_before(claimed):
     assert holder.put(f"{base}/evidence/{uuid.uuid4()}/", {"admitted": True}, format="json").status_code == 400
     assert holder.delete(f"{base}/citations/{uuid.uuid4()}/").status_code in (400, 404)
     assert holder.post(f"{base}/attachments/", {}, format="multipart").status_code == 400
-    assert not AuditLog.objects.filter(resource="judgment.claim_override").exists()
+    # The claimant's edits are not overrides: after one real override (a synchronous write) there is exactly one row.
+    assert mod.patch(f"{base}/", {"summary": "殿主改"}, format="json").status_code == 200
+    assert AuditLog.objects.filter(resource="judgment.claim_override").count() == 1
 
 
 def test_an_officer_who_may_reassign_overrides_and_leaves_a_record(claimed):
