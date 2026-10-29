@@ -253,7 +253,7 @@ function DispatchPageContent() {
         title={t("dispatch.pending")}
         isRefreshing={proposedStale}
         className="mb-6"
-        actions={buttonOn("dispatch.export") ? <ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed", ...filterParams })} page={t("dispatch.title")} hall={hall} /> : undefined}
+        actions={buttonOn("dispatch.export") ? <RequirePermission permissions="dispatch.export"><ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed", ...filterParams })} page={t("dispatch.title")} hall={hall} /></RequirePermission> : undefined}
       >
         <DispatchTable
           rows={proposed}
@@ -272,7 +272,7 @@ function DispatchPageContent() {
       <PageSection
         title={t("dispatch.history")}
         isRefreshing={historyStale}
-        actions={buttonOn("dispatch.export") ? <ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history", ...filterParams })} page={t("dispatch.title")} hall={hall} /> : undefined}
+        actions={buttonOn("dispatch.export") ? <RequirePermission permissions="dispatch.export"><ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history", ...filterParams })} page={t("dispatch.title")} hall={hall} /></RequirePermission> : undefined}
       >
         <DispatchTable
           rows={history}

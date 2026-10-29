@@ -30,7 +30,7 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const canExecute = useCan("judgment.execute");
+  const canExecute = useCan("city_god.execute");
 
   const state = detailStateOf({ data: c, error });
   if (state || !c) return <StateView state={state ?? "loading"} onRetry={() => void reload()} />;

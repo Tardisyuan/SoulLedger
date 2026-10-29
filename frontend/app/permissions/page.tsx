@@ -6,7 +6,8 @@ import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
-import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { PageSection } from "@/components/ui/page-section";
@@ -54,18 +55,22 @@ export type { GrantMap, RoleDiff } from "@/src/components/permissions/matrixDiff
 const PERMISSIONS_COLUMNS_KEY = "soulledger.permissions.columns";
 
 export default function PermissionsPage() {
-  // 页级门(rbac-web L-1 / L-6):授权矩阵接口全是 IsAdmin;门在最外层,非管理员不发 role-permissions/all/。
+  // 页级门(rbac-web L-1 / L-6):授权矩阵的读接口按 `system.settings` 判(2026-10-29 第 2 条,此前是 IsAdmin);
+  // 门在最外层,不持码的人不发 role-permissions/all/。
   return (
-    <RequireAdmin fallback={<PermissionDenied />}>
+    <RequirePermission permissions="system.settings" fallback={<PermissionDenied permission="system.settings" />}>
       <PermissionsPageContent />
-    </RequireAdmin>
+    </RequirePermission>
   );
 }
 
 function PermissionsPageContent() {
   const { t } = useI18n();
-  const { hasPermission } = usePermissions();
-  const canManagePermissions = hasPermission("system.settings");
+  const { hasPermission, isAdmin } = usePermissions();
+  const { user } = useTenant();
+  // 写(建 / 改 / 删码与角色、矩阵保存、导入)只给没绑殿的 ADMIN 且持 system.settings —— 与后端
+  // `CanWriteGlobalSettings` 同一条件:角色与授权是所有殿共用的配置。别的持码者只读。
+  const canManagePermissions = hasPermission("system.settings") && isAdmin && !user?.tenant;
 
   // ── Permission CRUD state (unchanged from the previous per-role picker) ──
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -206,7 +211,7 @@ function PermissionsPageContent() {
   }, [baseline]);
 
   function toggleCell(role: string, permId: number) {
-    if (isSaving) return;
+    if (isSaving || !canManagePermissions) return;
     setChecked((prev) => {
       if (!prev) return prev;
       const next = cloneGrantMap(prev);
@@ -252,6 +257,8 @@ function PermissionsPageContent() {
     failure: cells.failureAt,
     conflict: (key) => cells.conflictCells.has(key),
     failureReason,
+    heldCodenames: (role) =>
+      new Set([...(checked?.[role] ?? [])].map((id) => permsById[id]?.codename).filter((c): c is string => !!c)),
   };
 
   /** 定位: bring the failed cell on screen and put focus on it (on 393 px, via its role). */
@@ -310,18 +317,14 @@ function PermissionsPageContent() {
       subtitle={t("permissions.subtitle")}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {segment === "roles" ? (
-          <RequirePermission permissions="system.settings">
-            <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
-              + {t("permissions.create_role")}
-            </Button>
-          </RequirePermission>
+          {!canManagePermissions ? undefined : segment === "roles" ? (
+          <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
+            + {t("permissions.create_role")}
+          </Button>
         ) : segment === "definitions" && !permsQuery.isLoading ? (
-          <RequirePermission permissions="system.settings">
-            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(true)}>
-              + {t("permissions.create")}
-            </Button>
-          </RequirePermission>
+          <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(true)}>
+            + {t("permissions.create")}
+          </Button>
         ) : undefined}
           <PermissionConfigTransfer />
         </div>
@@ -351,7 +354,7 @@ function PermissionsPageContent() {
         </div>
       }
     >
-      <RequireAdmin fallback={<PermissionDenied />}>
+      <>
         {segment === "matrix" && (
           <div className="space-y-4">
             {cells.lastSave && (
@@ -529,7 +532,7 @@ function PermissionsPageContent() {
           onCancel={cells.closeConfirm}
           onConfirm={cells.confirmSave}
         />
-      </RequireAdmin>
+      </>
     </PageShell>
   );
 }

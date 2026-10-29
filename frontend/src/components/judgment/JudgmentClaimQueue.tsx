@@ -521,7 +521,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
               {t("officerHandover.action")}
             </Button>
           )}
-          {buttonOn("judgment.export") && hasPermission("judgment.read") && (
+          {buttonOn("judgment.export") && hasPermission("judgment.export") && (
             <ExportCsvButton
               fetchCsv={() => judgmentApi.exportCsv({ ...filters, has_verdict: "false" })}
               page={t("judgment.title")}

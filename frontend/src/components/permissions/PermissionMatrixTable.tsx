@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
-import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES } from "@soulledger/core/api/perm";
+import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +19,8 @@ import { ROW_HOVER } from "@/components/ui/data-table";
  *   ◇ 冲突 — 1px 墨色虚线框 + 2px 墨色强调环;这次改动会让某条审批流的某一步无人可批
  *   始终 — ADMIN 整列:只有 11px ink3 的「始终」二字。服务端对 ADMIN 在读授权之前就答
  *          「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
- *   禁授 — 11px ink3 字 + 135° 细斜线底。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),
+ *   禁授 — 11px ink3 字 + 135° 细斜线底。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`,以及按能力的
+ *          「设计流程的人不审批」:这一列此刻(含未保存的勾)持有设计码时的审批码格,持有审批码时的设计码格),
  *          一开始就摆明;不用反馈色 —— 禁授是规则,「!」失败才是事后结果
  *
  * 格子里没有文明色,也不再借警示 / 强调色:未保存与冲突靠环与字形,不靠色相。
@@ -29,10 +30,12 @@ import { ROW_HOVER } from "@/components/ui/data-table";
  */
 export type CellState = "on" | "off" | "grant" | "revoke" | "failed" | "conflict" | "lock" | "deny";
 
-/** A cell the server decides by rule, whatever is ticked: 「始终」 for ADMIN, 「! 禁授」 for a forbidden grant. */
-export function ruleState(role: string, codename: string): "lock" | "deny" | null {
+/** A cell the server decides by rule, whatever is ticked: 「始终」 for ADMIN, 「! 禁授」 for a forbidden grant.
+ *  `held` = the role's codenames as ticked now (unsaved included), for the design-vs-approve rule. */
+export function ruleState(role: string, codename: string, held: ReadonlySet<string> = new Set()): "lock" | "deny" | null {
   if (role === ADMIN_ROLE_NAME) return "lock";
-  return ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename) ? "deny" : null;
+  if (ROLE_FORBIDDEN_CODENAMES[role]?.includes(codename)) return "deny";
+  return capabilityForbids(role, codename, held) ? "deny" : null;
 }
 
 export function cellState({
@@ -96,13 +99,15 @@ export interface MatrixCellInfo {
   conflict: (key: string) => boolean;
   /** Words for a failure's reason, from its code. */
   failureReason: (f: CellFailure) => string;
+  /** The role's codenames as ticked now (unsaved included) — the design-vs-approve 禁授 reads it. */
+  heldCodenames?: (role: string) => ReadonlySet<string>;
 }
 
 function useCellDescription(info: MatrixCellInfo, role: string, perm: Permission) {
   const { t } = useI18n();
   const key = matrixCellKey(role, perm.id);
   const failure = info.failure(key);
-  const rule = ruleState(role, perm.codename);
+  const rule = ruleState(role, perm.codename, info.heldCodenames?.(role));
   const state =
     rule ??
     cellState({

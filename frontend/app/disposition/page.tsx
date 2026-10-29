@@ -215,7 +215,7 @@ function DispositionPageContent() {
   };
   const sectionProps = (section: DispositionSection) => ({
     action: buttonOn("disposition.export") && (
-      <RequirePermission permissions="disposition.read">
+      <RequirePermission permissions="disposition.export">
         <ExportCsvButton
           size="sm"
           fetchCsv={() => dispositionApi.exportCsv(SECTION_FILTERS[section])}
