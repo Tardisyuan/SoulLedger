@@ -103,8 +103,14 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
     `test_perm_prefix_discloses_only_the_catalogue.py` followed by
     `test_viewer_can_read_souls` fails every time.
     """
-    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.cache import get_permission_cache
     from apps.tenants.middleware import clear_tenant_cache
+
+    # The cache itself, not `invalidate_all_permissions`: that one also broadcasts a permission refresh to every
+    # open socket (decision 10), and a housekeeping flush is not a grant change. Broadcasting it between tests
+    # leaves a send on a throwaway event loop racing the next test's sockets on the shared channel layer.
+    def invalidate_all_permissions():
+        get_permission_cache().invalidate_all()
 
     # `TenantMiddleware`'s per-worker hall copies: a rolled-back test leaves no signal behind to drop them.
     cache.clear()
