@@ -29,7 +29,23 @@ def _awaiting_me(user) -> Q:
     mine = Q(current_node__approver_type="ROLE", current_node__approver_role__in=roles)
     if getattr(user, "actor_id", None):
         mine |= Q(current_node__approver_type="ACTOR", current_node__approver_actor_id=user.actor_id)
-    return mine & Q(status="IN_PROGRESS", current_node__status="PENDING")
+    waiting = Q(status="IN_PROGRESS", current_node__status="PENDING")
+    return (mine & waiting) | Q(pk__in=_cosigning_me(user, waiting))
+
+
+def _cosigning_me(user, waiting) -> list:
+    """加签人(还没签)与会签候选人(还有一格可签)也算「待我审批」(用户 2026-10-29),与 todo 同一个口径:
+    候选 = 当前节点是会签或带加签,再逐条问 `can_approve`。槽位在 JSON 里,SQLite 不支持 JSON 包含查询,
+    所以在 Python 里判。只看本殿召集或当前站在本殿的流程。"""
+    from apps.workflow.models import ApprovalWorkflow, NodeKind
+
+    candidates = ApprovalWorkflow.objects.filter(
+        waiting, Q(current_node__kind=NodeKind.COUNTERSIGN) | ~Q(current_node__cosigners_json=[]))
+    tenant_id = getattr(user, "tenant_id", None)
+    if tenant_id is not None:
+        candidates = candidates.filter(Q(tenant_id=tenant_id) | Q(current_node__segment__tenant_id=tenant_id))
+    # ponytail: 逐条 can_approve,候选只限进行中的会签 / 加签节点;量大时把槽位拆成表再写成 SQL。
+    return [wf.pk for wf in candidates.select_related("current_node__segment") if wf.current_node.can_approve(user)]
 
 
 @dataclass(frozen=True)
