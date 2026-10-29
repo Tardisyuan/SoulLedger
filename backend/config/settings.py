@@ -14,6 +14,9 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set in production")
+# 轮换 SECRET_KEY 不停机(docs/DEPLOYMENT.md「密钥轮换」):旧 key 放这里(逗号分隔),新 key 进 SECRET_KEY。
+# Django 的会话 / 重置链接 / signing 认旧 key 签的;JWT 也认(apps/core/jwt_fallback.py)。新签的一律用 SECRET_KEY。
+SECRET_KEY_FALLBACKS = [k.strip() for k in os.getenv("SECRET_KEY_FALLBACKS", "").split(",") if k.strip()]
 
 
 def _env_bool(name, default):
@@ -460,6 +463,11 @@ PUSH_DELIVERY_RETENTION_DAYS = int(os.getenv("PUSH_DELIVERY_RETENTION_DAYS", "90
 INACTIVE_PUSH_DEVICE_RETENTION_DAYS = int(os.getenv("INACTIVE_PUSH_DEVICE_RETENTION_DAYS", "30") or 0)
 # "Remember this device" MFA rows (officer + soul), deleted this many days after they expired.
 EXPIRED_MFA_DEVICE_GRACE_DAYS = int(os.getenv("EXPIRED_MFA_DEVICE_GRACE_DAYS", "1") or 0)
+# 助手用量行(AssistUsage,每问一行,不含原文)。用量页与月度上限只读当月;默认留两年。
+ASSIST_USAGE_RETENTION_DAYS = int(os.getenv("ASSIST_USAGE_RETENTION_DAYS", "730") or 0)
+# 土地神上报的死亡登记请求(DeathRegistrationRequest),按租户清(death_sync.cleanup_old_requests_for_tenant)。
+# 此前是任务表里写死的 90 天;默认不变。
+DEATH_SYNC_REQUEST_RETENTION_DAYS = int(os.getenv("DEATH_SYNC_REQUEST_RETENTION_DAYS", "90") or 0)
 
 # apps.scheduler — TaskRun history and the "did it run" detection.
 # Retention: delete finished runs older than this many days ...
@@ -562,21 +570,28 @@ ASSISTANT_RETRIEVAL_MIN_SIMILARITY = float(os.getenv("ASSISTANT_RETRIEVAL_MIN_SI
 # 提问时取问题向量的超时(在 ASSISTANT_TIMEOUT_SECONDS 之内,不重试);重建向量用更长的超时。
 ASSISTANT_EMBEDDING_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_EMBEDDING_TIMEOUT_SECONDS", "3"))
 
-# Logging
+# Logging. LOG_FORMAT=json gives one JSON object per line (config/json_logging.py) for a log collector;
+# text is the human one. Default: json when DEBUG is off, text when it is on. Anything else is refused.
+# Empty counts as unset: docker-compose passes `${LOG_FORMAT:-}` through x-django-env.
+LOG_FORMAT = (os.getenv("LOG_FORMAT") or ("text" if DEBUG else "json")).strip().lower()
+if LOG_FORMAT not in ("json", "text"):
+    raise ValueError(f"LOG_FORMAT must be 'json' or 'text', got {LOG_FORMAT!r}")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {"trace": {"()": "apps.core.trace.TraceIdFilter"}},
     "formatters": {
-        "verbose": {"format": "{levelname} {asctime} [{trace_id}] {module} {message}", "style": "{"},
+        "text": {"format": "{levelname} {asctime} [{trace_id}] {module} {message}", "style": "{"},
+        # A real encoder, not a JSON-shaped `%` template: that one broke on any quote or newline (IS-22).
+        "json": {"()": "config.json_logging.JsonFormatter"},
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose", "filters": ["trace"]},
+        "console": {"class": "logging.StreamHandler", "formatter": LOG_FORMAT, "filters": ["trace"]},
     },
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "DEBUG" if DEBUG else "INFO", "propagate": False},
     },
 }
 
@@ -600,34 +615,29 @@ if not DEBUG:
     # X-Forwarded-Proto header, so a 301 here makes every chat push fail silently while messages
     # still flow. The endpoint accepts no session or token — only a body signed with the shared
     # grant secret inside a 5-minute window (apps/chat/hook.py) — so plain http leaks nothing.
-    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^api/v1/chat/hooks/new-message/$"]
+    # `/metrics/` is Prometheus scraping backend:8000 over the compose network (apps/core/metrics.py); it is
+    # gated by METRICS_TOKEN / METRICS_ALLOWED_IPS and nginx does not route it, so a 301 would only break the scrape.
+    SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^metrics/$", r"^api/v1/chat/hooks/new-message/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-    # Logging - JSON format for production
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            # A real encoder, not a JSON-shaped `%` template: that one broke
-            # on any quote or newline in a message (IS-22).
-            "json": {"()": "config.json_logging.JsonFormatter"},
-        },
-        "filters": {"trace": {"()": "apps.core.trace.TraceIdFilter"}},
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "formatter": "json",
-                "filters": ["trace"],
-            },
-        },
-        "root": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
-    }
+# /metrics/ (apps/core/metrics.py, Prometheus text format). Closed unless one of these is set:
+# METRICS_TOKEN — the scraper sends `Authorization: Bearer <token>`;
+# METRICS_ALLOWED_IPS — comma-separated addresses / CIDRs (the client address as apps/core/client_ip.py resolves it).
+# Either one admits; neither set = 404 for everyone.
+METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
+METRICS_ALLOWED_IPS = [n.strip() for n in os.getenv("METRICS_ALLOWED_IPS", "").split(",") if n.strip()]
+import ipaddress  # noqa: E402
+
+from django.core.exceptions import ImproperlyConfigured  # noqa: E402
+
+for _net in METRICS_ALLOWED_IPS:
+    try:
+        ipaddress.ip_network(_net, strict=False)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"METRICS_ALLOWED_IPS: {_net!r} is not an address or CIDR") from exc
 
 # drf-spectacular (API docs)
 SPECTACULAR_SETTINGS = {
@@ -808,15 +818,22 @@ _KEY_HELP = (
 )
 
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "")
+# Rotation (docs/DEPLOYMENT.md「密钥轮换」): the old key(s) go here, comma-separated, the new one into
+# ENCRYPTION_KEY. Reads try every key, writes use ENCRYPTION_KEY only (MultiFernet, apps/death_sync/fields.py);
+# `manage.py rotate_encryption_key` re-encrypts the stored values, after which the fallback can be dropped.
+ENCRYPTION_KEY_FALLBACKS = [k.strip() for k in os.getenv("ENCRYPTION_KEY_FALLBACKS", "").split(",") if k.strip()]
+if ENCRYPTION_KEY_FALLBACKS and not ENCRYPTION_KEY:
+    raise ImproperlyConfigured("ENCRYPTION_KEY_FALLBACKS is set but ENCRYPTION_KEY is not: the new key goes first.")
 if ENCRYPTION_KEY:
     from cryptography.fernet import Fernet  # noqa: E402
 
-    try:
-        Fernet(ENCRYPTION_KEY.encode())
-    except (ValueError, TypeError) as exc:
-        raise ImproperlyConfigured(
-            f"ENCRYPTION_KEY is not a valid Fernet key (32 url-safe base64 bytes). {_KEY_HELP}"
-        ) from exc
+    for _name, _key in [("ENCRYPTION_KEY", ENCRYPTION_KEY)] + [("ENCRYPTION_KEY_FALLBACKS", k) for k in ENCRYPTION_KEY_FALLBACKS]:
+        try:
+            Fernet(_key.encode())
+        except (ValueError, TypeError) as exc:
+            raise ImproperlyConfigured(
+                f"{_name} is not a valid Fernet key (32 url-safe base64 bytes). {_KEY_HELP}"
+            ) from exc
 elif not DEBUG:
     raise ImproperlyConfigured(
         "ENCRYPTION_KEY must be set when DEBUG=False: without it "

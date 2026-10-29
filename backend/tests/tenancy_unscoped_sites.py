@@ -87,6 +87,7 @@ SITES = [
     ('apps/core/recycle_bin.py', '_unfiltered_manager', 'model._base_manager', 1, 'PK', 'helper returning the unfiltered manager for the recycle bin; callers scope (apps/core/recycle_bin_views.py)'),
     ('apps/core/ws_tenant.py', 'TenantMiddleware._resolve_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/death_sync/management/commands/create_api_key.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
+    ('apps/death_sync/management/commands/rotate_encryption_key.py', '_rotate_model', 'model._base_manager', 1, 'CLI', "operator key rotation over every hall's encrypted columns: rewrites each value in place, by pk, to the same plaintext under the new key; reads and returns nothing to anyone"),
     ('apps/death_sync/tasks.py', 'cleanup_old_requests', 'Tenant.objects', 1, 'FANOUT', 'reads the global Tenant table to fan out per-tenant work'),
     ('apps/death_sync/tasks.py', 'cleanup_old_requests_for_tenant', 'Tenant.objects', 1, 'FANOUT', 'per-tenant subtask: loads its own tenant by the id it was handed, then filters every query by that tenant_id'),
     ('apps/dispatch/models.py', 'CrossTenantJudgment.transition_to', 'CrossTenantJudgment._base_manager', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),

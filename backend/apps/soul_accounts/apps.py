@@ -7,4 +7,9 @@ class SoulAccountsConfig(AppConfig):
     verbose_name = "Soul accounts"
 
     def ready(self):
+        # JWTs signed with a SECRET_KEY_FALLBACKS key still verify (apps/core/jwt_fallback.py).
+        from apps.core.jwt_fallback import install
+
         from . import schema, signals  # noqa: F401
+
+        install()

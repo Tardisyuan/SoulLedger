@@ -23,6 +23,15 @@ x-django-env: &django-env
   SENTRY_DSN: ${SENTRY_DSN:-}
   # Scheduler failure / overdue alerts, also POSTed outside the app (settings.py).
   OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
+  # Logging, /metrics/ access, key rotation and retention (docs/DEPLOYMENT.md, 2026-10-30).
+  # Empty LOG_FORMAT = DEBUG decides; the retention defaults equal settings.py's (an empty value there means 0 = keep all).
+  LOG_FORMAT: ${LOG_FORMAT:-}
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  METRICS_ALLOWED_IPS: ${METRICS_ALLOWED_IPS:-}
+  SECRET_KEY_FALLBACKS: ${SECRET_KEY_FALLBACKS:-}
+  ENCRYPTION_KEY_FALLBACKS: ${ENCRYPTION_KEY_FALLBACKS:-}
+  ASSIST_USAGE_RETENTION_DAYS: ${ASSIST_USAGE_RETENTION_DAYS:-730}
+  DEATH_SYNC_REQUEST_RETENTION_DAYS: ${DEATH_SYNC_REQUEST_RETENTION_DAYS:-90}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
   # Officer e-mail links (password reset / e-mail verification) are built from
   # DESK_URL; unset, settings.py falls back to http://localhost:3000 and every
