@@ -298,6 +298,7 @@ def _reopen_requested(cn, eg, eu, judges):
     plan.serve(soul, p, 2)
     plan.arrive(soul, p, 3)
     req = plan_requests.file_request(p, eg, kind="REOPEN", changes={}, reason="新证据", user=judges[1])
+    plan.judged_by(p, judges[0])  # the original judge decides a REOPEN (2026-10-29, item 20)
     return soul, p, req
 
 

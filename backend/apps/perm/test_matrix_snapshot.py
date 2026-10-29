@@ -256,7 +256,9 @@ READ_MATRIX = {
 # rewriting it are different powers, and only these two roles hold the second.
 # Was OPEN_TO_ALL, i.e. any authenticated role could recalculate and persist a
 # soul's scores. That was the defect.
-LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+# 2026-10-29: GUARDIAN holds it too — it is the role that writes merit / demerit records, which moved from
+# `soul.update` to `ledger.manage` (user decision item 19, souls migration 0053).
+LEDGER_CALCULATE = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
 
 # ENFORCED. POST /souls/ declares `soul.create`.
 # Held by ADMIN and MODERATOR. JUDGE, GUARDIAN and VIEWER do not hold it —
@@ -574,7 +576,7 @@ def test_read_matrix_snapshot(role_clients, snapshot_tenant, path, role, expecte
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_ledger_calculate_snapshot(role_clients, snapshot_tenant, role):
-    """ENFORCED: ledger.manage. ADMIN and MODERATOR hold it; the other three read only."""
+    """ENFORCED: ledger.manage. ADMIN, MODERATOR and GUARDIAN hold it; JUDGE and VIEWER read only."""
     soul = _soul(snapshot_tenant, f"snapshot-calc-{role}")
     response = role_clients[role].post(f"/api/v1/ledger/calculate/{soul.id}/", {}, format="json")
     assert response.status_code == LEDGER_CALCULATE[role]

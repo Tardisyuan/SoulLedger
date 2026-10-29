@@ -8502,6 +8502,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/{id}/reopen-cancelled/:
+    post:
+      operationId: v1_judgment_reopen_cancelled_create
+      description: |-
+        Reopen a concluded original case whose approval flow a cancelled cross-realm judgment ended.
+
+        Such a disposition is held at `approval_cancelled` with no way forward: the flow did not pass, so it does
+        not execute, and nobody refused it, so it did not reopen. `judgment.assign` (the hall lead) withdraws the
+        conclusion exactly as a refused flow does (`weighing.reweigh_after_rejection`) and a new case is opened;
+        201 answers that case. 409 `not_cancelled` when the case's own flow did not end CANCELLED; 409
+        `cannot_reopen` when the soul was already placed (then reopen or appeal as before).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
   /api/v1/judgment/{id}/request-reassign/:
     post:
       operationId: v1_judgment_request_reassign_create
@@ -20225,7 +20261,7 @@ paths:
         The same serializer and the same validation as `add_record` — dates against the soul,
         the clause/count pair, the statute against the soul's civilization — with the record as
         instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
-        statute changes. Gated by `soul.update`, like `add_record`.
+        statute changes. Gated by `ledger.manage`, like `add_record`; 409 once a concluded case admitted it.
       parameters:
       - in: path
         name: id
@@ -28982,6 +29018,9 @@ components:
             type: string
         letters:
           type: integer
+        letters_kept:
+          type: integer
+          description: 操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下
         problems:
           type: array
           items:
@@ -28992,6 +29031,7 @@ components:
       - city_gods
       - judgments
       - letters
+      - letters_kept
       - problems
     HandoverPreviewProblemsEnum:
       enum:
@@ -29024,12 +29064,16 @@ components:
           type: integer
         letters:
           type: integer
+        letters_kept:
+          type: integer
+          description: 操作人不持 soul_inbox.reply:这些书信没有移交,留在交出人名下
       required:
       - appeals
       - appeals_returned_to_pool
       - city_gods
       - judgments
       - letters
+      - letters_kept
     HeldOfficer:
       type: object
       description: One officer a batch deactivation left active because they still

@@ -364,6 +364,7 @@ def _reopen_accepted(cn, eg, eu, judges):
     plan.serve(soul, p, 2)
     plan.arrive(soul, p, 3)
     req = _file(judges["eg"], p, kind="REOPEN", reason="新证据").data
+    plan.judged_by(p, judges["cn"])
     response = _c(judges["cn"]).post(f"{PLANS}{p.pk}/requests/{req['id']}/decide/", {"decision": "ACCEPT"},
                                      format="json")
     assert response.status_code == 200, response.data
@@ -425,6 +426,7 @@ def test_a_reopen_waits_while_another_case_is_open(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
     open_here = _open_amendment(judges["eg"], soul)
     req = _file(judges["eu"], p, kind="REOPEN", reason="x").data
+    plan.judged_by(p, judges["cn"])
     response = _c(judges["cn"]).post(f"{PLANS}{p.pk}/requests/{req['id']}/decide/", {"decision": "ACCEPT"},
                                      format="json")
     assert response.status_code == 409 and response.data["code"] == "open_judgment"

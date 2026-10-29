@@ -57,6 +57,7 @@
   "reincarnation.error.origin_flow_open",
   "reincarnation.error.rebirth_continent_not_applicable",
   "sentence_plan.errors.five_heinous_must_fail",
+  "sentence_plan.errors.not_original_judge",
   "soul_app.errors.invalid_days",
   "soul_push.wangsi_delivered.body",
   "soul_push.wangsi_delivered.title",

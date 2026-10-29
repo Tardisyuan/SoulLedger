@@ -462,7 +462,9 @@ ROLE_PERMISSIONS = {
     "GUARDIAN": [
         "soul.read", "soul.update", "soul.transition",
         "reincarnation.read", "reincarnation.manage",
-        "ledger.read", "dashboard.read",
+        # ledger.manage: 增改功过记录(souls add_record / update_record)的码,2026-10-29 从 soul.update 挪来,
+        # 守护者是原来靠 soul.update 写功过的角色(souls/0053)。
+        "ledger.read", "ledger.manage", "dashboard.read",
         "disposition.read",
         "dispatch.read", "dispatch.manage",
         "realms.read", "actors.read",

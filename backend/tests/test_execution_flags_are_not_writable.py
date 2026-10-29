@@ -81,11 +81,9 @@ def test_a_disposition_cannot_be_marked_executed_by_patch(scene):
 
 @pytest.mark.django_db
 def test_a_disposition_cannot_be_repointed_at_another_tenants_soul(scene):
-    """Re-pointing is a supported operation -- across tenants it is not.
-
-    `test_repointing_a_disposition_at_another_soul_is_checked` in
-    apps/disposition/test_term_start.py exists because a mis-filed sentence
-    gets corrected. What was never checked is the tenant of the new soul.
+    """Across tenants re-pointing was never allowed; since 2026-10-29 (rbac-be1 M3)
+    a disposition's soul is fixed altogether
+    (`test_a_disposition_cannot_be_repointed_at_another_soul` in apps/disposition/test_term_start.py).
     """
     resp = scene["client"].patch(
         f"/api/v1/disposition/{scene['disp'].pk}/",
