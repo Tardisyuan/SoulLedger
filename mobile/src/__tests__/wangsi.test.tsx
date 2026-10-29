@@ -8,7 +8,9 @@ import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
-import { installMobilePlatform } from "../platform";
+import { installMobilePlatform, persistentStore } from "../platform";
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
+import { formatIsoDay } from "@soulledger/core/domain/dates";
 import { WangsiGrievanceScreen, WangsiLine } from "../screens/wangsi";
 import { stubApi } from "./stubApi";
 
@@ -57,7 +59,7 @@ const row = (over: Partial<MeWangsiCase> = {}): MeWangsiCase =>
 
 it("a held case says until when and offers 「申诉 ›」, which opens the form", () => {
   wrap(<WangsiLine row={row()} />);
-  expect(screen.getByTestId(`wangsi-status-${J}`).props.children).toBe("押在枉死城 · 阳寿到 2027-12-01 才受审");
+  expect(screen.getByTestId(`wangsi-status-${J}`).props.children).toBe("押在枉死城 · 阳寿到 2027年 · 12月1日 才受审");
   fireEvent.press(screen.getByTestId(`wangsi-file-${J}`));
   expect(mockNavigate).toHaveBeenCalledWith("WangsiGrievance", { judgment: J, caseNumber: "CN-2026-0011", heldUntil: "2027-12-01" });
 });
@@ -74,6 +76,26 @@ it("a filed grievance shows its step and no second button; a decided one shows t
   );
   expect(screen.getByTestId(`wangsi-status-${J}`).props.children).toBe("申诉属实 · 已提前释放");
   expect(screen.getByText("确属冤死")).toBeTruthy();
+});
+
+it("the note's day is written like 卒 in the same cell, never ISO; egy in Abed (phone QA 10-29b)", () => {
+  const decided = row({ held: false, held_until: null, grievance_status: "DELIVERED", grievance_note: "查实", grievance_decided_at: "2026-10-29", can_file: false, refusal_code: "not_in_wangsi" });
+  const first = wrap(<WangsiLine row={decided} />);
+  const label = screen.getByTestId(`wangsi-note-label-${J}`).props.children as string;
+  expect(label).toBe("城隍批语 · 2026年 · 10月29日");
+  expect(label).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(screen.getByTestId(`wangsi-status-${J}`).props.children).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  first.unmount();
+  persistentStore.set(LOCALE_COOKIE, "egy");
+  try {
+    wrap(<WangsiLine row={decided} />);
+    const egy = screen.getByTestId(`wangsi-note-label-${J}`).props.children as string;
+    expect(egy).toContain(formatIsoDay("2026-10-29", "egy"));
+    expect(egy).toContain("Abed");
+    expect(egy).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  } finally {
+    persistentStore.remove(LOCALE_COOKIE);
+  }
 });
 
 it("no grievance: the line follows the server's refusal_code — a case no longer pending does not say 「押在枉死城」", () => {

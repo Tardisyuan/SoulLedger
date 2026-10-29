@@ -816,3 +816,27 @@ describe("the Android notification channel (RBAC A9)", () => {
     }
   });
 });
+
+describe("an answer that lands after requestPermissionsAsync returned (EMUI, phone QA 10-29b)", () => {
+  afterEach(() => jest.useRealTimers());
+
+  it("is waited for: granted, not denied; one never given stays undetermined", async () => {
+    jest.useFakeTimers();
+    system.answer = "undetermined";
+    const asked = requestPermission();
+    await jest.advanceTimersByTimeAsync(600);
+    system.status = "granted";
+    await jest.advanceTimersByTimeAsync(600);
+    await expect(asked).resolves.toBe("granted");
+
+    Object.assign(system, { status: "undetermined", answer: "undetermined" });
+    const unanswered = requestPermission();
+    await jest.advanceTimersByTimeAsync(5000);
+    await expect(unanswered).resolves.toBe("undetermined");
+  });
+
+  it("a refusal is returned at once", async () => {
+    system.answer = "denied";
+    await expect(requestPermission()).resolves.toBe("denied");
+  });
+});

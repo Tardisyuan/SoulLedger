@@ -40,7 +40,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { useDay } from "./lifeProgress";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useDiscardGuard } from "./discardGuard";
@@ -50,8 +50,6 @@ import { ButtonPair, MfaSheet } from "./mfaParts";
 export const APPEAL_REASON_MAX = 2000;
 const EVIDENCE_MAX = 4000;
 
-/** `2026-11-08`: the deadline is a day, not a moment. */
-export const appealDay = (iso: string | null | undefined) => formatStamp(iso)?.slice(0, 10) ?? "";
 
 /** A judgment's rounds, newest first. */
 export function roundsOf(list: MeJudgmentAppealList, judgment: string): MeJudgmentAppeal[] {
@@ -161,6 +159,8 @@ function Round({
   onWithdrawn: () => void;
 }) {
   const { t } = useI18n();
+  // 2026年 · 11月28日 / Abed, like 卒 in the same cell -- never the ISO value (phone QA 10-29b).
+  const day = useDay();
   const toast = useToast();
   const verdict = useVerdict();
   const [asking, setAsking] = useState(false);
@@ -222,7 +222,7 @@ function Round({
       {round.decision_note ? (
         <>
           <Txt variant="caption" tone="subtle">
-            {`${t("appeals.decision_note")}${round.decided_at ? ` · ${appealDay(round.decided_at)}` : ""}`}
+            {`${t("appeals.decision_note")}${round.decided_at ? ` · ${day(round.decided_at)}` : ""}`}
           </Txt>
           <Quote text={round.decision_note} testID={`appeal-note-${round.id}`} />
         </>
@@ -280,6 +280,8 @@ export function AppealLine({
   onChanged: () => void;
 }) {
   const { t } = useI18n();
+  // 2026年 · 11月28日 / Abed, like 卒 in the same cell -- never the ISO value (phone QA 10-29b).
+  const day = useDay();
   const theme = useTheme();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   // The soul's own toggle wins; until then a landed push holds it open.
@@ -315,7 +317,7 @@ export function AppealLine({
         ) : row.can_appeal ? (
           <>
             <Txt testID={`appeal-deadline-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
-              {t("appeals.deadline", { date: appealDay(row.deadline) })}
+              {t("appeals.deadline", { date: day(row.deadline) })}
             </Txt>
             <SmallButton
               testID={`appeal-file-${row.judgment_id}`}
@@ -332,7 +334,7 @@ export function AppealLine({
           </>
         ) : (
           <Txt testID={`appeal-refusal-${row.judgment_id}`} variant="caption" tone="subtle" style={styles.fill}>
-            {refusal ? t(refusal, { date: appealDay(row.deadline) }) : t("appeals.refusal.not_appealable")}
+            {refusal ? t(refusal, { date: day(row.deadline) }) : t("appeals.refusal.not_appealable")}
           </Txt>
         )}
       </View>
@@ -383,6 +385,8 @@ export type JudgmentAppealParams = {
 /** A-2: the form, a whole page — a 2000-character reason does not fit a sheet with the keyboard up. */
 export function JudgmentAppealScreen() {
   const { t, enumLabel } = useI18n();
+  // 2026年 · 11月28日 / Abed, like 卒 in the same cell -- never the ISO value (phone QA 10-29b).
+  const day = useDay();
   const toast = useToast();
   const { gutter } = useLayout();
   const verdict = useVerdict();
@@ -410,7 +414,7 @@ export function JudgmentAppealScreen() {
       navigation.goBack();
     } catch (e) {
       const refusal = appealRefusalKey(soulErrorCode(e));
-      if (refusal) setError(t(refusal, { date: appealDay(params.deadline) }));
+      if (refusal) setError(t(refusal, { date: day(params.deadline) }));
       else {
         const m = soulErrorMessage(e);
         setError(t(m.key, m.params));
@@ -459,7 +463,7 @@ export function JudgmentAppealScreen() {
           {t(params.escalate ? "appeals.escalate_body" : "appeals.file_body")}
         </Txt>
         <Txt variant="caption" tone="subtle">
-          {t("appeals.deadline", { date: appealDay(params.deadline) })}
+          {t("appeals.deadline", { date: day(params.deadline) })}
         </Txt>
         {error ? <FieldError testID="appeal-error" text={error} /> : null}
         {params.escalate ? (

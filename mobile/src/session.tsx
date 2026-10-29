@@ -23,6 +23,7 @@ import {
 } from "@soulledger/core/api/soul";
 import { getRefreshToken, platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
@@ -303,6 +304,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const profile = await soulApi.me();
     setState({ status: "signedIn", profile });
   }, []);
+
+  // Back in the foreground, `/me/` is asked again (as the officer app does, 192ad39d): the record can change while
+  // the app sleeps -- a judgment delivered, a name corrected -- and 本世 reads the profile from here (phone QA 10-29b).
+  // Only a session still signed in takes the answer; a failure keeps what is shown (a 401 / 403 is the client's to end).
+  const isSignedIn = state.status === "signedIn";
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let previous = AppState.currentState;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && previous !== "active") {
+        soulApi.me().then(
+          (profile) => setState((prev) => (prev.status === "signedIn" ? signedIn(profile) : prev)),
+          () => {}
+        );
+      }
+      previous = next;
+    });
+    return () => sub.remove();
+  }, [isSignedIn]);
 
   const value = useMemo<Session>(
     () => ({
