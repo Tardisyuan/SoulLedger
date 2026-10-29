@@ -16,19 +16,10 @@ import { test, expect, setupAuthenticatedPage, mockApi, OPENED_JUDGMENT, SOULS, 
 const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
 /**
- * 待 Design 定(2026-10-29),与 inkOnSurfaceContract.test.ts 的 PENDING_DESIGN 是同一批位置;
- * 比值在那份里按 token 钉住。命中这些选择器(元素或其祖先)的违规不算红,别的一律红。
- * 实测(2026-10-29,unRAID):axe 今天只报出第一条(393 深色底栏当前项 3.12:1,权限 / 灵魂详情 /
- * 调拨详情三页);身份带小字压着纹样层、键帽与「禁授」压着边框 / 斜纹,axe 判为 incomplete。
- * 后三条留着,是因为 axe 哪天能判了,红的应是「已知待 Design」而不是新缺陷;达标与否由 jest 那份管。
+ * 没有白名单。2026-10-29 的待 Design 四项(底栏当前项 main 字、身份带 11 · 0.7、键帽 opacity-70、
+ * 「禁授」压斜纹)已按第六十三批回复改掉,白名单随之删除;任何违规都红。
+ * axe 判不了的(压纹样 / 斜纹 / 渐变的字,记为 incomplete)由 inkOnSurfaceContract 按 token 算。
  */
-const PENDING_DESIGN = [
-  { id: "bottom-bar-current", selector: '[data-testid="bottom-bar"] [aria-current]', why: "底栏当前项字色 main(深色 cn 3.13)" },
-  { id: "identity-small-0.7", selector: ".identity-case[data-case] > span, .identity-brand span", why: "身份带 11 · 0.7 小字" },
-  { id: "keycap-0.7", selector: "kbd.opacity-70", why: "键帽 opacity-70" },
-  { id: "perm-deny-stripe", selector: '[class*="repeating-linear-gradient"]', why: "权限页「禁授」字压斜纹" },
-] as const;
-
 const ROUTES: [string, string, boolean][] = [
   ["login", "/login", false],
   ["dashboard", "/dashboard", true],
@@ -40,11 +31,11 @@ const ROUTES: [string, string, boolean][] = [
   ["dispatch-detail", `/dispatch/${PROPOSED_DISPATCH.id}`, true],
 ];
 
-type Finding = { target: string; text: string; message: string; allowedBy: string | null };
+type Finding = { target: string; text: string; message: string };
 
 for (const colorScheme of ["light", "dark"] as const) {
   for (const [name, route, auth] of ROUTES) {
-    test(`${name} · ${colorScheme}: no text below WCAG AA contrast outside the pending-Design list`, async ({ page }) => {
+    test(`${name} · ${colorScheme}: no text below WCAG AA contrast`, async ({ page }) => {
       test.setTimeout(90_000);
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       if (auth) await setupAuthenticatedPage(page);
@@ -54,7 +45,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${colorScheme}\\b`));
       await page.evaluate(AXE_SOURCE);
 
-      const findings: Finding[] = await page.evaluate(async (allow) => {
+      const findings: Finding[] = await page.evaluate(async () => {
         type AxeNode = { target: unknown[]; any: { message: string }[] };
         type Axe = { run: (ctx: Document, opts: object) => Promise<{ violations: { nodes: AxeNode[] }[] }> };
         const axe = (window as unknown as { axe: Axe }).axe;
@@ -63,13 +54,12 @@ for (const colorScheme of ["light", "dark"] as const) {
           v.nodes.map((n) => {
             const sel = String(n.target[n.target.length - 1]);
             const el = document.querySelector(sel);
-            const hit = allow.find((a) => el?.closest(a.selector));
-            return { target: sel, text: (el?.textContent ?? "").trim().slice(0, 40), message: n.any[0]?.message ?? "", allowedBy: hit?.id ?? null };
+            return { target: sel, text: (el?.textContent ?? "").trim().slice(0, 40), message: n.any[0]?.message ?? "" };
           })
         );
-      }, PENDING_DESIGN as unknown as { id: string; selector: string }[]);
+      });
 
-      expect(findings.filter((f) => f.allowedBy === null)).toEqual([]);
+      expect(findings).toEqual([]);
     });
   }
 }
