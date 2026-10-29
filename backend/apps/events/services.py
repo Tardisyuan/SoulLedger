@@ -194,7 +194,10 @@ class EventService:
 
         event_bus.publish(
             event_type="NOTIFICATION_CREATED",
-            payload={
+            # Nested under "notification", the shape `event_bus.publish_notification` sends: the web client's
+            # NOTIFICATION_CREATED handler reads `payload.notification`, so the flat shape this used to send was
+            # stored but never toasted (fix-notify 遗留 2). NotificationHandler reads either.
+            payload={"notification": {
                 "user_id": user.id,
                 "title": title,
                 "message": message,
@@ -202,7 +205,7 @@ class EventService:
                 "related_resource": related_resource,
                 "related_id": related_id,
                 "params": params or {},
-            },
+            }},
             domain="notification",
             tenant_code=tenant_code,
             user_ids=[user.id],
