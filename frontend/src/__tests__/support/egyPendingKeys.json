@@ -13,5 +13,20 @@
   "appeals.refusal.appeal_closed",
   "appeals.refusal.ladder_running",
   "disposition.release_error.generic",
-  "officer_app.biometric.prompt"
+  "officer_app.biometric.prompt",
+  "events.realtime.NOTIFICATION_CREATED",
+  "events.realtime.POST_CREATED",
+  "events.realtime.POST_UPDATED",
+  "events.realtime.POST_DELETED",
+  "events.realtime.COMMENT_CREATED",
+  "events.realtime.COMMENT_DELETED",
+  "events.realtime.REACTION_ADDED",
+  "events.realtime.REACTION_REMOVED",
+  "events.realtime.USER_FOLLOWED",
+  "events.realtime.USER_UNFOLLOWED",
+  "events.realtime.SCHEDULER_RUN_FAILED",
+  "events.realtime.fallback_workflow",
+  "events.realtime.fallback_dispatch",
+  "events.realtime.fallback_death_sync",
+  "events.realtime.fallback_social"
 ]

@@ -14,7 +14,7 @@
  */
 
 import {
-  EVENT_LABELS,
+  eventLabel,
   handleDeathSyncEvent,
   handleDispatchEvent,
   handleDispositionEvent,
@@ -240,7 +240,7 @@ export function isEventRegistered(domain: string, event: string): boolean {
  * Get event label for display.
  */
 export function getEventLabel(eventType: string): string {
-  return EVENT_LABELS[eventType] || eventType;
+  return eventLabel(eventType) ?? eventType;
 }
 
 // ── Event Drift Detection ──────────────────────────────────────────────

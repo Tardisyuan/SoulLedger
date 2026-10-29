@@ -7458,7 +7458,24 @@
     },
     "empty": "No events match",
     "empty_all": "No events yet",
-    "failed": "Couldn't load events, please try again"
+    "failed": "Couldn't load events, please try again",
+    "realtime": {
+      "NOTIFICATION_CREATED": "New notification",
+      "POST_CREATED": "New post",
+      "POST_UPDATED": "Post updated",
+      "POST_DELETED": "Post deleted",
+      "COMMENT_CREATED": "New comment",
+      "COMMENT_DELETED": "Comment deleted",
+      "REACTION_ADDED": "Reaction added",
+      "REACTION_REMOVED": "Reaction removed",
+      "USER_FOLLOWED": "New follower",
+      "USER_UNFOLLOWED": "Unfollowed",
+      "SCHEDULER_RUN_FAILED": "Scheduled task run failed",
+      "fallback_workflow": "Workflow update",
+      "fallback_dispatch": "Dispatch update",
+      "fallback_death_sync": "Death sync update",
+      "fallback_social": "Social update"
+    }
   },
   "state": {
     "gone_title": "This is no longer here",
