@@ -9,6 +9,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
 import { showToast } from "@/src/components/ui/Toast";
+import { useSecondFactor } from "./SecondFactorPrompt";
 
 /**
  * 管理员「重置两步验证」(A12):560 的对话框,列三条后果,理由必填(写入审计),再输入账号名;
@@ -19,8 +20,10 @@ export function MfaResetDialog({ user, onClose }: { user: User; onClose: () => v
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [typed, setTyped] = useState("");
+  // Another administrator's: the server wants the caller's own code (decision 8); the prompt asks for it.
+  const secondFactor = useSecondFactor(user.username);
   const reset = useMutation({
-    mutationFn: () => usersApi.resetMfa(user.id, reason.trim()),
+    mutationFn: () => secondFactor.run((proof) => usersApi.resetMfa(user.id, reason.trim(), proof)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all });
       showToast(t("mfa.admin.reset_done"), "success");
@@ -84,6 +87,7 @@ export function MfaResetDialog({ user, onClose }: { user: User; onClose: () => v
           disabled={reset.isPending}
         />
       </div>
+      {secondFactor.prompt}
     </BaseModal>
   );
 }

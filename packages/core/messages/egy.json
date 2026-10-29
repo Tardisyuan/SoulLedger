@@ -3307,19 +3307,10 @@
     "reset_password": {
       "action": "Wehem Sekhem",
       "confirm_title": "Wehem Sekhem En {{name}}?",
-      "confirm_body": "Sekhem Mawy Iri; Sekhem-Ef Nen Wenen Emu. Per Em Ikhet Neb-Ef. Er Aq Mawy: Khemen Sekhem-Ef Er Tepy. Sekhem Mawy: Maa Sep Wa.",
       "confirm": "Wehem Sekhem",
       "failed": "Nen Wehem Sekhem. Wehem Iri.",
-      "shown_title": "Sekhem Mawy En {{name}} (Maa Sep Wa)",
-      "shown_warning": "Er Khet Khetem: Nen Maa Djer. Djed Er-Ef Emu; Er Aq Tepy: Khemen Sekhem-Ef.",
-      "copy": "Senn Sekhem",
       "copied": "Senn Seth",
-      "copy_failed": "Nen Senn. Sesh Em Djeret.",
-      "close": "Smen-I Seth, Khetem",
-      "close_confirm_title": "Maa Sekhem Sep Wa",
-      "close_confirm_body": "Maa Sekhem Sep Wa. Khetem? Er Khet Khetem: Nen Maa Djer; Wehem Sekhem Er Sekhem Mawy.",
-      "close_confirm": "Khetem",
-      "close_back": "Er Hat"
+      "copy_failed": "Nen Senn. Sesh Em Djeret."
     },
     "import": {
       "title": "Ini Sab",

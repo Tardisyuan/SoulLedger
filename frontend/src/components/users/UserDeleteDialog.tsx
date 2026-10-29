@@ -8,6 +8,7 @@ import { RoleName } from "@/src/components/users/RoleName";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/src/components/ui/Toast";
+import { useSecondFactor } from "./SecondFactorPrompt";
 
 interface UserDeleteDialogProps {
   user: User | null;
@@ -25,8 +26,10 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
   const { t } = useI18n();
   const queryClient = useQueryClient();
 
+  // Another administrator: the caller's own code first (decision 8).
+  const secondFactor = useSecondFactor(user?.username ?? "");
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => usersApi.delete(id),
+    mutationFn: (id: string) => secondFactor.run((proof) => usersApi.delete(id, proof)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       showToast(t("users.delete_success"), "success");
@@ -39,6 +42,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
   });
 
   return (
+    <>
     <NameConfirmDialog
       isOpen={isOpen}
       title={t("users.delete_title")}
@@ -71,5 +75,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         </div>
       }
     />
+    {secondFactor.prompt}
+    </>
   );
 }

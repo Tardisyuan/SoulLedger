@@ -9,6 +9,7 @@ import {
   platform,
   setAccessToken,
   setRefreshToken,
+  usesRefreshCookie,
 } from "../platform/index";
 // Type-only import: erased at compile time, so this does not create a runtime
 // import cycle with users.ts (which imports `api` from here as a value).
@@ -126,6 +127,13 @@ api.interceptors.request.use((config) => {
   // side alone is worthless — a backend honouring a header nobody sends, or a
   // header the backend ignores.
   config.headers["Accept-Language"] = getLocale();
+  // Web: the refresh token is an httpOnly cookie on the API origin (decision 16). Credentials on every call so
+  // refresh / logout / change-password carry it, and the opt-in header so token answers set it instead of
+  // putting `refresh` in the body. The cookie's path is `/api/v1/auth/`; nothing else ever receives it.
+  if (usesRefreshCookie()) {
+    config.withCredentials = true;
+    config.headers["X-Auth-Cookie"] = "1";
+  }
   stampRequest(config.headers, config.method);
   return config;
 });
@@ -178,16 +186,19 @@ function isAuthEndpoint(url: string | undefined): boolean {
   return /\/auth\/(login|register|refresh)\/?$/.test(url || "");
 }
 
-export async function rotateRefreshToken(refresh: string): Promise<string> {
+export async function rotateRefreshToken(refresh: string | null): Promise<string> {
   // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True and BLACKLIST_AFTER_ROTATION=True,
   // so the server blacklists the refresh token we just sent and issues a new
   // one in `data.refresh`. It MUST be persisted (same place the login flow
   // writes to — on web that is the `soulledger_refresh` cookie) or the next
   // refresh will present an already-blacklisted token and the user gets
   // silently booted to /login.
+  // Cookie mode (web): no body; the httpOnly cookie is the credential and comes back rotated.
+  const cookie = usesRefreshCookie();
   const { data } = await axios.post<TokenRefreshResponse>(
     `${getApiBaseUrl()}/auth/refresh/`,
-    { refresh }
+    cookie ? {} : { refresh },
+    cookie ? { withCredentials: true, headers: { "X-Auth-Cookie": "1" } } : undefined
   );
   // THE ACCESS TOKEN DOES NOT GO IN THE PERSISTENT STORE.
   //
@@ -274,6 +285,7 @@ api.interceptors.response.use(
       }
 
       error.config._retry = true;
+      // On web this is only the signed-in marker (the httpOnly cookie is what gets sent); no marker = not signed in.
       const refresh = getRefreshToken();
       if (!refresh) {
         // FL-20: nothing to refresh with. This branch used to fall through to

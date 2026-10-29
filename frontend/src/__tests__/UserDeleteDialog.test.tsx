@@ -147,7 +147,7 @@ describe("UserDeleteDialog", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockedDelete).toHaveBeenCalledTimes(1);
-    expect(mockedDelete).toHaveBeenCalledWith("42");
+    expect(mockedDelete).toHaveBeenCalledWith("42", undefined); // no second-factor proof unless the server asks
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(mockedToast).toHaveBeenCalledWith(zh("users.delete_success"), "success");
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["users"] });
@@ -163,7 +163,7 @@ describe("UserDeleteDialog", () => {
     fireEvent.click(screen.getByTestId("name-confirm-action"));
 
     await waitFor(() => expect(mockedToast).toHaveBeenCalledWith(zh("users.delete_error"), "error"));
-    expect(mockedDelete).toHaveBeenCalledWith("1");
+    expect(mockedDelete).toHaveBeenCalledWith("1", undefined);
     expect(onClose).not.toHaveBeenCalled();
     expect(onConfirm).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();

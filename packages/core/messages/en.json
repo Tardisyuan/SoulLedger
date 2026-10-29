@@ -3374,19 +3374,15 @@
     "reset_password": {
       "action": "Reset password",
       "confirm_title": "Reset the password for {{name}}?",
-      "confirm_body": "A new random password is generated. The old one stops working at once, every device this person is signed in on is signed out, and they must change the password at next sign-in. The new password is shown only once.",
       "confirm": "Reset",
       "failed": "Reset failed, please try again",
-      "shown_title": "New password for {{name}} (shown once)",
-      "shown_warning": "You cannot see it again after closing. Pass it on now; they must change it at first sign-in.",
-      "copy": "Copy password",
       "copied": "Copied to clipboard",
       "copy_failed": "Copy failed, please write it down",
-      "close": "I have noted it, close",
-      "close_confirm_title": "The password is shown only once",
-      "close_confirm_body": "The password is shown only once. Close anyway? You cannot see it again; you would have to reset it to get a new one.",
-      "close_confirm": "Close",
-      "close_back": "Back"
+      "confirm_body_link": "The old password stops working at once and every device this person is signed in on is signed out. You get a one-time link, valid for 24 hours, on which they set a new password themselves. Nobody, you included, ever sees the new password.",
+      "link_title": "Set-password link for {{name}}",
+      "link_warning": "Pass this link to them yourself. It works once and expires in {{hours}} hours; resetting again replaces it.",
+      "link_copy": "Copy link",
+      "link_close": "Close"
     },
     "import": {
       "button": "Import CSV",
@@ -3428,7 +3424,21 @@
     "tenant_pick": "Choose a tenant",
     "organization_column": "Organization · Position",
     "position": "Position",
-    "organization_required": "A hall member who is not an administrator must belong to a unit"
+    "organization_required": "A hall member who is not an administrator must belong to a unit",
+    "second_factor": {
+      "title": "Confirm with your two-step code",
+      "body": "{{name}} is an administrator. Acting on another administrator needs your own two-step verification code.",
+      "code_label": "6-digit code",
+      "recovery_label": "Recovery code",
+      "use_recovery": "Use a recovery code instead",
+      "use_totp": "Use the 6-digit code instead",
+      "submit": "Confirm",
+      "wrong": "That code is not right. {{n}} tries left before it locks.",
+      "expired": "That code has expired. Wait for the next one.",
+      "locked": "Two-step verification is locked. Try again in {{minutes}} minutes.",
+      "admin_target_global_only": "Only the global administrator can do this to another administrator.",
+      "second_factor_unavailable": "Turn on two-step verification on your own account first."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -7975,7 +7985,11 @@
     "invalid_title": "This invite link can't be used",
     "invalid_body": "Ask your hall's administrator to invite you again.",
     "rate_limited": "Too many tries. Try again in {{seconds}} s",
-    "link_note": "An invite link lasts 7 days and works once."
+    "link_note": "An invite link lasts 7 days and works once.",
+    "reset_subtitle": "An administrator reset your password. Set a new one here, then sign in with your username and it.",
+    "reset_link_note": "This link lasts 24 hours and works once.",
+    "reset_invalid_title": "This link can't be used",
+    "reset_invalid_body": "It has expired or was already used. Ask your administrator to reset your password again."
   },
   "mengpoSoup": {
     "title": "Mengpo's soup",

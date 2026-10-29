@@ -1,57 +1,34 @@
 /**
- * 「在此设备上保持登录 30 天」, as the browser sees it: the refresh cookie's
- * lifetime.
+ * The web refresh token is an httpOnly cookie the API sets (2026-10-29 decision 16,
+ * `backend/apps/authentication/refresh_cookie.py`). The file name is historical: this used to pin the
+ * lifetime of a JS-written cookie that held the token itself.
  *
- * The cookie is written by `lib/platform/web.ts`, not by the server, so this is
- * where Max-Age / Expires are decided and where they are pinned:
- *
- * - a token carrying `remember: true` → `max-age` = the token's remaining life
- *   (30 days fresh from login), no `expires`;
- * - any other token → neither `max-age` nor `expires`: a session cookie;
- * - both → exactly today's other attributes: `path=/`, `SameSite=Lax`, no
- *   `HttpOnly` (the value must stay readable by JS — see the note in web.ts),
- *   `Secure` only on https (jsdom serves http://localhost, so absent here).
- *
- * And the case that makes the claim necessary: a silent refresh rewrites the
- * cookie through `rotateRefreshToken`, which knows nothing about how the
- * operator signed in. The rotated token's claim is what keeps the cookie at
- * 30 days instead of quietly turning it into a session cookie.
+ * What is pinned now:
+ * - the web adapter declares `refreshCookie`, so the core client sends credentials + `X-Auth-Cookie: 1`;
+ * - `setRefreshToken` never writes the token into a script-readable cookie — only the marker "1", for
+ *   `proxy.ts`, which cannot see the API origin's cookie (asserted absent as well as present);
+ * - a silent refresh posts no body (the cookie is the credential) and still writes only the marker.
  */
+import axios from "axios";
 import { rotateRefreshToken } from "@soulledger/core/api/client";
-import { configurePlatform, setRefreshToken } from "@soulledger/core/platform";
-import { refreshCookieLifetime, REFRESH_TOKEN_KEY, webPlatform } from "@/lib/platform/web";
+import { configurePlatform, setRefreshToken, usesRefreshCookie } from "@soulledger/core/platform";
+import { MARKER_MAX_AGE, REFRESH_TOKEN_KEY, webPlatform } from "@/lib/platform/web";
 
-const NOW = 1_800_000_000; // seconds
-const DAY = 86_400;
-
-let mockRotatedRefresh = "";
 jest.mock("axios", () => ({
   __esModule: true,
   default: {
-    post: jest.fn(async () => ({ data: { access: "NEW-ACCESS", refresh: mockRotatedRefresh } })),
+    post: jest.fn(async () => ({ data: { access: "NEW-ACCESS" } })),
     create: () => ({ interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } } }),
   },
 }));
 
-function b64url(value: object): string {
-  return btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
+const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCJ9.signature";
 
-function jwt(claims: Record<string, unknown>): string {
-  return `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url(claims)}.signature`;
-}
-
-const remembered = jwt({ token_type: "refresh", exp: NOW + 30 * DAY, iat: NOW, remember: true, tenant_code: "CN_DIYU" });
-const ordinary = jwt({ token_type: "refresh", exp: NOW + 7 * DAY, iat: NOW, tenant_code: "CN_DIYU" });
-
-/** Every string assigned to `document.cookie`, in order. jsdom's getter only
- *  returns name=value pairs, so the attributes can only be seen on the way in. */
 let writes: string[] = [];
 const cookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "cookie")!;
 
 beforeEach(() => {
   writes = [];
-  jest.spyOn(Date, "now").mockReturnValue(NOW * 1000);
   Object.defineProperty(document, "cookie", {
     configurable: true,
     get: () => cookieDescriptor.get!.call(document),
@@ -61,75 +38,43 @@ beforeEach(() => {
     },
   });
   configurePlatform(webPlatform);
+  (axios.post as jest.Mock).mockClear();
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
-  // Drop the instance override so the prototype accessor is back.
   delete (document as unknown as { cookie?: string }).cookie;
-  document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0`;
 });
 
-const attributes = (write: string) =>
-  write
-    .split(";")
-    .slice(1)
-    .map((part) => part.trim().toLowerCase());
+function refreshWrites(): string[] {
+  return writes.filter((w) => w.startsWith(`${REFRESH_TOKEN_KEY}=`));
+}
 
-const refreshWrites = () => writes.filter((w) => w.startsWith(`${REFRESH_TOKEN_KEY}=`) && !w.includes("max-age=0"));
+describe("web refresh token", () => {
+  it("is declared as a cookie the script cannot read", () => {
+    expect(webPlatform.refreshCookie).toBe(true);
+    expect(usesRefreshCookie()).toBe(true);
+  });
 
-describe("the refresh cookie's lifetime", () => {
-  it("lives 30 days when the token was issued with 保持登录", () => {
-    setRefreshToken(remembered);
+  it("is never written by the page: only the signed-in marker is", () => {
+    setRefreshToken(TOKEN);
     const [write] = refreshWrites();
-    expect(write.startsWith(`${REFRESH_TOKEN_KEY}=${remembered};`)).toBe(true);
-    expect(attributes(write)).toEqual(["path=/", `max-age=${30 * DAY}`, "samesite=lax"]);
+    expect(write.startsWith(`${REFRESH_TOKEN_KEY}=1;`)).toBe(true);
+    expect(writes.join("\n")).not.toContain(TOKEN);
+    expect(write).toContain(`max-age=${MARKER_MAX_AGE}`);
+    expect(write.toLowerCase()).not.toContain("httponly"); // the page sets the marker; the API sets the real one
   });
 
-  it("is a session cookie otherwise — no max-age, no expires", () => {
-    setRefreshToken(ordinary);
-    const [write] = refreshWrites();
-    expect(attributes(write)).toEqual(["path=/", "samesite=lax"]);
-    expect(write).not.toMatch(/max-age|expires/i);
+  it("a login answer without `refresh` still marks the browser signed in", () => {
+    setRefreshToken(undefined);
+    expect(refreshWrites()[0]).toMatch(new RegExp(`^${REFRESH_TOKEN_KEY}=1;`));
   });
 
-  it("keeps today's other flags in both cases: no HttpOnly, no Secure on http", () => {
-    setRefreshToken(remembered);
-    setRefreshToken(ordinary);
-    for (const write of refreshWrites()) {
-      expect(write).not.toMatch(/httponly/i);
-      expect(write).not.toMatch(/secure/i);
-      expect(attributes(write)).toContain("samesite=lax");
-      expect(attributes(write)).toContain("path=/");
-    }
-  });
-
-  it("counts the remaining life, not a fixed 30 days, for an older remembered token", () => {
-    expect(refreshCookieLifetime(remembered, NOW + 29 * DAY)).toBe(`; max-age=${DAY}`);
-    expect(refreshCookieLifetime(remembered, NOW + 31 * DAY)).toBe("; max-age=0");
-  });
-
-  it.each([
-    ["not a JWT", "opaque-value"],
-    ["unparseable payload", "a.%%%.c"],
-    ["remember as a string", jwt({ exp: NOW + 30 * DAY, remember: "true" })],
-    ["remember false", jwt({ exp: NOW + 30 * DAY, remember: false })],
-    ["remember without exp", jwt({ remember: true })],
-  ])("falls back to the session lifetime for %s", (_label, token) => {
-    expect(refreshCookieLifetime(token, NOW)).toBe("");
-  });
-});
-
-describe("after a silent refresh", () => {
-  it("a rotated remembered token keeps the 30-day cookie", async () => {
-    mockRotatedRefresh = remembered;
-    await rotateRefreshToken(ordinary);
-    expect(attributes(refreshWrites().at(-1)!)).toContain(`max-age=${30 * DAY}`);
-  });
-
-  it("a rotated ordinary token stays a session cookie", async () => {
-    mockRotatedRefresh = ordinary;
-    await rotateRefreshToken(ordinary);
-    expect(refreshWrites().at(-1)).not.toMatch(/max-age|expires/i);
+  it("a silent refresh sends no token in the body and asks for the cookie", async () => {
+    await rotateRefreshToken("1");
+    const [, body, config] = (axios.post as jest.Mock).mock.calls[0];
+    expect(body).toEqual({});
+    expect(config).toEqual({ withCredentials: true, headers: { "X-Auth-Cookie": "1" } });
+    expect(writes.join("\n")).not.toContain("NEW-ACCESS");
+    expect(refreshWrites()[0]).toMatch(new RegExp(`^${REFRESH_TOKEN_KEY}=1;`));
   });
 });

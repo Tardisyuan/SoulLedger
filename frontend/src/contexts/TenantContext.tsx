@@ -108,6 +108,9 @@ interface TenantContextValue {
    */
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
+  /** Re-read this user's permissions, role and hall from the server (focus, and the server's
+   *  `permission.refreshed` push after a demotion or a grant change — decision 10). */
+  refreshFromServer?: () => void;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -288,10 +291,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       tenantCode,
       setUser,
       logout,
+      refreshFromServer,
     }),
     // `tenantCode` is derived from `user` and cannot move without it; it is
     // listed because it is read here, not because it adds a trigger.
-    [user, tenantCode, setUser, logout]
+    [user, tenantCode, setUser, logout, refreshFromServer]
   );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;

@@ -7,6 +7,7 @@ import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
+import { useSecondFactor } from "./SecondFactorPrompt";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
@@ -85,9 +86,12 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     },
   });
 
+  // Editing another administrator needs the caller's own code (decision 8): an email change followed by an
+  // email reset would be a takeover, so every field counts.
+  const secondFactor = useSecondFactor(user?.username ?? "");
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateUserInput }) =>
-      usersApi.update(id, data),
+      secondFactor.run((proof) => usersApi.update(id, data, proof)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
       showToast(t("users.update_success") || "用户更新成功", "success");
@@ -390,6 +394,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           </>
         )}
       </form>
+      {secondFactor.prompt}
     </BaseModal>
   );
 }

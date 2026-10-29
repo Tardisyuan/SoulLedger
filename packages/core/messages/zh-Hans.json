@@ -3374,19 +3374,15 @@
     "reset_password": {
       "action": "重置密码",
       "confirm_title": "重置 {{name}} 的密码？",
-      "confirm_body": "将生成一个新的随机密码，旧密码立即作废，此人所有已登录的设备都会退出，下次登录必须自己改密码。新密码只显示一次。",
       "confirm": "确认重置",
       "failed": "重置失败，请重试",
-      "shown_title": "{{name}} 的新密码（仅此一次）",
-      "shown_warning": "关闭窗口后无法再次查看。请立即告知本人；首次登录须修改密码。",
-      "copy": "复制密码",
       "copied": "已复制到剪贴板",
       "copy_failed": "复制失败，请手动抄写",
-      "close": "我已记下，关闭",
-      "close_confirm_title": "密码只显示这一次",
-      "close_confirm_body": "密码只显示这一次，确定关闭？关闭后无法再次查看，需要重新重置才能拿到新密码。",
-      "close_confirm": "确定关闭",
-      "close_back": "返回"
+      "confirm_body_link": "旧密码立即作废，此人所有已登录的设备都会退出。你会拿到一条 24 小时内有效、只能用一次的链接，由本人在上面自己设新密码；包括你在内，谁都看不到新密码。",
+      "link_title": "{{name}} 的设置密码链接",
+      "link_warning": "请亲自把链接交给本人。链接只能用一次，{{hours}} 小时后失效；再重置一次会换一条新的。",
+      "link_copy": "复制链接",
+      "link_close": "关闭"
     },
     "import": {
       "button": "导入 CSV",
@@ -3428,7 +3424,21 @@
     "tenant_pick": "选择租户",
     "organization_column": "机构 · 职务",
     "position": "职务",
-    "organization_required": "有殿的非管理员必须属于一个机构"
+    "organization_required": "有殿的非管理员必须属于一个机构",
+    "second_factor": {
+      "title": "用你的两步验证码确认",
+      "body": "{{name}} 是管理员。对另一位管理员操作，需要输入你自己的两步验证码。",
+      "code_label": "6 位动态码",
+      "recovery_label": "恢复码",
+      "use_recovery": "改用恢复码",
+      "use_totp": "改用 6 位动态码",
+      "submit": "确认",
+      "wrong": "验证码不对，再错 {{n}} 次将锁定。",
+      "expired": "验证码已过期，请等下一个。",
+      "locked": "两步验证已锁定，请 {{minutes}} 分钟后再试。",
+      "admin_target_global_only": "只有全局管理员能对另一位管理员这样操作。",
+      "second_factor_unavailable": "请先给自己的账号开启两步验证。"
+    }
   },
   "settings": {
     "title": "设置",
@@ -7975,7 +7985,11 @@
     "invalid_title": "这个邀请链接用不了",
     "invalid_body": "请联系本殿管理员，重新给你发一次邀请。",
     "rate_limited": "试得太多了，请 {{seconds}} 秒后再试",
-    "link_note": "邀请链接 7 天有效，只能用一次。"
+    "link_note": "邀请链接 7 天有效，只能用一次。",
+    "reset_subtitle": "管理员重置了你的密码。在这里设一个新密码，然后用用户名和它登录。",
+    "reset_link_note": "链接 24 小时内有效，只能用一次。",
+    "reset_invalid_title": "这个链接用不了",
+    "reset_invalid_body": "链接已过期或已用过。请联系管理员再重置一次。"
   },
   "mengpoSoup": {
     "title": "孟婆汤",
