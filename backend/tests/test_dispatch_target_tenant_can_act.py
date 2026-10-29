@@ -295,3 +295,35 @@ def test_the_target_tenant_cannot_rewrite_the_proposers_reason(both_sides):
     assert resp.status_code == 200, resp.content
     record.refresh_from_db()
     assert record.reason == "clarified by source"
+
+
+@pytest.mark.django_db
+def test_the_source_tenant_cannot_reject_its_own_proposal(both_sides):
+    """RBAC 严查 2026-10-29 M4:驳回只许目标殿,与 approve / execute 同一条。撤回走 `cancel`。"""
+    from apps.notifications.models import UserNotification
+
+    record = both_sides["record"]
+    url = f"{BASE}/records/{record.pk}/reject/"
+    resp = both_sides["client_a"].post(url, {"reason": "self-rejected"}, format="json")
+    assert resp.status_code == 403, resp.status_code
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.PROPOSED and record.decided_by_id is None
+    assert not UserNotification.objects.filter(notification_type="DISPATCH_REJECTED").exists()
+
+    resp = both_sides["client_b"].post(url, {"reason": "not ours"}, format="json")
+    assert resp.status_code == 200, resp.content
+    record.refresh_from_db()
+    assert record.status == DispatchStatus.REJECTED
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("decided", [DispatchStatus.APPROVED, DispatchStatus.EXECUTED])
+def test_the_reason_is_locked_once_the_target_has_decided(both_sides, decided):
+    """RBAC 严查 2026-10-29 L2:对方据以批准的理由,批准 / 执行后发起殿不能再改。"""
+    record = both_sides["record"]
+    DispatchRecord.objects.filter(pk=record.pk).update(status=decided, reason="what they approved")
+    resp = both_sides["client_a"].patch(f"{BASE}/records/{record.pk}/", {"reason": "rewritten later"}, format="json")
+    assert resp.status_code == 409, resp.status_code
+    assert resp.data["code"] == "reason_locked"
+    record.refresh_from_db()
+    assert record.reason == "what they approved"
