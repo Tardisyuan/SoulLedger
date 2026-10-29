@@ -29,6 +29,27 @@ def api_client():
     return APIClient()
 
 
+def sign_in(client, user):
+    """Authenticate `client` as `user` the way production does: a JWT whose `tenant_code` is the user's hall,
+    so `TenantMiddleware` puts that hall on the request. `force_authenticate` leaves `request.tenant` empty,
+    which since 2026-10-29 refuses an ADMIN bound to a hall (only the hall-less ADMIN works without one)."""
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    token = RefreshToken.for_user(user)
+    if user.tenant_id:
+        token["tenant_code"] = user.tenant.code
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return client
+
+
+@pytest.fixture
+def cn_admin_user(db, django_user_model, cn_tenant):
+    """The ADMIN of the CN_DIYU hall: hall-scoped (2026-10-29). Sign it in with `sign_in`, not `force_authenticate`."""
+    user, _ = django_user_model.objects.get_or_create(
+        username="cn_admin", defaults={"role": "ADMIN", "tenant": cn_tenant})
+    return user
+
+
 @pytest.fixture
 def cn_tenant(db):
     """Chinese Diyu tenant."""
@@ -53,10 +74,12 @@ def eu_tenant(db):
 
 @pytest.fixture
 def admin_user(db, django_user_model, cn_tenant):
-    """Admin user with CN_DIYU tenant."""
+    """The global administrator: ADMIN with no hall (2026-10-29: only a hall-less ADMIN reads and writes
+    across halls; an ADMIN bound to a hall is scoped to it — that one is `eu_admin_user`). `cn_tenant` is
+    still requested so the CN hall exists for the tests that use this fixture."""
     user, _ = django_user_model.objects.get_or_create(
         username="admin",
-        defaults={"role": "ADMIN", "tenant": cn_tenant},
+        defaults={"role": "ADMIN", "tenant": None},
     )
     if not user.check_password("admin123"):
         user.set_password("admin123")
@@ -132,9 +155,10 @@ def soul_data():
 
 
 @pytest.fixture
-def auth_headers(api_client, admin_user):
-    """Authenticated headers dict with admin user."""
+def auth_headers(api_client, cn_admin_user):
+    """Authenticated headers dict for the CN hall's ADMIN (the counterpart of `eu_auth_headers`)."""
     from rest_framework_simplejwt.tokens import RefreshToken
+    admin_user = cn_admin_user
     token = RefreshToken.for_user(admin_user)
     # Add tenant_code claim
     if admin_user.tenant:

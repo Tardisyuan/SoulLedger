@@ -55,7 +55,7 @@ def tenant(db):
 @pytest.fixture
 def admin(db, tenant):
     return User.objects.create_user(
-        username="menu_tree_admin", password="x", role="ADMIN", tenant=tenant
+        username="menu_tree_admin", password="x", role="ADMIN", tenant=None
     )
 
 

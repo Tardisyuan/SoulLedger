@@ -24,6 +24,10 @@ ROLE_FORBIDDEN_CODENAMES = {
 }
 
 
+#: Codenames that change configuration shared by every hall. Held only by the hall-less ADMIN.
+GLOBAL_ONLY_CODENAMES = frozenset({"menu.manage"})
+
+
 def check_permission(user, codename):
     """
     Check if a user has a specific permission codename.
@@ -44,6 +48,11 @@ def check_permission(user, codename):
     if not role:
         return False
 
+    # 全站配置(菜单是所有殿共用的一棵树)只给没绑殿的全局 ADMIN,任何角色都不能经授予拿到(2026-10-29)。
+    if codename in GLOBAL_ONLY_CODENAMES:
+        from apps.core.tenant import is_tenant_exempt
+
+        return is_tenant_exempt(user)
     # ADMIN bypasses all permission checks
     if role == 'ADMIN':
         return True

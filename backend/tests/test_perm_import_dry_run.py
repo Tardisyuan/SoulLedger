@@ -57,7 +57,7 @@ def world(transactional_db):
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
     for codename in ("workflow.approve", "recycle_bin.restore"):
         Permission.objects.get_or_create(codename=codename, defaults={"name": codename, "category": "wf"})
-    admin = User.objects.create_user(username="dry_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="dry_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     token = RefreshToken.for_user(admin)
     token["tenant_code"] = tenant.code
     client = APIClient()

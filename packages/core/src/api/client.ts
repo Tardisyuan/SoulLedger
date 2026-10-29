@@ -240,12 +240,26 @@ export function onPasswordChangeRequired(listener: (() => void) | null): void {
   passwordChangeListener = listener;
 }
 
+let mfaSetupListener: (() => void) | null = null;
+
+/**
+ * The host's answer to a 403 `mfa_setup_required` (the role requires two-step verification and it is not on; the
+ * server refuses everything but setting it up, signing out and reading oneself): it routes to its setup page.
+ * One listener; `null` removes it.
+ */
+export function onMfaSetupRequired(listener: (() => void) | null): void {
+  mfaSetupListener = listener;
+}
+
 // Handle 401 → redirect to login (skip for auth endpoints which handle their own errors)
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 403 && error.response.data?.code === "password_change_required") {
       passwordChangeListener?.();
+    }
+    if (error.response?.status === 403 && error.response.data?.code === "mfa_setup_required") {
+      mfaSetupListener?.();
     }
     if (error.response?.status === 401 && !error.config._retry) {
       if (isAuthEndpoint(error.config.url)) {

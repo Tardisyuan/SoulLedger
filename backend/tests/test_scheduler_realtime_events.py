@@ -102,7 +102,8 @@ def test_a_global_run_goes_only_to_admin_user_groups(layer, admin_user, eu_admin
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id=str(uuid.uuid4()))
 
     groups = {g for g, _ in layer.sent}
-    assert groups == {f"rt_user_{admin_user.pk}", f"rt_user_{eu_admin_user.pk}"}
+    # A global job is not a hall's: the hall-less ADMIN only, not a hall's ADMIN (2026-10-29).
+    assert groups == {f"rt_user_{admin_user.pk}"}
     assert not any(g.startswith("rt_tenant_") for g in groups)
     assert f"rt_user_{judge_user.pk}" not in groups and f"rt_user_{viewer_user.pk}" not in groups
 
@@ -155,7 +156,8 @@ def test_rebuild_emits_to_every_active_tenant_and_to_admins(layer, api_client, a
 
     events = _events(layer, realtime.JOBS_REBUILT)
     groups = {g for g, _ in events}
-    assert {f"rt_tenant_{cn_tenant.code}", f"rt_tenant_{eu_tenant.code}", f"rt_user_{admin_user.pk}", f"rt_user_{eu_admin_user.pk}"} <= groups
+    assert {f"rt_tenant_{cn_tenant.code}", f"rt_tenant_{eu_tenant.code}", f"rt_user_{admin_user.pk}"} <= groups
+    assert f"rt_user_{eu_admin_user.pk}" not in groups  # reaches it through its hall's group
     for _, data in events:
         assert data["_permission"] == "scheduler.read"
         assert {"created", "updated", "removed", "legacy_removed", "timestamp"} <= set(data)

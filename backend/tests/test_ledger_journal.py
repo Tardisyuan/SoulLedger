@@ -42,7 +42,8 @@ def _login(client, user, *codenames):
 
     _grant(user.role, *codenames)
     token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
+    if user.tenant_id:  # the hall-less ADMIN carries no hall
+        token["tenant_code"] = user.tenant.code
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client
 

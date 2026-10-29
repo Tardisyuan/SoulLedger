@@ -71,7 +71,9 @@ def auth_client(api_client, admin_user):
                 rl_module.set_current_request(old_request)
 
     # Store context manager on the client for use in tests
-    api_client.force_authenticate(user=admin_user)
+    from tests.conftest import sign_in
+
+    sign_in(api_client, admin_user)  # a JWT carries the hall; the hall's ADMIN needs it (2026-10-29)
     api_client.set_user_context = set_user_context
 
     # Also set contextvar at module level for direct model operations

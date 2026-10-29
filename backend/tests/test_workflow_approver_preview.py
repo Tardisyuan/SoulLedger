@@ -47,7 +47,8 @@ def _bearer(user) -> APIClient:
     from rest_framework_simplejwt.tokens import RefreshToken
 
     token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
+    if user.tenant_id:  # the hall-less ADMIN carries no hall
+        token["tenant_code"] = user.tenant.code
     return APIClient(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
 
@@ -127,7 +128,7 @@ def test_the_preview_reads_the_draft_the_editor_is_showing(seeded):
 @pytest.mark.django_db
 def test_admin_previews_another_civilization_in_its_own_tenant(seeded):
     cn = Tenant.objects.get(code=CIVILIZATION_TENANT[Civilization.CHINESE])
-    admin = User.objects.create_user(username="pv_admin3", password="x", role="ADMIN", tenant=cn)
+    admin = User.objects.create_user(username="pv_admin3", password="x", role="ADMIN", tenant=None)
     template = _published(cn, [{"id": "o", "node_name": "Osiris · 称重", "node_order": 1}])
 
     res = _bearer(admin).get(

@@ -128,7 +128,7 @@ class TestArchiveGuard:
             code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
         )[0]
         self.admin = User.objects.create_user(
-            username="rb_archive_admin", password="test123", role="ADMIN", tenant=self.tenant
+            username="rb_archive_admin", password="test123", role="ADMIN", tenant=None
         )
         # JUDGING,不是 ALIVE:`conclude` 要把灵魂送到 DISPOSED,而那条边只从
         # JUDGING 出发。这里此前是 ALIVE,而 `conclude` **丢掉了 transition_to
@@ -308,7 +308,7 @@ class TestRecycleBinAPI:
             code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
         )[0]
         self.admin = User.objects.create_user(
-            username="rb_api_admin", password="test123", role="ADMIN", tenant=self.tenant
+            username="rb_api_admin", password="test123", role="ADMIN", tenant=None
         )
         self.viewer = User.objects.create_user(
             username="rb_api_viewer", password="test123", role="VIEWER", tenant=self.tenant

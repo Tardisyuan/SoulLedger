@@ -62,7 +62,7 @@ def world(db):
     RowLevelDataScope.objects.create(role=judge, model_name="soul", scope_type="READ")
     RowLevelDataScope.objects.create(role=admin_role, model_name="soul", scope_type="READ")
     FieldPermission.objects.create(role=admin_role, model_name="soul", field_name="name")
-    admin = User.objects.create_user(username="ow_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="ow_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     return {"tenant": tenant, "admin": admin, "judge": judge, "admin_role": admin_role}
 
 

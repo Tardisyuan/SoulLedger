@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from apps.audit.models import AuditLog
 from apps.audit.signals import explicit_audit_for
 from apps.core.client_ip import get_client_ip
-from apps.core.permissions import IsAdminPermission, TenantPermission
+from apps.core.permissions import IsAdminPermission, IsGlobalAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
@@ -74,7 +74,7 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
 
     def get_permissions(self):
         if self.action == "create":
-            return [TenantPermission(), IsAdminPermission()]
+            return [TenantPermission(), IsGlobalAdminPermission()]
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -110,19 +110,19 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
         return Response(TenantSerializer(tenant).data)
 
     @extend_schema(request=None, responses={200: TenantSerializer})
-    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsGlobalAdminPermission])
     def deactivate(self, request, code=None):
         """停用殿(不删):数据保留,不再收新灵魂与死亡登记。已停用再停用不写。"""
         return self._set_active(request, False)
 
     @extend_schema(request=None, responses={200: TenantSerializer})
-    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsGlobalAdminPermission])
     def activate(self, request, code=None):
         """重新启用。"""
         return self._set_active(request, True)
 
     @extend_schema(responses={200: HallOverviewSerializer(many=True)})
-    @action(detail=False, methods=["get"], permission_classes=[TenantPermission, IsAdminPermission])
+    @action(detail=False, methods=["get"], permission_classes=[TenantPermission, IsGlobalAdminPermission])
     def overview(self, request):
         """跨殿总览(ADMIN):每个殿的待办、审判积压、本月转世配额、未结申诉。规则见 `apps/tenants/overview.py`。"""
         from apps.tenants.overview import overview
@@ -130,7 +130,7 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
         return Response(overview(Tenant.objects.order_by("code")))
 
     @extend_schema(request=None, responses={201: HallViewStartSerializer})
-    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsAdminPermission])
+    @action(detail=True, methods=["post"], permission_classes=[TenantPermission, IsGlobalAdminPermission])
     def view(self, request, code=None):
         """全局管理员只读进入这一殿(停用的也行):签一张 30 分钟、只读、无刷新令牌的 access,`tenant_code` 是这一殿;
         开始 / 结束各一条审计。结束走 `POST auth/impersonate/end/`。规则见 `apps/authentication/impersonation.py`。"""

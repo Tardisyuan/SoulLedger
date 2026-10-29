@@ -27,7 +27,7 @@ def node_with_a_constraint(db):
         code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
     )
     user = User.objects.create_user(
-        username="judge", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="judge", password="x", role=UserRole.ADMIN, tenant=None
     )
     soul = Soul.objects.create(name="被审者", tenant=tenant)
     workflow = ApprovalWorkflow.objects.create(soul=soul, tenant=tenant)

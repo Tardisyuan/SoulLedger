@@ -14,20 +14,20 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def admin_client(api_client, admin_user, cn_tenant):
-    token = RefreshToken.for_user(admin_user)
-    if admin_user.tenant:
-        token["tenant_code"] = admin_user.tenant.code
+def admin_client(api_client, cn_admin_user, cn_tenant):
+    token = RefreshToken.for_user(cn_admin_user)
+    if cn_admin_user.tenant:
+        token["tenant_code"] = cn_admin_user.tenant.code
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return api_client
 
 
-def test_following_and_followers_stop_at_the_cap(admin_client, admin_user, cn_tenant, monkeypatch):
+def test_following_and_followers_stop_at_the_cap(admin_client, cn_admin_user, cn_tenant, monkeypatch):
     monkeypatch.setattr(social_views, "FOLLOW_LIST_CAP", 3)
     for i in range(6):
         other = User.objects.create_user(username=f"f{i}", password="x", tenant=cn_tenant)
-        Follow.objects.create(follower=admin_user, following=other, tenant=admin_user.tenant)
-        Follow.objects.create(follower=other, following=admin_user, tenant=admin_user.tenant)
+        Follow.objects.create(follower=cn_admin_user, following=other, tenant=cn_admin_user.tenant)
+        Follow.objects.create(follower=other, following=cn_admin_user, tenant=cn_admin_user.tenant)
     for action in ("following", "followers"):
         response = admin_client.get(f"/api/v1/social/follows/{action}/")
         assert response.status_code == 200, response.content

@@ -21,9 +21,10 @@ Two rules this module fixes in place:
   unfiltered queryset. ``apps/death_sync/views.py`` used to fail *open* on its
   API-key axis (``if api_key: qs = qs.filter(...)`` with no ``else``); see
   ``scope_to_api_key`` below.
-* **ADMIN is the one global role.** ``User.role == "ADMIN"`` is the only
-  tenant-exempt role in this codebase (apps/perm/models.py ``Role.scope``), and
-  the check is spelled with ``getattr`` so an ``AnonymousUser`` — which has no
+* **Only a hall-less ADMIN is global.** ``User.role == "ADMIN"`` with no
+  ``tenant`` is the only tenant-exempt user in this codebase; an ADMIN bound
+  to a hall is scoped to that hall like every other role (user, 2026-10-29).
+  The check is spelled with ``getattr`` so an ``AnonymousUser`` — which has no
   ``role`` — is never mistaken for one.
 
 ``backend/tests/test_tenant_scoping_contract.py`` walks every router-registered
@@ -47,7 +48,24 @@ def is_tenant_exempt(user) -> bool:
     added. Anonymous is never exempt.
     """
     # 进殿查看(`apps/authentication/impersonation.py::start_hall`):这一次请求里管理员只看那一殿。
-    return getattr(user, "role", None) == ADMIN_ROLE and not getattr(user, "hall_view", None)
+    # 殿管理员限本殿(用户 2026-10-29):只有**没绑殿**的 ADMIN 是全局的;绑了殿的 ADMIN 与殿内其他角色
+    # 一样只读写本殿 —— 这里一处改,`scope_to_tenant`、`TenantPermission` 与各处豁免判定一起跟着变。
+    return (
+        getattr(user, "role", None) == ADMIN_ROLE
+        and getattr(user, "tenant_id", None) is None
+        and not getattr(user, "hall_view", None)
+    )
+
+
+HALL_ADMIN_ROLES = ("ADMIN", "MODERATOR")
+
+
+def is_hall_admin(user) -> bool:
+    """ADMIN, or 殿主 (MODERATOR) held as the main role or as an additional one (`extra_roles`). Says nothing
+    about *which* hall — pair it with the caller's hall, or with `is_tenant_exempt` for the hall-less ADMIN."""
+    if getattr(user, "role", None) in HALL_ADMIN_ROLES:
+        return True
+    return "MODERATOR" in (getattr(user, "extra_roles", None) or ())
 
 
 def scope_to_tenant(

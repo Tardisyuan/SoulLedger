@@ -379,9 +379,10 @@ class TestRegenerateNeedsConfirmation:
             assert api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json").status_code == 400
         locked = api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json")
         assert locked.status_code == 429 and locked.data["code"] == "locked"
-        # Locked: the right password is refused here AND at disable (one lock).
+        # Locked: the right password is refused here, and at disable even the right code is (one lock).
         assert api_client.post(self.URL, {"method": "password", "password": "admin123"}, format="json").status_code == 429
-        assert api_client.post("/api/v1/auth/mfa/disable/", {"method": "password", "password": "admin123"}, format="json").status_code == 429
+        row = OfficerMfa.objects.get(user=admin_user)
+        assert api_client.post("/api/v1/auth/mfa/disable/", {"method": "totp", "code": _code(row.secret)}, format="json").status_code == 429
 
     def test_not_enabled_is_a_conflict(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
@@ -434,19 +435,29 @@ class TestRememberedDevice:
 
 @pytest.mark.django_db
 class TestDisableAndReset:
-    def test_disable_by_code_or_password_clears_everything(self, api_client, admin_user):
-        row, _ = _enable(admin_user)
+    def test_disable_by_code_or_recovery_code_clears_everything(self, api_client, admin_user):
+        row, codes = _enable(admin_user)
         mfa.remember_device(admin_user)
         api_client.force_authenticate(admin_user)
-        r = api_client.post("/api/v1/auth/mfa/disable/", {"method": "password", "password": "nope"}, format="json")
-        assert (r.status_code, r.data["code"]) == (400, "wrong_password")
+        r = api_client.post("/api/v1/auth/mfa/disable/", {"method": "totp", "code": "000000" if _code(row.secret) != "000000" else "111111"}, format="json")
+        assert (r.status_code, r.data["code"]) == (400, "wrong")
         r = api_client.post("/api/v1/auth/mfa/disable/", {"method": "totp", "code": _code(row.secret)}, format="json")
         assert r.status_code == 200 and r.data["enabled"] is False
         assert OfficerMfa.objects.count() == MfaRecoveryCode.objects.count() == MfaRememberedDevice.objects.count() == 0
         assert AuditLog.objects.filter(resource="mfa", changes={"mfa_enabled": [True, False]}).count() == 1
-        _enable(admin_user)
-        r = api_client.post("/api/v1/auth/mfa/disable/", {"method": "password", "password": "admin123"}, format="json")
+        _, codes = _enable(admin_user)
+        r = api_client.post("/api/v1/auth/mfa/disable/", {"method": "recovery", "code": codes[0]}, format="json")
         assert r.status_code == 200 and r.data["enabled"] is False
+
+    def test_the_password_alone_cannot_disable(self, api_client, admin_user):
+        """2026-10-29(Q):偷到密码的人不能顺手关掉两步验证。密码对了也是 400,而且仍然开着。"""
+        _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        for body in ({"method": "password", "password": "admin123"}, {"method": "totp", "password": "admin123"},
+                     {"method": "recovery", "password": "admin123"}):
+            r = api_client.post("/api/v1/auth/mfa/disable/", body, format="json")
+            assert r.status_code == 400, body
+        assert mfa.is_enabled(admin_user)
 
     def test_admin_reset_clears_secret_codes_devices_and_revokes_sessions(self, api_client, admin_user, judge_user):
         from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
@@ -498,7 +509,8 @@ class TestRequiredRolesAndListing:
         # 被要求也不挡登录。
         assert r.status_code == 200 and "access" in r.data and r.data["user"]["mfa_required"] is True
 
-    def test_tenant_settings_patch_and_role_rows(self, api_client, admin_user, judge_user, cn_tenant):
+    def test_tenant_settings_patch_and_role_rows(self, api_client, admin_user, cn_admin_user, judge_user, cn_tenant):
+        # `cn_admin_user` is the one ADMIN of the CN hall the role rows count (`admin_user` has no hall).
         _enable(judge_user)
         api_client.force_authenticate(admin_user)
         r = api_client.patch(f"/api/v1/tenants/{cn_tenant.code}/settings/", {"mfa_required_roles": ["JUDGE", "NOPE"]}, format="json")

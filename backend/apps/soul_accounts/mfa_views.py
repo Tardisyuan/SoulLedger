@@ -7,7 +7,7 @@
     DELETE /me/mfa/setup/               中途退出:未确认的密钥作废
     POST   /me/mfa/confirm/             向导:验一个 6 位数字 → 开启,并**只这一次**给出 10 个恢复码
     POST   /me/mfa/recovery-codes/      重新生成恢复码(旧码立即作废;只要确认,不用输码)
-    POST   /me/mfa/disable/             关闭(6 位数字或密码二选一)
+    POST   /me/mfa/disable/             关闭(6 位数字或恢复码二选一;只凭密码不行)
 
 拒绝体统一是 `{"detail", "code", …}`,`code` ∈ wrong / expired / locked / pending_invalid / rate_limited /
 wrong_password / not_enabled / already_enabled / not_started。`/me/` 下的视图继承 `SoulAPIView`
@@ -34,6 +34,7 @@ from apps.soul_accounts.serializers import (
     SoulMfaSetupRequestSerializer,
     SoulMfaSetupResponseSerializer,
     SoulMfaStatusSerializer,
+    SoulMfaTurnOffRequestSerializer,
     SoulMfaVerifyRequestSerializer,
     SoulMfaVerifyResponseSerializer,
 )
@@ -213,7 +214,7 @@ class MeMfaRecoveryCodesView(SoulAPIView):
                    responses={200: SoulMfaRecoveryCodesSerializer, 400: SoulMfaRefusalSerializer,
                               409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
-        """重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
+        """重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
         没带 / 错了 → 旧码原样有效。"""
         body = SoulMfaDisableRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -230,16 +231,15 @@ class MeMfaRecoveryCodesView(SoulAPIView):
 
 
 class MeMfaDisableView(SoulAPIView):
-    @extend_schema(request=SoulMfaDisableRequestSerializer,
+    @extend_schema(request=SoulMfaTurnOffRequestSerializer,
                    responses={200: SoulMfaStatusSerializer, 400: SoulMfaRefusalSerializer,
                               409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
-        body = SoulMfaDisableRequestSerializer(data=request.data)
+        body = SoulMfaTurnOffRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
-            outcome = mfa.disable(self.account, method=data["method"], code=data.get("code", ""),
-                                  password=data.get("password", ""), request=request)
+            outcome = mfa.disable(self.account, method=data["method"], code=data["code"], request=request)
         except svc.SoulAccountError as exc:
             return _error(exc)
         if outcome["code"] != "ok":

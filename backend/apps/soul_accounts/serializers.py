@@ -10,6 +10,7 @@ from datetime import datetime
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.authentication.mfa import OWNER_CONFIRM_METHODS, SECOND_FACTOR_METHODS
 from apps.reincarnation.models import RebirthForm
 from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
 from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
@@ -113,9 +114,16 @@ class SoulMfaRecoveryCodesSerializer(serializers.Serializer):
 
 
 class SoulMfaDisableRequestSerializer(serializers.Serializer):
-    method = serializers.ChoiceField(choices=["totp", "password"])
+    method = serializers.ChoiceField(choices=OWNER_CONFIRM_METHODS)
     code = serializers.CharField(required=False, allow_blank=True, max_length=32)
     password = serializers.CharField(required=False, allow_blank=True, max_length=128, trim_whitespace=False)
+
+
+class SoulMfaTurnOffRequestSerializer(serializers.Serializer):
+    """关闭:6 位数字(`totp`)或一枚恢复码(`recovery`)。只凭密码不行(2026-10-29)。"""
+
+    method = serializers.ChoiceField(choices=SECOND_FACTOR_METHODS)
+    code = serializers.CharField(max_length=32, trim_whitespace=True)
 
 
 class SoulMfaResetRequestSerializer(serializers.Serializer):

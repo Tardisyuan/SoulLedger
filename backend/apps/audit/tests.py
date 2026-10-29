@@ -228,8 +228,11 @@ class TestAuditLogActions:
         That one authenticated the ADMIN with ``force_authenticate``, so the
         request carried no JWT ``tenant_code`` and ``request.tenant`` was None;
         this one's JWT sets it. Both callers are kept."""
+        # A hall-bound ADMIN without a JWT has no hall on the request: refused (2026-10-29). The forced caller
+        # is therefore the hall-less ADMIN, which is what "no tenant_code" means in production.
         forced = APIClient()
-        forced.force_authenticate(user=self.admin)
+        forced.force_authenticate(user=User.objects.create_user(
+            username="aud_global", password="test123", role="ADMIN", tenant=None))
         for client in (self.admin_client, forced):
             resp = client.get(f"{BASE}/stats/")
             assert resp.status_code == status.HTTP_200_OK

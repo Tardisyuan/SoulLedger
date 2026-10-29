@@ -367,6 +367,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Every hall for the hall-less ADMIN; a hall's ADMIN sees its own row only (2026-10-29). */
         get: operations["assist_admin_halls_list"];
         put?: never;
         post?: never;
@@ -389,6 +390,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description The per-hall switch. A hall's ADMIN may flip its own hall's only; another hall's is 404 (2026-10-29). */
         patch: operations["assist_admin_hall_update"];
         trace?: never;
     };
@@ -910,7 +912,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。 */
+        /** @description 关闭:`method=totp` 验一个动态码,`method=recovery` 验一枚恢复码。只凭密码不行。错了计入同一个锁。 */
         post: operations["v1_auth_mfa_disable_create"];
         delete?: never;
         options?: never;
@@ -927,7 +929,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。 */
+        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。 */
         post: operations["v1_auth_mfa_recovery_codes_create"];
         delete?: never;
         options?: never;
@@ -4926,7 +4928,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
+         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
          *     没带 / 错了 → 旧码原样有效。
          */
         post: operations["v1_me_mfa_recovery_codes_create"];
@@ -7799,9 +7801,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+         * @description 从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
          *     这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
          *     不该借它看见别处的词。回包只有计数,不含词本身。
+         *     目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
          */
         post: operations["v1_social_moderation_sensitive_words_copy_from_create"];
         delete?: never;
@@ -14764,20 +14767,20 @@ export interface components {
         MessageSent: {
             event_id: string;
         };
+        MfaCodeRequest: {
+            code: string;
+        };
+        MfaDisableRequest: {
+            method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
+            code?: string;
+            password?: string;
+        };
         /**
          * @description * `totp` - totp
          *     * `password` - password
          * @enum {string}
          */
-        MethodEnum: "totp" | "password";
-        MfaCodeRequest: {
-            code: string;
-        };
-        MfaDisableRequest: {
-            method: components["schemas"]["MethodEnum"];
-            code?: string;
-            password?: string;
-        };
+        MfaOwnerConfirmMethodEnum: "totp" | "password";
         MfaRecoveryCodes: {
             recovery_codes: string[];
         };
@@ -14801,6 +14804,12 @@ export interface components {
             username: string;
         };
         /**
+         * @description * `totp` - totp
+         *     * `recovery` - recovery
+         * @enum {string}
+         */
+        MfaSecondFactorMethodEnum: "totp" | "recovery";
+        /**
          * @description 开始设置要先输当前密码:已登录不等于是本人(偷到登录状态的人能给账号绑上自己的验证器)。
          *     缺省 / 空按「密码不对」算,同一个原因码。
          */
@@ -14821,6 +14830,11 @@ export interface components {
             last_used_at: string | null;
             last_used_method: string;
             recovery_codes_remaining: number;
+        };
+        /** @description 关闭:6 位动态码(`totp`)或一枚恢复码(`recovery`)。密码不再算数(2026-10-29)。 */
+        MfaTurnOffRequest: {
+            method: components["schemas"]["MfaSecondFactorMethodEnum"];
+            code: string;
         };
         MfaVerifyRequest: {
             pending_token: string;
@@ -17359,6 +17373,7 @@ export interface components {
             readonly mfa_enabled?: boolean;
             readonly mfa_required?: boolean;
             readonly password_change_required?: boolean;
+            readonly mfa_setup_required?: boolean;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -18665,10 +18680,12 @@ export interface components {
         };
         /**
          * @description Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
-         *     civilization by code. The target is the caller's current civilization.
+         *     civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
+         *     `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
          */
         SensitiveWordCopy: {
             source_tenant: string;
+            target_tenant?: string;
         };
         SensitiveWordCopyResult: {
             copied: number;
@@ -19442,7 +19459,7 @@ export interface components {
             code: string;
         };
         SoulMfaDisableRequest: {
-            method: components["schemas"]["MethodEnum"];
+            method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
             code?: string;
             password?: string;
         };
@@ -19496,6 +19513,11 @@ export interface components {
             last_used_at: string | null;
             last_used_method: string;
             recovery_codes_remaining: number;
+        };
+        /** @description 关闭:6 位数字(`totp`)或一枚恢复码(`recovery`)。只凭密码不行(2026-10-29)。 */
+        SoulMfaTurnOffRequest: {
+            method: components["schemas"]["MfaSecondFactorMethodEnum"];
+            code: string;
         };
         SoulMfaVerifyRequest: {
             pending_token: string;
@@ -20547,6 +20569,7 @@ export interface components {
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
+            readonly mfa_setup_required: boolean;
         };
         /**
          * @description `batch_deactivate`: everyone without open work is deactivated (`updated`); the officers who still hold work
@@ -20570,13 +20593,13 @@ export interface components {
         /**
          * @description User serializer for creation with password handling.
          *
-         *     Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
+         *     Callers other than the hall-less ADMIN (an ADMIN bound to a hall included) are constrained two ways (see ROLE_HIERARCHY above):
          *     - `tenant` is forced to the caller's own tenant — a client-supplied
          *       value for another tenant is rejected rather than silently honored.
          *     - `role` can never be more privileged than the caller's own role, which
          *       is what blocks a non-ADMIN from creating an ADMIN account (themselves
          *       or anyone else).
-         *     ADMIN keeps its existing unrestricted behavior (any tenant, any role).
+         *     The hall-less ADMIN keeps the unrestricted behavior (any tenant, any role).
          */
         UserCreate: {
             readonly id: number;
@@ -20814,6 +20837,7 @@ export interface components {
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
+            readonly mfa_setup_required: boolean;
         };
         /**
          * @description * `PASSED` - Passed / Saved
@@ -22916,9 +22940,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MfaDisableRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["MfaDisableRequest"];
-                "multipart/form-data": components["schemas"]["MfaDisableRequest"];
+                "application/json": components["schemas"]["MfaTurnOffRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaTurnOffRequest"];
+                "multipart/form-data": components["schemas"]["MfaTurnOffRequest"];
             };
         };
         responses: {
@@ -22939,6 +22963,14 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30417,9 +30449,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SoulMfaDisableRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaDisableRequest"];
-                "multipart/form-data": components["schemas"]["SoulMfaDisableRequest"];
+                "application/json": components["schemas"]["SoulMfaTurnOffRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaTurnOffRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaTurnOffRequest"];
             };
         };
         responses: {

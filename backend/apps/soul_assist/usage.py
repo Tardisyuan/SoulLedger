@@ -165,7 +165,8 @@ def _notify_admins(kind, **params):
     params = {"kind": kind, **params}
     title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
 
-    for admin in User.objects.filter(role="ADMIN", is_active=True).order_by("pk"):
+    # The assistant's configuration is global: its admins are the hall-less ones (2026-10-29).
+    for admin in User.objects.filter(role="ADMIN", tenant__isnull=True, is_active=True).order_by("pk"):
         try:
             notify_user(admin, title=title, message=message,
                         notification_type=NotificationType.SYSTEM, related_resource="assistant_config",

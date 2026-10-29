@@ -210,14 +210,14 @@ def verify_second_step(account, *, code=None, recovery_code=None, request=None) 
         return core.verify_login_code(row, code=code, recovery_code=recovery_code, request=request)
 
 
-def disable(account, *, method, code="", password="", request=None) -> dict:
-    """关闭。确认方式见 `core.confirm_owner`(6 位数字或密码,失败记进同一把锁;重新生成恢复码共用)。"""
+def disable(account, *, method, code="", request=None) -> dict:
+    """关闭。确认方式见 `core.confirm_second_factor`:6 位数字或一枚恢复码,只凭密码不行;失败记进同一把锁。"""
     with transaction.atomic():
         account = _lock(account)
         row = get_mfa(account)
         if row is None or not row.enabled:
             raise SoulAccountError("两步验证未开启。", "not_enabled", 409)
-        outcome = core.confirm_owner(row, account.user, method=method, code=code, password=password, request=request)
+        outcome = core.confirm_second_factor(row, method=method, code=code, request=request)
         if outcome["code"] != "ok":
             return outcome
         void_all(account)

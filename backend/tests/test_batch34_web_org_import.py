@@ -10,19 +10,20 @@ User = get_user_model()
 
 
 @pytest.fixture
-def admin_client(api_client, admin_user):
+def admin_client(api_client, cn_admin_user):
+    # The CN hall's ADMIN: the import lands in the caller's hall (`cn_admin_user` has none since 2026-10-29).
     from rest_framework_simplejwt.tokens import RefreshToken
 
-    token = RefreshToken.for_user(admin_user)
-    if admin_user.tenant:
-        token["tenant_code"] = admin_user.tenant.code
+    token = RefreshToken.for_user(cn_admin_user)
+    if cn_admin_user.tenant:
+        token["tenant_code"] = cn_admin_user.tenant.code
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return api_client
 
 
 @pytest.fixture
-def tree(admin_user):
-    t = admin_user.tenant
+def tree(cn_admin_user):
+    t = cn_admin_user.tenant
     root = Organization.objects.create(name="Root", code="B34_ROOT", category="CHINESE", tenant=t)
     child = Organization.objects.create(name="Child", code="B34_CHILD", category="CHINESE", parent=root, tenant=t)
     leaf = Organization.objects.create(name="Leaf", code="B34_LEAF", category="CHINESE", parent=child, tenant=t)
@@ -41,9 +42,9 @@ class TestOrganizationWrites:
         assert Organization.objects.filter(pk=root.pk).exists()
         assert Organization.objects.get(pk=child.pk).parent_id == root.id
 
-    def test_delete_with_people_is_refused_with_counts(self, admin_client, admin_user, tree):
+    def test_delete_with_people_is_refused_with_counts(self, admin_client, cn_admin_user, tree):
         _root, _child, leaf, _other = tree
-        User.objects.create_user(username="b34_member", password="x", role="VIEWER", tenant=admin_user.tenant, organization=leaf)
+        User.objects.create_user(username="b34_member", password="x", role="VIEWER", tenant=cn_admin_user.tenant, organization=leaf)
         res = admin_client.delete(f"/api/v1/organizations/{leaf.id}/")
         assert res.status_code == 409
         assert (res.data["units"], res.data["people"]) == (0, 1)
@@ -64,10 +65,10 @@ class TestOrganizationWrites:
         assert res.status_code == 400
         assert "parent" in res.data
 
-    def test_users_list_filters_by_organization(self, admin_client, admin_user, tree):
+    def test_users_list_filters_by_organization(self, admin_client, cn_admin_user, tree):
         _root, _child, leaf, other = tree
-        User.objects.create_user(username="b34_in", password="x", role="VIEWER", tenant=admin_user.tenant, organization=leaf)
-        User.objects.create_user(username="b34_out", password="x", role="VIEWER", tenant=admin_user.tenant, organization=other)
+        User.objects.create_user(username="b34_in", password="x", role="VIEWER", tenant=cn_admin_user.tenant, organization=leaf)
+        User.objects.create_user(username="b34_out", password="x", role="VIEWER", tenant=cn_admin_user.tenant, organization=other)
         res = admin_client.get(f"/api/v1/users/?organization={leaf.id}")
         names = [u["username"] for u in res.data.get("results", res.data)]
         assert names == ["b34_in"]
@@ -146,12 +147,12 @@ class TestUserImportPreview:
 class TestArchiveRoundTrip:
     """软删被拒(409 archivable)→ 归档 → 详情仍取得到并带横条字段 → 取消归档回到列表。"""
 
-    def test_soul_archive_then_unarchive(self, admin_client, admin_user):
+    def test_soul_archive_then_unarchive(self, admin_client, cn_admin_user):
         from apps.judgment.models import Judgment, Verdict
         from apps.souls.models import Soul
 
-        soul = Soul.objects.create(name="B34 Soul", tenant=admin_user.tenant)
-        Judgment.objects.create(soul=soul, tenant=admin_user.tenant, verdict=Verdict.PASSED)
+        soul = Soul.objects.create(name="B34 Soul", tenant=cn_admin_user.tenant)
+        Judgment.objects.create(soul=soul, tenant=cn_admin_user.tenant, verdict=Verdict.PASSED)
         refused = admin_client.delete(f"/api/v1/souls/{soul.pk}/")
         assert (refused.status_code, refused.data["archivable"]) == (409, True)
 
@@ -169,12 +170,12 @@ class TestArchiveRoundTrip:
         listed = admin_client.get("/api/v1/souls/")
         assert str(soul.pk) in [str(r["id"]) for r in listed.data.get("results", listed.data)]
 
-    def test_show_archived_brings_archived_souls_back_into_the_list(self, admin_client, admin_user):
+    def test_show_archived_brings_archived_souls_back_into_the_list(self, admin_client, cn_admin_user):
         """审计 1017 #9:默认列表仍不带已归档的;`?show_archived=1` 带上,且行上 `is_archived` 为真。"""
         from apps.souls.models import Soul
 
-        kept = Soul.objects.create(name="B34 Kept", tenant=admin_user.tenant)
-        archived = Soul.objects.create(name="B34 Archived", tenant=admin_user.tenant, is_archived=True)
+        kept = Soul.objects.create(name="B34 Kept", tenant=cn_admin_user.tenant)
+        archived = Soul.objects.create(name="B34 Archived", tenant=cn_admin_user.tenant, is_archived=True)
 
         def rows(url):
             res = admin_client.get(url)
