@@ -48,6 +48,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         self.permissions = self.scope.get("permissions", set())
 
         if self.user and getattr(self.user, "is_authenticated", False):
+            self.data_scope = await self._resolve_data_scope()
             await self._join_groups()
             await self.accept()
             await self._send_connected()
@@ -106,6 +107,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.scope["user"] = user
             self.scope["tenant"] = self.tenant
             self._apply_permissions(await self._resolve_permissions())
+            self.data_scope = await self._resolve_data_scope()
 
             await self._join_groups()
             await self._send_connected()
@@ -133,6 +135,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             # computes the initial set and this branch, which knows the real
             # `self.user`, re-resolves through the same function.
             self._apply_permissions(await self._resolve_permissions())
+            self.data_scope = await self._resolve_data_scope()
             await self.send(text_data=json.dumps({
                 "type": "permission.refreshed",
                 "permissions": sorted(self.permissions),
@@ -182,6 +185,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 return
             data = {k: v for k, v in data.items() if k != "_recipients"}
 
+        # 殿组业务帧带数据范围标签(`apps/events/realtime.py::scope_tag`,B5):范围外丢弃;标签不发给客户端。
+        tag = data.get("_scope")
+        if tag is not None:
+            if not self._in_data_scope(tag):
+                return
+            data = {k: v for k, v in data.items() if k != "_scope"}
+
         await self.send(text_data=json.dumps(data))
 
     async def session_ended(self, event):
@@ -206,6 +216,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if not self.user or not getattr(self.user, "is_authenticated", False):
             return
         fresh = await self._resolve_permissions()
+        # 数据范围(B5)每次都重算:配置行或本人机构变了,权限集可以一样。
+        self.data_scope = await self._resolve_data_scope()
         if not event.get("targeted") and fresh == set(self.permissions):
             return
         self._apply_permissions(fresh)
@@ -276,6 +288,29 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         current.clear()
         current.update(fresh)
         self.permissions = current
+
+    def _in_data_scope(self, tag) -> bool:
+        """与 `data_scope.visible_q` 同一规则,只是不查库:不限、归属机构在集合里、或本人 / 指派。"""
+        scopes = getattr(self, "data_scope", {})
+        if tag.get("resource") not in scopes:
+            return True  # 注册表外的资源照常放行
+        ids = scopes[tag["resource"]]
+        return (ids is None or tag.get("owner_org_id") in ids
+                or getattr(self.user, "id", None) in (tag.get("owner_user_ids") or ()))
+
+    @database_sync_to_async
+    def _resolve_data_scope(self):
+        """{resource: 机构 id 集合 | None(不限)},每项业务一份;连接时与每次权限刷新时算,帧来时只查这张表。
+        重读这一行(角色、兼任、机构可能变了);账号没了或停用 = 每项业务都是空集。"""
+        from apps.authentication.models import User
+        from apps.perm.data_scope import REGISTRY, org_ids
+
+        resources = {entry.resource for entry in REGISTRY.values()}
+        fresh = User.objects.filter(pk=getattr(self.user, "pk", None), is_active=True).first()
+        if fresh is None:
+            return dict.fromkeys(resources, frozenset())
+        cache = {}
+        return {resource: org_ids(fresh, resource, cache) for resource in resources}
 
     @database_sync_to_async
     def _resolve_permissions(self):
