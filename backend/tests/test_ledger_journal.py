@@ -303,14 +303,19 @@ class TestExport:
         assert all(c[:1] not in "=+-@" for c in cells if c), cells
         assert {"'@SUM(A1)", "'+1", "'-2"} <= set(cells)
 
-    def test_without_ledger_read_the_export_is_refused(self, api_client, django_user_model, cn, souls):
+    def test_without_ledger_export_the_export_is_refused(self, api_client, django_user_model, cn, souls):
         # A custom role with no grants at all: the codename gate, not a role literal, refuses it.
+        # The file is `ledger.export` since 2026-10-29 (user item 3); reading the journal is not enough.
+        from apps.perm.cache import invalidate_all_permissions
+
         clerk = django_user_model.objects.create(username="clerk", role="LEDGERLESS", tenant=cn)
         _login(api_client, clerk)
         assert api_client.get(EXPORT, {"month": "2026-06"}).status_code == 403
         _grant("LEDGERLESS", "ledger.read")
-        from apps.perm.cache import invalidate_all_permissions
-
+        invalidate_all_permissions()
+        assert api_client.get(URL, {"month": "2026-06"}).status_code == 200
+        assert api_client.get(EXPORT, {"month": "2026-06"}).status_code == 403
+        _grant("LEDGERLESS", "ledger.export")
         invalidate_all_permissions()
         assert api_client.get(EXPORT, {"month": "2026-06"}).status_code == 200
 

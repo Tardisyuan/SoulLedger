@@ -185,7 +185,7 @@ function SoulsList({
   // 「移交…」打开发起移交表单,那一页要 `dispatch.manage`。
   const canDispatch = hasPermission("dispatch.manage");
   // 导出(页头与批量条同一个接口 `souls/export/`,后端要 soul.read):配置允许且持码(rbac-web L-3 / M-5)。
-  const canExport = buttonOn("souls.export") && hasPermission("soul.read");
+  const canExport = buttonOn("souls.export") && hasPermission("soul.export");
   const selection = useSoulSelection(JSON.stringify(params), souls);
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 

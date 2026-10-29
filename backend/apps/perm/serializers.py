@@ -40,6 +40,9 @@ class RolePermissionAssignSerializer(serializers.Serializer):
     # and the replace-not-diff semantics of this endpoint mean the second
     # save silently reverts the first rather than conflicting visibly.
     expected_version = serializers.IntegerField(required=False)
+    # Same as the matrix save's flag (rbac-be3 M-6): a replace that leaves a template step or a live
+    # workflow node with no approver is refused (`conflict_unacknowledged`) unless this is true.
+    acknowledge_conflicts = serializers.BooleanField(required=False, default=False)
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -327,13 +330,28 @@ class InitRolesResultSerializer(serializers.Serializer):
 
 
 class ExportedPermissionSerializer(serializers.Serializer):
-    codename = serializers.CharField()
+    codename = serializers.CharField(max_length=100)
     name = serializers.CharField()
     category = serializers.CharField()
 
+    def validate_codename(self, value):
+        """Same rule as `POST /perm/permissions/create/` (rbac-be3 L-1): an import is another way in."""
+        return PermissionCreateUpdateSerializer().validate_codename(value)
+
 
 class ExportedRoleSerializer(serializers.Serializer):
-    name = serializers.CharField()
+    # Same rule as `POST /perm/roles/create/` (rbac-be3 L-1): before this an import could make a Role row
+    # named `SOUL` (which `is_builtin` then took for a built-in), a lower-case or spaced name, or one over
+    # the column's 20 characters (a DataError 500 on PostgreSQL).
+    name = serializers.CharField(max_length=20)
+
+    def validate_name(self, value):
+        if not value.replace("_", "").isalpha() or value != value.upper():
+            raise serializers.ValidationError("Role name must be upper-case letters and underscores")
+        if value == "SOUL":
+            raise serializers.ValidationError("'SOUL' is reserved for soul accounts and cannot be a role")
+        return value
+
     display_name = serializers.CharField()
     # The export carries it and the importer reads it. Without this member the
     # serializer dropped it, so an overwrite import blanked every existing role's

@@ -412,12 +412,13 @@ export const TABS: readonly { key: TabKey; glyph: string }[] = [
 /**
  * Which tabs this officer gets (RBAC decisions 30 / 31): a tab is drawn when the officer holds ANY of the codes its
  * own requests need, `null` = everyone (通知 and 我的 are the officer's own). 待办: each server group checks one of
- * these (officer_app/todo.py `build`); 审判: the queue is `judgment.read`; 查询: the soul search is `soul.read`.
+ * these (officer_app/todo.py `build`; 城隍初审 / 枉死申诉 by city_god.execute / wangsi.execute since 2026-10-29);
+ * 审判: the queue is `judgment.read`; 查询: the soul search is `soul.read`.
  * So 牛头马面 / 访客 (GUARDIAN / VIEWER) see 查询 and 通知 (and 我的) only. The server still decides every request;
  * this only keeps a role out of tabs that would answer 403.
  */
 export const TAB_CODES: Readonly<Record<TabKey, readonly string[] | null>> = {
-  todo: ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute"],
+  todo: ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute", "city_god.execute", "wangsi.execute"],
   queue: ["judgment.read"],
   search: ["soul.read"],
   notices: null,

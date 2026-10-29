@@ -116,8 +116,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'unarchive': ['soul.delete'],
         # The batch form of destroy — the same codename, not a new one.
         'batch_recycle': ['soul.delete'],
-        # 批量条的「导出」:读了什么就导出什么,与列表同一个码名。
-        'export': ['soul.read'],
+        # 批量条的「导出」:自己的码(用户 2026-10-29 第 3 条;此前与列表同一个读码)。
+        'export': ['soul.export'],
         # CSV 导入:预览不写库,但问的是「我能不能建」,与提交同一个码名。
         'import_preview': ['soul.create'],
         'import_commit': ['soul.create'],

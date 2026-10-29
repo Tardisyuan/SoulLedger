@@ -113,7 +113,7 @@ class CityGodSerializer(serializers.ModelSerializer):
     def validate_officer_ids(self, value):
         """与改派同一条规则(`claims.is_assignable`):本殿、在职、能办案。"""
         tenant = self._tenant()
-        bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk))
+        bad = sorted(u.pk for u in value if not is_assignable(u, tenant.pk, codename="city_god.execute"))
         if bad:
             raise serializers.ValidationError(_refusal("invalid_officer", ids=bad))
         return value
@@ -123,8 +123,9 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
     """本殿的城隍(只有地府有)。删除是软删,名下还有没解送的案子时 409 `city_god_has_open_cases`。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "judgment"
-    extra_permissions = {action: ["judgment.assign"]
+    # 城隍一族(用户 2026-10-29 第 3 条):看 city_god.read,增改删与候选名单 city_god.manage(原 judgment.assign)。
+    permission_codename = "city_god"
+    extra_permissions = {action: ["city_god.manage"]
                          for action in ("create", "update", "partial_update", "destroy", "officer_choices")}
     queryset = CityGod.objects.prefetch_related("officers").all()
     serializer_class = CityGodSerializer
@@ -169,7 +170,8 @@ class CityGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
         if tenant is None:
             return Response([])
         people = User.objects.filter(tenant=tenant, is_active=True).order_by("username")
-        return Response([{"id": u.pk, "name": _name(u)} for u in people if is_assignable(u, tenant.pk)])
+        return Response([{"id": u.pk, "name": _name(u)} for u in people
+                         if is_assignable(u, tenant.pk, codename="city_god.execute")])
 
     @extend_schema(responses={204: None, 409: JudgmentClaimRefusalSerializer})
     def destroy(self, request, *args, **kwargs):
@@ -267,9 +269,9 @@ class CityGodCaseViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserV
     """在城隍处初审的案子(本殿)。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "judgment"
-    extra_permissions = {"send_on": ["judgment.execute"], "return_case": ["judgment.execute"],
-                         "transfer": ["judgment.assign"]}
+    permission_codename = "city_god"
+    extra_permissions = {"send_on": ["city_god.execute"], "return_case": ["city_god.execute"],
+                         "transfer": ["city_god.manage"]}
     queryset = Judgment.objects.filter(city_god__isnull=False).select_related("soul", "city_god", "sent_on_by")
     serializer_class = CityGodCaseSerializer
 

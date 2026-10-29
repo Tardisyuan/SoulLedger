@@ -449,6 +449,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const canEditCase = canExecute && judgment?.can_edit !== false;
   const overridingClaim =
     canEditCase && !judgment?.is_final && judgment?.claimed_by != null && judgment.claimed_by !== user?.id;
+  // 枉死申诉的登记与审核是 `wangsi.execute`(2026-10-29 从 judgment.execute 拆出);冤情等级照旧经审判 PATCH(judgment.execute)。
+  const canWangsi = canEditCase && hasPermission("wangsi.execute");
   // 城隍初审中(第五十三批 J-1):十殿不能认领、暂缓、结案(服务端 409 `at_city_god`),按钮置灰并说原因。
   const atCityGod = isAtCityGod(judgment?.city_god_status);
   // 城隍以外的「还不能结案」(枉死城 / 木乃伊 / 到不了殿 / 未渡河):服务端算好的码,与结案的拒绝同一条规则。
@@ -740,7 +742,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <NegativeConfessionPanel judgmentId={judgment.id} canRecord={canEditCase} />
           )}
           {/* 全案时灵魂栏整栏隐藏,枉死城块随之不见;在供词下面另放一份(用户 2026-10-29 定)。一次只渲染一份。 */}
-          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canEditCase} />}
+          {fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canWangsi} />}
           {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
           {fullCase && notesShown && (
             <div className="mt-6 border-t border-[oklch(var(--color-line))] pt-3">
@@ -955,7 +957,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </MetaRow>
           </dl>
           {/* 枉死城(第五十七批 D-2):只在枉死的案子上,放在身份这一组下面。未结案且持 judgment.execute 才可改。 */}
-          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canEditCase} />}
+          {!fullCase && judgment.untimely && <WangsiPanel judgment={judgment} editable={!isFinal && canWangsi} />}
 
           {/* 乙 · 功过:`/souls/{id}/karma/` 的 reading,与灵魂账页同一个面板 —— 功过格是
               收 / 支 / 结 三列压双线,别的文明各按自己的读法,不硬套一个净额。 */}

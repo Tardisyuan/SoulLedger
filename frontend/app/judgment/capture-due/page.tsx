@@ -29,7 +29,7 @@ function CaptureDueContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { hasPermission } = usePermissions();
-  const canIssue = hasPermission("soul.die");
+  const canIssue = hasPermission("capture.issue");
   const [issuing, setIssuing] = useState<CaptureDueSoul | null>(null);
   const list = useQuery({ queryKey: soulKeys.captureDue(), queryFn: () => captureWarrantsApi.due().then((r) => r.data) });
   const rows = list.data?.results ?? [];
@@ -108,7 +108,7 @@ function CaptureDueContent() {
 
 export default function CaptureDuePage() {
   return (
-    <RequirePermission permissions="soul.read" fallback={<PermissionDenied permission="soul.read" />}>
+    <RequirePermission permissions="capture.read" fallback={<PermissionDenied permission="capture.read" />}>
       <CaptureDueContent />
     </RequirePermission>
   );

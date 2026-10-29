@@ -76,10 +76,12 @@ class CaptureWarrantViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     """勾魂牒(只在地府):阳寿尽的灵魂由城隍发牒,鬼差拘到,交接时登记死亡。"""
 
     permission_classes = [TenantPermission, CodenamePermission]
-    permission_codename = "soul"
+    # 勾魂一族(用户 2026-10-29 第 3 条;原 soul.read / soul.die):发牒与撤销 capture.issue,拘到与交接 capture.execute。
+    permission_codename = "capture"
     extra_permissions = {
-        "list": ["soul.read"], "retrieve": ["soul.read"], "due": ["soul.read"],
-        "create": ["soul.die"], "capture": ["soul.die"], "hand_over": ["soul.die"], "cancel": ["soul.die"],
+        "due": ["capture.read"],
+        "create": ["capture.issue"], "cancel": ["capture.issue"],
+        "capture": ["capture.execute"], "hand_over": ["capture.execute"],
     }
     queryset = CaptureWarrant.objects.select_related("soul", "city_god").all()
     serializer_class = CaptureWarrantSerializer

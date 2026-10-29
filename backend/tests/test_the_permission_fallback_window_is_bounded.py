@@ -208,10 +208,23 @@ def test_invalidate_all_clears_its_own_prefix_and_only_its_own(local_redis):
 
 
 def test_an_empty_prefix_keeps_the_old_key_shape():
-    """默认空串 —— 升级不能把既有部署的键变成孤儿。"""
+    """显式设成空串时仍是旧键形状。(默认值 2026-10-29 起是库名 + 冒号,见下一条;rbac-be3 L-12。)"""
     cache = PermissionCache.__new__(PermissionCache)
     cache._key_prefix = ""
     assert cache._make_key("JUDGE", "soul.read") == "perm:JUDGE:soul.read"
+
+
+def test_the_default_prefix_is_the_database_name():
+    """不设 CACHE_PERMISSION_KEY_PREFIX 时,两个共用一台 Redis 的部署只要库不同,键就不相撞(rbac-be3 L-12)。"""
+    import os
+
+    from django.conf import settings
+
+    if "CACHE_PERMISSION_KEY_PREFIX" in os.environ:
+        pytest.skip("the environment sets the prefix explicitly")
+    # Computed from the database NAME at settings import (the test runner renames the database afterwards).
+    prefix = settings.CACHE_PERMISSION_KEY_PREFIX
+    assert prefix.endswith(":") and len(prefix) > 1, prefix
 
 
 @override_settings(CACHE_PERMISSION_TTL=300, CACHE_PERMISSION_FALLBACK_TTL=7)

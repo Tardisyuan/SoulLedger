@@ -110,7 +110,7 @@ export default function CrossJudgmentsPage() {
         title={t("crossJudgments.list_title")}
         actions={
           <div className="flex items-center gap-3">
-            {buttonOn("crossJudgments.export") && <RequirePermission permissions="cross_judgment.read">
+            {buttonOn("crossJudgments.export") && <RequirePermission permissions="cross_judgment.export">
               <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv(filterParams)} page={t("crossJudgments.title")} hall={hall} />
             </RequirePermission>}
             <ColumnMenu

@@ -561,8 +561,10 @@ describe("DashboardPage permission gate", () => {
     expect(await screen.findByText("dashboard.tab_ledger")).toBeInTheDocument();
   });
 
-  it("hides the ledger tab from a non-admin", async () => {
-    mockUser = { role: "JUDGE", permissions: ["karma.export"] };
+  // The ledger tab and its panel read /ledger/stats/overview/, which asks `ledger.read` alone since
+  // 2026-10-29 (user item 33); the stats CSV asks `ledger.export`. Both were RequireAdmin before.
+  it("hides the ledger tab from someone without ledger.read", async () => {
+    mockUser = { role: "JUDGE", permissions: ["judgment.read", "ledger.export"] };
 
     renderPage();
 
@@ -570,7 +572,15 @@ describe("DashboardPage permission gate", () => {
     expect(screen.queryByText("dashboard.tab_ledger")).not.toBeInTheDocument();
   });
 
-  it("refuses the ledger panel to a non-admin who reaches it via ?tab=ledger", async () => {
+  it("shows the ledger tab to a non-admin holding ledger.read", async () => {
+    mockUser = { role: "VIEWER", permissions: ["ledger.read"] };
+
+    renderPage();
+
+    expect(await screen.findByText("dashboard.tab_ledger")).toBeInTheDocument();
+  });
+
+  it("refuses the ledger panel to someone without ledger.read who reaches it via ?tab=ledger", async () => {
     mockUser = { role: "JUDGE", permissions: [] };
     mockSearch = new URLSearchParams("tab=ledger");
 
@@ -590,20 +600,8 @@ describe("DashboardPage permission gate", () => {
     expect(screen.queryByTestId("pie")).not.toBeInTheDocument();
   });
 
-  // These two used to gate on `karma.export`. That string is not in the
-  // backend's 46-codename catalogue and no role holds it -- the whole `karma.*`
-  // family was renamed to `ledger.*` by perm/0016, and there was never a
-  // `.export` member. `/ledger/stats/export/` checks `role == "ADMIN"` in the
-  // view body.
-  //
-  // So the second test constructed a user production cannot produce (a JUDGE
-  // holding a codename nobody can hold) and asserted the button appeared --
-  // which it did, but only because `hasPermission` short-circuits ADMIN... no:
-  // because the *mocked* hook was told the permission was present. The test
-  // exercised its own stub. The real gate was "ADMIN only" by accident, and
-  // it is now `<RequireAdmin>` by intent.
-  it("hides the export button from a non-admin", async () => {
-    mockUser = { role: "JUDGE", permissions: ["souls.read", "ledger.read"] };
+  it("hides the export button from someone holding ledger.read but not ledger.export", async () => {
+    mockUser = { role: "MODERATOR", permissions: ["ledger.read", "ledger.manage", "ledger.calculate"] };
 
     renderPage();
 
@@ -611,18 +609,12 @@ describe("DashboardPage permission gate", () => {
     expect(screen.queryByText("dashboard.export_stats")).not.toBeInTheDocument();
   });
 
-  it("hides it from a non-admin however many codenames they hold", async () => {
-    // The point of RequireAdmin: no codename opens this gate, so no future
-    // grant can open it by accident either.
-    mockUser = {
-      role: "MODERATOR",
-      permissions: ["ledger.read", "ledger.manage", "karma.export"],
-    };
+  it("shows the export button to a non-admin holding ledger.export", async () => {
+    mockUser = { role: "VIEWER", permissions: ["ledger.read", "ledger.export"] };
 
     renderPage();
 
-    await screen.findByText("dashboard.tab_overview");
-    expect(screen.queryByText("dashboard.export_stats")).not.toBeInTheDocument();
+    expect(await screen.findByText("dashboard.export_stats")).toBeInTheDocument();
   });
 
   it("shows the export button to an admin", async () => {

@@ -20,7 +20,7 @@ import { CityGodEditor } from "@/src/components/city-gods/CityGodEditor";
 /*
  * 系统设置 › 城隍(Design 第五十三批 G-1)。本殿的分工配置:谁管哪些地名、谁名下有哪些官员。
  * 兜底城隍排在最后,地名一栏写「没写中任何一位的案子」;名下官员为空时灰字说明只有殿管理员能办。
- * 没有 `judgment.assign` 的官员看到同一张表,没有「新建」与编辑。说明块常驻表格上方。
+ * 没有 `city_god.manage` 的官员看到同一张表,没有「新建」与编辑。说明块常驻表格上方。
  */
 
 const MUTED = "text-sm text-[oklch(var(--color-ink-subtle))]";
@@ -33,7 +33,7 @@ function CityGodsContent() {
   };
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission("judgment.assign");
+  const canEdit = hasPermission("city_god.manage");
   const [editing, setEditing] = useState<CityGod | "new" | null>(null);
   const list = useQuery({ queryKey: cityGodKeys.gods(), queryFn: () => cityGodsApi.list().then((r) => r.data.results) });
   const gods = [...(list.data ?? [])].sort((a, b) => Number(a.is_default) - Number(b.is_default));
@@ -118,7 +118,7 @@ function CityGodsContent() {
 
 export default function CityGodsPage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
+    <RequirePermission permissions="city_god.read" fallback={<PermissionDenied permission="city_god.read" />}>
       <CityGodsContent />
     </RequirePermission>
   );

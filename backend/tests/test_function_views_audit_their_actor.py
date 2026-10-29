@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.authentication.models import User
-from apps.perm.models import Permission, Role
+from apps.perm.models import Permission, Role, RolePermission
 from tests.test_perm_matrix_and_role_table import CHANGES, _cell, world  # noqa: F401
 
 
@@ -36,13 +36,16 @@ def test_a_matrix_save_names_the_admin(world, django_capture_on_commit_callbacks
 @pytest.mark.django_db
 def test_create_role_and_delete_permission_name_the_admin(world, django_capture_on_commit_callbacks):  # noqa: F811
     client, admin = world["client"], world["admin"]
+    # A catalogue codename (ledger.read) can no longer be deleted (rbac-be3 M-4): delete one an admin made.
+    custom = Permission.objects.create(codename="custom.audit_probe", name="探针", category="custom")
+    RolePermission.objects.create(role=Role.objects.get(name="JUDGE"), permission=custom)
     before = _last_pk()
     with django_capture_on_commit_callbacks(execute=True):
         assert client.post("/api/v1/perm/roles/create/", {"name": "CLERK", "display_name": "文书"},
                            format="json").status_code == 201
-        assert client.delete(f"/api/v1/perm/permissions/{world['perms']['ledger.read'].pk}/").status_code == 204
+        assert client.delete(f"/api/v1/perm/permissions/{custom.pk}/").status_code == 204
     assert Role.objects.filter(name="CLERK").exists()
-    assert not Permission.objects.filter(codename="ledger.read").exists()
+    assert not Permission.objects.filter(codename="custom.audit_probe").exists()
     rows = _actors_since(before)
     assert rows
     assert all(uid == admin.pk for _, uid in rows), rows

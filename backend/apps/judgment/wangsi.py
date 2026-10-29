@@ -68,8 +68,8 @@ def may_decide(user, judgment: Judgment) -> bool:
     from apps.perm.checker import check_permission
 
     if judgment.city_god_id is not None:
-        return city_gods.may_act(user, judgment)
-    return check_permission(user, "judgment.assign")
+        return city_gods.may_act(user, judgment, execute="wangsi.execute", manage="wangsi.manage")
+    return check_permission(user, "wangsi.manage")
 
 
 def _save(judgment: Judgment, *fields: str) -> None:
@@ -150,8 +150,9 @@ def decide_grievance(pk, user, *, upheld: bool, note: str, deliver: bool = False
                 "grievance_not_major", grievance_level=judgment.grievance_level)
         if deliver and judgment.city_god_status in AT_CITY_GOD:
             # 还在城隍初审:超度时顺带解送(用户 2026-10-29),同一事务、同一套规则(`city_gods.send_on`,
-            # CITY_GOD_SENT_ON 照记)。能审这件申诉的人(`may_decide`:城隍名下官员或持 `judgment.assign`)
-            # 正是能解送它的人(`city_gods.may_act`),所以此前的 409 `at_city_god` 不会再出现,已删。
+            # CITY_GOD_SENT_ON 照记)。能审这件申诉的人(`may_decide`:城隍名下官员或持 `wangsi.manage`)
+            # 按默认授予也是能解送它的人(`city_gods.may_act`:city_god.execute / manage 与 wangsi.* 同一批角色),
+            # 所以此前的 409 `at_city_god` 不会再出现,已删。矩阵把两族分开授时,`send_on` 自己的 403 照样拦。
             from apps.judgment import city_gods
 
             judgment = city_gods.send_on(judgment.pk, user, note="超度时一并解送(docs/10 §4.3)")

@@ -110,17 +110,18 @@ def received(judgment, transferred_from=None, transferred_from_name="") -> None:
 # ── 初审 ────────────────────────────────────────────────────────────────
 
 
-def may_act(user, judgment) -> bool:
-    """持 `judgment.execute`,且是分在这位城隍名下的官员或持 `judgment.assign` 的人(殿管理员、殿主)。
+def may_act(user, judgment, execute="city_god.execute", manage="city_god.manage") -> bool:
+    """持 `execute`,且是分在这位城隍名下的官员或持 `manage` 的人(殿管理员、殿主)。
 
-    `judgment.execute` 是解送 / 退回(`city_god_views`)与枉死审核(`wangsi_views`)两个接口自己的码:
+    `execute` 是接口自己的码:解送 / 退回(`city_god_views`)是 `city_god.execute`,枉死审核(`wangsi_views`)
+    传 `wangsi.execute` / `wangsi.manage`(用户 2026-10-29 第 3 条拆码;此前两处都是 judgment.execute / assign)。
     此前这里不看它,名下官员不持 execute 时 `can_act` 为真、按钮可点、接口 403(rbac-web L-4)。
     """
     from apps.perm.checker import check_permission
 
-    if judgment.city_god_id is None or not check_permission(user, "judgment.execute"):
+    if judgment.city_god_id is None or not check_permission(user, execute):
         return False
-    if check_permission(user, "judgment.assign"):
+    if check_permission(user, manage):
         return True
     return judgment.city_god.officers.filter(pk=user.pk).exists()
 

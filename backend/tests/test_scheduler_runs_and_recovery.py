@@ -411,10 +411,12 @@ def test_alert_recipients_are_admins_plus_tenant_holders_of_manage(db, admin_use
     # The hall-less ADMIN, not another hall's ADMIN (2026-10-29).
     assert set(services.alert_recipients(job)) == {admin_user}
 
+    # scheduler.manage is ADMIN-only since 2026-10-29 (user item 2): a stray grant to JUDGE adds nobody.
     RolePermission.objects.create(
         role=seeded_role("JUDGE"), permission=seeded_permission("scheduler.manage")
     )
-    assert set(services.alert_recipients(job)) == {admin_user, judge_user}
+    assert set(services.alert_recipients(job)) == {admin_user}
+    assert judge_user not in set(services.alert_recipients(job))
 
 
 # ---------------------------------------------------------------------------
