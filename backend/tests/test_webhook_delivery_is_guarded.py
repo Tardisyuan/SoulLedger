@@ -325,6 +325,17 @@ def test_a_key_without_can_query_status_is_refused_the_health_view(keys):
     assert with_cap.get("/api/v1/death-sync/health/").status_code == 200
 
 
+@pytest.mark.django_db
+def test_reading_registrations_back_needs_can_query_status_like_progress(keys):
+    """rbac-be2 L5:登记列表 / 详情与 `progress` 同一个能力;登记本身不受影响。"""
+    without = _api_client(keys(can_query_status=False, can_register_death=True))
+    with_cap = _api_client(keys(can_query_status=True))
+    assert without.get("/api/v1/death-sync/register/").status_code == 403
+    assert with_cap.get("/api/v1/death-sync/register/").status_code == 200
+    assert without.get("/api/v1/death-sync/register/00000000-0000-0000-0000-000000000000/").status_code == 403
+    assert without.post("/api/v1/death-sync/register/", {}, format="json").status_code != 403
+
+
 # ---------------------------------------------------------------------------
 # EventBus 投递也不许跟随重定向(2026-09-13)。
 #
