@@ -146,9 +146,9 @@ export const ROLE_GRANTS: Record<string, number[]> = {
 // is the one custom role here, referenced by one workflow template, so the
 // roles drawer has a refusal to show (`ROLE_REFERENCES` below).
 export const ROLES = [
-  { id: 1, name: "ADMIN", display_name: "管理员", scope: "GLOBAL", organization: null, organization_name: null, user_count: 2, member_count: 2, permission_count: 8, workflow_template_count: 0, is_builtin: true, version: 7, update_time: "2026-08-01T00:00:00Z" },
-  { id: 2, name: "JUDGE", display_name: "判官", scope: "TENANT", organization: null, organization_name: null, user_count: 5, member_count: 5, permission_count: 3, workflow_template_count: 1, is_builtin: true, version: 3, update_time: "2026-08-01T00:00:00Z" },
-  { id: 3, name: "GUARDIAN", display_name: "守卫", scope: "TENANT", organization: null, organization_name: null, user_count: 4, member_count: 0, permission_count: 3, workflow_template_count: 1, is_builtin: false, version: 2, update_time: "2026-08-01T00:00:00Z" },
+  { id: 1, name: "ADMIN", display_name: "管理员", user_count: 2, member_count: 2, permission_count: 8, workflow_template_count: 0, is_builtin: true, version: 7, update_time: "2026-08-01T00:00:00Z" },
+  { id: 2, name: "JUDGE", display_name: "判官", user_count: 5, member_count: 5, permission_count: 3, workflow_template_count: 1, is_builtin: true, version: 3, update_time: "2026-08-01T00:00:00Z" },
+  { id: 3, name: "GUARDIAN", display_name: "守卫", user_count: 4, member_count: 0, permission_count: 3, workflow_template_count: 1, is_builtin: false, version: 2, update_time: "2026-08-01T00:00:00Z" },
 ];
 
 /** `role_template_references()` — which template steps name a role as approver. */

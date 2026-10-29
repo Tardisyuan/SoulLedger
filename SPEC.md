@@ -35,7 +35,7 @@
 > - **角色集合不同。** 现在是 `ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL`
 >   （`apps/authentication/models.py::UserRole`）。本文的 `SYS_ADMIN`、`TENANT_ADMIN`、
 >   `DISPATCH_JUDGE` 不存在；`ADMIN` 在 `apps/core/permissions.py::TenantPermission` 里直接放行、绕过租户检查，该层并不强制「只读」（ADR-008 是设计意图，未在这一层落成不变量）。
->   权限是 codename + `DataScope` + `FieldPermission`（`apps/perm/`），不是 §6.X 的三张固定表。
+>   权限是 codename + `RoleDataScope` + `FieldPermission`（`apps/perm/`），不是 §6.X 的三张固定表。
 > - **外派（dispatch）是另一套模型。** §3.4 的 `Soul.dispatch_status` / `dispatched_to_tenant`、
 >   §3.12 的字段、§4.2／§4.4／§4.5 的 PENDING_DISPATCH／DISPATCHED／recall、§5.5 的投票与
 >   `check_judgment_timeouts`、§6.11 的端点与 §3.11 里的 `SOUL_RECALLED` 等事件，
@@ -1289,7 +1289,7 @@ PROPOSED → IN_REVIEW → APPROVED/REJECTED
 
 ## 6.X 权限模型
 
-> **现状（2026-10-12）：** 本节的角色与三张固定表不是现状：权限由 codename（`apps/perm/models.py`，角色默认值在 `ROLE_PERMISSIONS`）加 `DataScope`（行）与 `FieldPermission`（字段）构成，API 侧由 `CodenameViewSetMixin` 强制，前端 `RequirePermission` / `RequireButton` 只是外观。§6.X.5 的跨租户 JWT 读取只在设计里存在：`TenantMiddleware` 从访问令牌的 `tenant_code` 声明取 `request.tenant`，`TenantPermission` 再与用户当前租户核对。
+> **现状（2026-10-12）：** 本节的角色与三张固定表不是现状：权限由 codename（`apps/perm/models.py`，角色默认值在 `ROLE_PERMISSIONS`）加 `RoleDataScope`（行，2026-10-29 起）与 `FieldPermission`（字段）构成，API 侧由 `CodenameViewSetMixin` 强制，前端 `RequirePermission` / `RequireButton` 只是外观。§6.X.5 的跨租户 JWT 读取只在设计里存在：`TenantMiddleware` 从访问令牌的 `tenant_code` 声明取 `request.tenant`，`TenantPermission` 再与用户当前租户核对。
 
 > 本节定义 SoulLedger 系统的细粒度权限控制体系，包括角色定义、三层权限粒度、外派特殊权限以及前后端实施方式。
 

@@ -1,12 +1,12 @@
 """
 Tests for perm app - RBAC permissions and views.
 """
+import pytest
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.org.models import Organization
 from apps.perm.models import (
     DEFAULT_PERMISSIONS,
     ROLE_PERMISSIONS,
@@ -34,51 +34,14 @@ class PermissionModelTest(TestCase):
 
 
 class RoleModelTest(TestCase):
-    """Test Role model with scope and organization - M7"""
+    """Test Role model"""
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.diyu = Organization.objects.create(
-            name="中国地府", code="DIYU", category="CHINESE", level=0
-        )
-
-    def test_role_global_scope(self):
-        # 0017 seeds ADMIN (at the model's default scope, ORG), so this can no
-        # longer create the row — update_or_create still pins scope explicitly,
-        # which is what the assertion is about.
-        role, _ = Role.objects.update_or_create(
-            name="ADMIN",
-            defaults={"display_name": "Administrator", "scope": "GLOBAL"},
-        )
-        self.assertEqual(role.scope, "GLOBAL")
-        self.assertIsNone(role.organization)
-
-    def test_role_org_scope(self):
-        role = Role.objects.create(
-            name="DIYU_JUDGE", display_name="第一殿审判官", scope="ORG", organization=self.diyu
-        )
-        self.assertEqual(role.scope, "ORG")
-        self.assertEqual(role.organization, self.diyu)
-
-    def test_role_scope_choices(self):
-        self.assertIn("GLOBAL", dict(Role.SCOPE_CHOICES).keys())
-        self.assertIn("ORG", dict(Role.SCOPE_CHOICES).keys())
-
-    def test_role_parent_inheritance(self):
-        # `get_inherited_permissions()` assertion removed 2026-09-13 (BP-09):
-        # the method was deleted as dead code (see `apps/perm/models.py`).
-        parent_role = Role.objects.create(name="PARENT_ROLE", display_name="Parent Role", scope="GLOBAL")
-        child_role = Role.objects.create(name="CHILD_ROLE", display_name="Child Role", scope="GLOBAL", parent=parent_role)
-        self.assertEqual(child_role.parent, parent_role)
-
-    def test_role_get_ancestors(self):
-        parent = Role.objects.create(name="PARENT", display_name="Parent", scope="GLOBAL")
-        child = Role.objects.create(name="CHILD", display_name="Child", scope="GLOBAL", parent=parent)
-        grandchild = Role.objects.create(name="GRANDCHILD", display_name="Grandchild", scope="GLOBAL", parent=child)
-        ancestors = grandchild.get_ancestors()
-        self.assertEqual(len(ancestors), 2)
-        self.assertEqual(ancestors[0], child)
-        self.assertEqual(ancestors[1], parent)
+    def test_the_dead_scope_columns_are_gone(self):
+        # 数据范围 B7 (perm/0031): a role's data scope lives in RoleDataScope only.
+        names = {f.name for f in Role._meta.get_fields()}
+        self.assertTrue({"name", "display_name", "description"}.issubset(names))
+        self.assertFalse(names & {"scope", "organization", "parent", "children"})
+        self.assertFalse({f.name for f in RolePermission._meta.get_fields()} & {"conditions", "data_scope"})
 
     def test_role_str_representation(self):
         role, _ = Role.objects.update_or_create(
@@ -742,22 +705,6 @@ class LedgerPermissionRenameMigrationTest(TestCase):
             RolePermission.objects.get(pk=grant_pk).permission.codename, "karma.read"
         )
 
-    def test_collision_moves_the_grant_instead_of_dropping_it(self):
-        """两个 codename 同时存在时无法直接改名（唯一约束）。授权数量不能减少。"""
-        _, grant_pk = self._seed_karma()
-        Permission.objects.create(codename="ledger.read", name="x", category="ledger")
-
-        self._run(forward=True)
-
-        self.assertFalse(Permission.objects.filter(codename="karma.read").exists())
-        self.assertTrue(
-            RolePermission.objects.filter(
-                role=self.judge_role, permission__codename="ledger.read"
-            ).exists(),
-            "collision branch must carry the grant over, not drop it",
-        )
-        self.assertFalse(RolePermission.objects.filter(pk=grant_pk).exists())
-
     def test_role_permissions_dict_no_longer_mentions_karma(self):
         """字典才是 checker 实际判定的依据，改名必须两边同步。"""
         for role, codenames in ROLE_PERMISSIONS.items():
@@ -923,3 +870,37 @@ class RoleUserCountAndStaleWriteGuardTest(TestCase):
             RolePermission.objects.filter(role=self.role).count(), 1,
             "the stale second call must not have wiped the grant the first call made",
         )
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.migration
+def test_0016_collision_moves_the_grant_instead_of_dropping_it():
+    """两个 codename 同时存在时无法直接改名（唯一约束）。授权数量不能减少。
+
+    搬授权那一支读 `conditions` / `data_scope_id`,两列在 perm/0031(数据范围 B7)删了,
+    所以在它们还在的 0030 历史状态上跑,不再用今天的模型。
+    """
+    import importlib
+
+    from tests.migration_roundtrip import migrate_to, migrate_to_latest
+
+    mod = importlib.import_module("apps.perm.migrations.0016_rename_karma_permissions_to_ledger")
+    try:
+        state = migrate_to([("perm", "0030_split_business_codenames")])
+        P = state.get_model("perm", "Permission")
+        RP = state.get_model("perm", "RolePermission")
+        role = state.get_model("perm", "Role")._base_manager.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})[0]
+        karma = {c: P._base_manager.create(codename=c, name=c, category="karma") for c in ("karma.read", "karma.manage")}
+        grant = RP._base_manager.create(role=role, permission=karma["karma.read"])
+        P._base_manager.filter(codename="ledger.read").delete()
+        P._base_manager.create(codename="ledger.read", name="x", category="ledger")
+
+        mod._rename(P, RP, mod.RENAMES, "default")
+
+        assert not P._base_manager.filter(codename="karma.read").exists()
+        assert RP._base_manager.filter(role=role, permission__codename="ledger.read").exists(), (
+            "collision branch must carry the grant over, not drop it"
+        )
+        assert not RP._base_manager.filter(pk=grant.pk).exists()
+    finally:
+        migrate_to_latest()

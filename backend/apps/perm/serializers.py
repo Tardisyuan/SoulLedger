@@ -46,7 +46,6 @@ class RolePermissionAssignSerializer(serializers.Serializer):
 
 
 class RoleSerializer(serializers.ModelSerializer):
-    organization_name = serializers.CharField(source='organization.name', read_only=True)
     # How many users this role's name is currently assigned to
     # (User.role is a plain CharField, not a FK to Role — no join needed).
     # Exists for the Stage 7 permissions-matrix screen's save-confirmation
@@ -71,7 +70,7 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = [
-            "id", "name", "display_name", "description", "scope", "organization", "organization_name",
+            "id", "name", "display_name", "description",
             "user_count", "member_count", "permission_count", "workflow_template_count",
             "is_builtin", "version", "update_time",
         ]
@@ -119,7 +118,7 @@ class RoleSerializer(serializers.ModelSerializer):
 class RoleCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ["name", "display_name", "description", "scope", "organization"]
+        fields = ["name", "display_name", "description"]
 
     def validate_name(self, value):
         # Only allow uppercase letters and underscores
@@ -357,7 +356,6 @@ class ExportedRoleSerializer(serializers.Serializer):
     # serializer dropped it, so an overwrite import blanked every existing role's
     # description (found 2026-10-10 while counting what an overwrite updates).
     description = serializers.CharField(required=False, allow_blank=True)
-    scope = serializers.CharField(required=False)
 
 
 class ExportedRolePermissionSerializer(serializers.Serializer):
@@ -366,11 +364,7 @@ class ExportedRolePermissionSerializer(serializers.Serializer):
     # different database has different ids.
     role = serializers.CharField()
     permission = serializers.CharField()
-    # Optional members below mirror the `.get(key, default)` reads in
-    # `import_permissions` exactly: this serializer now VALIDATES the import
-    # body (it used to be documentation only), so anything it marks required
-    # is a 400 for a hand-written document the importer would have accepted.
-    conditions = serializers.JSONField(required=False)
+    # Files from before 数据范围 B7 also carry `conditions` (the column is gone); an unknown member is ignored.
 
 
 class ExportedFieldPermissionSerializer(serializers.Serializer):

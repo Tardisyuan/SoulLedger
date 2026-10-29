@@ -66,17 +66,17 @@ def world(db):
     return {"tenant": tenant, "admin": admin, "judge": judge, "admin_role": admin_role}
 
 
-# The file keeps: JUDGE soul.read (conditions changed), a new JUDGE grant, the `name` field rule
-# unchanged, and renames JUDGE's description. It drops: JUDGE soul.write + judgment.read,
+# The file keeps: JUDGE soul.read (with a pre-B7 `conditions` member, ignored: the column is gone),
+# a new JUDGE grant, the `name` field rule (now hidden), and renames JUDGE's description. It drops: JUDGE soul.write + judgment.read,
 # MODERATOR soul.read, two field rules, the JUDGE data scope.
 FILE = {
     "permissions": [],
     "roles": [{"name": "JUDGE", "display_name": "Judge", "description": "new", "scope": "ORG"}],
     "role_permissions": [
-        {"role": "JUDGE", "permission": "soul.read", "conditions": {"own": True}},  # kept, changed
-        {"role": "JUDGE", "permission": "system.settings", "conditions": {}},       # new
+        {"role": "JUDGE", "permission": "soul.read", "conditions": {"own": True}},  # kept
+        {"role": "JUDGE", "permission": "system.settings"},                          # new
     ],
-    "field_permissions": [{"role": "JUDGE", "model_name": "soul", "field_name": "name"}],  # kept, same
+    "field_permissions": [{"role": "JUDGE", "model_name": "soul", "field_name": "name", "visible": False}],  # kept, changed
     "role_data_scopes": [],
 }
 
@@ -104,7 +104,7 @@ def test_removed_is_what_the_file_does_not_have_not_what_was_deleted_first(world
     assert stats["role_permissions"]["created"] == 1
     assert stats["field_permissions"]["created"] == 0
     assert stats["role_data_scopes"]["created"] == 0
-    # Updated: the role's description + the grant whose conditions differ. The unchanged field rule is not.
+    # Updated: the role's description + the field rule whose content differs. A kept grant has no content to differ.
     assert stats["updated"] == 2
     assert _counts() == before, "a dry run leaves no row"
 

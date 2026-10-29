@@ -43,17 +43,22 @@ class FieldPermissionMixin:
             return meta.model.__name__
         return None
 
-    def _get_user_role(self):
-        """Get the current user's role from context."""
+    def _get_user(self):
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated:
-            return getattr(request.user, 'role', None)
+            return request.user
         return None
 
     def _apply_field_permissions(self):
-        """Apply field-level permissions based on user's role."""
+        """Apply field-level permissions for every role the user holds.
+
+        The primary role plus live extra roles (用户决定第 27 条:字段权限认兼任角色), combined like grants
+        are — the most open role wins: a field is hidden only when every role hides it, read-only only when
+        every role locks it, and a role with no rule for this model leaves every field as it is.
+        """
         model_name = self._get_field_permission_model_name()
-        user_role = self._get_user_role()
+        user = self._get_user()
+        user_role = getattr(user, 'role', None)
 
         if not model_name or not user_role:
             return  # No model or user — skip
@@ -62,40 +67,29 @@ class FieldPermissionMixin:
         if user_role == 'ADMIN':
             return
 
-        rules = FieldPermission.get_field_rules(user_role, model_name)
-        if not rules:
-            return  # No rules defined — all fields visible/editable
+        from apps.perm.checker import _live_extra_roles
 
-        # Get wildcard rules (field_name="*")
-        wildcard_rules = rules.get('*', {})
-        wildcard_visible = wildcard_rules.get('visible', True)
-        wildcard_read_only = wildcard_rules.get('read_only', False)
-        wildcard_editable = wildcard_rules.get('editable', True)
+        rule_sets = [FieldPermission.get_field_rules(role, model_name) for role in [user_role, *_live_extra_roles(user)]]
+        if not all(rule_sets):
+            return  # Some role has no rules here — it sees and edits every field
 
-        # Apply rules to each field
         fields_to_remove = []
         for field_name, field in self.fields.items():
-            # Get specific rule or fall back to wildcard
-            field_rule = rules.get(field_name, wildcard_rules)
-            if not field_rule:
-                continue  # No rule — keep default
-
-            # Handle visibility
-            visible = field_rule.get('visible', wildcard_visible)
-            if not visible:
+            outcomes = [_outcome(rules, field_name) for rules in rule_sets]
+            if not any(visible for visible, _ in outcomes):
                 fields_to_remove.append(field_name)
-                continue
-
-            # Handle read_only
-            read_only = field_rule.get('read_only', wildcard_read_only)
-            if read_only:
-                field.read_only = True
-
-            # Handle editable (set read_only if not editable)
-            editable = field_rule.get('editable', wildcard_editable)
-            if not editable:
+            elif all(locked for _, locked in outcomes):
                 field.read_only = True
 
         # Remove invisible fields
         for field_name in fields_to_remove:
             del self.fields[field_name]
+
+
+def _outcome(rules, field_name):
+    """(visible, locked) for one role: the field's own rule, else the role's wildcard `*`, else open."""
+    wildcard = rules.get('*', {})
+    rule = rules.get(field_name, wildcard)
+    visible = rule.get('visible', wildcard.get('visible', True))
+    locked = rule.get('read_only', wildcard.get('read_only', False)) or not rule.get('editable', wildcard.get('editable', True))
+    return visible, locked

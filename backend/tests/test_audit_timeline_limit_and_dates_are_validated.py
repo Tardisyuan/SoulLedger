@@ -107,7 +107,7 @@ def test_a_well_formed_date_still_filters(moderator_client, path):
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "picked, neighbour",
-    [("role", "rolepermission"), ("menu", "menubutton"), ("datascope", "rowleveldatascope")],
+    [("role", "rolepermission"), ("menu", "menubutton"), ("permission", "fieldpermission")],
 )
 def test_the_resource_filter_is_an_exact_match(moderator_client, picked, neighbour):
     """`?resource=` 是精确匹配(2026-10-17):选「角色」不再带回「角色权限」,选「菜单」不再带回「菜单按钮」。
@@ -122,5 +122,5 @@ def test_the_resource_filter_is_an_exact_match(moderator_client, picked, neighbo
     response = moderator_client.get(TIMELINE, {"resource": picked})
     assert response.status_code == 200, response.content[:200]
     assert [r["resource"] for r in response.data] == [picked]
-    # Without `?resource=` the default eight still cover both.
+    # Without `?resource=` the default six still cover both.
     assert {r["resource"] for r in moderator_client.get(TIMELINE).data} == {picked, neighbour}

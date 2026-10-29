@@ -277,19 +277,15 @@ class TestRecycleBinListing:
         assert self._entry("menu", child.pk)["location"] == {"kind": "parent", "value": "Parent Dir"}
         assert self._entry("menu", self.menu.pk)["location"] is None
 
-    def test_location_of_a_role_is_its_organization_then_its_parent(self):
-        from apps.org.models import Organization
+    def test_a_role_has_no_location(self):
+        # 数据范围 B7 dropped Role.organization / Role.parent, the two things a role's 「原位置」 was read from.
         from apps.perm.models import Role
 
-        org = Organization.objects.create(name="中国地府", code="DIYU_RB", category="CHINESE", level=0)
-        base = Role.objects.create(name="RB_BASE", display_name="基础角色", scope="GLOBAL")
-        in_org = Role.objects.create(name="RB_ORG", display_name="x", organization=org, parent=base)
-        child = Role.objects.create(name="RB_CHILD", display_name="y", scope="GLOBAL", parent=base)
-        for role in (in_org, child, base):
-            role.soft_delete(user=self.admin)
-        assert self._entry("role", in_org.pk)["location"] == {"kind": "organization", "value": "中国地府"}
-        assert self._entry("role", child.pk)["location"] == {"kind": "parent", "value": "基础角色"}
-        assert self._entry("role", base.pk)["location"] is None
+        role = Role.objects.create(name="RB_ROLE", display_name="x")
+        role.soft_delete(user=self.admin)
+        entry = self._entry("role", role.pk)
+        assert entry["label"] == "RB_ROLE"
+        assert entry["location"] is None
 
     def test_domain_entry_has_no_hard_delete_window(self):
         self.soul.delete_with_cascade(user=self.admin)

@@ -2624,13 +2624,11 @@
       "judgment": "Wedja",
       "soulrecord": "Sesh Nefer Hena Isfet",
       "permission": "Was",
-      "datascope": "Aat Khet",
       "fieldpermission": "Was Iwn",
       "menu": "Menu",
       "menubutton": "Aha Menu",
       "role": "Netjer",
-      "rolepermission": "Was Netjer",
-      "rowleveldatascope": "Aat Khet Em Sesh"
+      "rolepermission": "Was Netjer"
     },
     "timeline": {
       "all_resources": "Khet Was Neb",

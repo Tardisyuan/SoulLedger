@@ -96,7 +96,7 @@ RBAC
 
 - CodenameViewSetMixin
 - Permission codenames
-- DataScope
+- RoleDataScope
 - FieldPermission
 
 Events

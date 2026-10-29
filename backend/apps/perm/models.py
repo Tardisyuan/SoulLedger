@@ -1,8 +1,6 @@
 """
 RBAC Permission models — 参考 Snowy SaToken 设计
 """
-import uuid
-
 from django.db import models
 
 from apps.core.models import AuditUserFields
@@ -70,39 +68,10 @@ def _revive_or_create(model, key, value, defaults):
     return model.objects.create(**{key: value}, **defaults), True
 
 
-class DataScope(AuditUserFields):
-    """
-    数据范围定义，用于行级权限过滤
-    """
-    name = models.CharField(max_length=100)
-    code = models.CharField(max_length=50, unique=True)
-    filter_type = models.CharField(
-        max_length=20,
-        choices=[
-            ('realm', 'Realm范围'),
-            ('civilization', '文明范围'),
-            ('state', '状态范围'),
-            ('custom', '自定义'),
-        ],
-        default='custom'
-    )
-    # 过滤规则，存储为JSON如 {"realm_id": 1} 或 {"civilization": "CHINA"}
-    filter_rules = models.JSONField(default=dict, blank=True)
-
-    class Meta:
-        verbose_name = "Data Scope"
-        verbose_name_plural = "Data Scopes"
-        ordering = ["code"]
-
-    def __str__(self):
-        return f"{self.code} ({self.name})"
-
-
 class Role(AuditUserFields):
     """
-    角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
-    支持层级继承，子角色继承父角色的权限
-    新增 scope 字段：GLOBAL=全局权限，ORG=组织级权限
+    角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER。
+    数据范围在 RoleDataScope(数据范围 B7 删掉了旧的 scope / organization / parent 三列)。
     """
     # Unique among LIVE rows only. This was `unique=True` on a soft-deletable
     # model (BP-06, 2026-09-12): deleting VIEWER kept the row, so `roles/init/`
@@ -113,34 +82,6 @@ class Role(AuditUserFields):
     display_name = models.CharField(max_length=100)
     #: 角色表抽屉里的「说明」(E-11b):这个角色是干什么的。自由文本,可空;只 ADMIN 能改(与其余角色编辑同一道门)。
     description = models.TextField(blank=True, default="")
-    # 父角色，用于层级继承
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='children'
-    )
-    # 角色作用域：GLOBAL=全局，ORG=组织级
-    SCOPE_CHOICES = [
-        ('GLOBAL', '全局'),
-        ('ORG', '组织级'),
-    ]
-    scope = models.CharField(
-        max_length=10,
-        choices=SCOPE_CHOICES,
-        default='ORG',
-        help_text="作用域：GLOBAL=全局权限，ORG=组织级权限"
-    )
-    # ORG 角色专属组织（GLOBAL 角色此字段为空）
-    organization = models.ForeignKey(
-        'org.Organization',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='roles',
-        help_text="ORG角色专属组织，GLOBAL角色此字段为空"
-    )
 
     class Meta:
         constraints = [
@@ -174,40 +115,6 @@ class Role(AuditUserFields):
         """See `_revive_or_create`. Restoring a binned role restores its grants too."""
         return _revive_or_create(cls, "name", name, defaults)
 
-    # `get_inherited_permissions` lived here (own permissions ∪ parent's,
-    # recursive) — deleted 2026-09-13 (BP-09), full-repo grep found only test
-    # callers plus `PermissionCache.has_permission` (also dead, deleted below).
-    # The real enforcement path is `apps.perm.checker.check_permission`, which
-    # does NOT consider `parent` at all; `ws_permissions.py`'s docstring
-    # already documents that `Role.parent` inheritance "is not reproduced ...
-    # and is not load-bearing: nothing seeded ever sets it." `parent` itself
-    # stays — `get_ancestors`/`get_descendants` below are real (the latter is
-    # used by `PermissionCache.invalidate_role` to cascade cache clears to
-    # descendant roles), so removing the field is a separate, larger change.
-
-    def get_ancestors(self):
-        """
-        获取所有祖先角色
-        """
-        ancestors = []
-        current = self.parent
-        while current is not None:
-            ancestors.append(current)
-            current = current.parent
-        return ancestors
-
-    def get_descendants(self):
-        """
-        获取所有后代角色
-        """
-        descendants = []
-        children = list(self.children.all())
-        while children:
-            child = children.pop(0)
-            descendants.append(child)
-            children.extend(list(child.children.all()))
-        return descendants
-
 
 class RolePermission(AuditUserFields):
     """
@@ -222,19 +129,6 @@ class RolePermission(AuditUserFields):
         Permission,
         on_delete=models.CASCADE,
         related_name="role_permissions"
-    )
-    # 权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}
-    conditions = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text='权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}'
-    )
-    # 数据范围，用于更复杂的行级过滤
-    data_scope = models.ForeignKey(
-        DataScope,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='role_permissions'
     )
 
     class Meta:
@@ -590,61 +484,6 @@ DEFAULT_ROLES = [
     ("GUARDIAN", "Guardian"),
     ("VIEWER", "Viewer"),
 ]
-
-
-class RowLevelDataScope(models.Model):
-    """
-    行级数据范围 - 行级访问控制
-    例如：JUDGE 角色只能看和处理 status=PENDING 的灵魂
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    # 关联角色（使用 perm.Role 的 name 字段）
-    role = models.ForeignKey(
-        Role,
-        on_delete=models.CASCADE,
-        related_name='row_level_scopes'
-    )
-
-    # 文明范围（使用 CharField，因为 souls.Civilization 是 TextChoices 不是模型）
-    civilization = models.CharField(
-        max_length=20,
-        null=True,
-        blank=True,
-        help_text='文明：CHINA, EUROPE, EGYPT'
-    )
-
-    # 模型名称
-    model_name = models.CharField(max_length=50)  # 'Soul', 'Judgment'
-
-    # 过滤条件（JSON 存储）
-    filter_conditions = models.JSONField(
-        default=dict,
-        help_text='过滤条件，如 {"current_state": "ALIVE"}'
-    )
-
-    # 权限类型
-    SCOPE_TYPES = [
-        ('READ', '读取'),
-        ('WRITE', '写入'),
-        ('DELETE', '删除'),
-    ]
-    scope_type = models.CharField(max_length=10, choices=SCOPE_TYPES)
-
-    # 优先级（数值越大优先级越高）
-    priority = models.IntegerField(default=0)
-
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'permissions_row_level_data_scope'
-        indexes = [
-            models.Index(fields=['role', 'model_name']),
-        ]
-
-    def __str__(self):
-        return f"{self.role.name} - {self.model_name} ({self.scope_type})"
 
 
 class FieldPermission(models.Model):
