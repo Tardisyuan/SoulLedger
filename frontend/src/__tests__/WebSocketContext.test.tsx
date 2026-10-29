@@ -302,7 +302,7 @@ describe("WebSocketProvider event fan-out", () => {
     act(() =>
       lastSocket().receive({
         type: "notification",
-        notification: { id: 5, title: "Verdict", message: "signed" },
+        notification: { id: 5, title: "Verdict", message: "signed", user_id: 1 },
       }),
     );
 
@@ -413,7 +413,7 @@ describe("WebSocketProvider event fan-out", () => {
     connected();
 
     act(() => lastSocket().receive("garbage"));
-    act(() => lastSocket().receive({ type: "notification", notification: { id: 1, title: "Later" } }));
+    act(() => lastSocket().receive({ type: "notification", notification: { id: 1, title: "Later", user_id: 1 } }));
 
     expect(mockShowToast).toHaveBeenCalledWith("Later", "info", 5000);
   });

@@ -53,13 +53,17 @@ class WebSocketHandler(DomainEventHandler):
             if envelope.permission:
                 message["data"]["_permission"] = envelope.permission
 
-            groups = []
-            # Tenant-wide delivery
-            if envelope.tenant_code:
-                groups.append(ChannelNaming.tenant_group(envelope.tenant_code))
-            # Targeted user delivery
+            # 有收件人就只发收件人的用户组;没有才发全殿组。
+            # 2026-10-29 之前两组都发:每条个人通知(密码求助、代看、调拨理由……)
+            # 都经 `rt_tenant_<殿>` 推给了同殿每位在线官员,收件人自己收两次。
+            # `_recipients` 让 consumer 再按收件人核对一次(纵深)。
             if envelope.user_ids:
-                groups.extend(ChannelNaming.user_group(uid) for uid in envelope.user_ids)
+                groups = [ChannelNaming.user_group(uid) for uid in envelope.user_ids]
+                message["data"]["_recipients"] = list(envelope.user_ids)
+            elif envelope.tenant_code:
+                groups = [ChannelNaming.tenant_group(envelope.tenant_code)]
+            else:
+                groups = []
 
             def _publish():
                 # The try/except lives HERE, not only around `handle`.
