@@ -18402,6 +18402,7 @@ export interface components {
             cycle_limit?: number | null;
             /** @description Whether this realm requires a formal judgment process before entry */
             is_judgment_required?: boolean;
+            readonly is_retired: boolean;
         };
         /**
          * @description Serializer that resolves the best-fit name based on Accept-Language header.
