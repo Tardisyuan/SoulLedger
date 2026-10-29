@@ -10,11 +10,11 @@ from django.core import mail
 from django.utils import timezone
 
 from apps.authentication.models import User
-from tests.conftest import sign_in
 from apps.notifications.categories import CATEGORIES
 from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.tasks import email_action_needed_for_tenant, email_action_needed_global
 from apps.tenants.managers import get_current_tenant
+from tests.conftest import sign_in
 from tests.migration_schema_editor import SCHEMA_EDITOR
 
 pytestmark = pytest.mark.django_db
