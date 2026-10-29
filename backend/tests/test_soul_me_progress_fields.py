@@ -8,7 +8,7 @@ from django.core.management import call_command
 
 from apps.dispatch.models import CaptureStatus, CaptureWarrant
 from apps.judgment import confessions
-from apps.judgment.models import GrievanceStatus, Judgment, JudgmentMethod
+from apps.judgment.models import CityGod, GrievanceStatus, Judgment, JudgmentMethod
 from apps.realms.models import Realm
 from apps.realms.path import SoulPathService
 from apps.soul_accounts import services as svc
@@ -64,6 +64,7 @@ def test_the_capture_warrant_shows_its_status_and_a_cancelled_one_does_not(cn_te
 
 
 def test_a_diyu_death_registered_any_way_gives_the_soul_its_handed_over_warrant(cn_tenant):
+    CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"], is_default=True)
     soul = Soul.objects.create(name="寿终", tenant=cn_tenant, fated_death_year=2000, fated_death_month=1,
                                fated_death_day=1)
     soul.die(death_date=datetime.date.today())
