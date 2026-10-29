@@ -80,3 +80,16 @@ def guard_beat(**_) -> None:
         )
         sys.exit(1)
     threading.Thread(target=_refresh, args=(owner, threading.Event()), daemon=True, name="beat-lock").start()
+
+
+def held_here() -> bool:
+    """True when a beat process in this container holds the key: the owner is
+    `<hostname>:<pid>` and a container's hostname is its own."""
+    current = holder()
+    return isinstance(current, str) and current.startswith(f"{socket.gethostname()}:")
+
+
+if __name__ == "__main__":
+    # The celery-beat healthcheck (docker-compose.yml). Reads the key only; no
+    # django.setup(), so it costs a settings import and one Redis round trip.
+    sys.exit(0 if held_here() else 1)

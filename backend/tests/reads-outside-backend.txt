@@ -25,6 +25,7 @@ tests/test_chat_policy.py                                        config
 tests/test_chat_push_hook.py                                     config
 tests/test_chat_synapse_integration.py                           config
 tests/test_check_deploy_env_script.py                            scripts
+tests/test_ci_runs_on_a_budget.py                                .github
 tests/test_collection_scope.py                                   *
 tests/test_committed_schema_matches_the_backend.py               packages
 tests/test_credits_literature_quotes_the_corpus.py               config packages
@@ -48,6 +49,7 @@ tests/test_no_second_copy_of_the_civilization_map.py             *
 tests/test_officer_assist_corpus.py                              frontend
 tests/test_officer_letter_push.py                                config
 tests/test_official_notify_messages_match_the_language_packs.py  frontend packages
+tests/test_one_beat_on_the_database_scheduler.py                 .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx-admin-allow.conf nginx.conf scripts
 tests/test_page_gates_match_the_backend.py                       frontend
 tests/test_prepush_runs_the_gates_a_change_can_break.py          .dockerignore .gitignore .nvmrc CLAUDE.md README.md config conftest.py docker-compose.yml docs frontend mobile mobile-officer package-lock.json package.json packages pytest.ini scripts
 tests/test_production.py .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx-admin-allow.conf nginx.conf scripts
