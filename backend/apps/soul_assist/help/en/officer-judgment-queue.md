@@ -14,7 +14,7 @@ questions:
 Judgment queue (sidebar: "Judgment Queue"). The "Pending" tab splits open cases into four groups:
 - "Mine": claimed by you.
 - "Unclaimed": nobody has taken it; "Claim" takes it. A case marked "Untimely death" and "Held until <date>" has its soul in the City of Wrongful Death and cannot be claimed before that day; see the fated-date paragraph in officer-souls-and-records.
-- "Claimed by others": read-only for you; an officer with the reassign permission can move it with "Reassign…".
+- "Claimed by others": read-only for you; an officer with the reassign permission can move it with "Reassign…", or override the claim and edit it, which is recorded.
 - "Deferred": set aside with "Defer", which requires a reason.
 Filters: court, civilization, sort (waiting longest / newest), search. Batch actions apply to every selected case or to none. When nobody can take a case: if the "Reassign…" layer lists nobody but you, it shows "Ask an administrator to reassign", which notifies the administrators of the case's hall. Opening the reassign layer needs the reassign permission; the request itself is checked by the server against the judgment execute permission only, not the reassign permission. The same case can be asked about only once in a short while.
 The officer app's "Judgment" tab can claim and read cases and also write review comments and read others' (length-capped; a comment changes nothing about the case, and concluded cases accept them). Verdicts and seals are only at the officer desk.

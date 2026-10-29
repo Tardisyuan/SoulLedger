@@ -64,6 +64,16 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   按状态 / 文明 / 界域各数一遍,每租户每天一行、超过 731 天的顺手删掉。**不回填**(过去某天的状态无法倒推),趋势从第一份快照起有数;
   beat 没跑时没有数据,面板会写「快照还不足两天」。
 
+- **2026-10-29 那批(权限严查 / 数据范围 / 流程决定)部署时:**
+  - 先备份 115 再迁移;这批迁移跨 judgment、workflow、events、notifications、authentication、perm、menus、souls、org
+    多个 app(以 `showmigrations` 为准)。`perm` 0029 按现有持有关系授出拆分后的业务码(`city_god.*` / `tudi.*` /
+    `wangsi.*` / `capture.*` / `*.export` / `ledger.calculate`),`org` 0010 给每殿建根机构 `ROOT_<殿代码>` 并回填灵魂与审判的归属机构。
+  - 地府天道(`DY_01_HEAVEN`)停用不靠部署步骤:它写在代码里(`apps/realms/models.py::RETIRED_REALM_CODES`,接口回
+    `is_retired`,选单不再列它)。种子里那句「No longer used」说明只在 `seed_mythology --update` 时写进已有的行,
+    而 `--update` 会用种子值覆盖运维改动(`docs/DEPLOY.md`),不必为这句说明去跑。
+  - 网页的刷新令牌改放 httpOnly cookie:上线后已登录的网页用户要重新登录一次。
+  - 助手若配了内网 `base_url`,把那个主机写进 `ASSISTANT_PRIVATE_HOSTS_ALLOWED`(逗号分隔),否则助手管理页整表保存 400。
+
 ## 定时任务(celery beat)
 
 - **现状(2026-09-26):没有任何环境在跑 beat。** compose 里有 `celery-beat` 服务,但 115 测试环境
@@ -132,8 +142,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 
 ## 权限配置「覆盖」导入
 
-- `PERM_IMPORT_OVERWRITE_ENABLED`(默认 `False`)。权限配置不分殿、是全局的:任何一个殿的管理员做「覆盖」导入,
-  改的都是所有殿的权限。所以默认关闭 —— `POST /perm/import/` 收到 `overwrite=true`(预演也算)一律回 403
+- `PERM_IMPORT_OVERWRITE_ENABLED`(默认 `False`)。权限配置不分殿、是全局的,「覆盖」导入改的是所有殿的权限。
+  2026-10-29 起导入(连同权限页的一切写操作)只许**没绑殿的** ADMIN(`CanWriteGlobalSettings`,`apps/perm/views.py`),
+  绑殿的 ADMIN 403。覆盖仍默认关闭 —— `POST /perm/import/` 收到 `overwrite=true`(预演也算)一律回 403
   `overwrite_disabled`,不碰任何行;合并导入与预演不受影响。有了跨殿的超级管理员角色之后再打开。
   接口响应里的 `overwrite_enabled` 告诉前端要不要显示「合并 / 覆盖」的选择。
 

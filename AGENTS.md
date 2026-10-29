@@ -227,7 +227,7 @@ t("nav.greeting", { username: user.username })
   执法：`backend/tests/test_tenant_scoping_contract.py`（走真实 URLconf 静态检查）
 - 租户上下文用 **contextvar**（不是 thread-local），以支持 async 与 Celery worker；
   在 `finally` 里 `clear_current_tenant()`
-- **fail closed**：没有租户就是 `qs.none()`，不是"返回全部"。ADMIN 是唯一全局角色
+- **fail closed**：没有租户就是 `qs.none()`，不是"返回全部"。**没绑殿的** ADMIN 是唯一全局角色(2026-10-29 起绑了殿的 ADMIN 只看本殿,`apps/core/tenant.py::is_tenant_exempt`)
 - Soul 创建时 `perform_create` 必须设置 `tenant`（`TenantCreateMixin` 提供，**无全量守卫**）
 - 跨租户访问返回 404（不是 403）
 

@@ -19,8 +19,11 @@ If you discover a security vulnerability, please report it responsibly:
 - **Authentication**: JWT with refresh tokens (djangorestframework-simplejwt). Officers log in under
   `/auth/`, souls under `/soul-auth/`, with separate token families. Optional two-step verification
   (TOTP with recovery codes: `apps/authentication/mfa.py`, `/auth/mfa/*`; for souls `/soul-auth/mfa/verify/`
-  and `/me/mfa/*`); a hall can require it per role (`/tenants/{code}/mfa-roles/`)
-- **Authorization**: RBAC with permission codenames, data scope isolation
+  and `/me/mfa/*`); a hall can require it per role (`/tenants/{code}/mfa-roles/`), and a required officer without it gets
+  403 `mfa_setup_required` everywhere but setting it up (2026-10-29). The web client keeps its refresh token in an
+  httpOnly `SameSite=Strict` cookie (`apps/authentication/refresh_cookie.py`); the two apps do not use the cookie
+- **Authorization**: RBAC with permission codenames (`apps/perm/checker.py`) and per-role data scopes
+  (`RoleDataScope`, `apps/perm/data_scope.py`); only the ADMIN with no hall is global
 - **Tenant Isolation**: Row-level tenant filtering in the view layer via
   `apps/core/tenant.py::scope_to_tenant` (every ViewSet is pinned to it by the
   meta-test in `tests/test_tenant_scoping_contract.py`). `TenantManager` filters soft

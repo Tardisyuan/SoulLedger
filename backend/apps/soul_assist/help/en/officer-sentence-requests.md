@@ -10,7 +10,7 @@ questions:
   - "how do I execute a disposition"
 ---
 Sentence requests ask to change a soul's sentence plan: amend it (add or remove a station) or reopen the judgment. Statuses: pending (awaiting the original judge's decision), accepted, rejected, withdrawn.
-- Accept / Reject: the plan's home hall (or an administrator); needs the judgment execute permission. Accepting applies at once; accepting a reopen opens a retrial at once. A rejection may carry a reason.
+- Accept / Reject: an amend request is decided by the plan's home hall (or an administrator) and needs the judgment execute permission. A reopen request is decided by the judge who concluded the original case; when that judge is deactivated, has left the home hall or is not on record, an officer of the home hall with the reassign permission decides. Accepting applies at once; accepting a reopen opens a retrial at once. A rejection may carry a reason.
 - Withdraw: the hall that filed the request (or an administrator); it also needs the judgment execute permission.
 - Cancelling a whole sentence plan is separate: the home hall (or an administrator) only, with a reason, and it needs the sentence plan cancel permission.
 The page shows one row per plan with a pending request; rows waiting for you are marked.

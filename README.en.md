@@ -113,7 +113,7 @@ one place, `TENANT_CIVILIZATION` in `backend/apps/souls/models.py`. Row-level
 isolation is **not** in the ORM: `TenantManager` in `apps/tenants/managers.py`
 filters soft deletes only (`is_deleted=False`); the name is a leftover. Isolation
 lives entirely in the view layer, in `apps/core/tenant.py::scope_to_tenant`
-(non-ADMIN requests are narrowed to `request.tenant`, a missing field denies),
+(every request except the hall-less ADMIN's is narrowed to `request.tenant`, a missing field denies; since 2026-10-29 a hall-bound ADMIN is narrowed too),
 and the meta-test in `tests/test_tenant_scoping_contract.py` pins every ViewSet to it.
 The `contextvars` tenant exists so `apps/audit/signals.py` can attribute a
 write, not so queries filter themselves.

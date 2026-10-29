@@ -100,8 +100,8 @@ Redis 7                        →  :6379   （Channel Layer + Celery broker）
 只写在一个地方——`backend/apps/souls/models.py` 中的 `TENANT_CIVILIZATION`。行级隔离
 **不在 ORM 层**：`apps/tenants/managers.py` 的 `TenantManager` 只过滤软删除
 （`is_deleted=False`），名字是历史遗留。隔离全部在视图层，由
-`apps/core/tenant.py::scope_to_tenant` 收口（非 ADMIN 强制按 `request.tenant` 过滤，
-缺字段则拒绝），`tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet 都走它。
+`apps/core/tenant.py::scope_to_tenant` 收口（除没绑殿的 ADMIN 外一律按 `request.tenant` 过滤，
+缺字段则拒绝；2026-10-29 起绑了殿的 ADMIN 也只看本殿），`tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet 都走它。
 `contextvars` 里的当前租户只供 `apps/audit/signals.py` 归属写操作，不用于过滤。
 
 **权限**：六种角色（ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，
