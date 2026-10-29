@@ -16,6 +16,7 @@ from tests.perm_support import seeded_menus
 from tests.soul_account_support import officer_client
 
 seed_module = importlib.import_module("apps.menus.migrations.0021_seed_the_first_sixteen_menus")
+codename_module = importlib.import_module("apps.menus.migrations.0029_first_sixteen_menus_name_their_read_codename")
 FIRST_SIXTEEN = [m["path"] for m in seed_module.MENUS]
 
 pytestmark = pytest.mark.django_db
@@ -120,6 +121,7 @@ def test_reverse_removes_only_untouched_seed_rows():
     Menu.all_objects.filter(path="/souls").update(version=2)       # 有人保存过
     Menu.all_objects.filter(path="/users").update(name="成员管理")  # 改过名
 
+    codename_module.unfill(django_apps, SCHEMA_EDITOR)  # 真实回退里 0029 先退
     seed_module.unseed(django_apps, SCHEMA_EDITOR)
 
     left = set(Menu.objects.filter(menu_type="MENU", is_deleted=False).values_list("path", flat=True))
@@ -308,3 +310,97 @@ def test_the_capture_due_and_earth_god_entries(cn_tenant):
     assert rows["/judgment/capture-due"].order < Menu.objects.get(path="/city-god-cases", is_deleted=False).order
     assert {"待发勾魂牒", "土地公"} <= _seen_by("JUDGE", cn_tenant)
     assert not {"待发勾魂牒", "土地公"} & _seen_by("VIEWER", cn_tenant)
+
+
+# ── 0029:16 条写上页面读码,殿主与持码的自定义角色看得见(RBAC 审查 H2)────────────────
+
+
+def _custom(tenant, username, *codenames):
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import Permission, Role, RolePermission
+
+    role, _ = Role.objects.get_or_create(name="CLERK_" + username.upper(), defaults={"display_name": username})
+    for c in codenames:
+        perm, _ = Permission.objects.get_or_create(codename=c, defaults={"name": c, "category": c.split(".")[0]})
+        RolePermission.objects.get_or_create(role=role, permission=perm)
+    invalidate_all_permissions()
+    user = User.objects.create_user(username=username, password="x", role=role.name, tenant=tenant)
+    response = officer_client(user).get("/api/v1/menus/list-public/")
+    assert response.status_code == 200, response.data
+    return _names(response.json())
+
+
+def test_0029_names_the_page_codename_on_the_seeded_rows():
+    _wipe()
+    seeded_menus()
+    got = {m.path: m.permission for m in Menu.objects.filter(path__in=FIRST_SIXTEEN)}
+    assert got == {**dict.fromkeys(FIRST_SIXTEEN, ""), **codename_module.CODENAMES}
+    assert got["/permissions"] == "" and got["/welcome"] == ""  # 故意不写,见迁移文件头
+
+
+def test_a_moderator_sees_the_core_pages_and_not_the_admin_ones(cn_tenant):
+    from tests.perm_support import seeded_grants
+
+    seeded_grants()
+    _wipe()
+    seeded_menus()
+    seen = _seen_by("MODERATOR", cn_tenant, "/api/v1/menus/list-public/")
+    assert {"仪表盘", "灵魂管理", "审判队列", "跨域审判", "功德管理", "审批流程", "调度管理",
+            "领域管理", "神祇名录", "审计日志"} <= seen, seen
+    assert seen.isdisjoint({"用户管理", "权限与角色", "菜单管理"}), seen
+
+
+def test_a_custom_role_sees_exactly_the_pages_its_codenames_open(cn_tenant):
+    _wipe()
+    seeded_menus()
+    holder = _custom(cn_tenant, "souls_clerk", "soul.read", "menu.read")
+    assert "灵魂管理" in holder and "灵魂业务" in holder
+    assert holder.isdisjoint({"审判队列", "审计日志", "仪表盘", "用户管理"}), holder
+    bare = _custom(cn_tenant, "bare_clerk", "menu.read")
+    assert "灵魂管理" not in bare and "审判队列" not in bare
+
+
+def test_0029_leaves_a_hand_edited_row_alone():
+    _wipe()
+    seeded_menus()
+    codename_module.unfill(django_apps, SCHEMA_EDITOR)
+    Menu.all_objects.filter(path="/souls").update(roles=["ADMIN"])            # roles 改过
+    Menu.all_objects.filter(path="/audit").update(permission="audit.export")  # 码填过
+    codename_module.fill(django_apps, SCHEMA_EDITOR)
+    assert Menu.objects.get(path="/souls").permission == ""
+    assert Menu.objects.get(path="/audit").permission == "audit.export"
+    assert Menu.objects.get(path="/judgment").permission == "judgment.read"
+    codename_module.unfill(django_apps, SCHEMA_EDITOR)
+    assert Menu.objects.get(path="/audit").permission == "audit.export"     # 反向也不碰
+    assert Menu.objects.get(path="/judgment").permission == ""
+
+
+def _codenames_snapshot(apps):
+    from tests.migration_roundtrip import snapshot_rows
+
+    Menu_ = apps.get_model("menus", "Menu")
+    return snapshot_rows(
+        Menu_.all_objects.filter(is_deleted=False, menu_type="MENU"),
+        key=lambda m: m.path,
+        fields={"permission": "permission", "roles": "roles"},
+    )
+
+
+def test_0029_round_trip_fills_and_clears_the_codenames(migration_round_trip):
+    def seed(apps):
+        _directories_and_a_customised_souls(apps)
+        seed_module.seed(apps, SCHEMA_EDITOR)
+
+    def check_forward(apps):
+        rows = _codenames_snapshot(apps)
+        assert rows["/judgment"]["permission"] == "judgment.read"
+        assert rows["/souls"]["permission"] == ""  # roles 被改过的那行不动
+        assert rows["/permissions"]["permission"] == ""
+
+    migration_round_trip(
+        before=("menus", "0028_add_tudi_gods_and_capture_due_menus"),
+        after=("menus", "0029_first_sixteen_menus_name_their_read_codename"),
+        seed=seed,
+        snapshot=_codenames_snapshot,
+        check_forward=check_forward,
+    )

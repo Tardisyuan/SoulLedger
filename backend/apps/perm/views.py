@@ -58,13 +58,32 @@ from .serializers import (
 _get_role_permissions_from_db = get_role_permission_codenames
 
 
+class CanReadPermissionCatalogue(IsAdminPermission):
+    """ADMIN, or whoever holds a codename whose page reads the catalogue (RBAC review L4, 2026-10-29).
+
+    Two pages call `GET /perm/permissions/`: the permissions page (`system.settings`;
+    its writes are ADMIN-only) and the menu editor (`menu.manage`), which uses it only
+    to flag a typed codename that does not exist. Holding either keeps that page whole;
+    nobody else needs the list. Was `IsAuthenticated`: every VIEWER read the catalogue.
+    """
+
+    PAGE_CODENAMES = ("system.settings", "menu.manage")
+
+    def has_permission(self, request, view):
+        if super().has_permission(request, view):
+            return True
+        from apps.perm.checker import check_permission
+
+        return any(check_permission(request.user, c) for c in self.PAGE_CODENAMES)
+
+
 @extend_schema(request=None, responses={200: PermissionSerializer(many=True)})
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanReadPermissionCatalogue])
 def list_permissions(request):
     """
     GET /api/v1/perm/permissions/
-    获取所有权限列表
+    获取所有权限列表(ADMIN,或持 system.settings / menu.manage)
     """
     permissions = Permission.objects.all()
     serializer = PermissionSerializer(permissions, many=True)
@@ -183,7 +202,8 @@ def get_role_permissions(request):
     # `permissions` 字段,`list_permissions` 返回的是 codename 目录本身。
     #
     # 所以对非 ADMIN 泄漏的是**目录**,不是**授权**:codename 有哪些、角色叫什么、
-    # 每个角色有多少人(`user_count`)。那是个刻意的产品决定还是没人想过,
+    # 每个角色有多少人(`user_count`)。2026-10-29 起 codename 目录收窄到 ADMIN 与持
+    # system.settings / menu.manage 的人(`CanReadPermissionCatalogue`),角色名单仍开放。那是个刻意的产品决定还是没人想过,
     # 现在由 `tests/test_perm_prefix_discloses_only_the_catalogue.py` 钉住 ——
     # 一句注释是一次没被执行的断言,而上一句就是这样错了很久的。
     role = request.user.role

@@ -9,9 +9,10 @@
 
 * **授权**(哪个角色有哪些 codename)对非 ADMIN 关闭 —— 只有两条读取路径,
   一条只给自己,一条只给 ADMIN;
-* **目录**(codename 有哪些、角色叫什么、每个角色几个人)对任何登录用户开放。
+* **角色名单**(角色叫什么、每个角色几个人)对任何登录用户开放;
+* **codename 目录**只给 ADMIN 与持 system.settings / menu.manage 的人(2026-10-29,RBAC 审查 L4)。
 
-第二条是一个产品决定。把它写成测试,是为了下一次有人改动时**是这里报红**,
+后两条是产品决定。把它写成测试,是为了下一次有人改动时**是这里报红**,
 而不是几年后某份审计报告里再出现一次「注释与代码不一致」。
 """
 import pytest
@@ -57,22 +58,40 @@ def test_a_viewer_reads_its_own_grants_and_only_its_own(viewer):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    "path,what",
-    [
-        ("/api/v1/perm/permissions/", "codename 目录"),
-        ("/api/v1/perm/roles/", "角色名单"),
-    ],
-)
-def test_the_catalogue_is_open_to_any_authenticated_user(viewer, path, what):
-    """开放是**刻意的**:`app/menus/page.tsx` 拿 codename 目录去配按钮,
-    而那个页面的闸是 `menu.manage`,不是 ADMIN。
+def test_the_role_names_are_open_to_any_authenticated_user(viewer):
+    """角色名单仍对任何登录用户开放(下面那条守着它不带授权)。"""
+    assert viewer.get("/api/v1/perm/roles/").status_code == 200
 
-    这条测试不是在说「开放是对的」,是在说「开放是当前策略」——
-    改成 ADMIN-only 会让它红,那时候要一起改的是前端那个页面。
-    """
-    response = viewer.get(path)
-    assert response.status_code == 200, f"{what}: {response.status_code}"
+
+@pytest.mark.django_db
+def test_the_codename_catalogue_is_closed_to_a_plain_viewer(viewer):
+    """2026-10-29(RBAC 审查 L4):codename 目录只给 ADMIN 与持 system.settings / menu.manage 的人 ——
+    调它的只有权限页与菜单编辑页。此前 `[IsAuthenticated]`,VIEWER 拿得到全部目录。"""
+    assert viewer.get("/api/v1/perm/permissions/").status_code == 403
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("codename", ["menu.manage", "system.settings"])
+def test_a_custom_role_holding_a_page_codename_reads_the_catalogue(viewer, codename):
+    """菜单编辑页的闸是 `menu.manage`、权限页是 `system.settings`:持其一的自定义角色照样拿到目录,
+    不持的(同一租户、同一请求)拿不到 —— 两页都不被这道门打断。"""
+    from apps.perm.cache import invalidate_all_permissions
+    from apps.perm.models import RolePermission
+
+    role = Role.objects.create(name="CATALOGUER", display_name="CATALOGUER")
+    perm, _ = Permission.objects.get_or_create(codename=codename, defaults={"name": codename, "category": "system"})
+    Permission.objects.get_or_create(codename="menu.manage", defaults={"name": "m", "category": "system"})
+    Permission.objects.get_or_create(codename="system.settings", defaults={"name": "s", "category": "system"})
+    RolePermission.objects.create(role=role, permission=perm)
+    invalidate_all_permissions()
+    holder = User.objects.create_user(username="cataloguer", password="x", role="CATALOGUER",
+                                      tenant=Tenant.objects.get(code="CN_DIYU"))
+    client = APIClient()
+    client.force_authenticate(user=holder)
+    response = client.get("/api/v1/perm/permissions/")
+    assert response.status_code == 200
+    assert codename in {row["codename"] for row in response.data}
+    assert viewer.get("/api/v1/perm/permissions/").status_code == 403
 
 
 @pytest.mark.django_db

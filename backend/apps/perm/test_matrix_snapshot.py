@@ -226,9 +226,11 @@ READ_MATRIX = {
     # IsAdminPermission — a real gate, just not a codename one
     "/api/v1/users/": ADMIN_ONLY,
     "/api/v1/auth/login-logs/": ADMIN_ONLY,
-    # IsAuthenticated only: every logged-in user can read the permission model
-    # itself. Information disclosure, not privilege escalation.
-    "/api/v1/perm/permissions/": OPEN_TO_ALL,
+    # 2026-10-29 (RBAC review L4): ADMIN or a holder of system.settings /
+    # menu.manage (CanReadPermissionCatalogue) -- of the defaults, ADMIN alone.
+    "/api/v1/perm/permissions/": ADMIN_ONLY,
+    # IsAuthenticated only: every logged-in user can read the role names.
+    # Information disclosure, not privilege escalation.
     "/api/v1/perm/roles/": OPEN_TO_ALL,
     # see the module docstring: audit measured 500, the FieldError is now fixed
     "/api/v1/organizations/": OPEN_TO_ALL,
