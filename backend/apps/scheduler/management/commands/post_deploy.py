@@ -100,6 +100,8 @@ class Command(BaseCommand):
             warn("CELERY_BEAT_SCHEDULER is not DatabaseScheduler; the rows above will never fire")
         if not getattr(settings, "SENTRY_DSN", ""):
             warn("SENTRY_DSN is empty: no error tracking, no cron monitors")
+        if not getattr(settings, "OPS_ALERT_WEBHOOK_URL", ""):
+            warn("OPS_ALERT_WEBHOOK_URL is empty: task failures reach in-app notifications only")
         if not getattr(settings, "MATRIX_ENABLED", False):
             warn("MATRIX_ENABLED is off: /me/chat/ answers 503")
         backend = getattr(settings, "EMAIL_BACKEND", "")

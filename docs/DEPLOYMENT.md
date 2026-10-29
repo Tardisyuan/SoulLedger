@@ -349,3 +349,91 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
   2026-09-19 本机实跑过这一套(备份 → stop → dropdb → 卷恢复 → init → pg_restore → start):
   各步 exit 0,服务账号 `@soulledger:…` 与 admin 标记都在,`public` 下没有不属 `synapse` 的表,
   签名密钥前后 sha 相同,`/_matrix/client/versions` 经 nginx 200。
+
+### 备份异地副本与告警(2026-10-30)
+
+`backup` 服务用 `postgres:16-alpine`,不是库用的 `pgvector/pgvector:pg16`:它的命令要 busybox `crond`,
+而 Debian 版的 pgvector 镜像里没有(`dc61b349` 把两者一起换了,于是每日 cron 从没起来,容器在首次备份后反复重启)。
+`pg_dump` 不需要服务端扩展,dump 里的 `CREATE EXTENSION vector` 在恢复时由库执行。
+
+根 `.env` 里可设(都可不设,不设时脚本**打印一行**说明而不是静默):
+
+| 变量 | 作用 | 默认 |
+|------|------|------|
+| `BACKUP_RETENTION_DAYS` | 本机 `./backups/` 保留天数 | 30 |
+| `BACKUP_OFFSITE_REMOTE` | rclone 目标(`s3:bucket/soulledger`、`sftp-box:/srv/sl-backups`…)。设了就在每次备份后 `rclone copy`;启动时自动 `apk add rclone` | 不设 = 无异地副本 |
+| `BACKUP_OFFSITE_RETENTION_DAYS` | 异地超过这么多天的 `soulledger_*` 被 `rclone delete --min-age` 删掉;`0` = 永不删(交给对象存储的生命周期规则) | 90 |
+| `OPS_ALERT_WEBHOOK_URL` | 告警出口。备份 / 恢复演练失败、定时任务首次失败与逾期都 POST `{"text": …, "content": …}`(Slack / Mattermost 读 `text`,Discord 读 `content`) | 不设 = 只打印 / 只站内通知 |
+
+- rclone 的远端配置放在 compose 目录的 `./rclone/rclone.conf`(只读挂进容器,已在 `.gitignore`),
+  或者用 `RCLONE_CONFIG_<名字>_*` 环境变量。**是 copy 不是 sync**:本机卷被清空后下一次备份不会把异地也清空。
+- 异地失败时本机备份照样留着,脚本非零退出并告警;healthcheck 只看本机文件,所以异地失败**只靠告警**被看见。
+- 定时任务那一侧:`apps/scheduler/services.py::ops_alert`,在站内通知之外 POST 同一个地址,每个失败 / 逾期回合一次;
+  backend / celery 经 `x-django-env` 收到这个变量。`post_deploy` 在它为空时警告一行。
+- 验:`$DC run --rm --no-deps backup /scripts/backup-db.sh /backups`,看末尾 `Off-site copy complete.`;
+  把 `BACKUP_OFFSITE_REMOTE` 临时改成不存在的远端再跑一次,应退出 1 并在 webhook 收到 `backup-db.sh FAILED`。
+
+### 恢复演练
+
+`scripts/restore-drill.sh` 把**最新一份** db 备份恢复进同一台库上的临时库 `soulledger_drill_<pid>`,
+与线上库比对后删掉(成功、失败都删;`DRILL_KEEP=1` 保留):
+
+```bash
+$DC run --rm --no-deps --entrypoint bash backup /scripts/restore-drill.sh /backups
+```
+
+- 线上库只读。比对两项,任一不符即退出 1 并告警:线上有的表恢复出来都要有;线上 `django_migrations` 的每一行
+  恢复出来都要有(等于对线上代码问一次 `migrate --check` —— 备份之后又部署过带迁移的版本时这一项会红,那是对的:
+  那份备份恢复后要再 `migrate`)。另打印两边逐表行数与合计、以及恢复耗时(RTO 里实测的那一段)。
+- 要用 Django 自己的 `migrate --check` 再核一次:`DRILL_KEEP=1` 跑完,
+  `$DC run --rm --no-deps -e DATABASE_URL=postgres://soulledger:<密码>@db:5432/soulledger_drill_<pid> backend python manage.py migrate --check`,
+  然后 `$DC exec db dropdb -U soulledger soulledger_drill_<pid>`。
+- 建议每月一次,以及每次改了备份脚本、换了镜像之后。临时库和线上库同在一台,数据量大时先看磁盘余量(约等于线上库大小)。
+
+### RPO / RTO
+
+目标(现在没有生产,是上线时的起点,不是承诺):
+
+| | 目标 | 依据 |
+|--|------|------|
+| RPO(最多丢多久的数据) | **24 小时** | 每天 02:00 一份全量 dump;healthcheck 在最新一份超过 26 小时时转 unhealthy |
+| RTO(多久恢复服务) | **2 小时** | 停服务 + dropdb/createdb + 恢复(演练脚本打印实测耗时)+ 起服务 + 冒烟;媒体与聊天卷另计解包时间 |
+
+RPO 要比 24 小时更短,做法是 **WAL 归档 + 时间点恢复(PITR)**,这里只写做法,**现在不配**:
+
+1. `db` 服务加 `command: postgres -c wal_level=replica -c archive_mode=on -c archive_timeout=300 -c archive_command='…'`,
+   `archive_command` 把每段 WAL 送到异地(用 WAL-G / pgBackRest 之类的工具,不要手写 `cp`:要处理失败重试与校验)。
+   `archive_timeout=300` 让空闲时也最多 5 分钟切一段,RPO 约为 5 分钟。
+2. 每天(或每周)一次**基础备份**(`pg_basebackup` 或工具自带的 `backup-push`),保留到最老一份基础备份之后的 WAL。
+3. 恢复:新数据目录放基础备份,`postgresql.conf` 设 `restore_command`(从异地取 WAL)与 `recovery_target_time='<出事前一刻>'`,
+   建 `recovery.signal` 后启动;到达目标后 `pg_wal_replay_resume()` 或按 `recovery_target_action=promote` 提升。
+4. 演练同样要做:把基础备份 + WAL 恢复到临时实例,核对到目标时间点的最后一笔业务在、之后的不在。
+5. 每日 `pg_dump` 照留:它是逻辑备份,跨大版本、挑单表恢复都靠它;PITR 不替代它。
+
+## 部署回滚
+
+backend / celery / celery-beat 共用本机构建的 `soulledger-backend` 镜像,启动命令里会先跑 `migrate`。
+**所以「回滚镜像」与「回滚数据库」是两件事。**
+
+1. **部署前**给当前镜像打一个可回退的标签,并做一次备份:
+
+   ```bash
+   docker tag soulledger-backend soulledger-backend:prev-$(git rev-parse --short HEAD)
+   $DC run --rm --no-deps backup /scripts/backup-db.sh /backups
+   $DC exec backend python manage.py showmigrations --plan | grep '\[ \]'   # 这次要跑的迁移
+   ```
+
+2. **新版本不带迁移,或带的迁移都可逆**:回退镜像即可。
+   - 有迁移时先在新镜像里把它们倒回到旧版本的最后一条:
+     `$DC exec backend python manage.py migrate <app> <旧版本该 app 的最后一个迁移名>`(每个有新迁移的 app 各一次);
+   - 然后 `docker tag soulledger-backend:prev-<sha> soulledger-backend && $DC up -d backend celery celery-beat`。
+   - 顺序不能反:旧镜像里没有新迁移文件,它倒不回去。
+3. **带不可逆迁移**(`RunPython` 没有 reverse、`RunSQL` 没有 reverse_sql):`migrate` 倒不回去,只能**恢复部署前那份备份**
+   (上面「数据库备份与恢复」的 dropdb / createdb / restore 三步),再起旧镜像。部署后写入的数据会丢,所以:
+   - 发布前看 `backend/tests/irreversible_migrations.txt`:它列出全部不可逆迁移,由
+     `tests/test_irreversible_migrations_are_listed.py` 钉住 —— 新加一条不可逆迁移不登记就红,所以它一定出现在发布的 diff 里。
+     2026-10-30 这份清单是空的。
+   - 可逆但带数据的(reverse 是 `RunPython.noop`,或 reverse 只撤回 forward 自己写的行)倒回去不报错,
+     数据却不会复原;这类看迁移自己的 docstring。
+4. 只回退前端不涉及数据库。前端服务没有固定的 `image:` 名(compose 按项目名命名构建产物,`docker compose images frontend` 看),
+   同样在部署前 `docker tag <那个名字> <那个名字>:prev-<sha>`,回退时 tag 回去再 `$DC up -d frontend`。

@@ -470,6 +470,11 @@ SCHEDULER_FAILED_RUN_RETENTION_DAYS = int(os.getenv("SCHEDULER_FAILED_RUN_RETENT
 # ... but always keep the newest N per job, so a monthly job's history is not
 # emptied by a daily sweep.
 SCHEDULER_RUN_KEEP_MIN = int(os.getenv("SCHEDULER_RUN_KEEP_MIN", "20"))
+# Ops alerts outside the app: a scheduled task's first failure and an overdue job are
+# also POSTed here ({"text", "content"}: Slack / Mattermost / Discord / generic).
+# scripts/backup-db.sh and scripts/restore-drill.sh read the same variable. Empty:
+# in-app notifications only, and each alert logs a warning saying nobody outside was told.
+OPS_ALERT_WEBHOOK_URL = os.getenv("OPS_ALERT_WEBHOOK_URL", "")
 # A PENDING run not picked up by a worker within this many seconds is LOST
 # (the broker dropped it, or no worker is consuming). 15 minutes: long enough
 # for a real backlog, short enough that the next daily job is not blamed.

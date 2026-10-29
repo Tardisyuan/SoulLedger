@@ -21,6 +21,8 @@ x-django-env: &django-env
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   SENTRY_DSN: ${SENTRY_DSN:-}
+  # Scheduler failure / overdue alerts, also POSTed outside the app (settings.py).
+  OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
   # Officer e-mail links (password reset / e-mail verification) are built from
   # DESK_URL; unset, settings.py falls back to http://localhost:3000 and every

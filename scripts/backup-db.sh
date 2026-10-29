@@ -16,6 +16,18 @@
 # Exits non-zero on any failure, and a failed dump leaves no file matching
 # soulledger_*.sql.gz: the compose healthcheck counts those files.
 #
+# Off-site copy (optional): BACKUP_OFFSITE_REMOTE is an rclone destination
+# (`s3:bucket/soulledger`, `sftp-box:/srv/backups`, a local path, …; remotes come
+# from the rclone config, RCLONE_CONFIG or RCLONE_CONFIG_<NAME>_* variables).
+# After the local files are written, every soulledger_* file in BACKUP_DIR is
+# `rclone copy`-ed there — copy, never sync, so a wiped local volume cannot
+# empty the off-site side. Off-site files older than OFFSITE_RETENTION_DAYS
+# (default 90; 0 = never delete) are then removed there. Unset: skipped, with
+# one line saying so. Set but rclone missing or failing: non-zero exit.
+#
+# Any non-zero exit calls ops_alert (scripts/ops-alert.sh): POSTs to
+# OPS_ALERT_WEBHOOK_URL, or prints that nobody was notified when it is unset.
+#
 # MEDIA_DIR (optional): if set, also tars that directory to
 # soulledger_media_<timestamp>.tar.gz alongside the db dump, same partial-
 # then-rename and non-zero-exit-on-failure behavior. The production compose
@@ -25,9 +37,14 @@
 
 set -eu
 
+# shellcheck disable=SC1091
+. "$(dirname "$0")/ops-alert.sh"
+trap 'rc=$?; [ "$rc" -eq 0 ] || ops_alert "backup-db.sh FAILED (exit $rc); see the backup container log"' EXIT
+
 BACKUP_DIR="${1:-./backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
+OFFSITE_RETENTION_DAYS="${OFFSITE_RETENTION_DAYS:-90}"
 
 # Load .env if present (manual runs from the repo root)
 if [ -f .env ]; then
@@ -123,6 +140,28 @@ if [ -n "${SYNAPSE_DATA_DIR:-}" ]; then
         mv "${SYNAPSE_DATA_FILE}.partial" "$SYNAPSE_DATA_FILE"
         echo "Synapse data backup complete: ${SYNAPSE_DATA_FILE} ($(du -h "$SYNAPSE_DATA_FILE" | cut -f1))"
     fi
+fi
+
+if [ -z "${BACKUP_OFFSITE_REMOTE:-}" ]; then
+    echo "BACKUP_OFFSITE_REMOTE not set; no off-site copy (this host's disk is the only copy)"
+else
+    if ! command -v rclone >/dev/null 2>&1; then
+        echo "ERROR: BACKUP_OFFSITE_REMOTE is set but rclone is not installed" >&2
+        exit 1
+    fi
+    echo "Copying backups off-site to ${BACKUP_OFFSITE_REMOTE}..."
+    if ! rclone copy --include 'soulledger_*' --exclude '*.partial' "$BACKUP_DIR" "$BACKUP_OFFSITE_REMOTE"; then
+        echo "ERROR: off-site copy failed; local backups are intact" >&2
+        exit 1
+    fi
+    if [ "$OFFSITE_RETENTION_DAYS" -gt 0 ]; then
+        echo "Deleting off-site backups older than ${OFFSITE_RETENTION_DAYS} days..."
+        if ! rclone delete --include 'soulledger_*' --min-age "${OFFSITE_RETENTION_DAYS}d" "$BACKUP_OFFSITE_REMOTE"; then
+            echo "ERROR: off-site retention cleanup failed (the copy itself succeeded)" >&2
+            exit 1
+        fi
+    fi
+    echo "Off-site copy complete."
 fi
 
 # Clean up old backups
