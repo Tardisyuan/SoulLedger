@@ -4062,7 +4062,7 @@
     "expired_on": "期满 {{date}}",
     "arrange_reincarnation": "安排轮回",
     "serving_until": "服刑中 · 至 {{date}}",
-    "term_default": "默认 {{n}} 年 · 可改",
+    "term_default": "默认 {{n}} 年",
     "release": "期满释放",
     "release_confirm": "确认期满释放？",
     "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就候转世（或终局）。不可撤销。",
@@ -5615,6 +5615,22 @@
       "title": "申诉复核:已改判",
       "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"
     },
+    "wangsi_upheld": {
+      "title": "冤情申诉:属实 · 提前释放",
+      "body": "你的冤情申诉经审核属实，已提前出枉死城。打开灵魂簿查看。"
+    },
+    "wangsi_upheld_late": {
+      "title": "冤情申诉:属实",
+      "body": "你的冤情申诉经审核属实。打开灵魂簿查看审核意见。"
+    },
+    "wangsi_delivered": {
+      "title": "冤情申诉:属实 · 已超度",
+      "body": "你的冤情申诉经审核属实，已超度出枉死城。打开灵魂簿查看。"
+    },
+    "wangsi_rejected": {
+      "title": "冤情申诉:不属实",
+      "body": "你的冤情申诉经审核不属实。打开灵魂簿查看审核意见。"
+    },
     "disposition_executed": {
       "title": "处置已执行",
       "body": "你的处置已执行,打开灵魂簿查看。"
@@ -5928,6 +5944,10 @@
     "city_god_case_returned": {
       "title": "城隍退回补正",
       "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"
+    },
+    "wangsi_grievance_filed": {
+      "title": "枉死城有新申诉",
+      "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"
     },
     "workflow_pick_nodes": {
       "title": "请为本域选站",
@@ -7363,7 +7383,8 @@
       "level_saves": "点选即保存"
     },
     "judgment": {
-      "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站"
+      "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站",
+      "flow_not_here": "这条审批流程由别的殿主办，本殿在其中没有一段，这里看不到详情；进度见上一页。"
     }
   },
   "print": {

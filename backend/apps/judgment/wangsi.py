@@ -23,6 +23,8 @@
 
 事件(2026-10-28):提出 / 属实(提前释放或期满后属实,payload 的 status 分得开)/ 超度 / 不属实各一条 `WANGSI_GRIEVANCE_*`,记在灵魂时间线上,与那一笔同一事务。
 payload:judgment_id、status、冤情等级;提出另带 via(officer / soul)。不带申诉原文、审核批语与经办官员。
+推送与通知(2026-10-29 用户决定):四种结论推给灵魂 App(`soul_push.services.WANGSI_STATUS_KINDS`,事件总线接);
+提出时通知城隍名下官员(`_notify_filed`)。两者都在提交之后发。
 """
 from django.db import transaction
 from django.utils import timezone
@@ -101,7 +103,22 @@ def file_grievance(pk, user, plea: str, *, account=None) -> Judgment:
         _save(judgment, "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
               "grievance_filed_at")
         _event(judgment, "WANGSI_GRIEVANCE_FILED", via="soul" if account is not None else "officer")
+        _notify_filed(judgment)
     return judgment
+
+
+def _notify_filed(judgment: Judgment) -> None:
+    """提出申诉:提交后通知这件案子城隍名下的官员(站内通知 + 官员 App 的待办推送,与城隍收案同一写法);
+    名下没有官员、或案子没交城隍时只通知本殿管理员(`may_decide` 的另一半),不推官员 App ——
+    「枉死申诉」那组待办只列城隍名下官员的(`officer_app.todo._wangsi_items`),推了他们点开也落不到这一件。"""
+    from apps.judgment import city_gods
+    from apps.officer_app.push import notify_users
+
+    officers = (list(judgment.city_god.officers.filter(is_active=True))
+                if judgment.city_god_id is not None else [])
+    recipients = [u.pk for u in officers] or city_gods._hall_admins(judgment.tenant_id)
+    city_gods._notify_after_commit(recipients, "WANGSI_GRIEVANCE_FILED", judgment)
+    notify_users(officers, target={"kind": "wangsi", "id": str(judgment.pk)})
 
 
 def decide_grievance(pk, user, *, upheld: bool, note: str, deliver: bool = False) -> Judgment:

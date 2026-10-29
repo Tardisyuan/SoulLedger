@@ -13,5 +13,16 @@
   "appeals.refusal.appeal_closed",
   "appeals.refusal.ladder_running",
   "disposition.release_error.generic",
-  "officer_app.biometric.prompt"
+  "officer_app.biometric.prompt",
+  "soul_push.wangsi_upheld.title",
+  "soul_push.wangsi_upheld.body",
+  "soul_push.wangsi_upheld_late.title",
+  "soul_push.wangsi_upheld_late.body",
+  "soul_push.wangsi_delivered.title",
+  "soul_push.wangsi_delivered.body",
+  "soul_push.wangsi_rejected.title",
+  "soul_push.wangsi_rejected.body",
+  "official_notify.wangsi_grievance_filed.title",
+  "official_notify.wangsi_grievance_filed.body",
+  "officer_app.judgment.flow_not_here"
 ]
