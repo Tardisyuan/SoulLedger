@@ -123,8 +123,19 @@ class TestStaleFlagIsWrittenOnce:
         # select, then UPDATE + audit pre-save read + audit insert per row);
         # bulk is 4 (tenant, select, one bulk UPDATE, one batch audit row) and
         # does not grow with the row count.
+        # 2026-10-29: the batch audit row now takes the edited rows' tenant; with
+        # `tenant_id` deferred that was one extra SELECT per row (7 on real PG).
         with django_assert_max_num_queries(5):
             auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+
+    def test_the_batch_audit_row_is_filed_under_the_rows_hall(self):
+        from apps.audit.models import AuditLog
+
+        auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        rows = AuditLog.objects.filter(action="BATCH_UPDATE", changes__details__field="stale_since")
+        assert rows.count() == 1
+        assert rows.get().tenant_id == self.tenant.id
+        assert not rows.filter(tenant__isnull=True).exists()
 
 
 @pytest.mark.django_db
