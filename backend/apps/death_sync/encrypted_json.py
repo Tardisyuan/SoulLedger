@@ -6,7 +6,7 @@ from cryptography.fernet import InvalidToken
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from apps.death_sync.fields import get_fernet
+from apps.death_sync.fields import get_fernet, strict_reads
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,8 @@ class EncryptedJSONField(models.JSONField):
             try:
                 return json.loads(fernet.decrypt(value.encode()).decode())
             except InvalidToken:
+                if strict_reads.get():
+                    raise
                 logger.warning(
                     "EncryptedJSONField: stored value is not a Fernet token; reading it "
                     "as plain JSON (written before ENCRYPTION_KEY was set?)"

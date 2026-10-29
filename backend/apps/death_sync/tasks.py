@@ -6,7 +6,7 @@ from django.utils import timezone
 
 
 @shared_task(name="death_sync.cleanup_old_requests")
-def cleanup_old_requests(days=90, batch_size=1000):
+def cleanup_old_requests(days=None, batch_size=1000):
     """
     Fan out one cleanup subtask per active tenant. This is a DELETE, the
     highest-stakes of the four tasks fixed here: unscoped, a single batch
@@ -26,12 +26,19 @@ def cleanup_old_requests(days=90, batch_size=1000):
 
 
 @shared_task(name="death_sync.cleanup_old_requests_for_tenant")
-def cleanup_old_requests_for_tenant(tenant_id: str, days=90, batch_size=1000):
+def cleanup_old_requests_for_tenant(tenant_id: str, days=None, batch_size=1000):
     """
     Delete DeathRegistrationRequest records older than N days, for exactly
-    one tenant, in batches.
+    one tenant, in batches. `days=None` reads DEATH_SYNC_REQUEST_RETENTION_DAYS; 0 keeps everything.
     """
     import time
+
+    from django.conf import settings
+
+    if days is None:
+        days = max(int(settings.DEATH_SYNC_REQUEST_RETENTION_DAYS or 0), 0)
+    if not days:
+        return {"tenant_id": tenant_id, "deleted": 0, "skipped": "retention disabled"}
 
     from apps.death_sync.models import DeathRegistrationRequest
     from apps.tenants.managers import clear_current_tenant, set_current_tenant

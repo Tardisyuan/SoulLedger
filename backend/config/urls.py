@@ -18,6 +18,7 @@ from apps.chat import urls as chat_urls
 from apps.chat.image_views import ChatImageFileView
 from apps.core.app_version import AppVersionView
 from apps.core.health import HealthCheck, HealthCheckDetailed
+from apps.core.metrics import metrics_view
 from apps.core.permissions import IsAdminPermission
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.judgment.attachment_views import CaseAttachmentFileView
@@ -61,6 +62,8 @@ urlpatterns = [
     path("health/", HealthCheck.as_view(), name="health"),
     path("api/v1/app-version/", AppVersionView.as_view(), name="app-version"),
     path("health/detailed/", HealthCheckDetailed.as_view(), name="health_detailed"),
+    # Prometheus (apps/core/metrics.py): closed unless METRICS_TOKEN / METRICS_ALLOWED_IPS is set.
+    path("metrics/", metrics_view, name="metrics"),
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/users/", include(user_router.urls)),
     path("api/v1/recycle-bin/", include(recycle_bin_router.urls)),

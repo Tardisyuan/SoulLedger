@@ -101,3 +101,37 @@ def test_the_job_is_registered_and_runnable():
     from apps.audit.tasks import prune_retained_data as task
 
     assert task.name == "audit.prune_retained_data"
+
+
+def test_assist_usage_ages_out_and_a_zero_setting_keeps_it(user, settings):
+    from apps.soul_assist.models import AssistUsage
+    from apps.soul_assist.usage import record
+
+    record("officer", user.tenant, "ok")
+    record("officer", user.tenant, "ok")
+    old, young = AssistUsage.objects.order_by("id")
+    AssistUsage.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=731))
+
+    settings.ASSIST_USAGE_RETENTION_DAYS = 0
+    assert "assist_usage" not in prune_retained_data()
+    assert AssistUsage.objects.count() == 2
+
+    settings.ASSIST_USAGE_RETENTION_DAYS = 730
+    assert prune_retained_data()["assist_usage"] == 1
+    assert list(AssistUsage.objects.values_list("pk", flat=True)) == [young.pk]
+
+
+def test_expired_django_sessions_go_live_ones_stay(db):
+    from django.contrib.sessions.backends.db import SessionStore
+    from django.contrib.sessions.models import Session
+
+    live = SessionStore()
+    live["k"] = 1
+    live.create()
+    dead = SessionStore()
+    dead["k"] = 1
+    dead.create()
+    Session.objects.filter(pk=dead.session_key).update(expire_date=timezone.now() - timedelta(seconds=1))
+
+    assert prune_retained_data()["expired_sessions"] == 1
+    assert list(Session.objects.values_list("pk", flat=True)) == [live.session_key]
