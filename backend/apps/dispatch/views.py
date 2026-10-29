@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from apps.actors.models import Actor
 from apps.core.exports import export_csv
+from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import is_tenant_exempt
@@ -199,6 +200,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return DispatchRecordListSerializer
         return DispatchRecordSerializer
 
+    @idempotent
     def create(self, request, *args, **kwargs):
         """
         Route creation through DispatchService.propose() instead of the
@@ -550,6 +552,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         return Response(DispatchRecordListSerializer(history, many=True).data)
 
     @action(detail=True, methods=["post"])
+    @idempotent
     def approve(self, request, pk=None):
         """
         Approve a proposed dispatch.
@@ -622,6 +625,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         return Response(DispatchRecordSerializer(dispatch_record).data)
 
     @action(detail=True, methods=["post"])
+    @idempotent
     def execute(self, request, pk=None):
         """
         Execute an approved dispatch: the soul starts residing in the target

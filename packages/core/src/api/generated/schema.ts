@@ -651,6 +651,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/admin/sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_auth_admin_sessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/sessions/{session_id}/revoke/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_auth_admin_sessions_revoke_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/sessions/revoke-user/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_auth_admin_sessions_revoke_user_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password/": {
         parameters: {
             query?: never;
@@ -10290,6 +10338,30 @@ export interface components {
          * @enum {string}
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
+        AdminSession: {
+            /** Format: uuid */
+            id: string;
+            user_id: number;
+            username: string;
+            display_name: string;
+            tenant_code: string | null;
+            label: string;
+            method: string;
+            ip_address: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            current: boolean;
+        };
+        AdminSessionPage: {
+            count: number;
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["AdminSession"][];
+        };
         /**
          * @description `WebhookConfig` as the admin tab sees it.
          *
@@ -18507,6 +18579,12 @@ export interface components {
         RevokeOthersResponse: {
             revoked: number;
         };
+        RevokeUserRequest: {
+            user: number;
+        };
+        RevokeUserResponse: {
+            revoked: number;
+        };
         Role: {
             readonly id: number;
             name: string;
@@ -22574,6 +22652,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditLog"][];
+                };
+            };
+        };
+    };
+    v1_auth_admin_sessions_retrieve: {
+        parameters: {
+            query?: {
+                /** @description officer(默认)或 soul */
+                kind?: "officer" | "soul";
+                page?: number;
+                user?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSessionPage"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_admin_sessions_revoke_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_admin_sessions_revoke_user_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RevokeUserRequest"];
+                "multipart/form-data": components["schemas"]["RevokeUserRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeUserResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
                 };
             };
         };

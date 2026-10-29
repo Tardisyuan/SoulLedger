@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
+import { requestIdOf } from "@soulledger/core/api/requestStamp";
 
 /**
  * `QueryError`(列表查询失败)仍是规范 v2 补足 C15 的那一段:冷玫红「✕ 标题」13 / 600、
@@ -30,7 +31,8 @@ export function PageError({ error, reset }: PageErrorProps) {
       code="500"
       title={t("error.title")}
       message={error.message || t("error.description")}
-      detail={error.digest && <>trace {error.digest}</>}
+      // A failed API call carries the server's X-Request-ID: its first 8 characters find the request in the logs.
+      detail={error.digest ? <>trace {error.digest}</> : requestIdOf(error) && <>request {requestIdOf(error)}</>}
       action={
         <Button type="button" variant="secondary" size="sm" onClick={reset}>
           {t("error.retry")}

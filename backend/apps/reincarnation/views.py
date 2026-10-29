@@ -6,6 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
@@ -102,6 +103,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         return Response([{"rebirth_form": form, **row} for form, row in quota_usage(tenant).items()])
 
     @action(detail=False, methods=["post"])
+    @idempotent
     def reborn(self, request):
         """
         Create a new reincarnation for a soul and immediately complete it.

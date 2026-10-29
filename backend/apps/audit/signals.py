@@ -384,30 +384,28 @@ def _current_context():
 
 
 def _get_trace_id(request=None):
-    """Extract or generate trace_id from request for correlation."""
+    """The request's X-Request-ID (`apps/core/trace.py`), so audit rows and log lines share one id.
+
+    Until 2026-10-29 the id was invented here, on the first audit write of a request, and lived only on the
+    audit row: no log line, no response header, no client could name it. The fallback below is for a request
+    that never went through the middleware (a test's RequestFactory): one id per request, as before.
+    """
+    from apps.core.trace import get_trace_id, new_trace_id
+
+    trace_id = get_trace_id()
+    if trace_id:
+        return trace_id
     if request is None:
         try:
             from apps.core.request_local import get_current_request
             request = get_current_request()
         except Exception:
             return ''
-
     if request is None:
         return ''
-
-    # Check for existing trace_id on request (set by middleware)
-    trace_id = getattr(request, '_audit_trace_id', None)
-    if trace_id:
-        return trace_id
-
-    # Generate new trace_id from request headers or create one
-    import uuid
-    trace_id = request.META.get('HTTP_X_TRACE_ID', '')
+    trace_id = getattr(request, 'trace_id', None) or getattr(request, '_audit_trace_id', None)
     if not trace_id:
-        trace_id = uuid.uuid4().hex[:16]
-
-    # Cache on request for reuse within same request
-    if request:
+        trace_id = new_trace_id()
         request._audit_trace_id = trace_id
     return trace_id
 

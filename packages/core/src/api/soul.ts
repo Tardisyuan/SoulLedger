@@ -48,6 +48,7 @@ import type {
 } from "./auth";
 import type { components } from "./generated/schema";
 import type { AppealCompensation } from "../domain/appeals";
+import { stampRequest } from "./requestStamp";
 
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
@@ -133,6 +134,7 @@ soulHttp.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers["Accept-Language"] = getLocale();
+  stampRequest(config.headers, config.method);
   return config;
 });
 

@@ -310,6 +310,9 @@ DEFAULT_PERMISSIONS = [
     ("dashboard.read", "查看仪表盘", "dashboard"),
     # audit 权限
     ("audit.read", "查看审计日志", "audit"),
+    # 在线会话:管理员列出本殿(无殿管理员:全部)的登录会话并强退(apps/authentication/admin_session_views.py)。
+    # 只授 ADMIN(2026-10-29 用户决定);perm/0028 落 Permission 行。
+    ("session.manage", "管理在线会话", "session"),
     # notification 权限
     ("notification.read", "查看通知", "notification"),
     # dispatch 权限（read/manage 二元，外加三个审批动作）
@@ -432,7 +435,7 @@ ROLE_PERMISSIONS = {
         "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
         "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
-        "scheduler.read", "scheduler.manage",
+        "scheduler.read", "scheduler.manage", "session.manage",
         "soul_account.read", "soul_account.manage",
         "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
