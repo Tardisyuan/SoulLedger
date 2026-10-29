@@ -202,6 +202,7 @@ SITES = [
     ('apps/officer_app/todo.py', '_workflows', 'ApprovalWorkflow._base_manager', 1, 'FILTERED', 'scope_to_tenant on the same line'),
     ('apps/perm/data_scope.py', '_children', 'Organization._base_manager', 1, 'FILTERED', "(id, parent_id) of the user's own hall's live orgs, filtered by user.tenant_id; only org ids leave, and they are ANDed onto an already hall-scoped queryset"),
     ('apps/perm/data_scope.py', '_user_q', 'model._base_manager', 1, 'PK', 'a pk__in subquery keyed by the user (M2M / reverse FK); it only narrows the caller\'s already hall-scoped queryset'),
+    ('apps/perm/data_scope.py', '_user_q', 'related._base_manager', 1, 'PK', 'ids of the few related rows (e.g. city gods) the user is a member of, keyed by the user; they only narrow the caller\'s already hall-scoped queryset'),
     ('apps/perm/data_scope.py', 'visible_to', 'type(obj)._base_manager', 1, 'PK', 'exists() on one row the caller already holds, by its pk; returns a bool, never rows'),
     ('apps/perm/matrix.py', 'template_restore_refusal', 'WorkflowTemplate.all_objects', 1, 'PK', 'templates of one recycle-bin cascade id'),
     ('apps/perm/models.py', '_revive_or_create', 'model.all_objects', 1, 'GLOBAL', 'Role/Permission/etc. are global tables; revives a binned row by unique key'),
