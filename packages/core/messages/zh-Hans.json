@@ -2316,7 +2316,8 @@
         "invalid_assignee": "该官员不在本租户，或没有办案权限",
         "not_found": "有审判已不存在",
         "permission_denied": "没有权限",
-        "generic": "操作未能完成"
+        "generic": "操作未能完成",
+        "assignee_out_of_scope": "对方的数据范围看不到这条数据"
       },
       "held_short": "到期后可认领",
       "held": "这桩审判候至 {{date}}：灵魂在枉死城，到那天才能认领。",
@@ -7618,7 +7619,14 @@
     "delete_body": "删除后不能恢复。",
     "saved": "已保存",
     "deleted": "已删除",
-    "failed": "没能保存，请重试"
+    "failed": "没能保存，请重试",
+    "move_to": "把名下的灵魂与审判转移到",
+    "move_and_delete": "转移并删除",
+    "owner_label": "所属机构",
+    "owner_change": "修改",
+    "owner_saved": "所属机构已修改",
+    "owner_out_of_scope": "这个机构不在你的数据范围内",
+    "owner_failed": "所属机构没有改成"
   },
   "events": {
     "col_time": "时间",
@@ -7979,7 +7987,8 @@
     "blocked_title": "现在不能移交",
     "problem": {
       "target_cannot_judge": "{{name}}不能办案，而要交出的有审判或申诉。换一位接手人，或先给他办案的权限。",
-      "target_cannot_reply": "{{name}}不能回信，而要交出的有书信。换一位接手人，或先给他回信的权限。"
+      "target_cannot_reply": "{{name}}不能回信，而要交出的有书信。换一位接手人，或先给他回信的权限。",
+      "target_out_of_scope": "{{name}}的数据范围看不到要交出的某件审判或申诉。换一位接手人，或先调整他的数据范围。"
     },
     "result_title": "已移交给{{name}}",
     "result_counts": "实际移交：审判 {{judgments}} · 申诉 {{appeals}} · 城隍 {{city_gods}} · 书信 {{letters}}",
