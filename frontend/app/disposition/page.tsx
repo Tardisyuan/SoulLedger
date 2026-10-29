@@ -55,7 +55,7 @@ const SECTION_TITLE: Record<DispositionSection, string> = {
 };
 const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", executing: "乙", expired: "丙" };
 /** `apps/judgment/weighing.py::unfinished_flow` 的码:前两个在 `disposition.flow_waiting`,埃及的在 `judgment.weighing.errors`。 */
-const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected"];
+const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected", "approval_cancelled"];
 const FLOW_WAITING_WEIGHING = ["weighing_in_progress", "weighing_rejected", "weighing_wavers"];
 
 export default function DispositionPage() {

@@ -32,7 +32,16 @@ def _realm_for(soul, verdict):
 
 @pytest.fixture
 def case(cn_tenant):
-    """一个灵魂(带 /me 客户端)、一件由 `decider` 结案 FAILED 的原审判。两个裁决的 realm 都种好。"""
+    """一个灵魂(带 /me 客户端)、一件由 `decider` 结案 FAILED 的原审判,原审流程已走完(2026-10-29 起流程没走完
+    不能申诉,审查 B)。两个裁决的 realm 都种好。"""
+    made = make_case(cn_tenant)
+    sp.walk_flow(made["judgment"])
+    made["judgment"].refresh_from_db()
+    return made
+
+
+def make_case(cn_tenant):
+    """Same as `case`, its origin flow still running."""
     account, client = ready_soul(cn_tenant)
     soul = account.soul
     for verdict in (Verdict.FAILED, Verdict.PASSED):

@@ -136,6 +136,8 @@ SITES = [
     ('apps/judgment/weighing.py', 'reweigh_after_rejection', 'Disposition.all_objects', 1, 'PK', "the refused judgment's own dispositions, by its pk"),
     ('apps/judgment/weighing.py', 'reweigh_after_rejection', 'SentencePlan.all_objects', 2, 'PK', "the plan the refused judgment opened (origin_judgment_id = its pk), read then voided by those pks"),
     ('apps/judgment/weighing.py', 'reweigh_after_rejection', 'SentenceNode.all_objects', 1, 'PK', "the nodes of that one plan"),
+    ('apps/judgment/weighing.py', 'origin_flow_open', 'ApprovalWorkflow._base_manager', 1, 'PK', "existence probe of the flows of one judgment (judgment_id) or one soul (soul_id), each reached through a scoped path; nothing is read back"),
+    ('apps/workflow/models.py', 'ApprovalWorkflow.complete_node', 'Judgment.all_objects', 1, 'PK', "existence probe of the flow's own judgment by its FK (five-heinous PASSED guard); nothing is read back"),
     ('apps/judgment/attachments.py', 'delete', 'Judgment.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/judgment/attachments.py', 'live', 'CaseAttachment.all_objects', 1, 'PK', "attachments of one judgment the caller already reached through a scoped path"),
     ('apps/judgment/attachments.py', 'may_view', 'Judgment.all_objects', 1, 'FILTERED', "wrapped in scope_to_tenant for the viewer's tenant (the one signed into the URL); another hall's judgment answers like a missing one"),

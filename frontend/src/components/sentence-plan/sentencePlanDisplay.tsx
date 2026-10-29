@@ -62,6 +62,8 @@ export const REFUSAL_CODES = [
   "mortal_sin_unrepented", "no_mortal_sin",
   // 埃及否定告白(2026-10-28,apps/judgment/confessions.py):有一条记为「不实」,不能判通过。
   "untruthful_confession",
+  // 地府五逆(2026-10-29,审查 J;apps/judgment/models.py::refuse_passed_if_five_heinous):不能判通过。
+  "five_heinous_must_fail",
 ] as const;
 
 export function refusalKey(error: unknown): string {

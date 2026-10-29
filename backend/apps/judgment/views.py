@@ -694,8 +694,11 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # Realms are reference data but they are tenant-owned rows (RealmViewSet
         # scopes them the same way), so the options offered here go through the
         # same helper rather than being handed out unfiltered.
+        from apps.realms.models import RETIRED_REALM_CODES
+
         realms = scope_to_tenant(
-            Realm.objects.filter(civilization=soul.civilization), request
+            Realm.objects.filter(civilization=soul.civilization).exclude(realm_code__in=RETIRED_REALM_CODES),
+            request,
         )
         payload["realm_options"] = RealmLocalizedSerializer(
             realms.order_by("tier", "realm_code"), many=True, context=context

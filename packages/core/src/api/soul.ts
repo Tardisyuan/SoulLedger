@@ -420,6 +420,8 @@ export const APPEAL_REFUSAL_CODES = [
   // 撤回被拒(apps/judgment/appeals.py `withdraw`):已有结论 / 已撤回,或已进申诉流程。
   "appeal_closed",
   "ladder_running",
+  // 原审的审批流程还没走完(2026-10-29,审查 B):申诉与上诉都等它走完。
+  "origin_flow_open",
 ] as const;
 
 export function appealRefusalKey(code: string | null | undefined): string | null {

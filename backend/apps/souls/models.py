@@ -595,7 +595,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     #: one only when the caller passes its `system` reason; `POST /souls/{id}/transition/` passes none.
     #: DISPOSED → JUDGING: a refused original judgment's approval flow (the Egyptian weighing included) opens the
     #: case again (apps/judgment/weighing.py::reweigh_after_rejection), its unexecuted disposition voided first.
-    SYSTEM_ONLY_TRANSITIONS = {("DISPOSED", "JUDGING"): "weighing_rejected"}
+    #: LOST → JUDGING (user 2026-10-29, review K): the same withdrawal for a soul that went missing in transit while
+    #: the flow ran — its disposition was never executed, so it is voided and the case heard again.
+    SYSTEM_ONLY_TRANSITIONS = {("DISPOSED", "JUDGING"): "weighing_rejected", ("LOST", "JUDGING"): "weighing_rejected"}
 
     def can_transition_to(self, new_state: str, *, system: str | None = None) -> bool:
         """
