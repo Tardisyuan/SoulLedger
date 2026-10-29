@@ -104,6 +104,10 @@ class DispatchRecord(AuditUserFields, models.Model):
     decided_at = models.DateTimeField(null=True, blank=True)
     executed_at = models.DateTimeField(null=True, blank=True)
     returned_at = models.DateTimeField(null=True, blank=True)
+    # 调拨执行时灵魂原来的归属机构(数据范围 B1):执行把 `Soul.owner_org` 改成目标殿根,结束暂居还原成它。
+    source_owner_org = models.ForeignKey(
+        "org.Organization", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
 
     tenant = models.ForeignKey(
         "tenants.Tenant",

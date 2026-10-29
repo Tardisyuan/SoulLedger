@@ -363,6 +363,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         related_name='souls',
         null=True,
     )
+    # 归属机构(数据范围 B1):新建时取 `apps/org/ownership.py::default_owner_org`,建后不自动变;
+    # 调拨执行改为目标殿根,结束暂居还原(`DispatchRecord.source_owner_org`)。可空只因为 `tenant` 可空。
+    owner_org = models.ForeignKey(
+        'org.Organization', on_delete=models.PROTECT, null=True, blank=True, related_name='owned_souls',
+    )
     # 原属租户(2026-09-17 用户决定:跨文明调拨是**暂居**,不是迁籍)。
     #
     # `tenant` 是「此刻由谁管辖」:审判、处置、功过读法、官员可见性都跟它走,
@@ -414,6 +419,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # without this PostgreSQL sorts the tenant's rows on every page.
             models.Index(fields=["tenant", "-create_time"], name="souls_soul_tenant_created_idx"),
             models.Index(fields=["tenant", "name"], name="souls_soul_tenant_name_idx"),
+            models.Index(fields=["tenant", "owner_org"], name="souls_soul_tenant_owner_idx"),
         ]
         constraints = [
             # 参与算术或路由决策的字段,过去一个约束都没有。`full_clean()` 实跑:
@@ -465,6 +471,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             raise ValidationError("This hall is deactivated and accepts no new souls.", code="hall_inactive")
         if is_new and self.home_tenant_id is None:
             self.home_tenant_id = self.tenant_id
+        if is_new and self.owner_org_id is None:
+            from apps.core.request_local import get_current_user
+            from apps.org.ownership import default_owner_org
+            self.owner_org = default_owner_org(self.tenant, self.create_user or get_current_user())
 
         if not is_new:
             super().save(*args, **kwargs)

@@ -4,6 +4,7 @@ AMENDMENT 审判结案那条路径要守,写在序列化器里就只守住一边
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.viewer import SEE_ALL, viewer_tenant_id
 from apps.sentence_plan.models import SentenceNode, SentencePlan, SentencePlanRequest, SentenceRequestKind
 from apps.sentence_plan.services import last_refusal
 
@@ -79,3 +80,22 @@ class SentencePlanSerializer(serializers.ModelSerializer):
             "nodes", "requests", "create_time", "update_time",
         ]
         read_only_fields = fields
+
+    def to_representation(self, plan):
+        """跨殿读只给自己那一站 + 对方殿名(决定 24):节点方读计划时,别殿那一站的理由、别殿提的请求的
+        理由与答复都不给;站的殿名、年数、状态照给(路线本身是它要知道的)。原属殿与全局 ADMIN 看全部。"""
+        data = super().to_representation(plan)
+        request = self.context.get("request")
+        viewer = viewer_tenant_id(request)
+        if viewer is SEE_ALL or viewer == plan.tenant_id:
+            return data
+        code = getattr(getattr(request, "tenant", None) or getattr(request.user, "tenant", None), "code", None)
+        for node in data["nodes"]:
+            if node["tenant_code"] != code:
+                node["reason"] = ""
+                if node["last_refusal"]:
+                    node["last_refusal"] = {**node["last_refusal"], "reason": None}
+        for req in data["requests"]:
+            if req["from_tenant_code"] != code:
+                req.update(reason="", decision_reason="")
+        return data

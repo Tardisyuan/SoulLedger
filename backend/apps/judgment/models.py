@@ -395,6 +395,11 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         related_name='judgments',
         null=True,
     )
+    # 归属机构(数据范围 B1):新建时取 `apps/org/ownership.py::default_owner_org`(court 匹配本殿机构名前缀优先),
+    # 建后不自动变。可空只因为 `tenant` 可空。
+    owner_org = models.ForeignKey(
+        'org.Organization', on_delete=models.PROTECT, null=True, blank=True, related_name='owned_judgments',
+    )
 
     # 第几世。与 SoulRecord.cycle 同义:0 是第一世。灵魂端「前世」按
     # (soul, cycle) 一次查出各世数据,不沿账号链递归
@@ -509,6 +514,7 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["is_final"]),
             models.Index(fields=["soul", "cycle"]),
             models.Index(fields=["tenant", "deferred_at", "claimed_by"]),
+            models.Index(fields=["tenant", "owner_org"], name="judgment_tenant_owner_idx"),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
@@ -522,6 +528,10 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         # 埃及的每一件案子都称心 —— 手开的、重开的、再称的,不只是死亡登记那一件(docs/01 §3.3、
         # 02 §1.1;用户 2026-10-27)。此前只有 `Soul.die` 设 HEART_WEIGHING,其余默认 STANDARD,
         # 按功德净值 ≥ 50 送芦苇原。
+        if self._state.adding and self.owner_org_id is None and self.tenant_id is not None:
+            from apps.core.request_local import get_current_user
+            from apps.org.ownership import default_owner_org
+            self.owner_org = default_owner_org(self.tenant, self.create_user or get_current_user(), self.court)
         if self._state.adding and self.civilization == "EGYPTIAN":
             self.judgment_method = JudgmentMethod.HEART_WEIGHING
         # 任何一次写入都是「有进展」,滞留标记随之清掉(见 `stale_since`)。只给了

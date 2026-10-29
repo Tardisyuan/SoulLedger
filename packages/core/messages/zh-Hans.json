@@ -1111,7 +1111,6 @@
       "pending_cells": "{{n}} 处待改",
       "discard": "放弃",
       "unsaved_region": "未保存的改动",
-      "saved_all": "已保存 {{n}} 项",
       "partial_title": "部分保存失败 · 已存 {{saved}} 项，失败 {{failed}} 项",
       "locate": "定位",
       "conflict_title": "冲突提示 {{n}}",
@@ -1147,7 +1146,12 @@
       "lock_hint": "管理员角色始终拥有全部权限，不能取消勾选。",
       "deny_word": "禁授",
       "deny_hint": "殿主不能被授予「{{perm}}」。",
-      "conflict_view": "查看"
+      "conflict_view": "查看",
+      "category_all": "全选",
+      "category_none": "全不选",
+      "category_all_label": "{{role}} 勾选「{{category}}」类的全部权限",
+      "category_none_label": "{{role}} 取消「{{category}}」类的全部权限",
+      "saved_all_refresh": "已保存 {{n}} 项 · 对方刷新页面后生效"
     },
     "segments": {
       "label": "权限分区",
@@ -1260,6 +1264,36 @@
       "save_error": "数据范围保存失败",
       "load_error": "数据范围读取失败",
       "read_only": "只有不属于任何殿的管理员能改数据范围"
+    },
+    "members": {
+      "tabs": "角色页签",
+      "tab_details": "详情",
+      "search": "搜索成员",
+      "list": "持有此角色的人",
+      "empty": "没有人持有此角色。",
+      "load_error": "成员加载失败",
+      "primary": "主角色",
+      "extra": "兼任",
+      "primary_locked": "主角色不能在这里移除：先给此人授别的主角色。",
+      "remove": "移除",
+      "remove_label": "移除 {{name}} 的兼任",
+      "grant": "批量授予",
+      "grant_n": "授予 {{n}} 人",
+      "pick_search": "按用户名或邮箱找人",
+      "pick_empty": "没有匹配的人",
+      "already": "已持有",
+      "kind": "授为",
+      "primary_hint": "授为主角色会替换此人原来的主角色。",
+      "granted": "已授予 {{n}} 人 · 对方刷新页面后生效",
+      "removed": "已移除 {{n}} 人 · 对方刷新页面后生效",
+      "change_error": "没有改成，请重试",
+      "refused_title": "这一批没有改动：下面这些人被拒绝。",
+      "refused": {
+        "not_found": "不在你能管理的范围内",
+        "primary_needs_replacement": "主角色不能直接移除，先授别的主角色",
+        "forbidden": "不能授予比你自己更高的角色",
+        "invalid": "这个角色不能这样授予"
+      }
     }
   },
   "workflow": {
@@ -2330,7 +2364,9 @@
       "embalming": "这桩审判候至 {{date}}：木乃伊尚未完成，灵魂还没启程前往两真之殿，到那天才能认领。",
       "duat_unfinished": "这桩审判不能认领：灵魂到不了两真之殿。",
       "duat_barred_short": "到不了殿，不能认领",
-      "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。"
+      "unferried": "这桩审判不能认领：亡魂未葬或没有渡资，滞留在阿刻戎岸边。",
+      "not_yours_readonly": "此案由{{name}}认领，只有认领人能改；你可以查看。",
+      "override_recorded": "你不是认领人（此案由{{name}}认领），此操作会留痕。"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2572,6 +2608,15 @@
     "ferry": {
       "barred_unburied": "未葬，不得过河",
       "barred_no_fare": "无渡资，不得过河"
+    },
+    "reopen_cancelled": {
+      "button": "重开一案",
+      "hint": "原审的审批流程已被撤销，发落停在这里。撤回结案，另开一件新案重审。",
+      "done": "已重开：{{case_number}}",
+      "refusal": {
+        "not_cancelled": "这件案子的审批流程没有被撤销，不能这样重开。",
+        "cannot_reopen": "灵魂已经安置，不能这样重开；请走重开申请或申诉。"
+      }
     }
   },
   "audit": {
@@ -3425,6 +3470,13 @@
     "organization_column": "机构 · 职务",
     "position": "职务",
     "organization_required": "有殿的非管理员必须属于一个机构",
+    "org_filter": {
+      "label": "按机构筛选（含下级）",
+      "all": "全部机构"
+    },
+    "status_filter": {
+      "all": "全部状态"
+    },
     "second_factor": {
       "title": "用你的两步验证码确认",
       "body": "{{name}} 是管理员。对另一位管理员操作，需要输入你自己的两步验证码。",
@@ -6260,7 +6312,9 @@
       "copy_source": "源文明",
       "copy_source_placeholder": "— 选择文明 —",
       "copy_confirm": "复制",
-      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的"
+      "copy_done": "已复制 {{copied}} 个，跳过 {{skipped}} 个已有的",
+      "copy_target": "复制到",
+      "copy_target_placeholder": "选择目标文明"
     },
     "mutes": {
       "col_soul": "灵魂",
@@ -7566,7 +7620,8 @@
     "delete_blocked_body": {
       "both": "下面还有 {{units}} 个下级机构、{{people}} 名人员。先把他们移到别的机构，再删。",
       "units": "下面还有 {{units}} 个下级机构。先把它们移到别的机构，再删。",
-      "people": "下面还有 {{people}} 名人员。先把他们移到别的机构，再删。"
+      "people": "下面还有 {{people}} 名人员。先把他们移到别的机构，再删。",
+      "records": "名下还有 {{souls}} 个灵魂、{{judgments}} 件审判。先把它们转到别的机构，再删。"
     },
     "delete_blocked_people": "查看人员",
     "delete_title": "删除「{{name}}」？",
@@ -7948,7 +8003,9 @@
     },
     "deactivate_prompt": "{{name}}手上还有在途的事。停用前先移交？",
     "submit_and_deactivate_n": "移交 {{n}} 件并停用",
-    "deactivated_toast": "已移交并停用{{name}}"
+    "deactivated_toast": "已移交并停用{{name}}",
+    "letters_kept": "你没有回信权限，{{n}} 封书信不移交，留在{{name}}名下。",
+    "result_letters_kept": "{{n}} 封书信没有移交，仍在交出人名下（你没有回信权限）。"
   },
   "officerInvite": {
     "action": "邀请官员",

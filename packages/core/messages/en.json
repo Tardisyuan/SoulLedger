@@ -1111,7 +1111,6 @@
       "pending_cells": "{{n}} pending",
       "discard": "Discard",
       "unsaved_region": "Unsaved changes",
-      "saved_all": "Saved {{n}}",
       "partial_title": "Partly saved · {{saved}} saved, {{failed}} failed",
       "locate": "Locate",
       "conflict_title": "Conflicts {{n}}",
@@ -1147,7 +1146,12 @@
       "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
       "deny_word": "forbidden",
       "deny_hint": "A realm lead cannot be granted 「{{perm}}」.",
-      "conflict_view": "View"
+      "conflict_view": "View",
+      "category_all": "All",
+      "category_none": "None",
+      "category_all_label": "Grant {{role}} every {{category}} permission",
+      "category_none_label": "Revoke every {{category}} permission from {{role}}",
+      "saved_all_refresh": "Saved {{n}} · takes effect for others when they reload"
     },
     "segments": {
       "label": "Permission sections",
@@ -1260,6 +1264,36 @@
       "save_error": "Could not save the data scope",
       "load_error": "Could not load the data scope",
       "read_only": "Only an administrator outside every hall can change data scope"
+    },
+    "members": {
+      "tabs": "Role tabs",
+      "tab_details": "Details",
+      "search": "Search members",
+      "list": "People holding this role",
+      "empty": "Nobody holds this role.",
+      "load_error": "Could not load the members",
+      "primary": "Main role",
+      "extra": "Additional",
+      "primary_locked": "A main role cannot be removed here: give this person another main role first.",
+      "remove": "Remove",
+      "remove_label": "Remove {{name}}'s additional role",
+      "grant": "Grant to people",
+      "grant_n": "Grant to {{n}}",
+      "pick_search": "Find people by username or email",
+      "pick_empty": "Nobody matches",
+      "already": "Already holds it",
+      "kind": "Grant as",
+      "primary_hint": "Granting it as the main role replaces the person's current main role.",
+      "granted": "Granted to {{n}} · takes effect for them when they reload",
+      "removed": "Removed from {{n}} · takes effect for them when they reload",
+      "change_error": "The change did not go through; try again",
+      "refused_title": "Nothing in this batch was changed; these people were refused:",
+      "refused": {
+        "not_found": "not someone you can manage",
+        "primary_needs_replacement": "a main role cannot be removed; give another main role first",
+        "forbidden": "you cannot grant a role above your own",
+        "invalid": "this role cannot be granted that way"
+      }
     }
   },
   "workflow": {
@@ -2330,7 +2364,9 @@
       "embalming": "This judgment is held until {{date}}: the embalming isn't finished and the soul hasn't set out for the Hall of Two Truths; it can't be claimed before then.",
       "duat_unfinished": "This judgment can't be claimed: the soul cannot reach the Hall of Two Truths.",
       "duat_barred_short": "Can't reach the hall",
-      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron."
+      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron.",
+      "not_yours_readonly": "{{name}} has claimed this case; only they can change it. You can read it.",
+      "override_recorded": "You are not the claimant ({{name}} has claimed this case); what you change here is recorded."
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2572,6 +2608,15 @@
     "ferry": {
       "barred_unburied": "Unburied: can't cross the river",
       "barred_no_fare": "No fare: can't cross the river"
+    },
+    "reopen_cancelled": {
+      "button": "Reopen as a new case",
+      "hint": "This case's approval flow was cancelled and its disposition is stuck. Withdraw the conclusion and open a new case.",
+      "done": "Reopened: {{case_number}}",
+      "refusal": {
+        "not_cancelled": "This case's approval flow was not cancelled, so it cannot be reopened this way.",
+        "cannot_reopen": "The soul has already been placed; ask for a reopening or an appeal instead."
+      }
     }
   },
   "audit": {
@@ -3425,6 +3470,13 @@
     "organization_column": "Organization · Position",
     "position": "Position",
     "organization_required": "A hall member who is not an administrator must belong to a unit",
+    "org_filter": {
+      "label": "Filter by organization (with sub-units)",
+      "all": "All organizations"
+    },
+    "status_filter": {
+      "all": "Any status"
+    },
     "second_factor": {
       "title": "Confirm with your two-step code",
       "body": "{{name}} is an administrator. Acting on another administrator needs your own two-step verification code.",
@@ -6260,7 +6312,9 @@
       "copy_source": "Source civilization",
       "copy_source_placeholder": "— choose a civilization —",
       "copy_confirm": "Copy",
-      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list"
+      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list",
+      "copy_target": "Copy into",
+      "copy_target_placeholder": "Choose the target civilization"
     },
     "mutes": {
       "col_soul": "Soul",
@@ -7566,7 +7620,8 @@
     "delete_blocked_body": {
       "both": "It still has {{units}} sub-units and {{people}} people. Move them to another unit first, then delete.",
       "units": "It still has {{units}} sub-units. Move them to another unit first, then delete.",
-      "people": "It still has {{people}} people. Move them to another unit first, then delete."
+      "people": "It still has {{people}} people. Move them to another unit first, then delete.",
+      "records": "It still owns {{souls}} souls and {{judgments}} judgments. Move them to another unit first, then delete."
     },
     "delete_blocked_people": "View people",
     "delete_title": "Delete \"{{name}}\"?",
@@ -7948,7 +8003,9 @@
     },
     "deactivate_prompt": "{{name}} still has open work. Hand it over before deactivating?",
     "submit_and_deactivate_n": "Hand over {{n}} and deactivate",
-    "deactivated_toast": "Handed over and deactivated {{name}}"
+    "deactivated_toast": "Handed over and deactivated {{name}}",
+    "letters_kept": "You cannot reply to letters, so {{n}} letters stay with {{name}} and are not handed over.",
+    "result_letters_kept": "{{n}} letters were not handed over and stay with the outgoing officer (you cannot reply to letters)."
   },
   "officerInvite": {
     "action": "Invite an officer",

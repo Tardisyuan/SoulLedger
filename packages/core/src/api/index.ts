@@ -196,6 +196,10 @@ export {
   type MatrixWorkflowConflict,
   type RoleDeleteRefusal,
   type RoleCopyPayload,
+  type RoleMembersPage,
+  type RoleMembersChange,
+  type RoleMembersChangeResult,
+  type RoleMembersRefused,
 } from "./perm";
 
 // Data scope (per role)

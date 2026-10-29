@@ -252,22 +252,17 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _authenticate_token(self, token_str):
-        """Validate JWT and return User, or None."""
-        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-        from rest_framework_simplejwt.tokens import AccessToken
+        """Validate JWT and return User, or None.
 
-        try:
-            token = AccessToken(token_str)
-            user_id = token.get("user_id")
-            if not user_id or "imp_id" in token:  # 代看令牌不开实时连接
-                return None
-            from apps.authentication.models import User
-            return User.objects.select_related("rbac_role", "tenant").get(id=user_id)
-        except (TokenError, InvalidToken):
-            return None
-        except Exception:
-            logger.exception("NotificationConsumer: error authenticating token")
-            return None
+        Same rules as `JWTAuthMiddleware` (rbac-scope 第 14 条): active account, not SOUL, session still current,
+        token's hall claim matches the user's. This used to only check the signature and refuse impersonation
+        tokens — safe only because the middleware had already vetted the same frame; on a route without that
+        middleware it would have let a deactivated or password-changed session in.
+        """
+        from apps.core.ws_auth import JWTAuthMiddleware
+
+        user, _reason = JWTAuthMiddleware.check_token_sync(token_str)
+        return user
 
     def _apply_permissions(self, fresh):
         """Replace the permission set IN PLACE and point `self.permissions` at it.
