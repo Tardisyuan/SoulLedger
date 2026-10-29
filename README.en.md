@@ -276,8 +276,10 @@ docker compose up    # root docker-compose.yml: db, redis, backend, celery, cele
 Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
 migrations and seeds all four civilizations on boot.
 
-The production stack (nginx, first TLS issuance and renewal, backup and restore) is in
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+The production stack (nginx, first TLS issuance and renewal, backup and restore, off-site
+copy and alerts, restore drill, RPO/RTO, rollback, `/metrics/` and log format, retention, key
+rotation) is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md); the go-live checklist is
+[`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ### Seed data
 
@@ -470,9 +472,12 @@ unwatched gap.
 
 ## Testing, gates and CI
 
-**CI is now `workflow_dispatch` only** — no push or PR triggers it (GitHub Actions quota
-exhausted; `security.yml`'s weekly cron is off for the same reason). So "CI is green" is
-not a statement this repository makes automatically any more. The local gate is.
+**CI does not run on branch pushes or pull requests** (the GitHub Actions quota ran out;
+user decision 2026-10-30): `ci.yml` runs daily on main (03:00 UTC), on a pushed `v*` tag,
+and by hand; `security.yml` runs weekly (Monday 04:00 UTC) and by hand. The repository is
+public, and GitHub-hosted Linux runners bill no minutes for it. So "CI is green" speaks
+for the last daily run at most; the per-push check is the local (unRAID)
+gate, `scripts/run-gates.sh`.
 `.github/workflows/ci.yml` defines five jobs:
 
 | Job | Steps |
@@ -647,9 +652,12 @@ scope is wired.
 
 The Fernet encryption **depends on `ENCRYPTION_KEY`** (`config/settings.py`):
 with `DEBUG=False` and no key the process refuses to start; with `DEBUG=True`
-and no key it only warns, and `WebhookConfig.signing_secret` plus
-`DeathRegistrationRequest.source_payload` are **stored in plaintext**. If you see
-that warning in development, those two columns are plaintext.
+and no key it only warns, and the encrypted columns are **stored in plaintext**:
+`WebhookConfig.signing_secret`, `DeathRegistrationRequest.source_payload`, the officer and
+soul two-step `secret`s, a soul account's initial credentials, and the assistant's platform
+API keys. If you see that warning in development, those columns are plaintext. Both
+`SECRET_KEY` and `ENCRYPTION_KEY` rotate without downtime (`*_FALLBACKS` and
+`manage.py rotate_encryption_key`; steps in `docs/DEPLOYMENT.md`「密钥轮换」).
 
 Face / fingerprint sign-in in the soul app stores no password: the server issues a credential for that
 phone and keeps only its hash; a password change, an officer reset or a rebirth revokes it and tells the

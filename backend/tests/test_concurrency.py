@@ -1141,8 +1141,9 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
 
     这四条是这个仓库里**唯一**真正检验 `select_for_update` 的东西,而 CLAUDE.md 的
     一行命令强制 `DATABASE_URL="sqlite:///:memory:"` —— 本地全量跑时它们一条都不
-    执行。`ci.yml` 确实起 postgres:16(所以不是「永远不会触发」),但同一文件里
-    workflow 只剩 `workflow_dispatch`。**唯一验证行锁的东西,实践上没被跑过。**
+    执行。`ci.yml` 确实起 postgres:16(所以不是「永远不会触发」),但它当时只剩
+    `workflow_dispatch`(2026-10-30 起改为每天、`v*` tag 与手动,仍不在推送上跑)。
+    **唯一验证行锁的东西,当时实践上没被跑过。**
 
     这条守卫不能让它们跑起来 —— 那是运行环境的事,记在下面的运行方法里。它能做的
     是让这个集合**停止无声地增长**:再有一条测试被标成 PostgreSQL-only,这里就红,

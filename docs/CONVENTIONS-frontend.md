@@ -37,7 +37,7 @@
    > 结构 —— **2026-09-06 已改为 Base UI 的五段 anatomy**。`BRIEF.md:277` 仍是旧的，
    > 但那份属于冻结的交付包（`docs/README.md:196`），不改。测试注释里另有 8 处提及，
    > 多为过去时的迁移记录。
-3. **CI 不自动跑**（两个 workflow 都只有 `workflow_dispatch`）。每次都跑的是
+3. **CI 不在推送上跑**（2026-10-30 起 `ci.yml` 每天、`v*` tag 与手动，`security.yml` 每周一与手动）。每次都跑的是
    `.git/hooks/pre-commit`（暂存前端文件的 `eslint --max-warnings 0`）和 `pre-push`。
    **pre-push 不跑 E2E**，所以三个 playwright project 唯一的自动执行点是空的。
 

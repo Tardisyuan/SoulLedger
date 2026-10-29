@@ -397,9 +397,9 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # ↑ 这是 CI 的形状:全部测试 + 覆盖率与 80% 下限。**pre-push 不是这条**,见下。
 #
 # pre-push 的后端 pytest(2026-09-29 起)与上面有三处不同,都是有意的:
-#   --no-cov            覆盖率与 `--cov-fail-under=80` **只在 CI 里查**。而 CI 只能手动
-#                       dispatch —— 所以覆盖率跌破下限,要等有人去 dispatch 才会被发现,
-#                       不再是推送时。这是为了每次推送省下几分钟而接受的代价,不是疏忽。
+#   --no-cov            覆盖率与 `--cov-fail-under=80` **只在 CI 里查**。而 CI 不在推送上跑
+#                       (2026-10-30 起每天、`v*` tag 与手动)—— 所以覆盖率跌破下限,最晚
+#                       要等第二天的运行才会被发现,不再是推送时。这是为了每次推送省下几分钟而接受的代价,不是疏忽。
 #   -m "not migration"  26 条迁移往返测试(`migration` marker,pytest.ini 注册;用
 #                       `migration_round_trip` fixture 的自动带上,见 backend/tests/conftest.py)
 #                       每条 2–67 秒,合计 813 秒,约占 23 分钟全量的 13.5 分钟。推送
@@ -690,12 +690,13 @@ checks that can never fire. Before trusting a green suite on anything touching
 transactions, constraints, or column widths, run it against PostgreSQL.
 
 **CI/Local Differences:**
-- **CI 什么时候自己跑(2026-10-30 用户决定)**:`ci.yml` 每周一 03:00 UTC 跑 main、推 `v*` tag 时跑、手动跑;
+- **CI 什么时候自己跑(2026-10-30 用户决定)**:`ci.yml` 每天 03:00 UTC 跑 main、推 `v*` tag 时跑、手动跑;
   `security.yml` 每周一 04:00 UTC 与手动。**不在分支推送与 PR 上跑** —— 额度耗尽过,而这里的推送几乎全是推 main,
-  一天几十次。推送的门禁是本地(unRAID)的 `scripts/run-gates.sh`;CI 每周兜一次底:覆盖率下限、真 PostgreSQL 全量、
-  三个 E2E 引擎、npm / pip audit。所以 CI 发现问题最晚晚一周,而且红的那次对应的是一周的提交,不是一个。
-  每个 job 有 `timeout-minutes`,同 ref 旧运行被取消。估算每次约 120 分钟、每月约 520 + 17(security)+ 每个 tag 120,
-  是读 job 清单估的,第一轮真跑后按 Actions 的计时重估。守卫 `backend/tests/test_ci_runs_on_a_budget.py`。
+  一天几十次。仓库已公开,GitHub 托管的 Linux runner 对公开仓库不计分钟,所以「每天」不再受分钟额度限制。
+  推送的门禁是本地(unRAID)的 `scripts/run-gates.sh`;CI 每天兜一次底:覆盖率下限、真 PostgreSQL 全量、
+  三个 E2E 引擎、npm / pip audit。所以 CI 发现问题最晚晚一天,而且红的那次对应的是一天的提交,不是一个。
+  每个 job 有 `timeout-minutes`,同 ref 旧运行被取消。估算每次约 120 runner 分钟,是读 job 清单估的,
+  第一轮真跑后按 Actions 的计时重估。守卫 `backend/tests/test_ci_runs_on_a_budget.py`。
 - CI runs `python manage.py migrate` before tests (local uses existing DB)
 - CI runs `pip-audit --strict` (local can skip)
 - CI runs `npm audit --audit-level=high` (local can skip)

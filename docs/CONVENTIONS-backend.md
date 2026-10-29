@@ -20,8 +20,8 @@
 
 **三件影响全部读法的前提：**
 
-1. **CI 不自动跑。** `.github/workflows/ci.yml:7-8` 与 `security.yml:7-8` 都只剩
-   `workflow_dispatch`。凡标 `[CI]` 的都是"有人手动点了才跑"。
+1. **CI 不在推送上跑。** 2026-10-30 起 `.github/workflows/ci.yml` 每天、推 `v*` tag 与手动,
+   `security.yml` 每周一与手动。凡标 `[CI]` 的最晚一天后才跑到。
 2. **真正每次都跑的是 `.git/hooks/pre-push`**，且仅在跑过 `scripts/install-hooks.sh`
    的机器上，`SKIP_PREPUSH=1` 可绕过（`.git/hooks/pre-push:18-27`）。
 3. **没有 `pre-commit` 框架。** `.git/hooks/pre-commit` 是 `install-hooks.sh` 写的
@@ -428,7 +428,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | docstring 规则 | **任何文档都没写**，select 无 `D` |
 | 后端命名（snake_case） | **仓库文档没写**。ruff `N` 部分覆盖，N805/N806 被 ignore |
 | `ruff format` | 无任何执行点（`.pre-commit-config.yaml` 框架从未安装，文件已删，IS-23） |
-| 一切标 `[CI]` 的门 | workflow 只有 `workflow_dispatch` |
+| 一切标 `[CI]` 的门 | workflow 不在推送上跑(每天、`v*` tag、手动) |
 
 ---
 

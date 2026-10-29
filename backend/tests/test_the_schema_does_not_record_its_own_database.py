@@ -24,8 +24,9 @@ wherever pytest runs, and pytest locally runs on SQLite — so the gate compared
 a SQLite-generated file against a SQLite-generated file and agreed with itself.
 `.github/workflows/ci.yml` sets `DATABASE_URL: postgres://…` and starts a
 `postgres:16-alpine` service, so the gate has always been destined to fail
-there; it never has, because that workflow is `workflow_dispatch` only (the
-repository is out of Actions minutes). A check with a dimension nobody has ever
+there; it never had, because that workflow was `workflow_dispatch` only (the
+repository ran out of Actions minutes; since 2026-10-30 it runs daily, on `v*`
+tags and by hand). A check with a dimension nobody has ever
 exercised is not a check along that dimension.
 
 The remedy is `apps/core/schema.py::drop_engine_dependent_integer_bounds`,

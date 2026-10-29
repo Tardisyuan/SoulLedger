@@ -25,8 +25,8 @@
 > - **条文语料在本文里根本不存在**，它是本文之后才有的东西：六个 corpus 共 172 条，
 >   外加一个声明为空的 `HELL_LAW`。以
 >   `backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 为准。
-> - **CI 现在只有 `workflow_dispatch` 手动触发**（`.github/workflows/ci.yml`、`security.yml`），
->   没有任何自动触发（Actions 额度耗尽）。
+> - **CI 不在推送与 PR 上自动跑**（Actions 额度耗尽过）：2026-10-30 起 `ci.yml` 每天、推 `v*` tag
+>   与手动，`security.yml` 每周一与手动（`.github/workflows/`）。
 > - **`TenantManager` 不再自动过滤租户。** §2 的架构图、§9 验收表的「TenantManager ✅ 自动过滤
 >   QuerySet」与 ADR-004 的「双重隔离」都是当时的设计；现在 `apps/tenants/managers.py` 只过滤
 >   软删除，租户隔离**单层**、全在视图层 `apps/core/tenant.py::scope_to_tenant`，
