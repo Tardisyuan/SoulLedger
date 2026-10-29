@@ -1,6 +1,5 @@
-"""rbac-scope(2026-10-29)第 9、13、14、15 条的修复,各一道守卫。
+"""rbac-scope(2026-10-29)第 13、14、15 条的修复,各一道守卫。(第 9 条「联审列表过行级规则」随 RowLevelDataScope 退场:联审不在数据范围注册表里,设计如此。)
 
-* 跨殿联审列表过 RowLevelDataScope(同文件 DispatchRecord 早就过了)。
 * 审计行记在被改那一行的殿,不是操作人的租户上下文;按殿的到期检查在请求里同步调用后还原上下文。
 * WS 消费者的首帧鉴权与 JWTAuthMiddleware 同一套规则。
 * TenantQuerySetMixin 套在没有 `tenant` 列的模型上是配置错,直接报出来。
@@ -8,37 +7,9 @@
 import pytest
 from rest_framework_simplejwt.tokens import AccessToken
 
-from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
 from apps.tenants.managers import get_current_tenant, set_current_tenant
-from tests.soul_account_support import officer_client
 
 pytestmark = pytest.mark.django_db
-
-
-# ── 第 9 条:跨殿联审列表过数据范围 ─────────────────────────────────────────
-
-
-def test_the_cross_judgment_list_honours_the_data_scope(judge_user, cn_tenant):
-    from apps.perm.models import Role, RowLevelDataScope
-
-    active = CrossTenantJudgment.objects.create(title="进行中的联审", description="d", initiating_tenant=cn_tenant,
-                                                tenant=cn_tenant, status=JudgmentStatus.ACTIVE)
-    proposed = CrossTenantJudgment.objects.create(title="提议中的联审", description="d", initiating_tenant=cn_tenant,
-                                                  tenant=cn_tenant, status=JudgmentStatus.PROPOSED)
-    client = officer_client(judge_user)
-    url = "/api/v1/dispatch/cross-tenant-judgments/"
-
-    def ids():
-        return {row["id"] for row in client.get(url).data["results"]}
-
-    assert {str(active.pk), str(proposed.pk)} <= ids()  # 没有规则时两条都在
-    RowLevelDataScope.objects.create(
-        role=Role.objects.get_or_create(name="JUDGE")[0], model_name="crosstenantjudgment", scope_type="READ",
-        filter_conditions={"status": JudgmentStatus.ACTIVE}, is_active=True,
-    )
-    seen = ids()
-    assert str(active.pk) in seen and str(proposed.pk) not in seen
-    assert client.get(f"{url}{proposed.pk}/").status_code == 404
 
 
 # ── 第 13 条:审计行的殿 ────────────────────────────────────────────────────
