@@ -323,7 +323,9 @@ describe("WebSocketProvider event fan-out", () => {
     );
 
     expect(invalidatedKeys()).toContain('["workflows","detail","w1"]');
-    expect(mockShowToast).toHaveBeenCalledWith("Workflow rejected — Meng", "error", 6000);
+    // No I18nProvider here, so `translate` answers the key (lib/i18n/activeTranslator); the copy itself
+    // is asserted per locale in eventRegistry.test.ts.
+    expect(mockShowToast).toHaveBeenCalledWith("souls.events.WORKFLOW_REJECTED — Meng", "error", 6000);
   });
 
   it("routes a generic domain frame through the event registry", () => {

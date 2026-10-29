@@ -7458,7 +7458,24 @@
     },
     "empty": "没有符合条件的事件",
     "empty_all": "还没有事件",
-    "failed": "没能载入事件，请重试"
+    "failed": "没能载入事件，请重试",
+    "realtime": {
+      "NOTIFICATION_CREATED": "新通知",
+      "POST_CREATED": "新动态",
+      "POST_UPDATED": "动态已更新",
+      "POST_DELETED": "动态已删除",
+      "COMMENT_CREATED": "新评论",
+      "COMMENT_DELETED": "评论已删除",
+      "REACTION_ADDED": "新回应",
+      "REACTION_REMOVED": "回应已撤回",
+      "USER_FOLLOWED": "新关注者",
+      "USER_UNFOLLOWED": "已取消关注",
+      "SCHEDULER_RUN_FAILED": "定时任务运行失败",
+      "fallback_workflow": "审批有更新",
+      "fallback_dispatch": "调度有更新",
+      "fallback_death_sync": "死亡登记有更新",
+      "fallback_social": "动态有更新"
+    }
   },
   "state": {
     "gone_title": "这条已经不在了",
