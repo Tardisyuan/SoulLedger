@@ -13,6 +13,7 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { Modal } from "@/src/components/ui/Modal";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
+import { RoleDataScopeSection } from "./RoleDataScopeSection";
 
 /**
  * 角色表(E-11b)。行尾不放「编辑 / 删除」:整行点开右侧 480 px 抽屉。代码创建后
@@ -253,6 +254,8 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
           {t("permissions.roles.workflow_count", { n: String(role.workflow_template_count) })}
         </Stat>
       </dl>
+
+      <RoleDataScopeSection role={role} />
 
       {copying && (
         <form onSubmit={submitCopy} className="space-y-3 border-t border-[oklch(var(--color-block))] pt-3" aria-label={t("permissions.roles.copy")}>
