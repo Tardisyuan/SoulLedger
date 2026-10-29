@@ -173,10 +173,14 @@ export function useNavMode() {
 
 // ── 侧栏 ────────────────────────────────────────────────────────────────
 
-/** 当前项:3px main 左标 + 8% main 混进 surface-1。全导航只有这两处读 `--color-main`。 */
+/** 当前项:3px main 标(侧栏在左、底栏在顶)+ 8% main 混进 surface-1。全导航只有标与底读 `--color-main`,字一律 ink。 */
 const CURRENT_BG = "bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]";
 function CurrentMark() {
   return <span aria-hidden="true" data-testid="nav-current-mark" className="absolute inset-y-1.5 left-0 w-[3px] bg-[oklch(var(--color-main))]" />;
+}
+/** 底栏当前项的标:同一条 3px main,横在格子顶上。 */
+function BarMark() {
+  return <span aria-hidden="true" data-testid="bar-current-mark" className="absolute inset-x-2 top-0 h-[3px] bg-[oklch(var(--color-main))]" />;
 }
 
 const ROW = "relative flex w-full items-center rounded-control text-xs transition-colors duration-fast";
@@ -465,7 +469,7 @@ const BAR_SLOTS = 4;
 /**
  * 宽度 ≤ 768 时的导航:固定 5 格 —— 后端顺序里的前 4 个一级项 +「更多」。
  * 一级项是分组时,点它打开底部抽屉列出这组的页面;「更多」打开同一个抽屉,按分组列出其余全部项。
- * 中性底(surface-1、上沿 1px line);当前格是 main 色字 + 600。当前页落在「更多」里时,
+ * 中性底(surface-1、上沿 1px line);当前格是 ink 字 600 + 8% main 底 + 3px main 顶标(main 不作字色,Design 第六十三批)。当前页落在「更多」里时,
  * 「更多」这一格是当前态,抽屉里那一项是当前项。
  * 抽屉是模态对话框(`useDrawerA11y`:焦点进去、Tab 圈在里面、Esc 关、焦点还给打开它的那一格)。
  */
@@ -497,10 +501,10 @@ export function BottomBar({
   const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({ open: sheet !== null, onClose: close, label: sheetLabel });
 
   const sheetGroups = sheet === "more" ? rest : slots.filter((m) => m.id === sheet);
+  // 当前项与侧栏同一套:ink 字 600、8% 底,外加 3px main 顶标(Design 第六十三批:main 不作字色;
+  // 顶标是非文字,对 surface-1 ≥ 3:1,见 inkOnSurfaceContract)。
   const cell = (current: boolean) =>
-    `relative flex min-h-14 items-center justify-center px-1 text-center text-xs ${
-      current ? "font-semibold text-[oklch(var(--color-main))]" : "text-[oklch(var(--color-ink-muted))]"
-    }`;
+    `relative flex min-h-14 items-center justify-center px-1 text-center text-xs ${current ? CURRENT : "text-[oklch(var(--color-ink-muted))]"}`;
 
   return (
     <>
@@ -563,6 +567,7 @@ export function BottomBar({
           const body = <span title={primary} className="line-clamp-2 break-words">{primary}</span>;
           return !hasChildren(menu) ? (
             <Link key={menu.id} href={menu.path} aria-current={current ? "page" : undefined} className={cell(current)}>
+              {current ? <BarMark /> : null}
               {body}
             </Link>
           ) : (
@@ -574,6 +579,7 @@ export function BottomBar({
               onClick={() => setSheet((s) => (s === menu.id ? null : menu.id))}
               className={cell(current)}
             >
+              {current ? <BarMark /> : null}
               {body}
             </button>
           );
@@ -588,6 +594,7 @@ export function BottomBar({
           onClick={() => setSheet((s) => (s === "more" ? null : "more"))}
           className={cell(currentInRest)}
         >
+          {currentInRest ? <BarMark /> : null}
           <span>
             {moreLabel} <span aria-hidden="true">▴</span>
           </span>

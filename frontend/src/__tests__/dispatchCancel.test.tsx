@@ -72,7 +72,7 @@ describe("取消移交", () => {
     expect(trigger()?.className).toContain("border-[oklch(var(--color-line-strong))]");
     fireEvent.click(trigger() as HTMLElement);
     const confirm = await screen.findByRole("button", { name: tZh("dispatch.confirm_cancel") });
-    expect(confirm.className).toContain("bg-[oklch(var(--color-main))]");
+    expect(confirm.className).toContain("bg-(--main-fill)");
     expect(confirm.className).not.toContain("danger");
     expect(screen.getAllByRole("textbox")).toHaveLength(1); // 只有「理由」
   });

@@ -279,7 +279,7 @@ describe("接着做: one primary button, entries from the user's own menus", () 
     renderPage();
     await settled();
     await within(nextPanel()).findByTestId("welcome-primary");
-    const primaries = Array.from(document.querySelectorAll("a, button")).filter((el) => el.className.includes("--color-main"));
+    const primaries = Array.from(document.querySelectorAll("a, button")).filter((el) => el.className.includes("bg-(--main-fill)"));
     expect(primaries).toEqual([within(nextPanel()).getByTestId("welcome-primary")]);
   });
 });

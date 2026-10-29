@@ -233,7 +233,7 @@ export function UnsavedBar({
         aria-keyshortcuts="Meta+S Control+S"
       >
         {t("permissions.matrix.save_button")}
-        <kbd aria-hidden="true" className="ml-2 font-mono text-2xs opacity-70">⌘S</kbd>
+        <kbd aria-hidden="true" className="ml-2 font-mono text-2xs">⌘S</kbd>
       </Button>
     </div>
   );

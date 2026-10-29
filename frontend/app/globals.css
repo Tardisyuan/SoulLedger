@@ -773,9 +773,6 @@
     line-height: var(--text-2xs--line-height);
     letter-spacing: 0.12em;
   }
-  .identity-brand span {
-    opacity: 0.7;
-  }
   .identity-title {
     display: flex;
     align-items: center;
@@ -786,20 +783,20 @@
     margin-bottom: 6px;
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
-    opacity: 0.8;
     overflow-wrap: anywhere;
   }
   .identity-case {
     text-align: right;
     font-size: var(--text-xs);
   }
-  /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 · 0.7 在上,可复制的案号在下。
+  /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 在上,可复制的案号在下。
+     带上的字一律纯白 on-main,不用透明度降级(Design 第六十三批:v3 的 0.7 / 0.8 在深色埃及、希腊
+     只有 3.17–3.78:1;品牌、殿名、「案号」靠字号与等宽字区分)。守卫:inkOnSurfaceContract。
      收起的 48 带里照样在右(v3 `is-compact` 只藏品牌与题字);收起时并成一行。 */
   .identity-case[data-case] > span {
     display: block;
     margin-bottom: 5px;
     font-size: var(--text-2xs);
-    opacity: 0.7;
   }
   .identity-band[data-compact] .identity-case[data-case] > span {
     display: inline;
@@ -1197,6 +1194,18 @@ html.theme-switching *::after {
   input[type="checkbox"][aria-invalid="true"],
   input[type="radio"][aria-invalid="true"] {
     border: 2px solid oklch(var(--color-danger));
+  }
+
+  /* 主按钮底(Button.tsx `primary`):深色用身份带同一档 main 90% + #111,浅色就是 main。
+     Design 第六十三批:深色里 main 作底、上面有字,一律加深这一档。挂在 [data-civ] 上,
+     是因为 var() 在声明处求值:自己带 data-civ 的子树(交付单)要按它自己的 main 算。 */
+  :root,
+  [data-civ] {
+    --main-fill: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
+  }
+  :root.light,
+  .light [data-civ] {
+    --main-fill: oklch(var(--color-main));
   }
 
   /* A1「日期 · 原生控件」:根元素声明 color-scheme,原生日历与滚动条随主题变色。 */
