@@ -2316,7 +2316,8 @@
         "invalid_assignee": "That officer is not in this tenant or cannot work judgments",
         "not_found": "Some judgments no longer exist",
         "permission_denied": "Permission denied",
-        "generic": "The action did not go through"
+        "generic": "The action did not go through",
+        "assignee_out_of_scope": "That officer's data scope cannot see this record"
       },
       "held_short": "Can be claimed after that date",
       "held": "This judgment is held until {{date}}: the soul is in the City of Wrongful Death and can't be claimed before then.",
@@ -7618,7 +7619,14 @@
     "delete_body": "This can't be undone.",
     "saved": "Saved",
     "deleted": "Deleted",
-    "failed": "Couldn't save, please try again"
+    "failed": "Couldn't save, please try again",
+    "move_to": "Move its souls and judgments to",
+    "move_and_delete": "Move and delete",
+    "owner_label": "Owning unit",
+    "owner_change": "Change",
+    "owner_saved": "Owning unit changed",
+    "owner_out_of_scope": "That unit is outside your data scope",
+    "owner_failed": "The owning unit was not changed"
   },
   "events": {
     "col_time": "Time",
@@ -7979,7 +7987,8 @@
     "blocked_title": "Can't hand over yet",
     "problem": {
       "target_cannot_judge": "{{name}} can't take cases, and there are judgments or appeals to hand over. Pick someone else, or give them case permissions first.",
-      "target_cannot_reply": "{{name}} can't answer letters, and there are letters to hand over. Pick someone else, or give them that permission first."
+      "target_cannot_reply": "{{name}} can't answer letters, and there are letters to hand over. Pick someone else, or give them that permission first.",
+      "target_out_of_scope": "{{name}}'s data scope can't see some of the judgments or appeals to hand over. Pick someone else, or widen their data scope first."
     },
     "result_title": "Handed over to {{name}}",
     "result_counts": "Moved: judgments {{judgments}} · appeals {{appeals}} · City Gods {{city_gods}} · letters {{letters}}",

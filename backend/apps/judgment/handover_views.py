@@ -38,7 +38,7 @@ class HandoverPreviewSerializer(serializers.Serializer):
     city_gods = serializers.ListField(child=serializers.CharField())
     letters = serializers.IntegerField()
     letters_kept = serializers.IntegerField(help_text="操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下")
-    problems = serializers.ListField(child=serializers.ChoiceField(["target_cannot_judge", "target_cannot_reply"]))
+    problems = serializers.ListField(child=serializers.ChoiceField(["target_cannot_judge", "target_cannot_reply", "target_out_of_scope"]))
 
 
 class HandoverResultSerializer(serializers.Serializer):

@@ -243,7 +243,7 @@ function OrganizationsPageContent() {
         })}
       </div>
       <OrganizationFormDialog mode={formMode} organizations={organizations} onClose={() => setFormMode(null)} />
-      <OrganizationDeleteDialog org={deleting} canViewPeople={isAdmin} onClose={() => setDeleting(null)} />
+      <OrganizationDeleteDialog org={deleting} canViewPeople={isAdmin} organizations={organizations} onClose={() => setDeleting(null)} />
     </PageShell>
   );
 }

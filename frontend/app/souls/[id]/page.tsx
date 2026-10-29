@@ -37,6 +37,7 @@ import { useDispositions } from "@soulledger/core/hooks/useDispositions";
 import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { releaseRefusalOf } from "@soulledger/core/api/disposition";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
+import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import type { RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
 import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
@@ -831,6 +832,20 @@ export default function SoulDetailPage() {
       )}
 
       {soul && !loading && soul.current_state === "LOST" && <LostBanner event={latestLostEvent(events)} />}
+
+      {/* 所属机构(数据范围 B3a):持 soul.update 可改;暂居只读与已归档不给改。 */}
+      {soul && !loading && (
+        <OwnerOrgField
+          orgId={soul.owner_org}
+          orgName={soul.owner_org_name}
+          tenantId={soul.tenant}
+          canChange={hasPermission("soul.update") && !readOnlyAway && !archived}
+          onSave={async (orgId) => {
+            await soulsApi.update(soul.id, { owner_org: orgId });
+            refreshSoulViews();
+          }}
+        />
+      )}
 
       {/* 日期问题 —— 没有就什么都不画。放在最前:坏日期动摇下面每一份读数与每一条记录。 */}
       {!loading && soul && (

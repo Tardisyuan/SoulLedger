@@ -52,7 +52,9 @@ export const organizationsApi = {
   create: (data: OrganizationInput) => api.post<Organization>("/organizations/", data),
   /** Editing and moving are the same PATCH — a move is a changed `parent`. */
   update: (id: number, data: Partial<OrganizationInput>) => api.patch<Organization>(`/organizations/${id}/`, data),
-  delete: (id: number) => api.delete<void>(`/organizations/${id}/`),
+  /** `moveTo`:名下灵魂 / 审判先转到这个机构再删(同殿、在自己的数据范围内);不给时有名下数据是 409 `not_empty`。 */
+  delete: (id: number, moveTo?: number) =>
+    api.delete<void>(`/organizations/${id}/`, moveTo != null ? { params: { move_to: moveTo } } : undefined),
   list: () => api.get<PaginatedResponse<Organization>>("/organizations/"),
   /** Every page, concatenated (page size is fixed at 20 and `?page_size=` is ignored) — for pickers that show the whole tree. */
   all: async (): Promise<Organization[]> => {
