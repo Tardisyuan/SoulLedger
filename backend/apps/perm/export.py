@@ -9,7 +9,7 @@ from django.db import transaction
 from django.http import HttpResponse
 
 from apps.perm.matrix import ADMIN_ROLE_NAME, admin_only_violations, role_forbidden_violations
-from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
+from apps.perm.models import FieldPermission, Permission, Role, RoleDataScope, RolePermission
 
 
 def export_permissions():
@@ -17,7 +17,7 @@ def export_permissions():
     Export all permission configuration as a JSON dict.
 
     Returns:
-        dict with roles, permissions, role_permissions, field_permissions, data_scopes
+        dict with roles, permissions, role_permissions, field_permissions, role_data_scopes
     """
     # Export permissions
     permissions = list(
@@ -47,13 +47,11 @@ def export_permissions():
     for fp in field_permissions:
         fp['role'] = fp.pop('role__name')
 
-    # Export row-level data scopes
-    data_scopes = list(
-        RowLevelDataScope.objects.select_related('role')
-        .values('role__name', 'civilization', 'model_name', 'filter_conditions', 'scope_type', 'priority', 'is_active')
-    )
-    for ds in data_scopes:
-        ds['role'] = ds.pop('role__name')
+    # Role data scopes (数据范围 B4): machines move by org code, not id — ids differ between databases.
+    role_data_scopes = [
+        {'role': role, 'resource': resource, 'scope': scope, 'orgs': codes}
+        for (role, resource), (scope, codes) in sorted(_role_data_scope_rows().items())
+    ]
 
     return {
         'version': '1.0',
@@ -61,7 +59,7 @@ def export_permissions():
         'roles': roles,
         'role_permissions': role_permissions,
         'field_permissions': field_permissions,
-        'data_scopes': data_scopes,
+        'role_data_scopes': role_data_scopes,
     }
 
 
@@ -75,7 +73,7 @@ def export_permissions_json_response():
     return response
 
 
-SECTIONS = ('permissions', 'roles', 'role_permissions', 'field_permissions', 'data_scopes')
+SECTIONS = ('permissions', 'roles', 'role_permissions', 'field_permissions', 'role_data_scopes')
 
 # Why a row of the file was not added. `unknown_reference`: the row names a role
 # or permission that exists neither in the database nor in the file.
@@ -83,9 +81,19 @@ SKIP_ALREADY_EXISTS = 'already_exists'
 SKIP_ADMIN_ONLY = 'admin_only'
 SKIP_ROLE_FORBIDDEN = 'role_forbidden'
 SKIP_UNKNOWN_REFERENCE = 'unknown_reference'
+# A role data scope the API would refuse too: unknown resource or scope, DEFINE with no orgs, or ADMIN.
+SKIP_INVALID = 'invalid'
 
 
-GRANT_SECTIONS = ('role_permissions', 'field_permissions', 'data_scopes')
+GRANT_SECTIONS = ('role_permissions', 'field_permissions', 'role_data_scopes')
+
+
+def _role_data_scope_rows():
+    """``{(role, resource): (scope, [org codes, sorted])}`` for every live row of a live role."""
+    rows = {}
+    for row in RoleDataScope.objects.filter(role__is_deleted=False).select_related('role').prefetch_related('orgs'):
+        rows[(row.role.name, row.resource)] = (row.scope, sorted(o.code for o in row.orgs.all()))
+    return rows
 
 
 def _snapshot():
@@ -107,11 +115,7 @@ def _snapshot():
             for role, model, field, visible, read_only, editable in FieldPermission.objects.values_list(
                 'role__name', 'model_name', 'field_name', 'visible', 'read_only', 'editable')
         },
-        'data_scopes': {
-            (role, model, scope): (civilization, conditions, priority, active)
-            for role, model, scope, civilization, conditions, priority, active in RowLevelDataScope.objects.values_list(
-                'role__name', 'model_name', 'scope_type', 'civilization', 'filter_conditions', 'priority', 'is_active')
-        },
+        'role_data_scopes': {key: (scope, tuple(codes)) for key, (scope, codes) in _role_data_scope_rows().items()},
     }
 
 
@@ -176,7 +180,7 @@ def import_permissions(data, overwrite=False, dry_run=False, user=None):
         row of the file that was not added. Also ``updated`` (roles whose
         labels changed, plus surviving entries whose content changed - always
         0 for a merge), ``removed`` (``{role_permissions, field_permissions,
-        data_scopes, total}``: entries an overwrite leaves gone) and
+        role_data_scopes, total}``: entries an overwrite leaves gone) and
         ``removes_own_permissions`` (a removed entry belongs to a role that
         decides what the caller may do). In an overwrite the three grant
         sections' ``created`` is the net: entries that did not exist before.
@@ -217,7 +221,7 @@ def import_permissions(data, overwrite=False, dry_run=False, user=None):
 def _merge(data, overwrite, made, skip, role_labels_updated):
     if overwrite:
         FieldPermission.objects.all().delete()
-        RowLevelDataScope.objects.all().delete()
+        RoleDataScope.objects.all().delete()
         # ADMIN always has everything (`admin_always_all`, 2026-09-25): an
         # overwrite import whose file lacks an ADMIN row must not strip it.
         RolePermission.objects.exclude(role__name=ADMIN_ROLE_NAME).delete()
@@ -308,25 +312,28 @@ def _merge(data, overwrite, made, skip, role_labels_updated):
         else:
             skip('field_permissions', key, SKIP_ALREADY_EXISTS)
 
-    # Import data scopes
-    for ds_data in data.get('data_scopes', []):
-        key = f"{ds_data['role']} / {ds_data['model_name']} / {ds_data['scope_type']}"
-        role = Role.objects.filter(name=ds_data['role']).first()
-        if not role:
-            skip('data_scopes', key, SKIP_UNKNOWN_REFERENCE)
+    # Import role data scopes (数据范围 B4): the same refusals as PUT /perm/roles/<id>/data-scope/.
+    from apps.org.models import Organization
+    from apps.perm.data_scope import DEFINE
+    from apps.perm.data_scope_api import SCOPES, resource_keys
+
+    resources = set(resource_keys())
+    for ds_data in data.get('role_data_scopes', []):
+        resource = ds_data.get('resource', '')
+        key = f"{ds_data['role']} / {resource or '*'}"
+        codes = sorted(set(ds_data.get('orgs') or []))
+        if ds_data['role'] == ADMIN_ROLE_NAME or (resource and resource not in resources) \
+                or ds_data['scope'] not in SCOPES or (ds_data['scope'] == DEFINE and not codes):
+            skip('role_data_scopes', key, SKIP_INVALID)
             continue
-        _, created = RowLevelDataScope.objects.get_or_create(
-            role=role,
-            model_name=ds_data['model_name'],
-            scope_type=ds_data['scope_type'],
-            defaults={
-                'civilization': ds_data.get('civilization'),
-                'filter_conditions': ds_data.get('filter_conditions', {}),
-                'priority': ds_data.get('priority', 0),
-                'is_active': ds_data.get('is_active', True),
-            }
-        )
-        if created:
-            made('data_scopes')
-        else:
-            skip('data_scopes', key, SKIP_ALREADY_EXISTS)
+        role = Role.objects.filter(name=ds_data['role']).first()
+        orgs = list(Organization.objects.filter(code__in=codes)) if ds_data['scope'] == DEFINE else []
+        if not role or len(orgs) != (len(codes) if ds_data['scope'] == DEFINE else 0):
+            skip('role_data_scopes', key, SKIP_UNKNOWN_REFERENCE)
+            continue
+        if RoleDataScope.objects.filter(role=role, resource=resource).exists():
+            skip('role_data_scopes', key, SKIP_ALREADY_EXISTS)
+            continue
+        row = RoleDataScope.objects.create(role=role, resource=resource, scope=ds_data['scope'])
+        row.orgs.set(orgs)
+        made('role_data_scopes')
