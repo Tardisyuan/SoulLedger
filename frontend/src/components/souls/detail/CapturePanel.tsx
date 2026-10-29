@@ -32,6 +32,12 @@ function lifespanEnded(soul: Soul): boolean {
   return true;
 }
 
+/** 阳寿已知(完整的公元日期)且还没到。不知道阳寿的不算「未到」。「记录身故」据此在地府隐藏(用户 2026-10-29)。 */
+export function lifespanNotYet(soul: Soul): boolean {
+  const f = soul.fated_death_date;
+  return !!f && !!f.month && !!f.day && f.year >= 1 && !lifespanEnded(soul);
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 const fatedText = (soul: Soul) => {
   const f = soul.fated_death_date;

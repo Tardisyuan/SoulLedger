@@ -136,10 +136,35 @@ def rule_for(event_type, payload, account):
             return None
         return ("judgment", kind, f"appeal:{appeal_id}:{payload['status']}",
                 {"screen": "Life", "judgment_id": str(payload.get("judgment_id"))})
+    if event_type in WANGSI_EVENTS:
+        return _wangsi_rule(payload)
     return None
 
 
 APPEAL_KINDS = {"UPHELD": "appeal_upheld", "AMENDED": "appeal_amended"}
+
+#: 枉死城冤情申诉的结论(apps/judgment/wangsi.py;2026-10-29 用户决定推给灵魂)。按 payload 的 `status` 分四种:
+#: 属实 · 提前释放 / 属实(期满后才审,没有可放的)/ 属实 · 超度 / 不属实。提出申诉不推(灵魂自己或官员替它刚做的)。
+#: 落点与审判结论同一处:本世里那件审判。超度同时会结案,另有一条 `judgment_result` —— 两条各说各的事。
+WANGSI_EVENTS = frozenset({"WANGSI_GRIEVANCE_UPHELD", "WANGSI_GRIEVANCE_DELIVERED", "WANGSI_GRIEVANCE_REJECTED"})
+WANGSI_STATUS_KINDS = {"UPHELD": "wangsi_upheld", "UPHELD_LATE": "wangsi_upheld_late",
+                       "DELIVERED": "wangsi_delivered", "REJECTED": "wangsi_rejected"}
+
+
+def _wangsi_rule(payload):
+    from apps.judgment.models import Judgment
+
+    kind = WANGSI_STATUS_KINDS.get(payload.get("status"))
+    try:
+        judgment_pk = uuid.UUID(str(payload.get("judgment_id")))
+    except ValueError:
+        return None
+    # 不属实之后可以再提、再被驳回:dedupe 带上这次审核的时刻,第二次驳回照推。
+    decided_at = Judgment.all_objects.filter(pk=judgment_pk).values_list("grievance_decided_at", flat=True).first()
+    if not (kind and decided_at):
+        return None
+    return ("judgment", kind, f"wangsi:{judgment_pk}:{payload['status']}:{decided_at.isoformat()}"[:120],
+            {"screen": "Life", "judgment_id": str(judgment_pk)})
 
 
 #: 受刑计划(docs/ARCHITECTURE-sentence-plan.md §5.2)。`SentencePlanService` 直接写 SoulEvent,
@@ -198,7 +223,7 @@ def _sentence_rule(event_type, payload):
 
 
 HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "COOLDOWN_SHORTENING_DECIDED", "JUDGMENT_CONCLUDED",
-                            "STATE_CHANGED", "JUDGMENT_APPEAL_DECIDED", *SENTENCE_EVENTS})
+                            "STATE_CHANGED", "JUDGMENT_APPEAL_DECIDED", *SENTENCE_EVENTS, *WANGSI_EVENTS})
 
 #: 种类 → 偏好类别。发送前(含补发)再核对一次偏好时用。
 KIND_CATEGORY = {
@@ -207,6 +232,7 @@ KIND_CATEGORY = {
     "judgment_result": "judgment",
     "disposition_executed": "judgment",
     **{kind: "judgment" for kind in APPEAL_KINDS.values()},
+    **{kind: "judgment" for kind in WANGSI_STATUS_KINDS.values()},
     **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
     "sentence_waiting": "residence",
     "sentence_completed": "rebirth",

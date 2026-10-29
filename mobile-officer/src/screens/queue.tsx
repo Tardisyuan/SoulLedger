@@ -17,6 +17,12 @@ import { Screen, Txt, space, useI18n, useOnline, useRemote, useToast } from "../
 
 /** 他人手上 / 暂缓 are read-only on the phone: no claim button, the row opens the case. */
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
+
+/** 分段上的「名 · 数」。两位数起去掉「 · 」(用户 2026-10-29):360dp 上四段各自放得下;数字等宽见 `kit` 的 segmentTight。 */
+export function segmentLabel(label: string, count?: number): string {
+  if (count == null) return label;
+  return count >= 10 ? `${label}${count}` : `${label} · ${count}`;
+}
 type Group = JudgmentQueueGroup;
 
 /**
@@ -80,7 +86,7 @@ export function QueueTab({
           setGroup(next);
           onGroup?.(next);
         }}
-        options={GROUPS.map((key) => ({ key, label: counts ? `${t(`officer_app.queue.${key}`)} · ${counts[key]}` : t(`officer_app.queue.${key}`) }))}
+        options={GROUPS.map((key) => ({ key, label: segmentLabel(t(`officer_app.queue.${key}`), counts?.[key]) }))}
       />
       <View style={{ paddingHorizontal: space[5], paddingBottom: space[3] }}>
         <Txt variant="caption" tone="muted">

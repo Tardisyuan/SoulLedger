@@ -31968,6 +31968,25 @@ components:
       - refusal_code
       - rounds_used
       - verdict
+    MeCaptureWarrant:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/MeCaptureWarrantStatusEnum'
+        issued_at:
+          type: string
+          format: date-time
+      required:
+      - issued_at
+      - status
+    MeCaptureWarrantStatusEnum:
+      enum:
+      - ISSUED
+      - CAPTURED
+      type: string
+      description: |-
+        * `ISSUED` - ISSUED
+        * `CAPTURED` - CAPTURED
     MeCooldownShortening:
       type: object
       description: 灵魂看自己的那份:没有 decided_by。
@@ -32100,6 +32119,21 @@ components:
       - memory_reset
       - sentence_years
       - term_start
+    MeGreekFerry:
+      type: object
+      properties:
+        ferry_passage:
+          $ref: '#/components/schemas/FerryPassageEnum'
+        crossed:
+          type: boolean
+        crosses_on:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - crossed
+      - crosses_on
+      - ferry_passage
     MeJudge:
       type: object
       properties:
@@ -32302,6 +32336,22 @@ components:
       - rebirth_applications
       - records
       - reincarnation
+    MeNegativeConfession:
+      type: object
+      properties:
+        truthful:
+          type: integer
+        untruthful:
+          type: integer
+        unheard:
+          type: integer
+        total:
+          type: integer
+      required:
+      - total
+      - truthful
+      - unheard
+      - untruthful
     MeProfile:
       type: object
       description: instance 是灵魂;本世账号经 context["account"] 传入。
@@ -32396,26 +32446,56 @@ components:
         assistant_enabled:
           type: boolean
           readOnly: true
+        capture_warrant:
+          allOf:
+          - $ref: '#/components/schemas/MeCaptureWarrant'
+          nullable: true
+          readOnly: true
+        greek_ferry:
+          allOf:
+          - $ref: '#/components/schemas/MeGreekFerry'
+          nullable: true
+          readOnly: true
+        european_vestibule:
+          allOf:
+          - $ref: '#/components/schemas/MeVestibule'
+          nullable: true
+          readOnly: true
+        negative_confession:
+          allOf:
+          - $ref: '#/components/schemas/MeNegativeConfession'
+          nullable: true
+          readOnly: true
+        wangsi_delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
       required:
       - account
       - assistant_enabled
       - birth_continent
       - birth_date
       - birth_name
+      - capture_warrant
       - civilization
       - current_state
       - death_date
       - demerit_score
       - diyu_station
+      - european_vestibule
+      - greek_ferry
       - home_civilization
       - home_tenant
       - is_residing
       - merit_score
       - name
+      - negative_confession
       - origin_location
       - origin_region
       - soul_code
       - tenant
+      - wangsi_delivered_at
       - welcomed_civilizations
     MeRealm:
       type: object
@@ -32704,6 +32784,14 @@ components:
       - hall_names
       - seal_glyphs
       - visit
+    MeVestibule:
+      type: object
+      properties:
+        entered_at:
+          type: string
+          format: date-time
+      required:
+      - entered_at
     MeWangsiCase:
       type: object
       description: 灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。
@@ -33691,6 +33779,7 @@ components:
       - JUDGMENT_CLAIM_CHANGED
       - CITY_GOD_CASE_RECEIVED
       - CITY_GOD_CASE_RETURNED
+      - WANGSI_GRIEVANCE_FILED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -33725,6 +33814,7 @@ components:
         * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
         * `CITY_GOD_CASE_RECEIVED` - City God Case Received
         * `CITY_GOD_CASE_RETURNED` - City God Case Returned
+        * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
     NullEnum:
       enum:
       - null
