@@ -4725,7 +4725,46 @@
       "station_at": "第 {{n}} / 13 站",
       "continent": "出身部洲",
       "stations_card": "赴冥 · 十三站",
-      "station_here": "现在在{{station}}：{{desc}}"
+      "station_here": "现在在{{station}}：{{desc}}",
+      "capture": {
+        "title": "勾魂牒",
+        "ISSUED": "阳寿已到，鬼差已经出发。",
+        "CAPTURED": "鬼差已经拘到你，正送往城隍。",
+        "step_issued": "发牒",
+        "step_captured": "拘到",
+        "step_handed": "交城隍",
+        "issued_on": "发牒 · {{date}}"
+      },
+      "ferry": {
+        "title": "冥河渡口",
+        "UNBURIED": "你还没有得到安葬，卡戎不渡。在岸边满一百年，就可以渡河。",
+        "NO_FARE": "你没有渡资，卡戎不渡。",
+        "no_date": "没有可渡之日：记录改为「已付渡资」后才能渡河。",
+        "crosses_on": "可渡之日 · {{date}}",
+        "years_left": "还要等 {{n}} 年",
+        "years_left_one": "还要等 {{n}} 年",
+        "days_left": "还要等 {{n}} 天",
+        "days_left_one": "还要等 {{n}} 天",
+        "may_cross": "已满百年，可以渡河",
+        "waited_aria": "已在岸边等了 {{waited}} 年，共 100 年"
+      },
+      "vestibule": {
+        "title": "地狱前庭",
+        "body": "你留在地狱前庭，不进九圈。这里是归处，没有下一站。",
+        "entered_on": "进入 · {{date}}"
+      },
+      "confession": {
+        "title": "四十二条否定告白",
+        "subtitle": "本世最近一次称心",
+        "truthful": "如实",
+        "untruthful": "不实",
+        "unheard": "未记",
+        "partial": "已记 {{recorded}} / {{total}} 条，其余还没有记。",
+        "complete": "{{total}} 条都已记下。",
+        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条"
+      },
+      "delivered": "已超度",
+      "delivered_on": "已超度 · {{date}}"
     },
     "past_lives": {
       "title": "前世",

@@ -4662,7 +4662,46 @@
       "station_here": "Emu: {{station}} · {{desc}}",
       "station": "Sekhet Emu",
       "station_at": "Sekhet {{n}} / 13",
-      "continent": "Ta Mesut"
+      "continent": "Ta Mesut",
+      "capture": {
+        "title": "Medu Ini Ba",
+        "ISSUED": "Hru Mut Smen · Sab Ini Em Shem",
+        "CAPTURED": "Sab Ini Shesep Seth · Er Chenghuang",
+        "step_issued": "Hab Seth",
+        "step_captured": "Shesep Seth",
+        "step_handed": "Redi Er Chenghuang",
+        "issued_on": "Hab Seth · {{date}}"
+      },
+      "ferry": {
+        "title": "Acheron · Shem Itru",
+        "UNBURIED": "Nen Qeres · Charon: Nen Shem Itru. Renpet 100 Hena Itru: Shem Wenen.",
+        "NO_FARE": "Nen Redi Er Itru · Charon: Nen Shem Itru.",
+        "no_date": "Nen Hru Shem. Er Khet «Redi Er Itru Seth»: Shem Wenen.",
+        "crosses_on": "Hru Shem · {{date}}",
+        "years_left": "Renpet {{n}} Wenen",
+        "years_left_one": "Renpet {{n}} Wenen",
+        "days_left": "Hru {{n}} Wenen",
+        "days_left_one": "Hru {{n}} Wenen",
+        "may_cross": "Renpet 100 Hena Itru: Shem Wenen",
+        "waited_aria": "Renpet {{waited}} / 100 Hena Itru"
+      },
+      "vestibule": {
+        "title": "Duat · Antinferno",
+        "body": "Em Duat · Antinferno: Djet. Nen Wat Er Khet.",
+        "entered_on": "Iyi Seth · {{date}}"
+      },
+      "confession": {
+        "title": "Djed Nen 42",
+        "subtitle": "Fai Ib · Ankh Pen",
+        "truthful": "Maat",
+        "untruthful": "Nen Maat",
+        "unheard": "Nen Sesh Djer",
+        "partial": "Sesh Seth {{recorded}} / {{total}} · Ky: Nen Sesh Djer",
+        "complete": "Djed Nen {{total}} Neb: Sesh Seth",
+        "strip_aria": "Maat {{truthful}} · Nen Maat {{untruthful}} · Nen Sesh Djer {{unheard}} · {{total}}"
+      },
+      "delivered": "Seshem Seth",
+      "delivered_on": "Seshem Seth · {{date}}"
     },
     "past_lives": {
       "title": "Ankh Tepyu",
