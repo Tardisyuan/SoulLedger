@@ -19,12 +19,15 @@ def expire_due_dispositions_for_tenant(tenant_id: str):
 
     Idempotent — see apps.disposition.expiry.expire_for_tenant."""
     from apps.disposition.expiry import expire_for_tenant
-    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+    from apps.tenants.managers import get_current_tenant, set_current_tenant
     from apps.tenants.models import Tenant
 
     tenant = Tenant.objects.get(id=tenant_id)
+    # 还原调用前的值,不是清成 None:Django admin 的「立即检查到期」在请求里同步调它(rbac-scope 第 13 条),
+    # 清掉会让这次请求之后写的审计行丢殿。Celery 里调用前本来就是 None,行为不变。
+    outer = get_current_tenant()
     set_current_tenant(tenant)
     try:
         return {**expire_for_tenant(tenant), "timestamp": timezone.now().isoformat()}
     finally:
-        clear_current_tenant()
+        set_current_tenant(outer)

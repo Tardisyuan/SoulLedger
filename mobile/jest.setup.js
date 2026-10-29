@@ -48,6 +48,7 @@ jest.mock("expo-notifications", () => {
       return { type: "expo", data: state.token };
     },
     setNotificationChannelAsync: async () => null,
+    deleteNotificationChannelAsync: async () => undefined,
     setNotificationHandler: () => {},
     addPushTokenListener: (fn) => sub(state.tokenListeners, fn),
     addNotificationResponseReceivedListener: (fn) => sub(state.responseListeners, fn),

@@ -63,11 +63,39 @@ def test_both_fields_are_on_the_serializer(seeded):
     assert {"statute_clause", "occurrence_count"} <= fields, sorted(fields)
 
 
+def _hall_of(code):
+    from apps.judgment.models import Statute
+
+    return {"tenant_id": Statute.all_objects.filter(code=code).first().tenant_id}
+
+
 def test_a_resolvable_citation_with_a_count_is_accepted(seeded):
     s = SoulRecordSerializer(data=_payload(
         statute_clause=f"{GOOD_CODE}:{GOOD_CONDITION}", occurrence_count=12
-    ))
+    ), context=_hall_of(GOOD_CODE))
     assert s.is_valid(), s.errors
+
+
+def test_a_citation_resolves_only_against_the_souls_own_hall(seeded):
+    """rbac-scope 第 7 条:另一殿有同 code 的条文时,不按它核对,报错也不回显它的条款原文。"""
+    from apps.judgment.models import Statute
+    from apps.tenants.models import Tenant
+
+    other = Tenant.objects.create(code="ZZ_OTHER_HALL", display_name="other hall")
+    Statute.all_objects.create(code="ZZ-ONLY-THERE", tenant=other, civilization="CHINESE", corpus="GONGGUOGE",
+                               ordinal=1, title_zh="x", payload_json={"clauses": [{"condition_zh": "別殿秘條"}]})
+    home = _hall_of(GOOD_CODE)
+    s = SoulRecordSerializer(data=_payload(statute_clause="ZZ-ONLY-THERE:別殿秘條", occurrence_count=1),
+                             context=home)
+    assert not s.is_valid()
+    assert "別殿秘條" not in str(s.errors["statute_clause"]), s.errors
+    # 同一条在它自己的殿里是有效的:拒的是殿,不是条文。
+    s = SoulRecordSerializer(data=_payload(statute_clause="ZZ-ONLY-THERE:別殿秘條", occurrence_count=1),
+                             context={"tenant_id": other.pk})
+    assert s.is_valid(), s.errors
+    # 没有殿就什么都查不到(失败关闭)。
+    s = SoulRecordSerializer(data=_payload(statute_clause=f"{GOOD_CODE}:{GOOD_CONDITION}", occurrence_count=1))
+    assert not s.is_valid()
 
 
 def test_neither_field_is_still_a_valid_record(seeded):

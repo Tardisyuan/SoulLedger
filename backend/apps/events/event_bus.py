@@ -318,7 +318,7 @@ def configure_default_handlers() -> None:
         - soul domain:    AuditHandler (audit logging)
         - * domains:      WebSocketHandler (real-time push)
         - notification:   NotificationHandler (UserNotification + WS)
-        - all domains:    WebhookHandler (external delivery)
+        - business domains: WebhookHandler (external delivery; not notification)
     """
     from apps.events.handlers.audit_handler import AuditHandler
     from apps.events.handlers.notification_handler import NotificationHandler
@@ -363,8 +363,10 @@ def configure_default_handlers() -> None:
     for domain in ("workflow", "notification", "dispatch", "deathsync", "social", "scheduler"):
         handler_registry.register_domain(domain, WebSocketHandler())
 
-    # All domains — webhook delivery (filters by tenant internally)
-    for domain in ("workflow", "notification", "dispatch", "deathsync", "social"):
+    # Webhook delivery (filters by tenant internally). Not "notification" (决定 26, 2026-10-29): those are
+    # one officer's own inbox — password help, impersonation notices, letters handed over — addressed to a
+    # person, not business facts an external integration subscribes to.
+    for domain in ("workflow", "dispatch", "deathsync", "social"):
         handler_registry.register_domain(domain, WebhookHandler())
 
     # Scheduler: by event type, not by domain. Of the scheduler events only a

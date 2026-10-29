@@ -2330,7 +2330,9 @@
       "embalming": "This judgment is held until {{date}}: the embalming isn't finished and the soul hasn't set out for the Hall of Two Truths; it can't be claimed before then.",
       "duat_unfinished": "This judgment can't be claimed: the soul cannot reach the Hall of Two Truths.",
       "duat_barred_short": "Can't reach the hall",
-      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron."
+      "unferried": "This judgment can't be claimed: the soul is unburied or has no fare, and waits on the bank of Acheron.",
+      "not_yours_readonly": "{{name}} has claimed this case; only they can change it. You can read it.",
+      "override_recorded": "You are not the claimant ({{name}} has claimed this case); what you change here is recorded."
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2572,6 +2574,15 @@
     "ferry": {
       "barred_unburied": "Unburied: can't cross the river",
       "barred_no_fare": "No fare: can't cross the river"
+    },
+    "reopen_cancelled": {
+      "button": "Reopen as a new case",
+      "hint": "This case's approval flow was cancelled and its disposition is stuck. Withdraw the conclusion and open a new case.",
+      "done": "Reopened: {{case_number}}",
+      "refusal": {
+        "not_cancelled": "This case's approval flow was not cancelled, so it cannot be reopened this way.",
+        "cannot_reopen": "The soul has already been placed; ask for a reopening or an appeal instead."
+      }
     }
   },
   "audit": {
@@ -7939,7 +7950,9 @@
     },
     "deactivate_prompt": "{{name}} still has open work. Hand it over before deactivating?",
     "submit_and_deactivate_n": "Hand over {{n}} and deactivate",
-    "deactivated_toast": "Handed over and deactivated {{name}}"
+    "deactivated_toast": "Handed over and deactivated {{name}}",
+    "letters_kept": "You cannot reply to letters, so {{n}} letters stay with {{name}} and are not handed over.",
+    "result_letters_kept": "{{n}} letters were not handed over and stay with the outgoing officer (you cannot reply to letters)."
   },
   "officerInvite": {
     "action": "Invite an officer",

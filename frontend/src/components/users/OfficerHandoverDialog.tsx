@@ -31,6 +31,7 @@ const name = (u: { display_name?: string; username?: string }) => u.display_name
  * 任一人改了,旧预览丢掉重新取。预览四类各占一行、0 也写;回到待复核池的申诉写在申诉那一行下面;
  * 有 `problems`(或提交时真收到 409)= 少见的真阻断,danger 框、接手人描红、提交置灰;全 0 = `empty`、提交置灰。
  * 提交按钮写总件数。结果写实际件数:比预览少才有 `result_fewer`,有申诉回池才有 `result_pool`。
+ * 操作人不持 soul_inbox.reply 时后端只移交其余三类,`letters_kept` 封书信留在交出人名下:预览与结果各说一句。
  *
  * 不带 `from`:从审判队列进来(持 judgment.assign 的殿主,rbac-web M-7),交出人也在下拉里选。
  * 人选来自 `GET /judgment/handover/officers/`(judgment.assign,本殿在职官员),不是 `users/`(ADMIN + user.manage)。
@@ -149,6 +150,11 @@ export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { f
           {done.appeals_returned_to_pool > 0 && (
             <p>{t("officerHandover.result_pool", { n: String(done.appeals_returned_to_pool) })}</p>
           )}
+          {(done.letters_kept ?? 0) > 0 && (
+            <p data-testid="handover-result-letters-kept">
+              {t("officerHandover.result_letters_kept", { n: String(done.letters_kept) })}
+            </p>
+          )}
           {actual < result.planned && <p className={subNote}>{t("officerHandover.result_fewer")}</p>}
           <p className={subNote}>{t("officerHandover.result_notified", { name: result.to })}</p>
         </div>
@@ -232,6 +238,13 @@ export function OfficerHandoverDialog({ from, onClose, deactivate = false }: { f
         )}
 
         {previewQuery.isFetching && <p role="status" className={subNote}>{t("common.loading")}</p>}
+        {/* 操作人不持 soul_inbox.reply(第 22 条):书信不移交、留在交出人名下 —— 0 件时也要说,不然「没有可移交的」读起来像没有书信。 */}
+        {preview && !previewQuery.isFetching && (preview.letters_kept ?? 0) > 0 && (
+          <p className="text-sm text-[oklch(var(--color-ink))]" data-testid="handover-letters-kept">
+            <span aria-hidden="true">! </span>
+            {t("officerHandover.letters_kept", { n: String(preview.letters_kept), name: source ? name(source) : "" })}
+          </p>
+        )}
         {preview && !previewQuery.isFetching && total === 0 && problems.length === 0 && (
           <p role="status" className="text-sm" data-testid="handover-empty">
             {t("officerHandover.empty", { name: source ? name(source) : "" })}

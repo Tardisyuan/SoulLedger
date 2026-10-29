@@ -464,6 +464,10 @@ def refuse_started(workflow, what: str) -> None:
         raise WorkflowConflictError("workflow_started", f"The flow has started; its {what} can no longer be changed.")
 
 
+def _foreign_signature(sig):
+    return {**sig, "user_id": None, "user_name": None, **({"notes": ""} if "notes" in sig else {})}
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -565,11 +569,14 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         viewer = viewer_tenant_id(self.context.get("request"), node.workflow)
         if viewer is None or viewer == node.segment.tenant_id:
             return data
+        # 决定 24(2026-10-29):别站的意见原文也不给 —— 节点 notes、会签各人的 notes、退回前的旧意见。
         data.update(approver=None, approver_username=None, approver_display_name=None, cosigners=[],
-                    waiting_on_cosigner=None)
-        data["signatures_json"] = [{**sig, "user_id": None, "user_name": None} for sig in data.get("signatures_json") or []]
-        data["decision_history"] = [{**entry, "approver_id": None, "approver_name": None}
-                                    if "approver_name" in entry else entry for entry in data.get("decision_history") or []]
+                    waiting_on_cosigner=None, notes="")
+        data["signatures_json"] = [_foreign_signature(sig) for sig in data.get("signatures_json") or []]
+        data["decision_history"] = [
+            {**entry, "approver_id": None, "approver_name": None, "notes": "",
+             "signatures": [_foreign_signature(sig) for sig in entry.get("signatures") or []]}
+            if "approver_name" in entry else entry for entry in data.get("decision_history") or []]
         return data
 
     @extend_schema_field(CosignerRowSerializer(many=True))
@@ -797,6 +804,16 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     can_approve = serializers.SerializerMethodField()
     cross_judgment_id = serializers.SerializerMethodField()
     judgment_appeal = serializers.SerializerMethodField()
+
+    def to_representation(self, obj):
+        """决定 24:别殿(合并流程的参与域)读流程时不给召集殿写的 `notes`(别站意见原文在节点序列化器里收)。"""
+        data = super().to_representation(obj)
+        from apps.workflow.segments import viewer_tenant_id
+
+        viewer = viewer_tenant_id(self.context.get("request"), obj)
+        if viewer is not None and viewer != obj.tenant_id:
+            data["notes"] = ""
+        return data
 
     @extend_schema_field(WorkflowSegmentSerializer(many=True))
     def get_segments(self, obj):

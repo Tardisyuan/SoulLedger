@@ -273,7 +273,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         finally:
             clear_current_user()
 
-        output_serializer = DispatchRecordSerializer(dispatch_record)
+        output_serializer = DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context())
         headers = self.get_success_headers(output_serializer.data)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -313,6 +313,19 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         `dispatch_draft`),ADMIN 可从那里恢复。"""
         instance.soft_delete(user=self.request.user)
 
+    @staticmethod
+    def _not_target_or_403(request, record, verb):
+        """批准 / 驳回 / 执行只给目标殿。无殿 ADMIN 视为满足(决定 25,与 `cancel`、`create` 一致)。"""
+        # 绑殿 ADMIN 不算:它在别殿的提案上仍是第三方,不能借 ADMIN 身份替目标殿拍板。
+        if is_tenant_exempt(request.user) and getattr(request.user, "tenant_id", None) is None:
+            return None
+        tenant = getattr(request, "tenant", None)
+        if record.source_tenant != tenant and record.target_tenant != tenant:
+            return Response({"error": "Not authorized to modify this dispatch"}, status=403)
+        if record.target_tenant != tenant:
+            return Response({"error": f"Only target tenant can {verb} dispatch"}, status=403)
+        return None
+
     def _requester_tenant(self, request):
         return getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
 
@@ -345,7 +358,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         finally:
             clear_current_user()
-        return Response(DispatchRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+        return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=DispatchDraftSerializer, responses=DispatchRecordSerializer)
     @action(detail=True, methods=["patch"])
@@ -367,7 +380,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         finally:
             clear_current_user()
-        return Response(DispatchRecordSerializer(record).data)
+        return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data)
 
     @extend_schema(request=DispatchDraftSerializer, responses=DispatchRecordSerializer)
     @action(detail=True, methods=["post"])
@@ -410,7 +423,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             )
         finally:
             clear_current_user()
-        return Response(DispatchRecordSerializer(record).data)
+        return Response(DispatchRecordSerializer(record, context=self.get_serializer_context()).data)
 
     @extend_schema(
         parameters=[
@@ -559,16 +572,14 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         dispatch_record = self.get_object()
         # S-M2: Verify tenant is involved in this dispatch
-        if dispatch_record.source_tenant != request.tenant and dispatch_record.target_tenant != request.tenant:
-            return Response({"error": "Not authorized to modify this dispatch"}, status=403)
-        # S-H2: Only target tenant can approve
-        if dispatch_record.target_tenant != request.tenant:
-            return Response({"error": "Only target tenant can approve dispatch"}, status=403)
+        refused = self._not_target_or_403(request, dispatch_record, "approve")
+        if refused is not None:
+            return refused
         approver = request.user
 
         try:
             dispatch_record = DispatchService.approve(dispatch_record, approver)
-            return Response(DispatchRecordSerializer(dispatch_record).data)
+            return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
         except ValueError as e:
             return _refused(e)
 
@@ -578,13 +589,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         Reject a proposed dispatch.
         """
         dispatch_record = self.get_object()
-        # S-M2: Verify tenant is involved in this dispatch
-        if dispatch_record.source_tenant != request.tenant and dispatch_record.target_tenant != request.tenant:
-            return Response({"error": "Not authorized to modify this dispatch"}, status=403)
         # 只有目标殿能驳回(与 approve / execute 同一条)。RBAC 严查 2026-10-29 M4:此前发起殿也能
         # 驳回自己的提案,记录写成 REJECTED、通知只回发起殿,目标殿的待批里它悄悄消失。撤回走 `cancel`。
-        if dispatch_record.target_tenant != request.tenant:
-            return Response({"error": "Only target tenant can reject dispatch"}, status=403)
+        refused = self._not_target_or_403(request, dispatch_record, "reject")
+        if refused is not None:
+            return refused
         serializer = DispatchRejectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         rejector = request.user
@@ -592,7 +601,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         try:
             dispatch_record = DispatchService.reject(dispatch_record, rejector, reason)
-            return Response(DispatchRecordSerializer(dispatch_record).data)
+            return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -622,7 +631,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         except DispatchNotCancellableError as exc:
             return Response({"error": str(exc), "code": exc.code, "status": exc.status},
                             status=status.HTTP_409_CONFLICT)
-        return Response(DispatchRecordSerializer(dispatch_record).data)
+        return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
 
     @action(detail=True, methods=["post"])
     @idempotent
@@ -634,13 +643,14 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         """
         dispatch_record = self.get_object()
         # S-C1: Verify executor is from target tenant
-        if dispatch_record.target_tenant != request.tenant:
-            return Response({"error": "Only target tenant can execute dispatch"}, status=403)
+        refused = self._not_target_or_403(request, dispatch_record, "execute")
+        if refused is not None:
+            return refused
         executor = request.user
 
         try:
             dispatch_record = DispatchService.execute(dispatch_record, executor)
-            return Response(DispatchRecordSerializer(dispatch_record).data)
+            return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
         except ValueError as e:
             return _refused(e)
 
@@ -683,7 +693,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
         dispatch_record.refresh_from_db()
-        return Response(DispatchRecordSerializer(dispatch_record).data)
+        return Response(DispatchRecordSerializer(dispatch_record, context=self.get_serializer_context()).data)
 
 
 def _participants_with_names():
@@ -813,9 +823,11 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             # enforces no uniqueness, so a tenant added twice to the same
             # judgment sees that judgment twice — in the page body and in the
             # paginated `count`, which is the number the UI prints.
-            return qs.filter(
+            qs = qs.filter(
                 Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant)
             ).distinct()
+            # RowLevelDataScope 也要过(rbac-scope 第 9 条):同文件 DispatchRecord 补过,这里覆写后一直没补。
+            return DataScopeFilter.filter_queryset(self.request, qs, CrossTenantJudgment)
         return qs.none()
 
     def perform_create(self, serializer):
