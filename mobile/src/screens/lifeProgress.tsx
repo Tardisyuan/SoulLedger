@@ -70,8 +70,9 @@ const CAPTURE_STEPS = ["step_issued", "step_captured", "step_handed"] as const;
 const CAPTURE_AT: Record<string, number | undefined> = { ISSUED: 1, CAPTURED: 2, HANDED_OVER: 3 };
 
 /**
- * 勾魂牒(地府):发牒 → 拘到 → 交城隍,■ 已过 ▪ 正在 □ 未到。死亡登记时牒一并签发并交接(用户 2026-10-30),
- * 所以灵魂端通常看到的是 HANDED_OVER:三步全是 ■。
+ * 勾魂牒(地府):发牒 → 拘到 → 交城隍,■ 已过 ▪ 正在 □ 未到。死亡登记时牒一并签发并交接(用户 2026-10-30)。
+ * 已交城隍(HANDED_OVER)不画步骤行(第六十四批):三步是随死亡同时记下的,画成 ■ → ■ → ■ 像先后三件事。
+ * 灵魂上路(下一张位置卡出现)后这张卡收起,改成资料行里的 `CaptureLine`,由调用方判断。
  */
 export function CaptureCard({ warrant }: { warrant: MeProfile["capture_warrant"] }) {
   const { t: tr } = useI18n();
@@ -80,18 +81,32 @@ export function CaptureCard({ warrant }: { warrant: MeProfile["capture_warrant"]
   if (!warrant || at === undefined) return null;
   return (
     <Card testID="life-capture" title={tr("soul_app.life.capture.title")}>
-      <View testID="life-capture-steps" style={styles.steps}>
-        {CAPTURE_STEPS.map((step, i) => (
-          <Txt key={step} numberOfLines={1} variant="caption" tone={i === at ? "ink" : "muted"}>
-            {`${i ? "→ " : ""}${i < at ? "■" : i === at ? "▪" : "□"} ${tr(`soul_app.life.capture.${step}`)}`}
-          </Txt>
-        ))}
-      </View>
+      {at < CAPTURE_STEPS.length ? (
+        <View testID="life-capture-steps" style={styles.steps}>
+          {CAPTURE_STEPS.map((step, i) => (
+            <Txt key={step} numberOfLines={1} variant="caption" tone={i === at ? "ink" : "muted"}>
+              {`${i ? "→ " : ""}${i < at ? "■" : i === at ? "▪" : "□"} ${tr(`soul_app.life.capture.${step}`)}`}
+            </Txt>
+          ))}
+        </View>
+      ) : null}
       <Txt testID="life-capture-status" variant="body">
         {tr(`soul_app.life.capture.${warrant.status}`)}
       </Txt>
       <DateLine testID="life-capture-date" text={tr("soul_app.life.capture.issued_on", { date: day(warrant.issued_at) })} />
     </Card>
+  );
+}
+
+/** 收起后的勾魂牒(第六十四批):资料行里一行「勾魂牒 · 交城隍 · 日期」。只给已交城隍的牒。 */
+export function CaptureLine({ warrant }: { warrant: MeProfile["capture_warrant"] }) {
+  const { t: tr } = useI18n();
+  const day = useDay();
+  if (warrant?.status !== "HANDED_OVER") return null;
+  return (
+    <Txt testID="life-capture-line" variant="body" tone="muted">
+      {tr("soul_app.life.capture.handed_line", { date: day(warrant.issued_at) })}
+    </Txt>
   );
 }
 

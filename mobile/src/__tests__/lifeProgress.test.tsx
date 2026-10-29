@@ -147,15 +147,35 @@ describe("勾魂牒", () => {
     expect(screen.getByTestId("life-capture-status")).toHaveTextContent("鬼差已经拘到你，正送往城隍。");
   });
 
-  it("HANDED_OVER: all three steps past, the hand-over sentence", async () => {
+  it("HANDED_OVER, still with the City God: no step row (第六十四批), the sentence and the issued day", async () => {
     await openAs({ capture_warrant: { status: "HANDED_OVER", issued_at: "2026-10-27T12:00:00Z" } });
-    const steps = within(screen.getByTestId("life-capture-steps"));
-    expect(steps.getByText("■ 发牒")).toBeTruthy();
-    expect(steps.getByText("→ ■ 拘到")).toBeTruthy();
-    expect(steps.getByText("→ ■ 交城隍")).toBeTruthy();
-    expect(steps.queryByText(/▪|□/)).toBeNull();
+    expect(screen.queryByTestId("life-capture-steps")).toBeNull();
     expect(screen.getByTestId("life-capture-status")).toHaveTextContent("鬼差已把你交给城隍。");
+    expect(screen.getByTestId("life-capture-date")).toHaveTextContent("发牒 · 2026年 · 10月27日");
     expect(screen.getByTestId("life-capture")).not.toHaveTextContent("HANDED_OVER");
+    expect(screen.queryByTestId("life-capture-line")).toBeNull();
+  });
+
+  it("HANDED_OVER, on the road (a station card): the card folds into one data row", async () => {
+    await openAs({ capture_warrant: { status: "HANDED_OVER", issued_at: "2026-10-27T12:00:00Z" }, diyu_station: "TUDI_TEMPLE" });
+    expect(screen.getByTestId("life-stations")).toBeTruthy();
+    expect(screen.queryByTestId("life-capture")).toBeNull();
+    expect(screen.getByTestId("life-capture-line")).toHaveTextContent("勾魂牒 · 交城隍 · 2026年 · 10月27日");
+  });
+
+  it("HANDED_OVER, a wangsi case on the page: folded too", async () => {
+    await openAs(
+      { capture_warrant: { status: "HANDED_OVER", issued_at: "2026-10-27T12:00:00Z" } },
+      { "/me/wangsi/": { status: 200, data: [wangsiRow({ grievance_status: "UPHELD" })] } },
+    );
+    expect(await screen.findByTestId("life-capture-line")).toBeTruthy();
+    expect(screen.queryByTestId("life-capture")).toBeNull();
+  });
+
+  it("an open warrant keeps its card even with a station card on the page", async () => {
+    await openAs({ capture_warrant: { status: "CAPTURED", issued_at: "2026-10-27T12:00:00Z" }, diyu_station: "TUDI_TEMPLE" });
+    expect(screen.getByTestId("life-capture-steps")).toBeTruthy();
+    expect(screen.queryByTestId("life-capture-line")).toBeNull();
   });
 
   it("a status it does not know draws nothing (no raw member on the page)", async () => {

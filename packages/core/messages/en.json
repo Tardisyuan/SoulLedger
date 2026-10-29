@@ -4825,7 +4825,8 @@
         "step_issued": "Issued",
         "step_captured": "Captured",
         "step_handed": "To the City God",
-        "issued_on": "Issued · {{date}}"
+        "issued_on": "Issued · {{date}}",
+        "handed_line": "Capture warrant · handed to the City God · {{date}}"
       },
       "ferry": {
         "title": "The crossing of Acheron",

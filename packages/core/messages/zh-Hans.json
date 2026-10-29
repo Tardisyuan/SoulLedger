@@ -4825,7 +4825,8 @@
         "step_issued": "发牒",
         "step_captured": "拘到",
         "step_handed": "交城隍",
-        "issued_on": "发牒 · {{date}}"
+        "issued_on": "发牒 · {{date}}",
+        "handed_line": "勾魂牒 · 交城隍 · {{date}}"
       },
       "ferry": {
         "title": "冥河渡口",
