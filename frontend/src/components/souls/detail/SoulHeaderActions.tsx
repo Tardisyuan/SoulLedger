@@ -107,9 +107,9 @@ export function SoulHeaderActions({
   // 页面只在持有对应码名时才交来这些回调,所以门禁写成「任一」:码名与回调一一对应。
   const menuCodenames = [
     ...(onDelete ? ["soul.delete"] : []),
-    ...(onRecalculate ? ["ledger.manage"] : []),
+    ...(onRecalculate ? ["ledger.calculate"] : []),
     ...(onStartWorkflow ? ["workflow.create"] : []),
-    ...(onRegisterByTudi ? ["soul.die"] : []),
+    ...(onRegisterByTudi ? ["tudi.register"] : []),
     ...(onCorrectSettlement ? ["soul.correct_settlement"] : []),
     ...(onMarkLost ? ["soul.transition"] : []),
   ];

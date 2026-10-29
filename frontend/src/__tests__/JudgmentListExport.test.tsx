@@ -28,7 +28,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "yama", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "diyu" } } }),
+  useTenant: () => ({ user: { id: 1, username: "yama", role: "JUDGE", permissions: ["judgment.read", "judgment.execute", "judgment.export"], tenant: { code: "diyu" } } }),
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 

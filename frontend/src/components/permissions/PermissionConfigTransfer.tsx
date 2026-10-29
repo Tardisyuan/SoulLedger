@@ -10,6 +10,7 @@ import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { Modal } from "@/src/components/ui/Modal";
 import { TextField } from "@/src/components/ui/Field";
@@ -124,6 +125,7 @@ type Mode = "merge" | "overwrite";
 export function PermissionConfigTransfer() {
   const { t } = useI18n();
   const { user } = useTenant();
+  const { hasPermission, isAdmin } = usePermissions();
   const { showToast } = useToast();
   const exporter = useExportPermissionConfig();
   const importer = useImportPermissionConfig();
@@ -143,13 +145,15 @@ export function PermissionConfigTransfer() {
   // 只有恰为 true 才显示「合并 / 覆盖」与其后的全部覆盖界面;缺失或 false 与纯合并模式一样,不显示一个禁用的选项。
   const [canOverwrite, setCanOverwrite] = useState(false);
 
-  // 后端只许 ADMIN;这里同一条件,不显示一个注定 403 的入口。
-  if (user?.role !== "ADMIN") return null;
+  // 与后端同一条件(2026-10-29 第 2 条):导出要 `system.settings`;导入是写全站配置,只给没绑殿的 ADMIN
+  // (`CanWriteGlobalSettings`)。不显示一个注定 403 的入口。
+  if (!hasPermission("system.settings")) return null;
+  const canImport = isAdmin && !user?.tenant;
 
   const maxLabel = `${MAX_IMPORT_BYTES / 1024 / 1024} MB`;
-  const tenantCode = user.tenant?.code ?? "tenant";
+  const tenantCode = user?.tenant?.code ?? "global";
   const day = new Date().toISOString().slice(0, 10);
-  const hall = user.tenant?.display_name ?? tenantCode;
+  const hall = user?.tenant?.display_name ?? tenantCode;
 
   const doExport = () =>
     exporter.mutate(undefined, {
@@ -268,7 +272,7 @@ export function PermissionConfigTransfer() {
             onSelect: doExport,
             disabled: exporter.isPending,
           },
-          { key: "import", label: t("permissions.config.import"), onSelect: () => setOpen(true) },
+          ...(canImport ? [{ key: "import", label: t("permissions.config.import"), onSelect: () => setOpen(true) }] : []),
         ]}
       />
 

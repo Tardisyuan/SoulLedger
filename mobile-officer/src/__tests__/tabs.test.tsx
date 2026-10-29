@@ -368,7 +368,7 @@ describe("tabs by permission (decisions 30 / 31)", () => {
   it("visibleTabs: 待办 for any one of its groups' codes; 通知 / 我的 for everyone", () => {
     expect(visibleTabs([])).toEqual(["notices", "me"]);
     expect(visibleTabs(undefined)).toEqual(["notices", "me"]);
-    for (const code of ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute"]) expect(visibleTabs([code])).toContain("todo");
+    for (const code of ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute", "city_god.execute", "wangsi.execute"]) expect(visibleTabs([code])).toContain("todo");
     expect(visibleTabs(["dispatch.read", "workflow.read"])).not.toContain("todo");
     expect(visibleTabs(OFFICER.permissions)).toEqual(["todo", "queue", "search", "notices", "me"]);
   });

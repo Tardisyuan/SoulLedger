@@ -208,17 +208,17 @@ export default function SoulDetailPage() {
   });
 
   const soul = soulQuery.data ?? null;
-  // 「以土地公名义登记死亡」:除 `soul.die` 外,后端还要是某位土地公名下的官员或持 `judgment.assign`
-  // (`tudi_views.register_death`)。不持 assign 时取土地公列表(与弹层同一个键)看自己名下有没有。
-  const tudiCandidate = soul?.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("soul.die");
-  const canAssignJudgment = hasPermission("judgment.assign");
+  // 「以土地公名义登记死亡」:除 `tudi.register` 外,后端还要是某位土地公名下的官员或持 `tudi.manage`
+  // (`tudi_views.register_death`)。不持 manage 时取土地公列表(与弹层同一个键)看自己名下有没有。
+  const tudiCandidate = soul?.civilization === "CHINESE" && soul.current_state === "ALIVE" && hasPermission("tudi.register");
+  const canManageTudi = hasPermission("tudi.manage");
   const tudiGods = useQuery({
     queryKey: [...tudiGodKeys.all, "list"],
     queryFn: () => tudiGodsApi.list().then((r) => r.data.results),
-    enabled: tudiCandidate && !canAssignJudgment,
+    enabled: tudiCandidate && !canManageTudi,
   });
   const mayRegisterByTudi =
-    tudiCandidate && (canAssignJudgment || (tudiGods.data ?? []).some((g) => mayRegisterUnder(g, user?.id, false)));
+    tudiCandidate && (canManageTudi || (tudiGods.data ?? []).some((g) => mayRegisterUnder(g, user?.id, false)));
   const accountChain = useSoulAccountChain(id, hasPermission("soul_account.read"));
   const ledger = ledgerQuery.data ?? null;
   const records = recordsQuery.data ?? NO_RECORDS;
@@ -743,12 +743,12 @@ export default function SoulDetailPage() {
   const headerActions = !loading && soul && !readOnlyAway && !archived ? (
     <SoulHeaderActions
       /* 菜单按钮配置关掉的就不交给它;权限门在组件里照旧。 */
-      onEdit={buttonOn("souls.edit") ? () => setIsEditModalOpen(true) : undefined}
+      onEdit={buttonOn("souls.edit") && hasPermission("soul.update") ? () => setIsEditModalOpen(true) : undefined}
       onDelete={buttonOn("souls.delete") ? handleDeleteConfirm : undefined}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
       onMarkLost={soul.current_state === "DISPOSED" && canTransition ? () => setLostDialog("mark") : undefined}
       onRecall={soul.current_state === "LOST" && canTransition ? () => setLostDialog("recall") : undefined}
-      onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
+      onRecalculate={hasPermission("ledger.calculate") ? handleRecalculate : undefined}
       onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}
       onRegisterByTudi={mayRegisterByTudi ? () => setIsTudiRegisterOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
@@ -854,7 +854,7 @@ export default function SoulDetailPage() {
         <div className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
           <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay} />
           {soul && soul.civilization === "CHINESE" && !readOnlyAway && !archived && (
-            <CapturePanel soul={soul} canAct={hasPermission("soul.die")} />
+            <CapturePanel soul={soul} canIssue={hasPermission("capture.issue")} canExecute={hasPermission("capture.execute")} />
           )}
 
           {!readOnlyAway && !archived && (

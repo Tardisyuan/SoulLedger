@@ -41,7 +41,7 @@ export function wangsiMode(
 export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled: () => void; onDone: () => void }) {
   const { t, locale } = useI18n();
   const theme = useTheme();
-  const canAct = useCan("judgment.execute");
+  const canAct = useCan("wangsi.execute");
   // 没网时不审(同审判台的认领 / 改派):这期间案卷可能已经变了。
   const { offline } = useOnline();
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);

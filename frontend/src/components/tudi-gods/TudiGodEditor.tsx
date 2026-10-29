@@ -14,8 +14,9 @@ import { tudiRefusalCode, tudiRefusalMessage } from "./tudiDisplay";
 /*
  * 编辑土地公(第五十七批 S-5):照城隍的编辑抽屉 —— 名字、管辖地(标签输入,同城隍地名)、上级城隍(只列本殿的,
  * 已定级的只列县城隍:后端 `tudi_city_god_not_county` 拒别的级别)、名下官员。删除在底部左侧,二次确认。
- * ponytail: 名下官员的候选借用城隍抽屉的 `officer-choices`(能办案的人);土地公后端按 `soul.die` 校验,
- * 两份名单不同时保存会被 `invalid_officer` 拒并写出原因。要分开就给土地公加一个自己的候选接口。
+ * ponytail: 名下官员的候选借用城隍抽屉的 `officer-choices`(持 `city_god.execute` 的人;这个接口本身要 `city_god.manage`,
+ * 只持 `tudi.manage` 的人取不到候选);土地公后端按 `tudi.register` 校验,两份名单不同时保存会被 `invalid_officer`
+ * 拒并写出原因。默认授予下两组码同一批角色。要分开就给土地公加一个自己的候选接口。
  */
 
 interface Props {

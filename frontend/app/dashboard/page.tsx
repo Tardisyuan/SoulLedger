@@ -14,7 +14,7 @@ import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
-import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
@@ -150,16 +150,14 @@ function DashboardContent() {
     </>
   );
 
-  // The backend's /ledger/stats/export/ is a hardcoded `role == "ADMIN"` check,
-  // not a codename. `karma.export` never existed, and the whole `karma.*`
-  // family was renamed to `ledger.*` by perm/0016 -- so the string was doubly
-  // dead and the gate worked only because hasPermission short-circuits ADMIN.
+  // /ledger/stats/export/ is gated by `ledger.export` since 2026-10-29 (user items 3 / 33); until then it was
+  // a hardcoded `role == "ADMIN"` check and this button sat behind RequireAdmin.
   const pageActions = (
-    <RequireAdmin>
+    <RequirePermission permissions="ledger.export">
       <Button type="button" variant="primary" loading={exporting} onClick={handleExport}>
         {t("dashboard.export_stats")}
       </Button>
-    </RequireAdmin>
+    </RequirePermission>
   );
 
   const tabs: { key: DashboardTab; label: string }[] = [
@@ -191,11 +189,11 @@ function DashboardContent() {
         {tabItem.label}
       </button>
     );
-    // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
+    // The ledger tab reads /ledger/stats/overview/, which asks `ledger.read` alone since 2026-10-29 (item 33).
     return tabItem.key === "ledger" ? (
-      <RequireAdmin key={tabItem.key}>
+      <RequirePermission key={tabItem.key} permissions="ledger.read">
         {button}
-      </RequireAdmin>
+      </RequirePermission>
     ) : (
       button
     );
@@ -457,7 +455,7 @@ function DashboardContent() {
             </div>
           </>
         ) : (
-          <RequireAdmin fallback={<PermissionDenied />}>
+          <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
                 <ChartCard title={t("admin.avg_balance")}>
@@ -569,7 +567,7 @@ function DashboardContent() {
                 />
               </ChartCard>
             </div>
-          </RequireAdmin>
+          </RequirePermission>
         )}
       </div>
     </PageShell>

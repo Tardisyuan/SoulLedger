@@ -546,6 +546,20 @@ describe("AuditPage export", () => {
     await screen.findByText("audit.access_denied");
     expect(screen.queryByRole("button", { name: "audit.export" })).not.toBeInTheDocument();
   });
+
+  it("offers no export to a reader without audit.export (its own code since 2026-10-29), and one to a holder", async () => {
+    mockIsAdmin = false;
+    mockRole = "MODERATOR";
+    mockPermissions = ["audit.read"];
+    const { unmount } = renderPage();
+    await screen.findByText("created a soul");
+    expect(screen.queryByRole("button", { name: "audit.export" })).not.toBeInTheDocument();
+    unmount();
+    mockPermissions = ["audit.read", "audit.export"];
+    renderPage();
+    await screen.findByText("created a soul");
+    expect(screen.getByRole("button", { name: "audit.export" })).toBeInTheDocument();
+  });
 });
 
 // ── 记住的筛选与列菜单(2026-10-15) ─────────────────────────────────
