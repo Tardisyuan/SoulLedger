@@ -3,6 +3,7 @@
  * 点「解送十殿」先出一个底部小确认,可写批语;退回补正是底部弹层,批语必填,下面一句会通知本殿管理员。
  * 退回补正的案子只剩解送(后端不许再退)。改交与城隍管理留在网页上(「改交在网页上办」)。
  * `can_act=false` 时两个按钮置灰,上方一句「你不在这位城隍名下」。
+ * 不持 `judgment.execute`(后端 city_god_views 解送 / 退回都要它)的人不画这两个按钮(RBAC A6)。
  */
 import { cityGodCasesApi, CITY_GOD_CASE_ERROR_CODES } from "@soulledger/core/api/judgment";
 import { useCallback, useState } from "react";
@@ -10,6 +11,7 @@ import { View } from "react-native";
 
 import { formatWhen } from "../format";
 import { ActionButton, StateView, detailStateOf } from "../kit";
+import { useCan } from "../session";
 import { Input, Notice, Screen, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 function refusalKey(e: unknown): string {
@@ -28,11 +30,12 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const canExecute = useCan("judgment.execute");
 
   const state = detailStateOf({ data: c, error });
   if (state || !c) return <StateView state={state ?? "loading"} onRetry={() => void reload()} />;
 
-  const open = c.city_god_status !== "SENT_ON";
+  const open = c.city_god_status !== "SENT_ON" && canExecute;
   const locked = !c.can_act;
   const close = () => {
     setSheet(null);

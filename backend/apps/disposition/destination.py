@@ -15,7 +15,7 @@ from functools import cache
 from django.db.models import Count, Q
 
 from apps.judgment.models import JudgmentMethod, Verdict
-from apps.realms.models import Realm, SoulPathEntry
+from apps.realms.models import RETIRED_REALM_CODES, Realm, SoulPathEntry
 from apps.souls.models import Civilization
 
 #: 刑期上界就是列的上界(`Disposition.sentence_years` 是 IntegerField;
@@ -86,6 +86,7 @@ def _tenant_realms(judgment):
         Realm.all_objects.filter(
             tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization, is_deleted=False,
         )
+        .exclude(realm_code__in=RETIRED_REALM_CODES)  # 不再使用的界域不进选单(审查 L)
         .annotate(occupancy=Count("path_entries", filter=Q(path_entries__left_at__isnull=True)))
         .order_by("order", "tier", "realm_code")
     )

@@ -84,3 +84,15 @@ export const loginLogsApi = {
   list: (params?: { page?: string; status?: LoginLogStatus; search?: string }) =>
     api.get<PaginatedResponse<LoginLogEntry>>("/auth/login-logs/", { params }),
 };
+
+/** One row of `GET /auth/admin/sessions/` (`session.manage`): a live sign-in in the admin's halls (all halls for a hall-less admin). */
+export type AdminSession = components["schemas"]["AdminSession"];
+export type AdminSessionKind = "officer" | "soul";
+
+/** 在线会话与强退(backend/apps/authentication/admin_session_views.py)。范围外的 id 答 404;自己这台 400 `current_session`。 */
+export const adminSessionsApi = {
+  list: (params: { kind: AdminSessionKind; page?: string; user?: string }) =>
+    api.get<PaginatedResponse<AdminSession>>("/auth/admin/sessions/", { params }),
+  revoke: (id: string) => api.post<void>(`/auth/admin/sessions/${id}/revoke/`),
+  revokeUser: (user: number) => api.post<{ revoked: number }>("/auth/admin/sessions/revoke-user/", { user }),
+};

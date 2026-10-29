@@ -30,6 +30,7 @@ from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
 from apps.chat.models import Conversation, ConversationKind, InboxReplyTemplate
 from apps.chat.serializers import (
     ChatErrorSerializer,
+    ChatLookupResultSerializer,
     ChatLookupSerializer,
     ChatSessionSerializer,
     ConversationCreateSerializer,
@@ -46,11 +47,11 @@ from apps.chat.serializers import (
     OfficerInboxSerializer,
     OfficerReplySerializer,
 )
+from apps.core.idempotency import idempotent
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.throttling import ClientIPIdentMixin
 from apps.core.viewsets import CodenameViewSetMixin
-from apps.social.soul_serializers import SoulCardSerializer
 from apps.soul_accounts.me_views import SoulAPIView
 
 
@@ -111,10 +112,16 @@ class MeChatConversationsView(ChatView):
         account = self.account
         if body.validated_data["kind"] == ConversationKind.OFFICER_INBOX:
             conversation, created = svc.open_officer_inbox(account, request=request)
+        elif body.validated_data.get("ticket"):
+            # 按编号查到的人(可以在别的文明):凭证绑定发起人与目标、限时、只用一次。
+            target, used = svc.read_direct_ticket(account, body.validated_data["ticket"])
+            conversation, created = svc.open_direct(account, target, request=request)
+            svc.spend_direct_ticket(used)
         else:
-            # 存在与否、是否同文明,由 open_direct 按朋友圈搜索的同一个集合判断 —— 这里只取行。
+            # 凭 user_id 只能找看得见的人(nameable_by_id);别的文明的 id 与不存在答同一个 404,
+            # 不留「这个 id 有人」的区分 —— 否则逐个试 id 仍能数出全库(第 29 条)。
             target = User.objects.filter(pk=body.validated_data["target_user"]).first()
-            if target is None:
+            if target is None or (target.pk != account.user_id and not svc.nameable_by_id(account, target)):
                 raise svc.ChatError("找不到这个灵魂。", "not_found", status=404)
             conversation, created = svc.open_direct(account, target, request=request)
         return Response(
@@ -134,9 +141,10 @@ class ChatLookupThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
 class MeChatLookupView(ChatView):
     """`POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
 
-    返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
-    **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
-    互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+    返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)加一次性
+    凭证 `ticket` —— **编号不回显**、UUID 不出库。拿 `ticket`(不是 user_id:别的文明的 id 发起时不认,
+    第 29 条)走 `POST /me/chat/conversations/`,互关与 24 小时请求的规则都在那里,这里不另开一套。
+    被禁言的灵魂可以查,发起时照旧 403 `muted`。
     """
 
     throttle_classes = [ChatLookupThrottle]
@@ -148,13 +156,14 @@ class MeChatLookupView(ChatView):
         raise error
 
     @extend_schema(request=ChatLookupSerializer,
-                   responses={200: SoulCardSerializer, 403: ChatErrorSerializer,
+                   responses={200: ChatLookupResultSerializer, 403: ChatErrorSerializer,
                               404: ChatErrorSerializer, 429: ChatErrorSerializer})
     def post(self, request):
         body = ChatLookupSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         target = svc.find_by_soul_code(self.account, body.validated_data["soul_code"])
-        return Response(SoulCardSerializer(target).data)
+        ticket = svc.issue_direct_ticket(self.account, target)
+        return Response(ChatLookupResultSerializer(target, context={"ticket": ticket}).data)
 
 
 class MeChatMessagesView(ChatView):
@@ -175,6 +184,7 @@ class MeChatMessagesView(ChatView):
                    responses={201: MessageSentSerializer, 403: ChatErrorSerializer,
                               409: ChatErrorSerializer, 429: ChatErrorSerializer,
                               503: ChatErrorSerializer})
+    @idempotent
     def post(self, request, conversation_id):
         body = MessageSendSerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -403,6 +413,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
                    responses={201: MessageSentSerializer, 409: ChatErrorSerializer,
                               503: ChatErrorSerializer})
     @action(detail=True, methods=["post"])
+    @idempotent
     def reply(self, request, pk=None):
         conversation = self.get_object()
         body = OfficerReplySerializer(data=request.data)

@@ -24,6 +24,10 @@ MESSAGES = {
         "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开灵魂簿查看。"},
         "appeal_upheld": {"title": "申诉复核:维持原判", "body": "你的申诉已复核，维持原判。打开灵魂簿查看复核意见。"},
         "appeal_amended": {"title": "申诉复核:已改判", "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"},
+        "wangsi_upheld": {"title": "冤情申诉:属实 · 提前释放", "body": "你的冤情申诉经审核属实，已提前出枉死城。打开灵魂簿查看。"},
+        "wangsi_upheld_late": {"title": "冤情申诉:属实", "body": "你的冤情申诉经审核属实。打开灵魂簿查看审核意见。"},
+        "wangsi_delivered": {"title": "冤情申诉:属实 · 已超度", "body": "你的冤情申诉经审核属实，已超度出枉死城。打开灵魂簿查看。"},
+        "wangsi_rejected": {"title": "冤情申诉:不属实", "body": "你的冤情申诉经审核不属实。打开灵魂簿查看审核意见。"},
         "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开灵魂簿查看。"},
         "residence_approved": {"title": "即将暂居", "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"},
         "residence_started": {"title": "暂居开始", "body": "你已被调往另一文明暂居,打开灵魂簿查看。"},
@@ -87,6 +91,24 @@ MESSAGES = {
         "appeal_amended": {
             "title": "Appeal reviewed: the verdict was changed",
             "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see the new verdict.",
+        },
+        "wangsi_upheld": {
+            "title": "Grievance upheld: released early",
+            "body": "Your grievance was found true and you have been released early from the City of the Wrongfully Dead. "
+                    "Open Soul Ledger to see it.",
+        },
+        "wangsi_upheld_late": {
+            "title": "Grievance upheld",
+            "body": "Your grievance was found true. Open Soul Ledger to read the reviewer's note.",
+        },
+        "wangsi_delivered": {
+            "title": "Grievance upheld: delivered",
+            "body": "Your grievance was found true and you have been delivered from the City of the Wrongfully Dead. "
+                    "Open Soul Ledger to see it.",
+        },
+        "wangsi_rejected": {
+            "title": "Grievance not upheld",
+            "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer's note.",
         },
         "disposition_executed": {
             "title": "Disposition carried out",

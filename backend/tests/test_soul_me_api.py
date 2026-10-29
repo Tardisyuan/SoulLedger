@@ -25,6 +25,7 @@ PROFILE_KEYS = {
     "current_state", "birth_date", "death_date",
     "origin_location", "origin_region", "diyu_station", "birth_continent",
     "merit_score", "demerit_score", "account", "welcomed_civilizations", "assistant_enabled",
+    "capture_warrant", "greek_ferry", "european_vestibule", "negative_confession", "wangsi_delivered_at",
 }
 ACCOUNT_KEYS = {"cycle", "must_change_password", "initial_password_expires_at", "created_at"}
 LIFE_KEYS = {"cycle", "records", "judgments", "dispositions", "rebirth_applications", "reincarnation"}

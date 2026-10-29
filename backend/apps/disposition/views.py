@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.exports import export_csv
+from apps.core.idempotency import idempotent
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -196,6 +197,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         return {key: counts[key] or 0 for key in counts}
 
     @action(detail=True, methods=["post"])
+    @idempotent
     def execute(self, request, pk=None):
         """
         Execute a disposition: mark executed, transition soul to REINCARNATING.
@@ -300,6 +302,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
 
     @extend_schema(request=None, responses={200: DispositionSerializer, 409: OpenApiTypes.OBJECT})
     @action(detail=True, methods=["post"])
+    @idempotent
     def release(self, request, pk=None):
         """期满释放:刑期已满、每日检查还没跑到的处置,官员手动记期满(用户 2026-10-29)。
 

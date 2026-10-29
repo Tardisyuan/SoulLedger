@@ -13,9 +13,8 @@ import { useCallback, useState } from "react";
 import { View } from "react-native";
 
 import { ActionButton, Segmented, StateView, detailStateOf } from "../kit";
-import { noCityGod } from "../rules";
 import { useCan } from "../session";
-import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 
 type T = (key: string, vars?: Record<string, string>) => string;
 
@@ -42,7 +41,6 @@ export function wangsiMode(
 export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled: () => void; onDone: () => void }) {
   const { t, locale } = useI18n();
   const theme = useTheme();
-  const toast = useToast();
   const canAct = useCan("judgment.execute");
   // 没网时不审(同审判台的认领 / 改派):这期间案卷可能已经变了。
   const { offline } = useOnline();
@@ -60,11 +58,8 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
   const level = j.grievance_level ?? "";
   const canRelease = GRIEVANCE_RELEASE_LEVELS.includes(level);
   const noteMissing = note.trim() === "";
-  const refused = (e: unknown) => {
-    // M-6:本殿没有可收案的城隍 —— toast,文案同网页,不给按钮(设城隍只在网页)。
-    if (noCityGod(e)) toast(t("judgment.error.no_city_god"), "failure");
-    else setFailure(wangsiRefusalText(e, t));
-  };
+  // 申诉审核不开案,服务端不会答 409 `no_city_god`(用户 2026-10-29 删了那条分支):拒绝一律写在行内。
+  const refused = (e: unknown) => setFailure(wangsiRefusalText(e, t));
   const setLevel = (next: string) => {
     if (next === level || busy) return;
     setBusy(true);
@@ -128,6 +123,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
           ) : (
             <Segmented<string>
               testID="wangsi-level"
+              role="radiogroup"
               value={level}
               onChange={setLevel}
               disabled={busy || offline}

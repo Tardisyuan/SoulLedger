@@ -6,7 +6,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { Detail } from "../screens/detail";
 import { ToastProvider } from "../shared";
-import { httpError, renderOfficer } from "./harness";
+import { DISPATCHER, httpError, renderOfficer } from "./harness";
 
 const mockItem = jest.fn();
 const mockApproveNode = jest.fn();
@@ -265,6 +265,40 @@ describe("a rebirth's first review on the phone (O-b)", () => {
   });
 });
 
+describe("a transfer's 批准 and 驳回 are two codes (RBAC A5)", () => {
+  const openTransfer = (permissions: string[]) => {
+    mockItem.mockResolvedValue({ data: { ...ITEM, kind: "reassignment", id: "d5", facts: { status: "PROPOSED" } } });
+    renderOfficer(<Detail target={{ type: "todo", kind: "reassignment", id: "d5" }} onBack={() => {}} onSettled={() => {}} />, {
+      user: { ...DISPATCHER, permissions },
+    });
+    return screen.findByTestId("action-bar");
+  };
+
+  it("dispatch.approve without dispatch.reject: 批准 only", async () => {
+    await openTransfer(["dispatch.approve"]);
+    expect(screen.getByTestId("action-approve")).toBeTruthy();
+    expect(screen.queryByTestId("action-reject")).toBeNull();
+  });
+
+  it("dispatch.reject without dispatch.approve: 驳回 only", async () => {
+    await openTransfer(["dispatch.reject"]);
+    expect(screen.getByTestId("action-reject")).toBeTruthy();
+    expect(screen.queryByTestId("action-approve")).toBeNull();
+  });
+
+  it("both codes: both buttons", async () => {
+    await openTransfer(["dispatch.approve", "dispatch.reject"]);
+    expect(screen.getByTestId("action-approve")).toBeTruthy();
+    expect(screen.getByTestId("action-reject")).toBeTruthy();
+  });
+
+  it("an approval node is one server check: both buttons without any dispatch code", async () => {
+    await open();
+    expect(screen.getByTestId("action-approve")).toBeTruthy();
+    expect(screen.getByTestId("action-reject")).toBeTruthy();
+  });
+});
+
 describe("an approved dispatch still waits for the receiving hall (O-f)", () => {
   it("the detail says 「◐ 等接收方执行」 once approved", async () => {
     mockItem.mockResolvedValue({
@@ -288,7 +322,8 @@ describe("an approved dispatch still waits for the receiving hall (O-f)", () => 
     renderOfficer(
       <ToastProvider>
         <Detail target={{ type: "todo", kind: "reassignment", id: "d3" }} onBack={() => {}} onSettled={() => {}} />
-      </ToastProvider>
+      </ToastProvider>,
+      { user: DISPATCHER }
     );
     await screen.findByTestId("todo-detail");
     fireEvent.press(screen.getByTestId("action-approve"));

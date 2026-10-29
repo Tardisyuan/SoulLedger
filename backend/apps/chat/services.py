@@ -34,9 +34,12 @@ ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务
 **审计不含正文。** `audit()` 写的是「谁对哪个会话做了什么」,body 一个字都不传进去。
 """
 import logging
+import secrets
 from datetime import UTC, datetime, timedelta
 
 from django.conf import settings
+from django.core import signing
+from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -147,6 +150,71 @@ def find_by_soul_code(account, soul_code):
     if target is None:
         raise ChatError("找不到这个灵魂。", "not_found", status=404)
     return target
+
+
+# ── 凭什么找到的人(RBAC 2026-10-29 第 29 条)────────────────────────────
+#
+# 发起私聊此前收的是**自增 user id**,候选集是全部文明的本世灵魂:按 1, 2, 3… 枚举就能拿到全库灵魂的
+# 显示名(响应的 peer_name),还给每一个建房、force_join —— 绕过了「跨文明只能凭完整编号找、每小时 20 次」。
+# 现在 id 只能指认**本来就看得见**的人;别的文明的人只能凭 lookup 发的一次性凭证。
+
+DIRECT_TICKET_SALT = "apps.chat.direct-ticket"
+DIRECT_TICKET_TTL = timedelta(minutes=10)
+_TICKET_USED = "chat:direct-ticket-used:{}"
+
+
+def nameable_by_id(account, target_user):
+    """不经编号查找、直接给 user_id 就能发起的对象:同文明(朋友圈搜索本来就列得出)、两人之间有关注边
+    (关注 / 粉丝列表里给过这个 id;边可能是在对方换文明之前记下的)、或已经有过私聊(会话列表给过 peer_user)。"""
+    if circle.same_civilization(account.user, target_user):
+        return True
+    a, b = account.user_id, target_user.pk
+    if Follow.objects.filter(Q(follower_id=a, following_id=b) | Q(follower_id=b, following_id=a)).exists():
+        return True
+    return Conversation.objects.filter(kind=ConversationKind.DIRECT).filter(
+        Q(account_a=account, account_b__user_id=b) | Q(account_b=account, account_a__user_id=b)
+    ).exists()
+
+
+def issue_direct_ticket(account, target_user):
+    """`lookup` 命中时发的凭证:签名、`DIRECT_TICKET_TTL` 内有效、绑定发起人与目标、只能用一次。
+    不进库:签名就是它的全部内容,「用过」记在缓存里(同 mfa 的 pending token)。"""
+    return signing.dumps({"i": account.user_id, "t": target_user.pk, "n": secrets.token_urlsafe(16)},
+                         salt=DIRECT_TICKET_SALT)
+
+
+def _ticket_refused(code="ticket_invalid"):
+    words = "这次查找已过期,请重新按编号查找。" if code == "ticket_expired" else "请重新按编号查找。"
+    return ChatError(words, code, status=400)
+
+
+def read_direct_ticket(account, ticket):
+    """凭证 → (目标 User, 用过时要记的键)。过期答 `ticket_expired`;签名不对、别人的、已用过答 `ticket_invalid`。
+    **不在这里记「用过」**:建房失败(禁言、Synapse 不通)不该烧掉一次查找 —— 调用方成功后 `spend_direct_ticket`。"""
+    try:
+        data = signing.loads(ticket, salt=DIRECT_TICKET_SALT, max_age=DIRECT_TICKET_TTL)
+    except signing.SignatureExpired:
+        raise _ticket_refused("ticket_expired") from None
+    except signing.BadSignature:
+        raise _ticket_refused() from None
+    if (not isinstance(data, dict) or data.get("i") != account.user_id
+            or not isinstance(data.get("t"), int) or not isinstance(data.get("n"), str)):
+        raise _ticket_refused()
+    used = _TICKET_USED.format(data["n"])
+    if cache.get(used) is not None:
+        raise _ticket_refused()
+    from apps.authentication.models import User
+
+    target = User.objects.filter(pk=data["t"]).first()
+    if target is None:
+        raise ChatError("找不到这个灵魂。", "not_found", status=404)
+    return target, used
+
+
+def spend_direct_ticket(used_key):
+    # ponytail: 同一张凭证的两个请求同时到达可能都过 `read_direct_ticket`;它们建的是同一对人的同一个房间
+    # (open_direct 取或建),所以不加锁。
+    cache.set(used_key, 1, timeout=int(DIRECT_TICKET_TTL.total_seconds()) + 60)
 
 
 # ── 发言权 ───────────────────────────────────────────────────────────────

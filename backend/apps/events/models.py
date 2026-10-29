@@ -150,6 +150,10 @@ class EventType(models.TextChoices):
     # 属实且超度(2026-10-29):出城到莲花台、免审结案。同一事务里随后还有 DIYU_STATION_CHANGED 与结案的事件。
     WANGSI_GRIEVANCE_DELIVERED = "WANGSI_GRIEVANCE_DELIVERED"
 
+    # 埃及四十二条否定告白整轮记完(2026-10-29,审查 M;apps/judgment/confessions.py):一轮只写一条汇总,
+    # 不按条写。payload:judgment_id、truthful、untruthful、total、untruthful_ordinals。与记下最后一条同一事务。
+    NEGATIVE_CONFESSION_HEARD = "NEGATIVE_CONFESSION_HEARD"
+
     # Scheduler events (用户 2026-09-20 拍板:只有失败进枚举)
     #
     # 一条租户的 TaskRun 到了 FAILURE 或 LOST。由 `apps/scheduler/realtime.py`

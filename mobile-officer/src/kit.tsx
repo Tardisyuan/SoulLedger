@@ -78,7 +78,7 @@ export function StateView({
   area?: string;
 }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, enumLabel } = useI18n();
   if (state === "loading") return <LoadingRows />;
   if (state === "gone") return <GoneView />;
   if (state === "error") {
@@ -97,7 +97,7 @@ export function StateView({
       <View testID="state-denied" style={styles.state}>
         <Txt variant="title">{`□ ${tr("officer_app.state.denied_title")}`}</Txt>
         <Txt variant="body" tone="muted">
-          {tr("officer_app.state.denied_body", { role: role ?? "", area: area ?? "" })}
+          {tr("officer_app.state.denied_body", { role: roleName(enumLabel, role), area: area ?? "" })}
         </Txt>
       </View>
     );
@@ -290,6 +290,7 @@ export function Segmented<K extends string>({
   onChange,
   testID,
   disabled = false,
+  role = "tablist",
 }: {
   options: readonly { key: K; label: string }[];
   value: K;
@@ -297,18 +298,21 @@ export function Segmented<K extends string>({
   testID?: string;
   /** 正在保存 / 没网:每一段都不可按,读屏也念「不可用」(不只是按了没反应)。 */
   disabled?: boolean;
+  /** 切换视图的分段是 tablist(默认);在几个值里选一个(冤情等级)是 radiogroup,读屏念「单选按钮 · 已选」。 */
+  role?: "tablist" | "radiogroup";
 }) {
   const t = useTheme();
+  const radio = role === "radiogroup";
   return (
-    <View testID={testID} accessibilityRole="tablist" style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
+    <View testID={testID} accessibilityRole={role} style={[styles.segmented, { borderColor: t.inkSubtle }, disabled && { opacity: 0.5 }]}>
       {options.map(({ key, label }) => {
         const on = key === value;
         return (
           <Pressable
             key={key}
             testID={testID ? `${testID}-${key}` : undefined}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on, disabled }}
+            accessibilityRole={radio ? "radio" : "tab"}
+            accessibilityState={radio ? { checked: on, disabled } : { selected: on, disabled }}
             disabled={disabled}
             onPress={() => onChange(key)}
             style={[styles.segment, { backgroundColor: on ? t.ink : "transparent" }]}
@@ -405,14 +409,40 @@ export const TABS: readonly { key: TabKey; glyph: string }[] = [
   { key: "me", glyph: "□" },
 ];
 
-/** 56 high, five equal parts, surface-1 with a 1px top line. The current tab: civilization colour, 600. */
-export function TabBar({ current, onSelect, unread }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean }) {
+/**
+ * Which tabs this officer gets (RBAC decisions 30 / 31): a tab is drawn when the officer holds ANY of the codes its
+ * own requests need, `null` = everyone (通知 and 我的 are the officer's own). 待办: each server group checks one of
+ * these (officer_app/todo.py `build`); 审判: the queue is `judgment.read`; 查询: the soul search is `soul.read`.
+ * So 牛头马面 / 访客 (GUARDIAN / VIEWER) see 查询 and 通知 (and 我的) only. The server still decides every request;
+ * this only keeps a role out of tabs that would answer 403.
+ */
+export const TAB_CODES: Readonly<Record<TabKey, readonly string[] | null>> = {
+  todo: ["workflow.approve", "dispatch.approve", "soul_inbox.reply", "judgment.execute"],
+  queue: ["judgment.read"],
+  search: ["soul.read"],
+  notices: null,
+  me: null,
+};
+
+export function visibleTabs(permissions: readonly string[] | undefined): TabKey[] {
+  const held = new Set(permissions ?? []);
+  return TABS.map((tab) => tab.key).filter((key) => TAB_CODES[key]?.some((code) => held.has(code)) ?? true);
+}
+
+/** A role code through the bundles (守护者), the raw code only for a role the bundles do not know (a custom one). */
+export function roleName(enumLabel: ReturnType<typeof useI18n>["enumLabel"], role: string | null | undefined): string {
+  const d = enumLabel("users.roles", role);
+  return d.state === "known" ? d.label : (role ?? "");
+}
+
+/** 56 high, equal parts, surface-1 with a 1px top line. The current tab: civilization colour, 600. `tabs`: the ones this officer gets. */
+export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; onSelect: (tab: TabKey) => void; unread?: boolean; tabs?: readonly TabKey[] }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { bottom } = useSafeAreaInsets();
   return (
     <View testID="tab-bar" accessibilityRole="tablist" style={[styles.tabBar, { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: bottom }]}>
-      {TABS.map(({ key, glyph }) => {
+      {TABS.filter(({ key }) => !tabs || tabs.includes(key)).map(({ key, glyph }) => {
         const on = key === current;
         const colour = on ? t.plaque : t.inkMuted;
         return (

@@ -341,16 +341,16 @@ def test_not_applicable_is_the_rest_of_the_tenants_realms_and_conclude_refuses_t
     allowed = {o["realm_code"] for o in failed["options"]}
     rest = {o["realm_code"] for o in failed["not_applicable"]}
     assert allowed.isdisjoint(rest)
-    assert "DY_01_HEAVEN" in rest
+    # DY_01_HEAVEN is no longer used (2026-10-29, review L): in neither list, not even greyed.
+    assert "DY_01_HEAVEN" not in rest and "DY_01_HEAVEN" not in allowed
     assert "DY_COURT_03_SONGDI" not in rest  # another tenant's
     everything = set(Realm.all_objects.filter(
         tenant=cn_tenant, civilization=case.soul.civilization, is_deleted=False,
-    ).values_list("realm_code", flat=True))
-    assert allowed | rest == everything
-    heaven = next(o for o in failed["not_applicable"] if o["realm_code"] == "DY_01_HEAVEN")
+    ).exclude(realm_code="DY_01_HEAVEN").values_list("realm_code", flat=True))
+    assert allowed | rest == everything and everything
     refused = cn_judge.post(
         f"/api/v1/judgment/{case.id}/conclude/",
-        {"verdict": "FAILED", "notes": "", "destination_realm_id": heaven["id"]}, format="json",
+        {"verdict": "FAILED", "notes": "", "destination_realm_id": str(cn_realms["heaven"].pk)}, format="json",
     )
     assert refused.data["code"] == "realm_not_allowed", refused.data
 

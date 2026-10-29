@@ -16,7 +16,8 @@ export const OFFICER: LoginUser = {
   role: "JUDGE",
   display_name: "阎罗",
   // A JUDGE holds judgment.execute (claim / release / defer); without it those buttons are hidden.
-  permissions: ["workflow.approve", "judgment.execute"],
+  // judgment.read / soul.read: a JUDGE holds both, and the 审判 / 查询 tabs are drawn only for them (kit.tsx TAB_CODES).
+  permissions: ["workflow.approve", "judgment.execute", "judgment.read", "soul.read"],
   // What the API really sends: the code and the database's English display name.
   tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE_UNDERWORLD" },
   mfa_enabled: true,
@@ -47,6 +48,9 @@ export function renderOfficer(ui: ReactElement, { user = OFFICER, session }: { u
     </SafeAreaProvider>
   );
 }
+
+/** A hall lead (殿主): the receiving hall's dispatch.approve / dispatch.reject as well. */
+export const DISPATCHER: LoginUser = { ...OFFICER, role: "MODERATOR", permissions: [...OFFICER.permissions, "dispatch.approve", "dispatch.reject"] };
 
 /** An axios-shaped failure. */
 export const httpError = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });

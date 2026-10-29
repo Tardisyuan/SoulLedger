@@ -14,6 +14,7 @@ import {
 // import cycle with users.ts (which imports `api` from here as a value).
 import type { PaginatedResponse } from "./users";
 import { getImpersonation } from "./impersonationState";
+import { stampRequest } from "./requestStamp";
 
 /**
  * Where the API lives, resolved per call rather than captured at import.
@@ -125,6 +126,7 @@ api.interceptors.request.use((config) => {
   // side alone is worthless — a backend honouring a header nobody sends, or a
   // header the backend ignores.
   config.headers["Accept-Language"] = getLocale();
+  stampRequest(config.headers, config.method);
   return config;
 });
 

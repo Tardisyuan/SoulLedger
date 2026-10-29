@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -83,9 +83,22 @@ class StatsView(OfficerAppBaseView):
 
 
 class TodoItemView(OfficerAppBaseView):
-    @extend_schema(operation_id="officer_app_todo_item", responses={200: TodoItemDetailSerializer, 404: None})
+    #: 读一条要的码名,与官员台同类接口一致(`soul_accounts/views.py` 的转生 / 冷却、`dispatch/views.py` 的调拨)。
+    #: RBAC 严查 2026-10-29 M2:此前只有 TenantPermission,VIEWER / JUDGE 能读调拨理由、冷却陈述、审批历史。
+    READ_CODENAME = {
+        "approval": "workflow.read", "rebirth": "workflow.read",
+        "cooldown": "workflow.read", "reassignment": "dispatch.read",
+    }
+
+    @extend_schema(operation_id="officer_app_todo_item",
+                   responses={200: TodoItemDetailSerializer, 403: None, 404: None})
     def get(self, request, kind, item_id):
         """一条的详情:`actionable` 说我现在还能不能处理;已被处理时 `handled_by` 说是谁。"""
+        codename = self.READ_CODENAME.get(kind)
+        if codename is None:
+            raise NotFound()
+        if not check_permission(request.user, codename):
+            raise PermissionDenied()
         data = todo.detail(request.user, kind, item_id, request)
         if data is None:
             raise NotFound()

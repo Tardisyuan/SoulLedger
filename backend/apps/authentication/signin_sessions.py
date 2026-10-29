@@ -69,8 +69,11 @@ def request_label(request, *, officer_app: bool = False) -> str:
 
 
 def start(user, request, *, method="password", officer_app=False, trust_hash="") -> SignInSession:
+    from apps.core.client_ip import get_client_ip
+
     return SignInSession.objects.create(
-        user=user, label=request_label(request, officer_app=officer_app), method=method, trust_hash=trust_hash)
+        user=user, label=request_label(request, officer_app=officer_app), method=method, trust_hash=trust_hash,
+        ip_address=get_client_ip(request) or None)
 
 
 def attach(refresh, session) -> None:

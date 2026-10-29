@@ -367,7 +367,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Every hall for the hall-less ADMIN; a hall's ADMIN sees its own row only (2026-10-29). */
         get: operations["assist_admin_halls_list"];
         put?: never;
         post?: never;
@@ -390,7 +389,6 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description The per-hall switch. A hall's ADMIN may flip its own hall's only; another hall's is 404 (2026-10-29). */
         patch: operations["assist_admin_hall_update"];
         trace?: never;
     };
@@ -647,6 +645,54 @@ export interface paths {
         get: operations["v1_audit_logs_trace_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_auth_admin_sessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/sessions/{session_id}/revoke/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_auth_admin_sessions_revoke_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/sessions/revoke-user/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_auth_admin_sessions_revoke_user_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -912,7 +958,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 关闭:`method=totp` 验一个动态码,`method=recovery` 验一枚恢复码。只凭密码不行。错了计入同一个锁。 */
+        /** @description 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。 */
         post: operations["v1_auth_mfa_disable_create"];
         delete?: never;
         options?: never;
@@ -929,7 +975,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。 */
+        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。 */
         post: operations["v1_auth_mfa_recovery_codes_create"];
         delete?: never;
         options?: never;
@@ -4694,9 +4740,10 @@ export interface paths {
         /**
          * @description `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
          *
-         *     返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
-         *     **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
-         *     互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+         *     返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)加一次性
+         *     凭证 `ticket` —— **编号不回显**、UUID 不出库。拿 `ticket`(不是 user_id:别的文明的 id 发起时不认,
+         *     第 29 条)走 `POST /me/chat/conversations/`,互关与 24 小时请求的规则都在那里,这里不另开一套。
+         *     被禁言的灵魂可以查,发起时照旧 403 `muted`。
          */
         post: operations["v1_me_chat_lookup_create"];
         delete?: never;
@@ -4928,7 +4975,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
+         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
          *     没带 / 错了 → 旧码原样有效。
          */
         post: operations["v1_me_mfa_recovery_codes_create"];
@@ -6395,7 +6442,7 @@ export interface paths {
         };
         /**
          * @description GET /api/v1/perm/permissions/
-         *     获取所有权限列表
+         *     获取所有权限列表(ADMIN,或持 system.settings / menu.manage)
          */
         get: operations["v1_perm_permissions_list"];
         put?: never;
@@ -7801,10 +7848,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+         * @description 从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
          *     这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
          *     不该借它看见别处的词。回包只有计数,不含词本身。
-         *     目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
          */
         post: operations["v1_social_moderation_sensitive_words_copy_from_create"];
         delete?: never;
@@ -10292,6 +10338,30 @@ export interface components {
          * @enum {string}
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
+        AdminSession: {
+            /** Format: uuid */
+            id: string;
+            user_id: number;
+            username: string;
+            display_name: string;
+            tenant_code: string | null;
+            label: string;
+            method: string;
+            ip_address: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            current: boolean;
+        };
+        AdminSessionPage: {
+            count: number;
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["AdminSession"][];
+        };
         /**
          * @description `WebhookConfig` as the admin tab sees it.
          *
@@ -10667,9 +10737,10 @@ export interface components {
          *     * `APPEAL` - 申诉中
          *     * `EXCEPTION` - 异常处理
          *     * `COMPLETED` - 流程完成
+         *     * `CANCELLED` - 已取消
          * @enum {string}
          */
-        ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED" | "CANCELLED";
         ApproverPreview: {
             approver_type: string;
             actor: components["schemas"]["ApproverPreviewActor"] | null;
@@ -11264,6 +11335,17 @@ export interface components {
             /** @description 完整的灵魂编号,大小写不论;不做前缀或模糊匹配。 */
             soul_code: string;
         };
+        /** @description 按编号查到的名片(朋友圈同一张白名单)加一次性凭证 `ticket`(由视图放进 context):发起私聊时原样交回。 */
+        ChatLookupResult: {
+            user_id: number;
+            display_name: string;
+            /** Format: uri */
+            readonly avatar: string | null;
+            /** @description false:前世账号,只读、不可关注。 */
+            readonly is_active: boolean;
+            /** @description 一次性、约 10 分钟内有效、只认查找的这个账号。 */
+            readonly ticket: string;
+        };
         /** @description `GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。 */
         ChatSession: {
             homeserver: string;
@@ -11666,13 +11748,15 @@ export interface components {
             readonly refusal: string | null;
         };
         /**
-         * @description 两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
-         *     `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+         * @description 两种会话一个端点:私聊给 `ticket`(按编号查找 `POST /me/chat/lookup/` 发的一次性凭证)或
+         *     `target_user`(user_id —— **只认看得见的人**:同文明、有关注边、已有过私聊,见 `services.nameable_by_id`;
+         *     别的文明的人只能凭 ticket);`kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
          */
         ConversationCreate: {
             /** @default DIRECT */
             kind: components["schemas"]["ConversationKindEnum"];
             target_user?: number;
+            ticket?: string;
         };
         /**
          * @description * `DIRECT` - 灵魂私聊
@@ -12672,10 +12756,11 @@ export interface components {
          *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
          *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
          *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+         *     * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_DELIVERED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_DELIVERED" | "NEGATIVE_CONFESSION_HEARD" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -14361,6 +14446,17 @@ export interface components {
             escalation_stations: string[];
             civilization: components["schemas"]["CivilizationEnum"];
         };
+        MeCaptureWarrant: {
+            status: components["schemas"]["MeCaptureWarrantStatusEnum"];
+            /** Format: date-time */
+            issued_at: string;
+        };
+        /**
+         * @description * `ISSUED` - ISSUED
+         *     * `CAPTURED` - CAPTURED
+         * @enum {string}
+         */
+        MeCaptureWarrantStatusEnum: "ISSUED" | "CAPTURED";
         /** @description 灵魂看自己的那份:没有 decided_by。 */
         MeCooldownShortening: {
             /** Format: uuid */
@@ -14409,6 +14505,12 @@ export interface components {
             executed_at: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        MeGreekFerry: {
+            ferry_passage: components["schemas"]["FerryPassageEnum"];
+            crossed: boolean;
+            /** Format: date */
+            crosses_on: string | null;
         };
         MeJudge: {
             name: string;
@@ -14470,6 +14572,12 @@ export interface components {
             rebirth_applications: components["schemas"]["MeRebirthApplication"][];
             reincarnation: components["schemas"]["MeReincarnation"] | null;
         };
+        MeNegativeConfession: {
+            truthful: number;
+            untruthful: number;
+            unheard: number;
+            total: number;
+        };
         /** @description instance 是灵魂;本世账号经 context["account"] 传入。 */
         MeProfile: {
             soul_code: string;
@@ -14502,6 +14610,12 @@ export interface components {
             readonly account: components["schemas"]["MeAccount"];
             readonly welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
             readonly assistant_enabled: boolean;
+            readonly capture_warrant: components["schemas"]["MeCaptureWarrant"] | null;
+            readonly greek_ferry: components["schemas"]["MeGreekFerry"] | null;
+            readonly european_vestibule: components["schemas"]["MeVestibule"] | null;
+            readonly negative_confession: components["schemas"]["MeNegativeConfession"] | null;
+            /** Format: date-time */
+            readonly wangsi_delivered_at: string | null;
         };
         MeRealm: {
             realm_code: string;
@@ -14612,6 +14726,10 @@ export interface components {
             readonly visit: {
                 [key: string]: string;
             };
+        };
+        MeVestibule: {
+            /** Format: date-time */
+            entered_at: string;
         };
         /** @description 灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。 */
         MeWangsiCase: {
@@ -14767,20 +14885,20 @@ export interface components {
         MessageSent: {
             event_id: string;
         };
-        MfaCodeRequest: {
-            code: string;
-        };
-        MfaDisableRequest: {
-            method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
-            code?: string;
-            password?: string;
-        };
         /**
          * @description * `totp` - totp
          *     * `password` - password
          * @enum {string}
          */
-        MfaOwnerConfirmMethodEnum: "totp" | "password";
+        MethodEnum: "totp" | "password";
+        MfaCodeRequest: {
+            code: string;
+        };
+        MfaDisableRequest: {
+            method: components["schemas"]["MethodEnum"];
+            code?: string;
+            password?: string;
+        };
         MfaRecoveryCodes: {
             recovery_codes: string[];
         };
@@ -14804,12 +14922,6 @@ export interface components {
             username: string;
         };
         /**
-         * @description * `totp` - totp
-         *     * `recovery` - recovery
-         * @enum {string}
-         */
-        MfaSecondFactorMethodEnum: "totp" | "recovery";
-        /**
          * @description 开始设置要先输当前密码:已登录不等于是本人(偷到登录状态的人能给账号绑上自己的验证器)。
          *     缺省 / 空按「密码不对」算,同一个原因码。
          */
@@ -14830,11 +14942,6 @@ export interface components {
             last_used_at: string | null;
             last_used_method: string;
             recovery_codes_remaining: number;
-        };
-        /** @description 关闭:6 位动态码(`totp`)或一枚恢复码(`recovery`)。密码不再算数(2026-10-29)。 */
-        MfaTurnOffRequest: {
-            method: components["schemas"]["MfaSecondFactorMethodEnum"];
-            code: string;
         };
         MfaVerifyRequest: {
             pending_token: string;
@@ -15084,9 +15191,10 @@ export interface components {
          *     * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
          *     * `CITY_GOD_CASE_RECEIVED` - City God Case Received
          *     * `CITY_GOD_CASE_RETURNED` - City God Case Returned
+         *     * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED" | "CITY_GOD_CASE_RECEIVED" | "CITY_GOD_CASE_RETURNED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED" | "DEATH_SYNC_RETRY_FAILED" | "JUDGMENT_CLAIM_CHANGED" | "CITY_GOD_CASE_RECEIVED" | "CITY_GOD_CASE_RETURNED" | "WANGSI_GRIEVANCE_FILED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerAssistAsk: {
@@ -17373,7 +17481,7 @@ export interface components {
             readonly mfa_enabled?: boolean;
             readonly mfa_required?: boolean;
             readonly password_change_required?: boolean;
-            readonly mfa_setup_required?: boolean;
+            readonly permissions?: string[];
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -18471,6 +18579,12 @@ export interface components {
         RevokeOthersResponse: {
             revoked: number;
         };
+        RevokeUserRequest: {
+            user: number;
+        };
+        RevokeUserResponse: {
+            revoked: number;
+        };
         Role: {
             readonly id: number;
             name: string;
@@ -18680,12 +18794,10 @@ export interface components {
         };
         /**
          * @description Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
-         *     civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
-         *     `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
+         *     civilization by code. The target is the caller's current civilization.
          */
         SensitiveWordCopy: {
             source_tenant: string;
-            target_tenant?: string;
         };
         SensitiveWordCopyResult: {
             copied: number;
@@ -19459,7 +19571,7 @@ export interface components {
             code: string;
         };
         SoulMfaDisableRequest: {
-            method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
+            method: components["schemas"]["MethodEnum"];
             code?: string;
             password?: string;
         };
@@ -19513,11 +19625,6 @@ export interface components {
             last_used_at: string | null;
             last_used_method: string;
             recovery_codes_remaining: number;
-        };
-        /** @description 关闭:6 位数字(`totp`)或一枚恢复码(`recovery`)。只凭密码不行(2026-10-29)。 */
-        SoulMfaTurnOffRequest: {
-            method: components["schemas"]["MfaSecondFactorMethodEnum"];
-            code: string;
         };
         SoulMfaVerifyRequest: {
             pending_token: string;
@@ -20569,7 +20676,7 @@ export interface components {
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
-            readonly mfa_setup_required: boolean;
+            readonly permissions: string[];
         };
         /**
          * @description `batch_deactivate`: everyone without open work is deactivated (`updated`); the officers who still hold work
@@ -20593,13 +20700,13 @@ export interface components {
         /**
          * @description User serializer for creation with password handling.
          *
-         *     Callers other than the hall-less ADMIN (an ADMIN bound to a hall included) are constrained two ways (see ROLE_HIERARCHY above):
+         *     Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
          *     - `tenant` is forced to the caller's own tenant — a client-supplied
          *       value for another tenant is rejected rather than silently honored.
          *     - `role` can never be more privileged than the caller's own role, which
          *       is what blocks a non-ADMIN from creating an ADMIN account (themselves
          *       or anyone else).
-         *     The hall-less ADMIN keeps the unrestricted behavior (any tenant, any role).
+         *     ADMIN keeps its existing unrestricted behavior (any tenant, any role).
          */
         UserCreate: {
             readonly id: number;
@@ -20837,7 +20944,6 @@ export interface components {
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
-            readonly mfa_setup_required: boolean;
         };
         /**
          * @description * `PASSED` - Passed / Saved
@@ -22550,6 +22656,115 @@ export interface operations {
             };
         };
     };
+    v1_auth_admin_sessions_retrieve: {
+        parameters: {
+            query?: {
+                /** @description officer(默认)或 soul */
+                kind?: "officer" | "soul";
+                page?: number;
+                user?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSessionPage"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_admin_sessions_revoke_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_admin_sessions_revoke_user_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RevokeUserRequest"];
+                "multipart/form-data": components["schemas"]["RevokeUserRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokeUserResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRefusal"];
+                };
+            };
+        };
+    };
     v1_auth_change_password_create: {
         parameters: {
             query?: never;
@@ -22940,9 +23155,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MfaTurnOffRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["MfaTurnOffRequest"];
-                "multipart/form-data": components["schemas"]["MfaTurnOffRequest"];
+                "application/json": components["schemas"]["MfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["MfaDisableRequest"];
             };
         };
         responses: {
@@ -22963,14 +23178,6 @@ export interface operations {
                 };
             };
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MfaRefusal"];
-                };
-            };
-            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26839,9 +27046,10 @@ export interface operations {
                  *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
                  *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
                  *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+                 *     * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -26967,9 +27175,10 @@ export interface operations {
                  *     * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
                  *     * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
                  *     * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+                 *     * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -29834,7 +30043,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulCard"];
+                    "application/json": components["schemas"]["ChatLookupResult"];
                 };
             };
             403: {
@@ -30327,6 +30536,14 @@ export interface operations {
                     "application/json": components["schemas"]["MeJudgmentAppeal"];
                 };
             };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -30449,9 +30666,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SoulMfaTurnOffRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaTurnOffRequest"];
-                "multipart/form-data": components["schemas"]["SoulMfaTurnOffRequest"];
+                "application/json": components["schemas"]["SoulMfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaDisableRequest"];
             };
         };
         responses: {
@@ -33137,6 +33354,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TodoItemDetail"];
                 };
+            };
+            /** @description No response body */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No response body */
             404: {
@@ -39534,8 +39758,9 @@ export interface operations {
                  *     * `IN_PROGRESS` - 审批中
                  *     * `REJECTED` - 已拒绝
                  *     * `COMPLETED` - 流程完成
+                 *     * `CANCELLED` - 已取消
                  */
-                status?: "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
+                status?: "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;
@@ -40063,8 +40288,9 @@ export interface operations {
                  *     * `IN_PROGRESS` - 审批中
                  *     * `REJECTED` - 已拒绝
                  *     * `COMPLETED` - 流程完成
+                 *     * `CANCELLED` - 已取消
                  */
-                status?: "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
+                status?: "CANCELLED" | "COMPLETED" | "IN_PROGRESS" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;

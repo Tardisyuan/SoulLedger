@@ -95,6 +95,19 @@ const subscribeHash = (onChange: () => void) => {
 };
 const useHash = () => useSyncExternalStore(subscribeHash, () => window.location.hash.slice(1), () => "");
 
+/** Coded refusals with a sentence of their own (`workflow.detail.refusals.<code>`, 2026-10-29): escalating past the
+ *  final review (review A) and approving a five-heinous case judged PASSED (review J). Others fall back to the
+ *  server's `error`. */
+const CODED_REFUSALS = ["escalate_past_final", "five_heinous_must_fail"] as const;
+
+function codedRefusal(
+  data: { code?: string } | undefined,
+  t: (key: string) => string,
+): string | null {
+  const code = data?.code;
+  return code && (CODED_REFUSALS as readonly string[]).includes(code) ? t(`workflow.detail.refusals.${code}`) : null;
+}
+
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, formatDateTime, locale } = useI18n();
@@ -157,13 +170,13 @@ export default function WorkflowDetailPage() {
       setReasonForSoulError("");
       refetch();
     },
-    onError: (err: { response?: { status?: number; data?: { error?: string } }; message?: string }) => {
+    onError: (err: { response?: { status?: number; data?: { error?: string; code?: string } }; message?: string }) => {
       // The backend's one field-shaped refusal here: land it beside the field, not in a toast.
       if (err?.response?.status === 400 && err.response.data?.error === "rejection_reason_for_soul is required") {
         setReasonForSoulError(t("workflow.detail.reason_for_soul_required"));
         return;
       }
-      showToast(err?.response?.data?.error || t("workflow.detail.approve_error"), "error");
+      showToast(codedRefusal(err?.response?.data, t) ?? (err?.response?.data?.error || t("workflow.detail.approve_error")), "error");
     },
   });
 
@@ -206,8 +219,8 @@ export default function WorkflowDetailPage() {
       setEscalateOpen(false);
       refetch();
     },
-    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
-      showToast(err?.response?.data?.error || t("workflow.detail.escalate_error"), "error");
+    onError: (err: { response?: { data?: { error?: string; code?: string } }; message?: string }) => {
+      showToast(codedRefusal(err?.response?.data, t) ?? (err?.response?.data?.error || t("workflow.detail.escalate_error")), "error");
     },
   });
 
@@ -560,19 +573,19 @@ export default function WorkflowDetailPage() {
 
               {/* 判决键, v3 A1: 74 high, glyph over text, equal widths; the
                   chosen one 2 px ink. Still a radio group underneath — the
-                  inputs are visually hidden, the labels are the keys. All five
-                  verdicts stay (the drawing shows four). */}
+                  inputs are visually hidden, the labels are the keys. Four
+                  verdicts, as the drawing shows (SKIPPED left 2026-10-29). */}
               <fieldset>
                 <legend className="mb-2 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
                   {t("workflow.detail.select_verdict")}
                 </legend>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { key: "PASSED", label: t("workflow.verdicts.passed") },
                     { key: "FAILED", label: t("workflow.verdicts.failed") },
                     { key: "CONFIRMED", label: t("workflow.verdicts.confirmed") },
                     { key: "REJECTED", label: t("workflow.verdicts.rejected") },
-                    { key: "SKIPPED", label: t("workflow.verdicts.skipped") },
+                    // SKIPPED is not a verdict (2026-10-29, review F): the server refuses it (400 skipped_not_a_verdict).
                   ]
                     // A node that lists the verdicts it accepts gets only those; the server refuses the rest (400).
                     .filter((opt) => !currentNode?.required_verdicts?.length || currentNode.required_verdicts.includes(opt.key))

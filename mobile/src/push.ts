@@ -60,6 +60,10 @@ async function ensureAndroidChannel(): Promise<void> {
     await Notifications.setNotificationChannelAsync("default", {
       name: "SoulLedger",
       importance: Notifications.AndroidImportance.DEFAULT,
+      // A letter's sender, a comment's first words, a hall's warning are this soul's own business: the lock screen
+      // says only that something came (RBAC A9; the officer app's channel does the same). Android lets a channel's
+      // visibility be set only when it is created -- a phone that already has the channel keeps what it had.
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
     }).catch(() => {});
   }
 }
@@ -218,6 +222,8 @@ export function landingOf(data: unknown): Landing | null {
       const nodeIds = Array.isArray(nodes) ? nodes.filter((n): n is string => typeof n === "string" && ID.test(n)) : [];
       return { screen: "Sentence", landing: { kind: kind as SentencePushKind, nodeIds } };
     }
+    // 第六十二批:超度之后枉死城那件事已办完,落在「已超度」那一行,不落审判那格(不洗底色)。
+    if (kind === "wangsi_delivered") return { screen, focus: { delivered: true } };
     const focus: LifeFocus = {
       ...(typeof judgment === "string" && ID.test(judgment) ? { judgment } : {}),
       ...(typeof disposition === "string" && ID.test(disposition) ? { disposition } : {}),

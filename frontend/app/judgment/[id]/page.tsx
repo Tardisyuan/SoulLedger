@@ -84,7 +84,7 @@ import {
   placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useArchiveJudgment, useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
+import { useArchiveJudgment, useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useNegativeConfessions, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -270,6 +270,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
      天平摇摆、另开一次称量、不发落;原审判的称心流程必走,走完才执行。服务端同样拒收。 */
   const weighing = judgment?.admitted_balance?.weighing ?? null;
   const weighedCase = judgment?.judgment_method === "HEART_WEIGHING" && judgment?.kind !== "AMENDMENT";
+  /* 「通过」预先置灰并说明(2026-10-29):罪目是五逆(审查 J,400 `five_heinous_must_fail`),或埃及有一条否定告白
+     记为「不实」(审查 S,400 `untruthful_confession`)。告白合计与下面的告白面板同一个缓存。服务端同样拒收。 */
+  const { data: confessionsHeard } = useNegativeConfessions(id, { enabled: weighedCase });
+  const passedBarredBy =
+    judgment?.offence === "FIVE_HEINOUS"
+      ? "judgment.detail.passed_barred_five_heinous"
+      : (confessionsHeard?.tally?.untruthful ?? 0) > 0
+        ? "judgment.detail.passed_barred_untruthful"
+        : null;
   const weighingForced = weighedCase && (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
   /* 原审一律走审批流程(用户 2026-10-29,四文明):流程走完才执行处置,驳回就重开一案。服务端同样拒收不带流程的原审结案
      (400 `approval_flow_required`)。重开、申诉改判、加减项不是原审,照旧可选。 */
@@ -378,6 +387,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     }
   }, [judgment]);
 
+  /* 「通过」被拒收时不停在它上面(草稿或天平预选的,或告白合计晚一步到):退回预选的「待定」。 */
+  useEffect(() => {
+    if (!judgment?.verdict && selectedVerdict === "PASSED" && passedBarredBy) setSelectedVerdict(DEFAULT_VERDICT);
+  }, [judgment?.verdict, selectedVerdict, passedBarredBy]);
+
   const isAmendment = judgment?.kind === "AMENDMENT" && !!judgment?.amends_plan_id;
   const isOriginal = (judgment?.kind ?? "ORIGINAL") === "ORIGINAL";
   const myTenant = user?.tenant?.code ?? null;
@@ -401,6 +415,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   /** 埃及:天平给了「通过」就不能判「不通过」,反之亦然(待定 / 重审 = 天平摇摆,总可以选)。 */
   function contradictsScale(member: string) {
     return !!weighing && (member === "PASSED" || member === "FAILED") && member !== weighing.weighed_verdict;
+  }
+
+  /** Why this verdict cannot be chosen, as an i18n key, or null. */
+  function barredBy(member: string): string | null {
+    if (member === "PASSED" && passedBarredBy) return passedBarredBy;
+    return contradictsScale(member) ? "judgment.weighing.contradicts" : null;
   }
 
   function handleConclude() {
@@ -458,7 +478,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     enabled: !!judgment && !judgment.is_final && canExecute,
   });
   const chooseVerdict = (member: string) => {
-    if (contradictsScale(member)) return; // 快捷键也不能选天平没给的裁决
+    if (barredBy(member)) return; // 快捷键也不能选天平没给的、或被拒收的裁决
     verdictTouched.current = true;
     setSelectedVerdict(member);
     draft.markEdited();
@@ -1085,7 +1105,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             {VERDICTS.map((member, index) => {
               const isOrdered = ordered === member;
               const isChosen = selectedVerdict === member;
-              const offScale = !isFinal && contradictsScale(member);
+              const barred = isFinal ? null : barredBy(member);
+              const offScale = barred !== null;
               const marked = isFinal ? isOrdered : isChosen;
               const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
               const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
@@ -1104,7 +1125,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        carries the ring instead, on the same `--color-focus`
                        token globals.css uses. */
                     <label
-                      title={offScale ? t("judgment.weighing.contradicts") : undefined}
+                      title={barred ? t(barred) : undefined}
                       className={`${tile} ${offScale ? "cursor-not-allowed opacity-40" : "cursor-pointer"} focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
                     >
                       <input
@@ -1124,6 +1145,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             })}
           </ol>
 
+          {!isFinal && passedBarredBy && (
+            <p data-testid="verdict-passed-barred" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">
+              {t(passedBarredBy)}
+            </p>
+          )}
           {/* 埃及:天平此刻的读数(按本案采信的证据)与结案时托特记下的结果。 */}
           {weighing && !isFinal && (
             <p data-testid="weighing-scale" className="mx-auto mt-3 max-w-[540px] text-center text-xs text-[oklch(var(--color-ink-subtle))]">

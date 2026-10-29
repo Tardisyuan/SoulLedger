@@ -22,7 +22,7 @@ import type { ReactNode } from "react";
 import { FlatList, Platform, StyleSheet, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { ChatContext, ChatProvider, OUTBOX_KEY, readOutbox, useChat, type Chat } from "../chat";
+import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, type Chat } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { AppHeader } from "../chrome";
 import { I18nProvider } from "../i18n";
@@ -783,7 +783,7 @@ describe("find someone by code", () => {
     const calls = stubApi({
       "/me/social/following/": { status: 200, data: { results: [] } },
       "/me/social/followers/": { status: 200, data: { results: [] } },
-      "POST /me/chat/lookup/": { status: 200, data: { user_id: 7, display_name: "吴长明", avatar: "", is_active: true } },
+      "POST /me/chat/lookup/": { status: 200, data: { user_id: 7, display_name: "吴长明", avatar: "", is_active: true, ticket: "T-once" } },
     });
     const chat = chatState();
     wrap(chat, <FindSoulScreen />);
@@ -791,7 +791,9 @@ describe("find someone by code", () => {
     await act(async () => fireEvent.press(screen.getByTestId("find-submit")));
     expect(calls.find((c) => c.url === "/me/chat/lookup/")?.body).toEqual({ soul_code: "2P6R41WZ88" });
     await act(async () => fireEvent.press(await screen.findByTestId("find-write")));
-    expect(chat.openDirect).toHaveBeenCalledWith(7);
+    // With the lookup's ticket, not the id: a soul found by code may be in another civilization (decision 29).
+    expect(chat.openDirect).toHaveBeenCalledWith({ ticket: "T-once" });
+    expect(chat.openDirect).not.toHaveBeenCalledWith(7);
     expect(mockNavigate).toHaveBeenCalledWith("Conversation", { id: "c-direct" });
   });
 });
@@ -810,6 +812,8 @@ class FakeSynapse {
   /** The device each event was sent from: `unsigned.transaction_id` is echoed to that device only. */
   eventDevice = new Map<string, string>();
   sends: string[] = [];
+  /** The device of every access token ended with POST /logout. */
+  logouts: string[] = [];
   syncs = 0;
   logins: Record<string, unknown>[] = [];
   private devices = 0;
@@ -867,6 +871,10 @@ class FakeSynapse {
         });
       }
       if (method === "POST" && /\/receipt\//.test(url)) return ok({});
+      if (method === "POST" && url === "/_matrix/client/v3/logout") {
+        this.logouts.push(device);
+        return ok({});
+      }
       if (method === "GET" && /\/messages$/.test(url)) return ok({ chunk: [] });
       throw new Error(`unscripted Matrix request: ${method} ${url}`);
     };
@@ -932,6 +940,29 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
     // The echo carries the txn id back, so the pending bubble and the timeline message are one.
     await waitFor(() => expect(probe.timeline.rooms["!direct:hs.test"]?.messages[0]?.txnId).toBe(probe.outbox[0].txnId));
     view.unmount();
+  });
+
+  describe("signing out ends the Matrix session (RBAC A10)", () => {
+    it("a sign-out logs the access token out on the homeserver", async () => {
+      const view = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      clearOutbox(); // what the session's sign-out does first
+      view.rerender(
+        <ChatProvider account={null}>
+          <Probe />
+        </ChatProvider>
+      );
+      await waitFor(() => expect(synapse.logouts).toEqual(["DEV1"]));
+      view.unmount();
+    });
+
+    it("an unmount that is not a sign-out (the app going away) keeps it: the next start logs in as the same device", async () => {
+      const view = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      view.unmount();
+      await act(async () => {});
+      expect(synapse.logouts).toEqual([]);
+    });
   });
 
   describe("across a restart (the outbox is on disk)", () => {

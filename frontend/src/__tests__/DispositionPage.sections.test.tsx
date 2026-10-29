@@ -12,6 +12,9 @@ import DispositionPage from "@/app/disposition/page";
 import { dispositionApi } from "@soulledger/core/api";
 import { termState } from "@/src/lib/dispositionTerm";
 import type { Disposition } from "@soulledger/core/api";
+import zh from "@soulledger/core/messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn(), execute: jest.fn() },
@@ -255,5 +258,16 @@ describe("处置页按服务端分三段", () => {
     expect(within(eternal).getAllByText("disposition.term_eternal").length).toBeGreaterThan(0);
     expect(within(nostart).queryByRole("meter")).toBeNull();
     expect(within(nostart).getByText("disposition.start_unrecorded")).toBeInTheDocument();
+  });
+});
+
+describe("默认刑期的标注(2026-10-29 用户定:去掉「可改」)", () => {
+  it("三份语言包只写默认几年,不写可改", () => {
+    expect(zh.disposition.term_default).toBe("默认 {{n}} 年");
+    expect(en.disposition.term_default).toBe("Default {{n}} years");
+    expect(egy.disposition.term_default).toBe("Tepy: Renpet {{n}}");
+    for (const text of [zh.disposition.term_default, en.disposition.term_default, egy.disposition.term_default]) {
+      expect(text).not.toMatch(/可改|changed|Khemen/);
+    }
   });
 });

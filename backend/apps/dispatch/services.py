@@ -15,6 +15,18 @@ from apps.dispatch.models import (
 from apps.events.models import EventType, SoulEvent
 
 
+def _holders(tenants, codename):
+    """这些殿里持 `codename` 的在职官员。调拨 / 联审通知只发给他们(RBAC 严查 2026-10-29 M1):
+    此前发给殿里全部 is_active User —— 含每个灵魂账号(`tenant=原属殿`)和不持 `dispatch.read`
+    的 JUDGE / VIEWER(调拨视图对他们 403,通知却带着灵魂名与理由)。
+    `check_permission` 对 SOUL 恒假、对 ADMIN 恒真;与 `return_blocked_recipients` 同一口径。"""
+    from apps.authentication.models import User
+    from apps.perm.checker import check_permission
+
+    users = User.objects.filter(tenant__in=tenants, is_active=True).exclude(role="SOUL").order_by("pk")
+    return [u for u in users if check_permission(u, codename)]
+
+
 def _notify_localized(users, notification_type, params, record_id):
     """一条分语言的调度通知给这些人:库里存 zh-Hans 渲染的标题 / 正文(WebSocket 推送与未知语言的兜底)
     和 `params`,读的时候按请求语言重渲染(`apps/notifications/messages.py`)。`related_*` 指向这次移交。"""
@@ -148,7 +160,7 @@ class DispatchService:
         """
         from django.db.models import Case, IntegerField, Value, When
 
-        from apps.realms.models import REALM_TYPE_DISPLAY_ORDER, Realm
+        from apps.realms.models import REALM_TYPE_DISPLAY_ORDER, RETIRED_REALM_CODES, Realm
         from apps.souls.models import UNKNOWN_CIVILIZATION
 
         # `Tenant.civilization`,不是 `TENANT_CIVILIZATION[code]`:后者只认四个种子殿,管理员新建的殿
@@ -158,7 +170,7 @@ class DispatchService:
             return Realm.all_objects.none()
         return Realm.all_objects.filter(
             tenant_id=target_tenant.pk, civilization=civilization, is_deleted=False,
-        ).annotate(
+        ).exclude(realm_code__in=RETIRED_REALM_CODES).annotate(  # 不再使用的界域不给选(审查 L)
             type_rank=Case(
                 *[When(realm_type=t, then=Value(i)) for i, t in enumerate(REALM_TYPE_DISPLAY_ORDER)],
                 default=Value(len(REALM_TYPE_DISPLAY_ORDER)), output_field=IntegerField(),
@@ -328,9 +340,7 @@ class DispatchService:
         even if a reader were added later. Target tenants have operators, not
         populations.
         """
-        from apps.authentication.models import User
-
-        target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
+        target_users = _holders([dispatch_record.target_tenant], "dispatch.read")
         soul_name, source_code = dispatch_record.soul.name, dispatch_record.source_tenant.code
         record_id = str(dispatch_record.id)
 
@@ -418,9 +428,7 @@ class DispatchService:
     @staticmethod
     def _notify_approval(dispatch_record, approved, reason=""):
         """Notify source tenant about dispatch approval/rejection."""
-        from apps.authentication.models import User
-
-        target_users = User.objects.filter(tenant=dispatch_record.source_tenant, is_active=True)
+        target_users = _holders([dispatch_record.source_tenant], "dispatch.read")
         notification_type = "DISPATCH_APPROVED" if approved else "DISPATCH_REJECTED"
         params = {"soul": dispatch_record.soul.name, "target": dispatch_record.target_tenant.code}
         if not approved:
@@ -558,9 +566,7 @@ class DispatchService:
     @staticmethod
     def _notify_cancelled(dispatch_record, reason):
         """告诉执行地:这次移交已被发起方取消(他们的待批列表里它已经消失)。"""
-        from apps.authentication.models import User
-
-        target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
+        target_users = _holders([dispatch_record.target_tenant], "dispatch.read")
         soul_name, source_code = dispatch_record.soul.name, dispatch_record.source_tenant.code
         record_id = str(dispatch_record.id)
 
@@ -844,14 +850,13 @@ class CrossTenantJudgmentService:
             tenant=participant_tenant,
             node_order=node_order,
         )
-        if running:
+        if running and role != ParticipantRole.ADVISOR:
+            # 顾问席不走审批段(用户 2026-10-29,审查 D)。
             segments.append_foreign(workflow, participant_tenant)
 
         # Notify initiating tenant, through the bus so the row lands in the
         # model the notification API actually serves.
-        from apps.authentication.models import User
-
-        target_users = User.objects.filter(tenant=judgment.initiating_tenant, is_active=True)
+        target_users = _holders([judgment.initiating_tenant], "cross_judgment.read")
         title, joined, judgment_id = f"Participant Joined: {judgment.title}", f"{participant_tenant.code} has joined as {role}.", str(judgment.id)
 
         def send():
@@ -1057,9 +1062,8 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     def _notify_participants(judgment, params):
-        """结案 / 取消都通知席上各方租户的在职账号(经事件总线,事务提交后发)。
+        """结案 / 取消都通知席上各方租户里持 `cross_judgment.read` 的在职官员(经事件总线,事务提交后发)。
         存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。"""
-        from apps.authentication.models import User
         from apps.notifications import messages
 
         tenants = [p.participant_tenant for p in judgment.participants.all()]
@@ -1069,17 +1073,16 @@ class CrossTenantJudgmentService:
         def send():
             from apps.events.services import EventService
 
-            for tenant in tenants:
-                for user in User.objects.filter(tenant=tenant, is_active=True):
-                    EventService.notify_user(
-                        user,
-                        title=title,
-                        message=message,
-                        notification_type="JUDGMENT_CONCLUDED",
-                        related_resource="CrossTenantJudgment",
-                        related_id=judgment_id,
-                        params=params,
-                    )
+            for user in _holders(tenants, "cross_judgment.read"):
+                EventService.notify_user(
+                    user,
+                    title=title,
+                    message=message,
+                    notification_type="JUDGMENT_CONCLUDED",
+                    related_resource="CrossTenantJudgment",
+                    related_id=judgment_id,
+                    params=params,
+                )
 
         _after_commit(send)
 

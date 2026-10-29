@@ -267,8 +267,8 @@ class MeJudgmentAppealsView(SoulAPIView):
 
 
 class MeJudgmentAppealWithdrawView(SoulAPIView):
-    @extend_schema(request=None, responses={200: MeJudgmentAppealSerializer, 404: SoulErrorSerializer,
-                                            409: SoulErrorSerializer})
+    @extend_schema(request=None, responses={200: MeJudgmentAppealSerializer, 403: SoulErrorSerializer,
+                                            404: SoulErrorSerializer, 409: SoulErrorSerializer})
     def post(self, request, appeal_id):
         try:
             appeal = appeals.withdraw(self.account, appeal_id)

@@ -20,14 +20,20 @@ import {
 } from "@/lib/events/event_registry";
 import type { QueryClient } from "@tanstack/react-query";
 import { readFileSync } from "node:fs";
+import en from "@soulledger/core/messages/en.json";
+import zhHans from "@soulledger/core/messages/zh-Hans.json";
+import { publishTranslator } from "@/lib/i18n/activeTranslator";
+import { EVENT_LABELS, handleWorkflowEvent } from "@/lib/events/eventHandlers";
+import type { WorkflowEventPayload } from "@/lib/events/eventTypes";
 import path from "node:path";
 
-function makeContext() {
+function makeContext(currentUserId?: string) {
   const invalidateQueries = jest.fn();
   const showToast = jest.fn();
   const ctx = {
     queryClient: { invalidateQueries } as unknown as QueryClient,
     showToast,
+    currentUserId,
   } satisfies EventContext;
   return { ctx, invalidateQueries, showToast };
 }
@@ -36,6 +42,23 @@ function makeContext() {
 function invalidatedKeys(invalidateQueries: jest.Mock): string[] {
   return invalidateQueries.mock.calls.map(([arg]) => JSON.stringify(arg.queryKey));
 }
+
+/**
+ * A dot-path lookup over a shipped bundle, answering the key itself when it is missing (as `t` does).
+ * The handlers resolve their labels through `translate` (lib/i18n/activeTranslator); publishing this
+ * stands in for the mounted `I18nProvider` without a React tree.
+ */
+function lookup(bundle: object) {
+  return (key: string) => {
+    const value = key
+      .split(".")
+      .reduce<unknown>((node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined), bundle);
+    return typeof value === "string" ? value : key;
+  };
+}
+
+beforeAll(() => publishTranslator(lookup(en)));
+afterAll(() => publishTranslator(null));
 
 let warnSpy: jest.SpyInstance;
 let errorSpy: jest.SpyInstance;
@@ -62,11 +85,11 @@ describe("soul events", () => {
     );
 
     expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
-    expect(showToast).toHaveBeenCalledWith("Soul created: Meng", "info", 5000);
+    expect(showToast).toHaveBeenCalledWith("Soul registered — Meng", "info", 5000);
     expect(result).toEqual({
       success: true,
       invalidatedKeys: ["souls"],
-      toastMessage: "Soul created: Meng",
+      toastMessage: "Soul registered — Meng",
     });
   });
 
@@ -181,7 +204,7 @@ describe("workflow events", () => {
       ctx,
     );
 
-    expect(showToast).toHaveBeenCalledWith("Workflow assigned to you", "info", 6000);
+    expect(showToast).toHaveBeenCalledWith("Workflow assigned", "info", 6000);
   });
 });
 
@@ -200,7 +223,7 @@ describe("notification events", () => {
   });
 
   it("joins title and message into the toast", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent(
       {
@@ -215,7 +238,7 @@ describe("notification events", () => {
   });
 
   it("shows the title alone when the message body is empty", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent(
       {
@@ -236,7 +259,7 @@ describe("notification events", () => {
       notification: { id: 1, title: "存下来的标题", message: "存下来的正文", notification_type: "SYSTEM", is_read: false, created_at: "", user_id: 1, ...extra },
     }) as EventPayload;
     const i18n = { "zh-Hans": { title: "审批超时", message: "请处理" }, en: { title: "Approval overdue", message: "Please handle it" } };
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     document.cookie = "soulledger-locale=en; path=/";
     dispatchEvent(body({ i18n }), ctx);
@@ -255,11 +278,32 @@ describe("notification events", () => {
   });
 
   it("does not toast at all when the frame carries no notification body", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent({ domain: "notification", event: "NOTIFICATION_CREATED" } as EventPayload, ctx);
 
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it("toasts only the recipient: another officer's notification invalidates but does not toast", () => {
+    const frame = {
+      domain: "notification",
+      event: "NOTIFICATION_CREATED",
+      notification: { id: 1, title: "密码求助", message: "某人", notification_type: "SYSTEM", is_read: false, created_at: "", user_id: 7 },
+    } as EventPayload;
+
+    const other = makeContext("1");
+    dispatchEvent(frame, other.ctx);
+    expect(other.showToast).not.toHaveBeenCalled();
+    expect(other.invalidateQueries).toHaveBeenCalled();
+
+    const unknown = makeContext(undefined);
+    dispatchEvent(frame, unknown.ctx);
+    expect(unknown.showToast).not.toHaveBeenCalled();
+
+    const recipient = makeContext("7");
+    dispatchEvent(frame, recipient.ctx);
+    expect(recipient.showToast).toHaveBeenCalledWith("密码求助: 某人", "info", 5000);
   });
 });
 
@@ -302,7 +346,7 @@ describe("death sync events", () => {
     dispatchEvent({ domain: "deathsync", event: "DEATH_SYNC_PROCESSED" } as EventPayload, ctx);
 
     expect(invalidatedKeys(invalidateQueries)).toEqual(['["death-sync"]']);
-    expect(showToast).toHaveBeenCalledWith("Death registration processed", "info", 5000);
+    expect(showToast).toHaveBeenCalledWith("Death sync processed", "info", 5000);
   });
 });
 
@@ -599,7 +643,7 @@ describe("registry introspection", () => {
   });
 
   it("falls back to the raw event type when no label exists", () => {
-    expect(getEventLabel("SOUL_CREATED")).toBe("Soul created");
+    expect(getEventLabel("SOUL_CREATED")).toBe("Soul registered");
     expect(getEventLabel("BRAND_NEW_EVENT")).toBe("BRAND_NEW_EVENT");
   });
 });
@@ -621,6 +665,53 @@ describe("event drift", () => {
       const { ctx } = makeContext();
       const result = dispatchEvent({ domain, event } as unknown as EventPayload, ctx);
       expect(result.success).toBe(true);
+    }
+  });
+});
+
+// ── Toast copy follows the locale (2026-10-29) ──────────────────────────
+// The labels used to be English strings shown as they were in every locale. Each case asserts the
+// locale's copy AND the absence of the old English and of the raw key.
+
+describe("toast copy follows the locale", () => {
+  afterEach(() => publishTranslator(lookup(en)));
+
+  it("zh-Hans toasts in Chinese, with no English and no raw key", () => {
+    publishTranslator(lookup(zhHans));
+    const { ctx, showToast } = makeContext();
+    dispatchEvent({ domain: "soul", event: "SOUL_CREATED", soul_id: "s1", soul_name: "孟" } as EventPayload, ctx);
+    dispatchEvent({ domain: "workflow", event: "WORKFLOW_REJECTED", workflow_id: "w1" } as EventPayload, ctx);
+    dispatchEvent(
+      { domain: "social", event: "USER_FOLLOWED", follower_id: "u1", following_id: "me", author_name: "安" } as EventPayload,
+      { ...ctx, currentUserId: "me" },
+    );
+    const shown = showToast.mock.calls.map(([msg]) => msg as string);
+    expect(shown).toEqual(["灵魂登记 — 孟", "工作流驳回", "新关注者 — 安"]);
+    for (const msg of shown) {
+      expect(msg).not.toMatch(/[A-Za-z]/);
+    }
+    expect(getEventLabel("SOUL_CREATED")).toBe("灵魂登记");
+  });
+
+  it("an unlabelled event in a domain falls back to that domain's translated word", () => {
+    publishTranslator(lookup(zhHans));
+    const { ctx, showToast } = makeContext();
+    handleWorkflowEvent({ domain: "workflow", event: "WORKFLOW_SOMETHING_NEW", workflow_id: "w1" } as WorkflowEventPayload, ctx);
+    expect(showToast).toHaveBeenCalledWith("审批有更新", "info", 6000);
+    expect(showToast).not.toHaveBeenCalledWith("Workflow update", expect.anything(), expect.anything());
+  });
+
+  it("every label and fallback key resolves in en and zh-Hans", () => {
+    const keys = [
+      ...Object.values(EVENT_LABELS),
+      "events.realtime.fallback_workflow",
+      "events.realtime.fallback_dispatch",
+      "events.realtime.fallback_death_sync",
+      "events.realtime.fallback_social",
+    ];
+    for (const bundle of [en, zhHans]) {
+      const t = lookup(bundle);
+      expect(keys.filter((k) => t(k) === k)).toEqual([]);
     }
   });
 });

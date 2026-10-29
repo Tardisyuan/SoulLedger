@@ -13,7 +13,7 @@ import { SmallButton, Txt, space, useI18n, useTheme } from "../shared";
 
 type T = (key: string, vars?: Record<string, string>) => string;
 
-const APPROVAL_CODES = ["approval_in_progress", "approval_rejected"];
+const APPROVAL_CODES = ["approval_in_progress", "approval_rejected", "approval_cancelled"];
 const WEIGHING_CODES = ["weighing_in_progress", "weighing_rejected", "weighing_wavers"];
 
 /** `weighing.unfinished_flow` 的码 → 原因(同网页处置页);别的码或 null 为 null。 */

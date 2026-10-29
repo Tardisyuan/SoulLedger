@@ -69,6 +69,7 @@ MESSAGES = {
         "assistant_reopened": {"title": "助手已自动重开:新的一个月", "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"},
         "city_god_case_received": {"title": "城隍收案待初审", "body": "灵魂「{{soul}}」的案子已交到{{city_god}}，等待初审。"},
         "city_god_case_returned": {"title": "城隍退回补正", "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"},
+        "wangsi_grievance_filed": {"title": "枉死城有新申诉", "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"},
     },
     "en": {
         "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
@@ -133,6 +134,7 @@ MESSAGES = {
         "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
         "city_god_case_received": {"title": "New case for first review", "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."},
         "city_god_case_returned": {"title": "Case returned for correction", "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"},
+        "wangsi_grievance_filed": {"title": "New grievance in the City of the Wrongfully Dead", "body": "{{soul}} has filed a grievance, waiting for review."},
     },
     "egy": {
         "password_help_requested": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
@@ -221,6 +223,8 @@ KIND_BY_TYPE = {
     # 城隍初审:收案(给这位城隍名下的官员,没有就给本殿管理员)与退回补正(给本殿管理员),`apps/judgment/city_gods.py`。
     "CITY_GOD_CASE_RECEIVED": "city_god_case_received",
     "CITY_GOD_CASE_RETURNED": "city_god_case_returned",
+    # 枉死城的冤情申诉待审(`apps/judgment/wangsi.py::_notify_filed`)。
+    "WANGSI_GRIEVANCE_FILED": "wangsi_grievance_filed",
 }
 
 #: `SYSTEM` 类型没有自己的文案键(它是各种运维消息的兜底类型);发送方把下面之一写进 `params["kind"]`

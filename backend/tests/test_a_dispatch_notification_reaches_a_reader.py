@@ -123,3 +123,49 @@ def test_the_proposer_is_not_notified_of_their_own_proposal(
 # 2026-09-13 (BP-13): it pinned `apps.tenants.Notification`'s row count at 0.
 # The model itself is now deleted (migration 0010 in `apps/tenants`), so the
 # table it guarded against a dual-write into no longer exists to write to.
+
+
+def test_only_officers_who_can_read_dispatches_are_notified(
+    db, django_user_model, cn_tenant, target_tenant, proposer, target_operator, soul,
+    django_capture_on_commit_callbacks,
+):
+    """RBAC 严查 2026-10-29 M1:提案通知只给目标殿持 `dispatch.read` 的在职官员。
+
+    此前发给目标殿全部 is_active User:每个灵魂账号一行,JUDGE / VIEWER(调拨视图对
+    他们 403)也从通知里拿到灵魂名与来源殿。"""
+    def make(name, role, **kw):
+        return django_user_model.objects.create_user(
+            username=name, password="x", role=role, tenant=target_tenant, **kw)
+
+    moderator = make("duat_moderator", "MODERATOR")
+    judge = make("duat_judge", "JUDGE")
+    viewer = make("duat_viewer", "VIEWER")
+    soul_account = make("duat_soul", "SOUL")
+    retired = make("duat_retired", "MODERATOR", is_active=False)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        DispatchService.propose(
+            source_tenant=cn_tenant, target_tenant=target_tenant, soul=soul,
+            dispatcher=proposer, reason="Judged under the wrong cosmology.",
+        )
+
+    got = set(UserNotification.objects.filter(
+        notification_type=NotificationType.DISPATCH_PROPOSED).values_list("user_id", flat=True))
+    assert {target_operator.pk, moderator.pk} <= got
+    assert not got & {judge.pk, viewer.pk, soul_account.pk, retired.pk}, got
+
+
+def test_cross_judgment_notices_go_to_cross_judgment_readers_only(
+    db, django_user_model, target_tenant, target_operator,
+):
+    """联审通知(入席 / 结案 / 取消)的收件人:持 `cross_judgment.read` 的在职官员,不含灵魂。"""
+    from apps.dispatch.services import _holders
+
+    def make(name, role):
+        return django_user_model.objects.create_user(
+            username=name, password="x", role=role, tenant=target_tenant)
+
+    judge, viewer, soul_account = make("cj_judge", "JUDGE"), make("cj_viewer", "VIEWER"), make("cj_soul", "SOUL")
+    got = {u.pk for u in _holders([target_tenant], "cross_judgment.read")}
+    assert {target_operator.pk, judge.pk} <= got
+    assert viewer.pk not in got and soul_account.pk not in got

@@ -60,6 +60,8 @@ CATEGORY_BY_TYPE = {
     # 城隍初审的收案 / 退回补正(第五十三批,用户决定可关)。
     "CITY_GOD_CASE_RECEIVED": "city_god",
     "CITY_GOD_CASE_RETURNED": "city_god",
+    # 枉死申诉待审(2026-10-29):同属城隍那一摊,归同一类。
+    "WANGSI_GRIEVANCE_FILED": "city_god",
 }
 
 #: 发送方可以在 `params["category"]` 里改选的类别(只限这里列的,与 `messages.VARIANTS` 同一个做法):

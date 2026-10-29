@@ -151,6 +151,8 @@ export interface AuthProfile {
   mfa_required?: boolean;
   password_change_required?: boolean;
   mfa_setup_required?: boolean;
+  /** Same list as the login payload's `user.permissions`. Optional: older payloads lack it. */
+  permissions?: string[];
 }
 
 /**

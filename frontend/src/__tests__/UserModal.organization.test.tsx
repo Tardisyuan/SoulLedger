@@ -4,6 +4,8 @@
  * 钉住:编辑时出现职务框与机构选择;机构选项只有被编辑账号所在租户的(ADMIN 的机构列表跨租户,
  * 后端会拒绝别的租户的);保存时 PATCH 带上 organization / position;选「不属于任何机构」发 null。
  * 新建时先选租户才出现(机构只列该租户的,换租户清空已选机构),POST 带上 organization / position。
+ * 数据范围 B6:机构改用 OrgTreeSelect 单选;有殿的非管理员必填(没有「不属于任何机构」),缺省殿根
+ * (`ROOT_` 开头的顶层,没有就取排序最前的顶层)。
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -64,12 +66,15 @@ beforeEach(() => {
   ]);
 });
 
-it("offers only the edited user's tenant's organizations, with the current one selected", async () => {
+const submit = () => fireEvent.submit(document.getElementById("user-form")!);
+
+it("offers only the edited user's tenant's organizations, with the current one selected and no 'none' for a non-admin", async () => {
   renderModal(user);
   expect(await screen.findByRole("radio", { name: /第二殿/ })).toBeInTheDocument();
-  expect(screen.getByRole("radio", { name: /第一殿/ })).toHaveAttribute("aria-checked", "true");
+  expect(screen.getByRole("radio", { name: /第一殿/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /第二殿/ })).not.toBeChecked();
   expect(screen.queryByRole("radio", { name: /Hades/ })).not.toBeInTheDocument();
-  expect(screen.getByRole("radio", { name: /users.organization_none/ })).toHaveAttribute("aria-checked", "false");
+  expect(screen.queryByRole("radio", { name: /users.organization_none/ })).not.toBeInTheDocument();
   expect(screen.getByLabelText("users.position")).toHaveValue("判官");
 });
 
@@ -77,18 +82,45 @@ it("PATCHes the chosen organization and the position", async () => {
   renderModal(user);
   fireEvent.click(await screen.findByRole("radio", { name: /第二殿/ }));
   fireEvent.change(screen.getByLabelText("users.position"), { target: { value: "主簿" } });
-  fireEvent.submit(document.getElementById("user-form")!);
+  submit();
   await waitFor(() => expect(mockedUpdate).toHaveBeenCalledTimes(1));
   expect(mockedUpdate.mock.calls[0][0]).toBe("7");
   expect(mockedUpdate.mock.calls[0][1]).toMatchObject({ organization: 12, position: "主簿" });
 });
 
-it("sends null when the organization is cleared", async () => {
-  renderModal(user);
+it("an ADMIN in a hall may belong to no unit: 'none' is offered and sends null", async () => {
+  renderModal({ ...user, role: "ADMIN" });
   fireEvent.click(await screen.findByRole("radio", { name: /users.organization_none/ }));
-  fireEvent.submit(document.getElementById("user-form")!);
+  submit();
   await waitFor(() => expect(mockedUpdate).toHaveBeenCalledTimes(1));
   expect(mockedUpdate.mock.calls[0][1]).toMatchObject({ organization: null });
+});
+
+it("editing a non-admin with no unit defaults to the hall's first top-level unit when there is no ROOT_", async () => {
+  renderModal({ ...user, organization: null });
+  await waitFor(() => expect(screen.getByRole("radio", { name: /地府/ })).toBeChecked());
+  submit();
+  await waitFor(() => expect(mockedUpdate).toHaveBeenCalledTimes(1));
+  expect(mockedUpdate.mock.calls[0][1]).toMatchObject({ organization: 10 });
+});
+
+it("prefers the ROOT_ unit over other top-level units as the default", async () => {
+  mockedOrgs.mockResolvedValue([
+    { id: 30, name: "旧顶层", code: "OLD", parent: null, level: 0, sort: 0, tenant: 1 },
+    { id: 31, name: "殿根", code: "ROOT_CN_DIYU", parent: null, level: 0, sort: 5, tenant: 1 },
+  ]);
+  renderModal({ ...user, organization: null });
+  await waitFor(() => expect(screen.getByRole("radio", { name: /殿根/ })).toBeChecked());
+  expect(screen.getByRole("radio", { name: /旧顶层/ })).not.toBeChecked();
+});
+
+it("refuses to save a hall member with no unit when the hall has none to pick", async () => {
+  mockedOrgs.mockResolvedValue([{ id: 20, name: "Hades", code: "HADES", parent: null, level: 0, sort: 0, tenant: 4 }]);
+  renderModal({ ...user, organization: null });
+  await waitFor(() => expect(mockedOrgs).toHaveBeenCalled());
+  submit();
+  expect(await screen.findByText("users.organization_required")).toBeInTheDocument();
+  expect(mockedUpdate).not.toHaveBeenCalled();
 });
 
 it("creating: shows neither field until a tenant is chosen, then only that tenant's organizations", async () => {
@@ -102,19 +134,22 @@ it("creating: shows neither field until a tenant is chosen, then only that tenan
   expect(screen.getByLabelText("users.position")).toBeInTheDocument();
 });
 
-it("creating: changing the tenant clears the chosen organization, and POST carries organization + position", async () => {
+it("creating: changing the tenant drops the old unit for the new hall's default, and POST carries organization + position", async () => {
   renderModal(null);
   fireEvent.change(await screen.findByLabelText("users.tenant"), { target: { value: "1" } });
   fireEvent.click(await screen.findByRole("radio", { name: /第二殿/ }));
   fireEvent.change(screen.getByLabelText("users.tenant"), { target: { value: "4" } });
+  await waitFor(() => expect(screen.getByRole("radio", { name: /Hades/ })).toBeChecked());
+  expect(screen.queryByRole("radio", { name: /第二殿/ })).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("users.tenant"), { target: { value: "1" } });
-  expect(await screen.findByRole("radio", { name: /users.organization_none/ })).toHaveAttribute("aria-checked", "true");
+  await waitFor(() => expect(screen.getByRole("radio", { name: /地府/ })).toBeChecked());
+  expect(screen.getByRole("radio", { name: /第二殿/ })).not.toBeChecked();
   fireEvent.click(screen.getByRole("radio", { name: /第一殿/ }));
   fireEvent.change(screen.getByLabelText("users.position"), { target: { value: "主簿" } });
   fireEvent.change(screen.getByLabelText(/users.username/), { target: { value: "newbie" } });
   fireEvent.change(screen.getByLabelText(/users.email/), { target: { value: "n@x.io" } });
   fireEvent.change(screen.getByLabelText(/users.password/), { target: { value: "Str0ng-pass-phrase!" } });
-  fireEvent.submit(document.getElementById("user-form")!);
+  submit();
   await waitFor(() => expect(mockedCreate).toHaveBeenCalledTimes(1));
   expect(mockedCreate.mock.calls[0][0]).toMatchObject({ tenant: 1, organization: 11, position: "主簿" });
 });

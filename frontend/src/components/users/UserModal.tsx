@@ -10,7 +10,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
-import { ParentPicker } from "@/src/components/organizations/OrganizationDialogs";
+import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -162,7 +162,24 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
       setFormData((f) => (f.tenant == null ? { ...f, tenant: tenantChoices[0].id } : f));
     }
   }, [isEditing, tenantChoices]);
-  const tenantOrgs = (orgsQuery.data ?? []).filter((o) => userTenant != null && o.tenant === userTenant);
+  const tenantOrgs = useMemo(
+    () => (orgsQuery.data ?? []).filter((o) => userTenant != null && o.tenant === userTenant),
+    [orgsQuery.data, userTenant],
+  );
+  /**
+   * 有殿的非管理员必须属于一个机构(数据范围按机构算)。缺省是殿根:`ROOT_` 开头的顶层机构;
+   * 还没有根机构的殿(数据范围迁移之前)取排序最前的顶层机构。
+   */
+  const orgRequired = userTenant != null && formData.role !== "ADMIN";
+  const defaultOrg = useMemo(() => {
+    const tops = tenantOrgs.filter((o) => o.parent == null).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+    return (tops.find((o) => o.code.startsWith("ROOT_")) ?? tops[0])?.id;
+  }, [tenantOrgs]);
+  useEffect(() => {
+    if (isOpen && orgRequired && formData.organization == null && defaultOrg != null) {
+      setFormData((f) => ({ ...f, organization: defaultOrg }));
+    }
+  }, [isOpen, orgRequired, formData.organization, defaultOrg]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,6 +189,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     if (!formData.username.trim()) next.username = t("users.username_empty");
     if (!formData.email.trim()) next.email = t("users.email_empty");
     if (!isEditing && !formData.password) next.password = t("users.password_empty");
+    if (orgRequired && formData.organization == null) next.organization = t("users.organization_required");
     setFieldErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -356,13 +374,18 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               disabled={createMutation.isPending || updateMutation.isPending}
             />
-            <ParentPicker
+            <OrgTreeSelect
+              mode="single"
               label={t("users.organization")}
-              noneLabel={t("users.organization_none")}
+              noneLabel={orgRequired ? undefined : t("users.organization_none")}
               organizations={tenantOrgs}
               value={formData.organization ?? null}
-              onChange={(id) => setFormData({ ...formData, organization: id ?? undefined })}
-              disabledIds={new Set()}
+              error={fieldErrors.organization}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              onChange={(id) => {
+                setFieldErrors(({ organization: _drop, ...rest }) => rest);
+                setFormData({ ...formData, organization: id ?? undefined });
+              }}
             />
           </>
         )}
