@@ -315,7 +315,7 @@ def release(pk, user, *, may_override: bool, reason: str = "") -> Judgment:
 def reassign(pk, target, *, actor=None, reason: str = "") -> Judgment:
     with transaction.atomic():
         judgment = _lock(pk)
-        assert_assignable(target, judgment.tenant_id)
+        assert_assignable(target, judgment.tenant_id, judgment)
         holder = judgment.claimed_by_id
         _apply_reassign(judgment, target)
         if holder != target.pk:
@@ -387,7 +387,7 @@ def batch(pks, operation: str, user, *, target=None, reason: str = "", may_overr
                 if operation == "claim":
                     _apply_claim(judgment, user)
                 elif operation == "reassign":
-                    assert_assignable(target, judgment.tenant_id)
+                    assert_assignable(target, judgment.tenant_id, judgment)
                     _apply_reassign(judgment, target)
                 elif operation == "defer":
                     _apply_defer(judgment, user, reason, may_override)
@@ -423,8 +423,12 @@ def is_assignable(target, tenant_id, codename: str = "judgment.execute") -> bool
     )
 
 
-def assert_assignable(target, tenant_id) -> None:
+def assert_assignable(target, tenant_id, row=None) -> None:
+    """`row` 给了时还要对方的数据范围看得到它(数据范围 B3a):改派给一个看不到这件案子的人,
+    案子会从他的队列里消失。判的是改派之前的样子 —— 改派之后他是认领人,任何范围下都看得到。"""
     if is_assignable(target, tenant_id):
+        if row is not None:
+            assert_sees(target, row)
         return
     # 「没有这个人」与「这个人在别的租户」答同一句话:不同的答复就是一个跨租户的
     # 用户枚举口子。同租户里「在,但不能办案」才另说一句。
@@ -432,6 +436,16 @@ def assert_assignable(target, tenant_id) -> None:
             and not getattr(target, "is_deleted", False):
         raise ClaimRefusedError("That officer cannot work judgments.", "invalid_assignee", status=400)
     raise ClaimRefusedError("No such officer in this judgment's tenant.", "invalid_assignee", status=400)
+
+
+def assert_sees(target, row) -> None:
+    """交给 `target` 之前:他的数据范围要看得到 `row`,否则 400 `assignee_out_of_scope`。
+    改派、交接、选审批人共用。"""
+    from apps.perm.data_scope import visible_to
+
+    if not visible_to(target, row):
+        raise ClaimRefusedError("That officer's data scope cannot see this record.", "assignee_out_of_scope",
+                                status=400, id=str(row.pk))
 
 
 def assignable_officers(users, tenant_id, codename: str = "judgment.execute") -> list:

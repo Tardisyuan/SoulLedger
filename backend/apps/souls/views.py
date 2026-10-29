@@ -147,7 +147,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         Applies tenant isolation + DataScope filtering for non-ADMIN users.
         """
         from apps.souls.querysets import SoulQuerySet
-        qs = SoulQuerySet(Soul).select_related("tenant", "home_tenant")
+        qs = SoulQuerySet(Soul).select_related("tenant", "home_tenant", "owner_org")
         # Only the actions that serialize souls read `records` and `life_index` (perf review 2026-10-27 #6).
         # Without the prefetch a SoulSerializer pays one `reincarnations` COUNT per nested record; the other
         # actions (add_record, karma, path, the acknowledgements, delete …) loaded a soul's whole history for

@@ -58,6 +58,8 @@ export interface SoulInput {
   neutral_in_life?: boolean | null;
   /** 只希腊:未葬 / 无渡资。 */
   ferry_passage?: SoulFerryPassage;
+  /** 所属机构(数据范围);不给按服务端默认(建人机构 > 殿根)。 */
+  owner_org?: number;
   /** 只地府:这一世生在四大部洲的哪一洲;"" = 不详。 */
   birth_continent?: SoulContinent;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
@@ -153,6 +155,9 @@ export type SoulListItem = SoulBase & {
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase, ArchiveFields {
+  /** 所属机构(数据范围):id 与名字;持 `soul.update` 可改(`PATCH owner_org`,目标在自己的范围内)。 */
+  owner_org?: number | null;
+  owner_org_name?: string | null;
   /** 本世已批准的转生申请里灵魂选的道;办转世时默认选它,改道要写原因(2026-10-29)。没有为 null。 */
   desired_rebirth_form?: string | null;
   /** 本世饮孟婆汤的时刻(只在中国/地府);没饮是 null。转世完成时清空。 */

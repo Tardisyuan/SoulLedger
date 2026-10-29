@@ -23,6 +23,7 @@ from apps.judgment.models import (
     open_judgments,
 )
 from apps.ledger.serializers import LedgerSummarySerializer
+from apps.org.ownership import check_owner_org, owner_org_field
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
@@ -200,6 +201,13 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 这次审判挂着的审批(结案时「同时发起审批」或手动发起时关联);没有是 null。
     # 「发起审批」(W-11)的关联审判下拉据此把已有审批的置灰。列表的 queryset 已 select_related。
     workflow = serializers.PrimaryKeyRelatedField(source="approval_workflow", read_only=True)
+    # 所属机构(数据范围 B3a):建时可显式给,缺省按 `default_owner_org`(court 前缀 > 建案人机构 > 殿根);
+    # 建后持 judgment.assign 可改,已结案的案子也可以(归属是管理上的事,不是判决的依据)。
+    owner_org = owner_org_field()
+    owner_org_name = serializers.CharField(source="owner_org.name", read_only=True, default=None)
+
+    def validate_owner_org(self, value):
+        return check_owner_org(value, self.context, "judgment", self.instance, "judgment.assign")
 
     class Meta:
         model = Judgment
@@ -228,6 +236,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             # 申诉那几列只读,只经 `/judgment/wangsi/{id}/grievance|decide/` 写(apps/judgment/wangsi.py)。
             "offence", "wrongful_death_cause", "grievance_level",
             "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
+            "owner_org", "owner_org_name",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
@@ -404,7 +413,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
 
     #: 已结案的案子还能改的列(用户 2026-10-29 第 18 条):只有备注。判官、法庭、界域、证据、供词、摘要……
     #: 都是判决的依据,事后改它们记录就和判决对不上;改错走重开 / 更正结算。
-    _WRITABLE_AFTER_CONCLUSION = frozenset({"notes"})
+    _WRITABLE_AFTER_CONCLUSION = frozenset({"notes", "owner_org"})
 
     def _validate_fixed_after_creation(self, attrs):
         """M1:案子是关于哪个灵魂的,建后不改 —— 换灵魂会把已采信的证据、引条文、认领一并挪到别人头上,

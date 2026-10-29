@@ -14513,6 +14513,9 @@ paths:
         Refuse to delete a unit that still has sub-units or people, and say
         how many -- `parent` is SET_NULL, so deleting would silently turn the
         sub-units into roots and strip the people of their unit.
+
+        名下的灵魂 / 审判(数据范围,owner_org 是 PROTECT)同样拦下;`?move_to=<机构 id>` 先把它们
+        (连回收站里的)转到同殿、在操作人数据范围内的另一个机构,再删,一个事务(B3a)。子机构与人员不随 move_to 走。
       parameters:
       - in: path
         name: id
@@ -14520,6 +14523,12 @@ paths:
           type: integer
         description: A unique integer value identifying this Organization.
         required: true
+      - in: query
+        name: move_to
+        schema:
+          type: integer
+        description: Move the unit's souls and judgments to this unit (same hall,
+          in your data scope) first.
       tags:
       - v1
       security:
@@ -29380,10 +29389,12 @@ components:
       enum:
       - target_cannot_judge
       - target_cannot_reply
+      - target_out_of_scope
       type: string
       description: |-
         * `target_cannot_judge` - target_cannot_judge
         * `target_cannot_reply` - target_cannot_reply
+        * `target_out_of_scope` - target_out_of_scope
     HandoverRequest:
       type: object
       properties:
@@ -30104,6 +30115,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -30168,6 +30184,7 @@ components:
       - karmic_balance
       - kind
       - merit_score
+      - owner_org_name
       - realm_name
       - reassign_reason
       - reassign_requested_at
@@ -30991,6 +31008,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31078,6 +31100,7 @@ components:
       - karmic_balance
       - kind
       - merit_score
+      - owner_org_name
       - realm_name
       - reassign_reason
       - reassign_requested_at
@@ -37874,6 +37897,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -38381,6 +38409,11 @@ components:
         desired_rebirth_form:
           type: string
           nullable: true
+          readOnly: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
           readOnly: true
         is_archived:
           type: boolean
@@ -42505,6 +42538,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -42544,6 +42582,7 @@ components:
       - life_index
       - merit_score
       - name
+      - owner_org_name
       - records
       - soul_code
       - soup_taken_at
