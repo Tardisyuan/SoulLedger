@@ -39,6 +39,18 @@ If you discover a security vulnerability, please report it responsibly:
   `DeathRegistrationRequest.source_payload`, keyed by `ENCRYPTION_KEY`. With
   `DEBUG=False` and no key the process refuses to start; with `DEBUG=True` and
   no key it warns and stores both columns in plaintext.
+- **Key rotation without downtime** (procedure: `docs/DEPLOYMENT.md`「密钥轮换」):
+  - `SECRET_KEY`: put the old key in `SECRET_KEY_FALLBACKS`. Django verifies sessions and password-reset
+    links signed with it; JWTs signed with it also still verify until they expire
+    (`backend/apps/core/jwt_fallback.py` — SimpleJWT itself has no fallback support). New signatures use
+    `SECRET_KEY` only. Drop the fallback after `JWT_REFRESH_LIFETIME` (7 days by default).
+  - `ENCRYPTION_KEY`: put the old key in `ENCRYPTION_KEY_FALLBACKS` (reads try every key, writes use
+    `ENCRYPTION_KEY`; an invalid key refuses startup), run `manage.py rotate_encryption_key`, and drop the
+    fallback only after it exits 0 — it exits non-zero, touching nothing, for a value no configured key reads.
+  - Webhook signing secrets are per webhook, server-generated, shown once; there is no in-place rotation yet
+    (overlap two webhooks to the same URL; see the deployment doc).
+- **Metrics**: `/metrics/` is closed (404) unless `METRICS_TOKEN` (Bearer) or `METRICS_ALLOWED_IPS` is set;
+  nginx does not route it. It exposes counts only — no identifiers, no tenant names.
 
 ## Environment Variables
 
@@ -52,6 +64,9 @@ without each of these):
 - `ENCRYPTION_KEY` — Fernet key for the encrypted columns above
 
 Optional (missing only produces a warning):
+- `SECRET_KEY_FALLBACKS` / `ENCRYPTION_KEY_FALLBACKS` — previous keys during a rotation (comma-separated)
+- `METRICS_TOKEN` / `METRICS_ALLOWED_IPS` — open `/metrics/` to a scraper
+- `LOG_FORMAT` — `json` (default when `DEBUG=False`) or `text`
 - `REDIS_URL` — Redis connection string (defaults to `redis://localhost:6379/0`)
 - `SENTRY_DSN` — Sentry error tracking DSN (unset with `DEBUG=False` only warns)
 - `MATRIX_*` — the letters (chat) feature is off unless `MATRIX_ENABLED` is set and its secrets
