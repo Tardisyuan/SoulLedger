@@ -140,6 +140,31 @@ describe("OfficerHandoverDialog", () => {
     expect(screen.queryByText("officerHandover.result_fewer")).toBeNull();
   });
 
+  // 第 22 条:操作人不持 soul_inbox.reply,书信不移交 —— 预览与结果都说留下了几封;0 封时一句都不说。
+  it("says how many letters stay with the giver when the operator cannot reply", async () => {
+    preview.mockResolvedValue({ data: { judgments: 2, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, letters_kept: 3, problems: [] } });
+    commit.mockResolvedValue({ data: { judgments: 2, appeals: 0, appeals_returned_to_pool: 0, city_gods: 0, letters: 0, letters_kept: 3 } });
+    renderDialog();
+    await pickTarget();
+    expect(await screen.findByTestId("handover-letters-kept")).toHaveTextContent("officerHandover.letters_kept(3,alice)");
+    // Kept letters are not counted on the button.
+    expect(screen.getByTestId("handover-submit")).toHaveTextContent("officerHandover.submit_n(2)");
+    fireEvent.click(screen.getByTestId("handover-submit"));
+    expect(await screen.findByTestId("handover-result-letters-kept")).toHaveTextContent("officerHandover.result_letters_kept(3)");
+  });
+
+  it("says nothing about kept letters when none were kept", async () => {
+    preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 2, letters_kept: 0, problems: [] } });
+    commit.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: 0, letters: 2, letters_kept: 0 } });
+    renderDialog();
+    await pickTarget();
+    expect(await screen.findByTestId("handover-preview")).toBeInTheDocument();
+    expect(screen.queryByTestId("handover-letters-kept")).toBeNull();
+    fireEvent.click(screen.getByTestId("handover-submit"));
+    await screen.findByTestId("handover-result");
+    expect(screen.queryByTestId("handover-result-letters-kept")).toBeNull();
+  });
+
   // rbac-web M-7:人选走 judgment.assign 的接口,按交出人的殿问;不再读 users/(ADMIN + user.manage)。
   it("asks the handover officer list for the giver's hall, not the admin-only user list", async () => {
     renderDialog();

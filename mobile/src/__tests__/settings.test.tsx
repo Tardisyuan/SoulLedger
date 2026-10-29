@@ -801,12 +801,17 @@ describe("the Android notification channel (RBAC A9)", () => {
     const os = Platform.OS;
     Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
     const channel = jest.spyOn(Notifications, "setNotificationChannelAsync");
+    const removed = jest.spyOn(Notifications, "deleteNotificationChannelAsync");
     try {
       await requestPermission();
-      expect(channel).toHaveBeenCalledWith("default", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE }));
-      expect(channel).not.toHaveBeenCalledWith("default", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC }));
+      expect(channel).toHaveBeenCalledWith("default-v2", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE }));
+      expect(channel).not.toHaveBeenCalledWith("default-v2", expect.objectContaining({ lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC }));
+      // Visibility is fixed when a channel is created: the pre-A9 "default" is not re-made, it is removed.
+      expect(channel).not.toHaveBeenCalledWith("default", expect.anything());
+      expect(removed).toHaveBeenCalledWith("default");
     } finally {
       channel.mockRestore();
+      removed.mockRestore();
       Object.defineProperty(Platform, "OS", { value: os, configurable: true });
     }
   });

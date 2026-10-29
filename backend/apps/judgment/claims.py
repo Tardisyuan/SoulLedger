@@ -154,6 +154,19 @@ class NotClaimantError(APIException):
         })
 
 
+def overrides_claim(judgment: Judgment, user) -> bool:
+    """这次编辑是不是在别人认领中的开着的案子上(`assert_may_edit` 要么拒、要么留痕的那一种)。"""
+    return (judgment.claimed_by_id not in (None, user.pk) and judgment.verdict is None
+            and not judgment.is_final)
+
+
+def may_edit(judgment: Judgment, user) -> bool:
+    """`assert_may_edit` 会不会放行(不留痕)。审判台据此(`JudgmentSerializer.can_edit`)藏起编辑控件。"""
+    from apps.perm.checker import check_permission
+
+    return not overrides_claim(judgment, user) or check_permission(user, CONCLUDE_OVERRIDE_CODENAME)
+
+
 def assert_may_edit(judgment: Judgment, request, what: str) -> None:
     """改 / 删案子、写草稿、采信证据、引条文、写否认告白、上传附件之前(用户 2026-10-29 第 17 条)。
 
@@ -161,12 +174,10 @@ def assert_may_edit(judgment: Judgment, request, what: str) -> None:
     与释放 / 暂缓 / 改派的 `_may_override` 同一口径)的人可以越过,并留一行审计说他越过了谁;
     其余 403 `not_claimant`。已结案的案子不在此列 —— 那里由「结案冻结」管(第 18 条)。
     不在行锁下读认领人:与改派并发时最坏是按旧认领人放行一次编辑,不会落判(结案另有 `lock_for_conclude`)。"""
-    from apps.perm.checker import check_permission
-
     user = request.user
-    if judgment.claimed_by_id in (None, user.pk) or judgment.verdict is not None or judgment.is_final:
+    if not overrides_claim(judgment, user):
         return
-    if not check_permission(user, CONCLUDE_OVERRIDE_CODENAME):
+    if not may_edit(judgment, user):
         raise NotClaimantError(judgment)
     from apps.audit.models import AuditAction, AuditLog
     from apps.core.client_ip import get_client_ip
