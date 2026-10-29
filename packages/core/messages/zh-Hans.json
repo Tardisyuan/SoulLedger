@@ -7556,7 +7556,8 @@
     "delete_blocked_body": {
       "both": "下面还有 {{units}} 个下级机构、{{people}} 名人员。先把他们移到别的机构，再删。",
       "units": "下面还有 {{units}} 个下级机构。先把它们移到别的机构，再删。",
-      "people": "下面还有 {{people}} 名人员。先把他们移到别的机构，再删。"
+      "people": "下面还有 {{people}} 名人员。先把他们移到别的机构，再删。",
+      "records": "名下还有 {{souls}} 个灵魂、{{judgments}} 件审判。先把它们转到别的机构，再删。"
     },
     "delete_blocked_people": "查看人员",
     "delete_title": "删除「{{name}}」？",

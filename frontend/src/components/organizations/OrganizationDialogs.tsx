@@ -165,7 +165,9 @@ function OrganizationForm({
   // 挂在某个上级之下就随上级的文明(一棵树不跨文明)。
   const effectiveCategory = parentOrg?.category ?? category;
   const disabledIds = editing ? selfAndDescendants(editing, organizations) : new Set<number>();
-  const valid = name.trim() !== "" && code.trim() !== "";
+  // 每殿只有一个根(后端 org/0010 建):新建与移动都要选上级;只有根自己编辑时上级仍为空(数据范围 B1)。
+  const parentOk = parent !== null || (editing !== null && editing.parent === null);
+  const valid = name.trim() !== "" && code.trim() !== "" && parentOk;
 
   const submit = () => {
     if (!valid) return;
@@ -252,7 +254,12 @@ export function OrganizationDeleteDialog({
         ? t("org.delete_blocked_body.both", { units: String(blocked.units), people: String(blocked.people) })
         : blocked.units
           ? t("org.delete_blocked_body.units", { units: String(blocked.units) })
-          : t("org.delete_blocked_body.people", { people: String(blocked.people) });
+          : blocked.people
+            ? t("org.delete_blocked_body.people", { people: String(blocked.people) })
+            : t("org.delete_blocked_body.records", {
+                souls: String(blocked.souls ?? 0),
+                judgments: String(blocked.judgments ?? 0),
+              });
     return (
       <Modal
         isOpen

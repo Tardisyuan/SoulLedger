@@ -55,6 +55,7 @@
   "official_notify.wangsi_grievance_filed.title",
   "official_notify.workflow_timeout_failed.body",
   "official_notify.workflow_timeout_failed.title",
+  "org.delete_blocked_body.records",
   "org_select.implied",
   "org_select.no_match",
   "org_select.no_tenant",

@@ -31,6 +31,7 @@ A row whose site no longer exists must be deleted.
 TAGS = {"LOCK", "PK", "FILTERED", "CODE", "GLOBAL", "FANOUT", "CROSS", "CLI"}
 
 SITES = [
+    ('apps/org/ownership.py', 'tenant_root', 'Organization.all_objects', 1, 'FILTERED', "revives the hall's own deleted root: filtered by tenant and the root code"),
     ('apps/authentication/views.py', 'UserViewSet.import_csv', 'User.all_objects', 1, 'GLOBAL', 'existence probe of a username, which is unique across the whole table; nothing is read back'),
     ('apps/authentication/views.py', 'UserViewSet.invite', 'Tenant.objects', 1, 'FANOUT', 'only the hall-less ADMIN (is_tenant_exempt) names a hall by its globally unique code; a hall-bound ADMIN never reaches this lookup and invites into its own hall only (2026-10-29)'),
     ('apps/judgment/confessions.py', 'clauses', 'Statute.all_objects', 1, 'FILTERED', "the 42 articles of the case's own hall: filtered by judgment.tenant_id"),

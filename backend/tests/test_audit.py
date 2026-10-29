@@ -269,8 +269,10 @@ class TestAuditLogSignals:
     def test_audit_log_anonymous_action(self, db, cn_tenant):
         """Anonymous operations (no user) should still create audit logs."""
         from apps.audit.models import AuditLog
+        from apps.org.ownership import tenant_root
         from apps.souls.models import Soul
 
+        tenant_root(cn_tenant)  # the hall's root unit exists in a migrated database (org/0010); not this test's write
         initial_count = AuditLog.objects.count()
 
         # Anonymous creates should still log but with null user

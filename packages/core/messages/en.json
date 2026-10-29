@@ -7556,7 +7556,8 @@
     "delete_blocked_body": {
       "both": "It still has {{units}} sub-units and {{people}} people. Move them to another unit first, then delete.",
       "units": "It still has {{units}} sub-units. Move them to another unit first, then delete.",
-      "people": "It still has {{people}} people. Move them to another unit first, then delete."
+      "people": "It still has {{people}} people. Move them to another unit first, then delete.",
+      "records": "It still owns {{souls}} souls and {{judgments}} judgments. Move them to another unit first, then delete."
     },
     "delete_blocked_people": "View people",
     "delete_title": "Delete \"{{name}}\"?",

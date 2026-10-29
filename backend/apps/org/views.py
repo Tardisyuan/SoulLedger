@@ -99,9 +99,13 @@ class OrganizationViewSet(
         org = self.get_object()
         units = org.children.count()
         people = org.users.exclude(role="SOUL").count()
-        if units or people:
+        # 名下的灵魂 / 审判(数据范围 B1,owner_org 是 PROTECT);`?move_to=` 先转移留给 B3a。
+        souls = org.owned_souls.filter(is_deleted=False).count()
+        judgments = org.owned_judgments.filter(is_deleted=False).count()
+        if units or people or souls or judgments:
             return Response(
-                {"code": "not_empty", "error": "Move its sub-units and people first.", "units": units, "people": people},
+                {"code": "not_empty", "error": "Move its sub-units, people, souls and judgments first.",
+                 "units": units, "people": people, "souls": souls, "judgments": judgments},
                 status=status.HTTP_409_CONFLICT,
             )
         return super().destroy(request, *args, **kwargs)

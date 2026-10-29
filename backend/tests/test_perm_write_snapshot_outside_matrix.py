@@ -532,8 +532,10 @@ def _organization(tenant, code):
     directly.
     """
     from apps.org.models import Organization
+    from apps.org.ownership import tenant_root
 
-    return Organization.objects.create(name="wsnap", code=code, category="CHINESE", tenant=tenant)
+    # 每殿一个活根(数据范围 B1):挂在殿根下,不另起一棵树。
+    return Organization.objects.create(name="wsnap", code=code, category="CHINESE", tenant=tenant, parent=tenant_root(tenant))
 
 
 def _is_deleted(model, pk):
@@ -975,8 +977,13 @@ def test_organization_create(role_clients, snapshot_tenants, role):
     clients, _ = role_clients
     home, _other = snapshot_tenants
     code = f"WSNAP-C-{role}-{uuid.uuid4().hex[:6]}"
+    from apps.org.ownership import tenant_root
+
+    # 每殿一个活根(数据范围 B1):接口不建根,新机构挂在殿根下。
     response = clients[role].post(
-        "/api/v1/organizations/", {"name": "wsnap", "code": code, "category": "CHINESE"}, format="json"
+        "/api/v1/organizations/",
+        {"name": "wsnap", "code": code, "category": "CHINESE", "parent": tenant_root(home).pk},
+        format="json",
     )
     assert response.status_code == ORGANIZATION_CREATE[role], _msg(role, "POST /organizations/", response)
     created = Organization.objects.filter(code=code).first()
