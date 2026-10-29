@@ -187,20 +187,26 @@ def _create_workflow(soul, nodes, *, name, original=None):
 
 
 def _lock_account(account):
+    """锁序 灵魂 → 账号(2026-10-29),与期满释放 / 受刑计划推进(灵魂 → … → 推送行,推送行的外键对账号取 KEY SHARE)、
+    转世停用账号(灵魂 → 账号)同一个方向。此前是账号 → 灵魂:提交转生申请握着账号等灵魂,期满释放握着灵魂、
+    写 `PushDelivery` 时等账号 —— 真 PG 上死锁(tests/test_sentence_plan_concurrency.py 第 4 组)。
+    申诉、缩短冷却握着账号插入带灵魂外键的行,是同一个形状,所以锁放在这里,三个调用方一起。"""
+    from apps.souls.models import Soul
+
+    Soul.all_objects.select_for_update(of=("self",)).filter(pk=account.soul_id).first()
     return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "soul__home_tenant", "user").get(pk=account.pk)
 
 
 def submit(account, desired_form=None, statement=""):
     from apps.events.services import EventService
     from apps.reincarnation.services import RebirthFormNotApplicable, rebirth_form_for
-    from apps.souls.models import Civilization, Soul
+    from apps.souls.models import Civilization
     from apps.workflow.services import WorkflowService
 
     with transaction.atomic():
-        account = _lock_account(account)
-        # 锁序 账号 → 灵魂:受刑计划在灵魂行锁下完成(`SentencePlanService.advance`),
+        # 灵魂行锁在 `_lock_account` 里先拿:受刑计划在灵魂行锁下完成(`SentencePlanService.advance`),
         # 资格要在同一把锁下读,才不会读到一份正在变的计划(设计稿 §8 PG 测试 4)。
-        Soul.all_objects.select_for_update(of=("self",)).get(pk=account.soul_id)
+        account = _lock_account(account)
         can, code, _ = eligibility(account)
         if not can:
             raise SoulAccountError(REFUSALS[code], code, 409)
