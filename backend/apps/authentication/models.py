@@ -346,6 +346,8 @@ class SignInSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_seen_at = models.DateTimeField(default=timezone.now)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    #: 登录时的客户端地址(`apps/core/client_ip.py`),管理员的在线会话列表显示它;此前登录的行为空。
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
     #: 这条血统当前的刷新令牌 jti(每次刷新更新),退出时据此拉黑。
     refresh_jti = models.CharField(max_length=255, blank=True)
     #: 「30 天内不再询问」设备令牌的 sha256(官员的 `MfaRememberedDevice` 或灵魂的 `SoulMfaDevice`,

@@ -113,7 +113,8 @@ def test_the_dead_permission_module_is_gone():
     from django.conf import settings
 
     registered = [m for m in settings.MIDDLEWARE if "apps.core" in m]
-    assert registered == ["apps.core.request_local.RequestContextMiddleware"], (
+    # TraceIdMiddleware(2026-10-29)做的是另一件事:请求 id 进 contextvar 与响应头,不碰 request / user。
+    assert registered == ["apps.core.trace.TraceIdMiddleware", "apps.core.request_local.RequestContextMiddleware"], (
         f"apps.core 下注册的中间件变了:{registered}。曾经有两个并排挂着,后者是前者"
         f"的严格子集 —— 重复本身没有报错,所以谁都没发现其中一个多余。"
     )

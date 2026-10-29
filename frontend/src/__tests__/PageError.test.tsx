@@ -47,6 +47,17 @@ describe("PageError", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
+  it("a failed API call shows the short request id; an error without one shows none", () => {
+    const failed = Object.assign(new Error("Request failed"), {
+      response: { status: 500, headers: { "x-request-id": "0123456789abcdef0123456789abcdef" } },
+    });
+    const { unmount } = render(<PageError error={failed} reset={() => {}} />);
+    expect(screen.getByText("request 01234567")).toBeInTheDocument();
+    unmount();
+    render(<PageError error={new Error("plain")} reset={() => {}} />);
+    expect(screen.queryByText(/^request /)).not.toBeInTheDocument();
+  });
+
   it("renders error message from error object", () => {
     const error = new Error("Custom error message");
     render(<PageError error={error} reset={() => {}} />);

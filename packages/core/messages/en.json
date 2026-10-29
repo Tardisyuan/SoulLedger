@@ -2631,7 +2631,32 @@
       "audit": "Audit log",
       "logins": "Login log",
       "permissions": "Permission changes",
-      "stats": "Statistics"
+      "stats": "Statistics",
+      "sessions": "Online sessions"
+    },
+    "sessions": {
+      "title": "Online sessions",
+      "kind_label": "Account type",
+      "kind": {
+        "officer": "Officers",
+        "soul": "Souls"
+      },
+      "user": "Account",
+      "device": "Device",
+      "last_seen": "Last active",
+      "signed_in": "Signed in",
+      "current": "(this device)",
+      "revoke": "Sign out",
+      "revoke_all": "Sign out everywhere",
+      "filtered_by": "Only {{name}}",
+      "empty": "No one is signed in",
+      "confirm_title": "Sign out this session?",
+      "confirm_message": "{{name}} will be signed out on {{device}} at once and has to sign in again there.",
+      "confirm_all_title": "Sign out every session?",
+      "confirm_all_message": "{{name}} will be signed out on every device at once.",
+      "revoked": "{{name}} is signed out on that device",
+      "revoked_all": "{{name}} is signed out everywhere",
+      "revoke_failed": "Could not sign out. The list has been refreshed."
     },
     "login_log": {
       "title": "Login log",

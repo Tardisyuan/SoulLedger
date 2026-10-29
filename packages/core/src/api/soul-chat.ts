@@ -118,7 +118,7 @@ export const soulChatApi = {
         body,
         ...(txnId ? { txn_id: txnId } : {}),
         ...(feedbackTag ? { feedback_tag: feedbackTag } : {}),
-      })
+      }, txnId ? { headers: { "Idempotency-Key": txnId } } : undefined)
       .then((r) => r.data.event_id),
   /**
    * Letter images, two steps. `uploadImage`: one image per request (`body` is a multipart body the HOST
