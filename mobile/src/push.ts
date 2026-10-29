@@ -54,17 +54,28 @@ export async function permission(): Promise<Permission> {
   }
 }
 
+/**
+ * The Android channel every soul push lands on; the backend names it on each message
+ * (`backend/apps/soul_push/services.py::ANDROID_CHANNEL_ID`, keep the two equal).
+ *
+ * Not "default": Android lets a channel's lock-screen visibility be set only when the channel is created, so a
+ * phone that made "default" before RBAC A9 kept showing content on the lock screen. A new id is a new channel,
+ * created PRIVATE on every phone; the old one is deleted so the settings screen does not list a dead channel.
+ */
+export const ANDROID_CHANNEL_ID = "default-v2";
+const RETIRED_CHANNEL_IDS = ["default"];
+
 async function ensureAndroidChannel(): Promise<void> {
   // Android 13+ shows the permission dialog only once a channel exists.
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: "SoulLedger",
       importance: Notifications.AndroidImportance.DEFAULT,
       // A letter's sender, a comment's first words, a hall's warning are this soul's own business: the lock screen
-      // says only that something came (RBAC A9; the officer app's channel does the same). Android lets a channel's
-      // visibility be set only when it is created -- a phone that already has the channel keeps what it had.
+      // says only that something came (RBAC A9; the officer app's channel does the same).
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
     }).catch(() => {});
+    for (const id of RETIRED_CHANNEL_IDS) await Notifications.deleteNotificationChannelAsync(id).catch(() => {});
   }
 }
 

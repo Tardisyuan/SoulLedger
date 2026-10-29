@@ -516,9 +516,15 @@ def backoff_seconds(attempts):
     return min(BACKOFF_BASE_SECONDS * 2 ** attempts, BACKOFF_CAP_SECONDS)
 
 
+#: 灵魂 App 的安卓通知渠道(`mobile/src/push.ts::ANDROID_CHANNEL_ID`,两处要相同)。不是 "default":安卓的渠道
+#: 锁屏可见性只在建渠道时生效,RBAC A9 之前建的 "default" 在老手机上仍显示全文;新 id 在每台手机上都按 PRIVATE 新建。
+#: iOS 忽略这一项。
+ANDROID_CHANNEL_ID = "default-v2"
+
+
 def _message(delivery):
     return {"to": delivery.device.token, "title": delivery.title, "body": delivery.body, "data": delivery.data,
-            "sound": "default", "priority": "high"}
+            "sound": "default", "priority": "high", "channelId": ANDROID_CHANNEL_ID}
 
 
 def _claim(delivery_ids):
