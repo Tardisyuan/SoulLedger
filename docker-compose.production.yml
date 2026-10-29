@@ -136,13 +136,25 @@ services:
   # `synapse` database (pg_dump -Fc) and tars the volume (signing key, chat
   # media), and the healthcheck requires both to be fresh too. Before chat is
   # initialized both are skipped and not required.
+  #
+  # The image is postgres:16-alpine, not the db's pgvector/pgvector:pg16: the
+  # command below needs busybox `crond`, which the Debian-based pgvector image
+  # does not have (dc61b349 switched both; measured 2026-10-30, `command -v
+  # crond` empty there), so the daily run never started and the container
+  # restart-looped on its first backup. pg_dump needs no server extension;
+  # the dump's CREATE EXTENSION vector runs on the db at restore time.
+  #
+  # Off-site copy and alerts (docs/DEPLOYMENT.md「备份异地副本与告警」): set
+  # BACKUP_OFFSITE_REMOTE (an rclone destination) and OPS_ALERT_WEBHOOK_URL in
+  # .env. rclone is installed at start only when an off-site remote is set.
   backup:
-    image: pgvector/pgvector:pg16
+    image: postgres:16-alpine
     volumes:
       - ./scripts:/scripts:ro
       - ./backups:/backups
       - media_files:/media:ro
       - synapse_data:/synapse:ro
+      - ./rclone:/rclone:ro
     environment:
       PGHOST: db
       PGPORT: "5432"
@@ -152,9 +164,15 @@ services:
       MEDIA_DIR: /media
       SYNAPSE_DATA_DIR: /synapse
       SYNAPSE_DATABASE: synapse
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      OFFSITE_RETENTION_DAYS: ${BACKUP_OFFSITE_RETENTION_DAYS:-90}
+      BACKUP_OFFSITE_REMOTE: ${BACKUP_OFFSITE_REMOTE:-}
+      RCLONE_CONFIG: /rclone/rclone.conf
+      OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
     entrypoint: ["sh", "-c"]
     command:
       - >
+        { [ -z "$$BACKUP_OFFSITE_REMOTE" ] || command -v rclone >/dev/null || apk add --no-cache rclone; } ;
         /scripts/backup-db.sh /backups &&
         echo '0 2 * * * /scripts/backup-db.sh /backups > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
         exec crond -f -l 8

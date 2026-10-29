@@ -341,6 +341,17 @@ class TestDockerConfiguration:
         script = _read(os.path.join(REPO_ROOT, "scripts", "backup-db.sh"))
         assert 'PGHOST="${PGHOST:-' in script
 
+    def test_backup_image_has_the_crond_its_command_runs(self):
+        """dc61b349 moved backup to pgvector/pgvector:pg16 with the db; that image is
+        Debian and has no `crond`, so the daily run never started (2026-10-30).
+        busybox crond is in the alpine image. Off-site and alert settings reach it."""
+        backup = _production_services()['backup']
+        assert 'crond' in backup['command'][0]
+        assert backup['image'].startswith('postgres:16-alpine')
+        env = backup['environment']
+        assert {'BACKUP_OFFSITE_REMOTE', 'OFFSITE_RETENTION_DAYS', 'RETENTION_DAYS', 'OPS_ALERT_WEBHOOK_URL'} <= set(env)
+        assert 'OPS_ALERT_WEBHOOK_URL' in _load_compose(COMPOSE_BASE)['x-django-env']
+
     def test_backup_covers_the_chat_data(self):
         """Chat messages live in the `synapse` database and the signing key
         in the synapse_data volume — neither is in the soulledger dump. The
