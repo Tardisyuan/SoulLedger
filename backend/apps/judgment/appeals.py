@@ -329,8 +329,13 @@ def on_ladder_finished(workflow, status, end_reason=""):
 
 def withdraw(account, appeal_id):
     with transaction.atomic():
-        if not JudgmentAppeal.all_objects.filter(pk=appeal_id, soul_id=account.soul_id, is_deleted=False).exists():
+        cycle = (JudgmentAppeal.all_objects.filter(pk=appeal_id, soul_id=account.soul_id, is_deleted=False)
+                 .values_list("judgment__cycle", flat=True).first())
+        if cycle is None:
             raise AppealRefusedError("No such appeal.", "not_found", status=404)
+        # 前世的判决只读,它的申诉也不能撤(与 `appeal_refusal` 同一条;RBAC 严查 2026-10-29 L6)。
+        if cycle != account.cycle:
+            raise AppealRefusedError("A previous life's judgment is read only.", "past_life_read_only", status=403)
         appeal = _lock_appeal(appeal_id)
         if appeal.status not in OPEN_APPEAL_STATUSES:
             raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")
