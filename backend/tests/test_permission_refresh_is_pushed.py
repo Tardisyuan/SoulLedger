@@ -135,7 +135,11 @@ def test_assign_roles_publishes_after_commit_to_that_user_only(admin_user, djang
     sent = []
     monkeypatch.setattr("channels.layers.get_channel_layer", lambda: type(
         "L", (), {"group_send": staticmethod(_record(sent))})())
-    judge = django_user_model.objects.create_user(username="pp_judge", password="x", role="JUDGE", tenant=cn_tenant)
+    from apps.org.ownership import tenant_root
+
+    # 已在殿根机构:下面那次 PATCH 不会顺带把空机构补成殿根(那是一次真的换机构,B5 起也推刷新)。
+    judge = django_user_model.objects.create_user(username="pp_judge", password="x", role="JUDGE", tenant=cn_tenant,
+                                                  organization=tenant_root(cn_tenant))
     c = APIClient()
     c.force_authenticate(admin_user)
     with django_capture_on_commit_callbacks(execute=True):
