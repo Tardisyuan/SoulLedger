@@ -1,6 +1,6 @@
 /**
  * The signed-in shell: the identity band, the standing two-step-verification banner (when owed),
- * five tabs, and one detail screen over them. Each tab's top bar has 「问一问」; its conversation is
+ * up to five tabs (only those the officer's codes reach), and one detail screen over them. Each tab's top bar has 「问一问」; its conversation is
  * held here, above the tabs, so a tab switch or closing the sheet does not lose it (assist.tsx).
  *
  * Navigation is a state, not a navigator: five tabs and one level of detail do not need a stack,
@@ -13,7 +13,7 @@ import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
 import { AppState, BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
-import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
+import { IdentityBand, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
 import { listenForArrivals, listenForLandings, registerDevice } from "./push";
@@ -168,6 +168,11 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
     );
   }
 
+  // Only the tabs this officer's codes reach (kit.tsx `TAB_CODES`); a tab asked for that is not among them (the
+  // starting 待办 of a 访客, a link, a landing) shows the first one there is -- 通知 and 我的 are always there.
+  const tabs = visibleTabs(user.permissions);
+  const current = tabs.includes(tab) ? tab : tabs[0];
+
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
       <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
@@ -179,7 +184,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
       <OfflineBanner />
       {account || detail ? null : (
         <TabHead
-          tab={tab}
+          tab={current}
           onAsk={() => {
             assist.setView("chat");
             assist.setOpen(true);
@@ -211,23 +216,24 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onSettled={() => setVersion((v) => v + 1)}
             onGone={markGone}
           />
-        ) : tab === "todo" ? (
+        ) : current === "todo" ? (
           <TodoTab key={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
-        ) : tab === "queue" ? (
+        ) : current === "queue" ? (
           <QueueTab key={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
-        ) : tab === "search" ? (
+        ) : current === "search" ? (
           <SearchTab
             onOpenSoul={(id) => { setOrigin("search"); setDetail({ type: "soul", id }); }}
             onOpenJudgment={(id) => { setOrigin("search"); setDetail({ type: "judgment", id }); }}
           />
-        ) : tab === "notices" ? (
+        ) : current === "notices" ? (
           <NoticesTab key={version} gone={gone} onRead={countUnread} onLand={(landing) => land(landing, "notices")} />
         ) : (
           <MeTab onOpen={setAccount} />
         )}
       </View>
       <TabBar
-        current={tab}
+        current={current}
+        tabs={tabs}
         unread={unread}
         onSelect={(next) => {
           if (locked) return; // the recovery codes are on screen and not yet confirmed saved
@@ -236,7 +242,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           setTab(next);
         }}
       />
-      <AssistSheet assist={assist} tab={tab} />
+      <AssistSheet assist={assist} tab={current} />
       {resetLink && !locked ? (
         <View testID="reset-overlay" style={StyleSheet.absoluteFill}>
           <ResetPasswordScreen

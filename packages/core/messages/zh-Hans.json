@@ -5024,7 +5024,9 @@
         "chat_not_configured": "此地尚未通书信。",
         "not_found": "未找到。",
         "invalid_code": "灵魂编号须为 10 位。",
-        "self": "不能写信给自己。"
+        "self": "不能写信给自己。",
+        "ticket_expired": "这次查找已过期，请重新按编号查找。",
+        "ticket_invalid": "请重新按编号查找。"
       },
       "image": {
         "failed": "没能发出",
@@ -6937,7 +6939,9 @@
       "unavailable": "这部手机还没设锁屏密码，开不了。先在系统设置里设一个。",
       "failed": "没有认出{{bio}}，还没批准。再点一次确认重试。",
       "failed_reject": "没有认出{{bio}}，还没驳回。再点一次确认重试。",
-      "prompt": "批准或驳回前，确认是你本人。"
+      "prompt": "批准或驳回前，确认是你本人。",
+      "prompt_off": "关掉这项前，确认是你本人。",
+      "off_failed": "没有认出{{bio}}，这项仍然开着。"
     },
     "update_required": {
       "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
@@ -6970,7 +6974,8 @@
       "filter_clear": "清除筛选",
       "see_all": "全部 {{n}} 封",
       "group_sentence_change": "受刑计划变更",
-      "on_desk_only": "在电脑上处理"
+      "on_desk_only": "在电脑上处理",
+      "empty_body_other": "有轮到你的事时会推送给你。"
     },
     "queue": {
       "mine": "我手上",

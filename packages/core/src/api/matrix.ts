@@ -177,6 +177,8 @@ export function matrixClient(creds: MatrixCredentials) {
         token,
         data: {},
       }).then(() => undefined),
+    /** Ends this access token (and its device) on the homeserver: sign-out, so a copy left in memory is worth nothing. */
+    logout: () => call<object>("POST", `${base}/logout`, { token, data: {} }).then(() => undefined),
   };
 }
 

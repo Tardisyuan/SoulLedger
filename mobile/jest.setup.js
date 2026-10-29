@@ -28,6 +28,7 @@ jest.mock("expo-notifications", () => {
   return {
     __state: state,
     AndroidImportance: { DEFAULT: 3 },
+    AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
     // canAskAgain unset = iOS: only "undetermined" can still be asked.
     getPermissionsAsync: async () => ({
       status: state.status,

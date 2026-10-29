@@ -28,5 +28,10 @@
   "events.realtime.fallback_workflow",
   "events.realtime.fallback_dispatch",
   "events.realtime.fallback_death_sync",
-  "events.realtime.fallback_social"
+  "events.realtime.fallback_social",
+  "officer_app.biometric.prompt_off",
+  "officer_app.biometric.off_failed",
+  "officer_app.todo.empty_body_other",
+  "soul_app.chat.errors.ticket_expired",
+  "soul_app.chat.errors.ticket_invalid"
 ]

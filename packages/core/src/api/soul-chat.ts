@@ -22,8 +22,14 @@ export type SoulChatSession = Schemas["ChatSession"];
  * officers' list shows 「反馈 · 类别」 until someone replies). Backend `FEEDBACK_TAGS`.
  */
 export type SoulFeedbackTag = NonNullable<Schemas["MessageSend"]["feedback_tag"]>;
-/** The circle's card: `user_id`, display name, avatar, `is_active`. Never the soul code. */
-export type SoulChatLookupResult = Schemas["SoulCard"];
+/**
+ * The circle's card (`user_id`, display name, avatar, `is_active`; never the soul code) plus `ticket`: the one-time,
+ * ten-minute pass `openDirect` needs for a soul found by code -- a soul in another civilization cannot be named by
+ * `user_id` (RBAC decision 29: ids could be counted through to every soul's name).
+ */
+export type SoulChatLookupResult = Schemas["ChatLookupResult"];
+/** Whom to open a letter with: a `user_id` the soul can already see (same civilization, a follow, an old room) or a lookup's ticket. */
+export type SoulChatTarget = number | { ticket: string };
 /** An uploaded, not yet sent letter image: its id and pixel size. */
 export type SoulChatImageUpload = Schemas["ChatImageUploaded"];
 /** A letter image's signed URL (site-root path, about an hour), for one viewer. */
@@ -43,6 +49,8 @@ export const SOUL_CHAT_LOOKUP_ERROR_CODES = ["not_found", "rate_limited"] as con
  * `self_conversation` is the server's name for `self`.
  */
 export const SOUL_CHAT_ERROR_CODES = [
+  "ticket_expired",
+  "ticket_invalid",
   "request_throttled",
   "muted",
   "closed",
@@ -135,7 +143,9 @@ export const soulChatApi = {
   lookup: (soul_code: string) =>
     soulHttp.post<SoulChatLookupResult>("/me/chat/lookup/", { soul_code }).then((r) => r.data),
   /** 201 new, 200 existing. `throttled` true: not mutual, so this is a request (one per 24 h). */
-  openDirect: (target_user: number) =>
-    soulHttp.post<SoulConversation>("/me/chat/conversations/", { target_user }).then((r) => r.data),
+  openDirect: (target: SoulChatTarget) =>
+    soulHttp
+      .post<SoulConversation>("/me/chat/conversations/", typeof target === "number" ? { target_user: target } : { ticket: target.ticket })
+      .then((r) => r.data),
   conversations: () => soulHttp.get<SoulConversation[]>("/me/chat/conversations/").then((r) => r.data),
 };

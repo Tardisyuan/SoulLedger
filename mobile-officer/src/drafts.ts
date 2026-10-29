@@ -4,9 +4,12 @@
  * They belong to the signed-in officer, so sign-out and a session the server ended both call
  * `clearDrafts()` -- the next officer on the phone must not find the last one's words. (The server has
  * its own per-officer draft, `soulInboxApi.saveDraft`, which the web inbox uses; this app does not
- * read or write it, so the two are separate drafts.) Bodies are never logged.
+ * read or write it, so the two are separate drafts.) Stored as `{ owner, drafts }` (owner.ts): another
+ * officer on this phone reads none of them. Bodies are never logged.
  */
 import { platform } from "@soulledger/core/platform";
+
+import { readOwned, writeOwned } from "./owner";
 
 export const DRAFTS_KEY = "officer_reply_drafts";
 export const DRAFT_KEEP = 20;
@@ -18,17 +21,13 @@ interface Draft {
 }
 
 function read(): Draft[] {
-  try {
-    const parsed = JSON.parse(platform().persistent.get(DRAFTS_KEY) ?? "[]") as unknown;
-    return Array.isArray(parsed) ? parsed.filter((d): d is Draft => typeof d?.id === "string" && typeof d?.text === "string") : [];
-  } catch {
-    return [];
-  }
+  const drafts = readOwned<{ drafts?: unknown }>(DRAFTS_KEY)?.drafts;
+  return Array.isArray(drafts) ? drafts.filter((d): d is Draft => typeof d?.id === "string" && typeof d?.text === "string") : [];
 }
 
 function write(drafts: Draft[]): void {
   if (drafts.length === 0) platform().persistent.remove(DRAFTS_KEY);
-  else platform().persistent.set(DRAFTS_KEY, JSON.stringify(drafts));
+  else writeOwned(DRAFTS_KEY, { drafts });
 }
 
 export function readDraft(id: string): string {

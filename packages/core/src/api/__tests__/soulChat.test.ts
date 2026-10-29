@@ -51,9 +51,15 @@ describe("soulChatApi", () => {
     ]);
   });
 
-  it("opens with the looked-up user_id under the same token", async () => {
+  it("opens a soul the circle shows by its user_id under the same token", async () => {
     await soulChatApi.openDirect(7);
     expect(calls[0]).toMatchObject({ method: "post", url: "/me/chat/conversations/", auth: "Bearer SOUL", body: { target_user: 7 } });
+  });
+
+  it("opens a looked-up soul with the lookup's ticket, and no user_id beside it", async () => {
+    await soulChatApi.openDirect({ ticket: "T-once" });
+    expect(calls[0]).toMatchObject({ method: "post", url: "/me/chat/conversations/", auth: "Bearer SOUL", body: { ticket: "T-once" } });
+    expect(calls[0].body).not.toHaveProperty("target_user");
   });
 
   it("maps every lookup refusal to existing copy, not to the `unknown` fallback", () => {
