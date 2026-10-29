@@ -247,6 +247,8 @@ def test_deleting_a_unit_moves_its_souls_and_judgments_first(w):
 
 
 def test_move_to_outside_the_callers_scope_is_400_and_nothing_moves(w):
+    # 机构接口按范围收窄(B4):机构这项放开成全部,好让 B 在机构列表里看得见 —— 拒的是灵魂 / 审判的范围,不是机构的。
+    scope("MODERATOR", "ALL", resource="org")
     gone = org(w.cn, "将删", parent=w.A)
     Soul.objects.filter(pk=w.sA.pk).update(owner_org=gone)
     res = w.c.delete(f"/api/v1/organizations/{gone.pk}/?move_to={w.B.pk}")
