@@ -743,7 +743,7 @@ export default function SoulDetailPage() {
   const headerActions = !loading && soul && !readOnlyAway && !archived ? (
     <SoulHeaderActions
       /* 菜单按钮配置关掉的就不交给它;权限门在组件里照旧。 */
-      onEdit={buttonOn("souls.edit") ? () => setIsEditModalOpen(true) : undefined}
+      onEdit={buttonOn("souls.edit") && hasPermission("soul.update") ? () => setIsEditModalOpen(true) : undefined}
       onDelete={buttonOn("souls.delete") ? handleDeleteConfirm : undefined}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
       onMarkLost={soul.current_state === "DISPOSED" && canTransition ? () => setLostDialog("mark") : undefined}
