@@ -196,6 +196,41 @@ describe("下一世部洲(S-3)", () => {
   });
 });
 
+describe("地府阳寿未到不画「标记死亡」(用户 2026-10-29)", () => {
+  const nextYear = new Date().getFullYear() + 1;
+  const alive = (soul: Record<string, unknown>) =>
+    wrap(
+      <SoulActionsCard
+        soul={{ ...SOUL, current_state: "ALIVE", ...soul } as Soul}
+        loading={false}
+        actionLoading=""
+        dispositions={[]}
+        reincarnations={[]}
+        rebirthForm={null}
+        onRebirthFormChange={jest.fn()}
+        onDie={jest.fn()}
+        onStartJudgment={jest.fn()}
+        onReincarnate={jest.fn()}
+      />
+    );
+  const markDead = () => screen.queryByRole("button", { name: "标记死亡 → 开始审判" });
+
+  it("地府、阳寿未到:没有按钮", () => {
+    alive({ fated_death_date: { year: nextYear, month: 1, day: 1 } });
+    expect(markDead()).toBeNull();
+  });
+
+  it.each([
+    ["地府、阳寿已到", {}],
+    ["没登记阳寿的地府灵魂", { fated_death_date: null }],
+    ["只登记了年份", { fated_death_date: { year: nextYear, month: null, day: null } }],
+    ["别的文明,阳寿未到", { civilization: "EUROPEAN", fated_death_date: { year: nextYear, month: 1, day: 1 } }],
+  ])("%s:照旧有按钮", (_label, over) => {
+    alive(over);
+    expect(markDead()).toBeInTheDocument();
+  });
+});
+
 describe("以土地公名义登记死亡(S-6)", () => {
   // 登记的人(id 1)是虞山土地名下的官员,不是尚湖土地的,也不持 judgment.assign。
   const TUDI = { id: "t1", name: "虞山土地", city_god: "cg1", city_god_name: "常熟县城隍", regions: [], officers: [{ id: 1, name: "judge" }] };
