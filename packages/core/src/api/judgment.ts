@@ -177,6 +177,9 @@ export interface Judgment extends ArchiveFields {
   grievance_plea?: string;
   grievance_note?: string;
   grievance_decided_at?: string | null;
+  /** 所属机构(数据范围):id 与名字;持 `judgment.assign` 可改(`PATCH owner_org`,目标在自己的范围内)。 */
+  owner_org?: number | null;
+  owner_org_name?: string | null;
 }
 
 type Schemas = components["schemas"];
@@ -633,7 +636,7 @@ export const judgmentApi = {
   /** 改案由(`summary`)等普通字段。`notes` 走 `saveDraft`,认领 / 暂缓走各自的动作。 */
   update: (
     id: string,
-    data: Partial<Pick<Judgment, "summary" | "offence" | "wrongful_death_cause" | "grievance_level">>,
+    data: Partial<Pick<Judgment, "summary" | "offence" | "wrongful_death_cause" | "grievance_level">> & { owner_org?: number },
   ) => api.patch<Judgment>(`/judgment/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/judgment/${id}/`),
   /** 归档(`judgment.execute`):只收有裁决的审判;理由选填。 */

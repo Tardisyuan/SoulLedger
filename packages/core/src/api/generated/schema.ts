@@ -6385,6 +6385,9 @@ export interface paths {
          * @description Refuse to delete a unit that still has sub-units or people, and say
          *     how many -- `parent` is SET_NULL, so deleting would silently turn the
          *     sub-units into roots and strip the people of their unit.
+         *
+         *     名下的灵魂 / 审判(数据范围,owner_org 是 PROTECT)同样拦下;`?move_to=<机构 id>` 先把它们
+         *     (连回收站里的)转到同殿、在操作人数据范围内的另一个机构,再删,一个事务(B3a)。子机构与人员不随 move_to 走。
          */
         delete: operations["v1_organizations_destroy"];
         options?: never;
@@ -13245,9 +13248,10 @@ export interface components {
         /**
          * @description * `target_cannot_judge` - target_cannot_judge
          *     * `target_cannot_reply` - target_cannot_reply
+         *     * `target_out_of_scope` - target_out_of_scope
          * @enum {string}
          */
-        HandoverPreviewProblemsEnum: "target_cannot_judge" | "target_cannot_reply";
+        HandoverPreviewProblemsEnum: "target_cannot_judge" | "target_cannot_reply" | "target_out_of_scope";
         HandoverRequest: {
             to?: number | null;
             from: number;
@@ -13542,6 +13546,8 @@ export interface components {
             readonly grievance_note: string;
             /** Format: date-time */
             readonly grievance_decided_at: string | null;
+            owner_org?: number;
+            readonly owner_org_name: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13886,6 +13892,8 @@ export interface components {
             readonly grievance_note: string;
             /** Format: date-time */
             readonly grievance_decided_at: string | null;
+            owner_org?: number;
+            readonly owner_org_name: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -17150,6 +17158,8 @@ export interface components {
             readonly grievance_note?: string;
             /** Format: date-time */
             readonly grievance_decided_at?: string | null;
+            owner_org?: number;
+            readonly owner_org_name?: string;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17391,6 +17401,8 @@ export interface components {
             /** Format: date-time */
             readonly soup_taken_at?: string | null;
             readonly desired_rebirth_form?: string | null;
+            owner_org?: number;
+            readonly owner_org_name?: string;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -19358,6 +19370,8 @@ export interface components {
             /** Format: date-time */
             readonly soup_taken_at: string | null;
             readonly desired_rebirth_form: string | null;
+            owner_org?: number;
+            readonly owner_org_name: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -33865,7 +33879,10 @@ export interface operations {
     };
     v1_organizations_destroy: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Move the unit's souls and judgments to this unit (same hall, in your data scope) first. */
+                move_to?: number;
+            };
             header?: never;
             path: {
                 /** @description A unique integer value identifying this Organization. */

@@ -138,7 +138,16 @@ RWORK="$RDIR/work/$RID"
 remote_sync() {
     { git ls-files -z; git ls-files -z -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts; printf '.git\0'; } \
         | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P **/.pytest_cache/' \
-            --filter='P frontend/.next/' --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/"
+            --filter='P frontend/.next/' --filter='P .sl-*' --exclude='.git/soulledger-*' --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" \
+        || return 1
+    # --delete never fires under --files-from: a file deleted here is simply absent from the list, so the
+    # remote copy stayed and kept running (2026-10-29: a test deleted by a merge failed the gates there).
+    # The synced .git no longer tracks it, so it shows up remotely as untracked; remove every such file
+    # that is not one of this machine's own untracked files (those were just sent on purpose).
+    local keep; keep=$(git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts)
+    ssh "$GATES_REMOTE" "cd '$RWORK' && git ls-files -o --exclude-standard -- backend frontend packages mobile mobile-officer scripts" \
+        | grep -vxF -f <(printf '%s\n' "$keep") \
+        | ssh "$GATES_REMOTE" "cd '$RWORK' && xargs -r -d '\n' rm -f --"
 }
 # Installed once per lockfile change, in the synced tree, by whichever container runs first. The hash
 # names the BASE image (RIMG), so the E2E image built on it does not force a reinstall.
