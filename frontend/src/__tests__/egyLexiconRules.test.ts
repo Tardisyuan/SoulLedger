@@ -193,6 +193,9 @@ const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
   "soul_app.change_password.hours_left_consequence",
   "soul_app.change_password.under_hour_consequence",
   "soul_app.change_password.expired_consequence",
+  // 第六十三批:重置链接的提示「再重置一次」「请联系管理员再重置一次」,中文省了「密码」,重置的就是密码。
+  "users.reset_password.link_warning",
+  "acceptInvite.reset_invalid_body",
 ]);
 const hasSekhem = (v: string) => /\bSekhem\b/.test(prose(v));
 
@@ -637,11 +640,16 @@ const ROOTS_BATCH58 = ["Pekhret", "Mesha"];
 /** 第五十九批(Design,2026-10-29):火焰 Nesret(放火 Redi Nesret Er Per);制毒定为 Iri Mu Mut(不另立词根)。 */
 const ROOTS_BATCH59 = ["Nesret"];
 /**
+ * 第六十三批(Design,2026-10-29,用户同意采用):数据范围 Tash(tꜣš,边界)、机构 Hut(ḥwt,署 / 府)。
+ * 替代写法 Taui Maa(Taui 本义是文明)与 Kher Sab(Sab 是官员)整体换掉;organization.title 从 Per 改成 Hut。
+ */
+const ROOTS_BATCH63 = ["Tash", "Hut"];
+/**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
