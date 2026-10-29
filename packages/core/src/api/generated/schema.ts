@@ -30295,6 +30295,14 @@ export interface operations {
                     "application/json": components["schemas"]["MeJudgmentAppeal"];
                 };
             };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -33105,6 +33113,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TodoItemDetail"];
                 };
+            };
+            /** @description No response body */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No response body */
             404: {
