@@ -8,7 +8,7 @@ import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import { RefreshFailed, Row } from "../kit";
 import { NoticesTab } from "../screens/notices";
-import { QueueTab } from "../screens/queue";
+import { QueueTab, segmentLabel } from "../screens/queue";
 import { SearchTab } from "../screens/search";
 import { TodoTab } from "../screens/todo";
 import { Shell } from "../shell";
@@ -394,6 +394,19 @@ describe("the judgments tab's segments", () => {
     const label = await within(screen.getByTestId("queue-group-others")).findByText("他人手上 · 0");
     expect(label.props.numberOfLines).toBe(1);
     expect(StyleSheet.flatten(label.props.style).fontSize).toBe(13);
+    expect(StyleSheet.flatten(label.props.style).fontVariant).toEqual(["tabular-nums"]);
+    expect(screen.getByTestId("queue-group").props.accessibilityRole).toBe("tablist");
+    expect(screen.getByTestId("queue-group-others").props.accessibilityRole).toBe("tab");
+  });
+
+  // 用户 2026-10-29:两位数起去掉「 · 」,一位数照旧。
+  it("drops the 「 · 」 once a count has two digits", () => {
+    expect(segmentLabel("待认领", 12)).toBe("待认领12");
+    expect(segmentLabel("待认领", 12)).not.toContain("·");
+    expect(segmentLabel("待认领", 10)).toBe("待认领10");
+    expect(segmentLabel("待认领", 9)).toBe("待认领 · 9");
+    expect(segmentLabel("待认领", 0)).toBe("待认领 · 0");
+    expect(segmentLabel("待认领")).toBe("待认领");
   });
 
   it("starts on the segment it is given and reports a change", async () => {

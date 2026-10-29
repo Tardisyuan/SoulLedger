@@ -4,7 +4,8 @@
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
-import { TODO_GROUPS, deskPath, isTodoKind, noCityGod } from "../rules";
+import * as rules from "../rules";
+import { TODO_GROUPS, deskPath, isTodoKind } from "../rules";
 import { JudgmentFlowBlock, flowWaitingText } from "../screens/judgmentFlow";
 import { ServingFact, defaultTermOf, servingOf } from "../screens/servingFact";
 import { TodoTab } from "../screens/todo";
@@ -164,6 +165,19 @@ describe("枉死申诉 review", () => {
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith("j-1", { grievance_level: "SEVERE" }));
   });
 
+  // 官员 6(2026-10-29):四选一的等级是 radiogroup / radio + checked,不是 tablist / tab + selected。
+  it("the four-way level is a radio group, its segments radios checked by value", async () => {
+    judge({ grievance_level: "MAJOR" });
+    review();
+    const group = await screen.findByTestId("wangsi-level");
+    expect(group.props.accessibilityRole).toBe("radiogroup");
+    const major = screen.getByTestId("wangsi-level-MAJOR");
+    expect(major.props.accessibilityRole).toBe("radio");
+    expect(major.props.accessibilityState).toMatchObject({ checked: true });
+    expect(major.props.accessibilityState.selected).toBeUndefined();
+    expect(screen.getByTestId("wangsi-level-MINOR").props.accessibilityState).toMatchObject({ checked: false });
+  });
+
   // 华为真机 10-29 第二轮: the greyed buttons gave no reason, and the level saved on a tap with no word.
   it("an empty note says why the three are grey, and the line goes once a note is written", async () => {
     judge();
@@ -260,14 +274,12 @@ describe("枉死申诉 review", () => {
 
 // ── M-6 ─────────────────────────────────────────────────────────────────
 
-describe("no_city_god (M-6)", () => {
-  it("is recognised by its code only", () => {
-    expect(noCityGod(httpError(409, { code: "no_city_god" }))).toBe(true);
-    expect(noCityGod(httpError(409, { code: "not_in_wangsi" }))).toBe(false);
-    expect(noCityGod(new Error("x"))).toBe(false);
+describe("no_city_god is gone from the grievance review (2026-10-29)", () => {
+  it("rules no longer carries the branch", () => {
+    expect("noCityGod" in rules).toBe(false);
   });
 
-  it("is a toast with the desk's sentence, not an inline error", async () => {
+  it("an unexpected no_city_god reads as the generic inline refusal, never the city-god toast", async () => {
     judge();
     mockDecide.mockRejectedValue(httpError(409, { code: "no_city_god" }));
     renderOfficer(
@@ -277,8 +289,8 @@ describe("no_city_god (M-6)", () => {
     );
     fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
     fireEvent.press(screen.getByTestId("wangsi-reject"));
-    expect(await screen.findByText("本殿没有可收案的城隍，先在城隍管理里设一位兜底城隍。")).toBeTruthy();
-    expect(screen.queryByTestId("wangsi-failure")).toBeNull();
+    expect(await screen.findByTestId("wangsi-failure")).toBeTruthy();
+    expect(screen.queryByText("本殿没有可收案的城隍，先在城隍管理里设一位兜底城隍。")).toBeNull();
   });
 });
 

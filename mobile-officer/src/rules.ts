@@ -497,14 +497,6 @@ export function isDenied(error: unknown): boolean {
   return (error as { response?: { status?: number } })?.response?.status === 403;
 }
 
-/**
- * 409 `no_city_god`(第五十九批 M-6):本殿没有可收案的城隍。App 只 toast 网页那句 `judgment.error.no_city_god`,
- * 不给按钮 —— 设城隍只在网页上。
- */
-export function noCityGod(error: unknown): boolean {
-  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "no_city_god";
-}
-
 /** How long the pushed row's highlight takes to go (spec §五). */
 export const HIGHLIGHT_MS = 1200;
 /** Its peak: `ink / .07`. */
