@@ -720,3 +720,19 @@ class TestAuditHandlerTenantAgreement:
         event = SoulEvent.objects.get(event_type=self.EVENT)
         assert event.soul == self.soul_a
         assert event.tenant == self.tenant_a
+
+
+def test_notify_user_sends_the_nested_shape_the_web_toast_reads():
+    """`EventService.notify_user` used to publish a flat payload; the web client's NOTIFICATION_CREATED handler reads
+    `payload.notification`, so those notifications were stored but never toasted (fix-notify 遗留 2)."""
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    from apps.events.services import EventService
+
+    user = SimpleNamespace(id=7, tenant=None)
+    with patch("apps.events.event_bus.event_bus.publish") as publish:
+        EventService.notify_user(user, "Title", "Body")
+    payload = publish.call_args.kwargs["payload"]
+    assert set(payload) == {"notification"}
+    assert payload["notification"]["title"] == "Title" and payload["notification"]["user_id"] == 7
