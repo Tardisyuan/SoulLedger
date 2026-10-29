@@ -297,6 +297,13 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             if tenant is None or record.source_tenant_id != tenant.pk:
                 return Response({"error": "Only the proposing tenant may edit this dispatch"},
                                 status=status.HTTP_403_FORBIDDEN)
+        # 目标殿据以批准的理由,批准 / 执行之后不能再改(RBAC 严查 2026-10-29 L2)。ADMIN 也一样。
+        if record.status not in (DispatchStatus.DRAFT, DispatchStatus.PROPOSED):
+            return Response(
+                {"error": f"The reason can no longer be edited; this dispatch is {record.status}",
+                 "code": "reason_locked"},
+                status=status.HTTP_409_CONFLICT,
+            )
         return super().update(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
@@ -571,6 +578,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         # S-M2: Verify tenant is involved in this dispatch
         if dispatch_record.source_tenant != request.tenant and dispatch_record.target_tenant != request.tenant:
             return Response({"error": "Not authorized to modify this dispatch"}, status=403)
+        # 只有目标殿能驳回(与 approve / execute 同一条)。RBAC 严查 2026-10-29 M4:此前发起殿也能
+        # 驳回自己的提案,记录写成 REJECTED、通知只回发起殿,目标殿的待批里它悄悄消失。撤回走 `cancel`。
+        if dispatch_record.target_tenant != request.tenant:
+            return Response({"error": "Only target tenant can reject dispatch"}, status=403)
         serializer = DispatchRejectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         rejector = request.user
