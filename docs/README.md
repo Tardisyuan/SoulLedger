@@ -28,11 +28,12 @@ files and three `02_` files. Read by system, not by number.*
 
 这些文件在仓库根目录下曾有一份按体系分目录的、逐字节相同的镜像（`地府结构研究/`、
 `欧洲天堂地狱/`、`埃及冥界/`）。**2026-08-15 已去重**：那 19 份副本删除，三个目录只
-留一份指向本目录的 README。两份手工维护的副本会在第一次更正时分叉，这正是
+留一份指向本目录的 README;2026-10-30 这三个目录连同 README 一并删除。两份手工维护的副本会在第一次更正时分叉，这正是
 `docs/lore-verification/verify-egyptian.md` §1.5 提出的问题。
 *Those files used to be mirrored byte-for-byte at the repo root, grouped into
 per-cosmology directories. **De-duplicated on 2026-08-15**: the 19 copies were
-deleted and each directory now holds only a pointer README. Two hand-maintained
+deleted and each directory kept only a pointer README; those directories were
+removed on 2026-10-30. Two hand-maintained
 copies fork on the first correction — the problem raised in
 `docs/lore-verification/verify-egyptian.md` §1.5.*
 
@@ -153,30 +154,33 @@ draft was deleted on 2026-10-24.*
 不要当现状读。*Snapshots of one day's state, never updated afterwards. Read them as
 history, not as a description of the code today.*
 
+2026-10-30 起，下面链接指向 `archive/` 的那些已从本目录顶层移入 [`archive/`](archive/),
+内容未改。*Since 2026-10-30 the ones linked under `archive/` live there, unchanged.*
+
 已入库 / *in repo*：
 [PRODUCTION_READINESS_REPORT.md](PRODUCTION_READINESS_REPORT.md)、
-[RC_READINESS_REPORT_FINAL.md](RC_READINESS_REPORT_FINAL.md)、
-[M12_READY_REPORT.md](M12_READY_REPORT.md)、
-[ENGINEERING_EXCELLENCE_REPORT.md](ENGINEERING_EXCELLENCE_REPORT.md)、
+[RC_READINESS_REPORT_FINAL.md](archive/RC_READINESS_REPORT_FINAL.md)、
+[M12_READY_REPORT.md](archive/M12_READY_REPORT.md)、
+[ENGINEERING_EXCELLENCE_REPORT.md](archive/ENGINEERING_EXCELLENCE_REPORT.md)、
 [SECURITY_CLOSURE_REPORT.md](SECURITY_CLOSURE_REPORT.md)、
 [tenant-contextvar-investigation.md](tenant-contextvar-investigation.md)、
-[tenant-manager-safety-validation.md](tenant-manager-safety-validation.md)、
-[task-292-security-validation.md](task-292-security-validation.md)、
-[task-292-implementation-report.md](task-292-implementation-report.md)
+[tenant-manager-safety-validation.md](archive/tenant-manager-safety-validation.md)、
+[task-292-security-validation.md](archive/task-292-security-validation.md)、
+[task-292-implementation-report.md](archive/task-292-implementation-report.md)
 
 同样已入库（2026-08-14 起）/ *also in repo, since 2026-08-14*：
-[BACKEND_CODE_REVIEW_20260529.md](BACKEND_CODE_REVIEW_20260529.md)、
-[FRONTEND_CODE_REVIEW_20260528.md](FRONTEND_CODE_REVIEW_20260528.md)、
-[code-review-backend.md](code-review-backend.md)、
-[code-review-frontend.md](code-review-frontend.md)、
+[BACKEND_CODE_REVIEW_20260529.md](archive/BACKEND_CODE_REVIEW_20260529.md)、
+[FRONTEND_CODE_REVIEW_20260528.md](archive/FRONTEND_CODE_REVIEW_20260528.md)、
+[code-review-backend.md](archive/code-review-backend.md)、
+[code-review-frontend.md](archive/code-review-frontend.md)、
 [post-coverage-audit-report.md](post-coverage-audit-report.md)、
-[MILESTONE_M7.md](MILESTONE_M7.md)、[MILESTONE_M8.md](MILESTONE_M8.md)、
+[MILESTONE_M7.md](MILESTONE_M7.md)、[MILESTONE_M8.md](archive/MILESTONE_M8.md)、
 [MILESTONE_M15.md](MILESTONE_M15.md)、
 [M7_用户组织架构重构.md](M7_用户组织架构重构.md)、
-[v2-plan-analysis.md](v2-plan-analysis.md)、
-[snowy-analysis.md](snowy-analysis.md)（菜单/权限设计的参考来源）、
-[DEBATE_RESULTS.md](DEBATE_RESULTS.md)、[REVIEW_RESULTS.md](REVIEW_RESULTS.md)、
-[LESSONS_LEARNED.md](LESSONS_LEARNED.md)
+[v2-plan-analysis.md](archive/v2-plan-analysis.md)、
+[snowy-analysis.md](archive/snowy-analysis.md)（菜单/权限设计的参考来源）、
+[DEBATE_RESULTS.md](archive/DEBATE_RESULTS.md)、[REVIEW_RESULTS.md](archive/REVIEW_RESULTS.md)、
+[LESSONS_LEARNED.md](archive/LESSONS_LEARNED.md)
 
 **`MILESTONE_M15.md` 值得单独一提**：它列出三条被确认为**有意为之**的设计，其中
 「menu/perm 端点全局共享、不分租户」这一条正是本目录曾经不入库所付出的代价。

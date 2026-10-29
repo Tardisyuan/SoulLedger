@@ -513,8 +513,8 @@ Phase 3 (Day 6-7): API 加固 + 文档
 
 - [docs/MILESTONES.md](./MILESTONES.md) — 里程碑总览
 - [docs/tenant-contextvar-investigation.md](./tenant-contextvar-investigation.md) — contextvar 调查报告
-- [docs/tenant-manager-safety-validation.md](./tenant-manager-safety-validation.md) — TenantManager 安全验证
-- [docs/task-292-security-validation.md](./task-292-security-validation.md) — 安全验证报告
+- [docs/archive/tenant-manager-safety-validation.md](./archive/tenant-manager-safety-validation.md) — TenantManager 安全验证
+- [docs/archive/task-292-security-validation.md](./archive/task-292-security-validation.md) — 安全验证报告
 
 ---
 
