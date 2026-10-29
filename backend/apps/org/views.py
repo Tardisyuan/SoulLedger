@@ -2,7 +2,8 @@
 REST views for Organization app.
 """
 from django.db import transaction
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -92,20 +93,68 @@ class OrganizationViewSet(
                 child.level = child.parent.level + 1
                 child.save(update_fields=["level"])
 
+    @extend_schema(parameters=[OpenApiParameter(
+        "move_to", OpenApiTypes.INT, OpenApiParameter.QUERY, required=False,
+        description="Move the unit's souls and judgments to this unit (same hall, in your data scope) first.",
+    )])
     def destroy(self, request, *args, **kwargs):
         """Refuse to delete a unit that still has sub-units or people, and say
         how many -- `parent` is SET_NULL, so deleting would silently turn the
-        sub-units into roots and strip the people of their unit."""
+        sub-units into roots and strip the people of their unit.
+
+        名下的灵魂 / 审判(数据范围,owner_org 是 PROTECT)同样拦下;`?move_to=<机构 id>` 先把它们
+        (连回收站里的)转到同殿、在操作人数据范围内的另一个机构,再删,一个事务(B3a)。子机构与人员不随 move_to 走。"""
         org = self.get_object()
         units = org.children.count()
         people = org.users.exclude(role="SOUL").count()
-        # 名下的灵魂 / 审判(数据范围 B1,owner_org 是 PROTECT);`?move_to=` 先转移留给 B3a。
         souls = org.owned_souls.filter(is_deleted=False).count()
         judgments = org.owned_judgments.filter(is_deleted=False).count()
-        if units or people or souls or judgments:
+        move_to = request.query_params.get("move_to")
+        if units or people or ((souls or judgments) and not move_to):
             return Response(
                 {"code": "not_empty", "error": "Move its sub-units, people, souls and judgments first.",
                  "units": units, "people": people, "souls": souls, "judgments": judgments},
                 status=status.HTTP_409_CONFLICT,
             )
+        if move_to:
+            target = self._move_target(request, org, move_to)
+            with transaction.atomic():
+                self._move_owned(request, org, target)
+                return super().destroy(request, *args, **kwargs)
         return super().destroy(request, *args, **kwargs)
+
+    def _move_target(self, request, org, raw):
+        from rest_framework.exceptions import ValidationError
+
+        from apps.perm import data_scope
+
+        try:
+            target = self.get_queryset().filter(pk=int(raw), tenant_id=org.tenant_id).exclude(pk=org.pk).first()
+        except (TypeError, ValueError):
+            target = None
+        if target is None:
+            raise ValidationError({"move_to": ["No such unit in this hall."]}, code="invalid_move_to")
+        cache = data_scope.request_cache(request)
+        for resource in ("soul", "judgment"):
+            ids = data_scope.org_ids(request.user, resource, cache)
+            if ids is not None and target.pk not in ids:
+                raise ValidationError({"move_to": ["This unit is outside your data scope."]}, code="out_of_scope")
+        return target
+
+    @staticmethod
+    def _move_owned(request, org, target) -> None:
+        """名下的灵魂 / 审判整批改归属(连软删的,免得还原后指着已删的机构);审计一行记数。"""
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.core.client_ip import get_client_ip
+        from apps.judgment.models import Judgment
+        from apps.souls.models import Soul
+
+        souls = Soul.all_objects.filter(owner_org=org).update(owner_org=target)
+        judgments = Judgment.all_objects.filter(owner_org=org).update(owner_org=target)
+        if souls or judgments:
+            AuditLog.objects.create(
+                tenant_id=org.tenant_id, user=request.user, action=AuditAction.BATCH_UPDATE, resource="organization",
+                resource_id=str(org.pk), description=f"owner_org moved before delete: {org.pk} -> {target.pk}",
+                changes={"field": "owner_org", "from": org.pk, "to": target.pk, "souls": souls, "judgments": judgments},
+                ip_address=get_client_ip(request) or None, user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+            )

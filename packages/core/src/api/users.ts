@@ -180,7 +180,7 @@ export interface HandoverPreview {
   letters: number;
   /** 操作人不持 soul_inbox.reply:这些书信不移交,留在交出人名下(不计入 `letters`)。 */
   letters_kept?: number;
-  problems: ("target_cannot_judge" | "target_cannot_reply")[];
+  problems: ("target_cannot_judge" | "target_cannot_reply" | "target_out_of_scope")[];
 }
 
 /** 200 of POST /judgment/handover/: what actually moved. */

@@ -10,6 +10,7 @@ import { Button } from "@/src/components/ui/Button";
 import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { flattenTree } from "@/src/components/ui/TreeRow";
+import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 import { cn } from "@/lib/utils";
 
 /**
@@ -234,21 +235,28 @@ export function OrganizationDeleteDialog({
   org,
   canViewPeople,
   onClose,
+  organizations = [],
 }: {
   org: Organization | null;
   canViewPeople: boolean;
   onClose: () => void;
+  /** 只有名下灵魂 / 审判挡着时,在这里挑一个同殿机构「转移到…」再删(`?move_to=`,数据范围 B3a)。 */
+  organizations?: readonly Organization[];
 }) {
   const { t } = useI18n();
   const del = useDeleteOrganization();
   const [blocked, setBlocked] = useState<OrganizationNotEmpty | null>(null);
+  const [moveTo, setMoveTo] = useState<number | null>(null);
   const close = () => {
     setBlocked(null);
+    setMoveTo(null);
     onClose();
   };
   if (!org) return null;
 
   if (blocked) {
+    // 子机构与人员不随 move_to 走;只剩名下灵魂 / 审判时才给「转移到…」。
+    const movable = !blocked.units && !blocked.people && organizations.length > 0;
     const body =
       blocked.units && blocked.people
         ? t("org.delete_blocked_body.both", { units: String(blocked.units), people: String(blocked.people) })
@@ -276,13 +284,35 @@ export function OrganizationDeleteDialog({
                 {t("org.delete_blocked_people")}
               </Link>
             )}
-            <Button type="button" variant="primary" onClick={close}>
-              {t("common.dismiss")}
+            {movable && (
+              <Button
+                type="button"
+                variant="danger"
+                disabled={moveTo == null}
+                loading={del.isPending}
+                onClick={() => moveTo != null && del.mutate({ id: org.id, moveTo }, { onSuccess: close })}
+              >
+                {t("org.move_and_delete")}
+              </Button>
+            )}
+            <Button type="button" variant={movable ? "ghost" : "primary"} onClick={close}>
+              {t(movable ? "common.cancel" : "common.dismiss")}
             </Button>
           </div>
         }
       >
         <p className="text-sm text-[oklch(var(--color-ink))]">{body}</p>
+        {movable && (
+          <div className="mt-3">
+            <OrgTreeSelect
+              mode="single"
+              label={t("org.move_to")}
+              organizations={organizations.filter((o) => o.id !== org.id && o.tenant === org.tenant)}
+              value={moveTo}
+              onChange={setMoveTo}
+            />
+          </div>
+        )}
       </Modal>
     );
   }

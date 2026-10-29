@@ -10,7 +10,8 @@
   没有这把码就只移交其余三类,书信留在交出人名下,响应的 `letters_kept` 写明留下了几封。
 
 预览(`preview`)只数,不写;提交(`commit`)在一个事务里重新按行锁读一遍再写 —— 预览之后已结案、已被别人改派的不再动。
-接手人不能办案而手上有审判 / 申诉,或不能回信而手上有书信,预览带 `problems`,提交 409 `handover_blocked`。
+接手人不能办案而手上有审判 / 申诉,或不能回信而手上有书信,或接手人的数据范围看不到其中某件审判 / 申诉
+(`target_out_of_scope`,数据范围 B3a),预览带 `problems`,提交 409 `handover_blocked`。
 审计一行(谁交给谁、每类的 id);提交后给接手人一条站内通知(`JUDGMENT_CLAIM_CHANGED` 的 `officer_handover_received` 句)。
 单件改派那样给交出人发的逐件通知不发:交接是管理员替他做的整体动作。
 """
@@ -63,6 +64,14 @@ def _target_takes_appeal(appeal, target, can_judge) -> bool:
     return can_judge and target.pk not in original_officers(Judgment.all_objects.get(pk=appeal.judgment_id))
 
 
+def _target_sees_all(target, rows) -> bool:
+    """数据范围(B3a):接手人的范围要看得到交出人手上的每一件审判 / 申诉,否则交过去就从他的队列里消失。"""
+    from apps.perm.data_scope import q_for
+
+    q = q_for(target, rows.model)
+    return q is None or rows.filter(q).count() == rows.count()
+
+
 def actor_moves_letters(actor) -> bool:
     """操作人能不能顺带移交书信(第 22 条)。`actor` 为 None(只数件数的调用方)按能算。"""
     from apps.perm.checker import check_permission
@@ -87,6 +96,9 @@ def preview(source, target, tenant_id, actor=None) -> dict:
         problems.append("target_cannot_judge")
     if target is not None and letters and not can_reply:
         problems.append("target_cannot_reply")
+    if target is not None and not (_target_sees_all(target, _open_judgments(source, tenant_id))
+                                   and _target_sees_all(target, _open_appeals(source, tenant_id))):
+        problems.append("target_out_of_scope")
     summary = {
         "judgments": judgments,
         "appeals": len(appeals) - returned,
