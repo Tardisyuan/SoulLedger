@@ -103,14 +103,16 @@ const escalated = (stations: Station[], over: Record<string, unknown> = {}) =>
 
 it("an appealable judgment shows its deadline as a day and an 「申诉 ›」 that opens the form", () => {
   wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
-  expect(screen.getByTestId(`appeal-deadline-${J}`).props.children).toBe("2026-11-08 前可申诉");
+  // 2026年 · 11月8日, like 卒 in the same cell -- not the ISO value (phone QA 10-29b).
+  expect(screen.getByTestId(`appeal-deadline-${J}`).props.children).toBe("2026年 · 11月8日 前可申诉");
+  expect(screen.getByTestId(`appeal-deadline-${J}`).props.children).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   fireEvent.press(screen.getByTestId(`appeal-file-${J}`));
   expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, caseNumber: "CN-2026-0007" }));
 });
 
 it("a refused one says why in one grey line and offers no button", () => {
   wrap(<AppealLine row={row({ can_appeal: false, refusal_code: "appeal_window_closed" })} rounds={[]} onChanged={() => {}} />);
-  expect(screen.getByTestId(`appeal-refusal-${J}`).props.children).toBe("申诉期已于 2026-11-08 截止");
+  expect(screen.getByTestId(`appeal-refusal-${J}`).props.children).toBe("申诉期已于 2026年 · 11月8日 截止");
   expect(screen.queryByTestId(`appeal-file-${J}`)).toBeNull();
 });
 

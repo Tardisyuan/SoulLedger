@@ -82,10 +82,28 @@ async function ensureAndroidChannel(): Promise<void> {
 /** The system dialog. Only ever called from the primer's "yes". */
 export async function requestPermission(): Promise<Permission> {
   await ensureAndroidChannel();
+  // The channel first: Android 13+ shows the dialog only once one exists.
   try {
     await Notifications.requestPermissionsAsync();
   } catch {
     // Treated as whatever the system now reports.
+  }
+  return answered();
+}
+
+/**
+ * EMUI (Android 12, phone QA 10-29b): `requestPermissionsAsync` can come back before the officer has answered its
+ * dialog, and the status read then is still "undetermined" -- which is not a refusal. So an undetermined answer is
+ * read again a few times, a moment apart, before it is returned; the caller says "not answered yet", never "denied".
+ */
+const RECHECKS = 6;
+const RECHECK_MS = 500;
+async function answered(): Promise<Permission> {
+  // ponytail: a fixed 3 s of polling; an AppState wait if a phone turns out to need longer.
+  for (let i = 0; i < RECHECKS; i++) {
+    const now = await permission();
+    if (now !== "undetermined") return now;
+    await new Promise((r) => setTimeout(r, RECHECK_MS));
   }
   return permission();
 }

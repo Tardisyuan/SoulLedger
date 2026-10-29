@@ -16,7 +16,6 @@ import { StyleSheet, View } from "react-native";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { Button, FieldError, Input, Quote, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
-import { appealDay } from "./appeals";
 import type { AppStackParams } from "./applications";
 import { useDiscardGuard } from "./discardGuard";
 import { useDay } from "./lifeProgress";
@@ -49,7 +48,7 @@ export function WangsiLine({ row, landingRef }: { row: MeWangsiCase | undefined;
     <View ref={landingRef} testID={`wangsi-line-${row.judgment_id}`} style={[styles.line, { borderTopColor: theme.hair }]}>
       <View style={styles.entry}>
         <Txt testID={`wangsi-status-${row.judgment_id}`} variant="caption" tone="muted" style={styles.fill}>
-          {`${t(wangsiStatusKey(row), { date: appealDay(row.held_until) })}${delivered}`}
+          {`${t(wangsiStatusKey(row), { date: day(row.held_until) })}${delivered}`}
         </Txt>
         {row.can_file ? (
           <SmallButton
@@ -67,8 +66,8 @@ export function WangsiLine({ row, landingRef }: { row: MeWangsiCase | undefined;
       </View>
       {row.grievance_note ? (
         <>
-          <Txt variant="caption" tone="subtle">
-            {`${t("soul_app.wangsi.note_label")}${row.grievance_decided_at ? ` · ${appealDay(row.grievance_decided_at)}` : ""}`}
+          <Txt variant="caption" tone="subtle" testID={`wangsi-note-label-${row.judgment_id}`}>
+            {`${t("soul_app.wangsi.note_label")}${row.grievance_decided_at ? ` · ${day(row.grievance_decided_at)}` : ""}`}
           </Txt>
           <Quote text={row.grievance_note} testID={`wangsi-note-${row.judgment_id}`} />
         </>
@@ -79,6 +78,7 @@ export function WangsiLine({ row, landingRef }: { row: MeWangsiCase | undefined;
 
 export function WangsiGrievanceScreen() {
   const { t } = useI18n();
+  const day = useDay();
   const toast = useToast();
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -115,7 +115,7 @@ export function WangsiGrievanceScreen() {
     <Screen testID="wangsi-grievance" belowHeader>
       <View style={[styles.form, { paddingHorizontal: gutter }]}>
         <Txt variant="caption" tone="subtle">
-          {`${params.caseNumber} · ${t("soul_app.wangsi.held", { date: appealDay(params.heldUntil) })}`}
+          {`${params.caseNumber} · ${t("soul_app.wangsi.held", { date: day(params.heldUntil) })}`}
         </Txt>
         <View>
           <Input
