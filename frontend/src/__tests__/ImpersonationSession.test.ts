@@ -82,7 +82,8 @@ describe("开始与退出", () => {
   });
 
   it("退出:放回管理员的令牌、清掉状态;刷新令牌全程没碰", async () => {
-    platform().secure.set(REFRESH_TOKEN_KEY, "admin-refresh");
+    // 网页是 cookie 模式(2026-10-29):刷新令牌在 httpOnly cookie 里,脚本这边只存「已登录」标记 "1"。
+    platform().secure.set(REFRESH_TOKEN_KEY, "1");
     post.mockResolvedValueOnce({ data: START_RESPONSE }).mockResolvedValueOnce({ data: { ended: true } });
     await startImpersonation(3, "x");
 
@@ -92,7 +93,7 @@ describe("开始与退出", () => {
     expect(getAccessToken()).toBe("admin-token");
     expect(getAccessToken()).not.toBe("viewing-token");
     expect(getImpersonation()).toBeNull();
-    expect(platform().secure.get(REFRESH_TOKEN_KEY)).toBe("admin-refresh");
+    expect(platform().secure.get(REFRESH_TOKEN_KEY)).toBe("1");
   });
 
   it("服务端那一步失败(已到点 / 离线)也照样放回", async () => {
