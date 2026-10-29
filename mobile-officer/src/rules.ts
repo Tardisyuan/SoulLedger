@@ -97,6 +97,23 @@ export function isItemKind(value: unknown): value is ItemKind {
 
 export type Verdict = "approve" | "reject";
 
+/**
+ * Which of 批准 / 驳回 an officer may press on a detail the server called actionable. A transfer's two are
+ * separate codes on the server (`dispatch.approve` / `dispatch.reject`, dispatch/views.py), and the server's
+ * `actionable` speaks for approving only -- so a custom role holding one of them saw both and got a 403 on the
+ * other (RBAC review A5). Every other kind is one check on the server that covers both verdicts.
+ */
+const VERDICT_CODES: Partial<Record<TodoKind, Record<Verdict, string>>> = {
+  reassignment: { approve: "dispatch.approve", reject: "dispatch.reject" },
+};
+
+export function verdictsAllowed(kind: TodoKind, permissions: readonly string[] | undefined): Record<Verdict, boolean> {
+  const codes = VERDICT_CODES[kind];
+  if (!codes) return { approve: true, reject: true };
+  const held = permissions ?? [];
+  return { approve: held.includes(codes.approve), reject: held.includes(codes.reject) };
+}
+
 /** The verdicts that pass a node (`complete_node`: `verdict in [PASSED, CONFIRMED]`). */
 const PASSING = ["PASSED", "CONFIRMED"] as const;
 
@@ -495,14 +512,6 @@ export function deskUrl(target: Parameters<typeof deskPath>[0]): string {
 /** 403 means the role cannot see the area: the "denied" state, not an error. */
 export function isDenied(error: unknown): boolean {
   return (error as { response?: { status?: number } })?.response?.status === 403;
-}
-
-/**
- * 409 `no_city_god`(第五十九批 M-6):本殿没有可收案的城隍。App 只 toast 网页那句 `judgment.error.no_city_god`,
- * 不给按钮 —— 设城隍只在网页上。
- */
-export function noCityGod(error: unknown): boolean {
-  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "no_city_god";
 }
 
 /** How long the pushed row's highlight takes to go (spec §五). */

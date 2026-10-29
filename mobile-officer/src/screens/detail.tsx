@@ -13,13 +13,13 @@ import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { officerAppApi, type TodoFacts, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import type { SoulRecordEntry } from "@soulledger/core/api/souls";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
-import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, type ItemKind, type Verdict } from "../rules";
+import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
 import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
@@ -118,7 +118,19 @@ export function Detail({
       <GoneContext.Provider value={over}>
       {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
       {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} onOpenFlow={openFlow} /> : null}
-      {top?.type === "flow" ? <TodoDetail key={`over-${stack.length}`} kind="approval" id={top.id} onSettled={onSettled} onOpenSoul={openSoul} onOpenPick={openPick} /> : null}
+      {top?.type === "flow" ? (
+        // 官员 7(2026-10-29):审判看得到而流程不在本殿范围(跨域、本殿没有自己那一段;后端 todo 模块的 _workflows)时
+        // 服务端答 404。流程并没有不在 —— 不说「已不在」,说清为什么这里看不到。
+        <TodoDetail
+          key={`over-${stack.length}`}
+          kind="approval"
+          id={top.id}
+          onSettled={onSettled}
+          onOpenSoul={openSoul}
+          onOpenPick={openPick}
+          whenGone={<Notice tone="neutral" testID="flow-not-here">{t("officer_app.judgment.flow_not_here")}</Notice>}
+        />
+      ) : null}
       {top?.type === "pick" ? (
         <PickStations
           key={`over-${stack.length}`}
@@ -191,6 +203,7 @@ function TodoDetail({
   onSettled,
   onOpenSoul,
   onOpenPick,
+  whenGone,
 }: {
   kind: TodoKind;
   id: string;
@@ -198,6 +211,8 @@ function TodoDetail({
   onOpenSoul?: (id: string) => void;
   /** 选站 / 改选 from the workflow's segments (O-3), keyed by the workflow. */
   onOpenPick?: (workflowId: string) => void;
+  /** Shown instead of the shared 「已不在」 when a 404 means "not readable from this hall", not "gone". */
+  whenGone?: ReactNode;
 }) {
   const { t } = useI18n();
   const { state } = useSession();
@@ -241,6 +256,7 @@ function TodoDetail({
     onSettled();
   };
 
+  if (view === "gone" && whenGone) return <View style={{ padding: space[5] }}>{whenGone}</View>;
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
   const note = handledNotice(data);
   return (
@@ -317,6 +333,8 @@ function TodoDetail({
 function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void; waitingOn: string | null; offline: boolean }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const { state } = useSession();
+  const may = verdictsAllowed(kind, state.status === "signedIn" ? state.user.permissions : undefined);
   // The added signer has not approved yet: 批准 is greyed and the sentence above says why (and is the
   // button's hint). 驳回 and 加签 are never held.
   const wait = waitingOn !== null ? t("officer_app.detail.wait_cosigner", { name: waitingOn }) : null;
@@ -328,8 +346,12 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
         {kind === "approval" || kind === "rebirth" ? (
           <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} disabled={offline} onPress={() => onPick("cosign")} />
         ) : null}
-        <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} disabled={offline} accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined} onPress={() => onPick("reject")} />
-        <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={offline || wait !== null} accessibilityHint={offline ? t("officer_app.offline.no_decide") : (wait ?? undefined)} onPress={() => onPick("approve")} />
+        {may.reject ? (
+          <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} disabled={offline} accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined} onPress={() => onPick("reject")} />
+        ) : null}
+        {may.approve ? (
+          <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={offline || wait !== null} accessibilityHint={offline ? t("officer_app.offline.no_decide") : (wait ?? undefined)} onPress={() => onPick("approve")} />
+        ) : null}
       </View>
     </View>
   );

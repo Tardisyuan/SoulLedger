@@ -121,6 +121,18 @@ class ChineseOffence(models.TextChoices):
     FIVE_HEINOUS = "FIVE_HEINOUS", "五逆"
 
 
+def refuse_passed_if_five_heinous(judgment, verdict) -> None:
+    """400 `five_heinous_must_fail` when `verdict` is PASSED and the case's offence is 五逆 (user 2026-10-29,
+    review J): 五逆直入阿鼻(docs/11 §3.3),无罪不在其列。At conclusion (original and reopened), at an appeal
+    amended to PASSED, and at the approval of a flow whose judgment was concluded PASSED before this rule."""
+    if verdict != Verdict.PASSED or getattr(judgment, "offence", "") != ChineseOffence.FIVE_HEINOUS:
+        return
+    from apps.sentence_plan.requests import PlanChangeRefusedError
+
+    raise PlanChangeRefusedError("The offence is one of the five heinous crimes; the verdict cannot be PASSED",
+                                 "five_heinous_must_fail")
+
+
 #: 罪目 → 殿号(`Realm.tier`,`DispositionService.CHINESE_HELL_TIERS` 的键)。
 OFFENCE_COURT = {
     ChineseOffence.ABDUCTION: 2, ChineseOffence.SEIZING_PROPERTY: 2, ChineseOffence.MAIMING: 2,

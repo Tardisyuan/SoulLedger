@@ -32,7 +32,16 @@ def _realm_for(soul, verdict):
 
 @pytest.fixture
 def case(cn_tenant):
-    """一个灵魂(带 /me 客户端)、一件由 `decider` 结案 FAILED 的原审判。两个裁决的 realm 都种好。"""
+    """一个灵魂(带 /me 客户端)、一件由 `decider` 结案 FAILED 的原审判,原审流程已走完(2026-10-29 起流程没走完
+    不能申诉,审查 B)。两个裁决的 realm 都种好。"""
+    made = make_case(cn_tenant)
+    sp.walk_flow(made["judgment"])
+    made["judgment"].refresh_from_db()
+    return made
+
+
+def make_case(cn_tenant):
+    """Same as `case`, its origin flow still running."""
     account, client = ready_soul(cn_tenant)
     soul = account.soul
     for verdict in (Verdict.FAILED, Verdict.PASSED):
@@ -100,6 +109,22 @@ def test_at_most_two_rounds_and_a_withdrawn_one_counts(case):
     third = _file(case)
     assert third.status_code == 409 and third.data["code"] == "appeal_rounds_used"
     assert JudgmentAppeal.objects.filter(judgment=case["judgment"]).count() == 2
+
+
+def test_a_previous_lifes_appeal_cannot_be_withdrawn(case):
+    """RBAC 严查 2026-10-29 L6:`withdraw` 此前只按 soul_id,前世判决上仍开着的申诉也能撤。
+    现在与 `appeal_refusal` 同一条:前世只读,403 `past_life_read_only`。"""
+    filed = _file(case)
+    assert filed.status_code == 201
+    account = case["account"]
+    type(account).objects.filter(pk=account.pk).update(cycle=case["judgment"].cycle + 1)
+
+    refused = case["client"].post(f"{MINE}{filed.data['id']}/withdraw/")
+    assert refused.status_code == 403 and refused.data["code"] == "past_life_read_only", refused.data
+    assert JudgmentAppeal.objects.get(pk=filed.data["id"]).status == "PENDING"
+
+    type(account).objects.filter(pk=account.pk).update(cycle=case["judgment"].cycle)
+    assert case["client"].post(f"{MINE}{filed.data['id']}/withdraw/").status_code == 200
 
 
 def test_an_open_judgment_or_another_souls_judgment_is_refused(case, cn_tenant):

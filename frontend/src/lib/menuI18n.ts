@@ -52,6 +52,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/permissions": "breadcrumb.menu.permissions",
   "/menus": "breadcrumb.menu.menus",
   "/audit": "breadcrumb.menu.audit",
+  // backend/apps/menus/migrations/0030_add_online_sessions_menu.py:在线会话(系统设置)
+  "/audit/sessions": "audit.tabs.sessions",
   "/tenants": "breadcrumb.menu.tenants",
   "/organizations": "breadcrumb.menu.organizations",
   // backend/apps/menus/migrations/0015_add_scheduler_menu.py

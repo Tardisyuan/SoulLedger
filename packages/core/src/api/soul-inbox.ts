@@ -54,7 +54,12 @@ export const soulInboxApi = {
    * response, or the outbox picking the reply up again).
    */
   reply: (id: string, body: string, txnId?: string) =>
-    api.post<Schemas["MessageSent"]>(`/chat/inbox/${id}/reply/`, { body, ...(txnId ? { txn_id: txnId } : {}) }),
+    api.post<Schemas["MessageSent"]>(
+      `/chat/inbox/${id}/reply/`,
+      { body, ...(txnId ? { txn_id: txnId } : {}) },
+      // The txn id doubles as the idempotency key: a replay by the outbox after a restart is the same request.
+      txnId ? { headers: { "Idempotency-Key": txnId } } : undefined,
+    ),
   markRead: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/read/`),
   archive: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/archive/`),
   unarchive: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/unarchive/`),

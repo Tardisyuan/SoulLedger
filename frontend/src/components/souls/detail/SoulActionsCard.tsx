@@ -9,6 +9,7 @@ import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { SoupBlock } from "@/src/components/souls/detail/SoupBlock";
+import { lifespanNotYet } from "@/src/components/souls/detail/CapturePanel";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /** 四大部洲(docs/07 §人道),`Soul.Continent` 的次序。 */
@@ -98,7 +99,8 @@ export function SoulActionsCard({
         </div>
       ) : (
         <div className="space-y-2">
-          {soul?.current_state === "ALIVE" && (
+          {/* 地府:阳寿未到不记身故(用户 2026-10-29),阳寿到了走勾魂牒或这里;别的文明照旧。 */}
+          {soul?.current_state === "ALIVE" && !(soul.civilization === "CHINESE" && lifespanNotYet(soul)) && (
             <RequirePermission permissions="soul.die">
               {/* Primary (v3: the civilization's main colour), not status-error. Recording a death is the
                   central verb of this product, not a failure — and the

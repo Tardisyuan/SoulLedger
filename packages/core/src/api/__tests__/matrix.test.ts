@@ -84,6 +84,11 @@ class FakeSynapse {
       return { status: 200, data: { chunk: [...this.events].reverse(), start: "p0" } };
     }
     if (method === "POST" && url.includes("/receipt/m.read/")) return { status: 200, data: {} };
+    // Like Synapse: the token (and its device) is gone; the next request with it is 401.
+    if (method === "POST" && url === "/_matrix/client/v3/logout") {
+      this.tokens.delete((auth ?? "").replace(/^Bearer /, ""));
+      return { status: 200, data: {} };
+    }
     return { status: 404, data: { errcode: "M_UNRECOGNIZED", error: "Unrecognized request" } };
   }
 
@@ -142,6 +147,16 @@ describe("login", () => {
     const error = await matrixLogin({ homeserver: HS, login_type: "org.matrix.login.jwt", token: "stale" }).catch((e) => e);
     expect(error).toBeInstanceOf(MatrixRequestError);
     expect(error).toMatchObject({ errcode: "M_FORBIDDEN", status: 403 });
+  });
+});
+
+describe("logout", () => {
+  it("POSTs /logout with the token, after which the token is refused", async () => {
+    const client = await signedIn();
+    await client.logout();
+    expect(last()).toMatchObject({ method: "POST", url: "/_matrix/client/v3/logout", auth: "Bearer tok-me" });
+    const error = await client.send(ROOM, "t1", "x").catch((e) => e);
+    expect(error).toMatchObject({ errcode: "M_UNKNOWN_TOKEN", status: 401 });
   });
 });
 

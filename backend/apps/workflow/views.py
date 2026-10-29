@@ -19,7 +19,14 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.perm.filters import DataScopeFilter
 from apps.workflow import decision_codes, segments
 from apps.workflow.filters import WorkflowFilter
-from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, VerdictRefusedError, WorkflowTemplate
+from apps.workflow.models import (
+    ApprovalNode,
+    ApprovalWorkflow,
+    EscalationRefusedError,
+    NodeStatus,
+    VerdictRefusedError,
+    WorkflowTemplate,
+)
 from apps.workflow.serializers import (
     ApprovalNodeSerializer,
     ApprovalWorkflowExportSerializer,
@@ -623,6 +630,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # `skipped_node` and `advanced_to` were measured to be the same id.
         try:
             escalated = workflow.escalate_current_node(user=request.user, reason=reason)
+        except EscalationRefusedError as exc:
+            # 越级最多到终审那一站(用户 2026-10-29,审查 A):越过终审、或越级会让流程直接走完,400,什么都没写。
+            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except _hook_refusals() as exc:
             # Escalating past the last stop ends the flow, and with it the merged cross-realm judgment (or the
             # judgment the flow decides): a refusal there rolls the escalation back.

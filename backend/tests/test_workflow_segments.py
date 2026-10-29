@@ -416,7 +416,8 @@ def test_cancelling_inside_a_realm_skips_its_rest_including_the_final_and_ends_t
     assert first.status == NodeStatus.APPROVED
     assert (second.status, second.skip_kind) == (NodeStatus.SKIPPED, SkipKind.CANCELLED)
     assert (final.status, final.skip_kind) == (NodeStatus.SKIPPED, SkipKind.CANCELLED)
-    assert (wf.status, wf.end_reason, wf.current_node_id) == (ApprovalWorkflowStatus.COMPLETED, "CROSS_CANCELLED", None)
+    # Not COMPLETED (user 2026-10-29, review C): a flow the cancellation cut short is CANCELLED.
+    assert (wf.status, wf.end_reason, wf.current_node_id) == (ApprovalWorkflowStatus.CANCELLED, "CROSS_CANCELLED", None)
 
 
 def test_the_realm_order_is_locked_once_the_workflow_exists(w):

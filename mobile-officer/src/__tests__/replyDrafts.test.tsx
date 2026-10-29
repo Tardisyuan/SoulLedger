@@ -103,14 +103,14 @@ describe("the reply box", () => {
 describe("the store", () => {
   it("keeps the most recent DRAFT_KEEP, newest first; editing an old one brings it forward", () => {
     for (let i = 0; i < DRAFT_KEEP + 5; i++) saveDraft(`c-${i}`, `t${i}`);
-    const ids = (JSON.parse(stored()!) as { id: string }[]).map((d) => d.id);
+    const ids = (JSON.parse(stored()!) as { drafts: { id: string }[] }).drafts.map((d) => d.id);
     expect(ids).toHaveLength(DRAFT_KEEP);
     expect(ids[0]).toBe(`c-${DRAFT_KEEP + 4}`);
     expect(readDraft("c-0")).toBe(""); // the oldest went
     expect(readDraft("c-4")).toBe(""); // five went in all
     expect(readDraft("c-5")).toBe("t5");
     saveDraft("c-5", "改过");
-    expect((JSON.parse(stored()!) as { id: string }[])[0].id).toBe("c-5");
+    expect((JSON.parse(stored()!) as { drafts: { id: string }[] }).drafts[0].id).toBe("c-5");
   });
 
   it("an emptied box removes the draft (and the key, with the last one)", () => {

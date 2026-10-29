@@ -51,3 +51,21 @@ def crossed_q(today: datetime.date, prefix: str = "") -> Q:
     if (month, day) == (12, 31):
         same_year |= f(death_month__isnull=True)
     return f(ferry_passage=UNBURIED) & (f(death_year__lt=year) | (f(death_year=year) & same_year))
+
+
+def crosses_on(soul) -> datetime.date | None:
+    """The first day `crossed` is true for this soul (the soul App shows it, 2026-10-29). None when the soul
+    does not cross this way (NO_FARE, buried), the death year is unknown, or the day fell before 1 CE."""
+    if soul.ferry_passage != UNBURIED or soul.death_year is None:
+        return None
+    month = soul.death_month or 12
+    day = soul.death_day or _month_length(month)
+    # There is no year 0: a hundred years after 50 BCE (-50) is 51 CE.
+    year = soul.death_year + YEARS + (1 if soul.death_year < 0 <= soul.death_year + YEARS else 0)
+    if year < 1:
+        return None
+    on = datetime.date(year, month, min(day, calendar.monthrange(year, month)[1]))
+    # Step to the exact first day `crossed` agrees with (29 Feb, an unknown day): one reader of the rule, not two.
+    while not crossed(soul, on):
+        on += datetime.timedelta(days=1)
+    return on

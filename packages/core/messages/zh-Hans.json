@@ -346,7 +346,8 @@
       "WANGSI_GRIEVANCE_FILED": "枉死城申诉",
       "WANGSI_GRIEVANCE_UPHELD": "申诉属实 · 提前释放",
       "WANGSI_GRIEVANCE_REJECTED": "申诉不属实",
-      "WANGSI_GRIEVANCE_DELIVERED": "申诉属实 · 超度至莲花台"
+      "WANGSI_GRIEVANCE_DELIVERED": "申诉属实 · 超度至莲花台",
+      "NEGATIVE_CONFESSION_HEARD": "否定告白记完"
     },
     "civilizations": {
       "CHINESE": "中国",
@@ -1236,6 +1237,29 @@
         "confirm_hint": "输入「覆盖」以确认"
       },
       "download_skipped": "下载跳过明细"
+    },
+    "datascope": {
+      "title": "数据范围",
+      "default": "默认范围",
+      "scope": {
+        "ALL": "全部",
+        "ORG_CHILD": "本机构及以下",
+        "ORG": "本机构",
+        "SELF": "仅本人",
+        "DEFINE": "自定义机构"
+      },
+      "admin_fixed": "全部(固定)",
+      "own_always": "本人创建或被指派的数据在任何范围下都可见。",
+      "orgs": "机构",
+      "orgs_for": "{{name}} · 机构",
+      "orgs_required": "自定义机构至少选一个",
+      "per_resource": "按业务单独设置",
+      "follow_default": "跟随默认",
+      "save": "保存数据范围",
+      "saved": "数据范围已保存，对方刷新后生效",
+      "save_error": "数据范围保存失败",
+      "load_error": "数据范围读取失败",
+      "read_only": "只有不属于任何殿的管理员能改数据范围"
     }
   },
   "workflow": {
@@ -1530,7 +1554,11 @@
       "not_reached": "未走",
       "last_step": "最近一步",
       "template": "模板",
-      "status": "状态"
+      "status": "状态",
+      "refusals": {
+        "escalate_past_final": "越级推进最多到终审这一站：终审要由审批人判，不能越过。",
+        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。"
+      }
     },
     "verdicts": {
       "passed": "通过",
@@ -1588,7 +1616,8 @@
       "COMPLETED": "流程完成",
       "SKIPPED": "已跳过",
       "ESCALATED": "已升级",
-      "TRAVERSED": "已经过"
+      "TRAVERSED": "已经过",
+      "CANCELLED": "已取消"
     },
     "no_custom_templates": "你还没有保存过自己的模板。",
     "start": {
@@ -1619,7 +1648,8 @@
         "judgment_taken": "这次审判已经有审批了",
         "reason_required": "写一句理由",
         "forbidden": "你没有发起审批的权限",
-        "failed": "没能发起，请重试"
+        "failed": "没能发起，请重试",
+        "origin_flow_open": "这个灵魂的原审审批流程还没走完，走完之后才能发起申诉审批"
       }
     },
     "filter": {
@@ -2064,7 +2094,9 @@
       "conclude_with_workflow": "落判并发起",
       "current_realm": "所在界域",
       "method": "审判方式",
-      "workflow_forced_original": "原审必走审批流程：流程走完才能执行处置；流程被驳回就重开一案。"
+      "workflow_forced_original": "原审必走审批流程：流程走完才能执行处置；流程被驳回就重开一案。",
+      "passed_barred_five_heinous": "罪目是五逆：直入阿鼻，不能判通过。",
+      "passed_barred_untruthful": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -2602,7 +2634,32 @@
       "audit": "审计日志",
       "logins": "登录日志",
       "permissions": "权限变更",
-      "stats": "统计"
+      "stats": "统计",
+      "sessions": "在线会话"
+    },
+    "sessions": {
+      "title": "在线会话",
+      "kind_label": "账号类别",
+      "kind": {
+        "officer": "官员",
+        "soul": "灵魂"
+      },
+      "user": "账号",
+      "device": "设备",
+      "last_seen": "上次活动",
+      "signed_in": "登录时间",
+      "current": "（本机）",
+      "revoke": "强退",
+      "revoke_all": "强退全部设备",
+      "filtered_by": "只看 {{name}}",
+      "empty": "现在没有人在线",
+      "confirm_title": "强退这个会话？",
+      "confirm_message": "{{name}} 在「{{device}}」上会立即退出，要在那台设备上重新登录。",
+      "confirm_all_title": "强退全部会话？",
+      "confirm_all_message": "{{name}} 在所有设备上都会立即退出。",
+      "revoked": "已让 {{name}} 在那台设备上退出",
+      "revoked_all": "已让 {{name}} 在所有设备上退出",
+      "revoke_failed": "没能强退，列表已刷新。"
     },
     "login_log": {
       "title": "登录日志",
@@ -3370,7 +3427,8 @@
     "organization_none": "不属于任何机构",
     "tenant_pick": "选择租户",
     "organization_column": "机构 · 职务",
-    "position": "职务"
+    "position": "职务",
+    "organization_required": "有殿的非管理员必须属于一个机构"
   },
   "settings": {
     "title": "设置",
@@ -3674,6 +3732,7 @@
       "revoked_ok": "密钥已撤销",
       "revoke_failed": "撤销失败",
       "create_failed": "创建失败",
+      "create_no_tenant": "请先进入一个殿再新建：密钥属于某一殿",
       "no_keys": "暂无接入密钥",
       "shown_title": "新密钥（仅此一次）",
       "shown_warning": "这是密钥的唯一一次显示。关闭后服务器只保留散列，无法再次查看；请现在复制并交付给外部系统。",
@@ -4066,7 +4125,7 @@
     "expired_on": "期满 {{date}}",
     "arrange_reincarnation": "安排轮回",
     "serving_until": "服刑中 · 至 {{date}}",
-    "term_default": "默认 {{n}} 年 · 可改",
+    "term_default": "默认 {{n}} 年",
     "release": "期满释放",
     "release_confirm": "确认期满释放？",
     "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就候转世（或终局）。不可撤销。",
@@ -4078,7 +4137,8 @@
     },
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
-      "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。"
+      "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
+      "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。"
     }
   },
   "reincarnation": {
@@ -4104,7 +4164,8 @@
       "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
       "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转世。",
       "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。",
-      "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。"
+      "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。",
+      "origin_flow_open": "{{name}}的原审审批流程还没走完，走完之后才能转世。"
     },
     "next_continent": "下一世部洲 · 选填",
     "next_continent_same": "同本世",
@@ -4693,7 +4754,46 @@
       "station_at": "第 {{n}} / 13 站",
       "continent": "出身部洲",
       "stations_card": "赴冥 · 十三站",
-      "station_here": "现在在{{station}}：{{desc}}"
+      "station_here": "现在在{{station}}：{{desc}}",
+      "capture": {
+        "title": "勾魂牒",
+        "ISSUED": "阳寿已到，鬼差已经出发。",
+        "CAPTURED": "鬼差已经拘到你，正送往城隍。",
+        "step_issued": "发牒",
+        "step_captured": "拘到",
+        "step_handed": "交城隍",
+        "issued_on": "发牒 · {{date}}"
+      },
+      "ferry": {
+        "title": "冥河渡口",
+        "UNBURIED": "你还没有得到安葬，卡戎不渡。在岸边满一百年，就可以渡河。",
+        "NO_FARE": "你没有渡资，卡戎不渡。",
+        "no_date": "没有可渡之日：记录改为「已付渡资」后才能渡河。",
+        "crosses_on": "可渡之日 · {{date}}",
+        "years_left": "还要等 {{n}} 年",
+        "years_left_one": "还要等 {{n}} 年",
+        "days_left": "还要等 {{n}} 天",
+        "days_left_one": "还要等 {{n}} 天",
+        "may_cross": "已满百年，可以渡河",
+        "waited_aria": "已在岸边等了 {{waited}} 年，共 100 年"
+      },
+      "vestibule": {
+        "title": "地狱前庭",
+        "body": "你留在地狱前庭，不进九圈。这里是归处，没有下一站。",
+        "entered_on": "进入 · {{date}}"
+      },
+      "confession": {
+        "title": "四十二条否定告白",
+        "subtitle": "本世最近一次称心",
+        "truthful": "如实",
+        "untruthful": "不实",
+        "unheard": "未记",
+        "partial": "已记 {{recorded}} / {{total}} 条，其余还没有记。",
+        "complete": "{{total}} 条都已记下。",
+        "strip_aria": "如实 {{truthful}}，不实 {{untruthful}}，未记 {{unheard}}，共 {{total}} 条"
+      },
+      "delivered": "已超度",
+      "delivered_on": "已超度 · {{date}}"
     },
     "past_lives": {
       "title": "前世",
@@ -5028,7 +5128,9 @@
         "chat_not_configured": "此地尚未通书信。",
         "not_found": "未找到。",
         "invalid_code": "灵魂编号须为 10 位。",
-        "self": "不能写信给自己。"
+        "self": "不能写信给自己。",
+        "ticket_expired": "这次查找已过期，请重新按编号查找。",
+        "ticket_invalid": "请重新按编号查找。"
       },
       "image": {
         "failed": "没能发出",
@@ -5620,6 +5722,22 @@
       "title": "申诉复核:已改判",
       "body": "你的申诉已复核，原判已改。打开灵魂簿查看新的裁决。"
     },
+    "wangsi_upheld": {
+      "title": "冤情申诉:属实 · 提前释放",
+      "body": "你的冤情申诉经审核属实，已提前出枉死城。打开灵魂簿查看。"
+    },
+    "wangsi_upheld_late": {
+      "title": "冤情申诉:属实",
+      "body": "你的冤情申诉经审核属实。打开灵魂簿查看审核意见。"
+    },
+    "wangsi_delivered": {
+      "title": "冤情申诉:属实 · 已超度",
+      "body": "你的冤情申诉经审核属实，已超度出枉死城。打开灵魂簿查看。"
+    },
+    "wangsi_rejected": {
+      "title": "冤情申诉:不属实",
+      "body": "你的冤情申诉经审核不属实。打开灵魂簿查看审核意见。"
+    },
     "disposition_executed": {
       "title": "处置已执行",
       "body": "你的处置已执行,打开灵魂簿查看。"
@@ -5933,6 +6051,10 @@
     "city_god_case_returned": {
       "title": "城隍退回补正",
       "body": "{{city_god}}退回了灵魂「{{soul}}」的案子，需要补正资料。经办：{{by}}。批语：{{reason}}"
+    },
+    "wangsi_grievance_filed": {
+      "title": "枉死城有新申诉",
+      "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"
     },
     "workflow_pick_nodes": {
       "title": "请为本域选站",
@@ -6364,7 +6486,8 @@
       "retry_not_a_destination": "「重审」（及欧洲以外的「待审」）不是去处：请给出终局裁决，或另开一件审判。",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能判下地狱，应判待定（炼狱）。",
-      "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。"
+      "untruthful_confession": "有否定告白记为「不实」：不能判通过。可判天平摇摆，另开一次称量。",
+      "five_heinous_must_fail": "罪目是五逆：直入阿鼻，不能判通过。"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -6942,7 +7065,9 @@
       "unavailable": "这部手机还没设锁屏密码，开不了。先在系统设置里设一个。",
       "failed": "没有认出{{bio}}，还没批准。再点一次确认重试。",
       "failed_reject": "没有认出{{bio}}，还没驳回。再点一次确认重试。",
-      "prompt": "批准或驳回前，确认是你本人。"
+      "prompt": "批准或驳回前，确认是你本人。",
+      "prompt_off": "关掉这项前，确认是你本人。",
+      "off_failed": "没有认出{{bio}}，这项仍然开着。"
     },
     "update_required": {
       "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
@@ -6975,7 +7100,8 @@
       "filter_clear": "清除筛选",
       "see_all": "全部 {{n}} 封",
       "group_sentence_change": "受刑计划变更",
-      "on_desk_only": "在电脑上处理"
+      "on_desk_only": "在电脑上处理",
+      "empty_body_other": "有轮到你的事时会推送给你。"
     },
     "queue": {
       "mine": "我手上",
@@ -7368,7 +7494,8 @@
       "level_saves": "点选即保存"
     },
     "judgment": {
-      "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站"
+      "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站",
+      "flow_not_here": "这条审批流程由别的殿主办，本殿在其中没有一段，这里看不到详情；进度见上一页。"
     }
   },
   "print": {
@@ -7463,7 +7590,24 @@
     },
     "empty": "没有符合条件的事件",
     "empty_all": "还没有事件",
-    "failed": "没能载入事件，请重试"
+    "failed": "没能载入事件，请重试",
+    "realtime": {
+      "NOTIFICATION_CREATED": "新通知",
+      "POST_CREATED": "新动态",
+      "POST_UPDATED": "动态已更新",
+      "POST_DELETED": "动态已删除",
+      "COMMENT_CREATED": "新评论",
+      "COMMENT_DELETED": "评论已删除",
+      "REACTION_ADDED": "新回应",
+      "REACTION_REMOVED": "回应已撤回",
+      "USER_FOLLOWED": "新关注者",
+      "USER_UNFOLLOWED": "已取消关注",
+      "SCHEDULER_RUN_FAILED": "定时任务运行失败",
+      "fallback_workflow": "审批有更新",
+      "fallback_dispatch": "调度有更新",
+      "fallback_death_sync": "死亡登记有更新",
+      "fallback_social": "动态有更新"
+    }
   },
   "state": {
     "gone_title": "这条已经不在了",
@@ -7527,7 +7671,8 @@
       "soul_devoured": "灵魂已被阿米特吞噬，不复存在，无从申诉",
       "not_escalatable": "上一次复核维持原判之后才能上诉",
       "appeal_closed": "这份申诉已有结论或已撤回，不能再撤回。",
-      "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。"
+      "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。",
+      "origin_flow_open": "这件审判的审批流程还没走完，走完之后才能申诉或上诉"
     },
     "file": "申诉",
     "file_title": "对这件审判申诉",
@@ -7582,7 +7727,8 @@
       "not_final_judge": "只有终审官员能作出结论",
       "mortal_sin_unrepented": "已采信的证据里有未悔的大罪：只能改判不通过。",
       "no_mortal_sin": "已采信的罪都是小罪或已告解的大罪：不能改判下地狱。",
-      "untruthful_confession": "原审有否定告白记为「不实」：不能改判通过。"
+      "untruthful_confession": "原审有否定告白记为「不实」：不能改判通过。",
+      "five_heinous_must_fail": "原审罪目是五逆：不能改判通过。"
     },
     "decide": {
       "foreign_title": "联审带来的外地站",
@@ -7956,5 +8102,10 @@
     "escort": "建议鬼差",
     "issue": "发牒",
     "empty": "没有阳寿已到、待发勾魂牒的灵魂"
+  },
+  "org_select": {
+    "no_match": "没有匹配的机构",
+    "implied": "含于上级",
+    "no_tenant": "未归殿"
   }
 }

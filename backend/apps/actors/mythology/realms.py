@@ -76,8 +76,13 @@ CHINESE_REALMS = [
     # broth (§3.1 第十二步「喝孟婆汤 → 投胎」), which is why the mechanism is
     # MENGPO and tests/test_seed_mythology.py's washing guard lists this row
     # beside the ten courts.
+    #
+    # NO LONGER USED (user 2026-10-29, review L). 地府判无罪直接候转世(docs/11 §3.1, §3.3), so nothing is sent
+    # here any more. The row stays — old dispositions and paths name it — but it is never offered as a choice
+    # (`apps/realms/models.py::RETIRED_REALM_CODES`).
     ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "Tianjie", RealmType.BLISS, 1,
-     "Pure merit souls - highest bliss, for as long as the merit lasts; "
+     "No longer used (2026-10-29): an acquitted soul of Diyu goes straight to rebirth. "
+     "Formerly: pure merit souls - highest bliss, for as long as the merit lasts; "
      "when it is spent the soul returns to the wheel", "MENGPO", False, None),
     # SOURCE NOT FOUND. 「杨柳宫」 could not be located as an underworld place in
     # 《玉历宝钞》, in 《佛说预修十王生七经》, or in the general folklore material

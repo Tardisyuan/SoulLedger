@@ -71,19 +71,34 @@ def check_permission(user, codename):
     )
 
 
+#: Pseudo-codename under which a role's "is it live" answer is cached. Same
+#: (role, codename) key space as the grants, so `invalidate_role` (`perm:<role>:*`)
+#: and `invalidate_all` clear it with them; no real codename starts with `__`.
+_ROLE_LIVE_KEY = "__role_live__"
+
+
 def _live_extra_roles(user):
     """`user.extra_roles` minus anything that may not be a second role.
 
-    One query, and only for a user who has extras: a role sitting in the
-    recycle bin no longer counts (the default manager hides it), though its
-    RolePermission rows still exist.
+    A role sitting in the recycle bin no longer counts (the default manager
+    hides it), though its RolePermission rows still exist. The answer is cached
+    per role like a grant (RBAC review L3, 2026-10-29): before, every check for
+    a user with extras paid one Role query even when every grant was a cache hit.
+    Deleting a role calls `invalidate_role_permissions`, which clears this key.
     """
     extras = {r for r in (getattr(user, 'extra_roles', None) or ()) if r not in ('ADMIN', 'SOUL')}
     if not extras:
         return []
-    from apps.perm.models import Role
+    live = {name: _permission_cache.get(name, _ROLE_LIVE_KEY) for name in extras}
+    missing = [name for name, value in live.items() if value is None]
+    if missing:
+        from apps.perm.models import Role
 
-    return sorted(Role.objects.filter(name__in=extras).values_list('name', flat=True))
+        found = set(Role.objects.filter(name__in=missing).values_list('name', flat=True))
+        for name in missing:
+            live[name] = name in found
+            _permission_cache.set(name, _ROLE_LIVE_KEY, live[name])
+    return sorted(name for name, value in live.items() if value)
 
 
 def _role_has(role, codename):

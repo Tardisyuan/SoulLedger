@@ -4,7 +4,7 @@ Auth URL routes.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import impersonation_views, mfa_views, officer_reset_views, session_views
+from . import admin_session_views, impersonation_views, mfa_views, officer_reset_views, session_views
 from .views import (
     LoginLogViewSet,
     LoginView,
@@ -54,6 +54,12 @@ urlpatterns = [
     path("sessions/", session_views.sessions_view, name="sessions"),
     path("sessions/revoke-others/", session_views.revoke_other_sessions_view, name="sessions-revoke-others"),
     path("sessions/<uuid:session_id>/revoke/", session_views.revoke_session_view, name="sessions-revoke"),
+    # 管理员的在线会话列表与强退(2026-10-29)。见 admin_session_views.py。
+    path("admin/sessions/", admin_session_views.admin_sessions_view, name="admin-sessions"),
+    path("admin/sessions/revoke-user/", admin_session_views.admin_revoke_user_sessions_view,
+         name="admin-sessions-revoke-user"),
+    path("admin/sessions/<uuid:session_id>/revoke/", admin_session_views.admin_revoke_session_view,
+         name="admin-sessions-revoke"),
     # 以此人身份查看(只读代看,W6)。见 impersonation.py。
     path("impersonate/", impersonation_views.ImpersonateStartView.as_view(), name="impersonate-start"),
     path("impersonate/end/", impersonation_views.ImpersonateEndView.as_view(), name="impersonate-end"),

@@ -237,6 +237,28 @@ class SoulMfaRequiredSerializer(serializers.Serializer):
     home_tenant = MeTenantSerializer()
 
 
+class MeCaptureWarrantSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=["ISSUED", "CAPTURED"])
+    issued_at = serializers.DateTimeField()
+
+
+class MeGreekFerrySerializer(serializers.Serializer):
+    ferry_passage = serializers.ChoiceField(choices=Soul.FerryPassage.choices)
+    crossed = serializers.BooleanField()
+    crosses_on = serializers.DateField(allow_null=True)
+
+
+class MeVestibuleSerializer(serializers.Serializer):
+    entered_at = serializers.DateTimeField()
+
+
+class MeNegativeConfessionSerializer(serializers.Serializer):
+    truthful = serializers.IntegerField()
+    untruthful = serializers.IntegerField()
+    unheard = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
 class MeProfileSerializer(serializers.Serializer):
     """instance 是灵魂;本世账号经 context["account"] 传入。"""
 
@@ -266,6 +288,67 @@ class MeProfileSerializer(serializers.Serializer):
     #: 助手是否对这个灵魂开通(全局开关 + 原属殿开关,apps/soul_assist/service.py::enabled_for)。
     #: App 据此决定显示不显示「问一问」:设计稿定「未开通就隐藏入口」,所以点开之前就要知道。
     assistant_enabled = serializers.SerializerMethodField()
+    # ── 到案前后的进度(2026-10-29 用户决定,App 界面待 Design;不适用时一律 null)──────────────
+    #: 勾魂牒已发、还没交接到案(地府):`{status: ISSUED|CAPTURED, issued_at}`。交接或撤销后为 null。
+    capture_warrant = serializers.SerializerMethodField()
+    #: 希腊:卡戎不渡(`Soul.ferry_passage` 有值)时 `{ferry_passage, crossed, crosses_on}`;未葬者满百年得渡的那天,
+    #: 无渡资者没有这一天(null)。照常过河的为 null。
+    greek_ferry = serializers.SerializerMethodField()
+    #: 欧洲:此刻在地狱前庭(EU_ANTINFERNO,中立者的去处,永久)时 `{entered_at}`,否则 null。
+    european_vestibule = serializers.SerializerMethodField()
+    #: 埃及:本世受称量的那件审判,四十二条否认已听的计数 `{truthful, untruthful, unheard, total}`;没有这样的案子为 null。
+    negative_confession = serializers.SerializerMethodField()
+    #: 地府:本世最近一次枉死城超度(冤情属实 · 超度)的时刻;没有为 null。
+    wangsi_delivered_at = serializers.SerializerMethodField()
+
+    @extend_schema_field(MeCaptureWarrantSerializer(allow_null=True))
+    def get_capture_warrant(self, soul):
+        from apps.dispatch.models import OPEN_CAPTURE, CaptureWarrant
+
+        row = (CaptureWarrant.all_objects.filter(soul=soul, status__in=OPEN_CAPTURE, is_deleted=False)
+               .order_by("-issued_at").values("status", "issued_at").first())
+        return MeCaptureWarrantSerializer(row).data if row else None
+
+    @extend_schema_field(MeGreekFerrySerializer(allow_null=True))
+    def get_greek_ferry(self, soul):
+        from django.utils import timezone
+
+        from apps.souls import acheron
+
+        if not soul.ferry_passage:
+            return None
+        return MeGreekFerrySerializer({"ferry_passage": soul.ferry_passage,
+                                       "crossed": acheron.crossed(soul, timezone.localdate()),
+                                       "crosses_on": acheron.crosses_on(soul)}).data
+
+    @extend_schema_field(MeVestibuleSerializer(allow_null=True))
+    def get_european_vestibule(self, soul):
+        from apps.realms.models import SoulPathEntry
+
+        entered = (SoulPathEntry.all_objects.filter(soul_id=soul.pk, left_at__isnull=True,
+                                                     realm__realm_code="EU_ANTINFERNO")
+                   .values_list("entered_at", flat=True).first())
+        return MeVestibuleSerializer({"entered_at": entered}).data if entered else None
+
+    @extend_schema_field(MeNegativeConfessionSerializer(allow_null=True))
+    def get_negative_confession(self, soul):
+        from apps.judgment import confessions
+        from apps.judgment.models import Judgment, JudgmentKind, JudgmentMethod
+
+        judgment = (Judgment.all_objects.filter(soul=soul, cycle=self.context["account"].cycle, is_deleted=False,
+                                                judgment_method=JudgmentMethod.HEART_WEIGHING)
+                    .exclude(kind=JudgmentKind.AMENDMENT).order_by("-created_at").first())
+        tally = judgment and confessions.tally(judgment)
+        return MeNegativeConfessionSerializer(tally).data if tally else None
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_wangsi_delivered_at(self, soul):
+        from apps.judgment.models import GrievanceStatus, Judgment
+
+        at = (Judgment.all_objects.filter(soul=soul, cycle=self.context["account"].cycle, is_deleted=False,
+                                          grievance_status=GrievanceStatus.DELIVERED)
+              .order_by("-grievance_decided_at").values_list("grievance_decided_at", flat=True).first())
+        return serializers.DateTimeField().to_representation(at) if at else None
 
     @extend_schema_field(MeAccountSerializer)
     def get_account(self, soul):

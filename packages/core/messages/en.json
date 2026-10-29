@@ -346,7 +346,8 @@
       "WANGSI_GRIEVANCE_FILED": "Grievance filed in the City of Wrongful Death",
       "WANGSI_GRIEVANCE_UPHELD": "Grievance upheld · released early",
       "WANGSI_GRIEVANCE_REJECTED": "Grievance not upheld",
-      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace"
+      "WANGSI_GRIEVANCE_DELIVERED": "Grievance upheld · delivered at the Lotus Terrace",
+      "NEGATIVE_CONFESSION_HEARD": "Negative confession heard"
     },
     "civilizations": {
       "CHINESE": "Chinese",
@@ -1236,6 +1237,29 @@
         "confirm_hint": "Type \"Overwrite\" to confirm"
       },
       "download_skipped": "Download skipped details"
+    },
+    "datascope": {
+      "title": "Data scope",
+      "default": "Default scope",
+      "scope": {
+        "ALL": "All",
+        "ORG_CHILD": "This unit and below",
+        "ORG": "This unit only",
+        "SELF": "Own records only",
+        "DEFINE": "Chosen units"
+      },
+      "admin_fixed": "All (fixed)",
+      "own_always": "Records a user created or was assigned stay visible to them under any scope.",
+      "orgs": "Units",
+      "orgs_for": "{{name}} · units",
+      "orgs_required": "Choose at least one unit",
+      "per_resource": "Set per record type",
+      "follow_default": "Follow default",
+      "save": "Save data scope",
+      "saved": "Data scope saved; it applies once they refresh",
+      "save_error": "Could not save the data scope",
+      "load_error": "Could not load the data scope",
+      "read_only": "Only an administrator outside every hall can change data scope"
     }
   },
   "workflow": {
@@ -1530,7 +1554,11 @@
       "not_reached": "Not reached",
       "last_step": "Latest step",
       "template": "Template",
-      "status": "Status"
+      "status": "Status",
+      "refusals": {
+        "escalate_past_final": "Escalation stops at the final review: the final review has to be decided, not escalated past.",
+        "five_heinous_must_fail": "This judgment is passed on one of the five heinous crimes: it cannot be approved."
+      }
     },
     "verdicts": {
       "passed": "Passed",
@@ -1588,7 +1616,8 @@
       "COMPLETED": "Completed",
       "SKIPPED": "Skipped",
       "ESCALATED": "Escalated",
-      "TRAVERSED": "Passed through"
+      "TRAVERSED": "Passed through",
+      "CANCELLED": "Cancelled"
     },
     "no_custom_templates": "You have not saved any templates of your own yet.",
     "start": {
@@ -1619,7 +1648,8 @@
         "judgment_taken": "This judgment already has an approval",
         "reason_required": "Add a reason",
         "forbidden": "You don't have permission to start approvals",
-        "failed": "Couldn't start, please try again"
+        "failed": "Couldn't start, please try again",
+        "origin_flow_open": "This soul's original approval workflow has not finished; an appeal waits for it"
       }
     },
     "filter": {
@@ -2064,7 +2094,9 @@
       "conclude_with_workflow": "Rule and open workflow",
       "current_realm": "Realm",
       "method": "Method",
-      "workflow_forced_original": "An original judgment always runs its approval workflow: the disposition is executed once it finishes; a refused workflow reopens the case."
+      "workflow_forced_original": "An original judgment always runs its approval workflow: the disposition is executed once it finishes; a refused workflow reopens the case.",
+      "passed_barred_five_heinous": "The offence is one of the five heinous crimes: it cannot be passed.",
+      "passed_barred_untruthful": "A denial was recorded as untrue: the verdict cannot be passed. The scale can be left wavering for a new weighing."
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -2602,7 +2634,32 @@
       "audit": "Audit log",
       "logins": "Login log",
       "permissions": "Permission changes",
-      "stats": "Statistics"
+      "stats": "Statistics",
+      "sessions": "Online sessions"
+    },
+    "sessions": {
+      "title": "Online sessions",
+      "kind_label": "Account type",
+      "kind": {
+        "officer": "Officers",
+        "soul": "Souls"
+      },
+      "user": "Account",
+      "device": "Device",
+      "last_seen": "Last active",
+      "signed_in": "Signed in",
+      "current": "(this device)",
+      "revoke": "Sign out",
+      "revoke_all": "Sign out everywhere",
+      "filtered_by": "Only {{name}}",
+      "empty": "No one is signed in",
+      "confirm_title": "Sign out this session?",
+      "confirm_message": "{{name}} will be signed out on {{device}} at once and has to sign in again there.",
+      "confirm_all_title": "Sign out every session?",
+      "confirm_all_message": "{{name}} will be signed out on every device at once.",
+      "revoked": "{{name}} is signed out on that device",
+      "revoked_all": "{{name}} is signed out everywhere",
+      "revoke_failed": "Could not sign out. The list has been refreshed."
     },
     "login_log": {
       "title": "Login log",
@@ -3370,7 +3427,8 @@
     "organization_none": "No organization",
     "tenant_pick": "Choose a tenant",
     "organization_column": "Organization · Position",
-    "position": "Position"
+    "position": "Position",
+    "organization_required": "A hall member who is not an administrator must belong to a unit"
   },
   "settings": {
     "title": "Settings",
@@ -3674,6 +3732,7 @@
       "revoked_ok": "Key revoked",
       "revoke_failed": "Could not revoke the key",
       "create_failed": "Could not create the key",
+      "create_no_tenant": "Enter a hall first: an API key belongs to one hall",
       "no_keys": "No API keys yet",
       "shown_title": "New key (shown once)",
       "shown_warning": "This is the only time the key is shown. After closing, the server keeps only a hash and cannot show it again — copy it now and hand it to the external system.",
@@ -4066,7 +4125,7 @@
     "expired_on": "Served {{date}}",
     "arrange_reincarnation": "Arrange rebirth",
     "serving_until": "Serving · until {{date}}",
-    "term_default": "Default {{n}} years · can be changed",
+    "term_default": "Default {{n}} years",
     "release": "Release at term end",
     "release_confirm": "Release at term end?",
     "release_warning": "Records the term as served and the soul leaves this stop: to the next stop of its sentence plan, or, if none is left, to await rebirth (or its final rest). This can't be undone.",
@@ -4078,7 +4137,8 @@
     },
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
-      "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed."
+      "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
+      "approval_cancelled": "The approval workflow was cancelled with the joint judgment and never finished: it cannot be executed as is."
     }
   },
   "reincarnation": {
@@ -4104,7 +4164,8 @@
       "term_not_served": "{{name}}'s term is not served out (until {{date}}); release it at term end before the rebirth.",
       "disposition_not_executed": "{{name}} still has a disposition that has not been executed; execute it and let the term run out before the rebirth.",
       "rebirth_form_reason_required": "{{name}}'s approved application asks for {{form}}; give a reason to choose another path.",
-      "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents."
+      "rebirth_continent_not_applicable": "Only a soul of Diyu reborn into the human path is born in one of the four continents.",
+      "origin_flow_open": "{{name}}'s original approval workflow has not finished; the rebirth waits for it."
     },
     "next_continent": "Continent of the next life · optional",
     "next_continent_same": "Same as this life",
@@ -4693,7 +4754,46 @@
       "station_at": "Station {{n}} / 13",
       "continent": "Continent of birth",
       "stations_card": "To the underworld · thirteen stations",
-      "station_here": "You are at {{station}}: {{desc}}"
+      "station_here": "You are at {{station}}: {{desc}}",
+      "capture": {
+        "title": "Capture warrant",
+        "ISSUED": "Your fated day has come. The escorts are on their way.",
+        "CAPTURED": "The escorts have you and are taking you to the City God.",
+        "step_issued": "Issued",
+        "step_captured": "Captured",
+        "step_handed": "To the City God",
+        "issued_on": "Issued · {{date}}"
+      },
+      "ferry": {
+        "title": "The crossing of Acheron",
+        "UNBURIED": "You are unburied, so Charon will not take you across. After a hundred years on the bank, you may cross.",
+        "NO_FARE": "You have no fare, so Charon will not take you across.",
+        "no_date": "There is no crossing day: you may cross once your fare is recorded as paid.",
+        "crosses_on": "Crossing day · {{date}}",
+        "years_left": "{{n}} years to wait",
+        "years_left_one": "{{n}} year to wait",
+        "days_left": "{{n}} days to wait",
+        "days_left_one": "{{n}} day to wait",
+        "may_cross": "A hundred years on the bank: you may cross",
+        "waited_aria": "{{waited}} of 100 years on the bank"
+      },
+      "vestibule": {
+        "title": "The Vestibule of Hell",
+        "body": "You remain in the Vestibule, outside the nine circles. This is where you stay; there is no next stage.",
+        "entered_on": "Entered · {{date}}"
+      },
+      "confession": {
+        "title": "The forty-two denials",
+        "subtitle": "Latest weighing of the heart, this life",
+        "truthful": "True",
+        "untruthful": "False",
+        "unheard": "Not recorded",
+        "partial": "{{recorded}} of {{total}} recorded; the rest are not yet.",
+        "complete": "All {{total}} are recorded.",
+        "strip_aria": "{{truthful}} true, {{untruthful}} false, {{unheard}} not recorded, of {{total}}"
+      },
+      "delivered": "Delivered",
+      "delivered_on": "Delivered · {{date}}"
     },
     "past_lives": {
       "title": "Past lives",
@@ -5028,7 +5128,9 @@
         "chat_not_configured": "Letters are not open here.",
         "not_found": "Not found.",
         "invalid_code": "A soul code has 10 characters.",
-        "self": "You cannot write to yourself."
+        "self": "You cannot write to yourself.",
+        "ticket_expired": "This search has expired. Look the code up again.",
+        "ticket_invalid": "Look the code up again."
       },
       "image": {
         "failed": "Could not send",
@@ -5620,6 +5722,22 @@
       "title": "Appeal reviewed: the verdict was changed",
       "body": "Your appeal has been reviewed and the verdict was changed. Open Soul Ledger to see the new verdict."
     },
+    "wangsi_upheld": {
+      "title": "Grievance upheld: released early",
+      "body": "Your grievance was found true and you have been released early from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+    },
+    "wangsi_upheld_late": {
+      "title": "Grievance upheld",
+      "body": "Your grievance was found true. Open Soul Ledger to read the reviewer's note."
+    },
+    "wangsi_delivered": {
+      "title": "Grievance upheld: delivered",
+      "body": "Your grievance was found true and you have been delivered from the City of the Wrongfully Dead. Open Soul Ledger to see it."
+    },
+    "wangsi_rejected": {
+      "title": "Grievance not upheld",
+      "body": "Your grievance was not found true. Open Soul Ledger to read the reviewer's note."
+    },
     "disposition_executed": {
       "title": "Disposition carried out",
       "body": "Your disposition has been carried out. Open Soul Ledger to see it."
@@ -5933,6 +6051,10 @@
     "city_god_case_returned": {
       "title": "Case returned for correction",
       "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"
+    },
+    "wangsi_grievance_filed": {
+      "title": "New grievance in the City of the Wrongfully Dead",
+      "body": "{{soul}} has filed a grievance, waiting for review."
     },
     "workflow_pick_nodes": {
       "title": "Pick this realm's stations",
@@ -6364,7 +6486,8 @@
       "retry_not_a_destination": "A RETRY (or, outside Europe, a pending verdict) is not a destination: give a final verdict, or open a new judgment.",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: not hell. Give Pending (purgatory).",
-      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again."
+      "untruthful_confession": "A denial in the negative confession was recorded as untrue: the verdict can't be Passed. Let the scale waver to weigh again.",
+      "five_heinous_must_fail": "The offence is one of the five heinous crimes: the verdict cannot be passed."
     },
     "cross": {
       "title": "Sentence plan stops",
@@ -6942,7 +7065,9 @@
       "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
       "failed": "{{bio}} not recognised. Not approved yet. Tap Confirm to try again.",
       "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
-      "prompt": "Confirm it is you before approving or rejecting."
+      "prompt": "Confirm it is you before approving or rejecting.",
+      "prompt_off": "Confirm it is you before turning this off.",
+      "off_failed": "{{bio}} not recognised. This is still on."
     },
     "update_required": {
       "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
@@ -6975,7 +7100,8 @@
       "filter_clear": "Clear filters",
       "see_all": "All {{n}}",
       "group_sentence_change": "Punishment plan changes",
-      "on_desk_only": "Handle on computer"
+      "on_desk_only": "Handle on computer",
+      "empty_body_other": "Anything that comes to you will be pushed to you."
     },
     "queue": {
       "mine": "Mine",
@@ -7368,7 +7494,8 @@
       "level_saves": "Tap a level to save it"
     },
     "judgment": {
-      "flow_progress": "Approval workflow · station {{n}} of {{total}}"
+      "flow_progress": "Approval workflow · station {{n}} of {{total}}",
+      "flow_not_here": "This approval flow is run by another hall and has no segment of yours, so its details are not shown here; its progress is on the previous page."
     }
   },
   "print": {
@@ -7463,7 +7590,24 @@
     },
     "empty": "No events match",
     "empty_all": "No events yet",
-    "failed": "Couldn't load events, please try again"
+    "failed": "Couldn't load events, please try again",
+    "realtime": {
+      "NOTIFICATION_CREATED": "New notification",
+      "POST_CREATED": "New post",
+      "POST_UPDATED": "Post updated",
+      "POST_DELETED": "Post deleted",
+      "COMMENT_CREATED": "New comment",
+      "COMMENT_DELETED": "Comment deleted",
+      "REACTION_ADDED": "Reaction added",
+      "REACTION_REMOVED": "Reaction removed",
+      "USER_FOLLOWED": "New follower",
+      "USER_UNFOLLOWED": "Unfollowed",
+      "SCHEDULER_RUN_FAILED": "Scheduled task run failed",
+      "fallback_workflow": "Workflow update",
+      "fallback_dispatch": "Dispatch update",
+      "fallback_death_sync": "Death sync update",
+      "fallback_social": "Social update"
+    }
   },
   "state": {
     "gone_title": "This is no longer here",
@@ -7527,7 +7671,8 @@
       "soul_devoured": "This soul was devoured by Ammit and no longer exists; there is no appeal",
       "not_escalatable": "You can escalate only after a review has upheld the verdict",
       "appeal_closed": "This appeal has already been decided or withdrawn.",
-      "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done."
+      "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done.",
+      "origin_flow_open": "This judgment's approval workflow has not finished; you can appeal once it has"
     },
     "file": "Appeal",
     "file_title": "Appeal this judgment",
@@ -7582,7 +7727,8 @@
       "not_final_judge": "Only the final judge can decide",
       "mortal_sin_unrepented": "The admitted evidence holds an unrepented mortal sin: the amended verdict can only be Failed.",
       "no_mortal_sin": "Every admitted sin is venial or absolved: the amended verdict can't be hell.",
-      "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed."
+      "untruthful_confession": "A denial in the original case's negative confession was recorded as untrue: the amended verdict can't be Passed.",
+      "five_heinous_must_fail": "The original offence is one of the five heinous crimes: the appeal cannot amend it to passed."
     },
     "decide": {
       "foreign_title": "Stations abroad from the cross-realm judgment",
@@ -7956,5 +8102,10 @@
     "escort": "Suggested escort",
     "issue": "Issue",
     "empty": "No soul has reached its fated date without a warrant"
+  },
+  "org_select": {
+    "no_match": "No matching unit",
+    "implied": "Included via parent",
+    "no_tenant": "No hall"
   }
 }

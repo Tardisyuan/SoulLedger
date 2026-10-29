@@ -97,7 +97,8 @@ beforeEach(() => {
 describe("rebirth application workflow", () => {
   beforeEach(() => workflowApi.get.mockResolvedValue(workflow("REBIRTH_APPLICATION", "some workflow")));
 
-  it.each(["rejected", "failed", "skipped"])("a %s verdict shows the required field with the visibility hint", async (v) => {
+  // SKIPPED is no longer offered (2026-10-29, review F).
+  it.each(["rejected", "failed"])("a %s verdict shows the required field with the visibility hint", async (v) => {
     renderPage();
     await pick(v);
     const field = reasonField();

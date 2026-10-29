@@ -291,10 +291,12 @@ def test_souls_in_different_civilizations_who_follow_each_other_chat_freely(cn_t
 
 def test_souls_in_different_civilizations_who_do_not_follow_each_other_send_a_request(
         cn_tenant, eu_tenant, matrix):  # noqa: F811
-    """变异:`_reachable` 加回「同一文明」过滤(`soul_account__soul__tenant_id=account.soul.tenant_id`)→ 404,红。"""
+    """别的文明的人凭按编号查找的一次性凭证发起(第 29 条:凭 user_id 不认,见 test_chat_direct_ticket.py)。
+    变异:`_reachable` 加回「同一文明」过滤(`soul_account__soul__tenant_id=account.soul.tenant_id`)→ 查找 404,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(eu_tenant, name="Beatrice")
-    response = _open(a_client, b)
+    ticket = a_client.post("/api/v1/me/chat/lookup/", {"soul_code": b.soul.soul_code}, format="json").data["ticket"]
+    response = a_client.post(CONVERSATIONS, {"ticket": ticket}, format="json")
     assert response.status_code == 201 and response.data["throttled"] is True
     assert _send(a_client, response.data["id"], "打扰").status_code == 201
     assert _send(a_client, response.data["id"], "在吗").status_code == 429

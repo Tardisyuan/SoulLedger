@@ -55,7 +55,7 @@ const SECTION_TITLE: Record<DispositionSection, string> = {
 };
 const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", executing: "乙", expired: "丙" };
 /** `apps/judgment/weighing.py::unfinished_flow` 的码:前两个在 `disposition.flow_waiting`,埃及的在 `judgment.weighing.errors`。 */
-const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected"];
+const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected", "approval_cancelled"];
 const FLOW_WAITING_WEIGHING = ["weighing_in_progress", "weighing_rejected", "weighing_wavers"];
 
 export default function DispositionPage() {
@@ -257,7 +257,7 @@ export default function DispositionPage() {
             {realm(d)}
             <span className="text-[oklch(var(--color-ink-muted))]">
               {termLabel(termState(d, now), t)}
-              {/* 没写刑期时服务端按界域填的默认值(2026-10-29):标出来,判官知道这是默认、可改。 */}
+              {/* 没写刑期时服务端按界域填的默认值(2026-10-29):标出来,判官知道这是默认(用户 10-29 定不写「可改」)。 */}
               {d.default_term_years != null && d.sentence_years === d.default_term_years && (
                 <span data-testid="disposition-term-default" className="block text-xs">
                   {t("disposition.term_default", { n: String(d.default_term_years) })}

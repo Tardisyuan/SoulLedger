@@ -806,6 +806,8 @@ export const APPEAL_ERROR_CODES = [
   "no_mortal_sin",
   // 埃及否定告白(2026-10-28):原审有一条记为「不实」,不能改判通过。
   "untruthful_confession",
+  // 地府五逆(2026-10-29,审查 J):不能改判通过。
+  "five_heinous_must_fail",
 ] as const;
 
 // ── 城隍初审(第五十三批;backend/apps/judgment/city_god_views.py)────────────

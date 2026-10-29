@@ -840,8 +840,6 @@ paths:
   /api/v1/assist-admin/halls/:
     get:
       operationId: assist_admin_halls_list
-      description: Every hall for the hall-less ADMIN; a hall's ADMIN sees its own
-        row only (2026-10-29).
       tags:
       - v1
       security:
@@ -858,8 +856,6 @@ paths:
   /api/v1/assist-admin/halls/{tenant_id}/:
     patch:
       operationId: assist_admin_hall_update
-      description: The per-hall switch. A hall's ADMIN may flip its own hall's only;
-        another hall's is 404 (2026-10-29).
       parameters:
       - in: path
         name: tenant_id
@@ -1507,6 +1503,110 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuditLog'
           description: ''
+  /api/v1/auth/admin/sessions/:
+    get:
+      operationId: v1_auth_admin_sessions_retrieve
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - officer
+          - soul
+        description: officer(默认)或 soul
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: user
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSessionPage'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/auth/admin/sessions/{session_id}/revoke/:
+    post:
+      operationId: v1_auth_admin_sessions_revoke_create
+      parameters:
+      - in: path
+        name: session_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/auth/admin/sessions/revoke-user/:
+    post:
+      operationId: v1_auth_admin_sessions_revoke_user_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RevokeUserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeUserResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
   /api/v1/auth/change-password/:
     post:
       operationId: v1_auth_change_password_create
@@ -1908,20 +2008,20 @@ paths:
   /api/v1/auth/mfa/disable/:
     post:
       operationId: v1_auth_mfa_disable_create
-      description: 关闭:`method=totp` 验一个动态码,`method=recovery` 验一枚恢复码。只凭密码不行。错了计入同一个锁。
+      description: 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。
       tags:
       - v1
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaTurnOffRequest'
+              $ref: '#/components/schemas/MfaDisableRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MfaTurnOffRequest'
+              $ref: '#/components/schemas/MfaDisableRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MfaTurnOffRequest'
+              $ref: '#/components/schemas/MfaDisableRequest'
         required: true
       security:
       - jwtAuth: []
@@ -1944,16 +2044,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/MfaRefusal'
           description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MfaRefusal'
-          description: ''
   /api/v1/auth/mfa/recovery-codes/:
     post:
       operationId: v1_auth_mfa_recovery_codes_create
-      description: 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。
+      description: 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。
       tags:
       - v1
       requestBody:
@@ -6808,6 +6902,7 @@ paths:
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
+          - NEGATIVE_CONFESSION_HEARD
           - NOTIFICATION_CREATED
           - OFFICER_HANDOVER
           - POST_CREATED
@@ -6919,6 +7014,7 @@ paths:
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+          * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -7054,6 +7150,7 @@ paths:
           - JUDGMENT_INITIATED
           - KARMA_RECALCULATED
           - MENGPO_SOUP_TAKEN
+          - NEGATIVE_CONFESSION_HEARD
           - NOTIFICATION_CREATED
           - OFFICER_HANDOVER
           - POST_CREATED
@@ -7165,6 +7262,7 @@ paths:
           * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
           * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
           * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+          * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
       - in: query
         name: exclude_system
@@ -10652,9 +10750,10 @@ paths:
       description: |-
         `POST /me/chat/lookup/`:按完整灵魂编号找一个可私聊的灵魂,跨文明。
 
-        返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)——
-        **编号不回显**、UUID 不出库。拿到 `user_id` 之后走 `POST /me/chat/conversations/`,
-        互关与 24 小时请求的规则都在那里,这里不另开一套。被禁言的灵魂可以查,发起时照旧 403 `muted`。
+        返回朋友圈同一张名片(`SoulCardSerializer` 的白名单:user_id、显示名、头像、is_active)加一次性
+        凭证 `ticket` —— **编号不回显**、UUID 不出库。拿 `ticket`(不是 user_id:别的文明的 id 发起时不认,
+        第 29 条)走 `POST /me/chat/conversations/`,互关与 24 小时请求的规则都在那里,这里不另开一套。
+        被禁言的灵魂可以查,发起时照旧 403 `muted`。
       tags:
       - v1
       requestBody:
@@ -10676,7 +10775,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoulCard'
+                $ref: '#/components/schemas/ChatLookupResult'
           description: ''
         '403':
           content:
@@ -11088,6 +11187,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeJudgmentAppeal'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
         '404':
           content:
             application/json:
@@ -11187,13 +11292,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SoulMfaTurnOffRequest'
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
         required: true
       security:
       - soulJwtAuth: []
@@ -11226,7 +11331,7 @@ paths:
     post:
       operationId: v1_me_mfa_recovery_codes_create
       description: |-
-        重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
+        重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
         没带 / 错了 → 旧码原样有效。
       tags:
       - v1
@@ -13868,6 +13973,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/TodoItemDetail'
           description: ''
+        '403':
+          description: No response body
         '404':
           description: No response body
   /api/v1/officer-app/items/{kind}/{item_id}/cosigners/:
@@ -14441,7 +14548,7 @@ paths:
       operationId: v1_perm_permissions_list
       description: |-
         GET /api/v1/perm/permissions/
-        获取所有权限列表
+        获取所有权限列表(ADMIN,或持 system.settings / menu.manage)
       tags:
       - v1
       security:
@@ -17364,10 +17471,9 @@ paths:
     post:
       operationId: v1_social_moderation_sensitive_words_copy_from_create
       description: |-
-        从另一个文明复制整张词表到一个殿。**只有 ADMIN**(其余一律 403,码名之外再判一次):
+        从另一个文明复制整张词表到当前文明。**只有 ADMIN**(其余一律 403,码名之外再判一次):
         这是读别的文明词表的唯一入口,而 `social.moderate` 是按文明授的 —— 持码名的 MODERATOR
         不该借它看见别处的词。回包只有计数,不含词本身。
-        目标(2026-10-29):绑殿的 ADMIN 只复制进本殿;没有殿的全局 ADMIN 在 `target_tenant` 里点名目标殿。
       tags:
       - v1
       requestBody:
@@ -21961,6 +22067,7 @@ paths:
         schema:
           type: string
           enum:
+          - CANCELLED
           - COMPLETED
           - IN_PROGRESS
           - PENDING
@@ -21970,6 +22077,7 @@ paths:
           * `IN_PROGRESS` - 审批中
           * `REJECTED` - 已拒绝
           * `COMPLETED` - 流程完成
+          * `CANCELLED` - 已取消
       tags:
       - v1
       security:
@@ -22571,6 +22679,7 @@ paths:
         schema:
           type: string
           enum:
+          - CANCELLED
           - COMPLETED
           - IN_PROGRESS
           - PENDING
@@ -22580,6 +22689,7 @@ paths:
           * `IN_PROGRESS` - 审批中
           * `REJECTED` - 已拒绝
           * `COMPLETED` - 流程完成
+          * `CANCELLED` - 已取消
       tags:
       - v1
       security:
@@ -22915,6 +23025,70 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    AdminSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+        username:
+          type: string
+        display_name:
+          type: string
+        tenant_code:
+          type: string
+          nullable: true
+        label:
+          type: string
+        method:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+      required:
+      - created_at
+      - current
+      - display_name
+      - id
+      - ip_address
+      - label
+      - last_seen_at
+      - method
+      - tenant_code
+      - user_id
+      - username
+    AdminSessionPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSession'
+      required:
+      - count
+      - next
+      - previous
+      - results
     AdminWebhookConfig:
       type: object
       description: |-
@@ -23670,6 +23844,7 @@ components:
       - APPEAL
       - EXCEPTION
       - COMPLETED
+      - CANCELLED
       type: string
       description: |-
         * `PENDING` - 待审批
@@ -23679,6 +23854,7 @@ components:
         * `APPEAL` - 申诉中
         * `EXCEPTION` - 异常处理
         * `COMPLETED` - 流程完成
+        * `CANCELLED` - 已取消
     ApproverPreview:
       type: object
       properties:
@@ -24978,6 +25154,33 @@ components:
           maxLength: 32
       required:
       - soul_code
+    ChatLookupResult:
+      type: object
+      description: 按编号查到的名片(朋友圈同一张白名单)加一次性凭证 `ticket`(由视图放进 context):发起私聊时原样交回。
+      properties:
+        user_id:
+          type: integer
+        display_name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          description: false:前世账号,只读、不可关注。
+        ticket:
+          type: string
+          readOnly: true
+          description: 一次性、约 10 分钟内有效、只认查找的这个账号。
+      required:
+      - avatar
+      - display_name
+      - is_active
+      - ticket
+      - user_id
     ChatSession:
       type: object
       description: '`GET /me/chat/session/`。`token` 是短时效的 Matrix 登录凭据,不是访问令牌。'
@@ -25886,8 +26089,9 @@ components:
     ConversationCreate:
       type: object
       description: |-
-        两种会话一个端点:给 `target_user`(朋友圈搜索结果的 user_id)就是私聊,
-        `kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
+        两种会话一个端点:私聊给 `ticket`(按编号查找 `POST /me/chat/lookup/` 发的一次性凭证)或
+        `target_user`(user_id —— **只认看得见的人**:同文明、有关注边、已有过私聊,见 `services.nameable_by_id`;
+        别的文明的人只能凭 ticket);`kind=OFFICER_INBOX` 就是当前所在殿司的收件箱。
       properties:
         kind:
           allOf:
@@ -25896,6 +26100,9 @@ components:
         target_user:
           type: integer
           minimum: 1
+        ticket:
+          type: string
+          maxLength: 512
     ConversationKindEnum:
       enum:
       - DIRECT
@@ -28048,6 +28255,7 @@ components:
       - WANGSI_GRIEVANCE_UPHELD
       - WANGSI_GRIEVANCE_REJECTED
       - WANGSI_GRIEVANCE_DELIVERED
+      - NEGATIVE_CONFESSION_HEARD
       - SCHEDULER_RUN_FAILED
       type: string
       description: |-
@@ -28119,6 +28327,7 @@ components:
         * `WANGSI_GRIEVANCE_UPHELD` - Wangsi Grievance Upheld
         * `WANGSI_GRIEVANCE_REJECTED` - Wangsi Grievance Rejected
         * `WANGSI_GRIEVANCE_DELIVERED` - Wangsi Grievance Delivered
+        * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
     EventWebhookDelivery:
       type: object
@@ -31979,6 +32188,25 @@ components:
       - refusal_code
       - rounds_used
       - verdict
+    MeCaptureWarrant:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/MeCaptureWarrantStatusEnum'
+        issued_at:
+          type: string
+          format: date-time
+      required:
+      - issued_at
+      - status
+    MeCaptureWarrantStatusEnum:
+      enum:
+      - ISSUED
+      - CAPTURED
+      type: string
+      description: |-
+        * `ISSUED` - ISSUED
+        * `CAPTURED` - CAPTURED
     MeCooldownShortening:
       type: object
       description: 灵魂看自己的那份:没有 decided_by。
@@ -32111,6 +32339,21 @@ components:
       - memory_reset
       - sentence_years
       - term_start
+    MeGreekFerry:
+      type: object
+      properties:
+        ferry_passage:
+          $ref: '#/components/schemas/FerryPassageEnum'
+        crossed:
+          type: boolean
+        crosses_on:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - crossed
+      - crosses_on
+      - ferry_passage
     MeJudge:
       type: object
       properties:
@@ -32313,6 +32556,22 @@ components:
       - rebirth_applications
       - records
       - reincarnation
+    MeNegativeConfession:
+      type: object
+      properties:
+        truthful:
+          type: integer
+        untruthful:
+          type: integer
+        unheard:
+          type: integer
+        total:
+          type: integer
+      required:
+      - total
+      - truthful
+      - unheard
+      - untruthful
     MeProfile:
       type: object
       description: instance 是灵魂;本世账号经 context["account"] 传入。
@@ -32407,26 +32666,56 @@ components:
         assistant_enabled:
           type: boolean
           readOnly: true
+        capture_warrant:
+          allOf:
+          - $ref: '#/components/schemas/MeCaptureWarrant'
+          nullable: true
+          readOnly: true
+        greek_ferry:
+          allOf:
+          - $ref: '#/components/schemas/MeGreekFerry'
+          nullable: true
+          readOnly: true
+        european_vestibule:
+          allOf:
+          - $ref: '#/components/schemas/MeVestibule'
+          nullable: true
+          readOnly: true
+        negative_confession:
+          allOf:
+          - $ref: '#/components/schemas/MeNegativeConfession'
+          nullable: true
+          readOnly: true
+        wangsi_delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
       required:
       - account
       - assistant_enabled
       - birth_continent
       - birth_date
       - birth_name
+      - capture_warrant
       - civilization
       - current_state
       - death_date
       - demerit_score
       - diyu_station
+      - european_vestibule
+      - greek_ferry
       - home_civilization
       - home_tenant
       - is_residing
       - merit_score
       - name
+      - negative_confession
       - origin_location
       - origin_region
       - soul_code
       - tenant
+      - wangsi_delivered_at
       - welcomed_civilizations
     MeRealm:
       type: object
@@ -32715,6 +33004,14 @@ components:
       - hall_names
       - seal_glyphs
       - visit
+    MeVestibule:
+      type: object
+      properties:
+        entered_at:
+          type: string
+          format: date-time
+      required:
+      - entered_at
     MeWangsiCase:
       type: object
       description: 灵魂看的一件枉死的案子:不带城隍名下的官员是谁、不带审核人。
@@ -33092,6 +33389,14 @@ components:
           type: string
       required:
       - event_id
+    MethodEnum:
+      enum:
+      - totp
+      - password
+      type: string
+      description: |-
+        * `totp` - totp
+        * `password` - password
     MfaCodeRequest:
       type: object
       properties:
@@ -33103,21 +33408,13 @@ components:
       type: object
       properties:
         method:
-          $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
+          $ref: '#/components/schemas/MethodEnum'
         code:
           type: string
         password:
           type: string
       required:
       - method
-    MfaOwnerConfirmMethodEnum:
-      enum:
-      - totp
-      - password
-      type: string
-      description: |-
-        * `totp` - totp
-        * `password` - password
     MfaRecoveryCodes:
       type: object
       properties:
@@ -33163,14 +33460,6 @@ components:
       - mfa_required
       - pending_token
       - username
-    MfaSecondFactorMethodEnum:
-      enum:
-      - totp
-      - recovery
-      type: string
-      description: |-
-        * `totp` - totp
-        * `recovery` - recovery
     MfaSetupRequest:
       type: object
       description: |-
@@ -33216,17 +33505,6 @@ components:
       - last_used_method
       - recovery_codes_remaining
       - required
-    MfaTurnOffRequest:
-      type: object
-      description: 关闭:6 位动态码(`totp`)或一枚恢复码(`recovery`)。密码不再算数(2026-10-29)。
-      properties:
-        method:
-          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
-        code:
-          type: string
-      required:
-      - code
-      - method
     MfaVerifyRequest:
       type: object
       properties:
@@ -33721,6 +33999,7 @@ components:
       - JUDGMENT_CLAIM_CHANGED
       - CITY_GOD_CASE_RECEIVED
       - CITY_GOD_CASE_RETURNED
+      - WANGSI_GRIEVANCE_FILED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -33755,6 +34034,7 @@ components:
         * `JUDGMENT_CLAIM_CHANGED` - Judgment Claim Changed
         * `CITY_GOD_CASE_RECEIVED` - City God Case Received
         * `CITY_GOD_CASE_RETURNED` - City God Case Returned
+        * `WANGSI_GRIEVANCE_FILED` - Wangsi Grievance Filed
     NullEnum:
       enum:
       - null
@@ -38193,8 +38473,10 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
-        mfa_setup_required:
-          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
           readOnly: true
     PatchedUserNotification:
       type: object
@@ -40389,6 +40671,20 @@ components:
           type: integer
       required:
       - revoked
+    RevokeUserRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+      required:
+      - user
+    RevokeUserResponse:
+      type: object
+      properties:
+        revoked:
+          type: integer
+      required:
+      - revoked
     Role:
       type: object
       properties:
@@ -40887,13 +41183,9 @@ components:
       type: object
       description: |-
         Body of `POST sensitive-words/copy-from/` (ADMIN only): the source
-        civilization by code. The target is the caller's own hall; the hall-less ADMIN, which has none, names it in
-        `target_tenant` (2026-10-29). A hall's ADMIN may only copy into its own hall.
+        civilization by code. The target is the caller's current civilization.
       properties:
         source_tenant:
-          type: string
-          maxLength: 50
-        target_tenant:
           type: string
           maxLength: 50
       required:
@@ -42701,7 +42993,7 @@ components:
       type: object
       properties:
         method:
-          $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
+          $ref: '#/components/schemas/MethodEnum'
         code:
           type: string
           maxLength: 32
@@ -42813,18 +43105,6 @@ components:
       - last_used_at
       - last_used_method
       - recovery_codes_remaining
-    SoulMfaTurnOffRequest:
-      type: object
-      description: 关闭:6 位数字(`totp`)或一枚恢复码(`recovery`)。只凭密码不行(2026-10-29)。
-      properties:
-        method:
-          $ref: '#/components/schemas/MfaSecondFactorMethodEnum'
-        code:
-          type: string
-          maxLength: 32
-      required:
-      - code
-      - method
     SoulMfaVerifyRequest:
       type: object
       properties:
@@ -45060,8 +45340,10 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
-        mfa_setup_required:
-          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
           readOnly: true
       required:
       - email_verified
@@ -45069,9 +45351,9 @@ components:
       - is_active
       - mfa_enabled
       - mfa_required
-      - mfa_setup_required
       - organization
       - password_change_required
+      - permissions
       - position
       - role
       - tenant
@@ -45110,13 +45392,13 @@ components:
       description: |-
         User serializer for creation with password handling.
 
-        Callers other than the hall-less ADMIN (an ADMIN bound to a hall included) are constrained two ways (see ROLE_HIERARCHY above):
+        Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
         - `tenant` is forced to the caller's own tenant — a client-supplied
           value for another tenant is rejected rather than silently honored.
         - `role` can never be more privileged than the caller's own role, which
           is what blocks a non-ADMIN from creating an ADMIN account (themselves
           or anyone else).
-        The hall-less ADMIN keeps the unrestricted behavior (any tenant, any role).
+        ADMIN keeps its existing unrestricted behavior (any tenant, any role).
       properties:
         id:
           type: integer
@@ -45633,14 +45915,10 @@ components:
         password_change_required:
           type: boolean
           readOnly: true
-        mfa_setup_required:
-          type: boolean
-          readOnly: true
       required:
       - id
       - mfa_enabled
       - mfa_required
-      - mfa_setup_required
       - password_change_required
       - permissions
       - tenant

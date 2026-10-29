@@ -1622,6 +1622,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "realms.manage",
         # perm/0027 (2026-10-11, 灵魂端两步验证). Same reasoning as the scheduler pair.
         "souls.mfa_reset",
+        # perm/0028 (2026-10-29, 在线会话). Same reasoning as the scheduler pair.
+        "session.manage",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",
@@ -1817,7 +1819,9 @@ def test_guardian_denied_the_three_decisions_now_stays_denied_through_patch(
     blocked = guardian.patch(
         f"/api/v1/dispatch/records/{own.id}/", {"status": forged_status}, format="json"
     )
-    assert blocked.status_code == 400, (
+    # A decided record (APPROVED …) is refused one step earlier since 2026-10-29: its reason is locked,
+    # 409 `reason_locked` (RBAC L2). Still a refusal, never 200.
+    assert blocked.status_code == (400 if start_status == "PROPOSED" else 409), (
         f"If this is 200 again, `status` became writable on "
         f"DispatchRecordSerializer and the {codename} bypass has reopened."
     )
@@ -1864,7 +1868,9 @@ def test_patch_can_no_longer_forge_an_executed_dispatch(role_clients, snapshot_t
         {"status": DispatchStatus.EXECUTED},
         format="json",
     )
-    assert blocked.status_code == 400, (
+    # 409 `reason_locked`: an approved dispatch is no longer editable at all (2026-10-29, RBAC L2);
+    # before that lock it was the serializer's 400 on `status`. Either way, never 200.
+    assert blocked.status_code == 409, (
         "If this is 200 again, `status` became writable and the bypass has reopened."
     )
     assert DispatchRecord.objects.get(pk=own.pk).status == DispatchStatus.APPROVED
@@ -1951,7 +1957,8 @@ def test_patch_can_no_longer_skip_the_status_state_machine(role_clients, snapsho
         {"status": DispatchStatus.EXECUTED},
         format="json",
     )
-    assert blocked.status_code == 400
+    # 409 `reason_locked` since 2026-10-29 (RBAC L2): a decided dispatch is not editable at all.
+    assert blocked.status_code == 409
     assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.REJECTED, (
         "If this is EXECUTED, `status` became writable through PATCH again and "
         "the state machine is once more reachable only from the three actions."

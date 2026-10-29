@@ -8,7 +8,8 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
-import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
+import { TreeName } from "@/src/components/ui/TreeRow";
+import { orgTreeRows } from "@/src/components/organizations/OrgTreeSelect";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -137,11 +138,7 @@ function OrganizationsPageContent() {
         {/* 树表行(第三类 B 组):层级由缩进加 └ 肘线说,三枚按深度换的 lucide
             图标一起去掉 —— 它们说的是同一件事,而肘线还说清了「挂在谁下面」。
             兄弟按 `sort` 排,与改动前一致。 */}
-        {flattenTree(
-          [...orgs].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
-          (o) => o.id,
-          (o) => o.parent,
-        ).map(({ item: org, depth }) => (
+        {orgTreeRows(orgs).map(({ item: org, depth }) => (
           <tr key={org.id} className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
             <td className="py-2 px-3">
               <TreeName depth={depth}>

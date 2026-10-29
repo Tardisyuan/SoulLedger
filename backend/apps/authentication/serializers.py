@@ -469,8 +469,18 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "mfa_setup_required"]
+        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required", "mfa_setup_required", "permissions"]
         read_only_fields = ["id", "is_active", "username", "role", "organization", "position"]
+
+    #: Same list as the login payload's `user.permissions` (`UserWithTenantSerializer.get_permissions`):
+    #: the officer app re-reads it here at start and on returning to the foreground, so a grant
+    #: changed since sign-in reaches its button gates without signing in again (RBAC review M1).
+    permissions = serializers.SerializerMethodField()
+
+    def get_permissions(self, obj) -> list[str]:
+        from apps.perm.services import get_role_permission_codenames
+
+        return get_role_permission_codenames(obj.role, obj.extra_roles)
 
     #: 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。见 `User.email_verified`。
     email_verified = serializers.BooleanField(read_only=True)

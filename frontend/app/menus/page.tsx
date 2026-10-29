@@ -71,8 +71,9 @@ export default function MenusPage() {
 
   // GET /perm/permissions/ — used only to check whether a codename (typed or
   // derived) actually exists, so the editor can flag a guess that won't
-  // resolve. Available to any authenticated user (views.py:list_permissions
-  // requires only IsAuthenticated), not just ADMIN.
+  // resolve. ADMIN or a holder of menu.manage / system.settings
+  // (views.py:CanReadPermissionCatalogue); on a 403 `permissionsLoaded` stays
+  // false and the editor simply skips the check.
   const { data: allPermissions = [], isSuccess: permissionsLoaded } = useQuery<Permission[]>({
     queryKey: ["permissions-for-menu-codename-check"],
     queryFn: async () => (await permApi.list()).data,

@@ -14,7 +14,7 @@ import { View } from "react-native";
 import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { Row } from "../kit";
-import { useCan, useSession } from "../session";
+import { useCan } from "../session";
 import { CaseUpload } from "./caseUpload";
 import { SectionLabel, SmallButton, Txt, space, useI18n, useRemote } from "../shared";
 import { AccountFrame } from "./account";
@@ -38,8 +38,6 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
   // 一段取不到不挡别的段:失败 = 那一段不画,整体写一句「案情没有加载出来」。
   const loadRecords = useCallback(() => Promise.resolve().then(() => soulsApi.records(data.soul)).then((r) => r.data), [data.soul]);
   const loadFiles = useCallback(() => Promise.resolve().then(() => judgmentApi.attachments(data.id)), [data.id]);
-  const { state } = useSession();
-  const me = state.status === "signedIn" ? state.user.id : null;
   const canExecute = useCan("judgment.execute");
   const records = useRemote(loadRecords);
   const files = useRemote(loadFiles);
@@ -90,12 +88,13 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
             />
           </>
         ) : null}
-        {/* 认领人或持有 judgment.execute 的人才有入口;结案后与没认领各只写一行(服务端同样拒)。 */}
+        {/* 只有持 judgment.execute 的人才有入口 —— 服务端 add_attachment 只认这个码,认领人被收回码后点了也是 403(RBAC A4)。
+            结案后与没有码各只写一行。 */}
         {files.data || files.error ? (
           <CaseUpload
             judgmentId={data.id}
             list={files.data ?? null}
-            canWrite={(data.claimed_by != null && data.claimed_by === me) || canExecute}
+            canWrite={canExecute}
             onUploaded={() => void files.reload()}
           />
         ) : null}

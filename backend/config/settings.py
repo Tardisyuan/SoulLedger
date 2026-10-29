@@ -102,6 +102,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 最外层:之后每一层(含它们的日志)都看得到这个请求的 id,任何响应(含 301 / 403)都回 X-Request-ID。
+    "apps.core.trace.TraceIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -260,7 +262,11 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-requested-with",
     "x-imp-page",  # 代看期间前端随请求带当前页面(apps/authentication/impersonation.py)
+    "x-request-id",  # apps/core/trace.py
+    "idempotency-key",  # apps/core/idempotency.py
 ]
+# 客户端在报错详情里显示请求 id,跨源时得放行才读得到这个响应头。
+CORS_EXPOSE_HEADERS = ["x-request-id"]
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -550,11 +556,12 @@ ASSISTANT_EMBEDDING_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_EMBEDDING_TIMEO
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {"trace": {"()": "apps.core.trace.TraceIdFilter"}},
     "formatters": {
-        "verbose": {"format": "{levelname} {asctime} {module} {message}", "style": "{"},
+        "verbose": {"format": "{levelname} {asctime} [{trace_id}] {module} {message}", "style": "{"},
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose", "filters": ["trace"]},
     },
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
@@ -598,10 +605,12 @@ if not DEBUG:
             # on any quote or newline in a message (IS-22).
             "json": {"()": "config.json_logging.JsonFormatter"},
         },
+        "filters": {"trace": {"()": "apps.core.trace.TraceIdFilter"}},
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "json",
+                "filters": ["trace"],
             },
         },
         "root": {

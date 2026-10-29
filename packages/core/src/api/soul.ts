@@ -48,6 +48,7 @@ import type {
 } from "./auth";
 import type { components } from "./generated/schema";
 import type { AppealCompensation } from "../domain/appeals";
+import { stampRequest } from "./requestStamp";
 
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
@@ -135,6 +136,7 @@ soulHttp.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers["Accept-Language"] = getLocale();
+  stampRequest(config.headers, config.method);
   return config;
 });
 
@@ -422,6 +424,8 @@ export const APPEAL_REFUSAL_CODES = [
   // 撤回被拒(apps/judgment/appeals.py `withdraw`):已有结论 / 已撤回,或已进申诉流程。
   "appeal_closed",
   "ladder_running",
+  // 原审的审批流程还没走完(2026-10-29,审查 B):申诉与上诉都等它走完。
+  "origin_flow_open",
 ] as const;
 
 export function appealRefusalKey(code: string | null | undefined): string | null {

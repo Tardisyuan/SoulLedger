@@ -90,6 +90,12 @@ class RealmFork(models.TextChoices):
     FAIL = "FAIL", "不过(第二次死亡)"
 
 
+#: Realms kept as data but no longer offered anywhere a realm is picked (user 2026-10-29, review L): the
+#: destination picker (both lists), the judgment queue's options and the dispatch target list leave them out.
+#: DY_01_HEAVEN: 地府判无罪直接候转世(docs/11 §3.1、§3.3「善人径投」),天道不再是去处;存量处置与行程照旧可读。
+RETIRED_REALM_CODES = frozenset({"DY_01_HEAVEN"})
+
+
 class Realm(AuditUserFields, models.Model):
     """
     A destination realm within an afterlife system.

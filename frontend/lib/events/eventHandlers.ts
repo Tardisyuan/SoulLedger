@@ -41,6 +41,7 @@
  * convert, not an exception to the rule.
  */
 import { getLocale } from "@soulledger/core/platform";
+import { translate } from "@/lib/i18n/activeTranslator";
 import {
   dispositionKeys,
   notificationKeys,
@@ -65,114 +66,134 @@ import type {
 
 // ── Event Labels ───────────────────────────────────────────────────────
 
+/**
+ * Event type → message KEY, not copy (2026-10-29). The values used to be English strings shown as
+ * they were in every locale. Backend event types reuse the soul timeline's `souls.events.<TYPE>`
+ * (one word per event across the app); the realtime-only ones live in `events.realtime.<TYPE>`.
+ * `tests/test_frontend_event_types_track_the_backend.py` still reads the keys of this table.
+ */
 export const EVENT_LABELS: Record<string, string> = {
   // Soul events
-  SOUL_CREATED: "Soul created",
-  SETTLEMENT_CORRECTED: "Settlement corrected",
-  STATE_CHANGED: "Soul state changed",
-  RECORD_ADDED: "Record added",
-  JUDGMENT_INITIATED: "Judgment initiated",
-  JUDGMENT_CONCLUDED: "Judgment concluded",
-  DISPOSITION_CREATED: "Disposition created",
-  DISPOSITION_EXPIRED: "Disposition expired",
-  REINCARNATION_TRIGGERED: "Reincarnation triggered",
-  REINCARNATION_COMPLETED: "Reincarnation completed",
-  KARMA_RECALCULATED: "Balance recalculated",
+  SOUL_CREATED: "souls.events.SOUL_CREATED",
+  SETTLEMENT_CORRECTED: "souls.events.SETTLEMENT_CORRECTED",
+  STATE_CHANGED: "souls.events.STATE_CHANGED",
+  RECORD_ADDED: "souls.events.RECORD_ADDED",
+  JUDGMENT_INITIATED: "souls.events.JUDGMENT_INITIATED",
+  JUDGMENT_CONCLUDED: "souls.events.JUDGMENT_CONCLUDED",
+  DISPOSITION_CREATED: "souls.events.DISPOSITION_CREATED",
+  DISPOSITION_EXPIRED: "souls.events.DISPOSITION_EXPIRED",
+  REINCARNATION_TRIGGERED: "souls.events.REINCARNATION_TRIGGERED",
+  REINCARNATION_COMPLETED: "souls.events.REINCARNATION_COMPLETED",
+  KARMA_RECALCULATED: "souls.events.KARMA_RECALCULATED",
 
   // Workflow events
-  WORKFLOW_CREATED: "New workflow created",
-  WORKFLOW_ASSIGNED: "Workflow assigned to you",
-  WORKFLOW_APPROVED: "Workflow approved",
-  WORKFLOW_REJECTED: "Workflow rejected",
+  WORKFLOW_CREATED: "souls.events.WORKFLOW_CREATED",
+  WORKFLOW_ASSIGNED: "souls.events.WORKFLOW_ASSIGNED",
+  WORKFLOW_APPROVED: "souls.events.WORKFLOW_APPROVED",
+  WORKFLOW_REJECTED: "souls.events.WORKFLOW_REJECTED",
 
   // Dispatch events
-  DISPATCH_CREATED: "Dispatch proposed",
-  DISPATCH_APPROVED: "Dispatch approved",
-  DISPATCH_REJECTED: "Dispatch rejected",
-  DISPATCH_EXECUTED: "Dispatch executed",
-  DISPATCH_STATUS_CHANGED: "Dispatch status updated",
+  DISPATCH_CREATED: "souls.events.DISPATCH_CREATED",
+  DISPATCH_APPROVED: "souls.events.DISPATCH_APPROVED",
+  DISPATCH_REJECTED: "souls.events.DISPATCH_REJECTED",
+  DISPATCH_EXECUTED: "souls.events.DISPATCH_EXECUTED",
+  DISPATCH_STATUS_CHANGED: "souls.events.DISPATCH_STATUS_CHANGED",
 
   // Death sync events
-  DEATH_SYNC_RECEIVED: "Death registration received",
-  DEATH_SYNC_PROCESSED: "Death registration processed",
+  DEATH_SYNC_RECEIVED: "souls.events.DEATH_SYNC_RECEIVED",
+  DEATH_SYNC_PROCESSED: "souls.events.DEATH_SYNC_PROCESSED",
 
   // Notification events
-  NOTIFICATION_CREATED: "New notification",
+  NOTIFICATION_CREATED: "events.realtime.NOTIFICATION_CREATED",
 
   // Social events
-  POST_CREATED: "New post",
-  POST_UPDATED: "Post updated",
-  POST_DELETED: "Post deleted",
-  COMMENT_CREATED: "New comment",
-  COMMENT_DELETED: "Comment deleted",
-  REACTION_ADDED: "Reaction added",
-  REACTION_REMOVED: "Reaction removed",
-  USER_FOLLOWED: "New follower",
-  USER_UNFOLLOWED: "Unfollowed",
+  POST_CREATED: "events.realtime.POST_CREATED",
+  POST_UPDATED: "events.realtime.POST_UPDATED",
+  POST_DELETED: "events.realtime.POST_DELETED",
+  COMMENT_CREATED: "events.realtime.COMMENT_CREATED",
+  COMMENT_DELETED: "events.realtime.COMMENT_DELETED",
+  REACTION_ADDED: "events.realtime.REACTION_ADDED",
+  REACTION_REMOVED: "events.realtime.REACTION_REMOVED",
+  USER_FOLLOWED: "events.realtime.USER_FOLLOWED",
+  USER_UNFOLLOWED: "events.realtime.USER_UNFOLLOWED",
 
   // Soul account events
-  SOUL_ACCOUNT_CREATED: "Soul account opened",
-  SOUL_ACCOUNT_RETIRED: "Soul account retired",
-  REBIRTH_APPLICATION_SUBMITTED: "Rebirth application submitted",
-  REBIRTH_STATUS_CHANGED: "Rebirth application updated",
-  REBIRTH_CROSS_CIV_DECIDED: "Cross-civilization rebirth decided",
-  COOLDOWN_SHORTENING_DECIDED: "Cooldown shortening decided",
+  SOUL_ACCOUNT_CREATED: "souls.events.SOUL_ACCOUNT_CREATED",
+  SOUL_ACCOUNT_RETIRED: "souls.events.SOUL_ACCOUNT_RETIRED",
+  REBIRTH_APPLICATION_SUBMITTED: "souls.events.REBIRTH_APPLICATION_SUBMITTED",
+  REBIRTH_STATUS_CHANGED: "souls.events.REBIRTH_STATUS_CHANGED",
+  REBIRTH_CROSS_CIV_DECIDED: "souls.events.REBIRTH_CROSS_CIV_DECIDED",
+  COOLDOWN_SHORTENING_DECIDED: "souls.events.COOLDOWN_SHORTENING_DECIDED",
 
   // Sentence plan events (受刑计划)
-  SENTENCE_PLAN_CREATED: "Sentence plan created",
-  SENTENCE_NODE_ACTIVATED: "Sentence node started",
-  SENTENCE_NODE_WAITING: "Sentence served, waiting for retrial",
-  SENTENCE_NODE_COMPLETED: "Sentence node completed",
-  SENTENCE_NODE_REFUSED: "Sentence dispatch refused",
-  SENTENCE_NODE_REDISPATCHED: "Sentence dispatch sent again",
-  SENTENCE_PLAN_AMENDED: "Sentence plan amended",
-  SENTENCE_REQUEST_CREATED: "Sentence plan request submitted",
-  SENTENCE_REQUEST_DECIDED: "Sentence plan request decided",
-  SENTENCE_PLAN_COMPLETED: "Sentence plan completed",
-  SENTENCE_PLAN_CANCELLED: "Sentence plan cancelled",
+  SENTENCE_PLAN_CREATED: "souls.events.SENTENCE_PLAN_CREATED",
+  SENTENCE_NODE_ACTIVATED: "souls.events.SENTENCE_NODE_ACTIVATED",
+  SENTENCE_NODE_WAITING: "souls.events.SENTENCE_NODE_WAITING",
+  SENTENCE_NODE_COMPLETED: "souls.events.SENTENCE_NODE_COMPLETED",
+  SENTENCE_NODE_REFUSED: "souls.events.SENTENCE_NODE_REFUSED",
+  SENTENCE_NODE_REDISPATCHED: "souls.events.SENTENCE_NODE_REDISPATCHED",
+  SENTENCE_PLAN_AMENDED: "souls.events.SENTENCE_PLAN_AMENDED",
+  SENTENCE_REQUEST_CREATED: "souls.events.SENTENCE_REQUEST_CREATED",
+  SENTENCE_REQUEST_DECIDED: "souls.events.SENTENCE_REQUEST_DECIDED",
+  SENTENCE_PLAN_COMPLETED: "souls.events.SENTENCE_PLAN_COMPLETED",
+  SENTENCE_PLAN_CANCELLED: "souls.events.SENTENCE_PLAN_CANCELLED",
 
   // Judgment appeal events (申诉)
-  JUDGMENT_APPEAL_FILED: "Appeal filed",
-  JUDGMENT_APPEAL_WITHDRAWN: "Appeal withdrawn",
-  JUDGMENT_APPEAL_DECIDED: "Appeal decided",
+  JUDGMENT_APPEAL_FILED: "souls.events.JUDGMENT_APPEAL_FILED",
+  JUDGMENT_APPEAL_WITHDRAWN: "souls.events.JUDGMENT_APPEAL_WITHDRAWN",
+  JUDGMENT_APPEAL_DECIDED: "souls.events.JUDGMENT_APPEAL_DECIDED",
 
   // City god events (城隍初审)
-  CITY_GOD_RECEIVED: "Received by the city god",
-  CITY_GOD_SENT_ON: "Sent on to the ten courts",
-  CITY_GOD_RETURNED: "Returned by the city god",
+  CITY_GOD_RECEIVED: "souls.events.CITY_GOD_RECEIVED",
+  CITY_GOD_SENT_ON: "souls.events.CITY_GOD_SENT_ON",
+  CITY_GOD_RETURNED: "souls.events.CITY_GOD_RETURNED",
 
   // Mengpo soup (孟婆汤)
-  MENGPO_SOUP_TAKEN: "Drank the soup of forgetting",
+  MENGPO_SOUP_TAKEN: "souls.events.MENGPO_SOUP_TAKEN",
 
   // Purgatory → heaven (欧洲, 2026-10-27)
-  PURGATORY_ASCENDED: "Rose from purgatory to heaven",
+  PURGATORY_ASCENDED: "souls.events.PURGATORY_ASCENDED",
 
   // Officer handover / Duat passage (2026-10-27)
-  OFFICER_HANDOVER: "Case handed to another officer",
-  DUAT_PASSAGE_CHANGED: "Duat passage changed",
+  OFFICER_HANDOVER: "souls.events.OFFICER_HANDOVER",
+  DUAT_PASSAGE_CHANGED: "souls.events.DUAT_PASSAGE_CHANGED",
 
   // Diyu thirteen stations / capture warrants (2026-10-28)
-  DIYU_STATION_CHANGED: "Moved to another station",
-  CAPTURE_WARRANT_ISSUED: "Capture warrant issued",
-  SOUL_CAPTURED: "Captured by the escorts",
-  CAPTURE_HANDED_OVER: "Capture handed over",
-  CAPTURE_WARRANT_CANCELLED: "Capture warrant cancelled",
+  DIYU_STATION_CHANGED: "souls.events.DIYU_STATION_CHANGED",
+  CAPTURE_WARRANT_ISSUED: "souls.events.CAPTURE_WARRANT_ISSUED",
+  SOUL_CAPTURED: "souls.events.SOUL_CAPTURED",
+  CAPTURE_HANDED_OVER: "souls.events.CAPTURE_HANDED_OVER",
+  CAPTURE_WARRANT_CANCELLED: "souls.events.CAPTURE_WARRANT_CANCELLED",
 
   // 枉死城 grievances (2026-10-28)
-  WANGSI_GRIEVANCE_FILED: "Grievance filed in the City of the Wrongfully Dead",
-  WANGSI_GRIEVANCE_UPHELD: "Grievance upheld · released early",
-  WANGSI_GRIEVANCE_REJECTED: "Grievance not upheld",
-  WANGSI_GRIEVANCE_DELIVERED: "Grievance upheld · delivered at the Lotus Terrace",
+  WANGSI_GRIEVANCE_FILED: "souls.events.WANGSI_GRIEVANCE_FILED",
+  WANGSI_GRIEVANCE_UPHELD: "souls.events.WANGSI_GRIEVANCE_UPHELD",
+  WANGSI_GRIEVANCE_REJECTED: "souls.events.WANGSI_GRIEVANCE_REJECTED",
+  WANGSI_GRIEVANCE_DELIVERED: "souls.events.WANGSI_GRIEVANCE_DELIVERED",
+
+  // Egyptian negative confession: one summary per full round (2026-10-29)
+  NEGATIVE_CONFESSION_HEARD: "Negative confession heard",
 
   // Scheduler events
-  SCHEDULER_RUN_FAILED: "Scheduled task run failed",
+  SCHEDULER_RUN_FAILED: "events.realtime.SCHEDULER_RUN_FAILED",
 };
+
+/** The event's label in the current locale; `fallbackKey` (or null) for a type with no row. */
+export function eventLabel(event: string, fallbackKey: string): string;
+export function eventLabel(event: string): string | null;
+export function eventLabel(event: string, fallbackKey?: string): string | null {
+  const key = EVENT_LABELS[event] ?? fallbackKey;
+  return key ? translate(key) : null;
+}
+
+/** `label — name`, or the label alone when the frame carried no name. */
+const withName = (label: string, name?: unknown) => (name ? `${label} — ${String(name)}` : label);
 
 // ── Pure Handler Functions ─────────────────────────────────────────────
 
 export function handleSoulCreated(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
-  const msg = `Soul created: ${payload.soul_name || ""}`;
+  const msg = withName(eventLabel("SOUL_CREATED", "souls.events.SOUL_CREATED"), payload.soul_name);
   ctx.showToast(msg, "info", 5000);
   return { success: true, invalidatedKeys: ["souls"], toastMessage: msg };
 }
@@ -209,9 +230,7 @@ export function handleWorkflowEvent(payload: WorkflowEventPayload, ctx: EventCon
     ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   }
 
-  const label = EVENT_LABELS[payload.event] || "Workflow update";
-  const soulName = payload.soul_name || "";
-  const toastMsg = soulName ? `${label} — ${soulName}` : label;
+  const toastMsg = withName(eventLabel(payload.event, "events.realtime.fallback_workflow"), payload.soul_name);
   const toastType: "success" | "error" | "info" = payload.event === "WORKFLOW_REJECTED" ? "error" : "info";
   ctx.showToast(toastMsg, toastType, 6000);
 
@@ -226,10 +245,12 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
   ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.all });
   ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
 
-  if (payload.notification) {
+  // 个人通知只弹给收件人本人。后端已只发收件人的用户组(2026-10-29 之前同殿每个官员都收到),
+  // 这里再按 user_id 对一次:不知道当前用户或对不上就不弹。
+  if (payload.notification && String(payload.notification.user_id) === ctx.currentUserId) {
     // 后端把各语言的渲染一起推来(`i18n`),按当前语言取;没有(旧通知、未分语言的类型)就用存下来的原文。
     const text = payload.notification.i18n?.[getLocale()];
-    const title = text?.title || payload.notification.title || "New notification";
+    const title = text?.title || payload.notification.title || translate("events.realtime.NOTIFICATION_CREATED");
     const message = text?.message ?? payload.notification.message ?? "";
     ctx.showToast(message ? `${title}: ${message}` : title, "info", 5000);
   }
@@ -243,9 +264,7 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
 export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: ["dispatch"] });
 
-  const label = EVENT_LABELS[payload.event] || "Dispatch update";
-  const soulName = payload.soul_name || "";
-  const toastMsg = soulName ? `${label} — ${soulName}` : label;
+  const toastMsg = withName(eventLabel(payload.event, "events.realtime.fallback_dispatch"), payload.soul_name);
   // `DISPATCH_CANCELLED` is not a registered event (see `event_registry.ts` —
   // the table has CREATED/APPROVED/REJECTED/EXECUTED/STATUS_CHANGED only, and
   // the backend never emits it either), so checking for it here was dead.
@@ -263,7 +282,7 @@ export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventCon
 export function handleDeathSyncEvent(payload: DeathSyncEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: ["death-sync"] });
 
-  const label = EVENT_LABELS[payload.event] || "Death sync update";
+  const label = eventLabel(payload.event, "events.realtime.fallback_death_sync");
   ctx.showToast(label, "info", 5000);
 
   return {
@@ -342,9 +361,10 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
     return { success: true, invalidatedKeys: invalidated };
   }
 
-  const label = EVENT_LABELS[payload.event] || "Social update";
-  const name = payload.author_name || payload.soul_name || "";
-  const toastMsg = name ? `${label} — ${name}` : label;
+  const toastMsg = withName(
+    eventLabel(payload.event, "events.realtime.fallback_social"),
+    payload.author_name || payload.soul_name
+  );
   ctx.showToast(toastMsg, "info", 4000);
 
   return {

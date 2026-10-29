@@ -15,8 +15,8 @@ import { CACHE_KEY, DETAIL_KEEP, cacheRead, cacheWrite, clearReadCache } from ".
 import { LetterImage } from "../screens/letterImages";
 import { Detail } from "../screens/detail";
 import { TodoTab } from "../screens/todo";
-import { SessionProvider, useSession } from "../session";
-import { httpError, renderOfficer } from "./harness";
+import { SessionProvider, USER_KEY, useSession } from "../session";
+import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockTodo = jest.fn();
 const mockItem = jest.fn();
@@ -449,5 +449,48 @@ describe("whose these are", () => {
     renderOfficer(<SessionProvider>{null}</SessionProvider>);
     act(() => platform().onUnauthorized());
     gone();
+  });
+
+  it("a start with no refresh token to resume clears what the last officer left (A7)", () => {
+    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, id: 41 }));
+    seed();
+    expect(cacheRead("list:todo")).not.toBeNull(); // there was something to clear
+    renderOfficer(<SessionProvider>{null}</SessionProvider>);
+    gone();
+    expect(platform().persistent.get(USER_KEY)).toBeNull();
+  });
+
+  describe("left behind by another officer (A7)", () => {
+    const as = (id: number) => platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, id }));
+    afterEach(() => platform().persistent.remove(USER_KEY));
+
+    it("the next officer reads none of it, and the queue is not sent under the next one's name", async () => {
+      as(41);
+      seed();
+      expect(outboxEntries()).toHaveLength(1);
+      as(42); // nothing cleared in between
+      expect(outboxEntries()).toEqual([]);
+      expect(readDraft("c-1")).toBe("");
+      expect(cacheRead("list:todo")).toBeNull();
+      expect(cacheRead("detail:letter:c-1")).toBeNull();
+      mockMessages.mockResolvedValue({ data: [] });
+      await act(async () => {
+        expect(await flushOutbox()).toBe(0);
+      });
+      expect(mockReply).not.toHaveBeenCalled();
+      // It is still the first officer's: back under that name it is all there.
+      as(41);
+      expect(outboxEntries().map((e) => e.id)).toEqual(["c-1"]);
+      expect(readDraft("c-1")).toBe("好");
+      expect(cacheRead("list:todo")).not.toBeNull();
+    });
+
+    it("a store written before owners existed (a bare list) is read as nobody's", () => {
+      platform().persistent.set(OUTBOX_KEY, JSON.stringify([{ id: "c-1", name: "李白", text: "好", seen: [], state: "queued" }]));
+      platform().persistent.set(DRAFTS_KEY, JSON.stringify([{ id: "c-1", text: "好" }]));
+      as(43); // a different owner from the snapshot's: the outbox is read again
+      expect(outboxEntries()).toEqual([]);
+      expect(readDraft("c-1")).toBe("");
+    });
   });
 });

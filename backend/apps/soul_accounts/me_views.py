@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from apps.core.idempotency import idempotent
 from apps.soul_accounts import mfa as soul_mfa
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
@@ -354,6 +355,7 @@ class MeRebirthApplicationsView(SoulAPIView):
 
     @extend_schema(request=RebirthApplicationCreateSerializer,
                    responses={201: MeRebirthApplicationSerializer, 400: SoulErrorSerializer, 409: SoulErrorSerializer})
+    @idempotent
     def post(self, request):
         body = RebirthApplicationCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
