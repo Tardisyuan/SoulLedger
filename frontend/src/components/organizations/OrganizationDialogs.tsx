@@ -287,7 +287,7 @@ export function OrganizationDeleteDialog({
             {movable && (
               <Button
                 type="button"
-                variant="danger"
+                variant="primary"
                 disabled={moveTo == null}
                 loading={del.isPending}
                 onClick={() => moveTo != null && del.mutate({ id: org.id, moveTo }, { onSuccess: close })}
