@@ -120,3 +120,6 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 .design-sync/pkg/.generated/
+
+# Claude Design HTML pulled for reference while porting; regenerable, not source.
+/design-cache/
