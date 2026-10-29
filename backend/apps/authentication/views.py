@@ -88,6 +88,7 @@ from .serializers import (
     UserRoleSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    default_officer_organization,
     email_already_registered,
     may_assign_role,
     reissue_for_device,
@@ -668,6 +669,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                             tenant=tenant,
                             display_name=display_name,
                             must_change_password=True,  # an admin chose it: the officer picks their own at first login
+                            organization=default_officer_organization(tenant, role, None),
                         )
                         created += 1
             except Exception as e:

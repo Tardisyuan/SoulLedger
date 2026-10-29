@@ -93,8 +93,11 @@ def validate(email, role, tenant, *, username=""):
 
 
 def create_invitee(email, role, tenant, *, username="", display_name=""):
+    from .serializers import default_officer_organization
+
     return User.objects.create_user(username=username or _free_username(email), email=email, password=None,
-                                    role=role, tenant=tenant, display_name=display_name)
+                                    role=role, tenant=tenant, display_name=display_name,
+                                    organization=default_officer_organization(tenant, role, None))
 
 
 def send_after_commit(user):

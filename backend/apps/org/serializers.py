@@ -28,6 +28,14 @@ class OrganizationSerializer(serializers.ModelSerializer):
         """A unit cannot sit under itself or under one of its own sub-units (the
         move form greys them out; this is the server's own refusal)."""
         parent = attrs.get("parent")
+        # 每殿只有一个根(org/0010 建):接口不建根,也不把机构挪成根(数据范围 B1)。根自己改名时 parent 仍为空。
+        becomes_root = parent is None and (
+            "parent" in attrs or self.instance is None
+        ) and (self.instance is None or self.instance.parent_id is not None)
+        if becomes_root:
+            raise serializers.ValidationError(
+                {"parent": serializers.ErrorDetail("A unit needs a parent unit; each hall has one root.", code="required")}
+            )
         if self.instance is not None and parent is not None:
             if parent.pk in {o.pk for o in self.instance.get_children_recursive()}:
                 raise serializers.ValidationError({"parent": "A unit cannot be moved under itself or its own sub-units."})

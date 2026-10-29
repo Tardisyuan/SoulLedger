@@ -33,11 +33,13 @@ export interface OrganizationInput {
   sort?: number;
 }
 
-/** 409 body of DELETE /organizations/{id}/ when the unit still has sub-units or people. */
+/** 409 body of DELETE /organizations/{id}/ when the unit still has sub-units, people, or owned souls / judgments. */
 export interface OrganizationNotEmpty {
   code: "not_empty";
   units: number;
   people: number;
+  souls?: number;
+  judgments?: number;
 }
 
 export function organizationNotEmptyOf(error: unknown): OrganizationNotEmpty | null {

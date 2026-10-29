@@ -239,6 +239,8 @@ const COLLECTED_FILES = [
   "TrendsPanel.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
+  // 数据范围 B1:接口不建根(新建 / 移动必须选上级),删除被名下灵魂 / 审判挡住时说出两个数。
+  "OrganizationDialogs.root.test.tsx",
   "PasswordChangeRequired.test.tsx",
   "UserDeleteDialog.test.tsx",
   // 2026-10-17 审计 1017 #3:编辑用户时设所属机构(只列同租户)与职务。

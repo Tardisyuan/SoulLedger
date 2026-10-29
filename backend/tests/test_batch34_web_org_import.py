@@ -23,11 +23,14 @@ def admin_client(api_client, cn_admin_user):
 
 @pytest.fixture
 def tree(cn_admin_user):
+    from apps.org.ownership import tenant_root
+
     t = cn_admin_user.tenant
-    root = Organization.objects.create(name="Root", code="B34_ROOT", category="CHINESE", tenant=t)
+    hall = tenant_root(t)  # 每殿一个活根(数据范围 B1):两棵子树都挂在殿根下
+    root = Organization.objects.create(name="Root", code="B34_ROOT", category="CHINESE", tenant=t, parent=hall)
     child = Organization.objects.create(name="Child", code="B34_CHILD", category="CHINESE", parent=root, tenant=t)
     leaf = Organization.objects.create(name="Leaf", code="B34_LEAF", category="CHINESE", parent=child, tenant=t)
-    other = Organization.objects.create(name="Other", code="B34_OTHER", category="CHINESE", tenant=t)
+    other = Organization.objects.create(name="Other", code="B34_OTHER", category="CHINESE", tenant=t, parent=hall)
     return root, child, leaf, other
 
 
@@ -57,7 +60,7 @@ class TestOrganizationWrites:
         root, child, leaf, other = tree
         res = admin_client.patch(f"/api/v1/organizations/{root.id}/", {"parent": other.id}, format="json")
         assert res.status_code == 200, res.data
-        assert [Organization.objects.get(pk=o.pk).level for o in (root, child, leaf)] == [1, 2, 3]
+        assert [Organization.objects.get(pk=o.pk).level for o in (root, child, leaf)] == [2, 3, 4]
 
     def test_cannot_move_under_own_descendant(self, admin_client, tree):
         root, _child, leaf, _other = tree

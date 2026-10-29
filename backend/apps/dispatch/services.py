@@ -468,7 +468,10 @@ class DispatchService:
             if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
                 raise ValueError("Soul is no longer held by the source tenant at its home")
             old_tenant = soul.tenant
+            source_owner_org_id = soul.owner_org_id
             soul.tenant = dispatch_record.target_tenant
+            from apps.org.ownership import tenant_root
+            soul.owner_org = tenant_root(dispatch_record.target_tenant)
             soul.save()
             # 行程拓扑:离开源租户里所在的那一站。指定了目标界域的,同一时刻进入那一站
             # (`enter` 关掉旧的、开新的,这一站记在目标租户);没指定的只记离开。受刑计划的
@@ -504,7 +507,9 @@ class DispatchService:
             # caller's in-memory row; `transition_to` locks the DB row, which
             # may have been cancelled meanwhile. Raising inside the atomic
             # block rolls the soul's tenant change back with it.
-            if not dispatch_record.transition_to(DispatchStatus.EXECUTED, executed_at=timezone.now()):
+            if not dispatch_record.transition_to(
+                DispatchStatus.EXECUTED, executed_at=timezone.now(), source_owner_org_id=source_owner_org_id,
+            ):
                 raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
 
         return dispatch_record
@@ -624,6 +629,12 @@ class DispatchService:
                 .order_by("-executed_at").first()
             )
             locked.tenant_id = locked.home_tenant_id
+            from apps.org.models import Organization
+            from apps.org.ownership import tenant_root
+            source = record.source_owner_org_id if record is not None else None
+            locked.owner_org = (
+                Organization.objects.filter(pk=source, tenant_id=locked.home_tenant_id).first() if source else None
+            ) or tenant_root(locked.home_tenant)
             locked.save()
             # 行程拓扑:离开暂居地的那一站(已随处置执行关掉时这里什么都不写)。
             from apps.realms.path import SoulPathService
