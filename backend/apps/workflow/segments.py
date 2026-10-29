@@ -714,21 +714,26 @@ def remind(workflow_id, order, user, request=None):
 
 
 def on_workflow_finished(workflow, status, end_reason=""):
-    """`ApprovalWorkflow._finish` 调:并入了跨域审判的流程走完 = 审判以 PASS 结束,被驳回 = FAIL(第 7 条规则)。
+    """`ApprovalWorkflow._finish` 调:挂着跨域审判的流程走完 = 审判以 PASS 结束,被驳回 = FAIL(第 7 条规则;没有外域段时只认走完)。
     同一事务。PASS 照跑参与方的站的校验(没填完就拒,决定回滚);FAIL 不查 —— 否决用不到那些站。"""
     if status not in (ApprovalWorkflowStatus.COMPLETED, ApprovalWorkflowStatus.REJECTED):
         return
     if end_reason == END_REASON_CANCELLED or workflow.judgment_id is None:
         return
-    if not workflow.segments.filter(order__gt=1).exists():
-        return
     from apps.dispatch.models import JudgmentStatus
     from apps.dispatch.services import CrossTenantJudgmentService
 
+    passed = status == ApprovalWorkflowStatus.COMPLETED
+    merged = workflow.segments.filter(order__gt=1).exists()
+    # 没有外域段(参与殿只有顾问席,或只有召集方;审查 rev-flow-engine 15,2026-10-29):原审走完(COMPLETED)同样从这里结联审;
+    # 被驳回不结,召集人照旧手动结 —— 没有外域段时驳回只是原审一殿的事。空席的 PROPOSED 结不了(`activate` 拒空席),留给召集人取消。
+    if not merged and not passed:
+        return
     cross = cross_of(workflow)
     if cross is None or cross.status not in (JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE):
         return
-    passed = status == ApprovalWorkflowStatus.COMPLETED
+    if not merged and cross.status == JudgmentStatus.PROPOSED and not cross.participants.exists():
+        return
     try:
         if cross.status == JudgmentStatus.PROPOSED:
             CrossTenantJudgmentService.activate(cross)

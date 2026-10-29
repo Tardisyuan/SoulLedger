@@ -48,7 +48,7 @@ import type {
 } from "./auth";
 import type { components } from "./generated/schema";
 import type { AppealCompensation } from "../domain/appeals";
-import { stampRequest } from "./requestStamp";
+import { requestIdOf, stampRequest } from "./requestStamp";
 
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
@@ -474,6 +474,9 @@ export const SOUL_ERROR_CODES = [
 export interface SoulErrorMessage {
   key: string;
   params?: Record<string, string>;
+  /** First 8 characters of the failed request's `X-Request-ID` (`requestIdOf`), when it had one: the app's error
+   *  screen prints it beside the code, so a reported failure can be found in the server logs (feat-ops 遗留 4). */
+  requestId?: string;
 }
 
 /** The HTTP status of a failed soul request; `null` when no response arrived (or not an HTTP error). */
@@ -498,6 +501,12 @@ export function soulErrorCode(error: unknown): string | null {
  *                                an unmapped value is shown, not swallowed
  */
 export function soulErrorMessage(error: unknown): SoulErrorMessage {
+  const message = classifySoulError(error);
+  const requestId = requestIdOf(error);
+  return requestId ? { ...message, requestId } : message;
+}
+
+function classifySoulError(error: unknown): SoulErrorMessage {
   if (!axios.isAxiosError(error)) {
     return { key: "soul_app.errors.unknown", params: { code: "client" } };
   }

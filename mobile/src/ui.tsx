@@ -1174,8 +1174,8 @@ export function ScreenError({
       ) : null}
       <Button kind="secondary" title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} />
       {onHome ? <Button testID="crash-home" kind="secondary" title={tr("soul_app.errors.go_home")} onPress={onHome} style={styles.home} /> : null}
-      <Txt variant="value" tone="subtle" style={styles.errorCode}>
-        {`${code} · ${clock}`}
+      <Txt testID="error-code" variant="value" tone="subtle" style={styles.errorCode}>
+        {`${code} · ${clock}${error.requestId ? ` · request ${error.requestId}` : ""}`}
       </Txt>
     </View>
   );

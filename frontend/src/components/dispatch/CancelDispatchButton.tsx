@@ -14,7 +14,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 /**
  * 「取消移交」:发起方在对方批准之前撤回自己的提案(2026-10-11 用户决定)。
  *
- * 只给能成功的人:这个提案**是本殿发起的**(或 ADMIN)、状态还是 PROPOSED、持有 `dispatch.manage`
+ * 只给能成功的人:这个提案**是本殿发起的**(或无殿 ADMIN)、状态还是 PROPOSED、持有 `dispatch.manage`
  * (与发起同一个码);其余一律什么都不渲染 —— 不显示禁用而没有说明的按钮。服务端再判一次:
  * 对方在这期间批准了,答 409 `not_cancellable`,这里说清「对方已经处理了」而不是笼统的失败。
  * 理由必填(按钮在输入框为空时不可点)。
@@ -39,7 +39,8 @@ export function CancelDispatchButton({
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
-  const ownHall = isAdmin || (!!user?.tenant?.code && user.tenant.code === dispatch.source_tenant_code);
+  // 无殿 ADMIN 才算任一殿(后端 `cancel` 看 `is_tenant_exempt`);绑殿 ADMIN 只在本殿发起的提案上有按钮。
+  const ownHall = (isAdmin && !user?.tenant) || (!!user?.tenant?.code && user.tenant.code === dispatch.source_tenant_code);
   if (dispatch.status !== "PROPOSED" || !ownHall || !hasPermission("dispatch.manage")) return null;
 
   const close = () => {

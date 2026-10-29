@@ -151,6 +151,16 @@ export const ROLES = [
   { id: 3, name: "GUARDIAN", display_name: "守卫", user_count: 4, member_count: 0, permission_count: 3, workflow_template_count: 1, is_builtin: false, version: 2, update_time: "2026-08-01T00:00:00Z" },
 ];
 
+/**
+ * Who the roles drawer's 「成员」 tab can list (`GET /perm/roles/{id}/members/`, UserManagementSerializer rows).
+ * `role` is the main role; the live `extra_roles` are `ApiMock.roleExtras`, so a grant or a removal through
+ * `POST /perm/roles/{id}/members/` shows on the refetch that follows.
+ */
+export const ROLE_MEMBER_USERS = [
+  { id: 1, username: "test_admin", email: "admin@soulledger.test", role: "ADMIN", tenant: TEST_USER.tenant, organization: null, is_active: true },
+  { id: 2, username: "test_judge", email: "judge@soulledger.test", role: "JUDGE", tenant: TEST_USER.tenant, organization: null, is_active: true },
+];
+
 /** `role_template_references()` — which template steps name a role as approver. */
 export const ROLE_REFERENCES: Record<string, { template_id: string; template_name: string; tenant_id: number; civilization: string; is_active: boolean; steps: { step_order: number; step_name: string }[] }[]> = {
   GUARDIAN: [
@@ -1256,6 +1266,9 @@ export class ApiMock {
     Object.entries(ROLE_GRANTS).map(([role, ids]) => [role, [...ids]])
   );
 
+  /** Live 兼任 per role name (user ids), for the roles drawer's 「成员」 tab. Nobody holds GUARDIAN at first. */
+  readonly roleExtras: Record<string, number[]> = {};
+
   /** The signed-in user's avatar URL, so a successful upload is visible on
    *  the next GET of the same profile — same live-state shape as
    *  `roleVersions` above. */
@@ -1603,6 +1616,38 @@ export class ApiMock {
       const templates = ROLE_REFERENCES[role.name] ?? [];
       if (templates.length) return { status: 400, body: { error: "referenced", code: "role_referenced_by_workflow_templates", templates } };
       return { status: 204, body: null };
+    });
+    // 角色抽屉的「成员」页签(apps/perm/members.py):主角色在前、兼任另标;授予 / 移除兼任改的是 `roleExtras`,
+    // 下一次 GET 读得到。主角色不能在这里移除 —— 同后端,400 `refused` 带每人一行。
+    this.on("GET", "/perm/roles/:id/members/", (call) => {
+      const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
+      if (!role) return { status: 404, body: { error: "Role not found" } };
+      const extras = this.roleExtras[role.name] ?? [];
+      const rows = ROLE_MEMBER_USERS.filter((u) => u.role === role.name || extras.includes(u.id))
+        .sort((a, b) => Number(b.role === role.name) - Number(a.role === role.name))
+        .map((u) => ({ ...u, extra_roles: Object.keys(this.roleExtras).filter((r) => this.roleExtras[r].includes(u.id)) }));
+      return { body: paginated(rows) };
+    });
+    this.on("POST", "/perm/roles/:id/members/", (call) => {
+      const role = ROLES.find((r) => r.id === Number(call.path.split("/")[3]));
+      if (!role) return { status: 404, body: { error: "Role not found" } };
+      const { action, kind, user_ids: ids = [] } = (call.body ?? {}) as { action: string; kind: string; user_ids: number[] };
+      const users = ids.map((id) => ROLE_MEMBER_USERS.find((u) => u.id === id));
+      const refusals = users.flatMap((u, i) =>
+        !u ? [{ user_id: ids[i], username: "", code: "not_found" }]
+          : action === "remove" && u.role === role.name ? [{ user_id: u.id, username: u.username, code: "primary_needs_replacement" }]
+          : []);
+      if (refusals.length || kind !== "extra") return { status: 400, body: { code: "refused", refusals } };
+      const held = this.roleExtras[role.name] ?? (this.roleExtras[role.name] = []);
+      let changed = 0;
+      for (const id of ids) {
+        const has = held.includes(id);
+        if (action === "add" && !has) held.push(id);
+        else if (action === "remove" && has) held.splice(held.indexOf(id), 1);
+        else continue;
+        changed += 1;
+      }
+      return { body: { changed, unchanged: ids.length - changed } };
     });
     // 角色抽屉的「数据范围」区(第六十二批 B6;后端接口在 B4 批)。不 mock 时落到默认的分页空页,
     // 形状不对 —— 2026-10-29 曾让整个抽屉渲染崩掉。

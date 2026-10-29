@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { organizationNotEmptyOf, type Organization, type OrganizationNotEmpty } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
@@ -9,9 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
 import { SelectField, TextField } from "@/src/components/ui/Field";
-import { flattenTree } from "@/src/components/ui/TreeRow";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
-import { cn } from "@/lib/utils";
 
 /**
  * 机构增删改(第三十四批 W-4)。新建、编辑、移动共用一张表单;移动不做拖拽,在表单里改上级。
@@ -36,96 +34,6 @@ export function selfAndDescendants(org: Organization, all: readonly Organization
     }
   }
   return out;
-}
-
-/**
- * 可搜索的树:自己和自己的下级置灰,「根」是第一项。搜索命中时保留命中项的祖先,树形不断。
- * 用户编辑弹层也用它选「所属机构」:那里第一项是 `noneLabel`(不属于任何机构)。
- */
-export function ParentPicker({
-  organizations,
-  value,
-  onChange,
-  disabledIds,
-  label,
-  noneLabel,
-}: {
-  organizations: readonly Organization[];
-  value: number | null;
-  onChange: (id: number | null) => void;
-  disabledIds: ReadonlySet<number>;
-  label: string;
-  noneLabel?: string;
-}) {
-  const { t } = useI18n();
-  const labelId = useId();
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-  const byId = new Map(organizations.map((o) => [o.id, o]));
-  let shown = [...organizations].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-  if (q) {
-    const keep = new Set<number>();
-    for (const o of organizations) {
-      if (o.name.toLowerCase().includes(q) || o.code.toLowerCase().includes(q)) {
-        for (let cur: Organization | undefined = o; cur && !keep.has(cur.id); cur = cur.parent != null ? byId.get(cur.parent) : undefined) {
-          keep.add(cur.id);
-        }
-      }
-    }
-    shown = shown.filter((o) => keep.has(o.id));
-  }
-  const rows = flattenTree(shown, (o) => o.id, (o) => o.parent);
-  const rowClass = "flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm";
-  return (
-    <div className="flex flex-col gap-1">
-      <span id={labelId} className="text-xs text-[oklch(var(--color-ink-muted))]">{label}</span>
-      <input
-        type="search"
-        aria-label={t("souls.search")}
-        placeholder={t("souls.search")}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="h-(--control-h-md) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 text-sm"
-      />
-      <div role="radiogroup" aria-labelledby={labelId} className="max-h-56 overflow-y-auto border border-[oklch(var(--color-line))]">
-        <button
-          type="button"
-          role="radio"
-          aria-checked={value === null}
-          onClick={() => onChange(null)}
-          className={cn(rowClass, value === null && "bg-[oklch(var(--color-surface-2))] font-semibold")}
-        >
-          <span aria-hidden="true">{value === null ? "●" : "○"}</span>
-          {noneLabel ?? t("organization.root")}
-        </button>
-        {rows.map(({ item: o, depth }) => {
-          const disabled = disabledIds.has(o.id);
-          const selected = value === o.id;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-disabled={disabled || undefined}
-              disabled={disabled}
-              onClick={() => onChange(o.id)}
-              style={{ paddingLeft: 12 + (depth + 1) * 16 }}
-              className={cn(
-                rowClass,
-                selected && "bg-[oklch(var(--color-surface-2))] font-semibold",
-                disabled && "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]",
-              )}
-            >
-              <span aria-hidden="true">{selected ? "●" : "○"}</span>
-              {o.name}
-              <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{o.code}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export function OrganizationFormDialog({
@@ -214,11 +122,14 @@ function OrganizationForm({
           options={CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: t(`organization.civilizations.${c}`) }))}
         />
         <TextField label={t("menus.order")} type="number" value={sort} onChange={(e) => setSort(e.target.value)} />
-        <ParentPicker
+        {/* 与其它机构选择同一个树选择(ds-b6-web 遗留):「根」是无上级那一项,自己和自己的下级置灰。 */}
+        <OrgTreeSelect
+          mode="single"
           label={t("org.form.parent")}
           organizations={organizations}
           value={parent}
           onChange={setParent}
+          noneLabel={t("organization.root")}
           disabledIds={disabledIds}
         />
         {editing && <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("org.form.parent_hint")}</p>}

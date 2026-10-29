@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
-from apps.realms.models import Realm, SoulPathEntry
+from apps.realms.models import RETIRED_REALM_CODES, Realm, SoulPathEntry
 
 #: 行程拓扑的列(云端报告 realm-path-fields(已移出仓库,存于项目记忆目录))。契约里的 parent_id / code /
 #: is_eternal 就是已有的 `parent_realm` / `realm_code` / `is_eternal`,不另起别名。
@@ -40,6 +40,12 @@ class RealmSerializer(FieldPermissionMixin, serializers.ModelSerializer):
 
 class RealmListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""
+    # 不再使用的界域(`RETIRED_REALM_CODES`,种子里标「不再使用」):管理页照常列出,各处选单据此不给选(审查 L,impl-flow 遗留 3)。
+    is_retired = serializers.SerializerMethodField()
+
+    def get_is_retired(self, obj) -> bool:
+        return obj.realm_code in RETIRED_REALM_CODES
+
     class Meta:
         model = Realm
         # parent_realm / is_eternal / 拓扑列:官员端画整张拓扑图读的是列表,不是逐个 detail。
@@ -48,7 +54,7 @@ class RealmListSerializer(serializers.ModelSerializer):
             "parent_realm", "is_eternal", *TOPOLOGY_FIELDS,
             # 三条结构化事实(官员端界域页「说明」展开行)。**不含 `description`**:那是写给维护者的
             # 英文出处笔记,不是产品文案 —— tests/test_realm_actor_api.py::TestRealmDescriptionStaysOffTheCard。
-            "memory_reset_mechanism", "cycle_limit", "is_judgment_required",
+            "memory_reset_mechanism", "cycle_limit", "is_judgment_required", "is_retired",
         ]
         extra_kwargs = _IS_ETERNAL_KWARGS
 

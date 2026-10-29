@@ -238,6 +238,14 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   // and a 403 is reported, not hidden; the codename gate only avoids offering
   // it to roles that never could.
   const isResiding = dispatch.status === "EXECUTED";
+  // 哪一方(rbac-web M-1):批准 / 驳回 / 执行只给目标殿,送回只给原属殿 —— 与 `dispatch/views.py` 的
+  // `_not_target_or_403`、`return_home` 同一判定;无殿 ADMIN 两边都算(后端 `is_tenant_exempt`),绑殿 ADMIN 不算。
+  // 原属殿用 `source_tenant_code`:暂居中的灵魂不能再被移交(`DispatchService.propose` 拒 `is_residing`),
+  // 所以执行中的那一条的发起殿就是灵魂的原属殿。
+  const anyHall = user?.role === "ADMIN" && !user?.tenant;
+  const hall = user?.tenant?.code;
+  const isTargetHall = anyHall || (!!hall && hall === dispatch.target_tenant_code);
+  const isHomeHall = anyHall || (!!hall && hall === dispatch.source_tenant_code);
   // STATUS_LABELS is real copy and beats the convention's generic
   // "unrecognized" wording, but the raw member is never the fallback (§4.6).
   const statusResolved = resolveEnumDisplay(t, "dispatch.states", dispatch.status);
@@ -359,12 +367,12 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                   <>
                     {/* 发起方撤回自己的提案(对方批准之前),次级按钮、排在动作区最左(mr-auto 与右侧主动作隔开,免得和它们挨着误点);不是本殿发起的、没有 dispatch.manage 时不渲染。 */}
                     <CancelDispatchButton dispatch={dispatch} triggerClassName="mr-auto" />
-                    {buttonOn("dispatch.reject") && <RequirePermission permissions="dispatch.reject">
+                    {isTargetHall && buttonOn("dispatch.reject") && <RequirePermission permissions="dispatch.reject">
                       <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}
                       </Button>
                     </RequirePermission>}
-                    {buttonOn("dispatch.approve") && <RequirePermission permissions="dispatch.approve">
+                    {isTargetHall && buttonOn("dispatch.approve") && <RequirePermission permissions="dispatch.approve">
                       {/* Was `approveMutation.mutate()` fired straight from the click,
                           while reject and execute — on this same page — each opened a
                           confirmation. Approving is the cross-tenant handover: it is
@@ -381,14 +389,14 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                     </RequirePermission>}
                   </>
                 )}
-                {isApproved && (
+                {isApproved && isTargetHall && (
                   <RequirePermission permissions="dispatch.execute">
                     <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
                       {t("dispatch.execute")}
                     </Button>
                   </RequirePermission>
                 )}
-                {isResiding && (
+                {isResiding && isHomeHall && (
                   <RequirePermission permissions="dispatch.return">
                     <Button type="button" variant="secondary" onClick={() => setShowReturnModal(true)}>
                       {t("dispatch.return_home")}

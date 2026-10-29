@@ -47,6 +47,11 @@ export interface NotificationEventPayload extends BaseEventPayload {
     /** 各语言的渲染,键是语言包代号(zh-Hans / en / egy);只有分语言的通知才有。 */
     i18n?: Record<string, { title: string; message: string }>;
   };
+  /* 扁平格式(`EventService.notify_user`,后端 `notification_handler.py` 两种都认):同几个字段直接在 payload 上。 */
+  user_id?: number;
+  title?: string;
+  message?: string;
+  i18n?: Record<string, { title: string; message: string }>;
 }
 
 export interface DispatchEventPayload extends BaseEventPayload {

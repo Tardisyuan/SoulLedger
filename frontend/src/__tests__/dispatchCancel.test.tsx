@@ -12,9 +12,9 @@ import { tZh } from "./support/zhBundle";
 jest.mock("@soulledger/core/api", () => ({ dispatchApi: { cancel: jest.fn() } }));
 const { dispatchApi } = jest.requireMock("@soulledger/core/api") as { dispatchApi: { cancel: jest.Mock } };
 
-let mockTenant = "CN_DIYU";
+let mockTenant: string | null = "CN_DIYU";
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, tenant: { code: mockTenant } } }),
+  useTenant: () => ({ user: { id: 1, tenant: mockTenant ? { code: mockTenant } : null } }),
 }));
 let mockHeld = new Set(["dispatch.manage"]);
 let mockAdmin = false;
@@ -104,13 +104,18 @@ describe("取消移交", () => {
     expect(trigger()).toBeNull();
   });
 
-  it("执行地(对方)看不到;ADMIN 看得到", () => {
+  it("执行地(对方)看不到,对方殿的绑殿 ADMIN 也看不到;无殿 ADMIN 看得到", () => {
     mockTenant = "EG_DUAT";
     const away = renderButton();
     expect(trigger()).toBeNull();
     away.unmount();
 
     mockAdmin = true;
+    const boundAdmin = renderButton();
+    expect(trigger()).toBeNull();
+    boundAdmin.unmount();
+
+    mockTenant = null;
     renderButton();
     expect(trigger()).not.toBeNull();
   });
