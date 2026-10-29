@@ -1288,6 +1288,9 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_numbers_run_per_prefix_and_year_without_gaps 每个引擎都跑。
         "tests/test_judgment_case_number.py::"
         "test_eight_cases_opened_at_once_get_eight_consecutive_numbers",
+        # 2026-10-29 数据范围 B2:范围过滤后的灵魂列表走 (tenant, owner_org) 索引。EXPLAIN 的计划与
+        # 统计只在 PostgreSQL 上有意义;同文件的五种范围断言每个引擎都跑。
+        "tests/test_data_scope_solver.py::test_the_scoped_soul_list_uses_the_tenant_owner_index",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

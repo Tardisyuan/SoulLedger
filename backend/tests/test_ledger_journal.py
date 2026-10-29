@@ -324,15 +324,16 @@ class TestExport:
 def test_rows_follow_the_data_scope_and_the_totals_stay_the_halls(api_client, judge_user, souls):
     """rbac-scope 第 10 条(本批只做一半):明细行与导出只给数据范围里的灵魂,不回显范围外的灵魂名;
     四柱、计数仍是本殿全部(数据范围的大改在后续批次)。"""
-    from apps.perm.models import Role, RowLevelDataScope
+    from tests.data_scope_support import org, scope
 
     a, b = souls
-    Soul.objects.filter(pk=a.pk).update(current_state=SoulState.JUDGING)
+    mine = org(a.tenant, "本司")
+    Soul.objects.filter(pk=a.pk).update(owner_org=mine)
+    Soul.objects.filter(pk=b.pk).update(owner_org=org(a.tenant, "他司"))
+    judge_user.organization = mine
+    judge_user.save(update_fields=["organization"])
     _login(api_client, judge_user, "ledger.read")
-    RowLevelDataScope.objects.create(
-        role=Role.objects.get_or_create(name="JUDGE")[0], model_name="soul", scope_type="READ",
-        filter_conditions={"current_state": SoulState.JUDGING}, is_active=True,
-    )
+    scope("JUDGE", "ORG")
     body = api_client.get(URL, {"month": "2026-06"}).json()
     assert {r["soul_name"] for r in body["results"]} == {"甲"}  # 乙不在范围里
     assert body["count"] == 1
