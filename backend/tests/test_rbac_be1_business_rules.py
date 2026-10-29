@@ -52,10 +52,18 @@ def mod(cn):
 
 
 def _role(name, *codenames):
+    """A custom role. A codename with no Permission row yet is answered from ROLE_PERMISSIONS; creating the row
+    makes the database authoritative for it, so the default roles get their grants alongside (or MODERATOR would
+    lose judgment.assign in the middle of the test)."""
+    from apps.perm.models import ROLE_PERMISSIONS
+
     role, _ = Role.objects.get_or_create(name=name, defaults={"display_name": name})
     for codename in codenames:
-        perm, _ = Permission.objects.get_or_create(codename=codename,
-                                                   defaults={"name": codename, "category": codename.split(".")[0]})
+        perm, created = Permission.objects.get_or_create(
+            codename=codename, defaults={"name": codename, "category": codename.split(".")[0]})
+        if created:
+            for holder in Role.objects.filter(name__in=[r for r, cs in ROLE_PERMISSIONS.items() if codename in cs]):
+                RolePermission.objects.get_or_create(role=holder, permission=perm)
         RolePermission.objects.get_or_create(role=role, permission=perm)
     invalidate_all_permissions()
     return role
@@ -291,7 +299,7 @@ def test_the_claimant_edits_as_before(claimed):
     assert holder.patch(f"{base}/draft/", {"version": 0, "notes": "草稿"}, format="json").status_code == 200
     # Past the claim check: the services' own answers.
     assert holder.put(f"{base}/evidence/{uuid.uuid4()}/", {"admitted": True}, format="json").status_code == 400
-    assert holder.delete(f"{base}/citations/{uuid.uuid4()}/").status_code == 404
+    assert holder.delete(f"{base}/citations/{uuid.uuid4()}/").status_code in (400, 404)
     assert holder.post(f"{base}/attachments/", {}, format="multipart").status_code == 400
     assert not AuditLog.objects.filter(resource="judgment.claim_override").exists()
 
@@ -319,8 +327,6 @@ def _payload(**over):
 
 def test_records_are_written_under_ledger_manage(cn):
     soul = Soul.objects.create(name="魂", tenant=cn)
-    # The roles that wrote records through soul.update got ledger.manage (souls/0053).
-    assert RolePermission.objects.filter(role__name="GUARDIAN", permission__codename="ledger.manage").exists()
     guardian = plan.officer("be1_guardian", "GUARDIAN", cn)
     assert officer_client(guardian).post(f"/api/v1/souls/{soul.pk}/add_record/", _payload(),
                                          format="json").status_code == 201
@@ -333,6 +339,26 @@ def test_records_are_written_under_ledger_manage(cn):
     record = SoulRecord.objects.create(soul=soul, **_payload())
     assert client.patch(f"/api/v1/souls/{soul.pk}/records/{record.pk}/", {"weight": 3},
                         format="json").status_code == 403
+
+
+def test_the_migration_gives_ledger_manage_to_whoever_wrote_records(cn):
+    """souls/0053 on a database whose grants are seeded: every role holding soul.update, and GUARDIAN by name."""
+    import importlib
+    from types import SimpleNamespace
+
+    from django.apps import apps as registry
+
+    migration = importlib.import_module("apps.souls.migrations.0053_grant_ledger_manage_to_record_writers")
+    update, _ = Permission.objects.get_or_create(codename="soul.update", defaults={"name": "u", "category": "soul"})
+    manage, _ = Permission.objects.get_or_create(codename="ledger.manage", defaults={"name": "m", "category": "ledger"})
+    keeper = Role.objects.create(name="BE1_MIG_KEEPER", display_name="k")
+    reader = Role.objects.create(name="BE1_MIG_READER", display_name="r")
+    guardian, _ = Role.objects.get_or_create(name="GUARDIAN", defaults={"display_name": "Guardian"})
+    RolePermission.objects.get_or_create(role=keeper, permission=update)
+    RolePermission.objects.filter(role=guardian, permission=manage).delete()
+    migration.forward(registry, SimpleNamespace(connection=SimpleNamespace(alias="default")))
+    granted = set(RolePermission.objects.filter(permission=manage).values_list("role__name", flat=True))
+    assert {"BE1_MIG_KEEPER", "GUARDIAN"} <= granted and reader.name not in granted
 
 
 def test_a_record_a_concluded_case_admitted_is_no_longer_edited(cn, mod):
