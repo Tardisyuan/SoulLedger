@@ -352,6 +352,15 @@ class CrossTenantJudgmentParticipantSerializer(serializers.ModelSerializer):
             "sentence_memory_reset", "sentence_notes", "sentence_submitted_at",
         ]
 
+    def to_representation(self, seat):
+        """决定 24(用户 2026-10-29):别殿那一席的量刑备注不给 —— 殿名、站、年数照给。召集殿与全局 ADMIN
+        看全部(与受刑计划同口径:备注就是计划里那一站的 reason,召集殿在计划上本来看得到)。"""
+        data = super().to_representation(seat)
+        viewer = viewer_tenant_id(self.context.get("request"))
+        if viewer is not SEE_ALL and viewer not in (seat.participant_tenant_id, seat.judgment.initiating_tenant_id):
+            data["sentence_notes"] = ""
+        return data
+
 
 class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
     """Serializer for CrossTenantJudgment.

@@ -572,6 +572,9 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
         # 决定 24(2026-10-29):别站的意见原文也不给 —— 节点 notes、会签各人的 notes、退回前的旧意见。
         data.update(approver=None, approver_username=None, approver_display_name=None, cosigners=[],
                     waiting_on_cosigner=None, notes="")
+        # 加减站 / 选站时那一殿的人写的跳站理由同样不给(用户 2026-10-29);规则跳过(无 skipped_by)的理由是规则原文,照给。
+        if node.skipped_by_id is not None:
+            data["skip_reason"] = ""
         data["signatures_json"] = [_foreign_signature(sig) for sig in data.get("signatures_json") or []]
         data["decision_history"] = [
             {**entry, "approver_id": None, "approver_name": None, "notes": "",
