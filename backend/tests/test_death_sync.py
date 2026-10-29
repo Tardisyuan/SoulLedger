@@ -358,6 +358,19 @@ class TestExternalApiKeyPermissions:
         assert resp.status_code == status.HTTP_201_CREATED
         assert ExternalApiKey.objects.filter(name="New Key", tenant=self.tenant).exists()
 
+    def test_a_hall_less_admin_is_asked_for_a_hall_not_a_500(self):
+        """RBAC 严查 2026-10-29 L3:无殿 ADMIN 没进殿时建 key 是 IntegrityError 500;现在 400 `no_tenant`。"""
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        root = User.objects.create_user(username="eakroot", password="test123", role="ADMIN", tenant=None)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(root).access_token}")
+        resp = client.post("/api/v1/death-sync/api-keys/",
+                           {"name": "Hall-less Key", "system_type": "HOSPITAL"}, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.status_code
+        assert resp.data["code"] == "no_tenant"
+        assert not ExternalApiKey.objects.filter(name="Hall-less Key").exists()
+
     def test_non_admin_role_forbidden(self):
         resp = self.viewer_client.get("/api/v1/death-sync/api-keys/")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
