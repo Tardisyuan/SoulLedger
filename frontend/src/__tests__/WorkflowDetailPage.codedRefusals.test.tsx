@@ -40,7 +40,7 @@ const WORKFLOW = {
   data: {
     id: "w1", workflow_name: "一站", case_type: "ROUTINE", soul: "s1", soul_name: "张三", priority: 0,
     status: "IN_PROGRESS", is_appeal: false, cross_civilization: false, created_at: "2026-10-29T00:00:00Z",
-    completed_at: null, judgment: null, current_node: "n1", current_node_detail: node, nodes: [node],
+    completed_at: null, judgment: null, current_node: "n1", current_node_detail: node, nodes: [node], can_approve: true,
     updated_at: "2026-10-29T00:00:00Z",
   },
 };
