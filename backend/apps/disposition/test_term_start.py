@@ -172,19 +172,19 @@ class TestTermStartWrites:
         )
         assert serializer.is_valid(), serializer.errors
 
-    def test_repointing_a_disposition_at_another_soul_is_checked(self):
-        """The contradiction can be created without the date moving at all —
-        the other half of the pair is what changed. A rule that only looks when
-        the date is written would not see this."""
+    def test_a_disposition_cannot_be_repointed_at_another_soul(self):
+        """Was `test_repointing_a_disposition_at_another_soul_is_checked`, which let the re-point through and
+        relied on the term-start rules to catch a contradiction. Since 2026-10-29 (rbac-be1 M3) the soul is fixed
+        once filed, contradiction or not; sending the same soul back is still fine."""
         dead = self._soul(death=(-402, 6, 1))
         disposition = self._write(dead, {"year": -399, "month": 2, "day": 15})
 
-        living = self._soul(state=SoulState.ALIVE, death=(None, None, None))
-        serializer = DispositionSerializer(
-            instance=disposition, data={"soul": str(living.id)}, partial=True
-        )
-        assert not serializer.is_valid()
-        assert "ALIVE" in str(serializer.errors)
+        for other in (self._soul(state=SoulState.ALIVE, death=(None, None, None)), self._soul(death=(-402, 6, 1))):
+            serializer = DispositionSerializer(instance=disposition, data={"soul": str(other.id)}, partial=True)
+            assert not serializer.is_valid()
+            assert serializer.errors["soul"][0].code == "disposition_fixed"
+        same = DispositionSerializer(instance=disposition, data={"soul": str(dead.id)}, partial=True)
+        assert same.is_valid(), same.errors
 
     def test_a_disposition_with_no_term_start_is_never_checked(self):
         """Every existing row is in this state, including on souls whose state

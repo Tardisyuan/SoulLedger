@@ -6,6 +6,8 @@
   那一件**退回待复核**(复核人清空,任何能复核的人都可以认领),在预览里单独计数。
 * 城隍名下的官员 —— 交出人从每位城隍的 `officers` 里移走,接手人加进去。
 * 经办的书信 —— 未关闭、经办人是交出人的会话改标给接手人;接手人要能回信(`soul_inbox.reply`,与「标给同僚」同一条规则)。
+  **操作人自己也要持 `soul_inbox.reply`**(用户 2026-10-29 第 22 条):`judgment.assign` 管案子,不管殿司收件箱;
+  没有这把码就只移交其余三类,书信留在交出人名下,响应的 `letters_kept` 写明留下了几封。
 
 预览(`preview`)只数,不写;提交(`commit`)在一个事务里重新按行锁读一遍再写 —— 预览之后已结案、已被别人改派的不再动。
 接手人不能办案而手上有审判 / 申诉,或不能回信而手上有书信,预览带 `problems`,提交 409 `handover_blocked`。
@@ -61,7 +63,14 @@ def _target_takes_appeal(appeal, target, can_judge) -> bool:
     return can_judge and target.pk not in original_officers(Judgment.all_objects.get(pk=appeal.judgment_id))
 
 
-def preview(source, target, tenant_id) -> dict:
+def actor_moves_letters(actor) -> bool:
+    """操作人能不能顺带移交书信(第 22 条)。`actor` 为 None(只数件数的调用方)按能算。"""
+    from apps.perm.checker import check_permission
+
+    return actor is None or check_permission(actor, LETTER_PERMISSION)
+
+
+def preview(source, target, tenant_id, actor=None) -> dict:
     """`target` 为 None:只数件数(没有接手人就没有「退回待复核池」与 problems)。"""
     if target is not None:
         _assert_people(source, target, tenant_id)
@@ -71,12 +80,14 @@ def preview(source, target, tenant_id) -> dict:
     appeals = list(_open_appeals(source, tenant_id))
     returned = 0 if target is None else sum(1 for a in appeals if not _target_takes_appeal(a, target, can_judge))
     letters = _letters(source, tenant_id).count()
+    kept = 0 if actor_moves_letters(actor) else letters
+    letters -= kept
     problems = []
     if target is not None and judgments and not can_judge:
         problems.append("target_cannot_judge")
     if target is not None and letters and not can_reply:
         problems.append("target_cannot_reply")
-    return {
+    summary = {
         "judgments": judgments,
         "appeals": len(appeals) - returned,
         "appeals_returned_to_pool": returned,
@@ -84,6 +95,9 @@ def preview(source, target, tenant_id) -> dict:
         "letters": letters,
         "problems": problems,
     }
+    if actor is not None:
+        summary["letters_kept"] = kept
+    return summary
 
 
 def commit(source, target, tenant_id, *, actor, request=None) -> dict:
@@ -91,7 +105,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
     from apps.core.client_ip import get_client_ip
 
     _assert_people(source, target, tenant_id)  # 预览可以没有接手人,提交不行
-    summary = preview(source, target, tenant_id)
+    summary = preview(source, target, tenant_id, actor)
     if summary["problems"]:
         raise HandoverRefusedError("The receiving officer cannot take everything.", "handover_blocked",
                                    problems=summary["problems"])
@@ -124,7 +138,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
             god.officers.add(target)
             moved["city_gods"].append(str(god.pk))
 
-        letters = list(_letters(source, tenant_id).select_for_update(of=("self",)))
+        letters = list(_letters(source, tenant_id).select_for_update(of=("self",))) if actor_moves_letters(actor) else []
         for conversation in letters:
             conversation.assignee, conversation.assigned_at = target, now
             conversation.save(update_fields=["assignee", "assigned_at"])
@@ -140,6 +154,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
         )
         _notify_after_commit(target, actor, source, moved)
     counts = {k: len(v) for k, v in moved.items()}
+    counts["letters_kept"] = summary["letters_kept"]
     return counts
 
 
