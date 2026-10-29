@@ -120,7 +120,7 @@ def test_a_real_import_leaves_one_summary_audit_row_and_a_dry_run_none(world):
     assert all(r.user_id == world["admin"].pk and r.resource == "permission_config" for r in rows)
     overwrite = rows[1].changes
     assert set(overwrite) == {"mode", "created", "skipped", "updated", "removed"}
-    assert overwrite["removed"]["total"] == overwrite["removed"]["role_permissions"] + overwrite["removed"]["field_permissions"] + overwrite["removed"]["data_scopes"]
+    assert overwrite["removed"]["total"] == overwrite["removed"]["role_permissions"] + overwrite["removed"]["field_permissions"] + overwrite["removed"]["role_data_scopes"]
 
 
 @pytest.mark.django_db

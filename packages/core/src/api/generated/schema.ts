@@ -6439,6 +6439,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perm/data-scope/resources/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_perm_data_scope_resources_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perm/export/": {
         parameters: {
             query?: never;
@@ -6744,10 +6760,26 @@ export interface paths {
          *     Copies the source's RolePermission rows — permission, `conditions` and
          *     `data_scope` — i.e. what the matrix shows for it, and (maintainer decision,
          *     2026-09-25) its FieldPermission and RowLevelDataScope rows, so a copy sees
-         *     the same fields and rows the source does. Not copied: `parent`, and ADMIN's
+         *     the same fields and rows the source does — and its RoleDataScope rows (数据范围 B4). Not copied: `parent`, and ADMIN's
          *     short-circuit (a copy of ADMIN gets ADMIN's ticks, not ADMIN's bypass).
          */
         post: operations["v1_perm_roles_copy_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perm/roles/{id}/data-scope/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_perm_roles_data_scope_retrieve"];
+        put: operations["v1_perm_roles_data_scope_update"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12066,6 +12098,28 @@ export interface components {
             username: string;
             password: string;
         };
+        /**
+         * @description * `ALL` - 全部
+         *     * `ORG_CHILD` - 本机构及下级
+         *     * `ORG` - 本机构
+         *     * `SELF` - 仅本人
+         *     * `DEFINE` - 自定义机构
+         * @enum {string}
+         */
+        DataScopeEnum: "ALL" | "ORG_CHILD" | "ORG" | "SELF" | "DEFINE";
+        DataScopeOverride: {
+            scope: components["schemas"]["DataScopeEnum"];
+            orgs?: number[];
+            resource: components["schemas"]["ResourceEnum"];
+        };
+        DataScopeResource: {
+            key: string;
+            label: string;
+        };
+        DataScopeRule: {
+            scope: components["schemas"]["DataScopeEnum"];
+            orgs?: number[];
+        };
         /** @description `GET /death-sync/register/{id}/progress/`:只有阶段,没有裁决与批语(`services.progress_of`)。 */
         DeathRegistrationProgress: {
             /** Format: uuid */
@@ -12889,15 +12943,6 @@ export interface components {
          * @enum {string}
          */
         EvidenceSourceEnum: "REGISTRY" | "WITNESS" | "SELF_ACCOUNT" | "OTHER";
-        ExportedDataScope: {
-            role: string;
-            civilization?: string | null;
-            model_name: string;
-            filter_conditions?: unknown;
-            scope_type: string;
-            priority?: number;
-            is_active?: boolean;
-        };
         ExportedFieldPermission: {
             role: string;
             model_name: string;
@@ -12916,6 +12961,14 @@ export interface components {
             display_name: string;
             description?: string;
             scope?: string;
+        };
+        /** @description One RoleDataScope row (数据范围 B4). `resource` "" is the role's default; `orgs` are org codes. */
+        ExportedRoleDataScope: {
+            role: string;
+            /** @default  */
+            resource: string;
+            scope: string;
+            orgs?: string[];
         };
         ExportedRolePermission: {
             role: string;
@@ -17735,13 +17788,13 @@ export interface components {
             roles: components["schemas"]["ExportedRole"][];
             role_permissions: components["schemas"]["ExportedRolePermission"][];
             field_permissions: components["schemas"]["ExportedFieldPermission"][];
-            data_scopes: components["schemas"]["ExportedDataScope"][];
+            role_data_scopes: components["schemas"]["ExportedRoleDataScope"][];
         };
         /** @description Entries an overwrite leaves gone: existed before, absent after the rebuild from the file. */
         PermissionImportRemoved: {
             role_permissions: number;
             field_permissions: number;
-            data_scopes: number;
+            role_data_scopes: number;
             total: number;
         };
         /**
@@ -17764,7 +17817,7 @@ export interface components {
             roles?: components["schemas"]["ExportedRole"][];
             role_permissions?: components["schemas"]["ExportedRolePermission"][];
             field_permissions?: components["schemas"]["ExportedFieldPermission"][];
-            data_scopes?: components["schemas"]["ExportedDataScope"][];
+            role_data_scopes?: components["schemas"]["ExportedRoleDataScope"][];
             /** @default false */
             overwrite: boolean;
             /** @default false */
@@ -17791,25 +17844,26 @@ export interface components {
          *     * `admin_only` - admin_only
          *     * `role_forbidden` - role_forbidden
          *     * `unknown_reference` - unknown_reference
+         *     * `invalid` - invalid
          * @enum {string}
          */
-        PermissionImportSkippedReasonEnum: "already_exists" | "admin_only" | "role_forbidden" | "unknown_reference";
+        PermissionImportSkippedReasonEnum: "already_exists" | "admin_only" | "role_forbidden" | "unknown_reference" | "invalid";
         /**
          * @description * `permissions` - permissions
          *     * `roles` - roles
          *     * `role_permissions` - role_permissions
          *     * `field_permissions` - field_permissions
-         *     * `data_scopes` - data_scopes
+         *     * `role_data_scopes` - role_data_scopes
          * @enum {string}
          */
-        PermissionImportSkippedSectionEnum: "permissions" | "roles" | "role_permissions" | "field_permissions" | "data_scopes";
+        PermissionImportSkippedSectionEnum: "permissions" | "roles" | "role_permissions" | "field_permissions" | "role_data_scopes";
         /** @description Per table: rows created and rows skipped. A merge never updates or removes. */
         PermissionImportStats: {
             permissions: components["schemas"]["PermissionImportSectionStats"];
             roles: components["schemas"]["PermissionImportSectionStats"];
             role_permissions: components["schemas"]["PermissionImportSectionStats"];
             field_permissions: components["schemas"]["PermissionImportSectionStats"];
-            data_scopes: components["schemas"]["PermissionImportSectionStats"];
+            role_data_scopes: components["schemas"]["PermissionImportSectionStats"];
             skipped_details: components["schemas"]["PermissionImportSkipped"][];
             /** @description Overwrite only (0 for a merge): roles whose name / description the file replaced, plus surviving grants, field rules and scopes whose content differs. */
             updated: number;
@@ -18672,6 +18726,20 @@ export interface components {
             note: string;
             mute_days?: number | null;
         };
+        /**
+         * @description * `soul` - soul
+         *     * `judgment` - judgment
+         *     * `disposition` - disposition
+         *     * `reincarnation` - reincarnation
+         *     * `soul_event` - soul_event
+         *     * `capture` - capture
+         *     * `appeal` - appeal
+         *     * `workflow` - workflow
+         *     * `user` - user
+         *     * `org` - org
+         * @enum {string}
+         */
+        ResourceEnum: "soul" | "judgment" | "disposition" | "reincarnation" | "soul_event" | "capture" | "appeal" | "workflow" | "user" | "org";
         RevealedCredential: {
             soul_code: string;
             password: string;
@@ -18724,6 +18792,10 @@ export interface components {
             scope?: components["schemas"]["ScopeEnum"];
             /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
             organization?: number | null;
+        };
+        RoleDataScopeConfig: {
+            default: components["schemas"]["DataScopeRule"];
+            overrides?: components["schemas"]["DataScopeOverride"][];
         };
         /**
          * @description 400 body of `DELETE /perm/roles/<pk>/`. `user_count` comes with
@@ -33953,6 +34025,25 @@ export interface operations {
             };
         };
     };
+    v1_perm_data_scope_resources_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataScopeResource"][];
+                };
+            };
+        };
+    };
     v1_perm_export_retrieve: {
         parameters: {
             query?: never;
@@ -34469,6 +34560,78 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    v1_perm_roles_data_scope_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDataScopeConfig"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    v1_perm_roles_data_scope_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleDataScopeConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleDataScopeConfig"];
+                "multipart/form-data": components["schemas"]["RoleDataScopeConfig"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDataScopeConfig"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             404: {

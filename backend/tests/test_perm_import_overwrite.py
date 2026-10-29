@@ -18,7 +18,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.audit.models import AuditAction, AuditLog
 from apps.authentication.models import User
 from apps.perm.export import import_permissions
-from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
+from apps.perm.models import FieldPermission, Permission, Role, RoleDataScope, RolePermission
 from apps.tenants.models import Tenant
 
 IMPORT = "/api/v1/perm/import/"
@@ -44,7 +44,7 @@ def world(db):
     # Migrations seed roles and grants; start from a known table instead of counting on them.
     RolePermission.objects.all().delete()
     FieldPermission.objects.all().delete()
-    RowLevelDataScope.objects.all().delete()
+    RoleDataScope.objects.all().delete()
     admin_role, _ = Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "Admin"})
     judge, _ = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
     Role.objects.filter(pk=judge.pk).update(description="old", display_name="Judge")
@@ -59,8 +59,8 @@ def world(db):
     RolePermission.objects.create(role=mod, permission=perms["soul.read"])
     for f in ("name", "birth_name", "description"):
         FieldPermission.objects.create(role=judge, model_name="soul", field_name=f)
-    RowLevelDataScope.objects.create(role=judge, model_name="soul", scope_type="READ")
-    RowLevelDataScope.objects.create(role=admin_role, model_name="soul", scope_type="READ")
+    RoleDataScope.objects.create(role=judge, resource="", scope="ORG")
+    RoleDataScope.objects.create(role=admin_role, resource="", scope="ORG")  # not via the API; a stray row
     FieldPermission.objects.create(role=admin_role, model_name="soul", field_name="name")
     admin = User.objects.create_user(username="ow_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     return {"tenant": tenant, "admin": admin, "judge": judge, "admin_role": admin_role}
@@ -77,12 +77,12 @@ FILE = {
         {"role": "JUDGE", "permission": "system.settings", "conditions": {}},       # new
     ],
     "field_permissions": [{"role": "JUDGE", "model_name": "soul", "field_name": "name"}],  # kept, same
-    "data_scopes": [],
+    "role_data_scopes": [],
 }
 
 
 def _counts():
-    return (RolePermission.objects.count(), FieldPermission.objects.count(), RowLevelDataScope.objects.count())
+    return (RolePermission.objects.count(), FieldPermission.objects.count(), RoleDataScope.objects.count())
 
 
 def test_removed_is_what_the_file_does_not_have_not_what_was_deleted_first(world):
@@ -90,20 +90,20 @@ def test_removed_is_what_the_file_does_not_have_not_what_was_deleted_first(world
     deleted_first = (
         RolePermission.objects.exclude(role__name="ADMIN").count()
         + FieldPermission.objects.count()
-        + RowLevelDataScope.objects.count()
+        + RoleDataScope.objects.count()
     )
     stats = import_permissions(FILE, overwrite=True, dry_run=True)
 
     # judge: write + judgment.read; moderator: read -> 3 grants. fields: birth_name, description -> 2.
     # scopes: the JUDGE one and ADMIN's own (no file row for either) -> 2.
-    assert stats["removed"] == {"role_permissions": 3, "field_permissions": 3, "data_scopes": 2, "total": 8}
+    assert stats["removed"] == {"role_permissions": 3, "field_permissions": 3, "role_data_scopes": 2, "total": 8}
     # The ADMIN field rule is deleted too (overwrite wipes every field rule); the file lacks it.
     assert deleted_first == 10  # 4 non-ADMIN grants + 4 field rules + 2 scopes
     assert stats["removed"]["total"] < deleted_first, "the kept entries are rebuilt, not lost"
     # Net created: only the one entry that did not exist before. Rebuilt entries are not 'created'.
     assert stats["role_permissions"]["created"] == 1
     assert stats["field_permissions"]["created"] == 0
-    assert stats["data_scopes"]["created"] == 0
+    assert stats["role_data_scopes"]["created"] == 0
     # Updated: the role's description + the grant whose conditions differ. The unchanged field rule is not.
     assert stats["updated"] == 2
     assert _counts() == before, "a dry run leaves no row"
@@ -111,7 +111,7 @@ def test_removed_is_what_the_file_does_not_have_not_what_was_deleted_first(world
 
 def test_a_merge_removes_and_updates_nothing(world):
     stats = import_permissions(FILE, overwrite=False, dry_run=True)
-    assert stats["removed"] == {"role_permissions": 0, "field_permissions": 0, "data_scopes": 0, "total": 0}
+    assert stats["removed"] == {"role_permissions": 0, "field_permissions": 0, "role_data_scopes": 0, "total": 0}
     assert stats["updated"] == 0
     assert stats["removes_own_permissions"] is False
 
@@ -129,7 +129,7 @@ def test_the_dry_run_and_the_real_overwrite_agree_and_the_rows_match_the_file(wo
     assert sorted(RolePermission.objects.filter(role__name="JUDGE").values_list("permission__codename", flat=True)) == [
         "soul.read", "system.settings",
     ]
-    assert not RowLevelDataScope.objects.exists()
+    assert not RoleDataScope.objects.exists()
     assert list(FieldPermission.objects.values_list("field_name", flat=True)) == ["name"]
 
 
@@ -182,7 +182,7 @@ def test_an_admin_never_removes_its_own_permissions_even_when_admin_field_and_sc
     # ADMIN's field rule and data scope ARE removed (the file has none)...
     stats = import_permissions({"roles": [{"name": "ADMIN", "display_name": "Admin"}]}, overwrite=True,
                                dry_run=True, user=world["admin"])
-    assert stats["removed"]["field_permissions"] >= 1 and stats["removed"]["data_scopes"] >= 1
+    assert stats["removed"]["field_permissions"] >= 1 and stats["removed"]["role_data_scopes"] >= 1
     # ...but ADMIN bypasses grants, field rules and scopes, so none of them is "its own".
     assert stats["removes_own_permissions"] is False
 
@@ -218,7 +218,7 @@ def test_through_the_api_an_admin_gets_false(world):
 
 def _counts():
     return (RolePermission.objects.count(), FieldPermission.objects.count(),
-            RowLevelDataScope.objects.count(), AuditLog.objects.count())
+            RoleDataScope.objects.count(), AuditLog.objects.count())
 
 
 @pytest.mark.parametrize("dry_run", [False, True])
