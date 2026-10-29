@@ -26,7 +26,7 @@ jest.mock("@soulledger/core/api/auth", () => ({
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
 
-const auth = LocalAuthentication as unknown as { __state: { level: number; success: boolean; types: number[] } };
+const auth = LocalAuthentication as unknown as { __state: { level: number; success: boolean; types: number[]; error: string } };
 const authenticate = LocalAuthentication.authenticateAsync as jest.Mock;
 
 const detailOf = (kind: string) => ({ kind, id: "x-1", title: "案卷", created_at: "2026-10-09T01:00:00Z", actionable: true, state: "actionable", workflow_id: "wf-1", node_id: "n-1" }) as never;
@@ -38,6 +38,7 @@ beforeEach(() => {
   auth.__state.level = 1;
   auth.__state.success = true;
   auth.__state.types = [2];
+  auth.__state.error = "authentication_failed";
   platform().persistent.remove(confirmKey());
   mockSubmit.mockResolvedValue(undefined);
 });
@@ -117,6 +118,17 @@ describe("a check that does not pass", () => {
     expect(screen.queryByText(FAILED_REJECT)).toBeNull();
   });
 
+  it("a cancelled check says 已取消, not 没有认出, and sends nothing (phone QA 10-29b)", async () => {
+    auth.__state.success = false;
+    auth.__state.error = "user_cancel";
+    const { onClose } = sheet("approval", "approve");
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    expect(await screen.findByText("已取消，还没提交。再点一次确认重试。")).toBeTruthy();
+    expect(screen.queryByText(FAILED_APPROVE)).toBeNull();
+    expect(mockSubmit).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("an empty reason is flagged before the system is asked", async () => {
     sheet("approval", "reject");
     fireEvent.press(screen.getByTestId("decision-confirm"));
@@ -187,6 +199,21 @@ describe("the switch on 我的", () => {
     expect(platform().persistent.get(confirmKey())).toBeNull();
     expect(screen.getByTestId("me-confirm-bio")).toHaveTextContent(/✓/);
     expect(screen.getByText("没有认出面容，这项仍然开着。")).toBeTruthy();
+    expect(screen.queryByText("已取消，这项仍然开着。")).toBeNull();
+  });
+
+  it("stays on and says 已取消 (not 没有认出) when the check is cancelled (phone QA 10-29b)", async () => {
+    auth.__state.success = false;
+    auth.__state.error = "user_cancel";
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    const row = await screen.findByTestId("me-confirm-bio");
+    await act(async () => {
+      fireEvent.press(row);
+    });
+    expect(platform().persistent.get(confirmKey())).toBeNull();
+    expect(screen.getByTestId("me-confirm-bio")).toHaveTextContent(/✓/);
+    expect(screen.getByText("已取消，这项仍然开着。")).toBeTruthy();
+    expect(screen.queryByText("没有认出面容，这项仍然开着。")).toBeNull();
   });
 
   it("is each officer's own: one turning it off leaves it on for the next", async () => {

@@ -7132,7 +7132,10 @@
       "failed_reject": "没有认出{{bio}}，还没驳回。再点一次确认重试。",
       "prompt": "批准或驳回前，确认是你本人。",
       "prompt_off": "关掉这项前，确认是你本人。",
-      "off_failed": "没有认出{{bio}}，这项仍然开着。"
+      "off_failed": "没有认出{{bio}}，这项仍然开着。",
+      "off_cancelled": "已取消，这项仍然开着。",
+      "cancelled": "已取消，还没提交。再点一次确认重试。",
+      "failed_any": "没有认出{{bio}}，还没提交。再点一次确认重试。"
     },
     "update_required": {
       "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
@@ -7306,6 +7309,7 @@
       "push_off": "已关闭",
       "push_note": "锁屏只写有几件待办。",
       "push_denied": "系统已关闭通知。请先在系统设置里放行。",
+      "push_unanswered": "通知还没打开。系统询问时选「允许」，再点一次。",
       "push_unavailable": "推送暂未启用。",
       "push_failed": "没能开启推送，稍后再试。",
       "about": "关于",

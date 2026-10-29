@@ -7132,7 +7132,10 @@
       "failed_reject": "{{bio}} not recognised. Not rejected yet. Tap Confirm to try again.",
       "prompt": "Confirm it is you before approving or rejecting.",
       "prompt_off": "Confirm it is you before turning this off.",
-      "off_failed": "{{bio}} not recognised. This is still on."
+      "off_failed": "{{bio}} not recognised. This is still on.",
+      "off_cancelled": "Cancelled. This is still on.",
+      "cancelled": "Cancelled. Nothing was sent. Tap Confirm to try again.",
+      "failed_any": "{{bio}} not recognised. Nothing was sent. Tap Confirm to try again."
     },
     "update_required": {
       "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
@@ -7306,6 +7309,7 @@
       "push_off": "Off",
       "push_note": "The lock screen shows only a count.",
       "push_denied": "Notifications are off in system settings.",
+      "push_unanswered": "Notifications are not on yet. Choose Allow when the system asks, then tap again.",
       "push_unavailable": "Push isn't available in this build.",
       "push_failed": "Couldn't turn push on. Try again later.",
       "about": "About",

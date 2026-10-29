@@ -52,21 +52,54 @@ export function useBioWord(): { start: string; inside: string } {
 export const confirmWished = () => platform().persistent.get(confirmKey()) !== "0";
 export const setConfirmWished = (on: boolean) => (on ? platform().persistent.remove(confirmKey()) : platform().persistent.set(confirmKey(), "0"));
 
-/** The system check itself: true only when it passed (a cancel or an error is a no). */
-export async function deviceConfirms(promptMessage: string): Promise<boolean> {
+/**
+ * The system check itself: `ok` only when it passed. A check the officer (or the system) cancelled is `cancelled`;
+ * anything else -- not recognised, locked out, an error -- is `failed`. The screens say which (phone QA 10-29b:
+ * cancelling the prompt was reported as 没有认出指纹).
+ */
+export type CheckResult = "ok" | "cancelled" | "failed";
+const CANCELS = new Set(["user_cancel", "system_cancel", "app_cancel"]);
+export async function deviceCheck(promptMessage: string): Promise<CheckResult> {
   try {
-    return (await LocalAuthentication.authenticateAsync({ promptMessage })).success;
+    const r = await LocalAuthentication.authenticateAsync({ promptMessage });
+    if (r.success) return "ok";
+    return CANCELS.has(r.error) ? "cancelled" : "failed";
   } catch {
-    return false;
+    return "failed";
   }
 }
 
 /**
- * True when the decision may go ahead: the switch is off, the phone cannot check, or the system check passed.
+ * `ok` when the decision may go ahead: the switch is off, the phone cannot check, or the system check passed.
  * `promptMessage` is the reason the system shows with its check, in the app's language
  * (`officer_app.biometric.prompt`) — it was a fixed Chinese string, shown to an English-language officer too.
  */
-export async function decisionAllowed(promptMessage: string): Promise<boolean> {
-  if (!confirmWished() || !(await canCheck())) return true;
-  return deviceConfirms(promptMessage);
+export async function decisionAllowed(promptMessage: string): Promise<CheckResult> {
+  if (!confirmWished() || !(await canCheck())) return "ok";
+  return deviceCheck(promptMessage);
+}
+
+/** What `confirmedDecision` throws when the check did not pass: nothing was sent. */
+export class NotConfirmed extends Error {
+  constructor(readonly result: "cancelled" | "failed") {
+    super(`device check ${result}`);
+  }
+}
+
+/**
+ * Every decision a screen sends -- approve / reject, a wangsi conclusion, a release, a city god send-on or return --
+ * goes through here, so the switch on 我的 covers all of them (phone QA 10-29b: the wangsi review and both releases
+ * skipped it). `decisionsAreChecked.test.ts` fails a screen that calls one of those APIs any other way.
+ * Comments, co-sign opinions, claims and deferrals are not decisions and never ask.
+ */
+export async function confirmedDecision<T>(promptMessage: string, send: () => Promise<T>): Promise<T> {
+  const result = await decisionAllowed(promptMessage);
+  if (result !== "ok") throw new NotConfirmed(result);
+  return send();
+}
+
+/** The key of the line a screen shows when `confirmedDecision` threw; null when the error was the server's. */
+export function notConfirmedKey(e: unknown): string | null {
+  if (!(e instanceof NotConfirmed)) return null;
+  return e.result === "cancelled" ? "officer_app.biometric.cancelled" : "officer_app.biometric.failed_any";
 }
