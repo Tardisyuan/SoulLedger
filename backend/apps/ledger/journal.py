@@ -93,7 +93,8 @@ def journal_records(request, *, month: str, civilization: str = "", category: st
         qs = qs.filter(category=category)
     search = search.strip()
     if search:
-        qs = qs.filter(soul_q(search))
+        # 按姓名 / 编号搜索时合计也只算范围内的灵魂(B3b):否则四柱能拿来探范围外某个灵魂的功过。
+        qs = rows_in_data_scope(request, qs.filter(soul_q(search)))
     return qs.filter(recorded_at__lt=start), qs.filter(recorded_at__gte=start, recorded_at__lt=end)
 
 

@@ -233,9 +233,14 @@ def _notify_after_commit(user_ids, notification_type, judgment, **params) -> Non
         from apps.authentication.models import User
         from apps.events.services import EventService
         from apps.notifications import messages
+        from apps.perm.data_scope import visible_to
 
         title, body = messages.render(messages.DEFAULT_LOCALE, messages.KIND_BY_TYPE[notification_type], params)
+        cache = {}
         for user in User.objects.filter(pk__in=user_ids, is_active=True):
+            # 数据范围(B3b):名下官员是指派人,恒可见;退路里的殿主若看不到这件案子,不收它的灵魂名。
+            if not visible_to(user, judgment, cache):
+                continue
             EventService.notify_user(user, title=title, message=body, notification_type=notification_type,
                                      related_resource="judgment", related_id=judgment_id, params=params)
 
