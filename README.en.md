@@ -610,7 +610,8 @@ folder. The short version:
   at the repo root under `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`;
   **de-duplicated on 2026-08-15** (`b2645e3`), which deleted the 19 copies and
   left each directory holding one README that maps the old filenames into
-  `docs/`.
+  `docs/`; those pointer READMEs and their directories were removed on
+  2026-10-30.
 - **Engineering docs.** Architecture, conventions, API notes, milestones, and a
   set of dated review/audit reports.
 - **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)** — the guide for external systems (in Chinese): the
