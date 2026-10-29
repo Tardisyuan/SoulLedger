@@ -1,5 +1,5 @@
 /**
- * 「重算功过」(W-10):`POST /ledger/calculate/<id>/`,后端要码名 `ledger.manage`。
+ * 「重算功过」(W-10):`POST /ledger/calculate/<id>/`,后端要码名 `ledger.calculate`(2026-10-29 从 `ledger.manage` 拆出)。
  * 页面只在持有这个码名时给这一项(在 ⋯ 菜单里,Design 第三十七批 W-11a);点了先确认,确认后调 API,成功重取灵魂(页头的功 / 过读的是 Soul 自己的分)
  * 并报一句成功;失败报一句失败,不报成功。
  *
@@ -96,12 +96,12 @@ const findButton = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser.role = "JUDGE";
-  mockUser.permissions = ["soul.read", "soul.update", "ledger.manage"];
+  mockUser.permissions = ["soul.read", "soul.update", "ledger.calculate"];
   mockSoulsGet.mockResolvedValue({ data: SOUL });
 });
 
 describe("SoulDetailPage — 重算功过", () => {
-  it("持 ledger.manage:确认后调 API,重取灵魂并报成功", async () => {
+  it("持 ledger.calculate:确认后调 API,重取灵魂并报成功", async () => {
     mockRecalculate.mockResolvedValue({ data: { soul_id: SOUL_ID, merit_score: 1, demerit_score: 0, karmic_balance: 1 } });
     renderPage();
     fireEvent.click(await findButton());
@@ -126,8 +126,8 @@ describe("SoulDetailPage — 重算功过", () => {
     expect(mockToast).not.toHaveBeenCalledWith("souls.detail.recalculate_success", "success");
   });
 
-  it("不持 ledger.manage:没有这一项(这组权限下连 ⋯ 都没有)", async () => {
-    mockUser.permissions = ["soul.read", "soul.update"];
+  it("不持 ledger.calculate:没有这一项 —— 持 ledger.manage 也没有(守护者写功过,不重算)", async () => {
+    mockUser.permissions = ["soul.read", "soul.update", "ledger.manage"];
     renderPage();
     await screen.findByRole("button", { name: "souls.detail.edit" });
     expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();

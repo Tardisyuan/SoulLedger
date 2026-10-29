@@ -100,6 +100,7 @@ const COLLECTED_FILES = [
   "ImpersonationBanner.test.tsx",
   "ImpersonationSession.test.ts",
   "JudgmentDetailPage.notesDraft.test.tsx",
+  "JudgmentDetailPage.claimAndReopen.test.tsx",
   "JudgmentDetailPage.print.test.tsx",
   "JudgmentGroundsPanel.test.tsx",
   "JudgmentQueueConsole.test.tsx",
@@ -114,6 +115,7 @@ const COLLECTED_FILES = [
   "MfaVerifyPage.test.tsx",
   "MfaSetupWizard.test.tsx",
   "MfaSection.test.tsx",
+  "MenusPage.tree.test.tsx",
   "UsersPage.mfaColumn.test.tsx",
   "TenantSettingsDialog.mfaRoles.test.tsx",
   "brandTokensMatchIcon.test.ts",
@@ -166,6 +168,7 @@ const COLLECTED_FILES = [
   "RoleFormModal.test.tsx",
   // 2026-10-29 角色数据范围(第六十二批):角色抽屉里的数据范围段与机构树选择。
   "RoleDataScopeSection.test.tsx",
+  "RoleMembersSection.test.tsx",
   "OrgTreeSelect.test.tsx",
   // 2026-09-30 v2 管理页(v2-web-p3b):租户印字编辑、审批流节点框。
   "SealGlyphsDialog.test.tsx",
@@ -251,6 +254,7 @@ const COLLECTED_FILES = [
   "UsersPage.locate.test.tsx",
   // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
   "UsersPage.multiRole.test.tsx",
+  "UsersPage.orgFilter.test.tsx",
   "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
   // 2026-10-29 第 10 条:服务端推的 permission.refreshed 交给 TenantContext 重取权限。

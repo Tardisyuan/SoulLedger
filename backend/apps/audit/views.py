@@ -169,7 +169,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         'stats': ['audit.read'],
         'by_trace': ['audit.read'],
         'timeline': ['audit.read'],
-        'export': ['audit.read'],
+        'export': ['audit.export'],
     }
     serializer_class = AuditLogSerializer
     filterset_class = AuditLogFilter

@@ -18,7 +18,7 @@ from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records, rows_in_data_scope
 from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
@@ -114,12 +114,10 @@ class LedgerRecalculateView(APIView):
     permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
-        # Was 'karma.update' — a codename that exists nowhere: not in
-        # DEFAULT_PERMISSIONS, not in any ROLE_PERMISSIONS list. An undefined
-        # codename resolves to False for every non-ADMIN role, so declaring it
-        # meant "ADMIN only". Recalculating is a write to the ledger, and the
-        # write codename this app defines is ledger.manage, so use that.
-        return ['ledger.manage']
+        # Its own codename since 2026-10-29 (user item 3): GUARDIAN holds ledger.manage to write merit
+        # records (souls/0053), which must not bring recalculation with it. perm/0030 granted
+        # ledger.calculate to the roles that held ledger.manage, GUARDIAN excepted.
+        return ['ledger.calculate']
 
     @extend_schema(
         # No body. The soul is the path parameter and the recalculation takes
@@ -292,11 +290,12 @@ class LedgerJournalExportView(APIView):
     功过总账「导出」:本月、同一组筛选下的**全部**流水(不分页),一行一条。
     范围、码名与 `LedgerJournalView` 相同 —— 行取自同一个 `journal_records`,所以文件里的
     收 / 支之和就是屏幕上的「新收」「开除」。自由文本格一律过 `csv_safe`。
+    码是 `ledger.export`(用户 2026-10-29 第 3 条;此前与列表同一个 ledger.read)。
     """
     permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
-        return ['ledger.read']
+        return ['ledger.export']
 
     @extend_schema(
         parameters=[
@@ -389,9 +388,10 @@ class LedgerOverviewStatsView(APIView):
     """
     GET /ledger/stats/overview/
 
-    Admin-only overview statistics across all tenants.
+    Overview statistics: the hall-less ADMIN across all tenants, everyone else their own.
     Returns: total souls, state distribution, tenant totals, ledger range stats,
-    recent activity, and souls by realm.
+    recent activity, and souls by realm. Gated by `ledger.read` alone since 2026-10-29
+    (user item 33): the `role != 'ADMIN'` 403 that sat in the body made the declared code decorative.
     """
     permission_classes = [TenantPermission, CodenamePermission]
     #: See LedgerBalanceView.serializer_class.
@@ -403,16 +403,14 @@ class LedgerOverviewStatsView(APIView):
     @extend_schema(responses={200: LedgerOverviewStatsSerializer, 403: LedgerErrorSerializer})
     def get(self, request):
         user = request.user
-        if getattr(user, 'role', None) != 'ADMIN':
-            return Response(
-                {"error": "FORBIDDEN", "message": "Admin access required"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        exempt = is_tenant_exempt(user)
+        tenant = None if exempt else (getattr(request, 'tenant', None) or getattr(user, 'tenant', None))
 
-        tenant = getattr(request, 'tenant', None)
-
-        # ADMIN without tenant: show all souls
-        soul_qs = Soul.objects.all() if tenant is None else Soul.objects.filter(tenant=tenant)
+        # The hall-less ADMIN: all souls. Anyone else: their hall's, and none without one (fail closed).
+        if exempt:
+            soul_qs = Soul.objects.all()
+        else:
+            soul_qs = Soul.objects.filter(tenant=tenant) if tenant is not None else Soul.objects.none()
 
         # S-H3: All queries scoped to tenant
         total_souls = soul_qs.count()
@@ -439,8 +437,8 @@ class LedgerOverviewStatsView(APIView):
         # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
         # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。
         snapshots = BalanceSnapshot.objects.all()
-        if tenant is not None:
-            snapshots = scope_to_tenant(snapshots, request, admin_bypass=False)
+        if not exempt:
+            snapshots = snapshots.filter(tenant=tenant) if tenant is not None else snapshots.none()
         prev_raw = previous_month_average(snapshots)
         average_balance_delta = (
             None if prev_raw is None or average_raw is None
@@ -477,8 +475,8 @@ class LedgerOverviewStatsView(APIView):
         # 还没有灵魂的启用殿也要列出(0 条):发起移交页的目标殿单选只读这张表,管理员刚建的殿
         # 没有灵魂,不补就永远选不到。范围同 soul_qs:不带租户看全部,带租户只看自己。
         halls = Tenant.objects.filter(is_active=True)
-        if tenant is not None:
-            halls = halls.filter(pk=tenant.pk)
+        if not exempt:
+            halls = halls.filter(pk=tenant.pk) if tenant is not None else halls.none()
         listed = {v['tenant_id'] for v in tenant_stats}
         empty_halls = [
             {
@@ -545,7 +543,13 @@ class LedgerOverviewStatsView(APIView):
                 b["count"] = bucket_result.get(f'{prefix}_{i}', 0)
 
         # S-C2: Recent activity filtered to current tenant only
-        audit_qs = AuditLog.objects.all() if tenant is None else AuditLog.objects.filter(tenant=tenant)
+        # 审计行只给持 audit.read 的人(这个接口 2026-10-29 起对每个持 ledger.read 的角色开放,第 33 条)。
+        from apps.perm.checker import check_permission
+
+        if not check_permission(user, "audit.read"):
+            audit_qs = AuditLog.objects.none()
+        else:
+            audit_qs = AuditLog.objects.all() if exempt else AuditLog.objects.filter(tenant=tenant) if tenant else AuditLog.objects.none()
         recent_logs = audit_qs.select_related("user").order_by("-timestamp")[:10]
         recent_activity = [
             {
@@ -574,8 +578,9 @@ class LedgerOverviewStatsView(APIView):
         # numbers on the same screen disagreeing about what counts.
         disp_qs = (
             Disposition.objects.all()
-            if tenant is None
-            else Disposition.objects.filter(tenant=tenant)
+            if exempt
+            else Disposition.objects.filter(tenant=tenant) if tenant is not None
+            else Disposition.objects.none()
         )
         # All four name columns, resolved per row, rather than `name_en`.
         #
@@ -655,19 +660,17 @@ class LedgerExportStatsView(APIView):
     """
     GET /ledger/stats/export/
 
-    Admin-only CSV export of all souls with their ledger data.
+    CSV export of the caller's hall's souls with their ledger data.
 
-    The `role != 'ADMIN'` check below is still the gate that makes this
-    admin-only. `ledger.read` is now genuinely enforced by CodenamePermission,
-    but every one of the five roles holds it, so the codename alone would let
-    a VIEWER export every soul in the tenant. Replacing the hardcoded check
-    needs a codename that says "export" — that is a policy decision and a new
-    grant, not part of moving enforcement into DRF.
+    Gated by `ledger.export` (user 2026-10-29, items 3 and 33). Until then a
+    `role != 'ADMIN'` check in the body was the gate, because `ledger.read` —
+    held by all five roles — was the only codename there was; "may export" is
+    now its own cell in the matrix.
     """
     permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
-        return ['ledger.read']
+        return ['ledger.export']
 
     @extend_schema(
         # No `serializer_class` here, unlike its four neighbours: the 200 is a
@@ -687,12 +690,6 @@ class LedgerExportStatsView(APIView):
     )
     def get(self, request):
         user = request.user
-        if getattr(user, 'role', None) != 'ADMIN':
-            return Response(
-                {"error": "FORBIDDEN", "message": "Admin access required"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         tenant = getattr(request, 'tenant', None) or getattr(user, 'tenant', None)
         qs = (
             Soul.objects.select_related("tenant").filter(tenant=tenant)

@@ -275,8 +275,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'start': ['workflow.create'],
         # The choices for `start`, so the same people who may start.
         'case_types': ['workflow.create'],
-        # 列表的 CSV:与列表同一个读。
-        'export': ['workflow.read'],
+        # 列表的 CSV:自己的码(用户 2026-10-29 第 3 条)。
+        'export': ['workflow.export'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
         "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
@@ -350,7 +350,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 return Response({"code": "soul_not_found", "error": "Soul not found"},
                                 status=status.HTTP_404_NOT_FOUND)
             # Same scoping as `start`: another tenant's soul is a 404.
-            soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=soul_id).first()
+            soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=soul_id).first()
             if soul is None:
                 return Response({"code": "soul_not_found", "error": "Soul not found"},
                                 status=status.HTTP_404_NOT_FOUND)
@@ -400,13 +400,14 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response({"code": "not_found", "error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
         judgment = None
         if judgment_id:
-            judgment = (scope_to_tenant(Judgment.objects.select_related("soul", "tenant"), request)
+            judgment = (DataScopeFilter.filter_queryset(
+                request, scope_to_tenant(Judgment.objects.select_related("soul", "tenant"), request), Judgment)
                         .filter(pk=judgment_id).first())
             if judgment is None:
                 return Response({"code": "judgment_not_found", "error": "Judgment not found"},
                                 status=status.HTTP_404_NOT_FOUND)
         if soul_id:
-            soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=soul_id).first()
+            soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=soul_id).first()
             if soul is None:
                 return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
             if judgment is not None and judgment.soul_id != soul.pk:
@@ -464,8 +465,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         body.is_valid(raise_exception=True)
         data = body.validated_data
 
-        # Another tenant's soul is a 404, not a 403: its existence is not this caller's to learn.
-        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=data["soul"]).first()
+        # Another tenant's soul — or one outside the caller's data scope (B3b) — is a 404, not a 403:
+        # its existence is not this caller's to learn.
+        soul = DataScopeFilter.filter_queryset(request, scope_to_tenant(Soul.objects.all(), request), Soul).filter(pk=data["soul"]).first()
         if soul is None:
             return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
         tenant = soul.tenant

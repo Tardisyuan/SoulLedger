@@ -1,6 +1,6 @@
 /**
  * 菜单按钮配置页「也需要权限」一列抄的是 `WIRED_BUTTONS[].permission`(rbac-web L-3)。那一列只有在
- * **每个**问配置的按钮旁边真有那道码门时才是真话:灵魂列表的导出曾经只问配置、不看 `soul.read`;
+ * **每个**问配置的按钮旁边真有那道码门时才是真话:灵魂列表的导出曾经只问配置、不看码(现在是 `soul.export`,2026-10-29 从 `soul.read` 拆出);
  * 审判队列「待审」页签的导出曾经连配置都不问(M-5)。
  *
  * 规则:源码里每个 `buttonOn("<id>")` 的文件也写出了 `<id>` 的权限码;灵魂批量条的导出走页面算好的
@@ -37,8 +37,10 @@ it("every wired button is asked about somewhere, including the claim queue's exp
 });
 
 it("each file that asks the config for a button also gates it on the code the config page names", () => {
+  // The ids `judgment.export` / `disposition.export` / `dispatch.export` are spelled like their codes (2026-10-29),
+  // so the `buttonOn("…")` call itself must not count as the gate.
   const missing = callSites
-    .filter((c) => !c.text.includes(`"${PERMISSION.get(c.id)}"`))
+    .filter((c) => !c.text.replace(/buttonOn\("[^"]+"\)/g, "").includes(`"${PERMISSION.get(c.id)}"`))
     .map((c) => `${c.file}: ${c.id} without "${PERMISSION.get(c.id)}"`);
   expect(missing).toEqual([]);
 });
@@ -47,6 +49,6 @@ it("the souls batch bar's export uses the page's canExport, not an ungated butto
   const bar = readFileSync(path.join(FRONTEND, "src/components/souls/SoulBatchBar.tsx"), "utf8");
   expect(bar).toMatch(/\{canExport && \(\s*<Button[^>]*onClick=\{exportCsv\}/);
   const page = readFileSync(path.join(FRONTEND, "app/souls/page.tsx"), "utf8");
-  expect(page).toMatch(/const canExport = buttonOn\("souls\.export"\) && hasPermission\("soul\.read"\);/);
+  expect(page).toMatch(/const canExport = buttonOn\("souls\.export"\) && hasPermission\("soul\.export"\);/);
   expect(page).toContain("canExport={canExport}");
 });

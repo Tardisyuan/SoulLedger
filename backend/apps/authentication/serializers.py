@@ -795,11 +795,28 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         # Echoing the unchanged role back is not an assignment.
         if self.instance is not None and value == self.instance.role:
             return value
+        # Same rules as `assign_roles` (rbac-be3 L-14): a role that exists, and ADMIN never next to
+        # additional roles (it already holds everything).
+        from .models import is_assignable_role
+
+        if not is_assignable_role(value):
+            raise serializers.ValidationError(
+                f'Invalid role {value!r}: not a built-in role and not a live row in the role table.'
+            )
+        if value == 'ADMIN' and self.instance is not None and self.instance.extra_roles:
+            raise serializers.ValidationError('ADMIN already holds everything; remove the additional roles first.')
         if not may_assign_role(caller, value):
             raise serializers.ValidationError(
                 'Cannot assign a role more privileged than your own.'
             )
         return value
+
+    def update(self, instance, validated_data):
+        # The new main role is no longer an additional one too (`assign_roles` drops it the same way).
+        role = validated_data.get('role')
+        if role and role in (instance.extra_roles or []):
+            instance.extra_roles = [r for r in instance.extra_roles if r != role]
+        return super().update(instance, validated_data)
 
 
 class PasswordReasonSerializer(serializers.Serializer):

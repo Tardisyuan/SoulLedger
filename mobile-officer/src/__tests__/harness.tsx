@@ -17,7 +17,8 @@ export const OFFICER: LoginUser = {
   display_name: "阎罗",
   // A JUDGE holds judgment.execute (claim / release / defer); without it those buttons are hidden.
   // judgment.read / soul.read: a JUDGE holds both, and the 审判 / 查询 tabs are drawn only for them (kit.tsx TAB_CODES).
-  permissions: ["workflow.approve", "judgment.execute", "judgment.read", "soul.read"],
+  // city_god.execute / wangsi.execute: a JUDGE's 城隍初审 and 枉死申诉 codes (split from judgment.execute, 2026-10-29).
+  permissions: ["workflow.approve", "judgment.execute", "judgment.read", "soul.read", "city_god.execute", "wangsi.execute"],
   // What the API really sends: the code and the database's English display name.
   tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE_UNDERWORLD" },
   mfa_enabled: true,

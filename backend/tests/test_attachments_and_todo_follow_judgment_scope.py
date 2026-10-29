@@ -1,6 +1,6 @@
 """Case attachments and the officer-app to-do follow the data scope of their judgment (user 2026-10-27).
 
-Someone whose row-level scope hides a judgment cannot fetch its attachments or see its to-do item.
+Someone whose data scope hides a judgment cannot fetch its attachments or see its to-do item.
 Before, both paths filtered by hall only (security review 2026-10-27 #4).
 """
 import io
@@ -13,8 +13,8 @@ from PIL import Image
 from apps.judgment import attachments as svc
 from apps.judgment.models import Judgment
 from apps.officer_app import todo
-from apps.perm.models import Role, RowLevelDataScope
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+from tests.data_scope_support import org, scope
 from tests.soul_account_support import dead_soul
 
 pytestmark = pytest.mark.django_db
@@ -50,10 +50,13 @@ def test_a_judgment_outside_the_scope_hides_its_attachments_and_its_todo(cn_tena
     approvals = lambda: {i["id"] for i in todo.build(judge_user)["approvals"]["items"]}  # noqa: E731
     assert svc.may_view(judge_user, outside_file) and approvals() == {str(inside_wf.pk), str(outside_wf.pk)}
 
-    RowLevelDataScope.objects.create(
-        role=Role.objects.get_or_create(name="JUDGE")[0], model_name="judgment", scope_type="READ",
-        filter_conditions={"court": "第一殿"}, is_active=True,
-    )
+    first_hall = org(cn_tenant, "第一殿")
+    Judgment.objects.filter(pk=inside.pk).update(owner_org=first_hall)
+    Judgment.objects.filter(pk=outside.pk).update(owner_org=org(cn_tenant, "第二殿"))
+    judge_user.organization = first_hall
+    judge_user.save(update_fields=["organization"])
+    # 两条流程都「待我审批」(按角色),所以流程本身都看得到;挡住范围外那条的是它的案子。
+    scope("JUDGE", "ORG")
     assert svc.may_view(judge_user, inside_file) is True
     assert svc.may_view(judge_user, outside_file) is False
     assert approvals() == {str(inside_wf.pk)}

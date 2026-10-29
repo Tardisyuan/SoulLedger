@@ -6,10 +6,9 @@ VIEWER `PATCH /auth/profile/ {"organization": <B 租户的组织>}` → **200**�
 
 同一个序列化器里 `role` 与 `tenant` **是**锁住的,只漏了这一个。
 
-诚实界定影响:`grep organization apps/perm/filters.py` **零命中**,`DataScopeFilter`
-当前不读这个字段,所以今天没有把它放大成越权。**但「今天没人读的字段」不是一个
-权限模型** —— 一个可以把自己挂到任意租户下的写入,在下一个读它的人出现时就变成
-越权,而那时没有任何东西会提醒他。
+影响:写这段时 `DataScopeFilter` 还不读这个字段;**2026-10-29 数据范围 B2 起它读了**
+(`apps/perm/data_scope.py` 按 `user.organization` 求「本机构 / 本机构及下级」),
+所以这条路径若再打开,就是给自己扩大数据范围的越权 —— 当时那句「下一个读它的人」已经来了。
 
 `PrimaryKeyRelatedField` 按整张表解析外键(它从模型字段建的 queryset 没有租户
 contextvar、也没有 request),所以校验只能写在序列化器里。

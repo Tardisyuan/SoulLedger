@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 
@@ -11,8 +11,8 @@ import { PageSpinner } from "@/src/components/ui/Spinner";
  * /admin/stats has been merged into /dashboard as the "ledger" tab (the two
  * pages rendered near-identical cards off the same ledgerApi.statsOverview()
  * call). This route stays alive as a redirect so existing menu entries and
- * bookmarks keep working; the ADMIN-only gate now lives on the dashboard
- * page itself (RequirePermission around the ledger tab content).
+ * bookmarks keep working; the gate (`ledger.read`, the overview's code since
+ * 2026-10-29) lives on the dashboard page itself, around the ledger tab content.
  */
 function AdminStatsRedirectContent() {
   const router = useRouter();
@@ -34,13 +34,12 @@ function AdminStatsRedirectContent() {
 }
 
 
-/* `RequireAdmin`,不是 `RequirePermission permissions="ADMIN"` —— 后者把角色名当
-   码名用,只因为 `hasPermission` 对 ADMIN 短路才碰巧成立(见 RequirePermission.tsx
-   里 RequireAdmin 的注释)。这两页对应的后端确实是硬编码的 ADMIN,不是某个码名。 */
+/* 与它跳去的账本页签同一道门:`/ledger/stats/overview/` 从 2026-10-29 起只要 `ledger.read`(第 33 条),
+   此前后端硬编码 ADMIN,这里是 RequireAdmin。 */
 export default function AdminStatsRedirect() {
   return (
-    <RequireAdmin fallback={<PermissionDenied />}>
+    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>
       <AdminStatsRedirectContent />
-    </RequireAdmin>
+    </RequirePermission>
   );
 }

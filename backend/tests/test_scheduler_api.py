@@ -26,13 +26,26 @@ def _bearer(user):
 
 @pytest.fixture
 def judge_with_manage(judge_user):
+    """A hall-scoped holder of scheduler.read / manage. Was a JUDGE granted both; scheduler.manage is
+    ADMIN-only since 2026-10-29 (user item 2), so the hall-scoped holder is now the hall's ADMIN — scoped
+    to its hall exactly as the granted JUDGE was (only the hall-less ADMIN is tenant-exempt)."""
+    from apps.authentication.models import User
+
+    return User.objects.create_user(username="sched_hall_admin", password="x", role="ADMIN",
+                                    tenant=judge_user.tenant)
+
+
+@pytest.mark.django_db
+def test_scheduler_manage_cannot_be_held_by_a_judge(api_client, judge_user, synced):
     from apps.perm.models import RolePermission
     from tests.perm_support import seeded_permission, seeded_role
 
     role = seeded_role("JUDGE")
     for codename in ("scheduler.read", "scheduler.manage"):
         RolePermission.objects.create(role=role, permission=seeded_permission(codename))
-    return judge_user
+    resp = api_client.patch(f"{JOBS}{synced['cn'].pk}/", {"enabled": False}, format="json", **_bearer(judge_user))
+    assert resp.status_code == 403, resp.content
+    assert api_client.get(JOBS, **_bearer(judge_user)).status_code == 200  # read stays grantable
 
 
 @pytest.fixture

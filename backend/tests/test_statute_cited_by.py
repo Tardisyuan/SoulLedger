@@ -1,14 +1,15 @@
 """语料页「被引用 N 件」与它下面的清单(`GET /judgment/?statute=<id>`)必须永远一致。
 
 件数是 `StatuteViewSet` 上的 `citation_count` 注解,清单是判决列表加 `statute` 过滤。
-两者算在**同一个集合**上 —— 调用者的判决列表(租户 + 暂居只读 + 行级 DataScope),
+两者算在**同一个集合**上 —— 调用者的判决列表(租户 + 暂居只读 + 数据范围),
 所以一个被 DataScope 挡掉部分判决的人,看到的件数随之变小,而不是一个清单里数不出来的数。
 """
 import pytest
 
 from apps.judgment.models import Judgment, JudgmentCitation
-from apps.perm.models import Role, RowLevelDataScope
+from apps.perm.models import Role
 from apps.souls.models import Civilization, Soul, SoulState
+from tests.data_scope_support import org, scope
 from tests.test_judgment_statutes import make_statute
 
 pytestmark = pytest.mark.django_db
@@ -57,12 +58,14 @@ def world(cn_tenant):
     return statute, first, second
 
 
-def test_count_and_list_agree_for_a_data_scoped_judge(api_client, judge_headers, world):
+def test_count_and_list_agree_for_a_data_scoped_judge(api_client, judge_headers, judge_user, cn_tenant, world):
     statute, first, second = world
-    RowLevelDataScope.objects.create(
-        role=Role.objects.get(name="JUDGE"), model_name="Judgment", scope_type="READ",
-        filter_conditions={"court": "第一殿"}, is_active=True,
-    )
+    first_hall = org(cn_tenant, "第一殿")
+    Judgment.objects.filter(court="第一殿").update(owner_org=first_hall)
+    Judgment.objects.filter(court="第二殿").update(owner_org=org(cn_tenant, "第二殿"))
+    judge_user.organization = first_hall
+    judge_user.save(update_fields=["organization"])
+    scope("JUDGE", "ORG")
     ids, total = _listed(api_client, judge_headers, statute)
     assert _count(api_client, judge_headers, statute) == total == 2
     assert set(ids) == {str(j.id) for j in first}

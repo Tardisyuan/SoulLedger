@@ -1,6 +1,7 @@
 /**
  * 「导出」入口(第十五批 C3):/dispatch、/disposition、/cross-judgments 各有一个,
- * 带的就是该列表(该段)用的筛选,权限与列表的读码名一致 —— 没有读码名就没有按钮。
+ * 带的就是该列表(该段)用的筛选。权限是各自的导出码(2026-10-29 从读码拆出:dispatch.export /
+ * disposition.export / cross_judgment.export)—— 只有读码没有导出码,就没有按钮。
  * 内容(哪些行、哪些列)是后端的事,见 backend/tests/test_list_exports_dispatch_disposition_cross.py。
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -68,7 +69,7 @@ beforeEach(() => {
 
 describe("/dispatch", () => {
   it("exports each of its two tables with that table's section, and saves the file", async () => {
-    mockPermissions = ["dispatch.read"];
+    mockPermissions = ["dispatch.read", "dispatch.export"];
     renderWith(<DispatchPage />);
     const buttons = await screen.findAllByRole("button", { name: "common.export" });
     expect(buttons).toHaveLength(2);
@@ -80,7 +81,7 @@ describe("/dispatch", () => {
   });
 
   it("says so, and saves nothing, when the export fails", async () => {
-    mockPermissions = ["dispatch.read"];
+    mockPermissions = ["dispatch.read", "dispatch.export"];
     (dispatchApi.exportCsv as jest.Mock).mockRejectedValue(new Error("boom"));
     renderWith(<DispatchPage />);
     fireEvent.click((await screen.findAllByRole("button", { name: "common.export" }))[0]);
@@ -94,9 +95,32 @@ describe("/dispatch", () => {
   });
 });
 
+describe("export codes are their own (2026-10-29)", () => {
+  it("dispatch.read alone: the tables, no export", async () => {
+    mockPermissions = ["dispatch.read"];
+    renderWith(<DispatchPage />);
+    await waitFor(() => expect(dispatchApi.proposed).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: "common.export" })).toBeNull();
+  });
+
+  it("cross_judgment.read alone: the list, no export", async () => {
+    mockPermissions = ["cross_judgment.read"];
+    renderWith(<CrossJudgmentsPage />);
+    await waitFor(() => expect(crossTenantJudgmentsApi.list).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: "common.export" })).toBeNull();
+  });
+
+  it("disposition.read alone: the sections, no export", async () => {
+    mockPermissions = ["disposition.read"];
+    renderWith(<DispositionPage />);
+    await waitFor(() => expect(dispositionApi.list).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: "common.export" })).toBeNull();
+  });
+});
+
 describe("/cross-judgments", () => {
   it("offers the export to a reader and sends the list's filters (none by default)", async () => {
-    mockPermissions = ["cross_judgment.read"];
+    mockPermissions = ["cross_judgment.read", "cross_judgment.export"];
     renderWith(<CrossJudgmentsPage />);
     fireEvent.click(await screen.findByRole("button", { name: "common.export" }));
     await waitFor(() => expect(crossTenantJudgmentsApi.exportCsv).toHaveBeenCalledWith({}));
@@ -104,7 +128,7 @@ describe("/cross-judgments", () => {
   });
 
   it("filters by status and by our side, and the export carries the same filters", async () => {
-    mockPermissions = ["cross_judgment.read"];
+    mockPermissions = ["cross_judgment.read", "cross_judgment.export"];
     renderWith(<CrossJudgmentsPage />);
     fireEvent.change(await screen.findByRole("combobox", { name: "crossJudgments.filter.side" }), {
       target: { value: "participating" },
@@ -127,7 +151,7 @@ describe("/cross-judgments", () => {
 
 describe("/disposition", () => {
   it("exports each section under the filters its own table uses", async () => {
-    mockPermissions = ["disposition.read"];
+    mockPermissions = ["disposition.read", "disposition.export"];
     renderWith(<DispositionPage />);
     const buttons = await screen.findAllByRole("button", { name: "common.export" });
     expect(buttons).toHaveLength(3);

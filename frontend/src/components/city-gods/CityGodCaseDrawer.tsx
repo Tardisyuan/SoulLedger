@@ -16,7 +16,7 @@ import { CITY_GOD_STATUS_TONES, MatchedOrigin, cityGodCaseRefusalCode, cityGodCa
 /*
  * 初审的案子抽屉(第五十三批 Q-1 / Q-2):没有单独的初审页,点一行右侧打开,队列不动。
  * 动作在底部:待初审 = 解送十殿(主)+ 退回补正(描边);退回补正 = 只剩解送(后端不许再退)。
- * 点了在原处展开批语框和确认,不叠弹层;解送批语选填,退回批语必填。改交只给持 `judgment.assign` 的,
+ * 点了在原处展开批语框和确认,不叠弹层;解送批语选填,退回批语必填。改交只给持 `city_god.manage` 的,
  * 收在下拉里,选了直接提交。`can_act=false` 时三个按钮都置灰,上方一句「你不在这位城隍名下」。
  * `not_pending`(别人刚处理过)时刷新抽屉、toast 那一句,不关抽屉。
  */

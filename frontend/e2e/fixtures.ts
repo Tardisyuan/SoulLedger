@@ -159,7 +159,9 @@ export const ROLE_REFERENCES: Record<string, { template_id: string; template_nam
 };
 
 /** Codenames matrix.py refuses to grant to any role but ADMIN (`admin_only_permission`). */
-export const ADMIN_ONLY_CODENAMES = ["recycle_bin.restore", "recycle_bin.hard_delete"];
+export const ADMIN_ONLY_CODENAMES = [
+  "recycle_bin.restore", "recycle_bin.hard_delete", "soul.correct_settlement", "menu.manage", "scheduler.manage",
+];
 
 export const SOULS = [
   {
@@ -2041,7 +2043,8 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
  * addInitScript runs before any page script on every navigation, so the
  * storage is already populated by the time TenantContext's mount effect runs.
  */
-export async function seedAuthState(page: Page): Promise<void> {
+/** `user` defaults to TEST_USER (a hall's ADMIN); a spec may seed another, e.g. the hall-less ADMIN. */
+export async function seedAuthState(page: Page, user: object = TEST_USER): Promise<void> {
   await page.context().addCookies([
     { name: "soulledger_refresh", value: MOCK_REFRESH_TOKEN, url: BASE_URL },
     { name: "soulledger_access", value: MOCK_ACCESS_TOKEN, url: BASE_URL },
@@ -2055,7 +2058,7 @@ export async function seedAuthState(page: Page): Promise<void> {
       // deliberately absent; the context refetches it and never trusts cache.
       localStorage.setItem("soulledger_user", JSON.stringify({ user, storedAt: Date.now() }));
     },
-    { user: TEST_USER, accessToken: MOCK_ACCESS_TOKEN }
+    { user, accessToken: MOCK_ACCESS_TOKEN }
   );
 }
 

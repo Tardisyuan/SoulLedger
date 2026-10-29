@@ -25,7 +25,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 type MockUser = { id: number; role?: string; permissions?: string[] };
-let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
+let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read", "ledger.export"] };
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
@@ -82,7 +82,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
-  mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
+  mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read", "ledger.export"] };
   mockedJournal.mockReset();
   mockedJournalPage.mockReset();
   mockedExport.mockReset();
@@ -265,6 +265,14 @@ describe("搜索与导出:同一组筛选", () => {
     fireEvent.click(screen.getByRole("button", { name: "导出" }));
     await waitFor(() => expect(mockedSave).toHaveBeenCalledWith("csv", `ledger_journal_${currentMonth()}.csv`));
     expect(mockedExport).toHaveBeenCalledWith({ month: currentMonth(), search: "周" });
+  });
+
+  it("no export button without ledger.export (its own code since 2026-10-29), the journal still reads", async () => {
+    mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
+    mockedJournal.mockResolvedValue({ data: JOURNAL });
+    renderPage();
+    await screen.findByTestId("four-pillars");
+    expect(screen.queryByRole("button", { name: "导出" })).toBeNull();
   });
 
   it("says so when the export fails, and saves nothing", async () => {

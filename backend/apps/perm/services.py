@@ -11,7 +11,7 @@ The rule itself is not reimplemented here. That is the whole point — see
 get_role_permission_codenames.
 """
 from apps.perm.checker import check_permission
-from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission
+from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
 
 
 class RoleHolder:
@@ -92,3 +92,21 @@ def get_role_permission_codenames(role_name, extra_roles=()):
     )
     holder = RoleHolder(role_name, extra_roles)
     return sorted(codename for codename in candidates if check_permission(holder, codename))
+
+
+#: Codenames in the catalogue (`DEFAULT_PERMISSIONS`).
+CATALOGUE_CODENAMES = frozenset(c for c, _, _ in DEFAULT_PERMISSIONS)
+
+
+def grant_catalogue_defaults(permission):
+    """Give a catalogue codename's freshly created row the grants `ROLE_PERMISSIONS` gives it, as
+    `sync_permissions` does — so creating the row changes nobody's answer (rbac-be3 M-4). A row that
+    already has grants keeps them."""
+    if permission.codename not in CATALOGUE_CODENAMES:
+        return
+    if RolePermission.objects.filter(permission=permission).exists():
+        return
+    holders = [r for r, codes in ROLE_PERMISSIONS.items() if permission.codename in codes]
+    RolePermission.objects.bulk_create(
+        [RolePermission(role=role, permission=permission) for role in Role.objects.filter(name__in=holders)]
+    )

@@ -413,10 +413,14 @@ CACHE_PERMISSION_FALLBACK_TTL = int(
 #
 # `perm:{role}:{codename}` carried no deployment prefix, so two deployments
 # pointed at one Redis share each other's grants — and CLAUDE.md already
-# records test runs writing `perm:*` into the shared box. Defaults to the empty
-# string so an existing deployment's keys are not orphaned by an upgrade; set
-# it per environment.
-CACHE_PERMISSION_KEY_PREFIX = os.getenv("CACHE_PERMISSION_KEY_PREFIX", "")
+# records test runs writing `perm:*` into the shared box. Unset, it defaults to
+# the database name (rbac-be3 L-12): two deployments on one Redis no longer read
+# or `invalidate_all` each other's keys unless they also share a database. The
+# old unprefixed keys an upgrade orphans expire with the TTL (300 s). Set it
+# explicitly (even to "") to choose.
+CACHE_PERMISSION_KEY_PREFIX = os.getenv(
+    "CACHE_PERMISSION_KEY_PREFIX", f"{DATABASES['default'].get('NAME') or 'soulledger'}:"
+)
 
 # How long PermissionCache waits after a failed Redis connect attempt before
 # retrying, instead of reconnecting on every cache miss. See apps/perm/cache.py.

@@ -19,9 +19,38 @@ _permission_cache = get_permission_cache()
 #: for these whatever the grant table says, and the matrix, `assign` and import
 #: refuse to write them (`role_forbidden_permission`, apps/perm/matrix.py).
 #: MODERATOR (殿主): see the reasons above its entry in ROLE_PERMISSIONS.
+#: 「设计流程的人不审批」不再按角色名写在这里,改成下面按码组合的规则(用户 2026-10-29 第 13 条)。
 ROLE_FORBIDDEN_CODENAMES = {
-    "MODERATOR": frozenset({"workflow.approve", "workflow.advance", "user.manage"}),
+    "MODERATOR": frozenset({"user.manage"}),
 }
+
+#: 「设计流程的人不审批」按能力(用户 2026-10-29 第 13 条):同一个角色持有设计类码,就不能再持有审批类码
+#: —— 不论角色叫什么(复制殿主、自建角色都一样)。按角色各算:殿主兼任判官,判官那份审批照算。
+#: 殿主的 dispatch.approve / workflow.escalate / judgment.execute 不在审批类里(不是审批流节点)。
+WORKFLOW_DESIGN_CODENAMES = frozenset({"workflow.create", "workflow.update"})
+WORKFLOW_APPROVE_CODENAMES = frozenset({"workflow.approve", "workflow.advance"})
+
+#: Codenames only the ADMIN role may hold (maintainer decisions 2026-09-25 / 2026-10-29). `check_permission`
+#: denies them to every other role whatever the grant table says; the matrix, assign, copy and import refuse
+#: to write them (`admin_only_permission`, apps/perm/matrix.py).
+ADMIN_ONLY_CODENAMES = frozenset({
+    "recycle_bin.restore", "recycle_bin.hard_delete",
+    # SETTLED 是终态,撤销它是一次单独授权的更正(rbac-be3 M-7)。
+    "soul.correct_settlement",
+    # 菜单是所有殿共用的导航;定时任务的全局行影响每一殿(用户 2026-10-29 第 2 条)。
+    "menu.manage", "scheduler.manage",
+})
+
+
+def capability_conflicts(requested, held=()):
+    """The codenames in `requested` a role may not take on next to `held` (its other grants), by the
+    design / approve rule above. Granting approve beside design refuses the approve side; granting design
+    beside an approve the role already holds refuses the design side. Empty when there is no conflict."""
+    requested, held = set(requested), set(held)
+    combined = requested | held
+    if not (combined & WORKFLOW_DESIGN_CODENAMES and combined & WORKFLOW_APPROVE_CODENAMES):
+        return set()
+    return (requested & WORKFLOW_APPROVE_CODENAMES) or (requested & WORKFLOW_DESIGN_CODENAMES)
 
 
 #: Codenames that change configuration shared by every hall. Held only by the hall-less ADMIN.
@@ -64,11 +93,19 @@ def check_permission(user, codename):
     # 多角色:每个持有的角色先过自己的硬规则,再对各角色的答案取并集。
     # 殿主的禁用清单只剔掉「来自殿主这个角色」的授予;殿主兼任判官,判官的授予照算
     # (用户 2026-10-09 定)。ADMIN / SOUL 即使被写进 extra_roles 也无视,它们只能是主角色。
+    if codename in ADMIN_ONLY_CODENAMES:
+        return False
     roles = [role, *_live_extra_roles(user)]
-    return any(
-        codename not in ROLE_FORBIDDEN_CODENAMES.get(r, ()) and _role_has(r, codename)
-        for r in roles
-    )
+    return any(_role_allows(r, codename) for r in roles)
+
+
+def _role_allows(role, codename):
+    """One role's answer after its hard rules: the name-keyed forbidden list, then design-vs-approve."""
+    if codename in ROLE_FORBIDDEN_CODENAMES.get(role, ()) or not _role_has(role, codename):
+        return False
+    if codename in WORKFLOW_APPROVE_CODENAMES:
+        return not any(_role_has(role, d) for d in WORKFLOW_DESIGN_CODENAMES)
+    return True
 
 
 #: Pseudo-codename under which a role's "is it live" answer is cached. Same

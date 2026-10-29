@@ -23,8 +23,8 @@ import { useTenant } from "@/src/contexts/TenantContext";
 /*
  * 系统设置 › 土地公(Design 第五十七批 S-5),和「城隍」并列,照城隍管理:列表 + 右侧抽屉。
  * 四栏:土地公 · 管辖地 · 上级城隍(上级被删时灰字「—」)· 名下官员。看是 `judgment.read`,
- * 增改删 `judgment.assign`(接口自己查);行菜单「以土地公名义登记死亡」(S-6)要 `soul.die`,且是这位土地公名下的官员
- * 或持 `judgment.assign`(同后端 `register_death`),土地公预填。
+ * 看 `tudi.read`;增改删 `tudi.manage`(接口自己查);行菜单「以土地公名义登记死亡」(S-6)要 `tudi.register`,且是这位土地公名下的官员
+ * 或持 `tudi.manage`(同后端 `register_death`),土地公预填。(2026-10-29 从 judgment.* / soul.die 拆出。)
  * ponytail: 只取第一页(20 位);一殿的土地公多过一页再加分页。
  */
 
@@ -34,8 +34,8 @@ function TudiGodsContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission("judgment.assign");
-  const canRegister = hasPermission("soul.die");
+  const canEdit = hasPermission("tudi.manage");
+  const canRegister = hasPermission("tudi.register");
   const { user } = useTenant();
   const registrable = (g: TudiGod) => canRegister && mayRegisterUnder(g, user?.id, canEdit);
   const [editing, setEditing] = useState<TudiGod | "new" | null>(null);
@@ -107,7 +107,7 @@ function TudiGodsContent() {
 
 export default function TudiGodsPage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
+    <RequirePermission permissions="tudi.read" fallback={<PermissionDenied permission="tudi.read" />}>
       <TudiGodsContent />
     </RequirePermission>
   );

@@ -28,12 +28,15 @@ export function RolesSection({
   isError,
   onRetry,
   onOpenMatrix,
+  canManage,
 }: {
   roles: Role[];
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
   onOpenMatrix: (role: string) => void;
+  /** 改名 / 复制 / 移入回收站:只给没绑殿的 ADMIN 且持 system.settings(后端 `CanWriteGlobalSettings`)。 */
+  canManage: boolean;
 }) {
   const { t } = useI18n();
   const [openId, setOpenId] = useState<number | null>(null);
@@ -104,6 +107,7 @@ export function RolesSection({
         onNext={step(1)}
         onPrev={step(-1)}
         finalFocus={() => openers.current.get(lastOpen.current ?? -1) ?? null}
+        canManage={canManage}
         onOpenMatrix={(name) => {
           setOpenId(null);
           onOpenMatrix(name);
@@ -129,8 +133,10 @@ function RoleDrawer({
   onPrev,
   finalFocus,
   onOpenMatrix,
+  canManage,
 }: {
   role: Role | null;
+  canManage: boolean;
   onClose: () => void;
   onNext?: () => void;
   onPrev?: () => void;
@@ -149,12 +155,22 @@ function RoleDrawer({
       finalFocus={finalFocus}
     >
       {/* Keyed by role, so J / K to the next role starts its form afresh. */}
-      {role && <RoleDrawerBody key={role.id} role={role} onClose={onClose} onOpenMatrix={onOpenMatrix} />}
+      {role && <RoleDrawerBody key={role.id} role={role} onClose={onClose} onOpenMatrix={onOpenMatrix} canManage={canManage} />}
     </Drawer>
   );
 }
 
-function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: () => void; onOpenMatrix: (role: string) => void }) {
+function RoleDrawerBody({
+  role,
+  onClose,
+  onOpenMatrix,
+  canManage,
+}: {
+  role: Role;
+  onClose: () => void;
+  onOpenMatrix: (role: string) => void;
+  canManage: boolean;
+}) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -294,6 +310,8 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
       )}
 
       <div className="flex items-center gap-2 border-t border-[oklch(var(--color-block))] pt-3">
+        {/* 绑殿 ADMIN 与别的持码者只读:复制、回收、保存都会 403,不画。 */}
+        {canManage && (
         <div className="relative">
           <Button
             type="button"
@@ -339,20 +357,23 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
             </div>
           )}
         </div>
+        )}
         <span className="flex-1" />
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           {t("common.cancel")}
         </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          loading={saving}
-          disabled={!displayName.trim() || !changed}
-          onClick={save}
-        >
-          {t("common.save")}
-        </Button>
+        {canManage && (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={saving}
+            disabled={!displayName.trim() || !changed}
+            onClick={save}
+          >
+            {t("common.save")}
+          </Button>
+        )}
       </div>
       </>
       )}
