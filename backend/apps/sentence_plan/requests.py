@@ -559,6 +559,9 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
     from apps.judgment.confessions import refuse_passed_if_untruthful
 
     refuse_passed_if_untruthful(judgment, verdict)
+    from apps.judgment.models import refuse_passed_if_five_heinous
+
+    refuse_passed_if_five_heinous(judgment, verdict)  # 五逆不能改判 PASSED(审查 J)
     realm_code = _route_home_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
     realm = realm_by_code(realm_code, tenant_id=soul.home_tenant_id or soul.tenant_id)
     from apps.disposition.default_terms import default_term_years

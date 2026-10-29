@@ -134,6 +134,14 @@ class TestJudgmentQueueCursor:
             weight=30,
         )
         Realm.objects.create(
+            realm_code="DY_02_YANGLIU",
+            civilization=soul.civilization,
+            name_local="杨柳宫",
+            realm_type="BLISS",
+            tenant=cn_tenant,
+        )
+        # No longer used (2026-10-29, review L): kept as data, never offered.
+        Realm.objects.create(
             realm_code="DY_01_HEAVEN",
             civilization=soul.civilization,
             name_local="天道",
@@ -147,7 +155,7 @@ class TestJudgmentQueueCursor:
         assert body["soul"]["name"] == "待判之魂"
         assert body["ledger"]["merit_score"] > 0
         assert [c["cycle_count"] for c in body["prior_cycles"]] == [1]
-        assert [r["realm_code"] for r in body["realm_options"]] == ["DY_01_HEAVEN"]
+        assert [r["realm_code"] for r in body["realm_options"]] == ["DY_02_YANGLIU"]
 
     def test_concluded_cases_never_appear(self, admin_client, soul, cn_tenant):
         judgment = self._pending(soul, cn_tenant)

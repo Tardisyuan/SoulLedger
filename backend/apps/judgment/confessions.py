@@ -77,12 +77,29 @@ def record(judgment, ordinal: int, truthful, note: str = "") -> NegativeConfessi
         if statute is None:
             raise ConfessionRefusedError(f"No assessor {ordinal} in this hall.", "unknown_clause", status=404)
         row = NegativeConfession.all_objects.filter(judgment=locked, statute=statute, is_deleted=False).first()
+        was_complete = _complete(locked)
         if row is None:
             row = NegativeConfession(judgment=locked, statute=statute, tenant_id=locked.tenant_id)
         row.truthful = truthful
         row.note = (note or "").strip()
         row.save()
+        if not was_complete and _complete(locked):
+            # One timeline entry per full round, not one per denial (user 2026-10-29, review M): written when the
+            # last of the hall's denials is recorded, in the same transaction (CLAUDE.md, 事件日志).
+            from apps.events.services import EventService
+
+            counts = tally(locked)
+            EventService.log(locked.soul, "NEGATIVE_CONFESSION_HEARD", {
+                "judgment_id": str(locked.pk), "truthful": counts["truthful"], "untruthful": counts["untruthful"],
+                "total": counts["total"], "untruthful_ordinals": untruthful_ordinals(locked),
+            })
         return row
+
+
+def _complete(judgment) -> bool:
+    """Every denial of the hall has been recorded true or untrue (none left unheard)."""
+    counts = tally(judgment)
+    return counts is not None and counts["total"] > 0 and counts["unheard"] == 0
 
 
 def untruthful_ordinals(judgment) -> list[int]:

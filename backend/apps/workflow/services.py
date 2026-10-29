@@ -45,6 +45,16 @@ class NoAppealAboveMinosError(ValueError):
         super().__init__("Minos's judgment cannot be appealed: there is no Greek appeal flow.")
 
 
+class OriginFlowOpenError(ValueError):
+    """An APPEAL workflow while the original judgment's own approval flow is still running (user 2026-10-29,
+    review B). Same code as the soul's refusal (`apps/judgment/appeals.py::appeal_refusal`)."""
+
+    code = "origin_flow_open"
+
+    def __init__(self):
+        super().__init__("The original judgment's approval flow has not finished; an appeal waits for it.")
+
+
 # 模板表住在 `apps/workflow/templates.py`,这里重导出。
 #
 # 它们本来就在这个文件里,占了前 461 行 —— 而这个文件是 1125 行,是仓库里最大的
@@ -741,6 +751,12 @@ class WorkflowService:
             if civilization == Civilization.GREEK and case_type == CaseType.APPEAL:
                 raise NoAppealAboveMinosError()
             raise ValueError(validation_error)
+        if case_type == CaseType.APPEAL:
+            from apps.judgment.weighing import origin_flow_open
+
+            # The judgment it names, or — named none — any original judgment of the soul (review B).
+            if origin_flow_open(judgment=judgment) if judgment is not None else origin_flow_open(soul=soul):
+                raise OriginFlowOpenError()
 
         # DB first, then the hardcoded table, then a generic one-node flow — see `_resolve_template`.
         if template is None:

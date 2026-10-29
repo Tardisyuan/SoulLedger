@@ -25,7 +25,8 @@ import { PickNodesGroup } from "@/src/components/workflow/segments/PickNodesGrou
 /** 与后端 `ApprovalWorkflowStatus` / `CaseType` / `Civilization` 的取值一一对应(`apps/workflow/filters.py` 认这几个)。 */
 // Only the states a workflow can be in (backend `REACHABLE_WORKFLOW_STATUSES`, 2026-10-29): APPROVED / APPEAL / EXCEPTION
 // are declared and never written, and the list filter now refuses them.
-const STATUSES = ["PENDING", "IN_PROGRESS", "REJECTED", "COMPLETED"] as const;
+// CANCELLED (2026-10-29, review C): ended by a cancelled joint judgment — neither completed nor rejected.
+const STATUSES = ["PENDING", "IN_PROGRESS", "REJECTED", "COMPLETED", "CANCELLED"] as const;
 const CASE_TYPES = [
   "ROUTINE", "APPEAL", "CROSS_REALM", "SPECIAL", "CANONIZATION", "PURGATORY_REVIEW", "HERESY_TRIAL",
   "HEART_WEIGHING", "DIVINE_TRIAL", "REBIRTH_APPLICATION",

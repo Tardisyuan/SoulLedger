@@ -64,8 +64,9 @@ def weigh(judgment, verdict) -> tuple[str, int]:
 
 #: What a retrial carries over from the case it hears again (2026-10-29): the case's facts as registered — the
 #: offence the court routes by (地府 罪目) and the 枉死城 columns (横死, held until the fated date, the cause, the
-#: grievance and its decision). Not the evidence admitted nor the confessions heard: whether those follow the case
-#: is pending a product decision (review item E), so the new hearing starts without them.
+#: grievance and its decision). Not the evidence admitted (`EvidenceAdmission`), not the soul's confession
+#: (`confession`), and not the 42 denials heard nor how they were taken (`NegativeConfession`): the new hearing
+#: rules on them afresh (user 2026-10-29, review E / I; `tests/test_flow_decisions_2026_10_29.py`).
 RETRIAL_CARRIES = (
     "offence", "untimely", "held_until", "wrongful_death_cause",
     "grievance_level", "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
@@ -113,7 +114,10 @@ def reweigh_after_rejection(flow) -> Judgment | None:
 
     soul = Soul.all_objects.select_for_update().get(pk=judgment.soul_id)
     dispositions = Disposition.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
-    if soul.current_state != SoulState.DISPOSED or dispositions.filter(is_executed=True).exists():
+    # LOST too (review K): a soul that went missing in transit while the flow ran was never placed — its disposition
+    # is unexecuted — and used to leave the disposition stuck at `approval_rejected`.
+    if (soul.current_state not in (SoulState.DISPOSED, SoulState.LOST)
+            or dispositions.filter(is_executed=True).exists()):
         return None
     # The withdrawn conclusion's appeals go with it (2026-10-29): an appeal still open would otherwise amend a
     # verdict that no longer stands. Voided like a devoured soul's (`appeals.void_open_appeals`), same transaction.
@@ -142,6 +146,23 @@ def reweigh_after_rejection(flow) -> Judgment | None:
         raise WeighingRefusedError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was "
                                    f"rejected", "soul_cannot_reopen", status=409)
     return open_retrial(judgment, reason="REJECTED", method=judgment.judgment_method)
+
+
+def origin_flow_open(*, judgment=None, soul=None) -> bool:
+    """An original judgment's own approval flow is still running (PENDING / IN_PROGRESS) — for `judgment`, or for
+    any original judgment of `soul` (user 2026-10-29, review B and R). Until it ends, the conclusion is not final
+    in fact: no appeal, no escalated appeal, no rebirth (`origin_flow_open`). A flow that ended — completed,
+    refused, cancelled — does not count: a refusal reopens the case (`reweigh_after_rejection`)."""
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, judgment_deciding
+
+    flows = judgment_deciding(ApprovalWorkflow._base_manager.filter(
+        judgment__kind=JudgmentKind.ORIGINAL, is_deleted=False,
+        status__in=(ApprovalWorkflowStatus.PENDING, ApprovalWorkflowStatus.IN_PROGRESS)))
+    if judgment is not None:
+        flows = flows.filter(judgment_id=judgment.pk)
+    else:
+        flows = flows.filter(soul_id=soul.pk)
+    return flows.exists()
 
 
 _UNREAD = object()
@@ -175,5 +196,8 @@ def unfinished_flow(disposition, flow_status=_UNREAD) -> str | None:
         flow_status = flow.status if flow is not None and flow.decides_judgment else None
     if flow_status is None or flow_status == ApprovalWorkflowStatus.COMPLETED:
         return None
+    if flow_status == ApprovalWorkflowStatus.CANCELLED:
+        # Ended by a cancelled cross-realm judgment (review C): not passed, so not released.
+        return "approval_cancelled"
     prefix = "weighing" if applies(judgment) else "approval"
     return f"{prefix}_rejected" if flow_status == ApprovalWorkflowStatus.REJECTED else f"{prefix}_in_progress"

@@ -5,6 +5,8 @@
   `no_appeal_above_minos`。
 * 被阿米特吞噬(第二次死亡,docs/02_奥西里斯审判详解.md「不复存在」)之后不能申诉,拒绝码 `soul_devoured`;
   吞噬执行时还开着的申诉(连同它的申诉流程)当场作废(`VOID`,无补偿、不改判),见 `void_for_devoured`。
+* 原审的审批流程还在走(PENDING / IN_PROGRESS)时不能申诉、也不能上诉,拒绝码 `origin_flow_open`(用户 2026-10-29);
+  官员端手动发起的 APPEAL 流程同一个码(`WorkflowService.start_workflow`)。
 * 灵魂只能对**自己本世**、**已结案**的**原审判**(ORIGINAL)申诉;结案后 30 天内;每件审判至多 2 次
   (撤回的也算一次);同一时刻至多一份没有结论的。
 * 复核人不能是作出原判的官员:结案人(`Judgment.concluded_by`)或认领人(`claimed_by`)。
@@ -144,6 +146,11 @@ def appeal_refusal(judgment, account):
         return AppealRefusedError("This judgment has not been concluded.", "not_concluded")
     if judgment.kind != JudgmentKind.ORIGINAL:
         return AppealRefusedError("Only an original judgment can be appealed.", "not_appealable")
+    from apps.judgment.weighing import origin_flow_open
+
+    if origin_flow_open(judgment=judgment):
+        # 原审的审批流程没走完,结论还不算定(用户 2026-10-29,审查 B):申诉与上诉都等它走完。
+        return AppealRefusedError("The judgment's approval flow has not finished.", "origin_flow_open")
     rounds = JudgmentAppeal.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
     if rounds.filter(status__in=OPEN_APPEAL_STATUSES).exists():
         return AppealRefusedError("An appeal on this judgment is already open.", "appeal_open")

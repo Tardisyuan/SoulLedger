@@ -177,6 +177,11 @@ def assert_may_be_reborn(soul, disposition=None):
     if unserved is not None:
         raise RebirthBlocked("term_not_served", "The soul's sentence has not been served out yet.",
                              term_end=unserved)
+    from apps.judgment.weighing import origin_flow_open
+
+    if origin_flow_open(soul=soul):
+        # 原审的审批流程还没走完(用户 2026-10-29,审查 R):结论还不算定,不能转世。
+        raise RebirthBlocked("origin_flow_open", "An original judgment's approval workflow has not finished.")
     if in_progress_plan(soul) is not None:
         raise RebirthBlocked("plan_in_progress", "The soul's sentence plan is not finished.")
     # 赦免(撤销计划 / 手动结束)把永久节点改成 ABORTED / CANCELLED / REMOVED,那份永久处置就不再挡。

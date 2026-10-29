@@ -280,6 +280,11 @@ it("a refused withdrawal (already decided / in the appeal flow) is said in words
   expect(toast.props.children).not.toContain("appeal_closed");
   expect(appealRefusalKey("ladder_running")).toBe("appeals.refusal.ladder_running");
   expect(translate("en", "appeals.refusal.ladder_running")).not.toBe("appeals.refusal.ladder_running");
+  // 原审流程没走完(2026-10-29,审查 B):有自己的一句,中英都有。
+  expect(appealRefusalKey("origin_flow_open")).toBe("appeals.refusal.origin_flow_open");
+  for (const locale of ["zh-Hans", "en"] as const) {
+    expect(translate(locale, "appeals.refusal.origin_flow_open")).not.toBe("appeals.refusal.origin_flow_open");
+  }
 });
 
 it("the form refuses an empty reason locally, then sends the reason and goes back", async () => {

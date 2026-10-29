@@ -127,27 +127,45 @@ def test_the_audit_row_names_two_different_nodes(stuck):
 
 
 @pytest.mark.django_db
-def test_escalating_the_last_node_completes_the_workflow(stuck):
-    """A skip is a way of finishing with a node, so the last one ends the flow.
+def test_escalating_the_last_node_is_refused_and_writes_nothing(stuck):
+    """Escalation goes at most as far as the final review (user 2026-10-29, review A).
 
-    Otherwise escalate answers "no next node" on the final node and leaves the
-    flow stuck on exactly the node the caller was trying to get past.
+    It used to complete the flow on the last node: a workflow nobody decided ended COMPLETED. A flow without a
+    FINAL-type stop is held to the same rule at its last stop.
     """
     wf, nodes, client = stuck
-    for _ in range(3):
+    for _ in range(2):
         resp = client.post(
             f"{WORKFLOWS}/{wf.pk}/escalate/", {"reason": "r"}, format="json"
         )
         assert resp.status_code == 200, resp.data
 
+    resp = client.post(f"{WORKFLOWS}/{wf.pk}/escalate/", {"reason": "r"}, format="json")
+    assert (resp.status_code, resp.data["code"]) == (400, "escalate_past_final")
     wf.refresh_from_db()
-    assert wf.status == ApprovalWorkflowStatus.COMPLETED
-    assert wf.current_node is None
-    assert wf.completed_at is not None
-    assert all(
-        n.status == NodeStatus.ESCALATED
-        for n in ApprovalNode.objects.filter(workflow=wf)
-    )
+    nodes[2].refresh_from_db()
+    assert wf.status == ApprovalWorkflowStatus.IN_PROGRESS and wf.completed_at is None
+    assert wf.current_node_id == nodes[2].pk
+    assert nodes[2].status == NodeStatus.PENDING
+    from apps.audit.models import AuditLog
+
+    assert AuditLog.objects.filter(resource="workflow.escalate").count() == 2
+
+
+@pytest.mark.django_db
+def test_a_final_type_stop_is_refused_even_with_a_stop_after_it(stuck):
+    wf, nodes, client = stuck
+    ApprovalNode.objects.filter(pk=nodes[0].pk).update(node_type="FINAL")
+    resp = client.post(f"{WORKFLOWS}/{wf.pk}/escalate/", {"reason": "r"}, format="json")
+    assert (resp.status_code, resp.data["code"]) == (400, "escalate_past_final")
+    nodes[0].refresh_from_db()
+    assert nodes[0].status == NodeStatus.PENDING
+    # The stop before a final one still escalates — onto the final, not past it.
+    ApprovalNode.objects.filter(pk=nodes[0].pk).update(node_type="TRIAL")
+    ApprovalNode.objects.filter(pk=nodes[1].pk).update(node_type="FINAL")
+    assert client.post(f"{WORKFLOWS}/{wf.pk}/escalate/", {"reason": "r"}, format="json").status_code == 200
+    wf.refresh_from_db()
+    assert wf.current_node_id == nodes[1].pk
 
 
 @pytest.mark.django_db
