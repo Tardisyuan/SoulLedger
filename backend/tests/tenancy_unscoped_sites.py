@@ -230,7 +230,7 @@ SITES = [
     ('apps/sentence_plan/requests.py', 'cancel', 'DispatchRecord._base_manager', 1, 'PK', 'cancel works through one plan: its reopen judgments, requests and dispatch record'),
     ('apps/sentence_plan/requests.py', 'cancel', 'Judgment.all_objects', 1, 'PK', 'cancel works through one plan: its reopen judgments, requests and dispatch record'),
     ('apps/sentence_plan/requests.py', 'cancel', 'SentencePlanRequest.all_objects', 1, 'PK', 'cancel works through one plan: its reopen judgments, requests and dispatch record'),
-    ('apps/sentence_plan/requests.py', 'normalize_changes', 'SentenceNode.all_objects', 1, 'CODE', "lookup by a globally unique code, then checked against the caller's civilization/tenant"),
+    ('apps/sentence_plan/requests.py', 'normalize_changes', 'SentenceNode.all_objects', 1, 'PK', "the nodes of the one plan passed in, by its pk (plan_id=plan.pk); the changes name nodes by their pk within that plan"),
     ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentenceNode.all_objects', 1, 'PK', 're-reads the one node by pk that was just locked through its plan'),
     ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentencePlanRequest.all_objects', 1, 'PK', 'pending-request probe by the locked plan'),
     ('apps/sentence_plan/requests.py', 'amend_for_appeal', 'Disposition.all_objects', 3, 'CROSS', "locks the appealed judgment's own disposition, or the dispositions its plan's stops reference by id -- a foreign stop's disposition lives in that hall; it is only read (executed or not), and only home dispositions are rewritten; the two system_void calls (Diyu acquittal on appeal) void by pk the judgment's own disposition or the home in-place node's disposition, both already locked above"),
