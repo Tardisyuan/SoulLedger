@@ -76,19 +76,24 @@ export function SensitiveWordsSection() {
   const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
 
   const { isAdmin } = usePermissions();
-  const { tenantCode } = useTenant();
+  const { tenantCode, user } = useTenant();
+  // 没绑殿的全局 ADMIN 要点名复制进哪个殿(服务端 `target_tenant`,impl-sec 2026-10-29);绑殿的只进本殿。
+  const pickTarget = isAdmin && user?.tenant == null;
   const copy = useCopySensitiveWords();
   const [copying, setCopying] = useState(false);
   const [source, setSource] = useState("");
+  const [targetPick, setTargetPick] = useState("");
+  const target = pickTarget ? targetPick || tenantCode || "" : tenantCode;
   const tenants = useQuery({
     queryKey: ["tenants", 1],
     queryFn: async () => (await tenantsApi.list()).data,
     enabled: isAdmin && copying,
   });
-  const sources = (tenants.data?.results ?? []).filter((c) => c.code !== tenantCode);
+  const sources = (tenants.data?.results ?? []).filter((c) => c.code !== target);
   const copyFrom = () =>
     source &&
-    copy.mutate(source, {
+    (!pickTarget || target) &&
+    copy.mutate(pickTarget ? { source, target: target ?? undefined } : { source }, {
       onSuccess: ({ copied, skipped }) => {
         setCopying(false);
         setSource("");
@@ -342,13 +347,35 @@ export function SensitiveWordsSection() {
             <Button type="button" variant="ghost" onClick={() => setCopying(false)} disabled={copy.isPending}>
               {t("common.cancel")}
             </Button>
-            <Button type="button" variant="primary" onClick={copyFrom} loading={copy.isPending} disabled={!source}>
+            <Button type="button" variant="primary" onClick={copyFrom} loading={copy.isPending} disabled={!source || (pickTarget && !target)}>
               {t("social_moderation.words.copy_confirm")}
             </Button>
           </div>
         }
       >
         <p className="mb-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("social_moderation.words.copy_hint")}</p>
+        {pickTarget && (
+          <label className="mb-3 block text-xs text-[oklch(var(--color-ink-muted))]">
+            {t("social_moderation.words.copy_target")}
+            <select
+              value={target ?? ""}
+              onChange={(e) => {
+                setTargetPick(e.target.value);
+                if (e.target.value === source) setSource("");
+              }}
+              className={cn(fieldControl({ size: "md" }), "mt-1 w-full")}
+            >
+              <option value="" disabled>
+                {t("social_moderation.words.copy_target_placeholder")}
+              </option>
+              {(tenants.data?.results ?? []).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="block text-xs text-[oklch(var(--color-ink-muted))]">
           {t("social_moderation.words.copy_source")}
           <select

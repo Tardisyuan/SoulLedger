@@ -184,6 +184,43 @@ function roleLabel(roleMeta: Record<string, Role>, role: string) {
 }
 
 /**
+ * 类别整列「全选 / 全不选」(rbac-snowy 2026-10-29)。对象是这个类别里当前看得见、且不是规则格的码;
+ * 都已勾上就是「全不选」,否则「全选」。一个都没有(全是规则格,如 ADMIN 列)就不出现。
+ */
+function CategoryToggle({
+  role,
+  category,
+  visible,
+  info,
+  disabled,
+  onSetCategory,
+}: {
+  role: string;
+  category: string;
+  visible: Permission[];
+  info: MatrixCellInfo;
+  disabled: boolean;
+  onSetCategory: (role: string, perms: Permission[], on: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const free = visible.filter((p) => !ruleState(role, p.codename));
+  if (free.length === 0) return null;
+  const allOn = free.every((p) => info.granted(role, p.id));
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      data-category-toggle={`${role}:${category}`}
+      aria-label={t(allOn ? "permissions.matrix.category_none_label" : "permissions.matrix.category_all_label", { category, role })}
+      onClick={() => onSetCategory(role, free, !allOn)}
+      className="ml-1 text-2xs text-[oklch(var(--color-accent-ink))] hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {t(allOn ? "permissions.matrix.category_none" : "permissions.matrix.category_all")}
+    </button>
+  );
+}
+
+/**
  * 角色 × 权限矩阵。桌面是表格(冻结首列,理由见下方注释);393 px 下改成
  * 「先选角色,再逐行开关」—— 五列方格在手机上既点不准也看不全。两种版式都在
  * DOM 里、按断点显隐,各自是完整的一份控件:网格里是 checkbox(名字是
@@ -197,6 +234,7 @@ export function PermissionMatrixTable({
   isSaving,
   isVisible,
   onToggle,
+  onSetCategory,
   categoryTally,
   info,
   mobileRole,
@@ -209,6 +247,7 @@ export function PermissionMatrixTable({
   isSaving: boolean;
   isVisible: (perm: Permission) => boolean;
   onToggle: (role: string, permId: number) => void;
+  onSetCategory: (role: string, perms: Permission[], on: boolean) => void;
   categoryTally: (perms: Permission[], role: string) => string;
   info: MatrixCellInfo;
   mobileRole: string;
@@ -283,6 +322,7 @@ export function PermissionMatrixTable({
                   roleNames={roleNames}
                   isSaving={isSaving}
                   onToggle={onToggle}
+                  onSetCategory={onSetCategory}
                   categoryTally={categoryTally}
                   info={info}
                 />
@@ -314,7 +354,10 @@ export function PermissionMatrixTable({
             <section key={category} aria-label={category} className="mt-3 border-y border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
               <h3 className="flex h-9 items-center justify-between bg-[oklch(var(--color-surface-2))] px-4 text-2xs uppercase font-semibold text-[oklch(var(--color-ink-muted))]">
                 <span>{category}</span>
-                <span className="font-mono font-normal">{categoryTally(perms, role)}</span>
+                <span className="font-mono font-normal normal-case">
+                  {categoryTally(perms, role)}
+                  <CategoryToggle role={role} category={category} visible={visible} info={info} disabled={isSaving} onSetCategory={onSetCategory} />
+                </span>
               </h3>
               <ul>
                 {visible.map((perm) => (
@@ -349,6 +392,7 @@ function MatrixGroup({
   roleNames,
   isSaving,
   onToggle,
+  onSetCategory,
   categoryTally,
   info,
 }: {
@@ -358,6 +402,7 @@ function MatrixGroup({
   roleNames: string[];
   isSaving: boolean;
   onToggle: (role: string, permId: number) => void;
+  onSetCategory: (role: string, perms: Permission[], on: boolean) => void;
   categoryTally: (perms: Permission[], role: string) => string;
   info: MatrixCellInfo;
 }) {
@@ -378,7 +423,14 @@ function MatrixGroup({
             key={role}
             className="sticky top-14 z-20 border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-2 text-center font-mono text-2xs text-[oklch(var(--color-ink-muted))]"
           >
-            {role === ADMIN_ROLE_NAME ? t("filter.all") : categoryTally(perms, role)}
+            {role === ADMIN_ROLE_NAME ? (
+              t("filter.all")
+            ) : (
+              <>
+                {categoryTally(perms, role)}
+                <CategoryToggle role={role} category={category} visible={visible} info={info} disabled={isSaving} onSetCategory={onSetCategory} />
+              </>
+            )}
           </td>
         ))}
       </tr>

@@ -1111,7 +1111,6 @@
       "pending_cells": "{{n}} pending",
       "discard": "Discard",
       "unsaved_region": "Unsaved changes",
-      "saved_all": "Saved {{n}}",
       "partial_title": "Partly saved · {{saved}} saved, {{failed}} failed",
       "locate": "Locate",
       "conflict_title": "Conflicts {{n}}",
@@ -1147,7 +1146,12 @@
       "lock_hint": "The ADMIN role always holds every permission; it cannot be unticked.",
       "deny_word": "forbidden",
       "deny_hint": "A realm lead cannot be granted 「{{perm}}」.",
-      "conflict_view": "View"
+      "conflict_view": "View",
+      "category_all": "All",
+      "category_none": "None",
+      "category_all_label": "Grant {{role}} every {{category}} permission",
+      "category_none_label": "Revoke every {{category}} permission from {{role}}",
+      "saved_all_refresh": "Saved {{n}} · takes effect for others when they reload"
     },
     "segments": {
       "label": "Permission sections",
@@ -1260,6 +1264,36 @@
       "save_error": "Could not save the data scope",
       "load_error": "Could not load the data scope",
       "read_only": "Only an administrator outside every hall can change data scope"
+    },
+    "members": {
+      "tabs": "Role tabs",
+      "tab_details": "Details",
+      "search": "Search members",
+      "list": "People holding this role",
+      "empty": "Nobody holds this role.",
+      "load_error": "Could not load the members",
+      "primary": "Main role",
+      "extra": "Additional",
+      "primary_locked": "A main role cannot be removed here: give this person another main role first.",
+      "remove": "Remove",
+      "remove_label": "Remove {{name}}'s additional role",
+      "grant": "Grant to people",
+      "grant_n": "Grant to {{n}}",
+      "pick_search": "Find people by username or email",
+      "pick_empty": "Nobody matches",
+      "already": "Already holds it",
+      "kind": "Grant as",
+      "primary_hint": "Granting it as the main role replaces the person's current main role.",
+      "granted": "Granted to {{n}} · takes effect for them when they reload",
+      "removed": "Removed from {{n}} · takes effect for them when they reload",
+      "change_error": "The change did not go through; try again",
+      "refused_title": "Nothing in this batch was changed; these people were refused:",
+      "refused": {
+        "not_found": "not someone you can manage",
+        "primary_needs_replacement": "a main role cannot be removed; give another main role first",
+        "forbidden": "you cannot grant a role above your own",
+        "invalid": "this role cannot be granted that way"
+      }
     }
   },
   "workflow": {
@@ -3428,7 +3462,14 @@
     "tenant_pick": "Choose a tenant",
     "organization_column": "Organization · Position",
     "position": "Position",
-    "organization_required": "A hall member who is not an administrator must belong to a unit"
+    "organization_required": "A hall member who is not an administrator must belong to a unit",
+    "org_filter": {
+      "label": "Filter by organization (with sub-units)",
+      "all": "All organizations"
+    },
+    "status_filter": {
+      "all": "Any status"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -6250,7 +6291,9 @@
       "copy_source": "Source civilization",
       "copy_source_placeholder": "— choose a civilization —",
       "copy_confirm": "Copy",
-      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list"
+      "copy_done": "Copied {{copied}}; skipped {{skipped}} already on the list",
+      "copy_target": "Copy into",
+      "copy_target_placeholder": "Choose the target civilization"
     },
     "mutes": {
       "col_soul": "Soul",

@@ -1,6 +1,9 @@
 "use client";
 
 import { useId, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { permApi } from "@soulledger/core/api";
+import { permKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Modal } from "@/src/components/ui/Modal";
@@ -11,7 +14,6 @@ import {
   collectDescendantIds,
   deriveCodename,
   MENU_TYPE_OPTIONS,
-  ROLE_OPTIONS,
   type MenuFormState,
   type MenuItemFull,
   type MenuTypeOption,
@@ -75,10 +77,25 @@ export function MenuFormModal({
     }));
   };
 
+  // The role chips come from the role table (殿主 and custom roles included; this was a fixed list of
+  // four, rbac-snowy 2026-10-29). A name the menu already carries but the table no longer has stays,
+  // so it can still be unticked.
+  const rolesQuery = useQuery({
+    queryKey: permKeys.roles,
+    queryFn: async () => (await permApi.roles.list()).data,
+    enabled: isOpen,
+  });
+  const roleOptions = useMemo(() => {
+    const table = rolesQuery.data ?? [];
+    const known = new Set(table.map((r) => r.name));
+    return [
+      ...table.map((r) => ({ role: r.name, label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name })),
+      ...form.roles.filter((r) => !known.has(r)).map((r) => ({ role: r, label: r })),
+    ];
+  }, [rolesQuery.data, form.roles, t]);
+
   // Non-blocking sibling-icon collision check: same parent, different row,
-  // same icon. Compared against `menus`, so it only sees whatever page of
-  // the list is currently loaded — a real limit once there are enough menus
-  // to paginate, but the audit backing this feature found 13 rows total.
+  // same icon. Compared against `menus` — the whole tree since the page loads every page.
   const iconCollision = useMemo(() => {
     if (!form.icon) return null;
     return (
@@ -236,7 +253,7 @@ export function MenuFormModal({
         <div className="flex flex-col gap-1">
           <span id={rolesLabelId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("menus.roles")}</span>
           <div role="group" aria-labelledby={rolesLabelId} className="flex flex-wrap gap-2">
-            {ROLE_OPTIONS.map((role) => (
+            {roleOptions.map(({ role, label }) => (
               /* A pressed toggle is the accent fill, which is exactly
                  `Button`'s primary — including the `text-black` its contrast
                  note derives (9.82:1; `text-white` here would have been
@@ -249,7 +266,7 @@ export function MenuFormModal({
                 aria-pressed={form.roles.includes(role)}
                 onClick={() => toggleRole(role)}
               >
-                {t(`users.roles.${role}`)}
+                {label}
               </Button>
             ))}
           </div>
