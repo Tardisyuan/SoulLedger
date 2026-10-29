@@ -90,7 +90,7 @@ def test_the_whole_rebirth_flow_pushes_results_without_their_content(cn_tenant, 
     for secret in ("SECRET", "陈述", "内部备注", "HUMAN", "默认给灵魂"):
         assert secret not in everything, secret
     assert {m["data"]["application_id"] for batch in FakeSender.batches for m in batch} == {str(application.pk)}
-    assert all(set(m) == {"to", "title", "body", "data", "sound", "priority"}
+    assert all(set(m) == {"to", "title", "body", "data", "sound", "priority", "channelId"}
                for batch in FakeSender.batches for m in batch)
 
 
@@ -463,6 +463,8 @@ def test_messages_go_out_in_batches_of_at_most_100(cn_tenant, push_on, enqueued)
     assert PushDelivery.objects.count() == 201
     assert services.send_deliveries(_ids()) == 201
     assert [len(b) for b in FakeSender.batches] == [100, 100, 1]
+    # 安卓渠道是 A9 之后新建的 "default-v2"(锁屏 PRIVATE),不是老手机上还显示全文的 "default"。
+    assert {m.get("channelId") for b in FakeSender.batches for m in b} == {"default-v2"}
     assert set(PushDelivery.objects.values_list("status", flat=True)) == {PushStatus.SENT}
     assert PushDelivery.objects.exclude(ticket_id="").count() == 201
 
