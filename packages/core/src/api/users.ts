@@ -204,7 +204,17 @@ export function openWorkOf(error: unknown): Record<string, Omit<HandoverPreview,
   return data?.code === "officer_has_open_work" && data.open_work ? data.open_work : null;
 }
 
+/** A row of GET /judgment/handover/officers/: an active officer of one hall, three facts only. */
+export interface HandoverOfficer {
+  id: number;
+  display_name: string;
+  role_display: string;
+}
+
 export const handoverApi = {
+  /** `judgment.assign`. Hall officers see their own hall; a global ADMIN names it with `tenant`. */
+  officers: (tenant?: number | null) =>
+    api.get<HandoverOfficer[]>("/judgment/handover/officers/", { params: tenant == null ? {} : { tenant } }),
   /** `to` 省略 = 只数件数(停用前的提醒)。 */
   preview: (from: number, to?: number) => api.post<HandoverPreview>("/judgment/handover/preview/", to == null ? { from } : { from, to }),
   commit: (from: number, to: number) => api.post<HandoverResult>("/judgment/handover/", { from, to }),

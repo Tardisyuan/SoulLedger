@@ -768,6 +768,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     awaiting_segment = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
     can_adjust = serializers.SerializerMethodField()
+    can_approve = serializers.SerializerMethodField()
     cross_judgment_id = serializers.SerializerMethodField()
     judgment_appeal = serializers.SerializerMethodField()
 
@@ -796,6 +797,20 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
 
         request = self.context.get("request")
         return request is not None and segments.can_adjust_any(obj, request)
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_approve(self, obj):
+        """Whether the requester may decide the current node now — `approve_node`'s own gates (workflow.approve +
+        `ApprovalNode.can_approve` via `decision_codes.block_for`, and the node is the current stop). The web's
+        「提交判决」 and 「待我处理」 read this instead of the codename alone (rbac-web M-6)."""
+        from apps.workflow import decision_codes
+
+        request = self.context.get("request")
+        node = obj.current_node
+        user = getattr(request, "user", None)
+        if node is None or user is None or not obj.is_current(node):
+            return False
+        return decision_codes.block_for(node, user) is None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_cross_judgment_id(self, obj):
@@ -844,6 +859,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "awaiting_segment",
             "history",
             "can_adjust",
+            "can_approve",
             "cross_judgment_id",
             "judgment_appeal",
         ]

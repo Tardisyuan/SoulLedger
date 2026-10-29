@@ -69,6 +69,7 @@ function payload(status: string, current: string | null) {
       completed_at: null,
       judgment: null,
       current_node: current,
+      can_approve: true,
       current_node_detail: nodes.find((n) => n.id === current) ?? null,
       nodes,
       updated_at: "2026-09-17T00:00:00Z",
@@ -139,6 +140,23 @@ describe("待我处理 bar", () => {
     renderPage();
     await preview();
     expect(bars()).toHaveLength(0);
+  });
+
+  // rbac-web M-6:持码而不是本站指定的审批人(服务端 can_approve=false)—— 不标「待我」,也不画「提交判决」。
+  it("is absent, with no submit button, for a holder of workflow.approve this node does not designate", async () => {
+    const base = payload("IN_PROGRESS", "n2");
+    workflowApi.get.mockResolvedValue({ data: { ...base.data, can_approve: false } });
+    renderPage();
+    await preview();
+    expect(bars()).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: tZh("workflow.detail.submit_decision") })).toBeNull();
+  });
+
+  it("the designated approver sees the submit button", async () => {
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    expect(screen.getByRole("button", { name: tZh("workflow.detail.submit_decision") })).toBeInTheDocument();
   });
 
   it("is absent once the workflow is completed", async () => {

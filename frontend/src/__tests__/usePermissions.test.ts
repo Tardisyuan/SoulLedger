@@ -18,6 +18,11 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: jest.fn(),
 }));
 
+jest.mock("@/src/components/impersonation/useImpersonation", () => ({
+  ...jest.requireActual("@/src/components/impersonation/useImpersonation"),
+  useImpersonation: jest.fn(() => null),
+}));
+
 import { useTenant } from "@/src/contexts/TenantContext";
 import type { UserRole } from "@soulledger/core/api";
 const mockUseTenant = useTenant as jest.MockedFunction<typeof useTenant>;
@@ -89,5 +94,39 @@ describe("usePermissions", () => {
     });
     const { result } = renderHook(() => usePermissions());
     expect(result.current.hasPermission("soul.read")).toBe(false);
+  });
+});
+
+// 代看 / 进殿查看(rbac-web M-4):只认读码,isAdmin 为假 —— 与后端 impersonation_read_only / is_tenant_exempt 一致。
+describe("usePermissions while viewing", () => {
+  const impersonation = jest.requireMock("@/src/components/impersonation/useImpersonation") as { useImpersonation: jest.Mock };
+  afterEach(() => impersonation.useImpersonation.mockReturnValue(null));
+
+  it("a judge being viewed keeps read codes and loses write codes", () => {
+    impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 2, name: "x", role: "JUDGE", hall: null } });
+    mockUseTenant.mockReturnValue(mockContext("JUDGE", ["soul.read", "judgment.execute"]));
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.hasPermission("soul.read")).toBe(true);
+    expect(result.current.hasPermission("judgment.execute")).toBe(false);
+    expect(result.current.hasAnyPermission(["judgment.execute"])).toBe(false);
+    // RequirePermission / RequireButton 要原始答案,好让 ViewingLock 置灰而不是藏掉
+    expect(result.current.hasPermission("judgment.execute", { evenWhileViewing: true })).toBe(true);
+    expect(result.current.hasPermission("user.delete", { evenWhileViewing: true })).toBe(false);
+  });
+
+  it("hall view: ADMIN is not admin and holds only read codes", () => {
+    impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 0, name: "", role: "ADMIN", hall: {} }, hallView: { code: "CN_DIYU" } });
+    mockUseTenant.mockReturnValue(mockContext("ADMIN"));
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.isAdmin).toBe(false);
+    expect(result.current.hasPermission("soul.read")).toBe(true);
+    expect(result.current.hasPermission("recycle_bin.restore")).toBe(false);
+  });
+
+  it("not viewing: ADMIN is admin and holds write codes", () => {
+    mockUseTenant.mockReturnValue(mockContext("ADMIN"));
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.isAdmin).toBe(true);
+    expect(result.current.hasPermission("recycle_bin.restore")).toBe(true);
   });
 });

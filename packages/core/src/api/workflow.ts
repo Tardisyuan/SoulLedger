@@ -60,6 +60,8 @@ export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   history?: WorkflowHistoryEntry[];
   /** The requester may change stations now (加减站 entry, W-3b). */
   can_adjust?: boolean;
+  /** The requester may decide the current node now: workflow.approve, the node designates them, and it is the current stop (rbac-web M-6). */
+  can_approve?: boolean;
   /** The cross-realm judgment this workflow merged, if any. */
   cross_judgment_id?: string | null;
   /** The soul's appeal escalated to this APPEAL workflow (2026-10-27); null otherwise. */

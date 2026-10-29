@@ -54,6 +54,15 @@ export type { GrantMap, RoleDiff } from "@/src/components/permissions/matrixDiff
 const PERMISSIONS_COLUMNS_KEY = "soulledger.permissions.columns";
 
 export default function PermissionsPage() {
+  // 页级门(rbac-web L-1 / L-6):授权矩阵接口全是 IsAdmin;门在最外层,非管理员不发 role-permissions/all/。
+  return (
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <PermissionsPageContent />
+    </RequireAdmin>
+  );
+}
+
+function PermissionsPageContent() {
   const { t } = useI18n();
   const { hasPermission } = usePermissions();
   const canManagePermissions = hasPermission("system.settings");

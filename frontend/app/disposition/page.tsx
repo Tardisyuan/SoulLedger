@@ -30,6 +30,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { formatHistoricalDate } from "@/lib/utils";
 import { termState, type TermState } from "@/src/lib/dispositionTerm";
 import { VerdictBadge as DomainVerdictBadge } from "@/src/components/ui/StatusBadge";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * 处置(规范 v1 第三类 A·07):一页三段 —— 待执行 → 执行中 → 期满,就是处置本身的时间顺序。
@@ -59,6 +60,15 @@ const FLOW_WAITING_APPROVAL = ["approval_in_progress", "approval_rejected"];
 const FLOW_WAITING_WEIGHING = ["weighing_in_progress", "weighing_rejected", "weighing_wavers"];
 
 export default function DispositionPage() {
+  // 页级门(rbac-web L-1):三段列表都要 disposition.read。
+  return (
+    <RequirePermission permissions="disposition.read" fallback={<PermissionDenied permission="disposition.read" />}>
+      <DispositionPageContent />
+    </RequirePermission>
+  );
+}
+
+function DispositionPageContent() {
   const { t, formatDate } = useI18n();
   const hall = useHall(useCourtOffice());
   usePlaque({ hall });

@@ -9,6 +9,7 @@ import { judgmentApi, soulsApi, type Judgment, type PaginatedResponse, type Soul
 import { citationOf } from "@soulledger/core/config/statuteCitation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuTranslationKey } from "@/src/lib/menuI18n";
 import { shortIdentifier } from "@/src/lib/domainDisplay";
@@ -127,6 +128,9 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   const { t } = useI18n();
   const { user } = useTenant();
   const router = useRouter();
+  // 审判与律条要 judgment.read,灵魂要 soul.read:不持码就不发(rbac-web L-6),那一组也不出现 —— 与 403 时一样。
+  const { hasPermission } = usePermissions();
+  const allowed: Partial<Record<Kind, boolean>> = { judgment: hasPermission("judgment.read"), soul: hasPermission("soul.read"), statute: hasPermission("judgment.read") };
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [term, setTerm] = useState("");
@@ -169,16 +173,19 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   const common = { enabled, placeholderData: keepPreviousData, retry: false, staleTime: 30_000 } as const;
   const judgments = useQuery({
     ...common,
+    enabled: enabled && !!allowed.judgment,
     queryKey: ["global-search", "judgment", term],
     queryFn: async () => (await judgmentApi.list({ search: term })).data,
   });
   const souls = useQuery({
     ...common,
+    enabled: enabled && !!allowed.soul,
     queryKey: ["global-search", "soul", term],
     queryFn: async () => (await soulsApi.list({ search: term })).data,
   });
   const statutes = useQuery({
     ...common,
+    enabled: enabled && !!allowed.statute,
     queryKey: ["global-search", "statute", term],
     queryFn: async () => (await judgmentApi.statutes({ search: term })).data,
   });
@@ -222,6 +229,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     toOption: (row: T) => Option,
     order: (rows: T[]) => T[] = (rows) => rows
   ): Section {
+    if (allowed[kind] === false) return { kind, state: "hidden" };
     if (query.isError) return isForbidden(query.error) ? { kind, state: "hidden" } : { kind, state: "error", retry: () => void query.refetch() };
     if (!query.data) return { kind, state: "loading" };
     const options = order(query.data.results).slice(0, GROUP_LIMIT).map(toOption);

@@ -3,6 +3,8 @@ Permission serializers
 """
 from rest_framework import serializers
 
+from apps.authentication.serializers import LoginTenantRefSerializer
+
 from .matrix import ACTIONS, RESULT_CODES, ROLE_DELETE_REFUSAL_CODES, STATUSES
 from .models import Permission, Role, RolePermission
 
@@ -274,6 +276,16 @@ class RolePermissionsSerializer(serializers.Serializer):
     role = serializers.CharField()
     permissions = serializers.ListField(child=serializers.CharField())
     details = PermissionSerializer(many=True)
+
+
+class MyRolePermissionsSerializer(RolePermissionsSerializer):
+    """`get_role_permissions` only: the caller's own answer also carries who they are now —
+    id, tenant (same shape as the login payload) and extra roles — so the web can refresh
+    them on window focus instead of trusting a 24-hour cached envelope (rbac-web M-3)."""
+
+    id = serializers.IntegerField()
+    tenant = LoginTenantRefSerializer(allow_null=True)
+    extra_roles = serializers.ListField(child=serializers.CharField())
 
 
 class RolePermissionAssignResultSerializer(serializers.Serializer):

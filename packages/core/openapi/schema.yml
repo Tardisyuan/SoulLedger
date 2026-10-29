@@ -9436,6 +9436,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/HandoverResult'
           description: ''
+  /api/v1/judgment/handover/officers/:
+    get:
+      operationId: judgment_handover_officers
+      description: |-
+        `GET /judgment/handover/officers/`:交接对话框的人选 —— 一殿的在职官员(非灵魂),只回 id、显示名、角色显示名。
+
+        与交接本身同一个码 `judgment.assign`(rbac-web M-7 / 待拍板 23):对话框此前用 `users/`(ADMIN + user.manage),
+        持 judgment.assign 的殿主打开就是 403。非 ADMIN 只看本殿(殿取自令牌);全局 ADMIN 用 `?tenant=<id>` 说是哪一殿。
+      parameters:
+      - in: query
+        name: tenant
+        schema:
+          type: integer
+        description: 全局 ADMIN 指定殿;其他人忽略,一律本殿
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandoverOfficer'
+          description: ''
   /api/v1/judgment/handover/preview/:
     post:
       operationId: judgment_handover_preview
@@ -14569,7 +14596,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RolePermissions'
+                $ref: '#/components/schemas/MyRolePermissions'
           description: ''
   /api/v1/perm/role-permissions/all/:
     get:
@@ -23565,6 +23592,9 @@ components:
         can_adjust:
           type: boolean
           readOnly: true
+        can_approve:
+          type: boolean
+          readOnly: true
         cross_judgment_id:
           type: string
           nullable: true
@@ -23577,6 +23607,7 @@ components:
       required:
       - awaiting_segment
       - can_adjust
+      - can_approve
       - completed_at
       - created_at
       - cross_judgment_id
@@ -28946,6 +28977,19 @@ components:
       - post
       - reason
       - type
+    HandoverOfficer:
+      type: object
+      properties:
+        id:
+          type: integer
+        display_name:
+          type: string
+        role_display:
+          type: string
+      required:
+      - display_name
+      - id
+      - role_display
     HandoverPreview:
       type: object
       properties:
@@ -33417,6 +33461,40 @@ components:
       required:
       - days
       - user_id
+    MyRolePermissions:
+      type: object
+      description: |-
+        `get_role_permissions` only: the caller's own answer also carries who they are now —
+        id, tenant (same shape as the login payload) and extra roles — so the web can refresh
+        them on window focus instead of trusting a 24-hour cached envelope (rbac-web M-3).
+      properties:
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        id:
+          type: integer
+        tenant:
+          allOf:
+          - $ref: '#/components/schemas/LoginTenantRef'
+          nullable: true
+        extra_roles:
+          type: array
+          items:
+            type: string
+      required:
+      - details
+      - extra_roles
+      - id
+      - permissions
+      - role
+      - tenant
     NegativeConfessionError:
       type: object
       properties:
@@ -36278,6 +36356,9 @@ components:
             $ref: '#/components/schemas/WorkflowHistoryEntry'
           readOnly: true
         can_adjust:
+          type: boolean
+          readOnly: true
+        can_approve:
           type: boolean
           readOnly: true
         cross_judgment_id:

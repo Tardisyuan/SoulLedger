@@ -59,6 +59,7 @@ function workflow(node: Record<string, unknown>) {
       completed_at: null,
       judgment: null,
       current_node: "n1",
+      can_approve: true,
       current_node_detail: { ...NODE, ...node },
       nodes: [{ ...NODE, ...node }],
       updated_at: "2026-10-09T00:00:00Z",

@@ -196,6 +196,17 @@ def test_only_the_city_gods_officers_or_a_hall_admin_act(assigned, cn_tenant):
     assert again.status_code == 409 and again.data["code"] == "not_at_city_god"
 
 
+def test_a_named_officer_without_judgment_execute_cannot_act(assigned, cn_tenant):
+    """rbac-web L-4:解送 / 退回的接口要 judgment.execute;`may_act`(即 `can_act`)此前不看它,
+    名下官员不持 execute 时按钮可点、接口 403。"""
+    judgment = _dead(cn_tenant, "杭州")
+    keeper = sp.officer("keeper", "GUARDIAN", cn_tenant)  # GUARDIAN 默认不持 judgment.execute
+    assigned["hangzhou"].officers.add(keeper)
+    assert city_gods.may_act(keeper, judgment) is False
+    assert city_gods.may_act(assigned["clerk"], judgment) is True
+    assert city_gods.may_act(assigned["lead"], judgment) is True
+
+
 def test_return_needs_a_note_tells_the_admins_and_can_still_be_sent_on(assigned, cn_tenant,
                                                                       django_capture_on_commit_callbacks):
     judgment = _dead(cn_tenant, "杭州")

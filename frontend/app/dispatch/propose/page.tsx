@@ -36,13 +36,17 @@ import {
 import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
 import { cn } from "@/lib/utils";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 // `useSearchParams` needs a Suspense boundary under the App Router build.
 export default function ProposeDispatchPage() {
+  // 页级门(rbac-web L-1):提案、草稿、领域选项都要 dispatch.manage。
   return (
-    <Suspense fallback={null}>
-      <ProposeDispatchForm />
-    </Suspense>
+    <RequirePermission permissions="dispatch.manage" fallback={<PermissionDenied permission="dispatch.manage" />}>
+      <Suspense fallback={null}>
+        <ProposeDispatchForm />
+      </Suspense>
+    </RequirePermission>
   );
 }
 

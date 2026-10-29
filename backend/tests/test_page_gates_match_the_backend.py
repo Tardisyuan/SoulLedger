@@ -52,7 +52,6 @@ PUBLIC_OR_SELF_SERVICE = {
     "/cross-judgments/[id]": "同上。",
     "/corpus": "语料是公开的考据材料,不含任何租户数据。",
     "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见)。",
-    "/death-sync": "只读视图,后端 DeathRegistrationReadViewSet 是 ADMIN-only。",
 }
 
 #: 一道门在**使用处**长什么样。不是 `("RequirePermission", ...)` 这样的裸名字:
@@ -60,6 +59,38 @@ PUBLIC_OR_SELF_SERVICE = {
 #: `import { RequirePermission }`,守卫**一条不红** —— 它把一个未使用的 import
 #: 当成了一道门。这个仓库栽在「扫描器看的不是它以为在看的东西」上,这是第五次。
 GATE_MARKERS = ("<RequirePermission", "<RequireAdmin", "hasPermission(", "isAdmin")
+
+
+#: 门的位置(rbac-web L-1,2026-10-29)。上面那组标记只问「源码里**有没有**一道门」,而按钮上的
+#: `hasPermission(` 也算 —— `/souls`、`/users`、`/workflow`、`/disposition`、`/dispatch/propose`、
+#: `/menus/buttons` 都因为某个按钮的门而被判「有门」,直接输 URL 照样进得了页壳。所以现在要求门在
+#: **默认导出的最外层**:它 `return` 的第一个元素就是 `<RequirePermission` / `<RequireAdmin`,
+#: 或者它在函数体顶层先 `if (!<码判断>) return …`(审计各页的早返回写法)。
+OUTERMOST_GATE = re.compile(r"^\s*<(RequirePermission|RequireAdmin)\b")
+EARLY_RETURN_GATE = re.compile(r"^  if \(\s*!\s*(hasPermission\(|hasAnyPermission\(|isAdmin\b|can[A-Z]\w*\s*\))", re.M)
+
+
+def _default_export_body(source):
+    m = re.search(r"^export default function \w+\([^)]*\)[^{]*\{\n", source, re.M)
+    if m is None:
+        return None
+    end = re.search(r"^\}", source[m.end():], re.M)
+    body = source[m.end(): m.end() + end.start()]
+    body = re.sub(r"\{/\*.*?\*/\}", "", body, flags=re.S)
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    return "\n".join(line for line in body.split("\n") if not line.lstrip().startswith("//"))
+
+
+def gate_is_outermost(source):
+    body = _default_export_body(source)
+    if body is None:
+        return False
+    if EARLY_RETURN_GATE.search(body):
+        return True
+    first_return = re.search(r"^  return\b", body, re.M)
+    if first_return is None:
+        return False
+    return bool(OUTERMOST_GATE.match(body[first_return.end():].lstrip().lstrip("(")))
 
 
 def routes():
@@ -82,15 +113,7 @@ def test_the_walk_found_a_non_trivial_number_of_routes():
 
 @pytest.mark.parametrize("route", [r for r in ROUTES if r not in PUBLIC_OR_SELF_SERVICE])
 def test_every_other_route_has_a_gate(route):
-    parts = [p for p in route.strip("/").split("/") if p]
-    page = APP.joinpath(*parts, "page.tsx") if parts else APP / "page.tsx"
-    if not page.exists():
-        # 路由组:回退到全量搜索
-        page = next(
-            p for p in APP.rglob("page.tsx")
-            if "/" + "/".join(x for x in p.relative_to(APP).parent.parts if not x.startswith("(")) == route
-        )
-    source = page.read_text(encoding="utf-8")
+    source = _page_source(route)
     # 只看代码,不看注释 —— 这个仓库已经四次栽在「扫描器读到了自己的文档」上。
     code = "\n".join(
         line for line in source.split("\n")
@@ -104,6 +127,45 @@ def test_every_other_route_has_a_gate(route):
         f"直接输 URL 就能打开它。若这是有意的,把它加进 PUBLIC_OR_SELF_SERVICE "
         f"并写明理由。"
     )
+    assert gate_is_outermost(source), (
+        f"{route} 的门不在页面最外层:默认导出 return 的第一个元素应是 <RequirePermission> / "
+        f"<RequireAdmin>(放在 Suspense 外面),或者在函数体顶层先 `if (!<码判断>) return`。"
+        f"按钮上的 hasPermission 不挡路由,直接输 URL 会进到页壳里一片 403。"
+    )
+
+
+def test_the_outermost_rule_tells_a_page_gate_from_a_button_gate():
+    """守卫的守卫:规则本身要分得清两种写法,否则上面那条会对着任何页面都绿。"""
+    page_gate = (
+        'export default function P() {\n  return (\n    <RequirePermission permissions="soul.read">\n'
+        '      <Suspense fallback={null}><X /></Suspense>\n    </RequirePermission>\n  );\n}\n'
+    )
+    early = (
+        'export default function P() {\n  const { hasPermission } = usePermissions();\n'
+        '  if (!hasPermission("audit.read")) {\n    return <D />;\n  }\n  return <X />;\n}\n'
+    )
+    button_gate = (
+        'export default function P() {\n  return (\n    <Suspense fallback={null}>\n      <X />\n    </Suspense>\n  );\n}\n'
+        'function X() {\n  return <RequirePermission permissions="soul.create"><B /></RequirePermission>;\n}\n'
+    )
+    nested = (
+        'export default function P() {\n  return (\n    <PageShell>\n      <RequireAdmin><X /></RequireAdmin>\n'
+        '    </PageShell>\n  );\n}\n'
+    )
+    assert gate_is_outermost(page_gate) and gate_is_outermost(early)
+    assert not gate_is_outermost(button_gate) and not gate_is_outermost(nested)
+
+
+def _page_source(route):
+    parts = [p for p in route.strip("/").split("/") if p]
+    page = APP.joinpath(*parts, "page.tsx") if parts else APP / "page.tsx"
+    if not page.exists():
+        # 路由组:回退到全量搜索
+        page = next(
+            p for p in APP.rglob("page.tsx")
+            if "/" + "/".join(x for x in p.relative_to(APP).parent.parts if not x.startswith("(")) == route
+        )
+    return page.read_text(encoding="utf-8")
 
 
 def test_the_exemption_list_names_only_real_routes():

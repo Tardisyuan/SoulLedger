@@ -4061,6 +4061,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/handover/officers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `GET /judgment/handover/officers/`:交接对话框的人选 —— 一殿的在职官员(非灵魂),只回 id、显示名、角色显示名。
+         *
+         *     与交接本身同一个码 `judgment.assign`(rbac-web M-7 / 待拍板 23):对话框此前用 `users/`(ADMIN + user.manage),
+         *     持 judgment.assign 的殿主打开就是 403。非 ADMIN 只看本殿(殿取自令牌);全局 ADMIN 用 `?tenant=<id>` 说是哪一殿。
+         */
+        get: operations["judgment_handover_officers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/handover/preview/": {
         parameters: {
             query?: never;
@@ -10631,6 +10653,7 @@ export interface components {
             readonly awaiting_segment: number | null;
             readonly history: components["schemas"]["WorkflowHistoryEntry"][];
             readonly can_adjust: boolean;
+            readonly can_approve: boolean;
             readonly cross_judgment_id: string | null;
             readonly judgment_appeal: components["schemas"]["WorkflowJudgmentAppeal"] | null;
         };
@@ -13089,6 +13112,11 @@ export interface components {
             /** @description 帖子的图片张数(与举报队列同一条规则);评论为 0。 */
             media_count: number;
         };
+        HandoverOfficer: {
+            id: number;
+            display_name: string;
+            role_display: string;
+        };
         HandoverPreview: {
             judgments: number;
             appeals: number;
@@ -14923,6 +14951,19 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        /**
+         * @description `get_role_permissions` only: the caller's own answer also carries who they are now —
+         *     id, tenant (same shape as the login payload) and extra roles — so the web can refresh
+         *     them on window focus instead of trusting a 24-hour cached envelope (rbac-web M-3).
+         */
+        MyRolePermissions: {
+            role: string;
+            permissions: string[];
+            details: components["schemas"]["Permission"][];
+            id: number;
+            tenant: components["schemas"]["LoginTenantRef"] | null;
+            extra_roles: string[];
+        };
         NegativeConfessionError: {
             error: string;
             /** @description concluded (409) / not_weighed (400) / unknown_clause (404) */
@@ -16491,6 +16532,7 @@ export interface components {
             readonly awaiting_segment?: number | null;
             readonly history?: components["schemas"]["WorkflowHistoryEntry"][];
             readonly can_adjust?: boolean;
+            readonly can_approve?: boolean;
             readonly cross_judgment_id?: string | null;
             readonly judgment_appeal?: components["schemas"]["WorkflowJudgmentAppeal"] | null;
         };
@@ -28752,6 +28794,28 @@ export interface operations {
             };
         };
     };
+    judgment_handover_officers: {
+        parameters: {
+            query?: {
+                /** @description 全局 ADMIN 指定殿;其他人忽略,一律本殿 */
+                tenant?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverOfficer"][];
+                };
+            };
+        };
+    };
     judgment_handover_preview: {
         parameters: {
             query?: never;
@@ -33670,7 +33734,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RolePermissions"];
+                    "application/json": components["schemas"]["MyRolePermissions"];
                 };
             };
         };
