@@ -95,9 +95,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'die': ['soul.die'],
         'transition': ['soul.transition'],
         'karma': ['soul.read'],
-        'add_record': ['soul.update'],
-        # 改一条已入簿的功过:与 add_record 同一把 `soul.update`。
-        'update_record': ['soul.update'],
+        # 功过是审判净值与证据的来源,增改挂账簿的码 `ledger.manage`(用户 2026-10-29 第 19 条;此前是
+        # `soul.update`,守护者不持任何 judgment.* 却能改已被采信的证据)。souls/0053 把它授给原来靠 soul.update 写功过的角色。
+        'add_record': ['ledger.manage'],
+        'update_record': ['ledger.manage'],
         'records': ['soul.read'],
         'path': ['soul.read'],
         # 挪十三站(apps/souls/stations.py):与状态转换同一个码名 —— 都是把灵魂挪到别处。
@@ -778,13 +779,18 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         The same serializer and the same validation as `add_record` — dates against the soul,
         the clause/count pair, the statute against the soul's civilization — with the record as
         instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
-        statute changes. Gated by `soul.update`, like `add_record`.
+        statute changes. Gated by `ledger.manage`, like `add_record`; 409 once a concluded case admitted it.
         """
         soul = self.get_object()
         try:
             record = soul.records.get(pk=record_id)
         except (SoulRecord.DoesNotExist, DjangoValidationError):
             return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
+        from apps.judgment.services import EvidenceAdmissionService
+
+        if EvidenceAdmissionService.admitted_in_concluded_case(record):
+            return Response({"error": "This record was admitted as evidence in a concluded case and cannot be edited.",
+                             "code": "admitted_in_concluded_case"}, status=status.HTTP_409_CONFLICT)
         serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
         if not serializer.is_valid():
             return _record_errors(serializer)
@@ -888,6 +894,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 {"error": "Record not found on this soul."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        except DjangoValidationError:  # not a UUID: a 400, not a 500 (rbac-be1 L7)
+            return Response({"error": "record_id is not a valid id.", "code": "invalid_record_id"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         event = (record.event_year, record.event_month, record.event_day)
         birth = (soul.birth_year, soul.birth_month, soul.birth_day)
@@ -943,6 +952,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 {"error": "Record not found on this soul."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        except DjangoValidationError:  # not a UUID: a 400, not a 500 (rbac-be1 L7)
+            return Response({"error": "record_id is not a valid id.", "code": "invalid_record_id"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         record.date_warning_acknowledged_by = None
         record.date_warning_acknowledged_at = None

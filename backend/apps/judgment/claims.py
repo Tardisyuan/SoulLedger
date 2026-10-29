@@ -21,6 +21,7 @@
 """
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import APIException
 
 from apps.judgment.models import AT_CITY_GOD, DUAT_BARRED, DuatStage, Judgment, JudgmentKind
 from apps.souls import acheron
@@ -138,24 +139,68 @@ def _assert_may_act_on(judgment: Judgment, user, may_override: bool) -> None:
         )
 
 
-#: 结案不受认领限制的角色:ADMIN,以及殿主(MODERATOR)—— 与默认持有 `judgment.assign`
-#: 的是同一批人。按角色名判,不按码名:这是用户拍板的「谁可以越过认领」,不随权限矩阵漂。
-CONCLUDE_OVERRIDE_ROLES = ("ADMIN", "MODERATOR")
+class NotClaimantError(APIException):
+    """403 `not_claimant`:别人认领中的案子,不持 `judgment.assign` 的人不能改它(rbac-be1 第 17 条)。"""
+
+    status_code = 403
+    default_code = "not_claimant"
+
+    def __init__(self, judgment: Judgment):
+        holder = judgment.claimed_by
+        super().__init__({
+            "error": "This judgment is claimed by another officer; only they, or an officer who may reassign, can change it.",
+            "code": "not_claimant", "claimed_by": judgment.claimed_by_id,
+            "claimed_by_name": (holder.display_name or holder.username) if holder else None,
+        })
+
+
+def assert_may_edit(judgment: Judgment, request, what: str) -> None:
+    """改 / 删案子、写草稿、采信证据、引条文、写否认告白、上传附件之前(用户 2026-10-29 第 17 条)。
+
+    无人认领、或认领人就是自己:照旧。别人认领中(案子还开着):持 `judgment.assign`(殿主 / ADMIN,
+    与释放 / 暂缓 / 改派的 `_may_override` 同一口径)的人可以越过,并留一行审计说他越过了谁;
+    其余 403 `not_claimant`。已结案的案子不在此列 —— 那里由「结案冻结」管(第 18 条)。
+    不在行锁下读认领人:与改派并发时最坏是按旧认领人放行一次编辑,不会落判(结案另有 `lock_for_conclude`)。"""
+    from apps.perm.checker import check_permission
+
+    user = request.user
+    if judgment.claimed_by_id in (None, user.pk) or judgment.verdict is not None or judgment.is_final:
+        return
+    if not check_permission(user, CONCLUDE_OVERRIDE_CODENAME):
+        raise NotClaimantError(judgment)
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.core.client_ip import get_client_ip
+
+    AuditLog.objects.create(
+        tenant_id=judgment.tenant_id, user=user, action=AuditAction.UPDATE, resource="judgment.claim_override",
+        resource_id=str(judgment.pk),
+        description=f"越过认领人编辑:{judgment.case_number} {what}"[:500],
+        changes={"claimed_by": judgment.claimed_by_id, "action": what},
+        ip_address=get_client_ip(request), user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+    )
+
+
+#: 结案越过认领的码:`judgment.assign`(ADMIN、殿主默认持有),与释放 / 暂缓 / 改派的 `_may_override`
+#: 同一口径。按码判、认兼任角色(rbac-be1 第 21 条,2026-10-29;此前按主角色名 ADMIN / MODERATOR 判,
+#: 兼任殿主的判官越不过、矩阵收不回)。
+CONCLUDE_OVERRIDE_CODENAME = "judgment.assign"
 
 
 def lock_for_conclude(pk, user) -> Judgment:
     """结案前锁住案子这一行,并确认调用者可以结它。**必须在结案事务里调用。**
 
-    别人认领的案子只有认领人本人能结;ADMIN 与殿主不受此限。无人认领的案子,持
+    别人认领的案子只有认领人本人能结;持 `judgment.assign` 的人不受此限。无人认领的案子,持
     `judgment.execute` 的人都能结(码名由视图查)。行锁一直持有到结案事务结束,所以
     与「改派」并发时,要么改派先落、结案读到新认领人而被拒,要么结案先落、改派读到
     已结案而得 `not_pending` —— 不会有「按旧认领人放行、按新认领人落判」。
     """
+    from apps.perm.checker import check_permission
+
     judgment = _lock(pk)
     assert_concludable(judgment)
     if (
         judgment.claimed_by_id not in (None, user.pk)
-        and getattr(user, "role", None) not in CONCLUDE_OVERRIDE_ROLES
+        and not check_permission(user, CONCLUDE_OVERRIDE_CODENAME)
     ):
         holder = judgment.claimed_by
         raise ClaimRefusedError(

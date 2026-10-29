@@ -134,6 +134,36 @@ describe("SoulDetailPage — 重算功过", () => {
     expect(screen.queryByText("souls.detail.recalculate")).not.toBeInTheDocument();
   });
 
+  it("增改功过跟着 ledger.manage 走,不再跟 soul.update(2026-10-29 第 19 条)", async () => {
+    const { soulsApi } = jest.requireMock("@soulledger/core/api") as { soulsApi: { karma: jest.Mock } };
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        reading: { kind: "BALANCE", civilization: "CHINESE", merit: 0, demerit: 0, balance: 0 },
+        merit_score: 0, demerit_score: 0, karmic_balance: 0, record_count: 0, records: [],
+      },
+    });
+    try {
+    mockUser.permissions = ["soul.read", "soul.update"];
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <SoulDetailPage />
+      </QueryClientProvider>
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: /souls.detail.profile.tab_records/ }));
+    await waitFor(() => expect(soulsApi.karma).toHaveBeenCalled());
+    await screen.findByRole("tab", { name: /souls.detail.profile.tab_records/, selected: true });
+    expect(screen.queryByTestId("record-add")).not.toBeInTheDocument();
+    unmount();
+
+    mockUser.permissions = ["soul.read", "ledger.manage"];
+    renderPage();
+    fireEvent.click(await screen.findByRole("tab", { name: /souls.detail.profile.tab_records/ }));
+    expect(await screen.findByTestId("record-add")).toBeInTheDocument();
+    } finally {
+      soulsApi.karma.mockResolvedValue({ data: null });
+    }
+  });
+
   it("不再是页头上的独立按钮", async () => {
     renderPage();
     await screen.findByRole("button", { name: "更多操作" });

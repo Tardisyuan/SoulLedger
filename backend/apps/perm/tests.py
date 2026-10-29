@@ -767,7 +767,9 @@ class LedgerPermissionRenameMigrationTest(TestCase):
         self.assertIn("ledger.manage", ROLE_PERMISSIONS["ADMIN"])
         self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["VIEWER"])
         self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["JUDGE"])
-        self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["GUARDIAN"])
+        # GUARDIAN holds it since 2026-10-29: merit / demerit records moved from soul.update to ledger.manage
+        # and GUARDIAN is the role that writes them (souls/0053).
+        self.assertIn("ledger.manage", ROLE_PERMISSIONS["GUARDIAN"])
 
     def test_default_permissions_defines_every_codename_the_views_require(self):
         """karma.update 曾经是个谁也没定义过的 codename，别再来一次。"""

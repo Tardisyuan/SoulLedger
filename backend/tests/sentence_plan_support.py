@@ -74,6 +74,12 @@ def planned(home, stops=(), *, name="客魂", verdict=None):
     return soul, SentencePlan.all_objects.get(soul=soul, origin_judgment_id=case.pk)
 
 
+def judged_by(p, user):
+    """Record `user` as the plan's original judge (`Judgment.concluded_by` of the origin case): the officer who
+    decides its REOPEN requests (user 2026-10-29, item 20). `planned` concludes without a user."""
+    Judgment.all_objects.filter(pk=p.origin_judgment_id).update(concluded_by=user)
+
+
 def walk_flow(case):
     """原审的处置等审批流程走完才执行(用户 2026-10-29;埃及是称心流程,apps/judgment/weighing.py)。
     这里把每一站批过去。没有流程(非原审、早夭)什么都不做。"""

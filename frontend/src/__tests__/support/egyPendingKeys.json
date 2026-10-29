@@ -81,6 +81,7 @@
   "reincarnation.error.origin_flow_open",
   "reincarnation.error.rebirth_continent_not_applicable",
   "sentence_plan.errors.five_heinous_must_fail",
+  "sentence_plan.errors.not_original_judge",
   "soul_app.chat.errors.ticket_expired",
   "soul_app.chat.errors.ticket_invalid",
   "soul_app.errors.invalid_days",

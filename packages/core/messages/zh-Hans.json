@@ -4134,7 +4134,7 @@
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
-      "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。"
+      "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
     }
   },
   "reincarnation": {
@@ -6460,6 +6460,7 @@
       "request_closed": "这条请求已被处理",
       "not_home": "只有原属文明能这样做",
       "not_requester": "只有提出方能撤回",
+      "not_original_judge": "重开请求由原审判官本人决定；他不在职时，由原属殿能改派案子的官员决定",
       "node_not_pending": "要减的站已经开始",
       "eternal_not_last": "永久刑期只能排在最后一站",
       "soul_state": "灵魂当前的状态不允许结束计划",

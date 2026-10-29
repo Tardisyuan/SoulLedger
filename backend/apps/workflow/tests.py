@@ -184,6 +184,15 @@ class TestApprovalWorkflowCRUD:
         assert resp.status_code == status.HTTP_200_OK
 
     def test_delete_workflow(self):
+        """Only a flow that has not started and decides no judgment can be deleted (rbac-be1 H1, 2026-10-29);
+        a started one is a 409 `workflow_in_use` and stays. More in tests/test_rbac_be1_business_rules.py."""
+        from apps.workflow.models import ApprovalWorkflow
+
+        started = _create_wf({"workflow_name": "Running WF", "soul": str(self.soul.pk), "case_type": "ROUTINE",
+                              "status": "IN_PROGRESS"}).data["id"]
+        resp = self.client.delete(f"{WORKFLOWS}/{started}/")
+        assert resp.status_code == status.HTTP_409_CONFLICT and resp.data["code"] == "workflow_in_use"
+        assert ApprovalWorkflow.objects.filter(pk=started).exists()
         resp = _create_wf({"workflow_name": "Delete WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         pk = resp.data["id"]

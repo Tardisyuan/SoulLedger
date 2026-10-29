@@ -509,6 +509,22 @@ class EvidenceAdmissionService:
             row.save()
             return row
 
+    @classmethod
+    def admitted_in_concluded_case(cls, record) -> bool:
+        """Whether a concluded case of this soul's life weighed `record` as evidence: a merit / demerit record of
+        the case's soul and life, on the books when the verdict came, and not ruled not-admitted there. Such a record
+        is part of a decided case and no longer edited (user 2026-10-29, item 19); a wrong one is corrected through
+        reopening or a settlement correction."""
+        from apps.judgment.models import EvidenceAdmission, Judgment
+
+        if record.record_type not in cls.SCORED_TYPES:
+            return False
+        cases = Judgment.all_objects.filter(
+            soul_id=record.soul_id, cycle=record.cycle, verdict__isnull=False, is_deleted=False,
+        ).exclude(concluded_at__lt=record.create_time)
+        refused = EvidenceAdmission.objects.filter(record=record, admitted=False).values("judgment_id")
+        return cases.exclude(pk__in=refused).exists()
+
     @staticmethod
     def not_admitted_ids(judgment):
         return list(

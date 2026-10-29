@@ -94,7 +94,7 @@ def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=Judgment
     return retrial
 
 
-def reweigh_after_rejection(flow) -> Judgment | None:
+def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     """A station refused an original judgment's approval flow: the case is heard again (user 2026-10-27 for the
     Egyptian weighing; 2026-10-29 for every civilization's original judgment).
 
@@ -103,6 +103,10 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     in the recycle bin, not restorable), the soul takes the system-only edge DISPOSED → JUDGING, and a new case (`retrial_of`, same
     method) is opened with JUDGMENT_INITIATED. Same transaction as the decision that rejected the flow. Returns None, leaving the old
     way out (reopen or appeal), when the soul was already placed or the case is not a concluded original.
+
+    `because="CANCELLED"`: a hall lead reopening a case whose flow a cancelled cross-realm judgment ended
+    (`JudgmentViewSet.reopen_cancelled`, rbac-be1 2026-10-29) — the same withdrawal, otherwise that disposition
+    is held at `approval_cancelled` for good.
     """
     judgment = flow.judgment
     if judgment is None or judgment.kind != JudgmentKind.ORIGINAL or not judgment.is_final:
@@ -135,17 +139,17 @@ def reweigh_after_rejection(flow) -> Judgment | None:
     # A system void, not a deletion: out of the recycle bin and never restorable (user 2026-10-27).
     plan_ids = list(SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)
                     .values_list("pk", flat=True))
-    why = f"weighing_rejected:{judgment.pk}"
+    why = f"weighing_rejected:{judgment.pk}" if because == "REJECTED" else f"approval_cancelled:{judgment.pk}"
     void = system_void(SentenceNode.all_objects.filter(plan_id__in=plan_ids, is_deleted=False), why)
     system_void(SentencePlan.all_objects.filter(pk__in=plan_ids), why, void)
     system_void(dispositions, why, void)
     # The state machine's system-only edge (Soul.SYSTEM_ONLY_TRANSITIONS); it writes STATE_CHANGED itself.
-    if not soul.transition_to(SoulState.JUDGING, "Approval flow rejected", system="weighing_rejected"):
+    if not soul.transition_to(SoulState.JUDGING, f"Approval flow {because.lower()}", system="weighing_rejected"):
         # A business refusal, not a crash (2026-10-29): the decision that refused the flow is rolled back and
         # answered 409 with this code (`workflow/views.py::_hook_refusals`).
         raise WeighingRefusedError(f"Soul {soul.pk} could not go back to JUDGING after its approval flow was "
                                    f"rejected", "soul_cannot_reopen", status=409)
-    return open_retrial(judgment, reason="REJECTED", method=judgment.judgment_method)
+    return open_retrial(judgment, reason=because, method=judgment.judgment_method)
 
 
 def origin_flow_open(*, judgment=None, soul=None) -> bool:

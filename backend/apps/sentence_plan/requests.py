@@ -211,6 +211,27 @@ def _locked_pending_request(plan, request_id):
     return req
 
 
+def _assert_may_decide_reopen(plan, user):
+    """REOPEN 由原审判官本人批(用户 2026-10-29 第 20 条):原审的结案人(`Judgment.concluded_by`)。他不在职
+    (停用、调离原属殿)或没有记录(流程代结)时,原属殿持 `judgment.assign` 的人批。批准 REOPEN 是租户隔离唯一
+    一条写例外(`RESIDENCE_WRITE_REOPEN`)的入口,所以不能是「原属殿任一判官」。"""
+    from apps.judgment.models import Judgment
+    from apps.perm.checker import check_permission
+
+    origin = Judgment.all_objects.filter(pk=plan.origin_judgment_id).select_related("concluded_by").first()
+    judge = origin.concluded_by if origin is not None else None
+    on_duty = judge is not None and judge.is_active and judge.tenant_id == plan.tenant_id
+    if on_duty and judge.pk == getattr(user, "pk", None):
+        return
+    if not on_duty and check_permission(user, "judgment.assign"):
+        return
+    raise PlanChangeRefusedError(
+        "Only the original judge decides a reopening request (or, when they are no longer on duty, an officer of "
+        "the home hall who may reassign cases)", "not_original_judge", status=403,
+        original_judge=judge.pk if on_duty else None,
+    )
+
+
 def decide(plan, request_id, *, accept, reason, user):
     """原审判官决定。ACCEPT 应用改动(REOPEN 则立即在原属地开重开审判,Q7);REJECT 只记。然后推进。"""
     from apps.events.models import EventType
@@ -219,6 +240,8 @@ def decide(plan, request_id, *, accept, reason, user):
         soul = _lock_soul(plan.soul)
         plan = _lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
+        if req.kind == SentenceRequestKind.REOPEN:
+            _assert_may_decide_reopen(plan, user)
         if accept:
             if plan.status not in IN_PROGRESS_PLAN_STATUSES:
                 raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
