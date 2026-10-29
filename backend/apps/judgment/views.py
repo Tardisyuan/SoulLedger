@@ -279,6 +279,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # 改派是分配别人的工作,比办案更严:`judgment.assign`,默认只 ADMIN 与 MODERATOR
         # (殿主)持有。JUDGE 有 `judgment.execute` 而没有它 —— 审判官之间不能互相派活。
         'reassign': ['judgment.assign'],
+        # 跨域取消让原审流程中止、处置被永久扣住时,殿主重开一案(rbac-be1,2026-10-29)。
+        'reopen_cancelled': ['judgment.assign'],
         # 改派弹层的名单:谁能被改派到这些案子上。问的人就是能改派的人。
         'assignable_officers': ['judgment.assign'],
         # 「请管理员改派」:名单空了时请 ADMIN 来改派。能办这件案子的人就能为它求助。
@@ -341,6 +343,12 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         if self.action == "retrieve":
             return JudgmentDetailSerializer
         return super().get_serializer_class()
+
+    def create_tenant(self, serializer):
+        """The soul's hall, not the request's (rbac-be1 M4): a hall-less ADMIN filed the case under NULL — a case no
+        hall's queue, list or conclude could reach — and one naming another hall filed it away from its soul. For
+        everyone else the two are already equal (`validate_soul`)."""
+        return serializer.validated_data["soul"].tenant
 
     def perform_create(self, serializer):
         # `super()`, not a bare `serializer.save()`.
@@ -426,6 +434,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         from django.db import transaction
 
         instance = serializer.instance
+        claims.assert_may_edit(instance, self.request, "update")
         if "notes" in serializer.validated_data and instance.verdict is None and not instance.is_final:
             raise NotesOnOpenCaseError()
 
@@ -443,6 +452,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         """Soft-delete a pending judgment, or refuse with a clear reason
         once it carries a verdict (Stage 4 §4.7: archivable instead)."""
         judgment = self.get_object()
+        claims.assert_may_edit(judgment, request, "delete")
         reason = request.data.get("reason", "") if hasattr(request, "data") else ""
         try:
             judgment.delete_or_raise(user=request.user, reason=reason)
@@ -1245,6 +1255,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         judgment = self.get_object()
         serializer = JudgmentCitationWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        claims.assert_may_edit(judgment, request, "cite")
         try:
             StatuteCitationService.assert_amendable(judgment)
         except CitationRefusedError as exc:
@@ -1285,6 +1296,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
     def uncite(self, request, pk=None, statute_id=None):
         """Withdraw a ground from a judgment that has not been concluded."""
         judgment = self.get_object()
+        claims.assert_may_edit(judgment, request, "uncite")
         try:
             StatuteCitationService.assert_amendable(judgment)
         except CitationRefusedError as exc:
@@ -1330,6 +1342,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         judgment = self.get_object()
         serializer = EvidenceRulingWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        claims.assert_may_edit(judgment, request, "evidence")
         # A custom action is not `perform_*`, so AuditUserViewSetMixin does
         # not set the author for it; without this the row's create_user is None.
         set_current_user(request.user)
@@ -1370,6 +1383,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         judgment = self.get_object()
         serializer = JudgmentDraftWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        claims.assert_may_edit(judgment, request, "draft")
         data = dict(serializer.validated_data)
         version = data.pop("version")
         realm_id = data.get("draft_destination_realm_id")
@@ -1400,6 +1414,38 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         finally:
             clear_current_user()
         return Response(JudgmentDraftSerializer(saved).data)
+
+    @extend_schema(request=None, responses={201: JudgmentSerializer, 409: JudgmentClaimRefusalSerializer})
+    @action(detail=True, methods=["post"], url_path="reopen-cancelled")
+    def reopen_cancelled(self, request, pk=None):
+        """Reopen a concluded original case whose approval flow a cancelled cross-realm judgment ended.
+
+        Such a disposition is held at `approval_cancelled` with no way forward: the flow did not pass, so it does
+        not execute, and nobody refused it, so it did not reopen. `judgment.assign` (the hall lead) withdraws the
+        conclusion exactly as a refused flow does (`weighing.reweigh_after_rejection`) and a new case is opened;
+        201 answers that case. 409 `not_cancelled` when the case's own flow did not end CANCELLED; 409
+        `cannot_reopen` when the soul was already placed (then reopen or appeal as before).
+        """
+        from django.db import transaction
+
+        from apps.judgment import weighing
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+        judgment = self.get_object()
+        with transaction.atomic():
+            flow = ApprovalWorkflow._base_manager.select_for_update(of=("self",)).filter(judgment=judgment).first()
+            if flow is None or not flow.decides_judgment or flow.status != ApprovalWorkflowStatus.CANCELLED:
+                return Response({"error": "This case's approval flow was not cancelled.", "code": "not_cancelled"},
+                                status=status.HTTP_409_CONFLICT)
+            try:
+                retrial = weighing.reweigh_after_rejection(flow, because="CANCELLED")
+            except WeighingRefusedError as exc:
+                return Response({"error": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+            if retrial is None:
+                return Response({"error": "The soul has already been placed; reopen or appeal instead.",
+                                 "code": "cannot_reopen"}, status=status.HTTP_409_CONFLICT)
+        return Response(JudgmentSerializer(retrial, context=self.get_serializer_context()).data,
+                        status=status.HTTP_201_CREATED)
 
     @extend_schema(
         request=JudgmentConcludeSerializer,

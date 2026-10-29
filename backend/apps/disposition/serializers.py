@@ -169,11 +169,9 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
     def validate_soul(self, value):
         """A disposition may only be recorded against a soul in this tenant.
 
-        Re-pointing a disposition at a different soul is a supported operation
-        -- `test_repointing_a_disposition_at_another_soul_is_checked` exists
-        because a mis-filed sentence gets corrected, and the term-start rules
-        below are what guard it. What was never checked is whether the new soul
-        belongs to the caller's tenant: `soul` is a plain
+        (Re-pointing a filed disposition at another soul is refused outright since
+        2026-10-29 — `_validate_fixed_columns`; this check is the create path.)
+        What was never checked is whether the soul belongs to the caller's tenant: `soul` is a plain
         PrimaryKeyRelatedField whose queryset is a TenantManager, and that
         manager is evaluated with no tenant contextvar at serializer-validation
         time, so it scopes nothing. Same shape as ApprovalNodeSerializer's
@@ -221,6 +219,7 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
         start refusing writes just because this call site never distinguished
         them.
         """
+        self._validate_fixed_columns(attrs)
         touches_term_start = "term_start_year" in attrs
         touches_soul = "soul" in attrs
         if not (touches_term_start or touches_soul):
@@ -269,6 +268,28 @@ class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serial
         if messages:
             raise serializers.ValidationError(messages)
         return attrs
+
+    def _validate_fixed_columns(self, attrs):
+        """rbac-be1 M3 (2026-10-29): whose disposition this is and which judgment it carries out are fixed once
+        filed — re-pointing moved a sentence onto another soul with one PATCH; a mis-filed one is withdrawn and filed
+        again. Once executed the soul has gone where `destination_realm` said, so that is fixed too. On create, the
+        judgment must be the soul's."""
+        instance = self.instance
+        if instance is None:
+            judgment, soul = attrs.get("judgment"), attrs.get("soul")
+            if judgment is not None and soul is not None and judgment.soul_id != soul.pk:
+                raise serializers.ValidationError({"judgment": "This judgment is not this soul's."},
+                                                  code="judgment_not_this_souls")
+            return
+        fixed = {"soul": "soul_id", "judgment": "judgment_id"}
+        if instance.is_executed:
+            fixed["destination_realm"] = "destination_realm_id"
+        changed = [f for f, column in fixed.items()
+                   if f in attrs and getattr(attrs[f], "pk", None) != getattr(instance, column)]
+        if changed:
+            raise serializers.ValidationError(
+                {f: "Not changeable once the disposition is filed (destination: once executed)." for f in changed},
+                code="disposition_fixed")
 
     #: The columns a term is made of. Changing any of them on an expired row may
     #: move its end past today (see `update`).

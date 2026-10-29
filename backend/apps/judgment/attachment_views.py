@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 from apps.core.client_ip import get_client_ip
 from apps.core.throttling import ClientIPRateThrottle
 from apps.judgment import attachments as svc
+from apps.judgment import claims
 from apps.judgment.models import CaseAttachment
 from apps.social.media_views import serve_private_file
 
@@ -105,6 +106,7 @@ class CaseAttachmentActionsMixin:
         from apps.audit.models import AuditAction, AuditLog
 
         judgment = self.get_object()
+        claims.assert_may_edit(judgment, request, "attachment")
         uploaded = request.FILES.get("file")
         if uploaded is None:
             return Response({"detail": "file is required.", "code": "bad_type"}, status=status.HTTP_400_BAD_REQUEST)

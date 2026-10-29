@@ -158,6 +158,10 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             qs = qs.filter(is_archived=False)
         return qs
 
+    def create_tenant(self, serializer):
+        """Filed in the soul's hall, not the request's (rbac-be1 M4; same as `JudgmentViewSet.create_tenant`)."""
+        return serializer.validated_data["soul"].tenant
+
     def perform_create(self, serializer):
         """A manual disposition with a destination realm moves the soul there (行程拓扑).
 
