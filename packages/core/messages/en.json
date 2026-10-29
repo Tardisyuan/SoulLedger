@@ -1995,6 +1995,7 @@
       "pillar_disbursed": "Disbursed · demerit",
       "pillar_closing": "Closing",
       "formula": "Opening + received − disbursed = closing · {{souls}} accounts · {{records}} entries this period",
+      "totals_whole_hall": "Totals cover the whole hall; the entries list only souls in your data scope",
       "col_day": "Day",
       "col_soul": "Soul",
       "col_entry": "Entry",

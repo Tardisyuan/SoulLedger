@@ -205,3 +205,31 @@ def test_a_passage_recorded_for_the_living_logs_nothing(eg_tenant, admin_user):
     soul = _soul(eg_tenant)
     assert _patch_passage(admin_user, soul, "NAMELESS").status_code == 200
     assert not _passage_events(soul)
+
+
+def test_moving_an_open_case_by_its_passage_needs_judgment_assign(eg_tenant, judge):
+    """User 2026-10-29: with an open case, a passage change reassigns work — soul.update alone is 403."""
+    from tests.soul_account_support import officer_client
+
+    guardian = User.objects.create_user(username="eg_guardian", role="GUARDIAN", tenant=eg_tenant)
+    moderator = User.objects.create_user(username="eg_moderator", role="MODERATOR", tenant=eg_tenant)
+    soul = _soul(eg_tenant)
+    case = soul.die(death_date=date.today() - timedelta(days=200))
+    res = officer_client(guardian).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": "NAMELESS"}, format="json")
+    assert res.status_code == 403
+    case.refresh_from_db()
+    soul.refresh_from_db()
+    assert soul.duat_passage == "" and case.duat_stage == DuatStage.EMBALMING and not _passage_events(soul)
+    res = officer_client(moderator).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": "NAMELESS"}, format="json")
+    assert res.status_code == 200, res.data
+    case.refresh_from_db()
+    assert case.duat_stage == DuatStage.NAMELESS
+
+
+def test_a_passage_with_no_open_case_needs_only_soul_update(eg_tenant):
+    from tests.soul_account_support import officer_client
+
+    guardian = User.objects.create_user(username="eg_guardian2", role="GUARDIAN", tenant=eg_tenant)
+    soul = _soul(eg_tenant)
+    res = officer_client(guardian).patch(f"/api/v1/souls/{soul.pk}/", {"duat_passage": "NAMELESS"}, format="json")
+    assert res.status_code == 200, res.data

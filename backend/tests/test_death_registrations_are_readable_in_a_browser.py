@@ -103,6 +103,21 @@ def test_it_does_not_show_another_tenants_registrations(registrations):
 
 
 @pytest.mark.django_db
+def test_the_hall_less_admin_reads_every_halls_registrations(registrations):
+    """用户 2026-10-29(rbac-be2 D3):无殿 ADMIN 看全部 —— 此前同一个 `admin_bypass=False` 给它的是空表。
+    绑了殿的 ADMIN 仍只看本殿(上一条测试)。"""
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    root = User.objects.create_user(username="dr_root", password="x", role="ADMIN", tenant=None)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(root).access_token}")
+    resp = client.get("/api/v1/death-sync/registrations/")
+    assert resp.status_code == 200, resp.data
+    body = str(resp.data)
+    assert "mine-1" in body and "theirs-1" in body
+
+
+@pytest.mark.django_db
 def test_a_non_admin_is_refused(registrations):
     """Matches ExternalApiKeyViewSet beside it. There is no death_sync codename."""
     mine, _, _ = registrations
