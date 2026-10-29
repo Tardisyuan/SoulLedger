@@ -3464,9 +3464,9 @@
       },
       "delivery_summary": "Nis {{invite}} · Sekhem Tepy {{password}}"
     },
-    "organization": "Kher Sab",
-    "organization_column": "Kher Sab · Ren Iri",
-    "organization_none": "Nen Kher Sab",
+    "organization": "Hut",
+    "organization_column": "Hut · Ren Iri",
+    "organization_none": "Nen Hut",
     "position": "Ren Iri",
     "tenant_pick": "Setep Per Hemes",
     "organization_required": "Sab Em Wesekhet, Nen Sab Hery: Hut Em Tepy",
