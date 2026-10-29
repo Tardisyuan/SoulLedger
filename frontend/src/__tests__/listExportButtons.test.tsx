@@ -143,7 +143,9 @@ describe("/disposition", () => {
   it("offers nothing without disposition.read", async () => {
     mockPermissions = ["disposition.execute"];
     renderWith(<DispositionPage />);
-    await screen.findAllByTestId("section-count");
+    // 页级门(rbac-web L-1):没有 disposition.read 整页就是 403,三段一个请求都不发。
+    expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.export" })).toBeNull();
+    expect(dispositionApi.list).not.toHaveBeenCalled();
   });
 });

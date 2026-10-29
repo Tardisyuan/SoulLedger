@@ -46,7 +46,7 @@ export function RequireButton({
       // Button not found or has no permission — hide by default
       return <>{fallback}</>;
     }
-    if (!hasPermission(button.permission)) {
+    if (!hasPermission(button.permission, { evenWhileViewing: true })) {
       return <>{fallback}</>;
     }
     return <ViewingLock permissions={[button.permission]}>{children}</ViewingLock>;
@@ -56,8 +56,8 @@ export function RequireButton({
   if (permission) {
     const permArray = Array.isArray(permission) ? permission : [permission];
     const hasAccess = requireAll
-      ? hasAllPermissions(permArray)
-      : hasAnyPermission(permArray);
+      ? hasAllPermissions(permArray, { evenWhileViewing: true })
+      : hasAnyPermission(permArray, { evenWhileViewing: true });
 
     if (!hasAccess) return <>{fallback}</>;
     return <ViewingLock permissions={permArray}>{children}</ViewingLock>;

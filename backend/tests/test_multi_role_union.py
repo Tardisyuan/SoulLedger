@@ -106,6 +106,10 @@ def test_reported_codenames_follow_the_union(world):
     user = _user(world, "u_report", "VIEWER", extra=["JUDGE"])
     res = _client(user).get("/api/v1/perm/role-permissions/")
     assert res.status_code == 200 and JUDGE_ONLY in res.json()["permissions"], res.content
+    # rbac-web M-3:同一个应答带回此刻的身份 —— 网页聚焦重取时据此更新「本殿」与侧栏缓存键。
+    body = res.json()
+    assert body["id"] == user.pk and body["extra_roles"] == ["JUDGE"]
+    assert (body["tenant"] or {}).get("code") == (user.tenant.code if user.tenant_id else None)
 
 
 # --- hard rules beat the union ---------------------------------------------

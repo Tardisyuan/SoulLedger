@@ -24,6 +24,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { Button } from "@/src/components/ui/Button";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -33,6 +34,7 @@ import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/compon
 import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { OfficerHandoverDialog } from "@/src/components/users/OfficerHandoverDialog";
 import { isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { Badge } from "@/src/components/ui/Badge";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
@@ -156,6 +158,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const { hasPermission, isAdmin } = usePermissions();
   const canExecute = hasPermission("judgment.execute");
   const canAssign = hasPermission("judgment.assign");
+  const buttonOn = useMenuButtonConfig();
 
   const [term, setTerm] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
@@ -168,7 +171,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const [pages, setPages] = useState<Record<JudgmentQueueGroup, number>>({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<"defer" | "reassign" | "restore" | null>(null);
+  const [dialog, setDialog] = useState<"defer" | "reassign" | "restore" | "handover" | null>(null);
   /** 行内「⋯ → 改派…」作用的那一件;工具条与批量条的改派仍按勾选 / 焦点行。 */
   const [rowReassign, setRowReassign] = useState<string | null>(null);
   /** 已发出取消认领、服务端还没刷新到的 id:色标先退场(140ms),不等往返。 */
@@ -511,12 +514,21 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
               {t("judgment.claim.reassign")}
             </Button>
           )}
-          <ExportCsvButton
-            fetchCsv={() => judgmentApi.exportCsv({ ...filters, has_verdict: "false" })}
-            page={t("judgment.title")}
-            hall={hall}
-            count={counts.data?.total}
-          />
+          {/* 移交在途案件(rbac-web M-7 / 待拍板 23):持 judgment.assign 的殿内官员(殿主)在网页上的入口 ——
+              用户页只有 ADMIN 进得去。全局 ADMIN 没有殿,从用户页按人交接。 */}
+          {canAssign && user?.tenant && (
+            <Button type="button" size="md" variant="secondary" data-testid="queue-handover-open" onClick={() => setDialog("handover")}>
+              {t("officerHandover.action")}
+            </Button>
+          )}
+          {buttonOn("judgment.export") && hasPermission("judgment.read") && (
+            <ExportCsvButton
+              fetchCsv={() => judgmentApi.exportCsv({ ...filters, has_verdict: "false" })}
+              page={t("judgment.title")}
+              hall={hall}
+              count={counts.data?.total}
+            />
+          )}
         </div>
       </div>
 
@@ -846,6 +858,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
         onCancel={closeDialog}
         onConfirm={(to) => runBatch("reassign", { to })}
       />
+      {dialog === "handover" && <OfficerHandoverDialog onClose={() => setDialog(null)} />}
       <ConfirmDialog
         isOpen={dialog === "restore"}
         variant="info"

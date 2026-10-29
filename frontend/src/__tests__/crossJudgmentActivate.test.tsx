@@ -24,8 +24,9 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
 }));
 
-const mockTenant: { user: { id: number; username: string; tenant: { code: string } | null } } = {
-  user: { id: 1, username: "u", tenant: { code: "CN_DIYU" } },
+const HOLDS = ["cross_judgment.read", "cross_judgment.create"];
+const mockTenant: { user: { id: number; username: string; role?: string; permissions?: string[]; tenant: { code: string } | null } } = {
+  user: { id: 1, username: "u", role: "JUDGE", permissions: HOLDS, tenant: { code: "CN_DIYU" } },
 };
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenant,
@@ -98,7 +99,7 @@ describe("cross-judgment detail — activate", () => {
     crossTenantJudgmentsApi.get.mockReset();
     crossTenantJudgmentsApi.activate.mockReset();
     showToast.mockReset();
-    mockTenant.user = { id: 1, username: "u", tenant: { code: "CN_DIYU" } };
+    mockTenant.user = { id: 1, username: "u", role: "JUDGE", permissions: HOLDS, tenant: { code: "CN_DIYU" } };
   });
 
   it("the initiator sees it on a PROPOSED case with a seated participant, and it posts", async () => {
@@ -123,6 +124,15 @@ describe("cross-judgment detail — activate", () => {
 
   it("a participant tenant does not see it", async () => {
     mockTenant.user = { id: 2, username: "eu", tenant: { code: "EU_HEAVEN_HELL" } };
+    renderPage(judgment());
+
+    await screen.findByText("Joint");
+    expect(screen.queryByRole("button", { name: ACTIVATE })).toBeNull();
+  });
+
+  // rbac-web L-2:后端 activate 要 cross_judgment.create;只持 read 的发起殿官员不该看到一个点了就 403 的按钮。
+  it("the initiator without cross_judgment.create does not see it", async () => {
+    mockTenant.user = { id: 1, username: "u", role: "JUDGE", permissions: ["cross_judgment.read"], tenant: { code: "CN_DIYU" } };
     renderPage(judgment());
 
     await screen.findByText("Joint");

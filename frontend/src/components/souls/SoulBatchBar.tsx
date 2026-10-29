@@ -83,10 +83,13 @@ export function SoulBatchBar({
   selection,
   canRecycle,
   canDispatch,
+  canExport,
 }: {
   selection: SoulSelection;
   canRecycle: boolean;
   canDispatch: boolean;
+  /** 菜单按钮配置 `souls.export` 允许且持 soul.read —— 与页头导出同一个判断。 */
+  canExport: boolean;
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -187,9 +190,11 @@ export function SoulBatchBar({
             {t("souls.batch.transfer")}
           </Button>
         )}
-        <Button type="button" variant="inverse" size="sm" onClick={exportCsv} loading={exporting} disabled={count === 0}>
-          {t("souls.batch.export")}
-        </Button>
+        {canExport && (
+          <Button type="button" variant="inverse" size="sm" onClick={exportCsv} loading={exporting} disabled={count === 0}>
+            {t("souls.batch.export")}
+          </Button>
+        )}
         {canRecycle && (
           <Button type="button" variant="inverse" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
             {t("souls.detail.confirm_delete_action")}

@@ -33,6 +33,7 @@ import { SoulImportDialog } from "@/src/components/souls/SoulImportDialog";
 import { SoulRegionBackfillDialog } from "@/src/components/souls/SoulRegionBackfillDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -70,10 +71,13 @@ const SOULS_FILTER_FIELDS = ["state", "civilization", "balanceMin", "balanceMax"
 
 export default function SoulsPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/corpus/page.tsx).
+  // 页级门(rbac-web L-1):主接口 souls/ 要 soul.read。
   return (
-    <Suspense fallback={null}>
-      <SoulsRoute />
-    </Suspense>
+    <RequirePermission permissions="soul.read" fallback={<PermissionDenied permission="soul.read" />}>
+      <Suspense fallback={null}>
+        <SoulsRoute />
+      </Suspense>
+    </RequirePermission>
   );
 }
 
@@ -180,6 +184,8 @@ function SoulsList({
   const buttonOn = useMenuButtonConfig();
   // 「移交…」打开发起移交表单,那一页要 `dispatch.manage`。
   const canDispatch = hasPermission("dispatch.manage");
+  // 导出(页头与批量条同一个接口 `souls/export/`,后端要 soul.read):配置允许且持码(rbac-web L-3 / M-5)。
+  const canExport = buttonOn("souls.export") && hasPermission("soul.read");
   const selection = useSoulSelection(JSON.stringify(params), souls);
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
@@ -276,7 +282,7 @@ function SoulsList({
       actions={
         <>
         {/* 带当前的筛选 / 搜索 / 排序,不带页码:文件是整份筛选结果,不是这一页。 */}
-        {buttonOn("souls.export") && (
+        {canExport && (
           <ExportCsvButton
             fetchCsv={() => soulsApi.exportCsv({ ...params, page: undefined })}
             page={t("souls.title")}
@@ -559,7 +565,7 @@ function SoulsList({
         selection={selection.tableSelection}
       />
 
-      <SoulBatchBar selection={selection} canRecycle={canRecycle} canDispatch={canDispatch} />
+      <SoulBatchBar selection={selection} canRecycle={canRecycle} canDispatch={canDispatch} canExport={canExport} />
 
       <SoulPreviewDrawer
         soul={previewSoul}

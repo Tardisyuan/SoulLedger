@@ -25,9 +25,13 @@ jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (k: string, p?: Record<string, string>) => tZh(k, p), locale: "zh-Hans", hydrated: true }),
 }));
-let mockPermissions = ["menu.manage"];
+let mockPermissions = ["menu.read", "menu.manage"];
 jest.mock("@/src/hooks/usePermissions", () => ({
-  usePermissions: () => ({ hasPermission: (p: string) => mockPermissions.includes(p) }),
+  usePermissions: () => ({
+    hasPermission: (p: string) => mockPermissions.includes(p),
+    hasAnyPermission: (l: string[]) => l.some((p) => mockPermissions.includes(p)),
+    hasAllPermissions: (l: string[]) => l.every((p) => mockPermissions.includes(p)),
+  }),
 }));
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: { id: 1, role: "ADMIN" } }) }));
 
@@ -50,7 +54,7 @@ const toggleFor = (group: ReturnType<typeof within>, labelKey: string) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockPermissions = ["menu.manage"];
+  mockPermissions = ["menu.read", "menu.manage"];
   menusApi.all.mockResolvedValue({ data: MENUS });
   menuButtonsApi.config.mockResolvedValue({
     data: [{ id: 5, menu: 11, menu_path: "/souls", code: "export", is_active: false }],
@@ -96,7 +100,7 @@ describe("菜单按钮配置页", () => {
   });
 
   it("没有 menu.manage 只看,开关不可拨", async () => {
-    mockPermissions = [];
+    mockPermissions = ["menu.read"];
     renderPage();
     const group = await soulsGroup();
     for (const box of group.getAllByRole("checkbox")) expect(box).toBeDisabled();

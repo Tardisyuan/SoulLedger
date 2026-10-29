@@ -21,8 +21,8 @@ export function RequirePermission({
   const permArray = Array.isArray(permissions) ? permissions : [permissions];
 
   const hasAccess = requireAll
-    ? hasAllPermissions(permArray)
-    : hasAnyPermission(permArray);
+    ? hasAllPermissions(permArray, { evenWhileViewing: true })
+    : hasAnyPermission(permArray, { evenWhileViewing: true });
 
   if (!hasAccess) return <>{fallback}</>;
   // 代看(只读)期间写类控件置灰,见 ViewingLock。

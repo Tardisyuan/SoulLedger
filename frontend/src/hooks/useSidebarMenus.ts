@@ -61,7 +61,7 @@ export function hideOutsideDiyu(menus: SidebarMenu[], civilization: string | und
 export function useSidebarMenus() {
   const { user } = useTenant();
   return useQuery<SidebarMenu[]>({
-    queryKey: menuKeys.sidebar(user?.role, !!user),
+    queryKey: menuKeys.sidebar(user?.role, !!user, user?.extra_roles),
     queryFn: async () => {
       // Everyone reads /menus/list-public/: unpaginated and already role-filtered
       // by the same `menu_is_visible_to` as /menus/. The paginated /menus/ list
