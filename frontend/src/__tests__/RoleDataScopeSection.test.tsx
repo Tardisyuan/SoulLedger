@@ -132,3 +132,20 @@ it.each([
   expect(screen.getByText("permissions.datascope.read_only")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "permissions.datascope.save" })).not.toBeInTheDocument();
 });
+
+it("a response of the wrong shape reads as a load error instead of crashing the drawer", async () => {
+  // 例如一个分页空页 {count, results}:此前 `current.default.scope` 在渲染时抛错,整个角色抽屉消失。
+  api.getRoleDataScope.mockResolvedValue({ data: { count: 0, results: [] } });
+  api.getDataScopeResources.mockResolvedValue({ data: { count: 0, results: [] } });
+  renderSection(role("JUDGE"));
+  expect(await screen.findByRole("alert")).toHaveTextContent("permissions.datascope.load_error");
+  expect(screen.queryAllByRole("radio")).toHaveLength(0);
+});
+
+it("a resources list of the wrong shape still leaves the default editable and says the list failed", async () => {
+  api.getDataScopeResources.mockResolvedValue({ data: { count: 0, results: [] } });
+  renderSection(role("JUDGE"));
+  await waitFor(() => expect(radio("ALL")).toBeChecked());
+  expect(await screen.findByRole("alert")).toHaveTextContent("permissions.datascope.load_error");
+  expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+});
