@@ -281,14 +281,15 @@ describe("batch activate / deactivate", () => {
 });
 
 describe("a user without user.manage", () => {
-  it("sees the list and nothing to click: no checkboxes, no 设置角色, no bar", async () => {
+  // 页级门(rbac-web L-1):users/ 后端是 IsAdmin + user.manage,非管理员连列表都拿不到 —— 整页 403,
+  // 不再画一个空表加一片「加载失败」。
+  it("gets the denied page: no list, no checkboxes, no 设置角色, no bar", async () => {
     mockUser = { id: 9, username: "judge9", role: "JUDGE", tenant: null, permissions: ["soul.read"] };
     renderPage();
-    await screen.findByText("multi1");
+    expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
+    expect(screen.queryByText("multi1")).toBeNull();
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "users.edit_roles" })).toBeNull();
     expect(screen.queryByRole("region", { name: "users.batch.region" })).toBeNull();
-    // The chips are read-only information and stay.
-    expect(rowOf("multi1").querySelectorAll("[data-extra-role]")).toHaveLength(2);
   });
 });

@@ -350,8 +350,9 @@ export default function WorkflowDetailPage() {
 
   // 「待我处理」: the one place civilization colour enters this page (用户 10-02) —
   // a 3 px bar on the current node's row, when this operator is the one who can
-  // decide it. `workflow.approve` is the gate the 提交判决 button sits behind.
-  const waitingOnMe = workflow.status !== "COMPLETED" && hasPermission("workflow.approve");
+  // decide it. Same gate as the 提交判决 button: `workflow.approve` **and** the server's `can_approve`
+  // (this node designates me and it is the current stop) — the codename alone marked every holder (rbac-web M-6).
+  const waitingOnMe = workflow.status !== "COMPLETED" && hasPermission("workflow.approve") && workflow.can_approve === true;
   // 最近一步: the node decided last, by `decided_at`.
   const lastDecided = sortedNodes
     .filter((n) => n.decided_at)
@@ -651,6 +652,8 @@ export default function WorkflowDetailPage() {
               )}
 
               <div className="flex flex-wrap items-center gap-2">
+                {/* 不是本站指定的审批人:后端 403 `not designated`,按钮就不画(`can_approve`,rbac-web M-6)。 */}
+                {workflow.can_approve === true && (
                 <RequirePermission permissions="workflow.approve">
                   <Button
                     type="button"
@@ -663,6 +666,7 @@ export default function WorkflowDetailPage() {
                     {approveMutation.isPending ? t("workflow.detail.processing") : t("workflow.detail.submit_decision")}
                   </Button>
                 </RequirePermission>
+                )}
                 <RequirePermission permissions="workflow.advance">
                   <Button type="button" variant="secondary" onClick={() => setAdvanceOpen((v) => !v)} aria-expanded={advanceOpen}>
                     {t("workflow.detail.advance")}

@@ -88,7 +88,9 @@ describe("「以此人身份查看」入口", () => {
   it("不是管理员的人一行都看不到", async () => {
     mockTenant.user = { id: 9, username: "judge", role: "JUDGE", tenant: null, permissions: ["user.manage"] };
     renderPage();
-    await screen.findByText("mengpo");
+    // 页级门(rbac-web L-1):users/ 是 IsAdmin,非管理员整页 403,一行都不画。
+    expect(await screen.findByTestId("permission-denied")).toBeInTheDocument();
+    expect(screen.queryByText("mengpo")).toBeNull();
     expect(screen.queryByText(OPEN)).toBeNull();
   });
 

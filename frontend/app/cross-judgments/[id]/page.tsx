@@ -5,6 +5,7 @@ import Link from "next/link";
 import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -54,6 +55,7 @@ export default function CrossJudgmentDetailPage() {
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
+  const { hasPermission } = usePermissions();
   const params = useParams();
   const router = useRouter();
   const id = params.id;
@@ -130,8 +132,10 @@ export default function CrossJudgmentDetailPage() {
       showToast(t("crossJudgments.activate_error"), "error");
     },
   });
+  // 启动要 cross_judgment.create(后端 activate 的码,rbac-web L-2);殿与状态之外再看码。
   const canActivate =
     !!judgment &&
+    hasPermission("cross_judgment.create") &&
     judgment.status === "PROPOSED" &&
     !!user?.tenant?.code &&
     user.tenant.code === judgment.initiating_tenant_code &&

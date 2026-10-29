@@ -44,6 +44,28 @@ class TestHandover:
         body = {"from": world.users["a"].pk, "to": world.users["b"].pk}
         assert world.clients["a"].post("/api/v1/judgment/handover/", body, format="json").status_code == 403
 
+    def test_the_officer_list_is_the_moderators_own_hall_and_says_only_three_things(self, world, admin_user):  # noqa: F811
+        """rbac-web M-7:交接对话框的人选接口要 judgment.assign(殿主可用),不是 users/ 的 ADMIN + user.manage。"""
+        url = "/api/v1/judgment/handover/officers/"
+        soul = User.objects.create_user(username="claim_soul", password="x", role="SOUL", tenant=world.cn)
+        gone = User.objects.create_user(username="claim_gone", password="x", role="JUDGE", tenant=world.cn,
+                                        is_active=False)
+        res = world.clients["mod"].get(url, {"tenant": world.eu.pk})  # `tenant` is ignored for a hall officer
+        assert res.status_code == 200, res.data
+        ids = {row["id"] for row in res.data}
+        cn_officers = {world.users[k].pk for k in ("a", "b", "mod", "guardian", "viewer")}
+        assert cn_officers <= ids
+        assert not ids & {soul.pk, gone.pk, world.users["eu_judge"].pk, world.users["eu_mod"].pk}
+        assert all(set(row) == {"id", "display_name", "role_display"} for row in res.data)
+        # a judge does not hold judgment.assign
+        assert world.clients["a"].get(url).status_code == 403
+        # a global ADMIN names the hall; without it, 400
+        admin = officer_client(admin_user)
+        assert admin.get(url).status_code == 400
+        eu = admin.get(url, {"tenant": world.eu.pk})
+        assert eu.status_code == 200 and {r["id"] for r in eu.data} >= {world.users["eu_judge"].pk}
+        assert not {r["id"] for r in eu.data} & cn_officers
+
 
 @pytest.fixture
 def admin_client(admin_user):

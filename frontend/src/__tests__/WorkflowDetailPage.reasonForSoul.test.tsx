@@ -68,6 +68,7 @@ function workflow(caseType: string, name: string) {
       completed_at: null,
       judgment: null,
       current_node: "n1",
+      can_approve: true,
       current_node_detail: NODE,
       nodes: [NODE],
       updated_at: "2026-09-17T00:00:00Z",

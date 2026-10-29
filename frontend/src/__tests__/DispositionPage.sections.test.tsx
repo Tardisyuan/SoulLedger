@@ -33,7 +33,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 const mockTenant = {
-  user: { id: 1, username: "yama", role: "JUDGE", tenant: null, permissions: ["disposition.execute"] },
+  user: { id: 1, username: "yama", role: "JUDGE", tenant: null, permissions: ["disposition.read", "disposition.execute"] },
 };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => mockTenant }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));

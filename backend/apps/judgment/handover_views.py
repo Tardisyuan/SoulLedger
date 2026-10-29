@@ -2,12 +2,13 @@
 
     POST /api/v1/judgment/handover/preview/   {from, to} → 每类几件 + problems,不写
     POST /api/v1/judgment/handover/           {from, to} → 每类实际移了几件
+    GET  /api/v1/judgment/handover/officers/  → 一殿在职官员(交接对话框的人选)
 
 要 `judgment.assign`(殿管理员、殿主;与改派同一码名)。非 ADMIN 只能交接本殿的官员:别的殿的人与不存在的人
 答同一个 404。接手人必须是交出人所在殿的在职官员(400 `invalid_target`)。
 """
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -68,6 +69,48 @@ class _HandoverBase(APIView):
 
     def _refused(self, exc):
         return Response(exc.as_payload(), status=exc.status)
+
+
+class HandoverOfficerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    display_name = serializers.CharField()
+    role_display = serializers.CharField()
+
+
+class HandoverOfficersView(APIView):
+    """`GET /judgment/handover/officers/`:交接对话框的人选 —— 一殿的在职官员(非灵魂),只回 id、显示名、角色显示名。
+
+    与交接本身同一个码 `judgment.assign`(rbac-web M-7 / 待拍板 23):对话框此前用 `users/`(ADMIN + user.manage),
+    持 judgment.assign 的殿主打开就是 403。非 ADMIN 只看本殿(殿取自令牌);全局 ADMIN 用 `?tenant=<id>` 说是哪一殿。
+    """
+
+    permission_classes = [TenantPermission, CodenamePermission]
+
+    def get_required_permissions(self):
+        return ["judgment.assign"]
+
+    @extend_schema(operation_id="judgment_handover_officers",
+                   parameters=[OpenApiParameter("tenant", int, required=False,
+                                                description="全局 ADMIN 指定殿;其他人忽略,一律本殿")],
+                   responses={200: HandoverOfficerSerializer(many=True)})
+    def get(self, request):
+        from apps.perm.models import Role
+
+        if is_tenant_exempt(request.user):
+            raw = request.query_params.get("tenant", "")
+            if not raw.isdigit():
+                return Response({"tenant": ["Give the hall id."]}, status=400)
+            tenant_id = int(raw)
+        else:
+            tenant = getattr(request, "tenant", None)
+            if tenant is None:
+                return Response([])
+            tenant_id = tenant.pk
+        officers = list(User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL")
+                        .order_by("display_name", "username"))
+        labels = dict(Role.objects.filter(name__in={u.role for u in officers}).values_list("name", "display_name"))
+        return Response([{"id": u.pk, "display_name": u.display_name or u.username,
+                          "role_display": labels.get(u.role) or u.role} for u in officers])
 
 
 class HandoverPreviewView(_HandoverBase):

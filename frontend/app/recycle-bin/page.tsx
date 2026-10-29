@@ -8,6 +8,7 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { DataTable } from "@/components/ui/data-table";
@@ -38,9 +39,12 @@ export default function RecycleBinPage() {
   const queryClient = useQueryClient();
   const [confirmHardDelete, setConfirmHardDelete] = useState<RecycleBinEntry | null>(null);
 
+  // 门在下面的 JSX 里(拒绝时仍留页壳),所以列表请求自己看码:不持 recycle_bin.read 就不发(rbac-web L-6)。
+  const { hasPermission } = usePermissions();
   const { data, isLoading, error } = useQuery({
     queryKey: ["recycle-bin"],
     queryFn: async () => (await recycleBinApi.list()).data,
+    enabled: hasPermission("recycle_bin.read"),
   });
   const all = data?.results ?? [];
   // 原位置是文明时格子里印的是本地化的名字,搜索也要认它(「地府」),不只认代码。

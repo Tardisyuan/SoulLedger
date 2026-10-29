@@ -28,6 +28,7 @@ import {
 import { QueryError } from "@/src/components/ui/PageError";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import type {
   BackendTemplate,
   FrontendNode,
@@ -36,10 +37,13 @@ import type {
 
 export default function WorkflowPage() {
   // `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。
+  // 页级门(rbac-web L-1):模板与实例接口都要 workflow.read。
   return (
-    <Suspense fallback={null}>
-      <WorkflowPageContent />
-    </Suspense>
+    <RequirePermission permissions="workflow.read" fallback={<PermissionDenied permission="workflow.read" />}>
+      <Suspense fallback={null}>
+        <WorkflowPageContent />
+      </Suspense>
+    </RequirePermission>
   );
 }
 

@@ -37,6 +37,7 @@ from .serializers import (
     MatrixChangesRequestSerializer,
     MatrixChangesResultSerializer,
     MatrixImpactResultSerializer,
+    MyRolePermissionsSerializer,
     PermissionCreateUpdateSerializer,
     PermissionExportSerializer,
     PermissionImportRequestSerializer,
@@ -183,7 +184,7 @@ def update_delete_permission(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(request=None, responses={200: RolePermissionsSerializer})
+@extend_schema(request=None, responses={200: MyRolePermissionsSerializer})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_role_permissions(request):
@@ -210,10 +211,17 @@ def get_role_permissions(request):
     permission_codenames = _get_role_permissions_from_db(role, request.user.extra_roles)
     permissions = Permission.objects.filter(codename__in=permission_codenames)
     serializer = PermissionSerializer(permissions, many=True)
+    from apps.authentication.serializers import user_tenant_ref
+
     return Response({
         "role": role,
         "permissions": permission_codenames,
         "details": serializer.data,
+        # 网页在窗口聚焦时重取这一条(rbac-web M-3 / 待拍板 14):调了殿、兼了角色、代看换了身份,
+        # 前端的「本殿」判断与侧栏缓存键跟着这里走,不再等 24 小时的本地信封过期。
+        "id": request.user.pk,
+        "tenant": user_tenant_ref(request.user),
+        "extra_roles": list(request.user.extra_roles or []),
     })
 
 

@@ -23,7 +23,7 @@ const { judgmentApi, soulsApi } = jest.requireMock("@soulledger/core/api") as Re
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
-let mockUser: { id: number } | null = { id: 7 };
+let mockUser: { id: number; role?: string; permissions?: string[] } | null = { id: 7, role: "ADMIN" };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
@@ -82,7 +82,7 @@ async function search(text: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
-  mockUser = { id: 7 };
+  mockUser = { id: 7, role: "ADMIN" };
   judgmentApi.list.mockImplementation(async () => page([judgment("j1", "CN-2026-0001", "沈魂")]));
   soulsApi.list.mockImplementation(async () => page([soul("s1", "沈魂")]));
   judgmentApi.statutes.mockImplementation(async () => page([statute("t1", "魂之律", "凡魂过奈何桥者,先饮孟婆汤。")]));
@@ -114,6 +114,18 @@ describe("全局搜索", () => {
     await waitFor(() => expect(groups()).toEqual(["judgment", "statute", "page"]));
     expect(screen.queryByTestId("search-group-error")).toBeNull();
     expect(screen.queryByText(tZh("search.group_souls"))).toBeNull();
+  });
+
+  // rbac-web L-6:不持码的那几类根本不发(此前每次搜索白发两条 403,再靠 403 藏起来)。
+  it("不持 judgment.read:案件与律条不发请求、不出现;持 soul.read 的灵魂照常", async () => {
+    mockUser = { id: 7, role: "GUARDIAN", permissions: ["soul.read"] };
+    renderSearch();
+    await open();
+    await search("魂");
+    await waitFor(() => expect(soulsApi.list).toHaveBeenCalledWith({ search: "魂" }));
+    await waitFor(() => expect(groups()).toEqual(["soul", "page"]));
+    expect(judgmentApi.list).not.toHaveBeenCalled();
+    expect(judgmentApi.statutes).not.toHaveBeenCalled();
   });
 
   it("某类失败:只这一类显示「! 加载失败」与重试,其余几类照常;重试成功后换成结果", async () => {
@@ -206,7 +218,7 @@ describe("全局搜索", () => {
 
     // 别的用户看不到这一条。
     await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
-    mockUser = { id: 8 };
+    mockUser = { id: 8, role: "ADMIN" };
     view.rerender();
     await open();
     expect(options()).toHaveLength(0);

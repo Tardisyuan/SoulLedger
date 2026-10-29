@@ -10,7 +10,7 @@ import { authApi, handoverApi, usersApi, type User } from "@soulledger/core/api"
 
 jest.mock("@soulledger/core/api", () => ({
   authApi: { acceptOfficerInvite: jest.fn() },
-  handoverApi: { preview: jest.fn(), commit: jest.fn() },
+  handoverApi: { officers: jest.fn(), preview: jest.fn(), commit: jest.fn() },
   usersApi: { list: jest.fn(), deactivate: jest.fn() },
   officerRefusalOf: (error: { response?: { data?: { code?: string } } }) =>
     error?.response?.data?.code ? { code: error.response.data.code } : null,
@@ -37,6 +37,9 @@ const accept = authApi.acceptOfficerInvite as jest.Mock;
 const preview = handoverApi.preview as jest.Mock;
 const commit = handoverApi.commit as jest.Mock;
 const list = usersApi.list as jest.Mock;
+const officers = handoverApi.officers as jest.Mock;
+const row = (id: number, name: string) => ({ id, display_name: name, role_display: "判官" });
+const HALL = { data: [row(1, "alice"), row(2, "bob")] };
 const deactivate = usersApi.deactivate as jest.Mock;
 
 const officer = (id: number, username: string): User => ({ id, username, email: `${username}@x.test`, role: "JUDGE", is_active: true, tenant: { id: 1, code: "h", display_name: "H" } });
@@ -93,7 +96,7 @@ describe("OfficerHandoverDialog", () => {
     fireEvent.change(select, { target: { value: "2" } });
   };
 
-  beforeEach(() => list.mockResolvedValue({ data: { results: [officer(1, "alice"), officer(2, "bob")] } }));
+  beforeEach(() => officers.mockResolvedValue(HALL));
 
   it("previews on its own once both people are picked, notes pooled appeals, and writes the total on the button", async () => {
     preview.mockResolvedValue({ data: { judgments: 3, appeals: 2, appeals_returned_to_pool: 1, city_gods: ["城隍甲"], letters: 4, problems: [] } });
@@ -136,10 +139,35 @@ describe("OfficerHandoverDialog", () => {
     // 3 previewed, 3 moved (2 + 1 to the pool): nothing fewer.
     expect(screen.queryByText("officerHandover.result_fewer")).toBeNull();
   });
+
+  // rbac-web M-7:人选走 judgment.assign 的接口,按交出人的殿问;不再读 users/(ADMIN + user.manage)。
+  it("asks the handover officer list for the giver's hall, not the admin-only user list", async () => {
+    renderDialog();
+    await pickTarget();
+    expect(officers).toHaveBeenCalledWith(1);
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it("without a giver (opened from the queue by a hall lead) both people are picked, then it previews", async () => {
+    preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, problems: [] } });
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <OfficerHandoverDialog onClose={jest.fn()} />
+      </QueryClientProvider>,
+    );
+    const [giver, taker] = await screen.findAllByRole("combobox");
+    await within(giver).findByRole("option", { name: "alice" });
+    expect(officers).toHaveBeenCalledWith(undefined);
+    expect(preview).not.toHaveBeenCalled();
+    fireEvent.change(giver, { target: { value: "1" } });
+    fireEvent.change(taker, { target: { value: "2" } });
+    expect(await screen.findByTestId("handover-preview")).toBeInTheDocument();
+    expect(preview).toHaveBeenCalledWith(1, 2);
+  });
 });
 
 describe("OfficerHandoverDialog, opened from deactivation", () => {
-  beforeEach(() => list.mockResolvedValue({ data: { results: [officer(1, "alice"), officer(2, "bob")] } }));
+  beforeEach(() => officers.mockResolvedValue(HALL));
 
   it("locks the source and deactivates with the receiver in one call, never the bare handover", async () => {
     preview.mockResolvedValue({ data: { judgments: 1, appeals: 0, appeals_returned_to_pool: 0, city_gods: [], letters: 0, problems: [] } });

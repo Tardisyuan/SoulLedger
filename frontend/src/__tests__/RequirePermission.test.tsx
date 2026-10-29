@@ -4,6 +4,9 @@
 import { render, screen } from "@testing-library/react";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
+// RequirePermission asks for the raw answer so ViewingLock can grey (not hide) write controls while viewing (rbac-web M-4).
+const VIEWING = { evenWhileViewing: true };
+
 // Mock the usePermissions hook
 const mockHasPermission = jest.fn();
 const mockHasAnyPermission = jest.fn();
@@ -91,7 +94,7 @@ describe("RequirePermission", () => {
       "soul.create",
       "soul.delete",
       "judgment.review",
-    ]);
+    ], VIEWING);
   });
 
   // --- Multiple permissions (any) ---
@@ -105,7 +108,7 @@ describe("RequirePermission", () => {
       </RequirePermission>
     );
 
-    expect(mockHasAnyPermission).toHaveBeenCalledWith(["soul.create", "soul.edit"]);
+    expect(mockHasAnyPermission).toHaveBeenCalledWith(["soul.create", "soul.edit"], VIEWING);
     expect(mockHasAllPermissions).not.toHaveBeenCalled();
     expect(screen.getByText("Any Perm")).toBeInTheDocument();
   });
@@ -121,7 +124,7 @@ describe("RequirePermission", () => {
       </RequirePermission>
     );
 
-    expect(mockHasAllPermissions).toHaveBeenCalledWith(["soul.create", "soul.edit"]);
+    expect(mockHasAllPermissions).toHaveBeenCalledWith(["soul.create", "soul.edit"], VIEWING);
     expect(mockHasAnyPermission).not.toHaveBeenCalled();
     expect(screen.getByText("All Perms")).toBeInTheDocument();
   });
@@ -154,6 +157,6 @@ describe("RequirePermission", () => {
       </RequirePermission>
     );
 
-    expect(mockHasAnyPermission).toHaveBeenCalledWith(["soul.view"]);
+    expect(mockHasAnyPermission).toHaveBeenCalledWith(["soul.view"], VIEWING);
   });
 });

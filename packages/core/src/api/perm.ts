@@ -69,6 +69,10 @@ export interface RolePermissions {
   role: string;
   permissions: string[];
   details: Permission[];
+  /** `GET /perm/role-permissions/` only (the caller's own): who they are now — the web refreshes these on focus. */
+  id?: number;
+  tenant?: { code: string; display_name: string; civilization?: string; seal_glyphs?: string[] } | null;
+  extra_roles?: string[];
 }
 
 /** 200 body of POST /perm/role-permissions/assign/ (views.py:195). */

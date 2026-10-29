@@ -21,8 +21,18 @@ import { MenuRowCells } from "@/src/components/menus/MenuRowCells";
 import { MenuFormModal } from "@/src/components/menus/MenuFormModal";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { flattenTree } from "@/src/components/ui/TreeRow";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 export default function MenusPage() {
+  // 页级门(rbac-web L-1):menus/ 列表要 menu.read。
+  return (
+    <RequirePermission permissions="menu.read" fallback={<PermissionDenied permission="menu.read" />}>
+      <MenusPageContent />
+    </RequirePermission>
+  );
+}
+
+function MenusPageContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
