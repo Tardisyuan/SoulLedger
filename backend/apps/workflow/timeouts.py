@@ -137,8 +137,12 @@ def _tell_admins(workflow_pk, node_pk) -> None:
               "kind": kind, "category": "approval_timeout"}
     title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
     from apps.authentication.models import User
+    from apps.perm.data_scope import visible_to
 
+    cache = {}
     for user in User.objects.filter(pk__in=_hall_admins(workflow.tenant_id)):
+        if not visible_to(user, workflow, cache):  # 数据范围(B5):殿主看不到这条流程就不收
+            continue
         EventService.notify_user(user=user, title=title, message=message, notification_type="WORKFLOW_ASSIGNED",
                                  **WorkflowService.notice_target(workflow), params=params)
 

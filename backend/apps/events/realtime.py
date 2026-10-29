@@ -51,6 +51,42 @@ class ChannelNaming:
     OFFICERS_GROUP = "rt_officers"
 
 
+#: 殿组帧带的数据范围标签(数据范围 B5):payload 里有这些 id 就按它定归属,先审判后灵魂。
+_SCOPE_SOURCES = (("judgment_id", "judgment.Judgment"), ("soul_id", "souls.Soul"))
+
+
+def scope_tag(payload: dict) -> dict | None:
+    """发往 `rt_tenant_*` 的业务事件的数据范围标签:`{resource, owner_org_id, owner_user_ids}`;
+    payload 里没有注册表内的资源(或那一行已不在)就是 None,consumer 照常放行。
+
+    在发布方的事务里调(看得见未提交的行);一次查询 —— 归属机构与本人 / 指派字段一起取,M2M(城隍官员)
+    多出来的行合进集合。consumer 用 `NotificationConsumer._in_data_scope` 按 `data_scope.visible_q` 同一规则判。
+    """
+    from django.apps import apps as django_apps
+    from django.core.exceptions import ValidationError
+
+    from apps.perm.data_scope import REGISTRY
+
+    for key, label in _SCOPE_SOURCES:
+        pk = payload.get(key)
+        if not pk:
+            continue
+        entry = REGISTRY[label]
+        try:
+            rows = list(django_apps.get_model(label)._base_manager.filter(pk=pk)
+                        .values_list(entry.org_path, *entry.user_paths))
+        except (ValidationError, ValueError):
+            rows = []
+        if not rows:
+            continue
+        return {
+            "resource": entry.resource,
+            "owner_org_id": rows[0][0],
+            "owner_user_ids": sorted({uid for row in rows for uid in row[1:] if uid is not None}),
+        }
+    return None
+
+
 # 服务端因「登录已结束」主动关闭 socket 用的关闭码。**不是 4001**:4001 是「你的令牌不行」,
 # 客户端不重连;这条要客户端带着(可能已换新的)令牌重连 —— 当前设备拿到新令牌就连得上,
 # 被踢的设备重连被握手拒绝(4001),随后走「登录已失效」。见 packages/core/src/ws/client.ts。
