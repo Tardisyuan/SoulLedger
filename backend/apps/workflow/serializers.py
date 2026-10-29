@@ -446,6 +446,24 @@ class JumpSourceSerializer(serializers.Serializer):
         help_text="on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。")
 
 
+class WorkflowConflictError(APIException):
+    """409 `{"error", "code"}`: the flow is in a state that forbids this write (rbac-be1, 2026-10-29)."""
+
+    status_code = 409
+    default_code = "workflow_started"
+
+    def __init__(self, code: str, message: str):
+        super().__init__({"error": message, "code": code})
+
+
+def refuse_started(workflow, what: str) -> None:
+    """A started flow's stations are fixed (H2): adding, changing or removing one would re-draw the approval
+    chain under the people already deciding it — drop a station without `escalate`'s reason, or hand the next
+    one to a cooperative approver. Only a not-yet-started flow (`has_started`) may be edited station by station."""
+    if workflow is not None and workflow.has_started:
+        raise WorkflowConflictError("workflow_started", f"The flow has started; its {what} can no longer be changed.")
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -649,6 +667,10 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "is_required",
         ]
 
+    # rbac-be1 L3: a station's court and designated approver belong to the requester's hall too.
+    validate_realm = tenant_scoped("realm")
+    validate_approver_actor = tenant_scoped("approver_actor")
+
     def validate_workflow(self, value):
         """A node may only be attached to a workflow the requester can reach.
 
@@ -701,6 +723,9 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
                 )
                 for field in blocked
             })
+        # H2: neither the station's flow nor the flow it is moved to may have started.
+        refuse_started(getattr(self.instance, "workflow", None), "stations")
+        refuse_started(attrs.get("workflow"), "stations")
         return attrs
 
 
@@ -760,6 +785,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     validate_soul = tenant_scoped("soul")
     validate_judgment = tenant_scoped("judgment")
     validate_original_workflow = tenant_scoped("original_workflow")
+    validate_coordinating_realm = tenant_scoped("coordinating_realm")  # rbac-be1 L3
 
     # 第四十三批: one row per realm's segment (empty for a workflow built before segments); the segment the flow
     # stands at the gate of, waiting for that realm to pick; the 选站 / 加减站 records; whether the requester may
@@ -899,6 +925,13 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
                     )
                     for field in blocked
                 })
+            # L10: what kind of case a running flow is decided which stations it has; it cannot change midway.
+            if self.instance.has_started:
+                changed = [f for f in ("case_type", "is_appeal", "cross_civilization")
+                           if f in attrs and attrs[f] != getattr(self.instance, f)]
+                if changed:
+                    raise WorkflowConflictError(
+                        "workflow_started", f"The flow has started; {', '.join(changed)} can no longer be changed.")
         return attrs
 
 
