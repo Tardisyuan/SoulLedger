@@ -294,9 +294,12 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                 name should be — which no exception suspends. "Nobody recorded
                 this name" is a fact worth showing; a primary key is not. Same
                 shape as `app/judgment/page.tsx`'s `soul_name`. */}
+            {/* 跨殿读只给对方殿名(决定 24):目标殿读到的发起人名字是 null,那时写发起殿,不写「账号已删」。 */}
             <dd className={DD}>
               {dispatch.dispatched_by_name ? (
                 dispatch.dispatched_by_name
+              ) : user?.tenant?.code && user.tenant.code !== dispatch.source_tenant_code ? (
+                <span className="font-mono text-xs">{dispatch.source_tenant_code}</span>
               ) : (
                 <MissingValue kind="unrecorded" reason={t("dispatch.proposer_account_removed")} />
               )}

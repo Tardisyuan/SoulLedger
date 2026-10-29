@@ -62,7 +62,10 @@ def test_a_rejection_keeps_the_proposers_words_and_stores_the_decision_apart(wor
     # API 给出同一份字段;`reason` 不含决定的话。
     for body in (res.data, world["client_a"].get(f"{BASE}{record.pk}/").data):
         assert body["reason"] == ORIGINAL and body["decision_reason"] == WHY
-        assert body["decided_by"] == world["mod_b"].pk and body["decided_by_name"] == "dr_mod_b"
+    # 拍板人:目标殿自己看得到;发起殿只见对方殿名(决定 24)。
+    assert res.data["decided_by"] == world["mod_b"].pk and res.data["decided_by_name"] == "dr_mod_b"
+    theirs = world["client_a"].get(f"{BASE}{record.pk}/").data
+    assert (theirs["decided_by"], theirs["decided_by_name"]) == (None, None)
     # 通知带的是同一个理由。
     [note] = UserNotification.objects.filter(user=world["mod_a"], related_id=str(record.pk))
     assert note.notification_type == "DISPATCH_REJECTED" and note.params["reason"] == record.decision_reason
@@ -75,6 +78,10 @@ def test_a_cancellation_stores_its_reason_apart_too(world):
     assert record.reason == ORIGINAL and record.decision_reason == "改派别处"
     assert record.decided_by_id == world["mod_a"].pk
     assert res.data["reason"] == ORIGINAL and res.data["decision_reason"] == "改派别处"
+    # 撤回人是源殿自己的人:源殿看得到名字,目标殿看不到。
+    assert res.data["decided_by"] == world["mod_a"].pk
+    theirs = world["client_b"].get(f"{BASE}{world['record'].pk}/").data
+    assert (theirs["decided_by"], theirs["decided_by_name"]) == (None, None)
 
 
 def test_a_bare_rejection_leaves_the_reason_alone_and_the_decision_empty(world):

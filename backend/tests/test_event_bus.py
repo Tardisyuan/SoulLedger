@@ -616,6 +616,27 @@ class TestDefaultHandlers:
                 eb_module.EventBus._get_registry = property(original_get_registry)
 
 
+def test_officer_notifications_are_not_delivered_to_external_webhooks(monkeypatch):
+    """决定 26:notification 域是某位官员自己的收件箱(求助、代看、交办),不是外部集成订阅的业务事实 ——
+    WebhookHandler 不挂在它上面;实时推送和站内通知照旧,别的业务域照旧投 webhook。"""
+    import apps.events.handlers.registry as registry_module
+    from apps.events.event_bus import configure_default_handlers
+    from apps.events.handlers.registry import DomainEventHandlerRegistry
+    from apps.events.handlers.webhook_handler import WebhookHandler
+
+    fresh = DomainEventHandlerRegistry()
+    monkeypatch.setattr(registry_module, "handler_registry", fresh)
+    configure_default_handlers()
+
+    def kinds(domain):
+        return {type(h).__name__ for h in fresh.get_domain_handlers(domain)}
+
+    assert "WebhookHandler" not in kinds("notification")
+    assert {"NotificationHandler", "WebSocketHandler"} <= kinds("notification")
+    for domain in ("workflow", "dispatch", "deathsync", "social"):
+        assert WebhookHandler.__name__ in kinds(domain), domain
+
+
 # ------------------------------------------------------------------
 # EventEnvelope edge cases
 # ------------------------------------------------------------------
