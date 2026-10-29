@@ -89,6 +89,12 @@ def test_a_custom_role_holding_a_page_codename_reads_the_catalogue(viewer, coden
     client = APIClient()
     client.force_authenticate(user=holder)
     response = client.get("/api/v1/perm/permissions/")
+    from apps.perm.checker import GLOBAL_ONLY_CODENAMES
+
+    if codename in GLOBAL_ONLY_CODENAMES:
+        # 2026-10-29: `menu.manage` is held by the hall-less ADMIN alone — a grant to a hall's role is inert.
+        assert response.status_code == 403
+        return
     assert response.status_code == 200
     assert codename in {row["codename"] for row in response.data}
     assert viewer.get("/api/v1/perm/permissions/").status_code == 403

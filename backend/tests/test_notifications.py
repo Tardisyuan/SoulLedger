@@ -4,6 +4,7 @@ Tests for notifications functionality.
 import os
 
 import pytest
+
 from tests.conftest import sign_in
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
