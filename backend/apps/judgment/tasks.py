@@ -80,7 +80,9 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
             created_at__lt=threshold,
             update_time__lt=threshold,
             stale_since__isnull=True,
-        ).only("id", "stale_since")
+        # `tenant_id` 必须一起取:批审计行按被改那一行的殿记(`audit.signals._row_tenant_id`),
+        # 只取 id/stale_since 时它是延迟字段,每行多一条 SELECT(真 PG 实测 3 行 4 → 7 条)。
+        ).only("id", "stale_since", "tenant_id")
 
         # Chunked bulk_update instead of one `.save()` per row (PQ-02). That
         # also skips the per-row post_save audit rows, so each chunk gets one
