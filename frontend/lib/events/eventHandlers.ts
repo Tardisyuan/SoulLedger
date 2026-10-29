@@ -247,11 +247,13 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
 
   // 个人通知只弹给收件人本人。后端已只发收件人的用户组(2026-10-29 之前同殿每个官员都收到),
   // 这里再按 user_id 对一次:不知道当前用户或对不上就不弹。
-  if (payload.notification && String(payload.notification.user_id) === ctx.currentUserId) {
+  // 两种格式:`{notification: {...}}`(`publish_notification`)与扁平的(`EventService.notify_user`,站内多数通知走它)。
+  const body = payload.notification ?? (payload.user_id !== undefined ? payload : undefined);
+  if (body && String(body.user_id) === ctx.currentUserId) {
     // 后端把各语言的渲染一起推来(`i18n`),按当前语言取;没有(旧通知、未分语言的类型)就用存下来的原文。
-    const text = payload.notification.i18n?.[getLocale()];
-    const title = text?.title || payload.notification.title || translate("events.realtime.NOTIFICATION_CREATED");
-    const message = text?.message ?? payload.notification.message ?? "";
+    const text = body.i18n?.[getLocale()];
+    const title = text?.title || body.title || translate("events.realtime.NOTIFICATION_CREATED");
+    const message = text?.message ?? body.message ?? "";
     ctx.showToast(message ? `${title}: ${message}` : title, "info", 5000);
   }
 
