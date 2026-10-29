@@ -36,13 +36,13 @@
 - RC-4: KarmaExportStatsView O(n) 修复
 - RC-5: HealthCheckDetailed 认证加固
 - 前端: 16 个 error.tsx 边界, 4 hooks onError
-- 报告: SECURITY_CLOSURE_REPORT.md, RC_READINESS_REPORT_FINAL.md
+- 报告: SECURITY_CLOSURE_REPORT.md, archive/RC_READINESS_REPORT_FINAL.md
 
 ### M9 Engineering Excellence (2026-05-30)
 - 清理未使用依赖 (zustand, next-intl)
 - 前端 Hooks 测试 (useUsers, useWorkflows)
 - 架构一致性审查
-- 报告: ENGINEERING_EXCELLENCE_REPORT.md
+- 报告: archive/ENGINEERING_EXCELLENCE_REPORT.md
 
 ### M10 搜索与过滤系统 (2026-06-06)
 - 搜索 & 过滤 foundation
@@ -195,4 +195,4 @@ M16 之后的工作没有再按 M 编号立项，也没有回填到上面。现�
 记录，未回填后续变更。*
 
 *本文件不是事实来源——落后于代码，且 M7/M8 的编号与 `docs/MILESTONE_M7.md`、
-`docs/MILESTONE_M8.md` 指的不是同一件事。以 `git log` 为准。*
+`docs/archive/MILESTONE_M8.md` 指的不是同一件事。以 `git log` 为准。*
