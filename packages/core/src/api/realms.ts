@@ -18,6 +18,8 @@ export interface Realm {
   is_eternal: boolean;
   /** 入界前是否须经正式审判(`RealmListSerializer` 带;默认 true)。 */
   is_judgment_required?: boolean;
+  /** 不再使用(后端 `RETIRED_REALM_CODES`,如 DY_01_HEAVEN):管理页照常列出,选单不给选。列表接口带。 */
+  is_retired?: boolean;
   // ── 行程拓扑(RealmListSerializer 的 TOPOLOGY_FIELDS)。全部可空:一个文明用不
   // 到的列就是 null,意思是「不适用或没有出处」,不是 0。
   // 地府「一线」:殿号 1–10 与站的种类。
