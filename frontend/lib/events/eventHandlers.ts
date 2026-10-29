@@ -226,7 +226,9 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
   ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.all });
   ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
 
-  if (payload.notification) {
+  // 个人通知只弹给收件人本人。后端已只发收件人的用户组(2026-10-29 之前同殿每个官员都收到),
+  // 这里再按 user_id 对一次:不知道当前用户或对不上就不弹。
+  if (payload.notification && String(payload.notification.user_id) === ctx.currentUserId) {
     // 后端把各语言的渲染一起推来(`i18n`),按当前语言取;没有(旧通知、未分语言的类型)就用存下来的原文。
     const text = payload.notification.i18n?.[getLocale()];
     const title = text?.title || payload.notification.title || "New notification";
