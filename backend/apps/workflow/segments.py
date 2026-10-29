@@ -53,10 +53,11 @@ REMIND_INTERVAL = timedelta(hours=1)
 #: 每日提醒:定时任务每天跑一次,留几个小时余量,跑得早一点也不会漏掉一天。
 DAILY_REMINDER = timedelta(hours=20)
 
-#: 能选站的人:有 `workflow.approve` 的判官 / 管理员。都没有 = 「没有能选站的人」,待办转给殿管理员。
-PICKER_ROLES = ("JUDGE", "ADMIN")
-#: 殿管理员(与 `CrossTenantJudgmentService.can_end` 同一组角色)。
-HALL_ADMIN_ROLES = ("ADMIN", "MODERATOR")
+#: 能选站的人:持 `workflow.approve`。都没有 = 「没有能选站的人」,待办转给殿管理员。
+PICKER_CODENAME = "workflow.approve"
+#: 殿管理员:持 `workflow.update`(改审批流;ADMIN / 殿主默认持有,判官没有)。按码判、认兼任角色,
+#: 权限矩阵收得回(rbac-be1 第 21 条,2026-10-29;此前按主角色名 ADMIN / MODERATOR 判)。
+HALL_ADMIN_CODENAME = "workflow.update"
 #: 跨域审判取消让流程提前结束时写在 `end_reason` 上(不再去结束那场已取消的审判)。
 END_REASON_CANCELLED = "CROSS_CANCELLED"
 #: 外域的人经 `foreign_workflows` 能做的动作。列表、改、删、推进、越级都不在内。
@@ -387,19 +388,22 @@ def append_foreign(workflow, realm):
 # ── 谁 ──────────────────────────────────────────────────────────────────
 
 
-def pickers(tenant_id):
-    """这个域能选站的人:在职、JUDGE / ADMIN、有 `workflow.approve`。"""
+def _holders(tenant_id, codename):
+    """这个域在职、持 `codename` 的官员(含兼任角色)。"""
     from apps.authentication.models import User
     from apps.perm.checker import check_permission
 
-    candidates = User.objects.filter(tenant_id=tenant_id, is_active=True, role__in=PICKER_ROLES).order_by("pk")
-    return [u for u in candidates if check_permission(u, "workflow.approve")]
+    candidates = User.objects.filter(tenant_id=tenant_id, is_active=True).exclude(role="SOUL").order_by("pk")
+    return [u for u in candidates if check_permission(u, codename)]
+
+
+def pickers(tenant_id):
+    """这个域能选站的人:在职、持 `workflow.approve`。"""
+    return _holders(tenant_id, PICKER_CODENAME)
 
 
 def hall_admins(tenant_id):
-    from apps.authentication.models import User
-
-    return list(User.objects.filter(tenant_id=tenant_id, is_active=True, role__in=HALL_ADMIN_ROLES).order_by("pk"))
+    return _holders(tenant_id, HALL_ADMIN_CODENAME)
 
 
 def pick_recipients(tenant_id):
@@ -415,16 +419,16 @@ def _user_tenant_id(user, request=None):
 def can_pick(user, segment, request=None):
     if not getattr(user, "is_authenticated", False) or _user_tenant_id(user, request) != segment.tenant_id:
         return False
-    if user.role in HALL_ADMIN_ROLES:
-        return True
     from apps.perm.checker import check_permission
 
-    return user.role in PICKER_ROLES and check_permission(user, "workflow.approve")
+    return check_permission(user, HALL_ADMIN_CODENAME) or check_permission(user, PICKER_CODENAME)
 
 
 def is_convener_admin(user, workflow, request=None):
     """召集殿(流程所属殿)的管理员;没有租户的全局 ADMIN 也算(同 `can_end`)。"""
-    if not getattr(user, "is_authenticated", False) or user.role not in HALL_ADMIN_ROLES:
+    from apps.perm.checker import check_permission
+
+    if not getattr(user, "is_authenticated", False) or not check_permission(user, HALL_ADMIN_CODENAME):
         return False
     tenant_id = _user_tenant_id(user, request)
     if tenant_id is None:
@@ -436,7 +440,9 @@ def can_adjust(user, workflow, segment, request=None):
     """当前站的审批人(当前站在这一段里),或这一段所属域的殿管理员。"""
     if not getattr(user, "is_authenticated", False) or _user_tenant_id(user, request) != segment.tenant_id:
         return False
-    if user.role in HALL_ADMIN_ROLES:
+    from apps.perm.checker import check_permission
+
+    if check_permission(user, HALL_ADMIN_CODENAME):
         return True
     current = workflow.current_node
     return current is not None and current.segment_id == segment.pk and current.can_approve(user)

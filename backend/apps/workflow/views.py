@@ -36,6 +36,7 @@ from apps.workflow.serializers import (
     FlowPreviewSerializer,
     WorkflowAdjustSerializer,
     WorkflowCaseTypeSerializer,
+    WorkflowConflictError,
     WorkflowNodeActionSerializer,
     WorkflowPickSerializer,
     WorkflowReasonSerializer,
@@ -45,6 +46,7 @@ from apps.workflow.serializers import (
     WorkflowTemplateListSerializer,
     WorkflowTemplateSerializer,
     WorkflowTemplateVersionSerializer,
+    refuse_started,
 )
 from apps.workflow.services import WorkflowInProgressError, WorkflowService
 
@@ -308,6 +310,16 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     @extend_schema(exclude=True)
     def create(self, request, *args, **kwargs):
         raise MethodNotAllowed(request.method, detail="Use POST /workflows/start/ or /workflows/create_from_judgment/.")
+
+    def perform_destroy(self, instance):
+        """Only a flow that has not started and decides no judgment may be deleted (rbac-be1 H1, 2026-10-29).
+        The delete is physical; deleting a running flow let `weighing.unfinished_flow` find nothing and release the
+        held disposition — a hall lead denied approve / advance skipping the whole chain in one request — and
+        deleting a finished one erased its record."""
+        if instance.has_started or instance.judgment_id is not None:
+            raise WorkflowConflictError(
+                "workflow_in_use", "This flow has started or belongs to a judgment and cannot be deleted.")
+        super().perform_destroy(instance)
 
     @extend_schema(
         parameters=[
@@ -1014,3 +1026,8 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
         qs = ApprovalNode._base_manager.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
         qs = scope_to_tenant(qs, self.request, field="workflow__tenant")
         return DataScopeFilter.filter_queryset(self.request, qs, ApprovalNode)
+
+    def perform_destroy(self, instance):
+        """A started flow's stations are fixed (rbac-be1 H2); create / update are refused in the serializer."""
+        refuse_started(instance.workflow, "stations")
+        super().perform_destroy(instance)

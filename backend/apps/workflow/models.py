@@ -356,6 +356,13 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         (`weighing.unfinished_flow`): a judgment's own flow, not one started by hand naming it."""
         return self.judgment_id is not None and (not self.manually_started or MANUAL_FLOWS_DECIDE_THE_JUDGMENT)
 
+    @property
+    def has_started(self) -> bool:
+        """Whether the flow has left PENDING. `start_workflow` enters its first station in the same transaction
+        that creates it, so every flow the engine made has started; only a row written straight through the ORM
+        is still PENDING. Once started, its nodes and routing columns are fixed (rbac-be1 H2 / L10, 2026-10-29)."""
+        return self.status != ApprovalWorkflowStatus.PENDING
+
     def get_next_node(self) -> "ApprovalNode | None":
         """Get the next pending node in the workflow."""
         nodes = self.nodes.filter(status=NodeStatus.PENDING).order_by("node_order").first()
