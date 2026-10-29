@@ -194,6 +194,13 @@ class DeathRegistrationViewSet(
     queryset = DeathRegistrationRequest.objects.all()
     serializer_class = DeathRegistrationRequestSerializer
 
+    def get_permissions(self):
+        # 读登记(列表 / 详情)与 `progress` 同一个能力 `can_query_status`(rbac-be2 L5):关了它的 key 只能登记、读不回状态。
+        # 登记本身(create)仍只要有效 key,由 `can_register_death` 在 `create` 里判。
+        if self.action in ("list", "retrieve"):
+            return [CanQueryStatus()]
+        return super().get_permissions()
+
     def get_queryset(self):
         # Was fail-OPEN: `if api_key: qs = qs.filter(...)` with no else, so a
         # request that reached here without a key got every tenant's death
