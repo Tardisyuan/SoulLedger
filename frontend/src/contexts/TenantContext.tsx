@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { permApi } from "@soulledger/core/api";
-import { onPasswordChangeRequired } from "@soulledger/core/api/client";
+import { onMfaSetupRequired, onPasswordChangeRequired } from "@soulledger/core/api/client";
 import type { UserRole } from "@soulledger/core/api";
 import {
   ACCESS_TOKEN_KEY,
@@ -64,6 +64,8 @@ export interface AuthUser {
   mfa_required?: boolean;
   /** 首次登录 / 管理员重置 / 密码超期:除改密码外的接口 403,`AppLayout` 把人带去个人中心改密码。 */
   password_change_required?: boolean;
+  /** 角色要求两步验证而没开(2026-10-29 服务端强制):除设置两步验证 / 退出 / 读自己外的接口 403,`AppLayout` 把人带去个人中心开启。 */
+  mfa_setup_required?: boolean;
 }
 
 // Safe subset persisted to localStorage (no permissions)
@@ -137,6 +139,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       setUserState((prev) => (prev && !prev.password_change_required ? { ...prev, password_change_required: true } : prev))
     );
     return () => onPasswordChangeRequired(null);
+  }, []);
+
+  // A 403 `mfa_setup_required` (the role requires two-step verification and it is off) flips this flag the same way.
+  useEffect(() => {
+    onMfaSetupRequired(() =>
+      setUserState((prev) => (prev && !prev.mfa_setup_required ? { ...prev, mfa_setup_required: true } : prev))
+    );
+    return () => onMfaSetupRequired(null);
   }, []);
 
   // Hydrate from localStorage on mount (client-only)

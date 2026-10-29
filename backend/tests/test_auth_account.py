@@ -375,7 +375,9 @@ class TestPasswordHelpReachesTheRightAdministrators:
         note = UserNotification.objects.filter(user=cast["cn_admin"]).get()
         assert note.params["username"] == "cn_judge"
         assert "cn_judge" in note.message and note.related_resource == "user"
-        api_client.force_authenticate(cast["cn_admin"])
+        from tests.conftest import sign_in
+
+        sign_in(api_client, cast["cn_admin"])  # the hall's ADMIN carries its hall in the JWT (2026-10-29)
         listed = api_client.get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE="en").data
         rows = listed["results"] if isinstance(listed, dict) else listed
         assert rows[0]["title"] == "Password reset help"

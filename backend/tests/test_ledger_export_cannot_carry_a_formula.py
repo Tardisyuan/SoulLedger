@@ -38,8 +38,9 @@ def export(db):
     user = User.objects.create_user(
         username="exporter", password="x", role=UserRole.ADMIN, tenant=tenant
     )
-    client = APIClient()
-    client.force_authenticate(user=user)
+    from tests.conftest import sign_in
+
+    client = sign_in(APIClient(), user)  # the hall's ADMIN exports its hall; a JWT carries it (2026-10-29)
 
     def run():
         response = client.get("/api/v1/ledger/stats/export/")

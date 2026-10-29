@@ -57,7 +57,7 @@ def realms(db):
     )[0]
     cn_mod = User.objects.create_user(username="dp_cn_mod", password="x", role="MODERATOR", tenant=cn)
     eu_mod = User.objects.create_user(username="dp_eu_mod", password="x", role="MODERATOR", tenant=eu)
-    cn_admin = User.objects.create_user(username="dp_cn_admin", password="x", role="ADMIN", tenant=cn)
+    cn_admin = User.objects.create_user(username="dp_cn_admin", password="x", role="ADMIN", tenant=None)
     return {
         "cn": cn,
         "eu": eu,

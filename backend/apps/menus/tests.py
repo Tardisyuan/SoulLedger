@@ -49,7 +49,7 @@ class TestMenuCRUD:
             code="MENU_T1", defaults={"display_name": "Menu Test Tenant"}
         )[0]
         self.admin = User.objects.create_user(
-            username="menu_admin", password="test123", role="ADMIN", tenant=self.tenant
+            username="menu_admin", password="test123", role="ADMIN", tenant=None
         )
         self.viewer = User.objects.create_user(
             username="menu_viewer", password="test123", role="VIEWER", tenant=self.tenant
@@ -121,7 +121,7 @@ class TestMenuActions:
             code="MENU_T2", defaults={"display_name": "Menu Actions Tenant"}
         )[0]
         self.admin = User.objects.create_user(
-            username="menuact_admin", password="test123", role="ADMIN", tenant=self.tenant
+            username="menuact_admin", password="test123", role="ADMIN", tenant=None
         )
         self.viewer = User.objects.create_user(
             username="menuact_viewer", password="test123", role="VIEWER", tenant=self.tenant
@@ -171,7 +171,7 @@ class TestMenuButtonCRUD:
             code="MENU_T3", defaults={"display_name": "Button Test Tenant"}
         )[0]
         self.admin = User.objects.create_user(
-            username="btn_admin", password="test123", role="ADMIN", tenant=self.tenant
+            username="btn_admin", password="test123", role="ADMIN", tenant=None
         )
         self.viewer = User.objects.create_user(
             username="btn_viewer", password="test123", role="VIEWER", tenant=self.tenant

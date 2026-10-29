@@ -39,7 +39,7 @@ def setup(db):
         realm_code="EG_TEST", name_en="Duat", civilization="EGYPTIAN", tenant=tenant
     )
     user = User.objects.create_user(
-        username="actor-reader", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="actor-reader", password="x", role=UserRole.ADMIN, tenant=None
     )
     client = APIClient()
     client.force_authenticate(user=user)

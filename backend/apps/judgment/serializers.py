@@ -7,7 +7,6 @@ from rest_framework import serializers
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
-from apps.core.tenant import is_tenant_exempt
 from apps.core.tenant_fields import same_tenant_or_404_message, tenant_scoped
 from apps.disposition.destination import MAX_TERM_YEARS
 from apps.judgment import snapshot, wangsi
@@ -331,9 +330,12 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         # ADMIN is exempt from the two rules below as well, not only from
         # tenant ownership: it is the role that repairs data, and the states
         # these rules refuse are exactly the ones that need repairing. The
-        # exemption is a user decision (2026-09-12), not an oversight.
+        # exemption is a user decision (2026-09-12), not an oversight. It follows the role, not the reach:
+        # an ADMIN bound to a hall keeps it inside its hall (2026-10-29) — the soul is already known to be in
+        # the caller's hall by the line above.
         request = self.context.get("request")
-        if request is not None and is_tenant_exempt(getattr(request, "user", None)):
+        user = getattr(request, "user", None) if request is not None else None
+        if getattr(user, "role", None) == "ADMIN" and not getattr(user, "hall_view", None):
             return value
         if value.current_state == SoulState.SETTLED:
             raise serializers.ValidationError(

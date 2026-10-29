@@ -169,7 +169,10 @@
       "disable_confirm": "Turn off",
       "disabled_toast": "Two-step verification turned off",
       "disable_failed": "Could not turn it off — check the code or password",
-      "load_failed": "Could not read the two-step verification status"
+      "load_failed": "Could not read the two-step verification status",
+      "confirm_by_recovery": "Recovery code",
+      "turn_off_body": "Afterwards only the password is needed to sign in. Confirm with a code from your authenticator or one recovery code — the password alone cannot turn it off.",
+      "turn_off_failed": "Could not turn it off — check the code"
     },
     "banner": {
       "text": "This hall requires your role to use two-step verification; this reminder stays until it is set up.",
@@ -2747,7 +2750,8 @@
       "audit_note": "Sign-in history is in the audit log.",
       "load_failed": "Couldn't load your devices",
       "sign_out_failed": "Couldn't sign out. Please try again."
-    }
+    },
+    "mfa_must_setup": "Your role requires two-step verification. Turn it on to carry on."
   },
   "notifications": {
     "title": "Notifications",
@@ -5366,7 +5370,8 @@
         "title": "Turn off two-step verification?",
         "body": "Once it is off, signing in takes only your password. Any recovery codes left stop working.",
         "ok": "Turn off",
-        "use_password": "Phone not with you? Use your password"
+        "use_password": "Phone not with you? Use your password",
+        "use_recovery": "Phone not with you? Use a recovery code"
       },
       "regen": {
         "title": "Regenerate recovery codes?",

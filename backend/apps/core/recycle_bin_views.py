@@ -133,6 +133,19 @@ class RecycleBinHardDeleteRequestSerializer(serializers.Serializer):
     id = BinEntryIdField()
 
 
+def _bin_scope(request):
+    """Who may restore / destroy, and within what: the hall-less ADMIN everywhere (None); an ADMIN bound to a
+    hall within that hall (the Tenant); anyone else not at all (False). 2026-10-29: hall admins are hall-scoped,
+    not refused outright. Viewing one hall (`hall_view`) is read-only and never gets here."""
+    user = request.user
+    if is_tenant_exempt(user):
+        return None
+    tenant = getattr(request, "tenant", None)
+    if getattr(user, "role", None) == "ADMIN" and not getattr(user, "hall_view", None) and tenant is not None:
+        return tenant
+    return False
+
+
 def _admin_only():
     # A server rule on top of the codename (2026-09-25): restore and hard
     # delete are ADMIN's, whatever the grant table says. The matrix refuses
@@ -188,13 +201,14 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         the bin must not let a user restore eight dependent rows
         independently of their parent.
         """
-        if not is_tenant_exempt(request.user):
+        scope = _bin_scope(request)
+        if scope is False:
             return _admin_only()
         cascade_id = request.data.get("cascade_id")
         if not cascade_id:
             return Response({"error": "cascade_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            restored = recycle_bin.restore_cascade(cascade_id)
+            restored = recycle_bin.restore_cascade(cascade_id, tenant=scope)
         except recycle_bin.RestoreRefusedError as refused:
             return Response(refused.body, status=status.HTTP_400_BAD_REQUEST)
         except (ValueError, TypeError):
@@ -225,7 +239,8 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         doc's point that the bin should only ever contain things safe to
         destroy is enforced here, not just in the UI.
         """
-        if not is_tenant_exempt(request.user):
+        scope = _bin_scope(request)
+        if scope is False:
             return _admin_only()
         entity_type = request.data.get("entity_type")
         pk = request.data.get("id")
@@ -247,7 +262,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not recycle_bin.hard_delete(entity_type, pk):
+        if not recycle_bin.hard_delete(entity_type, pk, tenant=scope):
             return Response(
                 {
                     "error": (

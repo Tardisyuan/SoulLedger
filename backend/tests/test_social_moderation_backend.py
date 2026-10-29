@@ -407,9 +407,9 @@ def test_copying_again_copies_nothing(cn_tenant, eu_tenant, eu_admin_user):
     assert client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json").json() == {"copied": 0, "skipped": 1}
 
 
-def test_copy_refuses_its_own_civilization_and_unknown_ones(cn_tenant, admin_user):
+def test_copy_refuses_its_own_civilization_and_unknown_ones(cn_tenant, cn_admin_user):
     word(cn_tenant, "还阳", category="INDUCEMENT")
-    client = officer_client(admin_user)
+    client = officer_client(cn_admin_user)
     same = client.post(COPY, {"source_tenant": "CN_DIYU"}, format="json")
     assert same.status_code == 400 and same.json()["code"] == "same_tenant"
     assert client.post(COPY, {"source_tenant": "NOPE"}, format="json").status_code == 404

@@ -377,8 +377,9 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
                 tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
                 if tenant is None or soul.tenant_id != tenant.pk:
                     raise ValidationError({"soul": ["No such soul in this tenant."]})
-                # ADMIN is exempt (user decision 2026-09-12, tests/test_admin_is_exempt_from_the_case_state_rules.py):
-                # it is the role that repairs a case stuck open.
+            # ADMIN is exempt (user decision 2026-09-12, tests/test_admin_is_exempt_from_the_case_state_rules.py):
+            # it is the role that repairs a case stuck open. A hall's ADMIN keeps it inside its hall (2026-10-29).
+            if getattr(self.request.user, "role", None) != "ADMIN":
                 if open_judgments(soul).exists():
                     raise ValidationError(
                         {"soul": ["This soul already has an open case. Conclude it before opening another."]}

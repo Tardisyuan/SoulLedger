@@ -46,7 +46,13 @@ class TestHandover:
 
 
 @pytest.fixture
-def admin_client(admin_user):
+def admin_client(cn_admin_user):
+    return officer_client(cn_admin_user)
+
+
+@pytest.fixture
+def global_admin_client(admin_user):
+    """The hall-less ADMIN: halls themselves and the cross-hall overview are its (2026-10-29)."""
     return officer_client(admin_user)
 
 
@@ -86,7 +92,8 @@ class TestInvite:
 
 @pytest.mark.django_db
 class TestHalls:
-    def test_create_deactivate_and_refuse_new_souls(self, admin_client, judge_user):
+    def test_create_deactivate_and_refuse_new_souls(self, global_admin_client, judge_user):
+        admin_client = global_admin_client
         res = admin_client.post("/api/v1/tenants/", {"code": "CN_SECOND", "display_name": "Second",
                                                      "civilization": "CHINESE"}, format="json")
         assert res.status_code == 201, res.data
@@ -103,14 +110,16 @@ class TestHalls:
         assert officer_client(judge_user).post("/api/v1/tenants/", {"code": "X_Y", "display_name": "x",
                                                                     "civilization": "GREEK"}, format="json").status_code == 403
 
-    def test_web_create_in_a_deactivated_hall_is_a_400_not_a_500(self, admin_client, admin_user):
-        Tenant.objects.filter(pk=admin_user.tenant_id).update(is_active=False)
+    def test_web_create_in_a_deactivated_hall_is_a_400_not_a_500(self, admin_client, cn_admin_user):
+        Tenant.objects.filter(pk=cn_admin_user.tenant_id).update(is_active=False)
         admin_client.raise_request_exception = False
         res = admin_client.post("/api/v1/souls/", {"name": "late", "civilization": "CHINESE"}, format="json")
         assert res.status_code == 400, res.status_code
         assert "tenant" in res.data
 
-    def test_overview_is_admin_only(self, admin_client, judge_user):
+    def test_overview_is_admin_only(self, global_admin_client, admin_client, judge_user):
+        assert admin_client.get("/api/v1/tenants/overview/").status_code == 403  # a hall's ADMIN
+        admin_client = global_admin_client
         res = admin_client.get("/api/v1/tenants/overview/")
         assert res.status_code == 200 and {"todo", "judgments", "open_appeals"} <= set(res.data[0])
         assert officer_client(judge_user).get("/api/v1/tenants/overview/").status_code == 403
@@ -129,7 +138,7 @@ class TestMengpoSoup:
     def _soul(self, tenant, state=SoulState.REINCARNATING):
         return Soul.objects.create(name="待转", birth_date="1900-01-01", current_state=state, tenant=tenant)
 
-    def test_cn_needs_soup_then_rebirth_clears_it(self, cn_tenant, admin_user):
+    def test_cn_needs_soup_then_rebirth_clears_it(self, cn_tenant, cn_admin_user):
         from django.conf import settings as dj
         dj.MENGPO_SOUP_REQUIRED = True
         from apps.reincarnation.services import ReincarnationService, SoupNotTaken, drink_soup
@@ -143,7 +152,8 @@ class TestMengpoSoup:
         from apps.events.models import SoulEvent
         assert SoulEvent.objects.filter(soul=soul, event_type="MENGPO_SOUP_TAKEN").count() == 1
 
-    def test_wrong_state_and_other_civilizations_are_refused(self, cn_tenant, eu_tenant, admin_client):
+    def test_wrong_state_and_other_civilizations_are_refused(self, cn_tenant, eu_tenant, global_admin_client):
+        admin_client = global_admin_client  # reaches the EU soul too
         alive = self._soul(cn_tenant, SoulState.ALIVE)
         res = admin_client.post("/api/v1/reincarnation/drink-soup/", {"soul_id": str(alive.pk)}, format="json")
         assert (res.status_code, res.data["code"]) == (409, "not_reincarnating")

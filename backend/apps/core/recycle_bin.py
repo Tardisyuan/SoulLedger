@@ -108,7 +108,21 @@ def register_restore_check(check):
     _RESTORE_CHECKS.append(check)
 
 
-def restore_cascade(cascade_id) -> int:
+def _cascade_outside(cascade_id, tenant) -> bool:
+    """Whether any row of this cascade is not `tenant`'s: another hall's, or a global row (a model with no
+    tenant column, a NULL tenant). A hall's ADMIN restores and destroys its own hall's rows only (2026-10-29)."""
+    for model in _soft_deletable_models():
+        rows = _unfiltered_manager(model).filter(delete_cascade_id=cascade_id, is_deleted=True)
+        if not any(f.name == "tenant" for f in model._meta.get_fields()):
+            if rows.exists():
+                return True
+            continue
+        if rows.exclude(tenant_id=tenant.pk).exists():
+            return True
+    return False
+
+
+def restore_cascade(cascade_id, tenant=None) -> int:
     """Restore every soft-deleted row, across every soft-deletable model,
     that shares this cascade id. Returns the number of rows restored.
 
@@ -123,7 +137,12 @@ def restore_cascade(cascade_id) -> int:
     A registered type with a `listable` filter only restores rows that match
     it: a row the bin does not list (a soul's own deleted post) is not in the
     bin, so it cannot come back through it either.
+
+    `tenant` (an ADMIN bound to a hall): the cascade must be wholly that hall's, or nothing is restored (0, the
+    same answer as an unknown cascade — another hall's cascade is not confirmed to exist).
     """
+    if tenant is not None and _cascade_outside(cascade_id, tenant):
+        return 0
     if _is_system_void(cascade_id):
         raise RestoreRefusedError({"error": "The system voided these records; they cannot be restored",
                                    "code": "system_void"})
@@ -264,7 +283,7 @@ def list_bin_entries(tenant=None, is_admin=False):
     return entries
 
 
-def hard_delete(entity_type: str, pk) -> bool:
+def hard_delete(entity_type: str, pk, tenant=None) -> bool:
     """Permanently remove a reference-data row past its retention window.
     Returns False if the type isn't registered, isn't reference-data,
     doesn't exist, isn't soft-deleted, or hasn't cleared the retention
@@ -275,6 +294,9 @@ def hard_delete(entity_type: str, pk) -> bool:
     manager = _unfiltered_manager(bin_type.model)
     row = manager.filter(pk=pk, is_deleted=True).first()
     if row is None or not row.deleted_at:
+        return False
+    # A hall's ADMIN: only its own hall's rows (global reference rows, NULL tenant, are not its own).
+    if tenant is not None and getattr(row, "tenant_id", None) != tenant.pk:
         return False
     if timezone.now() - row.deleted_at < timedelta(days=REFERENCE_DATA_RETENTION_DAYS):
         return False

@@ -4,6 +4,7 @@ Tests for notifications functionality.
 import os
 
 import pytest
+from tests.conftest import sign_in
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
@@ -45,7 +46,7 @@ def auth_client(api_client, admin_user):
     """APIClient authenticated as admin_user."""
     from apps.core import request_local as rl_module
 
-    api_client.force_authenticate(user=admin_user)
+    sign_in(api_client, admin_user)
     rl_module.set_current_user(admin_user)
     rl_module.set_current_request(None)
 

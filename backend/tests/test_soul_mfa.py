@@ -437,14 +437,14 @@ class TestRecoveryCodes:
         assert response.status_code == 200 and not set(response.data["recovery_codes"]) & set(old)
 
     def test_wrong_confirmations_share_the_lock_with_disable(self, soul):
-        _enable(soul)
+        secret, _ = _enable(soul)
         client = soul_client(soul)
         url = "/api/v1/me/mfa/recovery-codes/"
         for _ in range(4):
             assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 400
         assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 429
         assert client.post(url, {"method": "password", "password": PASSWORD}, format="json").status_code == 429
-        assert client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": PASSWORD}, format="json").status_code == 429
+        assert client.post("/api/v1/me/mfa/disable/", {"method": "totp", "code": _code(secret)}, format="json").status_code == 429
         assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
 
 
@@ -500,22 +500,22 @@ class TestRememberedDevice:
         assert "mfa_required" not in _login(soul, device_token=token).data
 
     @pytest.mark.parametrize("how", ["disable", "reenable", "officer", "password", "email_reset", "officer_password"])
-    def test_it_is_voided_by(self, soul, cn_tenant, admin_user, how):
+    def test_it_is_voided_by(self, soul, cn_tenant, cn_admin_user, how):
         token, secret, _ = self._remembered(soul)
         assert SoulMfaDevice.objects.exists()
         if how == "disable":
-            mfa.disable(soul, method="password", password=PASSWORD)
+            assert mfa.disable(soul, method="totp", code=_code(secret, 1))["code"] == "ok"
         elif how == "reenable":
             SoulMfa.objects.filter(account=soul).delete()
             _enable(soul)
         elif how == "officer":
-            mfa.reset_by_officer(soul, actor=admin_user, reason="手机丢了,已核对身份")
+            mfa.reset_by_officer(soul, actor=cn_admin_user, reason="手机丢了,已核对身份")
         elif how == "password":
             svc.change_password(soul, PASSWORD, "another-long-password-2")
         elif how == "email_reset":
             svc.set_password_chosen_by_soul(soul, "another-long-password-2")
         else:
-            svc.reset_credential(soul, actor=admin_user)
+            svc.reset_credential(soul, actor=cn_admin_user)
         assert not SoulMfaDevice.objects.exists()
         soul.refresh_from_db()
         soul.user.refresh_from_db()
@@ -538,36 +538,45 @@ class TestDisable:
         assert not SoulMfa.objects.exists() and not SoulMfaRecoveryCode.objects.exists()
         assert "mfa_required" not in _login(soul).data
 
-    def test_by_password(self, soul):
-        _enable(soul)
+    def test_by_a_recovery_code(self, soul):
+        _, codes = _enable(soul)
         response = soul_client(soul).post("/api/v1/me/mfa/disable/",
-                                          {"method": "password", "password": PASSWORD}, format="json")
+                                          {"method": "recovery", "code": codes[0]}, format="json")
         assert response.status_code == 200 and response.data["enabled"] is False
 
-    def test_a_wrong_code_or_password_keeps_it_on(self, soul):
+    def test_the_password_alone_cannot_disable(self, soul):
+        """2026-10-29(Q):只凭密码关不掉 —— 对的密码也是 400,两步验证仍然开着。"""
+        _enable(soul)
+        client = soul_client(soul)
+        for body in ({"method": "password", "password": PASSWORD}, {"method": "totp", "password": PASSWORD},
+                     {"method": "recovery", "password": PASSWORD}):
+            assert client.post("/api/v1/me/mfa/disable/", body, format="json").status_code == 400, body
+        assert mfa.is_enabled(soul) is True
+
+    def test_a_wrong_code_or_recovery_code_keeps_it_on(self, soul):
         _enable(soul)
         client = soul_client(soul)
         assert client.post("/api/v1/me/mfa/disable/", {"method": "totp", "code": "000000"},
                            format="json").status_code == 400
-        bad = client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": "nope"}, format="json")
-        assert bad.status_code == 400 and bad.data["code"] == "wrong_password"
+        bad = client.post("/api/v1/me/mfa/disable/", {"method": "recovery", "code": "aaaa-aaaa"}, format="json")
+        assert bad.status_code == 400 and bad.data["code"] == "wrong"
         assert mfa.is_enabled(soul) is True
 
-    def test_wrong_passwords_are_counted_and_lock(self, soul):
-        _enable(soul)
+    def test_wrong_codes_are_counted_and_lock(self, soul):
+        secret, _ = _enable(soul)
         client = soul_client(soul)
         for _ in range(4):
-            assert client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": "nope"},
+            assert client.post("/api/v1/me/mfa/disable/", {"method": "recovery", "code": "aaaa-aaaa"},
                                format="json").status_code == 400
-        locked = client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": "nope"}, format="json")
+        locked = client.post("/api/v1/me/mfa/disable/", {"method": "recovery", "code": "aaaa-aaaa"}, format="json")
         assert locked.status_code == 429
-        # 锁着时连对的密码也不行。
-        assert client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": PASSWORD},
+        # 锁着时连对的码也不行。
+        assert client.post("/api/v1/me/mfa/disable/", {"method": "totp", "code": _code(secret)},
                            format="json").status_code == 429
         assert mfa.is_enabled(soul) is True
 
     def test_not_enabled_is_a_conflict(self, soul):
-        response = soul_client(soul).post("/api/v1/me/mfa/disable/", {"method": "password", "password": PASSWORD},
+        response = soul_client(soul).post("/api/v1/me/mfa/disable/", {"method": "totp", "code": "123456"},
                                           format="json")
         assert response.status_code == 409 and response.data["code"] == "not_enabled"
 
@@ -621,9 +630,9 @@ class TestLifecycle:
         svc.set_password_chosen_by_soul(soul, "another-long-password-2")
         assert mfa.is_enabled(soul) is True
 
-    def test_the_officer_credential_reset_keeps_two_step_on(self, soul, admin_user):
+    def test_the_officer_credential_reset_keeps_two_step_on(self, soul, cn_admin_user):
         _enable(soul)
-        svc.reset_credential(soul, actor=admin_user)
+        svc.reset_credential(soul, actor=cn_admin_user)
         assert mfa.is_enabled(soul) is True and SoulMfaRecoveryCode.objects.count() == 10
 
     def test_the_email_reset_endpoint_keeps_two_step_on(self, soul):
@@ -654,8 +663,8 @@ class TestOfficerReset:
     def _url(self, account):
         return f"/api/v1/soul-accounts/accounts/{account.pk}/reset-mfa/"
 
-    def test_the_serializer_shows_the_boolean_and_the_time_but_no_key_material(self, soul, admin_user):
-        client = officer_client(admin_user)
+    def test_the_serializer_shows_the_boolean_and_the_time_but_no_key_material(self, soul, cn_admin_user):
+        client = officer_client(cn_admin_user)
         row = client.get(f"/api/v1/soul-accounts/accounts/?soul={soul.soul_id}").data["results"][0]
         assert row["mfa_enabled"] is False and row["mfa_enabled_at"] is None
         secret, codes = _enable(soul)
@@ -666,13 +675,13 @@ class TestOfficerReset:
         assert not {"secret", "recovery_codes", "last_step", "failed_attempts"} & set(row)
 
     def test_it_clears_everything_audits_the_reason_and_leaves_the_soul_a_notice(
-        self, soul, admin_user, django_capture_on_commit_callbacks
+        self, soul, cn_admin_user, django_capture_on_commit_callbacks
     ):
         secret, codes = _enable(soul)
         pending_token = _verify(_pending(soul), code=_code(secret), remember_device=True).data
         tokens = svc.issue_tokens(soul)
         with django_capture_on_commit_callbacks(execute=True):
-            response = officer_client(admin_user).post(self._url(soul), {"reason": "手机丢了,已当面核对身份"},
+            response = officer_client(cn_admin_user).post(self._url(soul), {"reason": "手机丢了,已当面核对身份"},
                                                        format="json")
         assert response.status_code == 200, response.data
         assert response.data["mfa_enabled"] is False
@@ -685,17 +694,17 @@ class TestOfficerReset:
         # 之后用密码就能登进来。
         assert "mfa_required" not in _login(soul).data
         log = AuditLog.objects.get(resource="mfa", resource_id=str(soul.pk))
-        assert log.user_id == admin_user.pk and "手机丢了" in log.description
+        assert log.user_id == cn_admin_user.pk and "手机丢了" in log.description
         assert log.changes["reason"] == "手机丢了,已当面核对身份" and log.changes["mfa_enabled"] == [True, False]
         # 灵魂的通知记录里有这一条,带官员的名字。
         notice = PushDelivery.objects.get(account=soul, kind="mfa_reset_by_officer")
-        assert (admin_user.display_name or admin_user.username) in notice.body
+        assert (cn_admin_user.display_name or cn_admin_user.username) in notice.body
         # 点这条推送要去两步验证页(手机端 landingOf 认 screen: Mfa)。
         assert notice.data["screen"] == "Mfa"
 
-    def test_the_notice_is_readable_after_login_in_the_history(self, soul, admin_user):
+    def test_the_notice_is_readable_after_login_in_the_history(self, soul, cn_admin_user):
         _enable(soul)
-        officer_client(admin_user).post(self._url(soul), {"reason": "手机丢了,已当面核对身份"}, format="json")
+        officer_client(cn_admin_user).post(self._url(soul), {"reason": "手机丢了,已当面核对身份"}, format="json")
         # The reset ended every session at once: the soul signs in again (password only now) and reads it.
         tokens = _login(soul).data
         client = APIClient()
@@ -703,18 +712,18 @@ class TestOfficerReset:
         history = client.get("/api/v1/me/notifications/")
         assert history.status_code == 200
         item = next(i for i in history.data["results"] if i["kind"] == "mfa_reset_by_officer")
-        assert item["title"] == "两步验证已关闭" and (admin_user.display_name or admin_user.username) in item["body"]
+        assert item["title"] == "两步验证已关闭" and (cn_admin_user.display_name or cn_admin_user.username) in item["body"]
         assert item["status"] == "NO_DEVICE"
 
-    def test_a_reason_is_required(self, soul, admin_user):
+    def test_a_reason_is_required(self, soul, cn_admin_user):
         _enable(soul)
-        client = officer_client(admin_user)
+        client = officer_client(cn_admin_user)
         for body in ({}, {"reason": ""}, {"reason": "   "}):
             assert client.post(self._url(soul), body, format="json").status_code == 400
         assert mfa.is_enabled(soul) is True
 
-    def test_it_cannot_enable_for_the_soul(self, soul, admin_user):
-        response = officer_client(admin_user).post(self._url(soul), {"reason": "替它开启"}, format="json")
+    def test_it_cannot_enable_for_the_soul(self, soul, cn_admin_user):
+        response = officer_client(cn_admin_user).post(self._url(soul), {"reason": "替它开启"}, format="json")
         assert response.status_code == 409 and response.data["code"] == "not_enabled"
         assert not SoulMfa.objects.exists()
 
@@ -738,9 +747,9 @@ class TestOfficerReset:
 
     def test_only_the_home_hall_may(self, soul, eu_admin_user, django_user_model, cn_tenant, eu_tenant):
         _enable(soul)
-        # 别殿的 ADMIN:租户豁免放宽了查询,但「谁是本殿官员」不放宽。
+        # 别殿的 ADMIN:殿管理员限本殿(2026-10-29),连这个账号都看不见。
         response = officer_client(eu_admin_user).post(self._url(soul), {"reason": "不是我的殿"}, format="json")
-        assert response.status_code == 403 and response.data["code"] == "not_home_hall"
+        assert response.status_code == 404
         # 别殿持有权限的 MODERATOR:连这个账号都看不见。
         moderator = django_user_model.objects.create_user(username="eu_mod", password="x", role="MODERATOR",
                                                           tenant=eu_tenant)
@@ -759,9 +768,9 @@ class TestOfficerReset:
         _enable(soul)
         assert soul_client(soul).post(self._url(soul), {"reason": "自己关"}, format="json").status_code == 403
 
-    def test_the_login_after_reset_is_password_only_and_it_can_be_turned_on_again(self, soul, admin_user):
+    def test_the_login_after_reset_is_password_only_and_it_can_be_turned_on_again(self, soul, cn_admin_user):
         _enable(soul)
-        officer_client(admin_user).post(self._url(soul), {"reason": "手机丢了,已核对"}, format="json")
+        officer_client(cn_admin_user).post(self._url(soul), {"reason": "手机丢了,已核对"}, format="json")
         tokens = _login(soul).data
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
@@ -809,18 +818,18 @@ def _bearer(access):
 
 
 class TestSessionsEndAtOnce:
-    def test_an_officer_closing_it_kills_the_access_token_the_soul_already_holds(self, soul, admin_user):
+    def test_an_officer_closing_it_kills_the_access_token_the_soul_already_holds(self, soul, cn_admin_user):
         _enable(soul)
         held = svc.issue_tokens(soul)
         assert _bearer(held["access"]).get("/api/v1/me/").status_code == 200
-        mfa.reset_by_officer(soul, actor=admin_user, reason="手机丢了,已核对身份")
+        mfa.reset_by_officer(soul, actor=cn_admin_user, reason="手机丢了,已核对身份")
         assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
         refreshed = APIClient().post("/api/v1/soul-auth/refresh/", {"refresh": held["refresh"]}, format="json")
         assert refreshed.status_code == 401
 
-    def test_the_officer_resetting_the_password_does_too(self, soul, admin_user):
+    def test_the_officer_resetting_the_password_does_too(self, soul, cn_admin_user):
         held = svc.issue_tokens(soul)
-        svc.reset_credential(soul, actor=admin_user)
+        svc.reset_credential(soul, actor=cn_admin_user)
         assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
 
     def test_changing_the_password_keeps_this_device_and_ends_the_others(self, soul):
@@ -919,10 +928,10 @@ def test_a_soul_account_with_no_row_reports_off_everywhere(soul):
     assert mfa.status_of(soul)["recovery_codes_remaining"] == 0
 
 
-def test_refresh_tokens_for_the_officer_pool_are_unaffected(admin_user):
+def test_refresh_tokens_for_the_officer_pool_are_unaffected(cn_admin_user):
     """灵魂这一侧的改动没有碰官员登录的形状。"""
-    admin_user.set_password("admin123")
-    admin_user.save()
-    response = APIClient().post("/api/v1/auth/login/", {"username": "admin", "password": "admin123"}, format="json")
+    cn_admin_user.set_password("admin123")
+    cn_admin_user.save()
+    response = APIClient().post("/api/v1/auth/login/", {"username": "cn_admin", "password": "admin123"}, format="json")
     assert response.status_code == 200 and "access" in response.data
-    assert RefreshToken.for_user(admin_user)
+    assert RefreshToken.for_user(cn_admin_user)

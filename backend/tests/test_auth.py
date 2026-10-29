@@ -11,12 +11,14 @@ class TestSoulCRUD:
     """Test Soul CRUD operations via REST API."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, api_client, admin_user, cn_tenant):
+    def setup(self, api_client, cn_admin_user, cn_tenant):
+        from tests.conftest import sign_in
+
         self.client = api_client
-        self.admin_user = admin_user
+        self.admin_user = cn_admin_user
         self.cn_tenant = cn_tenant
-        # Authenticate
-        self.client.force_authenticate(user=admin_user)
+        # The hall's ADMIN, signed in with a JWT so the hall is on the request (2026-10-29).
+        sign_in(self.client, cn_admin_user)
 
     def test_list_souls_authenticated(self):
         """GET /api/v1/souls/ with auth returns 200."""

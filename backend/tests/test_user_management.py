@@ -12,7 +12,9 @@ class TestUserManagementAPI:
     """Test User Management CRUD operations via REST API."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, api_client, admin_user, cn_tenant):
+    def setup(self, api_client, cn_admin_user, cn_tenant):
+        # The CN hall's ADMIN: user management of one hall (the hall-less one is `admin_user`, 2026-10-29).
+        admin_user = cn_admin_user
         self.client = api_client
         self.admin_user = admin_user
         self.cn_tenant = cn_tenant
@@ -244,10 +246,13 @@ class TestUserManagementAPI:
         assert response.status_code == 400
 
     def test_admin_can_assign_roles(self):
-        """ADMIN can assign any valid role to a user."""
+        """The hall's ADMIN can assign any valid role but ADMIN (2026-10-29: appointing an ADMIN is the
+        hall-less ADMIN's — tests/test_hall_admin_is_scoped_to_its_hall.py)."""
         user = User.objects.create_user(username="adminassign1", password="pass123", role="VIEWER", tenant=self.cn_tenant)
 
-        for new_role in ['ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER']:
+        refused = self.client.post(f"/api/v1/users/{user.id}/assign_roles/", {"role": "ADMIN"}, format="json")
+        assert refused.status_code == 403
+        for new_role in ['JUDGE', 'GUARDIAN', 'VIEWER']:
             response = self.client.post(f"/api/v1/users/{user.id}/assign_roles/", {"role": new_role}, format="json")
             assert response.status_code == 200, f"Failed for role {new_role}"
             assert response.data["role"] == new_role

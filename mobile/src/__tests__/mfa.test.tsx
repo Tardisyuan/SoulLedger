@@ -604,22 +604,24 @@ describe("the management page", () => {
     expect(bodies(calls, "POST /me/mfa/disable/")).toEqual([{ method: "totp", code: "307155" }]);
   });
 
-  it("without the phone, the password does it", async () => {
+  it("without the phone, a recovery code does it — the password alone does not (2026-10-29)", async () => {
     const calls = await open(ON, { "POST /me/mfa/disable/": { status: 200, data: OFF } });
     fireEvent.press(screen.getByTestId("mfa-disable"));
-    fireEvent.press(await screen.findByTestId("disable-use-password"));
-    fireEvent.changeText(screen.getByTestId("disable-password"), "my-long-password");
+    expect(screen.queryByTestId("disable-use-password")).toBeNull();
+    fireEvent.press(await screen.findByTestId("disable-use-recovery"));
+    expect(screen.queryByTestId("disable-password")).toBeNull();
+    fireEvent.changeText(screen.getByTestId("disable-recovery"), "abcd-efgh");
     fireEvent.press(screen.getByTestId("disable-confirm"));
     await waitFor(() => expect(route()).not.toBe("Mfa"));
-    expect(bodies(calls, "POST /me/mfa/disable/")).toEqual([{ method: "password", password: "my-long-password" }]);
-    await expectNothingKept(["my-long-password"]);
+    expect(bodies(calls, "POST /me/mfa/disable/")).toEqual([{ method: "recovery", code: "abcd-efgh" }]);
+    await expectNothingKept(["abcd-efgh"]);
   });
 
-  it("a wrong number, a wrong password and a lock each say so, and it stays on", async () => {
+  it("a wrong number, a wrong recovery code and a lock each say so, and it stays on", async () => {
     await open(ON, {
       "POST /me/mfa/disable/": [
         { status: 400, data: { detail: "x", code: "wrong", remaining_attempts: 4 } },
-        { status: 400, data: { detail: "x", code: "wrong_password", remaining_attempts: 3 } },
+        { status: 400, data: { detail: "x", code: "wrong", remaining_attempts: 3 } },
         { status: 429, data: { detail: "x", code: "locked", retry_after: 900, locked_until: new Date(Date.now() + 900_000).toISOString() } },
       ],
     });
@@ -629,12 +631,11 @@ describe("the management page", () => {
     await screen.findByTestId("step-wrong");
     expect(screen.getByText("! 数字不对")).toBeTruthy();
     expect(screen.getByText("还可以再试 4 次。")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("disable-use-password"));
-    fireEvent.changeText(await screen.findByTestId("disable-password"), "nope");
+    fireEvent.press(screen.getByTestId("disable-use-recovery"));
+    fireEvent.changeText(await screen.findByTestId("disable-recovery"), "aaaa-aaaa");
     fireEvent.press(screen.getByTestId("disable-confirm"));
-    await waitFor(() => expect(screen.getByText("! 密码不对")).toBeTruthy());
-    expect(screen.getByText("还可以再试 3 次。")).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId("disable-password"), "nope2");
+    await waitFor(() => expect(screen.getByText("还可以再试 3 次。")).toBeTruthy());
+    fireEvent.changeText(screen.getByTestId("disable-recovery"), "bbbb-bbbb");
     fireEvent.press(screen.getByTestId("disable-confirm"));
     await screen.findByTestId("step-locked");
     expect(screen.getByTestId("disable-confirm").props.accessibilityState).toMatchObject({ disabled: true });

@@ -169,7 +169,10 @@
       "disable_confirm": "关闭",
       "disabled_toast": "两步验证已关闭",
       "disable_failed": "没能关闭，请检查动态码或密码",
-      "load_failed": "无法读取两步验证状态"
+      "load_failed": "无法读取两步验证状态",
+      "confirm_by_recovery": "恢复码",
+      "turn_off_body": "关闭后登录只需要密码。请用动态码或一枚恢复码确认 —— 只凭密码不能关闭。",
+      "turn_off_failed": "没能关闭，请检查动态码或恢复码"
     },
     "banner": {
       "text": "本殿要求你的角色开启两步验证，完成设置前会一直提醒。",
@@ -2747,7 +2750,8 @@
       "audit_note": "登录记录见审计日志。",
       "load_failed": "登录设备加载失败",
       "sign_out_failed": "退出失败，请重试"
-    }
+    },
+    "mfa_must_setup": "你的角色要求开启两步验证。开启后才能继续使用。"
   },
   "notifications": {
     "title": "通知中心",
@@ -5366,7 +5370,8 @@
         "title": "关闭两步验证？",
         "body": "关闭后，登录只要密码。剩下的恢复码一起作废。",
         "ok": "关闭",
-        "use_password": "手机不在身边？改用密码"
+        "use_password": "手机不在身边？改用密码",
+        "use_recovery": "手机不在身边？改用恢复码"
       },
       "regen": {
         "title": "重新生成恢复码？",

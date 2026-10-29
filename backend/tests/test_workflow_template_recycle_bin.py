@@ -27,7 +27,8 @@ PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
 def _client(user):
     client = APIClient()
     token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
+    if user.tenant_id:  # the hall-less ADMIN carries no hall
+        token["tenant_code"] = user.tenant.code
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client
 
@@ -38,7 +39,7 @@ def world(db):
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
     for name in UserRole.values:
         Role.objects.get_or_create(name=name, defaults={"display_name": name.title()})
-    admin = User.objects.create_user(username="tplbin_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="tplbin_admin", password="x", role="ADMIN", tenant=None)
     yield {"tenant": tenant, "client": _client(admin)}
     invalidate_all_permissions()
 

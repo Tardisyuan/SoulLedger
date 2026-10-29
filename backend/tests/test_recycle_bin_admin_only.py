@@ -25,7 +25,8 @@ BIN = "/api/v1/recycle-bin/"
 def _client(user):
     client = APIClient()
     token = RefreshToken.for_user(user)
-    token["tenant_code"] = user.tenant.code
+    if user.tenant_id:  # the hall-less ADMIN carries no hall
+        token["tenant_code"] = user.tenant.code
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return client
 
@@ -40,7 +41,7 @@ def world(db):
         c: Permission.objects.get_or_create(codename=c, defaults={"name": c, "category": "system"})[0]
         for c in CODENAMES
     }
-    admin = User.objects.create_user(username="bin_admin", password="x", role="ADMIN", tenant=tenant)
+    admin = User.objects.create_user(username="bin_admin", password="x", role="ADMIN", tenant=None)  # global configuration is the hall-less ADMIN's (2026-10-29)
     yield {"tenant": tenant, "perms": perms, "admin": admin, "client": _client(admin)}
     invalidate_all_permissions()
 

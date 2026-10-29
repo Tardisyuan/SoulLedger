@@ -68,8 +68,8 @@ def _login(api_client, user):
 
 
 @pytest.fixture
-def client(api_client, admin_user):
-    return _login(api_client, admin_user)
+def client(api_client, cn_admin_user):
+    return _login(api_client, cn_admin_user)
 
 
 # ── save writes a draft ────────────────────────────────────────────────
@@ -212,8 +212,8 @@ def test_an_invalid_draft_is_not_published_and_nothing_changes(client):
 
 
 @pytest.mark.django_db
-def test_a_viewer_cannot_publish(api_client, admin_user, viewer_user):
-    template, _ = _template(_login(api_client, admin_user), _nodes("甲"))
+def test_a_viewer_cannot_publish(api_client, cn_admin_user, viewer_user):
+    template, _ = _template(_login(api_client, cn_admin_user), _nodes("甲"))
     _login(api_client, viewer_user)
     assert api_client.post(f"{TEMPLATES}/{template.id}/publish/").status_code == 403
     template.refresh_from_db()
@@ -334,9 +334,9 @@ def test_workflow_0019_round_trip(migration_round_trip):
 
 
 @pytest.mark.django_db
-def test_users_are_named_not_numbered_in_history(client, admin_user):
+def test_users_are_named_not_numbered_in_history(client, cn_admin_user):
     template, _ = _template(client, _nodes("甲"))
     client.post(f"{TEMPLATES}/{template.id}/publish/")
     row = client.get(f"{TEMPLATES}/{template.id}/versions/").data[0]
-    assert row["published_by_name"] in {admin_user.display_name, admin_user.username}
+    assert row["published_by_name"] in {cn_admin_user.display_name, cn_admin_user.username}
 

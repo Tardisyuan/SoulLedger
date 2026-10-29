@@ -147,8 +147,8 @@ def test_an_admin_without_a_hall_follows_the_global_switch_only(db, settings):
     assert _ask(client).data["code"] == "assistant_not_configured"
 
 
-def test_an_admin_with_a_hall_reads_that_halls_switch(cn_tenant, admin_user):
-    client = officer_client(admin_user)
+def test_an_admin_with_a_hall_reads_that_halls_switch(cn_tenant, cn_admin_user):
+    client = officer_client(cn_admin_user)
     assert _ask(client).status_code == 503
     _enable(cn_tenant)
     assert _ask(client).status_code == 200

@@ -392,19 +392,20 @@ describe("the managed state", () => {
     await waitFor(() => expect(session.setMfaEnabled).toHaveBeenCalledWith(false));
   });
 
-  it("disable by password: a refusal says so without echoing the password, and nothing changes", async () => {
+  it("disable by recovery code: there is no password way, a refusal says so, and nothing changes", async () => {
     mockApi.status.mockResolvedValue({ data: ON });
-    mockApi.disable.mockRejectedValue(httpError(400, { code: "wrong_password" }));
+    mockApi.disable.mockRejectedValue(httpError(400, { code: "wrong" }));
     const session = sessionOf(OFFICER);
     renderOfficer(<MfaScreen onBack={() => {}} />, { session });
     fireEvent.press(await screen.findByTestId("mfa-disable"));
-    fireEvent.press(screen.getByTestId("mfa-disable-method-password"));
-    expect(screen.getByTestId("mfa-disable-password").props.secureTextEntry).toBe(true);
-    fireEvent.changeText(screen.getByTestId("mfa-disable-password"), "hunter2-secret");
+    // The password alone cannot turn it off (2026-10-29).
+    expect(screen.queryByTestId("mfa-disable-method-password")).toBeNull();
+    fireEvent.press(screen.getByTestId("mfa-disable-method-recovery"));
+    expect(screen.queryByTestId("mfa-disable-password")).toBeNull();
+    fireEvent.changeText(screen.getByTestId("mfa-disable-recovery"), "abcd-efgh");
     await press("mfa-disable-confirm");
-    expect(mockApi.disable).toHaveBeenCalledWith({ method: "password", password: "hunter2-secret" });
-    expect(await screen.findByText("没能关闭，请检查动态码或密码")).toBeTruthy();
-    expect(screen.queryByText(/hunter2-secret/)).toBeNull();
+    expect(mockApi.disable).toHaveBeenCalledWith({ method: "recovery", code: "abcd-efgh" });
+    expect(await screen.findByText("没能关闭，请检查动态码或恢复码")).toBeTruthy();
     expect(session.setMfaEnabled).not.toHaveBeenCalled();
   });
 });

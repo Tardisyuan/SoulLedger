@@ -33,7 +33,7 @@ def loaded(db):
         code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
     )
     user = User.objects.create_user(
-        username="sidebar", password="x", role=UserRole.ADMIN, tenant=tenant
+        username="sidebar", password="x", role=UserRole.ADMIN, tenant=None
     )
     for i in range(MENU_ROWS // 2):
         parent = Menu.objects.create(

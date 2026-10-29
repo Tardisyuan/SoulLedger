@@ -140,7 +140,7 @@ describe("MfaSection — on", () => {
     expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();
   });
 
-  it("关闭: the danger button is disabled until a 6-digit code (or a password) is given, and sends the chosen method", async () => {
+  it("关闭: the danger button is disabled until a 6-digit code (or a recovery code) is given, and sends the chosen method", async () => {
     status.mockResolvedValue({ data: ON });
     disable.mockResolvedValue({ data: OFF });
     renderSection();
@@ -151,12 +151,15 @@ describe("MfaSection — on", () => {
     expect(action.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/mfa\.verify\.code_label/), { target: { value: "123456" } });
     expect(action.disabled).toBe(false);
-    // switch to the password segment: the code no longer counts
-    fireEvent.click(screen.getByRole("radio", { name: "mfa.manage.confirm_by_password" }));
+    // The password alone cannot turn it off (2026-10-29): there is no password segment here at all.
+    expect(screen.queryByRole("radio", { name: "mfa.manage.confirm_by_password" })).toBeNull();
+    expect(screen.queryByLabelText(/auth\.password/)).toBeNull();
+    // switch to the recovery segment: the code no longer counts
+    fireEvent.click(screen.getByRole("radio", { name: "mfa.manage.confirm_by_recovery" }));
     expect((screen.getByTestId("mfa-disable-confirm") as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText(/auth\.password/), { target: { value: "pw" } });
+    fireEvent.change(screen.getByLabelText(/mfa\.verify\.recovery_label/), { target: { value: "abcd-efgh" } });
     fireEvent.click(screen.getByTestId("mfa-disable-confirm"));
-    await waitFor(() => expect(disable).toHaveBeenCalledWith({ method: "password", password: "pw" }));
+    await waitFor(() => expect(disable).toHaveBeenCalledWith({ method: "recovery", code: "abcdefgh" }));
     await waitFor(() => expect(mockSetUser).toHaveBeenCalledWith(expect.objectContaining({ mfa_enabled: false })));
   });
 
@@ -167,7 +170,7 @@ describe("MfaSection — on", () => {
     fireEvent.click(await screen.findByRole("button", { name: "mfa.manage.disable" }));
     fireEvent.change(await screen.findByLabelText(/mfa\.verify\.code_label/), { target: { value: "000000" } });
     fireEvent.click(screen.getByTestId("mfa-disable-confirm"));
-    expect((await screen.findByRole("alert")).textContent).toContain("mfa.manage.disable_failed");
+    expect((await screen.findByRole("alert")).textContent).toContain("mfa.manage.turn_off_failed");
     expect(mockSetUser).not.toHaveBeenCalled();
   });
 });
