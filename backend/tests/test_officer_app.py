@@ -220,6 +220,35 @@ def test_item_detail_is_404_outside_the_hall(cn_tenant, eu_tenant):
     assert officer_client(eu_judge).get(f"/api/v1/officer-app/items/nonsense/{wf.pk}/").status_code == 404
 
 
+def test_item_detail_asks_the_same_codename_as_the_desk(cn_tenant, eu_tenant, judge_user):
+    """RBAC 严查 2026-10-29 M2 / A1:审批 / 转生 / 冷却要 `workflow.read`,调拨要 `dispatch.read`。
+    此前只有 TenantPermission:VIEWER 读得到审批历史,JUDGE / VIEWER 读得到调拨的灵魂、发起人与理由。"""
+    import uuid
+
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+
+    wf, _ = _plain_workflow(cn_tenant)
+    record = DispatchRecord.objects.create(source_tenant=eu_tenant, target_tenant=cn_tenant,
+                                           soul=dead_soul(eu_tenant, name="待调拨"), reason="私下的理由",
+                                           status=DispatchStatus.PROPOSED, tenant=eu_tenant)
+    viewer = User.objects.create_user(username="m2_viewer", password="x", role="VIEWER", tenant=cn_tenant)
+    lead = User.objects.create_user(username="m2_lead", password="x", role="MODERATOR", tenant=cn_tenant)
+    approval = f"/api/v1/officer-app/items/approval/{wf.pk}/"
+    reassignment = f"/api/v1/officer-app/items/reassignment/{record.pk}/"
+
+    for url in (approval, reassignment, f"/api/v1/officer-app/items/cooldown/{uuid.uuid4()}/",
+                f"/api/v1/officer-app/items/rebirth/{uuid.uuid4()}/"):
+        r = officer_client(viewer).get(url)
+        assert r.status_code == 403, (url, r.status_code)
+        assert "facts" not in (r.data or {})
+    denied = officer_client(judge_user).get(reassignment)
+    assert denied.status_code == 403 and "私下的理由" not in str(denied.data)
+
+    assert officer_client(judge_user).get(approval).status_code == 200
+    ok = officer_client(lead).get(reassignment)
+    assert ok.status_code == 200 and ok.data["id"] == str(record.pk)
+
+
 # ── 决定失败码 ──────────────────────────────────────────────────────────
 
 

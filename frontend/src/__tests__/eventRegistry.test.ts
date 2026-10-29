@@ -27,12 +27,13 @@ import { EVENT_LABELS, handleWorkflowEvent } from "@/lib/events/eventHandlers";
 import type { WorkflowEventPayload } from "@/lib/events/eventTypes";
 import path from "node:path";
 
-function makeContext() {
+function makeContext(currentUserId?: string) {
   const invalidateQueries = jest.fn();
   const showToast = jest.fn();
   const ctx = {
     queryClient: { invalidateQueries } as unknown as QueryClient,
     showToast,
+    currentUserId,
   } satisfies EventContext;
   return { ctx, invalidateQueries, showToast };
 }
@@ -222,7 +223,7 @@ describe("notification events", () => {
   });
 
   it("joins title and message into the toast", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent(
       {
@@ -237,7 +238,7 @@ describe("notification events", () => {
   });
 
   it("shows the title alone when the message body is empty", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent(
       {
@@ -258,7 +259,7 @@ describe("notification events", () => {
       notification: { id: 1, title: "存下来的标题", message: "存下来的正文", notification_type: "SYSTEM", is_read: false, created_at: "", user_id: 1, ...extra },
     }) as EventPayload;
     const i18n = { "zh-Hans": { title: "审批超时", message: "请处理" }, en: { title: "Approval overdue", message: "Please handle it" } };
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     document.cookie = "soulledger-locale=en; path=/";
     dispatchEvent(body({ i18n }), ctx);
@@ -277,11 +278,32 @@ describe("notification events", () => {
   });
 
   it("does not toast at all when the frame carries no notification body", () => {
-    const { ctx, showToast } = makeContext();
+    const { ctx, showToast } = makeContext("1");
 
     dispatchEvent({ domain: "notification", event: "NOTIFICATION_CREATED" } as EventPayload, ctx);
 
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it("toasts only the recipient: another officer's notification invalidates but does not toast", () => {
+    const frame = {
+      domain: "notification",
+      event: "NOTIFICATION_CREATED",
+      notification: { id: 1, title: "密码求助", message: "某人", notification_type: "SYSTEM", is_read: false, created_at: "", user_id: 7 },
+    } as EventPayload;
+
+    const other = makeContext("1");
+    dispatchEvent(frame, other.ctx);
+    expect(other.showToast).not.toHaveBeenCalled();
+    expect(other.invalidateQueries).toHaveBeenCalled();
+
+    const unknown = makeContext(undefined);
+    dispatchEvent(frame, unknown.ctx);
+    expect(unknown.showToast).not.toHaveBeenCalled();
+
+    const recipient = makeContext("7");
+    dispatchEvent(frame, recipient.ctx);
+    expect(recipient.showToast).toHaveBeenCalledWith("密码求助: 某人", "info", 5000);
   });
 });
 

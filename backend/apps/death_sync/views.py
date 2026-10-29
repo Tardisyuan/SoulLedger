@@ -140,6 +140,16 @@ class ExternalApiKeyViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
         # ever grants a non-ADMIN role access to this viewset.
         return scope_to_tenant(super().get_queryset(), self.request)
 
+    def create(self, request, *args, **kwargs):
+        # key 属于一个殿(`ExternalApiKey.tenant` 非空)。无殿 ADMIN 没有当前殿时此前是 IntegrityError 500
+        # (RBAC 严查 2026-10-29 L3);现在要求先进殿,缺就 400。
+        if getattr(request, "tenant", None) is None:
+            return Response(
+                {"error": "Choose a hall before creating an API key", "code": "no_tenant"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         from apps.death_sync.models import ExternalApiKey
         raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()

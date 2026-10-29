@@ -174,6 +174,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if required_permission and required_permission not in current:
             return  # user lacks the required permission — drop silently
 
+        # 定向事件(`WebSocketHandler` 写的 `_recipients`)只给收件人:
+        # 即便某条路径又把它发进了殿组,别人的个人通知也到不了这条连接。
+        recipients = data.get("_recipients")
+        if recipients is not None:
+            if getattr(self.user, "id", None) not in recipients:
+                return
+            data = {k: v for k, v in data.items() if k != "_recipients"}
+
         await self.send(text_data=json.dumps(data))
 
     async def session_ended(self, event):

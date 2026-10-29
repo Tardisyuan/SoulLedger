@@ -778,23 +778,18 @@ class TestEventBusReachesTheChannelLayer:
                 user_id=42, notification_data={"msg": "Hello"},
                 tenant_code="CN_DIYU",
             )
-        # TWO, not one: the tenant group and the user's own group.
-        #
-        # This said `assert_called_once()` and passed — because `group_send`
-        # was a plain `MagicMock`, so `async_to_sync` recorded the first call
-        # and then raised `object MagicMock can't be used in 'await'
-        # expression` on the await. The handler swallowed that, the loop never
-        # reached the second group, and "called once" was true *of a publish
-        # that had crashed*. With a real `AsyncMock` the send completes and
-        # the count is what the code actually does.
-        assert mock_cl.group_send.call_count == 2, mock_cl.group_send.call_args_list
+        # ONE: the recipient's own group, never the tenant group (H1,
+        # 2026-10-29). This used to assert TWO — tenant group + user group —
+        # which pinned every personal notification being broadcast to every
+        # officer online in the recipient's hall.
         groups = [call.args[0] for call in mock_cl.group_send.call_args_list]
-        assert any("CN_DIYU" in g for g in groups), groups
-        assert any("42" in g for g in groups), groups
+        assert groups == ["rt_user_42"], groups
+        data = mock_cl.group_send.call_args.args[1]["data"]
+        assert data["_recipients"] == [42]
 
     @patch("channels.layers.get_channel_layer")
     def test_publish_with_user_ids(self, mock_get_cl, django_capture_on_commit_callbacks):
-        """publish with user_ids sends to tenant group + user groups."""
+        """publish with user_ids sends to the user groups only, not the tenant group."""
         mock_cl = MagicMock()
         # Make group_send a regular function (not async) to avoid async_to_sync warning
         mock_cl.group_send = AsyncMock(return_value=None)
@@ -811,8 +806,9 @@ class TestEventBusReachesTheChannelLayer:
                 payload={}, tenant_code="CN_DIYU",
                 user_ids=[1, 2, 3],
             )
-        # At minimum, the tenant group should be called
-        assert mock_cl.group_send.call_count >= 1
+        # Targeted: only the three user groups, no tenant broadcast.
+        groups = sorted(call.args[0] for call in mock_cl.group_send.call_args_list)
+        assert groups == ["rt_user_1", "rt_user_2", "rt_user_3"], groups
 
     @patch("channels.layers.get_channel_layer")
     def test_publish_no_channel_layer(self, mock_get_cl, caplog):

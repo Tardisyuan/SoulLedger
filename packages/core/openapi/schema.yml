@@ -11078,6 +11078,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeJudgmentAppeal'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
         '404':
           content:
             application/json:
@@ -13858,6 +13864,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/TodoItemDetail'
           description: ''
+        '403':
+          description: No response body
         '404':
           description: No response body
   /api/v1/officer-app/items/{kind}/{item_id}/cosigners/:

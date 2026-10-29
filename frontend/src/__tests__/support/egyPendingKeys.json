@@ -1,6 +1,7 @@
 [
   "appeals.refusal.appeal_closed",
   "appeals.refusal.ladder_running",
+  "death_sync.api_keys.create_no_tenant",
   "disposition.release_error.generic",
   "events.realtime.COMMENT_CREATED",
   "events.realtime.COMMENT_DELETED",

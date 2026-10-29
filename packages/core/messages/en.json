@@ -3694,6 +3694,7 @@
       "revoked_ok": "Key revoked",
       "revoke_failed": "Could not revoke the key",
       "create_failed": "Could not create the key",
+      "create_no_tenant": "Enter a hall first: an API key belongs to one hall",
       "no_keys": "No API keys yet",
       "shown_title": "New key (shown once)",
       "shown_warning": "This is the only time the key is shown. After closing, the server keeps only a hash and cannot show it again — copy it now and hand it to the external system.",
