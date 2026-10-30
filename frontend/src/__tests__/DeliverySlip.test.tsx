@@ -1,8 +1,8 @@
 /**
  * 登录交付单的二维码与内容(第二十批 §一.1、§三 F2)。
  *
- * 二维码库(qrcode-generator)只出矩阵、没有解码器,所以「内容是 SL1:<编号>」不能靠回读证明;
- * 这里钉的是能从矩阵上看见的东西:字母数字模式 + 纠错 M 下 14 个字符是版本 1(21×21),
+ * 二维码库(toqr,2026-10-30 起;此前是 qrcode-generator)只出矩阵、没有解码器,所以「内容是 SL1:<编号>」
+ * 不能靠回读证明;这里钉的是能从矩阵上看见的东西:纠错 M 下 14 个字符是版本 1(21×21)、格式信息里的纠错级别是 M,
  * 三个定位角的外圈全深、同一输入矩阵稳定、不同编号矩阵不同。真机扫码要在设备上手动验。
  */
 import { render, screen } from "@testing-library/react";
@@ -81,6 +81,11 @@ describe("qrMatrix", () => {
     ring(0, 0);
     ring(0, 14);
     ring(14, 0);
+  });
+
+  it("carries error-correction level M in its format information (not the library's default L)", () => {
+    // Format info bits 14–13 sit at row 8, columns 0–1, XOR-masked with 0b10…: M (00) reads dark/light, L (01) dark/dark.
+    expect([m[8][0], m[8][1]]).toEqual([true, false]);
   });
 
   it("is stable for one input and differs for another number", () => {

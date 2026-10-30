@@ -40,6 +40,7 @@
  * which is precisely how the four above went wrong. They are the next two to
  * convert, not an exception to the rule.
  */
+import type { InvalidateQueryFilters } from "@tanstack/react-query";
 import { getLocale } from "@soulledger/core/platform";
 import { translate } from "@/lib/i18n/activeTranslator";
 import {
@@ -191,24 +192,53 @@ const withName = (label: string, name?: unknown) => (name ? `${label} — ${Stri
 
 // ── Pure Handler Functions ─────────────────────────────────────────────
 
+/**
+ * Second segments of the `souls` keys that belong to ONE soul (`[souls, <kind>, …, id]`): `soulKeys.detail /
+ * ledger / path / capture / inheritance / reincarnationTimeline`, plus the soul page's own
+ * `records` and `events.timeline`. Everything else under `souls` — the list, `capture-due`, the souls page's
+ * counts — is a cross-soul view and is refreshed by any soul's event.
+ */
+const PER_SOUL_SEGMENTS = new Set([
+  "detail",
+  "ledger",
+  "path",
+  "capture",
+  "inheritance",
+  "reincarnations",
+  "records",
+  "events",
+]);
+
+/**
+ * What a soul's event invalidates: the cross-soul views and that soul's own keys, not every soul anyone has open
+ * (until 2026-10-30 it was all of `soulKeys.all`, so a batch of N events refetched every cached soul N times).
+ * A per-soul key that does not carry this id is left alone; a key of a shape not listed above is still refreshed,
+ * so a new key family errs on the side of refetching. No `soul_id` on the frame → the whole family, as before.
+ */
+export function soulScope(soulId?: string | number | null): InvalidateQueryFilters {
+  if (soulId === undefined || soulId === null || soulId === "") return { queryKey: soulKeys.all };
+  const id = String(soulId);
+  return {
+    queryKey: soulKeys.all,
+    predicate: ({ queryKey }) =>
+      !PER_SOUL_SEGMENTS.has(String(queryKey[1])) || queryKey.some((segment) => String(segment) === id),
+  };
+}
+
 export function handleSoulCreated(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+  ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   const msg = withName(eventLabel("SOUL_CREATED", "souls.events.SOUL_CREATED"), payload.soul_name);
   ctx.showToast(msg, "info", 5000);
   return { success: true, invalidatedKeys: ["souls"], toastMessage: msg };
 }
 
-export function handleSoulStateChanged(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  // `soulKeys.detail(id)` is `[...soulKeys.all, "detail", id]` — a prefix
-  // extension of `soulKeys.all`. `invalidateQueries` matches by prefix (default
-  // `exact: false`), so invalidating `all` already covers every `detail(id)`;
-  // a separate call for `payload.soul_id` was redundant.
-  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+export function handleSoulStateChanged(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+  ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   return { success: true, invalidatedKeys: ["souls"] };
 }
 
-export function handleSoulEvent(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+export function handleSoulEvent(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+  ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   return { success: true, invalidatedKeys: ["souls"] };
 }
 
@@ -227,7 +257,7 @@ export function handleWorkflowEvent(payload: WorkflowEventPayload, ctx: EventCon
     });
   }
   if (payload.soul_id) {
-    ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+    ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   }
 
   const toastMsg = withName(eventLabel(payload.event, "events.realtime.fallback_workflow"), payload.soul_name);
@@ -287,9 +317,9 @@ export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventCon
  * bus since 2026-10-30). Silent: the dispatch list and the soul's timeline refresh; the people it concerns
  * already get an in-app notification, so a toast here would say it twice.
  */
-export function handleDispatchStateChanged(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+export function handleDispatchStateChanged(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: ["dispatch"] });
-  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+  ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   return { success: true, invalidatedKeys: ["dispatch", "souls"] };
 }
 

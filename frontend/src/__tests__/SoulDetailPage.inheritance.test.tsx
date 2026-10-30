@@ -84,7 +84,6 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 // Recharts under next/dynamic isn't relevant to this test and is a
 // significant source of unrelated flake in jsdom — stub it out.
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazySoulLineChart: () => null,
   LazyLifespanBarChart: () => null,
 }));
 

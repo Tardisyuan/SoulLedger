@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -115,12 +115,14 @@ function PermissionsPageContent() {
         : undefined,
   });
 
-  // Keyed by the role names, so a created / copied / renamed role refetches the grants instead of
-  // reading as a role with none (FL-05: an empty baseline turns into "remove every grant").
+  // Sent alongside the roles, not after them (D6, 2026-10-30): it was keyed by the role names, so it could not start
+  // until `/roles/` had answered — two round trips in a row on every visit. A created / copied / renamed role must
+  // still refetch the grants instead of reading as a role with none (FL-05: an empty baseline turns into "remove
+  // every grant"): `matrixReady` below waits until every role has a row, and the effect after it refetches when the
+  // roles name one the grants do not have. `/role-permissions/all/` answers every Role row, so that converges.
   const grantsQuery = useQuery({
-    queryKey: permKeys.allRolePermissionsFor(roleNames),
+    queryKey: permKeys.allRoleGrants,
     queryFn: async () => (await permApi.allRolePermissions()).data,
-    enabled: roleNames.length > 0,
   });
 
   const roleMeta = useMemo(() => {
@@ -157,6 +159,15 @@ function PermissionsPageContent() {
     return map;
   }, [grantsQuery.data]);
   const rolePermsLoaded = roleNames.length > 0 && roleNames.every((name) => !!grantsByRole[name]);
+  const missingRoles = grantsQuery.data && !grantsQuery.isFetching && !rolePermsLoaded ? roleNames.filter((n) => !grantsByRole[n]).join(",") : "";
+  const refetchGrants = grantsQuery.refetch;
+  const refetchedFor = useRef("");
+  useEffect(() => {
+    // Once per set of missing names: a role the grants still lack after that stays not-ready, not a refetch loop.
+    if (!missingRoles || refetchedFor.current === missingRoles) return;
+    refetchedFor.current = missingRoles;
+    void refetchGrants();
+  }, [missingRoles, refetchGrants]);
   const rolePermsError = grantsQuery.isError;
   const matrixReady = !!permsQuery.data && rolePermsLoaded;
 
@@ -205,19 +216,6 @@ function PermissionsPageContent() {
     });
   }, [baseline]);
 
-  function toggleCell(role: string, permId: number) {
-    if (isSaving || !canManagePermissions) return;
-    setChecked((prev) => {
-      if (!prev) return prev;
-      const next = cloneGrantMap(prev);
-      const set = next[role] ?? new Set<number>();
-      if (set.has(permId)) set.delete(permId);
-      else set.add(permId);
-      next[role] = set;
-      return next;
-    });
-  }
-
   /**
    * 类别整列勾选(rbac-snowy 2026-10-29):一个角色、一个类别里**当前看得见的**码一起授或撤。
    * 只改待保存的勾选,照旧走「保存改动」与影响预检;服务端按规则定的格(ADMIN「始终」、殿主「禁授」)不动。
@@ -259,6 +257,32 @@ function PermissionsPageContent() {
   const cells = useMatrixCells({ checked, setChecked, baseline, roleNames, permsById, roleMeta });
   const isSaving = cells.isSaving;
 
+  // Stable across renders (R2): every matrix cell is memoised on it.
+  const toggleCell = useCallback(
+    (role: string, permId: number) => {
+      if (isSaving || !canManagePermissions) return;
+      setChecked((prev) => {
+        if (!prev) return prev;
+        const next = cloneGrantMap(prev);
+        const set = new Set(next[role] ?? []);
+        if (set.has(permId)) set.delete(permId);
+        else set.add(permId);
+        next[role] = set;
+        return next;
+      });
+    },
+    [isSaving, canManagePermissions]
+  );
+
+  /** Each role's codenames as ticked now, once per edit rather than once per cell per render. */
+  const heldByRole = useMemo(() => {
+    const out: Record<string, ReadonlySet<string>> = {};
+    for (const role of roleNames) {
+      out[role] = new Set([...(checked?.[role] ?? [])].map((id) => permsById[id]?.codename).filter((c): c is string => !!c));
+    }
+    return out;
+  }, [checked, roleNames, permsById]);
+
   /** Why a cell was not written, in words (the `code` from matrix.py). */
   const failureReason = useCallback(
     (f: CellFailure) =>
@@ -272,8 +296,7 @@ function PermissionsPageContent() {
     failure: cells.failureAt,
     conflict: (key) => cells.conflictCells.has(key),
     failureReason,
-    heldCodenames: (role) =>
-      new Set([...(checked?.[role] ?? [])].map((id) => permsById[id]?.codename).filter((c): c is string => !!c)),
+    heldCodenames: (role) => heldByRole[role] ?? new Set<string>(),
   };
 
   /** 定位: bring the failed cell on screen and put focus on it (on 393 px, via its role). */
