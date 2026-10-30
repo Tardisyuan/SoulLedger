@@ -38,8 +38,6 @@ const PAGE_TITLE: Partial<Record<OfficerAssistScreen, string>> = {
   "sentence-requests": "sentence_plan.inbox_title",
 };
 
-const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-
 /** The 问 / 答 square: decoration, the text beside it says the same. */
 function Seal({ glyph }: { glyph: string }) {
   return (
@@ -52,39 +50,7 @@ function Seal({ glyph }: { glyph: string }) {
   );
 }
 
-function AskIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <rect x="2" y="2" width="16" height="16" />
-      <path d="M7.6 7.4a2.4 2.4 0 1 1 3.6 2.1c-.8.5-1.2 1-1.2 1.9v.5M10 14.6h.01" strokeLinecap="square" />
-    </svg>
-  );
-}
-
-/** 1b: first in the toolbar's action group (规范 v3 工具条:44×44、中性 ink-muted,悬停 / 打开时 canvas 底). */
-export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
-  const { t } = useI18n();
-  if (!assist.visible) return null;
-  const shortcut = isMac() ? "⌘J" : "Ctrl+J";
-  return (
-    <button
-      ref={assist.entryRef}
-      type="button"
-      data-testid="officer-assist-entry"
-      onClick={assist.toggle}
-      aria-expanded={assist.open}
-      aria-label={t("officer_assist.entry_label", { shortcut })}
-      title={shortcut}
-      className="relative flex min-h-11 min-w-11 items-center justify-center gap-1 px-2 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-canvas))] aria-expanded:text-[oklch(var(--color-ink))] max-lg:px-0"
-    >
-      <AskIcon />
-      <span className="hidden lg:inline">{t("officer_assist.entry")}</span>
-      {assist.unseen ? (
-        <span data-testid="officer-assist-unseen" aria-hidden="true" className="absolute right-2 top-2 h-1.5 w-1.5 bg-[oklch(var(--color-ink))]" />
-      ) : null}
-    </button>
-  );
-}
+// The toolbar entry (1b) is `OfficerAssistEntry.tsx`, kept out of this module so the shell can load the panel lazily.
 
 /**
  * Design E 组: the panel starts below the connection bar (global state at the top of the
@@ -429,6 +395,9 @@ function Limited({ retryAt }: { retryAt: string | null }) {
 function Composer({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
   const busy = assist.pending !== null;
+  // First open: this module arrived after the open, so the hook's focus request is still waiting for the box.
+  const { takePendingFocus } = assist;
+  useEffect(() => takePendingFocus(), [takePendingFocus]);
   const send = () => {
     if (!busy) assist.ask(assist.draft);
   };

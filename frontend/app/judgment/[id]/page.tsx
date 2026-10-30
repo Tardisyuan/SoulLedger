@@ -492,9 +492,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     enabled: !!soulId,
     staleTime: 30_000,
   });
+  // 与灵魂页「轮回记录」同一把键、同一份整页响应(D6,2026-10-30):这里只 `select` 出数组。
+  // 此前这里另用 `soulKeys.reincarnations` 存数组,同一个请求在两页各发一次、各缓存一份。
   const { data: priorLives = NO_LIVES } = useQuery({
-    queryKey: soulKeys.reincarnations(soulId),
-    queryFn: async (): Promise<Reincarnation[]> => (await reincarnationApi.list({ soul: soulId })).data.results,
+    queryKey: soulKeys.reincarnationTimeline(soulId),
+    queryFn: async () => (await reincarnationApi.list({ soul: soulId })).data,
+    select: (page): Reincarnation[] => page.results,
     enabled: !!soulId,
     staleTime: 30_000,
   });

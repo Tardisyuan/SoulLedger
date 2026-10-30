@@ -233,11 +233,6 @@
       "url": "https://www.npmjs.com/package/nprogress"
     },
     {
-      "name": "qrcode-generator",
-      "licence": "MIT",
-      "url": "https://www.npmjs.com/package/qrcode-generator"
-    },
-    {
       "name": "react",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/react"
@@ -246,11 +241,6 @@
       "name": "react-dom",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/react-dom"
-    },
-    {
-      "name": "recharts",
-      "licence": "MIT",
-      "url": "https://www.npmjs.com/package/recharts"
     },
     {
       "name": "tailwind-merge",

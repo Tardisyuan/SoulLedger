@@ -13,6 +13,8 @@
  * **2026-10-02 起「按界域」也不是 recharts 了**(Design A4,CSS 柱):dashboard 上一个
  * recharts 图都没有,下面那条改成量每根柱的实际高度 —— 同一个道理:断「画出了面积」,
  * 不断「容器在」。
+ * **2026-10-30 起应用里一个 recharts 图都没有了**:灵魂页「全部功过记录」的寿数条(最后一张)
+ * 改成 div 柱,依赖已删。文件末尾那条量它的柱高与图案。下面关于 rAF 与 recharts 的几段是历史。
  *
  * 整个图表模块被替换成桩。1689 个通过的单元测试对「饼图能不能画出来」一个字都
  * 没说 —— 它们断言的是「组件收到了正确的 props」,而不是「浏览器里出现了图形」。
@@ -47,7 +49,7 @@
  * 同样重要。**
  */
 
-import { expect, test, LEDGER_STATS, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, LEDGER_STATS, setupAuthenticatedPage, SOULS, SOUL_LEDGER } from "./fixtures";
 
 /** 一份刻意含零值、也含多租户的统计,让两个图都有东西可画。
  *
@@ -129,5 +131,43 @@ test.describe("dashboard 的图表", () => {
     // …while every state, LOST at 0 included, keeps its ledger row with the number in text.
     await expect(ledger.locator('[data-legend-row="LOST"]')).toContainText("0%");
     await expect(ledger.locator('[data-legend-row="ALIVE"]')).toContainText("60");
+  });
+});
+
+test.describe("灵魂页的寿数条", () => {
+  const record = (id: string, type: "MERIT" | "DEMERIT", original: number, effective: number, year: number) => ({
+    id, type, category: "CHARITY", description: `${type} ${year}`, original_weight: original, effective_weight: effective,
+    years_elapsed: 0, decay_factor: effective / original, civilization: "CHINESE", recorded_at: `${year}-06-02T00:00:00Z`,
+    event_date: { year, month: 6, day: 2 }, is_milestone: false, occurrence_count: 1, statute_clause: "",
+  });
+  const RECORDS = [
+    record("11111111-1111-4111-8111-111111111111", "MERIT", 120, 90, 1990),
+    record("22222222-2222-4222-8222-222222222222", "DEMERIT", 60, 60, 2001),
+  ];
+
+  test("功向上、过向下,各有面积;过是斜线,衰减掉的部分叠在外侧;页上没有 recharts", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    api.on("GET", "/souls/:id/karma/", { ...SOUL_LEDGER, record_count: RECORDS.length, records: RECORDS });
+    await page.goto(`/souls/${SOULS[0].id}`);
+    await page.getByRole("tab", { name: /全部功过记录/ }).click();
+
+    const chart = page.locator("[data-lifespan-chart]");
+    await expect(chart.locator("[data-lifespan-bar]")).toHaveCount(2);
+    const box = async (bar: string, series: string) =>
+      (await chart.locator(`[data-lifespan-bar="${bar}"] [data-series="${series}"]`).boundingBox())!;
+    const meritSolid = await box(RECORDS[0].id, "effective");
+    const meritDecayed = await box(RECORDS[0].id, "decayedAway");
+    const demeritSolid = await box(RECORDS[1].id, "effective");
+    // 120 : 60 on one scale — the merit column (90 + 30) is twice the demerit one (60).
+    expect(meritSolid.height + meritDecayed.height).toBeCloseTo(2 * demeritSolid.height, 0);
+    expect(meritDecayed.y + meritDecayed.height).toBeCloseTo(meritSolid.y, 0); // decayed sits above the solid
+    expect(demeritSolid.y).toBeGreaterThanOrEqual(meritSolid.y + meritSolid.height - 1); // demerit hangs below zero
+    // No decay on the demerit record → no faded segment at all, not a sliver of border.
+    await expect(chart.locator(`[data-lifespan-bar="${RECORDS[1].id}"] [data-series="decayedAway"]`)).toHaveCount(0);
+    const demeritImage = await chart
+      .locator(`[data-lifespan-bar="${RECORDS[1].id}"] [data-series="effective"]`)
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(demeritImage).toContain("repeating-linear-gradient");
+    await expect(page.locator(".recharts-wrapper")).toHaveCount(0);
   });
 });

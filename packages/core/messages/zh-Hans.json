@@ -17,7 +17,8 @@
     "theme_dark": "切换到深色模式",
     "mobile_menu": "导航菜单",
     "more": "更多",
-    "soul_events": "灵魂事件"
+    "soul_events": "灵魂事件",
+    "skip_to_main": "跳到正文"
   },
   "auth": {
     "login": "登录",

@@ -19,9 +19,7 @@ export const soulKeys = {
   captureDue: () => [...soulKeys.all, "capture-due"] as const,
   /** 继承(功德 / 业力从前世带来的部分)。 */
   inheritance: (id: string) => [...soulKeys.all, "inheritance", id] as const,
-  /** 一个灵魂的转生记录(数组)。 */
-  reincarnations: (id: string) => [...soulKeys.all, "reincarnations", id] as const,
-  /** 灵魂页的转生时间线 —— 另一种形状,所以不和 `reincarnations(id)` 同键。 */
+  /** 一个灵魂的转生记录,第一页的整页响应(带 count)。灵魂页与审判详情共用;要数组的一边用 `select`。 */
   reincarnationTimeline: (id: string) => [...soulKeys.all, "reincarnations", "timeline", id] as const,
 };
 
@@ -311,8 +309,9 @@ export const permKeys = {
   roles: ["roles"] as const,
   /** Prefix of every roles'-grants key — invalidate or patch with this one. */
   allRolePermissions: ["role-permissions"] as const,
-  /** Every role's grants (`permApi.allRolePermissions`), keyed by the role names so a new or renamed role refetches. */
-  allRolePermissionsFor: (roleNames: readonly string[]) => ["role-permissions", "all", [...roleNames].sort()] as const,
+  /** Every role's grants (`permApi.allRolePermissions`). Not keyed by role names, so it starts with the roles query;
+   *  the permissions page refetches it when the roles name one it lacks (D6, 2026-10-30). */
+  allRoleGrants: ["role-permissions", "all"] as const,
 };
 
 /** The officer console's 「问一问」 history (`/assist/conversations/`), one list per signed-in officer. */

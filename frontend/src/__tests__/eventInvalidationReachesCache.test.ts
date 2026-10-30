@@ -40,6 +40,7 @@ import { QueryClient } from "@tanstack/react-query";
 
 import {
   dispatchEvent,
+  flushEventInvalidations,
   type EventContext,
   type EventPayload,
 } from "@/lib/events/event_registry";
@@ -80,6 +81,14 @@ import {
 const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
   { label: "soul detail", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.detail("s1") },
   { label: "soul list", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.list() },
+  // 2026-10-30: a soul's event reaches that soul's keys and the cross-soul views, not every soul in the cache.
+  { label: "soul ledger", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.ledger("s1") },
+  { label: "soul timeline", owner: "app/souls/[id]/page.tsx", key: [...soulKeys.all, "events", "timeline", "s1"] },
+  { label: "capture due list", owner: "app/judgment/capture-due/page.tsx", key: soulKeys.captureDue() },
+  // One key for the soul page's 轮回记录 and the judgment desk's 前世 (the desk `select`s the array), 2026-10-30.
+  { label: "prior lives", owner: "app/judgment/[id]/page.tsx", key: soulKeys.reincarnationTimeline("s1") },
+  { label: "another soul's detail", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.detail("s2") },
+  { label: "another soul's timeline", owner: "app/souls/[id]/page.tsx", key: [...soulKeys.all, "events", "timeline", "s2"] },
   { label: "workflow detail", owner: "app/workflow/[id]/page.tsx", key: workflowKeys.detail("w1") },
   { label: "judgment detail", owner: "app/judgment/[id]/page.tsx", key: judgmentKeys.detail("j1") },
   { label: "disposition section", owner: "app/disposition/page.tsx", key: dispositionKeys.list({ section: "pending" }) },
@@ -149,21 +158,40 @@ describe("the seeding is real", () => {
 });
 
 describe("a realtime push reaches the cache", () => {
+  /** What any event about soul s1 reaches: its own keys and the cross-soul lists — never soul s2's. */
+  const SOUL_S1 = ["soul detail", "soul list", "soul ledger", "soul timeline", "capture due list", "prior lives"];
+  /** With no soul_id there is nothing to narrow by: the whole family, as before 2026-10-30. */
+  const ALL_SOULS = [...SOUL_S1, "another soul's detail", "another soul's timeline"];
   const CASES: { name: string; payload: EventPayload; reaches: string[] }[] = [
     {
-      name: "STATE_CHANGED refreshes the soul list and that soul's detail",
+      name: "STATE_CHANGED refreshes the soul list and that soul's own keys, not another soul's",
       payload: { domain: "soul", event: "STATE_CHANGED", soul_id: "s1" } as EventPayload,
-      reaches: ["soul detail", "soul list"],
+      reaches: SOUL_S1,
+    },
+    {
+      name: "a soul event without a soul_id refreshes every soul",
+      payload: { domain: "soul", event: "RECORD_ADDED" } as unknown as EventPayload,
+      reaches: ALL_SOULS,
     },
     {
       name: "DISPOSITION_CREATED / _EXPIRED refresh the soul and the /disposition sections (another key family)",
       payload: { domain: "soul", event: "DISPOSITION_EXPIRED", soul_id: "s1" } as EventPayload,
-      reaches: ["soul detail", "soul list", "disposition section"],
+      reaches: [...SOUL_S1, "disposition section"],
     },
     {
       name: "a plain soul event does not touch the disposition sections",
       payload: { domain: "soul", event: "RECORD_ADDED", soul_id: "s1" } as EventPayload,
-      reaches: ["soul detail", "soul list"],
+      reaches: SOUL_S1,
+    },
+    {
+      name: "a sentence-plan event refreshes that soul",
+      payload: { domain: "sentence_plan", event: "SENTENCE_NODE_COMPLETED", soul_id: "s1" } as unknown as EventPayload,
+      reaches: SOUL_S1,
+    },
+    {
+      name: "a dispatch's own STATE_CHANGED refreshes that soul",
+      payload: { domain: "dispatch", event: "STATE_CHANGED", soul_id: "s1" } as EventPayload,
+      reaches: SOUL_S1,
     },
     {
       name: "WORKFLOW_APPROVED refreshes the workflow an approver has open",
@@ -173,7 +201,7 @@ describe("a realtime push reaches the cache", () => {
         workflow_id: "w1",
         soul_id: "s1",
       } as EventPayload,
-      reaches: ["soul detail", "soul list", "workflow detail"],
+      reaches: [...SOUL_S1, "workflow detail"],
     },
     {
       name: "a notification refreshes both the list and the masthead badge",
@@ -212,6 +240,9 @@ describe("a realtime push reaches the cache", () => {
     const { ctx } = makeCtx(client);
 
     dispatchEvent(testCase.payload, ctx);
+    // Nothing is invalidated synchronously: dispatch coalesces for INVALIDATION_BATCH_MS.
+    expect(invalidatedLabels(client)).toEqual([]);
+    flushEventInvalidations(client);
 
     // Sorted and compared whole: this asserts the entries that must NOT go
     // stale stay valid too. An over-broad handler that invalidated the entire
@@ -229,7 +260,21 @@ describe("a realtime push reaches the cache", () => {
     );
 
     expect(result.success).toBe(false);
+    flushEventInvalidations(client);
     expect(invalidatedLabels(client)).toEqual([]);
+  });
+
+  it("a burst about two souls reaches both, and still not a third", () => {
+    const client = seededClient();
+    client.setQueryData(soulKeys.detail("s3"), { seeded: true });
+    const { ctx } = makeCtx(client);
+
+    dispatchEvent({ domain: "soul", event: "RECORD_ADDED", soul_id: "s1" } as EventPayload, ctx);
+    dispatchEvent({ domain: "soul", event: "KARMA_RECALCULATED", soul_id: "s2" } as EventPayload, ctx);
+    flushEventInvalidations(client);
+
+    expect(invalidatedLabels(client).sort()).toEqual([...ALL_SOULS].sort());
+    expect(client.getQueryState(soulKeys.detail("s3"))?.isInvalidated).toBe(false);
   });
 });
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { BaseModal } from "@/src/components/ui/Modal";
 import { setSingleKeyShortcuts, useHotkeys, useRegisteredShortcuts, useSingleKeyShortcuts } from "@/src/lib/hotkeys";
 
 /**
@@ -23,29 +23,18 @@ export function SingleKeyShortcutsToggle() {
   );
 }
 
+/** The list and its modal, out of the shell's bundle (B3, 2026-10-30). */
+const ShortcutHelpDialog = dynamic(() => import("./ShortcutHelpDialog"), { ssr: false });
+
 /**
  * 全局 `?`:列出当前页面登记过的快捷键(`useShortcutHelp`)。页面没登记就什么都不做 ——
  * 审判队列控制台有自己的键盘映射和 `?`,不登记,也就不会两处同时响应。
  */
 export function ShortcutHelp() {
-  const { t } = useI18n();
   const rows = useRegisteredShortcuts();
   const [open, setOpen] = useState(false);
+  // The listener lives here, in the shell, so the first `?` opens the list even before its chunk has loaded.
   useHotkeys({ "?": () => setOpen(true) }, rows.length > 0);
   if (!open || rows.length === 0) return null;
-  return (
-    <BaseModal isOpen onClose={() => setOpen(false)} title={t("shortcuts.title")}>
-      <dl className="space-y-1">
-        {rows.map(({ key, label }) => (
-          <div key={`${key}-${label}`} className="flex items-baseline gap-3 text-sm">
-            <dt className="min-w-[8ch] font-mono text-xs text-[oklch(var(--color-ink))]">{key}</dt>
-            <dd className="text-[oklch(var(--color-ink-muted))]">{t(label)}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-4 border-t border-[oklch(var(--color-line))] pt-3">
-        <SingleKeyShortcutsToggle />
-      </div>
-    </BaseModal>
-  );
+  return <ShortcutHelpDialog rows={rows} onClose={() => setOpen(false)} />;
 }
