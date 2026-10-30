@@ -196,9 +196,9 @@ export default function SoulDetailPage() {
   const judgmentsQuery = useJudgments({ soul: id }, { enabled: canReadJudgments });
   const dispositionsQuery = useDispositions({ soul: id });
   // 键里的 "timeline" 不能省:这两条存的是整页响应(带 count),而 judgment/[id] 页用
-  // `[...soulKeys.all, "reincarnations", soulId]` 存的是数组 —— 同键不同形会互相读坏。
+  // `soulKeys.reincarnations(soulId)` 存的是数组 —— 同键不同形会互相读坏。
   const reincarnationsQuery = useQuery({
-    queryKey: [...soulKeys.all, "reincarnations", "timeline", id],
+    queryKey: soulKeys.reincarnationTimeline(id),
     queryFn: async () => (await reincarnationApi.list({ soul: id })).data,
     enabled: !!id,
     staleTime: 30_000,
@@ -244,7 +244,7 @@ export default function SoulDetailPage() {
     dispositionsQuery.data?.results.length ?? 0
   );
   const moreReincarnations = useMorePages(
-    [...soulKeys.all, "reincarnations", "timeline", id],
+    soulKeys.reincarnationTimeline(id),
     async (page) => (await reincarnationApi.list({ soul: id, page: String(page) })).data,
     extraPages,
     true,
@@ -334,7 +334,7 @@ export default function SoulDetailPage() {
   // treated as a normal "no data" result (null) rather than a query error.
   // That keeps it out of retry and error-toast paths entirely.
   const inheritanceQuery = useQuery({
-    queryKey: ["souls", "inheritance", id],
+    queryKey: soulKeys.inheritance(id),
     queryFn: async (): Promise<LedgerInheritance | null> => {
       try {
         const res = await ledgerApi.inheritance(id);

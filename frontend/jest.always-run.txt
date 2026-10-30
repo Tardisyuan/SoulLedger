@@ -48,6 +48,7 @@ src/__tests__/loginStatutes.test.ts backend config
 src/__tests__/printLayout.test.tsx frontend
 src/__tests__/menuButtonGates.test.ts frontend
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts *
+src/__tests__/menuIconTable.test.ts backend
 src/__tests__/motionTokens.test.ts packages
 src/__tests__/notificationTarget.test.tsx backend
 src/__tests__/notifyKeysExistInTheBundles.test.ts frontend packages

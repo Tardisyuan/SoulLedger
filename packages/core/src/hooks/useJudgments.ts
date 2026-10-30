@@ -162,37 +162,6 @@ export function useAssignableOfficers(ids: readonly string[], enabled = true) {
 
 // ── Mutations ────────────────────────────────────────────────────────
 
-export function useCreateJudgment() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: object) => judgmentApi.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: judgmentKeys.all });
-      notify("judgment.create_success", "success");
-    },
-    onError: () => {
-      notify("judgment.create_error", "error");
-    },
-  });
-}
-
-export function useConcludeJudgment() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: object }) =>
-      judgmentApi.conclude(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: judgmentKeys.all });
-      notify("judgment.conclude_success", "success");
-    },
-    onError: () => {
-      notify("judgment.conclude_error", "error");
-    },
-  });
-}
-
 /**
  * Rule one ledger record admitted / not admitted in a judgment. Refetches the
  * detail, which carries the rulings and the admitted balance. No toast: the

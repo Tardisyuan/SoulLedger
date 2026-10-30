@@ -7,7 +7,6 @@ import path from "node:path";
 
 import {
   CIVILIZATION_CODES,
-  CIVILIZATION_LABELS,
   CIVILIZATION_OPTIONS,
 } from "@soulledger/core/config/civilizations";
 import {
@@ -146,19 +145,15 @@ describe("every civilization-keyed map covers every civilization", () => {
     }
   );
 
-  // The two in config/civilizations.ts are imported rather than parsed: they
-  // are in the same module as the list they must cover, so there is no
-  // component graph to drag in and no reason to read them as text.
-  it("CIVILIZATION_LABELS covers every civilization", () => {
-    expect(CIVILIZATION_OPTIONS.filter((civ) => !CIVILIZATION_LABELS[civ])).toEqual([]);
-  });
-
   it("names all four addresses at once when one is short", () => {
     // The message is the point. A fifth civilization turns exactly one file red
     // and needs to be told every place it has to be added, or it will be added
     // in one and forgotten in five.
     //
-    // Four, not five: CIVILIZATION_DISPLAY_NAMES was deleted (2026-09-29) once
+    // Three, not four: CIVILIZATION_LABELS was deleted (2026-10-30) — nothing read it
+    // (civilization names on screen come from the language packs).
+    //
+    // (Four, not five, earlier:) CIVILIZATION_DISPLAY_NAMES was deleted (2026-09-29) once
     // `getDisplayNameForTenant` went and this test was its only reader — a map
     // kept alive only to be checked for coverage covers nothing.
     //
@@ -171,11 +166,8 @@ describe("every civilization-keyed map covers every civilization", () => {
     //
     // (The earlier drop, seven to six, was the judgment detail page's own
     // CIVILIZATION_ICONS being deleted with its avatar.)
-    const addresses = [
-      ...TEXT_MAPS.map((m) => `${m.file}::${m.name}`),
-      "packages/core/src/config/civilizations.ts::CIVILIZATION_LABELS",
-    ];
-    expect(addresses).toHaveLength(4);
+    const addresses = TEXT_MAPS.map((m) => `${m.file}::${m.name}`);
+    expect(addresses).toHaveLength(3);
   });
 });
 

@@ -1,11 +1,17 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizationNotEmptyOf, organizationsApi, type OrganizationInput } from "../api/index";
 import { notify } from "../platform/index";
+import { organizationKeys } from "../query_keys";
 
-/** The organizations page reads one `["organizations"]` query (every page, assembled into a tree). */
-const ORGANIZATIONS = ["organizations"] as const;
+/** Every screen that lists organizations reads this one query (every page; the tree needs them all). */
+const ORGANIZATIONS = organizationKeys.all;
+
+/** Every organization, all pages — the organizations page, the user dialog and filter, data scopes. */
+export function useAllOrganizations(options: { enabled?: boolean } = {}) {
+  return useQuery({ queryKey: ORGANIZATIONS, queryFn: () => organizationsApi.all(), ...options });
+}
 
 /** Create, edit and move are one form: a move is a PATCH with another `parent`. Needs `org.manage`. */
 export function useSaveOrganization() {

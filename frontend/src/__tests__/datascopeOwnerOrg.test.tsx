@@ -26,6 +26,8 @@ jest.mock("@soulledger/core/api", () => ({
 
 const mockMutateDelete = jest.fn();
 jest.mock("@soulledger/core/hooks/useOrganizations", () => ({
+  // The real read hook (it calls the `organizationsApi.all` mock above); only the writes are doubled.
+  useAllOrganizations: jest.requireActual("@soulledger/core/hooks/useOrganizations").useAllOrganizations,
   useDeleteOrganization: () => ({ mutate: mockMutateDelete, isPending: false }),
   useSaveOrganization: () => ({ mutate: jest.fn(), isPending: false }),
 }));

@@ -47,6 +47,9 @@ export function usePermissions() {
     // passing the string "ADMIN" to a codename check and relying on the
     // short-circuit above. See RequireAdmin. 代看 / 进殿查看时为假(后端 is_tenant_exempt 同样为假)。
     isAdmin: roleIsAdmin && !viewing,
+    // 无殿 ADMIN = 后端 `is_tenant_exempt`:任一殿都算「本殿」。代看 / 进殿查看时为假 —— 那时看的是别的殿,
+    // 自己不是任何一边(移交详情把自己当成目标 / 原属殿就是这里少了这一条)。所有「无殿 ADMIN」判断都读它。
+    isTenantExempt: roleIsAdmin && !viewing && !user?.tenant,
     permissions: user?.permissions ?? [],
   };
 }

@@ -3,7 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -55,7 +55,7 @@ export default function CrossJudgmentDetailPage() {
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isTenantExempt } = usePermissions();
   const params = useParams();
   const router = useRouter();
   const id = params.id;
@@ -91,7 +91,7 @@ export default function CrossJudgmentDetailPage() {
     isPending: loading,
     error: loadError,
   } = useQuery({
-    queryKey: ["cross-judgments", "detail", id],
+    queryKey: crossJudgmentKeys.detail(id as string),
     queryFn: () => crossTenantJudgmentsApi.get(id as string).then((res) => res.data),
     // `isPending` stays true while this is false, which is what the old
     // `useState(true)` did before the effect had a user to fetch for.
@@ -126,7 +126,7 @@ export default function CrossJudgmentDetailPage() {
     mutationFn: () => crossTenantJudgmentsApi.activate(id as string),
     onSuccess: () => {
       showToast(t("crossJudgments.activated_success"), "success");
-      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
     },
     onError: () => {
       showToast(t("crossJudgments.activate_error"), "error");
@@ -148,7 +148,7 @@ export default function CrossJudgmentDetailPage() {
   // 结束 / 取消不在这里判:`CrossJudgmentEndControls` 看服务端算的 `can_end`。
   const isHome =
     !!judgment &&
-    ((user?.role === "ADMIN" && !user?.tenant) || (!!user?.tenant?.code && user.tenant.code === judgment.initiating_tenant_code));
+    (isTenantExempt || (!!user?.tenant?.code && user.tenant.code === judgment.initiating_tenant_code));
   const originId = isHome ? judgment?.judgment ?? null : null;
   const { data: origin } = useQuery({
     queryKey: judgmentKeys.detail(originId ?? ""),

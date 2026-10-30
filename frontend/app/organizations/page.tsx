@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
+import type { Organization } from "@soulledger/core/api";
+import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -28,23 +28,9 @@ import {
   type OrganizationFormMode,
 } from "@/src/components/organizations/OrganizationDialogs";
 
-// organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
-// this page renders a parent/child tree (flattenTree/renderTable below), so a paged view would
-// split a node from its children onto different pages and break the tree. Fetch every page
-// up front instead — confirmed via curl that `/organizations/` is standard DRF pagination
-// (`{count,next,previous,results}`, page_size fixed at 20, `?page_size=` is ignored).
-async function fetchAllOrganizations(): Promise<Organization[]> {
-  const all: Organization[] = [];
-  let page = 1;
-  while (true) {
-    const res = await api.get<PaginatedResponse<Organization>>("/organizations/", { params: { page } });
-    const data = res.data;
-    all.push(...data.results);
-    if (!data.next) break;
-    page += 1;
-  }
-  return all;
-}
+// This page renders a parent/child tree, so a paged view would split a node from its children onto
+// different pages: it reads every page (`organizationsApi.all()`, via `useAllOrganizations`), under
+// the same key the user dialog, the user filter and data scopes read.
 
 // GREEK: 冥界/HADES and 希腊冥界/HADES_GREEK were `category="EUROPEAN"` until
 // org/0007 refiled them. Without an entry here the badge renders with no icon
@@ -102,11 +88,7 @@ function OrganizationsPageContent() {
   const [formMode, setFormMode] = useState<OrganizationFormMode | null>(null);
   const [deleting, setDeleting] = useState<Organization | null>(null);
 
-  const { data: organizations = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["organizations"],
-    queryFn: fetchAllOrganizations,
-    enabled: !!user,
-  });
+  const { data: organizations = [], isLoading, isError, refetch } = useAllOrganizations({ enabled: !!user });
 
   // Group by category (civilization)
   const grouped: Record<string, Organization[]> = organizations.reduce((acc, org) => {

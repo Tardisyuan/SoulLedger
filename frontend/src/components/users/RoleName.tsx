@@ -1,8 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { permApi } from "@soulledger/core/api";
-import { permissionKeys } from "@soulledger/core/query_keys";
+import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { SelectOption } from "@/src/components/ui/Field";
 
@@ -18,11 +16,7 @@ import type { SelectOption } from "@/src/components/ui/Field";
  * the delete dialog are the same decision in three more places.
  */
 function useRoleTable() {
-  return useQuery({
-    queryKey: permissionKeys.roles,
-    queryFn: async () => (await permApi.roles.list()).data,
-    staleTime: 60_000,
-  });
+  return useRoles({ staleTime: 60_000 });
 }
 
 /** `display_name` for a custom role, null for a built-in or an unknown name —

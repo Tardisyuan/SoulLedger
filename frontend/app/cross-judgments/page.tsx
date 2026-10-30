@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
+import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import Link from "next/link";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -82,7 +83,7 @@ export default function CrossJudgmentsPage() {
     setPage(1);
   };
   const { data: pageData, isLoading, isError, isPlaceholderData, refetch } = useQuery({
-    queryKey: ["cross-judgments", page, filterParams],
+    queryKey: crossJudgmentKeys.list(page, filterParams),
     queryFn: () => crossTenantJudgmentsApi.list({ page: String(page), ...filterParams }).then(r => r.data),
     placeholderData: (previous) => previous,
     enabled: !!user,
