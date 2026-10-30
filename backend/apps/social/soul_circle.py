@@ -104,20 +104,6 @@ def is_following(follower, target) -> bool:
     ).exists()
 
 
-def are_mutual_followers(user_a, user_b) -> bool:
-    """互相关注:同文明、不是同一人、双向都有关注边。聊天的准入判定用这一条。"""
-    if user_a is None or user_b is None or user_a.pk == user_b.pk:
-        return False
-    if not same_civilization(user_a, user_b):
-        return False
-    tenant_id = account_tenant_id(user_a)
-    edges = Follow.objects.filter(
-        Q(follower=user_a, following=user_b) | Q(follower=user_b, following=user_a),
-        tenant_id=tenant_id,
-    ).values_list("follower_id", flat=True)
-    return set(edges) == {user_a.pk, user_b.pk}
-
-
 def souls_in(tenant, *, include_retired=False):
     """此刻在 `tenant` 的灵魂账号(User 查询集)。默认只要本世账号 —— 搜索、关注都只针对活人账号。"""
     from apps.authentication.models import User

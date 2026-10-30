@@ -156,7 +156,7 @@ def apply(data: bytes, souls) -> list[RegionRow]:
     """
     with transaction.atomic():
         pks = [r.soul.pk for r in validate_csv(data, souls) if r.soul is not None]
-        list(Soul.objects.select_for_update().filter(pk__in=pks).values_list("pk", flat=True))
+        Soul.lock_many(pks)
         rows = validate_csv(data, souls)
         for r in rows:
             if r.status == OK:

@@ -446,6 +446,21 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = SoulManager()
 
+    @classmethod
+    def lock(cls, pk):
+        """Row-lock one soul inside the caller's transaction and return it.
+
+        `all_objects`, so a soft-deleted row is locked too (the caller decides what a deleted soul
+        means); `of=("self",)` so a later `select_related` never drags tenant rows into the lock
+        (`apps/core/lock_join_guard.py`).
+        """
+        return cls.all_objects.select_for_update(of=("self",)).get(pk=pk)
+
+    @classmethod
+    def lock_many(cls, pks):
+        """`lock` for several souls in one query, in pk order so two callers cannot deadlock."""
+        return list(cls.all_objects.select_for_update(of=("self",)).filter(pk__in=pks).order_by("pk"))
+
     def save(self, *args, **kwargs):
         # Set tenant from thread-local request context on first save
         is_new = self._state.adding
@@ -841,7 +856,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             raise ValueError("A reason is required to correct a settlement.")
 
         with transaction.atomic():
-            locked_soul = Soul.objects.select_for_update().get(pk=self.pk)
+            locked_soul = Soul.lock(self.pk)
+            if locked_soul.is_deleted:
+                raise Soul.DoesNotExist("A soft-deleted soul cannot have its settlement corrected.")
             if locked_soul.current_state != SoulState.SETTLED:
                 raise ValueError("Only a SETTLED soul can have its settlement corrected.")
 
