@@ -26,8 +26,6 @@ from rest_framework.exceptions import APIException
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import AT_CITY_GOD, CityGod, CityGodStatus, Judgment
 
-_BOOKKEEPING = ("version", "update_user", "update_time")
-
 
 class CityGodRefusedError(ClaimRefusedError):
     """初审此刻不接受这个动作。"""
@@ -149,7 +147,7 @@ def _assert_may_act(user, judgment) -> None:
 
 
 def _save(judgment, *fields) -> None:
-    judgment.save(update_fields=[*fields, *_BOOKKEEPING])
+    judgment.save(update_fields=fields)  # version / update_user / update_time: AuditUserFields.save
 
 
 def send_on(pk, user, note: str = "") -> Judgment:

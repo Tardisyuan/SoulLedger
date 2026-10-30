@@ -17,6 +17,7 @@ import {
   eventLabel,
   handleDeathSyncEvent,
   handleDispatchEvent,
+  handleDispatchStateChanged,
   handleDispositionEvent,
   handleNotificationEvent,
   handleSchedulerEvent,
@@ -88,19 +89,6 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     REBIRTH_STATUS_CHANGED: handleSoulEvent,
     REBIRTH_CROSS_CIV_DECIDED: handleSoulEvent,
     COOLDOWN_SHORTENING_DECIDED: handleSoulEvent,
-    // 受刑计划(docs/ARCHITECTURE-sentence-plan.md,Q9)。阶段 1 只声明,后端没有路径写入;
-    // 落在灵魂时间线上,与上面几种同样处理。
-    SENTENCE_PLAN_CREATED: handleSoulEvent,
-    SENTENCE_NODE_ACTIVATED: handleSoulEvent,
-    SENTENCE_NODE_WAITING: handleSoulEvent,
-    SENTENCE_NODE_COMPLETED: handleSoulEvent,
-    SENTENCE_NODE_REFUSED: handleSoulEvent,
-    SENTENCE_NODE_REDISPATCHED: handleSoulEvent,
-    SENTENCE_PLAN_AMENDED: handleSoulEvent,
-    SENTENCE_REQUEST_CREATED: handleSoulEvent,
-    SENTENCE_REQUEST_DECIDED: handleSoulEvent,
-    SENTENCE_PLAN_COMPLETED: handleSoulEvent,
-    SENTENCE_PLAN_CANCELLED: handleSoulEvent,
     // 申诉(backend/apps/judgment/appeals.py):同样落在灵魂时间线上。
     JUDGMENT_APPEAL_FILED: handleSoulEvent,
     JUDGMENT_APPEAL_WITHDRAWN: handleSoulEvent,
@@ -150,6 +138,24 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     DISPATCH_REJECTED: handleDispatchEvent,
     DISPATCH_EXECUTED: handleDispatchEvent,
     DISPATCH_STATUS_CHANGED: handleDispatchEvent,
+    // 调拨自己的时间线事件(backend DispatchService,2026-10-30 收口进事件总线):`action` 区分提议 / 批准 / …
+    STATE_CHANGED: handleDispatchStateChanged,
+  },
+
+  // 受刑计划(backend apps/sentence_plan/services.py::record_event,2026-10-30 起走 sentence_plan 域,
+  // 此前只写 SoulEvent、不推送)。落在灵魂时间线上,同灵魂域的事件处理。
+  sentence_plan: {
+    SENTENCE_PLAN_CREATED: handleSoulEvent,
+    SENTENCE_NODE_ACTIVATED: handleSoulEvent,
+    SENTENCE_NODE_WAITING: handleSoulEvent,
+    SENTENCE_NODE_COMPLETED: handleSoulEvent,
+    SENTENCE_NODE_REFUSED: handleSoulEvent,
+    SENTENCE_NODE_REDISPATCHED: handleSoulEvent,
+    SENTENCE_PLAN_AMENDED: handleSoulEvent,
+    SENTENCE_REQUEST_CREATED: handleSoulEvent,
+    SENTENCE_REQUEST_DECIDED: handleSoulEvent,
+    SENTENCE_PLAN_COMPLETED: handleSoulEvent,
+    SENTENCE_PLAN_CANCELLED: handleSoulEvent,
   },
 
   // Death sync domain

@@ -145,7 +145,7 @@ flowchart TD
 | 处置执行(原属):灵魂 `DISPOSED → REINCARNATING`(有来世)或 `→ SETTLED`(终局),按**原属文明** | `apps/disposition/services.py:667-753` |
 | **跨文明联审 `CrossTenantJudgment`**:`title / description / initiating_tenant / status(PROPOSED→ACTIVE→CONCLUDED\|CANCELLED) / conclusion_type(PASS\|FAIL)`;参与方 `CrossTenantJudgmentParticipant(participant_tenant, participant_actor, role ∈ ADVISOR\|CO_JUDGE\|CHAIRMAN)`。**没有 `soul` 字段,没有与 `Judgment` 的任何关联,参与方没有任何结论字段**;`conclude` 只写 `conclusion_type` 并通知参与方 | `apps/dispatch/models.py:139-262`;`apps/dispatch/services.py:486-625`;`apps/dispatch/serializers.py:312-330` |
 | 联审的权限族 `cross_judgment.read / .create`,持有者 ADMIN / JUDGE / MODERATOR;只有发起方能 seat 参与方与 activate;发起方或任一参与方可 conclude | `apps/dispatch/views.py:393-625`;`apps/perm/models.py:338-339` |
-| 灵魂推送:调拨批准 / 暂居开始 / 回归三种 kind,由 `SoulEvent.post_save` 信号接(不经总线);文案权威在 `packages/core/messages/*.json`,后端副本由测试逐字钉住 | `apps/soul_push/services.py:80-118`;`apps/soul_push/signals.py`;`apps/soul_push/messages.py:1-23` |
+| 灵魂推送:调拨批准 / 暂居开始 / 回归三种 kind,由事件总线的 `SoulPushHandler` 接(dispatch 域;2026-10-30 前是 `SoulEvent.post_save` 信号);文案权威在 `packages/core/messages/*.json`,后端副本由测试逐字钉住 | `apps/soul_push/services.py:80-118`;`apps/soul_push/handler.py`;`apps/soul_push/messages.py:1-23` |
 | 官员通知的多语言文案同一套办法;目前只有 `dispatch_return_blocked` 一种 | `apps/notifications/messages.py:11-36` |
 | App 显示「暂居 X · 原属 Y」;皮肤跟当前文明,词表跟原属 | `mobile/src/rules.ts:181-188`;`mobile/src/screens/life.tsx:278-283`;`/me` 给出 `home_tenant`、`is_residing`:`apps/soul_accounts/serializers.py:69-72` |
 | 审批工作流:`ApprovalWorkflow.tenant` 单租户;节点审批人按 ACTOR / ROLE / SYSTEM,`can_approve` 失败即拒;有条件路由 `on_pass` / `on_fail`;终态只有 COMPLETED / REJECTED | `apps/workflow/models.py:148-153`、`:665-740`、`:609-624`、`:31-34` |

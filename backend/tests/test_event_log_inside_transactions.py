@@ -541,6 +541,61 @@ def _cancel_proposed_dispatch():
             lambda: DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED, "STATE_CHANGED")
 
 
+def _dispatch(step):
+    """调拨(apps/dispatch/services.py,2026-10-30 收口进事件总线):提议 / 批准 / 驳回 / 执行 / 回归,
+    每一步的 STATE_CHANGED 与它描述的那一笔同进退。此前批准与驳回的事件写在状态提交之后。"""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.dispatch.services import DispatchService
+
+    def path():
+        home, away = _cn(), plan.tenant("EG_DUAT")
+        sender = plan.officer("evlog_dsp_send", "MODERATOR", home)
+        receiver = plan.officer("evlog_dsp_recv", "MODERATOR", away)
+        soul = Soul.objects.create(name="调拨之魂", tenant=home)
+        status = lambda pk: DispatchRecord.all_objects.get(pk=pk).status  # noqa: E731
+        if step == "propose":
+            return (lambda: DispatchService.propose(home, away, Soul.all_objects.get(pk=soul.pk), sender, "x" * 30),
+                    lambda: DispatchRecord.all_objects.filter(soul_id=soul.pk).exists(), "STATE_CHANGED")
+        record = DispatchService.propose(home, away, soul, sender, "x" * 30)
+        fresh = lambda: DispatchRecord.all_objects.get(pk=record.pk)  # noqa: E731
+        if step == "approve":
+            return (lambda: DispatchService.approve(fresh(), receiver),
+                    lambda: status(record.pk) == DispatchStatus.APPROVED, "STATE_CHANGED")
+        if step == "reject":
+            return (lambda: DispatchService.reject(fresh(), receiver, "不收"),
+                    lambda: status(record.pk) == DispatchStatus.REJECTED, "STATE_CHANGED")
+        DispatchService.approve(fresh(), receiver)
+        if step == "execute":
+            return (lambda: DispatchService.execute(fresh(), receiver),
+                    lambda: Soul.all_objects.get(pk=soul.pk).tenant_id == away.pk, "STATE_CHANGED")
+        DispatchService.execute(fresh(), receiver)
+        return (lambda: DispatchService.end_residence(Soul.all_objects.get(pk=soul.pk), actor=receiver,
+                                                      trigger=DispatchService.RETURN_ON_DISPOSITION),
+                lambda: Soul.all_objects.get(pk=soul.pk).tenant_id == home.pk, "STATE_CHANGED")
+    return path
+
+
+def _plan_stop(step):
+    """受刑计划(apps/sentence_plan/services.py::record_event,2026-10-30 起经总线):调拨执行 → 节点激活;
+    调拨被拒 → 节点退回。事件与它描述的那一笔同进退。"""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.dispatch.services import DispatchService
+
+    def path():
+        home, away = _cn(), plan.tenant("EG_DUAT")
+        soul, p = plan.planned(home, [(away, plan.stop_realm(away), 5)])
+        plan.serve(soul, p, 1)
+        record_id = plan.node(p, 2).dispatch_record_id
+        fresh = lambda: DispatchRecord.all_objects.get(pk=record_id)  # noqa: E731
+        if step == "refused":
+            return (lambda: DispatchService.reject(fresh(), plan.officer("evlog_plan_rej", "MODERATOR", away), "不收"),
+                    lambda: fresh().status == DispatchStatus.REJECTED, "SENTENCE_NODE_REFUSED")
+        DispatchService.approve(fresh(), "approver")
+        return (lambda: DispatchService.execute(fresh(), "executor"),
+                lambda: plan.node(p, 2).status == "ACTIVE", "SENTENCE_NODE_ACTIVATED")
+    return path
+
+
 def _cross_conclude_appends_stops():
     """第四十三批:并入审批流程的跨域审判以 PASS 结束(原审判已结案),参与方的站追加进受刑计划 ——
     SENTENCE_PLAN_AMENDED 与审判的 CONCLUDED 同一事务(`CrossTenantJudgmentService.conclude` → `append_cross_stops`)。"""
@@ -637,6 +692,13 @@ PATHS = {
     "capture_cancel/CAPTURE_WARRANT_CANCELLED": _capture("cancel"),
     "cross_conclude_pass/SENTENCE_PLAN_AMENDED": _cross_conclude_appends_stops,
     "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
+    "dispatch_propose/STATE_CHANGED": _dispatch("propose"),
+    "dispatch_approve/STATE_CHANGED": _dispatch("approve"),
+    "dispatch_reject/STATE_CHANGED": _dispatch("reject"),
+    "dispatch_execute/STATE_CHANGED": _dispatch("execute"),
+    "dispatch_return/STATE_CHANGED": _dispatch("return"),
+    "plan_dispatch_executed/SENTENCE_NODE_ACTIVATED": _plan_stop("activated"),
+    "plan_dispatch_refused/SENTENCE_NODE_REFUSED": _plan_stop("refused"),
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
