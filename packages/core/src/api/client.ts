@@ -401,8 +401,29 @@ export type FetchFailure = "gone" | "network" | "other";
  * `{ response: { data } }` objects work too.
  */
 export function responseCode(error: unknown): string | null {
-  const code = (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code;
+  const code = responseData<{ code: unknown }>(error)?.code;
   return typeof code === "string" ? code : null;
+}
+
+/** The HTTP status of a failed request, or `null` when there was no answer (same shapes as `responseCode`). */
+export function responseStatus(error: unknown): number | null {
+  const status = (error as { response?: { status?: unknown } } | null)?.response?.status;
+  return typeof status === "number" ? status : null;
+}
+
+/**
+ * The body of a failed request, for a refusal that carries more than its `code` (`count`, `retry_after`,
+ * `missing_roles` …). Every field is optional because nothing checks the server sent it; read the `code` with
+ * `responseCode`, which also checks its type.
+ */
+export function responseData<T extends object = Record<string, unknown>>(error: unknown): Partial<T> | undefined {
+  return (error as { response?: { data?: Partial<T> } } | null)?.response?.data ?? undefined;
+}
+
+/** The legacy `{error: "..."}` sentence of a failed request, when it is a string; else `undefined`. */
+export function responseError(error: unknown): string | undefined {
+  const text = responseData<{ error: unknown }>(error)?.error;
+  return typeof text === "string" ? text : undefined;
 }
 
 export function fetchFailureOf(error: unknown): FetchFailure {

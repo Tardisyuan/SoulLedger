@@ -27,7 +27,7 @@ jest.mock("react", () => {
 });
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
-import { PLACEMENT_REFUSALS } from "@/src/components/judgment/JudgmentPlacement";
+import { PLACEMENT_REFUSALS } from "@soulledger/core/api/judgment";
 
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { get: jest.fn(), conclude: jest.fn() },

@@ -25,6 +25,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { PageSection } from "@/components/ui/page-section";
 import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
+import { responseCode } from "@soulledger/core/api/client";
 
 const STATUS_COLORS: Record<string, string> = {
   // 规范 v3:等待审批不是风险、被驳回不是错误 —— 两个都是墨色,字形(◐ / ✕)把它们分开。
@@ -126,8 +127,6 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
    * behaviour on that path, and `rejectReason` is left alone — only the
    * dialog's own `onClose` clears it — so reopening after a failure still has
    * the typed reason in it. */
-  /** 后端拒绝时响应体里的 `code`(`open_judgment` / `target_dispatch_disabled` …);没有就 undefined。 */
-  const refusalCode = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
   const approveMutation = useMutation({
     mutationFn: () => dispatchApi.approve(id),
     onSuccess: () => {
@@ -138,7 +137,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     },
     onError: (err: unknown) => {
       setShowApproveModal(false);
-      showToast(t(refusalCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.approve_error"), "error");
+      showToast(t(responseCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.approve_error"), "error");
     },
   });
 
@@ -166,7 +165,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     },
     onError: (err: unknown) => {
       setShowExecuteModal(false);
-      showToast(t(refusalCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.execute_error"), "error");
+      showToast(t(responseCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.execute_error"), "error");
     },
   });
 
@@ -182,7 +181,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       setShowReturnModal(false);
       // 2026-09-18:灵魂仍有未结案审判时后端答 409 + code=open_judgment。说清原因,
       // 否则官员只看到「失败」,会一直重试。
-      const code = refusalCode(err);
+      const code = responseCode(err);
       showToast(
         t(code === "open_judgment" ? "dispatch.return_home_blocked_open_judgment" : "dispatch.return_home_error"),
         "error",

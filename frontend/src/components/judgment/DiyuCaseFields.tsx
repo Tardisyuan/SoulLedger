@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { fieldControl } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 import { Segmented } from "@/src/components/ui/Segmented";
+import { responseCode } from "@soulledger/core/api/client";
 
 /*
  * 地府案子的两块(Design 第五十七批 D-1、D-2):
@@ -40,10 +41,6 @@ function useRefresh() {
   // 属实提前释放 / 超度会改灵魂与处置(`wangsi._deliver`),不只是这件案子。
   return () =>
     Promise.all([judgmentKeys.all, dispositionKeys.all, soulKeys.all].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
-}
-
-function refusalCode(err: unknown): string | undefined {
-  return (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
 }
 
 type Translate = ReturnType<typeof useI18n>["t"];
@@ -154,7 +151,7 @@ export function WangsiPanel({ judgment, editable }: { judgment: Judgment; editab
   const canRelease = GRIEVANCE_RELEASE_LEVELS.includes(level);
 
   const onRefused = (err: unknown) => {
-    const code = refusalCode(err);
+    const code = responseCode(err);
     setError(code && (WANGSI_ERROR_CODES as readonly string[]).includes(code) ? t(`judgment.wangsi.error.${code}`) : t("common.error"));
   };
   const patch = useMutation({
