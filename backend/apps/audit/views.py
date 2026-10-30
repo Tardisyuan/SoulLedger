@@ -106,7 +106,6 @@ def parse_date_param(params, name):
     return value
 
 
-_parse_date_param = parse_date_param  # `apps/events/views.py` still imports the old name
 
 
 def _parse_limit(params):

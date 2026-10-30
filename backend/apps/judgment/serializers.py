@@ -265,7 +265,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         """
         for name, value in validated_data.items():
             setattr(instance, name, value)
-        instance.save(update_fields=[*validated_data, "version", "update_user", "update_time"])
+        instance.save(update_fields=[*validated_data])  # AuditUserFields.save adds version / update_user / update_time
         return instance
 
     # Fields that only `conclude/` may write. Checked against `initial_data`

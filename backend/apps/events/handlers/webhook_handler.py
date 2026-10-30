@@ -19,9 +19,9 @@ def _reject_if_not_publicly_routable(url):
     Delegates to the death_sync validator so there is one blocklist rather
     than two that drift. That validator's own gaps are fixed there.
     """
-    from apps.death_sync.webhook_service import _validate_webhook_url
+    from apps.core.outbound import validate_webhook_url
 
-    _validate_webhook_url(url)
+    validate_webhook_url(url)
 
 
 class WebhookHandler(DomainEventHandler):

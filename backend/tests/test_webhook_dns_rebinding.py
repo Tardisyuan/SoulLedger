@@ -67,12 +67,8 @@ def test_a_direct_private_address_is_refused_and_an_allowed_one_is_not(local_ser
         assert session.post(url, data=b"{}", timeout=5).status_code == 200
 
 
-def test_the_old_death_sync_names_are_the_core_guard_itself():
-    """`apps/events` still imports the guard from `apps.death_sync.webhook_service` (moved to
-    `apps.core.outbound` 2026-10-30): the re-export must be the same functions, not copies that could drift."""
-    from apps.core import outbound
-    from apps.death_sync import webhook_service
+def test_the_guard_has_one_home():
+    """Moved to `apps.core.outbound` 2026-10-30; the death_sync re-export is gone, so no copy can drift."""
+    import importlib.util
 
-    assert webhook_service._validate_webhook_url is outbound.validate_webhook_url
-    assert webhook_service._require_public_ip is outbound.require_public_ip
-    assert webhook_service.public_only_session is outbound.public_only_session
+    assert importlib.util.find_spec("apps.death_sync.webhook_service") is None
