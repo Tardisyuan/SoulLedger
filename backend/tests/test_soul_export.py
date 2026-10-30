@@ -169,5 +169,5 @@ def test_without_ids_and_without_soul_read_it_is_refused(world):
 
 @pytest.mark.django_db
 def test_without_ids_more_rows_than_the_ceiling_is_a_400(world, monkeypatch):
-    monkeypatch.setattr("apps.souls.views.EXPORT_MAX_ROWS", 2)
+    monkeypatch.setattr("apps.core.exports.EXPORT_MAX_ROWS", 2)  # the shared ceiling (`refuse_if_too_many`)
     assert world["reader"].get(URL).status_code == 400

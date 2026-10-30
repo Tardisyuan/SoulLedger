@@ -15,7 +15,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import EXPORT_MAX_ROWS, record_export
+from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -244,8 +244,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         # `filter_queryset(get_queryset())` is exactly what `list` runs, so the file
         # and the screen cannot drift apart on scope or filters.
         qs = self.filter_queryset(self.get_queryset())
-        if qs.count() > EXPORT_MAX_ROWS:
-            raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+        refuse_if_too_many(qs)
 
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=audit_logs.csv"

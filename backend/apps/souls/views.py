@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import EXPORT_MAX_ROWS, record_export
+from apps.core.exports import record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -357,8 +357,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """
         if "ids" not in request.query_params:
             souls = self.filter_queryset(self.get_queryset())
-            if souls.count() > EXPORT_MAX_ROWS:
-                raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+            refuse_if_too_many(souls)
         else:
             raw = [part.strip() for part in request.query_params.get("ids", "").split(",") if part.strip()]
             try:

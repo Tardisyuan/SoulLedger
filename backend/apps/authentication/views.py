@@ -1119,13 +1119,17 @@ def logout_view(request):
         if refresh_token:
             from . import signin_sessions
 
+            if not isinstance(refresh_token, str):  # a JSON number / object in the body
+                raise TokenError("not a token")
             token = RefreshToken(refresh_token)
             if str(token.payload.get("user_id")) != str(request.user.pk):
                 raise TokenError("not this user's token")
             token.blacklist()
             signin_sessions.sign_out(token)
         response = Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
-    except Exception:
+    # Only a bad token is the caller's 400; anything else (database, sign_out) is ours and surfaces as a 500
+    # instead of reading "Invalid token" while the refresh token stays valid (cq-backend 第 10 条).
+    except TokenError:
         response = Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
     return refresh_cookie.clear(response) if from_cookie or refresh_cookie.wants_cookie(request) else response
 
