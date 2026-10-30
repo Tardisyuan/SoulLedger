@@ -77,7 +77,7 @@ def issue(soul, escort=None) -> CaptureWarrant:
     if escort is not None and escort not in CaptureEscort.values:
         raise CaptureRefused("invalid_escort", f"{escort!r} is not an escort.", status=400)
     with transaction.atomic():
-        locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+        locked = Soul.lock(soul.pk)
         if locked.civilization != Civilization.CHINESE:
             raise CaptureRefused("not_diyu", "Only a soul of Diyu is fetched by the ghost escorts.")
         if locked.current_state != SoulState.ALIVE:

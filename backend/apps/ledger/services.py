@@ -253,7 +253,7 @@ class LedgerService:
             # read before another writer committed, and summing records is only
             # half the job -- the row this writes back to has to be the one it
             # locked.
-            soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+            soul = Soul.lock(soul.pk)
             old_merit = soul.merit_score
             old_demerit = soul.demerit_score
 

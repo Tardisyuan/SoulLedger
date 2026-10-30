@@ -689,7 +689,7 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             # move is not available". Both view entry points already exclude
             # deleted rows, so nothing reaches it today; the service layer is
             # callable from elsewhere and should refuse cleanly.
-            locked_soul = Soul.all_objects.select_for_update().get(pk=self.pk)
+            locked_soul = Soul.lock(self.pk)
             if locked_soul.is_deleted:
                 logger.warning(
                     "Refused %s for %s: the soul is soft-deleted.",
