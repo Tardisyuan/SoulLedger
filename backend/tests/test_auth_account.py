@@ -142,17 +142,24 @@ def _lifetime(token):
     return timedelta(seconds=token["exp"] - token["iat"])
 
 
+def _lasts(token, expected):
+    """`iat` and `exp` can come from two clock reads (an access token derived from a refresh token sets its `iat`
+    when it is built and its `exp` from the refresh token's clock), so a second boundary between them reads as
+    1799 s for a 30-minute token. Allow that one second, nothing more."""
+    return abs(_lifetime(token) - expected) <= timedelta(seconds=1)
+
+
 @pytest.mark.django_db
 class TestRememberMe:
     def test_without_remember_the_refresh_token_keeps_the_default_lifetime(self, api_client, django_user_model, cn_tenant):
         refresh = RefreshToken(_login(api_client, django_user_model, cn_tenant).data["refresh"])
-        assert _lifetime(refresh) == DEFAULT_REFRESH
+        assert _lasts(refresh, DEFAULT_REFRESH), _lifetime(refresh)
         assert REMEMBER_CLAIM not in refresh.payload
 
     def test_with_remember_the_refresh_token_lives_30_days(self, api_client, django_user_model, cn_tenant):
         response = _login(api_client, django_user_model, cn_tenant, remember=True)
         refresh = RefreshToken(response.data["refresh"])
-        assert _lifetime(refresh) == REMEMBERED_REFRESH
+        assert _lasts(refresh, REMEMBERED_REFRESH), _lifetime(refresh)
         assert refresh[REMEMBER_CLAIM] is True
         # The outstanding row moved with it — `flushexpiredtokens` deletes by it.
         row = OutstandingToken.objects.get(jti=refresh["jti"])
@@ -162,14 +169,14 @@ class TestRememberMe:
 
         access = AccessToken(response.data["access"])
         assert REMEMBER_CLAIM not in access.payload
-        assert _lifetime(access) == timedelta(minutes=30)
+        assert _lasts(access, timedelta(minutes=30)), _lifetime(access)
 
     def test_a_remembered_token_is_still_remembered_after_rotation(self, api_client, django_user_model, cn_tenant):
         first = _login(api_client, django_user_model, cn_tenant, remember=True).data["refresh"]
         rotated = api_client.post(REFRESH, {"refresh": first}, format="json")
         assert rotated.status_code == 200
         second = RefreshToken(rotated.data["refresh"])
-        assert _lifetime(second) == REMEMBERED_REFRESH
+        assert _lasts(second, REMEMBERED_REFRESH), _lifetime(second)
         assert second[REMEMBER_CLAIM] is True
         assert second["tenant_code"] == "CN_DIYU"
         row = OutstandingToken.objects.get(jti=second["jti"])
@@ -178,7 +185,7 @@ class TestRememberMe:
     def test_an_unremembered_token_rotates_into_an_unremembered_one(self, api_client, django_user_model, cn_tenant):
         first = _login(api_client, django_user_model, cn_tenant).data["refresh"]
         second = RefreshToken(api_client.post(REFRESH, {"refresh": first}, format="json").data["refresh"])
-        assert _lifetime(second) == DEFAULT_REFRESH
+        assert _lasts(second, DEFAULT_REFRESH), _lifetime(second)
         assert REMEMBER_CLAIM not in second.payload
 
     @pytest.mark.parametrize("remember", [True, False])
