@@ -9,7 +9,7 @@
  * the tests for. Importing the leaf modules in place changes nothing in `mobile/`.
  *
  * ONLY LEAF MODULES, on purpose. NEVER import `session`, `chrome`, `navigation`, `push`,
- * `coldStart` or anything under `screens/` from here -- those pull the soul's accounts into
+ * `coldStart` (the soul's shell; `coldStartView` is the shared leaf) or anything under `screens/` from here -- those pull the soul's accounts into
  * this bundle. Which `mobile/src/` files this app actually reaches (the transitive closure of
  * these imports) is pinned, and the forbidden ones refused, by `__tests__/sharedClosure.test.ts`;
  * that list is the record, not this comment. A change to one of those files is a change to both
@@ -52,6 +52,7 @@ export { family, FONT_ASSETS } from "../../mobile/src/fonts";
 export { Icon } from "../../mobile/src/emblems";
 export { BrandMark } from "../../mobile/src/brandMarkView";
 export { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "../../mobile/src/brandMark";
+export { ColdStartView, coldStart } from "../../mobile/src/coldStartView";
 export {
   hydratePersistentStore,
   installMobilePlatform,

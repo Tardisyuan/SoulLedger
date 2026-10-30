@@ -55,6 +55,7 @@ const EXPECTED = [
   "appVersion.ts",
   "brandMark.ts",
   "brandMarkView.tsx",
+  "coldStartView.tsx",
   "crashReport.ts",
   "deepLink.ts",
   "emblems.tsx",
