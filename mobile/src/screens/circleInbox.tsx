@@ -18,7 +18,7 @@ import { useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
 import type { AppStackParams } from "../navTypes";
-import { PagedFooter, usePaged } from "./circle";
+import { PagedFooter, usePaged } from "../paged";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
