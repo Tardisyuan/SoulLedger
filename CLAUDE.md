@@ -275,30 +275,45 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     根因是 `test_event_bus.py` 的 `EventBus().reset()` 清空了全进程共用的事件处理器表,之后同一 worker 上通知、事件、
     WebSocket 推送全丢;根 `conftest.py` 的 `_restore_event_handlers` 现在每条测试后还原(`6d2c21dd`),worksteal 全量两轮 8076 passed。
     打开它是因为不带时 xdist 预先分块,1–2 分钟一条的迁移往返堆在同一个 worker 上:全量在 99% 停 30–40 分钟、七个 worker 空等。
-    保留 `--durations=10`。
+    2026-10-30 起 `--durations=30 --durations-min=5`(此前 `--durations=10`):列出最慢的三十条里超过 5 秒的。
   - **整轮门禁放到 unRAID 上跑(2026-10-28 用户决定，做法一)**:`.prepush.env` 设 `GATES_REMOTE=unraid`(ssh 别名 → `root@192.168.2.2`,
     私钥 `~/.ssh/unraid-host`)和 `GATES_REMOTE_DB_URL`。本机只算「跑什么」、rsync 同步树(含 `.git`,`--no-owner`)到
     `/mnt/cache/appdata/sl-gates/work/<checkout>-<哈希>/`,然后在容器 `sl-gates-all:1`(node 20.19.5 + Python 3.11 + git/redis)里跑
     **同一个 `run-gates.sh`**(`GATES_IN_REMOTE=1`,改动清单经 `PREPUSH_CHANGED` 交过去),输出与退出码传回;成功后「已通过」记账仍记在本机。
-    `node_modules` 与 `backend/.venv` 装在那棵同步树里，锁文件 / package.json 变了才重装(约 2 分钟);数据库是网络 `sl-gates` 里的
-    `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关),所以同时跑 PG-only 测试。远端各 runner 8 个 worker,容器限 12 核 / 24 GB,
+    `node_modules` 与 `backend/.venv` 装在那棵同步树里;**2026-10-30 起两个哈希分开判断**(`run-gates.sh` 的 `REMOTE_DEPS`):
+    JS 哈希 = 各 package.json 的依赖字段(不含 version / scripts)+ 锁文件,变了才 `npm ci`;Python 哈希 = `requirements.lock` +
+    `requirements-dev.txt`,变了只把现有 venv 同步过去(`pip install` 再卸掉清单外的包,`scripts/venv-extras.py`),**不再删掉重建**。
+    此前改一个 package.json 的版本号就两样全重装。数据库是网络 `sl-gates` 里的
+    `sl-pg-test`(pgvector:pg16,tmpfs、fsync 关),所以同时跑 PG-only 测试。容器限 12 核 / 24 GB,
+    **2026-10-30 起后端 pytest 与 JS 测试(core vitest、web jest、两个 App 的 jest)在容器里同时跑**,各 6 个 worker
+    (`GATES_REMOTE_PYTEST_WORKERS` / `GATES_REMOTE_JS_WORKERS` 覆盖;此前各 8 个、先后跑),各写各的日志,一边红另一边照样跑完,
+    最后两份日志都打印、两个退出码一起决定。本机仍是先后跑(本机缺的是内存不是 CPU)。
+    三份 jest 配置(web、灵魂端、官员端)的 `cacheDirectory` 在 `node_modules/.cache/jest`,随同步树留着,下一轮转译命中缓存。
     各 checkout 的运行在那台上用 `flock` 排队。**连不上就拒绝，不退回本机**(本机跑正是卡死电脑的原因);临时要在本机跑就注释掉 `GATES_REMOTE`。
     远端失败日志在 `/mnt/cache/appdata/sl-gates/tmp/<checkout>-<哈希>/`,留一天。**临时目录不能放在同步树里**:放在 `/app` 下时，
     `test_testdb_name` 的子 pytest 会在它的 tmp_path 上层找到仓库根的 conftest,配置生效两次，每次委托运行都红(10-28)。
     实测(后端同一组：judgment 选择 + 28 条 PG-only):unRAID `-n 8` **2983 passed / 306 s,本机 CPU ≈ 0**;本机 SQLite `-n 2` 313 s / CPU 566 s;
-    本机进程连树莓派 PG 830 s;全在树莓派 753 s。约 100 s 是开头单线程建模板库。
+    本机进程连树莓派 PG 830 s;全在树莓派 753 s。当时约 100 s 是开头单线程建模板库。
+    **2026-10-30 起远端的 PG 模板库按输入哈希留着复用**(`backend/config/testdb.py`,只在 `GATES_IN_REMOTE=1` 时):
+    模板名 `test_soulledger_tpl_h<哈希>`,哈希与 SQLite 模板同一套输入(`config/sqlite_template.py`)加服务器版本;
+    同哈希已有就直接克隆、不迁移,跑完不删,按最近使用留最新 3 个。真迁移的运行(`--full` / `GATES_FULL=1` / 本轮含迁移往返)
+    照样新建模板、在它上面跑，再和留着的同哈希模板逐项比(结构 + 全部行，时间戳屏蔽),不一致就删掉留着的并让本轮红(`TemplateDriftError`)。
+    本机、CI、其他不带 `GATES_IN_REMOTE=1` 的运行不变：每轮一个模板，跑完删。
+    实测(10-30,unRAID 整轮门禁):选择性**冷 392 s / 模板命中 280 s**;`--full` **625 s**。
     搬过去时撞到的三处 Linux/macOS 差异(都已修):GNU `mktemp` 要 `XXXXXX`;rsync 保留 Mac 的 uid 时 git 在容器里拒认仓库
     (门禁测试设了 `GIT_CONFIG_NOSYSTEM`);外层的 `GATES_*` 环境串进门禁测试起的子门禁(`_clean_env` 现在去掉全部 `GATES_*`)。
     10-28 本机全量推送那次 15 条实时类测试红(`test_realtime_bus` 等)，空闲时本机与 unRAID 都 34/34 过 —— 交换区满时的超时，不是代码。
   - **E2E 也在 unRAID 上跑(2026-10-28 用户决定)**:`scripts/run-gates.sh --e2e`(chromium)、`--e2e=all`(三个)、
     `--e2e=chromium,mobile-chrome`(列表)。镜像 `sl-gates-e2e:1` = `sl-gates-all:1` + Playwright 1.63 的 chromium / firefox;
     先 `next build`,4 个 worker、`--retries=1`(重试才过的按名字报 flaky,不藏),`--reporter=line`(html 报告器失败时会起服务等人看，
-    在容器里会挂住)。没有 `GATES_REMOTE` 就拒绝，不在本机跑。日志在 unRAID 的 `sl-gates/tmp/<checkout>/e2e-<project>.log`。
+    在容器里会挂住)。没有 `GATES_REMOTE` 就拒绝，不在本机跑。**2026-10-30 起所有 project 一次 `playwright test` 跑完**
+    (一个 `next start`,worker 不在每个 project 的尾巴上空等),各 project 的 passed / failed / flaky 与失败、flaky 的测试名
+    由 json 报告器经 `scripts/e2e-report.py` 汇总。日志在 unRAID 的 `sl-gates/tmp/<checkout>/e2e.log`(此前每个 project 一份)。
     **2026-10-29 起 E2E 有自己的同步树(`work/<checkout>-<哈希>-e2e`)和自己的锁(`e2e.lock`,容器默认 8 核 / 16 GB,
     `GATES_REMOTE_E2E_CPUS` / `GATES_REMOTE_E2E_MEMORY` 覆盖)**,可以和一轮门禁同时跑,不再排在 `run.lock` 后面。
     安卓调试包与 Metro 也能放到那台上:`scripts/mobile-remote.sh`(本机只剩 adb 装包,`67fa9e90` / `7d4c36e7`)。
-    实测(10-28,同一棵树):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
-    (本机 10-27:3.6 / 7.9 / 4.5 分钟)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
+    实测(10-28,逐 project 跑的时候):build 31 s;chromium 236 passed / 70 s;firefox 236 / 86 s;mobile-chrome 229 / 68 s;`--e2e=all` 全程 243 s
+    (本机 10-27:3.6 / 7.9 / 4.5 分钟)。10-30 一次调用之后 `--e2e=all` 全程 **309 s**(unRAID,与 10-28 不是同一棵树)。mobile-chrome 在 4 worker 下偶有一条慢到超时(两轮里各一条、每次不同),单独跑 10/10 过 ——
     所以用一次重试并点名，不加 skip。
   - **E2E 不用 Playwright 的 `--only-changed`**:它按 spec 的 import 关系选，而这里的 spec 用网址打开页面、不 import 页面，
     改了页面它一个 spec 都选不中。E2E 仍按上面那条(日常 chromium,改布局加 mobile-chrome,合 main 前三个全跑)。
@@ -394,7 +409,7 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
   .venv/bin/python -m pytest --tb=short -q
-# ↑ 这是 CI 的形状:全部测试 + 覆盖率与 80% 下限。**pre-push 不是这条**,见下。
+# ↑ 这是 CI 的形状:全部测试 + 覆盖率与 80% 下限。CI 2026-10-30 起另加 `-n auto --dist worksteal`(此前串行)。**pre-push 不是这条**,见下。
 #
 # pre-push 的后端 pytest(2026-09-29 起)与上面有三处不同,都是有意的:
 #   --no-cov            覆盖率与 `--cov-fail-under=80` **只在 CI 里查**。而 CI 不在推送上跑
@@ -622,6 +637,8 @@ jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,�
 (调拨走 dispatch 域、受刑计划走 sentence_plan 域)。两条都由 `AuditHandler` 写行,规则相同;**不要直接 `SoulEvent.objects.create`**
 —— 那样的行到不了任何别的处理器(此前调拨与受刑计划就是这样,推送靠 post_save 补接,webhook / 实时推送收不到)。
 `AuditHandler` 找不到灵魂(软删、不在事件租户、也不在其原属租户)**抛 `SoulEventTargetError`**,业务随之回滚,不再静默跳过。
+同一轮:`AuditUserFields.save(update_fields=[…])` 部分保存自动补写 `version` / `update_user` / `update_time`(`apps/core/models.py`,
+`tests/test_partial_save_persists_bookkeeping.py`),调用方不要再手写这三项。
 事件类型必须先登记进 `EventType`(`tests/test_event_types_fit_the_column.py` 会点名),登记后前端那几道守卫会跟着要词条;
 egy 没有 Design 的词时把键写进 `frontend/src/__tests__/support/egyPendingKeys.json`,后端和前端的守卫现在都认这份清单。
 

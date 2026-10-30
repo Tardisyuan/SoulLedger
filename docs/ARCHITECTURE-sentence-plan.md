@@ -147,9 +147,9 @@ flowchart TD
 | 联审的权限族 `cross_judgment.read / .create`,持有者 ADMIN / JUDGE / MODERATOR;只有发起方能 seat 参与方与 activate;发起方或任一参与方可 conclude | `apps/dispatch/views.py:393-625`;`apps/perm/models.py:338-339` |
 | 灵魂推送:调拨批准 / 暂居开始 / 回归三种 kind,由事件总线的 `SoulPushHandler` 接(dispatch 域;2026-10-30 前是 `SoulEvent.post_save` 信号);文案权威在 `packages/core/messages/*.json`,后端副本由测试逐字钉住 | `apps/soul_push/services.py:80-118`;`apps/soul_push/handler.py`;`apps/soul_push/messages.py:1-23` |
 | 官员通知的多语言文案同一套办法;目前只有 `dispatch_return_blocked` 一种 | `apps/notifications/messages.py:11-36` |
-| App 显示「暂居 X · 原属 Y」;皮肤跟当前文明,词表跟原属 | `mobile/src/rules.ts:181-188`;`mobile/src/screens/life.tsx:278-283`;`/me` 给出 `home_tenant`、`is_residing`:`apps/soul_accounts/serializers.py:69-72` |
+| App 显示「暂居 X · 原属 Y」;皮肤跟当前文明,词表跟原属 | `mobile/src/rules.ts` 的 `residenceOf`;`mobile/src/residence.ts`(`useResidence` / `useResidenceNames`,2026-10-30 从 `screens/life.tsx` 与 `applications.tsx` 移出,断开 require 环);`/me` 给出 `home_tenant`、`is_residing`:`apps/soul_accounts/serializers.py:69-72` |
 | 审批工作流:`ApprovalWorkflow.tenant` 单租户;节点审批人按 ACTOR / ROLE / SYSTEM,`can_approve` 失败即拒;有条件路由 `on_pass` / `on_fail`;终态只有 COMPLETED / REJECTED | `apps/workflow/models.py:148-153`、`:665-740`、`:609-624`、`:31-34` |
-| 行锁写法:`select_for_update(of=("self",))`;pytest 插件在 SQLite 上也拦「锁语句连带关联表却没写 `of=`」 | `apps/core/lock_join_guard.py:1-25` |
+| 行锁写法:`select_for_update(of=("self",))`;pytest 插件在 SQLite 上也拦「锁语句连带关联表却没写 `of=`」。灵魂行 2026-10-30 起只经 `Soul.lock` / `Soul.lock_many`(`tests/test_soul_lock.py` 守着) | `apps/core/lock_join_guard.py:1-25`;`apps/souls/models.py` |
 | PG 专属并发测试 7 条 `skipif(SQLITE)`,集合被 `test_the_postgres_only_set_is_the_set_we_think_it_is` 钉住 | `tests/test_concurrency.py:109-639`、`:851` |
 | 提交的 OpenAPI 文档必须与后端生成的一致;core 的 `schema.ts` 由它生成 | `tests/test_committed_schema_matches_the_backend.py`;`packages/core/package.json:37` |
 
@@ -408,7 +408,7 @@ next.status = DISPATCHING; next.dispatch_record_id = record.id
 | 调拨被拒 / 取消 | `DispatchService.reject` / `cancel` | 节点 → PENDING,`SENTENCE_NODE_REFUSED`,通知原属判官;不自动重试(Q4) |
 | 请求被决定 | `SentencePlanRequestService.decide` | ACCEPT 时应用 changes(REOPEN 则立即建审判,§4.3);`advance` |
 
-**灵魂 `current_state` 不加新值。** 整个计划期间灵魂保持 DISPOSED(今天暂居也是这样,`disposition/services.py:757-761`);计划完成那一刻做今天原属处置执行做的那次转移。不加新 `SoulState` 的理由与 `UNKNOWN_CIVILIZATION` 那段注释相同(`souls/models.py:97-110`):`SoulState.choices` 是多处模型字段的 `choices=`,App 的六枚徽章逐个枚举(`mobile/src/rules.ts:36-61`)。
+**灵魂 `current_state` 不加新值。** 整个计划期间灵魂保持 DISPOSED(今天暂居也是这样,`disposition/services.py:757-761`);计划完成那一刻做今天原属处置执行做的那次转移。不加新 `SoulState` 的理由与 `UNKNOWN_CIVILIZATION` 那段注释相同(`souls/models.py:97-110`):`SoulState.choices` 是多处模型字段的 `choices=`,App 的六枚徽章逐个枚举(`mobile/src/rules.ts` 的 `SOUL_STATE_BADGES`;未知值的 `UNKNOWN_BADGE` 2026-10-30 起在 `layout.ts`)。
 
 `ReincarnationService.execute` 的原属守卫(`reincarnation/services.py:66-68`)保留;`disposition/views.py:132-152` 里那次 `ReincarnationService.execute(disposition)` 挪到 `advance` 的完成分支。
 
@@ -556,7 +556,7 @@ if plan is None or plan.status != COMPLETED: return False, "sentence_in_progress
 - **幂等:**`advance` 是状态的纯函数;并发调用被灵魂行锁串行化;串行化失效时 `unique_active_dispatch` 与「至多一个 DISPATCHING/ACTIVE 节点」两条部分唯一约束把第二条写入变成 IntegrityError(视图翻成 4xx,同 `dispatch/views.py:199-203`)。
 - **G7 补上:**`JudgmentViewSet.perform_create` 在建案前锁灵魂行。
 - **G11 可选加固:**未结案审判按 soul 的部分唯一约束(与现有规则同义,只是落到数据库层)。
-- 事件与通知在事务提交后发(`transaction.on_commit`,同 `soul_push/handler.py:20-35`);`SoulEvent` 与 `AuditLog` 在事务内写。
+- 事件与通知在事务提交后发(`transaction.on_commit`,同 `soul_push/handler.py:20-35`);`SoulEvent` 与 `AuditLog` 在事务内写。受刑计划事件 2026-10-30 起经 `event_bus.publish_soul_event(…, domain="sentence_plan")`,webhook 与网页实时推送都收。
 
 **PostgreSQL 专属测试清单**(`skipif(SQLITE)`,加进 `test_the_postgres_only_set_is_the_set_we_think_it_is` 的集合):
 

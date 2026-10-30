@@ -137,7 +137,7 @@ are the whole of the isolation"）。
 
 | 规则 | 出处 | 执法 |
 |---|---|---|
-| 继承 `AuditUserFields`（自带 create/update user+time、`version`、软删五字段） | `apps/core/models.py:11-75`；`soft_delete.py:32-51` | `[多数派]`【实跑】**38 个**继承；裸 `models.Model` 5 处，其中 2 个是 mixin，真正的例外是 `perm.FieldPermission:467`(当时还有一张行级规则表,数据范围 B7 删了)、`social.UserProfile:288` |
+| 继承 `AuditUserFields`（自带 create/update user+time、`version`、软删五字段）。2026-10-30 起 `save(update_fields=[…])` 部分保存会自动补上 `version` / `update_user` / `update_time`，调用方不再手写这三项 | `apps/core/models.py:11-75`；`soft_delete.py:32-51`；`[test:test_partial_save_persists_bookkeeping]` | `[多数派]`【实跑】**38 个**继承；裸 `models.Model` 5 处，其中 2 个是 mixin，真正的例外是 `perm.FieldPermission:467`(当时还有一张行级规则表,数据范围 B7 删了)、`social.UserProfile:288` |
 | 参与审判流程的再叠 `ArchivableMixin` | `apps/core/archive.py:32`；souls / judgment / disposition | `[多数派 3/3]` |
 | tenant FK 写法 `ForeignKey("tenants.Tenant", on_delete=CASCADE, related_name=...)` | `apps/souls/models.py:254-259` | `[多数派]`。`null=True` 18/25；非空的是 social 4 表 + death_sync 3 表 |
 | 声明 `all_objects` 在前、`objects = TenantManager()` 在后（前者要当 `_base_manager`） | `apps/judgment/models.py:89-90` | `[多数派 13]`，注释即理由 |
@@ -372,9 +372,20 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | `manage.py check --deploy` | — | **任何地方都不跑** |
 | `SENTRY_DSN` 生产缺失 | `settings.py:417-424` | 只 `warnings.warn`，**不 fail closed** |
 
-**锁：** `select_for_update` 有 10 个生产站点，分布在 model 方法、service、view 三层，
-配 `transaction.atomic()`（services 里 23 处）。**日志与事件发送放在 `atomic()` 块之后**
-（`apps/souls/models.py:546-547`）。
+**锁：** 锁灵魂行**只用 `Soul.lock(pk)` / `Soul.lock_many(pks)`**（`apps/souls/models.py`，2026-10-30）：
+`all_objects`（软删的也锁，由调用方决定怎么处理）、`of=("self",)`、多行按 pk 排序防死锁；容忍行不存在的地方用
+`lock_many([pk])`。此前约 30 处手写的 `Soul…select_for_update`（有的带 `of=` 有的不带）都已改过来，
+`tests/test_soul_lock.py` 的守卫在两个 helper 之外再出现一处就红。其它模型的锁照旧配 `transaction.atomic()`。
+**事件写在业务事务里面，给人的通知、推送、webhook 放 `transaction.on_commit`**（`CLAUDE.md`「事件日志」一节；
+此前这里写的是「日志与事件发送放在 `atomic()` 块之后」，2026-10-10 起已不成立）。
+入口：只上灵魂时间线用 `EventService.log*`；还要网页实时推送与租户 webhook 的用
+`event_bus.publish_soul_event(soul, …, domain=…, tenant=…)`（调拨、受刑计划自 2026-10-30 起走这条）；不要直接
+`SoulEvent.objects.create`。`AuditHandler` 找不到灵魂抛 `SoulEventTargetError`，业务随之回滚。
+**出站地址校验（SSRF）**在 `apps/core/outbound.py`（2026-10-30 从 `apps/death_sync/webhook_service.py` 搬来，旧文件已删），
+事件 webhook、死亡登记 webhook、助手模型地址共用。**发信**一律提交后入队 celery 任务，消息里只放 id / 随机 token，
+验证码与明文在缓存或加密列里（`apps/authentication/tasks.py`、`apps/soul_accounts/tasks.py`）。
+**开案**规则在 `JudgmentService.open_case`（`POST /judgment/` 与受刑计划 REOPEN 共用）。
+**权限检查**（`apps/perm/cache.py`）同一请求内对同一 (角色, 码名) 只问一次 Redis，任何失效都清掉这份记忆。
 
 ---
 

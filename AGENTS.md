@@ -408,10 +408,13 @@ SoulLedger/
 3. `views.py` — ViewSet，`perform_create` 必须设置 `tenant`
 4. `urls.py` — 注册路由
 5. Migration：`cd backend && .venv/bin/python manage.py makemigrations`（解释器是 `backend/.venv`，不是 PATH 上的 `python`；建法与原因见 `CLAUDE.md` 的 Build & Test）
+6. 写法（2026-10-30 起，细节见 `docs/CONVENTIONS-backend.md` §9「锁」一段）：锁灵魂行只用 `Soul.lock` / `Soul.lock_many`（有守卫）；灵魂事件用 `EventService.log*` 或 `event_bus.publish_soul_event`，写在业务事务里，不直接 `SoulEvent.objects.create`；发信提交后入队 celery 任务（消息只放 id）；出站地址校验用 `apps/core/outbound.py`
 
 **前端**：
 1. `packages/core/src/api/xxx.ts` — 添加 API 方法（JWT Authorization；`frontend/lib/api.ts` 已不存在）
-2. `packages/core/src/hooks/useXxx.ts` — TanStack Query hooks（`frontend/src/hooks/` 只放视图层 hook）
+2. `packages/core/src/hooks/useXxx.ts` — TanStack Query hooks（`frontend/src/hooks/` 只放视图层 hook）；query key 用
+   `packages/core/src/query_keys.ts` 里该资源的工厂（一个资源一个），拒绝码用 core 的 `responseCode(err)` 读，
+   「无殿 ADMIN」读 `usePermissions().isTenantExempt`（写法见 `docs/CONVENTIONS-frontend.md` §1、§7）
 3. `frontend/app/xxx/page.tsx` — 列表页（`PageShell` 骨架，样式守 §1）
 4. `components/xxx/XxxModal.tsx` — 创建/编辑弹窗（用 `BaseModal`）
 5. Build + 验证
