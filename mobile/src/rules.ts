@@ -251,13 +251,8 @@ export function termServed(startedOn: string | null | undefined, endsOn: string 
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** A server timestamp as the value the design shows in mono: `YYYY-MM-DD HH:mm`, device time. */
-export function formatStamp(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+/** `YYYY-MM-DD HH:mm`, device time — one copy in core, shared with the officer app. */
+export { formatStamp } from "@soulledger/core/domain/dates";
 
 // ── password reset (「忘记密码」) ──────────────────────────────────────
 

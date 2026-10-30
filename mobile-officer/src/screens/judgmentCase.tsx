@@ -8,6 +8,8 @@
  */
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { soulsApi, type SoulRecordEntry } from "@soulledger/core/api/souls";
+import type { Locale } from "@soulledger/core/config/locale";
+import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
@@ -27,13 +29,13 @@ export function summaryFolds(text: string): boolean {
   return text.length > SUMMARY_FOLD_CHARS || text.split("\n").length > SUMMARY_LINES;
 }
 
-export function recordDate(r: Pick<SoulRecordEntry, "event_date" | "recorded_at">): string {
-  const d = r.event_date;
-  return d ? [d.year, d.month, d.day].filter((x) => x != null).join("-") : formatWhen(r.recorded_at).slice(0, 10);
+/** When a record happened: its historical date in core's words (BC years too), else the day it was entered. */
+export function recordDate(r: Pick<SoulRecordEntry, "event_date" | "recorded_at">, locale: Locale): string {
+  return formatHistoricalDate(r.event_date, locale) ?? formatWhen(r.recorded_at).slice(0, 10);
 }
 
 export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRecord: (r: SoulRecordEntry) => void }) {
-  const { t, enumLabel } = useI18n();
+  const { t, enumLabel, locale } = useI18n();
   const [expanded, setExpanded] = useState(false);
   // 一段取不到不挡别的段:失败 = 那一段不画,整体写一句「案情没有加载出来」。
   const loadRecords = useCallback(() => Promise.resolve().then(() => soulsApi.records(data.soul)).then((r) => r.data), [data.soul]);
@@ -70,7 +72,7 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
                 testID={`evidence-${r.id}`}
                 minHeight={64}
                 title={r.description}
-                lines={[{ one: [source?.state === "known" ? source.label : null, recordDate(r)].filter(Boolean).join(" · ") }]}
+                lines={[{ one: [source?.state === "known" ? source.label : null, recordDate(r, locale)].filter(Boolean).join(" · ") }]}
                 onPress={() => onOpenRecord(r)}
                 right={<Txt variant="nav">›</Txt>}
               />
@@ -110,13 +112,13 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
 
 /** 纯文字的证据:全文页。 */
 export function EvidenceText({ record, onBack }: { record: SoulRecordEntry; onBack: () => void }) {
-  const { enumLabel } = useI18n();
+  const { enumLabel, locale } = useI18n();
   const source = record.evidence_source ? enumLabel("souls.evidence_sources", record.evidence_source) : null;
   return (
     <AccountFrame testID="evidence-text" onBack={onBack}>
       <Txt variant="title">{record.description}</Txt>
       <Txt variant="caption" tone="muted">
-        {[source?.state === "known" ? source.label : null, recordDate(record)].filter(Boolean).join(" · ")}
+        {[source?.state === "known" ? source.label : null, recordDate(record, locale)].filter(Boolean).join(" · ")}
       </Txt>
       {record.evidence_note ? <Txt variant="body">{record.evidence_note}</Txt> : null}
     </AccountFrame>

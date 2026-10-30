@@ -385,6 +385,23 @@ describe("出身地域 (Design 第四十五批 O-1)", () => {
   });
 });
 
+// cq-apps 2026-10-30 #3:日期走 core 的 formatHistoricalDate。此前 `[year, month, day].join("-")`,公元前 44 年写成 `-44-3-15`。
+describe("historical dates", () => {
+  it("birth / death and a deed's date read in words, BC included, never the dashed join", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, birth_date: { year: -44, month: 3, day: 15 }, death_date: { year: 12, month: null, day: null } } });
+    mockRecords.mockResolvedValue({ data: [{ ...record(1), event_date: { year: -500, month: 6, day: null } }] });
+    await openSoul();
+    const identity = await screen.findByTestId("soul-identity");
+    expect(within(identity).getByText("前44年 · 3月15日 · 湖州")).toBeTruthy();
+    expect(within(identity).getByText("12年")).toBeTruthy();
+    expect(within(identity).queryByText(/-44-3-15/)).toBeNull();
+    fireEvent.press(screen.getByTestId("soul-tab-karma"));
+    const row = await screen.findByTestId("soul-karma-row-r1");
+    expect(within(row).getByText(/前500年 · 6月/)).toBeTruthy();
+    expect(within(row).queryByText(/-500-6/)).toBeNull();
+  });
+});
+
 // 第五十七批 六:地府灵魂的身份页签多两行只读 —— 十三站「第 n / 13 站 · 站名」与勾魂状态。挪站、发牒留在网页上。
 describe("十三站与勾魂 (Design 第五十七批 六)", () => {
   it("on the road: station n of 13 by name; the latest warrant's status and escort, words not members", async () => {

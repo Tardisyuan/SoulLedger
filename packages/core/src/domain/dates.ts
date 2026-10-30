@@ -161,6 +161,19 @@ export function formatIsoDay(iso: string | null | undefined, locale: Locale = DE
   return m ? (formatHistoricalDate({ year: +m[1], month: +m[2], day: +m[3] }, locale) ?? "") : (iso ?? "");
 }
 
+/**
+ * A server timestamp as both apps print it in mono: `YYYY-MM-DD HH:mm`, in the device's own time zone.
+ * Null for nothing or an unparseable value. One copy (cq-apps 2026-10-30 #3): it was the soul app's
+ * `formatStamp` and the officer app's `formatWhen`, line for line.
+ */
+export function formatStamp(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /** Local calendar date as `YYYY-MM-DD` — the shape `Judgment.held_until` comes in. */
 function localIsoDate(now: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
