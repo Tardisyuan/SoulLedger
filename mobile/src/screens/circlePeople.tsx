@@ -33,7 +33,8 @@ import { SessionContext } from "../session";
 import { radius } from "../theme";
 import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "../navTypes";
-import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
+import { PostList } from "./circle";
+import { PagedFooter, useFailure, useFeed, usePaged } from "../paged";
 import { Glyph, Tag } from "./letters";
 
 type Nav = NativeStackNavigationProp<AppStackParams>;
