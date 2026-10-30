@@ -129,6 +129,56 @@ def _send(subject_kind, to, account, *, code=None, email=None):
                           rows=[], notes=[fill(text["note"], email=email)], to=[to], locale=locale)
 
 
+# ── 发信在 worker 里(perf-audit A4,2026-10-30)──────────────────────────────────────────────────────────
+# 请求只入队账号 id;码、地址都在缓存里,任务读出来再发 —— 验证码不进 broker。broker 连不上时就地发(与改之前一样)。
+
+def _changed_key(account_id):
+    return f"soul_email_change:{account_id}:notice"
+
+
+def _enqueue(task, account_id):
+    try:
+        task.delay(account_id)
+    except Exception:
+        logger.warning("contact email: enqueue failed, sending inline", exc_info=False)
+        task.run(account_id)
+
+
+def _account(account_id):
+    from apps.soul_accounts.models import SoulAccount
+
+    return SoulAccount.objects.select_related("soul").filter(pk=account_id).first()
+
+
+def send_pending_code(account_id):
+    """`soul_accounts.send_contact_email_code` 的正文:发缓存里那个码(已被新的一次覆盖就发新的,过期就不发)。"""
+    account = _account(account_id)
+    pending = account and cache.get(_keys(account)["code"])
+    if not pending:
+        return False
+    try:
+        _send("email_code", pending["email"], account, code=pending["code"])
+    except Exception:  # 发信失败不带码记日志;App 照常进下一步,收不到就「重新发送」
+        logger.error("contact email change code could not be sent", exc_info=False)
+        return False
+    return True
+
+
+def send_changed_notice(account_id):
+    """`soul_accounts.send_contact_email_changed` 的正文:通知旧邮箱,地址在缓存里(确认那一步写的)。"""
+    notice = cache.get(_changed_key(account_id))
+    cache.delete(_changed_key(account_id))
+    account = notice and _account(account_id)
+    if not account:
+        return False
+    try:
+        _send("email_changed", notice["to"], account, email=notice["email"])
+    except Exception:
+        logger.error("contact email change notice could not be sent", exc_info=False)
+        return False
+    return True
+
+
 class MeContactEmailView(SoulAPIView):
     @extend_schema(responses={200: ContactEmailStatusSerializer})
     def get(self, request):
@@ -151,10 +201,9 @@ class MeContactEmailView(SoulAPIView):
         code = f"{secrets.randbelow(900000) + 100000:06d}"
         cache.set(keys["code"], {"email": email, "code": code}, timeout=CODE_SECONDS)
         cache.delete(keys["tries"])
-        try:
-            _send("email_code", email, account, code=code)
-        except Exception:  # 发信失败不带码记日志;App 照常进下一步,收不到就「重新发送」
-            logger.error("contact email change code could not be sent", exc_info=False)
+        from apps.soul_accounts.tasks import send_contact_email_code
+
+        _enqueue(send_contact_email_code, account.pk)
         return Response({"sent_to": email}, status=status.HTTP_202_ACCEPTED)
 
 
@@ -212,8 +261,10 @@ class MeContactEmailConfirmView(SoulAPIView):
                   changes={"contact_email_changed_by_soul": True})
         cache.delete_many(list(keys.values()))
         if old:
-            try:
-                _send("email_changed", old, account, email=mask(new))
-            except Exception:
-                logger.error("contact email change notice could not be sent", exc_info=False)
+            from django.db import transaction
+
+            from apps.soul_accounts.tasks import send_contact_email_changed
+
+            cache.set(_changed_key(account.pk), {"to": old, "email": mask(new)}, timeout=CODE_SECONDS)
+            transaction.on_commit(lambda: _enqueue(send_contact_email_changed, account.pk))
         return Response(status_of(account))
