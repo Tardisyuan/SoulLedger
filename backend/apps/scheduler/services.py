@@ -352,7 +352,7 @@ def alert_recipients(job: ScheduledJob):
     users = list(User.objects.filter(role="ADMIN", tenant__isnull=True, is_active=True))
     if job.tenant_id is not None:
         for user in User.objects.filter(tenant_id=job.tenant_id, is_active=True):
-            if user.role == "ADMIN" or check_permission(user, "scheduler.manage"):
+            if check_permission(user, "scheduler.manage"):  # ADMIN-only code: the hall's own ADMINs
                 users.append(user)
     return users
 

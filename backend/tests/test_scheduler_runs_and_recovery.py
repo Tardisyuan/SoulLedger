@@ -454,6 +454,12 @@ def test_alert_recipients_are_admins_plus_tenant_holders_of_manage(db, admin_use
     assert set(services.alert_recipients(job)) == {admin_user}
     assert judge_user not in set(services.alert_recipients(job))
 
+    # The job's own hall's ADMIN is told (through check_permission's ADMIN answer, not a separate role test).
+    from django.contrib.auth import get_user_model
+
+    cn_admin = get_user_model().objects.create_user(username="cn_hall_admin", password="x", role="ADMIN", tenant=cn_tenant)
+    assert set(services.alert_recipients(job)) == {admin_user, cn_admin}
+
 
 # ---------------------------------------------------------------------------
 # Overdue
