@@ -81,10 +81,13 @@ def test_the_role_selectors_read_the_role_table_not_a_restated_list(rel):
     it. Since 2026-09-12 `User.role` is validated against the role table (a
     role created on the permissions screen can be held), so ANY list written
     into the page is wrong the moment an admin creates one. Both selectors now
-    read `permApi.roles.list()`; what this pins is that no literal role option
-    creeps back in beside it.
+    read the table — since 2026-10-30 through core's `useRoles()` (one query key,
+    `permKeys.roles`), which calls `permApi.roles.list()`; what this pins is that
+    no literal role option creeps back in beside it.
     """
     page = (FRONTEND / rel).read_text(encoding="utf-8")
-    assert "permApi.roles.list()" in page, f"{rel} no longer reads the role table"
+    hook = (FRONTEND.parent / "packages/core/src/hooks/usePermissionMatrix.ts").read_text(encoding="utf-8")
+    assert "useRoles(" in page or "permApi.roles.list()" in page, f"{rel} no longer reads the role table"
+    assert "permApi.roles.list()" in hook, "core useRoles() no longer reads the role table"
     restated = [r for r in UserRole.values if f'value="{r}"' in page or f'value: "{r}"' in page]
     assert not restated, f"{rel} restates role option(s) {restated} beside the table-driven list"
