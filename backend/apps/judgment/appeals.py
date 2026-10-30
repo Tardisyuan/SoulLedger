@@ -36,7 +36,7 @@ from apps.judgment.models import (
     JudgmentAppeal,
     JudgmentKind,
 )
-from apps.souls.models import Civilization
+from apps.souls.models import Civilization, Soul
 
 
 class AppealRefusedError(ClaimRefusedError):
@@ -386,15 +386,13 @@ def decide(appeal_id, user, *, outcome, note, verdict=None, keep_foreign_stops=N
 
     锁序:灵魂 → 申诉 → 计划 → 节点 → 处置 → 审判。改判的事务里:审判换成新裁决、计划改按新裁决、
     已执行的每一站一笔补偿、推进计划、事件 —— 任何一步拒绝,整笔回滚。"""
-    from apps.sentence_plan.services import _lock_soul
-
     if outcome not in (AppealStatus.UPHELD, AppealStatus.AMENDED):
         raise AppealRefusedError("outcome is UPHELD or AMENDED.", "invalid_outcome", status=400)
     with transaction.atomic():
         row = JudgmentAppeal.all_objects.filter(pk=appeal_id, is_deleted=False).first()
         if row is None:
             raise AppealRefusedError("No such appeal.", "not_found", status=404)
-        soul = _lock_soul(row.soul)
+        soul = Soul.lock(row.soul_id)
         appeal = _lock_appeal(appeal_id)
         if appeal.status not in OPEN_APPEAL_STATUSES:
             raise AppealRefusedError(f"This appeal is {appeal.status}.", "appeal_closed")

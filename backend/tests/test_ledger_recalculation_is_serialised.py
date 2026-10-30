@@ -109,8 +109,12 @@ def test_the_recalculation_takes_a_row_lock():
     attrs = {
         node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)
     }
-    assert "select_for_update" in attrs, (
+    soul_locks = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and node.attr == "lock" and ast.unparse(node.value) == "Soul"
+    ]
+    assert soul_locks, (
         "重算不再取行锁 —— PostgreSQL 上两个并发重算会丢失更新,"
         "而分数偏低会改变一个灵魂被送去哪个殿"
     )
-    assert "atomic" in attrs, "select_for_update 不在事务里是空操作"
+    assert "atomic" in attrs, "Soul.lock(select_for_update)不在事务里是空操作"

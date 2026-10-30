@@ -193,7 +193,7 @@ def _lock_account(account):
     申诉、缩短冷却握着账号插入带灵魂外键的行,是同一个形状,所以锁放在这里,三个调用方一起。"""
     from apps.souls.models import Soul
 
-    Soul.all_objects.select_for_update(of=("self",)).filter(pk=account.soul_id).first()
+    Soul.lock_many([account.soul_id])
     return SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "soul__home_tenant", "user").get(pk=account.pk)
 
 

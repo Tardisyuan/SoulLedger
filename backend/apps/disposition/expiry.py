@@ -332,7 +332,7 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
             with transaction.atomic():
                 # The soul first, then the row: the lock order of an appeal's amendment (soul → plan → nodes →
                 # dispositions) and of the officer's release (`views.release`), 2026-10-29.
-                Soul.all_objects.select_for_update(of=("self",)).filter(pk=soul_id).first()
+                Soul.lock_many([soul_id])
                 row = (
                     Disposition.objects.select_for_update(of=("self",))
                     .select_related("soul", "destination_realm")

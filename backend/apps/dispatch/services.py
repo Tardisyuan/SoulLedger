@@ -373,10 +373,12 @@ class DispatchService:
         """
         # 殿可以在提案挂着的时候关掉:批准是目标殿的「收下」,关着的殿不收(驳回仍可以)。
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
+        from apps.souls.models import Soul
+
         with transaction.atomic():  # 状态与事件同进退(CLAUDE.md「事件日志是业务记录的一部分」)
             # 锁序 灵魂 → 调拨记录,同 reject / cancel_proposed。事件行的外键要灵魂行的 KEY SHARE 锁:
             # 先锁记录再写事件,与先锁灵魂再锁记录的取消互相等,真 PG 上死锁(test_concurrency 抓到)。
-            DispatchService._lock_soul(dispatch_record.soul_id)
+            Soul.lock(dispatch_record.soul_id)
             if not dispatch_record.transition_to(
                 DispatchStatus.APPROVED, decided_at=timezone.now(), decided_by=_decider(approver),
             ):
@@ -403,9 +405,11 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
+        from apps.souls.models import Soul
+
         with transaction.atomic():
             # 锁序 灵魂 → 计划 → 节点 → 调拨记录(docs/ARCHITECTURE-sentence-plan.md §8)。
-            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            soul = Soul.lock(dispatch_record.soul_id)
             if not dispatch_record.transition_to(
                 DispatchStatus.REJECTED, decided_at=timezone.now(), decided_by=_decider(rejector), decision_reason=reason or "",
             ):
@@ -459,7 +463,7 @@ class DispatchService:
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
 
         with transaction.atomic():
-            soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=dispatch_record.soul_id)
+            soul = Soul.lock(dispatch_record.soul_id)
             # 提议时 propose() 检查过这两条;批准到执行之间灵魂可能已经不在源租户
             # (例如被另一条路径调走又没回来)。在行锁下再问一次。
             if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
@@ -517,8 +521,10 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
+        from apps.souls.models import Soul
+
         with transaction.atomic():
-            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            soul = Soul.lock(dispatch_record.soul_id)
             if not dispatch_record.transition_to(
                 DispatchStatus.CANCELLED, decided_at=timezone.now(), decided_by=_decider(canceller),
             ):
@@ -538,8 +544,10 @@ class DispatchService:
         受刑计划自动发起的调拨被取消后,节点照 `on_dispatch_refused` 退回 PENDING(不自动重试)。
         事件写在事务里;站内通知提交后才发。
         """
+        from apps.souls.models import Soul
+
         with transaction.atomic():
-            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            soul = Soul.lock(dispatch_record.soul_id)
             current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
             if current.status != DispatchStatus.PROPOSED:
                 raise DispatchNotCancellableError(current.status)
@@ -569,12 +577,6 @@ class DispatchService:
 
         _after_commit(send)
 
-    @staticmethod
-    def _lock_soul(soul_id):
-        from apps.souls.models import Soul
-
-        return Soul.all_objects.select_for_update(of=("self",)).get(pk=soul_id)
-
     RETURN_ON_DISPOSITION = "DISPOSITION_EXECUTED"
     RETURN_MANUAL = "MANUAL"
     RETURN_ON_CASE_CLOSED = "JUDGMENT_CLOSED"
@@ -600,7 +602,7 @@ class DispatchService:
         from apps.souls.models import Soul
 
         with transaction.atomic():
-            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            locked = Soul.lock(soul.pk)
             if not locked.is_residing:
                 raise ValueError("Soul is not residing away from its home tenant")
             # 在灵魂行锁下问。开新审判(`JudgmentViewSet.perform_create`)也锁灵魂行(G7),两者串行。
@@ -677,7 +679,7 @@ class DispatchService:
         with transaction.atomic():
             # 调用方(`_execute_during_residence`)已持有这把锁;再取一次是可重入的,
             # 让「每次暂居只发一次」不依赖调用方记得先锁。
-            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            locked = Soul.lock(soul.pk)
             record = (
                 DispatchRecord._base_manager
                 .filter(soul_id=locked.pk, status=DispatchStatus.EXECUTED, target_tenant_id=locked.tenant_id,

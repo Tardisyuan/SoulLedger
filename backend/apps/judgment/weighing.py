@@ -116,7 +116,7 @@ def reweigh_after_rejection(flow, because: str = "REJECTED") -> Judgment | None:
     from apps.sentence_plan.models import SentenceNode, SentencePlan
     from apps.souls.models import Soul, SoulState
 
-    soul = Soul.all_objects.select_for_update().get(pk=judgment.soul_id)
+    soul = Soul.lock(judgment.soul_id)
     dispositions = Disposition.all_objects.filter(judgment_id=judgment.pk, is_deleted=False)
     # LOST too (review K): a soul that went missing in transit while the flow ran was never placed — its disposition
     # is unexecuted — and used to leave the disposition stuck at `approval_rejected`.

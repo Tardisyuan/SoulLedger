@@ -56,7 +56,7 @@ def move(soul, station: str, user) -> Soul:
     if station not in STATIONS:
         raise StationRefusedError("invalid_station", f"{station!r} is not one of the thirteen stations.")
     with transaction.atomic():
-        locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+        locked = Soul.lock(soul.pk)
         if locked.civilization != Civilization.CHINESE:
             raise StationRefusedError("not_diyu", "Only a soul of Diyu walks the thirteen stations.")
         if locked.current_state == SoulState.ALIVE:
