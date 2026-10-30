@@ -64,7 +64,26 @@ jest.mock("expo-notifications", () => {
 jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { version: "0.1.0", extra: {} }, easConfig: null } }));
 
 jest.mock("expo-secure-store", () => {
-  const store = new Map();
+  // The app's secure port reads through a memory copy (platform.ts); a test that writes this store directly
+  // (`__store.set`, `clear()`) drops that copy, as a fresh process would start without one.
+  const changed = () => require("./src/platform").forgetSecureCache?.();
+  class Store extends Map {
+    set(key, value) {
+      super.set(key, value);
+      changed();
+      return this;
+    }
+    delete(key) {
+      const had = super.delete(key);
+      changed();
+      return had;
+    }
+    clear() {
+      super.clear();
+      changed();
+    }
+  }
+  const store = new Store();
   // Items kept with `requireAuthentication` (the 面容 / 指纹 login credential) live apart, as the Keychain's
   // biometric class does, and come back only when the system "verifies": `__auth.error` is what the native
   // module throws (null = the face / finger matched). `prompts` records the reason text shown.

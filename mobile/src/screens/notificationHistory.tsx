@@ -81,7 +81,7 @@ export function NotificationHistoryScreen() {
     setTail(null);
     return reloadFirst();
   }, [reloadFirst]);
-  useReloadOnRefocus(reload);
+  useReloadOnRefocus(reload, remote);
 
   const rows = remote.data ? [...remote.data.results, ...(tail?.rows ?? [])] : null;
   const next = tail ? tail.next : remote.data?.next ? 2 : null;

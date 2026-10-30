@@ -400,7 +400,7 @@ function EmailRow() {
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const email = useRemote(soulApi.contactEmail);
-  useReloadOnRefocus(email.reload);
+  useReloadOnRefocus(email.reload, email);
   const d = email.data;
   // A failed fetch must not make the account-recovery row look like it does not exist.
   if (!d && email.error)
@@ -483,10 +483,10 @@ export function SettingsScreen() {
   // Where 两步验证 stands, for the 账号安全 row; read again whenever this page is shown (the wizard and the
   // management page both come back here).
   const mfa = useRemote(soulApi.mfaStatus);
-  useReloadOnRefocus(mfa.reload);
+  useReloadOnRefocus(mfa.reload, mfa);
   // The device count for 登录设备与记录; the sub-page's 「退出」 changes it, so it is read again on return.
   const devices = useRemote(soulApi.signInSessions);
-  useReloadOnRefocus(devices.reload);
+  useReloadOnRefocus(devices.reload, devices);
   // The last settings the SERVER confirmed; a toggle shows its new value at once and falls back on failure.
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const shown = settings ?? remote.data;

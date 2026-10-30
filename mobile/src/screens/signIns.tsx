@@ -106,7 +106,7 @@ export function SignInsScreen() {
     setGone(new Set());
     return Promise.all([reloadDevices(), reloadRecords()]);
   }, [reloadDevices, reloadRecords]);
-  useReloadOnRefocus(reload);
+  useReloadOnRefocus(reload, { data: devices.data && records.data, error: devices.error ?? records.error });
 
   const signOut = (id: string) => {
     if (busy) return;

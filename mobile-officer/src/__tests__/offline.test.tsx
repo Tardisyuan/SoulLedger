@@ -11,7 +11,7 @@ import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { DRAFTS_KEY, clearDrafts, readDraft, saveDraft } from "../drafts";
 import { FOLD_MS, OfflineBanner } from "../offlineBanner";
 import { OUTBOX_KEY, clearOutbox, discardReply, enqueueReply, flushOutbox, outboxEntries, outboxEntry, retryReply } from "../outbox";
-import { CACHE_KEY, DETAIL_KEEP, cacheRead, cacheWrite, clearReadCache } from "../readCache";
+import { CACHE_KEY, CACHE_MAX_CHARS, DETAIL_KEEP, WRITE_DELAY_MS, cacheRead, cacheWrite, clearReadCache, flushReadCache } from "../readCache";
 import { LetterImage } from "../screens/letterImages";
 import { Detail } from "../screens/detail";
 import { TodoTab } from "../screens/todo";
@@ -230,7 +230,53 @@ describe("the read cache", () => {
     expect(cacheRead("detail:approval:3")).not.toBeNull();
     expect(cacheRead(`detail:approval:${DETAIL_KEEP + 2}`)).not.toBeNull();
     expect(cacheRead("list:todo")).not.toBeNull();
+    flushReadCache();
     expect((JSON.parse(platform().persistent.get(CACHE_KEY)!) as { details: unknown[] }).details).toHaveLength(DETAIL_KEEP);
+  });
+
+  // opt-apps2 N5: each read parsed, and each write stringified, the whole value; nothing bounded its size.
+  describe("held in memory, written late, kept small", () => {
+    afterEach(() => jest.useRealTimers());
+
+    it("writes reach the store WRITE_DELAY_MS after the last one, once; reads never parse it", () => {
+      jest.useFakeTimers();
+      const set = jest.spyOn(platform().persistent, "set");
+      cacheWrite("list:todo", TODO); // the one read of the stored value, for this officer
+      const get = jest.spyOn(platform().persistent, "get");
+      cacheWrite("detail:approval:wf-1", { item: ITEM });
+      expect(cacheRead("detail:approval:wf-1")).not.toBeNull();
+      expect(set.mock.calls.filter(([k]) => k === CACHE_KEY)).toHaveLength(0);
+      expect(get.mock.calls.filter(([k]) => k === CACHE_KEY)).toHaveLength(0);
+      jest.advanceTimersByTime(WRITE_DELAY_MS);
+      expect(set.mock.calls.filter(([k]) => k === CACHE_KEY)).toHaveLength(1);
+      expect(JSON.parse(platform().persistent.get(CACHE_KEY)!).details).toHaveLength(1);
+    });
+
+    it("past CACHE_MAX_CHARS the oldest details go first, then the oldest list; the newest stay", () => {
+      const quarter = "字".repeat(Math.ceil(CACHE_MAX_CHARS * 0.3));
+      // Details over the line: the oldest go until it fits.
+      cacheWrite("list:todo", TODO);
+      for (const id of ["a", "b", "c", "d"]) cacheWrite(`detail:approval:${id}`, { quarter });
+      flushReadCache();
+      let stored = platform().persistent.get(CACHE_KEY)!;
+      expect(stored.length).toBeLessThanOrEqual(CACHE_MAX_CHARS);
+      let kept = JSON.parse(stored) as { lists: { key: string }[]; details: { key: string }[] };
+      expect(kept.details.map((e) => e.key)).toEqual(["detail:approval:d", "detail:approval:c", "detail:approval:b"]);
+      expect(kept.lists.map((e) => e.key)).toEqual(["list:todo"]);
+      // Lists over the line on their own: every detail goes, then the oldest lists (待办 was written first).
+      const big = "字".repeat(Math.ceil(CACHE_MAX_CHARS * 0.6));
+      cacheWrite("list:queue:mine", { big });
+      cacheWrite("list:notices", { big });
+      flushReadCache();
+      stored = platform().persistent.get(CACHE_KEY)!;
+      expect(stored.length).toBeLessThanOrEqual(CACHE_MAX_CHARS);
+      kept = JSON.parse(stored) as { lists: { key: string }[]; details: { key: string }[] };
+      expect(kept.details).toEqual([]);
+      expect(kept.lists.map((e) => e.key)).toEqual(["list:notices"]);
+      // The memory copy still has everything for this run.
+      expect(cacheRead("detail:approval:a")).not.toBeNull();
+      expect(cacheRead("list:queue:mine")).not.toBeNull();
+    });
   });
 
   it("an opened-again detail moves to the front instead of taking a second slot", () => {

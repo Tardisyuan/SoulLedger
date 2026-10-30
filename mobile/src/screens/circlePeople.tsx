@@ -344,7 +344,7 @@ export function MyCircleScreen() {
   const me = useRemote(useCallback(async () => soulSocialApi.profile((await fetchSocialStatus()).user_id), []));
   const feed = useFeed({ author: me.data?.user_id ?? 0 }, !!me.data);
   // A post deleted from its own page comes back here.
-  useReloadOnRefocus(feed.reload);
+  useReloadOnRefocus(feed.reload, { data: feed.posts, error: feed.error });
   /** The name being edited; null when not editing. */
   const [name, setName] = useState<string | null>(null);
 

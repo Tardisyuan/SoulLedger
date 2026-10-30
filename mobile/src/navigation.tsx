@@ -21,7 +21,7 @@ import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-
 import { platform } from "@soulledger/core/platform";
 import * as Notifications from "expo-notifications";
 import type { MeProfile } from "@soulledger/core/api/soul";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useColorScheme } from "react-native";
 
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -51,18 +51,12 @@ import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/a
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
 import { BioAsk } from "./screens/bio";
-import { ScanScreen } from "./screens/scan";
-import { MfaScreen } from "./screens/mfa";
-import { AboutScreen } from "./screens/about";
-import { DataExportScreen } from "./screens/dataExport";
-import { HelpScreen } from "./screens/help";
 import { FeedbackScreen } from "./screens/writeToHall";
 import { JudgmentAppealScreen } from "./screens/appeals";
 import { WangsiGrievanceScreen } from "./screens/wangsi";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
-import { SignInsScreen } from "./screens/signIns";
 import { AppLock } from "./appLock";
 import { MyLifeScreen } from "./screens/life";
 import { SentenceScreen } from "./screens/sentence";
@@ -199,9 +193,26 @@ function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDe
   return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
 }
 
+/**
+ * Screens opened rarely (opt-apps2 S4) are required on first visit, not at start: scan (the camera's native
+ * module), data export, sign-in history, about, help and two-step verification. Their modules have no top-level
+ * effect but `StyleSheet.create` and constants, so loading late changes nothing but when. Metro caches the
+ * module, so each `require` after the first is a lookup.
+ */
+/* eslint-disable @typescript-eslint/no-require-imports */
+const lazyScreens = {
+  scan: () => (require("./screens/scan") as typeof import("./screens/scan")).ScanScreen,
+  about: () => (require("./screens/about") as typeof import("./screens/about")).AboutScreen,
+  mfa: () => (require("./screens/mfa") as typeof import("./screens/mfa")).MfaScreen,
+  signIns: () => (require("./screens/signIns") as typeof import("./screens/signIns")).SignInsScreen,
+  dataExport: () => (require("./screens/dataExport") as typeof import("./screens/dataExport")).DataExportScreen,
+};
+
 function Help({ route }: NativeStackScreenProps<AppStackParams, "Help">) {
+  const { HelpScreen } = require("./screens/help") as typeof import("./screens/help");
   return <HelpScreen only={route.params?.only} />;
 }
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Conversation">) {
   return <ConversationScreen id={route.params.id} landed={route.params.landed} />;
@@ -376,11 +387,11 @@ export function RootNavigator() {
   const [ready, setReady] = useState(0);
   const scheme = useColorScheme() === "light" ? "light" : "dark";
   const theme = state.status === "signedIn" ? themeFor(state.profile.civilization, scheme) : preLoginTheme(scheme);
-  const base = scheme === "light" ? DefaultTheme : DarkTheme;
-  const navTheme: NavTheme = {
-    ...base,
-    colors: { ...base.colors, primary: theme.ink, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
-  };
+  // `theme` is one object per (civ, scheme) (theme.ts), so this is too: NavigationContainer redraws on a new theme.
+  const navTheme = useMemo<NavTheme>(() => {
+    const base = theme.scheme === "light" ? DefaultTheme : DarkTheme;
+    return { ...base, colors: { ...base.colors, primary: theme.ink, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair } };
+  }, [theme]);
 
   let body;
   switch (state.status) {
@@ -415,7 +426,7 @@ export function RootNavigator() {
             />
             {/* 手机和恢复码都没有了: draws its own bar. Reached from the sign-in second step (hall and code come as params). */}
             <Stack.Screen name="MfaLost" component={MfaLostScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="ScanCode" component={ScanScreen} options={{ headerShown: false, animation: "slide_from_bottom" }} />
+            <Stack.Screen name="ScanCode" getComponent={lazyScreens.scan} options={{ headerShown: false, animation: "slide_from_bottom" }} />
             {/* 登录遇到问题: the help page with only 登录与账号 -- reached from the sign-in page, signed out. */}
             <Stack.Screen
               name="Help"
@@ -480,23 +491,23 @@ export function RootNavigator() {
             />
             <Stack.Screen
               name="About"
-              component={AboutScreen}
+              getComponent={lazyScreens.about}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("about.title")} onBack={navigation.goBack} />,
               })}
             />
             {/* 两步验证: the wizard draws its own bar (✕ and 1 / 3); the management page draws the app's. */}
-            <Stack.Screen name="Mfa" component={MfaScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Mfa" getComponent={lazyScreens.mfa} options={{ headerShown: false }} />
             <Stack.Screen
               name="SignIns"
-              component={SignInsScreen}
+              getComponent={lazyScreens.signIns}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.security.history")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen
               name="DataExport"
-              component={DataExportScreen}
+              getComponent={lazyScreens.dataExport}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.export.title")} onBack={navigation.goBack} />,
               })}

@@ -16,7 +16,6 @@ import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } fr
 import { onMfaSetupRequired, onPasswordChangeRequired } from "@soulledger/core/api/client";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AppState } from "react-native";
 
 import { clearDrafts } from "./drafts";
 import { clearOutbox } from "./outbox";
@@ -24,7 +23,7 @@ import { USER_KEY } from "./owner";
 import { clearReadCache } from "./readCache";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
-import { clearVoiceNumbers, setUnauthorizedHandler } from "./shared";
+import { clearVoiceNumbers, onForeground, setUnauthorizedHandler } from "./shared";
 
 export { USER_KEY };
 
@@ -128,7 +127,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             mfa_setup_required: profile.mfa_setup_required ?? prev.user.mfa_setup_required,
             permissions: Array.isArray(profile.permissions) ? profile.permissions : prev.user.permissions,
           };
-          platform().persistent.set(USER_KEY, JSON.stringify(user));
+          // Nothing changed: the same state object, so the shell and its tabs do not redraw (opt-apps2 R1).
+          const stored = JSON.stringify(user);
+          if (stored === JSON.stringify(prev.user)) return prev;
+          platform().persistent.set(USER_KEY, stored);
           return { status: "signedIn", user };
         }),
       () => {}
@@ -143,12 +145,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signedIn = state.status === "signedIn";
   useEffect(() => {
     if (!signedIn) return;
-    let previous = AppState.currentState;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active" && previous !== "active") refreshProfile();
-      previous = next;
-    });
-    return () => sub.remove();
+    return onForeground(refreshProfile);
   }, [signedIn, refreshProfile]);
 
   const signIn = useCallback(

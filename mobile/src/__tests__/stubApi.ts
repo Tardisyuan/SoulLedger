@@ -11,6 +11,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { ACCOUNT_KEY, APP_LOCK_KEY, ASKED_PREFIX, BIO_KEY, resetColdStart } from "../deviceLogin";
 import { persistentStore } from "../platform";
+import { REFOCUS_FRESH_MS } from "../ui";
 
 /**
  * Wait out a bottom-tab switch. After the (zero-length) transition, BottomTabView
@@ -41,6 +42,15 @@ export async function pressTab(testID: string) {
   await settleTabs();
 }
 
+/**
+ * Moves the clock the refocus throttle reads (ui.tsx `REFOCUS_FRESH_MS`) past it, so the answers already on
+ * screen count as old and a return to the page asks again. Returns the spy; `mockRestore()` it at the end.
+ */
+export function ageAnswers(ms = REFOCUS_FRESH_MS + 1000) {
+  const real = Date.now.bind(Date);
+  return jest.spyOn(Date, "now").mockImplementation(() => real() + ms);
+}
+
 export type Reply = { status: number; data?: unknown } | "offline";
 
 /**
@@ -64,7 +74,10 @@ export function stubApi(routes: Record<string, Reply | Promise<Reply> | (Reply |
     calls.push({ method, url, body, params: config.params });
     // An upload with a progress listener hears 30% before its reply, so the in-flight state is observable.
     config.onUploadProgress?.({ loaded: 30, total: 100, bytes: 30, lengthComputable: true });
-    const route = routes[`${method} ${url}`] ?? routes[url];
+    // A cold start with a stored refresh token rotates it before `/me/` (session.tsx `boot`); unless a test scripts
+    // that answer, the server accepts it.
+    const route =
+      routes[`${method} ${url}`] ?? routes[url] ?? (url === "/soul-auth/refresh/" ? { status: 200, data: { access: "A", refresh: body?.refresh ?? "R" } } : undefined);
     // A held reply may also sit inside a sequence (one per call), so every pick is awaited.
     const reply = await (Array.isArray(route) ? (route.length > 1 ? route.shift() : route[0]) : route);
     if (!reply) throw new Error(`unscripted request: ${method} ${url}`);

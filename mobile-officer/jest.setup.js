@@ -64,7 +64,26 @@ jest.mock("expo-notifications", () => {
 jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { version: "0.1.0", extra: {} }, easConfig: null } }));
 
 jest.mock("expo-secure-store", () => {
-  const store = new Map();
+  // The app's secure port reads through a memory copy (mobile/src/platform.ts); a test that writes this store
+  // directly drops that copy, as a fresh process would start without one.
+  const changed = () => require("../mobile/src/platform").forgetSecureCache?.();
+  class Store extends Map {
+    set(key, value) {
+      super.set(key, value);
+      changed();
+      return this;
+    }
+    delete(key) {
+      const had = super.delete(key);
+      changed();
+      return had;
+    }
+    clear() {
+      super.clear();
+      changed();
+    }
+  }
+  const store = new Store();
   return {
     __store: store,
     getItem: (key) => (store.has(key) ? store.get(key) : null),

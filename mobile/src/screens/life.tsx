@@ -812,9 +812,9 @@ export function MyLifeScreen() {
   const wangsi = useRemote(fetchWangsi);
   const residence = useResidence();
   const toast = useToast();
-  useReloadOnRefocus(life.reload);
-  useReloadOnRefocus(appeals.reload);
-  useReloadOnRefocus(wangsi.reload);
+  useReloadOnRefocus(life.reload, life);
+  useReloadOnRefocus(appeals.reload, appeals);
+  useReloadOnRefocus(wangsi.reload, wangsi);
   // 页头(阳寿、状态、所在)读的是会话里的档案:别的页改了它(审判结案、转世),回到这页也要重取。
   // 回到前台的重取失败不吵(下次再取);下拉刷新失败要说(见 `refresh`)。
   const reloadProfile = useCallback(() => refreshProfile().catch(() => {}), [refreshProfile]);
