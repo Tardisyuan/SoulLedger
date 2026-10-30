@@ -32,6 +32,7 @@ import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
 import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { fetchSocialStatus, invalidateSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PostList } from "./circle";
 import { PagedFooter, useFailure, useFeed, usePaged } from "../paged";
@@ -340,7 +341,7 @@ export function MyCircleScreen() {
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
   // My user id is the circle status's; my page is my profile as others would ask for it.
-  const me = useRemote(useCallback(async () => soulSocialApi.profile((await soulSocialApi.status()).user_id), []));
+  const me = useRemote(useCallback(async () => soulSocialApi.profile((await fetchSocialStatus()).user_id), []));
   const feed = useFeed({ author: me.data?.user_id ?? 0 }, !!me.data);
   // A post deleted from its own page comes back here.
   useReloadOnRefocus(feed.reload);
@@ -639,6 +640,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
     setBusy(true);
     try {
       await soulSocialApi.report(target, id, reason, text.trim());
+      invalidateSocialStatus();
       setDone(true);
     } catch (e) {
       fail(e);

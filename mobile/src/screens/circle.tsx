@@ -61,6 +61,7 @@ import {
   useTheme,
   shade,
 } from "../ui";
+import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, useFailure, useFeed, usePaged } from "../paged";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
@@ -487,7 +488,7 @@ export function ComposePostScreen() {
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
   const fail = useFailure();
-  const status = useRemote(soulSocialApi.status);
+  const status = useSocialStatus();
   const [draft, setDraft] = useState("");
   const [visibility, setVisibility] = useState<SoulPostVisibility>("TENANT");
   const [busy, setBusy] = useState(false);
@@ -539,6 +540,7 @@ export function ComposePostScreen() {
       const txn = writeTxn.txnFor(JSON.stringify([text.trim(), visibility, uploads.mediaIds]));
       const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds, txn);
       writeTxn.done();
+      invalidateSocialStatus();
       posted.current = true;
       guard.release();
       uploads.clear();
@@ -845,7 +847,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
   const fail = useFailure();
   const post = useRemote(useCallback(() => soulSocialApi.post(id), [id]));
   const comments = usePaged<SoulComment>(id, (page) => soulSocialApi.comments(id, page));
-  const status = useRemote(soulSocialApi.status);
+  const status = useSocialStatus();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<SoulComment | null>(null);
@@ -909,6 +911,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
     try {
       const sent = await soulSocialApi.comment(id, text.trim(), replyTo?.id, writeTxn.txnFor(JSON.stringify([text.trim(), replyTo?.id ?? null])));
       writeTxn.done();
+      invalidateSocialStatus();
       tellScreening(toast, tr, sent.screening);
       setDraft("");
       setReplyTo(null);
