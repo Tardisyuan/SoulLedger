@@ -3,7 +3,7 @@
  * left, the hall's right, no bubble colour), the template that is FILLED not sent, the send (once, the
  * words kept on a failure), and the quiet 503.
  */
-import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Dimensions, Image, StyleSheet } from "react-native";
 
 import { TodoTab } from "../screens/todo";
@@ -155,6 +155,20 @@ describe("the thread", () => {
     // Author and time on one line.
     expect(screen.getByText(/^崔珏 · 判官 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
     expect(screen.getByText(/^李白 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
+  });
+
+  it("typing a reply does not draw the letters above it again (R2)", async () => {
+    await openThread();
+    await screen.findByText("请问我的案子何时判？");
+    await act(async () => {}); // the opening's own requests (read mark, archive date) settle first
+    const soul = screen.getByTestId("letter-soul-e1").props.style;
+    const hall = screen.getByTestId("letter-hall-e2").props.style;
+    fireEvent.changeText(screen.getByTestId("letter-input"), "稍");
+    fireEvent.changeText(screen.getByTestId("letter-input"), "稍候");
+    expect(screen.getByTestId("letter-input").props.value).toBe("稍候");
+    // The same style objects: neither line rendered again (each render builds a new one).
+    expect(screen.getByTestId("letter-soul-e1").props.style).toBe(soul);
+    expect(screen.getByTestId("letter-hall-e2").props.style).toBe(hall);
   });
 
   it("opening it marks it read, once", async () => {

@@ -142,4 +142,19 @@ describe("the App Group", () => {
     const dir = path.resolve(__dirname, "../../../mobile-officer", pkg.expo.autolinking.nativeModulesDir);
     expect(fs.existsSync(path.join(dir, "soulledger-voice/expo-module.config.json"))).toBe(true);
   });
+
+  it("the officer app does not ship react-native-screens: it has no native stack or tab navigator to need it (B2)", () => {
+    const root = path.join(__dirname, "../../../mobile-officer");
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    expect(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })).not.toContain("react-native-screens");
+    // What would need it: the package itself, or a react-navigation navigator built on it.
+    const needs = /from ["'](react-native-screens|@react-navigation\/(native-stack|bottom-tabs|stack))["']/;
+    const files = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((e: { name: string; isDirectory: () => boolean }) =>
+        e.isDirectory() ? (e.name === "__tests__" ? [] : files(path.join(dir, e.name))) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []
+      );
+    const sources = [...files(path.join(root, "src")), path.join(root, "App.tsx"), path.join(root, "index.ts")];
+    expect(sources.length).toBeGreaterThan(20);
+    expect(sources.filter((f) => needs.test(fs.readFileSync(f, "utf8")))).toEqual([]);
+  });
 });

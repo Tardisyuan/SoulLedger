@@ -9,8 +9,9 @@
  * server did not report.
  */
 import { soulApi, soulErrorStatus, soulMfaFailure, type SoulDataExport } from "@soulledger/core/api/soul";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useRef, useState } from "react";
+import { AppState, StyleSheet, TextInput, View } from "react-native";
 
 import { EXPORT_PROMPT, bioEnabled, readCredential } from "../deviceLogin";
 import { formatBytes, saveExport } from "../dataExport";
@@ -182,11 +183,34 @@ export function DataExportScreen() {
   const preparing = exp?.status === "QUEUED" || exp?.status === "RUNNING";
 
   const { reload } = remote;
-  useEffect(() => {
-    if (!preparing) return;
-    const timer = setInterval(() => void reload(), POLL_MS);
-    return () => clearInterval(timer);
-  }, [preparing, reload]);
+  // Polls only while this page is in front and the app is not in the background (N4): a page left open under
+  // another screen, or a phone in a pocket, asked every 20 s for as long as the file took. Coming back to the
+  // page reads again (useReloadOnRefocus); coming back to the app reads once and polls on.
+  useFocusEffect(
+    useCallback(() => {
+      if (!preparing) return;
+      let timer: ReturnType<typeof setInterval> | null = null;
+      const start = () => {
+        timer ??= setInterval(() => void reload(), POLL_MS);
+      };
+      const stop = () => {
+        if (timer) clearInterval(timer);
+        timer = null;
+      };
+      if (AppState.currentState !== "background") start();
+      const sub = AppState.addEventListener("change", (next) => {
+        if (next === "background") stop();
+        else if (next === "active" && !timer) {
+          void reload();
+          start();
+        }
+      });
+      return () => {
+        stop();
+        sub.remove();
+      };
+    }, [preparing, reload])
+  );
 
   /** The face first when it is on; a face that does not answer falls back to the password sheet. */
   const request = useCallback(async () => {

@@ -8,10 +8,12 @@
  * object, not interface text. A screen reader hears the language pack's
  * 「第五殿之印」 (`seal.aria`), never the glyph.
  */
+import * as Font from "expo-font";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { family, quoteFamily } from "./fonts";
+import { HIEROGLYPH_FONT, family, quoteFamily } from "./fonts";
 import type { CivKey } from "./theme";
 
 export type SealCiv = Exclude<CivKey, "neutral">;
@@ -63,8 +65,30 @@ export function sealOutline(civ: SealCiv, w: number, h: number, i: number): stri
   return `M${r(i)} ${r(i)}H${r(w - i)}V${r(h - i)}H${r(i)}Z`;
 }
 
+const isHieroglyph = (g: string) => (g.codePointAt(0) ?? 0) >= 0x13000;
 /** A glyph's face: hieroglyphs in theirs, Han and Latin / Greek in the app's two serifs. */
-const outlineFace = (g: string) => ((g.codePointAt(0) ?? 0) >= 0x13000 ? family.hieroglyph : quoteFamily(g));
+const outlineFace = (g: string) => (isHieroglyph(g) ? family.hieroglyph : quoteFamily(g));
+
+/**
+ * Whether the hieroglyph face can draw now. `needed`: this seal has a hieroglyph; only then is the file read
+ * (once per process — expo-font keeps it registered). A load that fails leaves it false: the seal stays an
+ * empty frame rather than drawing boxes in a face that is not there.
+ */
+function useHieroglyphFace(needed: boolean): boolean {
+  const [ready, setReady] = useState(() => Font.isLoaded(family.hieroglyph));
+  useEffect(() => {
+    if (!needed || ready) return;
+    let alive = true;
+    Font.loadAsync(HIEROGLYPH_FONT).then(
+      () => alive && setReady(true),
+      () => {}
+    );
+    return () => {
+      alive = false;
+    };
+  }, [needed, ready]);
+  return ready;
+}
 
 export function OutlineSeal({
   civ,
@@ -84,11 +108,13 @@ export function OutlineSeal({
   label?: string;
   testID?: string;
 }) {
+  const shown = civ === "neutral" ? [] : sealGlyphs(civ, glyphs);
+  // Until the face is in, a hieroglyph seal is its frame alone (no glyph in a fallback face, then a jump).
+  const faceReady = useHieroglyphFace(shown.some(isHieroglyph));
   if (civ === "neutral") return null;
   const small = size <= 32;
   const w = size;
   const h = civ === "eg" ? Math.round(size * EG_ASPECT) : size;
-  const shown = sealGlyphs(civ, glyphs);
   const pair = shown.length === 2;
   const fontSize = Math.round(size * (pair ? OUTLINE_GLYPH_PAIR : small ? OUTLINE_GLYPH_SMALL : OUTLINE_GLYPH));
   const a11y = label
@@ -101,7 +127,7 @@ export function OutlineSeal({
         <Path testID={testID && `${testID}-inner`} d={sealOutline(civ, w, h, small ? 3.5 : 5.5)} fill="none" stroke={color} strokeWidth={1} />
       </Svg>
       <View style={styles.glyphs}>
-        {shown.map((g, i) => (
+        {(faceReady || !shown.some(isHieroglyph) ? shown : []).map((g, i) => (
           <Text
             key={i}
             testID={testID && `${testID}-glyph`}
