@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { isMonthTooLarge, ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -78,15 +79,11 @@ function LedgerPageContent() {
     }
   );
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const { showToast } = useToast();
 
   // Same 300 ms debounce as /souls: one request per pause, not per keystroke.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const search = useDebouncedValue(searchInput.trim());
 
   /* 搜索与文明、类目是**同一组**筛选:四柱、流水与导出都读它,所以搜出一户,
      四柱就只是这一户的账,仍然平。 */
@@ -122,7 +119,6 @@ function LedgerPageContent() {
     setCivilization("");
     setCategory("");
     setSearchInput("");
-    setSearch("");
   };
   const filtered = Boolean(civilization || category || search);
 

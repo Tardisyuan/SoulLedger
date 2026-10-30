@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { soulsApi, tudiGodKeys, tudiGodsApi, type TudiGod } from "@soulledger/core/api";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -45,18 +46,13 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
   const [tudiId, setTudiId] = useState(tudi?.id ?? "");
   const [soulId, setSoulId] = useState(soul?.id ?? "");
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const search = useDebouncedValue(searchInput);
   const [deathDate, setDeathDate] = useState(today);
   const [location, setLocation] = useState("");
   const [report, setReport] = useState("");
   const [refusal, setRefusal] = useState<string | null>(null);
   // 一次弹层一把幂等键:连点两下只登记一条(后端 409 答已有的那条)。
   const [idempotencyKey] = useState(() => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   const gods = useQuery({
     queryKey: [...tudiGodKeys.all, "list"],

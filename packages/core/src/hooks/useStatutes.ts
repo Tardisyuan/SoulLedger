@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { judgmentApi, type Statute, type StatuteCorpus } from "../api/index";
+import { collectPages } from "../api/client";
 import { judgmentKeys } from "../query_keys";
 
 /**
@@ -89,14 +90,9 @@ export function useAllStatutes({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     enabled,
     queryKey: judgmentKeys.statutes({ all: "true", ordering: "code" }),
-    queryFn: async () => {
-      const rows: Statute[] = [];
-      for (let n = 1; ; n += 1) {
-        const res = await judgmentApi.statutes({ ordering: "code", page: String(n) });
-        rows.push(...res.data.results);
-        if (!res.data.next) return rows;
-      }
-    },
+    // Page 1, then the rest in parallel (four at a time) — see `collectPages`.
+    queryFn: () =>
+      collectPages<Statute>(async (n) => (await judgmentApi.statutes({ ordering: "code", page: String(n) })).data),
     staleTime: 5 * 60_000,
   });
 }

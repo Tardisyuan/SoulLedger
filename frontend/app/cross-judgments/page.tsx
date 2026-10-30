@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import Link from "next/link";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
@@ -73,8 +74,9 @@ export default function CrossJudgmentsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [side, setSide] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};
-  if (search.trim()) filterParams.search = search.trim();
+  if (debouncedSearch) filterParams.search = debouncedSearch;
   if (status) filterParams.status = status;
   if (side) filterParams.side = side;
   const isFiltered = Object.keys(filterParams).length > 0;

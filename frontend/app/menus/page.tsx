@@ -54,6 +54,8 @@ function MenusPageContent() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["menus", "all", showDeleted],
+    // 切「显示已删除」时留着上一份，不闪骨架。
+    placeholderData: (previous) => previous,
     queryFn: async () => {
       // menusApi.all() (GET /menus/list-public/) only ever returns top-level,
       // is_active=True, role-filtered menus — an editor built on that source

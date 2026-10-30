@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -52,7 +53,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export default function AuditDetailPage() {
   const { t, formatDateTime } = useI18n();
   usePlaque({ title: t("audit.title"), hall: useHall(t("plaque.office.records")) });
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissionsReady } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
   const router = useRouter();
   const id = useParams().id as string;
@@ -72,7 +73,11 @@ export default function AuditDetailPage() {
   if (!canReadAudit) {
     return (
       <PageShell density="document" variant="page" title={t("audit.title")} backLink={backLink}>
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        {permissionsReady === false ? (
+          <PermissionsPending />
+        ) : (
+          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        )}
       </PageShell>
     );
   }

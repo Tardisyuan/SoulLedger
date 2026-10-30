@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { loginLogsApi, PAGE_SIZE, type LoginLogEntry, type LoginLogStatus } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DataTable } from "@/components/ui/data-table";
@@ -30,15 +31,16 @@ export function LoginLogPanel() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"" | LoginLogStatus>("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["login-logs", page, status, search],
+    queryKey: ["login-logs", page, status, debouncedSearch],
     queryFn: async () =>
       (
         await loginLogsApi.list({
           page: String(page),
           ...(status ? { status } : {}),
-          ...(search ? { search } : {}),
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
         })
       ).data,
     placeholderData: (previous) => previous,

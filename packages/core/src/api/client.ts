@@ -317,74 +317,61 @@ api.interceptors.response.use(
   }
 );
 
+/** 取全部分页时同时在路上的请求数上限。 */
+export const FETCH_ALL_CONCURRENCY = 4;
+
 /**
- * The query string of a URL: everything after the first `?`, with any
- * `#fragment` removed. `""` when there is no query.
+ * Every page of a DRF-paginated list, flattened, in page order — through any per-page fetcher
+ * (`(n) => someApi.list({ page: n })`), so a caller keeps its own typed API module.
  *
- * WHY THIS EXISTS INSTEAD OF `new URL(next).searchParams`.
+ * Page 1 first; its `count` and length give the number of pages, and the rest go out together,
+ * at most `concurrency` at a time (2026-10-30 D5: the statute corpus was nine round trips one
+ * after another, and there were four copies of the serial walk). A first page without `next`
+ * is the whole answer. A first page with `next` but no usable `count` (an older or hand-written
+ * response) falls back to following `next` one page at a time, so nothing is cut short.
  *
- * `fetchAllPages` used to read the page's parameters off a parsed `URL`, and
- * `platform/host-globals.d.ts` declared `URL` with a `readonly searchParams`
- * member under a header that says, in as many words, "Everything below exists
- * in browsers **and** in React Native". That claim is the one thing an entry in
- * that file is; it was not safe to make for this member. React Native's `URL`
- * is a hand-written partial polyfill rather than the platform's own, and
- * `searchParams` is the member it is known for omitting. Where it is missing,
- * `parsed.searchParams` is `undefined`, `.forEach` throws `TypeError`, and the
- * first paginated fetch of the session dies — that is every "load all realms"
- * and "load all actors" call, which is how the two collection screens fill.
- *
- * I HAVE NOT VERIFIED WHICH React Native VERSIONS OMIT IT. There is no React
- * Native checkout in this repository to run it against, so the version cutoff
- * is not a thing this comment can state. What is being fixed is the assertion,
- * not a measured failure: the package no longer *claims* a member it cannot
- * guarantee, and `URL` is gone from the allowlist entirely because this was its
- * only use. The behaviour that replaces it is string surgery plus
- * `URLSearchParams`, which the allowlist already carried and which React Native
- * does ship as a global.
- *
- * The split is on the FIRST `?`, matching WHATWG parsing: a second `?` inside a
- * query is an ordinary character and belongs to the value. The fragment is cut
- * first for the same reason `URL` would have dropped it — `?a=1#b` has the
- * query `a=1`, not `a=1#b`.
- *
- * Pinned by `__tests__/fetchAllPages.test.ts`, which drives the real
- * `fetchAllPages` with a stubbed transport rather than calling this helper: a
- * test that called it directly would stay green if the caller stopped using it.
+ * Pages are numbered, not followed by their `next` URL — which is also why the old string
+ * surgery on `next` (and its note about React Native's partial `URL`) is gone.
  */
-function queryOf(target: string): string {
-  const beforeFragment = target.split("#", 1)[0];
-  const firstQuestionMark = beforeFragment.indexOf("?");
-  return firstQuestionMark === -1 ? "" : beforeFragment.slice(firstQuestionMark + 1);
+export async function collectPages<T>(
+  fetchPage: (page: number) => Promise<PaginatedResponse<T>>,
+  concurrency: number = FETCH_ALL_CONCURRENCY
+): Promise<T[]> {
+  const first = await fetchPage(1);
+  if (!first.next) return first.results;
+  const size = first.results.length;
+  if (!(typeof first.count === "number" && size > 0)) {
+    const rows = [...first.results];
+    for (let n = 2, page = first; page.next; n += 1) {
+      page = await fetchPage(n);
+      rows.push(...page.results);
+    }
+    return rows;
+  }
+  const last = Math.ceil(first.count / size);
+  const pages: T[][] = [first.results];
+  let next = 2;
+  const worker = async () => {
+    while (next <= last) {
+      const n = next++;
+      pages[n - 1] = (await fetchPage(n)).results;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, last - 1)) }, worker));
+  return pages.flat();
 }
 
 /**
  * Walk every page of a DRF-paginated list endpoint and return the flattened
- * results. Callers that need the whole collection (realms, actors) rather than
- * one page use this instead of `api.get`.
+ * results. Callers that need the whole collection (realms, actors, menus) rather
+ * than one page use this instead of `api.get`. Page 1 is requested with exactly
+ * `params`; later pages add `page=N` (see `collectPages`).
  */
 export async function fetchAllPages<T>(url: string, params: Record<string, string> = {}): Promise<T[]> {
-  const results: T[] = [];
-  const base = getApiBaseUrl();
-  let nextUrl: string | null = `${base}${url}?${new URLSearchParams(params)}`;
-  while (nextUrl) {
-    const searchParams: Record<string, string> = {};
-    // Last occurrence of a repeated key wins, which is what the `URL`-based
-    // version did (`forEach` visits every pair in order) and what Django's
-    // QueryDict does on the other end.
-    new URLSearchParams(queryOf(nextUrl)).forEach((v: string, k: string) => { searchParams[k] = v; });
-    // Deliberately the whole of `nextUrl` minus the base, query string
-    // included, exactly as before. axios then appends `searchParams` to a path
-    // that already carries them, so each parameter is sent twice with the same
-    // value. That is pre-existing and harmless (DRF reads the last), and
-    // changing it here would alter the request this function makes while the
-    // subject of this change is only how the parameters are parsed.
-    const relativePath: string = nextUrl.replace(base, "");
-    const resp = await api.get<PaginatedResponse<T>>(relativePath, { params: searchParams });
-    results.push(...resp.data.results);
-    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${base}${resp.data.next}`) : null;
-  }
-  return results;
+  return collectPages<T>(async (page) => {
+    const pageParams = page === 1 ? params : { ...params, page: String(page) };
+    return (await api.get<PaginatedResponse<T>>(url, { params: pageParams })).data;
+  });
 }
 
 /**

@@ -2,6 +2,7 @@
 import { Suspense, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -87,9 +88,10 @@ function DeathSyncRoute() {
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};
   if (status) filterParams.status = status;
-  if (search.trim()) filterParams.search = search.trim();
+  if (debouncedSearch) filterParams.search = debouncedSearch;
   if (from) filterParams.received_after = from;
   if (to) filterParams.received_before = to;
   const isFiltered = Object.keys(filterParams).length > 0;

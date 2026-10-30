@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, soulsApi, workflowApi, type Soul } from "@soulledger/core/api";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -106,7 +107,8 @@ export function StartWorkflowDialog({
 
   const [pickedSoulId, setPickedSoulId] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  // 300ms,同 app/dispatch/propose 的灵魂搜索。
+  const search = useDebouncedValue(searchInput);
   const [caseType, setCaseType] = useState("");
   const [template, setTemplate] = useState("");
   /** `null` = 跟随模板:请求里不带 priority。 */
@@ -122,11 +124,6 @@ export function StartWorkflowDialog({
 
   const soulId = lockedSoul?.id ?? pickedSoulId;
 
-  // 300ms,同 app/dispatch/propose 的灵魂搜索。
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   const soulSearch = useQuery({
     queryKey: ["start-workflow", "souls", search],

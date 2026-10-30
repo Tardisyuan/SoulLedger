@@ -8,6 +8,7 @@ import { judgmentApi, type Judgment, type JudgmentCitation, type Statute } from 
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useDeferJudgment, useJudgmentPrecedents } from "@soulledger/core/hooks/useJudgments";
 import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { citationOf, resolveCitation } from "@soulledger/core/config/statuteCitation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -254,13 +255,15 @@ export function StatuteSearch({
         (c) => t(`judgment.statute_corpus.${c}`)
       )
     : undefined;
+  // 本地解析跟着原值走;发到服务端的全文检索停手 300ms 再发。
+  const searchQuery = useDebouncedValue(query);
   const { data, isFetching, isError } = useQuery({
-    queryKey: [...judgmentKeys.all, "statute-search", civilization, query],
+    queryKey: [...judgmentKeys.all, "statute-search", civilization, searchQuery],
     queryFn: () =>
-      judgmentApi.statutes({ search: query, civilization }).then((r) => r.data.results ?? []),
+      judgmentApi.statutes({ search: searchQuery, civilization }).then((r) => r.data.results ?? []),
     // Wait for the local resolve to have had its chance (or to have failed), so a
     // pasted sigil never also goes out as a text search.
-    enabled: query.length > 0 && !corpus.isPending && !resolved,
+    enabled: searchQuery.length > 0 && !corpus.isPending && !resolved,
     staleTime: 60_000,
   });
   const results: Statute[] = resolved ? [resolved] : (data ?? []);
