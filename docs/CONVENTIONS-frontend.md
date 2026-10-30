@@ -406,7 +406,7 @@ export default function XPage() {                    // 页级权限门包在默
 **`permissionsReady`**（`TenantContext`，经 `usePermissions()` 读，2026-10-30）：刷新页面时人先从本地信封恢复、权限清空再去服务端取，
 这段时间里「没有码」不等于「无权」。`permissionsReady === false` 只在这段时间成立（取到或取失败都转 `true`；登录、退出、没登录都是 `true`）。
 `hasPermission` 不看它（门照旧关着）；`RequirePermission` / `RequireAdmin` **带 fallback 时**未就绪画 `PermissionsPending` 骨架而不是拒绝页，
-不带 fallback 的（藏按钮）照旧什么都不画。审计三页另外自己看它。`app/audit/permissions` 的拒绝页本轮没加骨架。
+不带 fallback 的（藏按钮）照旧什么都不画。审计四页(含 `app/audit/permissions`,10-31 补上)另外自己看它。
 
 **隐藏而非禁用**是多数派：`<RequirePermission permissions="…">` 无 fallback = 不渲染，40 处。
 由权限决定 `disabled` 的只有 1 处。
