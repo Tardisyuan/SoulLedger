@@ -10,6 +10,7 @@ import {
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
 import { fetchFailureOf } from "@soulledger/core/api/client";
+import { hasSixPaths } from "@soulledger/core/domain/sixPaths";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
@@ -290,9 +291,10 @@ export function NewApplicationScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
   const guard = useDiscardGuard(!!statement.trim(), "application");
-  // 六道只属于地府(G-2):希腊灵魂的再生不选一道,申请不带 desired_form,服务端记 OTHER。
+  // 六道只属于地府(G-2):别的文明(能转生的只有希腊)的再生不选一道,申请不带 desired_form,服务端记 OTHER。
+  // 按原属文明,与服务端同一条规则(core hasSixPaths);此前写成 `!== GREEK`,欧 / 埃会被要求选道。
   const session = useContext(SessionContext);
-  const sixPaths = !(session?.state.status === "signedIn" && session.state.profile.home_civilization === "GREEK");
+  const sixPaths = hasSixPaths(session?.state.status === "signedIn" ? session.state.profile.home_civilization : null);
 
   const submit = async () => {
     if (sixPaths && !form) return setError({ key: "soul_app.applications.choose_form" });

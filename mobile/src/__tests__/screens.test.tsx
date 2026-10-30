@@ -164,6 +164,14 @@ describe("new application: six paths only for a soul of Diyu", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("ApplicationDetail", expect.anything()));
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ desired_form: "ASURA", statement: "" });
   });
+
+  // cq-web 2026-10-30 #4: the rule was `!== GREEK`. A European / Egyptian soul cannot reach this screen today (its
+  // 申请 button is disabled by terminal_cosmology), but if it did it must not be asked for a path the server refuses.
+  it.each(["EUROPEAN", "EGYPTIAN"])("a %s soul is not asked for a path either", (civ) => {
+    newApplication(civ);
+    expect(screen.queryByTestId("form-HUMAN")).toBeNull();
+    expect(screen.getByTestId("submit-application").props.accessibilityState?.disabled).not.toBe(true);
+  });
 });
 
 describe("application detail", () => {
