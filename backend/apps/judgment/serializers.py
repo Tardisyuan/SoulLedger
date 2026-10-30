@@ -28,7 +28,7 @@ from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
 from apps.souls.models import Civilization, SoulState
-from apps.souls.serializers import SoulSerializer, _is_viewer
+from apps.souls.serializers import SoulSerializer, is_viewer
 
 
 def _locale_from(context) -> str:
@@ -347,7 +347,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         # VIEWER 默认不持有任何 judgment.* 码名,到不了这里;但权限矩阵可以授予它
         # judgment.read,而功过分数对 VIEWER 的隐藏是写死的底线(SoulSerializer 的
         # docstring:数据库规则只能收窄,不能放宽)。这里守同一条底线。
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             for field in ("karmic_balance", "merit_score", "demerit_score"):
                 data.pop(field, None)
         # 暂居只读(原属殿读暂居地的案子,决定 24):暂居地经手官员的名字不给,只看案子在哪一殿。
@@ -509,6 +509,19 @@ class JudgmentFlowProgressSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     waiting = serializers.CharField(allow_null=True, help_text="处置为什么还不能执行:`weighing.unfinished_flow` 的码;"
                                     "没有处置、已执行或不被拦时为 null。")
+
+
+class JudgmentListSerializer(JudgmentSerializer):
+    """`GET /judgment/` (and its CSV) — every list column but `citations` (perf-audit A3, 2026-10-30).
+
+    The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
+    cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
+    grounds panel from `/judgment/{id}/citations/`.
+    """
+    citations = None
+
+    class Meta(JudgmentSerializer.Meta):
+        fields = [f for f in JudgmentSerializer.Meta.fields if f != "citations"]
 
 
 class JudgmentDetailSerializer(JudgmentSerializer):
@@ -738,9 +751,9 @@ class JudgmentPrecedentSerializer(serializers.Serializer):
     shared_statutes = serializers.IntegerField(read_only=True)
 
     def get_balance(self, obj) -> int | None:
-        from apps.souls.serializers import _is_viewer
+        from apps.souls.serializers import is_viewer
 
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             return None
         return obj.balance
 

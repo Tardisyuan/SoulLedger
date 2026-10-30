@@ -37,6 +37,7 @@ from apps.ledger.serializers import (
 from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.ledger.snapshots import previous_month_average
 from apps.realms.models import Realm, resolve_localized_name
+from apps.souls.dates import format_death_date
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -47,20 +48,6 @@ def _scoped_souls(request, tenant):
     from apps.perm.filters import DataScopeFilter
 
     return DataScopeFilter.filter_queryset(request, Soul.objects.filter(tenant=tenant), Soul)
-
-
-def _format_death_date(soul: Soul) -> str:
-    """CSV-friendly death date, preserving BCE years the legacy
-    soul.death_date property can't represent. year-month-day / year-month
-    / year, zero-padded to 4 digits (sign kept for BCE)."""
-    if soul.death_year is None:
-        return ""
-    parts = [f"{soul.death_year:05d}" if soul.death_year < 0 else f"{soul.death_year:04d}"]
-    if soul.death_month is not None:
-        parts.append(f"{soul.death_month:02d}")
-        if soul.death_day is not None:
-            parts.append(f"{soul.death_day:02d}")
-    return "-".join(parts)
 
 
 class LedgerBalanceView(APIView):
@@ -757,7 +744,7 @@ class LedgerExportStatsView(APIView):
                 # for BCE deaths, so build the CSV cell from the raw
                 # year/month/day instead — e.g. "-612-03" for a
                 # year+month-only BCE record.
-                csv_safe(_format_death_date(soul)),
+                csv_safe(format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
 

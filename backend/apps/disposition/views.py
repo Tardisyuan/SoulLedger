@@ -160,7 +160,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         return qs
 
     def create_tenant(self, serializer):
-        """Filed in the soul's hall, not the request's (rbac-be1 M4; same as `JudgmentViewSet.create_tenant`)."""
+        """Filed in the soul's hall, not the request's (rbac-be1 M4; same as `JudgmentService.open_case`)."""
         return serializer.validated_data["soul"].tenant
 
     def perform_create(self, serializer):

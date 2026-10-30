@@ -51,7 +51,8 @@ def test_status_shows_the_masked_address_and_none_as_empty(cn_tenant):
     assert other.get(URL).json()["email_masked"] == ""
 
 
-def test_the_whole_change_sends_the_code_to_the_new_address_and_tells_the_old_one(cn_tenant):
+def test_the_whole_change_sends_the_code_to_the_new_address_and_tells_the_old_one(
+        cn_tenant, django_capture_on_commit_callbacks):
     account, client = _soul(cn_tenant)
     assert client.post(f"{URL}verify/", {"password": PASSWORD}, format="json").status_code == 204
     res = client.post(URL, {"email": "new.box@example.org"}, format="json")
@@ -59,7 +60,8 @@ def test_the_whole_change_sends_the_code_to_the_new_address_and_tells_the_old_on
     assert mail.outbox[-1].to == ["new.box@example.org"]
     code = _code_in_last_mail()
 
-    done = client.post(f"{URL}confirm/", {"code": code}, format="json")
+    with django_capture_on_commit_callbacks(execute=True):  # the notice to the old address is sent after commit
+        done = client.post(f"{URL}confirm/", {"code": code}, format="json")
 
     assert done.status_code == 200 and done.json()["email_masked"] == "ne***@example.org"
     account.soul.refresh_from_db()

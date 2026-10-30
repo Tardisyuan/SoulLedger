@@ -67,9 +67,9 @@ class FieldPermissionMixin:
         if user_role == 'ADMIN':
             return
 
-        from apps.perm.checker import _live_extra_roles
+        from apps.perm.checker import live_extra_roles
 
-        rule_sets = [FieldPermission.get_field_rules(role, model_name) for role in [user_role, *_live_extra_roles(user)]]
+        rule_sets = [FieldPermission.get_field_rules(role, model_name) for role in [user_role, *live_extra_roles(user)]]
         if not all(rule_sets):
             return  # Some role has no rules here — it sees and edits every field
 

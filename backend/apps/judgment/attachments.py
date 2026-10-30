@@ -172,12 +172,12 @@ def may_view(user, attachment, tenant_id=None):
     if user is None or not user.is_authenticated or not user.is_active or attachment.deleted_at is not None:
         return False
     from apps.perm.checker import check_permission
-    from apps.social.media import _as_request
+    from apps.social.media import as_request
     from apps.social.soul_circle import SOUL_ROLE
 
     if getattr(user, "role", None) == SOUL_ROLE:
         return False
-    req = _as_request(user, tenant_id)
+    req = as_request(user, tenant_id)
     if req is None or not check_permission(user, READ_PERMISSION):
         return False
     from apps.core.tenant import scope_to_tenant

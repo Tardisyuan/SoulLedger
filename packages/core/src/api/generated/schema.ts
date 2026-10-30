@@ -14002,6 +14002,130 @@ export interface components {
          */
         JudgmentKindEnum: "ORIGINAL" | "AMENDMENT" | "REOPEN";
         /**
+         * @description `GET /judgment/` (and its CSV) — every list column but `citations` (perf-audit A3, 2026-10-30).
+         *
+         *     The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
+         *     cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
+         *     grounds panel from `/judgment/{id}/citations/`.
+         */
+        JudgmentList: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly case_number: string;
+            /** Format: uuid */
+            soul: string;
+            readonly soul_name: string;
+            readonly civilization: components["schemas"]["CivilizationEnum"];
+            /** Format: uuid */
+            judge?: string | null;
+            readonly judge_name: string;
+            /** @description Court name, e.g. 第一殿 */
+            court?: string;
+            /** Format: uuid */
+            realm_id?: string | null;
+            evidence_json?: unknown;
+            confession?: string;
+            summary?: string;
+            readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            notes?: string;
+            readonly is_final: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly concluded_at: string | null;
+            readonly untimely: boolean;
+            /** Format: date */
+            readonly held_until: string | null;
+            readonly duat_stage: components["schemas"]["DuatStageEnum"];
+            readonly ferry_barred: string;
+            readonly wangsi_held: boolean;
+            readonly conclude_refusal: string;
+            readonly can_edit: boolean;
+            readonly flow_cancelled: boolean;
+            readonly kind: components["schemas"]["JudgmentKindEnum"];
+            /** Format: uuid */
+            readonly amends_plan_id: string | null;
+            readonly draft_verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            readonly draft_saved_at: string | null;
+            readonly draft_version: number;
+            /** Format: uuid */
+            readonly draft_destination_realm_id: string | null;
+            readonly draft_term_years: number | null;
+            readonly draft_eternal: boolean;
+            readonly claimed_by: number | null;
+            readonly claimed_by_name: string | null;
+            /** Format: date-time */
+            readonly claimed_at: string | null;
+            /** Format: date-time */
+            readonly deferred_at: string | null;
+            readonly deferred_by: number | null;
+            readonly deferred_by_name: string | null;
+            readonly defer_reason: string;
+            /** Format: date-time */
+            readonly reassign_requested_at: string | null;
+            readonly reassign_requested_by: number | null;
+            readonly reassign_requested_by_name: string | null;
+            readonly reassign_reason: string;
+            /** Format: date-time */
+            readonly stale_since: string | null;
+            /** Format: uuid */
+            readonly city_god: string | null;
+            readonly city_god_name: string | null;
+            readonly city_god_status: components["schemas"]["CityGodStatusEnum"];
+            readonly city_god_note: string;
+            /** Format: date-time */
+            readonly sent_on_at: string | null;
+            /**
+             * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+             *
+             *     `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+             *     希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+             *     `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+             *     在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+             */
+            readonly karmic_balance: number | null;
+            /**
+             * @description `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+             *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+             */
+            readonly evidence_count: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score: number;
+            readonly demerit_score: number;
+            readonly realm_name: string | null;
+            /** Format: uuid */
+            readonly workflow: string;
+            readonly weighing_result: (components["schemas"]["WeighingResultEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly heart_weight: number | null;
+            /** Format: uuid */
+            readonly retrial_of: string | null;
+            offence?: components["schemas"]["ChineseOffenceEnum"] | components["schemas"]["BlankEnum"];
+            wrongful_death_cause?: components["schemas"]["WrongfulDeathCauseEnum"] | components["schemas"]["BlankEnum"];
+            grievance_level?: components["schemas"]["GrievanceLevelEnum"] | components["schemas"]["BlankEnum"];
+            readonly grievance_status: components["schemas"]["GrievanceStatusEnum"];
+            readonly grievance_plea: string;
+            readonly grievance_note: string;
+            /** Format: date-time */
+            readonly grievance_decided_at: string | null;
+            owner_org?: number;
+            readonly owner_org_name: string;
+            readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly archived_at: string | null;
+            readonly archived_by_name: string | null;
+            readonly archive_reason: string;
+        };
+        /**
          * @description * `STANDARD` - Standard Trial (Chinese/European/Greek)
          *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
          *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
@@ -15999,7 +16123,7 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["JudgmentAppeal"][];
         };
-        PaginatedJudgmentList: {
+        PaginatedJudgmentListList: {
             /** @example 123 */
             count: number;
             /**
@@ -16012,7 +16136,7 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["Judgment"][];
+            results: components["schemas"]["JudgmentList"][];
         };
         PaginatedLoginLogList: {
             /** @example 123 */
@@ -27491,7 +27615,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedJudgmentList"];
+                    "application/json": components["schemas"]["PaginatedJudgmentListList"];
                 };
             };
         };

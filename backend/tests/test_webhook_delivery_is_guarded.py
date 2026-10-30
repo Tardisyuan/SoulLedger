@@ -42,7 +42,7 @@ from unittest.mock import patch
 import pytest
 from django.db import transaction
 
-from apps.death_sync.webhook_service import _validate_webhook_url
+from apps.core.outbound import validate_webhook_url
 
 
 class _Envelope:
@@ -228,20 +228,20 @@ def test_the_validator_refuses_every_address_that_should_never_be_reached(addres
     """
     host = f"[{address}]" if ":" in address else address
     with pytest.raises(ValueError, match="private/loopback"):
-        _validate_webhook_url(f"https://{host}/hook")
+        validate_webhook_url(f"https://{host}/hook")
 
 
 @pytest.mark.parametrize("public", ["8.8.8.8", "2001:4860:4860::8888"])
 def test_a_publicly_routable_address_is_still_allowed(public):
     """Negative control -- a guard that refuses everything is an outage."""
     host = f"[{public}]" if ":" in public else public
-    _validate_webhook_url(f"https://{host}/hook")
+    validate_webhook_url(f"https://{host}/hook")
 
 
 def test_the_url_validator_rejects_a_loopback_target():
     """End-to-end on the validator, for an address that needs no DNS."""
     with pytest.raises(ValueError):
-        _validate_webhook_url("https://127.0.0.1/hook")
+        validate_webhook_url("https://127.0.0.1/hook")
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +407,7 @@ def test_an_event_bus_delivery_does_not_follow_a_redirect(wired):
         with patch(
             "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
             lambda url: None,
-        ), patch("apps.death_sync.webhook_service._require_public_ip", lambda *a, **k: None):
+        ), patch("apps.core.outbound.require_public_ip", lambda *a, **k: None):
             deliver_event_webhook.apply(args=[str(recorded[0].id)])
 
     assert len(outer_hits) >= 1, "第一个地址一次都没收到 —— 投递根本没发出去"

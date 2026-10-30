@@ -7,7 +7,7 @@
   * 本人创建或被指派(`user_paths`)—— 任何范围下都可见,防流程卡死;
   * 业务自带的额外条件(`extra_q`,如流程的「待我审批」)。
 
-角色 = 主角色 + 兼任(`_live_extra_roles` 已去掉回收站里的);某角色在回收站时,它的配置行不算。
+角色 = 主角色 + 兼任(`live_extra_roles` 已去掉回收站里的);某角色在回收站时,它的配置行不算。
 按业务覆盖(`resource=<key>`)优先于角色默认(`resource=""`)。ADMIN 跳过:绑殿 = 本殿全部,
 无殿 = 全局,那是殿级隔离(`is_tenant_exempt`)的事。
 
@@ -23,9 +23,9 @@ ALL, ORG_CHILD, ORG, SELF, DEFINE = "ALL", "ORG_CHILD", "ORG", "SELF", "DEFINE"
 
 def _awaiting_me(user) -> Q:
     """「待我审批」:进行中、当前节点待决、按角色或按实体指定给我(与 `officer_app/todo.py::_waiting_workflows` 同一条)。"""
-    from apps.perm.checker import _live_extra_roles
+    from apps.perm.checker import live_extra_roles
 
-    roles = [r for r in (getattr(user, "role", None), *_live_extra_roles(user)) if r]
+    roles = [r for r in (getattr(user, "role", None), *live_extra_roles(user)) if r]
     mine = Q(current_node__approver_type="ROLE", current_node__approver_role__in=roles)
     if getattr(user, "actor_id", None):
         mine |= Q(current_node__approver_type="ACTOR", current_node__approver_actor_id=user.actor_id)
@@ -153,10 +153,10 @@ def _rows(user, cache) -> dict:
     (`visible_to(目标用户, 行)` 与请求人共用一份 cache)。"""
     key = ("rows", user.pk)
     if key not in cache:
-        from apps.perm.checker import _live_extra_roles
+        from apps.perm.checker import live_extra_roles
         from apps.perm.models import RoleDataScope
 
-        names = [r for r in (getattr(user, "role", None), *_live_extra_roles(user)) if r]
+        names = [r for r in (getattr(user, "role", None), *live_extra_roles(user)) if r]
         by_role = {name: {} for name in names}
         for row in (RoleDataScope.objects.filter(role__name__in=names, role__is_deleted=False)
                     .select_related("role").prefetch_related("orgs")):
