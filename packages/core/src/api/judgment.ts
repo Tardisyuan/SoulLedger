@@ -44,11 +44,13 @@ export interface Judgment extends ArchiveFields {
   verdict: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
   notes: string;
   /**
-   * The articles this verdict rests on, nested by JudgmentSerializer.
-   * Always present, possibly empty — a judgment with no cited grounds is a
-   * valid (older, or simply unfounded) record, not a loading state.
+   * The articles this verdict rests on, nested by JudgmentSerializer: present on
+   * `GET /judgment/{id}/` and on every single-case answer (create, PATCH,
+   * conclude, claim …), possibly empty — a judgment with no cited grounds is a
+   * valid record, not a loading state. **Absent from `GET /judgment/`**
+   * (`JudgmentListSerializer`, perf-audit A3 2026-10-30): no list row reads it.
    */
-  citations: JudgmentCitation[];
+  citations?: JudgmentCitation[];
   is_final: boolean;
   created_at: string;
   concluded_at: string | null;

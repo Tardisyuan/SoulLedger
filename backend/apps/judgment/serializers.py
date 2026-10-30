@@ -511,6 +511,19 @@ class JudgmentFlowProgressSerializer(serializers.Serializer):
                                     "没有处置、已执行或不被拦时为 null。")
 
 
+class JudgmentListSerializer(JudgmentSerializer):
+    """`GET /judgment/` (and its CSV) — every list column but `citations` (perf-audit A3, 2026-10-30).
+
+    The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
+    cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
+    grounds panel from `/judgment/{id}/citations/`.
+    """
+    citations = None
+
+    class Meta(JudgmentSerializer.Meta):
+        fields = [f for f in JudgmentSerializer.Meta.fields if f != "citations"]
+
+
 class JudgmentDetailSerializer(JudgmentSerializer):
     """`GET /judgment/{id}/` — the list shape plus the evidence rulings and the
     admitted balance. Detail only: the balance walks the soul's ledger, which
