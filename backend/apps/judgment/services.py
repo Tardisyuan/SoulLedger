@@ -636,3 +636,83 @@ class JudgmentDraftService:
         Judgment.all_objects.filter(pk=judgment.pk).update(
             draft_version=F("draft_version") + 1, draft_saved_at=timezone.now(),
         )
+
+
+# ── Opening a case ───────────────────────────────────────────────────────────
+
+
+class OpenCaseRefusedError(Exception):
+    """`code`: `not_in_tenant` / `open_case` / `cannot_enter_judgment`; `open_ids` for `open_case`."""
+
+    def __init__(self, message, code, open_ids=()):
+        super().__init__(message)
+        self.code, self.open_ids = code, list(open_ids)
+
+
+def enter_judgment_realm(soul, judgment):
+    """The soul stands in the court its open ORIGINAL case is heard in.
+
+    Only an open case (no verdict yet): a concluded one whose `realm` is
+    corrected afterwards says where the case *was* heard, and the soul has
+    since moved on. Only ORIGINAL: an AMENDMENT is heard while the soul serves
+    a sentence plan stop, and a REOPEN while it is DISPOSED — in both the soul
+    is in its sentence realm, and whether a retrial walks it back to a court is
+    an open question (云端报告 realm-path-fields(已移出仓库,存于项目记忆目录)), not something to
+    decide here. A case with no realm writes nothing.
+    """
+    from apps.judgment.models import JudgmentKind
+    from apps.realms.path import SoulPathService
+
+    if judgment.realm_id is None or judgment.verdict is not None or judgment.kind != JudgmentKind.ORIGINAL:
+        return
+    SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
+
+
+class JudgmentService:
+    @staticmethod
+    def open_case(soul, *, actor=None, in_tenant=None, tenant=None, **fields):
+        """Open one case for `soul` under its row lock; the rules every case-opening door shares
+        (cq-backend 第 8 条, 2026-10-30; used by `POST /judgment/` and a sentence plan's REOPEN).
+
+        * `in_tenant`: refuse unless the soul is in that hall *now*, under the lock (G7, sentence-plan §8).
+        * One open case per soul, asked under the same lock; ADMIN is exempt (2026-09-12: it repairs a stuck case).
+        * `tenant` (default: the soul's hall at lock time) is where the case is filed.
+        * No `kind` given and the soul serves a sentence plan: an AMENDMENT of that plan (§4.1), decided here, not
+          by the caller.
+        * A living soul: opening it is a death recorded today — the 枉死城 / 城隍 columns `Soul.die` writes, the
+          JUDGING transition, and the 城隍 notice (2026-10-27, review #7).
+
+        Not used by `Soul.die` (the death registration is itself the transition and writes its own opening fields
+        from the recorded death date), nor by `weighing.open_retrial` (opened inside the conclusion of the case it
+        hears again, which is still the open one at that moment).
+        """
+        from apps.judgment.models import Judgment, JudgmentKind, open_judgments
+        from apps.sentence_plan.services import in_progress_plan
+        from apps.souls.models import Soul
+
+        with transaction.atomic():
+            soul = Soul.lock(soul.pk)
+            if in_tenant is not None and soul.tenant_id != in_tenant.pk:
+                raise OpenCaseRefusedError("No such soul in this tenant.", "not_in_tenant")
+            if getattr(actor, "role", None) != "ADMIN":
+                open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
+                if open_ids:
+                    raise OpenCaseRefusedError(
+                        "This soul already has an open case. Conclude it before opening another.", "open_case", open_ids)
+            if "kind" not in fields:
+                plan = in_progress_plan(soul)
+                if plan is not None:
+                    fields.update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
+            was_alive = soul.current_state == SoulState.ALIVE
+            if was_alive:
+                fields.update(soul.opening_fields(timezone.now().date()))
+            judgment = Judgment.objects.create(soul=soul, tenant=tenant or soul.tenant, **fields)
+            if was_alive:
+                from apps.judgment import city_gods
+
+                if not soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated"):
+                    raise OpenCaseRefusedError(
+                        f"The soul is {soul.current_state}; it cannot enter judgment.", "cannot_enter_judgment")
+                city_gods.received(judgment)
+            enter_judgment_realm(soul, judgment)
+            return judgment
