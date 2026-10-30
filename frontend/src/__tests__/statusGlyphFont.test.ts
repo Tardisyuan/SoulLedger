@@ -25,7 +25,9 @@ const REPO = path.join(__dirname, "..", "..", "..");
 const WEB_FONT = path.join(REPO, "frontend/public/fonts/SoulLedgerGlyphs.ttf");
 const APP_FONT = path.join(REPO, "mobile/assets/fonts/SoulLedgerGlyphs.ttf");
 const CSS = readFileSync(path.join(REPO, "frontend/app/globals.css"), "utf8");
-const APP_RULES = readFileSync(path.join(REPO, "mobile/src/rules.ts"), "utf8");
+// The badge glyphs live in two files since 2026-10-30: domain badges in rules.ts, the shared shape (UNKNOWN_BADGE "?")
+// in layout.ts, which the officer app also bundles.
+const APP_RULES = ["mobile/src/rules.ts", "mobile/src/layout.ts"].map((f) => readFileSync(path.join(REPO, f), "utf8")).join("\n");
 
 /** Code points in a TrueType font's format-4 (BMP) cmap subtable. Enough for these glyphs. */
 function cmapCodepoints(buf: Buffer): Set<number> {
@@ -78,7 +80,7 @@ const SQUARE_SOURCES = [
 const SQUARES = ["■", "□"].filter((g) => SQUARE_SOURCES.some((src) => src.includes(g)));
 /** Every glyph a web status / verdict badge draws, plus the squares. */
 const WEB_GLYPHS = cps([...Object.values(SOUL_STATE_GLYPH), ...Object.values(VERDICT_GLYPH), ...SQUARES]);
-/** Every glyph an App badge draws, read from mobile/src/rules.ts (it imports React Native's theme). */
+/** Every glyph an App badge draws, read from mobile/src/rules.ts and layout.ts (they import React Native's theme). */
 const APP_GLYPHS = cps([...APP_RULES.matchAll(/glyph: "([^"]+)"/g)].map((m) => m[1]));
 
 describe("status glyphs come from one bundled font (Design E 组)", () => {
@@ -88,6 +90,7 @@ describe("status glyphs come from one bundled font (Design E 组)", () => {
       expect(APP_GLYPHS).toContain(g.codePointAt(0));
     }
     expect(APP_GLYPHS.length).toBeGreaterThanOrEqual(10);
+    expect(APP_GLYPHS).toContain("?".codePointAt(0)); // UNKNOWN_BADGE, read from layout.ts
     expect(SQUARES).toEqual(["■", "□"]);
   });
 
