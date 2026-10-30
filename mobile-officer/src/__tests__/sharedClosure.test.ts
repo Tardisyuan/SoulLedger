@@ -68,6 +68,7 @@ const EXPECTED = [
   "online.ts",
   "passwordRulesView.tsx",
   "platform.ts",
+  "pushCore.ts",
   "theme.ts",
   "ui.tsx",
   "versionGate.tsx",

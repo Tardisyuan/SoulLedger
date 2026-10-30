@@ -12,47 +12,22 @@
  * kinds) lands exactly where its `screen` says, and an unknown `screen` lands
  * nowhere — the app simply opens.
  */
-import { soulApi, type PushPlatform } from "@soulledger/core/api/soul";
+import { soulApi } from "@soulledger/core/api/soul";
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 import { platform } from "@soulledger/core/platform";
-import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
 
 import type { NavigationProp } from "@react-navigation/native";
 
 import type { AppStackParams, LifeFocus } from "./navTypes";
+import { pushCore } from "./pushCore";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./sentenceKinds";
+
+export { easProjectId, installNotificationHandler, permission, type Permission, type Registration } from "./pushCore";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
 export const PUSH_TOKEN_KEY = "soul_push_token";
 /** The permission primer is offered once; "not now" does not call the system API. */
 export const PRIMER_SEEN_KEY = "soul_push_primer_seen";
-
-export type Permission = "undetermined" | "denied" | "granted";
-
-export type Registration =
-  | { ok: true; token: string }
-  | { ok: false; reason: "not_granted" | "no_project_id" | "token_failed" | "server_failed" };
-
-/** The EAS project this build belongs to; `null` in a development build that has none. */
-export function easProjectId(): string | null {
-  const extra = Constants.expoConfig?.extra as { eas?: { projectId?: unknown } } | undefined;
-  const id = extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  return typeof id === "string" && id ? id : null;
-}
-
-export async function permission(): Promise<Permission> {
-  try {
-    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
-    if (status === "granted") return "granted";
-    // Android 13+ reports a never-asked app as "denied" (notifications are off until
-    // granted); only canAskAgain tells it apart from a real refusal.
-    return status === "undetermined" || canAskAgain ? "undetermined" : "denied";
-  } catch {
-    return "denied";
-  }
-}
 
 /**
  * The Android channel every soul push lands on; the backend names it on each message
@@ -63,91 +38,17 @@ export async function permission(): Promise<Permission> {
  * created PRIVATE on every phone; the old one is deleted so the settings screen does not list a dead channel.
  */
 export const ANDROID_CHANNEL_ID = "default-v2";
-const RETIRED_CHANNEL_IDS = ["default"];
-
-async function ensureAndroidChannel(): Promise<void> {
-  // Android 13+ shows the permission dialog only once a channel exists.
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-      name: "SoulLedger",
-      importance: Notifications.AndroidImportance.DEFAULT,
-      // A letter's sender, a comment's first words, a hall's warning are this soul's own business: the lock screen
-      // says only that something came (RBAC A9; the officer app's channel does the same).
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
-    }).catch(() => {});
-    for (const id of RETIRED_CHANNEL_IDS) await Notifications.deleteNotificationChannelAsync(id).catch(() => {});
-  }
-}
-
-/** The system dialog. Only ever called from the primer's "yes". */
-export async function requestPermission(): Promise<Permission> {
-  await ensureAndroidChannel();
-  // The channel first: Android 13+ shows the dialog only once one exists.
-  try {
-    await Notifications.requestPermissionsAsync();
-  } catch {
-    // Treated as whatever the system now reports.
-  }
-  return answered();
-}
 
 /**
- * EMUI (Android 12, phone QA 10-29b): `requestPermissionsAsync` can come back before the officer has answered its
- * dialog, and the status read then is still "undetermined" -- which is not a refusal. So an undetermined answer is
- * read again a few times, a moment apart, before it is returned; the caller says "not answered yet", never "denied".
+ * Permission, registration (idempotent on the server: it runs on every sign-in, every cold start and every token
+ * change) and sign-out's unregistration -- the shared core (`pushCore.ts`) with this app's key, channel and endpoints.
  */
-const RECHECKS = 6;
-const RECHECK_MS = 500;
-async function answered(): Promise<Permission> {
-  // ponytail: a fixed 3 s of polling; an AppState wait if a phone turns out to need longer.
-  for (let i = 0; i < RECHECKS; i++) {
-    const now = await permission();
-    if (now !== "undetermined") return now;
-    await new Promise((r) => setTimeout(r, RECHECK_MS));
-  }
-  return permission();
-}
-
-const PLATFORM: PushPlatform = Platform.OS === "ios" ? "IOS" : "ANDROID";
-
-/**
- * Register this device for the signed-in soul, if it can be. Idempotent on the
- * server, so it runs on every sign-in, every cold start and every token change.
- */
-export async function registerDevice(): Promise<Registration> {
-  if ((await permission()) !== "granted") return { ok: false, reason: "not_granted" };
-  const projectId = easProjectId();
-  if (!projectId) return { ok: false, reason: "no_project_id" };
-  await ensureAndroidChannel();
-  let token: string;
-  try {
-    token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-  } catch {
-    return { ok: false, reason: "token_failed" };
-  }
-  try {
-    await soulApi.registerPushToken(token, PLATFORM);
-  } catch {
-    return { ok: false, reason: "server_failed" };
-  }
-  platform().persistent.set(PUSH_TOKEN_KEY, token);
-  return { ok: true, token };
-}
-
-export function hasRegisteredDevice(): boolean {
-  return !!platform().persistent.get(PUSH_TOKEN_KEY);
-}
-
-/**
- * Stop pushes to this device for this soul. MUST run while the soul's tokens
- * are still stored — the endpoint is authenticated. Never throws.
- */
-export async function unregisterDevice(): Promise<void> {
-  const token = platform().persistent.get(PUSH_TOKEN_KEY);
-  if (!token) return;
-  platform().persistent.remove(PUSH_TOKEN_KEY);
-  await soulApi.unregisterPushToken(token).catch(() => {});
-}
+export const { requestPermission, registerDevice, hasRegisteredDevice, unregisterDevice } = pushCore({
+  tokenKey: PUSH_TOKEN_KEY,
+  channel: { id: ANDROID_CHANNEL_ID, name: "SoulLedger", retired: ["default"] },
+  register: (token, device) => soulApi.registerPushToken(token, device),
+  unregister: (token) => soulApi.unregisterPushToken(token),
+});
 
 /**
  * The server writes the lock-screen text in the account's `locale`; keep it
@@ -166,13 +67,6 @@ export async function syncPushLocale(): Promise<void> {
   } catch {
     // Retried at the next sign-in or language change.
   }
-}
-
-/** A notification arriving while the app is open still shows its banner. */
-export function installNotificationHandler(): void {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
-  });
 }
 
 export type Landing =
