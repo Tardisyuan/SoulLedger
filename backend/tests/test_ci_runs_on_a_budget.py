@@ -41,3 +41,23 @@ def test_ci_does_run_on_its_own():
     _, on = _load("ci.yml")
     assert on.get("schedule"), "ci.yml has no schedule"
     assert "workflow_dispatch" in on
+
+
+def test_the_daily_run_skips_a_day_with_no_new_commit():
+    """User 2026-10-30: no change, no daily run. The `changes` job decides; every other job waits on it (directly or
+    through `needs` on a job that does), so a skipped `changes` gate skips the whole run."""
+    data, _ = _load("ci.yml")
+    jobs = data["jobs"]
+    check = " ".join(step.get("run", "") for step in jobs["changes"]["steps"])
+    assert "schedule" in check and "86400" in check, "the changes job no longer limits only the daily run"
+
+    def gated(name, seen=()):
+        job = jobs[name]
+        needs = job.get("needs") or []
+        needs = [needs] if isinstance(needs, str) else needs
+        if "changes" in needs:
+            return "needs.changes.outputs.run" in str(job.get("if", ""))
+        return bool(needs) and all(n not in seen and gated(n, (*seen, name)) for n in needs)
+
+    ungated = [name for name in jobs if name != "changes" and not gated(name)]
+    assert ungated == [], f"jobs that run even on a day with no commit: {ungated}"

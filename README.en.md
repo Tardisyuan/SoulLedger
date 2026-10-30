@@ -473,7 +473,7 @@ unwatched gap.
 ## Testing, gates and CI
 
 **CI does not run on branch pushes or pull requests** (the GitHub Actions quota ran out;
-user decision 2026-10-30): `ci.yml` runs daily on main (03:00 UTC), on a pushed `v*` tag,
+user decision 2026-10-30): `ci.yml` runs daily on main (03:00 UTC; skipped when main has no commit from the last 24 hours), on a pushed `v*` tag,
 and by hand; `security.yml` runs weekly (Monday 04:00 UTC) and by hand. The repository is
 public, and GitHub-hosted Linux runners bill no minutes for it. So "CI is green" speaks
 for the last daily run at most; the per-push check is the local (unRAID)
