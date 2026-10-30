@@ -2,7 +2,17 @@
 No DB server needed; the real-PostgreSQL run is what proves the clone works."""
 import pytest
 
-from config.testdb import template_names, use_templates, wants_template
+from config.testdb import (
+    database_digests,
+    keeps_templates,
+    kept_template_names,
+    objects_that_differ,
+    stale_templates,
+    template_names,
+    touch_template,
+    use_templates,
+    wants_template,
+)
 
 PG = "django.db.backends.postgresql"
 SQLITE = "django.db.backends.sqlite3"
@@ -66,3 +76,80 @@ def test_worker_without_templates_is_untouched():
     before = repr(d)
     use_templates(d, {})
     assert repr(d) == before
+
+
+# --- GATES_IN_REMOTE=1: a kept template per input hash (2026-10-30) --------
+
+H = "0123456789abcdef0123"
+
+
+def test_only_the_remote_gate_run_keeps_templates():
+    assert keeps_templates({"GATES_IN_REMOTE": "1"})
+    assert not keeps_templates({})
+    assert not keeps_templates({"GATES_IN_REMOTE": "0"})
+
+
+def test_kept_name_carries_the_input_hash_not_the_run_suffix():
+    assert kept_template_names(dbs(), {"default": H + "ffff"}) == {"default": f"test_soulledger_tpl_h{H}"}
+
+
+def test_pruning_keeps_the_newest_three_by_last_use_and_this_runs_own():
+    names = {i: f"test_soulledger_tpl_h{str(i) * 20}" for i in range(1, 7)}
+    rows = [(names[i], str(1000 + i)) for i in range(1, 7)]
+    rows += [("test_soulledger_tpl_abcd1234", "9999"),  # a per-run template: never pruned here
+             ("test_soulledger_shadow_tpl_h" + H, "1"),  # another alias's base
+             ("test_soulledger_gw0_x", "")]
+    # This run uses the oldest one; it stays, with the two newest others.
+    assert stale_templates(rows, names[1]) == [names[4], names[3], names[2]]
+    assert stale_templates(rows, names[6]) == [names[3], names[2], names[1]]
+    # Without a comment (never touched) a template counts as oldest.
+    assert stale_templates([(names[2], None), (names[3], "5")], names[1], keep=2) == [names[2]]
+
+
+class _Cursor:
+    """Answers the queries database_digests makes from {table: [row text]}."""
+
+    def __init__(self, tables, columns=(("column:t.id", "1|integer"),)):
+        self.tables, self.columns, self.result, self.executed = tables, list(columns), [], []
+
+    def execute(self, sql, params=None):
+        self.executed.append((sql, params))
+        if "information_schema.columns" in sql:
+            self.result = self.columns
+        elif sql.startswith("SELECT tablename"):
+            self.result = [(t,) for t in sorted(self.tables)]
+        elif sql.startswith("SELECT t::text"):
+            self.result = [(r,) for r in self.tables[sql.split('public."')[1].split('"')[0]]]
+        else:
+            self.result = []
+
+    def fetchall(self):
+        return self.result
+
+
+def test_two_migrates_that_differ_only_in_timestamps_are_the_same():
+    a = database_digests(_Cursor({"django_migrations": ['(1,auth,0001,"2026-10-30 01:02:03.456+00")']}))
+    b = database_digests(_Cursor({"django_migrations": ['(1,auth,0001,"2026-10-31 09:09:09.1+00")']}))
+    assert objects_that_differ(a, b) == []
+
+
+def test_a_different_row_order_is_the_same_table():
+    a = database_digests(_Cursor({"t": ["(1,a)", "(2,b)"]}))
+    b = database_digests(_Cursor({"t": ["(2,b)", "(1,a)"]}))
+    assert objects_that_differ(a, b) == []
+
+
+def test_a_changed_seed_row_a_missing_table_or_a_changed_column_differ():
+    base = database_digests(_Cursor({"t": ["(1,a)"], "u": []}))
+    assert objects_that_differ(base, database_digests(_Cursor({"t": ["(1,b)"], "u": []}))) == ["rows:t"]
+    assert objects_that_differ(base, database_digests(_Cursor({"t": ["(1,a)"]}))) == ["rows:u"]
+    changed = database_digests(_Cursor({"t": ["(1,a)"], "u": []}, columns=(("column:t.id", "1|bigint"),)))
+    assert objects_that_differ(base, changed) == ["column:t.id"]
+
+
+def test_touch_refuses_anything_but_a_test_database():
+    cursor = _Cursor({})
+    touch_template(cursor, f"test_soulledger_tpl_h{H}", 1700000000.9)
+    assert cursor.executed[-1] == (f'COMMENT ON DATABASE "test_soulledger_tpl_h{H}" IS %s', ["1700000000"])
+    with pytest.raises(ValueError):
+        touch_template(cursor, "soulledger", 1)

@@ -211,14 +211,15 @@ def _use_sqlite_template(request):
 
 _SUFFIX_KEY = "soulledger_db_suffix"
 _TEMPLATES_KEY = "soulledger_db_templates"
-_templates_key = pytest.StashKey[dict]()
+_templates_key = pytest.StashKey[dict]()  # what the workers clone
+_drop_key = pytest.StashKey[dict]()  # what this run built and drops at the end (not a kept template)
 _SUFFIX_KEY_STASH = pytest.StashKey[str]()
 
 
 def _drop_pg_templates(config):
-    """DROP every template this process built. WITH (FORCE): nothing should be
-    connected to it, but a leftover on 115 is the one outcome this must not have."""
-    templates = config.stash.get(_templates_key, {})
+    """DROP every per-run template this process built (a kept one, GATES_IN_REMOTE=1, stays). WITH (FORCE):
+    nothing should be connected to it, but a leftover on 115 is the one outcome this must not have."""
+    templates = config.stash.get(_drop_key, {})
     if not templates:
         return
     from django.db import connections
@@ -229,12 +230,13 @@ def _drop_pg_templates(config):
             creation = connections[alias].creation
             with creation._nodb_cursor() as cursor:
                 cursor.execute(f"DROP DATABASE IF EXISTS {creation._quote_name(name)} WITH (FORCE)")
-    config.stash[_templates_key] = {}
+    config.stash[_drop_key] = {}
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionstart(session):
-    """xdist controller only: build and migrate one template per PostgreSQL alias.
+    """xdist controller only: build and migrate one template per PostgreSQL alias
+    (on the remote gate box, GATES_IN_REMOTE=1: reuse the kept one for this input hash).
 
     `tryfirst` so this finishes before xdist's own sessionstart (`trylast`)
     spawns the workers. The controller collects no tests, so it builds every
@@ -254,25 +256,127 @@ def pytest_sessionstart(session):
         nomigrations=bool(config.getoption("nomigrations", False)),
     ):
         return
+    import os
+
     from django.db import connections
     from django.test.utils import setup_databases
     from pytest_django.plugin import blocking_manager_key
 
+    from config.testdb import keeps_templates
+
     suffix = run_suffix()
-    templates = template_names(settings.DATABASES, suffix)
-    for alias, name in templates.items():
-        settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
-    config.stash[_templates_key] = templates
+    fresh = template_names(settings.DATABASES, suffix)
     config.stash[_SUFFIX_KEY_STASH] = suffix
     try:
         with config.stash[blocking_manager_key].unblock():
-            setup_databases(verbosity=0, interactive=False, aliases=set(templates), serialized_aliases=set())
+            if keeps_templates(os.environ):
+                # Remote gate runs only: clone the kept template of this input hash (config/testdb.py).
+                config.stash[_templates_key] = _kept_or_fresh_templates(config, fresh)
+                return
+            for alias, name in fresh.items():
+                settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
+            config.stash[_templates_key] = fresh
+            config.stash[_drop_key] = dict(fresh)
+            setup_databases(verbosity=0, interactive=False, aliases=set(fresh), serialized_aliases=set())
             # CREATE DATABASE ... TEMPLATE refuses while anyone is connected to the template.
             connections.close_all()
     except BaseException:
         # sessionfinish never runs when sessionstart raises, so clean up here.
         _drop_pg_templates(config)
         raise
+
+
+def _kept_or_fresh_templates(config, fresh):
+    """GATES_IN_REMOTE=1: {alias: template the workers clone}. A kept template of this input hash is reused;
+    a missing one is built and kept; a verifying run builds fresh, compares, and fails on any difference."""
+    import os
+    import sys
+    import time
+    from pathlib import Path
+
+    import psycopg2
+    from django.conf import settings
+    from django.db import connections
+    from django.test.utils import setup_databases
+
+    from config import sqlite_template
+    from config.testdb import (
+        database_digests,
+        database_exists,
+        kept_template_names,
+        objects_that_differ,
+        prune_templates,
+        touch_template,
+    )
+
+    def server_version(alias):
+        with connections[alias].creation._nodb_cursor() as cursor:
+            cursor.execute("SHOW server_version_num")
+            return cursor.fetchone()[0]
+
+    backend_dir = Path(sqlite_template.__file__).resolve().parent.parent
+    hashes = {
+        alias: sqlite_template.input_hash(
+            backend_dir, {**sqlite_template.settings_inputs(settings, alias), "server": server_version(alias)}
+        )
+        for alias in fresh
+    }
+    kept = kept_template_names(settings.DATABASES, hashes)
+    verify = sqlite_template.mode(os.environ, reuse_db=False, nomigrations=False, has_migration_tests=False) == "verify"
+    existing = set()
+    for alias, name in kept.items():
+        with connections[alias].creation._nodb_cursor() as cursor:
+            if database_exists(cursor, name):
+                existing.add(alias)
+    build = {alias: fresh[alias] for alias in fresh if verify or alias not in existing}
+    use = {alias: kept[alias] for alias in fresh if alias not in build}
+    if build:
+        for alias, name in build.items():
+            settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = name
+        config.stash[_drop_key] = dict(build)
+        setup_databases(verbosity=0, interactive=False, aliases=set(build), serialized_aliases=set())
+    connections.close_all()
+
+    def digests(alias, name):
+        d = connections[alias].settings_dict
+        conn = psycopg2.connect(dbname=name, user=d["USER"], password=d["PASSWORD"], host=d["HOST"],
+                                port=d["PORT"] or 5432)
+        try:
+            with conn.cursor() as cursor:
+                return database_digests(cursor)
+        finally:
+            conn.close()
+
+    for alias, name in build.items():
+        with connections[alias].creation._nodb_cursor() as cursor:
+            if alias in existing:
+                diff = objects_that_differ(digests(alias, name), digests(alias, kept[alias]))
+                if diff:
+                    cursor.execute(f'DROP DATABASE IF EXISTS "{kept[alias]}" WITH (FORCE)')
+                    raise sqlite_template.TemplateDriftError(
+                        f"PostgreSQL test template {kept[alias]}: same input hash, but a real migrate produced "
+                        f"different contents -> the hash in config/sqlite_template.py is missing an input. "
+                        f"Template dropped. Differing objects: {', '.join(diff[:40])}"
+                    )
+                print(f"\nPostgreSQL test template {kept[alias]} verified against a real migrate.", file=sys.stderr)
+                use[alias] = name  # this run tests what it just migrated; dropped at the end
+                continue
+            try:
+                cursor.execute(f'ALTER DATABASE "{name}" RENAME TO "{kept[alias]}"')
+            except Exception:  # noqa: BLE001 -- a concurrent run kept one first: run on ours, drop it after
+                use[alias] = name
+                continue
+            config.stash[_drop_key].pop(alias, None)
+            use[alias] = kept[alias]
+    for alias in kept:
+        with connections[alias].creation._nodb_cursor() as cursor:
+            if database_exists(cursor, kept[alias]):
+                touch_template(cursor, kept[alias], time.time())
+                prune_templates(cursor, kept[alias])
+    connections.close_all()
+    print(f"\nPostgreSQL test templates: {', '.join(f'{a}={n}' for a, n in sorted(use.items()))} "
+          f"({'built' if build else 'kept, no migrate'})", file=sys.stderr)
+    return use
 
 
 

@@ -223,3 +223,119 @@ def terminate_other_sessions(cursor, name: str) -> None:
         "WHERE datname = %s AND pid <> pg_backend_pid()",
         [name],
     )
+
+
+# --- Remote gate runs keep the template, keyed by what migrating reads -------
+#
+# Every delegated run on the gate box (GATES_IN_REMOTE=1, scripts/run-gates.sh) built and migrated a fresh
+# template before the first test: ~100 s of a ~300 s selective run (2026-10-28). There, and only there, the
+# template is named after the input hash the SQLite template uses (config/sqlite_template.py, plus the
+# server version): `test_soulledger_tpl_h<hash>`. A run whose hash already has one clones it and migrates
+# nothing; the template outlives the run; the newest KEEP_TEMPLATES by last use (the database's comment, an
+# epoch) are kept and older ones dropped. A run that migrates for real (--full, GATES_FULL=1, round trips in
+# the run -> SOULLEDGER_SQLITE_TEMPLATE=0, i.e. sqlite_template.mode() == "verify") still builds a fresh
+# template, runs on it, and compares it with the kept one: a difference means the hash missed an input, so
+# the kept template is dropped and the run fails (TemplateDriftError), as the SQLite check does.
+# This machine, CI and every run without GATES_IN_REMOTE=1 are unchanged: a per-run template, dropped at the end.
+
+KEEP_TEMPLATES = 3
+_HASH_LEN = 20
+_KEPT_SUFFIX = re.compile(rf"_tpl_h[0-9a-f]{{{_HASH_LEN}}}$")
+
+
+def keeps_templates(env) -> bool:
+    return env.get("GATES_IN_REMOTE") == "1"
+
+
+def kept_template_names(databases: dict, hashes: dict) -> dict:
+    """{alias: `<test name>_tpl_h<hash>`} for the aliases in `hashes`."""
+    out = {}
+    for alias, digest in hashes.items():
+        db = databases[alias]
+        base = db.get("TEST", {}).get("NAME") or f"test_{db['NAME']}"
+        out[alias] = f"{base}_tpl_h{digest[:_HASH_LEN]}"
+    return out
+
+
+def database_exists(cursor, name: str) -> bool:
+    cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", [name])
+    return cursor.fetchone() is not None
+
+
+def _quoted(name: str) -> str:
+    if not is_disposable_test_db(name):
+        raise ValueError(f"refusing to touch {name!r}: not a test_soulledger_ database")
+    return f'"{name}"'
+
+
+def touch_template(cursor, name: str, now: float) -> None:
+    """Record the last use in the database's comment (COMMENT ON DATABASE does not connect to it)."""
+    cursor.execute(f"COMMENT ON DATABASE {_quoted(name)} IS %s", [str(int(now))])
+
+
+def stale_templates(rows, kept: str, keep: int = KEEP_TEMPLATES) -> list:
+    """Of `rows` = [(name, comment)], the kept templates of `kept`'s base beyond the newest `keep` by last
+    use. Never `kept` itself (this run's), never a name of any other shape (a per-run `_tpl_<suffix>`)."""
+    shape = re.compile(re.escape(_KEPT_SUFFIX.sub("", kept)) + _KEPT_SUFFIX.pattern)
+
+    def last_use(comment):
+        return int(comment) if (comment or "").isdigit() else 0
+
+    others = [n for _, n in sorted(((last_use(c), n) for n, c in rows if shape.match(n)), reverse=True) if n != kept]
+    return others[max(keep - 1, 0):]
+
+
+def prune_templates(cursor, kept: str, keep: int = KEEP_TEMPLATES) -> list:
+    """Drop the stale kept templates of `kept`'s base. Plain DROP (no FORCE): one in use stays, harmlessly."""
+    base = _KEPT_SUFFIX.sub("", kept)
+    cursor.execute(
+        "SELECT datname, shobj_description(oid, 'pg_database') FROM pg_database WHERE datname LIKE %s",
+        [base.replace("_", "\\_") + "\\_tpl\\_h%"],
+    )
+    dropped = []
+    for name in stale_templates(cursor.fetchall(), kept, keep):
+        try:
+            cursor.execute(f"DROP DATABASE IF EXISTS {_quoted(name)}")
+            dropped.append(name)
+        except Exception:  # noqa: BLE001 -- in use by a concurrent run: the next run's prune gets it
+            pass
+    return dropped
+
+
+# The drift check: a real migrate against the kept template of the same hash. Datetimes are masked
+# (django_migrations.applied, created/updated times of seeded rows): on SQLite they were the only
+# difference between two real migrates of one tree (config/sqlite_template.py, measured 2026-10-19).
+_DATETIME_IN_TEXT = re.compile(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}(:\d{2})?|Z)?")
+
+_SCHEMA_QUERIES = (
+    "SELECT 'column:' || table_name || '.' || column_name, concat_ws('|', ordinal_position, data_type, udt_name,"
+    " is_nullable, column_default, character_maximum_length, numeric_precision, numeric_scale)"
+    " FROM information_schema.columns WHERE table_schema = 'public'",
+    "SELECT 'index:' || indexname, indexdef FROM pg_indexes WHERE schemaname = 'public'",
+    "SELECT 'constraint:' || conrelid::regclass::text || '.' || conname, pg_get_constraintdef(oid)"
+    " FROM pg_constraint WHERE connamespace = 'public'::regnamespace",
+    "SELECT 'extension:' || extname, extversion FROM pg_extension",
+)
+
+
+def database_digests(cursor) -> dict:
+    """{object: digest} for the schema (columns, indexes, constraints, extensions) and every table's rows."""
+    import hashlib
+
+    out = {}
+    for query in _SCHEMA_QUERIES:
+        cursor.execute(query)
+        for key, value in cursor.fetchall():
+            out[key] = hashlib.sha256(repr(value).encode()).hexdigest()
+    cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename")
+    for (table,) in cursor.fetchall():
+        cursor.execute(f'SELECT t::text FROM public."{table}" t')
+        h = hashlib.sha256()
+        for row in sorted(_DATETIME_IN_TEXT.sub("<datetime>", r) for (r,) in cursor.fetchall()):
+            h.update(row.encode() + b"\0")
+        out[f"rows:{table}"] = h.hexdigest()
+    return out
+
+
+def objects_that_differ(a: dict, b: dict) -> list:
+    return sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
