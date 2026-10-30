@@ -45,8 +45,8 @@ import {
   ApplicationDetailScreen,
   ApplicationsScreen,
   NewApplicationScreen,
-  type AppStackParams,
 } from "./screens/applications";
+import type { AppStackParams } from "./navTypes";
 import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
