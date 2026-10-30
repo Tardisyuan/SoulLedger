@@ -130,9 +130,9 @@ def _caller_role_names(user):
     role = getattr(user, 'role', None)
     if not role or role == ADMIN_ROLE_NAME:
         return set()
-    from apps.perm.checker import _live_extra_roles
+    from apps.perm.checker import live_extra_roles
 
-    return {role, *_live_extra_roles(user)}
+    return {role, *live_extra_roles(user)}
 
 
 def _overwrite_outcome(before, after, user):

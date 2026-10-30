@@ -20,13 +20,13 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from apps.audit.retention import BATCH_SIZE, _days, _purge
+from apps.audit.retention import BATCH_SIZE, purge_in_batches, retention_days
 
 logger = logging.getLogger(__name__)
 
 
 def _purge_with_children(queryset, children, batch_size):
-    """`_purge` for a parent whose children `_raw_delete` would orphan: `children(pks)` yields their querysets."""
+    """`purge_in_batches` for a parent whose children `_raw_delete` would orphan: `children(pks)` yields their querysets."""
     deleted = 0
     while True:
         pks = list(queryset.order_by("pk").values_list("pk", flat=True)[:batch_size])
@@ -53,14 +53,14 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     now = now or timezone.now()
 
     def cutoff(setting):
-        days = _days(setting)
+        days = retention_days(setting)
         return now - timedelta(days=days) if days else None
 
     result = {}
 
     if c := cutoff("EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS"):
         rows = EventWebhookDelivery.all_objects.filter(create_time__lt=c).exclude(status=EventWebhookStatus.PENDING)
-        result["event_webhook_deliveries"] = _purge(rows, batch_size)
+        result["event_webhook_deliveries"] = purge_in_batches(rows, batch_size)
 
     if c := cutoff("USER_NOTIFICATION_READ_RETENTION_DAYS"):
         rows = UserNotification.all_objects.filter(is_read=True, created_at__lt=c)
@@ -70,8 +70,8 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
 
     if c := cutoff("PUSH_DELIVERY_RETENTION_DAYS"):
         rows = PushDelivery.objects.filter(created_at__lt=c).exclude(status__in=(PushStatus.QUEUED, PushStatus.SENDING))
-        result["push_deliveries"] = _purge(rows, batch_size)
-        result["officer_push_deliveries"] = _purge(OfficerPushDelivery.objects.filter(created_at__lt=c), batch_size)
+        result["push_deliveries"] = purge_in_batches(rows, batch_size)
+        result["officer_push_deliveries"] = purge_in_batches(OfficerPushDelivery.objects.filter(created_at__lt=c), batch_size)
 
     if c := cutoff("INACTIVE_PUSH_DEVICE_RETENTION_DAYS"):
         result["push_devices"] = _purge_with_children(
@@ -86,18 +86,18 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     # 朋友圈「互动消息」:窗口不是设置,是产品文案(「只保留 90 天内的互动」,第四十批 S-a)—— 改它要连文案一起改。
     # 有 tenant 列,但按年龄删与租户无关,同样是全局的一次扫。
     rows = SocialInteraction.objects.filter(last_at__lt=now - timedelta(days=SocialInteraction.RETENTION_DAYS))
-    result["social_interactions"] = _purge(rows, batch_size)
+    result["social_interactions"] = purge_in_batches(rows, batch_size)
 
     if c := cutoff("EXPIRED_MFA_DEVICE_GRACE_DAYS"):
-        result["mfa_remembered_devices"] = _purge(MfaRememberedDevice.objects.filter(expires_at__lt=c), batch_size)
-        result["soul_mfa_devices"] = _purge(SoulMfaDevice.objects.filter(expires_at__lt=c), batch_size)
+        result["mfa_remembered_devices"] = purge_in_batches(MfaRememberedDevice.objects.filter(expires_at__lt=c), batch_size)
+        result["soul_mfa_devices"] = purge_in_batches(SoulMfaDevice.objects.filter(expires_at__lt=c), batch_size)
 
     if c := cutoff("ASSIST_USAGE_RETENTION_DAYS"):
-        result["assist_usage"] = _purge(AssistUsage.objects.filter(created_at__lt=c), batch_size)
+        result["assist_usage"] = purge_in_batches(AssistUsage.objects.filter(created_at__lt=c), batch_size)
 
     # Django's own session table (the admin site): `clearsessions` was never scheduled, so expired rows stayed.
     # No setting: an expired session is unusable by definition.
-    result["expired_sessions"] = _purge(Session.objects.filter(expire_date__lt=now), batch_size)
+    result["expired_sessions"] = purge_in_batches(Session.objects.filter(expire_date__lt=now), batch_size)
 
     logger.info("data retention: %s", result)
     return result

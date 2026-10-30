@@ -29,13 +29,13 @@ def prune_soul_sign_ins():
     官员的 `LoginLog` 是审计的一部分,按 `LOGIN_LOG_RETENTION_DAYS` 另管(默认不清),这里不碰。
     `_raw_delete` 同 `audit/retention.py`:LoginLog 是被审计的模型,逐行 delete 会为每一行再写一条审计。
     """
-    from apps.audit.retention import _purge
+    from apps.audit.retention import purge_in_batches
 
     from .models import LoginLog, SignInSession
 
     cutoff = timezone.now() - timedelta(days=SOUL_SIGN_IN_KEEP_DAYS)
-    logs = _purge(LoginLog.all_objects.filter(timestamp__lt=cutoff, username__startswith="soul:"), 5000)
-    sessions = _purge(SignInSession.objects.filter(last_seen_at__lt=cutoff), 5000)
+    logs = purge_in_batches(LoginLog.all_objects.filter(timestamp__lt=cutoff, username__startswith="soul:"), 5000)
+    sessions = purge_in_batches(SignInSession.objects.filter(last_seen_at__lt=cutoff), 5000)
     return {"sign_in_logs": logs, "sessions": sessions}
 
 

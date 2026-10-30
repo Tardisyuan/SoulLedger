@@ -144,7 +144,7 @@ def may_view(user, image, tenant_id=None):
 
     * 灵魂:本世账号是会话参与方;对方发的图要已发出,自己上传的图发出前也看得见。
     * 官员:图已发出、会话是收件箱、持 `soul_inbox.read`,且会话在自己的租户里(`scope_to_tenant`,
-      与收件箱视图同一个函数)。`tenant_id` 是签发地址那次请求的租户(见 social.media._as_request)。
+      与收件箱视图同一个函数)。`tenant_id` 是签发地址那次请求的租户(见 social.media.as_request)。
     """
     if user is None or not user.is_authenticated or not user.is_active:
         return False
@@ -159,9 +159,9 @@ def may_view(user, image, tenant_id=None):
         return False
     from apps.core.tenant import scope_to_tenant
     from apps.perm.checker import check_permission
-    from apps.social.media import _as_request
+    from apps.social.media import as_request
 
-    req = _as_request(user, tenant_id)
+    req = as_request(user, tenant_id)
     return (req is not None and check_permission(user, READ_PERMISSION)
             and scope_to_tenant(Conversation.objects.filter(pk=conversation.pk), req).exists())
 
