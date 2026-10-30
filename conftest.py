@@ -123,6 +123,23 @@ def _clear_cache_between_tests(_isolate_cache_from_redis):
 
 
 @pytest.fixture(autouse=True)
+def _no_request_context_across_tests():
+    """Start and end every test with no current request / user in the context-vars.
+
+    The middleware clears them at the end of a real request, but a test that sets them by hand
+    (`set_current_request(...)`) and does not clear them hands the next test on the worker a "current
+    request" — and since 2026-10-30 the permission cache memoizes per request (`apps/perm/cache.py`),
+    so that test then reads a permission answer from a database state that no longer exists
+    (`test_can_end_goes_by_workflow_update_in_the_initiating_hall`, 10-30 gate).
+    """
+    from apps.core.request_local import clear_current_user
+
+    clear_current_user()
+    yield
+    clear_current_user()
+
+
+@pytest.fixture(autouse=True)
 def _restore_event_handlers():
     """Put the process-wide handler registry back as each test found it.
 
