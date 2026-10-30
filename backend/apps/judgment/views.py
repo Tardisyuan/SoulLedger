@@ -54,6 +54,7 @@ from apps.judgment.serializers import (
     JudgmentDraftConflictSerializer,
     JudgmentDraftSerializer,
     JudgmentDraftWriteSerializer,
+    JudgmentListSerializer,
     JudgmentPrecedentSerializer,
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
@@ -284,7 +285,6 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             "soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "reassign_requested_by", "realm",
             "approval_workflow", "city_god", "owner_org",
         )
-        .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
     serializer_class = JudgmentSerializer
@@ -300,7 +300,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action == "retrieve":
-            qs = qs.prefetch_related("evidence_admissions")
+            # The grounds only where they are answered (perf-audit A3): the list serializer has no `citations`.
+            qs = qs.prefetch_related("evidence_admissions", "citations__statute", "citations__statute__source_actor")
         return qs
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
@@ -311,7 +312,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         return export_csv(
             request,
             qs=self.filter_queryset(self.get_queryset()),
-            serializer_class=JudgmentSerializer,
+            serializer_class=JudgmentListSerializer,
             columns=[
                 ("Case ID", "id"), ("Case Number", "case_number"), ("Soul", "soul_name"),
                 ("Civilization", "civilization"), ("Judge", "judge_name"), ("Court", "court"),
@@ -326,6 +327,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # Detail only: the admitted balance walks the soul's ledger.
         if self.action == "retrieve":
             return JudgmentDetailSerializer
+        if self.action == "list":
+            return JudgmentListSerializer
         return super().get_serializer_class()
 
     def perform_create(self, serializer):
