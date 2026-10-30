@@ -11,6 +11,7 @@ import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
+import { responseCode } from "@soulledger/core/api/client";
 
 /** 结束说明的上限,与 `CrossTenantJudgmentConcludeSerializer.note` 的 max_length 同一个数。 */
 export const END_NOTE_MAX = 1000;
@@ -43,8 +44,7 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
     },
     onError: (error) => {
       // 第四十三批:并入了审批流程的跨域审判由流程结束(走完 = 通过,驳回 = 不通过);流程还在走时手动结束答 409。
-      const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      showToast(t(code === "workflow_running" ? "crossJudgments.workflow_running" : "crossJudgments.end_error"), "error");
+      showToast(t(responseCode(error) === "workflow_running" ? "crossJudgments.workflow_running" : "crossJudgments.end_error"), "error");
     },
   });
   const cancel = useMutation({

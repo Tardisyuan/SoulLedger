@@ -28,21 +28,6 @@ export interface Placement {
 
 export const EMPTY_PLACEMENT: Placement = { verdict: "", realmId: "", term: "", eternal: false };
 
-/** 结案接口的拒绝码里属于发落的那几个 —— 页面据此把拒绝画在这一节,而不是弹通用 toast。 */
-export const PLACEMENT_REFUSALS = [
-  "realm_full",
-  "realm_not_allowed",
-  "realm_not_found",
-  "term_conflict",
-  "eternal_not_allowed",
-  "destination_not_applicable",
-  "term_not_applicable",
-  // 欧洲「重审」另开一案、不发落(apps/judgment/services.py)。
-  "retry_has_no_destination",
-  // 地府判无罪不发落,结案后直接候转世(同上)。
-  "passed_has_no_destination",
-] as const;
-
 /** 这份发落在 `verdict` 之下要加进结案请求的字段;为别的裁决选的发落一律不带。 */
 export function placementFor(
   p: Placement,
@@ -95,7 +80,7 @@ export function JudgmentPlacement({
   verdict: string;
   value: Placement;
   onChange: (next: Placement) => void;
-  /** The conclude refusal code, when it is one of PLACEMENT_REFUSALS. */
+  /** The conclude refusal code, when it is one of `PLACEMENT_REFUSALS` (`@soulledger/core/api/judgment`). */
   refusal?: string | null;
   /** The draft's `draft_saved_at`: 「已自动保存 HH:MM」 at the right of the header while there is a draft. */
   savedAt?: string | null;

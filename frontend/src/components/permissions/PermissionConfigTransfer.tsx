@@ -15,6 +15,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Modal } from "@/src/components/ui/Modal";
 import { TextField } from "@/src/components/ui/Field";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { responseCode } from "@soulledger/core/api/client";
 
 /**
  * 「导出配置 / 导入配置…」(后端 apps/perm/export.py,两个接口都只许 ADMIN)。
@@ -192,8 +193,7 @@ export function PermissionConfigTransfer() {
 
   /** 开关在预演之后被关掉时后端答 403 `overwrite_disabled`:显示文案,并退回合并。 */
   const fail = (error: unknown) => {
-    const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
-    if (code === "overwrite_disabled") {
+    if (responseCode(error) === "overwrite_disabled") {
       setCanOverwrite(false);
       setMode("merge");
       setTyped("");

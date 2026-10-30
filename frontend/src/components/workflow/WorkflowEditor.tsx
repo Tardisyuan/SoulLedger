@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect, useId, useMemo, useRef, type CSSProperties, type DragEvent } from "react";
 import { flushSync } from "react-dom";
+import { responseCode } from "@soulledger/core/api/client";
 /**
  * WHAT gsap COSTS HERE, MEASURED, SO THE TRADE CAN BE RE-JUDGED LATER.
  *
@@ -284,7 +285,7 @@ const CASE_TYPES_BY_CIVILIZATION: Record<CivilizationOption, readonly string[]> 
 
 /** The save / publish refusal code for a case type the civilization does not have. */
 function caseTypeRefused(error: unknown): boolean {
-  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "case_type_not_for_civilization";
+  return responseCode(error) === "case_type_not_for_civilization";
 }
 
 export interface WorkflowTemplateInput {

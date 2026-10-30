@@ -7,10 +7,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextField } from "@/src/components/ui/Field";
 import { showToast } from "@/src/components/ui/Toast";
-
-type Refusal = { response?: { status?: number; data?: { code?: string; remaining_attempts?: number; retry_after?: number } } };
-
-const codeOf = (err: unknown) => (err as Refusal)?.response?.data?.code;
+import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /**
  * Acting on another administrator (reset password / two-step, deactivate, delete, edit, change roles) needs the
@@ -34,7 +31,7 @@ export function useSecondFactor(targetName: string): {
   const run = useCallback(
     <T,>(fn: (proof?: SecondFactorProof) => Promise<T>): Promise<T> =>
       fn().catch((err: unknown) => {
-        const code = codeOf(err);
+        const code = responseCode(err);
         if (code === "admin_target_global_only" || code === "second_factor_unavailable") {
           showToast(t(`users.second_factor.${code}`), "error");
           throw err;
@@ -84,14 +81,15 @@ function SecondFactorPrompt({
     try {
       await onSubmit({ mfa_method: method, mfa_code: code.trim() });
     } catch (err) {
-      const data = (err as Refusal)?.response?.data;
-      if (data?.code === "locked") {
-        showToast(t("users.second_factor.locked", { minutes: String(Math.ceil((data.retry_after ?? 900) / 60)) }), "error");
+      const code = responseCode(err);
+      const data = responseData<{ remaining_attempts: number; retry_after: number }>(err);
+      if (code === "locked") {
+        showToast(t("users.second_factor.locked", { minutes: String(Math.ceil((data?.retry_after ?? 900) / 60)) }), "error");
         onCancel();
         return;
       }
-      if (data?.code === "expired") setError(t("users.second_factor.expired"));
-      else if (data?.code === "wrong") setError(t("users.second_factor.wrong", { n: String(data.remaining_attempts ?? 0) }));
+      if (code === "expired") setError(t("users.second_factor.expired"));
+      else if (code === "wrong") setError(t("users.second_factor.wrong", { n: String(data?.remaining_attempts ?? 0) }));
       else throw err;
       setCode("");
     } finally {

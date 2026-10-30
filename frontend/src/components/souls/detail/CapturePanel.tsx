@@ -16,6 +16,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField } from "@/src/components/ui/Field";
+import { responseCode } from "@soulledger/core/api/client";
 
 const CAPTURE_CODES = ["not_diyu", "not_alive", "lifespan_not_ended", "warrant_open", "wrong_status", "reason_required"];
 const ESCORTS: CaptureEscort[] = ["WUCHANG", "NIUTOU_MAMIAN"];
@@ -64,7 +65,7 @@ function useCaptureFeedback(soulName: string) {
   const queryClient = useQueryClient();
   return {
     onError: (err: unknown) => {
-      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const code = responseCode(err);
       // 发牒或交接时本殿没有能收案的城隍(409 `no_city_god`,2026-10-29;发牒那一处同日补上):说清要先设兜底城隍。
       if (code === "no_city_god") return showToast(t("judgment.error.no_city_god"), "error");
       showToast(code && CAPTURE_CODES.includes(code) ? t(`souls.capture.error.${code}`) : t("common.error"), "error");

@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, responseCode, responseData, responseStatus } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 import type { PaginatedResponse } from "./users";
 import type { components } from "./generated/schema";
@@ -36,16 +36,14 @@ export interface RebirthQuotaFull {
 
 /** The 409 body when `error` is a rebirth refused for a full path; null for anything else. */
 export function rebirthQuotaFullOf(error: unknown): RebirthQuotaFull | null {
-  const r = (error as { response?: { status?: number; data?: Partial<RebirthQuotaFull> } })?.response;
-  const d = r?.data;
-  if (r?.status !== 409 || d?.code !== "rebirth_quota_full" || typeof d.rebirth_form !== "string") return null;
+  const d = responseData<RebirthQuotaFull>(error);
+  if (responseStatus(error) !== 409 || responseCode(error) !== "rebirth_quota_full" || typeof d?.rebirth_form !== "string") return null;
   return { code: "rebirth_quota_full", rebirth_form: d.rebirth_form, limit: Number(d.limit), used: Number(d.used) };
 }
 
 /** 409 `reborn` / `complete` answers for a soul of Diyu that has not drunk Mengpo's soup; the soul stays awaiting rebirth. */
 export function soupNotTakenOf(error: unknown): boolean {
-  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  return r?.status === 409 && r.data?.code === "soup_not_taken";
+  return responseStatus(error) === 409 && responseCode(error) === "soup_not_taken";
 }
 
 /** 409 `reborn` / `complete` answers when the business forbids the rebirth (2026-10-27); the soul stays where it was.
@@ -62,9 +60,8 @@ export function rebirthBlockedOf(
   | "disposition_not_executed"
   | "origin_flow_open"
   | null {
-  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  const c = r?.data?.code;
-  return r?.status === 409 &&
+  const c = responseCode(error);
+  return responseStatus(error) === 409 &&
     (c === "plan_in_progress" || c === "eternal_sentence" || c === "rebirth_not_approved" || c === "term_not_served" ||
       c === "disposition_not_executed" || c === "origin_flow_open")
     ? c
@@ -73,22 +70,22 @@ export function rebirthBlockedOf(
 
 /** The `term_end` of a 409 `term_not_served`, or null. */
 export function rebirthTermEndOf(error: unknown): HistoricalDate | null {
-  const d = (error as { response?: { data?: { code?: string; term_end?: HistoricalDate } } })?.response?.data;
-  return d?.code === "term_not_served" && d.term_end ? d.term_end : null;
+  const end = responseData<{ term_end: HistoricalDate }>(error)?.term_end;
+  return responseCode(error) === "term_not_served" && end ? end : null;
 }
 
 /** 400 `rebirth_form_reason_required` (2026-10-29): the chosen path differs from the soul's approved wish and
  *  no reason was given. Returns the wished path, or null. */
 export function rebirthReasonRequiredOf(error: unknown): string | null {
-  const r = (error as { response?: { status?: number; data?: { code?: string; desired_form?: string } } })?.response;
-  return r?.status === 400 && r.data?.code === "rebirth_form_reason_required" ? (r.data.desired_form ?? "") : null;
+  return responseStatus(error) === 400 && responseCode(error) === "rebirth_form_reason_required"
+    ? (responseData<{ desired_form: string }>(error)?.desired_form ?? "")
+    : null;
 }
 
 /** The refusal code of `drinkSoup` (409: `not_diyu` / `not_reincarnating` / `soup_already_taken`), else null. */
 export function soupRefusalOf(error: unknown): "not_diyu" | "not_reincarnating" | "soup_already_taken" | null {
-  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  const c = r?.data?.code;
-  return r?.status === 409 && (c === "not_diyu" || c === "not_reincarnating" || c === "soup_already_taken") ? c : null;
+  const c = responseCode(error);
+  return responseStatus(error) === 409 && (c === "not_diyu" || c === "not_reincarnating" || c === "soup_already_taken") ? c : null;
 }
 
 /** A path is full when it has a limit and this month's count has reached it (0 = full from the first day). */

@@ -20,6 +20,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { Segmented } from "@/src/components/ui/Segmented";
+import { responseCode } from "@soulledger/core/api/client";
 
 type Choice = "true" | "false" | "null";
 const CHOICES: readonly Choice[] = ["true", "false", "null"];
@@ -51,7 +52,7 @@ export function NegativeConfessionPanel({ judgmentId, canRecord }: { judgmentId:
       { ordinal: row.ordinal, data: { truthful, note } },
       {
         onError: (error) => {
-          const code = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+          const code = responseCode(error);
           const known = code && (CONFESSION_ERROR_CODES as readonly string[]).includes(code);
           showToast(t(`judgment.confessions.errors.${known ? code : "generic"}`), "error");
         },

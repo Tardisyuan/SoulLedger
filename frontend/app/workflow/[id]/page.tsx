@@ -36,6 +36,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { WorkflowSegmentList } from "@/src/components/workflow/segments/WorkflowSegmentList";
 import { WorkflowSegmentHistory } from "@/src/components/workflow/segments/WorkflowSegmentHistory";
 import { WorkflowGateBanner } from "@/src/components/workflow/segments/WorkflowGateBanner";
+import { responseCode, responseStatus, responseError } from "@soulledger/core/api/client";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -100,11 +101,8 @@ const useHash = () => useSyncExternalStore(subscribeHash, () => window.location.
  *  server's `error`. */
 const CODED_REFUSALS = ["escalate_past_final", "five_heinous_must_fail"] as const;
 
-function codedRefusal(
-  data: { code?: string } | undefined,
-  t: (key: string) => string,
-): string | null {
-  const code = data?.code;
+function codedRefusal(err: unknown, t: (key: string) => string): string | null {
+  const code = responseCode(err);
   return code && (CODED_REFUSALS as readonly string[]).includes(code) ? t(`workflow.detail.refusals.${code}`) : null;
 }
 
@@ -170,13 +168,13 @@ export default function WorkflowDetailPage() {
       setReasonForSoulError("");
       refetch();
     },
-    onError: (err: { response?: { status?: number; data?: { error?: string; code?: string } }; message?: string }) => {
+    onError: (err: unknown) => {
       // The backend's one field-shaped refusal here: land it beside the field, not in a toast.
-      if (err?.response?.status === 400 && err.response.data?.error === "rejection_reason_for_soul is required") {
+      if (responseStatus(err) === 400 && responseError(err) === "rejection_reason_for_soul is required") {
         setReasonForSoulError(t("workflow.detail.reason_for_soul_required"));
         return;
       }
-      showToast(codedRefusal(err?.response?.data, t) ?? (err?.response?.data?.error || t("workflow.detail.approve_error")), "error");
+      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.approve_error")), "error");
     },
   });
 
@@ -219,8 +217,8 @@ export default function WorkflowDetailPage() {
       setEscalateOpen(false);
       refetch();
     },
-    onError: (err: { response?: { data?: { error?: string; code?: string } }; message?: string }) => {
-      showToast(codedRefusal(err?.response?.data, t) ?? (err?.response?.data?.error || t("workflow.detail.escalate_error")), "error");
+    onError: (err: unknown) => {
+      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.escalate_error")), "error");
     },
   });
 

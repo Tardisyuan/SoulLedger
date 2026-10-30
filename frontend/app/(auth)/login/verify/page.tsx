@@ -14,6 +14,7 @@ import { defaultViewRoute } from "@/src/lib/defaultView";
 import { goTo, replaceWith } from "@/src/lib/navigate";
 import { clearMfaPending, readMfaPending, type MfaPending } from "@/src/lib/mfaPending";
 import { cn } from "@/lib/utils";
+import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
 /**
  * 登录第二步 `/login/verify`(A12,Design 2026-10-09):A9 的骨架,左栏不动,右栏换成一个 56 高的码框。
@@ -91,11 +92,11 @@ export default function LoginVerifyPage() {
       goTo(await defaultViewRoute());
       return;
     } catch (err: unknown) {
-      const response = (err as { response?: { status?: number; data?: Partial<MfaRefusal> } })?.response;
-      const data = response?.data;
-      const status = response?.status;
-      if (status === 429 && data?.code === "locked") {
-        setFailure({ kind: "locked", until: new Date(Date.now() + (data.retry_after ?? 900) * 1000) });
+      const data = responseData<MfaRefusal>(err);
+      const status = responseStatus(err);
+      const code = responseCode(err);
+      if (status === 429 && code === "locked") {
+        setFailure({ kind: "locked", until: new Date(Date.now() + (data?.retry_after ?? 900) * 1000) });
         return;
       }
       if (status === 401) {
@@ -103,11 +104,11 @@ export default function LoginVerifyPage() {
         setFailure({ kind: "pending" });
         return;
       }
-      if (!response || (status !== undefined && status >= 500)) {
+      if (fetchFailureOf(err) === "network" || (status !== null && status >= 500)) {
         setFailure({ kind: "network" });
         return;
       }
-      if (data?.code === "expired") setFailure({ kind: "expired" });
+      if (code === "expired") setFailure({ kind: "expired" });
       else setFailure({ kind: "wrong", remaining: data?.remaining_attempts ?? null, lockMinutes: data?.lock_minutes ?? null });
       setCode("");
       refocus();
