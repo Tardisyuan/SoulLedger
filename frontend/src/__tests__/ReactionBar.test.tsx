@@ -3,20 +3,19 @@
  * 长明灯 Noto Serif SC 600、1px ink 描边,点亮后 ink 实底反白并换字;其余四种无框。
  * 选中靠 aria-pressed + 字重,不只靠颜色。计数:右端是四种轻表态之和,长明灯的数单独写在灯那一格。
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
-const mockReactions: { user: string; reaction_type: string }[] = [];
+const mockToggle = { mutate: jest.fn(), isPending: false };
 jest.mock("@soulledger/core/hooks/useSocial", () => ({
-  useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
-  useReactions: () => ({ data: { results: mockReactions } }),
+  useToggleReaction: () => mockToggle,
 }));
-jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: { id: 7 } }) }));
 jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (k: string) => k }) }));
 
 import { ReactionBar, REACTIONS } from "@/src/components/social/ReactionBar";
 
 beforeEach(() => {
-  mockReactions.length = 0;
+  mockToggle.mutate.mockReset();
+  mockToggle.isPending = false;
 });
 
 describe("表态条", () => {
@@ -46,8 +45,7 @@ describe("表态条", () => {
     let lamp = screen.getByRole("button", { name: /social\.lamp\.light/ });
     expect(lamp).not.toHaveClass("bg-[oklch(var(--color-ink))]");
     unmount();
-    mockReactions.push({ user: "7", reaction_type: "ETERNAL_LIGHT" });
-    render(<ReactionBar postId="p1" />);
+    render(<ReactionBar postId="p1" mine="ETERNAL_LIGHT" />);
     lamp = screen.getByRole("button", { name: /social\.lamp\.lit/ });
     expect(lamp).toHaveClass("bg-[oklch(var(--color-ink))]", "text-[oklch(var(--color-surface-1))]");
     expect(screen.queryByRole("button", { name: /social\.lamp\.light/ })).toBeNull();
@@ -61,9 +59,8 @@ describe("表态条", () => {
     expect(screen.queryByTestId("post-totals")).toBeNull();
   });
 
-  it("我点过的那一种 aria-pressed 且加粗;别的不是", () => {
-    mockReactions.push({ user: "7", reaction_type: "ETERNAL_LIGHT" });
-    render(<ReactionBar postId="p1" />);
+  it("我点过的那一种(服务端的 my_reaction)aria-pressed 且加粗;别的不是", () => {
+    render(<ReactionBar postId="p1" mine="ETERNAL_LIGHT" />);
     const lamp = screen.getByRole("button", { name: /social\.lamp\.lit/ });
     expect(lamp).toHaveAttribute("aria-pressed", "true");
     expect(lamp).toHaveClass("font-semibold");
@@ -94,5 +91,19 @@ describe("表态条", () => {
     unmount();
     render(<ReactionBar commentId="c1" />);
     expect(screen.queryByTestId("lamp-count")).toBeNull();
+  });
+
+  it("请求中按钮不禁用,但再点不会再发一次", () => {
+    const { rerender } = render(<ReactionBar postId="p1" />);
+    const like = screen.getByRole("button", { name: /react\.like/ });
+    fireEvent.click(like);
+    expect(mockToggle.mutate).toHaveBeenCalledTimes(1);
+    expect(mockToggle.mutate).toHaveBeenCalledWith({ post: "p1", comment: undefined, reaction_type: "LIKE" });
+    mockToggle.isPending = true;
+    rerender(<ReactionBar postId="p1" />);
+    expect(like).not.toBeDisabled();
+    expect(like).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(like);
+    expect(mockToggle.mutate).toHaveBeenCalledTimes(1);
   });
 });

@@ -48,6 +48,8 @@ class PostSerializer(ScreeningFieldMixin, VisibleCommentCountMixin, PostMediaFie
     author_username = serializers.CharField(source="author.username", read_only=True)
     #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
+    #: 当前用户在这条上的表态(视图注解 `my_reaction`,`soul_circle.my_reaction_of`);没有为 null。
+    my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True, read_only=True)
 
     class Meta:
         model = Post
@@ -63,6 +65,7 @@ class PostSerializer(ScreeningFieldMixin, VisibleCommentCountMixin, PostMediaFie
             "reaction_count",
             "media",
             "reaction_counts",
+            "my_reaction",
             "tenant",
             "edited_at",
             "screening",
@@ -117,6 +120,8 @@ class PostListSerializer(VisibleCommentCountMixin, PostMediaFieldMixin, serializ
     author_username = serializers.CharField(source="author.username", read_only=True)
     #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
+    #: 当前用户在这条上的表态(视图注解 `my_reaction`,`soul_circle.my_reaction_of`);没有为 null。
+    my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True, read_only=True)
 
     class Meta:
         model = Post
@@ -132,6 +137,7 @@ class PostListSerializer(VisibleCommentCountMixin, PostMediaFieldMixin, serializ
             "reaction_count",
             "media",
             "reaction_counts",
+            "my_reaction",
             "edited_at",
             "create_time",
         ]
@@ -144,6 +150,11 @@ class PostListSerializer(VisibleCommentCountMixin, PostMediaFieldMixin, serializ
 class CommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 当前用户在这条上的表态(视图注解 `my_reaction`,`soul_circle.my_reaction_of`);没有为 null。
+    my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True, read_only=True)
+    reaction_count = serializers.IntegerField(
+        source="visible_reaction_count", read_only=True, help_text="未删除的表态数。",
+    )
 
     class Meta:
         model = Comment
@@ -156,6 +167,8 @@ class CommentSerializer(serializers.ModelSerializer):
             "parent",
             "content",
             "moderation_status",
+            "reaction_count",
+            "my_reaction",
             "tenant",
             "create_time",
             "update_time",
@@ -254,6 +267,11 @@ class CommentListSerializer(serializers.ModelSerializer):
 
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 当前用户在这条上的表态(视图注解 `my_reaction`,`soul_circle.my_reaction_of`);没有为 null。
+    my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True, read_only=True)
+    reaction_count = serializers.IntegerField(
+        source="visible_reaction_count", read_only=True, help_text="未删除的表态数。",
+    )
 
     class Meta:
         model = Comment
@@ -266,6 +284,8 @@ class CommentListSerializer(serializers.ModelSerializer):
             "parent",
             "content",
             "moderation_status",
+            "reaction_count",
+            "my_reaction",
             "create_time",
         ]
 

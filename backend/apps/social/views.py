@@ -26,7 +26,7 @@ TenantPermission plus an object-level owner check
 IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, serializers, status, viewsets
@@ -64,7 +64,7 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
-from apps.social.soul_circle import SocialError, reaction_kind_counts, visible_comment_count
+from apps.social.soul_circle import SocialError, my_reaction_of, reaction_kind_counts, visible_comment_count
 from apps.social.soul_serializers import SoulPostMediaUploadSerializer, SoulSocialErrorSerializer
 from apps.social.visibility import visible_posts
 
@@ -112,7 +112,10 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         # 五种表态各自的数(`PostSerializer.reaction_counts`);每页一次聚合。图随帖子一次预取。
         return (
             visible_posts(self.request, qs)
-            .annotate(visible_comment_count=visible_comment_count(), **reaction_kind_counts())
+            .annotate(
+                visible_comment_count=visible_comment_count(), **reaction_kind_counts(),
+                my_reaction=my_reaction_of(self.request.user),
+            )
             .prefetch_related(WITH_MEDIA)
             .order_by("-create_time")
         )
@@ -181,7 +184,10 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             visibility__in=["PUBLIC", "FOLLOWERS"],
             moderation_status=ModerationStatus.PUBLISHED,
             tenant=tenant,
-        ).select_related("author").annotate(visible_comment_count=visible_comment_count(), **reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
+        ).select_related("author").annotate(
+            visible_comment_count=visible_comment_count(), **reaction_kind_counts(),
+            my_reaction=my_reaction_of(request.user),
+        ).prefetch_related(WITH_MEDIA).order_by("-create_time")
         context = self.get_serializer_context()
         page = self.paginate_queryset(qs)
         if page is not None:
@@ -293,7 +299,11 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         post_id = self.request.query_params.get("post")
         if post_id:
             qs = qs.filter(post_id=post_id)
-        return qs.order_by("create_time")
+        # 每条评论的表态数与「我的表态」随列表一次取出 —— 前端不再每条评论各拉一次表态列表。
+        return qs.annotate(
+            visible_reaction_count=Count("reactions", filter=Q(reactions__is_deleted=False), distinct=True),
+            my_reaction=my_reaction_of(self.request.user, "comment"),
+        ).order_by("create_time")
 
     def perform_create(self, serializer):
         post = serializer.validated_data["post"]

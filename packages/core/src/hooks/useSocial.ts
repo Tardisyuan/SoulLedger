@@ -2,7 +2,7 @@
 
 import { drfFieldErrors, drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { socialApi, type PaginatedResponse, type Post, type ScreeningOutcome, type UserProfile } from "../api/index";
+import { socialApi, type PaginatedResponse, type Post, type Reaction, type ScreeningOutcome, type UserProfile } from "../api/index";
 import { notify, type NotifyMessage } from "../platform/index";
 import { socialKeys } from "../query_keys";
 
@@ -182,10 +182,9 @@ type ListParams = Record<string, string | number | undefined>;
 /**
  * Every page of a list, flattened into the shape of one.
  *
- * `CommentThread` builds a tree from `results` and `ReactionBar` looks the
- * signed-in user up in it; both read ONE page — the server's 20 — so the 21st
- * comment was never in the thread and a post with more than twenty reactions
- * showed the operator's own as not pressed (FL-09). Following `next` here,
+ * `CommentThread` builds a tree from `results`; it read ONE page — the
+ * server's 20 — so the 21st comment was never in the thread (FL-09). (The
+ * reaction half of FL-09 is now the server's `my_reaction` annotation.) Following `next` here,
  * inside the hook, keeps both consumers reading `data.results` exactly as
  * before. The first request is sent with the caller's params untouched so the
  * scoping is unchanged; later pages carry `page`. Not `fetchAllPages` from
@@ -247,34 +246,83 @@ export function useDeleteComment() {
 
 // ── Reactions ────────────────────────────────────────────────────────
 
-export function useReactions(params?: ListParams) {
-  return useQuery({
-    queryKey: [...socialKeys.reactions.all, params] as const,
-    queryFn: () => everyPage((p) => socialApi.listReactions(p), params),
-    staleTime: 30_000,
-  });
+type ReactionKind = Reaction["reaction_type"];
+type ReactionVars = { post?: string; comment?: string; reaction_type: string };
+type ReactableRow = { id: string; my_reaction?: ReactionKind | null; reaction_count?: number };
+
+/**
+ * What one toggle does to one cached row, mirroring `ReactionService.add_reaction`:
+ * the same kind again takes it off, another kind switches it, none adds it.
+ * Only the counts the row carries move — a comment has `reaction_count`, a post
+ * also `reaction_counts`.
+ */
+function toggledRow<T extends { my_reaction?: ReactionKind | null; reaction_count?: number }>(
+  row: T,
+  type: ReactionKind,
+): T {
+  const before = row.my_reaction ?? null;
+  const after = before === type ? null : type;
+  const next = { ...row, my_reaction: after } as T & { reaction_counts?: Record<ReactionKind, number> };
+  if (typeof row.reaction_count === "number") {
+    next.reaction_count = row.reaction_count + (after ? 1 : 0) - (before ? 1 : 0);
+  }
+  const counts = (row as { reaction_counts?: Record<ReactionKind, number> }).reaction_counts;
+  if (counts) {
+    const c = { ...counts };
+    if (before) c[before] = Math.max(0, (c[before] ?? 0) - 1);
+    if (after) c[after] = (c[after] ?? 0) + 1;
+    next.reaction_counts = c;
+  }
+  return next;
 }
 
+/** Apply `fn` to the row with `id` in a cached list page or a cached single row. */
+function patchCached(data: unknown, id: string, fn: (row: ReactableRow) => unknown): unknown {
+  if (!data || typeof data !== "object") return data;
+  const page = data as PaginatedResponse<ReactableRow>;
+  if (Array.isArray(page.results)) {
+    return page.results.some((r) => r.id === id)
+      ? { ...page, results: page.results.map((r) => (r.id === id ? fn(r) : r)) }
+      : data;
+  }
+  return (data as { id?: string }).id === id ? fn(data as ReactableRow) : data;
+}
+
+function holds(data: unknown, id: string): boolean {
+  return patchCached(data, id, (r) => ({ ...r })) !== data;
+}
+
+/**
+ * Optimistic: the bar reads `my_reaction` / the counts off the cached post or
+ * comment (the server annotates them on every list row), so the cache is
+ * changed in `onMutate`, put back in `onError`, and only the queries that hold
+ * that post or comment are refetched in `onSettled`. There is no per-card
+ * reaction list any more — that was one request (or several pages) per post and
+ * per comment on screen.
+ */
 export function useToggleReaction() {
   const qc = useQueryClient();
+  const scopeOf = (vars: ReactionVars) => (vars.post ? socialKeys.posts.all : socialKeys.comments.all);
+  const idOf = (vars: ReactionVars) => (vars.post ?? vars.comment) as string;
   return useMutation({
-    mutationFn: (data: { post?: string; comment?: string; reaction_type: string }) =>
-      socialApi.addReaction(data),
-    onSuccess: (_data, vars) => {
-      // The target's reaction list, not every reaction list in the cache.
-      // Each PostCard mounts its own ReactionBar with its own
-      // `useReactions({ post })` query, so `reactions.all` meant one click
-      // refetched the reaction list of every post on screen.
-      //
-      // `posts.all` STAYS, and is not the same mistake: `Post.reaction_count`
-      // is rendered in the card (PostCard.tsx:91), so the feed's own rows go
-      // stale on a reaction. Checked before narrowing it.
-      const target = vars.post ? { post: vars.post } : { comment: vars.comment };
-      qc.invalidateQueries({ queryKey: [...socialKeys.reactions.all, target] });
-      qc.invalidateQueries({ queryKey: socialKeys.posts.all });
+    mutationFn: (data: ReactionVars) => socialApi.addReaction(data),
+    onMutate: async (vars) => {
+      const queryKey = scopeOf(vars);
+      const id = idOf(vars);
+      await qc.cancelQueries({ queryKey });
+      const before = qc.getQueriesData({ queryKey });
+      for (const [key, data] of before) {
+        qc.setQueryData(key, patchCached(data, id, (r) => toggledRow(r, vars.reaction_type as ReactionKind)));
+      }
+      return { before };
     },
-    onError: (error) => {
+    onError: (error, _vars, ctx) => {
+      for (const [key, data] of ctx?.before ?? []) qc.setQueryData(key, data);
       notify(serverSaidOr(error, "social.reaction_error"), "error");
+    },
+    onSettled: (_data, _error, vars) => {
+      const id = idOf(vars);
+      qc.invalidateQueries({ queryKey: scopeOf(vars), predicate: (q) => holds(q.state.data, id) });
     },
   });
 }

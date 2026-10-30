@@ -54,7 +54,6 @@ jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useCreateComment: () => ({ mutate: mockCreateMutate, isPending: false }),
   useDeleteComment: () => ({ mutate: mockDeleteMutate, isPending: false }),
   useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
-  useReactions: () => ({ data: { results: [] } }),
 }));
 
 describe("CommentThread load states", () => {
@@ -89,6 +88,23 @@ describe("CommentThread 作者视角的审核状态", () => {
       expect(document.querySelector('[title="PENDING"]')).not.toBeNull();
       expect(document.querySelector('[title="HIDDEN"]')).not.toBeNull();
       expect(document.querySelector('[title="PUBLISHED"]')).toBeNull();
+    } finally {
+      comments.length = 2;
+    }
+  });
+});
+
+describe("CommentThread 表态读评论自带的 reaction_count / my_reaction", () => {
+  it("计数与「我的表态」来自评论行,不另拉表态列表", () => {
+    comments.push({ ...comments[1], id: "comment-r", content: "reacted", reaction_count: 3, my_reaction: "LOVE" });
+    try {
+      render(<CommentThread postId="post-1" />);
+      const row = document.querySelector('[data-comment="comment-r"]') as HTMLElement;
+      const toggle = within(row).getByRole("button", { name: /social\.reactions/ });
+      expect(toggle).toHaveTextContent("3");
+      fireEvent.click(toggle);
+      expect(within(row).getByRole("button", { name: /react\.love/ })).toHaveAttribute("aria-pressed", "true");
+      expect(within(row).getByRole("button", { name: /react\.like/ })).toHaveAttribute("aria-pressed", "false");
     } finally {
       comments.length = 2;
     }

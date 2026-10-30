@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useComments, useCreateComment, useDeleteComment, useReactions } from "@soulledger/core/hooks/useSocial";
+import { useComments, useCreateComment, useDeleteComment } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -22,8 +22,8 @@ import type { Comment } from "@soulledger/core/api";
  * 姓名后「回复 某某」。操作行 12px ink-muted、每项 44 高:「回复」「◇ 表态 · N」(作者另有「删除」)。
  *
  * 「◇ 表态 · N」是一个开关,点开才是完整的五种表态条 —— 稿上只画了一格,而评论原本就能
- * 五种表态,收成一格会丢掉其中四种。N 是这条评论的表态条数(`/social/reactions/?comment=`,
- * 和表态条用同一个查询,缓存共享)。
+ * 五种表态,收成一格会丢掉其中四种。N 是这条评论的表态数(评论列表里服务端注解的
+ * `reaction_count`;「我的表态」同样随列表来,`my_reaction`)。
  *
  * 底部输入:回复对象标签「回复 某某 ✕」+ 48 高输入框 + 48 高「发送」。
  */
@@ -46,7 +46,6 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
   const deleteComment = useDeleteComment();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [reacting, setReacting] = useState(false);
-  const { data: reactions } = useReactions({ comment: comment.id });
   const isAuthor = !!user && String(user.id) === String(comment.author);
   const nested = depth > 0;
 
@@ -100,7 +99,7 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
             className={ACTION}
           >
             <span aria-hidden="true">◇&nbsp;</span>
-            {t("social.reactions")} · <span className="ml-1 font-mono tabular-nums">{reactions?.results?.length ?? 0}</span>
+            {t("social.reactions")} · <span className="ml-1 font-mono tabular-nums">{comment.reaction_count ?? 0}</span>
           </button>
           {isAuthor && (
             <button type="button" onClick={() => setShowDeleteConfirm(true)} className={ACTION}>
@@ -108,7 +107,7 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
             </button>
           )}
         </div>
-        {reacting ? <ReactionBar commentId={comment.id} /> : null}
+        {reacting ? <ReactionBar commentId={comment.id} mine={comment.my_reaction} /> : null}
         {children}
       </div>
 
