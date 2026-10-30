@@ -248,10 +248,13 @@ describe("a conversation opened from history", () => {
     await openSheet();
     fireEvent.press(screen.getByTestId("assist-history"));
     await screen.findByTestId("assist-row-c-old");
-    mockConversations.mockResolvedValueOnce([TODAY]);
+    mockConversations.mockResolvedValueOnce([{ ...TODAY, id: "c-elsewhere" }]);
     fireEvent.press(screen.getByText("暂居的灵魂我能看到哪些字段？"));
     expect(await screen.findByText("这段会话没能打开，请重试")).toBeTruthy();
     expect(screen.queryByTestId("assist-row-c-old")).toBeNull();
+    // Only the gone row leaves: the list on screen is not swapped for the one just read.
+    expect(screen.getByTestId("assist-row-c-today")).toBeTruthy();
+    expect(screen.queryByTestId("assist-row-c-elsewhere")).toBeNull();
 
     mockConversations.mockRejectedValueOnce(new Error("x"));
     fireEvent.press(screen.getByText("会签和加签有什么区别？"));

@@ -16,7 +16,8 @@ import { Pressable, SectionList, StyleSheet, View } from "react-native";
 import { family } from "../fonts";
 import { useGone } from "../gone";
 import { useI18n } from "../i18n";
-import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
+import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useTheme } from "../ui";
+import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "../paged";
 
@@ -109,7 +110,7 @@ export function CircleInboxScreen() {
   useEffect(() => {
     if (!loaded || marked.current) return;
     marked.current = true;
-    void soulSocialApi.readInteractions().catch(() => {});
+    void soulSocialApi.readInteractions().then(invalidateSocialStatus, () => {});
   }, [loaded]);
 
   const open = (row: SoulInteraction) => {
@@ -181,7 +182,7 @@ export function CircleInboxScreen() {
  * 互动消息 it is 0). `null`: not known yet, or none — no badge either way.
  */
 export function useUnreadInteractions(): string | null {
-  const status = useRemote(soulSocialApi.status);
+  const status = useSocialStatus();
   useReloadOnRefocus(status.reload);
   const n = status.data?.unread_interactions ?? 0;
   return n > 0 ? (n > 99 ? "99+" : String(n)) : null;
