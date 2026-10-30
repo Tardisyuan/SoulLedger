@@ -193,16 +193,12 @@ describe("功过 and 事件 paging", () => {
     await screen.findByTestId("soul-events");
     expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(20);
     expect(screen.getByTestId("soul-events-count").props.children).toBe("已显示 20 / 30");
-    // 第一页若在第二页回来之前又取了一次(换了对象),多出的页按设计丢掉;全量并跑时偶尔撞上。
-    // 先等取数落定再点;仍被丢就再点一次 —— 这里验的是「第二页来自接口、计数跟着变」,不是那次竞争。
-    await act(async () => {});
-    await waitFor(
-      () => {
-        if (screen.queryByTestId("soul-events-more")) fireEvent.press(screen.getByTestId("soul-events-more"));
-        expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30);
-      },
-      { timeout: 3000 }
-    );
+    // The press inside act, so page 2's answer and its render land before the assertion. Pressing from inside a
+    // waitFor callback left that render to waitFor's polling: 10 s alone, past the 15 s limit under the gate's load.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("soul-events-more"));
+    });
+    expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30);
     expect(mockEvents).toHaveBeenLastCalledWith({ soul: "s1", page: "2" });
     expect(screen.queryByTestId("soul-events-more")).toBeNull();
   });
