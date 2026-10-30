@@ -281,6 +281,18 @@ export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventCon
   };
 }
 
+/**
+ * A dispatch's own timeline event (backend `DispatchService`, domain "dispatch", event `STATE_CHANGED` with
+ * `action` = DISPATCH_PROPOSED / APPROVED / REJECTED / EXECUTED / CANCELLED / RETURNED / RETURN_BLOCKED; on the
+ * bus since 2026-10-30). Silent: the dispatch list and the soul's timeline refresh; the people it concerns
+ * already get an in-app notification, so a toast here would say it twice.
+ */
+export function handleDispatchStateChanged(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
+  ctx.queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
+  return { success: true, invalidatedKeys: ["dispatch", "souls"] };
+}
+
 export function handleDeathSyncEvent(payload: DeathSyncEventPayload, ctx: EventContext): HandlerResult {
   ctx.queryClient.invalidateQueries({ queryKey: ["death-sync"] });
 

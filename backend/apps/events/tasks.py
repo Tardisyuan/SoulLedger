@@ -66,7 +66,7 @@ def deliver_event_webhook(self, delivery_id):
     if delivery.attempt >= ceiling:
         delivery.status = EventWebhookStatus.ABANDONED
         delivery.error = f"放弃:已试 {delivery.attempt} 次,上限 {ceiling}"
-        delivery.save(update_fields=["status", "error", "update_time"])
+        delivery.save(update_fields=["status", "error"])
         return
 
     secret = webhook.signing_secret
@@ -75,7 +75,7 @@ def deliver_event_webhook(self, delivery_id):
         # 谁都能伪造的签名。
         delivery.status = EventWebhookStatus.ABANDONED
         delivery.error = "webhook 没有 signing_secret,拒绝发出未签名的投递"
-        delivery.save(update_fields=["status", "error", "update_time"])
+        delivery.save(update_fields=["status", "error"])
         return
 
     payload = json.dumps(delivery.payload_json, default=str).encode()
@@ -116,17 +116,12 @@ def deliver_event_webhook(self, delivery_id):
         delivery.status = EventWebhookStatus.SUCCESS
         delivery.delivered_at = timezone.now()
         delivery.error = ""
-        delivery.save(update_fields=[
-            "status", "attempt", "response_status", "delivered_at", "error",
-            "update_time",
-        ])
+        delivery.save(update_fields=["status", "attempt", "response_status", "delivered_at", "error"])
         return
     except Exception as exc:  # noqa: BLE001 — 记下来再决定重试
         delivery.status = EventWebhookStatus.FAILED
         delivery.error = f"{type(exc).__name__}: {exc}"[:2000]
-        delivery.save(update_fields=[
-            "status", "attempt", "response_status", "error", "update_time",
-        ])
+        delivery.save(update_fields=["status", "attempt", "response_status", "error"])
 
     if delivery.attempt < ceiling:
         # 指数退避。`countdown` 而不是固定间隔:一个刚挂掉的端点通常不会在

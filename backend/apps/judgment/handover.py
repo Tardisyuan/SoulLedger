@@ -143,7 +143,7 @@ def commit(source, target, tenant_id, *, actor, request=None) -> dict:
             else:
                 appeal.reviewer, appeal.claimed_at, appeal.status = None, None, AppealStatus.PENDING
                 moved["appeals_returned_to_pool"].append(str(appeal.pk))
-            appeal.save(update_fields=["reviewer", "claimed_at", "status", "update_time", "update_user", "version"])
+            appeal.save(update_fields=["reviewer", "claimed_at", "status"])
 
         for god in _city_gods(source, tenant_id):
             god.officers.remove(source)

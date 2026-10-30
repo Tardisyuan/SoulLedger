@@ -72,7 +72,19 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
         if self.pk:
             self.version += 1
 
+        # A partial save persists the bookkeeping too (2026-10-30). Before, `save(update_fields=[...])` bumped
+        # `version` and set `update_user` in memory only and left `update_time` as it was, so e.g. a role
+        # relabelled by `perm/export.py` kept its optimistic-lock version, and callers had to remember to list
+        # the three themselves (judgment kept three copies of that list). An empty list stays a no-op.
+        update_fields = kwargs.get("update_fields")
+        if update_fields:
+            own = {f.name for f in self._meta.concrete_fields}
+            kwargs["update_fields"] = {*update_fields, *(n for n in self.BOOKKEEPING_FIELDS if n in own)}
+
         super().save(*args, **kwargs)
+
+    #: Written by every save, partial saves included.
+    BOOKKEEPING_FIELDS = ("version", "update_user", "update_time")
 
     class Meta:
         abstract = True

@@ -114,7 +114,7 @@ def capture(pk) -> CaptureWarrant:
         _assert_status(warrant, CaptureStatus.ISSUED)
         warrant.status = CaptureStatus.CAPTURED
         warrant.captured_at = timezone.now()
-        warrant.save(update_fields=["status", "captured_at", "version", "update_user", "update_time"])
+        warrant.save(update_fields=["status", "captured_at"])
         _event(warrant, "SOUL_CAPTURED")
     return warrant
 
@@ -126,7 +126,7 @@ def hand_over(pk, location: str = "") -> CaptureWarrant:
         # 先写成 HANDED_OVER,并告诉 `die()` 里的 `close_on_death` 这一张就是本次死亡的牒,不要再补发。
         warrant.status = CaptureStatus.HANDED_OVER
         warrant.handed_over_at = timezone.now()
-        warrant.save(update_fields=["status", "handed_over_at", "version", "update_user", "update_time"])
+        warrant.save(update_fields=["status", "handed_over_at"])
         soul = Soul.all_objects.get(pk=warrant.soul_id)
         token = _handing_over.set(True)
         try:
@@ -137,7 +137,7 @@ def hand_over(pk, location: str = "") -> CaptureWarrant:
         if judgment is None:
             raise CaptureRefused("not_alive", f"The soul is {soul.current_state}, not alive.")
         warrant.judgment = judgment
-        warrant.save(update_fields=["judgment", "version", "update_user", "update_time"])
+        warrant.save(update_fields=["judgment"])
         _event(warrant, "CAPTURE_HANDED_OVER", judgment_id=str(judgment.pk))
     return warrant
 
@@ -150,7 +150,7 @@ def cancel(pk, reason: str) -> CaptureWarrant:
         _assert_status(warrant, *OPEN_CAPTURE)
         warrant.status = CaptureStatus.CANCELLED
         warrant.cancel_reason = reason.strip()
-        warrant.save(update_fields=["status", "cancel_reason", "version", "update_user", "update_time"])
+        warrant.save(update_fields=["status", "cancel_reason"])
         _event(warrant, "CAPTURE_WARRANT_CANCELLED", via="officer")
     return warrant
 
@@ -175,8 +175,7 @@ def close_on_death(soul) -> None:
         warrant.status = CaptureStatus.HANDED_OVER
         warrant.captured_at = warrant.captured_at or now
         warrant.handed_over_at = now
-        warrant.save(update_fields=["status", "captured_at", "handed_over_at", "version", "update_user",
-                                    "update_time"])
+        warrant.save(update_fields=["status", "captured_at", "handed_over_at"])
         _event(warrant, "CAPTURE_HANDED_OVER", via="death")
 
 

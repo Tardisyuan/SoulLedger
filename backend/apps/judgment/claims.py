@@ -29,8 +29,6 @@ from apps.souls import acheron
 #: 一次批量最多多少件。与需求一致;超过的请求在序列化器上 400,不截断。
 BATCH_LIMIT = 100
 
-_SAVE_FIELDS_BOOKKEEPING = ("version", "update_user", "update_time")
-
 
 class ClaimRefusedError(Exception):
     """案子此刻不接受这个动作。`code` 是给客户端分支用的稳定键。"""
@@ -128,7 +126,7 @@ def _holder(judgment: Judgment) -> dict:
 
 
 def _save(judgment: Judgment, *fields: str) -> None:
-    judgment.save(update_fields=[*fields, *_SAVE_FIELDS_BOOKKEEPING])
+    judgment.save(update_fields=fields)  # version / update_user / update_time: AuditUserFields.save
 
 
 def _assert_may_act_on(judgment: Judgment, user, may_override: bool) -> None:
