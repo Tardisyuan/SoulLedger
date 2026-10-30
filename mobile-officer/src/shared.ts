@@ -53,6 +53,7 @@ export { Icon } from "../../mobile/src/emblems";
 export { BrandMark } from "../../mobile/src/brandMarkView";
 export { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "../../mobile/src/brandMark";
 export { ColdStartView, coldStart } from "../../mobile/src/coldStartView";
+export { easProjectId, installNotificationHandler, permission, pushCore, type Permission, type Registration } from "../../mobile/src/pushCore";
 export {
   hydratePersistentStore,
   installMobilePlatform,

@@ -28,6 +28,8 @@ jest.mock("expo-notifications", () => {
   return {
     __state: state,
     AndroidImportance: { DEFAULT: 3 },
+    // The real module has it; pushCore.ts reads `.PRIVATE` for the channel (the officer copy once read `?.` for want of this).
+    AndroidNotificationVisibility: { UNKNOWN: 0, PUBLIC: 1, PRIVATE: 2, SECRET: 3 },
     // canAskAgain unset = iOS: only "undetermined" can still be asked.
     getPermissionsAsync: async () => ({
       status: state.status,
