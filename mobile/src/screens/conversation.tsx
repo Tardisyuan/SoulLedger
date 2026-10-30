@@ -884,7 +884,9 @@ const styles = StyleSheet.create({
   rejected: { marginTop: 2 },
   dock: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1 },
   composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
-  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 15, lineHeight: 20, maxHeight: 140 },
+  // 24, not 20: the Han text is Noto Serif SC, whose glyph box is taller than 20 at 15 — Android clipped the top of
+  // the first line. Padding 10 keeps the one-line box at 44.
+  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10, fontSize: 15, lineHeight: 24, maxHeight: 140 },
   send: { paddingHorizontal: ANDROID ? 0 : 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 18 },
   lockedLine: { minHeight: 44, borderWidth: 1, borderStyle: "dotted", justifyContent: "center", paddingHorizontal: 12 },
