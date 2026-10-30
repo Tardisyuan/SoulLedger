@@ -158,6 +158,14 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   重步骤之间等负载回到 12 以下再点;模拟器截图会慢一帧,操作后截两张看第二张。
 - **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
   2026-10-11 灵魂端和官员端的恢复码框都漏了;编号框(`auth.tsx`、`letters.tsx`)早就设了。
+- **2026-10-30 第二轮设备验证得到的四条事实**:
+  - 改了 JS 依赖(如官员端删 `react-native-screens`)之后,unRAID 上的 Metro 要 `scripts/mobile-remote.sh <app> metro stop` 再 `metro start`;
+    只 `metro sync` 时 App 报 `Unable to resolve "react-native"`,读起来像依赖坏了。
+  - **release 包只有 debug 清单开了明文 http**(`usesCleartextTraffic`),release 连 `http://` 后端请求全失败、停在出错页 —— 生产走 https,
+    不是 R8 的问题。验 release 包要么给它 https 的后端,要么接受只能看「能启动、无 ClassNotFound / 崩溃」。
+  - iOS 模拟器上登录页截图是空的(登录页防截屏),这是正常的,不是 App 白屏(10-30 iOS 上因此没能盲输登录)。
+  - **115 上的 Synapse 可能停着**:10-30 发现 `soulledger_synapse` 已停 6 天(启动时解析不到 `postgres` 主机名,exit 1),
+    书信相关的验证会因此全部失败。`ssh tardis@pi docker ps -a | grep synapse` 看状态,停了就 `ssh tardis@pi docker start soulledger_synapse`。
 
 **原生重编用 `scripts/build-mobile-dev.sh <mobile|mobile-officer> <ios|android> [--device <udid>]`(2026-10-27 用户决定)**:
 utility QoS + nice 10;Xcode 同时编译限 4 个任务(`IOS_JOBS` 覆盖,写进 `com.apple.dt.xcodebuild` 的 user default);

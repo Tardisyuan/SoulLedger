@@ -199,6 +199,11 @@
 6. **Android 推送**:FCM 凭据(FCM v1 服务账号密钥)上传到 Expo/EAS;`google-services.json` 是否需要放进项目:**未核实**(`app.json` 的 `android` 段目前没有 `googleServicesFile`)。
 7. **签名**:iOS 分发证书与 provisioning(`eas build` 可托管)、Android 上架密钥(Play App Signing)。
 8. **原生构建**:本 App 是 dev-client,用了 `expo-notifications`、`expo-secure-store`、`expo-image-picker` 等原生模块,**不能用 Expo Go**;商店包用 `eas build --platform ios|android --profile production`。
+   Android release 构建(两个 App 都挂了 `mobile/plugins/withBuildTuning.js`,2026-10-30 起):开 R8 与资源裁剪(`android.enableMinifyInReleaseBuilds` /
+   `android.enableShrinkResourcesInReleaseBuilds`,只作用于 `buildTypes.release`,debug dev client 不变),`reactNativeArchitectures` 只有
+   `armeabi-v7a,arm64-v8a`(不含 x86,装不进 x86 模拟器;`expo run:android` 会按连着的设备改写)。release 清单**不允许明文 http**
+   (只有 debug 清单开了 `usesCleartextTraffic`),所以 release 包的 `EXPO_PUBLIC_API_URL` 必须是 `https://`;连 `http://` 后端时请求全部失败,
+   界面停在出错页。2026-10-30 在 unRAID 上 `assembleRelease`(arm64)装到真机:能启动、无 ClassNotFound,连 http 的测试后端失败即此原因。
 9. **上架材料**:隐私政策 URL、截图、应用描述、年龄分级;`expo-image-picker` 的相册权限文案在 `mobile/app.json`。灵魂端**社交/聊天内容**(UGC)——Apple 审核会要求举报/屏蔽入口;是否已满足:**未核实**。
 10. **通知**:`soulledger-soul` 与 `soulledger-officer` 各自独立的 Expo 项目;推送令牌 `SOUL_PUSH_ENABLED=True` 并重启 backend/worker 后,最近 24 小时内记为 `DISABLED` 的行会被 `soul_push.sweep` 补发(要 beat 在跑)。
 

@@ -6,8 +6,8 @@ import { chartColors, type ChartColors } from "@/lib/chart-colors";
 /**
  * The chart mirror for the theme currently on screen.
  *
- * Charts pass literals to Recharts props that cannot read CSS custom
- * properties, so they do not follow the `.light` cascade the rest of the app
+ * Charts passed literals to Recharts props that cannot read CSS custom
+ * properties (recharts is gone since 2026-10-30; the 寿数 bars now take them as inline `style`), so they do not follow the `.light` cascade the rest of the app
  * follows. Everything else on a light-mode page repainted; the charts did not.
  *
  * The theme comes from the same place the `.light` class does — `ThemeContext`

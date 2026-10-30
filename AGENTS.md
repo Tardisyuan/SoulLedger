@@ -295,6 +295,12 @@ npm run --workspace packages/core test      # vitest，不是 jest
 `npm run --workspace @soulledger/officer …`）；CI 里是 `mobile` 与 `officer` 两个 job，
 `mobile-officer` 原样引用 `mobile/src` 的叶子模块，所以改 `mobile/` 也会触发它。
 
+两个 App 的写法（2026-10-30 第二轮）：「回到前台就刷新」用 `onForeground`（`mobile/src/platform.ts`，只认 `background → active`；
+iOS 面容弹框、系统提示之后的 `inactive → active` 不算）。有意的例外是设置页读通知权限那处（从系统设置回来也要读）；
+进后台就停的轮询（书信长轮询、导出状态）各自监听 `AppState`。不常进的屏在 `navigation.tsx` 里用
+`getComponent` 按需加载；官员端刷新一个 tab 用 `useOnBump` 原地重拉，不用 `key={version}` 整个重挂；
+官员端已不依赖 `react-native-screens`（灵魂端仍用）。
+
 ### 推送门禁
 
 pre-push 实际跑的是 `scripts/run-gates.sh`（jest 只跑受影响的，其余照旧全跑；`--full` 全跑），
@@ -415,7 +421,10 @@ SoulLedger/
 2. `packages/core/src/hooks/useXxx.ts` — TanStack Query hooks（`frontend/src/hooks/` 只放视图层 hook）；query key 用
    `packages/core/src/query_keys.ts` 里该资源的工厂（一个资源一个），拒绝码用 core 的 `responseCode(err)` 读，
    「无殿 ADMIN」读 `usePermissions().isTenantExempt`（写法见 `docs/CONVENTIONS-frontend.md` §1、§7）
-3. `frontend/app/xxx/page.tsx` — 列表页（`PageShell` 骨架，样式守 §1）
+3. `frontend/app/xxx/page.tsx` — 列表页（`PageShell` 骨架，样式守 §1）。2026-10-30 起：搜索框用 core 的 `useDebouncedValue`，
+   搜索走后端 `?search=`（ViewSet 写 `search_fields`），列表查询带 `placeholderData`（翻页不闪骨架），要整个集合用 core 的
+   `fetchAllPages` / `collectPages`（并发取页）；页级门 `<RequirePermission fallback={…}>` 在权限未就绪时自己画骨架。
+   细节见 `docs/CONVENTIONS-frontend.md` §1、§7
 4. `components/xxx/XxxModal.tsx` — 创建/编辑弹窗（用 `BaseModal`）
 5. Build + 验证
 
