@@ -7,24 +7,28 @@ import type { MeRebirthApplication } from "@soulledger/core/api/soul";
 
 import { daysLeft, termFraction } from "@soulledger/core/domain/term";
 import { civKeyOf, type CivKey } from "./theme";
+import type { BadgeSpec } from "./layout";
+
+// The layout thresholds and the badge shape live in layout.ts, a leaf `ui.tsx` (and so the officer
+// app) can import without this file (cq-apps 2026-10-30 #2b). Screens keep importing them from here.
+export {
+  COMPACT_WIDTH,
+  GROW_FONT_SCALE,
+  LABEL_STACK_THRESHOLD,
+  STACK_FONT_SCALE,
+  TWO_LINE_FONT_SCALE,
+  UNKNOWN_BADGE,
+  badgeSpec,
+  layoutFor,
+  stacksLabel,
+  type BadgeSpec,
+  type Layout,
+} from "./layout";
 
 // One countdown for every screen (core/domain/term.ts); a mute still on screen passes `min` 1.
 export { daysLeft };
 
 // ── badges ──────────────────────────────────────────────────────────────
-
-/**
- * 补足 C15「状态徽章 · 领域枚举」: a badge is a domain value, never a status colour — ink
- * words in a 1px ink3 frame, told apart by glyph and border. The ones still waiting on
- * someone (`pending`: 待审 / 申诉中) sit on s2. A ✕ is ink too: 冷玫红 is for the system
- * failing, not for a decision (B8). `unknown` is the value the app cannot name.
- */
-export interface BadgeSpec {
-  glyph: string;
-  border: "solid" | "dashed" | "dotted";
-  pending?: boolean;
-  unknown?: boolean;
-}
 
 export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
   UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true },
@@ -58,8 +62,6 @@ export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
   SETTLED: { glyph: "≡", border: "solid" },
 };
 
-export const UNKNOWN_BADGE: BadgeSpec = { glyph: "?", border: "dotted", unknown: true };
-
 /**
  * v3: the 书信 / 朋友圈 tags carry a glyph beside the word (never instead of it; the word stays
  * the accessible label). Each entry is a `glyph:` string literal, so `statusGlyphFont.test.ts` checks the bundled
@@ -72,16 +74,6 @@ export const TAG_GLYPH = {
   mutual: { glyph: "⇄" }, // 书信 互关
   pending: { glyph: "◐" }, // 朋友圈 审核中
 } as const;
-
-/**
- * The shape for a member. `recognized` is whether the copy layer could name it;
- * a member the table has but the bundles do not still gets the unknown shape,
- * so the raw value is shown beside it.
- */
-export function badgeSpec(table: Record<string, BadgeSpec>, raw: string | null | undefined, recognized: boolean): BadgeSpec {
-  if (!recognized || !raw) return UNKNOWN_BADGE;
-  return table[raw] ?? UNKNOWN_BADGE;
-}
 
 // ── initial password expiry ────────────────────────────────────────────
 
@@ -105,15 +97,6 @@ export function expiryOf(expiresAt: string | null | undefined, now: number): Exp
     warning: ms < EXPIRY_WARNING_HOURS * 3_600_000,
     expired: ms <= 0,
   };
-}
-
-// ── long text ──────────────────────────────────────────────────────────
-
-/** A data-row label longer than this puts label and value on two lines (handoff 1g, rule 一). */
-export const LABEL_STACK_THRESHOLD = 18;
-
-export function stacksLabel(label: string): boolean {
-  return [...label].length > LABEL_STACK_THRESHOLD;
 }
 
 // ── lexicon ────────────────────────────────────────────────────────────
@@ -262,38 +245,6 @@ export function grouped(n: number): string {
 export function termServed(startedOn: string | null | undefined, endsOn: string | null | undefined, now: number): number | null {
   if (!startedOn || !endsOn) return null;
   return termFraction(Date.parse(startedOn), Date.parse(endsOn), now);
-}
-
-// ── layout ─────────────────────────────────────────────────────────────
-
-export const COMPACT_WIDTH = 340;
-export const GROW_FONT_SCALE = 1.3;
-/** 第二十八批 S4: above 1.5× a list row's "text left, time right" becomes two lines. */
-export const TWO_LINE_FONT_SCALE = 1.5;
-export const STACK_FONT_SCALE = 1.7;
-
-export interface Layout {
-  /** ≤ 340pt wide: gutter 16, data rows stacked, display one step down. */
-  compact: boolean;
-  /** ≥ 1.3× text: badges wrap, heights are minimums. */
-  grow: boolean;
-  /** ≥ 1.5× text: "text left, time / value right" rows put the time on its own line, below the text. */
-  twoLine: boolean;
-  /** ≥ 1.7× text: tab bar, scores, password reveal and languages go vertical; the flow drops its rail. */
-  stack: boolean;
-  gutter: number;
-}
-
-/** Handoff 2f-四 (and S4's 1.5×): the thresholds, one decision. */
-export function layoutFor(width: number, fontScale: number): Layout {
-  const compact = width <= COMPACT_WIDTH;
-  return {
-    compact,
-    grow: fontScale >= GROW_FONT_SCALE,
-    twoLine: fontScale >= TWO_LINE_FONT_SCALE,
-    stack: fontScale >= STACK_FONT_SCALE,
-    gutter: compact ? 16 : 20,
-  };
 }
 
 // ── dates ──────────────────────────────────────────────────────────────

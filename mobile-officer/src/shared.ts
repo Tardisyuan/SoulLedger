@@ -3,7 +3,7 @@
  *
  * WHY A RE-EXPORT AND NOT A SHARED PACKAGE. The pieces the spec names (Screen, Notice, list
  * rows, tokens, the platform ports, the sheet) live in `mobile/src/` and are about 3,000 lines
- * that import each other (`ui.tsx` → `emblems`, `fonts`, `i18n`, `rules`, `theme`). Extracting
+ * that import each other (`ui.tsx` → `emblems`, `fonts`, `i18n`, `layout`, `theme`). Extracting
  * them into a third package would move those files and rewrite the imports and paths of ~25
  * mobile test files -- changes to the soul app that nothing in this change is allowed to run
  * the tests for. Importing the leaf modules in place changes nothing in `mobile/`.

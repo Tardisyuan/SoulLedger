@@ -61,7 +61,7 @@ import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useOnline } from "./online";
-import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
+import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./layout";
 import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme";
 
 // ── theme & motion ─────────────────────────────────────────────────────

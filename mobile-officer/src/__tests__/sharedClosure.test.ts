@@ -62,12 +62,11 @@ const EXPECTED = [
   "feedback.tsx",
   "fonts.ts",
   "i18n.tsx",
-  "loginRules.ts",
+  "layout.ts",
   "network.tsx",
   "online.ts",
   "passwordRulesView.tsx",
   "platform.ts",
-  "rules.ts",
   "theme.ts",
   "ui.tsx",
   "versionGate.tsx",
@@ -84,9 +83,11 @@ describe("the soul-app files the officer app reaches", () => {
     expect(CLOSURE).toEqual(EXPECTED);
   });
 
-  it("never includes the soul's session, chrome, navigation, push, cold start or screens", () => {
+  // rules / loginRules: the soul's presentation and sign-in rules; ui.tsx reads layout.ts and the
+  // sign-out sheet lives in logout.tsx so neither comes along (cq-apps 2026-10-30 #2).
+  it("never includes the soul's session, chrome, navigation, push, cold start, rules or screens", () => {
     const forbidden = CLOSURE.filter((f) =>
-      /^(session|chrome|navigation|push|coldStart)\.[jt]sx?$/.test(f) || f.startsWith("screens/")
+      /^(session|chrome|navigation|push|coldStart|rules|loginRules|logout)\.[jt]sx?$/.test(f) || f.startsWith("screens/")
     );
     expect(forbidden).toEqual([]);
   });

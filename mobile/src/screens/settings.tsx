@@ -22,7 +22,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { Emblem, Icon, type IconName } from "../emblems";
-import { useAskLogout, useToast } from "../feedback";
+import { useToast } from "../feedback";
+import { useAskLogout } from "../logout";
 import { translate, useI18n } from "../i18n";
 import { PRIMER_SEEN_KEY, easProjectId, permission, registerDevice, requestPermission, type Permission } from "../push";
 import { useSession } from "../session";
