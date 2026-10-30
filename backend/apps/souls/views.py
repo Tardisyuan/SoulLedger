@@ -295,11 +295,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             # that one carries select_related over nullable FKs and may carry
             # DISTINCT from the DataScope filter, and PostgreSQL refuses FOR
             # UPDATE on either. Scope was decided above; this only re-reads.
+            # `lock_many` takes the rows in pk order, so two overlapping batches cannot deadlock.
             locked = {
                 soul.pk: soul
-                for soul in Soul.all_objects.select_for_update().filter(
-                    pk__in=ids, is_deleted=False, is_archived=False
-                )
+                for soul in Soul.lock_many(ids)
+                if not soul.is_deleted and not soul.is_archived
             }
             gone = [pk for pk in ids if pk not in locked]
             if gone:

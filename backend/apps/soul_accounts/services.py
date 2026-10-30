@@ -125,7 +125,7 @@ def provision_account(soul, origin, *, actor=None, request=None):
 
     caller_copy = soul
     with transaction.atomic():
-        soul = Soul.all_objects.select_for_update(of=("self",)).select_related("tenant").get(pk=soul.pk)
+        soul = Soul.lock(soul.pk)
         if soul.current_state == SoulState.ALIVE:
             raise SoulAccountError("灵魂尚在世,不能开通灵魂账号。", "soul_alive")
         cycle = soul.life_index
@@ -168,7 +168,7 @@ def reset_credential(account, *, actor=None, request=None):
         # 锁序 灵魂 → 账号(见 rebirth._lock_account):下面插入的凭据行对灵魂取 KEY SHARE。
         from apps.souls.models import Soul
 
-        Soul.all_objects.select_for_update(of=("self",)).filter(pk=account.soul_id).first()
+        Soul.lock_many([account.soul_id])
         account = SoulAccount.objects.select_for_update(of=("self",)).select_related("soul__tenant", "user").get(pk=account.pk)
         if account.retired_at is not None:
             raise SoulAccountError("该账号已随转世停用,不能重置。", "account_retired")

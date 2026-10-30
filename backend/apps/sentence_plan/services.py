@@ -29,6 +29,7 @@ from apps.sentence_plan.models import (
     SentencePlanStatus,
     SentenceRequestStatus,
 )
+from apps.souls.models import Soul
 
 logger = logging.getLogger(__name__)
 
@@ -183,12 +184,6 @@ def in_progress_plan(soul, *, lock=False):
     if lock:
         qs = qs.select_for_update(of=("self",))
     return qs.first()
-
-
-def _lock_soul(soul):
-    from apps.souls.models import Soul
-
-    return Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
 
 
 def _lock_plan(plan_id):
@@ -570,7 +565,7 @@ class SentencePlanService:
         from apps.dispatch.services import DispatchService
         from apps.judgment.models import open_judgments
 
-        locked = _lock_soul(soul)
+        locked = Soul.lock(soul.pk)
         found = in_progress_plan(locked)
         if found is None:
             return False
@@ -656,9 +651,7 @@ class SentencePlanService:
         ).values_list("pk", "soul_id").first()
         if found is None:
             return False
-        from apps.souls.models import Soul
-
-        soul = _lock_soul(Soul(pk=found[1]))
+        soul = Soul.lock(found[1])
         plan = _lock_plan(found[0])
         nodes = _lock_nodes(plan)
         if (plan.status != SentencePlanStatus.ACTIVE or _holds_home_stop(nodes) or soul.is_residing

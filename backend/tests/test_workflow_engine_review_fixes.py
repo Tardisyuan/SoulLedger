@@ -500,12 +500,11 @@ def test_a_diyu_acquittal_records_that_rebirth_was_triggered(cn):
 
 def test_release_locks_the_soul_before_the_disposition(cn, monkeypatch):
     from apps.disposition import expiry
-    from apps.sentence_plan import services as plan_services
 
     _soul, _plan, disposition = _termed(cn)
     order = []
-    real_lock, real_releasable = plan_services._lock_soul, expiry.releasable
-    monkeypatch.setattr(plan_services, "_lock_soul", lambda soul: (order.append("soul"), real_lock(soul))[1])
+    real_lock, real_releasable = Soul.lock, expiry.releasable
+    monkeypatch.setattr(Soul, "lock", lambda pk: (order.append("soul"), real_lock(pk))[1])
     monkeypatch.setattr(expiry, "releasable", lambda d: (order.append("disposition"), real_releasable(d))[1])
     mod = officer_client(sp.officer("release_mod", "MODERATOR", cn))
     mod.post(f"/api/v1/disposition/{disposition.pk}/release/")

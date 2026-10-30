@@ -78,7 +78,7 @@ def request_export(account, *, request=None):
             # 锁序 灵魂 → 账号(见 rebirth._lock_account):下面插入的导出行对灵魂取 KEY SHARE。
             from apps.souls.models import Soul
 
-            Soul.all_objects.select_for_update(of=("self",)).filter(pk=account.soul_id).first()
+            Soul.lock_many([account.soul_id])
             SoulAccount.objects.select_for_update(of=("self",)).get(pk=account.pk)
             if SoulDataExport.objects.filter(account=account, status__in=EXPORT_IN_PROGRESS).exists():
                 raise SoulAccountError("已经有一份资料在准备了。", "export_in_progress")

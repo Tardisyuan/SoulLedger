@@ -21,6 +21,7 @@ from apps.disposition.models import SECTION_FILTERS, Disposition, DispositionSec
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
 from apps.disposition.services import DispositionService
 from apps.reincarnation.models import Reincarnation
+from apps.souls.models import Soul
 from apps.workflow.models import ApprovalWorkflow, judgment_deciding
 
 
@@ -318,13 +319,12 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         from django.utils import timezone
 
         from apps.disposition.expiry import expire_one, releasable, serving
-        from apps.sentence_plan.services import _lock_soul
 
         disposition = self.get_object()
         with transaction.atomic():
             # The soul first, then the disposition (2026-10-29): the order an appeal's amendment takes (soul →
             # plan → nodes → dispositions). Disposition-first here could deadlock against it.
-            _lock_soul(disposition.soul)
+            Soul.lock(disposition.soul_id)
             locked = (
                 Disposition.objects.select_for_update(of=("self",))
                 .select_related("soul", "destination_realm").filter(pk=disposition.pk).first()

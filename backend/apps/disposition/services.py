@@ -928,7 +928,7 @@ class DispositionService:
         from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
-            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=disposition.soul_id)
+            locked = Soul.lock(disposition.soul_id)
             if SentencePlanService.node_for_disposition(disposition) is not None:
                 node = SentencePlanService.on_term_served(locked, disposition)
                 if node is None:
@@ -1016,7 +1016,7 @@ class DispositionService:
         from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
-            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            locked = Soul.lock(soul.pk)
             if (
                 locked.is_deleted or locked.is_residing
                 or disposition.tenant_id != locked.tenant_id
@@ -1056,7 +1056,7 @@ class DispositionService:
         from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
-            locked = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+            locked = Soul.lock(soul.pk)
             if (
                 locked.is_deleted or not locked.is_residing
                 or disposition.tenant_id != locked.tenant_id

@@ -25,7 +25,6 @@ from apps.sentence_plan.services import (
     SentencePlanService,
     _lock_nodes,
     _lock_plan,
-    _lock_soul,
     _route_home_realm,
     _save,
     _tenant_id,
@@ -33,6 +32,7 @@ from apps.sentence_plan.services import (
     notify_judges,
     record_event,
 )
+from apps.souls.models import Soul
 
 LIVE_NODE_STATUSES = tuple(s for s in SentenceNodeStatus if s not in (SentenceNodeStatus.REMOVED,
                                                                          SentenceNodeStatus.CANCELLED))
@@ -165,7 +165,7 @@ def _create_request(plan, soul, *, from_tenant_code, kind, changes, reason, user
 def file_request(plan, tenant, *, kind, changes, reason, user):
     """情况 2.1 / 2.2:X 的判官直接提请求。灵魂此刻就在 X → 400(情况 1 要开审判,§4.2)。"""
     with transaction.atomic():
-        soul = _lock_soul(plan.soul)
+        soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         if kind not in SentenceRequestKind.values:
             raise PlanChangeRefusedError(f"Unknown kind {kind!r}", "invalid_kind")
@@ -186,7 +186,7 @@ def file_request(plan, tenant, *, kind, changes, reason, user):
 def request_from_amendment(judgment, plan_changes, reason):
     """情况 1:AMENDMENT 审判结案 → 一条 AMEND 请求(Q2)。没有改动 = 本地审判没改什么,不生成请求。
     调用方(`JudgmentConclusionService.conclude_judgment`)持有事务;拒绝时整个结案回滚。"""
-    soul = _lock_soul(judgment.soul)
+    soul = Soul.lock(judgment.soul_id)
     plan = _lock_plan(judgment.amends_plan_id)
     if not plan_changes:
         return None
@@ -237,7 +237,7 @@ def decide(plan, request_id, *, accept, reason, user):
     from apps.events.models import EventType
 
     with transaction.atomic():
-        soul = _lock_soul(plan.soul)
+        soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
         if req.kind == SentenceRequestKind.REOPEN:
@@ -268,7 +268,7 @@ def decide(plan, request_id, *, accept, reason, user):
 def withdraw(plan, request_id, *, tenant, exempt, user):
     """请求方撤回(§4.2)。只有提出方租户(或 ADMIN)。"""
     with transaction.atomic():
-        soul = _lock_soul(plan.soul)
+        soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         req = _locked_pending_request(plan, request_id)
         if not exempt and (tenant is None or tenant.code != req.from_tenant_code):
@@ -352,7 +352,7 @@ def append_cross_stops(cross):
             "sentence_plan: cross judgment %s concluded PASS but judgment %s has no plan in progress; no stops added",
             cross.pk, judgment.pk)
         return []
-    soul = _lock_soul(found.soul)
+    soul = Soul.lock(found.soul_id)
     plan = _lock_plan(found.pk)
     nodes = _lock_nodes(plan)
     if any(n.added_by_judgment_id == judgment.pk and not n.is_home for n in nodes):
@@ -465,7 +465,7 @@ def conclude_reopened(judgment):
     from apps.judgment.models import acquitted_to_rebirth
     from apps.realms.models import realm_by_code
 
-    soul = _lock_soul(judgment.soul)
+    soul = Soul.lock(judgment.soul_id)
     plan = _lock_plan(judgment.amends_plan_id)
     nodes = _lock_nodes(plan)
     _refuse_undecided(soul, judgment.verdict)
@@ -723,7 +723,7 @@ def cancel(plan, *, reason, user):
     if not (reason or "").strip():
         raise PlanChangeRefusedError("A reason is required to cancel a sentence plan", "reason_required")
     with transaction.atomic():
-        soul = _lock_soul(plan.soul)
+        soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         if plan.status not in IN_PROGRESS_PLAN_STATUSES:
             raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
@@ -762,7 +762,7 @@ def cancel(plan, *, reason, user):
                 soul, actor=user if getattr(user, "is_authenticated", False) else "system",
                 trigger=DispatchService.RETURN_ON_PLAN_CANCELLED, reason=reason,
             )
-            soul = _lock_soul(soul)
+            soul = Soul.lock(soul.pk)
         plan.cancel_reason = reason
         _save(plan, "cancel_reason")
         if not SentencePlanService._complete(soul, plan, nodes, pardoned=True):
@@ -798,7 +798,7 @@ def retry_dispatch(plan, node_id, *, user):
     from apps.judgment.models import open_judgments
 
     with transaction.atomic():
-        soul = _lock_soul(plan.soul)
+        soul = Soul.lock(plan.soul_id)
         plan = _lock_plan(plan.pk)
         if plan.status == SentencePlanStatus.HELD:
             raise PlanChangeRefusedError("The plan is held on an eternal stop", "plan_held", status=409)

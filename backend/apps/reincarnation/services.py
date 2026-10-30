@@ -205,7 +205,7 @@ def assert_may_be_reborn(soul, disposition=None):
     from django.db import transaction
 
     with transaction.atomic():
-        Soul.all_objects.select_for_update(of=("self",)).filter(pk=soul.pk).first()
+        Soul.lock_many([soul.pk])
         unexecuted = Disposition.all_objects.filter(soul_id=soul.pk, cycle=soul.life_index, is_executed=False,
                                                     is_deleted=False).exclude(pk__in=pardoned).exists()
     if unexecuted:
@@ -251,7 +251,7 @@ def drink_soup(soul):
     from apps.events.services import EventService
 
     with transaction.atomic():
-        soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=soul.pk)
+        soul = Soul.lock(soul.pk)
         if not needs_soup(soul):
             raise SoupRefused("not_diyu", "Only a soul of Diyu drinks the soup of Meng Po.")
         if soul.current_state != SoulState.REINCARNATING:
@@ -439,7 +439,7 @@ class ReincarnationService:
             # clobbers a concurrent writer's merit/demerit -- the lock covers
             # that too, which is why it wraps the whole block and not just the
             # count.
-            soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+            soul = Soul.lock(soul.pk)
             assert_may_be_reborn(soul, disposition)
             # 灵魂已批准的申请里的意愿是默认;官员改了要写原因,记进下面的事件(用户 2026-10-29)。
             rebirth_form, desired_form, form_reason = resolve_rebirth_form(soul, rebirth_form, rebirth_form_reason)
