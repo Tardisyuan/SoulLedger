@@ -237,6 +237,31 @@ describe("timeline", () => {
     expect(last().params).toMatchObject({ since: "s1" });
   });
 
+  it("a sync that names no room keeps the rooms object itself (an empty long-poll changes nothing); one that names a room does not", () => {
+    const once = applySync(EMPTY_TIMELINE, {
+      next_batch: "s1",
+      rooms: { join: { [ROOM]: { timeline: { events: [{ event_id: "$1", type: "m.room.message", sender: PEER, origin_server_ts: 1, content: { body: "一" } }] } } } },
+    });
+    for (const empty of [{ next_batch: "s2" }, { next_batch: "s2", rooms: {} }, { next_batch: "s2", rooms: { join: {} } }]) {
+      const after = applySync(once, empty);
+      expect(after.rooms).toBe(once.rooms);
+      expect(after.since).toBe("s2");
+    }
+    const touched = applySync(once, { next_batch: "s3", rooms: { join: { [ROOM]: { unread_notifications: { notification_count: 2 } } } } });
+    expect(touched.rooms).not.toBe(once.rooms);
+    expect(touched.rooms[ROOM].unread).toBe(2);
+    expect(touched.rooms[ROOM].messages.map((m) => m.body)).toEqual(["一"]);
+  });
+
+  it("sync passes an abort signal through: an aborted long-poll rejects as unreachable", async () => {
+    const client = await signedIn();
+    // Structural (this package has no DOM types): what axios reads of an AbortController's signal.
+    const aborted = { aborted: true, addEventListener: () => {}, removeEventListener: () => {} };
+    const error = await client.sync("s0", 30_000, aborted).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(MatrixRequestError);
+    expect(isUnreachable(error)).toBe(true);
+  });
+
   it("ignores non-text events and keeps the officer's name and position from a hall reply", () => {
     const state = applySync(EMPTY_TIMELINE, {
       next_batch: "s1",

@@ -8,7 +8,7 @@
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, AppState, type AppStateStatus } from "react-native";
 import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,7 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BIO_KEY, EXPORT_PROMPT } from "../deviceLogin";
 import { formatBytes, safeFileName } from "../dataExport";
 import { I18nProvider } from "../i18n";
-import { RootNavigator } from "../navigation";
+import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { SessionProvider } from "../session";
 import { PROFILE, life, resetLoginMemory, stubApi, type Reply } from "./stubApi";
@@ -324,6 +324,54 @@ describe("the page follows the server", () => {
       expect(screen.queryByTestId("export-queued")).toBeNull();
     } finally {
       jest.useRealTimers();
+    }
+  });
+
+  it("stops asking in the background and while another page covers it; back in front it asks once and polls on (N4)", async () => {
+    type Listener = (state: AppStateStatus) => void;
+    const listeners = new Set<Listener>();
+    const spy = jest.spyOn(AppState, "addEventListener").mockImplementation(((_type: string, handler: Listener) => {
+      listeners.add(handler);
+      return { remove: () => void listeners.delete(handler) };
+    }) as unknown as typeof AppState.addEventListener);
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      const calls = signedIn({ "GET /me/export/": state(row()) });
+      await openPage();
+      await screen.findByTestId("export-queued");
+      const asked = () => calls.filter((c) => c.url === "/me/export/").length;
+      const wait = (ms: number) =>
+        act(async () => {
+          jest.advanceTimersByTime(ms);
+        });
+      // In front: it polls (the guard below is not measuring a page that never asks).
+      let before = asked();
+      await wait(21_000);
+      expect(asked()).toBe(before + 1);
+
+      await act(async () => listeners.forEach((l) => l("background")));
+      before = asked();
+      await wait(65_000);
+      expect(asked()).toBe(before);
+      await act(async () => listeners.forEach((l) => l("active")));
+      expect(asked()).toBe(before + 1);
+      await wait(21_000);
+      expect(asked()).toBe(before + 2);
+
+      // Another page over it: no polling until it is in front again (which reads once, then polls on).
+      await act(async () => navigationRef.navigate("About"));
+      await screen.findByTestId("about");
+      before = asked();
+      await wait(65_000);
+      expect(asked()).toBe(before);
+      await act(async () => navigationRef.goBack());
+      await screen.findByTestId("data-export");
+      expect(asked()).toBe(before + 1);
+      await wait(21_000);
+      expect(asked()).toBe(before + 2);
+    } finally {
+      jest.useRealTimers();
+      spy.mockRestore();
     }
   });
 });

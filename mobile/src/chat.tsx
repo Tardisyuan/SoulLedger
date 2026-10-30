@@ -63,6 +63,7 @@ import {
 } from "@soulledger/core/api/matrix";
 import { platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
 
 import { sendsThroughBackend } from "./chatRules";
 
@@ -157,6 +158,19 @@ const INERT: Chat = {
 /** Exported for screen tests, which hand a screen a fixed chat state. */
 export const ChatContext = createContext<Chat>(INERT);
 export const useChat = () => useContext(ChatContext);
+
+/**
+ * What the tab bar needs and nothing more: whether chat exists here, and whether any room has unread letters.
+ * Its own context, so a new letter in an open thread, an outbox tick or an upload's progress does not re-render
+ * the whole navigator — only a change of these two values does.
+ */
+export interface ChatStatus {
+  availability: Availability;
+  unread: boolean;
+}
+const INERT_STATUS: ChatStatus = { availability: INERT.availability, unread: false };
+const ChatStatusContext = createContext<ChatStatus>(INERT_STATUS);
+export const useChatStatus = () => useContext(ChatStatusContext);
 
 /** No response, or the service said it could not reach Synapse: queue, do not refuse. */
 function isOffline(error: unknown): boolean {
@@ -410,6 +424,22 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     if (!enabled) return;
     let alive = true;
     let retryMs = RETRY_MS;
+    // In the background the long-poll stops (N4): the open request is aborted and the loop waits here until the
+    // app is active again, then goes on at once (the same `wake` as the retry button). iOS's `inactive` (the
+    // face prompt, the app switcher) is not the background and stops nothing.
+    let paused = AppState.currentState === "background";
+    let resume = noop;
+    let poll: AbortController | null = null;
+    const appState = AppState.addEventListener("change", (next) => {
+      if (next === "background") {
+        paused = true;
+        poll?.abort();
+      } else if (next === "active" && paused) {
+        paused = false;
+        resume();
+        wake.current();
+      }
+    });
     // Waits out the current backoff and doubles it. `wake` (the retry button) ends the wait now and
     // starts the backoff over: the soul asked, so the next failure waits 5 s again, not 30.
     const backoff = () =>
@@ -451,6 +481,10 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     async function run() {
       await reload();
       while (alive) {
+        if (paused) {
+          await new Promise<void>((resolve) => (resume = resolve));
+          continue;
+        }
         if (!client.current) {
           const connected = await connect();
           if (!alive || connected === "stop") return;
@@ -460,7 +494,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           }
         }
         try {
-          const response = await client.current!.sync(since.current, since.current ? POLL_MS : 0);
+          poll = new AbortController();
+          const response = await client.current!.sync(since.current, since.current ? POLL_MS : 0, poll.signal);
           if (!alive) return;
           since.current = response.next_batch;
           retryMs = RETRY_MS; // connected and synced: the next failure waits 5 s again
@@ -469,7 +504,12 @@ export function ChatProvider({ account, children }: { account: string | null; ch
               if (e.unsigned?.transaction_id) echoed.current.set(e.unsigned.transaction_id, e.event_id);
             }
           }
-          setTimeline((state) => applySync(state, response));
+          // An empty long-poll (nothing new for 30 s) keeps the rooms: the state stays as it is, so nothing that
+          // reads the chat re-renders for it. `since` is kept in its ref above; nothing reads `timeline.since`.
+          setTimeline((state) => {
+            const next = applySync(state, response);
+            return next.rooms === state.rooms ? state : next;
+          });
           if (availabilityRef.current !== "ready") {
             setAvailability("ready");
             availabilityRef.current = "ready";
@@ -479,6 +519,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           if (rooms.some((r) => !known.current.has(r))) void reload();
         } catch (error) {
           if (!alive) return;
+          if (paused) continue; // aborted by going to the background: not a fault, nothing to report
           if (error instanceof MatrixRequestError && error.status === 401) {
             client.current = null; // the access token is gone: log in again with a fresh grant
             continue;
@@ -491,6 +532,9 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     void run();
     return () => {
       alive = false;
+      appState.remove();
+      poll?.abort();
+      resume();
       wake.current();
       // Signed out (not merely unmounted or re-run): the Matrix session ends on the server too, so the access
       // token this process held is dead rather than dropped (RBAC A10). A sign-out has already counted itself
@@ -580,5 +624,12 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     [availability, conversations, listError, gone, timeline, me, outbox, refused, progress, reload, flush, deliver, deliverImage]
   );
 
-  return <ChatContext.Provider value={enabled ? value : INERT}>{children}</ChatContext.Provider>;
+  const unread = Object.values(timeline.rooms).some((room) => room.unread > 0);
+  const status = useMemo<ChatStatus>(() => ({ availability, unread }), [availability, unread]);
+
+  return (
+    <ChatStatusContext.Provider value={enabled ? status : INERT_STATUS}>
+      <ChatContext.Provider value={enabled ? value : INERT}>{children}</ChatContext.Provider>
+    </ChatStatusContext.Provider>
+  );
 }

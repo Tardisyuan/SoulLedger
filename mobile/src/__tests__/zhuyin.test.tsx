@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
+import { FONT_ASSETS, HIEROGLYPH_FONT, family } from "../fonts";
 import { DEFAULT_GLYPHS, OutlineSeal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
 import { themeFor, v3, v3Band } from "../theme";
@@ -112,7 +113,7 @@ describe("v3 OutlineSeal", () => {
     expect(d("s-outer")).toMatch(/^M7 1L45 1L51 26L45 51L7 51L1 26Z$/);
   });
 
-  it("the glyph: the colour, 0.44 of the width (0.5 at ≤ 32, 0.34 each for two), in the app's serif or the hieroglyph face", () => {
+  it("the glyph: the colour, 0.44 of the width (0.5 at ≤ 32, 0.34 each for two), in the app's serif or the hieroglyph face", async () => {
     seal("cn", 64, { glyphs: ["五"] });
     expect(flat(screen.getByTestId("s-glyph", H))).toMatchObject({ fontFamily: "NotoSerifSC_400", fontSize: 28, color: "#123456" });
     screen.unmount();
@@ -125,11 +126,61 @@ describe("v3 OutlineSeal", () => {
     expect(flat(screen.getByTestId("s-glyph", H)).fontFamily).toBe("SourceSerif4_400Regular");
     screen.unmount();
     seal("eg", 100, { glyphs: ["\u{13184}", "\u{131CB}"] });
+    await act(async () => {}); // the hieroglyph face loads on demand (S2)
     const glyphs = screen.getAllByTestId("s-glyph", H);
     expect(glyphs.map((g) => [flat(g).fontFamily, flat(g).fontSize])).toEqual([
       ["NotoSansEgyptianHieroglyphs_400Regular", 34],
       ["NotoSansEgyptianHieroglyphs_400Regular", 34],
     ]);
+  });
+
+  describe("the hieroglyph face is read on demand, not at boot (S2)", () => {
+    const Font = jest.requireMock("expo-font") as { loadAsync: jest.Mock; __loaded: Set<string>; __state: { fail: boolean } };
+    beforeEach(() => {
+      Font.loadAsync.mockClear();
+      Font.__loaded.clear();
+      Font.__state.fail = false;
+    });
+    afterEach(() => {
+      Font.__state.fail = false;
+    });
+
+    it("is not among the fonts both apps load at start; it is its own asset", () => {
+      expect(FONT_ASSETS).not.toHaveProperty("NotoSansEgyptianHieroglyphs_400Regular");
+      expect(Object.keys(HIEROGLYPH_FONT)).toEqual([family.hieroglyph]);
+    });
+
+    it("a seal with no hieroglyph never reads it", async () => {
+      seal("cn", 64, { glyphs: ["五"] });
+      seal("eu", 30);
+      seal("gr", 52);
+      await act(async () => {});
+      expect(Font.loadAsync).not.toHaveBeenCalled();
+    });
+
+    it("an 埃及 seal draws its frame alone until the face is in, then the glyph in it; the second seal does not load it again", async () => {
+      seal("eg", 64);
+      expect(screen.getByTestId("s-outer", H)).toBeTruthy();
+      expect(screen.queryAllByTestId("s-glyph", H)).toEqual([]);
+      expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+      expect(Object.keys(Font.loadAsync.mock.calls[0][0])).toEqual([family.hieroglyph]);
+      await act(async () => {});
+      expect(screen.getByTestId("s-glyph", H).props.children).toBe("\u{13184}");
+      expect(flat(screen.getByTestId("s-glyph", H)).fontFamily).toBe(family.hieroglyph);
+      screen.unmount();
+      seal("eg", 30);
+      expect(screen.getByTestId("s-glyph", H).props.children).toBe("\u{13184}"); // drawn at once
+      expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("a face that fails to load leaves the empty frame, never the glyph in a face that is not there", async () => {
+      Font.__state.fail = true;
+      seal("eg", 64);
+      await act(async () => {});
+      expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("s-outer", H)).toBeTruthy();
+      expect(screen.queryAllByTestId("s-glyph", H)).toEqual([]);
+    });
   });
 
   it("reads its label, never its glyph; a soul of no known civilization has none", () => {
@@ -193,7 +244,9 @@ describe("no civilization display face on any bar (v3; v2's 匾题字 and Ma Sha
     wrap(<AppHeader title="设置" onBack={() => {}} />, signedIn({ civilization }), civilization);
     expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20 });
     await act(async () => {});
-    expect(Font.loadAsync).not.toHaveBeenCalled();
+    // No display face for the bar. The one font that may load is the seal's own hieroglyph face (埃及's default glyph, S2).
+    const loaded = Font.loadAsync.mock.calls.flatMap(([map]: [Record<string, unknown>]) => Object.keys(map));
+    expect(loaded.filter((name: string) => name !== family.hieroglyph)).toEqual([]);
   });
 
   it("a title with a letter the serif subset lacks (a soul's name) stays whole in the interface face", async () => {

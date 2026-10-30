@@ -26,7 +26,7 @@
  * Synapse's `errcode` (`M_FORBIDDEN` for "user_level (0) < send_level (50)"
  * and for the module's refusals alike), and the app asks the backend why.
  */
-import axios, { type AxiosError } from "axios";
+import axios, { type AxiosError, type GenericAbortSignal } from "axios";
 
 /** What `GET /me/chat/session/` hands out: a short-lived login token for this soul's Matrix user. */
 export interface MatrixSessionGrant {
@@ -76,7 +76,7 @@ function asMatrixError(error: unknown): MatrixRequestError {
 async function call<T>(
   method: "GET" | "POST" | "PUT",
   url: string,
-  options: { token?: string; params?: Record<string, string | number>; data?: unknown; timeout?: number } = {}
+  options: { token?: string; params?: Record<string, string | number>; data?: unknown; timeout?: number; signal?: GenericAbortSignal } = {}
 ): Promise<T> {
   try {
     const response = await matrixHttp.request<T>({
@@ -85,6 +85,7 @@ async function call<T>(
       params: options.params,
       data: options.data,
       timeout: options.timeout,
+      signal: options.signal,
       headers: options.token ? { Authorization: `Bearer ${options.token}` } : undefined,
     });
     return response.data;
@@ -154,11 +155,13 @@ export function matrixClient(creds: MatrixCredentials) {
   return {
     userId: creds.userId,
     /** Long-poll. `timeoutMs` 0 answers at once (the first sync); the HTTP timeout is set above it. */
-    sync: (since: string | null, timeoutMs: number) =>
+    /** `signal`: abort the wait (the app went to the background); it rejects as unreachable, status null. */
+    sync: (since: string | null, timeoutMs: number, signal?: GenericAbortSignal) =>
       call<SyncResponse>("GET", `${base}/sync`, {
         token,
         params: { filter: SYNC_FILTER, timeout: timeoutMs, ...(since ? { since } : {}) },
         timeout: timeoutMs + 15_000,
+        signal,
       }),
     /** Idempotent per `txnId`: a retry after a lost response does not post twice (Matrix spec). */
     send: (roomId: string, txnId: string, body: string) =>
@@ -263,10 +266,18 @@ function merge(existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] 
   return [...byId.values()].sort((a, b) => a.ts - b.ts);
 }
 
-/** Fold one `/sync` answer into the state. Pure. */
+/**
+ * Fold one `/sync` answer into the state. Pure.
+ *
+ * A long-poll that ran out with nothing new (every 30 s while the app is open) names no room: the
+ * answer keeps `state.rooms` itself, so a caller can tell "nothing changed" by identity and skip
+ * re-rendering everything that reads the chat.
+ */
 export function applySync(state: TimelineState, response: SyncResponse): TimelineState {
+  const updates = Object.entries(response.rooms?.join ?? {});
+  if (!updates.length) return { since: response.next_batch, rooms: state.rooms };
   const rooms = { ...state.rooms };
-  for (const [roomId, update] of Object.entries(response.rooms?.join ?? {})) {
+  for (const [roomId, update] of updates) {
     const current = rooms[roomId] ?? EMPTY_ROOM;
     const incoming = (update.timeline?.events ?? []).map(toMessage).filter((m): m is ChatMessage => m !== null);
     const readUpTo = { ...current.readUpTo };

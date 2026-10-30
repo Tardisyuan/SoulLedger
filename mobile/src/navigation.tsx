@@ -28,7 +28,7 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 import { AssistProvider, useAssist } from "./assist";
 import { AssistPanel } from "./assistPanel";
-import { ChatProvider, useChat } from "./chat";
+import { ChatProvider, useChatStatus } from "./chat";
 import { ColdStart } from "./coldStart";
 import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { ToastProvider } from "./feedback";
@@ -96,13 +96,14 @@ function ApplicationsTab({ route, navigation }: BottomTabScreenProps<ParamListBa
 
 function MainTabs() {
   const { t } = useI18n();
-  const chat = useChat();
+  // Only the two facts the bar shows (chat.tsx `ChatStatus`): a new letter or an outbox tick does not re-render the tabs.
+  const chat = useChatStatus();
   // v3 MotionSpec 底部标签: the content cross-fades over 180ms, the bar does not move; reduce motion swaps at once
   // — by a 0ms fade, never by `animation: "none"`. The OS answers reduce motion after this first renders, and
   // flipping "fade" → "none" turns the tabs' screen container (react-native-screens, iOS) into a different
   // native component, remounting every tab: the life tab's three requests went out twice.
   const { tabFade } = useReducedMotionDurations();
-  const unread = Object.values(chat.timeline.rooms).some((room) => room.unread > 0);
+  const { unread } = chat;
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
@@ -229,7 +230,7 @@ function CircleReport({ route }: NativeStackScreenProps<AppStackParams, "CircleR
 
 /** 「问一问」 above the navigator, so a drawer closed mid-answer still gets its answer. */
 function AssistRoot({ profile, signedIn, ready, children }: { profile: MeProfile | null; signedIn: boolean; ready: number; children: ReactNode }) {
-  const chat = useChat();
+  const chat = useChatStatus();
   const openLetters = useCallback(() => navigationRef.navigate("Tabs", { screen: "Letters" }), []);
   return (
     <AssistProvider profile={profile} onOpenLetters={chat.availability === "not_configured" ? null : openLetters}>
@@ -318,7 +319,7 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
  */
 function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const assist = useAssist();
-  const chat = useChat();
+  const chat = useChatStatus();
   const open = assist?.open;
   const setDraft = assist?.setDraft;
   const lettersOff = chat.availability === "not_configured";
