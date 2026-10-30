@@ -4,7 +4,7 @@ event webhooks (`apps/events`), the death-sync webhook serializer, the assistant
 (`apps/soul_assist/admin_serializers.py`).
 
 Moved here from `apps/death_sync/webhook_service.py` on 2026-10-30 (cq-backend 第 5 条): three apps imported
-its underscore names. That module re-exports the old names for the callers not moved yet.
+its underscore names. The old module and its re-exports are gone (d4db4fd5); import from here.
 """
 import ipaddress
 import socket

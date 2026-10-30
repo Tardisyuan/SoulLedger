@@ -108,6 +108,9 @@ The two entries this table carried on 2026-08-13 as its top **real** gaps — `l
 and `ledger/filters.py`, both listed at 0% — **no longer exist**; neither file is in
 `backend/apps/ledger/`. Do not go looking for them.
 
+`death_sync/webhook_service.py` **no longer exists** either (2026-10-30): its SSRF guard moved to
+`core/outbound.py` and the rest was removed. Re-measure before picking this table up.
+
 Priority order if this is picked up: `death_sync/webhook_service.py` (failure paths in an
 external integration), then `perm/export.py`, then `souls/querysets.py` / `souls/filters.py`.
 

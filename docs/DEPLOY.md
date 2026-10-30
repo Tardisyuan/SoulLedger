@@ -17,7 +17,7 @@
 2. **生产覆盖文件的 backend 启动命令没有 `seed_mythology`**(`docker-compose.production.yml:62-66`),而基础文件有(`docker-compose.yml:88-93`;compose 合并时 `command` 被整条替换)。
    全新生产库里没有租户、界域、冥界人物。首次上线要手动跑一次(见第 6 节),之后不用。
 3. **没有 `eas.json`,两个 `app.json` 也没有 `extra.eas.projectId`**(`mobile/app.json`、`mobile-officer/app.json`;`ls mobile/eas.json mobile-officer/eas.json` 均不存在)。
-   没有 projectId,App 拿不到 Expo 推送 token(`mobile/src/push.ts:86-87`、`mobile-officer/src/push.ts:66-67`:返回 `no_project_id`,不报错)。见第 9 节。
+   没有 projectId,App 拿不到 Expo 推送 token(两个 App 共用的 `mobile/src/pushCore.ts`(2026-10-30 起)读 projectId:返回 `no_project_id`,不报错)。见第 9 节。
 
 ## 1. 环境变量(按服务)
 
@@ -34,14 +34,14 @@
 | `ENCRYPTION_KEY` | 必 | `DEBUG=False` 且空:`ImproperlyConfigured` 拒绝启动。格式必须是 Fernet(44 字符 urlsafe-base64 以 `=` 结尾),否则同样拒绝。它加密 `WebhookConfig.signing_secret` 与 `DeathRegistrationRequest.source_payload`。2026-10-30 时加密的列还有官员 / 灵魂两步验证的 `secret`、灵魂账号初始凭据、助手平台 API key(`DEPLOYMENT.md`「密钥轮换」)。**可以不停机轮换**:`ENCRYPTION_KEY_FALLBACKS` + `manage.py rotate_encryption_key`,步骤见 `DEPLOYMENT.md`;直接换掉而不留旧 key,旧密文读不出。生成:`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` | `settings.py:695-736` |
 | `DATABASE_URL` | 必 | 生产叠加文件把它指到 `pgbouncer:5432`,由 `DB_PASSWORD` 拼出(`docker-compose.production.yml:48`)。含 `sqlite` 且 `DEBUG=False`:拒绝启动 | `settings.py:170-175` |
 | `DB_PASSWORD` | 必 | compose 的 `:?` 校验,缺了不启动 | `docker-compose.yml:13`;`production.yml:28,45,151` |
-| `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | 必 | 生产叠加文件由 `REDIS_PASSWORD` 拼出(`production.yml:49-51`);不用手写。缺 Redis:权限缓存退回进程内存(默认 TTL 0,每次查库)、WebSocket 与 Celery 全部不可用 | `settings.py:135,388-389` |
+| `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` | 必 | 生产叠加文件由 `REDIS_PASSWORD` 拼出(`production.yml:49-51`);不用手写。缺 Redis:权限缓存退回进程内存(默认 TTL 0,每次查库;同一请求内的重复检查只问一次,2026-10-30)、WebSocket 与 Celery 全部不可用 | `settings.py:135,388-389` |
 | `REDIS_PASSWORD` | 必 | `production.yml:16` 的 `:?` 校验 | |
 | `TRUSTED_PROXY_COUNT` | — | 生产叠加文件写死 `"1"`(nginx 一跳)。别改成 0:审计日志/登录限速/API key IP 白名单都会取到 nginx 的地址 | `production.yml:53`;`settings.py:49` |
 | `CORS_ALLOWED_ORIGINS` | 推 | 默认只有 localhost。**走同一个 nginx 域名(Web 与 API 同源)时不需要设。** Web 与 API 分在不同源时必须列**完整源**(`https://desk.example.com`),不能是 `*`:`CORS_ALLOW_CREDENTIALS=True` 是为 2FA「30 天不再询问」设备 cookie 开的(`mfa.py:325-331`:httpOnly、`SameSite=Lax`、`secure=not DEBUG`、path `/api/v1/auth/`)。Lax cookie 只在**同站**(同一可注册主域,如 `desk.example.com` 与 `api.example.com`)的 XHR 里随请求发送;跨站域名这个 cookie 永远发不出去,2FA 每次都要验 | `settings.py:236-239` |
 | `CSRF_TRUSTED_ORIGINS` | — | 全仓库没有这个设置(`grep CSRF_TRUSTED` 无结果)。API 走 JWT bearer,DRF 不校验 CSRF;只有 Django admin(`/admin/`)的表单登录受影响:若 admin 从 nginx 的 https 域名访问,Django 看到的是 `X-Forwarded-Proto: https` 与 `Host`,同源,通常不需要。**admin 登录实测:未核实** | |
 | `SECURE_SSL_REDIRECT` | — | 默认 true;staging 叠加文件设 false(`staging.yml:14`)。`/health/` 与 Synapse 回调路径豁免 | `settings.py:514,524` |
-| `SENTRY_DSN` | 推 | 空:启动 warning,无错误追踪、无 beat 的 Sentry Crons。**前端不会拿到它**:`frontend/Dockerfile` 没有 `SENTRY_DSN` 的 ARG(`frontend/next.config.js:24` 只在构建时看到它) | `settings.py:774-802` |
-| `EMAIL_HOST` `EMAIL_PORT` `EMAIL_HOST_USER` `EMAIL_HOST_PASSWORD` `EMAIL_USE_TLS` `EMAIL_USE_SSL` `DEFAULT_FROM_EMAIL` | 推(见 §0.1) | 目前只有找回密码验证码与官员重置/验证邮件会发信。没配:启动 warning,而且**发信失败界面不显示**(接口答同一个响应),上线后必须真发一封验证 | `settings.py:743-762` |
+| `SENTRY_DSN` | 推 | 空:启动 warning,无错误追踪、无 beat 的 Sentry Crons。**前端不会拿到它**:`frontend/Dockerfile` 没有 `SENTRY_DSN` 的 ARG(`frontend/next.config.js` 只在构建时看到它)。浏览器端同理:Dockerfile 也没有 `NEXT_PUBLIC_SENTRY_DSN` 的 ARG,而 2026-10-30 起构建时这个变量为空就**整个不打包 Sentry SDK**(`frontend/instrumentation-client.ts` 文件头),所以按现在的镜像,网页端不上报错误 | `settings.py:774-802` |
+| `EMAIL_HOST` `EMAIL_PORT` `EMAIL_HOST_USER` `EMAIL_HOST_PASSWORD` `EMAIL_USE_TLS` `EMAIL_USE_SSL` `DEFAULT_FROM_EMAIL` | 推(见 §0.1) | 目前只有找回密码验证码与官员重置/验证邮件会发信。没配:启动 warning,而且**发信失败界面不显示**(接口答同一个响应),上线后必须真发一封验证。找回密码与灵魂端的几封由 celery worker 发,worker 也要有这组变量 | `settings.py:743-762` |
 | `JWT_ACCESS_LIFETIME`(默认 30 分钟)、`JWT_REFRESH_LIFETIME`(默认 10080 分钟)、`JWT_OFFICER_APP_REFRESH_LIFETIME_HOURS`(默认 24) | — | 有默认值 | `settings.py:306-310` |
 | `MEDIA_ROOT` | — | compose 写死 `/app/media`(`docker-compose.yml:27`),对应 `media_files` 卷 | |
 | `POST_MEDIA_X_ACCEL` | — | 生产叠加文件设 `"true"`;**只有前面真有这份 nginx 才能开** | `production.yml:59` |
@@ -55,6 +55,7 @@
 ### 1.2 celery worker / celery-beat 的差别
 
 - 环境同上(同一个 `*django-env` 锚点,`production.yml:73-101` 只覆盖数据库/Redis 三个地址)。worker 需要 `SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`、`EMAIL_*`、`MATRIX_*`、`ASSISTANT_*`——任务里发推送/邮件/调 Matrix。
+- **worker 不在,找回密码验证码、灵魂联系邮箱验证码与初始密码邮件都不发**(2026-10-30 起由 worker 发,请求只入队;见 `DEPLOYMENT.md`「邮件」)。
 - 二者都 `depends_on: backend: service_healthy`(`docker-compose.yml:126-128,134-136`):backend 里 `migrate` 没跑完它们不起。
 - **beat 只起一个**,见第 7 节。
 
@@ -77,7 +78,7 @@
 | 变量 | App | 缺了怎么样 |
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | 灵魂端 `mobile/`(官员端 `mobile-officer/` 复用同一个 platform 模块:`mobile-officer/src/shared.ts` 从 `../../mobile/src/*` 再导出,**官员端是否同样读这个变量:未核实**) | 回退 `http://10.0.2.2:8000/api/v1`(Android)/ `http://localhost:8000/api/v1`(iOS),商店包会连自己的手机(`mobile/src/platform.ts:89-93`) |
-| `EXPO_PUBLIC_DESK_URL` | 官员端 | 官员端「打开官员台」之类的链接前缀,回退 `http://localhost:3000`(`mobile-officer/src/rules.ts:191-193`) |
+| `EXPO_PUBLIC_DESK_URL` | 官员端 | 官员端「打开官员台」之类的链接前缀,回退 `http://localhost:3000`(`mobile-officer/src/rules.ts` 的 `deskBaseUrl()`) |
 | EAS `projectId` | 两个 App | 见第 9 节 |
 
 `EXPO_PUBLIC_*` 在打包时替换进 JS,构建机上设,不是服务器上设。

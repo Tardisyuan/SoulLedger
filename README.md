@@ -457,7 +457,7 @@ Linux runner 不计分钟。
 **本地门禁**：`bash scripts/install-hooks.sh` 装上钩子之后，pre-commit 对暂存的前端文件跑
 ESLint，pre-push 调用 [`scripts/run-gates.sh`](scripts/run-gates.sh)——按改动路径挑选
 后端 / 前端 / `packages/core` / `mobile` / `mobile-officer` 的门禁，前端 jest 只跑受影响的测试，后端 pytest
-全跑。同一套门禁可以手动跑：
+按改动的 app 挑选（2026-10-27 起）。同一套门禁可以手动跑：
 
 ```bash
 scripts/run-gates.sh           # 与 origin/main 的 merge-base 比较，跑推送时会跑的那一套

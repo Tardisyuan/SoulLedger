@@ -131,9 +131,9 @@ only, else 400), checked against the verdict at conclusion (`DispositionService.
 ### Judgment
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /judgment/ | List judgments |
-| POST | /judgment/ | Create judgment |
-| GET | /judgment/{id}/ | Get judgment detail |
+| GET | /judgment/ | List judgments (`JudgmentListSerializer`: every detail field but `citations`, since 2026-10-30; the CSV export likewise) |
+| POST | /judgment/ | Create judgment (rules in `JudgmentService.open_case`, shared with a sentence plan's REOPEN) |
+| GET | /judgment/{id}/ | Get judgment detail (includes `citations`) |
 | GET | /judgment/queue-counts/ | Case count per queue group, one query |
 | GET | /judgment/assignable-officers/ | Officers a case can be reassigned to (unpaginated) |
 | POST | /judgment/{id}/request-reassign/ | Ask the case's tenant ADMIN to reassign it (when no one else can take it) |

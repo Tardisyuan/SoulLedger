@@ -71,6 +71,18 @@ This file is not.」
 | 根布局必须渲染 `PlatformProvider` | web 实现 `frontend/lib/platform/web.ts` | `[test:platformAdapterIsInstalled]`（读 `app/layout.tsx` 源码断言） |
 | `frontend/src/hooks/` 只剩视图层五个：`useChartColors` / `usePermissions` / `useRowTransitions` / `useSidebarMenus` / `useWideViewport`（2026-09-26 目录实况；数据 hook 十六个在 `packages/core/src/hooks/`） | 目录实况 | `[多数派]` |
 
+**2026-10-30 起的统一写法**（cq-web 一轮）：
+- **query key 一个资源一个工厂**，都在 `packages/core/src/query_keys.ts`：新加的有 `permKeys`（角色表 `permKeys.roles`，
+  用户页与权限页都读 core 的 `useRoles()`，旧的 `permissionKeys` 已删）、`tenantKeys`、`organizationKeys`、
+  `crossJudgmentKeys`、`todoKeys`，以及 `soulKeys.inheritance` / `reincarnations` / `reincarnationTimeline`。
+  租户与组织页不再直接 `api.get`，走 `tenantsApi.list({ page })`、`useTenantNames()`、`useAllOrganizations()`。
+- **读拒绝码用 core 的 `responseCode(err)`**（`packages/core/src/api/client.ts`，旁边还有 `responseStatus` /
+  `responseData` / `responseError`），不再手写 `(err as { response?: { data?: { code } } })`；
+  结案拒绝用 `concludeRefusalOf(err)`（`packages/core/src/api/judgment.ts`），页面只按它给的 kind 分支。
+- **菜单图标从静态表解析**（`frontend/src/lib/menuIcons.ts`：图标选择器的白名单 + 迁移种下的名字），表里没有才整包加载
+  `lucide-react`；`menuIconTable.test.ts` 扫迁移与 E2E 夹具，种下的名字解析不出就红。
+- **没设 DSN 的构建不带 Sentry SDK**（`next.config.js` 总是定义 `NEXT_PUBLIC_SENTRY_DSN`，`instrumentation-client.ts` 为空就什么都不加载）。
+
 **`domBoundary.test.ts` 为什么不能被 `typecheck` 替代：** 那些 DOM 类型是空接口，
 `const el: HTMLElement = {}` 能编译过。**只有那份测试在执法"平台无关"这个断言。**
 `ci.yml:119-137` 跑 core 的 typecheck、lint、vitest 三条（vitest 自 2026-09-14 起，审计 IS-16），与 pre-push 一致。
@@ -359,8 +371,10 @@ export default function XPage() {                    // 页级权限门包在默
 
 ## 7. 权限在 UI 上
 
-唯一来源 `usePermissions()`（`src/hooks/usePermissions.ts:8-41`）：
+唯一来源 `usePermissions()`（`src/hooks/usePermissions.ts`）：
 `isAdmin = user.role === "ADMIN"` 短路 → `hasPermission(code)` 查 `user.permissions`。
+**「无殿 ADMIN」一律读 `isTenantExempt`**（2026-10-30，对应后端 `is_tenant_exempt`）：角色是 ADMIN、没有殿、且不在代看 / 进殿查看时为真；
+代看时 `isAdmin` 与它都为假。此前七处各自内联判断，移交详情因此把代看中的 ADMIN 当成目标殿 / 原属殿。
 `RequireAdmin` 专给后端硬编码 ADMIN 的接口。
 
 **隐藏而非禁用**是多数派：`<RequirePermission permissions="…">` 无 fallback = 不渲染，40 处。
@@ -427,6 +441,9 @@ tf("x.y", "中文兜底")         // ✅ 真的会兜底。现存 52 处
 **日期**：`useI18n().formatDate/formatDateTime`（55 处），历史日期走
 `formatHistoricalDate(value, locale)`（6 处）。`recycle-bin:149` 是唯一直接
 `toLocaleString()` 的。
+两个 App 也用 core 的同一组（`packages/core/src/domain/dates.ts` 的 `formatHistoricalDate` / `formatStamp`，2026-10-30 起；
+官员端灵魂日期此前把公元前读坏）。同一轮还搬进 core 的：`domain/mfa.ts`（`mfaDigits` / `secretLines`）、
+`domain/sixPaths.ts`（`hasSixPaths`，按原属文明判六道，不再写 `!== GREEK`）。
 
 **执法**：`[test:messageValuesAreNotTheirOwnKeys]`（文案不得等于自己的键、不得为空、
 末段不得当文案）、`[test:domainNamespaceContract]`、`[test:civilizationCopyCoverage]`。

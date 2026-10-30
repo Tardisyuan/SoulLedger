@@ -171,6 +171,11 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 没配 `EMAIL_HOST` 只在启动时告警,不拒绝启动。除找回密码外一切照常;找回密码接口无论发没发出去
   都回同一个响应(不让它变成「这个邮箱注册过没有」的探针),所以**发信失败不会在界面上显出来**,
   上线后要真发一次验证。
+- **必须有 celery worker 在跑,否则这些邮件不发(2026-10-30 起)。** 找回密码验证码、灵魂改联系邮箱的验证码与改后通知、
+  灵魂初始密码都改成「业务提交后入队 celery 任务,worker 发信」(`apps/authentication/tasks.py`、`apps/soul_accounts/tasks.py`)。
+  消息里只有 id 或随机 token,验证码与明文不进 broker。只有 **broker 连不上**(入队抛错)时才就地发;broker 在、worker 不在,
+  任务就躺在队列里:找回密码那条在缓存里只留 5 分钟,过期即作废;初始密码那行停在待交付,官员可在界面上「重试」(同步发)。
+  上线后看 `/metrics/` 的 `soulledger_celery_queue_length`,真发一封找回密码验证码确认收到。
 
 ## 灵魂端推送(Expo Push Service)
 

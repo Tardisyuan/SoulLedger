@@ -496,7 +496,7 @@ step in the workflow file before loosening anything.
 **Local gates.** After `bash scripts/install-hooks.sh`, pre-commit runs ESLint on staged
 frontend files and pre-push calls [`scripts/run-gates.sh`](scripts/run-gates.sh), which
 picks the backend / frontend / `packages/core` / `mobile` / `mobile-officer` gates by changed path, runs
-frontend jest selectively, and runs backend pytest in full. The same gates run by hand:
+frontend jest selectively, and picks backend pytest by the changed app (since 2026-10-27). The same gates run by hand:
 
 ```bash
 scripts/run-gates.sh           # compare with the merge-base against origin/main; what a push would run
