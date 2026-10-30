@@ -47,7 +47,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
 import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage } from "./chatImages";

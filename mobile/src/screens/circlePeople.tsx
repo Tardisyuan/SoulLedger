@@ -32,7 +32,7 @@ import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
 import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
 

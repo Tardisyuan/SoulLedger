@@ -31,7 +31,7 @@ import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
 import { useSession } from "../session";
 import { Button, Input, Interp, Notice, OneLine, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 

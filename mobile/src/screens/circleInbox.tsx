@@ -17,7 +17,7 @@ import { family } from "../fonts";
 import { useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { PagedFooter, usePaged } from "./circle";
 
 const pad = (n: number) => String(n).padStart(2, "0");

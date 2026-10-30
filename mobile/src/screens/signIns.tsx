@@ -15,7 +15,7 @@ import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import { Button, Empty, OneLine, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 
 function DeviceRow({ session, busy, onSignOut }: { session: SoulSignInSession; busy: boolean; onSignOut: () => void }) {
   const theme = useTheme();

@@ -43,8 +43,8 @@ import {
   useTheme,
 } from "../ui";
 import type { SentenceLanding } from "../sentenceKinds";
-import { useResidenceNames, type AppStackParams } from "./applications";
-import { realmName } from "./life";
+import type { AppStackParams } from "../navTypes";
+import { realmName, useResidenceNames } from "../residence";
 
 export { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "../sentenceKinds";
 

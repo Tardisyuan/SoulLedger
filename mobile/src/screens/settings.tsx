@@ -47,7 +47,7 @@ import {
   useRemote,
   useTheme,
 } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { BioRow } from "./bio";
 

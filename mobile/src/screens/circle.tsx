@@ -62,7 +62,7 @@ import {
   useTheme,
   shade,
 } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
 import { useDiscardGuard } from "./discardGuard";
 import { Glyph, Tag } from "./letters";

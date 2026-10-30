@@ -21,7 +21,7 @@ import { Platform } from "react-native";
 
 import type { NavigationProp } from "@react-navigation/native";
 
-import type { AppStackParams, LifeFocus } from "./screens/applications";
+import type { AppStackParams, LifeFocus } from "./navTypes";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./sentenceKinds";
 
 /** The Expo token this device last registered — what sign-out must unregister. */

@@ -16,7 +16,7 @@ import { StyleSheet, View } from "react-native";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { Button, FieldError, Input, Quote, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { useDay } from "./lifeProgress";
 

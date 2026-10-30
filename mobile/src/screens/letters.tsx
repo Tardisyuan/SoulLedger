@@ -28,7 +28,7 @@ import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
 import { radius, type Theme } from "../theme";
 import { Button, Empty, FadeIn, Notice, OneLine, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 
 export const ANDROID = Platform.OS === "android";
 /** The ground of my own letter: s2, a step off the page — not a colour. */
