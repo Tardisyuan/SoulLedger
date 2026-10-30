@@ -12,6 +12,7 @@
  * Step 4 cannot be left until the officer has ticked 「我已妥善保存」 and pressed 完成.
  */
 import { mfaApi, type MfaSetupResponse, type MfaStatus } from "@soulledger/core/api/auth";
+import { mfaDigits, secretLines } from "@soulledger/core/domain/mfa";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, TextInput, View } from "react-native";
 
@@ -23,12 +24,8 @@ import { AccountFrame } from "./account";
 
 const STEPS = 4;
 
-/** 密钥四位一组、组间一格、每行四组(16 位),手抄用。仍是一整串文字,长按选中整串。 */
-const groupKey = (secret: string) =>
-  (secret.match(/.{1,4}/g) ?? [])
-    .map((g, i) => (i === 0 ? g : i % 4 === 0 ? `\n${g}` : ` ${g}`))
-    .join("");
-const digits = (s: string) => s.replace(/\D/g, "").slice(0, 6);
+/** 密钥四位一组、组间一格、每行四组(16 位),手抄用。仍是一整串文字,长按选中整串。分组与「只留数字」在 core(两端共用)。 */
+const groupKey = (secret: string) => secretLines(secret).join("\n");
 
 export function MfaScreen({ onBack, onLocked }: { onBack: () => void; onLocked?: (locked: boolean) => void }) {
   const { t } = useI18n();
@@ -156,7 +153,7 @@ function OwnerConfirm({
         ]}
       />
       {method === "totp" ? (
-        <Input testID={`${id}-code`} label={t("mfa.verify.code_label")} value={code} onChangeText={(v) => onCode(digits(v))} mono keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
+        <Input testID={`${id}-code`} label={t("mfa.verify.code_label")} value={code} onChangeText={(v) => onCode(mfaDigits(v))} mono keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
       ) : method === "recovery" ? (
         <Input testID={`${id}-recovery`} label={t("mfa.verify.recovery_label")} value={code} onChangeText={onCode} mono keyboardType="ascii-capable" autoCapitalize="none" autoCorrect={false} maxLength={9} />
       ) : (
@@ -475,7 +472,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
             value={code}
             onChangeText={(v) => {
               setCodeError(null);
-              setCode(digits(v));
+              setCode(mfaDigits(v));
             }}
             mono
             keyboardType="number-pad"

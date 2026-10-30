@@ -3,6 +3,7 @@
  * a 「选殿」 step follows and the sign-in is sent again with the chosen `tenant_code`; if the account
  * has two-step verification, a code step follows (`mfa_required` + `pending_token`).
  */
+import { mfaDigits } from "@soulledger/core/domain/mfa";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -133,7 +134,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               label={t(step.recovery ? "officer_app.mfa.recovery_label" : "officer_app.mfa.code_label")}
               value={code}
               // The six-digit code takes digits only and stops at six; a recovery code is typed as is.
-              onChangeText={(v) => setCode(step.recovery ? v : v.replace(/\D/g, "").slice(0, 6))}
+              onChangeText={(v) => setCode(step.recovery ? v : mfaDigits(v))}
               maxLength={step.recovery ? undefined : 6}
               mono
               keyboardType={step.recovery ? "ascii-capable" : "number-pad"}

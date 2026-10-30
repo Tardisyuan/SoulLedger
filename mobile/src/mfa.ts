@@ -43,19 +43,11 @@ export function forgetDevice(soulCode: string): void {
   platform().secure.set(MFA_DEVICES_KEY, JSON.stringify(rest));
 }
 
-/** The six digits the box may hold: everything else a paste brings is dropped. */
-export const digitsOf = (text: string) => text.replace(/\D/g, "").slice(0, 6);
+/** The six digits the box may hold, and the secret's 4 x 4 grouping: one copy in core, shared with the officer app. */
+export { mfaDigits as digitsOf, secretLines } from "@soulledger/core/domain/mfa";
 
 /** A recovery code as typed: letters, digits and the dash only, no spaces; case is left alone (the server folds it). */
 export const recoveryOf = (text: string) => text.replace(/[^A-Za-z0-9-]/g, "").slice(0, 16);
-
-/** Four characters to a group, four groups to a line (16 characters = one line, 32 = two), for copying by hand. */
-export function secretLines(secret: string): string[] {
-  const groups = secret.match(/.{1,4}/g) ?? [];
-  const lines: string[] = [];
-  for (let i = 0; i < groups.length; i += 4) lines.push(groups.slice(i, i + 4).join(" "));
-  return lines;
-}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
