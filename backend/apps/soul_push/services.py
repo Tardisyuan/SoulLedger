@@ -84,8 +84,8 @@ COOLDOWN_SHORTENING_KINDS = {
 }
 
 #: 暂居(已合并的 feat/dispatch-residence)。**两者都没有独立的 EventType**:
-#: `DispatchService.execute` / `end_residence` 直接写 `SoulEvent(event_type=STATE_CHANGED)`,
-#: 用 payload 的 `action` 区分 —— 而且**不经事件总线**,所以由 `signals.py` 挂在 SoulEvent 的 post_save 上接。
+#: `DispatchService` 发 `STATE_CHANGED`,用 payload 的 `action` 区分;经事件总线的 dispatch 域到这里
+#: (2026-10-30 起;此前直接写 SoulEvent,由已删除的 `signals.py` 挂在 post_save 上接)。
 #: 「暂居开始」选调拨执行(DISPATCH_EXECUTED):那一刻 `soul.tenant` 切到目标文明,是灵魂真正换了管辖。
 #: 批准(DISPATCH_APPROVED)另推一条「即将暂居」(2026-09-18 用户决定);提议不推 —— 还可能被驳回。
 #: 批准与执行的 dedupe_key 分别以各自的 action 结尾,同一次调拨两条各一、互不覆盖。
@@ -126,7 +126,7 @@ def rule_for(event_type, payload, account):
     if event_type == "STATE_CHANGED" and payload.get("action") in RESIDENCE_ACTIONS:
         action = payload["action"]
         # 调拨记录 id 是这次暂居的业务主键;回归时记录可能不存在(数据修正过的灵魂,dispatch_id=None),
-        # 退回用那条 SoulEvent 的 id —— 由 signals.py 放进 `_event_id`,一次回归只有一条。
+        # 退回用那条 SoulEvent 的 id —— 由 `SoulPushHandler` 从 AuditHandler 写下的行放进 `_event_id`,一次回归只有一条。
         key = payload.get("dispatch_id") or payload.get("_event_id")
         return ("residence", RESIDENCE_ACTIONS[action], f"residence:{key}:{action}", {"screen": "Life"}) if key else None
     if event_type in SENTENCE_EVENTS:

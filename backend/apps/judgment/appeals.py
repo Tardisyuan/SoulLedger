@@ -114,7 +114,7 @@ def void_open_appeals(soul, *, because, end_reason, judgment_id=None):
     for appeal in open_appeals.select_for_update(of=("self",)):
         appeal.status = AppealStatus.VOID
         appeal.decided_at = now
-        appeal.save(update_fields=["status", "decided_at", "update_time", "update_user", "version"])
+        appeal.save(update_fields=["status", "decided_at"])
         _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=None, compensation_record_ids=[],
                voided_because=because)
         workflow = flows.get(appeal.workflow_id)
@@ -231,7 +231,7 @@ def _start_ladder(appeal, judgment, soul):
         ApprovalWorkflow.all_objects.filter(pk=workflow.pk).update(original_workflow_id=original)
     appeal.workflow = workflow
     appeal.status = AppealStatus.IN_REVIEW
-    appeal.save(update_fields=["workflow", "status", "update_time", "update_user", "version"])
+    appeal.save(update_fields=["workflow", "status"])
 
 
 def _ladder_running(appeal):
@@ -326,11 +326,11 @@ def on_ladder_finished(workflow, status, end_reason=""):
             reviewer = None
         appeal.reviewer_id = reviewer
         appeal.claimed_at = timezone.now() if reviewer is not None else None
-        appeal.save(update_fields=["reviewer", "claimed_at", "update_time", "update_user", "version"])
+        appeal.save(update_fields=["reviewer", "claimed_at"])
         return
     appeal.reviewer_id = last.approver_id if last is not None else None
     appeal.claimed_at = timezone.now()
-    appeal.save(update_fields=["reviewer", "claimed_at", "update_time", "update_user", "version"])
+    appeal.save(update_fields=["reviewer", "claimed_at"])
     _settle(appeal.soul, appeal, AppealStatus.UPHELD, (last.notes if last is not None else "") or "")
 
 
@@ -350,7 +350,7 @@ def withdraw(account, appeal_id):
             raise AppealRefusedError("An appeal in the appeal flow cannot be withdrawn.", "ladder_running")
         appeal.status = AppealStatus.WITHDRAWN
         appeal.decided_at = timezone.now()
-        appeal.save(update_fields=["status", "decided_at", "update_time", "update_user", "version"])
+        appeal.save(update_fields=["status", "decided_at"])
         _event(account.soul, "JUDGMENT_APPEAL_WITHDRAWN", appeal)
     return appeal
 
@@ -377,7 +377,7 @@ def claim(appeal_id, user):
         appeal.reviewer = user
         appeal.claimed_at = timezone.now()
         appeal.status = AppealStatus.IN_REVIEW
-        appeal.save(update_fields=["reviewer", "claimed_at", "status", "update_time", "update_user", "version"])
+        appeal.save(update_fields=["reviewer", "claimed_at", "status"])
     return appeal
 
 
@@ -426,15 +426,14 @@ def _settle(soul, appeal, outcome, note, verdict=None, keep_foreign_stops=None):
             raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
         judgment = _lock_judgment(appeal.judgment_id)
         judgment.verdict = verdict
-        judgment.save(update_fields=["verdict", "update_time", "update_user", "version"])
+        judgment.save(update_fields=["verdict"])
         compensations = _compensate(soul, judgment, appeal, executed)
         appeal.new_verdict = verdict
         SentencePlanService.advance(soul)
     appeal.status = outcome
     appeal.decision_note = note
     appeal.decided_at = timezone.now()
-    appeal.save(update_fields=["status", "new_verdict", "decision_note", "decided_at",
-                               "update_time", "update_user", "version"])
+    appeal.save(update_fields=["status", "new_verdict", "decision_note", "decided_at"])
     _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=appeal.new_verdict,
            compensation_record_ids=[str(r.pk) for r in compensations])
 

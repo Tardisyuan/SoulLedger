@@ -1,8 +1,12 @@
 """
 Event logging service — delegates to EventBus.
 
-All methods maintain their original signatures for backward compatibility.
-New code should use ``event_bus.publish_soul_event()`` directly.
+Which entry point (the same rule as CLAUDE.md, "事件日志是业务记录的一部分"):
+    * an event that only goes on the soul's timeline (domain "soul"): ``EventService.log*`` / ``EventService.log``;
+    * an event that must also reach the web socket and tenant webhooks, or be recorded in the soul's home tenant:
+      ``event_bus.publish_soul_event(soul, ..., domain=..., tenant=...)`` (dispatch and sentence-plan events do).
+Both end in ``AuditHandler`` writing the ``SoulEvent`` row, so both must be called INSIDE the transaction of the
+write they describe. Never ``SoulEvent.objects.create`` directly: that row reaches no other handler.
 """
 from apps.events.event_bus import event_bus
 from apps.souls.models import Soul

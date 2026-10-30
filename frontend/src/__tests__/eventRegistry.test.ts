@@ -363,6 +363,36 @@ describe("dispatch events", () => {
 
     expect(showToast).toHaveBeenCalledWith("Dispatch approved", "info", 6000);
   });
+
+  it("a dispatch's own STATE_CHANGED (on the bus since 2026-10-30) refreshes dispatch and souls, silently", () => {
+    const { ctx, invalidateQueries, showToast } = makeContext();
+
+    const result = dispatchEvent(
+      { domain: "dispatch", event: "STATE_CHANGED", action: "DISPATCH_APPROVED", soul_id: "s1" } as unknown as EventPayload,
+      ctx,
+    );
+
+    expect(result.success).toBe(true);
+    expect(invalidatedKeys(invalidateQueries).sort()).toEqual(['["dispatch"]', '["souls"]']);
+    expect(showToast).not.toHaveBeenCalled();
+  });
+});
+
+describe("sentence plan events", () => {
+  it("arrive in their own domain and refresh the soul's timeline without a toast", () => {
+    const { ctx, invalidateQueries, showToast } = makeContext();
+
+    const result = dispatchEvent(
+      { domain: "sentence_plan", event: "SENTENCE_NODE_ACTIVATED", soul_id: "s1" } as unknown as EventPayload,
+      ctx,
+    );
+
+    expect(result.success).toBe(true);
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
+    expect(showToast).not.toHaveBeenCalled();
+    // The soul domain no longer carries them: the backend publishes them as sentence_plan only.
+    expect(isEventRegistered("soul", "SENTENCE_NODE_ACTIVATED")).toBe(false);
+  });
 });
 
 describe("death sync events", () => {
@@ -651,6 +681,7 @@ describe("registry introspection", () => {
       "dispatch",
       "notification",
       "scheduler",
+      "sentence_plan",
       "social",
       "soul",
       "workflow",

@@ -95,14 +95,20 @@ def notify_judges(tenant_ids, kind, params, related_id, related_resource="Senten
 
 
 def record_event(soul, event_type, payload, *, tenant_id=None):
-    """`SoulEvent`,默认写在灵魂**此刻所在**的租户:推送(`apps/soul_push`)只认「事件租户 = 灵魂租户」,
-    原属租户经暂居只读例外也读得到。"""
-    from apps.events.models import SoulEvent
+    """受刑计划事件经事件总线(sentence_plan 域):SoulEvent 行、灵魂端推送、网页实时推送、租户 webhook
+    (2026-10-30 收口;此前直接写 SoulEvent,后三者靠 soul_push 的 post_save 补接或根本收不到)。
+    默认写在灵魂**此刻所在**的租户:推送只认「事件租户 = 灵魂租户」,原属租户经暂居只读例外也读得到。
+    `tenant_id` 指定别的租户(计划的原属殿,灵魂暂居在外时);AuditHandler 只认灵魂的当前或原属租户。
+    必须在它所描述的那笔业务的事务里调(CLAUDE.md「事件日志是业务记录的一部分」)。"""
+    from apps.events.event_bus import event_bus
 
-    return SoulEvent.objects.create(
-        tenant_id=tenant_id if tenant_id is not None else soul.tenant_id,
-        soul_id=soul.pk, event_type=event_type, payload=payload, actor="system",
-    )
+    tenant = None
+    if tenant_id is not None and tenant_id != soul.tenant_id:
+        if tenant_id != soul.home_tenant_id:
+            raise ValueError(f"{event_type}: tenant {tenant_id} is neither the soul's current nor its home tenant")
+        tenant = soul.home_tenant
+    event_bus.publish_soul_event(soul, event_type, payload, tenant=tenant, domain="sentence_plan",
+                                 permission="judgment.read")
 
 
 def _tenant_id(code):
@@ -197,7 +203,7 @@ def _lock_nodes(plan):
 
 
 def _save(obj, *fields):
-    obj.save(update_fields=[*fields, "update_time", "update_user", "version"])
+    obj.save(update_fields=[*fields])
 
 
 def _leave_waiting_station(soul, node):

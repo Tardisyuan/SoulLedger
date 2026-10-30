@@ -152,11 +152,17 @@ def test_what_is_and_is_not_pushed(cn_tenant, enqueued):  # noqa: F811
 
 def test_an_event_claiming_another_tenant_pushes_nothing(cn_tenant, eu_tenant, enqueued):  # noqa: F811
     from apps.events.event_bus import event_bus
+    from apps.events.handlers.audit_handler import SoulEventTargetError
 
     account, _ = _soul_with_device(cn_tenant)
-    event_bus.publish("JUDGMENT_CONCLUDED", {"soul_id": str(account.soul_id), "judgment_id": "j"}, domain="soul",
-                      tenant_code=eu_tenant.code)
+    # 2026-10-30:AuditHandler 先于推送跑并抛错(不再静默跳过),推送处理器根本轮不到。
+    with pytest.raises(SoulEventTargetError):
+        event_bus.publish("JUDGMENT_CONCLUDED", {"soul_id": str(account.soul_id), "judgment_id": "j"},
+                          domain="soul", tenant_code=eu_tenant.code)
     assert not PushDelivery.objects.exists()
+    # 推送自己的那道核对仍在(不经 AuditHandler 直接问它):事件自称的租户与灵魂的不一致就不记。
+    assert services.record_for_event("JUDGMENT_CONCLUDED", {"soul_id": str(account.soul_id), "judgment_id": "j"},
+                                     eu_tenant.code) == []
 
 
 def _residence_tenants():
@@ -181,8 +187,8 @@ def _dispatch(soul, away):
 
 def test_residence_start_and_return_are_pushed_through_the_real_dispatch_service(
         django_capture_on_commit_callbacks, monkeypatch):
-    """暂居开始 = 调拨执行(DISPATCH_EXECUTED),回归 = DISPATCH_RETURNED。两者都是 DispatchService 直接写的
-    SoulEvent,不经事件总线 —— 这条走真实的 service,证明 signals.py 真的接到了。"""
+    """暂居开始 = 调拨执行(DISPATCH_EXECUTED),回归 = DISPATCH_RETURNED。两者都由 DispatchService 经事件总线
+    的 dispatch 域发出(2026-10-30 前直接写 SoulEvent、由 signals.py 补接)—— 这条走真实的 service。"""
     from apps.dispatch.services import DispatchService
 
     calls = []
@@ -205,6 +211,55 @@ def test_residence_start_and_return_are_pushed_through_the_real_dispatch_service
     everything = json.dumps(list(PushDelivery.objects.values("title", "body", "data")), ensure_ascii=False)
     for secret in ("SECRET", "EG_DUAT", "CN_DIYU", str(record.pk)):
         assert secret not in everything, secret
+
+
+def test_a_return_without_a_dispatch_record_is_keyed_by_its_event_row(enqueued):  # noqa: F811
+    """数据修正过的灵魂:暂居记录不在,回归的 dispatch_id 是 None。去重键退回 AuditHandler 刚写下的那条 SoulEvent 的 id
+    (此前 signals.py 从 post_save 的 instance 取;现在 SoulPushHandler 从 envelope.event_id 取)。"""
+    from apps.dispatch.models import DispatchRecord
+    from apps.dispatch.services import DispatchService
+    from apps.events.models import SoulEvent
+
+    home, away = _residence_tenants()
+    account, _ = _soul_with_device(home)
+    record = _dispatch(account.soul, away)
+    DispatchRecord.all_objects.filter(pk=record.pk).delete()
+    DispatchService.end_residence(account.soul, actor="officer", trigger=DispatchService.RETURN_MANUAL)
+    event = SoulEvent.objects.get(soul=account.soul, payload__action="DISPATCH_RETURNED")
+    assert event.payload["dispatch_id"] is None
+    returned = PushDelivery.objects.get(kind="residence_returned")
+    assert returned.dedupe_key == f"residence:{event.pk}:DISPATCH_RETURNED"
+
+
+def test_dispatch_and_sentence_plan_events_reach_webhooks_and_the_socket(monkeypatch):
+    """用户 2026-10-30:收口进总线之后,调拨与受刑计划事件 webhook 与网页实时推送都要收到。
+    调拨走 dispatch 域、受刑计划走 sentence_plan 域;两域都注册了 WebhookHandler 与 WebSocketHandler。"""
+    from apps.death_sync.models import ExternalApiKey, WebhookConfig
+    from apps.events.handlers.websocket_handler import WebSocketHandler
+    from apps.events.models import EventWebhookDelivery
+    from tests import sentence_plan_support as plan
+
+    sent = []
+    monkeypatch.setattr(WebSocketHandler, "handle", lambda self, env: sent.append((env.domain, env.event_type,
+                                                                                  env.payload.get("action"))))
+    home, away = _residence_tenants()
+    for hall in (home, away):
+        _raw, key_hash, prefix = ExternalApiKey.generate_key()
+        key = ExternalApiKey.objects.create(tenant=hall, name="k", system_type="HOSPITAL", key_hash=key_hash,
+                                            key_prefix=prefix)
+        WebhookConfig.objects.create(tenant=hall, api_key=key, url="https://example.invalid/hook", signing_secret="s")
+    soul, p = plan.planned(home, [(away, plan.stop_realm(away), 5)])
+    plan.serve(soul, p, 1)
+    plan.arrive(soul, p, 2)
+
+    hooks = set(EventWebhookDelivery.objects.values_list("domain", "event_type", "payload_json__payload__action"))
+    assert ("dispatch", "STATE_CHANGED", "DISPATCH_APPROVED") in hooks
+    assert ("dispatch", "STATE_CHANGED", "DISPATCH_EXECUTED") in hooks
+    assert ("sentence_plan", "SENTENCE_NODE_ACTIVATED", None) in hooks
+    assert ("dispatch", "STATE_CHANGED", "DISPATCH_EXECUTED") in sent
+    assert ("sentence_plan", "SENTENCE_NODE_ACTIVATED", None) in sent
+    # 只认 soul 域的东西没有多出来:灵魂域事件(如 SOUL_CREATED)仍不发 webhook。
+    assert not EventWebhookDelivery.objects.filter(domain="soul").exists()
 
 
 def test_residence_pushes_respect_the_residence_preference_and_roll_back(django_capture_on_commit_callbacks,
@@ -260,7 +315,7 @@ def test_a_residing_soul_still_gets_its_judgment_and_rebirth_pushes(enqueued):  
 
 def test_other_soul_events_written_directly_are_not_pushed_twice(enqueued,  # noqa: F811
                                                                  django_capture_on_commit_callbacks):
-    """AuditHandler 把总线事件写成 SoulEvent;signals.py 只接暂居的两个 action,不会把它们再推一遍。"""
+    """AuditHandler 把总线事件写成 SoulEvent,推送只由 SoulPushHandler 做一次(signals.py 已删)。"""
     from apps.events.models import SoulEvent
 
     home, _ = _residence_tenants()

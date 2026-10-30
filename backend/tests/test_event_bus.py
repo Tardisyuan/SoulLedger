@@ -387,15 +387,63 @@ class TestAuditHandler:
         # Should not raise or create anything
         handler.handle(env)
 
-    def test_skips_missing_soul(self, db):
-        handler = AuditHandler()
+    def test_raises_for_a_missing_soul(self, db):
+        """2026-10-30: no longer a silent skip -- the event is part of the business record."""
+        from apps.events.handlers.audit_handler import SoulEventTargetError
+        from apps.events.models import SoulEvent
+
         env = EventEnvelope(
             event_type="E",
             payload={"soul_id": "00000000-0000-0000-0000-000000000000"},
             domain="soul",
         )
-        # Should not raise
-        handler.handle(env)
+        with pytest.raises(SoulEventTargetError):
+            AuditHandler().handle(env)
+        assert not SoulEvent.all_objects.filter(event_type="E").exists()
+
+    def test_raises_for_a_soft_deleted_soul(self, db):
+        from apps.events.handlers.audit_handler import SoulEventTargetError
+        from apps.events.models import SoulEvent
+        from apps.souls.models import Soul
+        from apps.tenants.models import Tenant
+
+        tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Test"})
+        soul = Soul.objects.create(name="Deleted Soul", tenant=tenant)
+        Soul.all_objects.filter(pk=soul.pk).update(is_deleted=True)
+        env = EventEnvelope(event_type="SOUL_DIED", payload={"soul_id": str(soul.id)}, domain="soul",
+                            tenant_code=tenant.code)
+        with pytest.raises(SoulEventTargetError):
+            AuditHandler().handle(env)
+        assert not SoulEvent.all_objects.filter(soul_id=soul.pk, event_type="SOUL_DIED").exists()
+
+    def test_raises_for_an_unknown_tenant_code(self, db):
+        from apps.events.handlers.audit_handler import SoulEventTargetError
+        from apps.souls.models import Soul
+        from apps.tenants.models import Tenant
+
+        tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Test"})
+        soul = Soul.objects.create(name="Lost Hall Soul", tenant=tenant)
+        env = EventEnvelope(event_type="SOUL_DIED", payload={"soul_id": str(soul.id)}, domain="soul",
+                            tenant_code="NO_SUCH_HALL")
+        with pytest.raises(SoulEventTargetError):
+            AuditHandler().handle(env)
+
+    def test_raises_through_the_bus_and_rolls_the_business_write_back(self, db):
+        """`propagate_errors`: the registry re-raises, so the caller's atomic block undoes its own write."""
+        from django.db import transaction
+
+        from apps.events.event_bus import event_bus
+        from apps.events.handlers.audit_handler import SoulEventTargetError
+        from apps.souls.models import Soul
+        from apps.tenants.models import Tenant
+
+        home, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Test"})
+        other, _ = Tenant.objects.get_or_create(code="EG_DUAT", defaults={"display_name": "Other"})
+        soul = Soul.objects.create(name="Rollback Soul", tenant=home)
+        with pytest.raises(SoulEventTargetError), transaction.atomic():
+            Soul.all_objects.filter(pk=soul.pk).update(name="renamed")
+            event_bus.publish_soul_event(soul, "SOUL_DIED", {}, tenant=other)
+        assert Soul.all_objects.get(pk=soul.pk).name == "Rollback Soul"
 
 
 # ------------------------------------------------------------------
@@ -707,9 +755,12 @@ class TestAuditHandlerTenantAgreement:
         )
 
     def test_refuses_to_log_a_soul_from_another_tenant(self):
+        """Refused LOUDLY since 2026-10-30 (was a debug log and a silent return)."""
+        from apps.events.handlers.audit_handler import SoulEventTargetError
         from apps.events.models import SoulEvent
 
-        self._handle(self.tenant_b.code)
+        with pytest.raises(SoulEventTargetError):
+            self._handle(self.tenant_b.code)
         assert not SoulEvent.objects.filter(event_type=self.EVENT).exists()
 
     def test_still_logs_when_envelope_and_soul_agree(self):
@@ -720,6 +771,22 @@ class TestAuditHandlerTenantAgreement:
         event = SoulEvent.objects.get(event_type=self.EVENT)
         assert event.soul == self.soul_a
         assert event.tenant == self.tenant_a
+
+    def test_logs_in_the_home_tenant_of_a_residing_soul(self):
+        """A residing soul (tenant = B, home = A): an event recorded in A, its home, is accepted and stamped A;
+        one recorded in a third tenant still raises."""
+        from apps.events.handlers.audit_handler import SoulEventTargetError
+        from apps.events.models import SoulEvent
+        from apps.souls.models import Soul
+        from apps.tenants.models import Tenant
+
+        Soul.all_objects.filter(pk=self.soul_a.pk).update(tenant=self.tenant_b)  # home_tenant stays A
+        self._handle(self.tenant_a.code)
+        assert SoulEvent.objects.get(event_type=self.EVENT).tenant == self.tenant_a
+        third = Tenant.objects.get_or_create(code="AH_C", defaults={"display_name": "Audit Handler C"})[0]
+        with pytest.raises(SoulEventTargetError):
+            self._handle(third.code)
+        assert SoulEvent.objects.filter(event_type=self.EVENT).count() == 1
 
 
 def test_notify_user_sends_the_nested_shape_the_web_toast_reads():

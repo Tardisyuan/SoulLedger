@@ -91,7 +91,7 @@ class StatuteCitationService:
         )
         if not created and note and citation.note != note:
             citation.note = note
-            citation.save(update_fields=["note", "update_time", "update_user", "version"])
+            citation.save(update_fields=["note"])
         return citation
 
     @classmethod
