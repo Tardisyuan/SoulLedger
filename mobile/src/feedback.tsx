@@ -15,7 +15,7 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
+import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, type ScrollView, type TextInput } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

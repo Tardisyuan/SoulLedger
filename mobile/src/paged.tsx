@@ -39,17 +39,6 @@ export function useFailure() {
   };
 }
 
-export function useFailure() {
-  const { t } = useI18n();
-  const toast = useToast();
-  return (e: unknown) => {
-    const code = soulErrorCode(e);
-    if (code && code in REFUSALS) return toast(t(REFUSALS[code]), "failure");
-    const m = soulErrorMessage(e);
-    toast(t(m.key, m.params), "failure");
-  };
-}
-
 type Page<T> = { results: T[]; next?: string | null };
 
 /**
