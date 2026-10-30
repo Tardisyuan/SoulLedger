@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type {
   SensitiveWord,
   SensitiveWordAction,
@@ -16,7 +15,7 @@ import {
   useUpdateSensitiveWords,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { PAGE_SIZE } from "@soulledger/core/api";
-import { tenantsApi } from "@soulledger/core/api/tenants";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -75,21 +74,17 @@ export function SensitiveWordsSection() {
   const [editing, setEditing] = useState<WordDraft | null>(null);
   const [batchAction, setBatchAction] = useState<SensitiveWordAction | null>(null);
 
-  const { isAdmin } = usePermissions();
-  const { tenantCode, user } = useTenant();
+  const { isAdmin, isTenantExempt } = usePermissions();
+  const { tenantCode } = useTenant();
   // 没绑殿的全局 ADMIN 要点名复制进哪个殿(服务端 `target_tenant`,impl-sec 2026-10-29);绑殿的只进本殿。
-  const pickTarget = isAdmin && user?.tenant == null;
+  const pickTarget = isTenantExempt;
   const copy = useCopySensitiveWords();
   const [copying, setCopying] = useState(false);
   const [source, setSource] = useState("");
   const [targetPick, setTargetPick] = useState("");
   const target = pickTarget ? targetPick || tenantCode || "" : tenantCode;
-  const tenants = useQuery({
-    queryKey: ["tenants", 1],
-    queryFn: async () => (await tenantsApi.list()).data,
-    enabled: isAdmin && copying,
-  });
-  const sources = (tenants.data?.results ?? []).filter((c) => c.code !== target);
+  const tenants = useTenantNames({ enabled: isAdmin && copying });
+  const sources = (tenants.data ?? []).filter((c) => c.code !== target);
   const copyFrom = () =>
     source &&
     (!pickTarget || target) &&
@@ -368,7 +363,7 @@ export function SensitiveWordsSection() {
               <option value="" disabled>
                 {t("social_moderation.words.copy_target_placeholder")}
               </option>
-              {(tenants.data?.results ?? []).map((c) => (
+              {(tenants.data ?? []).map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.display_name}
                 </option>

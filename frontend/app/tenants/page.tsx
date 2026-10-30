@@ -5,7 +5,8 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
-import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@soulledger/core/api";
+import { tenantsApi, PAGE_SIZE, type Tenant } from "@soulledger/core/api";
+import { tenantKeys } from "@soulledger/core/query_keys";
 import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
@@ -32,11 +33,9 @@ function TenantsPageContent() {
   const [deactivating, setDeactivating] = useState<Tenant | null>(null);
   const activate = useHallActiveMutation();
 
-  // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
-  // calls the shared `api` client directly to reach `/tenants/?page=`.
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["tenants", page],
-    queryFn: () => api.get<PaginatedResponse<Tenant>>("/tenants/", { params: { page } }).then(r => r.data),
+    queryKey: tenantKeys.page(page),
+    queryFn: () => tenantsApi.list({ page }).then((r) => r.data),
     enabled: !!user,
   });
 

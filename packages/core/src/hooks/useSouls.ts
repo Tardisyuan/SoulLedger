@@ -65,36 +65,6 @@ export function useCreateSoul() {
   });
 }
 
-export function useMarkSoulDead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data?: object }) =>
-      soulsApi.die(id, data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: soulKeys.all });
-    },
-    onError: () => {
-      notify("souls.detail.failed", "error");
-    },
-  });
-}
-
-export function useTransitionSoul() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: object }) =>
-      soulsApi.transition(id, data),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: soulKeys.all });
-    },
-    onError: () => {
-      notify("souls.detail.failed", "error");
-    },
-  });
-}
-
 /** 400 + 对象体 = 后端按字段(或 non_field_errors)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
 function isFieldValidationError(error: unknown): boolean {
   const r = (error as { response?: { status?: number; data?: unknown } })?.response;
@@ -262,5 +232,4 @@ export function useSoulRegionUpdateCommit() {
   });
 }
 
-// NOTE: Judgment hooks (useJudgments, useConcludeJudgment) are in useJudgments.ts
-// NOTE: Disposition hooks (useDispositions, useExecuteDisposition) are in useDispositions.ts
+// NOTE: Judgment hooks are in useJudgments.ts, disposition hooks in useDispositions.ts

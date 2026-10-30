@@ -5,9 +5,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OrganizationsPage from "@/app/organizations/page";
-import { api } from "@soulledger/core/api";
+import { organizationsApi } from "@soulledger/core/api";
 
-jest.mock("@soulledger/core/api", () => ({ api: { get: jest.fn() } }));
+jest.mock("@soulledger/core/api", () => ({ organizationsApi: { all: jest.fn() } }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
@@ -18,7 +18,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 jest.mock("@/src/components/layout/MenuGloss", () => ({ MenuGloss: () => null }));
 
-const mockGet = api.get as jest.Mock;
+const mockAll = organizationsApi.all as jest.Mock;
 
 const org = (id: number, name: string, category: string) => ({
   id, name, code: `C${id}`, category, level: 0, parent: null, sort: id,
@@ -36,7 +36,7 @@ function renderPage() {
 beforeEach(() => jest.clearAllMocks());
 
 it("gives each civilization a section heading whose toggle lives inside the <h2>", async () => {
-  mockGet.mockResolvedValue({ data: { results: [org(1, "第五殿", "CHINESE"), org(2, "Limbo", "EUROPEAN")], next: null } });
+  mockAll.mockResolvedValue([org(1, "第五殿", "CHINESE"), org(2, "Limbo", "EUROPEAN")]);
   renderPage();
   const heading = await screen.findByRole("heading", { level: 2, name: /organization\.civilizations\.CHINESE/ });
   const toggle = within(heading).getByRole("button");
@@ -56,7 +56,7 @@ it("gives each civilization a section heading whose toggle lives inside the <h2>
 });
 
 it("shows a static table skeleton while loading, not pulsing cards", () => {
-  mockGet.mockReturnValue(new Promise(() => {}));
+  mockAll.mockReturnValue(new Promise(() => {}));
   renderPage();
   const skeleton = screen.getByTestId("organizations-skeleton");
   expect(skeleton).toHaveAttribute("aria-busy", "true");

@@ -17,6 +17,44 @@ export const soulKeys = {
   capture: (id: string) => [...soulKeys.all, "capture", id] as const,
   /** 待发勾魂牒(`capture-warrants/due/`,全殿):发牒或登记死亡都会让一行离开,所以也在 `souls` 下。 */
   captureDue: () => [...soulKeys.all, "capture-due"] as const,
+  /** 继承(功德 / 业力从前世带来的部分)。 */
+  inheritance: (id: string) => [...soulKeys.all, "inheritance", id] as const,
+  /** 一个灵魂的转生记录(数组)。 */
+  reincarnations: (id: string) => [...soulKeys.all, "reincarnations", id] as const,
+  /** 灵魂页的转生时间线 —— 另一种形状,所以不和 `reincarnations(id)` 同键。 */
+  reincarnationTimeline: (id: string) => [...soulKeys.all, "reincarnations", "timeline", id] as const,
+};
+
+/**
+ * 殿(租户)。新建、停用、改设置都失效 `all`,名单、分页表、概况、MFA 角色都在它下面。
+ */
+export const tenantKeys = {
+  all: ["tenants"] as const,
+  /** 全部殿(取遍所有分页):下拉、筛选、殿名对照表共用这一份。 */
+  names: ["tenants", "names"] as const,
+  page: (page: number) => ["tenants", "list", page] as const,
+  overview: ["tenants", "overview"] as const,
+  mfaRoles: (code: string) => ["tenants", code, "mfa-roles"] as const,
+};
+
+/** 机构:机构页、用户弹层、用户页筛选、数据范围共用一份(取遍所有分页)。 */
+export const organizationKeys = {
+  all: ["organizations"] as const,
+};
+
+/** 联审。 */
+export const crossJudgmentKeys = {
+  all: ["cross-judgments"] as const,
+  list: (page: number, params: Record<string, string>) => ["cross-judgments", page, params] as const,
+  detail: (id: string) => ["cross-judgments", "detail", id] as const,
+  seatableActors: (id: string, tenantCode: string, role: string) =>
+    ["cross-judgments", "seatable-actors", id, tenantCode, role] as const,
+};
+
+/** 仪表盘的待办条。选站之后失效 `all`。 */
+export const todoKeys = {
+  all: ["dashboard", "todo"] as const,
+  item: (name: string) => ["dashboard", "todo", name] as const,
 };
 
 /**
@@ -96,14 +134,6 @@ export const workflowKeys = {
     approverPreview: (id: string, node: string, civilization: string) =>
       [...workflowKeys.templates.detail(id), "approver-preview", node, civilization] as const,
   },
-};
-
-export const permissionKeys = {
-  all: ["permissions"] as const,
-  list: ["permissions", "list"] as const,
-  roles: ["permissions", "roles"] as const,
-  rolePermissions: (role?: string) =>
-    ["permissions", "role-permissions", role] as const,
 };
 
 export const dispositionKeys = {

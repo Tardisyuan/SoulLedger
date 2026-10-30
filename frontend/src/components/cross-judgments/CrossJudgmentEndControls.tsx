@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@soulledger/core/api";
+import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { segmentRealm } from "@soulledger/core/domain/workflowSegments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -33,7 +34,7 @@ export function CrossJudgmentEndControls({ judgment }: { judgment: CrossTenantJu
   const [note, setNote] = useState("");
   const [reason, setReason] = useState("");
 
-  const done = () => queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+  const done = () => queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
   const end = useMutation({
     mutationFn: () => crossTenantJudgmentsApi.conclude(judgment.id, { conclusion_type: conclusion!, note: note.trim() }),
     onSuccess: () => {

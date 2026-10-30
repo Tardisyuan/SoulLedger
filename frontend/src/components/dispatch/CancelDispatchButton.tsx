@@ -34,13 +34,13 @@ export function CancelDispatchButton({
   const { t } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isTenantExempt } = usePermissions();
   const cancel = useCancelDispatch();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
   // 无殿 ADMIN 才算任一殿(后端 `cancel` 看 `is_tenant_exempt`);绑殿 ADMIN 只在本殿发起的提案上有按钮。
-  const ownHall = (isAdmin && !user?.tenant) || (!!user?.tenant?.code && user.tenant.code === dispatch.source_tenant_code);
+  const ownHall = isTenantExempt || (!!user?.tenant?.code && user.tenant.code === dispatch.source_tenant_code);
   if (dispatch.status !== "PROPOSED" || !ownHall || !hasPermission("dispatch.manage")) return null;
 
   const close = () => {

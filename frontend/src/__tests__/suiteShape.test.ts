@@ -346,6 +346,8 @@ const COLLECTED_FILES = [
   "menuButtonGates.test.ts",
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
+  // 2026-10-30 perf A1:侧栏静态图标表覆盖菜单迁移与 E2E 夹具里的全部图标名。
+  "menuIconTable.test.ts",
   "menuTranslationCoverage.test.ts",
   // 2026-10-17 审计 1017 #5:通知点进哪一页;后端每个 related_resource 都要有去处或写明不跳。
   "notificationTarget.test.tsx",

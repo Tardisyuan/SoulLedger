@@ -1,21 +1,19 @@
 "use client";
 
 import { useId, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   DATA_SCOPES,
-  organizationsApi,
-  tenantsApi,
   type DataScope,
   type DataScopeRule,
   type Role,
   type RoleDataScopeConfig,
 } from "@soulledger/core/api";
 import { ADMIN_ROLE_NAME } from "@soulledger/core/api/perm";
+import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useDataScopeResources, useRoleDataScope, useSaveRoleDataScope } from "@soulledger/core/hooks/useRoleDataScope";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
@@ -30,20 +28,15 @@ const FOLLOW = "";
 export function RoleDataScopeSection({ role }: { role: Role }) {
   const { t } = useI18n();
   const { showToast } = useToast();
-  const { user } = useTenant();
-  const { isAdmin } = usePermissions();
+  const { isTenantExempt } = usePermissions();
   const headingId = useId();
   const fixed = role.name === ADMIN_ROLE_NAME;
-  const canEdit = !fixed && isAdmin && user?.tenant == null;
+  const canEdit = !fixed && isTenantExempt;
 
   const config = useRoleDataScope(role.id, !fixed);
   const resources = useDataScopeResources(!fixed);
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => organizationsApi.all(), enabled: !fixed });
-  const tenants = useQuery({
-    queryKey: ["tenants", "names"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-    enabled: !fixed,
-  });
+  const orgs = useAllOrganizations({ enabled: !fixed });
+  const tenants = useTenantNames({ enabled: !fixed });
   const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, x.display_name || x.code]));
   const save = useSaveRoleDataScope();
   const [draft, setDraft] = useState<RoleDataScopeConfig | null>(null);

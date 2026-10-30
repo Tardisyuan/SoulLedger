@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -44,7 +44,7 @@ export function OpenCrossJudgment({ judgmentId, soulName }: { judgmentId: string
     onSuccess: (created) => {
       setOpen(false);
       showToast(t("sentence_plan.cross.opened"), "success");
-      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
       // 审判详情的 `cross_judgment_id` 变了:回到审判页时「开联审」要已换成链接。
       queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(judgmentId) });
       router.push(`/cross-judgments/${created.id}`);

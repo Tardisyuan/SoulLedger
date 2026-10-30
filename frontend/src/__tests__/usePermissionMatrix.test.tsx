@@ -17,12 +17,17 @@ import {
   useRoles,
 } from "@soulledger/core/hooks/usePermissionMatrix";
 import { permKeys } from "@soulledger/core/query_keys";
+import { useCustomRoleLabel } from "@/src/components/users/RoleName";
+import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
+
+jest.mock("@/src/contexts/I18nContext", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
+jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
     applyChanges: jest.fn(),
     impact: jest.fn(),
-    roles: { list: jest.fn(), copy: jest.fn(), delete: jest.fn() },
+    roles: { list: jest.fn(), copy: jest.fn(), delete: jest.fn(), update: jest.fn() },
   },
 }));
 
@@ -30,7 +35,7 @@ const { permApi } = jest.requireMock("@soulledger/core/api") as {
   permApi: {
     applyChanges: jest.Mock;
     impact: jest.Mock;
-    roles: Record<"list" | "copy" | "delete", jest.Mock>;
+    roles: Record<"list" | "copy" | "delete" | "update", jest.Mock>;
   };
 };
 
@@ -132,6 +137,32 @@ describe("the other permission hooks", () => {
     expect(permApi.roles.copy).toHaveBeenCalledWith(2, { name: "CLERK", display_name: "书吏" });
     expect(permApi.roles.delete).toHaveBeenCalledWith(9);
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+// 用户页、用户弹层、欢迎卡上的角色名与权限页读同一把键(web.md 第 1 条,2026-10-30)。此前用户这边读
+// `["permissions", "roles"]`,权限页改角色只失效 `["roles"]`,于是用户页的角色名与下拉旧 30–60 秒。
+describe("one role list for every screen", () => {
+  it("renaming a role on the permissions page refreshes the name the users screens show", async () => {
+    const clerk = (display_name: string) => [{ id: 7, name: "CLERK", display_name, is_builtin: false }];
+    permApi.roles.list.mockResolvedValueOnce({ data: clerk("书吏") }).mockResolvedValueOnce({ data: clerk("主簿") });
+    permApi.roles.update.mockResolvedValue({ data: {} });
+    const client = newClient();
+    const wrapper = wrapperFor(client);
+    const label = renderHook(() => useCustomRoleLabel(), { wrapper }).result;
+    await waitFor(() => expect(label.current("CLERK")).toBe("书吏"));
+
+    const noop = () => {};
+    const crud = renderHook(
+      () => usePermissionCrud({ onCreated: noop, onEdited: noop, onDeleted: noop, onRoleCreated: noop, onRoleEdited: noop, onRoleDeleted: noop }),
+      { wrapper },
+    ).result;
+    await act(() => crud.current.roleEditMutation.mutateAsync({ id: 7, data: { name: "CLERK", display_name: "主簿" } }));
+
+    await waitFor(() => expect(label.current("CLERK")).toBe("主簿"));
+    expect(permApi.roles.list).toHaveBeenCalledTimes(2);
+    // Absence: nothing caches the role table under the old second key any more.
+    expect(client.getQueryCache().find({ queryKey: ["permissions", "roles"] })).toBeUndefined();
   });
 });
 

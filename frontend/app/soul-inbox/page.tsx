@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
+import { responseCode } from "@soulledger/core/api/client";
 import { renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
@@ -90,11 +91,6 @@ const DRAFT_DEBOUNCE_MS = 1000;
 /** 殿司展示名,按界面语言(`hall_names`,backend `Tenant.hall_names`);没有就退回租户名。 */
 function hallOf(c: InboxConversation, locale: string): string {
   return c.hall_names?.[locale] || c.tenant_name;
-}
-
-function errorCode(error: unknown): string | null {
-  const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
-  return typeof code === "string" ? code : null;
 }
 
 function paramsOf(key: FolderKey): InboxListParams {
@@ -437,7 +433,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
           showToast(t("soul_inbox.sent"), "success");
         },
         onError: (error) => {
-          const code = errorCode(error);
+          const code = responseCode(error);
           showToast(code ? t(`soul_inbox.errors.${code}`) : t("soul_inbox.failed"), "error");
         },
       }

@@ -39,6 +39,7 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "../platform/index";
+import { responseCode } from "./client";
 import type {
   PasswordResetAccepted,
   PasswordResetRefusal,
@@ -486,9 +487,7 @@ export function soulErrorStatus(error: unknown): number | null {
 
 /** The `code` of a `{detail, code}` body, or `null`. */
 export function soulErrorCode(error: unknown): string | null {
-  if (!axios.isAxiosError(error)) return null;
-  const code = (error.response?.data as { code?: unknown } | undefined)?.code;
-  return typeof code === "string" ? code : null;
+  return axios.isAxiosError(error) ? responseCode(error) : null;
 }
 
 /**

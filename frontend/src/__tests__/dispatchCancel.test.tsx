@@ -19,7 +19,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 let mockHeld = new Set(["dispatch.manage"]);
 let mockAdmin = false;
 jest.mock("@/src/hooks/usePermissions", () => ({
-  usePermissions: () => ({ hasPermission: (p: string) => mockHeld.has(p), isAdmin: mockAdmin }),
+  usePermissions: () => ({ hasPermission: (p: string) => mockHeld.has(p), isAdmin: mockAdmin, isTenantExempt: mockAdmin && !mockTenant }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => tZh(key), formatDateTime: (v: string) => v, locale: "zh-Hans", hydrated: true }),
