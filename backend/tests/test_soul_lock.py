@@ -37,7 +37,8 @@ def sfu_calls():
 
 @pytest.mark.django_db
 def test_lock_is_unfiltered_and_locks_only_the_soul_row(cn_tenant, sfu_calls):
-    soul = _soul(cn_tenant, is_deleted=True)
+    soul = _soul(cn_tenant)
+    Soul.all_objects.filter(pk=soul.pk).update(is_deleted=True)  # created live: SOUL_CREATED refuses a dead target
     assert Soul.lock(soul.pk).pk == soul.pk  # soft-deleted rows are locked too; the caller decides
     assert sfu_calls == [(Soul, {"of": ("self",)})]
 
