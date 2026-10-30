@@ -4,7 +4,7 @@
  * WHY THIS IS AN E2E TEST AND NOT A JEST TEST。`src/__tests__/DashboardPage.test.tsx`
  * 里有一行:
  *
- *     jest.mock("@/src/components/charts/LazyDashboardCharts", ...)
+ *     jest.mock("@/src/components/charts/LifespanBarChart", ...)
  *
  * **2026-09-24 起 dashboard 没有饼图了**(规范 v1 §3.4:图例账代替饼图,
  * 各文明是账行不是柱)。页上仍用 recharts 的只剩「地域分布」柱状图,所以下面

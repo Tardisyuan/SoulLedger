@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -120,7 +121,7 @@ function TimelineEntry({ log }: { log: AuditLogEntry }) {
 export default function PermissionChangesPage() {
   const { t, formatDate } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissionsReady } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
 
   const [resource, setResource] = useState("");
@@ -178,7 +179,11 @@ export default function PermissionChangesPage() {
   if (!canReadAudit) {
     return (
       <PageShell variant="full" title={title}>
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        {permissionsReady === false ? (
+          <PermissionsPending />
+        ) : (
+          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        )}
       </PageShell>
     );
   }

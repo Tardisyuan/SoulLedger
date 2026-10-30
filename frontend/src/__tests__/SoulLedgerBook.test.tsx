@@ -40,9 +40,9 @@ import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { BALANCE_READING, INHERITANCE } from "./support/ledgerQuantityFixtures";
 import { renderCard } from "./support/ledgerQuantityRender";
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  ...jest.requireActual("@/src/components/charts/LazyDashboardCharts"),
-  LazyLifespanBarChart: () => null,
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({
+  ...jest.requireActual("@/src/components/charts/LifespanBarChart"),
+  LifespanBarChart: () => null,
 }));
 
 function record(

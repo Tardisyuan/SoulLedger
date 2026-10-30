@@ -29,7 +29,7 @@
  * worse, because the unhandled path at least warns.
  *
  * The social keys now mirror what the local mutations in `useSocial.ts` do —
- * `comments.all`, `reactions.all`, `follows.all`, `profiles.all`. That is not
+ * `comments.all`, `follows.all`, `profiles.all`. That is not
  * a coincidence to preserve but the point: the optimistic path and the realtime
  * path should invalidate the same thing, and the local one is known to work.
  *
@@ -358,17 +358,19 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
     invalidated.push("social.comments", "social.posts");
   }
 
-  // Invalidate reaction queries
+  // Invalidate reaction counts. There is no reaction list any more: the counts and
+  // `my_reaction` ride on the post or comment rows, which is what
+  // `useToggleReaction` refetches too (posts for a post, comments for a comment).
   if (["REACTION_ADDED", "REACTION_REMOVED"].includes(payload.event)) {
-    // Same shape as comments: reaction lists cache under
-    // `[...reactions.all, params]` with the post id inside `params`.
-    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.reactions.all });
     if (payload.post_id) {
       ctx.queryClient.invalidateQueries({
         queryKey: socialKeys.posts.detail(payload.post_id),
       });
+      invalidated.push("social.posts");
+    } else {
+      ctx.queryClient.invalidateQueries({ queryKey: socialKeys.comments.all });
+      invalidated.push("social.comments");
     }
-    invalidated.push("social.reactions");
   }
 
   // Invalidate follow queries

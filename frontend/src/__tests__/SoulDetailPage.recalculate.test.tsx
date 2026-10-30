@@ -37,8 +37,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { id: 1, username: "u", tenant: null, ...mockUser }, tenantCode: null }),
 }));
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyLifespanBarChart: () => null,
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({
+  LifespanBarChart: () => null,
 }));
 jest.mock("@/src/components/souls/SoulEditModal", () => ({ SoulEditModal: () => null }));
 

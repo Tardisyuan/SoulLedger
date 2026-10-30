@@ -80,6 +80,7 @@ heredoc, so the seam is unchanged. `TestJestSelection` pins what sends jest to a
 full run instead of `--findRelatedTests` + `frontend/jest.always-run.txt`.
 """
 
+import json
 import os
 import re
 import shutil
@@ -1612,3 +1613,92 @@ class TestTheE2eReport:
         proc = self._report(tmp_path, {"suites": [], "errors": [{"message": "Timed out waiting for webServer\nmore"}]})
         assert proc.returncode == 1 and "error: Timed out waiting for webServer" in proc.stdout, proc.stdout
         assert "chromium: no tests" in proc.stdout
+
+
+# ── scripts/mobile-remote.sh: Metro follows the JS dependencies (2026-10-31, user decision) ─────────
+
+
+class TestMobileRemoteMetroFollowsTheDependencies:
+    """The dependency hash is run-gates.sh's deps_hash_js (dependency fields + lockfile + image), and a Metro
+    started under another hash is restarted by `metro sync` / `metro open` — on 2026-10-31 a dependency change
+    followed by only `metro sync` bundled against a node_modules that was gone. ssh and rsync are fakes; the
+    fake ssh answers `docker inspect` with the environment in `metro-env` (absent = no Metro running)."""
+
+    def _repo(self, tmp_path):
+        repo = tmp_path / "repo"
+        (repo / "scripts").mkdir(parents=True)
+        shutil.copy(REPO_ROOT / "scripts" / "mobile-remote.sh", repo / "scripts" / "mobile-remote.sh")
+        (repo / "package-lock.json").write_text('{"lockfileVersion": 3}\n')
+        self._pkg(repo, "1.0.0", "jest", "1")
+        _git(repo, "init", "-q")
+        _git(repo, "add", "-A")
+        return repo
+
+    def _pkg(self, repo, version, script, dep):
+        (repo / "mobile").mkdir(exist_ok=True)
+        (repo / "mobile" / "package.json").write_text(
+            json.dumps({"name": "m", "version": version, "scripts": {"t": script}, "dependencies": {"a": dep}}))
+
+    def _run(self, repo, tmp_path, *args):
+        b = tmp_path / "bin"
+        b.mkdir(exist_ok=True)
+        log = tmp_path / "ssh.log"
+        (b / "ssh").write_text(f'''#!/bin/bash
+for a; do cmd="$a"; done
+printf '%s\\n' "$cmd" >> {log}
+case "$cmd" in *"docker inspect"*) [ -f {tmp_path}/metro-env ] && cat {tmp_path}/metro-env || exit 1 ;; esac
+exit 0
+''')
+        (b / "rsync").write_text("#!/bin/bash\ncat >/dev/null\nexit 0\n")
+        (b / "adb").write_text("#!/bin/bash\nexit 0\n")
+        for f in b.iterdir():
+            f.chmod(0o755)
+        if log.exists():
+            log.unlink()
+        env = _clean_env(MOBILE_REMOTE="box")
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(repo / "scripts" / "mobile-remote.sh"), "mobile", *args], cwd=repo,
+                              env=env, capture_output=True, text=True, timeout=60)
+        return proc, (log.read_text() if log.exists() else "")
+
+    def _deps(self, repo, tmp_path):
+        proc, log = self._run(repo, tmp_path, "metro", "start")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        return re.search(r"-e SL_DEPS=(\w+)", log).group(1)
+
+    def test_only_the_dependency_fields_move_the_hash(self, tmp_path):
+        repo = self._repo(tmp_path)
+        first = self._deps(repo, tmp_path)
+        self._pkg(repo, "1.0.1", "vitest", "1")
+        assert self._deps(repo, tmp_path) == first, "a version or script edit reinstalled node_modules"
+        self._pkg(repo, "1.0.1", "vitest", "2")
+        assert self._deps(repo, tmp_path) != first
+        (repo / "package-lock.json").write_text('{"lockfileVersion": 3, "x": 1}\n')
+        assert self._deps(repo, tmp_path) != first
+
+    def test_sync_restarts_a_metro_started_under_other_dependencies(self, tmp_path):
+        repo = self._repo(tmp_path)
+        (tmp_path / "metro-env").write_text("PATH=/usr/bin\nSL_DEPS=0123456789abcdef\n")
+        proc, log = self._run(repo, tmp_path, "metro", "sync")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "restarting it" in proc.stdout and "docker run -d" in log, proc.stdout + log
+
+    def test_open_restarts_it_too(self, tmp_path):
+        repo = self._repo(tmp_path)
+        (tmp_path / "metro-env").write_text("SL_DEPS=0123456789abcdef\n")
+        (repo / "mobile" / "app.json").write_text('{"expo": {"android": {"package": "x.y"}}}')
+        proc, log = self._run(repo, tmp_path, "metro", "open")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "restarting it" in proc.stdout and "docker run -d" in log, proc.stdout + log
+
+    def test_a_current_metro_and_no_metro_are_left_alone(self, tmp_path):
+        repo = self._repo(tmp_path)
+        deps = self._deps(repo, tmp_path)
+        (tmp_path / "metro-env").write_text(f"SL_DEPS={deps}\n")
+        proc, log = self._run(repo, tmp_path, "metro", "sync")
+        assert proc.returncode == 0 and "docker inspect" in log, proc.stdout + proc.stderr
+        assert "docker run" not in log and "restarting" not in proc.stdout, log
+        (tmp_path / "metro-env").unlink()
+        proc, log = self._run(repo, tmp_path, "metro", "sync")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "docker run" not in log and "restarting" not in proc.stdout, log

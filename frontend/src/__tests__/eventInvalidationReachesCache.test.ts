@@ -96,11 +96,11 @@ const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
   { label: "unread badge", owner: "src/components/layout/AppLayout.tsx", key: notificationKeys.unreadCount },
   { label: "post feed", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.posts.feed() },
   { label: "post detail", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.posts.detail("p1") },
-  // The four that were unreachable. Keyed here EXACTLY as useSocial.ts keys
+  // Three of the four that were unreachable (the fourth, the reaction list, is gone
+  // with its key: counts ride on the rows, 2026-10-31). Keyed here EXACTLY as useSocial.ts keys
   // them — including the params object, which is where the post id actually
   // lives and which is what the old per-post keys got wrong.
   { label: "comment thread", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.comments.list({ post: "p1" }) },
-  { label: "reaction list", owner: "packages/core/src/hooks/useSocial.ts", key: [...socialKeys.reactions.all, { post: "p1" }] },
   { label: "followers list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.followers },
   { label: "following list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.following },
   { label: "profile detail", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.profiles.detail("u2") },
@@ -214,9 +214,14 @@ describe("a realtime push reaches the cache", () => {
       reaches: ["post feed", "post detail", "comment thread"],
     },
     {
-      name: "REACTION_ADDED refreshes the reaction list and the post",
+      name: "REACTION_ADDED on a post refreshes that post (its counts live on the row)",
       payload: { domain: "social", event: "REACTION_ADDED", post_id: "p1" } as EventPayload,
-      reaches: ["post detail", "reaction list"],
+      reaches: ["post detail"],
+    },
+    {
+      name: "REACTION_REMOVED on a comment refreshes the comment threads",
+      payload: { domain: "social", event: "REACTION_REMOVED", comment_id: "c1" } as EventPayload,
+      reaches: ["comment thread"],
     },
     {
       name: "USER_FOLLOWED refreshes both follow lists and the followed profile",

@@ -78,8 +78,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenant,
 }));
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyLifespanBarChart: () => null,
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({
+  LifespanBarChart: () => null,
 }));
 
 // 409 = terminal cosmology, which the page renders as "no panel". Not the

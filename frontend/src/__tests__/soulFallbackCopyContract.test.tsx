@@ -48,9 +48,9 @@ import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimel
 //
 // Declared here rather than in the shared render helper: `jest.mock` is hoisted
 // per test file and does not travel through an import.
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  ...jest.requireActual("@/src/components/charts/LazyDashboardCharts"),
-  LazyLifespanBarChart: () => null,
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({
+  ...jest.requireActual("@/src/components/charts/LifespanBarChart"),
+  LifespanBarChart: () => null,
 }));
 
 // The real `RequirePermission` runs; the identity underneath it is an ADMIN, so

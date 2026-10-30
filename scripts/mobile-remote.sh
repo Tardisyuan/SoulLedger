@@ -7,8 +7,9 @@
 #   scripts/mobile-remote.sh <app> build        rsync → (native fingerprint changed?) prebuild + assembleDebug
 #                                               → scp the APK → adb install -r. Unchanged: says so, no build.
 #   scripts/mobile-remote.sh <app> metro start  rsync, then Metro in a container on <box>:<port> (detached)
-#   scripts/mobile-remote.sh <app> metro sync   rsync only — the running Metro sees the change (inotify)
-#   scripts/mobile-remote.sh <app> metro open   adb: point the app at <box ip>:<port> and restart it
+#   scripts/mobile-remote.sh <app> metro sync   rsync; the running Metro sees the change (inotify), and is
+#                                               restarted if it was started under other JS dependencies
+#   scripts/mobile-remote.sh <app> metro open   the same check, then adb: point the app at <box ip>:<port>
 #   scripts/mobile-remote.sh <app> metro logs|stop
 #
 # Settings (environment):
@@ -29,7 +30,7 @@
 # 2026-10-29); the lock only keeps two builds apart. Metro takes no lock — it is light.
 set -euo pipefail
 APP="${1:-}"; case "$APP" in mobile) PORT=8081 DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_SOUL ;;
-    mobile-officer) PORT=8082 DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,12p' "$0"; exit 2 ;; esac
+    mobile-officer) PORT=8082 DSN_VAR=EXPO_PUBLIC_SENTRY_DSN_OFFICER ;; *) sed -n '2,13p' "$0"; exit 2 ;; esac
 shift
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ -f "$ROOT/.prepush.env" ] && . "$ROOT/.prepush.env"
@@ -57,7 +58,23 @@ sync_tree() {
             --filter='P mobile*/.expo/' --filter='P .sl-*' --from0 --files-from=- -r "$ROOT/" "$H:$W/"
 }
 
-DEPS=$( { git ls-files -z -- package-lock.json '*package.json' .nvmrc | xargs -0 cat; echo "$IMG"; } | shasum | cut -c1-16)
+# The JS dependency hash, as run-gates.sh's deps_hash_js: the lockfile, only the dependency fields of each
+# package.json (a version or script edit reinstalls nothing), and the image. No Python is installed here, so
+# there is no second hash. A function for its test (backend/tests/test_prepush_runs_the_gates_a_change_can_break.py).
+deps_hash_js() {
+    git ls-files -z -- package-lock.json '*package.json' | xargs -0 python3 -I -c '
+import json, sys
+fields = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "overrides", "workspaces")
+for path in sys.argv[1:]:
+    data = json.load(open(path, encoding="utf-8"))
+    if path.endswith("package-lock.json"):
+        print(path, json.dumps(data, sort_keys=True))
+    else:
+        print(path, json.dumps({k: data.get(k) for k in fields}, sort_keys=True))
+' || echo "unreadable $(date +%s%N)"
+    echo "$IMG"
+}
+DEPS=$(deps_hash_js | shasum | cut -c1-16)
 # Installed in the synced tree once per lockfile change (run-gates.sh's REMOTE_DEPS, without the venv).
 REMOTE_DEPS='
     if [ "$(cat .sl-deps 2>/dev/null)" != "$SL_DEPS" ]; then
@@ -118,19 +135,41 @@ build)
     echo "$P: installed. Next: scripts/mobile-remote.sh $APP metro start && scripts/mobile-remote.sh $APP metro open"
     ;;
 metro)
-    case "${2:-}" in
-    start)
-        sync_tree
+    # Always a fresh container: the install (REMOTE_DEPS) runs before Metro, so Metro's module map is built
+    # over the node_modules that match $DEPS, never over a tree `npm ci` replaced under a running Metro.
+    metro_start() {
         rsh "docker rm -f $METRO >/dev/null 2>&1; docker run -d --init --name $METRO --cpus 4 --memory 6g -p $PORT:$PORT \
             -v $W:/app -w /app -e SL_DEPS=$DEPS -e EXPO_NO_TELEMETRY=1 -e REACT_NATIVE_PACKAGER_HOSTNAME=$IP \
             -e EXPO_PUBLIC_API_URL='$API_URL' -e $DSN_VAR='$DSN' \
             $IMG bash -c '$REMOTE_DEPS
               cd $APP && exec npx expo start --dev-client --port $PORT --clear' >/dev/null"
         echo "$P: Metro ($APP) starting on http://$IP:$PORT (API $API_URL). Ready when 'metro logs' shows 'Waiting on'."
+    }
+    # A Metro started under other dependencies serves the module map of a node_modules that is gone
+    # (2026-10-31: `Unable to resolve "react-native" from node_modules/react-native-is-edge-to-edge` after a
+    # dependency change and only `metro sync`). The SL_DEPS it was started with is in its container's
+    # environment; when that is not $DEPS it is restarted (which installs first). Automatic, not a hint: the
+    # bundler error never names the cause. Not running (empty) = nothing to restart.
+    running_deps() {
+        { rsh "docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' $METRO 2>/dev/null" || true; } | sed -n 's/^SL_DEPS=//p'
+    }
+    restart_if_stale() {
+        local was; was=$(running_deps)
+        if [ -n "$was" ] && [ "$was" != "$DEPS" ]; then
+            echo "$P: the running Metro was started under other JS dependencies ($was, now $DEPS); restarting it"
+            sync_tree
+            metro_start
+        fi
+    }
+    case "${2:-}" in
+    start)
+        sync_tree
+        metro_start
         echo "$P: open the app on it: scripts/mobile-remote.sh $APP metro open"
         ;;
-    sync) sync_tree; echo "$P: synced; Metro on $H picks the change up" ;;
+    sync) sync_tree; restart_if_stale; echo "$P: synced; Metro on $H picks the change up" ;;
     open)
+        restart_if_stale
         # No expo-dev-client in these apps: the APK is a plain React Native debug build, which reads the
         # packager address from debug_http_host in its default SharedPreferences (the dev menu's
         # "Debug server host"). run-as works because the build is debuggable. Restart to pick it up.
@@ -145,5 +184,5 @@ metro)
     *) echo "usage: $0 $APP metro start|sync|open|logs|stop"; exit 2 ;;
     esac
     ;;
-*) sed -n '2,12p' "$0"; exit 2 ;;
+*) sed -n '2,13p' "$0"; exit 2 ;;
 esac

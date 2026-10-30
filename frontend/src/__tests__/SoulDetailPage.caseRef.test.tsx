@@ -31,7 +31,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 let mockUser: { id: number; username: string; role: string; tenant: null; permissions: string[] };
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({ LazyLifespanBarChart: () => null }));
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({ LifespanBarChart: () => null }));
 jest.mock("@soulledger/core/api/ledger", () => ({
   ...jest.requireActual("@soulledger/core/api/ledger"),
   ledgerApi: { inheritance: jest.fn().mockRejectedValue({ response: { status: 409 } }) },

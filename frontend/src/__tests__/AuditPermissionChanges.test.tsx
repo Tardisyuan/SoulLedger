@@ -22,7 +22,10 @@ const { auditApi } = jest.requireMock("@soulledger/core/api") as {
 };
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
-jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser, tenantCode: "CN_DIYU" }) }));
+let mockReady = true;
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: mockUser, tenantCode: "CN_DIYU", permissionsReady: mockReady }),
+}));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
@@ -79,6 +82,7 @@ const lastParams = () => auditApi.timeline.mock.calls[auditApi.timeline.mock.cal
 beforeEach(() => {
   jest.clearAllMocks();
   nextId = 1;
+  mockReady = true;
   mockUser = { id: 1, username: "mod", role: "MODERATOR", permissions: ["audit.read"] };
   auditApi.actions.mockResolvedValue({ data: ["CREATE", "UPDATE", "DELETE"].map((value) => ({ value, label: "模型中文" })) });
 });
@@ -88,6 +92,27 @@ it("without audit.read: refused, and no request", () => {
   renderRoute();
   expect(screen.getByText(tZh("audit.needs_audit_read"))).toBeInTheDocument();
   expect(auditApi.timeline).not.toHaveBeenCalled();
+  expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
+});
+
+it("while permissions are still on their way, a skeleton — not the refusal, and no request", () => {
+  // Same rule as the other three audit pages: "no code yet" is not "no right".
+  mockUser = { id: 2, username: "judge", role: "JUDGE", permissions: [] };
+  mockReady = false;
+  const { rerender } = renderRoute();
+  expect(screen.getByTestId("permissions-pending")).toBeInTheDocument();
+  expect(screen.queryByText(tZh("audit.needs_audit_read"))).not.toBeInTheDocument();
+  expect(auditApi.timeline).not.toHaveBeenCalled();
+
+  // The codes arrive without audit.read: now it is a refusal.
+  mockReady = true;
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <PermissionChangesPage />
+    </QueryClientProvider>
+  );
+  expect(screen.getByText(tZh("audit.needs_audit_read"))).toBeInTheDocument();
+  expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
 });
 
 it("groups by local day, keeps every step (no ×N), and links each entry to its detail", async () => {
