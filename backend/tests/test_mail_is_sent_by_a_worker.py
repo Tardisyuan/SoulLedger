@@ -92,13 +92,11 @@ def test_an_initial_password_is_enqueued_by_credential_id_after_commit(cn_tenant
     from apps.souls.models import Soul
 
     soul = Soul.objects.create(name="入队之魂", tenant=cn_tenant, contact_email="cred@example.org", current_state="JUDGING")
-    with (
-        mock.patch.object(soul_tasks.send_credential, "delay") as delay,
-        django_capture_on_commit_callbacks(execute=False) as callbacks,
-    ):
-        svc.provision_account(soul, AccountOrigin.DEATH_SYNC)
+    with mock.patch.object(soul_tasks.send_credential, "delay") as delay:
+        with django_capture_on_commit_callbacks(execute=False) as callbacks:
+            svc.provision_account(soul, AccountOrigin.DEATH_SYNC)
         assert delay.call_count == 0, "enqueued before the transaction committed"
-        for callback in callbacks:
+        for callback in callbacks:  # the list is filled when the capture block exits
             callback()
     credential = InitialCredential.objects.get(soul=soul)
     delay.assert_called_once_with(credential.pk)

@@ -23,7 +23,10 @@ def _request_memo(create=True):
     """
     from apps.core.request_local import get_current_request
 
-    request = get_current_request()
+    try:
+        request = get_current_request()
+    except LookupError:  # same tolerance as the audit signal's reads (`apps/audit/signals.py::_current_context`)
+        return None
     if request is None:
         return None
     memo = getattr(request, "_perm_memo", None)
