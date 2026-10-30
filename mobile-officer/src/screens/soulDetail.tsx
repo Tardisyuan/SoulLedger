@@ -17,6 +17,8 @@ import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { latestLostEvent, lostSinceLabel } from "@soulledger/core/domain/lost";
+import { formatHistoricalDate, type HistoricalDate } from "@soulledger/core/domain/dates";
+import type { Locale } from "@soulledger/core/config/locale";
 import { useCallback, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
@@ -35,8 +37,9 @@ function usePermissionCodes(): readonly string[] {
   return state.status === "signedIn" ? (state.user.permissions ?? NO_PERMISSIONS) : NO_PERMISSIONS;
 }
 
-export function dateText(d: { year: number; month?: number | null; day?: number | null } | null | undefined): string {
-  return d ? [d.year, d.month, d.day].filter((x) => x != null).join("-") : "—";
+/** A historical date in core's words (「前44年 · 3月15日」); it was `[year, month, day].join("-")`, so 44 BC read `-44-3-15`. */
+export function dateText(d: HistoricalDate | null | undefined, locale: Locale): string {
+  return formatHistoricalDate(d, locale) ?? "—";
 }
 
 /**
@@ -225,10 +228,10 @@ function IdentityTab({ soul }: { soul: Soul }) {
   const diyu = soul.civilization === "CHINESE";
   return (
     <View testID="soul-identity" style={{ padding: GUTTER, flexDirection: "row", flexWrap: "wrap", gap: space[4] }}>
-      <Fact label={t("souls.detail.birth")} value={[dateText(soul.birth_date), soul.origin_location].filter(Boolean).join(" · ")} />
+      <Fact label={t("souls.detail.birth")} value={[dateText(soul.birth_date, locale), soul.origin_location].filter(Boolean).join(" · ")} />
       {/* 出身地域(Design O-1):籍贯旁边,只读。「不详」是一个词,不是「—」。 */}
       <Fact testID="soul-origin-region" label={t("souls.origin_region.label")} value={originRegionLabel(t, soul.origin_region, locale)} />
-      <Fact label={t("souls.detail.death")} value={dateText(soul.death_date)} />
+      <Fact label={t("souls.detail.death")} value={dateText(soul.death_date, locale)} />
       {soul.birth_name && soul.birth_name !== soul.name ? <Fact label={t("officer_app.soul.birth_name")} value={soul.birth_name} /> : null}
       <ServingFact soulId={soul.id} />
       {diyu ? <StationFact soul={soul} /> : null}
@@ -368,7 +371,7 @@ function PlanStops({ plan }: { plan: Parameters<typeof planStops>[0] }) {
 }
 
 function KarmaTab({ soulId }: { soulId: string }) {
-  const { t, enumLabel } = useI18n();
+  const { t, enumLabel, locale } = useI18n();
   const theme = useTheme();
   const load = useCallback(() => soulsApi.records(soulId).then((r) => r.data), [soulId]);
   const { data, error, reload } = useRemote(load);
@@ -388,7 +391,7 @@ function KarmaTab({ soulId }: { soulId: string }) {
           </View>
           {g.rows.map((r) => {
             const source = r.evidence_source ? enumLabel("souls.evidence_sources", r.evidence_source) : null;
-            const when = r.event_date ? dateText(r.event_date) : formatWhen(r.recorded_at).slice(0, 10);
+            const when = r.event_date ? dateText(r.event_date, locale) : formatWhen(r.recorded_at).slice(0, 10);
             return (
               <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
                 <View style={{ width: 56 }}>
