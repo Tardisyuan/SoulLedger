@@ -179,6 +179,21 @@ async function rotate(refresh: string): Promise<string> {
   return data.access;
 }
 
+/**
+ * Trades `refresh` for a new pair (stored) and answers the access token. Concurrent callers share one request
+ * -- the 401 handler below and a cold start that has a refresh token but no access token in memory, which
+ * rotates before its first `/me/` instead of collecting a certain 401 first (opt-apps2 S1). Rejects with the
+ * axios error; no `response` means the network, not the server, refused.
+ */
+export function rotateSoulTokens(refresh: string): Promise<string> {
+  if (!refreshInFlight) {
+    refreshInFlight = rotate(refresh).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 type RetriableConfig = InternalAxiosRequestConfig & { _soulRetry?: boolean };
 
 soulHttp.interceptors.response.use(
@@ -196,12 +211,7 @@ soulHttp.interceptors.response.use(
       const refresh = getRefreshToken();
       if (refresh) {
         try {
-          if (!refreshInFlight) {
-            refreshInFlight = rotate(refresh).finally(() => {
-              refreshInFlight = null;
-            });
-          }
-          const access = await refreshInFlight;
+          const access = await rotateSoulTokens(refresh);
           config.headers.Authorization = `Bearer ${access}`;
           return soulHttp(config);
         } catch (refreshError) {

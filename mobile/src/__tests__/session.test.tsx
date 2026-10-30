@@ -4,6 +4,7 @@
  * stores are doubles.
  */
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
+import { soulHttp } from "@soulledger/core/api/soul";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
@@ -16,7 +17,7 @@ import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { PENDING_LOGOUT_KEY, SessionProvider } from "../session";
 import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
-import { PROFILE, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
+import { PROFILE, ageAnswers, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -142,6 +143,7 @@ describe("a stored session", () => {
 
   it("a 401 on a LATER request (not the boot /me/) also returns to login — that path is onUnauthorized alone", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
+    sessionStore.set("soulledger_access", "A"); // a warm session: the boot asks /me/ without rotating first
     const refresh = heldReply();
     const calls = stubApi({
       "/me/": { status: 200, data: PROFILE },
@@ -156,6 +158,7 @@ describe("a stored session", () => {
 
   it("a session that expires on its own (401) takes the unsent letters off the device too", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
+    sessionStore.set("soulledger_access", "A");
     const letter = { txnId: "t1", conversationId: "c1", roomId: "!r", body: "枯树那边风大", ts: 1, state: "queued" };
     persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: PROFILE.soul_code, device: "DEV1", items: [letter] }));
     const refresh = heldReply();
@@ -180,6 +183,47 @@ describe("a stored session", () => {
     expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器,请检查网络后重试");
     expect(screen.queryByTestId("login-submit")).toBeNull();
     expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
+  });
+
+  // opt-apps2 S1: the access token lives in memory, so a cold start has none; /me/ first was a certain 401.
+  it("a cold start rotates the refresh token BEFORE the first /me/ -- one request, no 401", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({
+      "/soul-auth/refresh/": { status: 200, data: { access: "A9", refresh: "R9" } },
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "GET /me/notification-settings/": { status: 200, data: { locale: "zh-Hans" } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    const boot = calls.map((c) => c.url).filter((u) => u === "/soul-auth/refresh/" || u === "/me/");
+    expect(boot.slice(0, 2)).toEqual(["/soul-auth/refresh/", "/me/"]);
+    expect(boot.filter((u) => u === "/soul-auth/refresh/")).toHaveLength(1);
+    expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R9");
+    expect(sessionStore.get("soulledger_access")).toBe("A9");
+  });
+
+  it("a warm start (access token in memory) asks /me/ without rotating", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    sessionStore.set("soulledger_access", "A");
+    const calls = stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "GET /me/notification-settings/": { status: 200, data: { locale: "zh-Hans" } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    expect(calls.some((c) => c.url === "/soul-auth/refresh/")).toBe(false);
+  });
+
+  it("the rotation at a cold start offline: the retry screen, the refresh token kept, /me/ not asked", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({ "/soul-auth/refresh/": "offline", "/me/": { status: 200, data: PROFILE } });
+    renderApp();
+    expect((await screen.findByTestId("failure")).props.children).toBe("无法连接服务器,请检查网络后重试");
+    expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R");
+    expect(calls.some((c) => c.url === "/me/")).toBe(false);
+    expect(screen.queryByTestId("login-submit")).toBeNull();
   });
 
   it("403 password_change_required from ANY /me call routes to the change-password screen", async () => {
@@ -245,9 +289,33 @@ describe("a stored session", () => {
     // By testID: the tab label also appears as the header title and a section heading.
     await pressTab("tab-Applications");
     await screen.findByTestId("eligibility");
+    const clock = ageAnswers(); // past the 15 s in which a focus asks nothing (opt-apps2 N3)
     await pressTab("tab-Life");
     await screen.findByText("审批中");
     expect(screen.queryByText("这一世没有转生申请")).toBeNull();
+    clock.mockRestore();
+  });
+
+  // opt-apps2 N3: tabbing back and forth re-sent every request each time.
+  it("a return to the life tab within 15 s of its answer asks nothing -- unless the app changed something since", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/rebirth-applications/": { status: 200, data: { can_apply: true, reason: null, cooldown_until: null, results: [] } },
+      "POST /me/test-write/": { status: 200, data: {} },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    const lifeCalls = () => calls.filter((c) => c.url === "/me/life/").length;
+    await waitFor(() => expect(lifeCalls()).toBe(1));
+    await pressTab("tab-Applications");
+    await pressTab("tab-Life");
+    expect(lifeCalls()).toBe(1);
+    await pressTab("tab-Applications");
+    await act(async () => void (await soulHttp.post("/me/test-write/", {})));
+    await pressTab("tab-Life");
+    await waitFor(() => expect(lifeCalls()).toBe(2));
   });
 
   it("returning to the life tab also re-reads the profile (/me/) the page head is drawn from", async () => {

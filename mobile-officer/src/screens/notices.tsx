@@ -6,7 +6,7 @@ import { View } from "react-native";
 import { formatWhen } from "../format";
 import { RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
-import { useCachedRemote } from "../readCache";
+import { useCachedRemote, useOnBump } from "../readCache";
 import { isDenied, landingGoneKey, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
 import { Screen, SmallButton, space, useI18n } from "../shared";
@@ -15,12 +15,13 @@ import { Screen, SmallButton, space, useI18n } from "../shared";
  * `onRead`: a mark reached the server, or the list was pulled -- the shell asks for the unread count again (the tab bar's ●).
  * `gone`: notices whose item turned out to be gone (O-c) -- greyed, and they no longer open anything.
  */
-export function NoticesTab({ onRead, onLand, gone }: { onRead?: () => void; onLand?: (landing: Landing) => void; gone?: ReadonlySet<string> }) {
+export function NoticesTab({ onRead, onLand, gone, version }: { onRead?: () => void; onLand?: (landing: Landing) => void; gone?: ReadonlySet<string>; version?: number }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   const load = useCallback(() => notificationsApi.list().then((r) => r.data), []);
   const { data: firstPage, error, loading, reload } = useCachedRemote("list:notices", load);
+  useOnBump(version, reload); // the shell's bump: reloaded in place
   const fetchPage = useCallback((page: number) => notificationsApi.list({ page: String(page) }).then((r) => r.data), []);
   const { rows: data, more, moreState } = useMoreRows(firstPage, fetchPage);
   // Marking is local first (the row turns ○ at once); a failure puts it back on the next reload.

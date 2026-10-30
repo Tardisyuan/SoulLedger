@@ -7,7 +7,7 @@ import { Pressable, Share, StyleSheet, View } from "react-native";
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { MoreRow, useMoreRows } from "../paged";
 import { unassignedShown } from "../todoFacts";
-import { useCachedRemote } from "../readCache";
+import { useCachedRemote, useOnBump } from "../readCache";
 
 import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, pickRowLines, todoTitle, type ItemKind } from "../rules";
@@ -36,16 +36,17 @@ function readFilter(): TodoKind[] {
 const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
 
 /** `gone`: rows whose detail turned out to be gone (O-c), greyed and not pressable -- keyed by `goneKey`. */
-export function TodoTab({ onOpen, highlight, gone }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null; gone?: ReadonlySet<string> }) {
+export function TodoTab({ onOpen, highlight, gone, version }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null; gone?: ReadonlySet<string>; version?: number }) {
   const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   // 「新的审批、移交和申请会推送给你」 only to an officer who can be given one (decision 30); others get a sentence that promises nothing they cannot get.
   const held = state.status === "signedIn" ? (state.user.permissions ?? []) : [];
   const approver = held.includes("workflow.approve") || held.includes("dispatch.approve");
-  // The shell gives this tab a new `key` whenever the list should ask again (back from a detail, a push).
+  // The shell bumps `version` whenever the list should ask again (a push, the foreground): reloaded in place.
   const load = useCallback(() => officerAppApi.todo().then((r) => r.data), []);
   const { data, error, loading, reload } = useCachedRemote("list:todo", load);
+  useOnBump(version, reload);
   // Siri's 「有几件待办」 speaks this total back (voiceCache.ts): a number and a time, never a case.
   useEffect(() => {
     if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + countOf(data, g.field), 0));

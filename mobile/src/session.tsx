@@ -11,19 +11,20 @@ import {
   clearSoulTokens,
   isMfaRequired,
   onSoulPasswordChangeRequired,
+  rotateSoulTokens,
   soulApi,
   soulErrorCode,
   soulErrorMessage,
   soulErrorStatus,
+  soulHttp,
   storeSoulTokens,
   type MeProfile,
   type SoulErrorMessage,
   type SoulLoginOutcome,
   type SoulLoginResponse,
 } from "@soulledger/core/api/soul";
-import { getRefreshToken, platform } from "@soulledger/core/platform";
+import { getAccessToken, getRefreshToken, platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AppState } from "react-native";
 
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
@@ -31,11 +32,17 @@ import { clearOutbox } from "./chat";
 import { bioEnabled, readCredential, rememberAccount, spendAutoPrompt } from "./deviceLogin";
 import { useI18n } from "./i18n";
 import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
-import { setUnauthorizedHandler } from "./platform";
+import { onForeground, setUnauthorizedHandler } from "./platform";
 import { PUSH_TOKEN_KEY, hasRegisteredDevice, unregisterDevice } from "./push";
 import { clearVoiceNumbers } from "./voiceCache";
 import { clearSocialStatus } from "./socialStatus";
+import { markWritten } from "./ui";
 
+// Every change this soul makes on the server ends the refocus throttle's "fresh" (ui.tsx `useReloadOnRefocus`).
+soulHttp.interceptors.response.use((res) => {
+  if ((res.config.method ?? "get").toLowerCase() !== "get") markWritten();
+  return res;
+});
 
 /**
  * A sign-out the server never heard (offline): its refresh token is kept and the logout is sent again at the next
@@ -107,6 +114,11 @@ export const SessionContext = createContext<Session | null>(null);
 
 const signedIn = (profile: MeProfile): SessionState => ({ status: "signedIn", profile });
 
+/** Signed in with `profile` -- the same state object when it is already that (the server's JSON unchanged). */
+export function withProfile(prev: SessionState, profile: MeProfile): SessionState {
+  return prev.status === "signedIn" && JSON.stringify(prev.profile) === JSON.stringify(profile) ? prev : signedIn(profile);
+}
+
 /** What a failed `GET /me/` means for the session. */
 export function stateAfterFailedMe(error: unknown): SessionState {
   const status = soulErrorStatus(error);
@@ -163,10 +175,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [land]
   );
 
+  /**
+   * A cold start holds the refresh token only (the access token lives in memory): `/me/` would be a certain 401
+   * and then a rotation. Rotate first (opt-apps2 S1), as the client's 401 handler would: a refusal with an answer
+   * ends the session; no answer (offline) keeps the tokens and shows the retry screen.
+   */
+  const boot = useCallback(() => {
+    const refresh = getRefreshToken();
+    if (!refresh || getAccessToken()) return enter();
+    return rotateSoulTokens(refresh).then(enter, (e: unknown) => {
+      if (soulErrorStatus(e) === null) return setState(stateAfterFailedMe(e));
+      clearSoulTokens();
+      platform().onUnauthorized();
+    });
+  }, [enter]);
+
   const retryBoot = useCallback(() => {
     setState({ status: "booting" });
-    void enter();
-  }, [enter]);
+    void boot();
+  }, [boot]);
 
   useEffect(() => {
     // An expired session ends like a sign-out: the unsent letters leave the device too.
@@ -188,7 +215,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // A stored refresh token from a previous run: ask the server whether it still holds.
   useEffect(() => {
     retryPendingLogout();
-    if (getRefreshToken()) void enter();
+    if (getRefreshToken()) void boot();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once
   }, []);
 
@@ -306,26 +333,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     const profile = await soulApi.me();
-    setState({ status: "signedIn", profile });
+    setState((prev) => withProfile(prev, profile));
   }, []);
 
   // Back in the foreground, `/me/` is asked again (as the officer app does, 192ad39d): the record can change while
   // the app sleeps -- a judgment delivered, a name corrected -- and 本世 reads the profile from here (phone QA 10-29b).
   // Only a session still signed in takes the answer; a failure keeps what is shown (a 401 / 403 is the client's to end).
+  // An answer equal to what is shown keeps the state object, so nothing under the session redraws (opt-apps2 R1).
   const isSignedIn = state.status === "signedIn";
   useEffect(() => {
     if (!isSignedIn) return;
-    let previous = AppState.currentState;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active" && previous !== "active") {
-        soulApi.me().then(
-          (profile) => setState((prev) => (prev.status === "signedIn" ? signedIn(profile) : prev)),
-          () => {}
-        );
-      }
-      previous = next;
+    return onForeground(() => {
+      soulApi.me().then(
+        (profile) => setState((prev) => (prev.status === "signedIn" ? withProfile(prev, profile) : prev)),
+        () => {}
+      );
     });
-    return () => sub.remove();
   }, [isSignedIn]);
 
   const value = useMemo<Session>(

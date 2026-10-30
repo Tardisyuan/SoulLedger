@@ -57,6 +57,7 @@ export { easProjectId, installNotificationHandler, permission, pushCore, type Pe
 export {
   hydratePersistentStore,
   installMobilePlatform,
+  onForeground,
   setUnauthorizedHandler,
 } from "../../mobile/src/platform";
 export {

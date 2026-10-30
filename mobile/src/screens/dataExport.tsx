@@ -175,7 +175,7 @@ export function DataExportScreen() {
   const { gutter } = useLayout();
   const bio = useBiometry();
   const remote = useRemote(soulApi.dataExport);
-  useReloadOnRefocus(remote.reload);
+  useReloadOnRefocus(remote.reload, remote);
   const [asking, setAsking] = useState(false);
   const [working, setWorking] = useState(false);
   const [sharing, setSharing] = useState(false);

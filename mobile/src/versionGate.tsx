@@ -1,9 +1,10 @@
 import Constants from "expo-constants";
 import { useEffect, useState, type ReactNode } from "react";
-import { AppState, Linking, Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Linking, Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { fetchVersionPolicy, isBelowMinimum, type VersionApp, type VersionPolicy } from "./appVersion";
 import { BrandMark } from "./brandMarkView";
+import { onForeground } from "./platform";
 import { useI18n } from "./i18n";
 import { space, themeFor } from "./theme";
 import { Button, Screen, ThemeContext, Txt, useTheme } from "./ui";
@@ -24,10 +25,10 @@ export function useVersionPolicy(app: VersionApp): VersionPolicy | null {
       });
     };
     check();
-    const sub = AppState.addEventListener("change", (s) => s === "active" && check());
+    const off = onForeground(check);
     return () => {
       alive = false;
-      sub.remove();
+      off();
     };
   }, [app]);
   return policy;
