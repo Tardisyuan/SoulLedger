@@ -541,7 +541,7 @@ describe("social events", () => {
     ]);
   });
 
-  it("invalidates the reaction family and the post detail for REACTION_ADDED", () => {
+  it("invalidates the post detail for REACTION_ADDED on a post", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -549,13 +549,11 @@ describe("social events", () => {
       ctx,
     );
 
-    expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["social","reactions"]',
-      '["social","posts","detail","p2"]',
-    ]);
+    // There is no reaction cache any more (2026-10-31): the counts live on the post row.
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","posts","detail","p2"]']);
   });
 
-  it("still refreshes reactions for a reaction on a comment (no post_id)", () => {
+  it("still refreshes a reaction on a comment (no post_id): the comment rows carry the counts", () => {
     // Previously this invalidated NOTHING and the case was named for that as
     // if it were a decision. Reactions on comments are cached in the same
     // family as reactions on posts; leaving them stale was the per-post key's
@@ -567,8 +565,8 @@ describe("social events", () => {
       ctx,
     );
 
-    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","reactions"]']);
-    expect(result.invalidatedKeys).toEqual(["social.reactions"]);
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","comments"]']);
+    expect(result.invalidatedKeys).toEqual(["social.comments"]);
     // No banner: a reaction is not addressed to the viewer, and the payload
     // carries no field that could say whether it was. See the "aimed at the
     // viewer" block below.

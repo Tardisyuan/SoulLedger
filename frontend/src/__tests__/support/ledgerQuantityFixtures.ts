@@ -6,7 +6,7 @@
  * Deliberately free of component imports. The tables half asserts things about
  * `SUMMARY_QUANTITIES` and friends and renders nothing; pulling
  * `SoulKarmaLedgerCard` into it through a shared module would drag
- * `LazyDashboardCharts` and its jsdom flake along with it for no reason. The
+ * `LifespanBarChart` and its jsdom flake along with it for no reason. The
  * render helpers live next door in `ledgerQuantityRender.tsx`, which is the
  * file that does import components.
  *

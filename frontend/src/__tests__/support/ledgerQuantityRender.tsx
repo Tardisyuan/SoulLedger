@@ -10,7 +10,7 @@
  * for `/\.test\.tsx?$/` and requires every match to be registered by name.
  *
  * NOTE for anyone importing this: the caller must declare
- * `jest.mock("@/src/components/charts/LazyDashboardCharts", ...)` itself.
+ * `jest.mock("@/src/components/charts/LifespanBarChart", ...)` itself.
  * `jest.mock` is hoisted per test file and does not travel through an import.
  */
 import { render } from "@testing-library/react";

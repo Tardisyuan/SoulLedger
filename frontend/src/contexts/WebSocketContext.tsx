@@ -17,6 +17,30 @@ import { authApi } from "@soulledger/core/api/auth";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
+import {
+  dispositionKeys,
+  notificationKeys,
+  schedulerKeys,
+  socialKeys,
+  soulKeys,
+  workflowKeys,
+} from "@soulledger/core/query_keys";
+
+/**
+ * What a socket that was down may have missed: the families the realtime handlers keep fresh
+ * (`lib/events/eventHandlers.ts`), plus the unread badge, which lives outside `notificationKeys.all`.
+ * Invalidated once on every `connected` after the first, so a push sent while the link was down is not
+ * lost until the next unrelated event or a reload. Only queries on screen refetch; the rest are marked stale.
+ */
+const KEYS_MISSED_WHILE_DISCONNECTED = [
+  notificationKeys.all,
+  notificationKeys.unreadCount,
+  soulKeys.all,
+  workflowKeys.all,
+  dispositionKeys.all,
+  socialKeys.all,
+  schedulerKeys.all,
+] as const;
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -121,8 +145,16 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let connectedBefore = false;
     const client = new WSClient({
       onStatusChange: setStatus,
+      // A re-connect (not the first connect): refetch what a push may have changed while the link was down.
+      onConnected: () => {
+        if (connectedBefore) {
+          for (const queryKey of KEYS_MISSED_WHILE_DISCONNECTED) queryClient.invalidateQueries({ queryKey });
+        }
+        connectedBefore = true;
+      },
       onNotification: handleNotification,
       onWorkflowEvent: handleWorkflowEvent,
       onGenericEvent: handleGenericEvent,
@@ -145,7 +177,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       client.disconnect();
       clientRef.current = null;
     };
-  }, [user, handleNotification, handleWorkflowEvent, handleGenericEvent, refreshFromServer]);
+  }, [user, handleNotification, handleWorkflowEvent, handleGenericEvent, refreshFromServer, queryClient]);
 
   /**
    * A suspended session coming back re-opens the socket.

@@ -291,6 +291,58 @@ describe("WebSocketProvider status propagation", () => {
 
 // ── Event fan-out ────────────────────────────────────────────────────
 
+describe("WebSocketProvider catch-up after a reconnect", () => {
+  // A push sent while the link was down is gone: the server does not replay it. So the provider
+  // refetches what the realtime handlers keep fresh when the link comes BACK (not on the first connect).
+  const MISSED = [
+    '["notifications"]',
+    '["notifications-unread-count"]',
+    '["souls"]',
+    '["workflows"]',
+    '["dispositions"]',
+    '["social"]',
+    '["scheduler"]',
+  ];
+
+  it("the first connect invalidates nothing; a reconnect invalidates the missed families", () => {
+    renderProvider();
+    act(() => lastSocket().open());
+    act(() => lastSocket().receive({ type: "connected" }));
+    expect(invalidatedKeys()).toEqual([]);
+
+    act(() => lastSocket().serverClose(1006));
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+    expect(invalidatedKeys()).toEqual([]); // reconnecting is not reconnected
+
+    act(() => lastSocket().open());
+    act(() => lastSocket().receive({ type: "connected" }));
+    expect(invalidatedKeys().sort()).toEqual([...MISSED].sort());
+  });
+
+  it("reaches a cached soul detail and the unread badge, and not a family no handler maintains", () => {
+    queryClient.setQueryData(["souls", "detail", "s1"], { id: "s1" });
+    queryClient.setQueryData(["notifications-unread-count"], { count: 0 });
+    queryClient.setQueryData(["judgments", "detail", "j1"], { id: "j1" });
+
+    renderProvider();
+    act(() => lastSocket().open());
+    act(() => lastSocket().receive({ type: "connected" }));
+    act(() => lastSocket().serverClose(1006));
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+    act(() => lastSocket().open());
+    act(() => lastSocket().receive({ type: "connected" }));
+
+    expect(queryClient.getQueryState(["souls", "detail", "s1"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(["notifications-unread-count"])?.isInvalidated).toBe(true);
+    // Absence: a family no realtime handler maintains is not swept along.
+    expect(queryClient.getQueryState(["judgments", "detail", "j1"])?.isInvalidated).toBe(false);
+  });
+});
+
 describe("WebSocketProvider event fan-out", () => {
   function connected() {
     renderProvider();

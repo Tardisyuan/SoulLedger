@@ -49,8 +49,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenant,
 }));
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyLifespanBarChart: () => null,
+jest.mock("@/src/components/charts/LifespanBarChart", () => ({
+  LifespanBarChart: () => null,
 }));
 
 jest.mock("@soulledger/core/api/ledger", () => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
-import { LazyLifespanBarChart } from "@/src/components/charts/LazyDashboardCharts";
+import { LifespanBarChart } from "@/src/components/charts/LifespanBarChart";
 import { useChartColors } from "@/src/hooks/useChartColors";
 import { KARMA_PATTERNS, type ChartColors } from "@/lib/chart-colors";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
@@ -297,7 +297,7 @@ export function SoulKarmaLedgerCard({
         {records.length > 0 && (
           <div className="mt-4">
             <p className="text-xs text-[oklch(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
-            <LazyLifespanBarChart
+            <LifespanBarChart
               data={getLifespanChartData(records, CHART_SERIES)}
               seriesNames={{
                 effective: t("ledger.series_effective"),

@@ -7,11 +7,11 @@ import { HATCH, type ChartPattern } from "@/lib/chart-colors";
 /**
  * The soul page's 寿数 chart — the last chart in the app, drawn with divs (2026-10-30).
  *
- * This file used to hold three recharts components behind `next/dynamic`. Two of them (`LazyBarChart`,
- * `LazySoulLineChart`) had no caller left — the dashboard moved to the 图例账 and CSS realm bars
+ * This file was `LazyDashboardCharts.tsx` and held three recharts components behind `next/dynamic`. Two of them
+ * (`LazyBarChart`, `LazySoulLineChart`) had no caller left — the dashboard moved to the 图例账 and CSS realm bars
  * (`dashboard/RealmBars.tsx`, Design A4) — and the third pulled the whole recharts chunk (~146 KB gz) into the
- * soul page for one stacked bar per ledger record. It is now what RealmBars is: boxes with heights. The name is
- * kept so the dozen test mocks that stub it by name keep working; nothing about it is lazy any more.
+ * soul page for one stacked bar per ledger record. It is now what RealmBars is: boxes with heights, nothing lazy,
+ * so file and export were renamed to `LifespanBarChart` (2026-10-31) along with every test mock.
  *
  * Encoding (unchanged): one column per record, labelled by year. `effective` — the decayed weight, signed
  * (+merit / −demerit) — draws at 85% opacity from the zero line; `decayedAway` (same sign, since decay only shrinks
@@ -48,7 +48,7 @@ const round = (n: number) => Number(n.toFixed(2));
  * `seriesNames` is required: the two series used to print as the raw dataKeys `effective` / `decayedAway` in a
  * zh-Hans tooltip. A caller cannot render this chart without deciding what the two are called.
  */
-function LazyLifespanBarChart({
+function LifespanBarChart({
   data,
   height = 140,
   seriesNames,
@@ -118,4 +118,4 @@ function LazyLifespanBarChart({
   );
 }
 
-export { LazyLifespanBarChart };
+export { LifespanBarChart };

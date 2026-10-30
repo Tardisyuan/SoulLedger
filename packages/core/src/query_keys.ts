@@ -281,9 +281,6 @@ export const socialKeys = {
     list: (params?: Record<string, string | number | undefined>) =>
       [...socialKeys.comments.all, "list", params] as const,
   },
-  reactions: {
-    all: ["social", "reactions"] as const,
-  },
   follows: {
     all: ["social", "follows"] as const,
     following: ["social", "follows", "following"] as const,
