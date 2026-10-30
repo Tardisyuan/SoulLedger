@@ -617,6 +617,11 @@ jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,�
 写在事务之后的 `log*` 在失败时业务已经提交、无从回滚;写在内层 `atomic` 里又被吞掉异常的,会静默回滚却报成功 ——
 修之前有 17 处是后一种。`tests/test_event_log_inside_transactions.py` 按「不在事务里 / 调用方有事务 / 调用方之后还查询」
 三种上下文逐条注入失败。新加一个会写事件的业务路径,就在那张网格里加一格。
+**入口(2026-10-30 统一,与 `apps/events/services.py` 文件头同一句)**:只上灵魂时间线的用 `EventService.log*`;
+还要发网页实时推送与租户 webhook、或要记在灵魂原属租户的,用 `event_bus.publish_soul_event(soul, …, domain=…, tenant=…)`
+(调拨走 dispatch 域、受刑计划走 sentence_plan 域)。两条都由 `AuditHandler` 写行,规则相同;**不要直接 `SoulEvent.objects.create`**
+—— 那样的行到不了任何别的处理器(此前调拨与受刑计划就是这样,推送靠 post_save 补接,webhook / 实时推送收不到)。
+`AuditHandler` 找不到灵魂(软删、不在事件租户、也不在其原属租户)**抛 `SoulEventTargetError`**,业务随之回滚,不再静默跳过。
 事件类型必须先登记进 `EventType`(`tests/test_event_types_fit_the_column.py` 会点名),登记后前端那几道守卫会跟着要词条;
 egy 没有 Design 的词时把键写进 `frontend/src/__tests__/support/egyPendingKeys.json`,后端和前端的守卫现在都认这份清单。
 

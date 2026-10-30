@@ -32,8 +32,6 @@ from django.utils import timezone
 from apps.judgment.claims import ClaimRefusedError, _lock
 from apps.judgment.models import GRIEVANCE_RELEASE_LEVELS, GrievanceStatus, Judgment
 
-_BOOKKEEPING = ("version", "update_user", "update_time")
-
 
 class WangsiRefusedError(ClaimRefusedError):
     """枉死城的申诉此刻不接受这个动作。"""
@@ -73,7 +71,7 @@ def may_decide(user, judgment: Judgment) -> bool:
 
 
 def _save(judgment: Judgment, *fields: str) -> None:
-    judgment.save(update_fields=[*fields, *_BOOKKEEPING])
+    judgment.save(update_fields=fields)  # version / update_user / update_time: AuditUserFields.save
 
 
 def _event(judgment: Judgment, event_type: str, **extra) -> None:

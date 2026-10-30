@@ -604,8 +604,7 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
         disposition.is_eternal = content["is_eternal"]
         disposition.memory_reset = content["memory_reset"]
         disposition.sentence_years = content["sentence_years"]
-        disposition.save(update_fields=["destination_realm", "is_eternal", "memory_reset", "sentence_years",
-                                        "update_time", "update_user", "version"])
+        disposition.save(update_fields=["destination_realm", "is_eternal", "memory_reset", "sentence_years"])
         SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
 
     found = (SentencePlan.all_objects.filter(origin_judgment_id=judgment.pk, is_deleted=False)

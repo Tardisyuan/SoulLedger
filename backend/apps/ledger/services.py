@@ -281,7 +281,7 @@ class LedgerService:
             soul.merit_score = round(merit)
             soul.demerit_score = round(demerit)
             soul.needs_ledger_recalculation = False  # this run IS the recalculation a failed batch flush asked for
-            soul.save(update_fields=["merit_score", "demerit_score", "needs_ledger_recalculation", "update_time"])
+            soul.save(update_fields=["merit_score", "demerit_score", "needs_ledger_recalculation"])
 
             # The event row is part of the recalculation's record: same transaction, so a failed insert rolls
             # the new scores back and reaches the caller.

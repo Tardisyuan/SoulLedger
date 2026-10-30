@@ -53,7 +53,7 @@ class EventEnvelope:
 
     __slots__ = (
         "event_type", "payload", "domain", "tenant_code",
-        "user_ids", "permission", "actor",
+        "user_ids", "permission", "actor", "event_id",
     )
 
     def __init__(
@@ -73,6 +73,9 @@ class EventEnvelope:
         self.user_ids = user_ids
         self.permission = permission
         self.actor = actor
+        # The `SoulEvent` row's id, set by `AuditHandler` once it has written it (None until then, and for
+        # events without a soul). Later handlers use it as a business key when the payload has none.
+        self.event_id = None
 
     def to_dict(self) -> dict:
         """Serialize for logging / transport."""
@@ -207,14 +210,26 @@ class EventBus:
     # ------------------------------------------------------------------
 
     def publish_soul_event(
-        self, soul: Any, event_type: str, payload: dict, actor: str = "system"
+        self, soul: Any, event_type: str, payload: dict, actor: str = "system", *,
+        tenant: Any = None, domain: str = "soul", permission: str | None = None,
     ) -> None:
-        """Publish a soul-domain audit event."""
+        """Publish an event about one soul; `AuditHandler` writes its `SoulEvent` row.
+
+        `tenant`: the tenant the event is recorded in; default the soul's current tenant. Name another one only
+        for the soul's HOME tenant (e.g. a dispatch decision recorded in the hall that sent the soul while it
+        resides elsewhere). `AuditHandler` accepts the soul's current or home tenant and raises on anything else.
+
+        `domain`: which handlers fire. "soul" = timeline and soul push only; "dispatch" and "sentence_plan" also
+        reach the web socket and the tenant's webhooks (`configure_default_handlers`).
+        """
+        if tenant is None:
+            tenant = soul.tenant if soul.tenant_id else None
         self.publish(
             event_type=event_type,
             payload={"soul_id": str(soul.id), **payload},
-            domain="soul",
-            tenant_code=getattr(soul.tenant, "code", None) if soul.tenant else None,
+            domain=domain,
+            tenant_code=tenant.code if tenant is not None else None,
+            permission=permission,
             actor=actor,
         )
 
@@ -331,13 +346,16 @@ def configure_default_handlers() -> None:
         return  # already configured
 
     # Audit logging — all domains that carry soul_id in payload
-    for domain in ("soul", "workflow", "notification", "dispatch", "deathsync", "social"):
+    for domain in ("soul", "workflow", "notification", "dispatch", "sentence_plan", "deathsync", "social"):
         handler_registry.register_domain(domain, AuditHandler())
 
     # 灵魂端推送(apps/soul_push)。在 AuditHandler 之后:推送是对已记下事实的宣告。
+    # dispatch / sentence_plan:暂居与受刑计划的事件(2026-10-30 收口进总线;此前直接写 SoulEvent,
+    # 由已删除的 soul_push/signals.py 的 post_save 补接)。
     from apps.soul_push.handler import SoulPushHandler
 
-    handler_registry.register_domain("soul", SoulPushHandler())
+    for domain in ("soul", "dispatch", "sentence_plan"):
+        handler_registry.register_domain(domain, SoulPushHandler())
 
     # Notification domain — the UserNotification row itself.
     #
@@ -360,13 +378,14 @@ def configure_default_handlers() -> None:
     # list below: those are tenant-facing business events; a run heartbeat
     # every five minutes is operator telemetry, not something an external
     # webhook subscribed to.
-    for domain in ("workflow", "notification", "dispatch", "deathsync", "social", "scheduler"):
+    for domain in ("workflow", "notification", "dispatch", "sentence_plan", "deathsync", "social", "scheduler"):
         handler_registry.register_domain(domain, WebSocketHandler())
 
     # Webhook delivery (filters by tenant internally). Not "notification" (决定 26, 2026-10-29): those are
     # one officer's own inbox — password help, impersonation notices, letters handed over — addressed to a
     # person, not business facts an external integration subscribes to.
-    for domain in ("workflow", "dispatch", "deathsync", "social"):
+    # 调拨与受刑计划事件也发 webhook(用户 2026-10-30)。
+    for domain in ("workflow", "dispatch", "sentence_plan", "deathsync", "social"):
         handler_registry.register_domain(domain, WebhookHandler())
 
     # Scheduler: by event type, not by domain. Of the scheduler events only a

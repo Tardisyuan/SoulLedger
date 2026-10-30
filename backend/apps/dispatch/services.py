@@ -12,7 +12,7 @@ from apps.dispatch.models import (
     JudgmentStatus,
     ParticipantRole,
 )
-from apps.events.models import EventType, SoulEvent
+from apps.events.models import EventType, SoulEvent  # SoulEvent: read only (record_blocked_return)
 
 
 def _holders(tenants, codename):
@@ -130,6 +130,18 @@ def _after_commit(send):
     静默回滚自己那一段、调用方却拿到「成功」的返回值。回调里失败只丢这一条通知。
     收件人在回调里才查(提交后的状态)。不在事务里时 `on_commit` 立刻执行,行为不变。"""
     transaction.on_commit(send)
+
+
+def _log(soul, payload, actor, *, tenant=None):
+    """调拨的领域事件(`STATE_CHANGED` + `action`)经事件总线写:SoulEvent 行、灵魂端推送、网页实时推送、
+    租户 webhook 一处出(2026-10-30 收口,此前直接 `SoulEvent.objects.create`,后三者都收不到)。
+    `tenant` 默认灵魂此刻所在;记在原属殿时传它(AuditHandler 只认当前或原属)。必须在业务事务里调。"""
+    from apps.events.event_bus import event_bus
+
+    event_bus.publish_soul_event(
+        soul, EventType.STATE_CHANGED, payload, actor=str(actor) if actor is not None else "system",
+        tenant=tenant, domain="dispatch", permission="dispatch.read",
+    )
 
 
 class DispatchService:
@@ -251,8 +263,7 @@ class DispatchService:
                 reason=reason,
                 tenant=source_tenant,
             )
-
-        DispatchService._announce_proposal(dispatch_record, dispatcher)
+            DispatchService._announce_proposal(dispatch_record, dispatcher)
         return dispatch_record
 
     #: What a draft save may write. Everything else on the row is set by the server.
@@ -300,12 +311,12 @@ class DispatchService:
             locked.status = DispatchStatus.PROPOSED
             locked.proposed_at = timezone.now()
             locked.save()
-        DispatchService._announce_proposal(locked, dispatcher)
+            DispatchService._announce_proposal(locked, dispatcher)
         return locked
 
     @staticmethod
     def _announce_proposal(dispatch_record, dispatcher):
-        """提案成立之后的两件事:通知目标租户,记领域事件。草稿在提交之前一件都不做。"""
+        """提案成立之后的两件事:通知目标租户(提交后才发),记领域事件(在提案的事务里)。草稿在提交之前一件都不做。"""
         DispatchService._notify_target_tenant(dispatch_record)
         payload = {
             "action": "DISPATCH_PROPOSED",
@@ -315,14 +326,8 @@ class DispatchService:
         }
         if dispatch_record.target_realm_id:
             payload["target_realm"] = dispatch_record.target_realm.realm_code
-        SoulEvent.objects.create(
-            tenant=dispatch_record.source_tenant,
-            soul=dispatch_record.soul,
-            event_type=EventType.STATE_CHANGED,
-            payload=payload,
-            # 受刑计划推进由系统发起(`dispatcher=None`,设计稿 §2.4)。
-            actor=str(dispatcher) if dispatcher is not None else "system",
-        )
+        # 受刑计划推进由系统发起(`dispatcher=None` → "system",设计稿 §2.4)。
+        _log(dispatch_record.soul, payload, dispatcher, tenant=dispatch_record.source_tenant)
 
     @staticmethod
     def _notify_target_tenant(dispatch_record):
@@ -368,22 +373,20 @@ class DispatchService:
         """
         # 殿可以在提案挂着的时候关掉:批准是目标殿的「收下」,关着的殿不收(驳回仍可以)。
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
-        if not dispatch_record.transition_to(
-            DispatchStatus.APPROVED, decided_at=timezone.now(), decided_by=_decider(approver),
-        ):
-            raise ValueError(f"Cannot approve dispatch in status: {dispatch_record.status}")
+        with transaction.atomic():  # 状态与事件同进退(CLAUDE.md「事件日志是业务记录的一部分」)
+            # 锁序 灵魂 → 调拨记录,同 reject / cancel_proposed。事件行的外键要灵魂行的 KEY SHARE 锁:
+            # 先锁记录再写事件,与先锁灵魂再锁记录的取消互相等,真 PG 上死锁(test_concurrency 抓到)。
+            DispatchService._lock_soul(dispatch_record.soul_id)
+            if not dispatch_record.transition_to(
+                DispatchStatus.APPROVED, decided_at=timezone.now(), decided_by=_decider(approver),
+            ):
+                raise ValueError(f"Cannot approve dispatch in status: {dispatch_record.status}")
 
-        # Notify source tenant
-        DispatchService._notify_approval(dispatch_record, approved=True)
+            # Notify source tenant (after commit)
+            DispatchService._notify_approval(dispatch_record, approved=True)
 
-        # Log domain event
-        SoulEvent.objects.create(
-            tenant=dispatch_record.source_tenant,
-            soul=dispatch_record.soul,
-            event_type=EventType.STATE_CHANGED,
-            payload={"action": "DISPATCH_APPROVED", "dispatch_id": str(dispatch_record.id)},
-            actor=str(approver),
-        )
+            _log(dispatch_record.soul, {"action": "DISPATCH_APPROVED", "dispatch_id": str(dispatch_record.id)},
+                 approver, tenant=dispatch_record.source_tenant)
 
         return dispatch_record
 
@@ -411,17 +414,11 @@ class DispatchService:
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
 
-        # Notify source tenant
-        DispatchService._notify_approval(dispatch_record, approved=False, reason=reason)
+            # Notify source tenant (after commit)
+            DispatchService._notify_approval(dispatch_record, approved=False, reason=reason)
 
-        # Log domain event
-        SoulEvent.objects.create(
-            tenant=dispatch_record.source_tenant,
-            soul=dispatch_record.soul,
-            event_type=EventType.STATE_CHANGED,
-            payload={"action": "DISPATCH_REJECTED", "dispatch_id": str(dispatch_record.id), "reason": reason},
-            actor=str(rejector),
-        )
+            _log(soul, {"action": "DISPATCH_REJECTED", "dispatch_id": str(dispatch_record.id), "reason": reason},
+                 rejector, tenant=dispatch_record.source_tenant)
 
         return dispatch_record
 
@@ -485,20 +482,14 @@ class DispatchService:
                 SoulPathService.leave(soul)
             dispatch_record.soul = soul
 
-            # Create soul event
-            SoulEvent.objects.create(
-                tenant=dispatch_record.target_tenant,
-                soul=soul,
-                event_type=EventType.STATE_CHANGED,
-                payload={
-                    "action": "DISPATCH_EXECUTED",
-                    "from_tenant": old_tenant.code,
-                    "to_tenant": dispatch_record.target_tenant.code,
-                    "home_tenant": soul.home_tenant.code,
-                    "dispatch_id": str(dispatch_record.id),
-                },
-                actor=str(executor),
-            )
+            # 记在目标租户(灵魂此刻所在)。
+            _log(soul, {
+                "action": "DISPATCH_EXECUTED",
+                "from_tenant": old_tenant.code,
+                "to_tenant": dispatch_record.target_tenant.code,
+                "home_tenant": soul.home_tenant.code,
+                "dispatch_id": str(dispatch_record.id),
+            }, executor)
             # 受刑计划的这一站:节点 DISPATCHING → ACTIVE,按节点内容建处置(同一事务)。
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_executed(soul, dispatch_record)
@@ -558,13 +549,8 @@ class DispatchService:
                 raise DispatchNotCancellableError(current.status)
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
-            SoulEvent.objects.create(
-                tenant=dispatch_record.source_tenant,
-                soul=dispatch_record.soul,
-                event_type=EventType.STATE_CHANGED,
-                payload={"action": "DISPATCH_CANCELLED", "dispatch_id": str(dispatch_record.id), "reason": reason},
-                actor=str(canceller),
-            )
+            _log(soul, {"action": "DISPATCH_CANCELLED", "dispatch_id": str(dispatch_record.id), "reason": reason},
+                 canceller, tenant=dispatch_record.source_tenant)
             DispatchService._notify_cancelled(dispatch_record, reason)
         return dispatch_record
 
@@ -651,10 +637,7 @@ class DispatchService:
                 "dispatch_id": str(record.id) if record else None,
                 "reason": reason,
             }
-            SoulEvent.objects.create(
-                tenant=home, soul=locked, event_type=EventType.STATE_CHANGED,
-                payload=payload, actor=str(actor),
-            )
+            _log(locked, payload, actor)  # 灵魂已回到原属殿,记在那里
             AuditLog.objects.create(
                 tenant=home,
                 user=actor if getattr(actor, "is_authenticated", False) else None,
@@ -705,17 +688,13 @@ class DispatchService:
             already_told = SoulEvent.all_objects.filter(
                 soul_id=locked.pk, payload__action="DISPATCH_RETURN_BLOCKED", payload__dispatch_id=dispatch_id,
             ).exists()
-            SoulEvent.objects.create(
-                tenant_id=locked.tenant_id, soul=locked, event_type=EventType.STATE_CHANGED,
-                payload={
-                    "action": "DISPATCH_RETURN_BLOCKED",
-                    "code": blocked.code,
-                    "open_judgment_ids": blocked.judgment_ids,
-                    "disposition_id": str(disposition.pk),
-                    "dispatch_id": dispatch_id,
-                },
-                actor="system",
-            )
+            _log(locked, {
+                "action": "DISPATCH_RETURN_BLOCKED",
+                "code": blocked.code,
+                "open_judgment_ids": blocked.judgment_ids,
+                "disposition_id": str(disposition.pk),
+                "dispatch_id": dispatch_id,
+            }, None)
             if not already_told:
                 DispatchService._notify_return_blocked(locked, dispatch_id, len(blocked.judgment_ids))
 
