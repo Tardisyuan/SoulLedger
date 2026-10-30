@@ -1,9 +1,10 @@
 /**
- * The officer app's rules that are not pixels: what a decision sends, why one failed, where a
- * push lands, where "continue on desktop" points. Pure functions so a test can pin each.
+ * The officer app's rules that are not pixels: which verdict a decision carries, why one failed, where a
+ * push lands, where "continue on desktop" points. Pure functions so a test can pin each; the one that
+ * sends a decision is `decisions.ts` (cq-apps 2026-10-30 #9).
  */
 import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
-import { dispatchApi, type DispatchRecord } from "@soulledger/core/api/dispatch";
+import type { DispatchRecord } from "@soulledger/core/api/dispatch";
 import {
   decisionFailureOf,
   type DecisionFailureCode,
@@ -12,9 +13,7 @@ import {
   type TodoItemDetail,
   type TodoKind,
 } from "@soulledger/core/api/officer-app";
-import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox";
-import { workflowApi } from "@soulledger/core/api/workflow";
 import { TENANT_CODE_TO_CIVILIZATION, realmLabel } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
 
@@ -136,17 +135,6 @@ export function refuseVerdictOf(detail: Pick<TodoItemDetail, "required_verdicts"
   return declared.length > 0 && !declared.includes("REJECTED") && declared.includes("FAILED") ? "FAILED" : "REJECTED";
 }
 
-export interface DecisionInput {
-  detail: TodoItemDetail;
-  verdict: Verdict;
-  /** An approval of a workflow node: which passing verdict (when the node accepts several). */
-  passVerdict?: string;
-  /** The reject reason (required to reject); an approval's optional note. */
-  reason: string;
-  /** Cooldown shortening only: the days to approve. */
-  days?: number;
-}
-
 /**
  * 转生初审的批准底页(Design 第四十批 O-b),不加开关:
  * `no` = 初审(第一步、不是申诉)且没定成跨 —— 底页写「跨文明：不跨，批准后不能改」,按钮「批准 · 不跨」;
@@ -164,45 +152,6 @@ export function rebirthCross(detail: Pick<TodoItemDetail, "kind" | "facts" | "is
 /** A reject without a reason is refused HERE, before any request; the screen marks it on confirm. */
 export function reasonMissing(verdict: Verdict, reason: string): boolean {
   return verdict === "reject" && reason.trim() === "";
-}
-
-/**
- * Sends one decision to the endpoint the desk already uses for that kind. `require_reason: true`
- * asks the server to enforce the same rule (400 `reason_required`). Rejects with the axios error;
- * `decisionFailure` reads it.
- */
-export async function submitDecision({ detail, verdict, reason, days, passVerdict }: DecisionInput): Promise<void> {
-  const note = reason.trim();
-  if (verdict === "reject" && note === "") throw new Error("reason_required");
-  if (detail.kind === "approval" || detail.kind === "rebirth") {
-    if (!detail.workflow_id || !detail.node_id) throw new Error("no_node");
-    // O-b: approving the first review on the phone settles 跨文明 as 「不跨」 -- written first, so the record says so.
-    // 409 = the first review is already past (the flag is no longer this step's to set): approve as before.
-    if (verdict === "approve" && rebirthCross(detail) === "no" && (detail.facts as TodoFacts | undefined)?.cross_civilization == null) {
-      await soulAccountsApi.decideCrossCivilization(detail.id, false).catch((e: unknown) => {
-        if ((e as { response?: { status?: number } })?.response?.status !== 409) throw e;
-      });
-    }
-    await workflowApi.approveNode(detail.workflow_id, detail.node_id, {
-      verdict: verdict === "approve" ? (passVerdict ?? passVerdictsOf(detail)[0]) : refuseVerdictOf(detail),
-      notes: note,
-      require_reason: true,
-      // A rebirth rejection is read by the soul; the same words, since the officer wrote one reason.
-      ...(detail.kind === "rebirth" && verdict === "reject" ? { rejection_reason_for_soul: note } : {}),
-    });
-    return;
-  }
-  if (detail.kind === "cooldown") {
-    if (verdict === "approve") await soulAccountsApi.approveCooldownShortening(detail.id, days ?? 0, note);
-    else await soulAccountsApi.rejectCooldownShortening(detail.id, note);
-    return;
-  }
-  if (detail.kind === "reassignment") {
-    if (verdict === "approve") await dispatchApi.approve(detail.id);
-    else await dispatchApi.reject(detail.id, note);
-    return;
-  }
-  throw new Error("unknown_kind");
 }
 
 /** Why a submit failed (the words are under officer_app confirm reasons), plus who handled it if known. */

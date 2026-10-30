@@ -4,7 +4,7 @@
  * served called their APIs directly, and an officer with the switch on concluded a case without the phone asking.
  *
  * Read from source, not imported: a call site written any other way is red here, with its file and line.
- * The low-level approve / reject calls live only in rules.ts, inside `submitDecision` -- which is itself a decision.
+ * The low-level approve / reject calls live only in decisions.ts, inside `submitDecision` -- which is itself a decision.
  * NOT decisions (they never ask, by design, deviceCheck.ts): comments, co-sign, claim, 放回 (`judgmentApi.release`
  * gives a claimed case back to the queue), defer / undefer, reassign, letters.
  */
@@ -41,16 +41,16 @@ const files = sources(SRC).filter((f) => !f.endsWith("deviceCheck.ts"));
 const texts = files.map((f) => [relative(SRC, f), readFileSync(f, "utf8")] as const);
 
 it("every decision call site goes through confirmedDecision", () => {
-  const sites = texts.filter(([f]) => f !== "rules.ts").flatMap(([f, s]) => [...s.matchAll(DECISION)].map(() => f));
+  const sites = texts.filter(([f]) => f !== "decisions.ts").flatMap(([f, s]) => [...s.matchAll(DECISION)].map(() => f));
   // Not vacuous: the scan still finds the four screens that send decisions.
   expect(new Set(sites)).toEqual(new Set(["screens/sheets.tsx", "screens/wangsi.tsx", "screens/servingFact.tsx", "screens/cityGod.tsx"]));
   expect(sites.length).toBeGreaterThanOrEqual(5);
   expect(texts.flatMap(([f, s]) => unchecked(f, s))).toEqual([]);
 });
 
-it("the low-level approve / reject calls are only in rules.ts (inside submitDecision)", () => {
+it("the low-level approve / reject calls are only in decisions.ts (inside submitDecision)", () => {
   const where = texts.filter(([, s]) => [...s.matchAll(LOW_LEVEL)].length > 0).map(([f]) => f);
-  expect(where).toEqual(["rules.ts"]);
+  expect(where).toEqual(["decisions.ts"]);
 });
 
 it("the scan is red on a direct call and on a call outside the wrapper's expression", () => {

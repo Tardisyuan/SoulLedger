@@ -26,8 +26,8 @@ import {
   passwordFailure,
   reassignCandidates,
   rebirthCross,
-  submitDecision,
 } from "../rules";
+import { submitDecision } from "../decisions";
 
 const mockApproveNode = jest.fn();
 const mockCooldownApprove = jest.fn();
