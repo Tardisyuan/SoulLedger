@@ -47,13 +47,18 @@ export const FONT_ASSETS = {
   // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
   // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
   SoulLedgerGlyphs: require("../assets/fonts/SoulLedgerGlyphs.ttf"),
-  // v3's outline seal for 埃及 (its default glyph is U+13184), loaded with the rest at boot. v2 朱印's
-  // other three glyph faces (霞鹜篆书, UnifrakturMaguntia, GFS Didot) went with v2's seal (2026-10-03);
+  // v2 朱印's glyph faces (霞鹜篆书, UnifrakturMaguntia, GFS Didot) went with v2's seal (2026-10-03);
   // its plaque title faces (Josefin Slab, Cinzel, Ma Shan Zheng) with v2's plaque (2026-10-02).
-  NotoSansEgyptianHieroglyphs_400Regular,
 };
 
-type FontName = keyof typeof FONT_ASSETS;
+/**
+ * 埃及's outline seal (its default glyph U+13184) — about 1 MB, and drawn only by a seal whose glyph is a
+ * hieroglyph. Not in `FONT_ASSETS`, so neither app reads it at boot (S2, 2026-10-30): `OutlineSeal` loads it
+ * the first time it has a hieroglyph to draw (`useHieroglyphFace` in seal.tsx).
+ */
+export const HIEROGLYPH_FONT = { NotoSansEgyptianHieroglyphs_400Regular };
+
+type FontName = keyof typeof FONT_ASSETS | keyof typeof HIEROGLYPH_FONT;
 
 export const family = {
   ui: { 400: "Archivo_400Regular", 500: "Archivo_500Medium", 600: "Archivo_600SemiBold" },
