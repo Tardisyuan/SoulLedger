@@ -9,9 +9,10 @@
  * - 功过用**实底与空框斜线**分,不用状态色(反馈色不进领域枚举);
  * - 提示框 s1 底 + 1px ink 框;图形对 bg ≥ 3:1,数字直接标在图上,图例只作补充。
  *
- * Recharts props (`fill`, `stroke`, …) take concrete colours and cannot read CSS
+ * Recharts props (`fill`, `stroke`, …) took concrete colours and could not read CSS
  * custom properties, so the tokens in app/globals.css are mirrored here as
- * `oklch()` literals, one table per theme. `CHART_TOKENS` names the token each
+ * `oklch()` literals, one table per theme. recharts is gone since 2026-10-30; the
+ * remaining reader (the soul page's 寿数 bars) puts these literals in inline `style`. `CHART_TOKENS` names the token each
  * entry mirrors; src/__tests__/chartColourContract.test.ts holds every literal
  * to that token's value in both themes, so this file cannot drift.
  * `src/hooks/useChartColors.ts` picks the table for the current theme.
@@ -24,7 +25,7 @@ export type ChartSeriesKey = "balance" | "realm" | "neutral" | "merit" | "demeri
 export type ChartChromeKey = "grid" | "axis" | "tick" | "tooltipBg" | "tooltipBorder";
 
 /**
- * A5 的四种图案。recharts 里 `half` 是梯度第 4 档的实底,另外三种都用第 1 档;
+ * A5 的四种图案。recharts(2026-10-30 已删)里 `half` 是梯度第 4 档的实底,另外三种都用第 1 档;
  * 仪表盘「按界域」的 CSS 柱(`RealmBars`,Design A4)把 `half` 画成第 1 档的点阵半色调。
  */
 export type ChartPattern = "solid" | "half" | "hatch" | "outline" | "void";

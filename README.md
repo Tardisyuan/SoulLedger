@@ -352,7 +352,7 @@ bash scripts/install-hooks.sh  # 装 git 钩子，见「测试、门禁与 CI」
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | Next.js 16、React 19、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
+| 前端 | Next.js 16、React 19、TypeScript 5、Tailwind CSS 4、TanStack Query v5、@xyflow/react（流程画布）、class-variance-authority；图表用 div / CSS 画，没有图表库 |
 | 字体 | next/font + Archivo / Source Serif 4 / IBM Plex Mono；`@fontsource-variable/noto-sans-sc`、`-serif-sc` 自托管切片（各 101 片带 `unicode-range`，浏览器只取用到的那几片） |
 | 后端 | Django 5、Django REST Framework、drf-spectacular、channels + daphne |
 | 数据库 | PostgreSQL 16（Docker/生产，助手检索用 pgvector）、SQLite（本地默认） |
