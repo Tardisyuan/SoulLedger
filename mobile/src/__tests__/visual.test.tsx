@@ -14,7 +14,7 @@ import { useState, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { LogoutProvider, useAskLogout } from "../feedback";
+import { LogoutProvider, useAskLogout } from "../logout";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LOCALE_COOKIE } from "@soulledger/core/config/locale";

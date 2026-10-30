@@ -7,7 +7,7 @@ import { join } from "path";
 
 const SRC = join(__dirname, "..");
 const BACKDROPS: [string, RegExp][] = [
-  ["feedback.tsx", /<Pressable style=\{styles\.fill\}[^\n]*\/>/g],
+  ["logout.tsx", /<Pressable style=\{styles\.fill\}[^\n]*\/>/g],
   ["screens/circlePeople.tsx", /<Pressable style=\{styles\.fill\}[^\n]*\/>/g],
   ["screens/circle.tsx", /<Pressable style=\{styles\.fill\}[^\n]*\/>/g],
   ["screens/mfaParts.tsx", /<Pressable style=\{styles\.fill\}[^\n]*\/>/g],

@@ -1,7 +1,8 @@
 /**
- * Transient feedback: the toast (bottom, 110pt up, 4s, success / failure)
- * and the sign-out confirmation sheet. Both only fade — 160ms / 120ms, or 0
- * under reduce-motion. And `Sheet`, v2's bottom sheet, at the end.
+ * Transient feedback: the toast (bottom, 110pt up, 4s, success / failure). It only fades —
+ * 160ms, or 0 under reduce-motion. And `Sheet`, v2's bottom sheet, at the end. The sign-out
+ * confirmation is in `logout.tsx`: it reads `loginRules`, which the officer app (it shares this
+ * file) has no use for.
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -14,16 +15,13 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Dimensions, Keyboard, Modal, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
+import { Animated, BackHandler, Dimensions, Keyboard, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
-import { BIO_KEY, logoutBody } from "./loginRules";
-import { platform } from "@soulledger/core/platform";
-import { useI18n } from "./i18n";
 import { radius } from "./theme";
-import { Button, InSheetContext, SheetRevealContext, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { InSheetContext, SheetRevealContext, GUTTER, Txt, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
@@ -76,65 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const LogoutContext = createContext<() => void>(() => {});
-/** Opens the sign-out confirmation. Signing out is never one tap away. */
-export const useAskLogout = () => useContext(LogoutContext);
-
-/**
- * The sign-out confirmation, shown from the bottom over a dimmed screen. It
- * says what signing back in will take, because the initial password is gone.
- */
-export function LogoutProvider({ children, onConfirm }: { children: ReactNode; onConfirm: () => void }) {
-  const t = useTheme();
-  const { t: tr } = useI18n();
-  const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
-  const [visible, setVisible] = useState(false);
-  const ask = useCallback(() => setVisible(true), []);
-  const cancel = () => setVisible(false);
-  // Read when the sheet is drawn: the flag changes in Settings while this provider stays mounted.
-  const body = logoutBody(visible ? platform().persistent.get(BIO_KEY) : null);
-  return (
-    <LogoutContext.Provider value={ask}>
-      {children}
-      <Modal visible={visible} transparent animationType={reduced ? "none" : "fade"} onRequestClose={cancel}>
-        <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
-          <Pressable style={styles.fill} accessibilityRole="button" onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
-          <View
-            testID="confirm-sheet"
-            accessibilityViewIsModal
-            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 32 + insets.bottom }]}
-          >
-            <Txt variant="title">
-              {tr("soul_app.logout.title")}
-            </Txt>
-            <Txt testID="logout-body" variant="caption" tone="muted">
-              {body.bioKey ? tr(body.key, { bio: tr(body.bioKey) }) : tr(body.key)}
-            </Txt>
-            <Txt testID="logout-forget-hint" variant="caption" tone="muted">
-              {tr("soul_app.logout.forget_hint")}
-            </Txt>
-            <View style={styles.sheetButtons}>
-              <Button
-                testID="logout-confirm"
-                kind="danger"
-                title={tr("soul_app.life.logout")}
-                onPress={() => {
-                  setVisible(false);
-                  onConfirm();
-                }}
-              />
-              <Button testID="logout-cancel" kind="secondary" title={tr("soul_app.logout.cancel")} onPress={cancel} />
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </LogoutContext.Provider>
-  );
-}
-
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
   toast: {
     position: "absolute",
     left: GUTTER,
@@ -148,9 +88,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   toastText: { flex: 1, fontSize: 13 },
-  scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
-  sheetButtons: { marginTop: 12, gap: 12 },
 });
 
 /**
