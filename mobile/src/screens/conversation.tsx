@@ -21,7 +21,7 @@
 import { soulSocialApi } from "@soulledger/core/api/soul-social";
 import { hasRead, type ChatMessage } from "@soulledger/core/api/matrix";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Animated,
   FlatList,
@@ -60,6 +60,8 @@ type Line =
   | { kind: "pending"; key: string; o: Outgoing };
 
 const lineKey = (line: Line) => line.key;
+/** One empty list for a room sync has not brought yet, so the memos below see the same "nothing" each render. */
+const NO_MESSAGES: ChatMessage[] = [];
 
 const Mono = ({ children, tone = "muted" }: { children: string; tone?: "muted" | "negInk" }) => (
   <Txt variant="value" tone={tone} style={styles.inlineMono}>
@@ -74,7 +76,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const insets = useSafeAreaInsets();
   const hallName = useCurrentHall();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
-  const [draft, setDraft] = useState("");
+  // The draft lives in the Dock (R2): a keystroke re-renders the composer, not this screen and its thread.
   const toast = useToast();
   const [viewing, setViewing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
@@ -83,7 +85,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
   const c = chat.conversations?.find((row) => row.id === id) ?? chat.gone[id] ?? null;
   const room = c ? chat.timeline.rooms[c.room_id] : undefined;
-  const messages = room?.messages ?? [];
+  const messages = room?.messages ?? NO_MESSAGES;
   const now = useNow();
 
   const mode: ChatMode | null = c
@@ -162,6 +164,72 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     void reload().then(() => setRechecked(id));
   }, [missing, id, reload]);
 
+  // Bubbles: the timeline, day dividers, and this device's sends not yet echoed back. Memoized on what they are
+  // made of, so a re-render that changed none of it (a minute ticking, a refusal elsewhere) hands the list the
+  // same rows. No "" in the set: a message without a txn id (theirs, history) must not match a send with no event id yet.
+  const conversationId = c?.id;
+  const { outbox, me } = chat;
+  const { pending, rows } = useMemo(() => {
+    const echoed = new Set(messages.flatMap((m) => (m.txnId ? [m.eventId, m.txnId] : [m.eventId])));
+    const pending = outbox.filter((o) => o.conversationId === conversationId && !(o.eventId && echoed.has(o.eventId)) && !echoed.has(o.txnId));
+    const lines: Line[] = [];
+    let lastDay = "";
+    for (const item of [...messages.map((m) => ({ ts: m.ts, m })), ...pending.map((o) => ({ ts: o.ts, o }))]) {
+      const day = dayOf(item.ts);
+      if (day !== lastDay) lines.push({ kind: "day", key: `d${day}`, day });
+      lastDay = day;
+      if ("m" in item) lines.push({ kind: "message", key: item.m.eventId, m: item.m, mine: item.m.sender === me });
+      else lines.push({ kind: "pending", key: item.o.txnId, o: item.o });
+    }
+    // Inverted list: newest first.
+    return { pending, rows: lines.reverse() };
+  }, [messages, outbox, conversationId, me]);
+
+  // The viewer pages through every image in the thread, oldest first, and opens on the one tapped.
+  const gallery = useMemo(() => messages.flatMap((m) => (m.image ? [m.image] : [])), [messages]);
+  const landedOn = landed ? lastTheirs?.eventId : undefined;
+  const inboxRoom = c?.kind === "OFFICER_INBOX";
+  const hallTitle = c ? hallOf(c, locale) : "";
+  const hallSealed = mode?.kind === "hall_sealed";
+  const { progress, resend } = chat;
+  // One function for as long as what the rows show is the same, so the list does not redraw every row each render.
+  const renderLine = useCallback(
+    ({ item: line }: { item: Line }) => {
+      const read = (m: ChatMessage) => !inboxRoom && Object.keys(room?.readUpTo ?? {}).some((u) => u !== me && hasRead(room, u, m));
+      if (line.kind === "day") {
+        return (
+          <Txt variant="value" tone="subtle" style={styles.day}>
+            {line.day}
+          </Txt>
+        );
+      }
+      if (line.kind === "pending") {
+        return line.o.image ? (
+          <PendingImage o={line.o} progress={progress[line.o.txnId]} onResend={() => resend(line.o.txnId)} />
+        ) : (
+          <PendingBubble o={line.o} onResend={() => resend(line.o.txnId)} now={now} />
+        );
+      }
+      if (line.m.image) {
+        const image = line.m.image;
+        return (
+          <ChatImageMessage
+            image={image}
+            mine={line.mine}
+            ts={line.m.ts}
+            now={now}
+            onOpen={() => setViewing(Math.max(0, gallery.findIndex((g) => g.id === image.id)))}
+            receipt={line.mine ? tr(read(line.m) ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent") : undefined}
+          />
+        );
+      }
+      if (line.mine) return <Bubble mine m={line.m} now={now} read={read(line.m)} />;
+      if (inboxRoom) return <OfficerBubble m={line.m} hall={hallTitle} sealed={hallSealed} now={now} />;
+      return <Bubble m={line.m} now={now} landed={line.m.eventId === landedOn} />;
+    },
+    [inboxRoom, room, me, progress, resend, now, gallery, tr, hallTitle, hallSealed, landedOn]
+  );
+
   const goHall = async () => {
     try {
       const inbox = await chat.openInbox();
@@ -198,26 +266,12 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const sealed = mode.kind === "closed" || mode.kind === "hall_sealed";
   const unavailable = chat.availability === "unavailable";
 
-  // Bubbles: the timeline, day dividers, and this device's sends not yet echoed back.
-  // No "" in the set: a message without a txn id (theirs, history) must not match a send with no event id yet.
-  const echoed = new Set(messages.flatMap((m) => (m.txnId ? [m.eventId, m.txnId] : [m.eventId])));
-  const pending = chat.outbox.filter((o) => o.conversationId === c.id && !(o.eventId && echoed.has(o.eventId)) && !echoed.has(o.txnId));
-  const lines: Line[] = [];
-  let lastDay = "";
-  for (const item of [...messages.map((m) => ({ ts: m.ts, m })), ...pending.map((o) => ({ ts: o.ts, o }))]) {
-    const day = dayOf(item.ts);
-    if (day !== lastDay) lines.push({ kind: "day", key: `d${day}`, day });
-    lastDay = day;
-    if ("m" in item) lines.push({ kind: "message", key: item.m.eventId, m: item.m, mine: item.m.sender === chat.me });
-    else lines.push({ kind: "pending", key: item.o.txnId, o: item.o });
-  }
-  const landedOn = landed ? lastTheirs?.eventId : undefined;
-
+  /** True when a letter went into the outbox: the Dock then empties its box. */
   const send = (text: string) => {
     const body = text.trim();
-    if (!body) return;
+    if (!body) return false;
     chat.send(c, body);
-    setDraft("");
+    return true;
   };
 
   // Images: the same picker and compression as the circle. Each lands in the outbox as its own message,
@@ -242,9 +296,6 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       setPicking(false);
     }
   };
-  // The viewer pages through every image in the thread, oldest first, and opens on the one tapped.
-  const gallery = messages.flatMap((m) => (m.image ? [m.image] : []));
-  const open = (id: string) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)));
 
   return (
     <KeyboardAvoidingView
@@ -296,45 +347,14 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         ref={list}
         testID="thread"
         inverted
-        data={[...lines].reverse()}
+        data={rows}
         keyExtractor={lineKey}
         style={[styles.fill, sealed && styles.sealed]}
         contentContainerStyle={styles.thread}
         keyboardShouldPersistTaps="handled"
         onEndReached={prevBatch ? older : undefined}
         onEndReachedThreshold={0.5}
-        renderItem={({ item: line }) =>
-          line.kind === "day" ? (
-            <Txt variant="value" tone="subtle" style={styles.day}>
-              {line.day}
-            </Txt>
-          ) : line.kind === "pending" ? (
-            line.o.image ? (
-              <PendingImage o={line.o} progress={chat.progress[line.o.txnId]} onResend={() => chat.resend(line.o.txnId)} />
-            ) : (
-              <PendingBubble o={line.o} onResend={() => chat.resend(line.o.txnId)} now={now} />
-            )
-          ) : line.m.image ? (
-            <ChatImageMessage
-              image={line.m.image}
-              mine={line.mine}
-              ts={line.m.ts}
-              now={now}
-              onOpen={() => open(line.m.image!.id)}
-              receipt={
-                line.mine
-                  ? tr(!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m)) ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent")
-                  : undefined
-              }
-            />
-          ) : line.mine ? (
-            <Bubble mine m={line.m} now={now} read={!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m))} />
-          ) : inbox ? (
-            <OfficerBubble m={line.m} hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} now={now} />
-          ) : (
-            <Bubble m={line.m} now={now} landed={line.m.eventId === landedOn} />
-          )
-        }
+        renderItem={renderLine}
         // Inverted, the header sits under the newest letter and the footer above the oldest.
         ListHeaderComponent={
           <>
@@ -369,8 +389,6 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       <ChatImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
       <Dock
         mode={mode}
-        draft={draft}
-        onDraft={setDraft}
         onSend={send}
         onImage={() => void addImages()}
         picking={picking}
@@ -559,7 +577,8 @@ function Band({
 
 // ── bubbles ────────────────────────────────────────────────────────────
 
-function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean; read?: boolean; landed?: boolean; now: number }) {
+/** Memoized: a message object is kept by the timeline until it changes, so an unchanged bubble skips re-rendering. */
+const Bubble = memo(function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean; read?: boolean; landed?: boolean; now: number }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const reduced = useReducedMotion();
@@ -603,7 +622,7 @@ function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean
       </View>
     </View>
   );
-}
+});
 
 function Body({ text, dim }: { text: string; dim?: boolean }) {
   const t = useTheme();
@@ -708,8 +727,6 @@ function LetterCorners({ civ, stroke }: { civ: CivKey; stroke: string }) {
 
 function Dock({
   mode,
-  draft,
-  onDraft,
   onSend,
   onImage,
   picking,
@@ -719,10 +736,8 @@ function Dock({
   bottom,
 }: {
   mode: ChatMode;
-  draft: string;
-  onDraft: (v: string) => void;
-  /** Called with the text to send — on iOS, what the field holds once the keyboard has committed it. */
-  onSend: (text: string) => void;
+  /** Called with the text to send — on iOS, what the field holds once the keyboard has committed it. True: it went, empty the box. */
+  onSend: (text: string) => boolean;
   onImage: () => void;
   picking: boolean;
   secondary: boolean;
@@ -733,8 +748,13 @@ function Dock({
   const t = useTheme();
   const { t: tr } = useI18n();
   const input = useRef<TextInput>(null);
+  // Here, not in the screen (R2): typing re-renders this composer only. The same component stays mounted across
+  // the dock's states, so the words survive a lock and come back with the box, as they did in the screen.
+  const [draft, setDraft] = useState("");
   const pad = { paddingBottom: 16 + bottom, borderTopColor: t.hair };
-  const { press, onEndEditing } = useCommittedSend(input, draft, onSend);
+  const { press, onEndEditing } = useCommittedSend(input, draft, (text) => {
+    if (onSend(text)) setDraft("");
+  });
   switch (mode.kind) {
     case "outgoing_locked":
       return (
@@ -781,7 +801,7 @@ function Dock({
             testID="compose"
             accessibilityLabel={tr(placeholder)}
             value={draft}
-            onChangeText={onDraft}
+            onChangeText={setDraft}
             onEndEditing={onEndEditing}
             placeholder={tr(placeholder)}
             placeholderTextColor={t.inkSubtle}

@@ -19,10 +19,10 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
-import { FlatList, Platform, StyleSheet, TextInput } from "react-native";
+import { AppState, FlatList, Platform, StyleSheet, TextInput, type AppStateStatus } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, type Chat } from "../chat";
+import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, useChatStatus, type Chat, type ChatStatus } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { AppHeader } from "../chrome";
 import { I18nProvider } from "../i18n";
@@ -524,6 +524,32 @@ describe("the thread is an inverted FlatList: newest at the bottom, older pages 
     expect(keys().at(-1)).toBe(`d${dayOf(NOW)}`);
   });
 
+  it("typing re-renders the composer only: the list keeps the same rows and the same row renderer (R2)", () => {
+    openConversation(conv(), letters(3));
+    // `style` is built inline on each render of the screen: the same array means the screen did not render.
+    const before = { data: thread().props.data, renderItem: thread().props.renderItem, style: thread().props.style };
+    fireEvent.changeText(screen.getByTestId("compose"), "在");
+    fireEvent.changeText(screen.getByTestId("compose"), "在吗");
+    expect(screen.getByTestId("compose").props.value).toBe("在吗");
+    expect(thread().props.style).toBe(before.style);
+    expect(thread().props.data).toBe(before.data);
+    expect(thread().props.renderItem).toBe(before.renderItem);
+  });
+
+  it("a re-render that changes no letter keeps the rows, and an unchanged bubble is not drawn again (R2)", () => {
+    const c = conv();
+    const chat = chatState({ conversations: [c], timeline: withRoom(c.room_id, letters(3)) });
+    const view = wrap(chat, <ConversationScreen id={c.id} />);
+    const data = thread().props.data;
+    const renderItem = thread().props.renderItem;
+    const words = screen.getByText("第 1 封").props.style;
+    // An upload's progress elsewhere: a new chat value, the same letters.
+    view.rerender(providers({ ...chat, progress: { "other-txn": 0.5 } }, <ConversationScreen id={c.id} />));
+    expect(thread().props.renderItem).not.toBe(renderItem); // the rows were asked again …
+    expect(thread().props.data).toBe(data); // … over the same data …
+    expect(screen.getByText("第 1 封").props.style).toBe(words); // … and the bubble skipped its render
+  });
+
   it("reads one older page at a time: nothing more while one is on its way, then the next", async () => {
     const pending: (() => void)[] = [];
     const loadOlder = jest.fn(() => new Promise<void>((resolve) => pending.push(resolve)));
@@ -815,6 +841,10 @@ class FakeSynapse {
   /** The device of every access token ended with POST /logout. */
   logouts: string[] = [];
   syncs = 0;
+  /** Long-polls given up by the app (their AbortSignal fired). */
+  aborted = 0;
+  /** `unread_notifications.notification_count` on the room in each answer that carries events. */
+  unread = 0;
   logins: Record<string, unknown>[] = [];
   private devices = 0;
   private waiters: (() => void)[] = [];
@@ -859,7 +889,14 @@ class FakeSynapse {
       if (method === "GET" && url === "/_matrix/client/v3/sync") {
         const since = Number(config.params?.since ?? 0);
         if (since >= this.events.length && Number(config.params?.timeout) > 0) {
-          await new Promise<void>((resolve) => this.waiters.push(resolve));
+          await new Promise<void>((resolve, reject) => {
+            this.waiters.push(resolve);
+            // Like axios's own adapters: an aborted request rejects with no response.
+            config.signal?.addEventListener?.("abort", () => {
+              this.aborted += 1;
+              reject(new AxiosError("canceled", "ERR_CANCELED", config));
+            });
+          });
           if (this.offline) throw new AxiosError("Network Error", "ERR_NETWORK", config);
         }
         const events = this.events
@@ -867,7 +904,7 @@ class FakeSynapse {
           .map((e) => (this.eventDevice.get(e.event_id) === device ? e : { ...e, unsigned: {} }));
         return ok({
           next_batch: String(this.events.length),
-          rooms: events.length ? { join: { "!direct:hs.test": { timeline: { events } } } } : {},
+          rooms: events.length ? { join: { "!direct:hs.test": { timeline: { events }, unread_notifications: { notification_count: this.unread } } } } : {},
         });
       }
       if (method === "POST" && /\/receipt\//.test(url)) return ok({});
@@ -1138,6 +1175,106 @@ describe("retrying the session: 5 → 10 → 20 → 30 → 30 s (fake timers)", 
     await advance(120_000);
     expect(sessions(calls)).toBe(1);
     expect(probe.availability).toBe("not_configured");
+    view.unmount();
+  });
+});
+
+describe("an idle chat costs nothing (R3, N4)", () => {
+  let synapse: FakeSynapse;
+  let probe: Chat;
+  let renders = { chat: 0, status: 0 };
+  let status: ChatStatus;
+  type Listener = (state: AppStateStatus) => void;
+  let listeners: Set<Listener>;
+  function Probe() {
+    probe = useChat();
+    renders.chat += 1;
+    return null;
+  }
+  function StatusProbe() {
+    status = useChatStatus();
+    renders.status += 1;
+    return null;
+  }
+  const turn = (state: AppStateStatus) => act(async () => listeners.forEach((l) => l(state)));
+  const peer = (body: string) =>
+    synapse.events.push({ event_id: `$p${synapse.events.length}`, type: "m.room.message", sender: PEER, origin_server_ts: NOW, content: { msgtype: "m.text", body } });
+
+  beforeEach(() => {
+    renders = { chat: 0, status: 0 };
+    listeners = new Set();
+    jest.spyOn(AppState, "addEventListener").mockImplementation(((_type: string, handler: Listener) => {
+      listeners.add(handler);
+      return { remove: () => void listeners.delete(handler) };
+    }) as unknown as typeof AppState.addEventListener);
+    synapse = new FakeSynapse();
+    synapse.install();
+    stubApi({
+      "/me/chat/conversations/": { status: 200, data: [conv()] },
+      "/me/chat/session/": { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } },
+    });
+  });
+  afterEach(() => synapse.release());
+
+  async function startPolling() {
+    const view = render(
+      <ChatProvider account="QU33Q9FW5F">
+        <Probe />
+        <StatusProbe />
+      </ChatProvider>
+    );
+    await waitFor(() => expect(probe.availability).toBe("ready"));
+    await waitFor(() => expect(synapse.syncs).toBe(2)); // the first sync, then a long-poll waiting
+    await act(async () => {});
+    return view;
+  }
+
+  it("a long-poll that ends with nothing new re-renders nothing that reads the chat", async () => {
+    const view = await startPolling();
+    const before = { ...renders };
+    await act(async () => synapse.release()); // 30 s, nothing new
+    await waitFor(() => expect(synapse.syncs).toBe(3));
+    await act(async () => {});
+    expect(renders).toEqual(before);
+    // A letter that does arrive still reaches the chat (so the count above is not a dead probe).
+    peer("在吗");
+    await act(async () => synapse.release());
+    await waitFor(() => expect(probe.timeline.rooms["!direct:hs.test"]?.messages.map((m) => m.body)).toEqual(["在吗"]));
+    expect(renders.chat).toBeGreaterThan(before.chat);
+    view.unmount();
+  });
+
+  it("the tab bar's status changes only with availability or unread: a letter with nothing unread leaves it alone, an unread one sets it", async () => {
+    const view = await startPolling();
+    expect(status).toEqual({ availability: "ready", unread: false });
+    const before = renders.status;
+    peer("一");
+    await act(async () => synapse.release());
+    await waitFor(() => expect(probe.timeline.rooms["!direct:hs.test"]?.messages).toHaveLength(1));
+    expect(renders.status).toBe(before);
+    synapse.unread = 1;
+    peer("二");
+    await act(async () => synapse.release());
+    await waitFor(() => expect(status.unread).toBe(true));
+    expect(status).toEqual({ availability: "ready", unread: true });
+    view.unmount();
+  });
+
+  it("in the background the long-poll is aborted and none goes out; inactive does not count as back; active polls at once", async () => {
+    const view = await startPolling();
+    expect(synapse.aborted).toBe(0);
+    await turn("background");
+    expect(synapse.aborted).toBe(1);
+    await act(async () => {});
+    expect(synapse.syncs).toBe(2);
+    // An abort is the app stepping away, not Synapse failing.
+    expect(probe.availability).toBe("ready");
+    await turn("inactive");
+    await act(async () => {});
+    expect(synapse.syncs).toBe(2);
+    await turn("active");
+    await waitFor(() => expect(synapse.syncs).toBe(3));
+    expect(synapse.aborted).toBe(1);
     view.unmount();
   });
 });

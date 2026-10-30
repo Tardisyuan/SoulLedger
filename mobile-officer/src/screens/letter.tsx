@@ -15,7 +15,7 @@ import {
   soulInboxApi,
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 
 import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
@@ -53,6 +53,8 @@ import {
 
 /** What `GET …/messages/` sends at most per page (`officer_messages`' limit): a full page means there may be more. */
 const LETTER_PAGE = 50;
+/** The same "no older page" every render, so the thread's memo below keeps its rows while the officer types. */
+const NO_ROWS: InboxMessage[] = [];
 
 export function LetterThread({
   id,
@@ -95,7 +97,7 @@ export function LetterThread({
     more: false,
     state: null,
   });
-  const older = earlier.base === thread.data ? earlier : { base: thread.data, rows: [] as InboxMessage[], more: (thread.data?.messages.length ?? 0) >= LETTER_PAGE, state: null };
+  const older = earlier.base === thread.data ? earlier : { base: thread.data, rows: NO_ROWS, more: (thread.data?.messages.length ?? 0) >= LETTER_PAGE, state: null };
   const loadEarlier = () => {
     const base = thread.data;
     const all = [...(base?.messages ?? []), ...older.rows];
@@ -235,6 +237,17 @@ export function LetterThread({
     act(() => soulInboxApi.unarchive(id).then(() => setArchivedAt(null)), t("officer_app.letter.done_unarchived"));
   };
 
+  // Every keystroke in the reply box re-renders this screen (R2): the letters above it keep the same rows and the
+  // same two callbacks, so each `LetterLine` (memo) skips its render instead of drawing the thread again.
+  const shownMessages = thread.data?.messages;
+  // The server sends the newest first; the screen reads from the top down. Earlier pages are older still.
+  const ordered = useMemo(() => [...(shownMessages ?? []), ...older.rows].reverse(), [shownMessages, older.rows]);
+  // The viewer pages through every picture in the thread, oldest first.
+  const gallery = useMemo(() => ordered.flatMap((m) => (m.image ? [m.image] : [])), [ordered]);
+  const openImage = useCallback((imageId: string) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === imageId))), [gallery]);
+  const { reload: reloadThread } = thread;
+  const reloadImages = useCallback(() => void reloadThread(), [reloadThread]);
+
   if (thread.error && lettersUnavailable(thread.error)) {
     return (
       <Screen testID="letter-unavailable" edges={["left", "right"]}>
@@ -250,7 +263,7 @@ export function LetterThread({
   if (view || !thread.data)
     return <StateView state={view ?? "loading"} onRetry={thread.reload} />;
 
-  const { conversation, messages } = thread.data;
+  const { conversation } = thread.data;
   const closed = conversation.closed_at != null;
   // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
   const assigned = conversation.assignee !== null;
@@ -264,10 +277,6 @@ export function LetterThread({
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
   };
-  // The server sends the newest first; the screen reads from the top down. Earlier pages are older still.
-  const ordered = [...messages, ...older.rows].reverse();
-  // The viewer pages through every picture in the thread, oldest first.
-  const gallery = ordered.flatMap((m) => (m.image ? [m.image] : []));
 
   return (
     <View
@@ -338,15 +347,8 @@ export function LetterThread({
                 key={m.event_id}
                 message={m}
                 soulName={conversation.soul_name}
-                onReloadImages={() => void thread.reload()}
-                onOpenImage={(id) =>
-                  setViewing(
-                    Math.max(
-                      0,
-                      gallery.findIndex((g) => g.id === id),
-                    ),
-                  )
-                }
+                onReloadImages={reloadImages}
+                onOpenImage={openImage}
               />
             ))}
           </View>
@@ -500,8 +502,8 @@ export function LetterThread({
   );
 }
 
-/** One letter: the author and time on a line, the words under it; the hall's go to the right. */
-function LetterLine({
+/** One letter: the author and time on a line, the words under it; the hall's go to the right. Memo: see `ordered`. */
+const LetterLine = memo(function LetterLine({
   message,
   soulName,
   onOpenImage,
@@ -552,4 +554,4 @@ function LetterLine({
       )}
     </View>
   );
-}
+});
