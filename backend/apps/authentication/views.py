@@ -4,6 +4,7 @@ Auth views: register, login, logout, profile.
 import logging
 import math
 import secrets
+import threading
 import time
 
 from django.contrib.auth import get_user_model
@@ -33,8 +34,6 @@ logger = logging.getLogger(__name__)
 
 from apps.audit.models import AuditAction
 from apps.audit.signals import create_batch_audit_log
-from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
-from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.exports import record_export
@@ -1272,6 +1271,17 @@ def _throttle_wait(request, throttles):
 SELF_RESET_ROLE = UserRole.SOUL
 
 
+def _run_reset_code_mail(token):
+    from django.db import close_old_connections
+
+    from .tasks import send_reset_code_mail
+
+    try:
+        send_reset_code_mail.run(token)
+    finally:
+        close_old_connections()
+
+
 @extend_schema(
     request=ResetPasswordSerializer,
     responses={
@@ -1369,27 +1379,21 @@ def reset_password_request(request):
     # nobody was ever sent, so every later answer is the same as for a real one.
     code = f"{secrets.randbelow(900000) + 100000:06d}"
     cache.set(f"pwd_reset:{email}", code, timeout=300)
-    if len(matches) == 1:
+    # BP-12: the code goes to the mailbox only — never the log, never the response, never the broker.
+    # perf-audit A4 (2026-10-30): SMTP used to run here, up to 10 s, and only for a registered address — the
+    # slower answer was itself the oracle the identical bodies exist to hide. Now every address takes the same
+    # statements: one outbox entry under a random token, one enqueue of that token. The worker reads the code from
+    # the cache and sends it, or, for an entry with no user, sends nothing.
+    from .tasks import RESET_OUTBOX_SECONDS, reset_outbox_key, send_reset_code_mail
 
-        # BP-12: this was a comment, so no reset could ever be completed.
-        # The code goes to the mailbox only — never the log, never the
-        # response. A send failure is logged without the code and answered
-        # like success: a 500 only for registered addresses would disclose
-        # exactly what the identical responses above exist to hide.
-        try:
-            locale = mail_locale(user=matches[0])
-            pack = MAIL_MESSAGES[locale]["reset_code"]
-            send_neutral_mail(
-                f"SoulLedger {pack['title']}",
-                fill(pack["text"], code=code),
-                heading=pack["title"],
-                rows=[(pack["code_label"], code)],
-                notes=[pack["note"]],
-                to=[email],
-                locale=locale,
-            )
-        except Exception:
-            logger.error("password reset mail could not be sent", exc_info=False)
+    token = secrets.token_urlsafe(16)
+    cache.set(reset_outbox_key(token), {"user_id": matches[0].pk if len(matches) == 1 else None, "email": email},
+              timeout=RESET_OUTBOX_SECONDS)
+    try:
+        send_reset_code_mail.delay(token)
+    except Exception:
+        # Broker down: off the request thread, for every address alike (same as officer-reset/request/).
+        threading.Thread(target=_run_reset_code_mail, args=(token,), daemon=True).start()
 
     return Response({"detail": "验证码已发送到邮箱"})
 
