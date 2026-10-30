@@ -152,7 +152,6 @@ def test_what_is_and_is_not_pushed(cn_tenant, enqueued):  # noqa: F811
 
 def test_an_event_claiming_another_tenant_pushes_nothing(cn_tenant, eu_tenant, enqueued):  # noqa: F811
     from apps.events.event_bus import event_bus
-
     from apps.events.handlers.audit_handler import SoulEventTargetError
 
     account, _ = _soul_with_device(cn_tenant)
