@@ -19,11 +19,11 @@ import {
   passVerdictsOf,
   reasonMissing,
   rebirthCross,
-  submitDecision,
   todoTitle,
   type FailureReason,
   type Verdict,
 } from "../rules";
+import { submitDecision } from "../decisions";
 import { effectLine, objectLines } from "../todoFacts";
 import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 import { PEOPLE_SHOWN } from "./letterActions";

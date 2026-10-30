@@ -15,7 +15,7 @@ import { translate } from "../shared";
 import { renderOfficer } from "./harness";
 
 const mockSubmit = jest.fn();
-jest.mock("../rules", () => ({ ...jest.requireActual("../rules"), submitDecision: (...a: unknown[]) => mockSubmit(...a) }));
+jest.mock("../decisions", () => ({ submitDecision: (...a: unknown[]) => mockSubmit(...a) }));
 const mockAddCosigner = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
