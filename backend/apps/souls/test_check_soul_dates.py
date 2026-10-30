@@ -114,12 +114,14 @@ class TestCheckSoulDatesCommand:
         soul = Soul.objects.create(
             name="Gone", tenant=self.tenant, birth_year=2019, death_year=1943
         )
-        soul.is_deleted = True
-        soul.save()
+        # The record first: adding one recalculates karma and logs KARMA_RECALCULATED, and since 2026-10-30
+        # AuditHandler refuses (raises) an event about a soft-deleted soul instead of skipping it.
         SoulRecord.objects.create(
             soul=soul, record_type="MERIT", civilization="CHINESE",
             description="Attached to a deleted soul", weight=1, event_year=1900,
         )
+        soul.is_deleted = True
+        soul.save()
         output = self._run()
         assert "Checking live rows only" in output
         # The record is live; it is skipped because its soul is not, and
