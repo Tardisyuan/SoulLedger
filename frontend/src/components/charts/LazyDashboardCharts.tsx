@@ -1,420 +1,121 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Skeleton } from "@/components/ui/skeleton";
-import { prefersReducedMotion } from "@/lib/motion";
+import type { CSSProperties } from "react";
+
 import { HATCH, type ChartPattern } from "@/lib/chart-colors";
 
-/** One `<pattern>` per colour, id derived from the colour so two bars of one colour share it. */
-const hatchId = (colour: string) => `hatch-${colour.replace(/[^a-z0-9]/gi, "")}`;
-
 /**
- * 规范 v2 A5 的斜线图案:45°、线宽 1.5、间距 5。放在 `<BarChart>` 里的 `<defs>`,每种颜色一个。
- * 斜线条形另外描一道同色边(`HATCH.stroke`),即 A5 画的「空框斜线」。
+ * The soul page's 寿数 chart — the last chart in the app, drawn with divs (2026-10-30).
+ *
+ * This file used to hold three recharts components behind `next/dynamic`. Two of them (`LazyBarChart`,
+ * `LazySoulLineChart`) had no caller left — the dashboard moved to the 图例账 and CSS realm bars
+ * (`dashboard/RealmBars.tsx`, Design A4) — and the third pulled the whole recharts chunk (~146 KB gz) into the
+ * soul page for one stacked bar per ledger record. It is now what RealmBars is: boxes with heights. The name is
+ * kept so the dozen test mocks that stub it by name keep working; nothing about it is lazy any more.
+ *
+ * Encoding (unchanged): one column per record, labelled by year. `effective` — the decayed weight, signed
+ * (+merit / −demerit) — draws at 85% opacity from the zero line; `decayedAway` (same sign, since decay only shrinks
+ * toward zero) stacks beyond it at 25%, so the full height reads as "what the deed originally weighed". Merit is
+ * solid, demerit is A5's hollow box with 45° hatching (`HATCH`: 1.5 px lines every 5 px), the zero line 2px ink.
+ * No motion to decline: there is no mount animation, so `prefers-reduced-motion` has nothing to stop.
  */
-function HatchDefs({ colours }: { colours: string[] }) {
-  return (
-    <defs>
-      {[...new Set(colours)].map((c) => (
-        <pattern
-          key={c}
-          id={hatchId(c)}
-          width={HATCH.gap}
-          height={HATCH.gap}
-          patternUnits="userSpaceOnUse"
-          patternTransform={`rotate(${HATCH.angle})`}
-        >
-          <line x1="0" y1="0" x2="0" y2={HATCH.gap} stroke={c} strokeWidth={HATCH.stroke} />
-        </pattern>
-      ))}
-    </defs>
-  );
-}
 
-/** Cell props for one datum under a pattern: `hatch` / `outline` / `void` are hollow, the rest solid. */
-function patternFill(colour: string, pattern: ChartPattern | undefined) {
-  if (pattern === "hatch") return { fill: `url(#${hatchId(colour)})`, stroke: colour, strokeWidth: HATCH.stroke };
-  if (pattern === "outline") return { fill: "none", stroke: colour, strokeWidth: HATCH.stroke };
-  if (pattern === "void") return { fill: "none", stroke: colour, strokeWidth: HATCH.stroke, strokeDasharray: "3 3" };
-  return { fill: colour };
-}
-
-/**
- * `isAnimationActive={animate}` on every series in this file, and `animate` is
- * one question: does the operator want motion at all.
- *
- * THE ONE HOLE THE STYLESHEET COULD NOT REACH. `app/globals.css` collapses all
- * CSS motion under `prefers-reduced-motion: reduce` with a universal selector
- * and `!important`, so every `animate-spin` and every transition in the app
- * already obey it (skeletons no longer pulse at all — 规范 v2 C15, static
- * skeletons; this file's ChartSkeleton is the static `Skeleton`). recharts does not draw with CSS: it
- * grows bars and sweeps arcs by writing attributes on a `requestAnimationFrame`
- * loop, which no media query can shorten. `isAnimationActive` defaults to true
- * and was set nowhere in this repository, so these four charts were the entire
- * remaining answer to "what still moves for an operator who asked for no
- * motion" — and they are on the dashboard, i.e. the first screen.
- *
- * Read per mount rather than per render: each of these components is built
- * inside a `dynamic(..., { ssr: false })` factory, so the const is evaluated
- * when the chart actually appears on the client and there is no server render
- * to disagree with.
- *
- * Deliberately NOT `isAnimationActive={false}` for everyone. The mount
- * animation is legible when it is wanted; the defect was that it could not be
- * declined. Note for anyone who does turn it off wholesale later:
- * `e2e/charts-render.spec.ts` reasons from "recharts animates on rAF, so the
- * `<path>` appears over several frames" — read that file before changing this
- * to a constant, because its whole causal chain runs through this prop.
- */
-/**
- * The chart chrome, written once.
- *
- * The five design-guard ESLint rules only read class strings, so everything
- * recharts takes as an inline style object is invisible to them — and it
- * drifted accordingly. Measured 2026-09-01: four tooltips carried
- * `borderRadius: "6px"` and two bar series carried rounded corners in a system
- * where every radius is 0 except `full`/`focus`; four ticks were `fontSize: 9`,
- * under the type scale's 11px floor and effectively illegible for CJK tick
- * labels; and only ONE of the four charts set `axisLine`/`tickLine`, so three
- * of them drew recharts' default grey axes in both themes, on themed surfaces.
- *
- * A shared object rather than four copies, so a fifth chart cannot forget the
- * way the first three did.
- */
-const CHART_AXIS = {
-  tick: { fill: "oklch(var(--color-ink-muted))", fontSize: 11 },
-  axisLine: { stroke: "oklch(var(--color-hairline))" },
-  tickLine: { stroke: "oklch(var(--color-hairline))" },
-} as const;
-
-
-// ── Recharts base types ──────────────────────────────────────────
-interface ChartDataPoint {
-  name?: string;
-  value?: number;
-  color?: string;
-  /** 规范 v2 A5 的四种图案之一(去向、功过);缺省 = 实底。 */
+interface LifespanDatum {
+  key: string;
+  label: string;
+  effective: number;
+  decayedAway: number;
+  color: string;
   pattern?: ChartPattern;
-  fill?: string;
-  total?: number;
-  [key: string]: unknown;
 }
 
-// ── Chart Skeletons ──────────────────────────────────────────────
-function ChartSkeleton({ height = 240 }: { height?: number }) {
+/** Inline style for one segment: `hatch` / `outline` / `void` are hollow with a 1.5px edge, the rest solid. */
+function segmentStyle(colour: string, pattern: ChartPattern | undefined): CSSProperties {
+  const edge = `${HATCH.stroke}px ${pattern === "void" ? "dashed" : "solid"} ${colour}`;
+  if (pattern === "hatch") {
+    return {
+      border: edge,
+      backgroundImage: `repeating-linear-gradient(${HATCH.angle}deg, ${colour} 0 ${HATCH.stroke}px, transparent ${HATCH.stroke}px ${HATCH.gap}px)`,
+    };
+  }
+  if (pattern === "outline" || pattern === "void") return { border: edge };
+  return { background: colour };
+}
+
+const round = (n: number) => Number(n.toFixed(2));
+
+/**
+ * `seriesNames` is required: the two series used to print as the raw dataKeys `effective` / `decayedAway` in a
+ * zh-Hans tooltip. A caller cannot render this chart without deciding what the two are called.
+ */
+function LazyLifespanBarChart({
+  data,
+  height = 140,
+  seriesNames,
+}: {
+  data: LifespanDatum[];
+  height?: number;
+  seriesNames: { effective: string; decayedAway: string };
+}) {
+  const totals = data.map((d) => d.effective + d.decayedAway);
+  const hi = Math.max(0, ...totals, ...data.map((d) => d.effective));
+  const lo = Math.min(0, ...totals, ...data.map((d) => d.effective));
+  const range = hi - lo || 1;
+  const px = (v: number) => (Math.abs(v) / range) * height;
+  const zeroFromTop = `${(hi / range) * 100}%`;
+  const zeroFromBottom = `${(-lo / range) * 100}%`;
+  const columns = { gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0, 1fr))` };
+
   return (
-    <div className="flex items-center justify-center" style={{ height }}>
-      <Skeleton className="h-full w-full" />
+    <div data-lifespan-chart="" className="flex gap-1">
+      {/* The y scale's two ends and its zero, where recharts drew a 30px axis. */}
+      <div className="relative w-8 shrink-0 font-mono text-2xs text-[oklch(var(--color-ink-muted))]" style={{ height }} aria-hidden="true">
+        <span className="absolute right-0 top-0">{round(hi)}</span>
+        {hi !== 0 && lo !== 0 && (
+          <span className="absolute right-0 -translate-y-1/2" style={{ top: zeroFromTop }}>
+            0
+          </span>
+        )}
+        <span className="absolute bottom-0 right-0">{round(lo)}</span>
+      </div>
+      <div className="min-w-0 flex-1 overflow-x-auto">
+        <div className="relative grid gap-1" style={{ ...columns, height }}>
+          <span aria-hidden="true" className="absolute inset-x-0 h-0.5 -translate-y-1/2 bg-[oklch(var(--color-ink))]" style={{ top: zeroFromTop }} />
+          {data.map((d) => {
+            const up = d.effective + d.decayedAway >= 0;
+            // Positive deeds grow up from the zero line, negative ones down; the decayed part sits beyond the solid.
+            const anchor = up ? { bottom: zeroFromBottom } : { top: zeroFromTop };
+            const style = segmentStyle(d.color, d.pattern);
+            return (
+              <div
+                key={d.key}
+                data-lifespan-bar={d.key}
+                className="relative min-w-1"
+                title={`${d.label} · ${seriesNames.effective} ${round(d.effective)} · ${seriesNames.decayedAway} ${round(d.decayedAway)}`}
+              >
+                <div className={`absolute inset-x-0 flex ${up ? "flex-col-reverse" : "flex-col"}`} style={anchor}>
+                  {/* A zero segment is not drawn: its 1.5px edges alone would show as a sliver. */}
+                  {d.effective !== 0 && (
+                    <span data-series="effective" className="block" style={{ ...style, opacity: 0.85, height: px(d.effective) }} />
+                  )}
+                  {d.decayedAway !== 0 && (
+                    <span data-series="decayedAway" className="block" style={{ ...style, opacity: 0.25, height: px(d.decayedAway) }} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="grid gap-1 pt-1 text-center text-2xs text-[oklch(var(--color-ink-muted))]" style={columns}>
+          {data.map((d) => (
+            <span key={d.key} className="truncate" title={d.label}>
+              {d.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-const LazyBarChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        BarChart,
-        Bar,
-        Cell,
-        XAxis,
-        YAxis,
-        CartesianGrid,
-        Tooltip,
-        ResponsiveContainer,
-      } = mod;
-      // `fill` has no default, deliberately. It used to be `"#f59e0b"` — a
-      // literal nothing else in the app declares, invisible to
-      // `chartColourContract`, and picked up by whichever caller forgot to
-      // choose. That caller was the tenant comparison chart on the dashboard,
-      // which drew all four cosmologies in one amber directly above four cards
-      // giving each of them its own mark colour: two views of the same four
-      // tenants on one screen, one of which said they were a single category.
-      // A required prop makes "which colour is this series" a question every
-      // caller answers.
-      //
-      // `color` on a datum overrides it for that bar alone. The pie chart that
-      // used to live in this file (removed 2026-09-24: 规范 v1 has no pies, the
-      // dashboard draws a 图例账 instead) already read `entry.color`; the bar path had a single series
-      // fill and no way to say "these bars are four different things", which is
-      // exactly what a per-civilization comparison is.
-      return function WrappedBarChart({
-        data,
-        dataKey = "total",
-        // Which key holds the category label. Defaulted rather than hardcoded
-        // because two callers feed `/ledger/stats/overview/`'s
-        // `karma_distribution`, whose items are `{label, count}` -- no `name`.
-        // The axis therefore resolved nothing, and recharts draws no <path>
-        // for a bar whose category is undefined. Measured 2026-08-29: the
-        // 「功过分布」card on /dashboard and the only chart on /ledger rendered
-        // 0 bars from 7 data points, looking exactly like "no data". Adding a
-        // `name` key to the same 7 rows produced 7 bars and 7 ticks.
-        nameKey = "name",
-        fill,
-        height = 240,
-        name,
-        showGrid = true,
-      }: {
-        data: ChartDataPoint[];
-        dataKey?: string;
-        nameKey?: string;
-        fill: string;
-        height?: number;
-        name?: string;
-        showGrid?: boolean;
-      }) {
-        const animate = !prefersReducedMotion();
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data}>
-              <HatchDefs colours={data.filter((d) => d.pattern === "hatch").map((d) => d.color ?? fill)} />
-              {showGrid && (
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="oklch(var(--color-hairline))"
-                />
-              )}
-              <XAxis
-                dataKey={nameKey}
-                tick={{
-                  fill: "oklch(var(--color-ink-muted))",
-                  fontSize: 11,
-                }}
-              axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-                />
-              <YAxis
-                tick={{
-                  fill: "oklch(var(--color-ink-muted))",
-                  fontSize: 11,
-                }}
-              axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-                />
-              <Tooltip
-                contentStyle={{
-                  background: "oklch(var(--color-surface-1))",
-                  border: "1px solid oklch(var(--color-ink))",
-                  borderRadius: 0,
-                  fontSize: 12,
-                }}
-              />
-              <Bar
-                dataKey={dataKey}
-                fill={fill}
-                radius={0}
-                name={name}
-                isAnimationActive={animate}
-              >
-                {data.map((entry, i) => (
-                  <Cell key={i} {...patternFill(entry.color ?? fill, entry.pattern)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton />,
-  }
-);
-
-const LazySoulLineChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        LineChart,
-        Line,
-        XAxis,
-        YAxis,
-        CartesianGrid,
-        Tooltip,
-        ResponsiveContainer,
-        ReferenceLine,
-      } = mod;
-      return function WrappedSoulLineChart({
-        data,
-        height = 120,
-      }: {
-        data: ChartDataPoint[];
-        height?: number;
-      }) {
-        // A soul's ledger spans its whole life — decades, once event dates are
-        // real. Slicing every label to MM-DD dropped the year, so a series
-        // running 1969→2011 read as one year and the labels looked unsorted.
-        // Below two years the year is the redundant part, so switch on span.
-        const years = data
-          .map((d) => Number(String(d.date).slice(0, 4)))
-          .filter((y) => !Number.isNaN(y));
-        const spansYears = years.length > 0 && Math.max(...years) - Math.min(...years) >= 2;
-        const formatTick = (v: string) =>
-          spansYears ? String(v).slice(0, 4) : String(v).slice(5, 10);
-
-        const animate = !prefersReducedMotion();
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <LineChart data={data}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="oklch(var(--color-hairline))"
-              />
-              <XAxis
-                dataKey="date"
-                tick={{
-                  fill: "oklch(var(--color-ink-muted))",
-                  fontSize: 11,
-                }}
-                axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-                tickFormatter={formatTick}
-              />
-              <YAxis
-                tick={{
-                  fill: "oklch(var(--color-ink-muted))",
-                  fontSize: 11,
-                }}
-                axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-                width={30}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "oklch(var(--color-surface-1))",
-                  border: "1px solid oklch(var(--color-ink))",
-                  borderRadius: 0,
-                  fontSize: 11,
-                }}
-                labelStyle={{ color: "oklch(var(--color-ink-muted))" }}
-              />
-              <ReferenceLine
-                x={0}
-                stroke="oklch(var(--color-hairline))"
-              />
-              <Line
-                type="monotone"
-                isAnimationActive={animate}
-                dataKey="cumulative"
-                stroke="oklch(var(--color-accent))"
-                strokeWidth={2}
-                dot={false}
-                name="Balance"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton height={120} />,
-  }
-);
-
-// ── Soul Lifecycle Lifespan Bar Chart (Stage 3) ──────────────────
-// One bar per ledger record, labeled by year. `effective` (the decayed
-// weight, still signed +merit/-demerit) draws solid; `decayedAway` (the
-// magnitude decay stripped off — always the same sign as `effective`, since
-// decay only shrinks toward zero, never flips merit into demerit) stacks on
-// top of it in the same hue at low opacity, so the full bar height reads as
-// "what this deed originally weighed" and the solid base reads as "what
-// still counts today". A record with no decay yet (rate 0, or age ~0) has
-// decayedAway ~0 and the bar is solid all the way up.
-const LazyLifespanBarChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        BarChart,
-        Bar,
-        XAxis,
-        YAxis,
-        CartesianGrid,
-        Tooltip,
-        ResponsiveContainer,
-        ReferenceLine,
-      } = mod;
-      /**
-       * `seriesNames` is required, not optional, and that is the point.
-       *
-       * The two `<Bar>`s had no `name`, so recharts fell back to the dataKey
-       * and a zh-Hans tooltip printed the raw identifiers `effective` and
-       * `decayedAway`. The solid-vs-85%-opacity encoding that distinguishes
-       * them was explained only in a code comment — nothing on screen said
-       * which was which. Making the prop required means a caller cannot render
-       * this chart without deciding what the two series are called.
-       */
-      return function WrappedLifespanBarChart({
-        data,
-        height = 140,
-        seriesNames,
-      }: {
-        data: {
-          key: string;
-          label: string;
-          effective: number;
-          decayedAway: number;
-          color: string;
-          pattern?: ChartPattern;
-        }[];
-        height?: number;
-        seriesNames: { effective: string; decayedAway: string };
-      }) {
-        const animate = !prefersReducedMotion();
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data}>
-              <HatchDefs colours={data.filter((d) => d.pattern === "hatch").map((d) => d.color)} />
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="oklch(var(--color-hairline))"
-              />
-              <XAxis
-                dataKey="label"
-                tick={CHART_AXIS.tick}
-                axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-              />
-              <YAxis
-                tick={{ fill: "oklch(var(--color-ink-muted))", fontSize: 11 }}
-                axisLine={CHART_AXIS.axisLine}
-                tickLine={CHART_AXIS.tickLine}
-                width={30}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "oklch(var(--color-surface-1))",
-                  border: "1px solid oklch(var(--color-ink))",
-                  borderRadius: 0,
-                  fontSize: 11,
-                }}
-                labelStyle={{ color: "oklch(var(--color-ink-muted))" }}
-              />
-              {/* A5:功过图的零线 2px ink。 */}
-              <ReferenceLine y={0} stroke="oklch(var(--color-ink))" strokeWidth={2} />
-              <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0} isAnimationActive={animate}>
-                {data.map((d) => (
-                  <mod.Cell key={`eff-${d.key}`} {...patternFill(d.color, d.pattern)} fillOpacity={0.85} />
-                ))}
-              </Bar>
-              <Bar dataKey="decayedAway" name={seriesNames.decayedAway} stackId="w" isAnimationActive={animate}>
-                {data.map((d) => (
-                  <mod.Cell key={`decay-${d.key}`} {...patternFill(d.color, d.pattern)} fillOpacity={0.25} strokeOpacity={0.25} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton height={140} />,
-  }
-);
-
-export {
-  LazyBarChart,
-  LazySoulLineChart,
-  LazyLifespanBarChart,
-  ChartSkeleton,
-};
+export { LazyLifespanBarChart };

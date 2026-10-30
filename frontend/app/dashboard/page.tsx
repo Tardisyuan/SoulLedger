@@ -24,6 +24,7 @@ import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { formatAsOf } from "@/src/lib/formatAsOf";
+import { saveBlob } from "@/src/lib/saveBlob";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
@@ -127,13 +128,8 @@ function DashboardContent() {
     setExporting(true);
     try {
       const response = await ledgerApi.exportStats();
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "souls_ledger_export.csv");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      // The shared helper, which also revokes the object URL (this copy never did, so each export kept its blob).
+      saveBlob(response.data, "souls_ledger_export.csv");
     } catch {
       showToast(t("dashboard.error_export"), "error");
     } finally {

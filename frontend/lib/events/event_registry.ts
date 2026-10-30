@@ -28,6 +28,8 @@ import {
   handleUnknownEvent,
   handleWorkflowEvent,
 } from "./eventHandlers";
+import type { InvalidateQueryFilters, Query, QueryClient } from "@tanstack/react-query";
+
 import type { EventContext, EventHandler, EventPayload, HandlerResult } from "./eventTypes";
 
 export type {
@@ -198,11 +200,91 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
  * @param context - QueryClient and showToast for UI updates
  * @returns HandlerResult with success status and invalidated keys
  */
+/**
+ * Invalidations are coalesced: handlers ask, and `INVALIDATION_BATCH_MS` after the first ask of a burst every
+ * distinct filter is sent once (2026-10-30). A batch judgment or a sentence plan advancing several nodes arrives as
+ * a run of frames in a few milliseconds; before this each frame refetched everything it touched, so ten frames meant
+ * ten rounds of the same requests. Merging is by key: equal keys collapse (predicates OR together), and a key whose
+ * whole prefix is already being invalidated without a predicate is dropped.
+ * Toasts are not delayed — only the cache work is.
+ */
+export const INVALIDATION_BATCH_MS = 250;
+
+type Pending = { filters: InvalidateQueryFilters[]; timer: ReturnType<typeof setTimeout> };
+const pendingInvalidations = new Map<QueryClient, Pending>();
+
+function isPrefixOf(prefix: readonly unknown[], key: readonly unknown[]): boolean {
+  return prefix.length <= key.length && prefix.every((seg, i) => JSON.stringify(seg) === JSON.stringify(key[i]));
+}
+
+function flushClient(client: QueryClient): void {
+  const batch = pendingInvalidations.get(client);
+  if (!batch) return;
+  pendingInvalidations.delete(client);
+  clearTimeout(batch.timer);
+
+  // ponytail: only `queryKey` / `predicate` survive the merge — no handler passes other filter options today.
+  const byKey = new Map<string, { queryKey: readonly unknown[]; predicates: ((q: Query) => boolean)[] | null }>();
+  for (const { queryKey = [], predicate } of batch.filters) {
+    const id = JSON.stringify(queryKey);
+    const seen = byKey.get(id);
+    if (!predicate) byKey.set(id, { queryKey, predicates: null });
+    else if (!seen) byKey.set(id, { queryKey, predicates: [predicate] });
+    else seen.predicates?.push(predicate);
+  }
+  const entries = [...byKey.values()];
+  for (const entry of entries) {
+    const covered = entries.some(
+      (other) => other !== entry && other.predicates === null && isPrefixOf(other.queryKey, entry.queryKey),
+    );
+    if (covered) continue;
+    const { queryKey, predicates } = entry;
+    // Sent from a timer, so a throw here would surface as an uncaught error with no frame to blame; one bad key
+    // must not keep the rest of the burst from going out either.
+    try {
+      void client.invalidateQueries(
+        predicates ? { queryKey, predicate: (q) => predicates.some((p) => p(q)) } : { queryKey },
+      );
+    } catch (err) {
+      console.error("[EventRegistry] invalidation failed:", err);
+    }
+  }
+}
+
+/** Send every pending invalidation now (tests; or a caller that must not wait out the window). */
+export function flushEventInvalidations(client?: QueryClient): void {
+  if (client) flushClient(client);
+  else for (const c of [...pendingInvalidations.keys()]) flushClient(c);
+}
+
+/** The context's client, with `invalidateQueries` routed into this burst's batch. */
+function batching(context: EventContext): EventContext {
+  const client = context.queryClient;
+  const enqueue = (filters: InvalidateQueryFilters = {}) => {
+    let batch = pendingInvalidations.get(client);
+    if (!batch) {
+      batch = { filters: [], timer: setTimeout(() => flushClient(client), INVALIDATION_BATCH_MS) };
+      pendingInvalidations.set(client, batch);
+    }
+    batch.filters.push(filters);
+    return Promise.resolve();
+  };
+  const queryClient = new Proxy(client, {
+    get(target, prop) {
+      if (prop === "invalidateQueries") return enqueue;
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { ...context, queryClient };
+}
+
 export function dispatchEvent(
   payload: EventPayload,
-  context: EventContext,
+  rawContext: EventContext,
 ): HandlerResult {
   const { domain, event } = payload;
+  const context = batching(rawContext);
 
   // 1. Try domain-specific handler
   const domainHandlers = EVENT_REGISTRY[domain];

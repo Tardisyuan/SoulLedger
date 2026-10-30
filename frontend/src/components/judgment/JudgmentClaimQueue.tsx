@@ -41,7 +41,6 @@ import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/da
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
-import { animate } from "motion/react";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
@@ -131,7 +130,9 @@ const SEGMENT = (on: boolean) =>
 /**
  * 选中行滚进视野(v3 第 7 轮 App.tsx「B2 · 审判队列」↑↓ 与「滚动进视野」):只沿纵轴,160ms、进场曲线;
  * 减少动态效果下瞬时。浏览器的 smooth 定不了时长与曲线,所以自己滚 window(这页滚的就是 window)。
- * 上缘让开吸顶的表头(它卡住时底边就是遮挡线)。用 motion 的数值动画 —— 队列这一族已经在用它,不另加库。
+ * 上缘让开吸顶的表头(它卡住时底边就是遮挡线)。
+ * 2026-10-30 起(B4)是一个 requestAnimationFrame 补间,不再用 motion 的 `animate`:那是 motion 的整套补间引擎,
+ * 静态 import 让每个打开队列的人都下载它,只为了滚一个数。曲线照旧是 `MOTION_EASINGS.enter` 的三次贝塞尔。
  */
 export function scrollRowIntoView(row: HTMLElement) {
   const r = row.getBoundingClientRect();
@@ -143,11 +144,33 @@ export function scrollRowIntoView(row: HTMLElement) {
     window.scrollTo(window.scrollX, from + delta);
     return;
   }
-  return animate(from, from + delta, {
-    duration: MOTION_DURATIONS.fast,
-    ease: [...MOTION_EASINGS.enter],
-    onUpdate: (y) => window.scrollTo(window.scrollX, y),
-  });
+  const ease = cubicBezier(...MOTION_EASINGS.enter);
+  const ms = MOTION_DURATIONS.fast * 1000;
+  let start: number | undefined;
+  const step = (now: number) => {
+    start ??= now;
+    const p = Math.min(1, (now - start) / ms);
+    window.scrollTo(window.scrollX, from + delta * ease(p));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/** CSS `cubic-bezier(x1, y1, x2, y2)` as a function of progress: solve x(t) = p by bisection, return y(t). */
+export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const at = (t: number, a: number, b: number) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  return (p: number) => {
+    if (p <= 0) return 0;
+    if (p >= 1) return 1;
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (at(mid, x1, x2) < p) lo = mid;
+      else hi = mid;
+    }
+    return at((lo + hi) / 2, y1, y2);
+  };
 }
 
 /** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。 */

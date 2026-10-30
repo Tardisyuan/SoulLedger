@@ -139,9 +139,19 @@ export function useOfficerAssist(wide: boolean) {
 
   useEffect(() => {
     if (!open && focusNext.current === "entry") entryRef.current?.focus();
-    if (open && focusNext.current === "input") inputRef.current?.focus();
+    if (open && focusNext.current === "input") {
+      // The panel comes by `next/dynamic` (AppLayout, 2026-10-30): on a first open its box may not exist yet,
+      // so the request stays pending and the composer takes it when it mounts (`takePendingFocus`).
+      if (!inputRef.current) return;
+      inputRef.current.focus();
+    }
     focusNext.current = null;
   }, [open]);
+  const takePendingFocus = useCallback(() => {
+    if (!openRef.current || focusNext.current !== "input") return;
+    inputRef.current?.focus();
+    focusNext.current = null;
+  }, []);
 
   const listKey = officerAssistKeys.conversations(userId ?? 0);
   const fetchList = useCallback(
@@ -322,6 +332,7 @@ export function useOfficerAssist(wide: boolean) {
     announce,
     entryRef,
     inputRef,
+    takePendingFocus,
     panelRef,
     mainRef,
     show,

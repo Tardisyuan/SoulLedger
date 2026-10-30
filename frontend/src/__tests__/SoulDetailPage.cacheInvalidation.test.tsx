@@ -30,7 +30,7 @@ import { render, screen, waitFor, fireEvent, act } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulDetailPage from "@/app/souls/[id]/page";
 import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
-import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
+import { dispatchEvent, flushEventInvalidations, type EventPayload } from "@/lib/events/event_registry";
 
 const SOUL_ID = "soul-1";
 
@@ -79,7 +79,6 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazySoulLineChart: () => null,
   LazyLifespanBarChart: () => null,
 }));
 
@@ -156,6 +155,7 @@ function renderPage() {
 function push(queryClient: QueryClient, payload: EventPayload) {
   act(() => {
     dispatchEvent(payload, { queryClient, showToast: mockShowToast });
+    flushEventInvalidations(queryClient);
   });
 }
 

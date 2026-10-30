@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "description": "Platform-independent SoulLedger layer: API contract, realtime clients, domain config, validation schemas and message bundles. No DOM, no React DOM, no Next.js.",
   "type": "module",
+  "sideEffects": false,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

@@ -231,4 +231,31 @@ test.describe("Authenticated shell", () => {
       await expect(sidebar.getByRole("link", { name })).toHaveAttribute("href", href);
     }
   });
+
+  test("跳到正文 (A1, 2026-10-30): the first Tab shows it, Enter puts focus on the page past nav and toolbar", async ({ page }) => {
+    await setupAuthenticatedPage(page);
+    await page.goto("/dashboard");
+    await expect(page.getByTestId("app-content")).toBeVisible();
+
+    const skip = page.getByTestId("skip-to-main");
+    // Hidden until focused: sr-only clips it to 1px, it is not display:none.
+    expect((await skip.boundingBox())?.width ?? 0).toBeLessThanOrEqual(1);
+    await page.keyboard.press("Tab");
+    await expect(skip).toBeFocused();
+    await expect(skip).toHaveText("跳到正文");
+    expect((await skip.boundingBox())!.width).toBeGreaterThan(20);
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("main#main")).toBeFocused();
+    await expect(page.locator("main")).toHaveCount(1);
+  });
+
+  test("⌘K / Ctrl K opens 全局搜索 on the first press (its code arrives by next/dynamic, B3)", async ({ page }) => {
+    await setupAuthenticatedPage(page);
+    await page.goto("/dashboard");
+    // The entry (placeholder or real) is drawn once the user has resolved — before that there is no search to open.
+    await expect(page.locator('[data-testid^="global-search-entry"]:visible')).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(page.getByRole("dialog", { name: "全局搜索" })).toBeVisible();
+  });
 });

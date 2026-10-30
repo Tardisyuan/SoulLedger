@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Popover } from "@base-ui/react/popover";
@@ -12,15 +13,13 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
-import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionBanner, useConnectionBannerShown } from "@/src/components/connection-status";
 import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { PasswordChangeRedirect } from "@/src/components/layout/PasswordChangeRedirect";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
-import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
-import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
+import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 import { Plaque, PlaqueProvider, shortBandFor, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -28,7 +27,7 @@ import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 // 「问一问」的推开只在 ≥ 1024 px(canvas 1a),且主内容区让出 420 后仍有 720(Design E 组);否则它是覆盖层。
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useRoomBeside } from "@/src/hooks/useRoomBeside";
-import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
+import { OfficerAssistEntry } from "@/src/components/assist/OfficerAssistEntry";
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 import { ShortcutHelp } from "@/src/components/layout/ShortcutHelp";
 import { useSyncEmailLocale } from "@/src/components/layout/EmailLocaleSync";
@@ -53,6 +52,28 @@ import { useImpersonation } from "@/src/components/impersonation/useImpersonatio
 /** domMax arrives after first paint (`motionFeatures.ts`); an `m` element renders unanimated until then. */
 const loadMotionFeatures = () => import("./motionFeatures").then((mod) => mod.default);
 
+/*
+ * The overlays that are closed on arrival come by `next/dynamic` (B3, 2026-10-30), out of the bundle every page pays
+ * for. Their entry points stay static — the 问一问 button and its ⌘J (`useOfficerAssist`), the user menu's 设置 /
+ * 退出, the `?` listener (`ShortcutHelp`) — and so does each one's open state, so a press before a chunk lands is
+ * kept: the overlay appears when its code does. 全局搜索 keeps its open state inside, so its placeholder draws the
+ * same buttons and hands an early press over (`GlobalSearchEntry.tsx`).
+ */
+const OfficerAssistPanel = dynamic(() => import("@/src/components/assist/OfficerAssist").then((m) => m.OfficerAssistPanel), {
+  ssr: false,
+});
+const GlobalSearch = dynamic(() => import("@/src/components/layout/GlobalSearch").then((m) => m.GlobalSearch), {
+  ssr: false,
+  loading: () => <GlobalSearchPlaceholder />,
+});
+const SettingsDrawer = dynamic(() => import("@/src/components/settings/SettingsDrawer").then((m) => m.SettingsDrawer), {
+  ssr: false,
+});
+const LogoutConfirmDialog = dynamic(
+  () => import("@/src/components/layout/LogoutConfirmDialog").then((m) => m.LogoutConfirmDialog),
+  { ssr: false },
+);
+
 /** 问一问 pushed panel (canvas 1a) and the room the page keeps beside it (Design E 组). */
 export const ASSIST_PANEL_WIDTH = 420;
 export const ASSIST_MIN_MAIN_WIDTH = 720;
@@ -73,7 +94,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // the user's choice, so no single viewport width says how much room there is. (At 1440
   // expanded the column is 1188 → pushed; at 1260 expanded it is 1008 → overlay, and
   // collapsing the nav gives the push back.)
-  const mainBoxRef = useRef<HTMLElement>(null);
+  const mainBoxRef = useRef<HTMLDivElement>(null);
   const roomy = useRoomBeside(mainBoxRef, ASSIST_PANEL_WIDTH + ASSIST_MIN_MAIN_WIDTH);
   const wide = useWideViewport() && roomy;
   const assist = useOfficerAssist(wide);
@@ -149,6 +170,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <LazyMotion features={loadMotionFeatures}>
+    {/* 跳到正文(WCAG 2.4.1):第一个可聚焦的东西,只在聚焦时出现,把焦点交给 `<main id="main">`,
+        越过导航、工具条与身份带。点击时自己挪焦点:只靠 `#main` 的锚点,有的浏览器只滚动不移焦。 */}
+    <a
+      href="#main"
+      data-testid="skip-to-main"
+      onClick={(e) => {
+        const target = document.getElementById("main");
+        if (!target) return;
+        e.preventDefault();
+        target.focus(); // focus() scrolls the target into view too
+      }}
+      className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-toast focus:bg-[oklch(var(--color-surface-1))] focus:px-3 focus:py-2 focus:text-sm focus:text-[oklch(var(--color-ink))]"
+    >
+      {t("nav.skip_to_main")}
+    </a>
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
       <aside className="sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block">
@@ -163,7 +199,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         />
       </aside>
 
-      <main ref={mainBoxRef} className="min-w-0 max-[768px]:pb-14">
+      <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-14">
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。 */}
         <header
           data-testid="global-topbar"
@@ -335,7 +371,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             side padding drops to 24 (canvas 1a 一). The padding rule reaches into
             PageShell's `md:px-8` (v2: 32 px; v1 was `md:px-10`) by attribute, so no page
             has to know about the panel. */}
-        <div
+        {/* The page itself is the landmark (and the skip link's target) — not the toolbar and band above it,
+            which the `<main>` used to wrap. */}
+        <main
+          id="main"
           ref={assist.mainRef}
           tabIndex={-1}
           data-testid="app-content"
@@ -345,8 +384,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }`}
         >
           <PlaqueProvider value={setPlaque}>{hallViewExpired ? <HallViewExpired /> : children}</PlaqueProvider>
-        </div>
-      </main>
+        </main>
+      </div>
 
       <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
 

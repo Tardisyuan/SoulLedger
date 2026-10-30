@@ -150,6 +150,29 @@ beforeEach(() => {
   composeAllRolePermissions(permApi as unknown as Parameters<typeof composeAllRolePermissions>[0]);
 });
 
+describe("the grants are fetched alongside the roles (D6, 2026-10-30)", () => {
+  it("asks for every role's grants before /roles/ has answered", async () => {
+    let answerRoles: (_v: { data: Role[] }) => void = () => {};
+    mockRolesList.mockReturnValue(new Promise((resolve) => (answerRoles = resolve)));
+    const mockAll = permApi.allRolePermissions as jest.Mock;
+    mockAll.mockResolvedValue({
+      data: ["JUDGE", "CLERK"].map((name) => ({
+        role: name,
+        permissions: GRANTS[name].map((id) => PERMS[id - 1].codename),
+        details: GRANTS[name].map((id) => PERMS[id - 1]),
+      })),
+    });
+    renderPage();
+    await waitFor(() => expect(mockAll).toHaveBeenCalledTimes(1));
+    expect(mockRolesList).toHaveBeenCalled();
+
+    await act(async () => answerRoles({ data: [JUDGE, CLERK] }));
+    await waitFor(() => expect(cell("CLERK", "menu.read")).toHaveAttribute("aria-checked", "true"));
+    // Every role was in that one answer: no second request.
+    expect(mockAll).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("a renamed role keeps its grants in the matrix", () => {
   it("shows no pending change after the rename — not 'remove all 3'", async () => {
     renderPage();

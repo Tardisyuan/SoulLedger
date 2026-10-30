@@ -88,6 +88,8 @@ import { AppLayout } from "@/src/components/layout/AppLayout";
 import { BottomBar, GlobalNav, NAV_MODE_KEY } from "@/src/components/layout/GlobalNav";
 import { iconResolver } from "@/src/lib/menuIcons";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
+import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];
 
@@ -409,6 +411,83 @@ describe("usePlaque:页面给身份带的题字", () => {
     renderWith(<Page text={{ title: undefined, meta: "在押 3" }} />);
     expect(title()).toHaveTextContent("菜单");
     expect(band().querySelector(".identity-case")).toHaveTextContent("在押 3");
+  });
+});
+
+describe("跳到正文(A1,2026-10-30)", () => {
+  it("是外框里第一个可聚焦的东西;点它焦点落到 <main id=main>,而 main 里只有页面,不含工具条与导航", () => {
+    const { container } = renderLayout();
+    const skip = screen.getByTestId("skip-to-main");
+    expect(skip).toHaveTextContent("nav.skip_to_main");
+    expect(skip).toHaveAttribute("href", "#main");
+    // Visually hidden until focused (sr-only + focus:not-sr-only), not hidden from the keyboard.
+    expect(skip.className).toMatch(/(^|\s)sr-only(\s|$)/);
+    expect(skip.className).toContain("focus:not-sr-only");
+    // Within the shell (the toast layer portals into <body> on its own).
+    const focusables = container.querySelectorAll("a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])");
+    expect(focusables[0]).toBe(skip);
+
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main");
+    expect(main).toHaveAttribute("tabindex", "-1");
+    expect(main).toHaveTextContent("page body");
+    expect(main.contains(screen.getByTestId("global-topbar"))).toBe(false);
+    expect(main.contains(nav())).toBe(false);
+    expect(document.querySelectorAll("main")).toHaveLength(1);
+
+    fireEvent.click(skip);
+    expect(document.activeElement).toBe(main);
+  });
+});
+
+describe("默认关着的浮层按需加载(B3,2026-10-30)", () => {
+  afterEach(() => {
+    mockUser = null;
+  });
+
+  it("设置与退出确认:入口在用户菜单里(静态),点了之后抽屉 / 对话框照样打开", async () => {
+    mockUser = { username: "yama", display_name: "阎罗", role: "ADMIN" };
+    renderLayout();
+    fireEvent.click(screen.getByTestId("user-menu"));
+    fireEvent.click(await screen.findByText("nav.settings"));
+    expect(await screen.findByRole("dialog", { name: "settings.title" })).toBeInTheDocument();
+  });
+
+  it("全局搜索:外框里点入口打开对话框", async () => {
+    mockUser = { username: "yama", display_name: "阎罗", role: "ADMIN" };
+    renderLayout();
+    fireEvent.click(await screen.findByTestId("global-search-entry"));
+    expect(await screen.findByRole("dialog", { name: "search.dialog_label" })).toBeInTheDocument();
+  });
+
+  // Driven directly: in jest the dynamic chunk can resolve before any click, so the placeholder window is not
+  // reliably observable through AppLayout. The contract is the hand-over between the two components.
+  it.each([
+    ["a click on the placeholder's entry", () => fireEvent.click(screen.getByTestId("global-search-entry"))],
+    ["Ctrl K before the search has loaded", () => fireEvent.keyDown(window, { key: "k", ctrlKey: true })],
+  ])("全局搜索:%s opens the search once it mounts", async (_name, press) => {
+    mockUser = { username: "yama", display_name: "阎罗", role: "ADMIN" };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrap = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const placeholder = render(<GlobalSearchPlaceholder />, { wrapper: wrap });
+    press();
+    placeholder.unmount();
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    render(<GlobalSearch menus={MENUS} />, { wrapper: wrap });
+    expect(await screen.findByRole("dialog", { name: "search.dialog_label" })).toBeInTheDocument();
+  });
+
+  it("全局搜索:no early press, no dialog on mount (the hand-over is read once and cleared)", async () => {
+    mockUser = { username: "yama", display_name: "阎罗", role: "ADMIN" };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <GlobalSearch menus={MENUS} />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId("global-search-entry");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 

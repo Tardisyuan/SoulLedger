@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { memo, useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
 import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
@@ -106,8 +106,8 @@ export interface MatrixCellInfo {
   heldCodenames?: (role: string) => ReadonlySet<string>;
 }
 
-function useCellDescription(info: MatrixCellInfo, role: string, perm: Permission) {
-  const { t } = useI18n();
+/** What one cell draws, worked out by its row so the memoised cell compares strings, not the `info` closures. */
+function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: ReturnType<typeof useI18n>["t"]) {
   const key = matrixCellKey(role, perm.id);
   const failure = info.failure(key);
   const rule = ruleState(role, perm.codename, info.heldCodenames?.(role));
@@ -129,29 +129,38 @@ function useCellDescription(info: MatrixCellInfo, role: string, perm: Permission
       : state === "on" || state === "off"
         ? ""
         : t(`permissions.matrix.state.${state}`);
-  return { key, state, words };
+  // 「始终」 and 「! 禁授」 are rules, not choices: the cell says what the server enforces and does not toggle.
+  const granted = state === "lock" ? true : state === "deny" ? false : info.granted(role, perm.id);
+  return { state, words, granted };
 }
 
-function MatrixCell({
+/**
+ * One cell, memoised (R2, 2026-10-30): it takes its drawn state as plain values and a toggle that is stable across
+ * renders, so ticking one box re-renders that box — not the ~1500 others, which it used to, since every cell got the
+ * page's freshly built `info` object and its own inline `() => onToggle(role, id)`.
+ */
+const MatrixCell = memo(function MatrixCell({
   role,
   perm,
-  info,
+  state,
+  words,
+  granted,
   disabled,
   onToggle,
   variant,
 }: {
   role: string;
   perm: Permission;
-  info: MatrixCellInfo;
+  state: CellState;
+  words: string;
+  granted: boolean;
   disabled: boolean;
-  onToggle: () => void;
+  onToggle: (role: string, permId: number) => void;
   variant: "grid" | "switch";
 }) {
   const descId = useId();
-  const { key, state, words } = useCellDescription(info, role, perm);
-  // 「始终」 and 「! 禁授」 are rules, not choices: the cell says what the server enforces and does not toggle.
+  const key = matrixCellKey(role, perm.id);
   const ruled = state === "lock" || state === "deny";
-  const granted = state === "lock" ? true : state === "deny" ? false : info.granted(role, perm.id);
   return (
     <>
       <button
@@ -165,7 +174,7 @@ function MatrixCell({
         disabled={disabled && !ruled}
         aria-disabled={ruled || undefined}
         data-rule={ruled ? state : undefined}
-        onClick={ruled ? undefined : onToggle}
+        onClick={ruled ? undefined : () => onToggle(role, perm.id)}
         className={cn(
           "flex size-(--control-h-sm) items-center justify-center",
           variant === "grid" && "mx-auto",
@@ -185,7 +194,7 @@ function MatrixCell({
       )}
     </>
   );
-}
+});
 
 function roleLabel(roleMeta: Record<string, Role>, role: string) {
   return roleMeta[role]?.display_name || role;
@@ -377,9 +386,9 @@ export function PermissionMatrixTable({
                     <MatrixCell
                       role={role}
                       perm={perm}
-                      info={info}
+                      {...describeCell(info, role, perm, t)}
                       disabled={isSaving}
-                      onToggle={() => onToggle(role, perm.id)}
+                      onToggle={onToggle}
                       variant="switch"
                     />
                   </li>
@@ -462,9 +471,9 @@ function MatrixGroup({
               <MatrixCell
                 role={role}
                 perm={perm}
-                info={info}
+                {...describeCell(info, role, perm, t)}
                 disabled={isSaving}
-                onToggle={() => onToggle(role, perm.id)}
+                onToggle={onToggle}
                 variant="grid"
               />
             </td>
