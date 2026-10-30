@@ -110,8 +110,8 @@ declare const URLSearchParams: {
  * there is no React Native checkout here to measure it against. The claim being
  * withdrawn is the point, not a reproduction.)
  *
- * `fetchAllPages` now splits the query off the string itself and hands it to
- * `URLSearchParams`, which is above and which React Native does ship. That was
+ * `fetchAllPages` no longer parses `next` at all (2026-10-30): it numbers the
+ * pages from page 1's `count` and asks for `page=N`. That was
  * `URL`'s only use in this package, so the entry is deleted rather than
  * narrowed: an allowlist entry with no call site is a claim nobody needs made.
  * Re-adding it means re-making the claim — deliberately, with a reason, which

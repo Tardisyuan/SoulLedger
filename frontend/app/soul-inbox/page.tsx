@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
 import { responseCode } from "@soulledger/core/api/client";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
@@ -142,10 +143,12 @@ function Composer({
   const [active, setActive] = useState(0);
   const query = slashAt === null ? "" : value.slice(slashAt + 1, caret);
 
+  // 停手 300ms 才检索(每个字一请求太多);弹层开合仍跟着原值走。
+  const settledQuery = useDebouncedValue(query);
   const search = useQuery({
-    queryKey: [...judgmentKeys.all, "statute-search", "", query],
-    queryFn: () => judgmentApi.statutes({ search: query }).then((r) => r.data.results ?? []),
-    enabled: canCite && slashAt !== null && query.length > 0,
+    queryKey: [...judgmentKeys.all, "statute-search", "", settledQuery],
+    queryFn: () => judgmentApi.statutes({ search: settledQuery }).then((r) => r.data.results ?? []),
+    enabled: canCite && slashAt !== null && settledQuery.length > 0,
     staleTime: 60_000,
   });
   const results: Statute[] = (slashAt !== null && query ? search.data : undefined)?.slice(0, 6) ?? [];

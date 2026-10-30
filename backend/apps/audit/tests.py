@@ -171,6 +171,48 @@ class TestAuditLogListRetrieve:
         for log in resp.data["results"]:
             assert str(log.get("user")) == str(self.admin.id) or log.get("user_display") == self.admin.username
 
+    def test_search_reaches_rows_past_the_first_page(self):
+        """2026-10-30 A2: `?search=` is server-side. The page used to filter the 20 rows it had,
+        so a match on page 2 was reported as "nothing". The match is the OLDEST row, behind 25
+        newer ones (default ordering is newest first), and must be the only result."""
+        needle = AuditLog.objects.create(
+            tenant=self.tenant, user=self.admin, action=AuditAction.UPDATE,
+            resource="karma", resource_id="needle-77", description="Oldest row"
+        )
+        AuditLog.objects.filter(pk=needle.pk).update(timestamp="2000-01-01T00:00:00Z")
+        for i in range(25):
+            AuditLog.objects.create(
+                tenant=self.tenant, user=self.admin, action=AuditAction.VIEW,
+                resource="soul", description=f"filler {i}"
+            )
+        first_page = self.admin_client.get(f"{BASE}/")
+        assert needle.pk not in {row["id"] for row in first_page.data["results"]}
+
+        for term in ("needle-77", "Oldest", "karma"):
+            resp = self.admin_client.get(f"{BASE}/", {"search": term})
+            assert resp.status_code == status.HTTP_200_OK
+            assert [row["id"] for row in resp.data["results"]] == [needle.pk], term
+
+    def test_search_matches_the_acting_username(self):
+        AuditLog.objects.create(
+            tenant=self.tenant, user=self.viewer, action=AuditAction.VIEW,
+            resource="soul", description="viewer row"
+        )
+        resp = self.admin_client.get(f"{BASE}/", {"search": "aud_viewer"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert [row["username"] for row in resp.data["results"]] == ["aud_viewer"]
+
+    def test_search_stays_inside_the_hall(self):
+        """`search` narrows the hall-scoped queryset; it never widens it (this ADMIN is hall-bound)."""
+        other = Tenant.objects.get_or_create(code="AUD_T2", defaults={"display_name": "Other"})[0]
+        AuditLog.objects.create(tenant=other, action=AuditAction.VIEW, resource="soul", description="cross-hall-needle")
+        AuditLog.objects.create(
+            tenant=self.tenant, user=self.admin, action=AuditAction.VIEW, resource="soul", description="own-hall-needle"
+        )
+        resp = self.admin_client.get(f"{BASE}/", {"search": "hall-needle"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert [row["description"] for row in resp.data["results"]] == ["own-hall-needle"]
+
 
 @pytest.mark.django_db
 class TestAuditLogActions:

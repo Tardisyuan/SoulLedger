@@ -386,6 +386,7 @@ const COLLECTED_FILES = [
   "themeSwapTransition.test.tsx",
   "truncatedValuesAreRecoverable.test.ts",
   "unreadBadgeCountsTheWholeInbox.test.tsx",
+  "useDebouncedValue.test.ts",
   "useDispositions.test.ts",
   "useJudgmentClaims.test.ts",
   "useJudgmentQueue.test.tsx",

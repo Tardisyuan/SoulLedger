@@ -15,7 +15,7 @@ type ViewingOpt = { evenWhileViewing?: boolean };
  * 好让 ViewingLock 把写按钮画成置灰而不是藏掉(Design 第二十八批 W6)。
  */
 export function usePermissions() {
-  const { user } = useTenant();
+  const { user, permissionsReady = true } = useTenant();
   const viewing = useImpersonation() !== null;
 
   // One expression, read twice. It used to be written out twice — once here as
@@ -51,5 +51,7 @@ export function usePermissions() {
     // 自己不是任何一边(移交详情把自己当成目标 / 原属殿就是这里少了这一条)。所有「无殿 ADMIN」判断都读它。
     isTenantExempt: roleIsAdmin && !viewing && !user?.tenant,
     permissions: user?.permissions ?? [],
+    /** 刷新后权限还没从服务端回来(见 TenantContext)。`hasPermission` 不看它;画拒绝页之前看。 */
+    permissionsReady,
   };
 }
