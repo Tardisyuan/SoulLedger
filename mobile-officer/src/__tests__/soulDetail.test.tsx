@@ -476,6 +476,21 @@ describe("lost banner (第五十批 M-1)", () => {
     await openSoul();
     expect(screen.queryByTestId("soul-lost-banner")).toBeNull();
   });
+
+  // cq-apps 2026-10-30 #7: the banner read the newest 20 events of every kind, so a soul lost 20 events ago had none.
+  it("asks for state changes only, so a loss older than the events' first page still shows", async () => {
+    mockSoul.mockResolvedValue({ data: { ...SOUL, current_state: "LOST" } });
+    const lost = { ...event(99), payload: { old_state: "DISPOSED", new_state: "LOST", reason: "押送途中走失" }, actor: "陆判", create_time: "2026-09-01T02:00:00Z" };
+    mockEvents.mockImplementation(async (params: { event_type?: string }) =>
+      params.event_type === "STATE_CHANGED" ? page([lost]) : page(Array.from({ length: 20 }, (_, i) => ({ ...event(i), event_type: "RECORD_ADDED", payload: {} })), 21, "next"),
+    );
+    await openSoul();
+    const banner = await screen.findByTestId("soul-lost-banner");
+    expect(within(banner).getByText("押送途中走失")).toBeTruthy();
+    expect(mockEvents).toHaveBeenCalledWith(expect.objectContaining({ soul: "s1", event_type: "STATE_CHANGED" }));
+    // The events tab is not opened, so nothing else asked for the unfiltered list.
+    expect(mockEvents.mock.calls.filter(([p]) => !(p as { event_type?: string }).event_type)).toEqual([]);
+  });
 });
 
 // 官员 7(2026-10-29):审判看得到、流程不在本殿范围(跨域、本殿没有自己那一段)时 item 答 404。
