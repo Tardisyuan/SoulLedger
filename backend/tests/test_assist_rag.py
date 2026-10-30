@@ -645,13 +645,12 @@ def test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_mo
     rows = HelpChunk.objects.filter(model="fake-embed", dims=64, locale="zh-Hans", audience="soul")
     with connection.cursor() as cursor:
         cursor.execute("SET LOCAL enable_seqscan = off")
-        # HNSW 是近似检索:这张表只有几十行,默认 ef_search=40 时图上偶尔走不到真正的最近邻
-        # (门禁里偶发得到 'codes')。这条测的是「索引被建出来、被用上、随模型删掉」,不是召回率,
-        # 所以把候选放宽到全表,让近似结果等于精确结果。
-        cursor.execute("SET LOCAL hnsw.ef_search = 1000")
+    # 只断言「走了索引、拿回了结果」,不断言头一条是谁。替身给每个条目一个基向量,同一条目在
+    # 各语言 × 各受众下是同一个向量:整张表是成组的完全重复点,彼此等距。HNSW 在这种图上
+    # 会有走不到的节点,放宽 ef_search 也救不回来(b1766f48 设到 1000 后,10-31 仍得到
+    # 'this-life-ledger')。排序对不对由上面的精确扫描那条测。
     with CaptureQueriesContext(connection) as ctx:
-        assert vectors.nearest(rows, ollama.vector(vectors.QUERY_INSTRUCTION + "申诉", None), 3)[0][1] == \
-            "rebirth-appeal"
+        assert len(vectors.nearest(rows, ollama.vector(vectors.QUERY_INSTRUCTION + "申诉", None), 3)) == 3
     with connection.cursor() as cursor:
         cursor.execute("EXPLAIN " + ctx.captured_queries[-1]["sql"])
         plan = "\n".join(r[0] for r in cursor.fetchall())
