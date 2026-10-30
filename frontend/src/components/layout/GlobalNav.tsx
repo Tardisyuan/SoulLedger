@@ -4,11 +4,11 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Popover } from "@base-ui/react/popover";
-import type { LucideIcon } from "lucide-react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { isMenuPathActive } from "@/src/lib/menuPath";
+import { useMenuIcon } from "@/src/lib/menuIcons";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -49,53 +49,13 @@ export function groupOfPath(menus: readonly SidebarMenu[], pathname: string, all
   return i < 0 ? null : menus[i].id;
 }
 
-type LucideModule = typeof import("lucide-react");
-type IconResolver = (icon: string | null | undefined) => LucideIcon | null;
-
 /**
- * `menu.icon` → lucide 组件。库里存的是 IconPicker 写下的导出名(`LayoutDashboard`,也有别名
- * `Building2`、`BarChart`),E2E 夹具里有直接写 kebab 的(`users`)。只认真正的图标 ——
- * `lucide-react` 还导出 `Icon`、`createLucideIcon` 这类非图标,名字撞上它们要落回中性方块,
- * 所以以 `icons` 表里的组件为准(别名与正名是同一个组件对象)。导出给测试。
+ * 菜单图标:`menu.icon` 先查静态图标表(`src/lib/menuIcons.ts`:IconPicker 白名单 + 菜单迁移 / 夹具里的名字),
+ * 查不到才按需异步载整套 lucide。此前每一页都异步下整套(783 KB / 199 KB gz,perf A1)。
  */
-export function iconResolver(mod: LucideModule): IconResolver {
-  const real = new Set<unknown>(Object.values(mod.icons));
-  const table = mod as unknown as Record<string, unknown>;
-  return (icon) => {
-    if (!icon) return null;
-    const pascal = icon.replace(/(^|-)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase());
-    const hit = [icon, pascal].map((n) => table[n]).find((c) => real.has(c));
-    return (hit as LucideIcon | undefined) ?? null;
-  };
-}
-
-/**
- * 整套 lucide 只在这里按需载入一次(异步块,不进外框的首屏包):图标名来自数据库,
- * 静态 import 做不了摇树。载入之前与不认得的名字都画中性方块。
- */
-let resolverPromise: Promise<IconResolver> | null = null;
-let resolved: IconResolver | null = null;
-function loadResolver(): Promise<IconResolver> {
-  resolverPromise ??= import("lucide-react").then((mod) => (resolved = iconResolver(mod)));
-  return resolverPromise;
-}
-// 外框模块一求值就开始载(不等第一个 NavIcon 挂上):图标早一点到,已到时 NavIcon 首帧就画对。
-if (typeof window !== "undefined") void loadResolver();
-
 /** 菜单图标(16px)。不认得 → 中性方块,不按路径写死。 */
 export function NavIcon({ icon }: { icon: string | null | undefined }) {
-  const [resolve, setResolve] = useState<IconResolver | null>(() => resolved);
-  useEffect(() => {
-    if (resolve) return;
-    let live = true;
-    void loadResolver().then((r) => {
-      if (live) setResolve(() => r);
-    });
-    return () => {
-      live = false;
-    };
-  }, [resolve]);
-  const Icon = resolve?.(icon) ?? null;
+  const Icon = useMenuIcon(icon);
   return (
     <span aria-hidden="true" data-icon={icon || undefined} className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
       {Icon ? <Icon size={16} strokeWidth={1.6} /> : <span data-testid="nav-icon-fallback" className="inline-block h-2.5 w-2.5 border border-current" />}

@@ -125,7 +125,7 @@ type Mode = "merge" | "overwrite";
 export function PermissionConfigTransfer() {
   const { t } = useI18n();
   const { user } = useTenant();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isTenantExempt } = usePermissions();
   const { showToast } = useToast();
   const exporter = useExportPermissionConfig();
   const importer = useImportPermissionConfig();
@@ -148,7 +148,7 @@ export function PermissionConfigTransfer() {
   // 与后端同一条件(2026-10-29 第 2 条):导出要 `system.settings`;导入是写全站配置,只给没绑殿的 ADMIN
   // (`CanWriteGlobalSettings`)。不显示一个注定 403 的入口。
   if (!hasPermission("system.settings")) return null;
-  const canImport = isAdmin && !user?.tenant;
+  const canImport = isTenantExempt;
 
   const maxLabel = `${MAX_IMPORT_BYTES / 1024 / 1024} MB`;
   const tenantCode = user?.tenant?.code ?? "global";

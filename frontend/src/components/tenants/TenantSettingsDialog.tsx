@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
+import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -102,7 +103,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
   const usedOf = (form: string) => quotaUsage.data?.find((r) => r.rebirth_form === form)?.used;
   // 安全 · 两步验证(A12):每角色一行,开关写 `mfa_required_roles`。行从 /tenants/{code}/mfa-roles/ 来;
   // 没拉到就不发这个字段,免得把一份空清单写进去。
-  const mfaRoles = useQuery({ queryKey: ["tenants", tenant.code, "mfa-roles"], queryFn: () => tenantsApi.mfaRoles(tenant.code).then((r) => r.data) });
+  const mfaRoles = useQuery({ queryKey: tenantKeys.mfaRoles(tenant.code), queryFn: () => tenantsApi.mfaRoles(tenant.code).then((r) => r.data) });
   const [requiredRoles, setRequiredRoles] = useState<Set<string> | null>(null);
   useEffect(() => {
     if (mfaRoles.data && requiredRoles === null) {
@@ -117,7 +118,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
   const save = useMutation({
     mutationFn: (patch: TenantSettingsPatch) => tenantsApi.updateSettings(tenant.code, patch).then((r) => r.data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      void queryClient.invalidateQueries({ queryKey: tenantKeys.all });
       void queryClient.invalidateQueries({ queryKey: userKeys.all });
       void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
       showToast(t("tenants.settings.saved"), "success");

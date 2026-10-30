@@ -85,7 +85,8 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 }));
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
-import { BottomBar, GlobalNav, NAV_MODE_KEY, iconResolver } from "@/src/components/layout/GlobalNav";
+import { BottomBar, GlobalNav, NAV_MODE_KEY } from "@/src/components/layout/GlobalNav";
+import { iconResolver } from "@/src/lib/menuIcons";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];

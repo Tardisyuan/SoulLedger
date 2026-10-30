@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { permApi, type User } from "@soulledger/core/api";
-import { permissionKeys } from "@soulledger/core/query_keys";
+import type { User } from "@soulledger/core/api";
+import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useAssignUserRoles } from "@soulledger/core/hooks/useUsers";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -34,11 +33,7 @@ export function UserRolesDialog({ user, onClose }: { user: User | null; onClose:
     }
   }, [user]);
 
-  const rolesQuery = useQuery({
-    queryKey: permissionKeys.roles,
-    queryFn: async () => (await permApi.roles.list()).data,
-    enabled: isOpen,
-  });
+  const rolesQuery = useRoles({ enabled: isOpen });
   const labelOf = (name: string, displayName?: string, builtin?: boolean) =>
     builtin ? t(`users.roles.${name}`) : displayName || name;
   const roles = (rolesQuery.data ?? []).filter((r) => r.name !== "SOUL");

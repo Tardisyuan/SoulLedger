@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { officerRefusalOf, permApi, tenantsApi, usersApi, type OfficerInviteInput } from "@soulledger/core/api";
-import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { officerRefusalOf, usersApi, type OfficerInviteInput } from "@soulledger/core/api";
+import { userKeys } from "@soulledger/core/query_keys";
+import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -32,16 +34,8 @@ export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onCl
   const [tenant, setTenant] = useState("");
   const [errors, setErrors] = useState<Partial<Record<"email" | "role" | "username" | "tenant", string>>>({});
 
-  const rolesQuery = useQuery({
-    queryKey: permissionKeys.roles,
-    queryFn: async () => (await permApi.roles.list()).data,
-    enabled: isOpen,
-  });
-  const tenantsQuery = useQuery({
-    queryKey: ["tenants", "for-user-create"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-    enabled: isOpen,
-  });
+  const rolesQuery = useRoles({ enabled: isOpen });
+  const tenantsQuery = useTenantNames({ enabled: isOpen });
   const roleOptions = (rolesQuery.data ?? [])
     .filter((r) => r.name !== "SOUL" && r.name !== "ADMIN")
     .map((r) => ({ value: r.name, label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name }));

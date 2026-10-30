@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { dispatchApi, tenantsApi, type DispatchRecord } from "@soulledger/core/api";
+import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -87,12 +88,7 @@ function DispatchPageContent() {
       if (saved.target_tenant) setTargetTenant(saved.target_tenant);
     }
   );
-  const tenantsQuery = useQuery({
-    queryKey: ["dispatch", "filter-tenants"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-    enabled: !!user,
-    staleTime: 60_000,
-  });
+  const tenantsQuery = useTenantNames({ enabled: !!user, staleTime: 60_000 });
   const tenantOptions = [
     { value: "", label: t("dispatch.filter.all_tenants") },
     ...(tenantsQuery.data ?? []).map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),

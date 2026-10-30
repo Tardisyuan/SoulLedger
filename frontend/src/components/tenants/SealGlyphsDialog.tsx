@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
+import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -55,7 +56,7 @@ export function SealGlyphsDialog({ tenant, onClose }: { tenant: Tenant | null; o
   const save = useMutation({
     mutationFn: () => tenantsApi.updateSealGlyphs(tenant!.code, glyphs).then((r) => r.data),
     onSuccess: (saved) => {
-      void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      void queryClient.invalidateQueries({ queryKey: tenantKeys.all });
       if (user?.tenant && user.tenant.code === saved.code) {
         setUser({ ...user, tenant: { ...user.tenant, seal_glyphs: saved.seal_glyphs ?? [] } });
       }

@@ -1,15 +1,12 @@
 "use client";
 
-import * as LucideIcons from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { useMenuIcon } from "@/src/lib/menuIcons";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TreeName } from "@/src/components/ui/TreeRow";
 import type { MenuItemFull } from "./menuTypes";
-
-type LucideIconName = keyof typeof LucideIcons;
 
 /** One menu row's seven `<td>`s — DataTable supplies the surrounding `<tr>`. */
 export function MenuRowCells({
@@ -25,9 +22,8 @@ export function MenuRowCells({
   onDelete: (menu: MenuItemFull) => void;
 }) {
   const { t } = useI18n();
-  const MenuIcon = menu.icon
-    ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
-    : null;
+  // Same resolution as the sidebar (static table first, whole of lucide only for a name outside it).
+  const MenuIcon = useMenuIcon(menu.icon);
   // Deleted-row state (Stage 4 §4.7): ink-subtle text, strikethrough
   // on the name only, plus a "已删除" badge — never hidden data,
   // just de-emphasized. Only reachable when showDeleted is on,

@@ -3,8 +3,9 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, handoverApi, openWorkOf, PAGE_SIZE, type User } from "@soulledger/core/api";
-import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
+import { usersApi, handoverApi, openWorkOf, PAGE_SIZE, type User } from "@soulledger/core/api";
+import { userKeys } from "@soulledger/core/query_keys";
+import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -137,10 +138,7 @@ function UsersRoute() {
   // fixed list is wrong now that custom roles can be held). Built-ins keep
   // their translated label via `users.roles.*`; a custom role shows its
   // server-side display_name, which is data rather than UI copy.
-  const rolesQuery = useQuery({
-    queryKey: permissionKeys.roles,
-    queryFn: async () => (await permApi.roles.list()).data,
-  });
+  const rolesQuery = useRoles();
   const roleFilterOptions = (rolesQuery.data ?? []).map((r) => ({
     value: r.name,
     label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name,

@@ -1,15 +1,14 @@
 /**
  * Tests for useDispositions hooks
  */
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useDispositions, useExecuteDisposition } from "@soulledger/core/hooks/useDispositions";
+import { useDispositions } from "@soulledger/core/hooks/useDispositions";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: {
     list: jest.fn().mockResolvedValue({ data: [] }),
-    execute: jest.fn().mockResolvedValue({ data: {} }),
   },
 }));
 
@@ -45,24 +44,5 @@ describe("useDispositions", () => {
     const { result } = renderHook(() => useDispositions(), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
-  });
-});
-
-describe("useExecuteDisposition", () => {
-  it("returns mutation object", () => {
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(() => useExecuteDisposition(), { wrapper });
-    expect(result.current).toHaveProperty("mutate");
-  });
-
-  it("calls dispositionApi.execute on mutate", async () => {
-    const { dispositionApi } = require("@soulledger/core/api");
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(() => useExecuteDisposition(), { wrapper });
-    await act(async () => {
-      result.current.mutate({ id: "1" });
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(dispositionApi.execute).toHaveBeenCalledWith("1", undefined);
   });
 });

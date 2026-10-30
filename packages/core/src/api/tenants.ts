@@ -95,7 +95,8 @@ export interface HallOverviewRow {
 }
 
 export const tenantsApi = {
-  list: () => api.get<PaginatedResponse<Tenant>>("/tenants/"),
+  /** One page (20 rows). `useTenantNames()` walks them all. */
+  list: (params?: { page?: number }) => api.get<PaginatedResponse<Tenant>>("/tenants/", params ? { params } : undefined),
   // TenantViewSet sets lookup_field = "code" (backend/apps/tenants/views.py:9),
   // so the detail route is /tenants/{code}/ — a numeric id does not address it.
   get: (code: string) => api.get<Tenant>(`/tenants/${code}/`),

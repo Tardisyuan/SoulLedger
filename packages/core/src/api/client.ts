@@ -395,6 +395,16 @@ export async function fetchAllPages<T>(url: string, params: Record<string, strin
  */
 export type FetchFailure = "gone" | "network" | "other";
 
+/**
+ * The `code` of a failed request's `{detail, code}` / `{error, code}` body, or `null` (no response,
+ * no body, a non-string code). Reads any rejection shaped like an axios error, so tests' plain
+ * `{ response: { data } }` objects work too.
+ */
+export function responseCode(error: unknown): string | null {
+  const code = (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code;
+  return typeof code === "string" ? code : null;
+}
+
 export function fetchFailureOf(error: unknown): FetchFailure {
   const response = (error as { response?: { status?: number } } | null)?.response;
   if (!response) return "network";

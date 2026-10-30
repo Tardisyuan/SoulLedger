@@ -21,10 +21,16 @@ import { permKeys } from "../query_keys";
  * in the page's local state for nothing.
  */
 
-export function useRoles() {
+/**
+ * The role table. One key for every screen that reads it (permissions page, the users page and its
+ * dialogs, the menu form), so a role created / renamed / deleted on the permissions page refreshes
+ * them all — the users screens used to read it under a second key nothing invalidated.
+ */
+export function useRoles(options: { enabled?: boolean; staleTime?: number } = {}) {
   return useQuery({
     queryKey: permKeys.roles,
     queryFn: async () => (await permApi.roles.list()).data,
+    ...options,
   });
 }
 

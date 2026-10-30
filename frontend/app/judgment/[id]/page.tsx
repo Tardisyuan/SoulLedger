@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi, soulsApi } from "@soulledger/core/api";
 import { fetchFailureOf } from "@soulledger/core/api/client";
-import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
+import { judgmentKeys, soulKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -260,7 +260,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
      与跨域审判详情页同一把缓存键。原审判在发起方(原属)这边,读得到。 */
   const crossId = judgment?.cross_judgment_id ?? null;
   const { data: cross } = useQuery({
-    queryKey: ["cross-judgments", "detail", crossId],
+    queryKey: crossJudgmentKeys.detail(crossId ?? ""),
     queryFn: () => crossTenantJudgmentsApi.get(crossId!).then((res) => res.data),
     enabled: !!crossId && !judgment?.is_final,
   });
@@ -332,7 +332,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       }
       if (code === "cross_judgment_open" && crossId) {
         setCrossRefused(true);
-        queryClient.invalidateQueries({ queryKey: ["cross-judgments", "detail", crossId] });
+        queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.detail(crossId) });
         return;
       }
       if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
@@ -506,7 +506,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     staleTime: 30_000,
   });
   const { data: priorLives = NO_LIVES } = useQuery({
-    queryKey: [...soulKeys.all, "reincarnations", soulId],
+    queryKey: soulKeys.reincarnations(soulId),
     queryFn: async (): Promise<Reincarnation[]> => (await reincarnationApi.list({ soul: soulId })).data.results,
     enabled: !!soulId,
     staleTime: 30_000,

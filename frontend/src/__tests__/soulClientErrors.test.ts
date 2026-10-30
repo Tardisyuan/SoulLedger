@@ -4,6 +4,7 @@
  * every branch is a sentence some screen shows, so a misread code shows the wrong sentence.
  */
 import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestConfig } from "axios";
+import { responseCode } from "@soulledger/core/api/client";
 
 import {
   clearSoulTokens,
@@ -45,7 +46,21 @@ describe("soulErrorMessage / soulCodeMessage", () => {
     expect(soulErrorCode(http(400, { code: "x" }))).toBe("x");
     expect(soulErrorCode(http(400, { code: 3 }))).toBeNull();
     expect(soulErrorCode(new Error())).toBeNull();
+    // soulErrorCode stays axios-only even though the shared reader is not: a plain object with a code is not a soul error.
+    expect(soulErrorCode({ response: { data: { code: "x" } } })).toBeNull();
     expect(soulCodeMessage("invalid_credentials")).toEqual({ key: "soul_app.errors.invalid_credentials" });
+  });
+});
+
+describe("responseCode (core api/client), the one reader the three error-code helpers share", () => {
+  it("reads a string code off any axios-shaped rejection, and nothing else", () => {
+    expect(responseCode(http(409, { code: "not_cancellable" }))).toBe("not_cancellable");
+    expect(responseCode({ response: { status: 400, data: { code: "draft_conflict" } } })).toBe("draft_conflict");
+    expect(responseCode(http(400, { code: 3 }))).toBeNull();
+    expect(responseCode(http(500))).toBeNull();
+    expect(responseCode(offline())).toBeNull();
+    expect(responseCode(null)).toBeNull();
+    expect(responseCode("nope")).toBeNull();
   });
 });
 

@@ -106,10 +106,7 @@ const offersAWay = (code: string) => CAN_CHANGE_THE_PAGE.test(code) || NARROWS_I
  * ones.
  */
 const EXEMPT: Record<string, string> = {
-  "app/organizations/page.tsx":
-    "Requests page 1..N in a loop and keeps every result — it renders a parent/child " +
-    "tree, and a paged view would split a node from its children onto different pages. " +
-    "The whole collection is on screen, so there is nothing left to page to.",
+  // app/organizations 的豁免已删(2026-10-30):页面改用 `useAllOrganizations()`,自己不再请求第 N 页。
   // app/ledger 的豁免已删(2026-09-30):总账改为 `all=1` 一次取整月,页面不再请求第 N 页。
 };
 

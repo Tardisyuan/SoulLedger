@@ -1,7 +1,7 @@
 /**
  * Tests for the soul lifecycle hooks in src/hooks/useSouls.ts that the
  * existing useSouls.test.ts does not reach: useSoul, useSoulLedger,
- * useMarkSoulDead, useTransitionSoul, useAddSoulRecord.
+ * useAddSoulRecord.
  *
  * The failure mode these guard against is a mutation that succeeds on the
  * server but forgets to invalidate a cache key — the operator then sees the
@@ -14,8 +14,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useSoul,
   useSoulLedger,
-  useMarkSoulDead,
-  useTransitionSoul,
   useAddSoulRecord,
 } from "@soulledger/core/hooks/useSouls";
 import { soulsApi } from "@soulledger/core/api";
@@ -128,74 +126,6 @@ describe("useSoulLedger", () => {
 });
 
 // ── Mutations ────────────────────────────────────────────────────────
-
-describe("useMarkSoulDead", () => {
-  it("posts the death payload for the given soul", async () => {
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(() => useMarkSoulDead(), { wrapper });
-
-    await act(async () => {
-      result.current.mutate({ id: "s1", data: { death_date: "2026-01-01" } });
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(soulsApi.die).toHaveBeenCalledWith("s1", { death_date: "2026-01-01" });
-  });
-
-  it("refreshes both the soul detail and the soul list", async () => {
-    const { wrapper, invalidate } = createWrapper();
-    const { result } = renderHook(() => useMarkSoulDead(), { wrapper });
-
-    await act(async () => {
-      result.current.mutate({ id: "s1" });
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(keys(invalidate)).toEqual(['["souls","detail","s1"]', '["souls"]']);
-  });
-
-  it("toasts an error and invalidates nothing when the call fails", async () => {
-    (soulsApi.die as jest.Mock).mockRejectedValueOnce(new Error("409"));
-    const { wrapper, invalidate } = createWrapper();
-    const { result } = renderHook(() => useMarkSoulDead(), { wrapper });
-
-    await act(async () => {
-      result.current.mutate({ id: "s1" });
-    });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-
-    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.failed", "error");
-    expect(invalidate).not.toHaveBeenCalled();
-  });
-});
-
-describe("useTransitionSoul", () => {
-  it("posts the target state and refreshes detail plus list", async () => {
-    const { wrapper, invalidate } = createWrapper();
-    const { result } = renderHook(() => useTransitionSoul(), { wrapper });
-
-    await act(async () => {
-      result.current.mutate({ id: "s3", data: { state: "JUDGING" } });
-    });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(soulsApi.transition).toHaveBeenCalledWith("s3", { state: "JUDGING" });
-    expect(keys(invalidate)).toEqual(['["souls","detail","s3"]', '["souls"]']);
-  });
-
-  it("reports a rejected transition through a toast rather than silently", async () => {
-    (soulsApi.transition as jest.Mock).mockRejectedValueOnce(new Error("400"));
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(() => useTransitionSoul(), { wrapper });
-
-    await act(async () => {
-      result.current.mutate({ id: "s3", data: { state: "SETTLED" } });
-    });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-
-    expect(mockShowToast).toHaveBeenCalledWith("souls.detail.failed", "error");
-  });
-});
 
 describe("useAddSoulRecord", () => {
   it("refreshes the soul detail and its ledger — not the whole soul list", async () => {

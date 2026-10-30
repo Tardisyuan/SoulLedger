@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useId, useMemo, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usersApi, permApi, organizationsApi, tenantsApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
-import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
+import { userKeys } from "@soulledger/core/query_keys";
+import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
+import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -132,11 +135,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    * the only option so the form never shows a blank select and a save never
    * silently changes the role.
    */
-  const rolesQuery = useQuery({
-    queryKey: permissionKeys.roles,
-    queryFn: async () => (await permApi.roles.list()).data,
-    enabled: isOpen,
-  });
+  const rolesQuery = useRoles({ enabled: isOpen });
   const roleOptions =
     rolesQuery.data && rolesQuery.data.length > 0
       ? rolesQuery.data.map((r) => ({ value: r.name, label: r.display_name || r.name }))
@@ -149,17 +148,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    * 与机构页共用 `["organizations"]` 这把键,机构增删改后两边一起刷新。
    */
   const userTenant = isEditing ? user?.tenant?.id : formData.tenant;
-  const orgsQuery = useQuery({
-    queryKey: ["organizations"],
-    queryFn: () => organizationsApi.all(),
-    enabled: isOpen && userTenant != null,
-  });
+  const orgsQuery = useAllOrganizations({ enabled: isOpen && userTenant != null });
   // 新建时租户在这里选(只有选了才出现机构与职务);只有一个可选租户(非管理员)就直接选上。
-  const tenantsQuery = useQuery({
-    queryKey: ["tenants", "for-user-create"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-    enabled: isOpen && !isEditing,
-  });
+  const tenantsQuery = useTenantNames({ enabled: isOpen && !isEditing });
   const tenantChoices = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data]);
   useEffect(() => {
     if (!isEditing && tenantChoices.length === 1) {

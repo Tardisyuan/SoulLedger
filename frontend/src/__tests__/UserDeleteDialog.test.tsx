@@ -36,7 +36,7 @@ jest.mock("@soulledger/core/api", () => ({
 
 jest.mock("@soulledger/core/query_keys", () => ({
   userKeys: { all: ["users"] },
-  permissionKeys: { roles: ["permissions", "roles"] },
+  permKeys: { roles: ["roles"] },
 }));
 
 jest.mock("@/src/components/ui/Toast", () => ({

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { dispatchApi } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
@@ -91,6 +92,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   usePlaque({ title: t("dispatch.detail_title"), hall: useHall(useCourtOffice()) });
   const buttonOn = useMenuButtonConfig();
   const { user } = useTenant();
+  const { isTenantExempt } = usePermissions();
   const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -242,7 +244,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   // `_not_target_or_403`、`return_home` 同一判定;无殿 ADMIN 两边都算(后端 `is_tenant_exempt`),绑殿 ADMIN 不算。
   // 原属殿用 `source_tenant_code`:暂居中的灵魂不能再被移交(`DispatchService.propose` 拒 `is_residing`),
   // 所以执行中的那一条的发起殿就是灵魂的原属殿。
-  const anyHall = user?.role === "ADMIN" && !user?.tenant;
+  const anyHall = isTenantExempt;
   const hall = user?.tenant?.code;
   const isTargetHall = anyHall || (!!hall && hall === dispatch.target_tenant_code);
   const isHomeHall = anyHall || (!!hall && hall === dispatch.source_tenant_code);

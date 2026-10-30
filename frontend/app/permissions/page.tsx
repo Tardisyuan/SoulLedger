@@ -7,7 +7,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { PageSection } from "@/components/ui/page-section";
@@ -33,7 +32,7 @@ import { DeleteConfirmModal } from "@/src/components/permissions/DeleteConfirmMo
 import { buildPermissionColumns } from "@/src/components/permissions/permissionColumns";
 import { usePermissionCrud } from "@/src/components/permissions/usePermissionCrud";
 import { useMatrixCells, type CellFailure } from "@/src/components/permissions/useMatrixCells";
-import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
+import { matrixCellKey, useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { permKeys } from "@soulledger/core/query_keys";
 import { fieldControl } from "@/src/components/ui/Field";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
@@ -66,11 +65,10 @@ export default function PermissionsPage() {
 
 function PermissionsPageContent() {
   const { t } = useI18n();
-  const { hasPermission, isAdmin } = usePermissions();
-  const { user } = useTenant();
+  const { hasPermission, isTenantExempt } = usePermissions();
   // 写(建 / 改 / 删码与角色、矩阵保存、导入)只给没绑殿的 ADMIN 且持 system.settings —— 与后端
   // `CanWriteGlobalSettings` 同一条件:角色与授权是所有殿共用的配置。别的持码者只读。
-  const canManagePermissions = hasPermission("system.settings") && isAdmin && !user?.tenant;
+  const canManagePermissions = hasPermission("system.settings") && isTenantExempt;
 
   // ── Permission CRUD state (unchanged from the previous per-role picker) ──
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -98,14 +96,11 @@ function PermissionsPageContent() {
   // (`/perm/role-permissions/all/`). Three calls, whatever the role count —
   // it used to be one call per role (perf review 2026-10-27 #10).
   const permsQuery = useQuery({
-    queryKey: ["permissions"],
+    queryKey: permKeys.permissions,
     queryFn: async () => (await permApi.list()).data,
   });
 
-  const rolesQuery = useQuery({
-    queryKey: ["roles"],
-    queryFn: async () => (await permApi.roles.list()).data,
-  });
+  const rolesQuery = useRoles();
 
   const roleNames = useMemo(() => (rolesQuery.data ?? []).map((r) => r.name), [rolesQuery.data]);
 

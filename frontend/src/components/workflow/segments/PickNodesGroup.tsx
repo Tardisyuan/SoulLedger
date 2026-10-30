@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { officerAppApi } from "@soulledger/core/api";
+import { todoKeys } from "@soulledger/core/query_keys";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -19,7 +20,7 @@ import { PickStationsSheet } from "./PickStationsSheet";
 export function PickNodesGroup() {
   const { t, locale } = useI18n();
   const todo = useQuery({
-    queryKey: ["dashboard", "todo", "officer"],
+    queryKey: todoKeys.item("officer"),
     queryFn: async () => (await officerAppApi.todo()).data,
     staleTime: 60_000,
   });

@@ -85,13 +85,6 @@ export const TENANT_CODE_TO_CIVILIZATION: Record<string, string> = {
   GR_HADES: "GREEK",
 };
 
-export const CIVILIZATION_LABELS: Record<string, string> = {
-  CHINESE: "中国地府",
-  EUROPEAN: "欧洲天堂地狱",
-  EGYPTIAN: "埃及冥界",
-  GREEK: "希腊冥界",
-};
-
 export function getCivilizationFromTenantCode(code: string): string {
   return TENANT_CODE_TO_CIVILIZATION[code] || code;
 }

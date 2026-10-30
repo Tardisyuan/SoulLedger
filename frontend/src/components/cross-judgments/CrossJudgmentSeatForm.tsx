@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@soulledger/core/api";
+import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import type { SeatableActor } from "@soulledger/core/api/dispatch";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -67,7 +68,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
     mine === judgment.initiating_tenant_code &&
     hasPermission("cross_judgment.create");
   const actors = useQuery({
-    queryKey: ["cross-judgments", "seatable-actors", judgment.id, tenantCode, role],
+    queryKey: crossJudgmentKeys.seatableActors(judgment.id, tenantCode, role),
     queryFn: () => crossTenantJudgmentsApi.seatableActors(judgment.id, tenantCode, role).then((r) => r.data),
     enabled: isInitiator && !!tenantCode,
   });
@@ -84,7 +85,7 @@ export function CrossJudgmentSeatForm({ judgment }: { judgment: CrossTenantJudgm
       setTenantCode("");
       setActorId("");
       showToast(t("sentence_plan.cross.seated"), "success");
-      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
     },
     onError: (error) => showToast(errorText(error, t) ?? t("sentence_plan.cross.seat_error"), "error"),
   });

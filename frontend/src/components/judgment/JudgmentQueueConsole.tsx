@@ -5,7 +5,7 @@ import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -90,7 +90,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   });
   const crossId = detail?.cross_judgment_id ?? null;
   const { data: cross } = useQuery({
-    queryKey: ["cross-judgments", "detail", crossId],
+    queryKey: crossJudgmentKeys.detail(crossId ?? ""),
     queryFn: () => crossTenantJudgmentsApi.get(crossId!).then((res) => res.data),
     enabled: !!crossId && !judgment?.is_final,
   });
