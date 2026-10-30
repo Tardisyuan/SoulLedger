@@ -93,3 +93,40 @@ it("a failed refresh keeps the cached list", async () => {
   await comeBack();
   expect(screen.getByTestId("gate").props.children).toBe("execute -");
 });
+
+// opt-apps2 N2: iOS reports inactive → active after the face sheet or a system alert -- not a return.
+it("inactive → active asks nothing; background → active does", async () => {
+  mockProfile.mockResolvedValue(profileWith(OFFICER.permissions));
+  await boot();
+  expect(mockProfile).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    foreground?.("inactive");
+    foreground?.("active");
+  });
+  expect(mockProfile).toHaveBeenCalledTimes(1);
+  await comeBack();
+  expect(mockProfile).toHaveBeenCalledTimes(2);
+});
+
+// opt-apps2 R1: an equal answer replaced the state (and rewrote the stored profile), redrawing the whole shell.
+it("an unchanged profile keeps the session state and the stored copy as they were", async () => {
+  const rendered = jest.fn();
+  function Count() {
+    useCan("judgment.execute");
+    rendered();
+    return null;
+  }
+  mockProfile.mockResolvedValue(profileWith(OFFICER.permissions));
+  render(
+    <SessionProvider>
+      <Count />
+    </SessionProvider>
+  );
+  await act(async () => {});
+  const before = rendered.mock.calls.length;
+  const write = jest.spyOn(platform().persistent, "set");
+  await comeBack();
+  expect(mockProfile).toHaveBeenCalledTimes(2);
+  expect(rendered.mock.calls.length).toBe(before);
+  expect(write.mock.calls.filter(([key]) => key === USER_KEY)).toEqual([]);
+});

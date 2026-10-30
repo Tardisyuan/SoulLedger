@@ -5,7 +5,7 @@
  */
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, StyleSheet } from "react-native";
@@ -135,7 +135,22 @@ describe("the offline bar", () => {
     expect(flat(screen.getByTestId("plaque")).paddingTop).toBe(TOP);
   });
 
-  it("back online, the life tab loads again without being pulled; staying offline does not", async () => {
+  it("back online, a life tab that failed loads again without being pulled; staying offline does not", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({ "/me/": { status: 200, data: PROFILE }, "/me/life/": ["offline", { status: 200, data: life(1) }] });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    const lifeCalls = () => calls.filter((c) => c.url === "/me/life/").length;
+    await waitFor(() => expect(lifeCalls()).toBe(1));
+    await drop();
+    await act(async () => net.__set({ isInternetReachable: false })); // another offline event: no return
+    expect(lifeCalls()).toBe(1);
+    await restore();
+    expect(lifeCalls()).toBe(2);
+  });
+
+  // opt-apps2 N3: every page re-asked everything on each return to the network, loaded or not.
+  it("back online, a life tab that had loaded asks nothing", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const calls = stubApi({ "/me/": { status: 200, data: PROFILE }, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
@@ -143,10 +158,8 @@ describe("the offline bar", () => {
     const lifeCalls = () => calls.filter((c) => c.url === "/me/life/").length;
     const loaded = lifeCalls();
     await drop();
-    await act(async () => net.__set({ isInternetReachable: false })); // another offline event: no return
-    expect(lifeCalls()).toBe(loaded);
     await restore();
-    expect(lifeCalls()).toBe(loaded + 1);
+    expect(lifeCalls()).toBe(loaded);
   });
 
   // The bug as reported: reduce motion on, the network drops, and the life tab's three requests

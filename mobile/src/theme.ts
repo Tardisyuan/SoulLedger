@@ -198,6 +198,17 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
  */
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
   const key = civKeyOf(civilization);
+  // One frozen object per (civ, scheme). A new one on every call changed ThemeContext's value on each
+  // foreground / profile answer and redrew every consumer in the app (opt-apps2 R1, 2026-10-30).
+  const id = `${key}:${scheme}`;
+  let theme = themes.get(id);
+  if (!theme) themes.set(id, (theme = Object.freeze(buildTheme(key, scheme))));
+  return theme;
+}
+
+const themes = new Map<string, Theme>();
+
+function buildTheme(key: CivKey, scheme: ColorScheme): Theme {
   const n = v3[scheme];
   const plaque = key === "neutral" ? NEUTRAL_PLAQUE[scheme] : v3.civ[key][scheme];
   return {

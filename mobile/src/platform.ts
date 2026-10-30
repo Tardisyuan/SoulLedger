@@ -46,31 +46,75 @@ export const persistentStore: KeyValueStore = {
   },
 };
 
+/**
+ * One `multiGet` for the lot; if it throws, key by key. Android's AsyncStorage throws for the WHOLE `multiGet`
+ * when one row is past its cursor window (~2 MB) -- that one oversized value used to cost every key: theme,
+ * sign-in memory, drafts, the outbox (opt-apps2 N5). Now only the unreadable key is lost.
+ */
 export async function hydratePersistentStore(): Promise<void> {
+  let keys: readonly string[];
   try {
-    const keys = await AsyncStorage.getAllKeys();
-    for (const [key, value] of await AsyncStorage.multiGet(keys)) {
-      if (value !== null) persistentCache.set(key, value);
-    }
+    keys = await AsyncStorage.getAllKeys();
   } catch {
-    // An unreadable store is an empty one: defaults apply, nothing secret lives here.
+    return; // An unreadable store is an empty one: defaults apply, nothing secret lives here.
+  }
+  let rows: readonly (readonly [string, string | null])[];
+  try {
+    rows = await AsyncStorage.multiGet(keys);
+  } catch {
+    rows = await Promise.all(keys.map((key) => AsyncStorage.getItem(key).then((value) => [key, value] as const, () => [key, null] as const)));
+  }
+  for (const [key, value] of rows) {
+    if (value !== null) persistentCache.set(key, value);
   }
 }
 
 /**
+ * Reads go through a memory copy (opt-apps2 S5): every request asked the Keychain / Keystore for the refresh
+ * token synchronously. Writes and removals through this port update the copy at once. Only this port's entries
+ * are kept here; the 面容 / 指纹 credential (`requireAuthentication`, deviceLogin.ts) is read with its own
+ * SecureStore call each time and never passes through this cache.
+ *
  * `deleteItemAsync` is the only delete expo-secure-store offers. Overwriting
  * with "" first makes the removal visible to the very next synchronous `get`
  * (read as absent), so a sign-out followed at once by a read cannot see the
  * old refresh token while the async delete is still in flight.
  */
+const secureCache = new Map<string, string | null>();
 export const secureStore: KeyValueStore = {
-  get: (key) => SecureStore.getItem(key) || null,
-  set: (key, value) => SecureStore.setItem(key, value),
+  get: (key) => {
+    if (!secureCache.has(key)) secureCache.set(key, SecureStore.getItem(key) || null);
+    return secureCache.get(key) ?? null;
+  },
+  set: (key, value) => {
+    SecureStore.setItem(key, value);
+    secureCache.set(key, value || null);
+  },
   remove: (key) => {
     SecureStore.setItem(key, "");
+    secureCache.set(key, null);
     SecureStore.deleteItemAsync(key).catch(() => {});
   },
 };
+
+/** The memory copy is dropped: the next read asks the native store. For a store changed behind the port (tests). */
+export function forgetSecureCache(): void {
+  secureCache.clear();
+}
+
+/**
+ * A return from the background: `background → active` only. iOS also goes `inactive → active` after the face /
+ * finger sheet, a system alert or Control Center, which is not a return (opt-apps2 N2: 4–5 needless requests per
+ * face check). The same rule as `onSessionResume` below.
+ */
+export function onForeground(handler: () => void): () => void {
+  let previous = AppState.currentState;
+  const sub = AppState.addEventListener("change", (state) => {
+    if (state === "active" && previous === "background") handler();
+    previous = state;
+  });
+  return () => sub.remove();
+}
 
 let unauthorizedHandler: () => void = () => {};
 export function setUnauthorizedHandler(handler: () => void): void {
@@ -105,14 +149,7 @@ export const mobilePlatform: PlatformAdapter = {
     });
     return () => sub.remove();
   },
-  onSessionResume(handler) {
-    let previous = AppState.currentState;
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && previous === "background") handler();
-      previous = state;
-    });
-    return () => sub.remove();
-  },
+  onSessionResume: onForeground,
   notify(message, _kind) {
     const text = render(message);
     if (Platform.OS === "android") ToastAndroid.show(text, ToastAndroid.SHORT);

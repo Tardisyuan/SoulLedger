@@ -198,7 +198,7 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const gone = useGone();
   const list = useRemote(soulApi.applications);
-  useReloadOnRefocus(list.reload);
+  useReloadOnRefocus(list.reload, list);
   // Siri's 「冷却还剩几天」 reads this number back (voiceCache.ts). Every fresh fetch re-stamps it.
   useEffect(() => {
     if (list.data) publishVoiceNumber("cooldown", daysLeft(list.data.cooldown_until));

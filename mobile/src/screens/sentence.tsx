@@ -256,7 +256,7 @@ export type SentenceRemote = ReturnType<typeof useSentencePlan>;
 export function useSentencePlan({ landing, reloadKey }: { landing?: SentenceLanding; reloadKey: number }) {
   const remote = useRemote(soulApi.sentencePlan);
   const { reload } = remote;
-  useReloadOnRefocus(reload);
+  useReloadOnRefocus(reload, remote);
   // A pull on the life page, or a push landing while the page is already open: the plan just changed.
   useEffect(() => {
     if (reloadKey || landing) void reload();

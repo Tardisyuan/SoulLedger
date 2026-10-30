@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { notificationsApi } from "@soulledger/core/api/notifications";
 import type { JudgmentQueueGroup } from "@soulledger/core/api/judgment";
-import { AppState, BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
 import { ActionButton, IdentityBand, StandingBanner, TabBar, visibleTabs, type TabKey } from "./kit";
@@ -31,7 +31,7 @@ import { ResetPasswordScreen } from "./screens/reset";
 import { SearchTab } from "./screens/search";
 import { TodoTab, type ItemRef } from "./screens/todo";
 import { needsMfaSetup, useSession } from "./session";
-import { useI18n, useTheme } from "./shared";
+import { onForeground, useI18n, useTheme } from "./shared";
 
 export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const { t } = useI18n();
@@ -80,19 +80,16 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
     return listenForLandings(land);
   }, [land]);
 
-  // The lists ask again when the app comes back to the foreground and when a push arrives while it is open:
-  // the same bump a closed detail gives them (待办 / 审判 / 通知 remount on `version`).
+  // The lists ask again when the app comes back from the background and when a push arrives while it is open:
+  // the same bump a closed detail gives them. 待办 / 审判 / 通知 reload on `version` in place -- no remount, so the
+  // scroll position and the pages fetched with 「加载更多」 stay (opt-apps2 N1; paged.tsx refreshes those pages).
   useEffect(() => {
     const bump = () => setVersion((v) => v + 1);
     const stop = listenForArrivals(bump);
-    let previous = AppState.currentState;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active" && previous !== "active") bump();
-      previous = next;
-    });
+    const off = onForeground(bump);
     return () => {
       stop();
-      sub.remove();
+      off();
     };
   }, []);
 
@@ -231,16 +228,16 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
             onGone={markGone}
           />
         ) : current === "todo" ? (
-          <TodoTab key={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
+          <TodoTab version={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : current === "queue" ? (
-          <QueueTab key={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
+          <QueueTab version={version} gone={gone} initialGroup={queueGroup} onGroup={setQueueGroup} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
         ) : current === "search" ? (
           <SearchTab
             onOpenSoul={(id) => { setOrigin("search"); setDetail({ type: "soul", id }); }}
             onOpenJudgment={(id) => { setOrigin("search"); setDetail({ type: "judgment", id }); }}
           />
         ) : current === "notices" ? (
-          <NoticesTab key={version} gone={gone} onRead={countUnread} onLand={(landing) => land(landing, "notices")} />
+          <NoticesTab version={version} gone={gone} onRead={countUnread} onLand={(landing) => land(landing, "notices")} />
         ) : (
           <MeTab onOpen={setAccount} />
         )}

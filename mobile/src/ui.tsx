@@ -1486,15 +1486,37 @@ export function useRemote<T>(fetcher: () => Promise<T>) {
  * changes it (seen on the iPhone run: a just-submitted application missing from
  * the life tab). Reload on every focus AFTER the first — the first is the mount,
  * which `useRemote` already loads.
+ *
+ * `state` (what `useRemote` returns): a focus within REFOCUS_FRESH_MS of the last successful answer asks nothing
+ * -- tabbing back and forth sent the page's requests every time (opt-apps2 N3) -- and a return to the network asks
+ * only when the page failed or has nothing. A pull, and a push arriving while the page is in front, always ask.
  */
-export function useReloadOnRefocus(reload: () => unknown) {
+export const REFOCUS_FRESH_MS = 15_000;
+
+/**
+ * When the app last changed something on the server (any successful non-GET; session.tsx reports them). An
+ * answer older than that is not fresh, however recent: back from 「申请转生」 or a new post within 15 s, the page
+ * asks again, as it did before the throttle.
+ */
+let wroteAt = 0;
+export function markWritten(): void {
+  wroteAt = Date.now();
+}
+
+export function useReloadOnRefocus(reload: () => unknown, state?: RemoteState) {
   const first = useRef(true);
+  const okAt = useRef(0);
+  const ok = state !== undefined && state.data != null && state.error == null;
+  useEffect(() => {
+    if (ok) okAt.current = Date.now();
+  }, [ok, state?.data]);
   useFocusEffect(
     useCallback(() => {
       if (first.current) {
         first.current = false;
         return;
       }
+      if (okAt.current > wroteAt && Date.now() - okAt.current < REFOCUS_FRESH_MS) return;
       void reload();
     }, [reload])
   );
@@ -1507,17 +1529,31 @@ export function useReloadOnRefocus(reload: () => unknown) {
       return () => sub.remove();
     }, [reload])
   );
-  useReloadOnReconnect(reload);
+  useReloadOnReconnect(reload, state);
 }
 
-/** Back online (network.tsx): whatever failed while offline loads again, focused or not. */
-export function useReloadOnReconnect(reload: () => unknown) {
+/** `data` / `error` as `useRemote` holds them. */
+export interface RemoteState {
+  data: unknown;
+  error: unknown;
+}
+
+/**
+ * Back online (network.tsx): whatever failed while offline loads again, focused or not. With `state`, only a page
+ * that failed or has nothing asks (opt-apps2 N3); without it (a caller that cannot tell), every one does.
+ */
+export function useReloadOnReconnect(reload: () => unknown, state?: RemoteState) {
   const { back } = useOnline();
   const seen = useRef(back);
+  const needed = state === undefined || state.error != null || state.data == null;
+  const neededNow = useRef(needed);
+  useEffect(() => {
+    neededNow.current = needed;
+  }, [needed]);
   useEffect(() => {
     if (back === seen.current) return; // a new `reload` alone is not a return to the network
     seen.current = back;
-    void reload();
+    if (neededNow.current) void reload();
   }, [back, reload]);
 }
 
