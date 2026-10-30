@@ -413,21 +413,33 @@ def _open_reopen_judgment(soul, plan, req):
     租户隔离的唯一一条写例外(`apps.core.tenant.residence_writable`)。
     """
     from apps.core.tenant import RESIDENCE_WRITE_REOPEN, residence_writable
-    from apps.judgment.models import Judgment, JudgmentKind, open_judgments
+    from apps.judgment.models import JudgmentKind, open_judgments
+    from apps.judgment.services import JudgmentService, OpenCaseRefusedError
 
-    open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
+    # Asked first so an open case answers 409 even where `not_home` would also apply (unchanged order);
+    # `open_case` asks it again under the soul lock and owns the rule.
+    open_ids = list(open_judgments(soul).values_list("pk", flat=True))
     if open_ids:
-        raise PlanChangeRefusedError("The soul has an open judgment; decide once it is concluded or withdrawn",
-                                "open_judgment", status=409, open_judgment_ids=open_ids)
+        _refuse_open_case(open_ids)
     home = plan.tenant
     if soul.is_residing and not residence_writable(soul, home, RESIDENCE_WRITE_REOPEN):
         raise PlanChangeRefusedError("Only the home tenant opens a reopened judgment", "not_home", status=403)
-    Judgment.objects.create(
-        soul=soul, tenant=home, civilization=home.known_civilization or soul.civilization,
-        court="重开审判", kind=JudgmentKind.REOPEN, amends_plan_id=plan.pk, notes="",
-    )
+    try:
+        JudgmentService.open_case(
+            soul, tenant=home, civilization=home.known_civilization or soul.civilization,
+            court="重开审判", kind=JudgmentKind.REOPEN, amends_plan_id=plan.pk, notes="",
+        )
+    except OpenCaseRefusedError as exc:
+        if exc.code != "open_case":
+            raise
+        _refuse_open_case(exc.open_ids)
     plan.status = SentencePlanStatus.RETRIAL
     _save(plan, "status")
+
+
+def _refuse_open_case(open_ids):
+    raise PlanChangeRefusedError("The soul has an open judgment; decide once it is concluded or withdrawn",
+                                 "open_judgment", status=409, open_judgment_ids=[str(pk) for pk in open_ids])
 
 
 def _refuse_undecided(soul, verdict):

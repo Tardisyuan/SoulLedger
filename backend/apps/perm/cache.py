@@ -13,6 +13,34 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def _request_memo(create=True):
+    """{(role, codename): bool} for the current HTTP request, or None outside one (Celery, shell).
+
+    perf-audit A5 (2026-10-30): one sidebar render asks dozens of (role, codename) questions, each a Redis GET.
+    Within one request the answer is asked of Redis once; any invalidation clears it (`_forget_request_memo`), so a
+    permission-matrix write followed by a check in the same request reads the new grants. Lives on the request
+    object, so it cannot outlive the request or reach another one.
+    """
+    from apps.core.request_local import get_current_request
+
+    try:
+        request = get_current_request()
+    except LookupError:  # same tolerance as the audit signal's reads (`apps/audit/signals.py::_current_context`)
+        return None
+    if request is None:
+        return None
+    memo = getattr(request, "_perm_memo", None)
+    if memo is None and create:
+        memo = request._perm_memo = {}
+    return memo
+
+
+def _forget_request_memo():
+    memo = _request_memo(create=False)
+    if memo:
+        memo.clear()
+
+
 class PermissionCache:
     """
     Redis-based permission cache with fallback to memory cache.
@@ -92,6 +120,15 @@ class PermissionCache:
         Returns:
             True if permission granted, False if denied, None if not cached.
         """
+        memo = _request_memo()
+        if memo is not None and (role, codename) in memo:
+            return memo[(role, codename)]
+        value = self._get(role, codename)
+        if memo is not None and value is not None:
+            memo[(role, codename)] = value
+        return value
+
+    def _get(self, role: str, codename: str) -> bool | None:
         # Try Redis first (with reconnection attempt, throttled by cooldown)
         if self._redis_client is None and self._should_attempt_reconnect():
             self._connect_redis()  # Attempt reconnection
@@ -119,6 +156,9 @@ class PermissionCache:
 
     def set(self, role: str, codename: str, has_permission: bool) -> None:
         """Cache permission result with TTL."""
+        memo = _request_memo()
+        if memo is not None:
+            memo[(role, codename)] = has_permission
         # Update Redis if available
         if self._redis_client is not None:
             try:
@@ -145,6 +185,7 @@ class PermissionCache:
 
     def invalidate_role(self, role: str) -> None:
         """Clear all cached permissions for a role (roles have no hierarchy since 数据范围 B7)."""
+        _forget_request_memo()
         # Invalidate Redis using SCAN (non-blocking) instead of KEYS
         if self._redis_client is not None:
             try:
@@ -169,6 +210,7 @@ class PermissionCache:
 
     def invalidate_all(self) -> None:
         """Clear all permission caches."""
+        _forget_request_memo()
         # Clear Redis using SCAN (non-blocking) instead of KEYS.
         #
         # Same shape as `_make_key`. This was a hard-coded "perm:*", and MATCH

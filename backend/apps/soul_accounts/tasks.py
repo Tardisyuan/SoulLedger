@@ -19,3 +19,31 @@ def prune_data_exports():
     from apps.soul_accounts import data_export
 
     return data_export.prune_expired()
+
+
+# ── 发信(perf-audit A4,2026-10-30):请求只入队,SMTP 在 worker 里;消息里只有账号 / 凭据的 id ──────────
+
+
+@shared_task(name="soul_accounts.send_contact_email_code")
+def send_contact_email_code(account_id):
+    """改联系邮箱的验证码:码与新地址从缓存读(`contact_email._keys`),不进 broker。"""
+    from apps.soul_accounts import contact_email
+
+    return contact_email.send_pending_code(account_id)
+
+
+@shared_task(name="soul_accounts.send_contact_email_changed")
+def send_contact_email_changed(account_id):
+    """改好之后通知旧邮箱;旧地址与打码的新地址在缓存里(确认那一步写的)。"""
+    from apps.soul_accounts import contact_email
+
+    return contact_email.send_changed_notice(account_id)
+
+
+@shared_task(name="soul_accounts.send_credential")
+def send_credential(credential_id):
+    """初始密码:明文在库里那一行(加密列),按 id 取。失败照旧记成待交付(`services.send_credential`)。"""
+    from apps.soul_accounts import services
+
+    credential = services.send_credential(credential_id)
+    return None if credential is None else credential.status

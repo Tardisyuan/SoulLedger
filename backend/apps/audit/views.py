@@ -15,7 +15,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import EXPORT_MAX_ROWS, record_export
+from apps.core.exports import EXPORT_MAX_ROWS, record_export, refuse_if_too_many
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -89,7 +89,7 @@ TIMELINE_DEFAULT_LIMIT = 50
 # 一份悄悄少了行的审计导出,比没有导出更糟(与 `/ledger/journal/export/` 的 MONTH_TOO_LARGE 同一立场)。
 
 
-def _parse_date_param(params, name):
+def parse_date_param(params, name):
     """`?start_date=垃圾` 曾经直接进 `timestamp__date__gte`,Django 抛 ValidationError,
     DRF 不认它 → 500。DRF 自己的 ValidationError 才是 400。"""
     raw = params.get(name)
@@ -104,6 +104,9 @@ def _parse_date_param(params, name):
     if value is None:
         raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
     return value
+
+
+_parse_date_param = parse_date_param  # `apps/events/views.py` still imports the old name
 
 
 def _parse_limit(params):
@@ -204,11 +207,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if resource_id:
             qs = qs.filter(resource_id=resource_id)
 
-        start_date = _parse_date_param(self.request.query_params, 'start_date')
+        start_date = parse_date_param(self.request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = _parse_date_param(self.request.query_params, 'end_date')
+        end_date = parse_date_param(self.request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 
@@ -241,8 +244,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         # `filter_queryset(get_queryset())` is exactly what `list` runs, so the file
         # and the screen cannot drift apart on scope or filters.
         qs = self.filter_queryset(self.get_queryset())
-        if qs.count() > EXPORT_MAX_ROWS:
-            raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+        refuse_if_too_many(qs)
 
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=audit_logs.csv"
@@ -382,11 +384,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if action_filter:
             qs = qs.filter(action=action_filter.upper())
 
-        start_date = _parse_date_param(request.query_params, 'start_date')
+        start_date = parse_date_param(request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = _parse_date_param(request.query_params, 'end_date')
+        end_date = parse_date_param(request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 

@@ -105,7 +105,7 @@ def test_without_audit_read_it_is_refused(tenant, rows):
 
 @pytest.mark.django_db
 def test_over_the_limit_is_a_400_never_a_truncated_file(moderator, rows, monkeypatch):
-    monkeypatch.setattr("apps.audit.views.EXPORT_MAX_ROWS", 2)
+    monkeypatch.setattr("apps.core.exports.EXPORT_MAX_ROWS", 2)  # the shared ceiling (`refuse_if_too_many`)
     response = moderator.get(EXPORT)
     assert response.status_code == 400
     assert response["Content-Type"].startswith("application/json")

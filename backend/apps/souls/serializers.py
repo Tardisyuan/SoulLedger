@@ -63,7 +63,7 @@ def _this_lifes_records(soul):
     return [r for r in soul.records.all() if r.cycle == index]
 
 
-def _is_viewer(context) -> bool:
+def is_viewer(context) -> bool:
     """Check if the current user has VIEWER role."""
     request = context.get("request")
     if not request or not request.user:
@@ -752,12 +752,12 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             raise PermissionDenied("Changing the Duat passage moves this soul's open case; that needs judgment.assign.")
 
     def get_merit_score(self, obj) -> int | None:
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             return None  # VIEWER cannot see merit score
         return obj.merit_score
 
     def get_demerit_score(self, obj) -> int | None:
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             return None  # VIEWER cannot see demerit score
         return obj.demerit_score
 
@@ -774,7 +774,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     def to_representation(self, instance):
         # Remove karmic_balance from output for VIEWER (use the computed field name)
         data = super().to_representation(instance)
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             # Remove karmic_balance field entirely for VIEWER
             data.pop("merit_score", None)
             data.pop("demerit_score", None)
@@ -824,7 +824,7 @@ class SoulListSerializer(serializers.ModelSerializer):
         read_only_fields = ["is_archived", "soup_taken_at"]
 
     def get_karmic_balance(self, obj) -> int | None:
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             return None
         return obj.karmic_balance
 
@@ -863,7 +863,7 @@ class SoulListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if _is_viewer(self.context):
+        if is_viewer(self.context):
             data.pop("merit_score", None)
             data.pop("demerit_score", None)
             data.pop("karmic_balance", None)

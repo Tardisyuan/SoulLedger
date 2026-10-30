@@ -7444,7 +7444,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedJudgmentList'
+                $ref: '#/components/schemas/PaginatedJudgmentListList'
           description: ''
     post:
       operationId: v1_judgment_create
@@ -31361,6 +31361,376 @@ components:
         * `ORIGINAL` - 原审判
         * `AMENDMENT` - 加项 / 减项审判
         * `REOPEN` - 重开审判
+    JudgmentList:
+      type: object
+      description: |-
+        `GET /judgment/` (and its CSV) — every list column but `citations` (perf-audit A3, 2026-10-30).
+
+        The nested grounds cost the list three prefetches per page, and a concluded case renders and hashes each
+        cited article's snapshot. No list screen reads them: the desk reads them from `GET /judgment/{id}/`, and the
+        grounds panel from `/judgment/{id}/citations/`.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        case_number:
+          type: string
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+        soul_name:
+          type: string
+          readOnly: true
+        civilization:
+          allOf:
+          - $ref: '#/components/schemas/CivilizationEnum'
+          readOnly: true
+        judge:
+          type: string
+          format: uuid
+          nullable: true
+        judge_name:
+          type: string
+          readOnly: true
+        court:
+          type: string
+          description: Court name, e.g. 第一殿
+          maxLength: 255
+        realm_id:
+          type: string
+          format: uuid
+          nullable: true
+        evidence_json: {}
+        confession:
+          type: string
+        summary:
+          type: string
+        verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        notes:
+          type: string
+        is_final:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        concluded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        untimely:
+          type: boolean
+          readOnly: true
+        held_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        duat_stage:
+          allOf:
+          - $ref: '#/components/schemas/DuatStageEnum'
+          readOnly: true
+        ferry_barred:
+          type: string
+          readOnly: true
+        wangsi_held:
+          type: boolean
+          readOnly: true
+        conclude_refusal:
+          type: string
+          readOnly: true
+        can_edit:
+          type: boolean
+          readOnly: true
+        flow_cancelled:
+          type: boolean
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentKindEnum'
+          readOnly: true
+        amends_plan_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_verdict:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/VerdictEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        draft_saved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        draft_version:
+          type: integer
+          readOnly: true
+        draft_destination_realm_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        draft_term_years:
+          type: integer
+          readOnly: true
+          nullable: true
+        draft_eternal:
+          type: boolean
+          readOnly: true
+        claimed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        claimed_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        claimed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deferred_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        deferred_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        defer_reason:
+          type: string
+          readOnly: true
+        reassign_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reassign_requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reassign_requested_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reassign_reason:
+          type: string
+          readOnly: true
+        stale_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        city_god:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        city_god_name:
+          type: string
+          readOnly: true
+          nullable: true
+        city_god_status:
+          allOf:
+          - $ref: '#/components/schemas/CityGodStatusEnum'
+          readOnly: true
+        city_god_note:
+          type: string
+          readOnly: true
+        sent_on_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        karmic_balance:
+          type: integer
+          nullable: true
+          description: |-
+            功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
+
+            `apps/ledger/readings.py`:净值是功過格的读法,埃及是称心、欧洲是罪与罚分离、
+            希腊是两条并行的账,给它们一个净值就是把中国的读法套到所有人头上。按案子的
+            `civilization`(审理它的宇宙观)判,不按灵魂此刻的管辖 —— 暂居不改变这件案子
+            在哪个法庭上审。VIEWER 在 `to_representation` 里整个拿掉,与 `SoulSerializer` 同一条。
+          readOnly: true
+        evidence_count:
+          type: integer
+          description: |-
+            `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
+            (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
+          readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this row belongs to; 0 is the first life.
+        judgment_method:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentMethodEnum'
+          readOnly: true
+          description: |-
+            Method of judgment (affects disposition routing)
+
+            * `STANDARD` - Standard Trial (Chinese/European/Greek)
+            * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+            * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+        merit_score:
+          type: integer
+          readOnly: true
+        demerit_score:
+          type: integer
+          readOnly: true
+        realm_name:
+          type: string
+          nullable: true
+          readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+        weighing_result:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/WeighingResultEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        heart_weight:
+          type: integer
+          readOnly: true
+          nullable: true
+        retrial_of:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        offence:
+          oneOf:
+          - $ref: '#/components/schemas/ChineseOffenceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        wrongful_death_cause:
+          oneOf:
+          - $ref: '#/components/schemas/WrongfulDeathCauseEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_level:
+          oneOf:
+          - $ref: '#/components/schemas/GrievanceLevelEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        grievance_status:
+          allOf:
+          - $ref: '#/components/schemas/GrievanceStatusEnum'
+          readOnly: true
+        grievance_plea:
+          type: string
+          readOnly: true
+        grievance_note:
+          type: string
+          readOnly: true
+        grievance_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        owner_org:
+          type: integer
+        owner_org_name:
+          type: string
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
+          readOnly: true
+      required:
+      - amends_plan_id
+      - archive_reason
+      - archived_at
+      - archived_by_name
+      - can_edit
+      - case_number
+      - city_god
+      - city_god_name
+      - city_god_note
+      - city_god_status
+      - civilization
+      - claimed_at
+      - claimed_by
+      - claimed_by_name
+      - conclude_refusal
+      - concluded_at
+      - created_at
+      - cycle
+      - defer_reason
+      - deferred_at
+      - deferred_by
+      - deferred_by_name
+      - demerit_score
+      - draft_destination_realm_id
+      - draft_eternal
+      - draft_saved_at
+      - draft_term_years
+      - draft_verdict
+      - draft_version
+      - duat_stage
+      - evidence_count
+      - ferry_barred
+      - flow_cancelled
+      - grievance_decided_at
+      - grievance_note
+      - grievance_plea
+      - grievance_status
+      - heart_weight
+      - held_until
+      - id
+      - is_archived
+      - is_final
+      - judge_name
+      - judgment_method
+      - karmic_balance
+      - kind
+      - merit_score
+      - owner_org_name
+      - realm_name
+      - reassign_reason
+      - reassign_requested_at
+      - reassign_requested_by
+      - reassign_requested_by_name
+      - retrial_of
+      - sent_on_at
+      - soul
+      - soul_name
+      - stale_since
+      - untimely
+      - verdict
+      - wangsi_held
+      - weighing_result
+      - workflow
     JudgmentMethodEnum:
       enum:
       - STANDARD
@@ -35735,7 +36105,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JudgmentAppeal'
-    PaginatedJudgmentList:
+    PaginatedJudgmentListList:
       type: object
       required:
       - count
@@ -35757,7 +36127,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Judgment'
+            $ref: '#/components/schemas/JudgmentList'
     PaginatedLoginLogList:
       type: object
       required:

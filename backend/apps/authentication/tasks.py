@@ -29,13 +29,13 @@ def prune_soul_sign_ins():
     官员的 `LoginLog` 是审计的一部分,按 `LOGIN_LOG_RETENTION_DAYS` 另管(默认不清),这里不碰。
     `_raw_delete` 同 `audit/retention.py`:LoginLog 是被审计的模型,逐行 delete 会为每一行再写一条审计。
     """
-    from apps.audit.retention import _purge
+    from apps.audit.retention import purge_in_batches
 
     from .models import LoginLog, SignInSession
 
     cutoff = timezone.now() - timedelta(days=SOUL_SIGN_IN_KEEP_DAYS)
-    logs = _purge(LoginLog.all_objects.filter(timestamp__lt=cutoff, username__startswith="soul:"), 5000)
-    sessions = _purge(SignInSession.objects.filter(last_seen_at__lt=cutoff), 5000)
+    logs = purge_in_batches(LoginLog.all_objects.filter(timestamp__lt=cutoff, username__startswith="soul:"), 5000)
+    sessions = purge_in_batches(SignInSession.objects.filter(last_seen_at__lt=cutoff), 5000)
     return {"sign_in_logs": logs, "sessions": sessions}
 
 
@@ -178,3 +178,43 @@ def send_officer_reset_mail(identifier, ip_address=None, user_agent=""):
     from .officer_reset import send_reset_mail_if_eligible
 
     return send_reset_mail_if_eligible(identifier, ip=ip_address, ua=user_agent)
+
+
+#: A soul's forgot-password mail waits here under a random token until its task runs (perf-audit A4, 2026-10-30).
+RESET_OUTBOX_SECONDS = 300
+
+
+def reset_outbox_key(token):
+    return f"pwd_reset_outbox:{token}"
+
+
+@shared_task(name="authentication.send_reset_code_mail")
+def send_reset_code_mail(token):
+    """Send one forgot-password code. The message carries only `token`; the code is read from the cache here
+    (`pwd_reset:<address>`), never put on the broker. An entry without a user (unregistered / ambiguous address)
+    sends nothing — the view enqueued it all the same, so both kinds of address cost the request the same."""
+    import logging
+
+    from django.core.cache import cache
+
+    from .mail import MESSAGES, fill, mail_locale, send_neutral_mail
+    from .models import User
+
+    entry = cache.get(reset_outbox_key(token))
+    cache.delete(reset_outbox_key(token))
+    if not entry or entry["user_id"] is None:
+        return False
+    user = User.objects.filter(pk=entry["user_id"], is_active=True).first()
+    code = cache.get(f"pwd_reset:{entry['email']}")
+    if user is None or code is None:
+        return False
+    try:
+        locale = mail_locale(user=user)
+        pack = MESSAGES[locale]["reset_code"]
+        send_neutral_mail(f"SoulLedger {pack['title']}", fill(pack["text"], code=code), heading=pack["title"],
+                          rows=[(pack["code_label"], code)], notes=[pack["note"]], to=[entry["email"]],
+                          locale=locale)
+    except Exception:  # logged without the code; the soul asks again
+        logging.getLogger(__name__).error("password reset mail could not be sent", exc_info=False)
+        return False
+    return True

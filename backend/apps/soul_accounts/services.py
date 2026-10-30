@@ -203,15 +203,26 @@ def _issue_credential(account, soul):
         secret=password,
     )
     if delivery is not None:
-        transaction.on_commit(lambda: send_credential(credential.pk))
+        transaction.on_commit(lambda: _enqueue_credential(credential.pk))
     return credential
+
+
+def _enqueue_credential(credential_id):
+    """提交后入队(perf-audit A4,2026-10-30):SMTP 不再压在开号 / 重置的请求上。消息里只有行 id,明文在库里。
+    broker 连不上就地发(改之前的做法),行照旧停在 QUEUED / PENDING,不丢。"""
+    from apps.soul_accounts import tasks
+
+    try:
+        tasks.send_credential.delay(credential_id)
+    except Exception:
+        logger.warning("soul credential %s: enqueue failed, sending inline", credential_id, exc_info=False)
+        send_credential(credential_id)
 
 
 def send_credential(credential_id):
     """发送一条 QUEUED / PENDING 凭据。成功 → SENT 并抹掉明文;失败 → PENDING。
 
-    持锁发送(ponytail: 发件期间这一行被锁住,SMTP 超时 10 秒;量上来改 celery 任务 +
-    SKIP LOCKED)。持锁是为了「只发一次」:提交后回调与官员的「重试」并发时,
+    持锁发送(开号后由 celery 任务 `soul_accounts.send_credential` 调;官员「重试」仍在请求里同步调)。持锁是为了「只发一次」:提交后回调与官员的「重试」并发时,
     后到的那个看见 SENT 直接返回。
     """
     with transaction.atomic():

@@ -54,6 +54,7 @@ from apps.judgment.serializers import (
     JudgmentDraftConflictSerializer,
     JudgmentDraftSerializer,
     JudgmentDraftWriteSerializer,
+    JudgmentListSerializer,
     JudgmentPrecedentSerializer,
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
@@ -73,7 +74,10 @@ from apps.judgment.services import (
     JudgmentDraftService,
     JudgmentFrozenError,
     JudgmentNotConcludableError,
+    JudgmentService,
+    OpenCaseRefusedError,
     StatuteCitationService,
+    enter_judgment_realm,
 )
 from apps.judgment.weighing import WeighingRefusedError
 from apps.ledger.services import LedgerService
@@ -82,7 +86,6 @@ from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
 from apps.sentence_plan.requests import PlanChangeRefusedError
 from apps.sentence_plan.services import CrossJudgmentOpenError
-from apps.souls.models import SoulState
 from apps.souls.serializers import SoulSerializer
 from apps.workflow.segments import SegmentRefusedError
 
@@ -174,25 +177,6 @@ class NotesOnOpenCaseError(APIException):
             "error": "The verdict text of an open case is saved through PATCH /judgment/{id}/draft/.",
             "code": "use_draft_endpoint",
         })
-
-
-def _enter_judgment_realm(soul, judgment):
-    """The soul stands in the court its open ORIGINAL case is heard in.
-
-    Only an open case (no verdict yet): a concluded one whose `realm` is
-    corrected afterwards says where the case *was* heard, and the soul has
-    since moved on. Only ORIGINAL: an AMENDMENT is heard while the soul serves
-    a sentence plan stop, and a REOPEN while it is DISPOSED — in both the soul
-    is in its sentence realm, and whether a retrial walks it back to a court is
-    an open question (云端报告 realm-path-fields(已移出仓库,存于项目记忆目录)), not something to
-    decide here. A case with no realm writes nothing.
-    """
-    from apps.judgment.models import JudgmentKind
-    from apps.realms.path import SoulPathService
-
-    if judgment.realm_id is None or judgment.verdict is not None or judgment.kind != JudgmentKind.ORIGINAL:
-        return
-    SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
 
 
 #: `comments` answers a bare array; a judgment with more 评议 than this shows the oldest.
@@ -301,7 +285,6 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             "soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "reassign_requested_by", "realm",
             "approval_workflow", "city_god", "owner_org",
         )
-        .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
     serializer_class = JudgmentSerializer
@@ -317,7 +300,8 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action == "retrieve":
-            qs = qs.prefetch_related("evidence_admissions")
+            # The grounds only where they are answered (perf-audit A3): the list serializer has no `citations`.
+            qs = qs.prefetch_related("evidence_admissions", "citations__statute", "citations__statute__source_actor")
         return qs
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
@@ -328,7 +312,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         return export_csv(
             request,
             qs=self.filter_queryset(self.get_queryset()),
-            serializer_class=JudgmentSerializer,
+            serializer_class=JudgmentListSerializer,
             columns=[
                 ("Case ID", "id"), ("Case Number", "case_number"), ("Soul", "soul_name"),
                 ("Civilization", "civilization"), ("Judge", "judge_name"), ("Court", "court"),
@@ -343,85 +327,34 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
         # Detail only: the admitted balance walks the soul's ledger.
         if self.action == "retrieve":
             return JudgmentDetailSerializer
+        if self.action == "list":
+            return JudgmentListSerializer
         return super().get_serializer_class()
 
-    def create_tenant(self, serializer):
-        """The soul's hall, not the request's (rbac-be1 M4): a hall-less ADMIN filed the case under NULL — a case no
-        hall's queue, list or conclude could reach — and one naming another hall filed it away from its soul. For
-        everyone else the two are already equal (`validate_soul`)."""
-        return serializer.validated_data["soul"].tenant
-
     def perform_create(self, serializer):
-        # `super()`, not a bare `serializer.save()`.
-        #
-        # This class lists TenantCreateMixin among its bases, which is why the
-        # omission read as harmless — but overriding `perform_create` without
-        # chaining took the mixin out of the call path entirely, so every
-        # Judgment was written with `tenant = NULL`. The column is `null=True`,
-        # so nothing complained; the row simply became invisible to its own
-        # tenant, because `scope_to_tenant` filters `tenant=X` and NULL matches
-        # no tenant. Measured 2026-09-07: non-ADMIN创建后 list / next / conclude
-        # 全部 404, while `soul.transition_to(JUDGING)` below had already moved
-        # the soul out of ALIVE — a case nobody in that tenant could close.
-        #
-        # `tests/test_judgment_api.py` did not catch it because both of its
-        # clients are ADMIN, and ADMIN bypasses scoping.
-        #
-        # G7 (docs/ARCHITECTURE-sentence-plan.md §8): the serializer's two
-        # checks — the soul is in this tenant, and it has no open case — ran
-        # without a lock, so a concurrent return home (`end_residence`, which
-        # asks `open_judgments` under the soul row lock) could slip between
-        # them and the insert: the soul goes home while a case is filed where
-        # it no longer is. Both are asked again here, under the same lock.
-        from django.db import transaction
+        # The case is filed under the soul's hall (rbac-be1 M4: a hall-less ADMIN once filed it under NULL) with `create_user` — what
+        # TenantCreateMixin.perform_create wrote; skipping it once filed every case under tenant NULL (2026-09-07).
+        # G7 (docs/ARCHITECTURE-sentence-plan.md §8): the hall check and the one-open-case check run again under
+        # the soul row lock, so a concurrent return home (`end_residence`) cannot slip between them and the insert.
+        # The rules themselves live in `JudgmentService.open_case` (cq-backend 第 8 条, 2026-10-30): the reopen
+        # path of a sentence plan opens its case through the same function.
         from rest_framework.exceptions import ValidationError
 
         from apps.core.tenant import is_tenant_exempt
-        from apps.judgment.models import open_judgments
-        from apps.souls.models import Soul
 
-        with transaction.atomic():
-            soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=serializer.validated_data["soul"].pk)
-            if not is_tenant_exempt(self.request.user):
-                tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
-                if tenant is None or soul.tenant_id != tenant.pk:
-                    raise ValidationError({"soul": ["No such soul in this tenant."]})
-            # ADMIN is exempt (user decision 2026-09-12, tests/test_admin_is_exempt_from_the_case_state_rules.py):
-            # it is the role that repairs a case stuck open. A hall's ADMIN keeps it inside its hall (2026-10-29).
-            if getattr(self.request.user, "role", None) != "ADMIN":
-                if open_judgments(soul).exists():
-                    raise ValidationError(
-                        {"soul": ["This soul already has an open case. Conclude it before opening another."]}
-                    )
-            was_alive = soul.current_state == SoulState.ALIVE
-            super().perform_create(serializer)
-            judgment = serializer.instance
-            # 受刑计划进行中的灵魂,这件案子是对计划的加 / 减项(情况 1,§4.1):结案生成请求,
-            # 不建处置、不动灵魂状态。服务端定,不由 body 定。
-            from apps.sentence_plan.services import in_progress_plan
-
-            plan = in_progress_plan(soul)
-            if plan is not None:
-                from apps.judgment.models import Judgment, JudgmentKind
-
-                Judgment.all_objects.filter(pk=judgment.pk).update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
-                judgment.kind, judgment.amends_plan_id = JudgmentKind.AMENDMENT, plan.pk
-            if was_alive:
-                # Opening a case for a living soul is a death recorded today: the same 枉死城 and 城隍 columns
-                # `Soul.die` writes, or the case skips both (2026-10-27, review #7).
-                from django.utils import timezone
-
-                from apps.judgment import city_gods
-                from apps.judgment.models import Judgment
-
-                fields = soul.opening_fields(timezone.now().date())
-                Judgment.all_objects.filter(pk=judgment.pk).update(**fields)
-                for name, value in fields.items():
-                    setattr(judgment, name, value)
-                if not soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated"):
-                    raise ValidationError({"soul": [f"The soul is {soul.current_state}; it cannot enter judgment."]})
-                city_gods.received(judgment)
-            _enter_judgment_realm(soul, judgment)
+        user = self.request.user
+        in_tenant = None
+        if not is_tenant_exempt(user):
+            in_tenant = getattr(self.request, "tenant", None) or getattr(user, "tenant", None)
+            if in_tenant is None:
+                raise ValidationError({"soul": ["No such soul in this tenant."]})
+        fields = {k: v for k, v in serializer.validated_data.items() if k != "soul"}
+        try:
+            serializer.instance = JudgmentService.open_case(
+                serializer.validated_data["soul"], actor=user, in_tenant=in_tenant, create_user=user, **fields,
+            )
+        except OpenCaseRefusedError as exc:
+            raise ValidationError({"soul": [str(exc)]}) from None
 
     def perform_update(self, serializer):
         """Moving an open case to another court moves the soul there too (行程拓扑).
@@ -448,7 +381,7 @@ class JudgmentViewSet(NegativeConfessionActionsMixin, CaseAttachmentActionsMixin
             if "notes" in serializer.validated_data and judgment.notes != notes_before:
                 JudgmentDraftService.touch_after_plain_update(judgment)
             if judgment.realm_id != realm_before:
-                _enter_judgment_realm(judgment.soul, judgment)
+                enter_judgment_realm(judgment.soul, judgment)
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete a pending judgment, or refuse with a clear reason

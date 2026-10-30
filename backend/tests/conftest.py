@@ -23,6 +23,31 @@ def _clear_tenant_context():
     clear_current_tenant()
 
 
+#: The mail tasks a request enqueues (perf-audit A4, 2026-10-30). There is no worker in the test run, so their
+#: `.delay` runs the task body in place — the mail still goes through the task, reading the code from the cache as
+#: in production. `tests/test_mail_is_sent_by_a_worker.py` re-patches `.delay` to pin what the request enqueues.
+_MAIL_TASKS = (
+    ("apps.authentication.tasks", "send_reset_code_mail"),
+    ("apps.soul_accounts.tasks", "send_contact_email_code"),
+    ("apps.soul_accounts.tasks", "send_contact_email_changed"),
+    ("apps.soul_accounts.tasks", "send_credential"),
+)
+
+
+@pytest.fixture(autouse=True)
+def _mail_tasks_run_in_place():
+    import importlib
+    from unittest import mock
+
+    tasks = [getattr(importlib.import_module(module), name) for module, name in _MAIL_TASKS]
+    patches = [mock.patch.object(task, "delay", side_effect=task.run) for task in tasks]
+    for p in patches:
+        p.start()
+    yield
+    for p in patches:
+        p.stop()
+
+
 @pytest.fixture
 def api_client():
     """DRF APIClient for making test requests."""

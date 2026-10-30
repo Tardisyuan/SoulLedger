@@ -172,7 +172,7 @@ def may_view(user, media, tenant_id=None):
     * 官员看官员的帖子(2026-10-02):帖子在官员动态流里看得见 —— `scope_to_tenant` +
       `visibility.visible_posts`,与 `PostViewSet.get_queryset` 同一条规则。
 
-    `tenant_id` 是签发地址那次请求的租户(签在地址里,见 `_as_request`);官员两条判定都在
+    `tenant_id` 是签发地址那次请求的租户(签在地址里,见 `as_request`);官员两条判定都在
     这个租户里做,所以 ADMIN 在 X 文明里看得见的「本域可见」帖子,图也打得开。
     """
     if user is None or not user.is_authenticated or not user.is_active:
@@ -181,13 +181,13 @@ def may_view(user, media, tenant_id=None):
         return not media.is_deleted and media.uploader_id == user.pk
     if getattr(user, "role", None) == SOUL_ROLE:
         return not media.is_deleted and visible_posts_for_soul(user).filter(pk=media.post_id).exists()
-    req = _as_request(user, tenant_id)
+    req = as_request(user, tenant_id)
     if req is None:
         return False
     return _officer_may_view(req, media) or _officer_feed_may_view(req, media)
 
 
-def _as_request(user, tenant_id=None):
+def as_request(user, tenant_id=None):
     """取文件的请求不带令牌,「请求所在的租户」来自签名:签发地址的那次列表请求的 `request.tenant`。
 
     此前这里用的是官员自己的租户,于是 ADMIN 在别的文明里看得见那里「本域可见」的帖子,

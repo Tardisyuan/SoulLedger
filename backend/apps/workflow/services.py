@@ -766,7 +766,8 @@ class WorkflowService:
 
         with transaction.atomic():
             if exclusive:
-                Soul.objects.select_for_update().get(pk=soul.pk)
+                if Soul.lock(soul.pk).is_deleted:
+                    raise Soul.DoesNotExist("A soft-deleted soul cannot start a workflow.")
                 live = (
                     ApprovalWorkflow.objects.filter(soul=soul, case_type=case_type)
                     .exclude(status__in=TERMINAL_WORKFLOW_STATUSES)

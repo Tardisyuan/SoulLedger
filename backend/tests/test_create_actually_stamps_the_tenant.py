@@ -39,8 +39,9 @@ What "would really fail" means here
 -----------------------------------
 Each case was checked by reverting its fix and watching this file go red:
 
-* dropping `super()` from `JudgmentViewSet.perform_create` reddens
-  `test_a_judgment_created_by_a_judge_carries_the_tenant`;
+* dropping `super()` from `JudgmentViewSet.perform_create` reddened
+  `test_a_judgment_created_by_a_judge_carries_the_tenant` (since 2026-10-30 the row is written by
+  `JudgmentService.open_case`; filing it under `tenant=None` there reddens the same test);
 * removing `TenantCreateMixin` from `DispositionViewSet` reddens
   `test_a_disposition_created_by_a_judge_carries_the_tenant`;
 * `ReincarnationViewSet` lost its create route on 2026-10-27 (the record is

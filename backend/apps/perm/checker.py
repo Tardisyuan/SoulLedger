@@ -95,7 +95,7 @@ def check_permission(user, codename):
     # (用户 2026-10-09 定)。ADMIN / SOUL 即使被写进 extra_roles 也无视,它们只能是主角色。
     if codename in ADMIN_ONLY_CODENAMES:
         return False
-    roles = [role, *_live_extra_roles(user)]
+    roles = [role, *live_extra_roles(user)]
     return any(_role_allows(r, codename) for r in roles)
 
 
@@ -114,7 +114,7 @@ def _role_allows(role, codename):
 _ROLE_LIVE_KEY = "__role_live__"
 
 
-def _live_extra_roles(user):
+def live_extra_roles(user):
     """`user.extra_roles` minus anything that may not be a second role.
 
     A role sitting in the recycle bin no longer counts (the default manager
