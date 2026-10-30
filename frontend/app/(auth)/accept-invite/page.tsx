@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { LoginShell } from "@/src/components/auth/LoginShell";
 import { PasswordRuleFields, usePasswordRules } from "@/src/components/auth/PasswordRules";
 import { Button } from "@/src/components/ui/Button";
+import { responseCode, responseData, responseStatus } from "@soulledger/core/api/client";
 
 /**
  * 接受邀请(第五十四批 V-3):邮件里的链接落在这里,`?uid=…&token=…`,与 `/reset-password` 同一个外壳。
@@ -65,14 +66,14 @@ export default function AcceptInvitePage() {
       await authApi.acceptOfficerInvite({ ...credential, new_password: rules.next });
       setPhase("done");
     } catch (err: unknown) {
-      const response = (err as { response?: { status?: number; data?: { code?: string; retry_after?: number } } })?.response;
-      if (response?.data?.code === "invite_link_invalid") {
+      const code = responseCode(err);
+      if (code === "invite_link_invalid") {
         setPhase("invalid");
-      } else if (response?.data?.code === "weak_password") {
+      } else if (code === "weak_password") {
         rules.reject();
-        setReasons(passwordReasonKeys(response.data));
-      } else if (response?.status === 429) {
-        setWait(Math.max(1, Math.ceil(Number(response.data?.retry_after) || 60)));
+        setReasons(passwordReasonKeys(responseData(err)));
+      } else if (responseStatus(err) === 429) {
+        setWait(Math.max(1, Math.ceil(Number(responseData<{ retry_after: number }>(err)?.retry_after) || 60)));
       } else {
         setFailed(true);
       }

@@ -13,6 +13,7 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
+import { responseCode, responseData, responseStatus } from "@soulledger/core/api/client";
 
 /**
  * 认领一族(apps/judgment/claims.py)的两个弹层与一张拒绝码表。队列页的批量条和审判台的
@@ -37,19 +38,19 @@ type T = (key: string, params?: Record<string, string>) => string;
 
 /** 一次被拒的认领 / 改派 / 暂缓,译成一句话。认不出的码落到通用句,不回显服务端英文。 */
 export function claimRefusalMessage(err: unknown, t: T): string {
-  const e = err as { response?: { status?: number; data?: Partial<JudgmentClaimRefusal> } };
-  const code = e?.response?.data?.code;
+  const code = responseCode(err);
+  const heldUntil = responseData<JudgmentClaimRefusal>(err)?.held_until;
   // 枉死城(第五十一批 F-3):候至阳寿那天,绕过队列直接认领时服务端 409 并带上日期。
-  if (code === "held_until_fated_date" && e.response?.data?.held_until) return t("judgment.claim.held", { date: e.response.data.held_until });
+  if (code === "held_until_fated_date" && heldUntil) return t("judgment.claim.held", { date: heldUntil });
   // 埃及入殿前(review P2-9):木乃伊 70 天未满,或灵魂到不了两真之殿。
-  if (code === "embalming" && e.response?.data?.held_until) return t("judgment.claim.embalming", { date: e.response.data.held_until });
+  if (code === "embalming" && heldUntil) return t("judgment.claim.embalming", { date: heldUntil });
   if (code === "duat_unfinished") return t("judgment.claim.duat_unfinished");
   // 希腊(2026-10-28):未葬或无渡资,滞留阿刻戎岸边。
   if (code === "unferried") return t("judgment.claim.unferried");
   // 城隍初审中(第五十三批):解送之前十殿不能认领、改派、暂缓、结案。
   if (code === "at_city_god") return t("judgment.error.at_city_god");
   if (code &&(REFUSAL_CODES as readonly string[]).includes(code)) return t(`judgment.claim.refused.${code}`);
-  if (e?.response?.status === 403) return t("judgment.claim.refused.permission_denied");
+  if (responseStatus(err) === 403) return t("judgment.claim.refused.permission_denied");
   return t("judgment.claim.refused.generic");
 }
 

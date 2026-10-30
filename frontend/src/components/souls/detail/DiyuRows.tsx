@@ -11,6 +11,7 @@ import { Button } from "@/src/components/ui/Button";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { SelectField } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { responseCode } from "@soulledger/core/api/client";
 
 const ROW = "border-t border-[oklch(var(--color-line))] py-3";
 const DT = "text-2xs text-[oklch(var(--color-ink-subtle))]";
@@ -119,7 +120,7 @@ function MoveStationDialog({ soul, at, onClose }: { soul: Soul; at: number; onCl
       onClose();
     },
     onError: (err: unknown) => {
-      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const code = responseCode(err);
       showToast(code === "not_diyu" || code === "alive" ? t(`souls.diyu_station.error.${code}`) : t("common.error"),
         "error");
     },

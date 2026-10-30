@@ -1,10 +1,12 @@
 "use client";
 
 import type { SentencePlan, SentencePlanRequest, SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
+import { SENTENCE_PLAN_REFUSAL_CODES } from "@soulledger/core/api/judgment";
 import { getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { BadgeTone } from "@/src/components/ui/Badge";
+import { responseCode } from "@soulledger/core/api/client";
 
 /*
  * 受刑计划的显示件,计划面板(灵魂详情)与「受刑请求」收件箱共用。
@@ -47,30 +49,9 @@ export const CURRENT_NODE_STATUSES = ["DISPATCHING", "ACTIVE", "WAITING", "ETERN
 /** 还能决定 / 撤回 / 撤销的计划状态(`IN_PROGRESS_PLAN_STATUSES`)。 */
 export const OPEN_PLAN_STATUSES = ["ACTIVE", "RETRIAL", "HELD"];
 
-/**
- * 服务端拒绝码(`apps/sentence_plan/requests.py` 的 `PlanChangeRefusedError.code` 与视图的
- * `not_home`),各有一句 `sentence_plan.errors.*`。不在这里的码落到通用失败 —— `t()` 找不到键
- * 时返回键本身,所以不能靠「翻出来的是不是键」来判。
- */
-export const REFUSAL_CODES = [
-  "open_judgment", "plan_closed", "plan_held", "plan_in_retrial", "request_pending", "request_closed",
-  "not_home", "not_requester", "node_not_pending", "eternal_not_last", "soul_state", "reason_required",
-  "not_found", "invalid_changes", "empty_changes", "foreign_node", "foreign_realm", "unknown_node",
-  "soul_is_here", "node_not_retryable", "not_refused", "not_next", "soul_away", "dispatch_not_started",
-  "retry_with_open_cross", "retry_not_a_destination",
-  // 欧洲 大罪 / 小罪(2026-10-28,DispositionService.refuse_against_gravity):结案裁决与已采信的罪不符。
-  "mortal_sin_unrepented", "no_mortal_sin",
-  // 埃及否定告白(2026-10-28,apps/judgment/confessions.py):有一条记为「不实」,不能判通过。
-  "untruthful_confession",
-  // 地府五逆(2026-10-29,审查 J;apps/judgment/models.py::refuse_passed_if_five_heinous):不能判通过。
-  "five_heinous_must_fail",
-  // REOPEN 只由原审判官本人(不在职时原属殿持 judgment.assign 的人)决定(2026-10-29 第 20 条)。
-  "not_original_judge",
-] as const;
-
 export function refusalKey(error: unknown): string {
-  const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
-  return typeof code === "string" && (REFUSAL_CODES as readonly string[]).includes(code)
+  const code = responseCode(error);
+  return code !== null && (SENTENCE_PLAN_REFUSAL_CODES as readonly string[]).includes(code)
     ? `sentence_plan.errors.${code}`
     : "sentence_plan.errors.failed";
 }

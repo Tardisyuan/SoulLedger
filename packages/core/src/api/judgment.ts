@@ -1,7 +1,7 @@
 import type { AppealCompensation } from "../domain/appeals";
 import type { ArchiveFields } from "./archive";
 import type { GenericAbortSignal } from "axios";
-import { api } from "./client";
+import { api, responseCode } from "./client";
 import type { components } from "./generated/schema";
 import type { LedgerSummary } from "./ledger";
 import type { NumericFields } from "./ledgerQuantities";
@@ -898,3 +898,80 @@ export const CITY_GOD_CASE_ERROR_CODES = [
   "invalid_city_god",
   "not_pending",
 ] as const;
+
+/**
+ * 服务端拒绝码(`apps/sentence_plan/requests.py` 的 `PlanChangeRefusedError.code` 与视图的
+ * `not_home`),各有一句 `sentence_plan.errors.*`。不在这里的码落到通用失败 —— `t()` 找不到键
+ * 时返回键本身,所以不能靠「翻出来的是不是键」来判。结案(`concludeRefusalOf`)也会答这一组,所以放在这里;
+ * 不放 `sentence-plans.ts` 是因为许多测试整个 mock 掉那个模块。
+ */
+export const SENTENCE_PLAN_REFUSAL_CODES = [
+  "open_judgment", "plan_closed", "plan_held", "plan_in_retrial", "request_pending", "request_closed",
+  "not_home", "not_requester", "node_not_pending", "eternal_not_last", "soul_state", "reason_required",
+  "not_found", "invalid_changes", "empty_changes", "foreign_node", "foreign_realm", "unknown_node",
+  "soul_is_here", "node_not_retryable", "not_refused", "not_next", "soul_away", "dispatch_not_started",
+  "retry_with_open_cross", "retry_not_a_destination",
+  // 欧洲 大罪 / 小罪(2026-10-28,DispositionService.refuse_against_gravity):结案裁决与已采信的罪不符。
+  "mortal_sin_unrepented", "no_mortal_sin",
+  // 埃及否定告白(2026-10-28,apps/judgment/confessions.py):有一条记为「不实」,不能判通过。
+  "untruthful_confession",
+  // 地府五逆(2026-10-29,审查 J;apps/judgment/models.py::refuse_passed_if_five_heinous):不能判通过。
+  "five_heinous_must_fail",
+  // REOPEN 只由原审判官本人(不在职时原属殿持 judgment.assign 的人)决定(2026-10-29 第 20 条)。
+  "not_original_judge",
+] as const;
+
+/** 结案接口的拒绝码里属于发落的那几个 —— 页面据此把拒绝画在 戊 · 发落 那一节,而不是弹通用 toast。 */
+export const PLACEMENT_REFUSALS = [
+  "realm_full",
+  "realm_not_allowed",
+  "realm_not_found",
+  "term_conflict",
+  "eternal_not_allowed",
+  "destination_not_applicable",
+  "term_not_applicable",
+  // 欧洲「重审」另开一案、不发落(apps/judgment/services.py)。
+  "retry_has_no_destination",
+  // 地府判无罪不发落,结案后直接候转世(同上)。
+  "passed_has_no_destination",
+] as const;
+
+/** 埃及称心的结案拒绝(apps/judgment/weighing.py),各有一句译文 `judgment.weighing.errors.*`。
+ * 后两个是 `JudgmentService.conclude` 抛的同一类错:原审要走审批 / 称心流程,不能直接结案。 */
+export const WEIGHING_REFUSALS = [
+  "verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross",
+  "approval_flow_required", "weighing_flow_required",
+] as const;
+
+/** `claims.assert_concludable` 的拒绝码(结案与认领同一组,即 `conclude_refusal`),译文在 `claimRefusalMessage` 里。 */
+export const NOT_CONCLUDABLE_REFUSALS = ["at_city_god", "held_until_fated_date", "embalming", "duat_unfinished", "unferried"] as const;
+
+/**
+ * 结案(`conclude/`)被拒,按页面要做的事分好类;认不出的码(以及没有码的失败)为 null。
+ * - `placement`:发落那一节的拒绝(画在 戊 里、重取占用);
+ * - `cross_open`:跨域审判还开着(`cross_judgment_open`);
+ * - `plan`:受刑计划的拒绝,译文 `sentence_plan.errors.*`;
+ * - `weighing`:埃及称心 / 审批流程,译文 `judgment.weighing.errors.*`;
+ * - `not_concludable`:候审未到,与认领同一组码。
+ * 选站的拒绝(`segmentRefusalOf`)不在这里:它有自己的分类与译文。
+ */
+export type ConcludeRefusal =
+  | { kind: "placement"; code: (typeof PLACEMENT_REFUSALS)[number] }
+  | { kind: "cross_open"; code: "cross_judgment_open" }
+  | { kind: "plan"; code: (typeof SENTENCE_PLAN_REFUSAL_CODES)[number] }
+  | { kind: "weighing"; code: (typeof WEIGHING_REFUSALS)[number] }
+  | { kind: "not_concludable"; code: (typeof NOT_CONCLUDABLE_REFUSALS)[number] };
+
+const isOneOf = <T extends string>(list: readonly T[], code: string): code is T =>
+  (list as readonly string[]).includes(code);
+
+export function concludeRefusalOf(error: unknown): ConcludeRefusal | null {
+  const code = responseCode(error);
+  if (code === null) return null;
+  if (isOneOf(PLACEMENT_REFUSALS, code)) return { kind: "placement", code };
+  if (code === "cross_judgment_open") return { kind: "cross_open", code };
+  if (isOneOf(SENTENCE_PLAN_REFUSAL_CODES, code)) return { kind: "plan", code };
+  if (isOneOf(WEIGHING_REFUSALS, code)) return { kind: "weighing", code };
+  if (isOneOf(NOT_CONCLUDABLE_REFUSALS, code)) return { kind: "not_concludable", code };
+  return null;
+}

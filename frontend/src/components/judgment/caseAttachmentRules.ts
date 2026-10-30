@@ -38,5 +38,5 @@ export const ERROR_KEY: Record<string, string> = {
 };
 
 /** 这些拒绝重试也不会好 —— 行上只留「移除」。 */
-export const isFinalRefusal = (code: string | undefined): code is CaseAttachmentErrorCode =>
-  code !== undefined && code in ERROR_KEY;
+export const isFinalRefusal = (code: string | null | undefined): code is CaseAttachmentErrorCode =>
+  code != null && code in ERROR_KEY;

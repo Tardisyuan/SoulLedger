@@ -15,6 +15,7 @@ import { CodeInput } from "@/src/components/auth/CodeInput";
 import { RecoveryCodesPanel } from "@/src/components/auth/RecoveryCodesPanel";
 import { MfaSetupWizard } from "@/src/components/profile/MfaSetupWizard";
 import { cn } from "@/lib/utils";
+import { responseCode, responseStatus } from "@soulledger/core/api/client";
 
 export const MFA_STATUS_KEY = ["profile", "mfa"] as const;
 
@@ -165,8 +166,7 @@ const turnOffBody = (method: OwnerMethod, code: string) =>
 
 /** 失败时对话框里说的话:被锁了说锁,其余说「检查动态码或密码」。 */
 function ownerFailure(err: unknown, fallback: string, t: (key: string) => string): string {
-  const body = (err as { response?: { status?: number; data?: { code?: string } } })?.response;
-  return body?.status === 429 || body?.data?.code === "locked" ? t("officer_app.mfa.reasons.locked") : fallback;
+  return responseStatus(err) === 429 || responseCode(err) === "locked" ? t("officer_app.mfa.reasons.locked") : fallback;
 }
 
 /** 分段「动态码 / 密码」二选一 + 输入框 + 错误行。关闭与重新生成共用同一块。 */

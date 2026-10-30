@@ -5,7 +5,7 @@
  * cooldown-shortening and dispatch -- this module is the aggregate, the
  * per-item "still mine?" answer, add-signer candidates and push devices.
  */
-import { api } from "./client";
+import { api, fetchFailureOf, responseCode, responseData, responseStatus } from "./client";
 import type { components } from "./generated/schema";
 
 export type TodoItem = components["schemas"]["TodoItem"];
@@ -77,19 +77,18 @@ export type DecisionFailureCode = (typeof DECISION_FAILURE_CODES)[number];
 /** The failure code on an axios-style error, or null when it is not one of ours
  *  (network error, 5xx, ...). 403 without a code reads as `permission_changed`. */
 export function decisionFailureOf(error: unknown): { code: DecisionFailureCode; handledBy: { id: number | null; name: string } | null } | null {
-  const response = (error as { response?: { status?: number; data?: { code?: string; handled_by?: { id: number | null; name: string } | null } } })?.response;
-  if (!response) return null;
-  const code = response.data?.code;
+  if (fetchFailureOf(error) === "network") return null;
+  const code = responseCode(error);
   if (code && (DECISION_FAILURE_CODES as readonly string[]).includes(code)) {
-    return { code: code as DecisionFailureCode, handledBy: response.data?.handled_by ?? null };
+    const handledBy = responseData<{ handled_by: { id: number | null; name: string } | null }>(error)?.handled_by;
+    return { code: code as DecisionFailureCode, handledBy: handledBy ?? null };
   }
-  return response.status === 403 ? { code: "permission_changed", handledBy: null } : null;
+  return responseStatus(error) === 403 ? { code: "permission_changed", handledBy: null } : null;
 }
 
 /** The refusal body of `addCosigner`, or null when the error is not one (network, 5xx...). */
 export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" | "duplicate" | null {
-  const response = (error as { response?: { data?: { code?: string } } })?.response;
-  const code = response?.data?.code;
+  const code = responseCode(error);
   return code === "not_allowed" || code === "not_eligible" || code === "duplicate" ? code : null;
 }
 

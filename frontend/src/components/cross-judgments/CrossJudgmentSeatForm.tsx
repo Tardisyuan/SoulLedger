@@ -14,6 +14,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /** The name in the reader's language, falling back to the primary name. */
 function actorName(a: SeatableActor, locale: string): string {
@@ -24,9 +25,9 @@ function actorName(a: SeatableActor, locale: string): string {
 const ROLES = ["CO_JUDGE", "CHAIRMAN", "ADVISOR"] as const;
 
 function errorText(error: unknown, t: (key: string) => string): string | null {
-  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  const data = responseData(error);
   // 第四十三批:流程不在走时不能入席,在走时只能排最后(409 `order_locked`);后端那句是英文,不上屏。
-  if (data?.code === "order_locked") return t("crossJudgments.join_locked");
+  if (responseCode(error) === "order_locked") return t("crossJudgments.join_locked");
   const first = data?.error ?? Object.values(data ?? {})[0];
   const text = Array.isArray(first) ? first[0] : first;
   return typeof text === "string" ? text : null;

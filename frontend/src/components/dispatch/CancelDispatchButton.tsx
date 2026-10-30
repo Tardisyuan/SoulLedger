@@ -10,6 +10,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { responseCode } from "@soulledger/core/api/client";
 
 /**
  * 「取消移交」:发起方在对方批准之前撤回自己的提案(2026-10-11 用户决定)。
@@ -57,9 +58,8 @@ export function CancelDispatchButton({
           onCancelled?.();
         },
         onError: (err: unknown) => {
-          const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
-          setOpen(false);
-          showToast(t(code === "not_cancellable" ? "dispatch.cancel_not_cancellable" : "dispatch.cancel_error"), "error");
+                    setOpen(false);
+          showToast(t(responseCode(err) === "not_cancellable" ? "dispatch.cancel_not_cancellable" : "dispatch.cancel_error"), "error");
         },
       },
     );

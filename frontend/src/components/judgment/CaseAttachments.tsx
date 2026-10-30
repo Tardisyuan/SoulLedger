@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { QueryError } from "@/src/components/ui/PageError";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { ERROR_KEY, formatBytes, isFinalRefusal, isPdf, kindTile, looksAllowed, megabytes } from "./caseAttachmentRules";
+import { responseCode, fetchFailureOf } from "@soulledger/core/api/client";
 
 /**
  * 案卷附件(Design 第二十八批 W4):案卷页(「审判评语」下面、「评议区」上面)与审批页(「理由」之下)用的
@@ -76,13 +77,12 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
         void qc.invalidateQueries({ queryKey: judgmentKeys.attachments(judgmentId) });
       } catch (e) {
         if (controller.signal.aborted) return drop(key);
-        const res = (e as { response?: { data?: { code?: string } } }).response;
-        const code = res?.data?.code;
+        const code = responseCode(e);
         if (isFinalRefusal(code)) {
           const max = code === "too_many" ? (data?.max_count ?? 30) : Math.round(maxFile / 1048576);
           patch(key, { state: "failed", message: t(ERROR_KEY[code], { max: String(max) }), retryable: false });
         } else {
-          patch(key, { state: "failed", message: t(res ? "case.attachments.failed_generic" : "case.attachments.failed_network"), retryable: true });
+          patch(key, { state: "failed", message: t(fetchFailureOf(e) !== "network" ? "case.attachments.failed_generic" : "case.attachments.failed_network"), retryable: true });
         }
       }
     },
@@ -125,7 +125,7 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
     del.mutate(a.id, {
       onSuccess: () => setAsking(null),
       onError: (e) => {
-        const code = (e as { response?: { data?: { code?: string } } }).response?.data?.code;
+        const code = responseCode(e);
         setRowError((m) => ({ ...m, [a.id]: t(code === "concluded" ? "case.attachments.delete_concluded" : "case.attachments.delete_failed") }));
         setAsking(null);
         void qc.invalidateQueries({ queryKey: judgmentKeys.attachments(judgmentId) });

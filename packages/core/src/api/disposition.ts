@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, responseCode, responseStatus } from "./client";
 import type { components } from "./generated/schema";
 import type { PaginatedResponse } from "./users";
 import type { ArchiveFields } from "./archive";
@@ -92,7 +92,6 @@ export const dispositionApi = {
 
 /** 期满释放被拒的 code;别的错误为 null。 */
 export function releaseRefusalOf(error: unknown): "term_not_ended" | "not_serving" | null {
-  const r = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
-  const c = r?.data?.code;
-  return r?.status === 409 && (c === "term_not_ended" || c === "not_serving") ? c : null;
+  const c = responseCode(error);
+  return responseStatus(error) === 409 && (c === "term_not_ended" || c === "not_serving") ? c : null;
 }

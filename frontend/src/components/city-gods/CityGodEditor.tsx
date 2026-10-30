@@ -15,6 +15,7 @@ import { Collapse } from "@/src/components/ui/Collapse";
 import { Segmented } from "@/src/components/ui/Segmented";
 import { showToast } from "@/src/components/ui/Toast";
 import { cityGodFieldMessage, cityGodFieldRefusal, type CityGodFieldRefusal } from "./cityGodDisplay";
+import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /*
  * 编辑城隍(第五十三批 G-2):右侧抽屉,不离开列表。地名是标签输入(回车加一个,去掉首尾空格,重复的不加);
@@ -159,8 +160,8 @@ export function CityGodEditor({ god, gods, onClose }: Props) {
       onClose();
     },
     onError: (err) => {
-      const data = (err as { response?: { data?: { code?: string; count?: number } } })?.response?.data;
-      if (data?.code === "city_god_has_open_cases") setBlocked(data.count ?? god?.open_case_count ?? 0);
+      if (responseCode(err) === "city_god_has_open_cases")
+        setBlocked(responseData<{ count: number }>(err)?.count ?? god?.open_case_count ?? 0);
       else showToast(t("judgment.claim.refused.generic"), "error");
     },
   });

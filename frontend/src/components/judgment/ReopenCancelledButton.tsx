@@ -7,6 +7,7 @@ import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
+import { responseCode } from "@soulledger/core/api/client";
 
 const REFUSALS = ["not_cancelled", "cannot_reopen"] as const;
 
@@ -29,7 +30,7 @@ export function ReopenCancelledButton({ judgmentId }: { judgmentId: string }) {
       router.push(`/judgment/${retrial.id}`);
     },
     onError: (error) => {
-      const code = (error as { response?: { data?: { code?: string } } }).response?.data?.code;
+      const code = responseCode(error);
       showToast(
         code && (REFUSALS as readonly string[]).includes(code) ? t(`judgment.reopen_cancelled.refusal.${code}`) : t("common.error"),
         "error",

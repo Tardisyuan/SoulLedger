@@ -21,6 +21,7 @@ import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /**
  * Global recycle bin (Stage 4 §4.7) — one screen listing soft-deleted
@@ -73,10 +74,11 @@ export default function RecycleBinPage() {
     // `template_role_missing` (backend/apps/perm/matrix.py::template_restore_refusal):
     // a workflow template naming roles that are gone. Say which, not just "failed".
     onError: (err) => {
-      const body = (err as { response?: { data?: { code?: string; missing_roles?: string[] } } })?.response?.data;
       showToast(
-        body?.code === "template_role_missing"
-          ? t("recycle_bin.restore_missing_roles", { roles: (body.missing_roles ?? []).join("、") })
+        responseCode(err) === "template_role_missing"
+          ? t("recycle_bin.restore_missing_roles", {
+              roles: (responseData<{ missing_roles: string[] }>(err)?.missing_roles ?? []).join("、"),
+            })
           : t("recycle_bin.restore_error"),
         "error"
       );

@@ -12,13 +12,15 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { Segmented } from "@/src/components/ui/Segmented";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { responseCode, responseData, responseStatus } from "@soulledger/core/api/client";
 
 const PAGE_SIZE = 20;
 
 function refusedOf(error: unknown): RoleMembersRefused | null {
-  const r = (error as { response?: { status?: number; data?: Partial<RoleMembersRefused> } } | null)?.response;
-  return r && (r.status === 400 || r.status === 403) && r.data?.code === "refused" && Array.isArray(r.data.refusals)
-    ? (r.data as RoleMembersRefused)
+  const status = responseStatus(error);
+  const data = responseData<RoleMembersRefused>(error);
+  return (status === 400 || status === 403) && responseCode(error) === "refused" && Array.isArray(data?.refusals)
+    ? (data as RoleMembersRefused)
     : null;
 }
 

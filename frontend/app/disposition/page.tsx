@@ -31,6 +31,7 @@ import { formatHistoricalDate } from "@/lib/utils";
 import { termState, type TermState } from "@/src/lib/dispositionTerm";
 import { VerdictBadge as DomainVerdictBadge } from "@/src/components/ui/StatusBadge";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { responseCode } from "@soulledger/core/api/client";
 
 /**
  * 处置(规范 v1 第三类 A·07):一页三段 —— 待执行 → 执行中 → 期满,就是处置本身的时间顺序。
@@ -137,8 +138,7 @@ function DispositionPageContent() {
     },
     onError: (err: unknown) => {
       // 原审的审批流程没走完 / 被驳回(埃及:称心流程,或天平摇摆)时不执行(409,apps/judgment/weighing.py),说清是哪一条。
-      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      showToast(flowWaitingText(code) ?? t("disposition.execute_error"), "error");
+      showToast(flowWaitingText(responseCode(err)) ?? t("disposition.execute_error"), "error");
     },
   });
 
