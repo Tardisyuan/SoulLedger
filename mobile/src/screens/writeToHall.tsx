@@ -22,7 +22,7 @@ import { Icon } from "../emblems";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { Button, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { useDiscardGuard } from "./discardGuard";
 

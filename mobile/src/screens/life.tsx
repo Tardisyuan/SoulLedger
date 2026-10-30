@@ -1,10 +1,9 @@
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
-import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,13 +24,11 @@ import {
   lexiconKey,
   lifePathIndex,
   lifeSectionsOpen,
-  residenceOf,
   signedBalance,
   type LifePathStep,
   type LifeSectionKey,
-  type Residence,
 } from "../rules";
-import { SessionContext, useSession } from "../session";
+import { useSession } from "../session";
 import { OutlineSeal } from "../seal";
 import { sealedTheme, type CivKey } from "../theme";
 import {
@@ -64,7 +61,8 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
-import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
+import type { AppStackParams, LifeFocus, LifeParams } from "../navTypes";
+import { realmName, useResidence } from "../residence";
 import { AppealLine, roundsOf } from "./appeals";
 import { WangsiLine } from "./wangsi";
 import { CaptureCard, CaptureLine, ConfessionCard, DeliveredRow, FerryCard, VestibuleCard } from "./lifeProgress";
@@ -80,20 +78,7 @@ import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuS
  */
 const SOUL_STATES = ["soul_app", "soul_states"].join(".");
 
-export function realmName(realm: { name_zh: string; name_en: string; name_local: string }, locale: Locale): string {
-  return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;
-}
-
 type SectionKey = Exclude<LifeSectionKey, "sentence" | "past_lives">;
-
-/** Skin by where the soul is (the theme already is); words by where it belongs. */
-export function useResidence(): Residence {
-  const t = useTheme();
-  // Read the context directly: a screen rendered without a session (a test) is simply "at home".
-  const session = useContext(SessionContext);
-  const me = session?.state.status === "signedIn" ? session.state.profile : null;
-  return residenceOf(t.civ, me);
-}
 
 function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   const t = useTheme();

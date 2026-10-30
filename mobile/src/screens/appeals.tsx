@@ -42,7 +42,7 @@ import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { useDay } from "./lifeProgress";
 import { Button, DataRow, DataRows, FieldError, Input, Quote, Screen, SmallButton, Txt, enumText, useLayout, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 import { useDiscardGuard } from "./discardGuard";
 import { ButtonPair, MfaSheet } from "./mfaParts";
 

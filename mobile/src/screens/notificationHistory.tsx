@@ -15,7 +15,7 @@ import { useI18n } from "../i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
 import { Button, Empty, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
-import type { AppStackParams } from "./applications";
+import type { AppStackParams } from "../navTypes";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
 const NOT_DELIVERED = new Set(["FAILED", "DISABLED", "EXPIRED", "CANCELLED", "NO_DEVICE"]);
