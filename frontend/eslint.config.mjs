@@ -172,7 +172,7 @@ const HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b/g;
 // 真值颜色的合法例外。这几处不是疏忽,是这些库不吃 CSS 变量:
 //   - @xyflow/react 的 `markerEnd` / edge `style` 走 SVG <marker>,在一个
 //     独立的 defs 树里渲染,`oklch(var(--color-accent))` 在那里解析不到。
-//   - recharts 的 fill / stroke 是 prop 不是 class,同理。
+//   - recharts 的 fill / stroke 是 prop 不是 class,同理(recharts 2026-10-30 已删)。
 //   (SettingsDrawer 的强调色选择器曾是第三处;规范 v2 撤掉了用户自选强调色,
 //    那一项随之删除。)
 const HEX_ALLOW = [

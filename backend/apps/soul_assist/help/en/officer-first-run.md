@@ -16,3 +16,4 @@ On your first sign-in the "First-time setup" comes first: four steps, all change
 - Language and theme: the interface language and the light or dark theme; both can be changed any time from the user menu.
 - Shortcuts: the keys that work throughout the judgment queue.
 Finishing or skipping both count as done and are saved in your account's preferences, so another browser will not ask again. To see it again, use "Redo first-time setup" under "Pick up where you left off" on the welcome page; redoing it does not clear the done mark.
+Keyboard: on any console page, press Tab once and "Skip to main content" appears at the top left; press Enter to jump past the navigation and toolbar straight to the page's content.

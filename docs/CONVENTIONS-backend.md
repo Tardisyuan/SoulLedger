@@ -201,6 +201,8 @@ class XViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixi
 | 码名格式 `<resource>.<action>`；未知 `@action` 默认**拒绝** | `apps/core/viewsets.py:8-15,56-58` | `[test]` 三道（见 §3.2） |
 | 限流：anon 60/min、register 5/h、login 10/min、password_reset 3/5min | `settings.py:218-226` | `[test:test_rate_limiting]`、`[test:test_api_key_rate_limit_is_enforced]` |
 | `@extend_schema` 叠在 `@action` 之上 | 63 处分布在 12/19 个 views.py | `[test:test_schema_has_no_warnings]`（间接） |
+| 列表要能搜就在 ViewSet 上写 `search_fields`（`SearchFilter` 是全局默认后端，`?search=`），不让前端只在已取到的那一页里过滤。审计日志 2026-10-30 才补上：此前搜索框只搜当前 20 条；`export` 走同一个 `filter_queryset`，所以导出也受搜索约束 | `settings.py` 的 `DEFAULT_FILTER_BACKENDS`；`apps/audit/views.py` 的 `search_fields` | `[test]` `apps/audit/tests.py`（只管审计这一处） |
+| 「当前用户在这一行上的 X」随列表一次注解出来，不让前端每行再发一次请求。例：帖子 / 评论的 `my_reaction` 用 `soul_circle.my_reaction_of(viewer, "post"\|"comment")`（每页一个子查询），评论另注解 `visible_reaction_count`（2026-10-30，此前前端每帖 / 每评论各拉一次表态列表，且只看第一页） | `apps/social/soul_circle.py`、`apps/social/views.py` | `[test]` `apps/social/tests/test_my_reaction.py`（含查询数不随条数涨） |
 
 ### 6.3 OpenAPI 是前端类型的来源 —— 四道门
 

@@ -100,7 +100,7 @@ deliberately not kept here.
 | `chat/` | officer | the 殿司 inbox: `inbox/`, `inbox-templates/`, `hooks/new-message/` (Matrix push hook: signature-checked, no token, not in the schema) |
 | `assist/` | officer | officer-side assistant: `/`, `conversations/` |
 | `assist-admin/` | officer (ADMIN) | assistant admin page: `config/*`, `halls/`, `eval/*`, `try/`, `usage/`, `corpus/`, `embedding/*` |
-| `social/` | officer | admin-side social CRUD (posts, comments, reactions, follows, profiles, `media/`) |
+| `social/` | officer | admin-side social CRUD (posts, comments, reactions, follows, profiles, `media/`). Post and comment rows carry `my_reaction` (the caller's own reaction kind, or `null`) and comment rows `reaction_count` (since 2026-10-30, annotated once per page) |
 | `social-moderation/` | officer (`social.moderate`) | `reports/`, `posts/`, `comments/`, `sensitive-words/`, `mutes/`, `handled/` |
 | `soul-accounts/` | officer | soul accounts, `credentials/` (+ `{id}/print-slip/`), `rebirth-applications/`, `cooldown-shortenings/`, `accounts/{id}/reset-mfa/` |
 | `soul-auth/` | none / soul | `login/`, `refresh/`, `logout/`, `mfa/verify/`, `device-login/` (+ `revoke/`) |
@@ -314,7 +314,11 @@ its whole hall; data the user created or is assigned to is always visible.
 ### Audit (Admin)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /audit-logs/ | List audit logs |
+| GET | /audit-logs/ | List audit logs (`?action=`, `?resource=`, `?resource_id=`, `?user=`, `?trace_id=`, `?tenant=<hall code>`, `?start_date=` / `?end_date=`, `?search=`) |
+| GET | /audit-logs/export/ | CSV of the same query as the list (same filters, `?search=` included, same hall scope), unpaginated |
+
+`?search=` (since 2026-10-30) matches `resource`, `resource_id`, `description` and the acting user's
+username across every row the caller may read — not only the page on screen.
 
 ### Organizations
 | Method | Endpoint | Description |

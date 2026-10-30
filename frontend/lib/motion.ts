@@ -7,7 +7,8 @@
  * `!important`, so everything drawn by CSS is covered and covered well. What
  * that rule cannot reach is motion a library draws from JavaScript on a
  * `requestAnimationFrame` loop — gsap writing `transform` on the workflow
- * canvas, and recharts growing its bars and arcs on mount. No stylesheet can
+ * canvas, and recharts growing its bars and arcs on mount (recharts is gone
+ * since 2026-10-30; what reads this now is listed by its callers). No stylesheet can
  * shorten either one. Those are the only two places in this application where
  * the preference has to be read in JS, and until now only the first one did:
  * an operator who had asked their OS for no motion still got the dashboard's
