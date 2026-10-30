@@ -490,7 +490,10 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
 function LostBanner({ soulId }: { soulId: string }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const load = useCallback(() => eventsApi.list({ soul: soulId }).then((r) => r.data), [soulId]);
+  // Its own query, not the events tab's first page (cq-apps 2026-10-30 #7): that page is the newest 20 of every kind,
+  // so a soul lost 20 events ago had no banner. The soul carries no lost-since field; the newest STATE_CHANGED of a
+  // soul that is LOST now is the one that made it so, and the server sorts newest first.
+  const load = useCallback(() => eventsApi.list({ soul: soulId, event_type: "STATE_CHANGED", ordering: "-create_time" }).then((r) => r.data), [soulId]);
   const { data } = useRemote(load);
   const event = data ? latestLostEvent(data.results) : null;
   if (!event) return null;
