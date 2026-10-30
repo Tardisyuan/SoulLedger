@@ -82,7 +82,7 @@ def deliver_event_webhook(self, delivery_id):
     delivery.attempt += 1
 
     try:
-        from apps.death_sync.webhook_service import public_only_session
+        from apps.core.outbound import public_only_session
         from apps.events.handlers.webhook_handler import (
             _reject_if_not_publicly_routable,
         )
@@ -103,7 +103,7 @@ def deliver_event_webhook(self, delivery_id):
                     "X-SoulLedger-Delivery": str(delivery.id),
                 },
                 timeout=timeout,
-                # 与 `apps/death_sync/webhook_service.py` 同一个洞:上面的校验器只看过
+                # 与 `apps/core/outbound.py`(原 death_sync/webhook_service.py)同一个洞:上面的校验器只看过
                 # 这一个 URL。从前这里是 `urllib.request.urlopen`,默认 opener 跟随
                 # 302,于是一个公网端点答 `302 -> http://169.254.169.254/` 就能让
                 # 服务端带着租户的 HMAC 签名去请求内网。
