@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant, type TenantCreateBody } from "@soulledger/core/api";
+import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
@@ -51,7 +52,7 @@ export function CreateHallDialog({ onClose }: { onClose: () => void }) {
   const create = useMutation({
     mutationFn: () => tenantsApi.create(form).then((r) => r.data),
     onSuccess: (hall) => {
-      void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      void queryClient.invalidateQueries({ queryKey: tenantKeys.all });
       showToast(t("halls.created_toast", { name: hall.display_name }), "success");
       onClose();
     },
@@ -187,7 +188,7 @@ export function useHallActiveMutation(onDone?: () => void) {
     mutationFn: ({ tenant, active }: { tenant: Tenant; active: boolean }) =>
       (active ? tenantsApi.activate(tenant.code) : tenantsApi.deactivate(tenant.code)).then((r) => r.data),
     onSuccess: (hall, { active }) => {
-      void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      void queryClient.invalidateQueries({ queryKey: tenantKeys.all });
       showToast(t(active ? "halls.activated_toast" : "halls.deactivated_toast", { name: hall.display_name }), "success");
       onDone?.();
     },

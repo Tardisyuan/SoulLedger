@@ -17,6 +17,9 @@ const nextConfig = {
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+    // Always defined (empty when unset), so Next inlines it as a literal and
+    // `instrumentation-client.ts` can drop the Sentry SDK from a DSN-less build.
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || "",
   },
 };
 

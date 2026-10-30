@@ -20,6 +20,7 @@ describe("RequireButton", () => {
       hasAnyPermission: () => true,
       hasAllPermissions: () => true,
       isAdmin: false,
+      isTenantExempt: false,
       permissions: ["soul.create"],
     });
     render(
@@ -36,6 +37,7 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
+      isTenantExempt: false,
       permissions: [],
     });
     render(
@@ -52,6 +54,7 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
+      isTenantExempt: false,
       permissions: [],
     });
     render(
@@ -69,6 +72,7 @@ describe("RequireButton", () => {
       hasAnyPermission: () => false,
       hasAllPermissions: () => false,
       isAdmin: false,
+      isTenantExempt: false,
       permissions: [],
     });
     render(

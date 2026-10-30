@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { organizationsApi } from "@soulledger/core/api";
+import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -31,7 +30,7 @@ export function OwnerOrgField({
   const [editing, setEditing] = useState(false);
   const [picked, setPicked] = useState<number | null>(orgId ?? null);
   const [busy, setBusy] = useState(false);
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => organizationsApi.all(), enabled: editing });
+  const orgs = useAllOrganizations({ enabled: editing });
 
   const save = async () => {
     if (picked == null || busy) return;

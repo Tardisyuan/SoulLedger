@@ -44,9 +44,15 @@ let mockHall: string | null = "CN_DIYU";
 let mockRole = "MODERATOR";
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({
-    user: { id: 1, username: "cn_mod", role: mockRole, tenant: mockHall ? { code: mockHall } : null },
+    user: { id: 1, username: "cn_mod", role: mockRole, tenant: mockHall ? { code: mockHall } : null, permissions: [...mockHeld] },
     isAdmin: mockRole === "ADMIN",
   }),
+}));
+// 进殿查看(只读):非空时 usePermissions 的 isTenantExempt 为假,写类控件被 ViewingLock 置灰。
+let mockViewing: { hallView: boolean } | null = null;
+jest.mock("@/src/components/impersonation/useImpersonation", () => ({
+  ...jest.requireActual("@/src/components/impersonation/useImpersonation"),
+  useImpersonation: () => mockViewing,
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key, formatDateTime: (v: string) => v ?? "", locale: "en", hydrated: true }),
@@ -54,18 +60,9 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const mockShowToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 
-// Real `RequirePermission`, fed a mutable permission list (suiteShape.test.ts forbids stubbing the gate).
+// Real `RequirePermission` and real `usePermissions`, fed a mutable permission list through the user
+// (suiteShape.test.ts forbids stubbing the gate). ADMIN holds everything, as in the hook.
 let mockHeld = new Set<string>();
-jest.mock("@/src/hooks/usePermissions", () => ({
-  usePermissions: () => {
-    const has = (p: string) => mockHeld.has(p);
-    return {
-      hasPermission: has,
-      hasAnyPermission: (list: string[]) => list.some(has),
-      hasAllPermissions: (list: string[]) => list.every(has),
-    };
-  },
-}));
 
 const mockedGet = dispatchApi.get as jest.Mock;
 const mockedReturn = dispatchApi.returnHome as jest.Mock;
@@ -88,6 +85,7 @@ beforeEach(() => {
   mockHeld = new Set(["dispatch.return", "dispatch.execute"]);
   mockHall = "CN_DIYU";
   mockRole = "MODERATOR";
+  mockViewing = null;
 });
 
 describe("ending a residence", () => {
@@ -204,5 +202,30 @@ describe("which hall sees which button", () => {
     renderPage("EXECUTED");
     await screen.findByText("孟婆");
     expect(!!name("dispatch.return_home")).toBe(shown);
+  });
+
+  // 代看 / 进殿查看时无殿 ADMIN 不再是「任一殿」(usePermissions.isTenantExempt 为假):既不是目标殿也不是原属殿,
+  // 按钮连置灰的都不画。按文本找而不是按 role —— 置灰的控件在 inert 里,role 查询可能看不见它,那样漏画与置灰分不出来。
+  it.each([
+    ["PROPOSED", ["dispatch.approve", "dispatch.reject"]],
+    ["APPROVED", ["dispatch.execute"]],
+    ["EXECUTED", ["dispatch.return_home"]],
+  ])("an ADMIN with no hall, viewing a hall: %s offers none of %j", async (status, buttons) => {
+    mockHeld = new Set(ALL);
+    mockHall = null;
+    mockRole = "ADMIN";
+    mockViewing = { hallView: true };
+    renderPage(status, status === "EXECUTED" ? {} : { executed_at: null });
+    await screen.findByText("孟婆");
+    for (const b of buttons) expect(screen.queryByText(b)).toBeNull();
+  });
+
+  it("the same ADMIN, not viewing, is offered them (the control for the case above)", async () => {
+    mockHeld = new Set(ALL);
+    mockHall = null;
+    mockRole = "ADMIN";
+    renderPage("PROPOSED", { executed_at: null });
+    await screen.findByText("孟婆");
+    expect(screen.queryByText("dispatch.approve")).not.toBeNull();
   });
 });

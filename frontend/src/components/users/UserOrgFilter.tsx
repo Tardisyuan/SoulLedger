@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { organizationsApi, tenantsApi } from "@soulledger/core/api";
+import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 
@@ -11,11 +11,8 @@ import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
  */
 export function UserOrgFilter({ value, onChange }: { value: number | null; onChange: (id: number | null) => void }) {
   const { t } = useI18n();
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => organizationsApi.all() });
-  const tenants = useQuery({
-    queryKey: ["tenants", "names"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-  });
+  const orgs = useAllOrganizations();
+  const tenants = useTenantNames();
   const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, x.display_name || x.code]));
   return (
     <OrgTreeSelect

@@ -44,18 +44,3 @@ export function useDispositions(params?: DispositionListParams) {
     staleTime: 30_000,
   });
 }
-
-export function useExecuteDisposition() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data?: object }) =>
-      dispositionApi.execute(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: dispositionKeys.all });
-      notify("disposition.execute_success", "success");
-    },
-    onError: () => {
-      notify("disposition.execute_error", "error");
-    },
-  });
-}

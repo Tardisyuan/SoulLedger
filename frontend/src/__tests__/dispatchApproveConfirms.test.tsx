@@ -117,6 +117,8 @@ jest.mock("@/src/hooks/usePermissions", () => {
       hasPermission: has,
       hasAnyPermission: (list: string[]) => list.some(has),
       hasAllPermissions: (list: string[]) => list.every(has),
+      // The no-hall ADMIN above is tenant-exempt, so both sides of a dispatch are its own.
+      isTenantExempt: true,
     }),
   };
 });

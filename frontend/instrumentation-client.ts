@@ -18,13 +18,24 @@
  * So the dependency, the DSN plumbing in next.config.js and three config files
  * were all in place, and no error has ever been reported from a browser.
  *
- * WHY THE IMPORT IS DYNAMIC. `instrumentation-client.ts` is a Next file
- * convention: Next bundles it on every build, whether or not `withSentryConfig`
- * wrapped anything. A static `import * as Sentry` therefore put **143 KB
- * gzipped** of SDK into builds with no DSN — dev builds, and any deployment
- * that never configured Sentry. `NEXT_PUBLIC_SENTRY_DSN` is inlined at build
- * time, so guarding the dynamic import on it lets a DSN-less build drop the
- * whole branch.
+ * WHY EVERY USE IS BEHIND THE DSN, AND THE IMPORT IS NOT DYNAMIC.
+ * `instrumentation-client.ts` is a Next file convention: Next bundles it on
+ * every build, whether or not `withSentryConfig` wrapped anything. With the SDK
+ * called unconditionally, **143 KB gzipped** of it sat in the root bundle of
+ * builds with no DSN — dev builds, and any deployment that never configured
+ * Sentry (measured 2026-10-30 on e5ae6546; perf A2). An `import()` would fix
+ * that and open a window at start-up in which an error is not reported — not
+ * accepted (user decision 2026-10-30).
+ *
+ * So the import stays static and every use sits behind
+ * `process.env.NEXT_PUBLIC_SENTRY_DSN`, written out at each use: next.config.js
+ * always defines that variable (empty when unset), so Next inlines it as a
+ * literal, the condition folds to a constant, and — `@sentry/nextjs` declares
+ * `sideEffects: false` — a DSN-less build drops the SDK entirely. With a DSN
+ * the code is exactly what it was. A `require()` in a ternary was tried first
+ * and is worse: the variable was not inlined (it was undefined at build time,
+ * and Next only inlines what is defined), and `require` pulled the CommonJS
+ * build, 374 KB gz into the root bundle (measured, same day).
  *
  * REPLAY IS LOADED LAZILY on top of that. It was in the synchronous
  * `integrations` array while `replaysSessionSampleRate` is 0.1, so nine
@@ -37,15 +48,15 @@
  */
 import * as Sentry from "@sentry/nextjs";
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  tracesSampleRate: 0.2,
-  debug: false,
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-});
-
 if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    tracesSampleRate: 0.2,
+    debug: false,
+    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+  });
+
   Sentry.lazyLoadIntegration("replayIntegration")
     .then((replayIntegration) => {
       Sentry.addIntegration(
@@ -60,6 +71,9 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
 /**
  * Required by Next 16 for navigation spans. Without it, client-side route
  * changes are invisible to tracing — which on this app is most of the
- * navigation, since every transition after login is client-side.
+ * navigation, since every transition after login is client-side. Next calls it
+ * with `?.`, so `undefined` without a DSN is fine.
  */
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+export const onRouterTransitionStart = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? Sentry.captureRouterTransitionStart
+  : undefined;

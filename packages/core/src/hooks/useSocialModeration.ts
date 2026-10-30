@@ -16,6 +16,7 @@ import {
   type SensitiveWordEdit,
 } from "../api/social-moderation";
 import { socialModerationKeys } from "../query_keys";
+import { responseCode } from "../api/client";
 
 /**
  * Officer moderation backend. Every write invalidates the whole
@@ -138,10 +139,6 @@ export function useAddSensitiveWord() {
   return useModerationWrite(async (word: NewSensitiveWord) => (await socialModerationApi.addWord(word)).data);
 }
 
-export function useRemoveSensitiveWord() {
-  return useModerationWrite(async (id: string) => (await socialModerationApi.removeWord(id)).status);
-}
-
 export function useUpdateSensitiveWord() {
   return useModerationWrite(
     async ({ id, edit }: { id: string; edit: SensitiveWordEdit }) => (await socialModerationApi.updateWord(id, edit)).data
@@ -190,6 +187,5 @@ export function useLiftMute() {
 
 /** `{detail, code}` → the code, else null. The page maps it to `social_moderation.errors.<code>`. */
 export function moderationErrorCode(error: unknown): string | null {
-  const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
-  return typeof code === "string" ? code : null;
+  return responseCode(error);
 }

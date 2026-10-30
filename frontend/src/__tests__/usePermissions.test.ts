@@ -130,3 +130,32 @@ describe("usePermissions while viewing", () => {
     expect(result.current.hasPermission("recycle_bin.restore")).toBe(true);
   });
 });
+
+describe("isTenantExempt (无殿 ADMIN = 后端 is_tenant_exempt)", () => {
+  const impersonation = jest.requireMock("@/src/components/impersonation/useImpersonation") as { useImpersonation: jest.Mock };
+  afterEach(() => impersonation.useImpersonation.mockReturnValue(null));
+  const withHall = (role: UserRole, hall: { code: string } | null) => ({
+    ...mockContext(role),
+    user: { ...mockUser(role), tenant: hall },
+  });
+
+  it("an ADMIN with no hall, not viewing, is exempt", () => {
+    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(true);
+  });
+
+  it("a hall-bound ADMIN and a no-hall non-ADMIN are not", () => {
+    mockUseTenant.mockReturnValue(withHall("ADMIN", { code: "CN_DIYU" }) as never);
+    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+    mockUseTenant.mockReturnValue(withHall("JUDGE", null) as never);
+    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+  });
+
+  it("the no-hall ADMIN viewing a hall (or a person) is not", () => {
+    mockUseTenant.mockReturnValue(withHall("ADMIN", null) as never);
+    impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 0, name: "", role: "ADMIN", hall: {} }, hallView: { code: "EG_DUAT" } });
+    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+    impersonation.useImpersonation.mockReturnValue({ id: 1, target: { id: 2, name: "x", role: "JUDGE", hall: null } });
+    expect(renderHook(() => usePermissions()).result.current.isTenantExempt).toBe(false);
+  });
+});

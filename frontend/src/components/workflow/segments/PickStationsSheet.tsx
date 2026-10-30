@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow } from "@soulledger/core/api";
-import { workflowKeys } from "@soulledger/core/query_keys";
+import { workflowKeys, todoKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
@@ -62,7 +62,7 @@ export function PickStationsSheet({
       workflowApi.pickSegment(workflowId, order, { skip_node_ids: [...skipped], version: segment!.version }),
     onSuccess: (res) => {
       queryClient.setQueryData(workflowKeys.detail(workflowId), res.data);
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "todo"] });
+      queryClient.invalidateQueries({ queryKey: todoKeys.all });
       showToast(t("workflow.pick.confirmed"), "success");
       onClose();
     },

@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { permApi } from "@soulledger/core/api";
+import { permKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 
@@ -38,7 +39,7 @@ export function usePermissionCrud(closers: {
   const createMutation = useMutation({
     mutationFn: (data: PermissionPayload) => permApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.permissions });
       closers.onCreated();
     },
     onError: () => showToast(t("permissions.create_error") || "Failed to create permission", "error"),
@@ -47,7 +48,7 @@ export function usePermissionCrud(closers: {
   const editMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: PermissionPayload }) => permApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.permissions });
       closers.onEdited();
     },
     onError: () => showToast(t("permissions.edit_error") || "Failed to update permission", "error"),
@@ -56,7 +57,7 @@ export function usePermissionCrud(closers: {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => permApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.permissions });
       closers.onDeleted();
     },
     onError: () => showToast(t("permissions.delete_error") || "Failed to delete permission", "error"),
@@ -65,7 +66,7 @@ export function usePermissionCrud(closers: {
   const roleCreateMutation = useMutation({
     mutationFn: (data: RolePayload) => permApi.roles.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.roles });
       closers.onRoleCreated();
     },
     onError: () => showToast(t("permissions.role_create_error") || "Failed to create role", "error"),
@@ -74,7 +75,7 @@ export function usePermissionCrud(closers: {
   const roleEditMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: RolePayload }) => permApi.roles.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.roles });
       closers.onRoleEdited();
     },
     onError: () => showToast(t("permissions.role_edit_error") || "Failed to update role", "error"),
@@ -83,7 +84,7 @@ export function usePermissionCrud(closers: {
   const roleDeleteMutation = useMutation({
     mutationFn: (id: number) => permApi.roles.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: permKeys.roles });
       closers.onRoleDeleted();
     },
     onError: () => showToast(t("permissions.role_delete_error") || "Failed to delete role", "error"),

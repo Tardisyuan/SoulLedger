@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, tenantsApi, PAGE_SIZE, type AuditLogEntry, type Tenant } from "@soulledger/core/api";
+import { auditApi, PAGE_SIZE, type AuditLogEntry, type Tenant } from "@soulledger/core/api";
+import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { saveBlob } from "@/src/lib/saveBlob";
@@ -225,11 +226,7 @@ export default function AuditPage() {
   const resourceLabel = (resource: string) => auditResourceLabel(t, resource);
 
   // 殿的清单。一个殿的名字按文明的冥界名写(同身份带),认不出文明才退回租户展示名。
-  const { data: halls } = useQuery({
-    queryKey: ["audit-halls"],
-    queryFn: async () => (await tenantsApi.list()).data.results,
-    enabled: canReadAudit && isGlobalAdmin,
-  });
+  const { data: halls } = useTenantNames({ enabled: canReadAudit && isGlobalAdmin });
   const hallLabel = (hall: Tenant) => {
     const civ = civSkinOf(hall.code);
     return civ === "neutral" ? hall.display_name : t(`plaque.realm.${civ}`);

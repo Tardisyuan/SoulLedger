@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { tenantsApi, type HallOverviewRow } from "@soulledger/core/api";
+import { tenantKeys } from "@soulledger/core/query_keys";
 import { quotaIsFull } from "@soulledger/core/api/reincarnation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DataTable } from "@/components/ui/data-table";
@@ -41,7 +42,7 @@ function HallsOverviewContent() {
   const { t, locale } = useI18n();
   const [sort, setSort] = useState<HallSort>("code");
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["tenants", "overview"],
+    queryKey: tenantKeys.overview,
     queryFn: () => tenantsApi.overview().then((r) => r.data),
   });
   const rows = useMemo(() => sortHalls(data ?? [], sort), [data, sort]);

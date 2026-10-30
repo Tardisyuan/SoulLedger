@@ -8,6 +8,7 @@ import {
   type CrossTenantJudgment,
   type CrossTenantJudgmentParticipant,
 } from "@soulledger/core/api";
+import { crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -66,7 +67,7 @@ function SentenceForm({ judgmentId, seat }: { judgmentId: string; seat: CrossTen
       }),
     onSuccess: () => {
       showToast(t("sentence_plan.cross.submitted"), "success");
-      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
     },
     // 服务端的 400 是一句英文说明(「Realm … is not a realm of …」),没有码;照原样给出。
     onError: (error) => showToast(errorText(error) ?? t("sentence_plan.cross.submit_error"), "error"),
@@ -139,13 +140,13 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
     onSuccess: () => {
       setDraft(null);
       showToast(t("sentence_plan.cross.order_saved"), "success");
-      queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
     },
     onError: (error) => {
       if ((error as { response?: { data?: { code?: string } } })?.response?.data?.code === "order_locked") {
         setDraft(null);
         showToast(t("crossJudgments.order.locked"), "error");
-        queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+        queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
         return;
       }
       showToast(errorText(error) ?? t("sentence_plan.cross.order_error"), "error");

@@ -36,18 +36,18 @@ import {
 import { installWebPlatform } from "@/lib/platform/web";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { dispositionApi } from "@soulledger/core/api";
-import { useExecuteDisposition } from "@soulledger/core/hooks/useDispositions";
+import { useArchiveDisposition } from "@soulledger/core/hooks/useDispositions";
 
 jest.mock("@soulledger/core/api", () => ({
-  dispositionApi: { list: jest.fn(), execute: jest.fn() },
+  dispositionApi: { list: jest.fn(), archive: jest.fn() },
 }));
 
 // NO `jest.mock("@/src/contexts/I18nContext")` HERE, and its absence is the
-// point. `useExecuteDisposition` does not import it any more — the key it
+// point. `useArchiveDisposition` does not import it any more — the key it
 // raises is resolved by the adapter, at the far end of the port. A mock of a
 // module nothing under test imports reads as coverage and is not any.
 
-const mockExecute = dispositionApi.execute as jest.Mock;
+const mockArchive = dispositionApi.archive as jest.Mock;
 
 /** Deliberately NOT a jest.mock of the port — the adapter is swapped the way a
  *  host swaps it, so the code under test resolves it exactly as it does in the
@@ -198,15 +198,17 @@ describe("the web adapter's notify reaches the browser's toast", () => {
 });
 
 describe("a hook drives the port, not the context", () => {
-  it("useExecuteDisposition's success message arrives at the installed adapter", async () => {
+  // Was `useExecuteDisposition` until 2026-10-30, when that hook was deleted for having no caller;
+  // `useArchiveDisposition` is the one the dispositions page still uses and it goes through the same port.
+  it("useArchiveDisposition's success message arrives at the installed adapter", async () => {
     const { adapter, calls } = recordingAdapter();
     configurePlatform(adapter);
-    mockExecute.mockResolvedValue({ data: {} });
+    mockArchive.mockResolvedValue({ data: {} });
 
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    const { result } = renderHook(() => useExecuteDisposition(), {
+    const { result } = renderHook(() => useArchiveDisposition(), {
       wrapper: ({ children }: { children: React.ReactNode }) =>
         createElement(QueryClientProvider, { client: queryClient }, children),
     });
@@ -214,18 +216,18 @@ describe("a hook drives the port, not the context", () => {
     result.current.mutate({ id: "d-1" });
 
     await waitFor(() => expect(calls.length).toBe(1));
-    expect(calls[0]).toEqual(["disposition.execute_success", "success", undefined]);
+    expect(calls[0]).toEqual(["records.archive.done", "success", undefined]);
   });
 
   it("and its failure message does too, with the error kind", async () => {
     const { adapter, calls } = recordingAdapter();
     configurePlatform(adapter);
-    mockExecute.mockRejectedValue(new Error("nope"));
+    mockArchive.mockRejectedValue(new Error("nope"));
 
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    const { result } = renderHook(() => useExecuteDisposition(), {
+    const { result } = renderHook(() => useArchiveDisposition(), {
       wrapper: ({ children }: { children: React.ReactNode }) =>
         createElement(QueryClientProvider, { client: queryClient }, children),
     });
@@ -233,7 +235,7 @@ describe("a hook drives the port, not the context", () => {
     result.current.mutate({ id: "d-1" });
 
     await waitFor(() => expect(calls.length).toBe(1));
-    expect(calls[0]).toEqual(["disposition.execute_error", "error", undefined]);
+    expect(calls[0]).toEqual(["records.archive.failed", "error", undefined]);
   });
 });
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { deathSyncApi, dispatchApi, judgmentApi, officerAppApi } from "@soulledger/core/api";
+import { todoKeys } from "@soulledger/core/query_keys";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { socialModerationApi } from "@soulledger/core/api/social-moderation";
 import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
@@ -112,19 +113,19 @@ export function TodoStrip() {
   const canJudge = hasPermission("judgment.read");
   const canDeathSync = isAdmin;
   const dispatchQ = useQuery({
-    queryKey: ["dashboard", "todo", "dispatch-proposed"],
+    queryKey: todoKeys.item("dispatch-proposed"),
     queryFn: async () => (await dispatchApi.proposed({ page: "1" })).data.count,
     enabled: canDispatch,
     staleTime: 60_000,
   });
   const queueQ = useQuery({
-    queryKey: ["dashboard", "todo", "judgment-queue"],
+    queryKey: todoKeys.item("judgment-queue"),
     queryFn: async () => (await judgmentApi.next()).data.total,
     enabled: canJudge,
     staleTime: 60_000,
   });
   const deathSyncQ = useQuery({
-    queryKey: ["dashboard", "todo", "death-sync"],
+    queryKey: todoKeys.item("death-sync"),
     queryFn: async () => (await deathSyncApi.summary()).data,
     enabled: canDeathSync,
     staleTime: 60_000,
@@ -133,7 +134,7 @@ export function TodoStrip() {
   // 链接落到受刑计划列表的同一个筛选(此前只能链到第一份计划的灵魂,其余找不到);按钮在各灵魂的计划卡上。
   const canResend = hasPermission("judgment.execute");
   const resendQ = useQuery({
-    queryKey: ["dashboard", "todo", "redispatch"],
+    queryKey: todoKeys.item("redispatch"),
     queryFn: async () => (await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 })).data.count,
     enabled: canResend,
     staleTime: 60_000,
@@ -142,7 +143,7 @@ export function TodoStrip() {
   const canApprove = hasPermission("workflow.approve") && !viewing;
   const canLetters = hasPermission("soul_inbox.reply") && !viewing;
   const officerQ = useQuery({
-    queryKey: ["dashboard", "todo", "officer"],
+    queryKey: todoKeys.item("officer"),
     queryFn: async () => (await officerAppApi.todo()).data,
     enabled: canApprove || canLetters,
     staleTime: 60_000,
@@ -151,14 +152,14 @@ export function TodoStrip() {
     ({ ...officerQ, data: officerQ.data?.[group]?.count }) as UseQueryResult<number>;
   const canSentenceRequests = hasPermission("judgment.execute");
   const sentenceRequestQ = useQuery({
-    queryKey: ["dashboard", "todo", "sentence-requests"],
+    queryKey: todoKeys.item("sentence-requests"),
     queryFn: async () => (await sentencePlansApi.list({ pending_request: true, page: 1 })).data.count,
     enabled: canSentenceRequests,
     staleTime: 60_000,
   });
   const canModerate = hasPermission("social.moderate");
   const reportsQ = useQuery({
-    queryKey: ["dashboard", "todo", "reports"],
+    queryKey: todoKeys.item("reports"),
     queryFn: async () => (await socialModerationApi.reports({})).data.count,
     enabled: canModerate,
     staleTime: 60_000,
