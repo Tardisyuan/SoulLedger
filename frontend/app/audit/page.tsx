@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, PAGE_SIZE, type AuditLogEntry, type Tenant } from "@soulledger/core/api";
+import { auditApi, PAGE_SIZE, type Tenant } from "@soulledger/core/api";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { saveBlob } from "@/src/lib/saveBlob";
@@ -25,6 +26,7 @@ import {
 } from "@/lib/auditGrouping";
 import { TreeName } from "@/src/components/ui/TreeRow";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
@@ -143,7 +145,7 @@ export default function AuditPage() {
   // gate at all; it had one, pointed at the wrong question. Both are in the
   // same ledger (M47 and M65), which is why this comment names the codename
   // rather than the role.
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissionsReady } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
   // 「殿」下拉只给全局管理员(`ADMIN` 且不属于任何殿,后端审计列表与导出唯一跨殿的人)。绑了殿的人
   // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
@@ -187,9 +189,11 @@ export default function AuditPage() {
   // corresponding value was hardcoded "" on every branch).
   const dateFrom = useMemo(() => datePresetStart(datePreset), [datePreset]);
 
-  // 列表与导出共用的服务端筛选。`search` 不在其中:它只筛已取回的这一页(见下),
-  // 所以导出的是这组筛选下的全部行,不受搜索框影响。
+  // 列表与导出共用的服务端筛选。`search` 也在其中(2026-10-30 A2):后端 `search_fields`
+  // 搜资源、资源编号、描述与操作人,搜的是全部行 —— 此前只筛已取回的这 20 条。停手 300ms 再发。
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};
+  if (debouncedSearch) filterParams.search = debouncedSearch;
   if (actionFilter) filterParams.action = actionFilter;
   if (resourceFilter) filterParams.resource = resourceFilter;
   if (hallFilter) filterParams.tenant = hallFilter;
@@ -233,37 +237,21 @@ export default function AuditPage() {
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
-    // `search` deliberately excluded — it filters the already-fetched page
-    // client-side (see below) rather than triggering a new request per keystroke.
-    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter],
+    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
     },
     enabled: canReadAudit,
+    // 翻页 / 换筛选时留着上一页，不闪骨架。
+    placeholderData: (previous) => previous,
   });
 
-  // Client-side search across resource/description on the page already
-  // fetched — the audit endpoint has no dedicated `search` param (see
-  // lib/api/audit.ts / backend/apps/audit/views.py's filterset_fields).
-  //
-  // `data?.results ?? []` lives *inside* the callback rather than above it.
-  // Hoisted, the `?? []` fallback minted a fresh array on every render where
-  // `data` was undefined, so the memo it fed re-ran every render and handed
-  // `groups` below a new identity each time — a useMemo that memoised
-  // nothing. The dependency is the query result itself, which TanStack keeps
-  // referentially stable between fetches.
-  const filteredLogs = useMemo(() => {
-    const logs = data?.results ?? [];
-    if (!search) return logs;
-    const needle = search.toLowerCase();
-    return logs.filter(
-      (log: AuditLogEntry) =>
-        log.resource.toLowerCase().includes(needle) || log.description.toLowerCase().includes(needle)
-    );
-  }, [data?.results, search]);
+  // `data?.results ?? []` lives *inside* the callback rather than above it: hoisted, the
+  // fallback minted a fresh array every render and the memos below re-ran every render.
+  const logs = useMemo(() => data?.results ?? [], [data?.results]);
 
-  const groups = useMemo(() => groupAuditLogsByTrace(filteredLogs), [filteredLogs]);
+  const groups = useMemo(() => groupAuditLogsByTrace(logs), [logs]);
 
   // 合并同类 + 按日分组头(第三类 D 组答复)。A collapsed run shows only its
   // first member; `expanded` holds the run keys the operator opened. Day counts
@@ -410,7 +398,11 @@ export default function AuditPage() {
   if (!canReadAudit) {
     return (
       <PageShell variant="full" title={title}>
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        {permissionsReady === false ? (
+          <PermissionsPending />
+        ) : (
+          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        )}
       </PageShell>
     );
   }

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "./client";
+import { api, fetchAllPages } from "./client";
 import type { PaginatedResponse } from "./users";
 
 /**
@@ -57,14 +57,7 @@ export const organizationsApi = {
     api.delete<void>(`/organizations/${id}/`, moveTo != null ? { params: { move_to: moveTo } } : undefined),
   list: () => api.get<PaginatedResponse<Organization>>("/organizations/"),
   /** Every page, concatenated (page size is fixed at 20 and `?page_size=` is ignored) — for pickers that show the whole tree. */
-  all: async (): Promise<Organization[]> => {
-    const all: Organization[] = [];
-    for (let page = 1; ; page += 1) {
-      const { data } = await api.get<PaginatedResponse<Organization>>("/organizations/", { params: { page } });
-      all.push(...data.results);
-      if (!data.next) return all;
-    }
-  },
+  all: (): Promise<Organization[]> => fetchAllPages<Organization>("/organizations/"),
   get: (id: number) => api.get<Organization>(`/organizations/${id}/`),
   // Bare array of root nodes — the action returns the serializer data
   // directly (backend/apps/org/views.py:25) and does not nest children.

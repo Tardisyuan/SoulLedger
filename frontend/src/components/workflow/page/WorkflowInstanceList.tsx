@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflowListItem } from "@soulledger/core/api";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -54,9 +55,10 @@ export function WorkflowInstancesPanel({ hall }: { hall?: string }) {
   // 「发起审批」(W-11):实例页签右上角,持 `workflow.create` 才有。
   const [startOpen, setStartOpen] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};
   if (overdueOnly) filterParams.overdue = "true";
-  if (search.trim()) filterParams.search = search.trim();
+  if (debouncedSearch) filterParams.search = debouncedSearch;
   if (status) filterParams.status = status;
   if (caseType) filterParams.case_type = caseType;
   if (civilization) filterParams.civilization = civilization;

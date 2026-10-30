@@ -175,6 +175,9 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     }
     serializer_class = AuditLogSerializer
     filterset_class = AuditLogFilter
+    # `?search=` (SearchFilter is a default backend). The list page's search box used to filter
+    # only the 20 rows it had fetched; the export runs the same `filter_queryset`, so it follows.
+    search_fields = ["resource", "resource_id", "description", "user__username"]
     ordering_fields = ["timestamp", "action", "resource"]
     ordering = ["-timestamp"]
 

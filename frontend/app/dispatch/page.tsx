@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -93,8 +94,9 @@ function DispatchPageContent() {
     { value: "", label: t("dispatch.filter.all_tenants") },
     ...(tenantsQuery.data ?? []).map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),
   ];
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};
-  if (search.trim()) filterParams.search = search.trim();
+  if (debouncedSearch) filterParams.search = debouncedSearch;
   if (status) filterParams.status = status;
   if (sourceTenant) filterParams.source_tenant = sourceTenant;
   if (targetTenant) filterParams.target_tenant = targetTenant;

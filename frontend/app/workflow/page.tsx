@@ -56,6 +56,8 @@ function WorkflowPageContent() {
   const [editingTemplateData, setEditingTemplateData] = useState<TemplatePreviewData | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TemplatePreviewData | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  /** 「查看」取模板详情期间置灰，连点不会发两次、开两回。 */
+  const [viewLoading, setViewLoading] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmingTemplate, setConfirmingTemplate] = useState<BackendTemplate | null>(null);
 
@@ -296,7 +298,10 @@ function WorkflowPageContent() {
                             <>
                               <Button
                                 type="button"
+                                loading={viewLoading}
                                 onClick={async () => {
+                                  if (viewLoading) return;
+                                  setViewLoading(true);
                                   try {
                                     const res = await workflowApi.templates.get(String(tmpl.id));
                                     setViewingTemplate(res.data);
@@ -309,6 +314,8 @@ function WorkflowPageContent() {
                                     // merely-empty detail view, with nothing
                                     // on screen to say the request failed.
                                     showToast(t("workflow.view_error"), "error");
+                                  } finally {
+                                    setViewLoading(false);
                                   }
                                 }}
                               >

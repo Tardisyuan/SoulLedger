@@ -7,7 +7,7 @@
  * is asserted directly (`auditApi.list` not called).
  *
  * The rest covers the filter plumbing: which filters become query params,
- * which one (search) is deliberately client-side only, and the page reset
+ * search included (server-side and debounced since 2026-10-30), and the page reset
  * that has to happen whenever a filter changes — otherwise the operator
  * lands on page 4 of a one-page result and sees nothing.
  */
@@ -35,6 +35,8 @@ let mockIsAdmin = true;
 let mockRole: string | null = null;
 let mockPermissions: string[] = ["audit.read"];
 let mockTenantCode: string | null = null;
+/** `undefined` = the key is absent, as in every hand-built context elsewhere (reads as ready). */
+let mockReady: boolean | undefined = undefined;
 
 jest.mock("@/src/contexts/TenantContext", () => ({
   // `permissions` 现在有意义:页面外面包了
@@ -45,6 +47,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
     isAdmin: mockIsAdmin,
     tenantCode: mockTenantCode,
     user: { role: mockRole ?? (mockIsAdmin ? "ADMIN" : "JUDGE"), permissions: mockPermissions },
+    permissionsReady: mockReady,
   }),
 }));
 
@@ -116,6 +119,7 @@ beforeEach(() => {
   mockRole = null;
   mockPermissions = ["audit.read"];
   mockTenantCode = null;
+  mockReady = undefined;
   mockedList.mockResolvedValue({ data: { count: 1, results: [entry()] } });
   // The filter options come from the backend now; `label` is the model's Chinese and must not be shown.
   (auditApi.actions as jest.Mock).mockResolvedValue({
@@ -154,6 +158,33 @@ describe("AuditPage access control", () => {
     expect(await screen.findByText("audit.access_denied")).toBeInTheDocument();
     expect(screen.getByText("audit.needs_audit_read")).toBeInTheDocument();
     expect(mockedList).not.toHaveBeenCalled();
+  });
+
+  it("while permissions are still on their way after a reload, shows a skeleton — not the refusal, and no request", async () => {
+    // 2026-10-30 D3: the cached envelope restores the user with no codes; "no code yet" is not "no right".
+    mockIsAdmin = false;
+    mockRole = "MODERATOR";
+    mockPermissions = [];
+    mockReady = false;
+
+    const { rerender } = renderPage();
+
+    expect(screen.getByTestId("permissions-pending")).toBeInTheDocument();
+    expect(screen.queryByText("audit.access_denied")).not.toBeInTheDocument();
+    expect(mockedList).not.toHaveBeenCalled();
+
+    // The codes arrive without audit.read: now it is a refusal.
+    mockReady = true;
+    rerender(<AuditPage />);
+    expect(await screen.findByText("audit.access_denied")).toBeInTheDocument();
+    expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
+  });
+
+  it("an ADMIN is not held back while permissions load — the role is already known", async () => {
+    mockReady = false;
+    renderPage();
+    await screen.findByText("created a soul");
+    expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
   });
 
   it("renders no filter bar or table without audit.read", async () => {
@@ -341,35 +372,47 @@ describe("AuditPage request parameters", () => {
     expect(lastParams().start_date < sevenDay).toBe(true);
   });
 
-  it("does not send the search box as a query param — it filters client-side", async () => {
-    mockedList.mockResolvedValue({
-      data: { count: 2, results: [entry({ id: 1 }), entry({ id: 2, description: "deleted a user", resource: "User" })] },
-    });
+  it("sends the search to the server once typing pauses — the settled term, never the partial ones", async () => {
+    // 2026-10-30 A2: the box used to filter only the 20 rows on screen.
     renderPage();
     await screen.findByText("created a soul");
-    const callsBefore = mockedList.mock.calls.length;
+    const box = screen.getByPlaceholderText("audit.search_placeholder");
 
-    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), {
-      target: { value: "deleted" },
-    });
+    fireEvent.change(box, { target: { value: "d" } });
+    fireEvent.change(box, { target: { value: "de" } });
+    fireEvent.change(box, { target: { value: " deleted " } });
 
-    await waitFor(() => expect(screen.queryByText("created a soul")).not.toBeInTheDocument());
-    expect(screen.getByText("deleted a user")).toBeInTheDocument();
-    expect(mockedList).toHaveBeenCalledTimes(callsBefore);
+    await waitFor(() => expect(lastParams()).toEqual({ page: "1", page_size: "20", search: "deleted" }));
+    const searched = mockedList.mock.calls.map((c) => c[0].search).filter(Boolean);
+    expect(searched).toEqual(["deleted"]);
   });
 
-  it("matches the search against the resource name as well as the description", async () => {
-    mockedList.mockResolvedValue({
-      data: { count: 2, results: [entry({ id: 1 }), entry({ id: 2, description: "x", resource: "Permission" })] },
-    });
+  it("shows what the server matched, not a client-side filter of the page it had", async () => {
     renderPage();
     await screen.findByText("created a soul");
+    // The server's answer for the term holds a row whose text does not contain it (matched on the username).
+    mockedList.mockResolvedValue({ data: { count: 1, results: [entry({ id: 7, description: "row from page three" })] } });
 
-    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), {
-      target: { value: "permis" },
-    });
+    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "alice" } });
 
-    await waitFor(() => expect(screen.queryByText("created a soul")).not.toBeInTheDocument());
+    expect(await screen.findByText("row from page three")).toBeInTheDocument();
+    expect(screen.queryByText("created a soul")).not.toBeInTheDocument();
+  });
+
+  it("keeps the previous page on screen while the next one loads (no skeleton flash)", async () => {
+    mockedList.mockResolvedValue({ data: { count: 40, results: [entry()] } });
+    renderPage();
+    await screen.findByText("created a soul");
+    let release: (_v: unknown) => void = () => {};
+    mockedList.mockReturnValue(new Promise((r) => { release = r; }));
+
+    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "x" } });
+    await waitFor(() => expect(lastParams().search).toBe("x"));
+
+    // The new request is in flight; the old rows are still there.
+    expect(screen.getByText("created a soul")).toBeInTheDocument();
+    release({ data: { count: 1, results: [entry({ id: 9, description: "the x row" })] } });
+    expect(await screen.findByText("the x row")).toBeInTheDocument();
   });
 });
 
@@ -516,16 +559,17 @@ describe("AuditPage repeats and day headers", () => {
 describe("AuditPage export", () => {
   const exportCsv = auditApi.exportCsv as jest.Mock;
 
-  it("exports the server-side filters in force, without page or the client-side search box", async () => {
+  it("exports the filters in force, the server-side search included, without page", async () => {
     exportCsv.mockResolvedValue({ data: "csv" });
     renderPage();
     await screen.findByText("created a soul");
     await pickOption("audit.filter_action", "DELETE");
     fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "soul" } });
+    await waitFor(() => expect(lastParams().search).toBe("soul"));
     fireEvent.click(screen.getByRole("button", { name: "audit.export" }));
 
     await waitFor(() => expect(saveBlob).toHaveBeenCalledWith("csv", "audit_logs.csv"));
-    expect(exportCsv).toHaveBeenCalledWith({ action: "DELETE" });
+    expect(exportCsv).toHaveBeenCalledWith({ action: "DELETE", search: "soul" });
   });
 
   it("says so when the export fails, and saves nothing", async () => {

@@ -412,6 +412,26 @@ describe("WorkflowPage detail modal", () => {
     expect(screen.queryByText("workflow.no_node_data")).not.toBeInTheDocument();
   });
 
+  // 2026-10-30 A4: a second click while the detail is on its way sent a second request.
+  it("disables 查看 while the detail loads: two clicks, one request, and it comes back enabled", async () => {
+    mockedTemplates.mockResolvedValue({ data: [backendTemplate] });
+    let answer: (_v: unknown) => void = () => {};
+    mockedTemplateGet.mockReturnValue(new Promise((r) => { answer = r; }));
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Custom Tribunal"));
+    const view = screen.getByText("workflow.view").closest("button")!;
+    fireEvent.click(view);
+    expect(view).toBeDisabled();
+    expect(view).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(view);
+    expect(mockedTemplateGet).toHaveBeenCalledTimes(1);
+
+    answer({ data: { ...backendTemplate, nodes_json: [] } });
+    await screen.findByRole("dialog");
+    await waitFor(() => expect(view).not.toBeDisabled());
+  });
+
   /**
    * 保存的模板列表:三态。
    *
