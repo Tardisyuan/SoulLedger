@@ -149,17 +149,44 @@ remote_sync() {
         | grep -vxF -f <(printf '%s\n' "$keep") \
         | ssh "$GATES_REMOTE" "cd '$RWORK' && xargs -r -d '\n' rm -f --"
 }
-# Installed once per lockfile change, in the synced tree, by whichever container runs first. The hash
-# names the BASE image (RIMG), so the E2E image built on it does not force a reinstall.
-DEPS=$( { git ls-files -z -- package-lock.json '*package.json' backend/requirements.lock backend/requirements-dev.txt .nvmrc | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
+# Installed in the synced tree by whichever container runs first, and only when its inputs change — two
+# hashes, decided apart (2026-10-30): a version bump in one package.json used to reinstall node_modules AND
+# rebuild the venv from nothing. JS: the dependency fields of every package.json (not "version", "scripts"
+# …) and the lockfile. Python: requirements.lock and requirements-dev.txt; the venv is kept and synced to
+# them (pip install, then anything not in them uninstalled), not deleted. Both name the BASE image (RIMG),
+# so the E2E image built on it does not force a reinstall. deps_hash_js is a function for its test.
+deps_hash_js() {
+    git ls-files -z -- package-lock.json '*package.json' | xargs -0 python3 -I -c '
+import json, sys
+fields = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "overrides", "workspaces")
+for path in sys.argv[1:]:
+    data = json.load(open(path, encoding="utf-8"))
+    if path.endswith("package-lock.json"):
+        print(path, json.dumps(data, sort_keys=True))
+    else:
+        print(path, json.dumps({k: data.get(k) for k in fields}, sort_keys=True))
+' || echo "unreadable $(date +%s%N)"
+    echo "$RIMG"
+}
+DEPS_JS=$(deps_hash_js | shasum | cut -c1-16)
+DEPS_PY=$( { git ls-files -z -- backend/requirements.lock backend/requirements-dev.txt | xargs -0 cat; echo "$RIMG"; } | shasum | cut -c1-16)
+# Runs inside the container (no single quotes: it is spliced into a single-quoted bash -c).
 REMOTE_DEPS='
-          if [ "$(cat .sl-deps 2>/dev/null)" != "$SL_DEPS" ]; then
-            echo "    (installing node_modules and backend/.venv for these lockfiles — once per lockfile change)"
+          if [ "$(cat .sl-deps-js 2>/dev/null)" != "$SL_DEPS_JS" ]; then
+            echo "    (installing node_modules — the JS dependencies changed)"
             { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
-              && git checkout -- package-lock.json && rm -rf backend/.venv && python3 -m venv backend/.venv \
-              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt; } >/tmp/deps.log 2>&1 \
-              || { tail -20 /tmp/deps.log; echo "gates: could not install the dependencies"; exit 1; }
-            echo "$SL_DEPS" > .sl-deps
+              && git checkout -- package-lock.json; } >/tmp/deps-js.log 2>&1 \
+              || { tail -20 /tmp/deps-js.log; echo "gates: could not install the JS dependencies"; exit 1; }
+            echo "$SL_DEPS_JS" > .sl-deps-js
+          fi
+          if [ "$(cat .sl-deps-py 2>/dev/null)" != "$SL_DEPS_PY" ]; then
+            echo "    (syncing backend/.venv — the Python requirements changed)"
+            { { [ -x backend/.venv/bin/python ] || python3 -m venv backend/.venv; } \
+              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt \
+              && backend/.venv/bin/python scripts/venv-extras.py backend/requirements.lock backend/requirements-dev.txt \
+                 | xargs -r backend/.venv/bin/pip uninstall -q -y; } >/tmp/deps-py.log 2>&1 \
+              || { tail -20 /tmp/deps-py.log; echo "gates: could not sync backend/.venv"; exit 1; }
+            echo "$SL_DEPS_PY" > .sl-deps-py
           fi'
 
 # ── --e2e: PLAYWRIGHT ON THE REMOTE MACHINE (2026-10-28, user decision) ─────────────────────────
@@ -171,6 +198,9 @@ REMOTE_DEPS='
 # is reported as flaky, by name, not hidden. Measured 2026-10-28 on the unRAID box: build 31 s,
 # chromium 236 passed in 70 s, firefox 236 in 88 s, mobile-chrome 228 + 1 flaky in 115 s — against
 # 3.6 / 7.9 / 4.5 minutes here on 10-27. Never on this machine: no GATES_REMOTE, no E2E.
+# One `playwright test` for all the projects (2026-10-30): one `next start`, and the workers move on to
+# the next project's tests instead of idling at each project's tail. Per-project passed / failed / flaky,
+# and the failed and flaky tests by name, come from the json reporter (scripts/e2e-report.py).
 if [ -n "$E2E" ]; then
     [ -n "${GATES_REMOTE:-}" ] || { echo "$P: --e2e runs on the machine GATES_REMOTE names (.prepush.env), never on this one"; exit 2; }
     EIMG="${GATES_REMOTE_E2E_IMAGE:-sl-gates-e2e:1}"
@@ -188,22 +218,21 @@ if [ -n "$E2E" ]; then
     trap 'exit 130' INT TERM
     ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/e2e.lock docker run --rm --init --name $ENAME \
         --cpus ${GATES_REMOTE_E2E_CPUS:-8} --memory ${GATES_REMOTE_E2E_MEMORY:-16g} --shm-size 2g \
-        -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS=$DEPS -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
+        -v $RWORK:/app -v $RDIR/tmp/$RID:/sl-tmp -w /app -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY -e PW_WORKERS=${GATES_REMOTE_PW_WORKERS:-4} \
         -e PROJECTS='$E2E' $EIMG bash -c '$REMOTE_DEPS
           cd frontend && npm run build > /sl-tmp/e2e-build.log 2>&1 || { tail -30 /sl-tmp/e2e-build.log; echo \"e2e: next build failed\"; exit 1; }
-          rc=0
-          for p in \$(echo \$PROJECTS | tr , \" \"); do
-            T=\$(date +%s)
-            npx playwright test --project=\$p --reporter=line --retries=1 > /sl-tmp/e2e-\$p.log 2>&1 || rc=1
-            echo \"  → \$p (\$(( \$(date +%s) - T ))s)\"
-            grep -E \"^ +[0-9]+ (passed|failed|flaky|skipped)\" /sl-tmp/e2e-\$p.log | sed \"s/^ */    /\"
-            grep -E \"^ +\\[\$p\\] ›\" /sl-tmp/e2e-\$p.log | sed \"s/^ */      /\"
-          done
+          PF=\"\"; for p in \$(echo \$PROJECTS | tr , \" \"); do PF=\"\$PF --project=\$p\"; done
+          T=\$(date +%s); rm -f /sl-tmp/e2e.json
+          PLAYWRIGHT_JSON_OUTPUT_NAME=/sl-tmp/e2e.json npx playwright test \$PF --reporter=line,json --retries=1 > /sl-tmp/e2e.log 2>&1
+          rc=\$?
+          echo \"  → \$PROJECTS in one run (\$(( \$(date +%s) - T ))s)\"
+          python3 /app/scripts/e2e-report.py /sl-tmp/e2e.json \$(echo \$PROJECTS | tr , \" \") \
+            || { tail -30 /sl-tmp/e2e.log; [ \$rc -eq 0 ] && rc=1; }
           exit \$rc'"
     ERC=$?
     trap - EXIT
     [ "$ERC" -eq 0 ] && { echo "$P: E2E ok on $GATES_REMOTE"; exit 0; }
-    echo "$P: E2E failed on $GATES_REMOTE (exit $ERC). Logs: $GATES_REMOTE:$RDIR/tmp/$RID/e2e-<project>.log"
+    echo "$P: E2E failed on $GATES_REMOTE (exit $ERC). Log: $GATES_REMOTE:$RDIR/tmp/$RID/e2e.log"
     exit 1
 fi
 
@@ -644,7 +673,7 @@ fi
 # container — same rules, one copy of them — with the decision handed over in PREPUSH_CHANGED. Its
 # output streams back, its exit status is this run's. The container image (GATES_REMOTE_IMAGE) has
 # node (.nvmrc), Python 3.11, git, redis-server; node_modules and backend/.venv are installed there,
-# in the synced tree, and reinstalled only when a lockfile or package.json changes. Its database is
+# in the synced tree, and reinstalled only when their own inputs change (REMOTE_DEPS). Its database is
 # the throwaway PostgreSQL GATES_REMOTE_DB_URL names, so the run includes the PostgreSQL-only tests.
 # Runs from all checkouts queue on one lock on that machine.
 #
@@ -671,21 +700,16 @@ if [ -n "${GATES_REMOTE:-}" ] && [ "${GATES_IN_REMOTE:-0}" != 1 ]; then
     # lock there: GATE_LOCK=0 turns off gate-lock.sh inside the container, whose pid check cannot work
     # across containers — each numbers its processes from 1, so a lock an interrupted run left behind
     # named pid 7, the next container had a live pid 7, and that push waited 30 minutes (2026-10-28).
+    # Workers: 6 for pytest + 6 for the JS runners = the container's 12 CPUs, because the two sides now
+    # run at once (TWO SIDES AT ONCE, near the end). GATES_REMOTE_PYTEST_WORKERS / _JS_WORKERS override.
     ssh -o BatchMode=yes "$GATES_REMOTE" "flock $RDIR/run.lock docker run --rm --init --name $RNAME \
         --network ${GATES_REMOTE_NET:-sl-gates} --cpus ${GATES_REMOTE_CPUS:-12} --memory ${GATES_REMOTE_MEMORY:-24g} \
         -v $RWORK:/app -w /app -e GATES_IN_REMOTE=1 -e GATES_QOS=none -e GATE_LOCK=0 -e GATES_FULL=${GATES_FULL:-} \
-        -e JEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e VITEST_WORKERS=${GATES_REMOTE_WORKERS:-8} -e PYTEST_WORKERS=${GATES_REMOTE_WORKERS:-8} \
-        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS=$DEPS \
+        -e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e VITEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6} -e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6} \
+        -e DATABASE_URL='$GATES_REMOTE_DB_URL' -e GATES_PG_URL='$GATES_REMOTE_DB_URL' -e SL_DEPS_JS=$DEPS_JS -e SL_DEPS_PY=$DEPS_PY \
         -v $RDIR/tmp/$RID:/sl-tmp -e TMPDIR=/sl-tmp $RIMG bash -c '
           find /sl-tmp -mindepth 1 -mmin +1440 -delete 2>/dev/null
-          if [ \"\$(cat .sl-deps 2>/dev/null)\" != \"\$SL_DEPS\" ]; then
-            echo \"    (installing node_modules and backend/.venv for these lockfiles — once per lockfile change)\"
-            { npx -y npm@11 ci --no-audit --no-fund --loglevel=error && { npm rebuild @parcel/watcher unrs-resolver @sentry/cli >/dev/null 2>&1 || true; } \
-              && git checkout -- package-lock.json && rm -rf backend/.venv && python3 -m venv backend/.venv \
-              && backend/.venv/bin/pip install -q --no-deps -r backend/requirements.lock -r backend/requirements-dev.txt; } >/tmp/deps.log 2>&1 \
-              || { tail -20 /tmp/deps.log; echo \"gates: could not install the dependencies\"; exit 1; }
-            echo \"\$SL_DEPS\" > .sl-deps
-          fi
+          $REMOTE_DEPS
           export PREPUSH_CHANGED=\"\$(cat .sl-changed)\"
           exec bash scripts/run-gates.sh $RFLAGS'"
     RSTATUS=$?
@@ -833,8 +857,8 @@ pytest_finish() {
         fi
     done
     wait "$PYTEST_PID"; PYTEST_STATUS=$?
-    # The ten slowest, so a run that stalls says where (--durations=10 above).
-    sed -n '/slowest 10 durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
+    # The thirty slowest over 5 s, so a run that stalls says where (--durations=30 --durations-min=5 below).
+    sed -n '/slowest [0-9]* *durations/,/^$/p' "$PYTEST_LOG" | sed 's/^/    /'
     tail -4 "$PYTEST_LOG"
     if [ "$PYTEST_STATUS" -eq 0 ]; then rm -f "$PYTEST_LOG"; else echo "    full log: $PYTEST_LOG"; fi
     # Stop the throwaway before deciding, so a failure does not leak a daemon.
@@ -868,6 +892,8 @@ PG_ONLY_PY
 # RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
 # only the tests that read the areas that did (see above) — no ruff and no
 # makemigrations, which read nothing outside backend/.
+# A function so the remote run can start it beside the JS tests (TWO SIDES AT ONCE, near the end).
+run_backend_tests() {
 if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
 
@@ -1044,7 +1070,7 @@ PROBE_PY
     #
     # -n $PYTEST_WORKERS (pytest-xdist, requirements-dev.txt) when it is installed. 2 since 2026-10-27
     # (see TWO WORKERS near the top); it was 4 (measured 2026-09-29 at 4:21 against 5:43 serial).
-    # PYTEST_WORKERS=0 runs serially; CI stays serial either way.
+    # PYTEST_WORKERS=0 runs serially; CI runs -n auto (ci.yml).
     XDIST=""
     if [ "$PYTEST_WORKERS" != "0" ] && "$PY" -c "import xdist" 2>/dev/null; then
         # --dist worksteal: an idle worker takes tests from a busy one. Plain -n hands out chunks up front,
@@ -1063,6 +1089,17 @@ PROBE_PY
     if [ "$FULL_RUN" = 1 ]; then
         export SOULLEDGER_SQLITE_TEMPLATE=0
         echo "    (SQLite: real migrate + template check, SOULLEDGER_SQLITE_TEMPLATE=0)"
+    fi
+    # The remote run keeps its PostgreSQL template between runs (config/testdb.py). Its xdist controller
+    # collects no tests, so it cannot see round trips in the run the way the SQLite template does: say it here.
+    # A full run is already covered by the line above.
+    if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
+        [ "$RUN_MIGRATION" = 1 ] && export SOULLEDGER_SQLITE_TEMPLATE=0
+        if [ "${SOULLEDGER_SQLITE_TEMPLATE:-}" = 0 ]; then
+            echo "    (PostgreSQL: real migrate, checked against the kept template of the same input hash)"
+        else
+            echo "    (PostgreSQL: the kept template of this input hash, if there is one — config/testdb.py)"
+        fi
     fi
     PYTEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-pytest.XXXXXX")
     PYTEST_PATHS=""
@@ -1126,7 +1163,7 @@ PROBE_PY
     # and a 600 s limit — the network round trips make the slow tests slower (CLAUDE.md, the real-PG command).
     REAL_PG_ARGS=""
     if [ "$REAL_PG" = 1 ] || [ "${GATES_IN_REMOTE:-0}" = 1 ]; then REAL_PG_ARGS="--create-db"; TEST_TIMEOUT="${PYTEST_TEST_TIMEOUT:-600}"; fi
-    PYARGS=(-q --no-header --no-cov --durations=10 $XDIST
+    PYARGS=(-q --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
@@ -1135,7 +1172,10 @@ PROBE_PY
     fi  # PYTEST_SKIP = 0
     cd "$ROOT" || exit 1
 fi
+}  # run_backend_tests
 
+# The JS test runners, in order. A function for the same reason as run_backend_tests.
+run_js_tests() {
 # Core first: it is the frontend's dependency, it is fast, and a boundary
 # failure should be the thing you read rather than the tsc error it causes 400
 # lines later.
@@ -1304,6 +1344,45 @@ if [ -n "$MOBILE_READERS" ]; then
     # shellcheck disable=SC2046
     npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
     [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
+fi
+}  # run_js_tests
+
+# ── TWO SIDES AT ONCE (the remote run only, 2026-10-30, user decision) ──────────────────────────────
+#
+# On the gate box the backend pytest and the JS runners (core vitest, web jest, the two app jests) ran one
+# after the other. There they now run side by side, each into its own log, 6 + 6 workers over the
+# container's 12 CPUs (the docker run in DELEGATED RUNS). A side that fails does not stop the other: both
+# finish, then both logs are printed and both exit codes decide. On this Mac they stay serial — memory,
+# not CPU, is what runs out here (TWO WORKERS near the top).
+if [ "${GATES_IN_REMOTE:-0}" = 1 ]; then
+    BE_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-backend.XXXXXX"); JS_LOG=$(mktemp "${TMPDIR:-/tmp}/gates-js.XXXXXX")
+    echo "  → backend pytest and JS tests side by side"
+    ( run_backend_tests ) >"$BE_LOG" 2>&1 &
+    BE_PID=$!
+    ( run_js_tests ) >"$JS_LOG" 2>&1 &
+    JS_PID=$!
+    T0=$(date +%s); NEXT=60
+    while kill -0 "$BE_PID" 2>/dev/null || kill -0 "$JS_PID" 2>/dev/null; do
+        sleep 2
+        if [ $(( $(date +%s) - T0 )) -ge "$NEXT" ]; then
+            NEXT=$(( NEXT + 60 ))
+            echo "    … $(( ($(date +%s) - T0) / 60 ))m · backend: $(grep -E '^ +(→|…)' "$BE_LOG" | tail -1 | sed 's/^ *//') · js: $(grep -E '^ +(→|…)' "$JS_LOG" | tail -1 | sed 's/^ *//')"
+        fi
+    done
+    wait "$BE_PID"; BE_RC=$?
+    wait "$JS_PID"; JS_RC=$?
+    echo "  ── backend (exit $BE_RC) ──"; cat "$BE_LOG"
+    echo "  ── JS tests (exit $JS_RC) ──"; cat "$JS_LOG"
+    if [ "$BE_RC" -ne 0 ] || [ "$JS_RC" -ne 0 ]; then
+        echo ""
+        [ "$BE_RC" -ne 0 ] && echo "  backend: $(grep -E "^$P: " "$BE_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
+        [ "$JS_RC" -ne 0 ] && echo "  JS:      $(grep -E "^$P: " "$JS_LOG" | grep -vE 'push refused|FAILED$' | tail -1)"
+        fail "tests failed (backend exit $BE_RC, JS exit $JS_RC) — both sides ran to the end, logs above"
+    fi
+    rm -f "$BE_LOG" "$JS_LOG"
+else
+    run_backend_tests
+    run_js_tests
 fi
 
 

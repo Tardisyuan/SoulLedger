@@ -48,6 +48,10 @@ module.exports = {
   // is still a problem.
   testTimeout: 15000,
   workerIdleMemoryLimit: '1GB',
+  // In node_modules, not the OS temp dir (2026-10-30): on the gate box TMPDIR is /sl-tmp, emptied of files
+  // older than a day, so the first run each day transformed everything again. rsync keeps node_modules/
+  // (scripts/run-gates.sh). rootDir is the repo root here, so this is the root node_modules.
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest',
   rootDir: path.resolve(__dirname, '..'),
   roots: ['<rootDir>/frontend'],
   // Without this, `--coverage` writes to the new rootDir's default
