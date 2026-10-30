@@ -9,6 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { responseCode } from "@soulledger/core/api/client";
 
 export const VISIBILITIES =["PUBLIC", "TENANT", "FOLLOWERS", "PRIVATE"] as const;
 const UPLOAD_ERRORS = ["not_an_image", "too_large", "too_many_pixels", "too_many_pending"] as const;
@@ -22,7 +23,7 @@ function toBody(file: File) {
 
 /** The server's `code` on a refused upload, when it is one the language packs name. */
 function uploadErrorCode(error: unknown) {
-  const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
+  const code = responseCode(error);
   return UPLOAD_ERRORS.find((c) => c === code);
 }
 

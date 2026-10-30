@@ -18,6 +18,7 @@ import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { responseCode } from "@soulledger/core/api/client";
 
 const SYSTEM_TYPES: ExternalApiKeySystemType[] = ["GOVERNMENT", "HOSPITAL", "POLICE", "MESSAGE_BUS", "CUSTOM"];
 const GRANTS = ["can_register_death", "can_query_status", "can_manage_webhooks"] as const;
@@ -181,7 +182,7 @@ function CreateKeyDialog({ onClose, onCreated }: { onClose: () => void; onCreate
     // 无殿管理员没进殿时后端答 400 `no_tenant`:密钥属于某一殿。
     onError: (err: unknown) =>
       showToast(
-        t((err as { response?: { data?: { code?: string } } })?.response?.data?.code === "no_tenant"
+        t(responseCode(err) === "no_tenant"
           ? "death_sync.api_keys.create_no_tenant" : "death_sync.api_keys.create_failed"),
         "error",
       ),

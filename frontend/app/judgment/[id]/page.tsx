@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi, soulsApi } from "@soulledger/core/api";
 import { fetchFailureOf } from "@soulledger/core/api/client";
+import { concludeRefusalOf } from "@soulledger/core/api/judgment";
 import { judgmentKeys, soulKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -73,7 +74,6 @@ import {
   draftToChanges,
   type ChangesDraft,
 } from "@/src/components/sentence-plan/PlanChangesEditor";
-import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
 import { FlowStationPicker, useFlowPreview } from "@/src/components/workflow/segments/FlowStationPicker";
 import { segmentRefusalOf, segmentRefusalText } from "@soulledger/core/domain/workflowSegments";
@@ -81,7 +81,6 @@ import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/component
 import {
   EMPTY_PLACEMENT,
   JudgmentPlacement,
-  PLACEMENT_REFUSALS,
   placementFor,
   placementFromDraft,
   type Placement,
@@ -168,16 +167,6 @@ const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RE
  * 预选不算「动过」:不触发自动保存,存过的草稿裁决仍然优先。
  */
 const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
-
-/** 埃及称心的结案拒绝(apps/judgment/weighing.py),各有一句译文 `judgment.weighing.errors.*`。
- * 后两个是 `JudgmentService.conclude` 抛的同一类错:原审要走审批 / 称心流程,不能直接结案。 */
-const WEIGHING_REFUSALS = [
-  "verdict_contradicts_weighing", "wavering_has_no_destination", "wavering_with_open_cross",
-  "approval_flow_required", "weighing_flow_required",
-] as const;
-
-/** `claims.assert_concludable` 的拒绝码(结案与认领同一组),译文在 `claimRefusalMessage` 里。 */
-const CONCLUDE_REFUSALS = ["at_city_god", "held_until_fated_date", "embalming", "duat_unfinished", "unferried"] as const;
 
 /*
  * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
@@ -320,34 +309,32 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.conclude_success"), "success");
     },
     onError: (err: unknown) => {
-      const e = err as { response?: { data?: { error?: string; code?: string } } };
-      // An amendment's plan changes refused (same transaction, nothing written): say which rule, translated.
-      const code = e?.response?.data?.code;
-      // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
-      if (code && (PLACEMENT_REFUSALS as readonly string[]).includes(code)) {
-        setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
-        setDraftOpen(true); // 平板上 戊 收着的话,也一并展开
-        queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
-        return;
-      }
-      if (code === "cross_judgment_open" && crossId) {
-        setCrossRefused(true);
-        queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.detail(crossId) });
-        return;
-      }
-      if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
-        showToast(t(`sentence_plan.errors.${code}`), "error");
-        return;
-      }
-      if (code && (WEIGHING_REFUSALS as readonly string[]).includes(code)) {
-        showToast(t(`judgment.weighing.errors.${code}`), "error");
-        return;
-      }
-      // 候审未到(枉死城 / 木乃伊 / 到不了殿 / 未渡河 / 还在城隍那里):与认领的拒绝同一组码、同一句译文。
-      if (code && (CONCLUDE_REFUSALS as readonly string[]).includes(code)) {
-        queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(id) }); // 规则在服务端:重取 `conclude_refusal`,键就灰了
-        showToast(claimRefusalMessage(err, t), "error");
-        return;
+      // 分类在 core(`concludeRefusalOf`);这里只决定每一类在页面上做什么。
+      const refusal = concludeRefusalOf(err);
+      switch (refusal?.kind) {
+        case "placement":
+          // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
+          setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
+          setDraftOpen(true); // 平板上 戊 收着的话,也一并展开
+          queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
+          return;
+        case "cross_open":
+          if (!crossId) break;
+          setCrossRefused(true);
+          queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.detail(crossId) });
+          return;
+        case "plan":
+          // An amendment's plan changes refused (same transaction, nothing written): say which rule, translated.
+          showToast(t(`sentence_plan.errors.${refusal.code}`), "error");
+          return;
+        case "weighing":
+          showToast(t(`judgment.weighing.errors.${refusal.code}`), "error");
+          return;
+        case "not_concludable":
+          // 候审未到(枉死城 / 木乃伊 / 到不了殿 / 未渡河 / 还在城隍那里):与认领的拒绝同一组码、同一句译文。
+          queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(id) }); // 规则在服务端:重取 `conclude_refusal`,键就灰了
+          showToast(claimRefusalMessage(err, t), "error");
+          return;
       }
       // 第四十三批的选站拒绝(终审 / 驳回目标 / 跨域审判要流程):译好的一句,不是后端的英文。
       const segmentRefusal = segmentRefusalText(t, segmentRefusalOf(err));
@@ -627,10 +614,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const citations = judgment.citations ?? [];
   const citedIds = new Set(citations.map((c) => c.statute.id));
   const canEditGrounds = !isFinal && canEditCase;
-  const refusalCode = (concludeMutation.error as { response?: { data?: { code?: string } } } | null)?.response?.data
-    ?.code;
-  const placementRefusal =
-    refusalCode && (PLACEMENT_REFUSALS as readonly string[]).includes(refusalCode) ? refusalCode : null;
+  const concludeRefusal = concludeRefusalOf(concludeMutation.error);
+  const placementRefusal = concludeRefusal?.kind === "placement" ? concludeRefusal.code : null;
 
   /**
    * Hoisted out of the JSX on purpose, and not for tidiness.

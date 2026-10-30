@@ -1,4 +1,4 @@
-import { api } from "@soulledger/core/api/client";
+import { api, responseCode } from "@soulledger/core/api/client";
 import { endImpersonation, getImpersonation, startHallView } from "@soulledger/core/api/impersonation";
 
 import { markHallViewExpired } from "./hallViewExpiry";
@@ -39,10 +39,10 @@ export function wireImpersonation(): void {
       const imp = getImpersonation();
       // 进殿查看:令牌过期的 401(及服务端的 impersonation_* 收场)不跳走,标为到期,页面换成到期页。
       if (imp?.hallView && error?.response?.status === 401) markHallViewExpired(imp.id);
-      const code: unknown = error?.response?.data?.code;
+      const code = responseCode(error);
       const over =
         error?.response?.status === 403 &&
-        typeof code === "string" &&
+        code !== null &&
         code.startsWith("impersonation_") &&
         code !== "impersonation_read_only";
       // 结束请求自己的 403 不再触发收场(它就是收场的一部分)。

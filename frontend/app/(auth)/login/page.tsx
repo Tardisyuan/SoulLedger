@@ -17,6 +17,7 @@ import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { storeMfaPending } from "@/src/lib/mfaPending";
 import { cn } from "@/lib/utils";
+import { responseCode, responseData, responseStatus, fetchFailureOf } from "@soulledger/core/api/client";
 
 /**
  * 登录(A9 §二,Design 2026-10-03):两栏 `minmax(0,1fr)` + 560,左 canvas 放律条与四文明,
@@ -250,16 +251,14 @@ export default function LoginPage() {
       window.location.href = await defaultViewRoute();
       return;
     } catch (err: unknown) {
-      const response = (err as { response?: { status?: number; data?: Partial<LoginFailedBody & LoginLockedBody> } })
-        ?.response;
-      const data = response?.data;
-      const status = response?.status;
-      if (status === 429 && data?.code === "login_locked") {
-        setFailure({ kind: "locked", until: new Date(Date.now() + (data.retry_after ?? LOGIN_LIMIT.windowMinutes * 60) * 1000) });
+      const data = responseData<LoginFailedBody & LoginLockedBody>(err);
+      const status = responseStatus(err);
+      if (status === 429 && responseCode(err) === "login_locked") {
+        setFailure({ kind: "locked", until: new Date(Date.now() + (data?.retry_after ?? LOGIN_LIMIT.windowMinutes * 60) * 1000) });
         return;
       }
       // No response, or the server fell over: what was typed stays, and 重试 sends it again.
-      if (!response || (status !== undefined && status >= 500)) {
+      if (fetchFailureOf(err) === "network" || (status !== null && status >= 500)) {
         setFailure({ kind: "network" });
         return;
       }

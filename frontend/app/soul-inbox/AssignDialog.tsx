@@ -8,6 +8,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField } from "@/src/components/ui/Field";
+import { responseCode } from "@soulledger/core/api/client";
 
 /*
  * 「标给同僚」(backend `OfficerInboxViewSet.assign`)。信不换殿:名单是这封信的收件殿司里能回信的
@@ -36,8 +37,8 @@ export function AssignDialog({ conversation, onClose }: { conversation: InboxCon
           onClose();
         },
         onError: (error) => {
-          const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
-          showToast(typeof code === "string" ? t(`soul_inbox.errors.${code}`) : t("soul_inbox.failed"), "error");
+          const code = responseCode(error);
+          showToast(code !== null ? t(`soul_inbox.errors.${code}`) : t("soul_inbox.failed"), "error");
         },
       }
     );

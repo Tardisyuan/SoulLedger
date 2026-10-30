@@ -21,6 +21,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SelectField, TextAreaField, TextField } from "@/src/components/ui/Field";
 import { TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { responseCode } from "@soulledger/core/api/client";
 
 /*
  * 联审定下的各站(docs/ARCHITECTURE-sentence-plan.md §2.1、Q1、Q5、Q12、Q16)。
@@ -143,7 +144,7 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
       queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });
     },
     onError: (error) => {
-      if ((error as { response?: { data?: { code?: string } } })?.response?.data?.code === "order_locked") {
+      if (responseCode(error) === "order_locked") {
         setDraft(null);
         showToast(t("crossJudgments.order.locked"), "error");
         queryClient.invalidateQueries({ queryKey: crossJudgmentKeys.all });

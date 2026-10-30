@@ -21,11 +21,10 @@ import { SelectField, TextField } from "@/src/components/ui/Field";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import type { BadgeTone } from "@/src/components/ui/Badge";
+import { responseCode } from "@soulledger/core/api/client";
 
 const WEBHOOKS_QUERY = ["death-sync", "webhooks"] as const;
 const DELIVERIES_QUERY = ["death-sync", "webhook-deliveries"] as const;
-/** The server's refusal code on a 409 (`webhook_inactive`, `not_finished`), or undefined. */
-const refusalCode = (error: unknown) => (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
 /** The event name of a 「发测试事件」 delivery (`apps/death_sync/views.py::WEBHOOK_TEST_EVENT`); not an `EventType`. */
 const TEST_EVENT = "WEBHOOK_TEST";
 const DELIVERY_TONE: Record<WebhookDeliveryStatus, BadgeTone> = {
@@ -85,7 +84,7 @@ export function WebhooksPanel() {
     },
     onError: (error) =>
       showToast(
-        refusalCode(error) === "webhook_inactive" ? t("death_sync.webhooks.inactive") : t("death_sync.webhooks.test_failed"),
+        responseCode(error) === "webhook_inactive" ? t("death_sync.webhooks.inactive") : t("death_sync.webhooks.test_failed"),
         "error"
       ),
   });
@@ -361,7 +360,7 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
       void queryClient.invalidateQueries({ queryKey: DELIVERIES_QUERY });
     },
     onError: (error) => {
-      const code = refusalCode(error);
+      const code = responseCode(error);
       showToast(
         code === "not_finished"
           ? t("death_sync.webhooks.redeliver_not_finished")

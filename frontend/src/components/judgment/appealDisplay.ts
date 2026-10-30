@@ -1,5 +1,6 @@
 import { APPEAL_ERROR_CODES, type JudgmentAppealStatus, type JudgmentClaimRefusal } from "@soulledger/core/api";
 import type { BadgeTone } from "@/src/components/ui/Badge";
+import { responseCode, responseData } from "@soulledger/core/api/client";
 
 /** 申诉状态 → 徽章色调。改判不是失败,撤回也不是:中性;复核中是进行中。 */
 export const APPEAL_STATUS_TONES: Record<JudgmentAppealStatus, BadgeTone> = {
@@ -16,8 +17,8 @@ export type AppealRefusal = { code: string; foreignOrders?: number[] };
 
 /** 认领 / 决定被拒:服务端的 `code`(没有就是 null —— 网络或别的错误)。 */
 export function appealRefusalOf(err: unknown): AppealRefusal | null {
-  const data = (err as { response?: { data?: Partial<JudgmentClaimRefusal> } })?.response?.data;
-  return data?.code ? { code: data.code, foreignOrders: data.foreign_orders } : null;
+  const code = responseCode(err);
+  return code ? { code, foreignOrders: responseData<JudgmentClaimRefusal>(err)?.foreign_orders } : null;
 }
 
 type T = (key: string, params?: Record<string, string>) => string;

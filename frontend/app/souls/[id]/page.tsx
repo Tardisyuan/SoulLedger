@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -31,7 +31,7 @@ import {
 import { REBIRTH_QUOTA_KEY, useRebirthQuota } from "@/src/components/souls/RebirthQuota";
 import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
 import { isArchivableConflict, tudiGodKeys, tudiGodsApi } from "@soulledger/core/api";
-import { fetchFailureOf } from "@soulledger/core/api/client";
+import { fetchFailureOf, responseCode, responseError, responseStatus } from "@soulledger/core/api/client";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
@@ -66,6 +66,7 @@ import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard"
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useConfirm } from "@/src/hooks/useConfirm";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -118,7 +119,6 @@ export default function SoulDetailPage() {
   const { t, tf, locale } = useI18n();
   const { showToast } = useToast();
   const { tenantCode, user } = useTenant();
-  const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCorrectSettlementOpen, setIsCorrectSettlementOpen] = useState(false);
@@ -129,7 +129,6 @@ export default function SoulDetailPage() {
   const [isTudiRegisterOpen, setIsTudiRegisterOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const { hasPermission } = usePermissions();
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   // The rebirth destination. Was not state at all: handleReincarnate posted a
   // literal "HUMAN", so every soul this app ever reincarnated went into 人道
   // no matter what the six-path enum offered. HUMAN stays the default — 人道
@@ -144,8 +143,7 @@ export default function SoulDetailPage() {
   const [quotaRefusal, setQuotaRefusal] = useState<RebirthQuotaFull | null>(null);
   // 办转世被 409 `soup_not_taken` 拒了(地府的灵魂还没饮汤):灵魂留在轮回中,操作卡里的孟婆汤那一块写说明。
   const [soupRefused, setSoupRefused] = useState(false);
-  const [confirmMessage, setConfirmMessage] = useState("");
-  const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
+  const confirm = useConfirm();
 
   const deleteSoulMutation = useDeleteSoul();
   const archiveSoulMutation = useArchiveSoul();
@@ -340,8 +338,7 @@ export default function SoulDetailPage() {
         const res = await ledgerApi.inheritance(id);
         return res.data;
       } catch (e: unknown) {
-        const err = e as { response?: { status?: number } };
-        if (err?.response?.status === 409) {
+        if (responseStatus(e) === 409) {
           return null;
         }
         throw e;
@@ -351,62 +348,52 @@ export default function SoulDetailPage() {
     staleTime: 30_000,
   });
 
-  async function handleDie() {
-    if (!soul) return;
-    setConfirmMessage(t("souls.detail.mark_dead_confirm", { name: soul.name }));
-    setConfirmCallback(() => async () => {
-      setActionLoading("die");
-      try {
-        await soulsApi.die(soul.id, {});
-        // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
-        // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
-        // 它的 onSuccess 做的事就是下面这一行 —— 只是这里连判决/处置一起标脏,
-        // 因为 Soul.die() 会顺手开一份判决(apps/souls/models.py)。
-        refreshSoulViews();
-        // The success path said nothing at all until now, while every failure
-        // path on this page toasts. So the only evidence that an irreversible
-        // state change had landed was the action card swapping to a different
-        // set of buttons — and that same card also swaps when a WebSocket push
-        // from another operator changes the soul underneath you
-        // (`handleSoulStateChanged`). One ambiguous signal for two different
-        // causes is not a confirmation.
-        showToast(t("souls.detail.mark_dead_success"), "success");
-      } catch (e: unknown) {
-        const err = e as { response?: { data?: { error?: string; code?: string } }; message?: string };
-        // 本殿没有能收案的城隍(409 `no_city_god`,2026-10-29):死亡不登记,说清要先设兜底城隍。
-        showToast(noCityGod(err) ?? (err?.response?.data?.error || "Failed"), "error");
-      } finally {
-        setActionLoading("");
-      }
-    });
-    setIsConfirmOpen(true);
+  /** 409 `no_city_god`(本殿没有能收案的城隍)→ 那句说明;别的错误为 null。 */
+  function noCityGod(err: unknown) {
+    return responseCode(err) === "no_city_god" ? t("judgment.error.no_city_god") : null;
   }
+
+  // ── 操作卡上的动作:每个一个 mutation ─────────────────────────────────
+  //
+  // 此前是一个 `actionLoading` 字符串 + 每个动作手写 try / finally 去置它、清它。
+  // 现在「哪个动作在跑」就是各 mutation 的 `isPending`,下面 `actionLoading` 只是把它
+  // 译回操作卡认的那个名字。失效与拒绝文案逐条照旧。
+
+  const dieMutation = useMutation({
+    mutationFn: (soulId: string) => soulsApi.die(soulId, {}),
+    onSuccess: () => {
+      // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
+      // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
+      // 它的 onSuccess 做的事就是下面这一行 —— 只是这里连判决/处置一起标脏,
+      // 因为 Soul.die() 会顺手开一份判决(apps/souls/models.py)。
+      refreshSoulViews();
+      // The success path said nothing at all until now, while every failure
+      // path on this page toasts. So the only evidence that an irreversible
+      // state change had landed was the action card swapping to a different
+      // set of buttons — and that same card also swaps when a WebSocket push
+      // from another operator changes the soul underneath you
+      // (`handleSoulStateChanged`). One ambiguous signal for two different
+      // causes is not a confirmation.
+      showToast(t("souls.detail.mark_dead_success"), "success");
+    },
+    // 本殿没有能收案的城隍(409 `no_city_god`,2026-10-29):死亡不登记,说清要先设兜底城隍。
+    onError: (e) => showToast(noCityGod(e) ?? (responseError(e) || "Failed"), "error"),
+  });
 
   // 重算功过(`POST /ledger/calculate/<id>/`):把 Soul 上存的功 / 过按全部事项重新算一遍。
   // 页头的数读的就是 Soul 自己的 `merit_score` / `demerit_score`(SoulFigures),所以成功后标脏灵魂那一族。
-  function handleRecalculate() {
-    if (!soul) return;
-    setConfirmMessage(t("souls.detail.recalculate_confirm", { name: soul.name }));
-    setConfirmCallback(() => async () => {
-      setActionLoading("recalculate");
-      try {
-        await ledgerApi.recalculate(soul.id);
-        refreshSoulViews();
-        showToast(t("souls.detail.recalculate_success"), "success");
-      } catch {
-        // 后端的 404 / 403 文案是英文的 `message`,这里统一用自己的一句。
-        showToast(t("souls.detail.recalculate_failed"), "error");
-      } finally {
-        setActionLoading("");
-      }
-    });
-    setIsConfirmOpen(true);
-  }
+  const recalculateMutation = useMutation({
+    mutationFn: (soulId: string) => ledgerApi.recalculate(soulId),
+    onSuccess: () => {
+      refreshSoulViews();
+      showToast(t("souls.detail.recalculate_success"), "success");
+    },
+    // 后端的 404 / 403 文案是英文的 `message`,这里统一用自己的一句。
+    onError: () => showToast(t("souls.detail.recalculate_failed"), "error"),
+  });
 
-  async function handleStartJudgment() {
-    if (!soul) return;
-    setActionLoading("judge");
-    try {
+  const startJudgmentMutation = useMutation({
+    mutationFn: async (target: NonNullable<typeof soul>) => {
       // Soul.die() already opens a judgment when it moves the soul to JUDGING
       // (apps/souls/models.py), so creating one here unconditionally left every
       // soul with a duplicate pending judgment alongside the real one. Reuse
@@ -415,31 +402,18 @@ export default function SoulDetailPage() {
       // Asked of the server, not found in `judgments`: that is page one (20
       // rows) of this soul's judgments, so an open one on page two was missed
       // and a duplicate created. `JudgmentFilter` takes `is_final`. (FL-19)
-      const open = (await judgmentApi.list({ soul: soul.id, is_final: "false" })).data.results[0];
-      const id = open
+      const open = (await judgmentApi.list({ soul: target.id, is_final: "false" })).data.results[0];
+      return open
         ? open.id
-        : (await judgmentApi.create({ soul: soul.id, civilization: soul.civilization })).data.id;
-      router.push(`/judgment/${id}`);
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string; code?: string } }; message?: string };
-      showToast(noCityGod(err) ?? (err?.response?.data?.error || err?.message || "Failed"), "error");
-    } finally {
-      setActionLoading("");
-    }
-  }
+        : (await judgmentApi.create({ soul: target.id, civilization: target.civilization })).data.id;
+    },
+    onSuccess: (judgmentId) => router.push(`/judgment/${judgmentId}`),
+    onError: (e) => showToast(noCityGod(e) ?? (responseError(e) || e?.message || "Failed"), "error"),
+  });
 
-  /** 409 `no_city_god`(本殿没有能收案的城隍)→ 那句说明;别的错误为 null。 */
-  function noCityGod(err: { response?: { data?: { code?: string } } }) {
-    return err?.response?.data?.code === "no_city_god" ? t("judgment.error.no_city_god") : null;
-  }
-
-  async function handleReincarnate(dispositionId: string) {
-    if (sixPaths && !rebirthForm) return;
-    if (formOverridden && !formReason.trim()) return;
-    setActionLoading("reincarnate");
-    setQuotaRefusal(null);
-    try {
-      await reincarnationApi.reborn({
+  const reincarnateMutation = useMutation({
+    mutationFn: (dispositionId: string) =>
+      reincarnationApi.reborn({
         soul_id: soul?.id,
         disposition_id: dispositionId,
         // 不传 new_identity:服务端缺省用灵魂原名(`ReincarnationService.reborn`)。此前写死英文「名 (rebirth)」,
@@ -449,14 +423,16 @@ export default function SoulDetailPage() {
         ...(sixPaths && rebirthForm === "HUMAN" && (nextContinent || soul?.birth_continent)
           ? { rebirth_continent: nextContinent || soul?.birth_continent }
           : {}),
-      });
+      }),
+    onSuccess: () => {
       // 转生会写出一条新的处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
-      // Same as `handleDie` above: silent success, loud failure. Reincarnation
+      // Same as `dieMutation` above: silent success, loud failure. Reincarnation
       // additionally ticks the `generation` badge, which moved with no word.
       showToast(t("souls.detail.reincarnate_success"), "success");
       void queryClient.invalidateQueries({ queryKey: REBIRTH_QUOTA_KEY });
-    } catch (e: unknown) {
+    },
+    onError: (e) => {
       // 这一道本月满了(并发时刚被用完):不弹 toast,同一句话出现在操作卡里,灵魂留在原处。
       if (soupNotTakenOf(e)) {
         setSoupRefused(true);
@@ -489,38 +465,75 @@ export default function SoulDetailPage() {
         );
         return;
       }
-      const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
       // 四大部洲只在地府的人道(400);其余认不出的码写通用句,不回显后端英文。
-      showToast(code === "rebirth_continent_not_applicable" ? t("reincarnation.error.rebirth_continent_not_applicable") : t("common.error"), "error");
-    } finally {
-      setActionLoading("");
-    }
-  }
+      showToast(responseCode(e) === "rebirth_continent_not_applicable" ? t("reincarnation.error.rebirth_continent_not_applicable") : t("common.error"), "error");
+    },
+  });
 
-  async function handleRelease(dispositionId: string) {
-    setActionLoading("release");
-    try {
-      await dispositionApi.release(dispositionId);
+  const releaseMutation = useMutation({
+    mutationFn: (dispositionId: string) => dispositionApi.release(dispositionId),
+    onSuccess: () => {
       refreshSoulViews();
       showToast(t("disposition.release_success"), "success");
-    } catch (e: unknown) {
-      const code = releaseRefusalOf(e);
-      showToast(t(`disposition.release_error.${code ?? "generic"}`), "error");
-    } finally {
-      setActionLoading("");
-    }
-  }
+    },
+    onError: (e) => showToast(t(`disposition.release_error.${releaseRefusalOf(e) ?? "generic"}`), "error"),
+  });
 
-  async function handleDrinkSoup() {
-    if (!soul) return;
-    try {
-      await reincarnationApi.drinkSoup(soul.id);
-      showToast(t("mengpoSoup.registered_toast", { name: soul.name }), "success");
-    } catch (e: unknown) {
+  const drinkSoupMutation = useMutation({
+    mutationFn: (target: { id: string; name: string }) => reincarnationApi.drinkSoup(target.id),
+    onSuccess: (_data, target) => showToast(t("mengpoSoup.registered_toast", { name: target.name }), "success"),
+    onError: (e) => {
       const code = soupRefusalOf(e);
       showToast(code ? t(`mengpoSoup.error.${code}`) : t("common.error"), "error");
-    }
-    refreshSoulViews();
+    },
+    onSettled: () => refreshSoulViews(),
+  });
+
+  // 操作卡认的名字;喝汤不占它(此前也不占)。
+  const actionLoading = dieMutation.isPending
+    ? "die"
+    : recalculateMutation.isPending
+      ? "recalculate"
+      : startJudgmentMutation.isPending
+        ? "judge"
+        : reincarnateMutation.isPending
+          ? "reincarnate"
+          : releaseMutation.isPending
+            ? "release"
+            : "";
+
+  function handleDie() {
+    if (!soul) return;
+    const soulId = soul.id;
+    confirm.ask(t("souls.detail.mark_dead_confirm", { name: soul.name }), () => dieMutation.mutate(soulId));
+  }
+
+  function handleRecalculate() {
+    if (!soul) return;
+    const soulId = soul.id;
+    confirm.ask(t("souls.detail.recalculate_confirm", { name: soul.name }), () => recalculateMutation.mutate(soulId));
+  }
+
+  function handleStartJudgment() {
+    if (!soul) return;
+    startJudgmentMutation.mutate(soul);
+  }
+
+  function handleReincarnate(dispositionId: string) {
+    if (sixPaths && !rebirthForm) return;
+    if (formOverridden && !formReason.trim()) return;
+    setQuotaRefusal(null);
+    reincarnateMutation.mutate(dispositionId);
+  }
+
+  function handleRelease(dispositionId: string) {
+    releaseMutation.mutate(dispositionId);
+  }
+
+  // 孟婆汤那一块等它办完才收起确认(`SoupBlock` 的 busy),所以这一个要返回 Promise;失败已由 onError 报过。
+  async function handleDrinkSoup() {
+    if (!soul) return;
+    await drinkSoupMutation.mutateAsync({ id: soul.id, name: soul.name }).catch(() => undefined);
   }
 
   function handleDeleteConfirm() {
@@ -1042,14 +1055,8 @@ export default function SoulDetailPage() {
 
       {/* Custom Confirm Dialog */}
       <ConfirmDialog
-        isOpen={isConfirmOpen}
+        {...confirm.dialogProps}
         title={t("common.confirm")}
-        message={confirmMessage}
-        onConfirm={() => {
-          setIsConfirmOpen(false);
-          confirmCallback?.();
-        }}
-        onCancel={() => setIsConfirmOpen(false)}
         variant="warning"
       />
     </PageShell>
