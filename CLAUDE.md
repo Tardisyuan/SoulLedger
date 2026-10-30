@@ -164,8 +164,11 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
     (`scripts/mobile-remote.sh`,守卫 `TestMobileRemoteMetroFollowsTheDependencies`);手动处理仍是 `metro stop` 再 `metro start`。
   - **release 包只有 debug 清单开了明文 http**(`usesCleartextTraffic`),release 连 `http://` 后端请求全失败、停在出错页 —— 生产走 https,
     不是 R8 的问题。验 release 包要么给它 https 的后端,要么接受只能看「能启动、无 ClassNotFound / 崩溃」。
-  - 登录页的截图拿不到画面:安卓 `screencap` 得到 0 字节、iOS 模拟器是全黑(10-30 实测),代码里没找到防截屏的调用,原因未查清;
-    不是 App 白屏。iOS 上因此没能盲输登录。
+  - 登录页的截图拿不到画面:安卓 `screencap` 得到 0 字节(10-30 实测),代码里没找到防截屏的调用,原因未查清;不是 App 白屏。
+    iOS 模拟器那次全黑**不是 App 的问题**:10-31 同一模拟器 `simctl launch` 报「system shell probably crashed」,
+    `simctl shutdown` 后 `bootstatus -b` 重启,登录页截图正常。模拟器上登录不用手输凭据:`xcrun simctl pbcopy <udid>` 把值放进剪贴板,
+    长按输入框点「粘贴」。拼音输入要先给模拟器加键盘(`simctl spawn <udid> defaults write -g AppleKeyboards -array
+    "zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=Automatic" …`,再 `set_keyboard show`),验完 `defaults delete -g AppleKeyboards`。
   - **115 上的 Synapse 可能停着**:10-30 发现 `soulledger_synapse` 已停 6 天(启动时解析不到 `postgres` 主机名,exit 1),
     书信相关的验证会因此全部失败。`ssh tardis@pi docker ps -a | grep synapse` 看状态,停了就 `ssh tardis@pi docker start soulledger_synapse`。
 
