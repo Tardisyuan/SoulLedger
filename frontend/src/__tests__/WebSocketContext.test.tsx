@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WebSocketProvider, useWebSocket } from "@/src/contexts/WebSocketContext";
+import { flushEventInvalidations } from "@/lib/events/event_registry";
 
 // ── Fake WebSocket ───────────────────────────────────────────────────
 
@@ -139,8 +140,11 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-const invalidatedKeys = () =>
-  invalidateSpy.mock.calls.map(([arg]) => JSON.stringify((arg as { queryKey: unknown }).queryKey));
+/** Flushes first: the registry coalesces invalidations for `INVALIDATION_BATCH_MS` (2026-10-30). */
+const invalidatedKeys = () => {
+  flushEventInvalidations();
+  return invalidateSpy.mock.calls.map(([arg]) => JSON.stringify((arg as { queryKey: unknown }).queryKey));
+};
 
 // ── Authentication gating ────────────────────────────────────────────
 
@@ -322,7 +326,8 @@ describe("WebSocketProvider event fan-out", () => {
       }),
     );
 
-    expect(invalidatedKeys()).toContain('["workflows","detail","w1"]');
+    // The family, which covers `workflows.detail(w1)` too: the batch drops the narrower key it already reaches.
+    expect(invalidatedKeys()).toContain('["workflows"]');
     // No I18nProvider here, so `translate` answers the key (lib/i18n/activeTranslator); the copy itself
     // is asserted per locale in eventRegistry.test.ts.
     expect(mockShowToast).toHaveBeenCalledWith("souls.events.WORKFLOW_REJECTED — Meng", "error", 6000);
@@ -347,7 +352,7 @@ describe("WebSocketProvider event fan-out", () => {
 
     act(() => lastSocket().receive("<<< not json >>>"));
 
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(invalidatedKeys()).toEqual([]);
     expect(mockShowToast).not.toHaveBeenCalled();
     expect(status()).toBe("connected");
   });
@@ -357,7 +362,7 @@ describe("WebSocketProvider event fan-out", () => {
 
     act(() => lastSocket().receive({ type: "gossip", payload: 42 }));
 
-    expect(invalidateSpy).not.toHaveBeenCalled();
+    expect(invalidatedKeys()).toEqual([]);
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 

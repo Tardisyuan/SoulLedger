@@ -15,6 +15,7 @@ import { menuTranslationKey } from "@/src/lib/menuI18n";
 import { shortIdentifier } from "@/src/lib/domainDisplay";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { SoulStateBadge, VerdictBadge } from "@/src/components/ui/StatusBadge";
+import { GlobalSearchEntries, isSearchShortcut, takePendingOpen } from "./GlobalSearchEntry";
 
 /**
  * 全局搜索(规范 v3 A8,`docs/design-handoff/v3-pages/A8-search.md`)。
@@ -156,13 +157,20 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
   // ⌘K / Ctrl K(不用 `/`:律条和表单里常在打字)。修饰键组合,在输入框里也接。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing || e.key.toLowerCase() !== "k") return;
+      if (!isSearchShortcut(e)) return;
       e.preventDefault();
       if (!open) show();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // This component arrives by `next/dynamic`; a press on the placeholder before then opens it now.
+  useEffect(() => {
+    const pending = takePendingOpen();
+    if (pending) show(pending === "desktop" ? desktopEntry.current : pending === "mobile" ? mobileEntry.current : undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setTerm(input.trim()), SEARCH_DEBOUNCE_MS);
@@ -441,34 +449,10 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     );
   };
 
-  const shortcut = isMac() ? "⌘K" : "Ctrl K";
 
   return (
     <>
-      <button
-        ref={desktopEntry}
-        type="button"
-        data-testid="global-search-entry"
-        onClick={(e) => show(e.currentTarget)}
-        aria-haspopup="dialog"
-        aria-keyshortcuts="Meta+K Control+K"
-        className={`hidden h-9 w-60 shrink-0 items-center gap-2 border ${LINE_STRONG} rounded-(--radius-control) bg-[oklch(var(--color-surface-1))] px-3 text-sm ${SUBTLE} hover:text-[oklch(var(--color-ink))] min-[769px]:flex`}
-      >
-        <Search aria-hidden="true" size={16} strokeWidth={1.5} />
-        <span className="flex-1 text-left">{t("search.aria_label")}</span>
-        <kbd className={KEYCAP}>{shortcut}</kbd>
-      </button>
-      <button
-        ref={mobileEntry}
-        type="button"
-        data-testid="global-search-entry-mobile"
-        onClick={(e) => show(e.currentTarget)}
-        aria-haspopup="dialog"
-        aria-label={t("search.aria_label")}
-        className={`flex h-11 w-11 shrink-0 items-center justify-center ${MUTED} hover:text-[oklch(var(--color-ink))] min-[769px]:hidden`}
-      >
-        <Search aria-hidden="true" size={20} strokeWidth={1.5} />
-      </button>
+      <GlobalSearchEntries onOpen={(from) => show(from)} desktopRef={desktopEntry} mobileRef={mobileEntry} />
 
       <Dialog.Root open={open} onOpenChange={(next) => { if (!next) close(); }}>
         <Dialog.Portal>

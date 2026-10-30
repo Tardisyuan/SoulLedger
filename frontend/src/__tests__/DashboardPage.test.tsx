@@ -771,19 +771,24 @@ describe("DashboardPage tab navigation", () => {
 
 describe("DashboardPage export", () => {
   const createObjectURL = jest.fn(() => "blob:csv");
+  const revokeObjectURL = jest.fn();
 
   beforeEach(() => {
     Object.defineProperty(window.URL, "createObjectURL", { value: createObjectURL, writable: true });
+    Object.defineProperty(window.URL, "revokeObjectURL", { value: revokeObjectURL, writable: true });
     createObjectURL.mockClear();
+    revokeObjectURL.mockClear();
   });
 
-  it("builds a download from the exported CSV payload", async () => {
+  it("builds a download from the exported CSV payload, and lets the blob go afterwards", async () => {
     mockedExport.mockResolvedValue({ data: "a,b\n1,2" });
     renderPage();
 
     fireEvent.click(await screen.findByText("dashboard.export_stats"));
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+    // 2026-10-30: through `saveBlob`, which revokes the URL; the page's own copy never did.
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:csv"));
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 

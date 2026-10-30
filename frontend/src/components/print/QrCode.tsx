@@ -1,17 +1,20 @@
-import qrcode from "qrcode-generator";
+import { toQR } from "toqr";
 
 const QUIET_ZONE = 4;
+/** toqr's `ECLevel.M` (its `.d.ts` declares the enum `const`, which an isolated-modules build cannot import). */
+const EC_M = 0;
 
 /**
- * 二维码矩阵。内容 `SL1:<10 位>` 全是大写字母、数字和冒号,走字母数字模式;纠错级别 M(第二十批 §一.1)。
- * 同一输入每次得到同一矩阵。
+ * 二维码矩阵,纠错级别 M(第二十批 §一.1)。同一输入每次得到同一矩阵。
+ *
+ * 2026-10-30 起用 `toqr`(约 13 KB,MFA 向导本来就在用)代替 `qrcode-generator`(约 52 KB):站里只留一个二维码库。
+ * toqr 只有字节模式,不走字母数字模式 —— `SL1:<10 位>` 共 14 个字符,正好是 1-M 字节模式的容量,仍是 21×21
+ * 的第 1 版;扫码器按符号里的模式解码,读出来的字符串一样。编号若变长,符号会升到第 2 版(25×25),不会读错。
  */
 export function qrMatrix(text: string): boolean[][] {
-  const qr = qrcode(0, "M");
-  qr.addData(text, "Alphanumeric");
-  qr.make();
-  const n = qr.getModuleCount();
-  return Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => qr.isDark(r, c)));
+  const cells = toQR(text, EC_M);
+  const n = Math.round(Math.sqrt(cells.length));
+  return Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => cells[r * n + c] === 1));
 }
 
 /**

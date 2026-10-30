@@ -8,6 +8,8 @@
  */
 import {
   dispatchEvent,
+  flushEventInvalidations,
+  INVALIDATION_BATCH_MS,
   detectEventDrift,
   getEventLabel,
   getRegisteredDomains,
@@ -38,9 +40,19 @@ function makeContext(currentUserId?: string) {
   return { ctx, invalidateQueries, showToast };
 }
 
-/** All query keys the handler invalidated, as JSON for easy comparison. */
+/**
+ * All query keys the handler invalidated, as JSON for easy comparison. Flushes first: `dispatchEvent` coalesces
+ * invalidations for `INVALIDATION_BATCH_MS`, so nothing reaches the client synchronously (pinned below).
+ */
 function invalidatedKeys(invalidateQueries: jest.Mock): string[] {
+  flushEventInvalidations();
   return invalidateQueries.mock.calls.map(([arg]) => JSON.stringify(arg.queryKey));
+}
+
+/** Whether the soul invalidation was narrowed to one soul (has a predicate) or was the whole family. */
+function soulCall(invalidateQueries: jest.Mock) {
+  flushEventInvalidations();
+  return invalidateQueries.mock.calls.map(([arg]) => arg).find((arg) => JSON.stringify(arg.queryKey) === '["souls"]');
 }
 
 /**
@@ -107,17 +119,58 @@ describe("soul events", () => {
     dispatchEvent({ domain: "soul", event: "STATE_CHANGED", soul_id: "s7" } as EventPayload, ctx);
 
     expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
+    // 2026-10-30: narrowed to soul s7 by a predicate (which keys it reaches is pinned against a real cache in
+    // eventInvalidationReachesCache.test.ts).
+    expect(typeof soulCall(invalidateQueries)?.predicate).toBe("function");
   });
 
-  it("invalidates the same way when STATE_CHANGED carries no soul_id", () => {
-    // Before FL-16's cleanup this was the control case for the now-removed
-    // conditional `soul_id` branch; kept as a control that behavior does not
-    // depend on `soul_id` being present.
+  it("falls back to the whole soul family when STATE_CHANGED carries no soul_id", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent({ domain: "soul", event: "STATE_CHANGED" } as unknown as EventPayload, ctx);
 
     expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
+    expect(soulCall(invalidateQueries)?.predicate).toBeUndefined();
+  });
+
+  it("holds invalidations for the batch window and sends a burst once, merged", () => {
+    jest.useFakeTimers();
+    try {
+      const { ctx, invalidateQueries } = makeContext();
+      for (const soul_id of ["s1", "s2", "s1"]) {
+        dispatchEvent({ domain: "soul", event: "RECORD_ADDED", soul_id } as EventPayload, ctx);
+      }
+      dispatchEvent({ domain: "soul", event: "DISPOSITION_CREATED", soul_id: "s3" } as EventPayload, ctx);
+      expect(invalidateQueries).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(INVALIDATION_BATCH_MS - 1);
+      expect(invalidateQueries).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(1);
+
+      // One call per distinct key: four soul frames → one `souls` call whose predicate covers s1, s2 and s3.
+      expect(invalidateQueries.mock.calls.map(([arg]) => JSON.stringify(arg.queryKey))).toEqual([
+        '["souls"]',
+        '["dispositions"]',
+      ]);
+      const predicate = invalidateQueries.mock.calls[0][0].predicate as (_q: { queryKey: unknown[] }) => boolean;
+      expect(["s1", "s2", "s3", "s4"].map((id) => predicate({ queryKey: ["souls", "detail", id] }))).toEqual([
+        true,
+        true,
+        true,
+        false,
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("drops a narrowed soul invalidation when the same burst invalidates the whole family", () => {
+    const { ctx, invalidateQueries } = makeContext();
+    dispatchEvent({ domain: "soul", event: "RECORD_ADDED", soul_id: "s1" } as EventPayload, ctx);
+    dispatchEvent({ domain: "soul", event: "RECORD_ADDED" } as unknown as EventPayload, ctx);
+
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["souls"]']);
+    expect(soulCall(invalidateQueries)?.predicate).toBeUndefined();
   });
 
   it("does not toast for a silent soul event like RECORD_ADDED", () => {
@@ -137,7 +190,7 @@ describe("soul events", () => {
 // ── Workflow domain ──────────────────────────────────────────────────
 
 describe("workflow events", () => {
-  it("invalidates workflow list, workflow detail and souls when a soul is attached", () => {
+  it("invalidates the workflow family (detail included) and that soul when a soul is attached", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -151,11 +204,10 @@ describe("workflow events", () => {
       ctx,
     );
 
-    expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["workflows"]',
-      '["workflows","detail","w1"]',
-      '["souls"]',
-    ]);
+    // The handler still asks for `workflows.detail(w1)` too; the batch drops it because `workflows` (no predicate)
+    // is its prefix and already reaches it — the real-cache test shows the detail entry going stale.
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["workflows"]', '["souls"]']);
+    expect(typeof soulCall(invalidateQueries)?.predicate).toBe("function");
   });
 
   it("leaves the soul cache alone when the workflow event has no soul_id", () => {
@@ -290,7 +342,7 @@ describe("notification events", () => {
     const other = makeContext("1");
     dispatchEvent(flat, other.ctx);
     expect(other.showToast).not.toHaveBeenCalled();
-    expect(other.invalidateQueries).toHaveBeenCalled();
+    expect(invalidatedKeys(other.invalidateQueries).length).toBeGreaterThan(0);
 
     const recipient = makeContext("7");
     dispatchEvent(flat, recipient.ctx);
@@ -321,7 +373,7 @@ describe("notification events", () => {
     const other = makeContext("1");
     dispatchEvent(frame, other.ctx);
     expect(other.showToast).not.toHaveBeenCalled();
-    expect(other.invalidateQueries).toHaveBeenCalled();
+    expect(invalidatedKeys(other.invalidateQueries).length).toBeGreaterThan(0);
 
     const unknown = makeContext(undefined);
     dispatchEvent(frame, unknown.ctx);
@@ -621,7 +673,7 @@ describe("unhandled events", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Unhandled event: aliens.PROBE");
-    expect(invalidateQueries).not.toHaveBeenCalled();
+    expect(invalidatedKeys(invalidateQueries)).toEqual([]);
     // Logged, NOT toasted. This used to assert the opposite: the operator got
     // "Unhandled event: aliens.PROBE" as a banner over their work —
     // untranslated debug text about a missing registry row they cannot act on.
@@ -639,36 +691,45 @@ describe("unhandled events", () => {
     expect(result.error).toBe("Unhandled event: soul.SOUL_VAPORISED");
   });
 
+  // The cache work is deferred to the batch (below), so a handler that throws is made to throw in its toast.
   it("catches a throwing handler and returns the error rather than propagating", () => {
-    const showToast = jest.fn();
     const ctx = {
-      queryClient: {
-        invalidateQueries: jest.fn(() => {
-          throw new Error("cache exploded");
-        }),
-      } as unknown as QueryClient,
-      showToast,
+      queryClient: { invalidateQueries: jest.fn() } as unknown as QueryClient,
+      showToast: jest.fn(() => {
+        throw new Error("toast exploded");
+      }),
     };
 
     const result = dispatchEvent({ domain: "soul", event: "SOUL_CREATED" } as EventPayload, ctx);
 
-    expect(result).toEqual({ success: false, invalidatedKeys: [], error: "cache exploded" });
+    expect(result).toEqual({ success: false, invalidatedKeys: [], error: "toast exploded" });
     expect(errorSpy).toHaveBeenCalled();
   });
 
   it("stringifies a non-Error throw", () => {
     const ctx = {
-      queryClient: {
-        invalidateQueries: jest.fn(() => {
-          throw "plain string failure";
-        }),
-      } as unknown as QueryClient,
-      showToast: jest.fn(),
+      queryClient: { invalidateQueries: jest.fn() } as unknown as QueryClient,
+      showToast: jest.fn(() => {
+        throw "plain string failure";
+      }),
     };
 
     const result = dispatchEvent({ domain: "dispatch", event: "DISPATCH_CREATED" } as EventPayload, ctx);
 
     expect(result.error).toBe("plain string failure");
+  });
+
+  it("a cache that throws when the batch is sent is logged, and the rest of the batch still goes out", () => {
+    const invalidateQueries = jest.fn((filters: { queryKey: unknown[] }) => {
+      if (filters.queryKey[0] === "dispatch") throw new Error("cache exploded");
+    });
+    const ctx = { queryClient: { invalidateQueries } as unknown as QueryClient, showToast: jest.fn() };
+
+    dispatchEvent({ domain: "dispatch", event: "STATE_CHANGED", soul_id: "s1" } as EventPayload, ctx);
+    expect(() => flushEventInvalidations()).not.toThrow();
+
+    expect(invalidateQueries.mock.calls.map(([f]) => JSON.stringify(f.queryKey))).toEqual(['["dispatch"]', '["souls"]']);
+    expect(errorSpy).toHaveBeenCalledWith("[EventRegistry] invalidation failed:", expect.any(Error));
   });
 });
 

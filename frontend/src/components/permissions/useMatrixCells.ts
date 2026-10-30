@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
   MatrixChangesResult,
@@ -124,12 +124,17 @@ export function useMatrixCells({
 
   const isSaving = apply.isPending;
 
-  const liveDiffs: RoleDiff[] =
-    checked && baseline
-      ? roleNames
-          .map((role) => computeRoleDiff(role, baseline[role] ?? new Set(), checked[role] ?? new Set(), permsById))
-          .filter((d): d is RoleDiff => d !== null)
-      : [];
+  // Memoised (R2): every role's diff against every permission, rebuilt only when the ticks or the data change —
+  // not on each render the matrix makes.
+  const liveDiffs: RoleDiff[] = useMemo(
+    () =>
+      checked && baseline
+        ? roleNames
+            .map((role) => computeRoleDiff(role, baseline[role] ?? new Set(), checked[role] ?? new Set(), permsById))
+            .filter((d): d is RoleDiff => d !== null)
+        : [],
+    [checked, baseline, roleNames, permsById]
+  );
 
   function patchCaches(result: MatrixChangesResult) {
     // Server truth for what was written, now — the invalidation in

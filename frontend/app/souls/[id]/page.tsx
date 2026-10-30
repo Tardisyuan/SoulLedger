@@ -193,8 +193,7 @@ export default function SoulDetailPage() {
   const canReadJudgments = hasPermission("judgment.read");
   const judgmentsQuery = useJudgments({ soul: id }, { enabled: canReadJudgments });
   const dispositionsQuery = useDispositions({ soul: id });
-  // 键里的 "timeline" 不能省:这两条存的是整页响应(带 count),而 judgment/[id] 页用
-  // `soulKeys.reincarnations(soulId)` 存的是数组 —— 同键不同形会互相读坏。
+  // 存的是整页响应(带 count)。judgment/[id] 页用同一把键,在自己那边 `select` 出数组(2026-10-30 起共用)。
   const reincarnationsQuery = useQuery({
     queryKey: soulKeys.reincarnationTimeline(id),
     queryFn: async () => (await reincarnationApi.list({ soul: id })).data,
