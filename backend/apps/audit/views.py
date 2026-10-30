@@ -89,7 +89,7 @@ TIMELINE_DEFAULT_LIMIT = 50
 # 一份悄悄少了行的审计导出,比没有导出更糟(与 `/ledger/journal/export/` 的 MONTH_TOO_LARGE 同一立场)。
 
 
-def _parse_date_param(params, name):
+def parse_date_param(params, name):
     """`?start_date=垃圾` 曾经直接进 `timestamp__date__gte`,Django 抛 ValidationError,
     DRF 不认它 → 500。DRF 自己的 ValidationError 才是 400。"""
     raw = params.get(name)
@@ -104,6 +104,9 @@ def _parse_date_param(params, name):
     if value is None:
         raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
     return value
+
+
+_parse_date_param = parse_date_param  # `apps/events/views.py` still imports the old name
 
 
 def _parse_limit(params):
@@ -204,11 +207,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if resource_id:
             qs = qs.filter(resource_id=resource_id)
 
-        start_date = _parse_date_param(self.request.query_params, 'start_date')
+        start_date = parse_date_param(self.request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = _parse_date_param(self.request.query_params, 'end_date')
+        end_date = parse_date_param(self.request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 
@@ -382,11 +385,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if action_filter:
             qs = qs.filter(action=action_filter.upper())
 
-        start_date = _parse_date_param(request.query_params, 'start_date')
+        start_date = parse_date_param(request.query_params, 'start_date')
         if start_date:
             qs = qs.filter(timestamp__date__gte=start_date)
 
-        end_date = _parse_date_param(request.query_params, 'end_date')
+        end_date = parse_date_param(request.query_params, 'end_date')
         if end_date:
             qs = qs.filter(timestamp__date__lte=end_date)
 

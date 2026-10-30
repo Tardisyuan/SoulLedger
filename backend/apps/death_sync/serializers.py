@@ -69,17 +69,17 @@ class DeathRegistrationCreateSerializer(serializers.Serializer):
 
 def validate_webhook_url_field(value):
     """http(s) only, and nothing that resolves to a private or loopback
-    address — `_validate_webhook_url` is the SSRF blocklist the delivery
+    address — `apps.core.outbound.validate_webhook_url` is the SSRF blocklist the delivery
     task already applies at send time; refusing here means the row is
     never written rather than failing on every attempt. Both doors that write
     a `WebhookConfig` (the API key's self-service one and the admin's) use it
     (rbac-be2 L4: the self-service one did not)."""
-    from apps.death_sync.webhook_service import _validate_webhook_url
+    from apps.core.outbound import validate_webhook_url
 
     if urlparse(value).scheme not in ("http", "https"):
         raise serializers.ValidationError("Webhook URL must use http or https.")
     try:
-        _validate_webhook_url(value)
+        validate_webhook_url(value)
     except ValueError as exc:
         raise serializers.ValidationError(str(exc)) from None
     return value

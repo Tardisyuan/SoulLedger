@@ -369,7 +369,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             if not ids or len(ids) > SOUL_BATCH_RECYCLE_MAX:
                 raise ValidationError({"ids": [f"1-{SOUL_BATCH_RECYCLE_MAX} comma-separated soul UUIDs."]})
             souls = self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk")
-        from apps.ledger.views import _format_death_date
+        from apps.souls.dates import format_death_date
 
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=souls_export.csv"
@@ -390,7 +390,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 soul.merit_score,
                 soul.demerit_score,
                 soul.karmic_balance,
-                csv_safe(_format_death_date(soul)),
+                csv_safe(format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
         record_export(request, resource="soul", rows=rows)

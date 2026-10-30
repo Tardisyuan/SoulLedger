@@ -558,3 +558,17 @@ def check_term_start(term_start, death, soul_state, *, term_executed=False) -> l
             f"check the soul's state, or whether this term start belongs to it at all.",
         ))
     return problems
+
+
+def format_death_date(soul) -> str:
+    """CSV-friendly death date, preserving BCE years the legacy
+    soul.death_date property can't represent. year-month-day / year-month
+    / year, zero-padded to 4 digits (sign kept for BCE)."""
+    if soul.death_year is None:
+        return ""
+    parts = [f"{soul.death_year:05d}" if soul.death_year < 0 else f"{soul.death_year:04d}"]
+    if soul.death_month is not None:
+        parts.append(f"{soul.death_month:02d}")
+        if soul.death_day is not None:
+            parts.append(f"{soul.death_day:02d}")
+    return "-".join(parts)

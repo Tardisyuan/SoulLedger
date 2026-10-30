@@ -34,7 +34,7 @@ def _endpoint_must_be_public(url):
 
     from django.conf import settings
 
-    from apps.death_sync.webhook_service import _require_public_ip
+    from apps.core.outbound import require_public_ip
 
     host = (urlparse(url).hostname or "").lower()
     if not host:
@@ -50,7 +50,7 @@ def _endpoint_must_be_public(url):
         return url
     try:
         for address in addresses:
-            _require_public_ip(address)
+            require_public_ip(address)
     except ValueError:
         raise serializers.ValidationError(
             "这个地址指向内网或本机;要用就让运维把主机加进 ASSISTANT_PRIVATE_HOSTS_ALLOWED。",
