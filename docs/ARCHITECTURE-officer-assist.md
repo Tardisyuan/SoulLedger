@@ -1,6 +1,6 @@
 # 官员端助手 —— 阶段 3 计划
 
-> **现状(2026-10-28):已实施。** 后端 `backend/apps/soul_assist/officer_tools.py`、迁移 `0002_officer_conversations`;Web 问一问 `frontend/src/components/assist/OfficerAssist.tsx`(挂在 `AppLayout.tsx`,E2E `frontend/e2e/officer-assist.spec.ts`);官员端 App `mobile-officer/src/assist.tsx`。下面「等 Design 出稿、不写前端」是 2026-09-29 的原记。
+> **现状(2026-10-28):已实施。** 后端 `backend/apps/soul_assist/officer_tools.py`、迁移 `0002_officer_conversations`;Web 问一问 `frontend/src/components/assist/OfficerAssist.tsx`(挂在 `AppLayout.tsx`;2026-10-30 起面板经 `next/dynamic` 按需加载,页头按钮与 ⌘J 在 `OfficerAssistEntry.tsx` / `useOfficerAssist.ts`,代码没到时按下的会在面板加载后打开;E2E `frontend/e2e/officer-assist.spec.ts`);官员端 App `mobile-officer/src/assist.tsx`。下面「等 Design 出稿、不写前端」是 2026-09-29 的原记。
 >
 > **(原记)状态:§6 Q1–Q3 已由用户拍板(2026-09-29),均取推荐项;Q4 等 Design 出稿。** 基于 `feat/soul-assist-app`。灵魂端助手的设计与决策记录见
 > `docs/ARCHITECTURE-soul-assist.md`;本文只写官员端与它**不同**的地方。代码出处标文件:行;

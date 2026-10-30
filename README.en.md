@@ -375,7 +375,7 @@ user should use `reading`.**
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
+| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), class-variance-authority; charts are drawn with divs / CSS, no chart library |
 | Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
 | Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
 | Database | PostgreSQL 16 (Docker/production, pgvector for assistant retrieval), SQLite (local default) |

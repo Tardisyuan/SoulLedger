@@ -271,6 +271,11 @@ flowchart LR
 | `onSessionSuspend` / `onSessionResume` | bfcache / visibility | `AppState` 前后台切换 |
 | `notify` | Toast | 原生提示;重要事件走推送 |
 
+> **实现现状(2026-10-30):** 端口在 `mobile/src/platform.ts`。`persistent` 是 AsyncStorage 加内存副本;`secure` 是 `expo-secure-store`
+> 加内存读缓存(面容 / 指纹凭据不经这个缓存,每次单独读);`persistent` 启动时一次 `multiGet` 读进内存,它抛错就逐键读,
+> 读不出的那一个键丢掉、其余照常(安卓单行过大曾让整批读取失败);`onSessionResume` 即 `onForeground`,只认 `background → active` ——
+> iOS 面容弹框、系统提示之后的 `inactive → active` 不算回前台。官员端经 `mobile-officer/src/shared.ts` 用同一份。
+
 ---
 
 ## 7. 部署分档

@@ -42,8 +42,8 @@ function apiOrigins(): string[] {
  *  listed for CSP2-only browsers, which ignore `'strict-dynamic'`; CSP3
  *  browsers ignore host sources when `'strict-dynamic'` is present.
  *
- *  style-src keeps `'unsafe-inline'`: React `style={…}` props and xyflow /
- *  recharts write inline styles, and a nonce in style-src would disable
+ *  style-src keeps `'unsafe-inline'`: React `style={…}` props and xyflow
+ *  write inline styles (recharts did too, until it was removed 2026-10-30), and a nonce in style-src would disable
  *  `'unsafe-inline'` there. img-src names the API origin because avatars are
  *  served from its /media/ when the API is not same-origin (dev, E2E).
  *

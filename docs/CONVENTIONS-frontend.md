@@ -83,6 +83,29 @@ This file is not.」
   `lucide-react`；`menuIconTable.test.ts` 扫迁移与 E2E 夹具，种下的名字解析不出就红。
 - **没设 DSN 的构建不带 Sentry SDK**（`next.config.js` 总是定义 `NEXT_PUBLIC_SENTRY_DSN`，`instrumentation-client.ts` 为空就什么都不加载）。
 
+**2026-10-30 第二轮起的写法**（w2-data / w2-social / w2-shell）：
+- **搜索框防抖用 core 的 `useDebouncedValue(value, delayMs = SEARCH_DEBOUNCE_MS)`**（`packages/core/src/hooks/useDebouncedValue.ts`，默认 300 ms）：
+  输入框绑原值，查询键用防抖后的值；首次渲染直接返回原值。不再各页手写 `setTimeout`。
+- **列表翻页 / 换筛选留着上一页**：`useQuery` 带 `placeholderData: (previous) => previous`（或 `keepPreviousData`），
+  配 §5.1 的 `isPlaceholderData` 变淡。审计、事件、用户、菜单、审判列表这一轮补上。
+- **要整个集合就用 core 的 `fetchAllPages(url, params)` / `collectPages(fetchPage)`**（`packages/core/src/api/client.ts`）：
+  先取第一页，按 `count` 算出页数，其余页并发取（`FETCH_ALL_CONCURRENCY = 4`），按页序拼回；第一页没有 `count` 时退回顺着 `next` 一页页取。
+  此前有四份各自串行的实现。
+- **列表能搜就走服务端 `?search=`**，不在已取到的那页里过滤（审计页 2026-10-30 改过来，后端见 `CONVENTIONS-backend.md` §6.2）。
+- **乐观更新**：表态（core `useToggleReaction`）与通知单条已读在 `onMutate` 改缓存、`onError` 放回并提示、`onSettled` 再以服务端为准。
+  帖子 / 评论的「我的表态」读行上的 `my_reaction`，不再每条各拉一次表态列表（`useReactions` 已删）。
+- **WS 连着就不轮询**：通知页 `refetchInterval: isConnected ? false : 30000`（`useWebSocket()`）。
+- **实时事件只失效那一个灵魂**：`lib/events/eventHandlers.ts` 的 `soulScope(soul_id)` —— 跨灵魂的视图（列表、计数）照刷，
+  单个灵魂的键（`detail` / `ledger` / `path` / `capture` / `inheritance` / `reincarnations` / `records` / `events`）只刷带这个 id 的；
+  帧上没有 `soul_id` 时退回整个 `soulKeys.all`。失效经 `lib/events/event_registry.ts` 合并，一串帧在 `INVALIDATION_BATCH_MS`（250 ms）后每个键只发一次；
+  提示不延迟。新加一种只属于单个灵魂的键，要加进 `PER_SOUL_SEGMENTS`，否则它会被任何灵魂的事件刷新（多刷，不会漏）。
+- **外壳里打开前不需要的浮层走 `next/dynamic`**（`AppLayout.tsx`：助手面板、全局搜索、设置抽屉、退出确认；快捷键帮助在 `ShortcutHelp.tsx` 里同样拆开）。
+  入口按钮与打开状态留在静态代码里，代码没到时按下的键会被接住，代码到了浮层再出现。
+- **`packages/core` 声明了 `"sideEffects": false`**：core 里不能写模块加载时就有副作用、又靠被 import 才生效的代码（摇树会把它删掉）。
+- **一个库只留一份**：二维码只用 `toqr` 一个库（交付单 `src/components/print/QrCode.tsx` 与 MFA 向导的 `auth/QrCode.tsx` 都用它；`qrcode-generator` 已删）；图表库 recharts 已删，
+  灵魂页寿数条与仪表盘按界域柱都是 div（见 §2.4）。
+- **权限矩阵**：单元格 `React.memo`，点一格不重画整表（`components/permissions/PermissionMatrixTable.tsx`、`useMatrixCells.ts`）。
+
 **`domBoundary.test.ts` 为什么不能被 `typecheck` 替代：** 那些 DOM 类型是空接口，
 `const el: HTMLElement = {}` 能编译过。**只有那份测试在执法"平台无关"这个断言。**
 `ci.yml:119-137` 跑 core 的 typecheck、lint、vitest 三条（vitest 自 2026-09-14 起，审计 IS-16），与 pre-push 一致。
@@ -174,7 +197,8 @@ lint 违规片段，确认其中六条会红（`no-styles-in-csstext` 没有探�
   "某人说过的话"**（`app/fonts.ts:24-47`）。`[test:designGuardContract:391-428]` 只保证
   DESIGN.md 不点名 Inter/JetBrains；**衬线的用途本身无执法**
 - **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识七档字号；`[test:designGuardContract:357-404]`）
-- **Recharts 不读 CSS 变量**，`lib/chart-colors.ts` 是**镜像**且双主题。
+- **图表色是 `lib/chart-colors.ts` 里的字面量镜像**且双主题。镜像当初是因为 Recharts 的 prop 不读 CSS 变量；
+  2026-10-30 起 recharts 已删，剩下的读者（灵魂页寿数条）把这些值写进 inline `style`。镜像仍由
   `[test:chartColourContract]` 按主题双向比对（`CHART_TOKENS` 记每项对应的令牌）
 
 ### 2.5 状态 token 分层（容易搞错的一条）
@@ -323,7 +347,9 @@ export default function XPage() {                    // 页级权限门包在默
 **唯一的骨架原语是 `components/ui/skeleton.tsx`**，填色必须 `--color-hairline`
 （`[test:cssTokenReferenceContract:416-447]`）。
 
-**翻页 / 换筛选**用 `isPlaceholderData` → tbody `opacity-50 aria-busy`，不是整页重画。
+**翻页 / 换筛选**用 `isPlaceholderData` → tbody `opacity-50 aria-busy`，不是整页重画（前提是查询带 `placeholderData`，见 §1）。
+
+**权限未就绪画骨架，不画拒绝页**（2026-10-30）：见 §7 的 `permissionsReady`。
 
 ### 5.2 错误态五种
 
@@ -376,6 +402,11 @@ export default function XPage() {                    // 页级权限门包在默
 **「无殿 ADMIN」一律读 `isTenantExempt`**（2026-10-30，对应后端 `is_tenant_exempt`）：角色是 ADMIN、没有殿、且不在代看 / 进殿查看时为真；
 代看时 `isAdmin` 与它都为假。此前七处各自内联判断，移交详情因此把代看中的 ADMIN 当成目标殿 / 原属殿。
 `RequireAdmin` 专给后端硬编码 ADMIN 的接口。
+
+**`permissionsReady`**（`TenantContext`，经 `usePermissions()` 读，2026-10-30）：刷新页面时人先从本地信封恢复、权限清空再去服务端取，
+这段时间里「没有码」不等于「无权」。`permissionsReady === false` 只在这段时间成立（取到或取失败都转 `true`；登录、退出、没登录都是 `true`）。
+`hasPermission` 不看它（门照旧关着）；`RequirePermission` / `RequireAdmin` **带 fallback 时**未就绪画 `PermissionsPending` 骨架而不是拒绝页，
+不带 fallback 的（藏按钮）照旧什么都不画。审计三页另外自己看它。`app/audit/permissions` 的拒绝页本轮没加骨架。
 
 **隐藏而非禁用**是多数派：`<RequirePermission permissions="…">` 无 fallback = 不渲染，40 处。
 由权限决定 `disabled` 的只有 1 处。
@@ -463,7 +494,8 @@ tf("x.y", "中文兜底")         // ✅ 真的会兜底。现存 52 处
 | **jsx-a11y recommended 全套 34 条 + `label-has-associated-control`，全部 `error`** | `[eslint]`（测试文件除外；`no-autofocus` 仅对 4 个对话框文件关闭） |
 | 全局 `:focus-visible { outline: 2px solid oklch(var(--color-focus)) !important }`。**不得用 `--color-accent`** —— 用户可运行时改写它，且浅色下只有 2.14:1，不过 WCAG 1.4.11 | **`[test:focusRingContract]`** 断言规则存在、带 `!important`、只点名 focus token、在全部表面上 ≥3:1 |
 | `prefers-reduced-motion: reduce` 下动画/过渡收敛到 **1ms，不是 `none`**（Base UI 等靠 `transitionend` 卸载）。spinner 不豁免 | **`[test:reducedMotionContract]`** 断言不含 `none` 且仍有动效可压 |
-| JS 驱动的动效（gsap / recharts）在 `lib/motion.ts::prefersReducedMotion()` 读偏好 | `[test:workflowAutoLayoutMotion]` + `[e2e]` |
+| JS 驱动的动效（gsap、`el.animate` / rAF；recharts 2026-10-30 已删）在 `lib/motion.ts::prefersReducedMotion()` 读偏好 | `[test:workflowAutoLayoutMotion]` + `[e2e]` |
+| 「跳到正文」（WCAG 2.4.1）：外壳第一个可聚焦元素，只在聚焦时出现，点击把焦点交给 `<main id="main">`（页面本身，不含上面的工具条与身份带）；文案 `nav.skip_to_main` | `AppLayout.tsx`；`[e2e:home.spec]`、`[test:globalNav]` |
 | 所有文字 ≥ AA 4.5:1 | `[test:inkOnSurfaceContract]`（4 主题 × 租户 × 表面 × ink = **128 对**）、`[test:civIdentityInkContract]`（32 对）、`[test:dataGridToneContract]`（badge 填充 ≤0.1 alpha） |
 | 不得只靠颜色传达状态 | `[test:selectionIsNotColourOnly]`（侧栏 `aria-current`、折叠时有名字） |
 | 截断的数据值必须带 `title` | `[test:truncatedValuesAreRecoverable]` —— 自述**触摸层仍无覆盖** |
