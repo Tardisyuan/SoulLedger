@@ -145,6 +145,53 @@ describe("TenantContext rehydration", () => {
     expect(result.current.user?.permissions).toEqual([]);
   });
 
+  // 2026-10-30 D3: between the envelope and the server's answer, "no codes" is not "no right".
+  it("is not permissionsReady until the refetch answers, then is", async () => {
+    seedStoredUser();
+    let answer: (_v: unknown) => void = () => {};
+    mockMyRolePermissions.mockReturnValue(new Promise((r) => { answer = r; }));
+
+    const { result } = renderHook(() => useTenant(), { wrapper });
+
+    expect(result.current.user?.role).toBe("JUDGE");
+    expect(result.current.permissionsReady).toBe(false);
+    await act(async () => answer({ data: { role: "JUDGE", permissions: ["soul.read"] } }));
+    expect(result.current.permissionsReady).toBe(true);
+    expect(result.current.user?.permissions).toEqual(["soul.read"]);
+  });
+
+  it("a failed refetch still ends the wait (the refusal shows, the skeleton does not spin forever)", async () => {
+    seedStoredUser();
+    mockMyRolePermissions.mockRejectedValue(new Error("network error"));
+
+    const { result } = renderHook(() => useTenant(), { wrapper });
+
+    await waitFor(() => expect(result.current.permissionsReady).toBe(true));
+    expect(result.current.user?.permissions).toEqual([]);
+  });
+
+  it("with no stored user there is nothing to wait for", () => {
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    expect(result.current.permissionsReady).toBe(true);
+  });
+
+  it("an expired envelope is nothing to wait for either", () => {
+    localStorage.setItem(USER_KEY, JSON.stringify({ user: { id: 1, role: "JUDGE" }, storedAt: 0 }));
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    expect(result.current.user).toBeNull();
+    expect(result.current.permissionsReady).toBe(true);
+  });
+
+  it("signing in (setUser with the login's permissions) is ready at once, even mid-refetch", async () => {
+    seedStoredUser();
+    mockMyRolePermissions.mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useTenant(), { wrapper });
+    expect(result.current.permissionsReady).toBe(false);
+
+    act(() => result.current.setUser({ ...result.current.user!, permissions: ["soul.read"] }));
+    expect(result.current.permissionsReady).toBe(true);
+  });
+
   it("does not call the API when there is no stored user", () => {
     const { result } = renderHook(() => useTenant(), { wrapper });
 

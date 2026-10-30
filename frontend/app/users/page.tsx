@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, handoverApi, openWorkOf, PAGE_SIZE, type User } from "@soulledger/core/api";
 import { userKeys } from "@soulledger/core/query_keys";
 import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -116,13 +117,17 @@ function UsersRoute() {
   const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
+  // 搜索停手 300ms 才进查询键;输入框仍绑原值。
+  const debouncedSearch = useDebouncedValue(search);
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
+  // `placeholderData`:翻页 / 换筛选时留着上一页，不闪骨架。
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization, active: statusFilter }),
+    queryKey: userKeys.list({ page, search: debouncedSearch, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization, active: statusFilter }),
+    placeholderData: (previous) => previous,
     queryFn: async () => {
       const res = await usersApi.list({
         page,
-        search,
+        search: debouncedSearch,
         role: roleFilter || undefined,
         ordering: ordering || undefined,
         username: located || undefined,
@@ -204,7 +209,7 @@ function UsersRoute() {
   };
 
   const users = data?.results ?? [];
-  const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter, organization, statusFilter }), users);
+  const selection = useUserSelection(JSON.stringify({ page, search: debouncedSearch, roleFilter, ordering, located, mfaFilter, organization, statusFilter }), users);
 
   const allColumns: DataTableColumn[] = [
     { key: "username", header: t("users.username"), sortable: true, pinned: true },

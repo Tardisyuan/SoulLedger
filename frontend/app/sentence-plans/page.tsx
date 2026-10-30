@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import type { SentencePlanFilters, SentencePlanStatus } from "@soulledger/core/api/sentence-plans";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -50,8 +51,9 @@ function SentencePlansContent() {
     setPage(1);
   };
 
+  const debouncedSearch = useDebouncedValue(search.trim());
   const filters: SentencePlanFilters = { page };
-  if (search.trim()) filters.search = search.trim();
+  if (debouncedSearch) filters.search = debouncedSearch;
   if (status) filters.status = status as SentencePlanStatus;
   if (awaitingRedispatch) filters.awaiting_redispatch = true;
   if (pendingRequest) filters.pending_request = true;

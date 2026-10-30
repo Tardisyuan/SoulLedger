@@ -89,6 +89,8 @@ function SoulEventsContent() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["soul-events", params],
     queryFn: async () => (await eventsApi.list(params)).data,
+    // 翻页 / 换筛选时留着上一页，不闪骨架。
+    placeholderData: (previous) => previous,
   });
 
   const actorsStart = startDate(datePreset);

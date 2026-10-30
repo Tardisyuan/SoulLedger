@@ -106,6 +106,9 @@ function JudgmentQueuePageContent() {
     },
     // The pending tab is a shared worklist other officers are taking cases from.
     staleTime: 0,
+    // 翻页 / 换排序时留着上一页，不闪骨架;换分段不留(另一段的行不能当这一段的显示)。
+    placeholderData: <T,>(previous: T | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
+      previousQuery?.queryKey[1] === which ? previous : undefined,
   });
   // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
   const { data: judgmentData, isLoading, isError, refetch } = useQuery(listQuery(tab, page));

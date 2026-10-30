@@ -1,7 +1,8 @@
 "use client";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import {
   DISPATCH_REASON_MIN_CHARS,
   dispatchApi,
@@ -127,13 +128,8 @@ function ProposeDispatchForm() {
    * it happens to have and present that as the answer.
    */
   const [soulSearchInput, setSoulSearchInput] = useState("");
-  const [soulSearch, setSoulSearch] = useState("");
-
   // 300ms, the same debounce app/souls/page.tsx uses for its own search box.
-  useEffect(() => {
-    const timer = setTimeout(() => setSoulSearch(soulSearchInput), 300);
-    return () => clearTimeout(timer);
-  }, [soulSearchInput]);
+  const soulSearch = useDebouncedValue(soulSearchInput);
 
   // `isError` on BOTH feeders below, and neither had it. This page renders
   // neither an empty-state component nor a data grid, so neither rule in

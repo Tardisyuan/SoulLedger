@@ -9,6 +9,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { PermissionsPending } from "@/src/components/rbac/RequirePermission";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -26,7 +27,7 @@ import { auditResourceLabel } from "@/src/components/audit/auditLabels";
 export default function AuditStatsPage() {
   const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissionsReady } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
   const { user, tenantCode } = useTenant();
   const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
@@ -67,7 +68,11 @@ export default function AuditStatsPage() {
   if (!canReadAudit) {
     return (
       <PageShell variant="full" title={title}>
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        {permissionsReady === false ? (
+          <PermissionsPending />
+        ) : (
+          <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
+        )}
       </PageShell>
     );
   }

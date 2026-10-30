@@ -2,7 +2,7 @@
  * Tests for src/components/rbac/RequirePermission.tsx
  */
 import { render, screen } from "@testing-library/react";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 // RequirePermission asks for the raw answer so ViewingLock can grey (not hide) write controls while viewing (rbac-web M-4).
 const VIEWING = { evenWhileViewing: true };
@@ -12,18 +12,94 @@ const mockHasPermission = jest.fn();
 const mockHasAnyPermission = jest.fn();
 const mockHasAllPermissions = jest.fn();
 
+let mockReady: boolean | undefined = undefined;
+let mockIsAdmin = false;
+
 jest.mock("@/src/hooks/usePermissions", () => ({
   usePermissions: () => ({
     hasPermission: mockHasPermission,
     hasAnyPermission: mockHasAnyPermission,
     hasAllPermissions: mockHasAllPermissions,
     permissions: [],
+    permissionsReady: mockReady,
+    isAdmin: mockIsAdmin,
   }),
 }));
 
 describe("RequirePermission", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockReady = undefined;
+    mockIsAdmin = false;
+  });
+
+  // 2026-10-30 D3: after a reload the codes are still on their way; the refusal must not flash.
+  it("shows a skeleton instead of the fallback while permissions are not ready", () => {
+    mockHasAnyPermission.mockReturnValue(false);
+    mockReady = false;
+
+    render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+
+    expect(screen.getByTestId("permissions-pending")).toBeInTheDocument();
+    expect(screen.queryByText("No Access")).not.toBeInTheDocument();
+    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+  });
+
+  it("shows the fallback once ready, and no skeleton", () => {
+    mockHasAnyPermission.mockReturnValue(false);
+    mockReady = true;
+
+    render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+
+    expect(screen.getByText("No Access")).toBeInTheDocument();
+    expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
+  });
+
+  it("a gate with no fallback (a hidden button) draws nothing while not ready — no skeleton per button", () => {
+    mockHasAnyPermission.mockReturnValue(false);
+    mockReady = false;
+
+    const { container } = render(
+      <RequirePermission permissions="soul.create">
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("an answer already in hand is not held back by readiness", () => {
+    mockHasAnyPermission.mockReturnValue(true);
+    mockReady = false;
+
+    render(
+      <RequirePermission permissions="soul.create" fallback={<div>No Access</div>}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+    expect(screen.queryByTestId("permissions-pending")).not.toBeInTheDocument();
+  });
+
+  it("RequireAdmin: skeleton while not ready, the fallback after", () => {
+    mockReady = false;
+    const { rerender } = render(<RequireAdmin fallback={<div>Admins only</div>}>secret</RequireAdmin>);
+    expect(screen.getByTestId("permissions-pending")).toBeInTheDocument();
+    expect(screen.queryByText("Admins only")).not.toBeInTheDocument();
+
+    mockReady = true;
+    rerender(<RequireAdmin fallback={<div>Admins only</div>}>secret</RequireAdmin>);
+    expect(screen.getByText("Admins only")).toBeInTheDocument();
+    expect(screen.queryByText("secret")).not.toBeInTheDocument();
   });
 
   it("should render children when the user has the required permission", () => {

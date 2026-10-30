@@ -2,6 +2,7 @@
 
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { ViewingLock } from "@/src/components/impersonation/ViewingLock";
+import { ListSkeleton } from "@/components/ui/skeleton";
 
 interface RequirePermissionProps {
   permissions: string | string[];
@@ -16,7 +17,7 @@ export function RequirePermission({
   children,
   fallback = null,
 }: RequirePermissionProps) {
-  const { hasAnyPermission, hasAllPermissions } = usePermissions();
+  const { hasAnyPermission, hasAllPermissions, permissionsReady } = usePermissions();
 
   const permArray = Array.isArray(permissions) ? permissions : [permissions];
 
@@ -24,7 +25,9 @@ export function RequirePermission({
     ? hasAllPermissions(permArray, { evenWhileViewing: true })
     : hasAnyPermission(permArray, { evenWhileViewing: true });
 
-  if (!hasAccess) return <>{fallback}</>;
+  // 刷新时权限还在路上:没有码不等于无权。有 fallback(拒绝页)的地方先画骨架，不闪 403;
+  // 没有 fallback 的(藏一个按钮)本来就什么都不画。`!== false`:测试里手搓的 usePermissions 没有这一项。
+  if (!hasAccess) return <>{permissionsReady === false && fallback !== null ? <PermissionsPending /> : fallback}</>;
   // 代看(只读)期间写类控件置灰,见 ViewingLock。
   return <ViewingLock permissions={permArray}>{children}</ViewingLock>;
 }
@@ -52,7 +55,16 @@ export function RequireAdmin({
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }) {
-  const { isAdmin } = usePermissions();
-  if (!isAdmin) return <>{fallback}</>;
+  const { isAdmin, permissionsReady } = usePermissions();
+  if (!isAdmin) return <>{permissionsReady === false && fallback !== null ? <PermissionsPending /> : fallback}</>;
   return <>{children}</>;
+}
+
+/** 权限未就绪时代替拒绝页的骨架(骨架自带 400 ms 延迟，快的刷新什么都看不见)。 */
+export function PermissionsPending() {
+  return (
+    <div data-testid="permissions-pending" aria-busy="true">
+      <ListSkeleton count={3} />
+    </div>
+  );
 }

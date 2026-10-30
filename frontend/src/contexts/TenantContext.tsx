@@ -107,6 +107,13 @@ interface TenantContextValue {
    * Do not add a role boolean back here: ask `usePermissions`.
    */
   setUser: (user: AuthUser | null) => void;
+  /**
+   * 刷新页面时，本地信封先把人恢复出来、权限清空，再去服务端取 —— 这段时间里「没有权限码」
+   * 不等于「无权」。`false` 只在这段时间里成立(取到或取失败都转 `true`);登录、退出、没登录都是 `true`。
+   * `hasPermission` 不看它(门照旧关着);是否画拒绝页的那几处看它，未就绪时画骨架。
+   * 可选:测试里手搓的 context 没有这一项，读作已就绪。
+   */
+  permissionsReady?: boolean;
   logout: () => void;
   /** Re-read this user's permissions, role and hall from the server (focus, and the server's
    *  `permission.refreshed` push after a demotion or a grant change — decision 10). */
@@ -125,11 +132,14 @@ const TenantContext = createContext<TenantContextValue>({
   user: null,
   tenantCode: null,
   setUser: () => {},
+  permissionsReady: true,
   logout: () => {},
 });
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
+  // 挂载后读本地信封之前也算「未就绪」:那一拍里 user 还是 null,不能据此画拒绝页。
+  const [permissionsReady, setPermissionsReady] = useState(false);
   const tenantCode = user?.tenant?.code ?? null;
 
   // 文明皮(规范 v2 §三):<html data-civ="cn|eu|eg|gr|neutral">,globals.css 据此只换
@@ -195,7 +205,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         // Leave permissions as they are — on load they were just emptied (gates closed, not guessed open).
-      });
+      })
+      // 取到或取失败都算就绪:失败时门关着、拒绝页照画，不让骨架一直转。
+      .finally(() => setPermissionsReady(true));
   }, []);
 
   // 窗口聚焦时重取(节流)。没登录不取。
@@ -221,6 +233,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server
   useEffect(() => {
+    let refreshing = false;
     try {
       const raw = localStorage.getItem(USER_KEY);
       if (raw) {
@@ -238,15 +251,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         // and a stale "yes" is worse than a momentary "no". If the fetch
         // fails, permissions stay empty rather than guessed.
         setUserState({ ...envelope.user, permissions: [] });
+        refreshing = true;
         refreshFromServer();
       }
     } catch {
       // ignore
+    } finally {
+      // 没有信封(或已过期、读坏了)就没有要等的权限;有就等 refreshFromServer 收尾。
+      if (!refreshing) setPermissionsReady(true);
     }
   }, [refreshFromServer]);
 
   const setUser = useCallback((u: AuthUser | null) => {
     setUserState(u);
+    // 登录带回的就是完整权限;退出后也没有要等的。
+    setPermissionsReady(true);
     if (u) {
       // Store only safe user fields to localStorage, NOT permissions
       const { permissions: _ignored, ...safeUser } = u;
@@ -290,12 +309,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       user,
       tenantCode,
       setUser,
+      permissionsReady,
       logout,
       refreshFromServer,
     }),
     // `tenantCode` is derived from `user` and cannot move without it; it is
     // listed because it is read here, not because it adds a trigger.
-    [user, tenantCode, setUser, logout, refreshFromServer]
+    [user, tenantCode, setUser, permissionsReady, logout, refreshFromServer]
   );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
