@@ -278,7 +278,7 @@ def test_a_soul_outside_the_conversation_cannot_post_into_it(cn_tenant, matrix):
 
 def test_souls_in_different_civilizations_who_follow_each_other_chat_freely(cn_tenant, eu_tenant, matrix):  # noqa: F811
     """两条关注边记在不同的文明上(关注者各自所在),照样是互关。
-    变异:`_mutual` 改用朋友圈的 `circle.are_mutual_followers`(要求此刻同文明)→ throttled 为真,红。"""
+    变异:`_mutual` 加上「此刻同文明」的要求 → throttled 为真,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
     b, _ = ready_soul(eu_tenant, name="Beatrice")
     mutual(a, b)

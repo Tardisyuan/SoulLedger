@@ -57,17 +57,6 @@ def is_tenant_exempt(user) -> bool:
     )
 
 
-HALL_ADMIN_ROLES = ("ADMIN", "MODERATOR")
-
-
-def is_hall_admin(user) -> bool:
-    """ADMIN, or 殿主 (MODERATOR) held as the main role or as an additional one (`extra_roles`). Says nothing
-    about *which* hall — pair it with the caller's hall, or with `is_tenant_exempt` for the hall-less ADMIN."""
-    if getattr(user, "role", None) in HALL_ADMIN_ROLES:
-        return True
-    return "MODERATOR" in (getattr(user, "extra_roles", None) or ())
-
-
 def scope_to_tenant(
     qs,
     request,

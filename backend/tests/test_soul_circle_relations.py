@@ -1,15 +1,14 @@
 """关系判定(聊天代理 feat/soul-chat 直接调用这几条)、换世后的归属、事件。
 
-`are_mutual_followers` / `same_civilization` 是**准入判定**:聊天用它们决定两个灵魂
-能不能说话。所以每条都测「不该为真」的那几种,而不只是「该为真」的那一种。
+`same_civilization` 是**准入判定**,所以测「不该为真」的那几种,而不只是「该为真」的那一种。
+(朋友圈自己的互关判定 `are_mutual_followers` 2026-10-30 删了:聊天从来没用它,`apps/chat` 有自己的 `_mutual`。)
 """
 from unittest import mock
 
 import pytest
-from django.utils import timezone
 
 from apps.social import soul_circle as circle
-from apps.social.models import Follow, Visibility
+from apps.social.models import Visibility
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import AccountOrigin, SoulAccount
 from tests.soul_social_support import SOCIAL, feed_ids, follow, post, soul, soul_client
@@ -17,7 +16,7 @@ from tests.soul_social_support import SOCIAL, feed_ids, follow, post, soul, soul
 pytestmark = pytest.mark.django_db
 
 
-# ── 同文明 / 互关 ─────────────────────────────────────────────────────────
+# ── 同文明 ─────────────────────────────────────────────────────────
 
 
 def test_same_civilization_is_true_only_for_two_current_souls_in_one_tenant(cn_tenant, eu_tenant, judge_user):
@@ -28,48 +27,6 @@ def test_same_civilization_is_true_only_for_two_current_souls_in_one_tenant(cn_t
     assert circle.same_civilization(a.user, c.user) is False, "跨文明"
     assert circle.same_civilization(a.user, judge_user) is False, "官员不在朋友圈里"
     assert circle.same_civilization(a.user, None) is False
-
-
-def test_mutual_follow_needs_both_edges(cn_tenant):
-    a, _ = soul(cn_tenant, "甲")
-    b, _ = soul(cn_tenant, "乙")
-    assert circle.are_mutual_followers(a.user, b.user) is False
-    follow(a, b)
-    assert circle.are_mutual_followers(a.user, b.user) is False, "单向关注被当成了互关"
-    follow(b, a)
-    assert circle.are_mutual_followers(a.user, b.user) is True
-    assert circle.are_mutual_followers(b.user, a.user) is True, "互关不对称"
-    assert circle.are_mutual_followers(a.user, a.user) is False, "自己和自己"
-
-
-def test_mutual_follow_does_not_survive_a_move_to_another_civilization(cn_tenant, eu_tenant):
-    """两人在地府互关,之后乙被调拨去天堂暂居:关注边还在库里,但按「当前所在」
-    两人不再同文明,于是不再互关 —— 聊天也就不再准入。回到地府后恢复。"""
-    a, _ = soul(cn_tenant, "甲")
-    b, _ = soul(cn_tenant, "乙")
-    follow(a, b)
-    follow(b, a)
-    assert circle.are_mutual_followers(a.user, b.user) is True
-
-    type(b.soul).all_objects.filter(pk=b.soul_id).update(tenant=eu_tenant)
-    b.user.refresh_from_db()
-    b.user.soul_account.soul.refresh_from_db()
-    assert Follow.objects.filter(follower=a.user, following=b.user).exists(), "前提:边还在"
-    assert circle.are_mutual_followers(a.user, b.user) is False, "跨文明后仍被判为互关"
-
-    type(b.soul).all_objects.filter(pk=b.soul_id).update(tenant=cn_tenant)
-    b.user.soul_account.soul.refresh_from_db()
-    assert circle.are_mutual_followers(a.user, b.user) is True
-
-
-def test_a_retired_account_is_nobodys_mutual(cn_tenant):
-    a, _ = soul(cn_tenant, "甲")
-    b, _ = soul(cn_tenant, "乙")
-    follow(a, b)
-    follow(b, a)
-    SoulAccount.objects.filter(pk=b.pk).update(retired_at=timezone.now())
-    b.user.soul_account.refresh_from_db()
-    assert circle.are_mutual_followers(a.user, b.user) is False
 
 
 # ── 换世 ─────────────────────────────────────────────────────────────────
