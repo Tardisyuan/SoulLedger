@@ -669,7 +669,7 @@ class TestWhatPytestIsInvokedWith:
         main, _ = checkouts
         args, _ = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert "--ff" not in args and "--failed-first" not in args, args
-        assert "--durations=10" in args, args
+        assert "--durations=30" in args and "--durations-min=5" in args, args
         # The stand-in python has no xdist, so -n never reaches this line here: read the script for it.
         text = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         assert 'XDIST="-n $PYTEST_WORKERS --dist worksteal"' in text
@@ -1417,6 +1417,17 @@ class TestEndToEndOnAnotherMachine:
         assert "npm run build" in remote and "sl-gates-e2e:1" in remote and "flock" in remote, remote
         assert "$(echo $PROJECTS" in remote, "the loop must reach the remote unexpanded"
 
+    def test_all_projects_run_in_one_playwright_call_summed_from_its_json(self, checkouts, tmp_path):
+        """2026-10-30: one `playwright test` (one webServer) for every project; per-project counts and the
+        flaky/failed names come from the json reporter, read by scripts/e2e-report.py."""
+        main, _ = checkouts
+        self._run(main, tmp_path, "--e2e=all")
+        remote = (tmp_path / "remote-run").read_text()
+        assert remote.count("playwright test") == 1, remote
+        assert "--project=$p" not in remote.split("playwright test")[1].split("\n")[0], "still one call per project"
+        assert "$PF --reporter=line,json --retries=1" in remote, remote
+        assert "PLAYWRIGHT_JSON_OUTPUT_NAME=/sl-tmp/e2e.json" in remote and "scripts/e2e-report.py" in remote, remote
+
     def test_all_means_the_three_projects(self, checkouts, tmp_path):
         main, _ = checkouts
         self._run(main, tmp_path, "--e2e=all")
@@ -1427,3 +1438,177 @@ class TestEndToEndOnAnotherMachine:
         proc = self._run(main, tmp_path, "--e2e", image_ok=False)
         assert proc.returncode == 1 and "does not run on this machine" in proc.stdout, proc.stdout
         assert not (tmp_path / "remote-run").exists()
+
+
+# ── 2026-10-30 gate speed-ups (user decision): deps hashes, jest cache, two sides at once, e2e report ──
+
+
+class TestTheRemoteDependencyHashes:
+    """B3: node_modules and backend/.venv are reinstalled on the gate box by two hashes decided apart, and
+    the venv is synced, never deleted. The hashes reach the container as SL_DEPS_JS / SL_DEPS_PY."""
+
+    def _hashes(self, repo, tmp_path):
+        proc = TestTheWholeRunOnAnotherMachine()._run(repo, tmp_path)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        remote = (tmp_path / "remote-run").read_text()
+        return re.search(r"SL_DEPS_JS=(\w+)", remote).group(1), re.search(r"SL_DEPS_PY=(\w+)", remote).group(1)
+
+    def _write(self, repo, rel, text):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text(text)
+        _git(repo, "add", "-A")
+
+    def test_each_hash_moves_only_with_its_own_inputs(self, checkouts, tmp_path):
+        main, _ = checkouts
+        pkg = '{"name": "x", "version": "%s", "scripts": {"t": "%s"}, "dependencies": {"a": "%s"}}'
+        self._write(main, "frontend/package.json", pkg % ("1.0.0", "jest", "1"))
+        self._write(main, "backend/requirements.lock", "django==5.2\n")
+        js, py = self._hashes(main, tmp_path)
+        self._write(main, "frontend/package.json", pkg % ("1.0.1", "vitest", "1"))
+        assert self._hashes(main, tmp_path) == (js, py), "a version or script change reinstalled something"
+        self._write(main, "frontend/package.json", pkg % ("1.0.1", "vitest", "2"))
+        js2, py2 = self._hashes(main, tmp_path)
+        assert js2 != js and py2 == py
+        self._write(main, "backend/requirements.lock", "django==5.2.1\n")
+        js3, py3 = self._hashes(main, tmp_path)
+        assert js3 == js2 and py3 != py2
+
+    def test_the_venv_is_synced_not_rebuilt(self):
+        text = RUNNER.read_text(encoding="utf-8")
+        deps = text[text.index("REMOTE_DEPS='"):]
+        deps = deps[: deps.index("fi'") + 3]
+        assert "rm -rf backend/.venv" not in deps
+        assert ".sl-deps-js" in deps and ".sl-deps-py" in deps and "venv-extras.py" in deps, deps
+        assert "'" not in deps[len("REMOTE_DEPS='"):-1], "it is spliced into a single-quoted bash -c"
+        assert text.count("$REMOTE_DEPS") == 2, "the gate run and the E2E run install the same way"
+
+
+class TestVenvExtras:
+    """scripts/venv-extras.py: what the kept venv has that the requirement files no longer name."""
+
+    def _mod(self):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("venv_extras", REPO_ROOT / "scripts" / "venv-extras.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_a_dropped_package_is_named_and_kept_ones_are_not(self, tmp_path):
+        mod = self._mod()
+        lock = tmp_path / "requirements.lock"
+        lock.write_text("# comment\nDjango==5.2\nzope.interface==7 ; python_version>'3'\n    # via x\n-r other.txt\n")
+        wanted = mod.required([lock])
+        assert wanted == {"django", "zope-interface"}
+        got = mod.extras(["Django", "zope_interface", "pip", "setuptools", "wheel", "Old_Package"], wanted)
+        assert got == ["old-package"]
+
+
+class TestTheJestCacheSurvivesTheNight:
+    """B2: TMPDIR on the gate box is /sl-tmp, emptied daily; the cache lives in node_modules, which the
+    rsync protects."""
+
+    @pytest.mark.parametrize("config", ["frontend/jest.config.js", "mobile/jest.config.js",
+                                        "mobile-officer/jest.config.js"])
+    def test_cache_directory_is_under_node_modules(self, config):
+        text = (REPO_ROOT / config).read_text(encoding="utf-8")
+        assert re.search(r"cacheDirectory: ['\"]<rootDir>/node_modules/\.cache/jest['\"]", text), config
+
+    def test_the_sync_keeps_node_modules(self):
+        assert "--filter='P **/node_modules/'" in RUNNER.read_text(encoding="utf-8")
+
+
+class TestTwoSidesAtOnce:
+    """B4: in the remote run the backend pytest and the JS runners run side by side; one side failing does
+    not stop the other, and both exit codes are reported."""
+
+    def _repo(self, checkouts, tmp_path):
+        main, _ = checkouts
+        (main / "mobile" / "src").mkdir(parents=True)
+        (main / "mobile" / "src" / "r.test.ts").write_text("import fs from 'fs'; fs.readFileSync('x');\n")
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "mobile reader")
+        b = tmp_path / "bin"
+        b.mkdir()
+        # The JS side: slower than the backend, and leaves a mark when it ran to the end.
+        (b / "npm").write_text(f"#!/bin/bash\nsleep 3\ntouch '{tmp_path}/js-finished'\necho 'Tests: 6 passed'\n")
+        (b / "npm").chmod(0o755)
+        py = tmp_path / "fake-python"
+        py.write_text(
+            "#!/bin/bash\n"
+            'case "$1" in\n'
+            "  manage.py) exit 0 ;;\n"
+            f'  -m) if [ "$2" = pytest ]; then touch "{tmp_path}/pytest-started"; echo "1 failed"; exit 1; fi ;;\n'
+            "esac\n"
+            'exec python3 "$@"\n')
+        py.chmod(0o755)
+        return main, b, str(py)
+
+    def _run(self, repo, b, py, remote):
+        env = _clean_env(PREPUSH_CHANGED="backend/x.py", PYTHON_BIN=py, RUFF_BIN=shutil.which("true"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""),
+                         **({"GATES_IN_REMOTE": "1"} if remote else {}))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), "--prepush"], cwd=repo, env=env,
+                              capture_output=True, text=True, timeout=120)
+
+    def test_a_red_backend_does_not_stop_the_js_side(self, checkouts, tmp_path, fake_backend):
+        repo, b, py = self._repo(checkouts, tmp_path)
+        proc = self._run(repo, b, py, remote=True)
+        assert proc.returncode != 0
+        assert (tmp_path / "pytest-started").exists() and (tmp_path / "js-finished").exists(), proc.stdout
+        assert "side by side" in proc.stdout, proc.stdout
+        assert "backend exit 1, JS exit 0" in proc.stdout, proc.stdout
+        assert "Tests: 6 passed" in proc.stdout, "the JS log was not printed"
+
+    def test_here_it_stays_serial_and_stops_at_the_first_red(self, checkouts, tmp_path, fake_backend):
+        repo, b, py = self._repo(checkouts, tmp_path)
+        proc = self._run(repo, b, py, remote=False)
+        assert proc.returncode != 0 and "pytest failed" in proc.stdout, proc.stdout
+        assert "side by side" not in proc.stdout
+        assert not (tmp_path / "js-finished").exists(), "the serial run went on past a red pytest"
+
+    def test_the_container_splits_its_cpus_between_the_sides(self):
+        text = RUNNER.read_text(encoding="utf-8")
+        assert "-e PYTEST_WORKERS=${GATES_REMOTE_PYTEST_WORKERS:-6}" in text
+        assert "-e JEST_WORKERS=${GATES_REMOTE_JS_WORKERS:-6}" in text
+        assert "--cpus ${GATES_REMOTE_CPUS:-12}" in text
+
+
+class TestTheE2eReport:
+    """B5: scripts/e2e-report.py turns one multi-project Playwright JSON report into per-project lines."""
+
+    def _report(self, tmp_path, report):
+        import json
+
+        path = tmp_path / "e2e.json"
+        path.write_text(json.dumps(report))
+        return subprocess.run([sys.executable, "-I", str(REPO_ROOT / "scripts" / "e2e-report.py"), str(path),
+                               "chromium", "firefox", "mobile-chrome"], capture_output=True, text=True, timeout=60)
+
+    def test_counts_and_names_per_project(self, tmp_path):
+        def spec(title, *tests):
+            return {"title": title, "tests": [{"projectName": p, "status": s} for p, s in tests]}
+
+        report = {"suites": [{"title": "souls.spec.ts", "specs": [
+            spec("lists souls", ("chromium", "expected"), ("firefox", "unexpected"), ("mobile-chrome", "flaky")),
+        ], "suites": [{"title": "detail", "specs": [
+            spec("opens one", ("chromium", "expected"), ("firefox", "expected"), ("mobile-chrome", "skipped")),
+        ]}]}], "errors": []}
+        proc = self._report(tmp_path, report)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        out = proc.stdout
+        assert "    chromium: 2 passed\n" in out, out
+        assert "    firefox: 1 passed, 1 failed\n" in out, out
+        assert "    mobile-chrome: 1 flaky, 1 skipped\n" in out, out
+        assert "failed: [firefox] souls.spec.ts › lists souls" in out, out
+        assert "flaky: [mobile-chrome] souls.spec.ts › lists souls" in out, out
+        assert "[chromium] souls.spec.ts" not in out, "a passing test was named"
+
+    def test_a_missing_report_or_a_run_error_is_exit_1(self, tmp_path):
+        missing = subprocess.run([sys.executable, "-I", str(REPO_ROOT / "scripts" / "e2e-report.py"),
+                                  str(tmp_path / "none.json")], capture_output=True, text=True, timeout=60)
+        assert missing.returncode == 1 and "no readable" in missing.stdout
+        proc = self._report(tmp_path, {"suites": [], "errors": [{"message": "Timed out waiting for webServer\nmore"}]})
+        assert proc.returncode == 1 and "error: Timed out waiting for webServer" in proc.stdout, proc.stdout
+        assert "chromium: no tests" in proc.stdout
