@@ -34,6 +34,7 @@ import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
 import { setUnauthorizedHandler } from "./platform";
 import { PUSH_TOKEN_KEY, hasRegisteredDevice, unregisterDevice } from "./push";
 import { clearVoiceNumbers } from "./voiceCache";
+import { clearSocialStatus } from "./socialStatus";
 
 
 /**
@@ -117,6 +118,7 @@ export function stateAfterFailedMe(error: unknown): SessionState {
   clearSoulTokens();
   clearOutbox();
   clearVoiceNumbers();
+  clearSocialStatus();
   return { status: "signedOut", notice: soulErrorMessage(error) };
 }
 
@@ -171,6 +173,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       clearOutbox();
       clearVoiceNumbers();
+      clearSocialStatus();
       setState({ status: "signedOut" });
     });
     const off = onSoulPasswordChangeRequired(() =>
@@ -290,6 +293,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const refresh = getRefreshToken();
     clearOutbox();
     clearVoiceNumbers();
+    clearSocialStatus();
     password.current = null;
     setState({ status: "signedOut" });
     const end = () => {

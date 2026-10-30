@@ -337,7 +337,11 @@ function History({ assist }: { assist: OfficerAssist }) {
     back();
   };
 
-  /** Read again on open: the messages as they are now, and a conversation deleted elsewhere is 「没能打开」, not a stale copy. */
+  /**
+   * Read again on open: the messages as they are now, and a conversation deleted elsewhere is 「没能打开」, not a stale copy.
+   * A gone one leaves only its own row; the rest of the list on screen stays as it was (cq-apps 2026-10-30 #7).
+   * ponytail: the read is still the whole list — the server has no GET for one conversation (its detail view is DELETE only).
+   */
   const openOne = (id: string) => {
     setNotice(null);
     officerAssistApi.conversations().then(
@@ -345,7 +349,7 @@ function History({ assist }: { assist: OfficerAssist }) {
         const found = rows.find((c) => c.id === id);
         if (!found) {
           setNotice("open_failed");
-          setList({ status: "done", rows });
+          setList((l) => (l.status === "done" ? { status: "done", rows: l.rows.filter((c) => c.id !== id) } : l));
           return;
         }
         assist.setThread({
