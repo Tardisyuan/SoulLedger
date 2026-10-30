@@ -104,7 +104,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install --no-deps -r requirements.lock
+          pip install --no-deps -r requirements.lock -r requirements-dev.txt
       - name: Check migrations
         run: |
           cd backend
@@ -113,14 +113,16 @@ jobs:
         run: |
           cd backend
           python manage.py migrate
-          python -m pytest --tb=short -q
+          # -n auto (pytest-xdist, requirements-dev.txt): it ran serially (2026-10-30). worksteal, as the
+          # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
+          # floor still apply (pytest-cov combines the workers).
+          python -m pytest --tb=short -q -n auto --dist worksteal
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
-      # unpinned, i.e. whatever was newest on the day of the run.
+      # unpinned, i.e. whatever was newest on the day of the run. Installed above.
       - name: Lint
         run: |
           cd backend
-          pip install --no-deps -r requirements-dev.txt
           ruff check .
       # Blocks. Scoped to requirements.lock — what the image installs; auditing
       # requirements.txt resolved its `>=` to today's newest releases (IS-17) —

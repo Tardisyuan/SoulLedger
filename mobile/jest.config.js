@@ -12,6 +12,10 @@ module.exports = {
   // JEST_WORKERS overrides; `-w` on the command line still wins over both.
   maxWorkers: process.env.JEST_WORKERS || "50%",
   workerIdleMemoryLimit: "1GB",
+  // In node_modules, not the OS temp dir (2026-10-30): on the gate box TMPDIR is /sl-tmp, emptied of files
+  // older than a day, so the first run each day transformed everything again. rsync keeps node_modules/
+  // (scripts/run-gates.sh).
+  cacheDirectory: "<rootDir>/node_modules/.cache/jest",
   preset: "jest-expo",
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.test.ts", "**/*.test.tsx"],

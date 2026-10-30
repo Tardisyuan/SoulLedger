@@ -61,3 +61,17 @@ def test_the_daily_run_skips_a_day_with_no_new_commit():
 
     ungated = [name for name in jobs if name != "changes" and not gated(name)]
     assert ungated == [], f"jobs that run even on a day with no commit: {ungated}"
+
+
+def test_the_backend_suite_runs_in_parallel():
+    """2026-10-30 (user decision): CI's backend suite ran serially on minutes it pays for. pytest-xdist is in
+    requirements-dev.txt, so that file is installed before the tests, not only for ruff after them."""
+    data, _ = _load("ci.yml")
+    steps = data["jobs"]["backend"]["steps"]
+    runs = [step.get("run", "") for step in steps]
+    install = next(i for i, r in enumerate(runs) if "-r requirements-dev.txt" in r)
+    tests = next(i for i, r in enumerate(runs) if "python -m pytest" in r)
+    assert install < tests
+    # The command line itself, not the comment above it in the same `run:` block.
+    (command,) = [ln for ln in runs[tests].splitlines() if ln.strip().startswith("python -m pytest")]
+    assert "-n auto" in command, command
