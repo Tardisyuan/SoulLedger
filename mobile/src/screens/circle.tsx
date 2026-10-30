@@ -356,7 +356,7 @@ export function CircleScreen() {
   const [following, setFollowing] = useState(true);
   const feed = useFeed({ following });
   const openSoul = useOpenSoul();
-  useReloadOnRefocus(feed.reload);
+  useReloadOnRefocus(feed.reload, { data: feed.posts, error: feed.error });
   const pendingId = route.params?.pendingId;
   const justPending = feed.posts?.some((p) => p.id === pendingId && p.moderation_status === "PENDING");
   const write = () => navigation.navigate("ComposePost");

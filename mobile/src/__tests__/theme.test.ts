@@ -303,3 +303,20 @@ describe("oklchToHex", () => {
     expect(oklchToHex("0.627955 0.257683 29.2339")).toBe("#ff0000");
   });
 });
+
+// opt-apps2 R1: a new object per call changed ThemeContext's value on every render of the root.
+describe("one theme object per (civilization, scheme)", () => {
+  it("the same call answers the same object; another civilization or scheme answers another", () => {
+    expect(themeFor("CHINESE", "dark")).toBe(themeFor("CHINESE", "dark"));
+    expect(themeFor("CHINESE", "dark")).not.toBe(themeFor("CHINESE", "light"));
+    expect(themeFor("CHINESE", "dark")).not.toBe(themeFor("EGYPTIAN", "dark"));
+    // Unknown and none are both the neutral skin: one object.
+    expect(themeFor("ATLANTEAN", "light")).toBe(themeFor(null, "light"));
+    expect(preLoginTheme("light")).toBe(themeFor(undefined, "light"));
+  });
+
+  it("the shared object cannot be changed by one screen for all the others", () => {
+    expect(Object.isFrozen(themeFor("GREEK", "dark"))).toBe(true);
+    expect(sealedTheme(themeFor("GREEK", "dark"))).not.toBe(themeFor("GREEK", "dark"));
+  });
+});

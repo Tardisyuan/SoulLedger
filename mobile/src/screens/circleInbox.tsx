@@ -183,7 +183,7 @@ export function CircleInboxScreen() {
  */
 export function useUnreadInteractions(): string | null {
   const status = useSocialStatus();
-  useReloadOnRefocus(status.reload);
+  useReloadOnRefocus(status.reload, status);
   const n = status.data?.unread_interactions ?? 0;
   return n > 0 ? (n > 99 ? "99+" : String(n)) : null;
 }

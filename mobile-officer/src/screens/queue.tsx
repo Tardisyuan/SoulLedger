@@ -10,7 +10,7 @@ import { View } from "react-native";
 
 import { ActionButton, RefreshFailed, Row, Segmented, StateView, viewStateOf } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
-import { useCachedRemote } from "../readCache";
+import { useCachedRemote, useOnBump } from "../readCache";
 import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
 import { Screen, Txt, space, useI18n, useOnline, useReloadOnReconnect, useRemote, useToast } from "../shared";
@@ -30,19 +30,21 @@ type Group = JudgmentQueueGroup;
 /**
  * `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable.
  * `initialGroup` / `onGroup`: the shell keeps the chosen segment. Opening a case unmounts this tab and
- * closing it remounts it (`key={version}`), so a segment kept here alone fell back to 我手上 on every
- * return from a case opened under 待认领 (华为真机 10-29 第二轮).
+ * closing it mounts it again, so a segment kept here alone fell back to 我手上 on every
+ * return from a case opened under 待认领 (华为真机 10-29 第二轮). `version`: the shell's bump, reloaded in place.
  */
 export function QueueTab({
   onOpen,
   gone,
   initialGroup = "mine",
+  version,
   onGroup,
 }: {
   onOpen: (id: string) => void;
   gone?: ReadonlySet<string>;
   initialGroup?: Group;
   onGroup?: (group: Group) => void;
+  version?: number;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -62,9 +64,10 @@ export function QueueTab({
   // they are asked again by themselves, like the list (phone QA 10-29c: they stayed blank until a pull).
   const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
   const { data: counts, error: countsError, reload: reloadCounts } = useRemote(loadCounts);
-  useReloadOnReconnect(reloadCounts);
+  useReloadOnReconnect(reloadCounts, { data: counts, error: countsError });
   // A pull, a claim, a 409: the list and its four counts are asked again together.
   const refresh = () => Promise.all([reload(), reloadCounts()]);
+  useOnBump(version, refresh); // the shell's bump (a push, the foreground): reloaded in place
 
   const claim = (row: Judgment) => {
     setClaiming(row.id);

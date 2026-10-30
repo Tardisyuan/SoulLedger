@@ -18,7 +18,7 @@
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { readOwned, writeOwned } from "./owner";
+import { currentOwner, readOwned } from "./owner";
 import { useOnline, useReloadOnReconnect, useRemote } from "./shared";
 
 export const CACHE_KEY = "officer_read_cache";
@@ -34,9 +34,53 @@ interface Store {
   details: Entry[]; // newest first
 }
 
+/**
+ * The parsed store lives here, for the officer it belongs to (opt-apps2 N5): every read used to parse the whole
+ * JSON value and every write stringify it, on the JS thread, per list and per detail opened. Writes reach the
+ * persistent store WRITE_DELAY_MS after the last one, and no larger than CACHE_MAX_CHARS -- the oldest details go
+ * first, then the oldest lists. Android's AsyncStorage cannot read back a row past ~2 MB (its cursor window), and
+ * a JSON character is at most 3 bytes in UTF-8, so 500,000 characters stay under 1.5 MB.
+ */
+export const CACHE_MAX_CHARS = 500_000;
+export const WRITE_DELAY_MS = 500;
+
+let mem: { owner: string | null; store: Store; dirty?: boolean } | null = null;
+let pending: ReturnType<typeof setTimeout> | null = null;
+
 function read(): Store {
+  const owner = currentOwner();
+  if (mem && mem.owner === owner) return mem.store;
+  flushReadCache(); // another officer's unsaved writes are saved under that officer's name before switching
   const parsed = readOwned<Partial<Store>>(CACHE_KEY);
-  return { lists: Array.isArray(parsed?.lists) ? parsed.lists : [], details: Array.isArray(parsed?.details) ? parsed.details : [] };
+  mem = { owner, store: { lists: Array.isArray(parsed?.lists) ? parsed.lists : [], details: Array.isArray(parsed?.details) ? parsed.details : [] } };
+  return mem.store;
+}
+
+/** What is stored: the store, trimmed to CACHE_MAX_CHARS (the memory copy keeps everything until restart). */
+function serialize(store: Store, owner: string | null): string {
+  const lists = [...store.lists];
+  const details = [...store.details];
+  let text = JSON.stringify({ lists, details, owner });
+  while (text.length > CACHE_MAX_CHARS && (details.length || lists.length)) {
+    // Both are newest first (cacheWrite puts each write at the front), so the last one is the oldest.
+    if (details.length) details.pop();
+    else lists.pop();
+    text = JSON.stringify({ lists, details, owner });
+  }
+  return text;
+}
+
+/** The pending write, now. Also before switching officers, and from tests. */
+export function flushReadCache(): void {
+  if (pending) clearTimeout(pending);
+  pending = null;
+  if (!mem?.dirty) return;
+  mem.dirty = false;
+  try {
+    platform().persistent.set(CACHE_KEY, serialize(mem.store, mem.owner));
+  } catch {
+    // A full store loses the cache, never the screen.
+  }
 }
 
 export function cacheRead<T>(key: string): { at: number; data: T } | null {
@@ -52,15 +96,16 @@ export function cacheWrite(key: string, data: unknown): number {
   const entry: Entry = { key, at, data };
   if (key.startsWith("list:")) store.lists = [entry, ...store.lists.filter((e) => e.key !== key)];
   else store.details = [entry, ...store.details.filter((e) => e.key !== key)].slice(0, DETAIL_KEEP);
-  try {
-    writeOwned(CACHE_KEY, store);
-  } catch {
-    // A full store loses the cache, never the screen.
-  }
+  mem!.dirty = true;
+  if (pending) clearTimeout(pending);
+  pending = setTimeout(flushReadCache, WRITE_DELAY_MS);
   return at;
 }
 
 export function clearReadCache(): void {
+  if (pending) clearTimeout(pending);
+  pending = null;
+  mem = null;
   platform().persistent.remove(CACHE_KEY);
   setShownAt(null);
 }
@@ -134,7 +179,8 @@ export function useCachedRemote<T>(key: string, fetcher: () => Promise<T>) {
     }
   }, [key, fetcher]);
   const { data, error, loading, reload } = useRemote(wrapped);
-  useReloadOnReconnect(reload);
+  // Back online: only what failed, has nothing, or is showing the cache asks again (opt-apps2 N3).
+  useReloadOnReconnect(reload, { data: data?.cached ? null : data, error });
   const at = data?.at ?? null;
   const [screen] = useState(() => ++nextScreen);
   const missed = data === null && error != null;
@@ -144,4 +190,21 @@ export function useCachedRemote<T>(key: string, fetcher: () => Promise<T>) {
   }, [screen, at, missed]);
   useEffect(() => () => dropScreen(screen), [screen]);
   return { data: data ? data.value : null, error, loading, reload, cached: data?.cached ?? false };
+}
+
+/**
+ * Runs `run` whenever `bump` changes after the first render: the shell's `version` (a push, the foreground, a
+ * detail closed) reloads a tab in place instead of remounting it, so its scroll and its extra pages stay (opt-apps2 N1).
+ */
+export function useOnBump(bump: number | undefined, run: () => unknown): void {
+  const latest = useRef(run);
+  useEffect(() => {
+    latest.current = run;
+  });
+  const seen = useRef(bump);
+  useEffect(() => {
+    if (bump === seen.current) return;
+    seen.current = bump;
+    void latest.current();
+  }, [bump]);
 }

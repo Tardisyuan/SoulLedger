@@ -5,7 +5,7 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { AccessibilityInfo, StyleSheet } from "react-native";
+import { AccessibilityInfo, AppState, StyleSheet } from "react-native";
 
 import { OnlineContext, type Online } from "../../../mobile/src/online";
 import { RefreshFailed, Row, visibleTabs } from "../kit";
@@ -320,6 +320,54 @@ describe("lists the server pages (20 a page) show the rest on 「加载更多」
     expect(await screen.findByText("通知21")).toBeTruthy();
     expect(screen.getByText("通知1")).toBeTruthy();
   });
+
+  // opt-apps2 N1: the shell's bump (a push, the foreground) remounted the tab (`key={version}`): back to the top,
+  // the pages fetched with 「加载更多」 gone.
+  it("the shell's bump reloads in place: same screen, the extra pages fetched again and still shown", async () => {
+    const notice = (id: number, title = `通知${id}`) => ({ id, title, message: "", is_read: true, created_at: "2026-10-09T01:00:00Z" });
+    let round = 0;
+    mockNotices.mockImplementation(async (params?: { page?: string }) =>
+      params?.page === "2" ? { data: { results: [notice(21, `通知21-${round}`)], next: null } } : { data: { results: [notice(0, `新${round}`), notice(1)], next: "http://x/?page=2" } }
+    );
+    let bump!: () => void;
+    function Host() {
+      const [version, setVersion] = useState(0);
+      bump = () => setVersion((v) => v + 1);
+      return <NoticesTab version={version} />;
+    }
+    renderOfficer(<Host />);
+    fireEvent.press(await screen.findByTestId("list-more"));
+    expect(await screen.findByText("通知21-0")).toBeTruthy();
+    const before = screen.getByTestId("tab-notices-screen");
+    round = 1;
+    await act(async () => bump());
+    expect(await screen.findByText("新1")).toBeTruthy();
+    expect(await screen.findByText("通知21-1")).toBeTruthy(); // page 2 asked again, not dropped
+    expect(screen.queryByText("通知21-0")).toBeNull();
+    expect(screen.getByTestId("tab-notices-screen")).toBe(before); // not remounted
+    expect(mockNotices.mock.calls.filter(([p]) => (p as { page?: string } | undefined)?.page === "2")).toHaveLength(2);
+  });
+
+  it("after a bump, a list that now ends on page 1 drops the extra pages", async () => {
+    const notice = (id: number) => ({ id, title: `通知${id}`, message: "", is_read: true, created_at: "2026-10-09T01:00:00Z" });
+    let short = false;
+    mockNotices.mockImplementation(async (params?: { page?: string }) =>
+      params?.page === "2" ? { data: { results: [notice(21)], next: null } } : { data: { results: [notice(1)], next: short ? null : "http://x/?page=2" } }
+    );
+    let bump!: () => void;
+    function Host() {
+      const [version, setVersion] = useState(0);
+      bump = () => setVersion((v) => v + 1);
+      return <NoticesTab version={version} />;
+    }
+    renderOfficer(<Host />);
+    fireEvent.press(await screen.findByTestId("list-more"));
+    await screen.findByText("通知21");
+    short = true;
+    await act(async () => bump());
+    await waitFor(() => expect(screen.queryByText("通知21")).toBeNull());
+    expect(screen.getByText("通知1")).toBeTruthy();
+  });
 });
 
 describe("a refresh that failed while the old list is on screen (A22)", () => {
@@ -417,6 +465,32 @@ describe("the shell", () => {
     expect(screen.queryByText("JUDGE")).toBeNull();
     for (const tab of ["todo", "queue", "search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
     expect(screen.queryByTestId("mfa-banner")).toBeNull();
+  });
+
+  // opt-apps2 N1 + N2: the to-do list asks again on a return from the background, in place; the face sheet's
+  // inactive → active is not a return.
+  it("back from the background the to-do list asks again without remounting; inactive → active asks nothing", async () => {
+    const listeners = new Set<(s: string) => void>();
+    // Swapped, not spied: the preset's addEventListener is itself a jest.fn, and restoring a spy on it leaves it
+    // answering undefined for the tests after this one.
+    const real = AppState.addEventListener;
+    AppState.addEventListener = ((_t: string, fn: (s: string) => void) => {
+      listeners.add(fn);
+      return { remove: () => void listeners.delete(fn) };
+    }) as unknown as typeof AppState.addEventListener;
+    const turn = (s: string) => act(async () => void listeners.forEach((l) => l(s)));
+    renderOfficer(<Shell />);
+    const before = await screen.findByTestId("tab-todo-screen");
+    await waitFor(() => expect(mockTodo).toHaveBeenCalledTimes(1));
+    await turn("inactive");
+    await turn("active");
+    expect(mockTodo).toHaveBeenCalledTimes(1);
+    await turn("background");
+    await turn("active");
+    await waitFor(() => expect(mockTodo).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("tab-todo-screen")).toBe(before);
+    screen.unmount();
+    AppState.addEventListener = real;
   });
 
   it("keeps the banner on screen for a role that must use two-step verification and has not set it up", async () => {
