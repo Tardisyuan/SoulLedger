@@ -21,7 +21,6 @@ jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useUpdatePost: () => ({ mutate: mockUpdate, isPending: false }),
   useRefreshPosts: () => jest.fn(),
   useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
-  useReactions: () => ({ data: { results: [] } }),
 }));
 
 const post: Post = {

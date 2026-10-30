@@ -25924,6 +25924,16 @@ components:
           allOf:
           - $ref: '#/components/schemas/SocialModerationStatusEnum'
           readOnly: true
+        reaction_count:
+          type: integer
+          readOnly: true
+          description: 未删除的表态数。
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         tenant:
           type: integer
           readOnly: true
@@ -25943,8 +25953,10 @@ components:
       - create_time
       - id
       - moderation_status
+      - my_reaction
       - parent
       - post
+      - reaction_count
       - tenant
       - update_time
     CommentCreate:
@@ -26002,6 +26014,16 @@ components:
           type: string
         moderation_status:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
+        reaction_count:
+          type: integer
+          readOnly: true
+          description: 未删除的表态数。
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         create_time:
           type: string
           format: date-time
@@ -26013,7 +26035,9 @@ components:
       - content
       - create_time
       - id
+      - my_reaction
       - post
+      - reaction_count
     ConditionClause:
       type: object
       description: |-
@@ -37517,6 +37541,16 @@ components:
           allOf:
           - $ref: '#/components/schemas/SocialModerationStatusEnum'
           readOnly: true
+        reaction_count:
+          type: integer
+          readOnly: true
+          description: 未删除的表态数。
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         tenant:
           type: integer
           readOnly: true
@@ -38626,6 +38660,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
           readOnly: true
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         tenant:
           type: integer
           readOnly: true
@@ -39872,6 +39912,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
           readOnly: true
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         tenant:
           type: integer
           readOnly: true
@@ -39904,6 +39950,7 @@ components:
       - id
       - media
       - moderation_status
+      - my_reaction
       - reaction_count
       - reaction_counts
       - screening
@@ -39982,6 +40029,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
           readOnly: true
+        my_reaction:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ReactionTypeEnum'
+          - $ref: '#/components/schemas/NullEnum'
         edited_at:
           type: string
           format: date-time
@@ -39999,6 +40052,7 @@ components:
       - create_time
       - id
       - media
+      - my_reaction
       - reaction_counts
     PostMedia:
       type: object

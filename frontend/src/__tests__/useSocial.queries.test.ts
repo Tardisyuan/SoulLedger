@@ -19,7 +19,6 @@ import {
   useDeletePost,
   useComments,
   useDeleteComment,
-  useReactions,
   useToggleFollow,
   useFollowing,
   useFollowers,
@@ -39,7 +38,6 @@ jest.mock("@soulledger/core/api", () => ({
     deletePost: jest.fn().mockResolvedValue({ data: {} }),
     listComments: jest.fn().mockResolvedValue({ data: { results: [] } }),
     deleteComment: jest.fn().mockResolvedValue({ data: {} }),
-    listReactions: jest.fn().mockResolvedValue({ data: { results: [] } }),
     toggleFollow: jest.fn().mockResolvedValue({ data: {} }),
     following: jest.fn().mockResolvedValue({ data: { results: [] } }),
     followers: jest.fn().mockResolvedValue({ data: { results: [] } }),
@@ -270,39 +268,12 @@ describe("useDeleteComment", () => {
   });
 });
 
-// ── Reactions ────────────────────────────────────────────────────────
-
-describe("useReactions", () => {
-  it("passes the filter params through", async () => {
-    const { wrapper } = createWrapper();
-
-    const { result } = renderHook(() => useReactions({ post: "p1" }), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(socialApi.listReactions).toHaveBeenCalledWith({ post: "p1" });
-  });
-
-  it("fetches unfiltered when no params are given", async () => {
-    const { wrapper } = createWrapper();
-
-    const { result } = renderHook(() => useReactions(), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(socialApi.listReactions).toHaveBeenCalledWith(undefined);
-  });
-});
-
 // ── Every page, not the first (FL-09) ────────────────────────────────
 //
-// `CommentThread` builds a tree out of `data.results` and `ReactionBar` looks
-// the signed-in user up in it. Both read one page of twenty: the 21st comment
-// was never in the thread, and a post with more than twenty reactions showed
-// the operator's own as not pressed. The server paginates; these two hooks
-// now follow `next` until it is null and hand back one flattened page.
-//
-// The first call is asserted UNCHANGED (`{ post: "p1" }`, no page) so the two
-// scoping tests above keep meaning what they say; every later call carries
-// the page number.
+// `CommentThread` builds a tree out of `data.results`. It read one page of
+// twenty: the 21st comment was never in the thread. The server paginates; the
+// hook follows `next` until it is null and hands back one flattened page.
+// (Reactions no longer have a list hook: `my_reaction` comes on each row.)
 
 function page<T>(results: T[], next: string | null) {
   return { data: { count: 0, next, previous: null, results } };
@@ -322,22 +293,6 @@ describe("useComments walks every page", () => {
     expect(socialApi.listComments).toHaveBeenNthCalledWith(1, { post: "p1" });
     expect(socialApi.listComments).toHaveBeenNthCalledWith(2, { post: "p1", page: "2" });
     expect(socialApi.listComments).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("useReactions walks every page", () => {
-  it("concatenates page 2 onto page 1 and asks for it by number", async () => {
-    (socialApi.listReactions as jest.Mock)
-      .mockResolvedValueOnce(page([{ id: "r1" }], "http://x/api/v1/social/reactions/?post=p1&page=2"))
-      .mockResolvedValueOnce(page([{ id: "r2" }], null));
-    const { wrapper } = createWrapper();
-
-    const { result } = renderHook(() => useReactions({ post: "p1" }), { wrapper });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect((result.current.data?.results as Array<{ id: string }>).map((r) => r.id)).toEqual(["r1", "r2"]);
-    expect(socialApi.listReactions).toHaveBeenNthCalledWith(2, { post: "p1", page: "2" });
-    expect(socialApi.listReactions).toHaveBeenCalledTimes(2);
   });
 });
 

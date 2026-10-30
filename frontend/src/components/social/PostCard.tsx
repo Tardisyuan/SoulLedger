@@ -119,6 +119,7 @@ export function PostCard({ post }: { post: Post }) {
           postId={post.id}
           totals={{ reactions: post.reaction_count, comments: post.comment_count }}
           counts={post.reaction_counts}
+          mine={post.my_reaction}
         />
       </div>
 

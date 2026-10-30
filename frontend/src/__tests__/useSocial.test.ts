@@ -77,38 +77,95 @@ beforeEach(() => {
 
 describe("useToggleReaction behavior", () => {
   /**
-   * Behavioural, and it asserts an ABSENCE that the previous version could not.
-   *
-   * This used to spy on `invalidateQueries` and check it was called with
-   * `["social","reactions"]`. That is the whole reaction family — every
-   * PostCard mounts its own ReactionBar with its own `useReactions({ post })`
-   * query, so one click refetched the reaction list of every post on screen,
-   * and a spy on the call could not tell that from the narrow, correct thing.
-   *
-   * Seeding two posts and asking the cache afterwards can. `posts.all` is
-   * still expected broad: `Post.reaction_count` is rendered in the card
-   * (PostCard.tsx:91), so the feed rows really do go stale on a reaction —
-   * checked before narrowing anything.
+   * Optimistic, then narrow. The bar reads `my_reaction` and the counts off the
+   * cached post / comment, so the click changes the cache before the server
+   * answers; afterwards only queries that HOLD that post (or comment) are
+   * refetched — a list that does not contain it is left alone.
    */
-  it("invalidates the reacted post's reactions, and leaves other posts' alone", async () => {
-    const { queryClient, wrapper } = createWrapper();
-    const mine = [...socialKeys.reactions.all, { post: "post-1" }];
-    const theirs = [...socialKeys.reactions.all, { post: "post-2" }];
-    const feed = socialKeys.posts.feed({ page: 1 });
-    queryClient.setQueryData(mine, { results: [] });
-    queryClient.setQueryData(theirs, { results: [] });
-    queryClient.setQueryData(feed, { results: [], count: 0 });
+  const post = (id: string, mine: string | null, like = 0) => ({
+    id, my_reaction: mine, reaction_count: like,
+    reaction_counts: { LIKE: like, LOVE: 0, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
+  });
 
+  it("shows the new reaction at once, then refetches only the queries holding that post", async () => {
+    let answer!: (_v: unknown) => void;
+    (socialApi.addReaction as jest.Mock).mockReturnValueOnce(new Promise((r) => { answer = r; }));
+    const { queryClient, wrapper } = createWrapper();
+    const feed = socialKeys.posts.feed({ page: 1 });
+    const other = socialKeys.posts.list({ page: 2 });
+    const detail = socialKeys.posts.detail("post-1");
+    queryClient.setQueryData(feed, { results: [post("post-1", null), post("post-2", null)], count: 2 });
+    queryClient.setQueryData(other, { results: [post("post-9", null)], count: 1 });
+    queryClient.setQueryData(detail, post("post-1", null));
+
+    const { result } = renderHook(() => useToggleReaction(), { wrapper });
+    act(() => {
+      result.current.mutate({ post: "post-1", reaction_type: "LIKE" });
+    });
+    await waitFor(() =>
+      expect((queryClient.getQueryData(detail) as { my_reaction: string }).my_reaction).toBe("LIKE"),
+    );
+    const row = (queryClient.getQueryData(feed) as { results: ReturnType<typeof post>[] }).results;
+    expect(row[0]).toMatchObject({ my_reaction: "LIKE", reaction_count: 1, reaction_counts: { LIKE: 1 } });
+    expect(row[1]).toMatchObject({ my_reaction: null, reaction_count: 0 });
+
+    await act(async () => answer({ data: {} }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryState(feed)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(detail)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(other)?.isInvalidated).toBe(false);
+  });
+
+  it("the same kind again takes it off; another kind switches it", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const detail = socialKeys.posts.detail("post-1");
+    queryClient.setQueryData(detail, post("post-1", "LIKE", 1));
+    const { result } = renderHook(() => useToggleReaction(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ post: "post-1", reaction_type: "LOVE" });
+    });
+    expect(queryClient.getQueryData(detail)).toMatchObject({
+      my_reaction: "LOVE", reaction_count: 1, reaction_counts: { LIKE: 0, LOVE: 1 },
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await act(async () => {
+      result.current.mutate({ post: "post-1", reaction_type: "LOVE" });
+    });
+    expect(queryClient.getQueryData(detail)).toMatchObject({
+      my_reaction: null, reaction_count: 0, reaction_counts: { LIKE: 0, LOVE: 0 },
+    });
+  });
+
+  it("a comment's reaction moves the comment row, not any post", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const thread = socialKeys.comments.list({ post: "post-1" });
+    const detail = socialKeys.posts.detail("post-1");
+    queryClient.setQueryData(thread, { results: [{ id: "c1", my_reaction: null, reaction_count: 2 }] });
+    queryClient.setQueryData(detail, post("post-1", null));
+    const { result } = renderHook(() => useToggleReaction(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ comment: "c1", reaction_type: "RESPECT" });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect((queryClient.getQueryData(thread) as { results: unknown[] }).results[0]).toMatchObject({
+      my_reaction: "RESPECT", reaction_count: 3,
+    });
+    expect(queryClient.getQueryState(thread)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(detail)).toMatchObject({ my_reaction: null });
+    expect(queryClient.getQueryState(detail)?.isInvalidated).toBe(false);
+  });
+
+  it("puts the cache back when the server refuses", async () => {
+    (socialApi.addReaction as jest.Mock).mockRejectedValueOnce(networkError());
+    const { queryClient, wrapper } = createWrapper();
+    const feed = socialKeys.posts.feed({ page: 1 });
+    queryClient.setQueryData(feed, { results: [post("post-1", "SYMPATHY", 0)], count: 1 });
     const { result } = renderHook(() => useToggleReaction(), { wrapper });
     await act(async () => {
       result.current.mutate({ post: "post-1", reaction_type: "LIKE" });
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(queryClient.getQueryState(mine)?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(theirs)?.isInvalidated).toBe(false);
-    // The feed carries reaction_count, so it does have to refresh.
-    expect(queryClient.getQueryState(feed)?.isInvalidated).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((queryClient.getQueryData(feed) as { results: unknown[] }).results[0]).toEqual(post("post-1", "SYMPATHY", 0));
   });
 
   it("surfaces the backend's actual message on a cross-tenant 400", async () => {

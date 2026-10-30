@@ -36,6 +36,11 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
+let mockWsConnected = false;
+jest.mock("@/src/contexts/WebSocketContext", () => ({
+  useWebSocket: () => ({ isConnected: mockWsConnected }),
+}));
+
 const mockedList = notificationsApi.list as jest.Mock;
 const mockedMarkRead = notificationsApi.markRead as jest.Mock;
 const mockedMarkAllRead = notificationsApi.markAllRead as jest.Mock;
@@ -57,12 +62,13 @@ function renderPage() {
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return render(<NotificationsPage />, { wrapper: Wrapper });
+  return { ...render(<NotificationsPage />, { wrapper: Wrapper }), queryClient };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = null;
+  mockWsConnected = false;
   mockedList.mockResolvedValue({ data: { results: [notification()] } });
   mockedMarkRead.mockResolvedValue({});
   mockedMarkAllRead.mockResolvedValue({});
@@ -279,6 +285,34 @@ describe("NotificationsPage filter tabs", () => {
 // ── Mutations ────────────────────────────────────────────────────────
 
 describe("NotificationsPage mark-as-read", () => {
+  it("is optimistic: the row reads as read before the server answers", async () => {
+    let answer!: (_v: unknown) => void;
+    mockedMarkRead.mockReturnValue(new Promise((r) => { answer = r; }));
+    renderPage();
+    fireEvent.click(await screen.findByText("notifications.mark_read"));
+    await waitFor(() => expect(screen.queryByText("notifications.mark_read")).toBeNull());
+    expect(document.querySelector("[data-unread-mark]")).toBeNull();
+    expect(mockedList).toHaveBeenCalledTimes(1);
+    mockedList.mockResolvedValue({ data: { results: [notification({ is_read: true })] } });
+    answer({});
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("notifications.mark_read")).toBeNull();
+  });
+
+  it("puts the row back as unread when the server refuses", async () => {
+    let refuse!: (_e: unknown) => void;
+    mockedMarkRead.mockReturnValue(new Promise((_r, j) => { refuse = j; }));
+    renderPage();
+    fireEvent.click(await screen.findByText("notifications.mark_read"));
+    await waitFor(() => expect(screen.queryByText("notifications.mark_read")).toBeNull());
+    // The settle-time refetch never answers, so only the rollback can bring the row back.
+    mockedList.mockReturnValue(new Promise(() => {}));
+    refuse(new Error("500"));
+    expect(await screen.findByText("notifications.mark_read")).toBeInTheDocument();
+    expect(document.querySelector("[data-unread-mark]")).not.toBeNull();
+    expect(mockShowToast).toHaveBeenCalledWith("notifications.mark_read_error", "error");
+  });
+
   it("marks a single notification read by its stringified id", async () => {
     renderPage();
 
@@ -454,5 +488,26 @@ describe("NotificationsPage remembered filter", () => {
     renderPage();
     await screen.findByText("Verdict ready");
     expect(mockedList).toHaveBeenLastCalledWith(undefined);
+  });
+});
+
+describe("NotificationsPage polling", () => {
+  const intervalOf = (qc: QueryClient) =>
+    qc.getQueryCache().findAll({ queryKey: ["notifications", "list"] })[0]?.observers[0]?.options.refetchInterval;
+
+  it("polls every 30 s while the push socket is down", async () => {
+    const { queryClient } = renderPage();
+    await screen.findByText("Verdict ready");
+    expect(intervalOf(queryClient)).toBe(30000);
+  });
+
+  it("does not poll while the push socket is connected, and resumes when it drops", async () => {
+    mockWsConnected = true;
+    const { queryClient, rerender } = renderPage();
+    await screen.findByText("Verdict ready");
+    expect(intervalOf(queryClient)).toBe(false);
+    mockWsConnected = false;
+    rerender(<NotificationsPage />);
+    await waitFor(() => expect(intervalOf(queryClient)).toBe(30000));
   });
 });

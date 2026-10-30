@@ -1,7 +1,6 @@
 "use client";
 
-import { useToggleReaction, useReactions } from "@soulledger/core/hooks/useSocial";
-import { useTenant } from "@/src/contexts/TenantContext";
+import { useToggleReaction } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 /**
@@ -16,6 +15,9 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * 已点 = ink 实底 surface-1 字(反白)。v2 的胶囊 + 长明灯色框随 v3 撤掉。
  * 选中不靠颜色:aria-pressed + 加粗,长明灯还换字(「点长明灯」→「长明灯已点」)。
  * ≤ 768 轻表态只显示字形(名字留给读屏),长明灯换短字。
+ *
+ * 「我的表态」是服务端随帖子 / 评论一起注解的 `my_reaction`(调用方传 `mine`),不再每卡拉一次表态列表。
+ * 点按是乐观的(`useToggleReaction` 先改缓存、失败回滚);请求中按钮不禁用,但再点会被忽略。
  *
  * 计数(`Post.reaction_counts`,五种各自的数):照 A5 稿「轻表态只计总数;长明灯单独一格,
  * 不与其他四种并排计数」—— 右端「表态 N」是四种轻表态之和,长明灯的数写在它自己那一格里
@@ -42,23 +44,19 @@ interface ReactionBarProps {
   totals?: { reactions: number; comments: number };
   /** 五种表态各自的数(`Post.reaction_counts`)。 */
   counts?: Record<(typeof REACTIONS)[number]["type"], number>;
+  /** 当前用户的表态(`Post.my_reaction` / `Comment.my_reaction`)。 */
+  mine?: (typeof REACTIONS)[number]["type"] | null;
 }
 
-export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarProps) {
-  const { user } = useTenant();
+export function ReactionBar({ postId, commentId, totals, counts, mine }: ReactionBarProps) {
   const { t } = useI18n();
   const toggleReaction = useToggleReaction();
-  const { data } = useReactions(
-    postId ? { post: postId } : commentId ? { comment: commentId } : undefined,
-  );
-  const reactions = data?.results ?? [];
-
-  const myReaction = reactions.find(
-    (r) => String(r.user) === String(user?.id),
-  )?.reaction_type;
+  const myReaction = mine ?? null;
 
   const handleToggle = (type: string) => {
     if (!postId && !commentId) return;
+    // 防重复:上一次还没回来就不再发 —— 按钮保持可点,已经乐观地显示了新状态。
+    if (toggleReaction.isPending) return;
     toggleReaction.mutate({
       post: postId,
       comment: commentId,
@@ -70,7 +68,7 @@ export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarPr
   const lamps = counts?.ETERNAL_LIGHT ?? 0;
   const lightTotal = counts ? LIGHT.reduce((sum, r) => sum + (counts[r.type] ?? 0), 0) : totals?.reactions;
   const base =
-    "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed";
+    "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard";
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -81,7 +79,7 @@ export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarPr
             key={type}
             type="button"
             onClick={() => handleToggle(type)}
-            disabled={toggleReaction.isPending}
+            aria-busy={toggleReaction.isPending || undefined}
             aria-pressed={isActive}
             data-reaction={type}
             className={`${base} px-2 ${
@@ -99,7 +97,7 @@ export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarPr
       <button
         type="button"
         onClick={() => handleToggle("ETERNAL_LIGHT")}
-        disabled={toggleReaction.isPending}
+        aria-busy={toggleReaction.isPending || undefined}
         aria-pressed={lit}
         data-reaction="ETERNAL_LIGHT"
         className={`${base} border border-[oklch(var(--color-ink))] px-[14px] font-title font-semibold ${

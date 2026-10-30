@@ -11636,6 +11636,9 @@ export interface components {
             readonly parent: string | null;
             content: string;
             readonly moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            /** @description 未删除的表态数。 */
+            readonly reaction_count: number;
+            readonly my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly tenant: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -11667,6 +11670,9 @@ export interface components {
             parent?: string | null;
             content: string;
             moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
+            /** @description 未删除的表态数。 */
+            readonly reaction_count: number;
+            readonly my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -16932,6 +16938,9 @@ export interface components {
             readonly parent?: string | null;
             content?: string;
             readonly moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
+            /** @description 未删除的表态数。 */
+            readonly reaction_count?: number;
+            readonly my_reaction?: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly tenant?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -17440,6 +17449,7 @@ export interface components {
             /** @description 按显示顺序,最多 9 张。 */
             readonly media?: components["schemas"]["PostMedia"][];
             readonly reaction_counts?: components["schemas"]["SoulReactionCounts"];
+            readonly my_reaction?: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly tenant?: number;
             /** Format: date-time */
             readonly edited_at?: string | null;
@@ -18051,6 +18061,7 @@ export interface components {
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
+            readonly my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             readonly tenant: number;
             /** Format: date-time */
             readonly edited_at: string | null;
@@ -18093,6 +18104,7 @@ export interface components {
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
+            readonly my_reaction: (components["schemas"]["ReactionTypeEnum"] | components["schemas"]["NullEnum"]) | null;
             /** Format: date-time */
             edited_at?: string | null;
             /** Format: date-time */

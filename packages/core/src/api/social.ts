@@ -30,6 +30,8 @@ export interface Post {
   media: PostMedia[];
   /** 五种表态各自的数(未删除的)。 */
   reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
+  /** 当前用户在这条帖子上的表态,没有为 null(服务端注解;发帖的响应里没有)。 */
+  my_reaction?: Reaction["reaction_type"] | null;
   tenant?: number;
   /** 非 PUBLISHED 只会出现在作者本人看到的数据里:PENDING=审核中,HIDDEN=已被隐藏。 */
   moderation_status?: "PUBLISHED" | "PENDING" | "HIDDEN";
@@ -55,6 +57,10 @@ export interface Comment {
   moderation_status?: "PUBLISHED" | "PENDING" | "HIDDEN";
   /** 只在发评论的响应里有值,见 `Post.screening`。 */
   screening?: ScreeningOutcome | null;
+  /** 未删除的表态数(列表与详情有;发评论的响应里没有)。 */
+  reaction_count?: number;
+  /** 当前用户在这条评论上的表态,没有为 null。 */
+  my_reaction?: Reaction["reaction_type"] | null;
   create_time: string;
   update_time?: string;
 }

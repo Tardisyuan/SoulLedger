@@ -10,6 +10,7 @@ import { notificationKeys } from "@soulledger/core/query_keys";
 import { notificationsApi, type Notification } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useWebSocket } from "@/src/contexts/WebSocketContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
@@ -69,6 +70,8 @@ export default function NotificationsPage() {
   const { t, formatDateTime, formatDate: formatDay } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  // 推送连着时不轮询:新通知经 WS 到达,eventHandlers.ts 失效 `notificationKeys.all`。断了才每 30 秒拉一次。
+  const { isConnected: pushed } = useWebSocket();
   const { hasPermission } = usePermissions();
   // User management is ADMIN only (`user.manage`); a realm lead's notice says to ask one instead.
   const canManageUsers = hasPermission("user.manage");
@@ -103,7 +106,7 @@ export default function NotificationsPage() {
       const res = await notificationsApi.list(params);
       return res.data.results;
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: pushed ? false : 30000,
     // Polled and pushed; the global 30s default would skip the refetch on mount.
     staleTime: 0,
   });
@@ -126,12 +129,26 @@ export default function NotificationsPage() {
     queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
   };
 
+  // 乐观:点下去这一行当场变已读(按钮随之消失),失败放回原样并提示,完了再以服务端为准。
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
-    onSuccess: () => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: notificationKeys.all });
+      const before = queryClient.getQueriesData<Notification[]>({ queryKey: notificationKeys.all });
+      for (const [key, rows] of before) {
+        if (Array.isArray(rows)) {
+          queryClient.setQueryData(key, rows.map((n) => (String(n.id) === id ? { ...n, is_read: true } : n)));
+        }
+      }
+      return { before };
+    },
+    onError: (_error, _id, ctx) => {
+      for (const [key, rows] of ctx?.before ?? []) queryClient.setQueryData(key, rows);
+      showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error");
+    },
+    onSettled: () => {
       invalidateNotifications();
     },
-    onError: () => showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error"),
   });
 
   const markAllReadMutation = useMutation({

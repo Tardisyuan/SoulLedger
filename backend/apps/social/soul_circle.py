@@ -214,9 +214,15 @@ def annotate_posts_for(viewer, qs):
         visible_comment_count=visible_comment_count(),
         visible_reaction_count=Count("reactions", filter=Q(reactions__is_deleted=False), distinct=True),
         **reaction_kind_counts(),
-        my_reaction=Subquery(
-            Reaction.objects.filter(post=OuterRef("pk"), user=viewer).values("reaction_type")[:1]
-        ),
+        my_reaction=my_reaction_of(viewer),
+    )
+
+
+def my_reaction_of(viewer, target="post"):
+    """「我的表态」:`viewer` 在这条帖子(`target="post"`)或评论(`"comment"`)上的表态,没有为 None。
+    每页一个子查询,不随条数增长;与表态列表分不分页无关。灵魂端与官员端共用。"""
+    return Subquery(
+        Reaction.objects.filter(**{target: OuterRef("pk")}, user=viewer).values("reaction_type")[:1]
     )
 
 
