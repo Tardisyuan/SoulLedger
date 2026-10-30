@@ -72,4 +72,6 @@ def test_the_backend_suite_runs_in_parallel():
     install = next(i for i, r in enumerate(runs) if "-r requirements-dev.txt" in r)
     tests = next(i for i, r in enumerate(runs) if "python -m pytest" in r)
     assert install < tests
-    assert "-n auto" in runs[tests], runs[tests]
+    # The command line itself, not the comment above it in the same `run:` block.
+    (command,) = [ln for ln in runs[tests].splitlines() if ln.strip().startswith("python -m pytest")]
+    assert "-n auto" in command, command
