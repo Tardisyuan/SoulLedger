@@ -690,7 +690,7 @@ checks that can never fire. Before trusting a green suite on anything touching
 transactions, constraints, or column widths, run it against PostgreSQL.
 
 **CI/Local Differences:**
-- **CI 什么时候自己跑(2026-10-30 用户决定)**:`ci.yml` 每天 03:00 UTC 跑 main、推 `v*` tag 时跑、手动跑;
+- **CI 什么时候自己跑(2026-10-30 用户决定)**:`ci.yml` 每天 03:00 UTC 跑 main(**main 过去 24 小时没有新提交就整轮跳过**,`changes` job 判断;用户 10-30)、推 `v*` tag 时跑、手动跑;
   `security.yml` 每周一 04:00 UTC 与手动。**不在分支推送与 PR 上跑** —— 额度耗尽过,而这里的推送几乎全是推 main,
   一天几十次。仓库已公开,GitHub 托管的 Linux runner 对公开仓库不计分钟,所以「每天」不再受分钟额度限制。
   推送的门禁是本地(unRAID)的 `scripts/run-gates.sh`;CI 每天兜一次底:覆盖率下限、真 PostgreSQL 全量、

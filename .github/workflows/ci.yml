@@ -9,7 +9,9 @@ name: CI
 # unRAID). CI runs:
 #   - daily, 03:00 UTC, on main: catches what the selective local gates can
 #     miss (coverage floor, the full real-PostgreSQL suite, all three E2E
-#     engines, npm/pip audit) within a day;
+#     engines, npm/pip audit) within a day — but only when main has a commit
+#     from the last 24 hours (the `changes` job; user 2026-10-30: no change, no
+#     run). A manual or tag run always runs;
 #   - on a pushed tag `v*`: a release gets a full run before it ships;
 #   - by hand: Actions tab, or `gh workflow run ci.yml --ref <branch>`.
 # Not on push to branches and not on pull_request. `concurrency` cancels a
@@ -48,9 +50,26 @@ permissions:
   contents: read
 
 jobs:
+  # Daily schedule only: skip everything when main's head commit is older than a day (nothing new since the last
+  # scheduled run). Any other event — workflow_dispatch, a v* tag — always runs.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          if [ "$age" -lt 86400 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; echo "no commit on main in the last 24 h; skipping"; fi
+
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     env:
       # At least 32 bytes: simplejwt signs HS256 with SECRET_KEY, and PyJWT
       # warns (InsecureKeyLengthWarning) on every encode/decode below that —
@@ -128,6 +147,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -218,6 +239,8 @@ jobs:
   mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -245,6 +268,8 @@ jobs:
   officer:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

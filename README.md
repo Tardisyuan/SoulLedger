@@ -437,7 +437,7 @@ workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出
 ## 测试、门禁与 CI
 
 **CI 不在分支推送与 PR 上跑**（GitHub Actions 额度耗尽过，2026-10-30 用户决定）：`ci.yml`
-每天 03:00 UTC 跑 main、推 `v*` tag 时跑、也可手动跑；`security.yml` 每周一 04:00 UTC 与手动。仓库公开，
+每天 03:00 UTC 跑 main（过去 24 小时没有新提交就跳过）、推 `v*` tag 时跑、也可手动跑；`security.yml` 每周一 04:00 UTC 与手动。仓库公开，
 Linux runner 不计分钟。
 所以「CI 是绿的」最多说明上一次每天运行时是绿的，每次推送的检查是本地（unRAID）门禁
 `scripts/run-gates.sh`。`.github/workflows/ci.yml` 定义了五个 job：
