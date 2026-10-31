@@ -117,19 +117,39 @@ def build(export_id):
         stored, size = _store_archive(export)
     except Exception as exc:  # noqa: BLE001 — 任何失败都要释放「一次一份」的名额
         logger.exception("soul_accounts: 导出 %s 生成失败", export_id)
-        SoulDataExport.objects.filter(pk=export.pk).update(
-            status=DataExportStatus.FAILED, finished_at=timezone.now(), error=type(exc).__name__[:200])
+        _fail_if_running(export.pk, exc)
         return SoulDataExport.objects.get(pk=export.pk)
+    # 收尾只在这一行**还是 RUNNING** 时写(2026-10-31):生成超过 `STUCK_AFTER` 的,`prune_expired` 已把它标成
+    # FAILED(StuckWorker),灵魂可能已经申请了新的一份。此时再写 READY 会让一个账号同时有两份包;
+    # 所以条件更新不中就删掉刚写的文件、保留 FAILED。收尾事务失败也删文件 —— 否则 zip 留在存储里没有行指向它。
     now = timezone.now()
-    with transaction.atomic():
-        export.status, export.finished_at, export.expires_at = DataExportStatus.READY, now, now + LINK_TTL
-        export.file_path, export.byte_size = stored, size
-        export.file_name = f"soulledger-{export.soul.soul_code}-{now:%Y%m%d}.zip"
-        export.save(update_fields=["status", "finished_at", "expires_at", "file_path", "byte_size", "file_name"])
-        audit("EXECUTE", export.soul, "个人资料导出已生成", actor=export.account.user,
-              resource="soul_data_export", resource_id=export.pk, changes={"bytes": size})
-        _notify_ready(export)
+    try:
+        with transaction.atomic():
+            final = {"status": DataExportStatus.READY, "finished_at": now, "expires_at": now + LINK_TTL,
+                     "file_path": stored, "byte_size": size,
+                     "file_name": f"soulledger-{export.soul.soul_code}-{now:%Y%m%d}.zip"}
+            written = SoulDataExport.objects.filter(pk=export.pk, status=DataExportStatus.RUNNING).update(**final)
+            if written:
+                for field, value in final.items():
+                    setattr(export, field, value)
+                audit("EXECUTE", export.soul, "个人资料导出已生成", actor=export.account.user,
+                      resource="soul_data_export", resource_id=export.pk, changes={"bytes": size})
+                _notify_ready(export)
+    except Exception as exc:  # noqa: BLE001 — 行没写成 READY,文件就不能留
+        logger.exception("soul_accounts: 导出 %s 收尾失败", export_id)
+        _remove_file(stored)
+        _fail_if_running(export.pk, exc)
+        return SoulDataExport.objects.get(pk=export.pk)
+    if not written:
+        logger.warning("soul_accounts: 导出 %s 生成完时已不是 RUNNING,丢弃这份文件", export_id)
+        _remove_file(stored)
+        return SoulDataExport.objects.get(pk=export.pk)
     return export
+
+
+def _fail_if_running(export_id, exc):
+    SoulDataExport.objects.filter(pk=export_id, status=DataExportStatus.RUNNING).update(
+        status=DataExportStatus.FAILED, finished_at=timezone.now(), error=type(exc).__name__[:200])
 
 
 def _notify_ready(export):
