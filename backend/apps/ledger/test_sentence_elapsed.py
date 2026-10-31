@@ -85,6 +85,14 @@ class TestSentenceElapsedArithmetic:
         assert elapsed > GREEK_CIRCUIT_YEARS
         assert elapsed == 2424
 
+    def test_without_today_it_measures_to_the_projects_day_not_the_hosts(self, monkeypatch):
+        """`timezone.localdate()` (TIME_ZONE), not `date.today()` (the process's local zone), like the rest
+        of the backend. A host clock east of UTC would otherwise count a year early just after midnight."""
+        from django.utils import timezone
+
+        monkeypatch.setattr(timezone, "localdate", lambda *a, **k: datetime.date(2126, 1, 1))
+        assert sentence_elapsed_years((2026, 1, 1)) == 100
+
 
 @pytest.mark.django_db
 class TestGreekReadingReadsTheTermStart:
