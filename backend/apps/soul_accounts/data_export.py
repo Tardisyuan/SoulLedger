@@ -326,12 +326,14 @@ def prune_expired(now=None):
     for export in expired:
         _remove_file(export.file_path)
     SoulDataExport.objects.filter(pk__in=[e.pk for e in expired]).update(status=DataExportStatus.EXPIRED, file_path="")
+    # 先标卡住的,再重新入队(2026-10-31):「卡住」按 `requested_at` 算,而重新入队的正是 `requested_at` 早的行。
+    # 次序反过来时,刚入队的那份被 worker 立刻认领成 RUNNING,同一次清理接着就把它标成 StuckWorker 失败。
+    stuck = SoulDataExport.objects.filter(status=DataExportStatus.RUNNING, requested_at__lte=now - STUCK_AFTER)
+    failed = stuck.update(status=DataExportStatus.FAILED, finished_at=now, error="StuckWorker")
     stale = list(SoulDataExport.objects.filter(status=DataExportStatus.QUEUED,
                                                requested_at__lte=now - REQUEUE_AFTER).values_list("pk", flat=True))
     for pk in stale:
         enqueue(pk)
-    stuck = SoulDataExport.objects.filter(status=DataExportStatus.RUNNING, requested_at__lte=now - STUCK_AFTER)
-    failed = stuck.update(status=DataExportStatus.FAILED, finished_at=now, error="StuckWorker")
     return {"expired": len(expired), "requeued": len(stale), "failed": failed}
 
 
