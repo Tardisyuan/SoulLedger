@@ -36,14 +36,15 @@ export function useFormValidation<T extends z.ZodType>(schema: T) {
   const validateField = useCallback(
     (fieldPath: string, value: unknown): string | null => {
       try {
+        // Only this field's issues count: the other keys are absent here, so a required sibling always
+        // fails the parse, and judging by `success` would mark a valid field with an empty error.
         const result = schema.safeParse({ [fieldPath]: value })
-        if (!result.success) {
-          const fieldIssue = result.error.issues.find(
-            (issue) => issue.path.join('.') === fieldPath
-          )
-          const errorMsg = fieldIssue?.message ?? null
-          setErrors((prev) => ({ ...prev, [fieldPath]: errorMsg ?? '' }))
-          return errorMsg ?? null
+        const fieldIssue = result.success
+          ? undefined
+          : result.error.issues.find((issue) => issue.path.join('.') === fieldPath)
+        if (fieldIssue) {
+          setErrors((prev) => ({ ...prev, [fieldPath]: fieldIssue.message }))
+          return fieldIssue.message
         }
         setErrors((prev) => {
           const { [fieldPath]: _, ...rest } = prev
