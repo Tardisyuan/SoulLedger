@@ -164,7 +164,9 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
     (`scripts/mobile-remote.sh`,守卫 `TestMobileRemoteMetroFollowsTheDependencies`);手动处理仍是 `metro stop` 再 `metro start`。
   - **release 包只有 debug 清单开了明文 http**(`usesCleartextTraffic`),release 连 `http://` 后端请求全失败、停在出错页 —— 生产走 https,
     不是 R8 的问题。验 release 包要么给它 https 的后端,要么接受只能看「能启动、无 ClassNotFound / 崩溃」。
-  - 登录页的截图拿不到画面:安卓 `screencap` 得到 0 字节(10-30 实测),代码里没找到防截屏的调用,原因未查清;不是 App 白屏。
+  - 登录页的截图拿不到画面:安卓 `screencap` 得到 0 字节 —— **是华为的安全键盘,不是 App**(10-31 查明)。密码框一获得焦点,
+    EMUI 就把输入法换成 `com.huawei.secime`,它的窗口 `secure=true`(`dumpsys window` 可见),键盘在屏上时整屏截图为空;
+    收起键盘(`input keyevent 4`)立即恢复。两步验证页的密码框同样如此。要截有密码框的页,先截再点框,或填完收起键盘再截。
     iOS 模拟器那次全黑**不是 App 的问题**:10-31 同一模拟器 `simctl launch` 报「system shell probably crashed」,
     `simctl shutdown` 后 `bootstatus -b` 重启,登录页截图正常。模拟器上登录不用手输凭据:`xcrun simctl pbcopy <udid>` 把值放进剪贴板,
     长按输入框点「粘贴」。拼音输入要先给模拟器加键盘(`simctl spawn <udid> defaults write -g AppleKeyboards -array
