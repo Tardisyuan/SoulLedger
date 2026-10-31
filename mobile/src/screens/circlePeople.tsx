@@ -43,6 +43,9 @@ type Nav = NativeStackNavigationProp<AppStackParams>;
 /** The server's report reasons; their copy is the moderation section's (egy settled there). */
 const REASONS: SoulReportReason[] = ["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"];
 
+/** The display-name field's face: Han in the bundled Noto Serif SC, a Latin name in the interface face. */
+export const nameFace = (name: string) => (quoteFamily(name) === family.serifHan ? family.serifHan : family.ui[500]);
+
 /** The civilization the soul is in now, by name, with its mark — the only "where" a card carries. */
 function CivMark() {
   const t = useTheme();
@@ -316,7 +319,7 @@ function RenameField({ value, onChange, onDone, onCancel }: { value: string; onC
         onEndEditing={onEndEditing}
         autoFocus
         maxLength={20}
-        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink }]}
+        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink, fontFamily: nameFace(value) }]}
       />
       {refusal ? (
         <Txt testID="name-refusal" variant="caption" tone="negInk" accessibilityRole="alert">
@@ -761,6 +764,10 @@ const styles = StyleSheet.create({
   detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 13, lineHeight: 24, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
-  /** A name is not something said: the interface face, not the serif (v3). */
-  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 15, fontFamily: family.ui[500] },
+  /**
+   * A name is not something said: the interface face, not the serif (v3) — but Archivo has no Han, so a Han
+   * name fell back to the phone's own face (a script face on the test Huawei, 10-31). `nameFace` gives Han
+   * the bundled Noto Serif SC and keeps a Latin name in the interface face.
+   */
+  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 15 },
 });
