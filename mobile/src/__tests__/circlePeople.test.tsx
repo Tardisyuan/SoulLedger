@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { FlatList, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { family } from "../fonts";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { SessionContext } from "../session";
@@ -283,6 +284,8 @@ describe("search", () => {
   it("by code: the exact-match label, and the code nowhere in the result", async () => {
     stubApi({ "/me/social/search/": { status: 200, data: [{ user_id: 5, display_name: "许南", avatar: null, is_active: true, is_following: false }] } });
     wrap(<CircleSearchScreen />);
+    // The Han hint in the bundled serif, not the phone's system face.
+    expect(StyleSheet.flatten(screen.getByTestId("search-input").props.style).fontFamily).toBe(family.serifHan);
     fireEvent(screen.getByTestId("search-input"), "submitEditing", { nativeEvent: { text: "4H8Q2MZT7C" } });
     expect(await screen.findByText("编号精确匹配")).toBeTruthy();
     expect(screen.queryByText("4H8Q2MZT7C")).toBeNull();
@@ -321,6 +324,8 @@ describe("report", () => {
     // Han serif in an Android multiline input: under ~1.8 × the size the first line's top is cut (chat.test, 10-31).
     const detail = StyleSheet.flatten(screen.getByTestId("report-detail").props.style);
     expect(detail.lineHeight / detail.fontSize).toBeGreaterThanOrEqual(1.8);
+    // A Han placeholder in the bundled serif, not whatever the phone's system face is (华为真机 10-31: a script face).
+    expect(detail.fontFamily).toBe(family.serifHan);
     expect(screen.getByTestId("report-submit").props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText("辱骂骚扰")).toBeTruthy();
     fireEvent.press(screen.getByTestId("reason-ABUSE"));
