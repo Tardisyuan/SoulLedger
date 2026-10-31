@@ -148,7 +148,10 @@ def test_0010_converts_every_legacy_shape_without_the_key(migration_round_trip):
                                [stored(), idem])
 
     def snapshot(state):
-        return {idem: dict(zip(("kind", "value"), _decode(s), strict=True))
+        # The stored text too, except for the double-encoded plain row: the reverse brings that one back as an
+        # object (the shape the old field read correctly), so only its kind and value are restored.
+        return {idem: {**dict(zip(("kind", "value"), _decode(s), strict=True)),
+                       "stored": None if idem == "enc-mig-plain" else s}
                 for idem, s in _stored_by_idem(state).items()}
 
     def check_forward(state):
