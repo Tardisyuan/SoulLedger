@@ -30,6 +30,28 @@ def _isolate_cache_from_redis():
         yield
 
 
+#: A fixed, test-only Fernet key (the one `scripts/run-gates.sh` used to export).
+TEST_ENCRYPTION_KEY = "Y2ktdGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcyE="
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _encryption_key_when_none_is_set():
+    """The suite runs with an ENCRYPTION_KEY wherever it runs (review 2026-10-31 A1).
+
+    It used to come from the runner: the main checkout's backend/.env, then `scripts/run-gates.sh` exporting
+    one — and CI, which does neither, went red on five tests that were green everywhere else. Now the suite
+    sets its own when the environment has none; tests about the no-key path override it to "" themselves.
+    Settings are already loaded when this conftest is imported, hence an override and not `os.environ`.
+    """
+    from django.conf import settings
+
+    if settings.ENCRYPTION_KEY:
+        yield
+        return
+    with override_settings(ENCRYPTION_KEY=TEST_ENCRYPTION_KEY):
+        yield
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _fast_password_hasher():
     """MD5 instead of PBKDF2 (1,000,000 iterations) for every hash the suite makes.
