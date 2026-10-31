@@ -171,19 +171,24 @@ describe("the offline bar", () => {
     const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
     secure.set(REFRESH_TOKEN_KEY, "R");
     const calls = stubApi({ "/me/": { status: 200, data: PROFILE }, "/me/life/": { status: 200, data: life(1) } });
-    renderApp();
-    await screen.findByTestId("profile-card");
-    await drop();
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
-    });
-    const count = (u: string) => calls.filter((c) => c.url === u).length;
-    expect(["/me/life/", "/me/past-lives/", "/me/sentence-plan/"].map((u) => [u, count(u)])).toEqual([
-      ["/me/life/", 1],
-      ["/me/past-lives/", 1],
-      ["/me/sentence-plan/", 1],
-    ]);
-    spy.mockResolvedValue(false);
+    // Fake timers: "sent only once" after a real-time sleep said nothing under load (the sleep could end before a
+    // remount's requests went out). The 50 ms below are on the fake clock: every timer due by then has run.
+    jest.useFakeTimers();
+    try {
+      renderApp();
+      await screen.findByTestId("profile-card");
+      await drop();
+      await act(() => jest.advanceTimersByTimeAsync(50));
+      const count = (u: string) => calls.filter((c) => c.url === u).length;
+      expect(["/me/life/", "/me/past-lives/", "/me/sentence-plan/"].map((u) => [u, count(u)])).toEqual([
+        ["/me/life/", 1],
+        ["/me/past-lives/", 1],
+        ["/me/sentence-plan/", 1],
+      ]);
+    } finally {
+      jest.useRealTimers();
+      spy.mockResolvedValue(false);
+    }
   });
 });
 
