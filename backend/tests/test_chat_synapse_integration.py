@@ -25,6 +25,7 @@ import uuid
 
 import pytest
 import requests
+from django.db import transaction
 
 from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import sign as sign_grant
@@ -42,7 +43,15 @@ CONVERSATIONS = "/api/v1/me/chat/conversations/"
 
 
 @pytest.fixture
-def synapse(settings):
+def synapse(settings, monkeypatch):
+    # The room power-level sync and the Matrix deactivation are celery tasks since 575d78d8; run `.delay` in
+    # place, as `chat_support.matrix` does. This file then ran nowhere, so the mute step's 403 went
+    # unasserted until CI's synapse job (2026-10-31: it read 200).
+    from apps.chat import tasks
+
+    monkeypatch.setattr(tasks.sync_rooms_task, "delay", lambda *a, **k: tasks.sync_rooms_task.run(*a, **k))
+    monkeypatch.setattr(tasks.deactivate_matrix_task, "delay",
+                        lambda *a, **k: tasks.deactivate_matrix_task.run(*a, **k))
     settings.MATRIX_ENABLED = True
     settings.MATRIX_CLIENT = "apps.chat.matrix.SynapseClient"
     settings.MATRIX_INTERNAL_URL = URL
@@ -194,7 +203,9 @@ def test_the_request_rule_the_mute_and_retirement_against_synapse(cn_tenant, syn
     assert _say(a_token, room_id)[0] == 200
 
     # 转世:Matrix 用户停用、token 作废、离开房间(Synapse 后台异步做完)。
-    with django_capture_on_commit_callbacks(execute=True):
+    # In a transaction, as its docstring requires (the reincarnation that calls it holds one): it locks the
+    # account with select_for_update, which this transaction=True test has no outer atomic for.
+    with django_capture_on_commit_callbacks(execute=True), transaction.atomic():
         retire_account_for_rebirth(a.soul, a.cycle)
     assert _say(a_token, room_id)[0] == 401
 

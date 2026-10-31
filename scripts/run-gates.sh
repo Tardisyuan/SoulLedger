@@ -1164,6 +1164,14 @@ PROBE_PY
     PYARGS=(-q --no-header --no-cov --durations=30 --durations-min=5 $XDIST
         -o faulthandler_timeout="$TEST_TIMEOUT" -o faulthandler_exit_on_timeout=true $REAL_PG_ARGS
         ${SKIP_MIGRATION:+-m "not migration"} $META_IGNORE ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS)
+    # The multi-database guard (tests/test_multidb_shadow.py) exists only under its own settings, so the
+    # suite below skips it. `--real-pg --full` runs it first, on the same PostgreSQL and Redis (C21, 2026-10-31).
+    if [ "$REAL_PG" = 1 ] && [ "$FULL_RUN" = 1 ]; then
+        echo "  → pytest: multi-database guard (--ds=config.settings_multidb -m multidb)"
+        SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $REAL_PG_ARGS --ds=config.settings_multidb \
+            -m multidb tests/test_multidb_shadow.py 2>&1 | tail -4
+        [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest (multi-database guard, tests/test_multidb_shadow.py) failed"
+    fi
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest "${PYARGS[@]}" >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     pytest_finish
@@ -1245,13 +1253,19 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     fi
     JEST_LOG=$(mktemp "${TMPDIR:-/tmp}/prepush-jest.XXXXXX")
     T_JEST=$(date +%s)
+    # COVERAGE ON --full ONLY (A3, 2026-10-31). jest.config.js's coverageThreshold (global, and
+    # packages/core/src) is evaluated only under --coverage, and until now only CI passed it. A selective
+    # run cannot judge it: each threshold is an aggregate over every file under its key, and the related
+    # tests leave most of those files unexecuted — so a core change gets no core-scoped coverage check here.
+    JEST_COV=--coverage=false
+    [ "$FULL_RUN" = 1 ] && { JEST_COV=--coverage; echo "    with coverage: --full checks jest.config.js's coverageThreshold"; }
     # shellcheck disable=SC2086
-    npx jest --coverage=false --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
+    npx jest $JEST_COV --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
     JEST_STATUS=$?
     tail -4 "$JEST_LOG"
     echo "    jest took $(( $(date +%s) - T_JEST ))s"
     if [ "$JEST_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$JEST_LOG" | awk '!seen[$0]++' | head -20
+        grep -E '^(FAIL |  ● |Jest: .*coverage threshold)' "$JEST_LOG" | awk '!seen[$0]++' | head -20
         echo "    full jest log: $JEST_LOG"
         fail "jest failed"
     fi
@@ -1309,12 +1323,15 @@ app_jest() {
     # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
     # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
     log=$(mktemp "${TMPDIR:-/tmp}/prepush-$dir-jest.XXXXXX")
+    # --full runs the app's `test:coverage` when it has one (its thresholds), as CI's job does; else `test`.
+    local script=test
+    [ "$FULL_RUN" = 1 ] && grep -q '"test:coverage"' "$ROOT/$dir/package.json" && { script=test:coverage; echo "    with coverage: npm run test:coverage"; }
     # shellcheck disable=SC2086
-    npm run --workspace "$dir" test --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
+    npm run --workspace "$dir" "$script" --silent -- --silent ${paths:+--runTestsByPath $paths} >"$log" 2>&1
     status=$?
     tail -4 "$log"
     if [ "$status" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$log" | awk '!seen[$0]++' | head -20
+        grep -E '^(FAIL |  ● |Jest: .*coverage threshold)' "$log" | awk '!seen[$0]++' | head -20
         echo "    full $dir jest log: $log"
         fail "$msg"
     fi
