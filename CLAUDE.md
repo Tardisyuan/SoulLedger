@@ -291,6 +291,10 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     数据库读 `backend/.env` 的 `DATABASE_URL`(worktree 用主 checkout 的),不认 `.prepush.env` 的 SQLite 覆盖;115 连不上就**拒绝**,不退回 SQLite。
     自带 `--create-db`、单条测试 600 s 限时、一次性 Redis、门禁锁。
   - 全量 `scripts/run-gates.sh --real-pg --full`(含迁移往返)**只在大分支合进 main 前跑一次**。实测 `-n 2` 含往返约 45 分钟(10-28)。
+    2026-10-31 起它先跑多库守卫(`--ds=config.settings_multidb -m multidb tests/test_multidb_shadow.py`,同一个 PG;unRAID 实测 8 passed / 137 s)。
+  - **覆盖率门槛只在 `--full` 查(2026-10-31)**:`--full` 的前端 jest 带 `--coverage`(`jest.config.js` 的 global 与 `packages/core/src` 两组门槛),
+    两个 App 有 `test:coverage` 脚本就跑它;选择性运行照旧 `--coverage=false`。**改 core 时不做「只看 core」的覆盖率检查**:门槛是目录下全部文件的合计,
+    相关测试只执行其中一部分,按它判一定低于门槛 —— 判不准，所以不做。守卫 `TestCoverageOnFull`。
   - **`--dist worksteal` 已打开(2026-10-29),`--ff` 仍不加。** 10-28 加过又撤回:实时类测试随顺序变红(两次 9 / 11 条)。
     根因是 `test_event_bus.py` 的 `EventBus().reset()` 清空了全进程共用的事件处理器表,之后同一 worker 上通知、事件、
     WebSocket 推送全丢;根 `conftest.py` 的 `_restore_event_handlers` 现在每条测试后还原(`6d2c21dd`),worksteal 全量两轮 8076 passed。
@@ -603,6 +607,9 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 跑全量(规则同 pre-push 的 SQLite 那条)。
 # 多库守卫(G3/G7,opt-in,2026-10-09):第二个别名 `tenant_shadow` + 测试路由,只在这个 settings 下存在,
 # 正常门禁不跑(skip)。说明与限制见 docs/ARCHITECTURE-tenant-sharding.md 4.1。
+# 2026-10-31 起 CI 的 backend job(PG)与 `run-gates.sh --real-pg --full` 都跑它;真 Synapse 的
+# `tests/test_chat_synapse_integration.py` 由 CI 的 `synapse` job 跑(`scripts/synapse-test.sh up` 起一次性 Synapse,
+# 有 skip 就红),门禁里不跑。手动复现照那个 job 的 env 设 SYNAPSE_TEST_*,`SYN_DOCKER_ARGS` 换成本机的端口 / 网络参数。
 cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
   DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 \
   .venv/bin/python -m pytest --ds=config.settings_multidb -m multidb --no-cov tests/test_multidb_shadow.py

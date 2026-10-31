@@ -75,3 +75,37 @@ def test_the_backend_suite_runs_in_parallel():
     # The command line itself, not the comment above it in the same `run:` block.
     (command,) = [ln for ln in runs[tests].splitlines() if ln.strip().startswith("python -m pytest")]
     assert "-n auto" in command, command
+
+
+def _runs(job):
+    data, _ = _load("ci.yml")
+    return [step.get("run", "") for step in data["jobs"][job]["steps"]]
+
+
+def test_the_multidb_guard_runs_in_the_backend_job():
+    """Review C21 (2026-10-31): test_multidb_shadow.py exists only under its own settings, so the suite skips it."""
+    (command,) = [r for r in _runs("backend") if "test_multidb_shadow.py" in r]
+    assert "--ds=config.settings_multidb" in command and "-m multidb" in command, command
+
+
+def test_the_synapse_integration_runs_against_a_started_synapse_and_a_skip_fails_it():
+    """Review C21: test_chat_synapse_integration.py skips without SYNAPSE_TEST_URL. The job starts a disposable
+    Synapse, sets the variables both of its skips read, and turns any skip into a red job."""
+    data, _ = _load("ci.yml")
+    job = data["jobs"]["synapse"]
+    env = job["env"]
+    assert env["SYNAPSE_TEST_URL"] and env["SYNAPSE_TEST_PUSH"], env
+    runs = _runs("synapse")
+    up = next(i for i, r in enumerate(runs) if "scripts/synapse-test.sh up" in r)
+    test = next(i for i, r in enumerate(runs) if "tests/test_chat_synapse_integration.py" in r)
+    assert up < test
+    assert "--liveserver 0.0.0.0:18099" in runs[test] and "! grep -q SKIPPED" in runs[test], runs[test]
+    assert (WORKFLOWS.parents[1] / "scripts" / "synapse-test.sh").is_file()
+
+
+@pytest.mark.parametrize("job,app", [("mobile", "mobile"), ("officer", "mobile-officer")])
+def test_the_app_jobs_run_test_coverage_once_the_app_defines_it(job, app):
+    """Review C22: the apps get coverage thresholds through a `test:coverage` script. The step runs it when the
+    package defines it and plain `test` otherwise — never neither."""
+    (command,) = [r for r in _runs(job) if "package.json" in r]
+    assert f"require('./{app}/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'" in command, command
