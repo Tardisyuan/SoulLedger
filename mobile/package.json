@@ -11,7 +11,8 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile node_modules/.cache/tsc.tsbuildinfo",
     "lint": "eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint/",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@expo-google-fonts/archivo": "^0.4.2",

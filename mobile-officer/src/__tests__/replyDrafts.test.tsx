@@ -82,9 +82,9 @@ describe("the reply box", () => {
     await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "已发出", expect.any(String)));
     await waitFor(() => expect(screen.getByTestId("letter-input").props.value).toBe(""));
     expect(stored()).toBeNull();
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 600));
-    });
+    // Run the debounced write now if one is still waiting (what its timer would do), instead of sleeping past
+    // SAVE_DELAY_MS on real time — under load the sleep can end before the timer fires and prove nothing.
+    act(() => flushDraft());
     expect(stored()).toBeNull();
   });
 

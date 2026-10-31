@@ -21,6 +21,13 @@ module.exports = {
   testMatch: ["**/*.test.ts", "**/*.test.tsx"],
   // AfterEnv, not setupFiles: the act guard at the bottom needs afterEach.
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  // Coverage floor (review 2026-10-31 C22): evaluated only with --coverage (`npm run test:coverage`), like the web's.
+  // The denominator is every source file, not just the ones a test loads. Measured on unRAID 2026-10-31
+  // (1142 tests): statements 93.00 / branches 86.76 / functions 88.81 / lines 95.20. Ratchet: about two points
+  // under the reading; raise it when the reading rises, never lower it to make a red run green.
+  collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/**/__tests__/**"],
+  coverageDirectory: "<rootDir>/node_modules/.cache/coverage",
+  coverageThreshold: { global: { statements: 91, branches: 84, functions: 86, lines: 93 } },
   // Above the 5 s findBy/waitFor budget set in jest.setup.js, so a miss fails on its own message.
   testTimeout: 15_000,
   // One React for the whole run — the one this workspace resolves — so a
