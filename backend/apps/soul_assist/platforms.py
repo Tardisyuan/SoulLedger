@@ -31,6 +31,7 @@ from urllib.parse import urlsplit
 import requests
 from django.core.cache import cache
 
+from apps.core import outbound
 from apps.soul_assist import config
 
 logger = logging.getLogger(__name__)
@@ -121,8 +122,9 @@ def table():
 
 
 def _get(url, headers, timeout):
-    """唯一出网的地方。不重试。"""
-    return requests.get(url, headers=headers, timeout=timeout)
+    """唯一出网的地方。不重试,不跟重定向;连上之后查对端是公网(或运维放行的主机),否则 ValueError。"""
+    with outbound.session_for(url, config.private_hosts_allowed()) as session:
+        return session.get(url, headers=headers, timeout=timeout, allow_redirects=False)
 
 
 # ── 获取模型 ───────────────────────────────────────────────────────────────
@@ -156,7 +158,7 @@ def list_models(conn: config.Connection) -> dict:
         resp = _get(url, headers, LIST_TIMEOUT_SECONDS)
     except requests.Timeout:
         return failed("timeout")
-    except requests.RequestException as exc:
+    except (requests.RequestException, ValueError) as exc:  # ValueError:对端是内网(outbound.require_public_ip)
         logger.warning("assistant list models failed: %s", type(exc).__name__)
         return failed("connection")
     if resp.status_code in (404, 405):

@@ -28,21 +28,18 @@ class PriceSerializer(serializers.Serializer):
 
 def _endpoint_must_be_public(url):
     """管理页填的地址不许指向内网 / 本机,除非主机在 `ASSISTANT_PRIVATE_HOSTS_ALLOWED` 里或是 env 里配的那两个地址的主机。
-    判定与 webhook 同一个(`is_global`)。解析不出的主机名放过:连接时它一样连不上,而测试与离线环境里这类名字很多。"""
+    判定与 webhook 同一个(`is_global`)。解析不出的主机名这里放过(测试与离线环境里这类名字很多):
+    保存时的解析只是提示,真正的关口在连接时 —— `platforms._get` 与 `vectors._post` 走
+    `outbound.session_for`,连上之后再查对端地址、不跟重定向(审查 2026-10-31 A9)。"""
     import socket
     from urllib.parse import urlparse
-
-    from django.conf import settings
 
     from apps.core.outbound import require_public_ip
 
     host = (urlparse(url).hostname or "").lower()
     if not host:
         return url
-    allowed = set(settings.ASSISTANT_PRIVATE_HOSTS_ALLOWED)
-    allowed |= {(urlparse(u).hostname or "").lower()
-                for u in (settings.ASSISTANT_BASE_URL, settings.ASSISTANT_EMBEDDING_URL) if u}
-    if host in allowed:
+    if host in config.private_hosts_allowed():
         return url
     try:
         addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
