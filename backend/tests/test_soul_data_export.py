@@ -423,6 +423,20 @@ def test_prune_requeues_a_lost_job_and_frees_a_dead_worker(world, queued):
     assert SoulDataExport.objects.get(pk=lost).status == DataExportStatus.FAILED
 
 
+def test_a_job_requeued_hours_late_is_not_failed_by_the_same_prune(world, queued, monkeypatch):
+    """「卡住」按 `requested_at` 算,重新入队的也正是 `requested_at` 早的行。worker 一拿到就是 RUNNING;
+    同一次清理不能接着把它当卡住的标失败(2026-10-31:此前先入队、后标卡住)。"""
+    with world.capture(execute=True):
+        late = _request(world.client).data["id"]
+    SoulDataExport.objects.filter(pk=late).update(requested_at=timezone.now() - timedelta(hours=3))
+    # A worker that claims the job the moment it is enqueued (the claim `build` makes before it starts writing).
+    monkeypatch.setattr(data_export, "enqueue", lambda export_id: SoulDataExport.objects.filter(
+        pk=export_id).update(status=DataExportStatus.RUNNING))
+    assert data_export.prune_expired() == {"expired": 0, "requeued": 1, "failed": 0}
+    row = SoulDataExport.objects.get(pk=late)
+    assert row.status == DataExportStatus.RUNNING and row.error == ""
+
+
 def test_building_twice_makes_one_file(world, queued, media_root):
     with world.capture(execute=True):
         export_id = _request(world.client).data["id"]
