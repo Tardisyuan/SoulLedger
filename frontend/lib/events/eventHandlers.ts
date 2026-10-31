@@ -33,17 +33,15 @@
  * a coincidence to preserve but the point: the optimistic path and the realtime
  * path should invalidate the same thing, and the local one is known to work.
  *
- * TWO KEYS ARE STILL LITERALS: `["dispatch"]` and `["death-sync"]`, because
- * neither family has a factory yet. Both are correct today — every dispatch
- * and death-sync page keys under the same first segment, so the one-segment
- * key prefix-matches all of them — but correct by coincidence of spelling,
- * which is precisely how the four above went wrong. They are the next two to
- * convert, not an exception to the rule.
+ * `["dispatch"]` and `["death-sync"]` were the last two literals; they are
+ * `dispatchKeys.all` / `deathSyncKeys.all` now (2026-10-31).
  */
 import type { InvalidateQueryFilters } from "@tanstack/react-query";
 import { getLocale } from "@soulledger/core/platform";
 import { translate } from "@/lib/i18n/activeTranslator";
 import {
+  deathSyncKeys,
+  dispatchKeys,
   dispositionKeys,
   notificationKeys,
   schedulerKeys,
@@ -51,6 +49,24 @@ import {
   soulKeys,
   workflowKeys,
 } from "@soulledger/core/query_keys";
+
+/**
+ * Every key family a handler below invalidates — what a socket that was down may have missed
+ * (`WebSocketContext` refetches these on a reconnect). `eventRegistry.test.ts` dispatches every
+ * registered event and requires this list to equal the roots the handlers actually reached, both ways:
+ * until 2026-10-31 it was hand-copied into `WebSocketContext` and had lost dispatch and death-sync.
+ */
+export const REALTIME_KEY_FAMILIES = [
+  notificationKeys.all,
+  notificationKeys.unreadCount,
+  soulKeys.all,
+  workflowKeys.all,
+  dispositionKeys.all,
+  dispatchKeys.all,
+  deathSyncKeys.all,
+  socialKeys.all,
+  schedulerKeys.all,
+] as const;
 
 import type {
   DeathSyncEventPayload,
@@ -294,7 +310,7 @@ export function handleNotificationEvent(payload: NotificationEventPayload, ctx: 
 }
 
 export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+  ctx.queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
 
   const toastMsg = withName(eventLabel(payload.event, "events.realtime.fallback_dispatch"), payload.soul_name);
   // `DISPATCH_CANCELLED` is not a registered event (see `event_registry.ts` —
@@ -318,13 +334,13 @@ export function handleDispatchEvent(payload: DispatchEventPayload, ctx: EventCon
  * already get an in-app notification, so a toast here would say it twice.
  */
 export function handleDispatchStateChanged(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["dispatch"] });
+  ctx.queryClient.invalidateQueries({ queryKey: dispatchKeys.all });
   ctx.queryClient.invalidateQueries(soulScope(payload.soul_id));
   return { success: true, invalidatedKeys: ["dispatch", "souls"] };
 }
 
 export function handleDeathSyncEvent(payload: DeathSyncEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["death-sync"] });
+  ctx.queryClient.invalidateQueries({ queryKey: deathSyncKeys.all });
 
   const label = eventLabel(payload.event, "events.realtime.fallback_death_sync");
   ctx.showToast(label, "info", 5000);
@@ -358,20 +374,10 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
     invalidated.push("social.comments", "social.posts");
   }
 
-  // Invalidate reaction counts. There is no reaction list any more: the counts and
-  // `my_reaction` ride on the post or comment rows, which is what
-  // `useToggleReaction` refetches too (posts for a post, comments for a comment).
-  if (["REACTION_ADDED", "REACTION_REMOVED"].includes(payload.event)) {
-    if (payload.post_id) {
-      ctx.queryClient.invalidateQueries({
-        queryKey: socialKeys.posts.detail(payload.post_id),
-      });
-      invalidated.push("social.posts");
-    } else {
-      ctx.queryClient.invalidateQueries({ queryKey: socialKeys.comments.all });
-      invalidated.push("social.comments");
-    }
-  }
+  // REACTION_ADDED / REACTION_REMOVED: nothing. No backend code publishes them (EventType keeps the
+  // members, so they stay registered — see `event_registry.ts`); a reaction is a REST toggle whose own
+  // mutation (`useToggleReaction`) updates `my_reaction` and the counts. Until 2026-10-31 a branch here
+  // invalidated post / comment rows for a frame that never arrives.
 
   // Invalidate follow queries
   if (["USER_FOLLOWED", "USER_UNFOLLOWED"].includes(payload.event)) {

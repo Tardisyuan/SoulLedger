@@ -30,6 +30,21 @@ jest.mock("react", () => {
 });
 
 import JudgmentDetailPage from "@/app/judgment/[id]/page";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/src/components/judgment/JudgmentDraftAutosave";
+
+/**
+ * 越过自动保存的去抖窗口,在假时钟上:断言「没存」之前,去抖的定时器**一定**已经到点。
+ * 此前这里是真睡 1500 ms(去抖 1200 ms):机器忙时 effect 晚挂上定时器,睡完它还没到点,
+ * 「没调用过」就白绿。用它的测试先 `useFakeTimers({ advanceTimers: true })`(findBy / waitFor 照常走)。
+ */
+async function pastAutosaveWindow() {
+  await act(async () => {
+    jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS + 300);
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  });
+}
+const fakeClock = () => jest.useFakeTimers({ advanceTimers: true });
+afterEach(() => jest.useRealTimers());
 
 // 「插入审判台」落点读 `?cite=`;默认没有。
 let mockSearch = "";
@@ -654,6 +669,7 @@ const NO_PLACEMENT = { draft_destination_realm_id: null, draft_term_years: null,
 
 describe("丁 · 判词自动保存", () => {
   beforeEach(() => {
+    fakeClock();
     judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_saved_at: null, draft_verdict: null }) });
   });
 
@@ -663,7 +679,7 @@ describe("丁 · 判词自动保存", () => {
     });
     renderPage();
     await screen.findAllByRole("radio");
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
 
     fireEvent.keyDown(document.body, { key: "3" });
@@ -708,7 +724,7 @@ describe("丁 · 判词自动保存", () => {
     expect(screen.queryByTestId("draft-saved-at")).toBeNull();
 
     fireEvent.change(notesBox(), { target: { value: "我的判词,续写" } });
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
   }, 15000);
 
@@ -736,7 +752,7 @@ describe("丁 · 判词自动保存", () => {
     fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.use_server") }));
     expect(notesBox().value).toBe("他人的判词");
     expect(radio("PASSED").checked).toBe(true);
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
   }, 15000);
 
@@ -750,7 +766,7 @@ describe("丁 · 判词自动保存", () => {
     renderPage();
     await screen.findByText(tZh("judgment.detail.final"));
     fireEvent.keyDown(document.body, { key: "2" });
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
   }, 15000);
 });
@@ -952,6 +968,7 @@ describe("戊 · 发落", () => {
   }, 15000);
 
   it("重开页面时还原存下的发落,挂「草稿」与保存时间", async () => {
+    fakeClock();
     judgmentApi.get.mockResolvedValue({
       data: judgment({
         draft_verdict: "FAILED", draft_destination_realm_id: "r-9", draft_term_years: 12, draft_eternal: false,
@@ -964,11 +981,12 @@ describe("戊 · 发落", () => {
     expect(screen.getByTestId("placement-draft")).toBeInTheDocument();
     expect(screen.getByTestId("placement-saved")).toHaveTextContent(tZh("judgment.draft.saved_at", { time: "2026-09-25T14:02:00Z" }));
     // 还原不是编辑:不存。
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
   }, 15000);
 
   it("发落的 409 与判词一样:停下、冲突条;「改用对方的」连发落一起换成对方的", async () => {
+    fakeClock();
     judgmentApi.get.mockResolvedValue({ data: judgment({ notes: "", draft_version: 4, draft_verdict: null }) });
     judgmentApi.saveDraft.mockRejectedValue({
       response: {
@@ -992,7 +1010,7 @@ describe("戊 · 发落", () => {
     fireEvent.click(within(banner).getByRole("button", { name: tZh("judgment.draft.use_server") }));
     await waitFor(() => expect(termBox().value).toBe("30"));
     expect(destinationBox().value).toBe("r-7");
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1);
   }, 15000);
 
@@ -1201,9 +1219,10 @@ describe("v3 · 当前这一判", () => {
   });
 
   it("预选不触发自动保存;存过的草稿裁决优先于预选", async () => {
+    fakeClock();
     const a = renderPage();
     await waitFor(() => expect(radio("PURGATORY").checked).toBe(true));
-    await new Promise((r) => setTimeout(r, 1500));
+    await pastAutosaveWindow();
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled();
     a.unmount();
 

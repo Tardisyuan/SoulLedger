@@ -231,7 +231,7 @@ function JudgmentQueuePageContent() {
                   {judgment.soul_name ? (
                     judgment.soul_name
                   ) : (
-                    <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
+                    <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />
                   )}
                 </Link>
               </td>

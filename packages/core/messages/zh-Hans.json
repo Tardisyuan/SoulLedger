@@ -2024,6 +2024,7 @@
     "soul_filter": "灵魂",
     "soul_filter_clear": "清除灵魂筛选",
     "soul_name": "灵魂名称",
+    "soul_name_not_returned": "判决未附带灵魂名称",
     "civilization": "文明",
     "court": "法庭",
     "verdict": "裁决",

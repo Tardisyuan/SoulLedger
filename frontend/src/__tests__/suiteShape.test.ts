@@ -275,6 +275,10 @@ const COLLECTED_FILES = [
   "StartWorkflowDialog.test.tsx",
   // 2026-10-18 第四十三批 W-1 ~ W-5:选站列表、门口那一块、加减站与 segment_changed、审批页「待我选站」、记录句子。
   "workflowSegments.test.tsx",
+  // 2026-10-31 core 分支覆盖率回到门槛之上(A3):分段规则、拒绝读法与请求形状、表单校验 hook 直接测。
+  "workflowSegmentRules.test.ts",
+  "coreRefusalReaders.test.ts",
+  "useFormValidation.test.ts",
   // 2026-10-19 第四十五批:出身地域的表单 / 详情、编辑器自动分流、流程详情没走到的站、选站的分流理由。
   "originRegionBatch45.test.tsx",
   // 2026-10-19 第四十六批:补录出身地域的入口(soul.update)、预览表、无可更新、完成页先给跳过的行、文件级错误。

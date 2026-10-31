@@ -17,6 +17,7 @@ import {
   isEventRegistered,
   BACKEND_EVENT_TYPES,
   REALTIME_ONLY_EVENT_TYPES,
+  REALTIME_KEY_FAMILIES,
   type EventContext,
   type EventPayload,
 } from "@/lib/events/event_registry";
@@ -541,36 +542,17 @@ describe("social events", () => {
     ]);
   });
 
-  it("invalidates the post detail for REACTION_ADDED on a post", () => {
-    const { ctx, invalidateQueries } = makeContext();
-
-    dispatchEvent(
-      { domain: "social", event: "REACTION_ADDED", post_id: "p2" } as EventPayload,
-      ctx,
-    );
-
-    // There is no reaction cache any more (2026-10-31): the counts live on the post row.
-    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","posts","detail","p2"]']);
-  });
-
-  it("still refreshes a reaction on a comment (no post_id): the comment rows carry the counts", () => {
-    // Previously this invalidated NOTHING and the case was named for that as
-    // if it were a decision. Reactions on comments are cached in the same
-    // family as reactions on posts; leaving them stale was the per-post key's
-    // side effect, not a choice.
-    const { ctx, invalidateQueries, showToast } = makeContext();
-
-    const result = dispatchEvent(
-      { domain: "social", event: "REACTION_REMOVED", comment_id: "c1" } as EventPayload,
-      ctx,
-    );
-
-    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","comments"]']);
-    expect(result.invalidatedKeys).toEqual(["social.comments"]);
-    // No banner: a reaction is not addressed to the viewer, and the payload
-    // carries no field that could say whether it was. See the "aimed at the
-    // viewer" block below.
-    expect(showToast).not.toHaveBeenCalled();
+  it("REACTION_ADDED / _REMOVED are registered and do nothing: the backend has no sender for them", () => {
+    // Registered so `detectEventDrift` stays empty (EventType keeps the members); a reaction is a REST
+    // toggle whose own mutation updates the row. Handled, not unknown: no "Unhandled event" warning.
+    for (const event of ["REACTION_ADDED", "REACTION_REMOVED"]) {
+      const { ctx, invalidateQueries, showToast } = makeContext();
+      const result = dispatchEvent({ domain: "social", event, post_id: "p2" } as EventPayload, ctx);
+      expect(result).toEqual({ success: true, invalidatedKeys: [] });
+      expect(invalidatedKeys(invalidateQueries)).toEqual([]);
+      expect(showToast).not.toHaveBeenCalled();
+    }
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("invalidates the follow family and both users' profiles", () => {
@@ -829,5 +811,38 @@ describe("toast copy follows the locale", () => {
       const t = lookup(bundle);
       expect(keys.filter((k) => t(k) === k)).toEqual([]);
     }
+  });
+});
+
+describe("REALTIME_KEY_FAMILIES (what a reconnect refetches) is what the handlers reach", () => {
+  /** Dispatch every registered event, with every id a handler might narrow by; map each key to its family. */
+  function reachedFamilies(): string[] {
+    const reached = new Set<string>();
+    for (const domain of getRegisteredDomains()) {
+      for (const event of getRegisteredEvents(domain)) {
+        const { ctx, invalidateQueries } = makeContext("u2");
+        dispatchEvent(
+          { domain, event, soul_id: "s1", workflow_id: "w1", post_id: "p1", follower_id: "u1", following_id: "u2" } as EventPayload,
+          ctx,
+        );
+        for (const key of invalidatedKeys(invalidateQueries)) {
+          const family = REALTIME_KEY_FAMILIES.map((f) => JSON.stringify(f)).find(
+            (f) => key === f || key.startsWith(f.slice(0, -1) + ","),
+          );
+          reached.add(family ?? `UNLISTED ${domain}.${event} → ${key}`);
+        }
+      }
+    }
+    return [...reached].sort();
+  }
+
+  it("every key a handler invalidates is under a listed family, and every listed family is reached", () => {
+    expect(reachedFamilies()).toEqual(REALTIME_KEY_FAMILIES.map((f) => JSON.stringify(f)).sort());
+  });
+
+  it("includes dispatch and death-sync (the hand-copied list had lost both until 2026-10-31)", () => {
+    const listed = REALTIME_KEY_FAMILIES.map((f) => JSON.stringify(f));
+    expect(listed).toEqual(expect.arrayContaining(['["dispatch"]', '["death-sync"]']));
+    expect(listed).not.toContain('["judgments"]');
   });
 });

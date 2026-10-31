@@ -907,6 +907,55 @@ function scanCaseNumbers(): { raw: Violation[]; chips: number } {
   return { raw, chips };
 }
 
+// ---------------------------------------------------------------------------
+// Rule 5 — a missing-value reason is translated copy, never a literal
+// ---------------------------------------------------------------------------
+
+/**
+ * `<MissingValue reason>` (and `missingReason` on the components that forward it) goes into
+ * `aria-label` and `title`: a screen reader reads it aloud. Until 2026-10-31 three sites passed the
+ * developer note "soul_name 未随判决返回", so an English-locale reader heard untranslated Chinese
+ * naming a JSON field. A literal cannot be translated, CJK or not, so any string literal is refused.
+ */
+function literalReasonsIn(file: string, text: string): Violation[] {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const found: Violation[] = [];
+  const isLiteral = (n: ts.Node | undefined): boolean =>
+    !!n && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateExpression(n));
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxAttribute(node)) {
+      const name = node.name.getText(sf);
+      const tag = (node.parent.parent as ts.JsxOpeningLikeElement).tagName.getText(sf);
+      const init = node.initializer;
+      const value = init && ts.isJsxExpression(init) ? init.expression : init;
+      if (((name === "reason" && tag === "MissingValue") || name === "missingReason") && isLiteral(value)) {
+        found.push({ file, line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1, text: node.getText(sf) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return found;
+}
+
+describe("missing-value reasons are translated", () => {
+  it("sees a literal reason in every spelling, and not a translated one", () => {
+    const probe = [
+      `<MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />`,
+      `<MissingValue kind="unrecorded" reason={"not returned"} />`,
+      `<DomainEnum namespace="x" value={v} missingReason={\`no \${x}\`} />`,
+      `<MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />`,
+      `<Other reason="a prop of something else" />`,
+    ].join("\n");
+    expect(literalReasonsIn("probe.tsx", probe).map((v) => v.line)).toEqual([1, 2, 3]);
+  });
+
+  it("no component passes a literal reason", () => {
+    const found = SOURCE_FILES.flatMap((file) => literalReasonsIn(relative(file), readFileSync(file, "utf8")));
+    expect(found.length === 0 ? "" : `Pass t("…") — the reason is read aloud:\n${format(found)}`).toBe("");
+  });
+});
+
 describe("case numbers (CASE_NUMBER_POLICY)", () => {
   it("shows the case number on the desk, the queue and the workflow card", () => {
     // Not vacuous: the three places the Design puts it each render one (the desk's is the
