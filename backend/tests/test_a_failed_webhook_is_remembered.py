@@ -167,3 +167,59 @@ def test_a_webhook_that_lost_its_secret_is_abandoned_not_retried_forever(hook):
     row.refresh_from_db()
     assert row.status == EventWebhookStatus.ABANDONED
     assert "signing_secret" in row.error
+
+
+@pytest.mark.django_db
+def test_a_failed_row_is_picked_by_its_own_backoff_not_by_when_it_was_created(hook):
+    """FAILED 的行建得早不等于该再试了:刚失败的那条由 `self.retry` 排着,兜底在
+    `update_time + retry_delay(attempt) + older_than` 之前不碰它(2026-10-31;此前按 `create_time` 选)。"""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.events.tasks import retry_delay
+
+    for _ in range(4):
+        _record(_envelope())
+    rows = list(EventWebhookDelivery.objects.order_by("id"))
+    now = timezone.now()
+    cutoff = now - timedelta(seconds=300)
+    # (失败时刻, attempt):刚失败 / 退避到期前 / 到期后 / 很久以前。每条都早在十分钟前就建好了。
+    shapes = [(now, 1), (cutoff - timedelta(seconds=retry_delay(4) - 3), 4),
+              (cutoff - timedelta(seconds=retry_delay(4) + 3), 4), (now - timedelta(hours=1), 2)]
+    for row, (failed_at, attempt) in zip(rows, shapes, strict=True):
+        EventWebhookDelivery.objects.filter(pk=row.pk).update(
+            status=EventWebhookStatus.FAILED, attempt=attempt, update_time=failed_at,
+            create_time=now - timedelta(seconds=600))
+
+    enqueued = []
+    with patch.object(deliver_event_webhook, "delay", side_effect=enqueued.append):
+        picked = retry_pending_webhooks(older_than_seconds=300)
+
+    assert sorted(enqueued) == sorted([str(rows[2].id), str(rows[3].id)])
+    assert str(rows[0].id) not in enqueued and str(rows[1].id) not in enqueued
+    assert picked == 2
+
+
+@pytest.mark.django_db
+def test_a_failure_stamps_the_time_its_backoff_counts_from(hook):
+    """上面那条依赖「失败的那次保存写下 `update_time`」。不写的话,兜底读到的是建行时的时间。"""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    row = _record(_envelope())[0]
+    EventWebhookDelivery.objects.filter(pk=row.pk).update(update_time=timezone.now() - timedelta(days=1))
+
+    def boom(*args, **kwargs):
+        raise OSError("connection refused")
+
+    with patch("requests.Session.post", side_effect=boom), patch(
+        "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
+        lambda url: None,
+    ):
+        deliver_event_webhook.apply(args=[str(row.id)])
+
+    row.refresh_from_db()
+    assert row.status == EventWebhookStatus.FAILED
+    assert timezone.now() - row.update_time < timedelta(minutes=1)
