@@ -189,6 +189,15 @@ def _vendor_params(conn):
     return {}
 
 
+def _http_client():
+    """SDK 的连接也查对端:公网，或运维放行的主机(`config.private_hosts_allowed`);不跟重定向。
+    保存时解析不出、之后指向内网的模型地址，对话请求也连不过去(审查 2026-10-31 A9 补)。"""
+    from apps.core.outbound import public_only_http_client
+    from apps.soul_assist.config import private_hosts_allowed
+
+    return public_only_http_client(private_hosts_allowed())
+
+
 class OpenAICompatibleProvider:
     """OpenAI Chat Completions 协议:OpenAI、Azure OpenAI、Ollama、DeepSeek 等只差 base_url。"""
 
@@ -199,7 +208,8 @@ class OpenAICompatibleProvider:
 
             c = self._conn()
             try:
-                client = openai.OpenAI(api_key=c.api_key or "unused", base_url=c.base_url or None, max_retries=0)
+                client = openai.OpenAI(api_key=c.api_key or "unused", base_url=c.base_url or None, max_retries=0,
+                                       http_client=_http_client())
             except Exception as exc:
                 raise _unexpected(exc, c) from exc
         self.client = client
@@ -337,7 +347,8 @@ class AnthropicProvider:
                 # 管理员在页面上「清除 key」就成了空话。没有 key 就是鉴权失败。
                 raise ProviderError("no api key", "auth")
             try:
-                client = anthropic.Anthropic(api_key=c.api_key, base_url=c.base_url or None, max_retries=0)
+                client = anthropic.Anthropic(api_key=c.api_key, base_url=c.base_url or None, max_retries=0,
+                                             http_client=_http_client())
             except Exception as exc:
                 raise _unexpected(exc, c) from exc
         self.client = client
