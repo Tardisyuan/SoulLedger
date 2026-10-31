@@ -11,8 +11,8 @@ import { useFormValidation } from "@soulledger/core/validations/useFormValidatio
 
 const schema = z.object({
   name: z.string().min(2, "too short").regex(/^[a-z]+$/, "letters only"),
-  // Optional: `validateField` parses `{[field]: value}` alone, so a required sibling would fail every field check.
-  age: z.number().min(0, "negative").optional(),
+  // Required on purpose: checking `name` must not fail because `age` is absent from the field check.
+  age: z.number().min(0, "negative"),
 });
 
 describe("useFormValidation", () => {
@@ -53,6 +53,39 @@ describe("useFormValidation", () => {
     });
     expect(message).toBeNull();
     expect(result.current.errors).toEqual({ age: "negative" });
+  });
+
+  it("judges only the checked field while other required fields are still empty", () => {
+    const { result } = renderHook(() => useFormValidation(schema));
+    act(() => {
+      result.current.validate({});
+    });
+    expect(Object.keys(result.current.errors).sort()).toEqual(["age", "name"]);
+
+    let message: string | null = "unset";
+    act(() => {
+      message = result.current.validateField("name", "abc");
+    });
+    expect(message).toBeNull();
+    expect(result.current.getError("name")).toBeUndefined();
+    expect(Object.keys(result.current.errors)).toEqual(["age"]);
+
+    act(() => {
+      result.current.clearErrors();
+    });
+    act(() => {
+      message = result.current.validateField("name", "abc");
+    });
+    expect(message).toBeNull();
+    expect(result.current.errors).toEqual({});
+    expect(result.current.hasErrors()).toBe(false);
+
+    act(() => {
+      message = result.current.validateField("name", "1");
+    });
+    expect(message).toBe("too short");
+    expect(result.current.errors).toEqual({ name: "too short" });
+    expect(result.current.errors).not.toHaveProperty("age");
   });
 
   it("reports nothing, rather than throwing, when the schema itself throws", () => {
