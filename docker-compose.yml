@@ -9,6 +9,16 @@
 # `${…}` values come from a root `.env` (see .env.example); the names are the
 # ones config/settings.py reads.
 
+# Every service logs through this (docker's json-file driver keeps everything
+# forever by default; one chatty container filled the disk). Anchors do not
+# cross files, so docker-compose.production.yml has its own copy for the
+# services only it defines. 10 MB x 5 files = at most 50 MB per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 x-django-env: &django-env
   DATABASE_URL: postgres://soulledger:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/soulledger
   REDIS_URL: redis://redis:6379/0
@@ -30,8 +40,18 @@ x-django-env: &django-env
   METRICS_ALLOWED_IPS: ${METRICS_ALLOWED_IPS:-}
   SECRET_KEY_FALLBACKS: ${SECRET_KEY_FALLBACKS:-}
   ENCRYPTION_KEY_FALLBACKS: ${ENCRYPTION_KEY_FALLBACKS:-}
+  # Every *_RETENTION_DAYS settings.py reads (tests/test_deploy_hardening.py
+  # holds this list to settings.py, defaults included).
+  AUDIT_LOG_RETENTION_DAYS: ${AUDIT_LOG_RETENTION_DAYS:-365}
+  LOGIN_LOG_RETENTION_DAYS: ${LOGIN_LOG_RETENTION_DAYS:-180}
+  EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS: ${EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS:-90}
+  USER_NOTIFICATION_READ_RETENTION_DAYS: ${USER_NOTIFICATION_READ_RETENTION_DAYS:-180}
+  PUSH_DELIVERY_RETENTION_DAYS: ${PUSH_DELIVERY_RETENTION_DAYS:-90}
+  INACTIVE_PUSH_DEVICE_RETENTION_DAYS: ${INACTIVE_PUSH_DEVICE_RETENTION_DAYS:-30}
   ASSIST_USAGE_RETENTION_DAYS: ${ASSIST_USAGE_RETENTION_DAYS:-730}
   DEATH_SYNC_REQUEST_RETENTION_DAYS: ${DEATH_SYNC_REQUEST_RETENTION_DAYS:-90}
+  SCHEDULER_RUN_RETENTION_DAYS: ${SCHEDULER_RUN_RETENTION_DAYS:-30}
+  SCHEDULER_FAILED_RUN_RETENTION_DAYS: ${SCHEDULER_FAILED_RUN_RETENTION_DAYS:-365}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
   # Officer e-mail links (password reset / e-mail verification) are built from
   # DESK_URL; unset, settings.py falls back to http://localhost:3000 and every
@@ -65,6 +85,7 @@ x-django-env: &django-env
 
 services:
   db:
+    logging: *logging
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: soulledger
@@ -79,16 +100,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # The celery broker: a queued task lives only here until a worker takes it.
+  # Without a volume and AOF a `docker compose up` that recreates this
+  # container dropped every queued task (password-reset mails, exports,
+  # pushes). AOF fsync once a second: a crash loses at most ~1 s of enqueues.
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
+    logging: *logging
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # `redis-cli ping` exits 0 on "NOAUTH Authentication required", so the
+      # bare form was healthy against a server it could not use. The reply
+      # must be PONG; production passes the password as REDISCLI_AUTH.
+      test: ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
+    logging: *logging
     build:
       # Root context: backend/Dockerfile copies `backend/…`, and .dockerignore
       # at the root keeps `backend/.env`, `test.db` and the coverage dumps out.
@@ -144,8 +177,15 @@ services:
         condition: service_healthy
 
   celery:
+    logging: *logging
     image: soulledger-backend
-    command: celery -A config.celery worker --loglevel=info
+    # Explicit pool size: the default is one child per host CPU, and each
+    # child is a full Django process. Arithmetic (docs/DEPLOY.md §1.2, idle
+    # worker measured 2026-10-31): parent 167 MB RSS, children 136 MB each,
+    # ~267 MB PSS for all three — 2 children fit production's 512m limit;
+    # --max-memory-per-child (KiB) replaces a child that grew past ~200 MB
+    # after its current task instead of letting the cgroup OOM-kill the lot.
+    command: celery -A config.celery worker --loglevel=info --concurrency=2 --max-memory-per-child=200000
     environment: *django-env
     # Unhealthy when this worker no longer answers a broker ping (wedged, or
     # lost the broker). `docker compose ps` / an external monitor reads it;
@@ -164,6 +204,7 @@ services:
         condition: service_healthy
 
   celery-beat:
+    logging: *logging
     image: soulledger-backend
     # Exactly one beat, on the database scheduler (settings.CELERY_BEAT_SCHEDULER
     # says the same; the flag keeps this line true if settings drift). Never
@@ -193,6 +234,7 @@ services:
   # pgbouncer:production 的 pgbouncer 只配了 soulledger 库,而 Synapse 自带连接池
   # (cp_min/cp_max),再套一层没有收益。
   synapse:
+    logging: *logging
     image: matrixdotorg/synapse:v1.161.0
     restart: unless-stopped
     volumes:
@@ -228,6 +270,7 @@ services:
         condition: service_healthy
 
   frontend:
+    logging: *logging
     build:
       # Root context: `frontend` is an npm workspace and its `@soulledger/core`
       # dependency lives in `packages/core`, outside `./frontend`.
@@ -259,3 +302,5 @@ volumes:
   # Synapse 的签名密钥与媒体(聊天图片)。消息本身在 db 的 synapse 库里;
   # 签名密钥丢了等于换了一台 homeserver —— 与数据库一起备份。
   synapse_data:
+  # Redis AOF (appendonly.aof) — the queued celery tasks.
+  redis_data:

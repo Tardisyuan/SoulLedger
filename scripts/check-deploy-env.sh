@@ -35,6 +35,8 @@ fail() { echo "FAIL  $1"; FAILS=$((FAILS + 1)); }
 warn() { echo "WARN  $1"; }
 lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 is_true() { case "$(lower "$1")" in true|1|yes) return 0;; esac; return 1; }
+# ALLOW_* waivers: from the env file, or set on the command line for one run.
+flag() { is_true "$(get "$1")" || is_true "${!1:-}"; }
 
 present() { # name
   if [ -n "$(get "$1")" ]; then pass "$1 is set"; return 0; fi
@@ -120,6 +122,42 @@ if is_true "$(get MATRIX_ENABLED)"; then
   fi
 else
   pass "MATRIX_ENABLED is off (chat checks skipped)"
+fi
+
+# --- TLS --------------------------------------------------------------------
+# With SECURE_SSL_REDIRECT on (the default) Django 301s every http request to
+# https, so nginx must have the certificate scripts/nginx-entrypoint.sh looks
+# for, or the whole site is a redirect to a port nobody answers. The first
+# issuance itself needs nginx on plain 80: ALLOW_NO_TLS_CERT=1 for that one
+# bring-up (docs/DEPLOYMENT.md「TLS 证书」).
+ssl_redirect=$(get SECURE_SSL_REDIRECT)
+if [ -n "$ssl_redirect" ] && ! is_true "$ssl_redirect"; then
+  warn "SECURE_SSL_REDIRECT is off: no TLS checks (staging only)"
+elif present TLS_DOMAIN; then
+  cert="${LETSENCRYPT_DIR:-/etc/letsencrypt}/live/$(get TLS_DOMAIN)/fullchain.pem"
+  if [ -s "$cert" ]; then pass "certificate found at $cert"
+  elif flag ALLOW_NO_TLS_CERT; then warn "no certificate at $cert and ALLOW_NO_TLS_CERT=1: plain HTTP until it is issued"
+  else fail "no certificate at $cert (not issued, or not readable: run this as root); first issuance: ALLOW_NO_TLS_CERT=1"; fi
+fi
+
+# --- alerts and off-site backups: required unless explicitly waived ---------
+need_or_allow() { # VAR ALLOW_FLAG consequence
+  if [ -n "$(get "$1")" ]; then pass "$1 is set"
+  elif flag "$2"; then warn "$1 is empty and $2=1: $3"
+  else fail "$1 is empty: $3 (set it, or $2=1 to accept that)"; fi
+}
+need_or_allow OPS_ALERT_WEBHOOK_URL ALLOW_NO_ALERTS "a failed backup, restore drill or scheduled job notifies nobody"
+need_or_allow BACKUP_OFFSITE_REMOTE ALLOW_NO_OFFSITE "backups exist only on this host's disk"
+
+recipient=$(get BACKUP_AGE_RECIPIENT)
+if [ -n "$recipient" ]; then
+  case "$recipient" in
+    age1*|ssh-ed25519\ *|ssh-rsa\ *) pass "BACKUP_AGE_RECIPIENT looks like an age / ssh public key";;
+    *) fail "BACKUP_AGE_RECIPIENT is not an age1… or ssh-ed25519/ssh-rsa public key";;
+  esac
+elif [ -n "$(get BACKUP_OFFSITE_REMOTE)" ]; then
+  if flag ALLOW_PLAINTEXT_OFFSITE; then warn "BACKUP_AGE_RECIPIENT is empty and ALLOW_PLAINTEXT_OFFSITE=1: off-site backups are unencrypted"
+  else fail "BACKUP_AGE_RECIPIENT is empty: backup-db.sh refuses to copy unencrypted backups off-site (set it, or ALLOW_PLAINTEXT_OFFSITE=1)"; fi
 fi
 
 # --- recommended, never fatal ----------------------------------------------

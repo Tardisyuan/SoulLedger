@@ -25,8 +25,24 @@
 # (default 90; 0 = never delete) are then removed there. Unset: skipped, with
 # one line saying so. Set but rclone missing or failing: non-zero exit.
 #
+# Encryption (optional): BACKUP_AGE_RECIPIENT is an age public key (`age1…`, or
+# an `ssh-ed25519 …` / `ssh-rsa …` line). Each finished file is then also written
+# as <name>.age, and only the .age files go off-site. Local plaintext stays: it
+# sits on the same disk as the database it was dumped from. With an off-site
+# remote and no recipient the off-site copy is REFUSED (exit 3) unless
+# ALLOW_PLAINTEXT_OFFSITE=1. The private key belongs off this host
+# (docs/DEPLOYMENT.md「备份加密」); restore-drill.sh BACKUP_AGE_IDENTITY proves it decrypts.
+#
+# Exit codes: 0 all done; 1 a backup step failed; 3 every local backup was
+# written but the setup is incomplete: an off-site copy refused as plaintext, or
+# — with BACKUP_STRICT=1 (the production compose service) — no
+# OPS_ALERT_WEBHOOK_URL (opt out: ALLOW_NO_ALERTS=1) or no BACKUP_OFFSITE_REMOTE
+# (opt out: ALLOW_NO_OFFSITE=1). A manual dev run (no BACKUP_STRICT) exits 0
+# without either. $BACKUP_DIR/.backup-ok is removed at the start and touched only
+# on exit 0; the compose healthcheck requires it.
+#
 # Any non-zero exit calls ops_alert (scripts/ops-alert.sh): POSTs to
-# OPS_ALERT_WEBHOOK_URL, or prints that nobody was notified when it is unset.
+# OPS_ALERT_WEBHOOK_URL, or prints a loud block saying nobody was notified.
 #
 # MEDIA_DIR (optional): if set, also tars that directory to
 # soulledger_media_<timestamp>.tar.gz alongside the db dump, same partial-
@@ -39,7 +55,26 @@ set -eu
 
 # shellcheck disable=SC1091
 . "$(dirname "$0")/ops-alert.sh"
-trap 'rc=$?; [ "$rc" -eq 0 ] || ops_alert "backup-db.sh FAILED (exit $rc); see the backup container log"' EXIT
+trap 'rc=$?; [ "$rc" -eq 0 ] || ops_alert "${ALERT_MSG:-backup-db.sh FAILED (exit $rc); see the backup container log}" || true' EXIT
+PROBLEMS=""
+problem() { PROBLEMS="${PROBLEMS}  - $1
+"; echo "WARNING: $1" >&2; }
+
+# <file>: also write <file>.age when BACKUP_AGE_RECIPIENT is set.
+encrypt() {
+    [ -n "${BACKUP_AGE_RECIPIENT:-}" ] || return 0
+    if ! command -v age >/dev/null 2>&1; then
+        echo "ERROR: BACKUP_AGE_RECIPIENT is set but age is not installed" >&2
+        exit 1
+    fi
+    if ! age -r "$BACKUP_AGE_RECIPIENT" -o "$1.age.partial" "$1" || [ ! -s "$1.age.partial" ]; then
+        rm -f "$1.age.partial"
+        echo "ERROR: encrypting $1 failed" >&2
+        exit 1
+    fi
+    mv "$1.age.partial" "$1.age"
+    echo "Encrypted: $1.age"
+}
 
 BACKUP_DIR="${1:-./backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -66,6 +101,7 @@ BACKUP_FILE="${BACKUP_DIR}/soulledger_${TIMESTAMP}.sql.gz"
 PARTIAL="${BACKUP_FILE}.partial"
 
 mkdir -p "$BACKUP_DIR"
+rm -f "$BACKUP_DIR/.backup-ok"
 
 echo "Backing up SoulLedger database..."
 echo "  Host: ${PGHOST}:${PGPORT}"
@@ -86,6 +122,7 @@ if ! gzip -t "$PARTIAL" || [ ! -s "$PARTIAL" ]; then
     exit 1
 fi
 mv "$PARTIAL" "$BACKUP_FILE"
+encrypt "$BACKUP_FILE"
 echo "Backup complete: ${BACKUP_FILE} ($(du -h "$BACKUP_FILE" | cut -f1))"
 
 if [ -n "${MEDIA_DIR:-}" ]; then
@@ -104,6 +141,7 @@ if [ -n "${MEDIA_DIR:-}" ]; then
         exit 1
     fi
     mv "$MEDIA_PARTIAL" "$MEDIA_FILE"
+    encrypt "$MEDIA_FILE"
     echo "Media backup complete: ${MEDIA_FILE} ($(du -h "$MEDIA_FILE" | cut -f1))"
 fi
 
@@ -127,6 +165,7 @@ if [ -n "${SYNAPSE_DATA_DIR:-}" ]; then
             exit 1
         fi
         mv "${SYNAPSE_FILE}.partial" "$SYNAPSE_FILE"
+        encrypt "$SYNAPSE_FILE"
         echo "Synapse database backup complete: ${SYNAPSE_FILE} ($(du -h "$SYNAPSE_FILE" | cut -f1))"
 
         SYNAPSE_DATA_FILE="${BACKUP_DIR}/soulledger_synapse_data_${TIMESTAMP}.tar.gz"
@@ -138,19 +177,31 @@ if [ -n "${SYNAPSE_DATA_DIR:-}" ]; then
             exit 1
         fi
         mv "${SYNAPSE_DATA_FILE}.partial" "$SYNAPSE_DATA_FILE"
+        encrypt "$SYNAPSE_DATA_FILE"
         echo "Synapse data backup complete: ${SYNAPSE_DATA_FILE} ($(du -h "$SYNAPSE_DATA_FILE" | cut -f1))"
     fi
 fi
 
 if [ -z "${BACKUP_OFFSITE_REMOTE:-}" ]; then
     echo "BACKUP_OFFSITE_REMOTE not set; no off-site copy (this host's disk is the only copy)"
+    if [ "${BACKUP_STRICT:-}" = 1 ] && [ "${ALLOW_NO_OFFSITE:-}" != 1 ]; then
+        problem "BACKUP_OFFSITE_REMOTE is not set: this host's disk is the only copy (set it, or ALLOW_NO_OFFSITE=1)"
+    fi
+elif [ -z "${BACKUP_AGE_RECIPIENT:-}" ] && [ "${ALLOW_PLAINTEXT_OFFSITE:-}" != 1 ]; then
+    problem "off-site copy REFUSED: backups are not encrypted (set BACKUP_AGE_RECIPIENT, or ALLOW_PLAINTEXT_OFFSITE=1)"
 else
+    if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then
+        set -- --include 'soulledger_*.age'
+    else
+        echo "WARNING: copying UNENCRYPTED backups off-site (ALLOW_PLAINTEXT_OFFSITE=1)" >&2
+        set -- --include 'soulledger_*' --exclude '*.partial'
+    fi
     if ! command -v rclone >/dev/null 2>&1; then
         echo "ERROR: BACKUP_OFFSITE_REMOTE is set but rclone is not installed" >&2
         exit 1
     fi
     echo "Copying backups off-site to ${BACKUP_OFFSITE_REMOTE}..."
-    if ! rclone copy --include 'soulledger_*' --exclude '*.partial' "$BACKUP_DIR" "$BACKUP_OFFSITE_REMOTE"; then
+    if ! rclone copy "$@" "$BACKUP_DIR" "$BACKUP_OFFSITE_REMOTE"; then
         echo "ERROR: off-site copy failed; local backups are intact" >&2
         exit 1
     fi
@@ -170,5 +221,16 @@ find "$BACKUP_DIR" -name "soulledger_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_media_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_synapse_*.dump" -mtime +"$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -name "soulledger_synapse_data_*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name "soulledger_*.age" -mtime +"$RETENTION_DAYS" -delete
+
+if [ -z "${OPS_ALERT_WEBHOOK_URL:-}" ] && [ "${BACKUP_STRICT:-}" = 1 ] && [ "${ALLOW_NO_ALERTS:-}" != 1 ]; then
+    problem "OPS_ALERT_WEBHOOK_URL is not set: a failed backup notifies nobody (set it, or ALLOW_NO_ALERTS=1)"
+fi
+if [ -n "$PROBLEMS" ]; then
+    printf 'ERROR: local backups written, but:\n%s' "$PROBLEMS" >&2
+    ALERT_MSG="backup-db.sh incomplete (exit 3): $(printf '%s' "$PROBLEMS" | tr '\n' ' ')"
+    exit 3
+fi
+touch "$BACKUP_DIR/.backup-ok"
 
 echo "Done."
