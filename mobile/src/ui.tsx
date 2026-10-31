@@ -833,6 +833,19 @@ export function SwitchMark({ on, large }: { on: boolean; large?: boolean }) {
   );
 }
 
+/** Keyboards that can only type Latin letters, digits and symbols: a field on one of them is a code, a number or an address. */
+const LATIN_KEYBOARDS: ReadonlySet<string> = new Set([
+  "ascii-capable",
+  "number-pad",
+  "numeric",
+  "decimal-pad",
+  "phone-pad",
+  "email-address",
+  "url",
+  "visible-password",
+  "numbers-and-punctuation",
+]);
+
 export function Input({
   label,
   labelHidden,
@@ -882,7 +895,12 @@ export function Input({
     ? { backgroundColor: t.s2, borderColor: t.hair }
     : { backgroundColor: t.s1, borderColor: bad ? t.neg : focused ? t.ink : t.inkSubtle, borderWidth: bad ? 2 : 1 };
   const text = typeof rest.value === "string" ? rest.value : "";
-  const fontFamily = multiline ? quoteFamily(text || (rest.placeholder ?? "")) : mono ? family.mono[500] : family.mono[400];
+  // A1 input faces. Multiline (prose) is always the quote face. A single-line field is set in mono only when it
+  // can hold nothing but Latin: `mono`, a password, or a Latin-only keyboard (a code, a number, an email). Any
+  // other field gets the quote face, so Han text and a Han placeholder are drawn in the bundled Noto Serif SC
+  // instead of falling back to the phone's own face (on the test Huawei a script face, 10-31).
+  const latinOnly = mono || !!rest.secureTextEntry || (rest.keyboardType !== undefined && LATIN_KEYBOARDS.has(rest.keyboardType));
+  const fontFamily = multiline || !latinOnly ? quoteFamily(text || (rest.placeholder ?? "")) : mono ? family.mono[500] : family.mono[400];
   // Handoff 2d: at ≥ 1.7× text the reveal leaves the field's right edge for a full-width row under it.
   const { stack } = useLayout();
   const reveal = secureToggle ? (
@@ -1591,7 +1609,9 @@ export const styles = StyleSheet.create({
   inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
   input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 15 },
   monoInput: { fontSize: 15, letterSpacing: 2.2 },
-  multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 15, lineHeight: 24, textAlignVertical: "top" },
+  // Android clips the first line's top of a Noto Serif SC multiline field under about 1.8 x the size
+  // (Huawei 10-31: 15/24 and 15/26 clip, 15/27 whole); `inputFace.test.tsx` holds the ratio.
+  multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
   revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },

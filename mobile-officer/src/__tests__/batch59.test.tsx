@@ -14,8 +14,9 @@ import { OnlineContext } from "../../../mobile/src/online";
 import { ToastProvider, translate } from "../shared";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
-// The bottom sheet animates closed after a confirm; let it land before the test ends (act warnings otherwise).
-const settleSheet = () => act(async () => new Promise((r) => setTimeout(r, 400)));
+// Flush the updates a confirm leaves in flight before the test ends (act warnings otherwise). The sheet double in
+// jest.setup.js closes synchronously, so there is nothing to wait out in real time.
+const settleSheet = () => act(async () => {});
 
 const mockJudgment = jest.fn();
 const mockUpdate = jest.fn();
