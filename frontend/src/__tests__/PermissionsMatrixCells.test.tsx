@@ -96,9 +96,11 @@ async function ready() {
   await screen.findByText(/^permissions\.matrix\.showing/);
   await waitFor(() => expect(cell("JUDGE", "soul.read")).toHaveAttribute("aria-checked", "true"));
 }
+/** Past the 300 ms impact debounce (`useMatrixCells`) on the fake clock the "impact" block runs on — not a real sleep. */
 async function flushImpact() {
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 350));
+    jest.advanceTimersByTime(300);
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
   });
 }
 /** Save; a removal is tier 2, so the confirm dialog comes first. */
@@ -318,6 +320,9 @@ describe("category select-all (rbac-snowy 2026-10-29)", () => {
 });
 
 describe("impact", () => {
+  beforeEach(() => jest.useFakeTimers({ advanceTimers: true }));
+  afterEach(() => jest.useRealTimers());
+
   it("names the workflow step that would lose its last approver and marks the causing cell ◇", async () => {
     api.impact.mockResolvedValue({
       data: {
