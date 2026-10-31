@@ -121,3 +121,32 @@ def session_for(url, private_hosts=()):
         except (socket.gaierror, UnicodeError):
             pass
     return public_only_session(ips)
+
+
+def public_only_http_client(private_hosts=()):
+    """The same guard for the openai / anthropic SDKs, which speak httpx (`httpx2`), not `requests`:
+    an `httpx2.Client` whose every TCP connection must land on a public address, unless the host it
+    dials is one of `private_hosts` (resolved by the connect itself, so at connect time). No redirects,
+    no proxies from the environment. A refused peer is `httpcore2.ConnectError`, which the SDKs turn
+    into `APIConnectionError` like any dead host."""
+    import httpcore2
+    import httpx2
+
+    hosts = frozenset(h.lower() for h in private_hosts)
+
+    class _Backend(httpcore2.SyncBackend):
+        def connect_tcp(self, host, port, *args, **kwargs):
+            stream = super().connect_tcp(host, port, *args, **kwargs)
+            if str(host).lower() not in hosts:
+                try:
+                    require_public_ip(stream.get_extra_info("socket").getpeername()[0])
+                except ValueError as exc:
+                    stream.close()
+                    raise httpcore2.ConnectError(str(exc)) from None
+            return stream
+
+    transport = httpx2.HTTPTransport()
+    # HTTPTransport takes no backend argument; its pool reads this attribute for every new connection.
+    # If httpcore2 renames it, tests/test_assist_sdk_outbound_is_public_only.py goes red.
+    transport._pool._network_backend = _Backend()
+    return httpx2.Client(transport=transport, follow_redirects=False, trust_env=False)
