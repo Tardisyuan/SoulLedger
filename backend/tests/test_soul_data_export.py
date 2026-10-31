@@ -445,6 +445,42 @@ def test_building_twice_makes_one_file(world, queued, media_root):
     assert len(list((media_root / "private" / "exports").glob("*.zip"))) == 1
 
 
+def test_a_job_failed_as_stuck_while_writing_does_not_turn_ready_and_leaves_no_file(
+        world, queued, media_root, monkeypatch, enqueued):  # noqa: F811
+    """生成超过两小时:清理把它标 FAILED(StuckWorker)、灵魂重新申请;旧 worker 这时才写完 zip。
+    旧行必须仍是 FAILED,文件删掉,不发「已准备好」—— 否则一个账号同时有两份包(2026-10-31)。"""
+    with world.capture(execute=True):
+        export_id = _request(world.client).data["id"]
+    real = data_export._store_archive
+
+    def slow_store(export):
+        stored = real(export)
+        SoulDataExport.objects.filter(pk=export.pk).update(
+            requested_at=timezone.now() - timedelta(hours=3))
+        assert data_export.prune_expired()["failed"] == 1
+        return stored
+
+    monkeypatch.setattr(data_export, "_store_archive", slow_store)
+    row = data_export.build(export_id)
+    assert row.status == DataExportStatus.FAILED and row.error == "StuckWorker"
+    assert row.file_path == "" and row.expires_at is None
+    assert list((media_root / "private" / "exports").glob("*.zip")) == []
+    assert not PushDelivery.objects.filter(kind="export_ready").exists()
+    # 同一账号可以重新申请,且只有这一份在准备。
+    assert _request(world.client).status_code == 201
+
+
+def test_a_failed_final_write_deletes_the_zip_and_frees_the_slot(world, queued, media_root, monkeypatch):
+    """zip 已写进存储而收尾事务失败:文件不能成孤儿,行标 FAILED(不留在 RUNNING 等两小时)。"""
+    with world.capture(execute=True):
+        export_id = _request(world.client).data["id"]
+    monkeypatch.setattr(data_export, "_notify_ready", lambda export: (_ for _ in ()).throw(RuntimeError("push")))
+    row = data_export.build(export_id)
+    assert row.status == DataExportStatus.FAILED and row.error == "RuntimeError" and row.file_path == ""
+    assert list((media_root / "private" / "exports").glob("*.zip")) == []
+    assert _request(world.client).status_code == 201
+
+
 # ── 通知、登记 ──────────────────────────────────────────────────────────────
 
 
