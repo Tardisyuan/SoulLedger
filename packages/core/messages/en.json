@@ -2024,6 +2024,7 @@
     "soul_filter": "Soul",
     "soul_filter_clear": "Clear the soul filter",
     "soul_name": "Soul Name",
+    "soul_name_not_returned": "the soul's name did not come back with this judgment",
     "civilization": "Civilization",
     "court": "Court",
     "verdict": "Verdict",

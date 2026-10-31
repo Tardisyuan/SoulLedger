@@ -300,6 +300,8 @@ describe("WebSocketProvider catch-up after a reconnect", () => {
     '["souls"]',
     '["workflows"]',
     '["dispositions"]',
+    '["dispatch"]',
+    '["death-sync"]',
     '["social"]',
     '["scheduler"]',
   ];

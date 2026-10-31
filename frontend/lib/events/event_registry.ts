@@ -28,6 +28,7 @@ import {
   handleUnknownEvent,
   handleWorkflowEvent,
 } from "./eventHandlers";
+export { REALTIME_KEY_FAMILIES } from "./eventHandlers";
 import type { InvalidateQueryFilters, Query, QueryClient } from "@tanstack/react-query";
 
 import type { EventContext, EventHandler, EventPayload, HandlerResult } from "./eventTypes";
@@ -173,6 +174,8 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     POST_DELETED: handleSocialEvent,
     COMMENT_CREATED: handleSocialEvent,
     COMMENT_DELETED: handleSocialEvent,
+    // No sender in the backend (EventType keeps the members, so `detectEventDrift` needs a row):
+    // `handleSocialEvent` does nothing for them. A reaction is a REST toggle that updates itself.
     REACTION_ADDED: handleSocialEvent,
     REACTION_REMOVED: handleSocialEvent,
     USER_FOLLOWED: handleSocialEvent,
