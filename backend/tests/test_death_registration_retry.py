@@ -87,6 +87,24 @@ def test_retry_processes_the_same_row(setup, monkeypatch):
 
 
 @pytest.mark.django_db
+def test_retry_without_an_encryption_key_reaches_die(setup, monkeypatch):
+    """Review 2026-10-31 A2: with no key the old field read source_payload back as a str, the serializer
+    refused it, and the row became VALIDATION_ERROR — no longer retryable, for good."""
+    from django.test import override_settings
+
+    tenant, key, soul, admin = setup
+    with override_settings(ENCRYPTION_KEY=""):
+        reg = _internal_error_row(monkeypatch, tenant, key, soul, idem="retry-no-key")
+        resp = _jwt_client(admin, tenant).post(_url(reg))
+
+    assert resp.status_code == 200, resp.data
+    assert resp.data["status"] == DeathRegistrationStatus.PROCESSED
+    assert resp.data["error_code"] != "VALIDATION_ERROR"
+    soul.refresh_from_db()
+    assert soul.current_state != SoulState.ALIVE
+
+
+@pytest.mark.django_db
 def test_a_retry_that_fails_again_stays_failed_and_counts(setup, monkeypatch):
     tenant, key, soul, admin = setup
     reg = _internal_error_row(monkeypatch, tenant, key, soul)

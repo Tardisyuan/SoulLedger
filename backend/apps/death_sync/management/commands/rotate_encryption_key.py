@@ -4,8 +4,9 @@ Run after moving the old key into ENCRYPTION_KEY_FALLBACKS and the new one into 
 process. Each value is read with every configured key and written back with the first; afterwards the old key
 can be dropped. Idempotent: a second run re-encrypts under the same key.
 
-A value no configured key can read (a ciphertext under a key you no longer list, or plaintext written while
-DEBUG ran without a key) is left untouched and counted; any such value makes the command exit non-zero, because
+Plain JSON in an encrypted JSON column (written while DEBUG ran without a key) is encrypted like any other value:
+it cannot be mistaken for a token (`encrypted_json.decode_stored`). A value no configured key can read (a ciphertext
+under a key you no longer list, or a plain string in an encrypted char column) is left untouched and counted; any such value makes the command exit non-zero, because
 dropping the fallback then would make those rows unreadable for good.
 
 Rows are found through `_base_manager` (soft-deleted and every hall's rows too: a key rotation that skipped
@@ -18,7 +19,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from apps.death_sync.encrypted_json import EncryptedJSONField
+from apps.death_sync.encrypted_json import EncryptedJSONTextField
 from apps.death_sync.fields import EncryptedCharField, strict_reads
 
 
@@ -26,7 +27,7 @@ def encrypted_fields():
     """[(model, [field names])] for every installed model with an encrypted column."""
     found = []
     for model in apps.get_models():
-        names = [f.name for f in model._meta.concrete_fields if isinstance(f, (EncryptedCharField, EncryptedJSONField))]
+        names = [f.name for f in model._meta.concrete_fields if isinstance(f, (EncryptedCharField, EncryptedJSONTextField))]
         if names:
             found.append((model, names))
     return found
