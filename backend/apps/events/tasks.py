@@ -47,19 +47,40 @@ def deliver_event_webhook(self, delivery_id):
 
     幂等:已经 SUCCESS 的行直接返回 —— 重复投递比漏投更难查,而 at-least-once
     的队列**一定**会重复。
+
+    并发:整次投递在这一行的行锁下(2026-10-31)。同一条投递会同时在两个 worker 上:队列重投,或
+    `retry_pending_webhooks` 每 5 分钟把 FAILED 的行再入队一次、而它自己的 `self.retry` 还排着。
+    此前两边各读到「还没成功」、各发一次;现在后到的在锁上等,醒来重读,看到 SUCCESS 就不发,
+    看到 FAILED 则作为下一次尝试(`attempt` 也不再被两边各自 +1 覆盖)。
     """
+    from django.db import transaction
+
+    # ponytail: the row lock is held across the POST (up to the endpoint's timeout); one row per delivery, so
+    # it only ever blocks a duplicate of the same delivery. A lease column would free it, if that ever matters.
+    with transaction.atomic():
+        outcome = _deliver_locked(delivery_id)
+    if outcome is not None:
+        attempt, ceiling = outcome
+        if attempt < ceiling:
+            # 指数退避。`countdown` 而不是固定间隔:一个刚挂掉的端点通常不会在
+            # 一秒后好起来,而每秒重试只会把它压得更久。
+            raise self.retry(countdown=2 ** attempt, exc=None)
+
+
+def _deliver_locked(delivery_id):
+    """一次尝试,调用方持有事务。失败且还能再试时返回 `(attempt, ceiling)`,其余返回 None。"""
     from apps.events.models import EventWebhookDelivery, EventWebhookStatus
 
     try:
-        delivery = EventWebhookDelivery.objects.select_related("webhook").get(
+        delivery = EventWebhookDelivery.objects.select_for_update(of=("self",)).select_related("webhook").get(
             id=delivery_id
         )
     except EventWebhookDelivery.DoesNotExist:
         logger.error("deliver_event_webhook: 投递记录 %s 不存在", delivery_id)
-        return
+        return None
 
     if delivery.status == EventWebhookStatus.SUCCESS:
-        return
+        return None
 
     webhook = delivery.webhook
     ceiling = attempt_ceiling(webhook)
@@ -122,11 +143,7 @@ def deliver_event_webhook(self, delivery_id):
         delivery.status = EventWebhookStatus.FAILED
         delivery.error = f"{type(exc).__name__}: {exc}"[:2000]
         delivery.save(update_fields=["status", "attempt", "response_status", "error"])
-
-    if delivery.attempt < ceiling:
-        # 指数退避。`countdown` 而不是固定间隔:一个刚挂掉的端点通常不会在
-        # 一秒后好起来,而每秒重试只会把它压得更久。
-        raise self.retry(countdown=2 ** delivery.attempt, exc=None)
+    return delivery.attempt, ceiling
 
 
 @shared_task(name="events.retry_pending_webhooks")
