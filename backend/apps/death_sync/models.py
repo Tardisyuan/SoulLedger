@@ -188,8 +188,8 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
         help_text="Reference ID from source system",
     )
     # PII-sensitive payload (encrypted at rest)
-    from apps.death_sync.encrypted_json import EncryptedJSONField
-    source_payload = EncryptedJSONField(
+    from apps.death_sync.encrypted_json import EncryptedJSONTextField
+    source_payload = EncryptedJSONTextField(
         help_text="Original request payload (encrypted at rest)",
     )
 
