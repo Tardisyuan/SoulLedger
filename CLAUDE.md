@@ -144,8 +144,11 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   15/27、13/24 完整;不设 `lineHeight` 也完整)。看「向」字上那一点在不在,10-30 就是把一张被裁的截图当成了修好。
   所以**界面改动合并后要真的上一次模拟器**,测试全绿不够。
 - **iOS 模拟器的钥匙串不强制生物验证**:`requireAuthentication: true` 的 secure-store 条目不弹面容就能读。面容相关只能真机验(清单在备忘 `real-device-checklist`)。
-- **本机连 115 的 Matrix 要先开隧道**:`ssh -f -N -L 8008:127.0.0.1:8008 tardis@pi`;runserver 的 `ALLOWED_HOSTS` 还要加本机局域网地址
-  (Synapse 回调 `/chat/hooks/new-message/` 用的是它,否则 400 `DisallowedHost`,信能发、推送钩子丢)。验完 `pkill -f "ssh -f -N -L 8008"`。
+- **115 的 Matrix 直接连 `http://192.168.2.115:8008`,不用再开隧道**(2026-10-31 用户决定:`infrastructure/docker-compose.yml` 的端口
+  由 `127.0.0.1:8008` 改成 `0.0.0.0:8008`,原文件备份为 `docker-compose.yml.bak-20261031-matrix-lan`)。App 会直接连 `homeserver`
+  (`MATRIX_PUBLIC_BASEURL`),所以这个地址必须是手机连得到的。unRAID 的手机测试后端(`sl-mobile-backend`,env 在
+  `sl-gates/mobile/backend.env`)两项 `MATRIX_*_URL` 已改指它。本机 runserver 的 `ALLOWED_HOSTS` 仍要加本机局域网地址
+  (Synapse 回调 `/chat/hooks/new-message/` 用的是它,否则 400 `DisallowedHost`,信能发、推送钩子丢)。
 - **装到 iOS 真机(2026-10-11):这台 Mac 的签名是免费的个人开发团队,签不了「推送」和「App 组」——这是必然的,不是配置坏了。**
   `expo run:ios --device <udid>` 会报 `Personal development teams … do not support the Push Notifications capability` /
   `doesn't support the App Groups capability`。做法:只在生成的工程里(`mobile/ios/SoulLedger/SoulLedger.entitlements`,gitignored)删掉
