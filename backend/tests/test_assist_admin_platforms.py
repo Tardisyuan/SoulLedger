@@ -249,6 +249,20 @@ def test_reference_prices_are_per_million_tokens_with_a_date(api, net):
         "found": True, "input": 2.5, "output": 10.0, "cache_read": None, "as_of": None}
 
 
+def test_the_price_date_is_the_configured_local_day_not_the_hosts(net, settings, monkeypatch):
+    """`as_of` 是 `timezone.localdate()`(与后端别处一样),不是宿主机的 `date.today()`:
+    UTC 20:00 在上海已是第二天。"""
+    from datetime import UTC, datetime
+
+    from django.utils import timezone
+
+    _, routes = net
+    routes[platforms.LITELLM_URL] = Resp(200, TABLE)
+    settings.TIME_ZONE = "Asia/Shanghai"
+    monkeypatch.setattr(timezone, "now", lambda: datetime(2026, 1, 1, 20, 0, tzinfo=UTC))
+    assert platforms._fetch_table()["as_of"] == "2026-01-02"
+
+
 def test_a_model_not_in_the_table_is_not_found(api, net):
     _, routes = net
     routes[platforms.LITELLM_URL] = Resp(200, TABLE)
