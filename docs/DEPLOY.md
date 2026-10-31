@@ -56,6 +56,7 @@
 
 - 环境同上(同一个 `*django-env` 锚点,`production.yml:73-101` 只覆盖数据库/Redis 三个地址)。worker 需要 `SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`、`EMAIL_*`、`MATRIX_*`、`ASSISTANT_*`——任务里发推送/邮件/调 Matrix。
 - **worker 不在,找回密码验证码、灵魂联系邮箱验证码与初始密码邮件都不发**(2026-10-30 起由 worker 发,请求只入队;见 `DEPLOYMENT.md`「邮件」)。
+- **worker 进程数写死为 2**(`--concurrency=2 --max-memory-per-child=200000`,`docker-compose.yml`):默认是「每个 CPU 一个子进程」,每个子进程是一整个 Django,8 核主机就是 9 个进程挤在 512m 里。算术(2026-10-31 在 unRAID 的门禁容器里实测空闲 worker,同一份依赖):主进程 RSS 167 MB、每个子进程 RSS 136 MB;按 PSS(共享页只算一份)三个进程合计约 267 MB,容器 cgroup 289 MiB。子进程涨过 200000 KiB(约 195 MB)RSS 时做完当前任务就被换掉,所以最坏约 100 + 2 × 160 ≈ 420 MB PSS < 512m,而不是整个容器被 OOM 杀掉。**空闲值是实测,忙时没量过**,上线后 `docker stats` 看一次;要加并发先加内存上限,每个子进程按 150 MB 算。
 - 二者都 `depends_on: backend: service_healthy`(`docker-compose.yml:126-128,134-136`):backend 里 `migrate` 没跑完它们不起。
 - **beat 只起一个**,见第 7 节。
 
@@ -87,7 +88,7 @@
 
 - 准备:一个主域(例 `example.com`)A/AAAA 记录指向主机;80、443 公网可达。Web、API、`/ws/`、`/_matrix` 都在同一个 nginx 域名下(`nginx.conf` 一个 `server`,`server_name _`),因此 Web 与 API **同源**,不需要 CORS。
 - 若坚持把 API 放子域(`api.example.com`):`nginx.conf` 要拆 server_name,`CORS_ALLOWED_ORIGINS` 列 Web 源,且必须同一可注册主域才保住 2FA 设备 cookie(`SameSite=Lax`)。**这条路径本仓库没测过(未核实)。**
-- 首签与启用 443:按 `DEPLOYMENT.md`「TLS 证书」5 步(先 `--staging`,再正式;编辑 `nginx.conf` 解开 `listen 443 ssl;`、`http2 on;` 与两行 `ssl_certificate*`,换 `YOUR_DOMAIN`;`tests/test_production.py` 要求 443 与证书两行同开同关)。
+- 首签与启用 443:按 `DEPLOYMENT.md`「TLS 证书」5 步(先 `--staging`,再正式)。2026-10-31 起**不用改 `nginx.conf`**:根 `.env` 设 `TLS_DOMAIN`,证书在 `/etc/letsencrypt/live/$TLS_DOMAIN/{fullchain,privkey}.pem` 就自动 443 + 80 跳转(ACME 挑战除外),不在就只听 80、nginx 照样起来(`scripts/nginx-entrypoint.sh`,每 5 分钟复查)。`SECURE_SSL_REDIRECT` 开着(默认)而没有 `TLS_DOMAIN` 或证书,`check-deploy-env.sh` 拒绝;首签那一次用 `ALLOW_NO_TLS_CERT=1`。
 - **HSTS 一旦发出就是一年**:Django 发 `max-age=31536000; includeSubDomains; preload`(`settings.py:507-509`),nginx 也发(`nginx.conf` 安全头)。`includeSubDomains` 意味着该主域**所有子域**都必须有 https,再决定是否真去提交 preload 名单。
 - `SECURE_PROXY_SSL_HEADER` 信任 `X-Forwarded-Proto`(`settings.py:528`);后端端口不对外发布(基础文件无 `ports`),只有 nginx 发布 80/443(`production.yml:209-211`)。别直接把 8000 暴露出去。
 
@@ -104,7 +105,7 @@
 
 首次上线(空库):
 1. `scripts/check-deploy-env.sh .env` 全部 PASS。
-2. `cp .env.example .env.production` 填值 → `scripts/deploy.sh production`(= 复制成 `.env` 后 `$DC up -d`)。**注意**首次先别开 443 段(没证书 nginx 起不来,见第 2 节),按首签流程来。
+2. `cp .env.example .env.production` 填值 → `scripts/deploy.sh production`(= 复制成 `.env` 后 `$DC up -d`)。首次还没有证书:nginx 自动只听 80(见第 2 节),按首签流程来;这一次的 `check-deploy-env.sh` 用 `ALLOW_NO_TLS_CERT=1`。
 3. `backend` 容器启动命令依次跑:`collectstatic` → `migrate` → `setup_scheduled_tasks` → `daphne`(`production.yml:62-66`)。`migrate` 是启动命令的一部分,**每次容器重启都会跑一遍**(幂等,但意味着迁移期间 backend 不健康、celery/beat 因 `service_healthy` 等着)。
 4. `$DC ps` 等 `backend` healthy(健康检查走 `/health/`,`docker-compose.yml:98-112`;`start_period` 40 秒,迁移多时可能不够——**大库首次迁移耗时:未核实**,`26` 条迁移往返测试每条 2–67 秒,见 `CLAUDE.md`)。
 5. 跑第 6 节的一次性命令。
@@ -173,8 +174,12 @@
 - `backup` 服务(`docker-compose.production.yml`,镜像 `postgres:16-alpine`;2026-10-30 前用 pgvector 镜像时没有 `crond`,每日 cron 从没起来):启动先备份一次(失败容器退出),之后容器内 cron **每天 02:00**(容器时区,镜像默认 UTC)跑 `scripts/backup-db.sh`,文件在主机 `./backups/`:`soulledger_*.sql.gz`(库)、`soulledger_media_*.tar.gz`(头像媒体)、聊天初始化后再加 `soulledger_synapse_*.dump` 与 `soulledger_synapse_data_*.tar.gz`(签名密钥,丢了等于换了一台 homeserver)。
 - healthcheck:任一应有的最新备份超过 26 小时 → unhealthy。备份失败会 POST `OPS_ALERT_WEBHOOK_URL`;**unhealthy 本身仍没有人被通知**(§3)。
 - **异地副本**:设 `BACKUP_OFFSITE_REMOTE` 后每次备份 `rclone copy` 到那里(`DEPLOYMENT.md`「备份异地副本与告警」)。**目标还没定**(用户 2026-10-30),不设时备份只在本机 `./backups/`,机器坏了一起坏。
-- **加密密钥也要备份**:`ENCRYPTION_KEY`、`MATRIX_*` 全部、`MATRIX_USER_SALT`。丢了 `ENCRYPTION_KEY`,库里加密列永久不可读;这些值**不在** `./backups/` 里。
-- 恢复只能进空库,步骤与实测记录见 `DEPLOYMENT.md`「数据库备份与恢复」。**上线前至少在 staging 演练一次完整恢复**:`scripts/restore-drill.sh`(`DEPLOYMENT.md`「恢复演练」)。RPO 24 小时 / RTO 2 小时(用户 2026-10-30 接受),PITR 上线前再配。
+- **2026-10-31 起不设就不算部署好**:`check-deploy-env.sh` 在 `OPS_ALERT_WEBHOOK_URL` 或 `BACKUP_OFFSITE_REMOTE` 为空时 FAIL,除非明写 `ALLOW_NO_ALERTS=1` / `ALLOW_NO_OFFSITE=1`(变成 WARN)。`backup` 服务带 `BACKUP_STRICT=1`:缺这两样(且没明写放弃)时备份照写,但脚本退出 3、打印醒目的告警块、healthcheck 转 unhealthy(`.backup-ok` 只在退出 0 时才有),每晚的日志里都会再出现一次。告警发不出去时 `ops-alert.sh` 也打印一整块 `ALERT NOT DELIVERED` 并返回非 0。
+- **加密**:设 `BACKUP_AGE_RECIPIENT`(age 公钥)后异地只传 `.age`;设了异地而没设公钥,异地复制被拒(退出 3),除非 `ALLOW_PLAINTEXT_OFFSITE=1`(`DEPLOYMENT.md`「备份加密」)。
+- **密钥不在备份里,另存进密码管理器**:`ENCRYPTION_KEY` + `ENCRYPTION_KEY_FALLBACKS`(丢了,库里加密列永久不可读)、`SECRET_KEY` + `SECRET_KEY_FALLBACKS`、age 私钥、`MATRIX_*` 全部、`MATRIX_USER_SALT`。最省事:整份根 `.env` 存一份,每次轮换后更新。
+- 恢复只能进空库,步骤与实测记录见 `DEPLOYMENT.md`「数据库备份与恢复」。**上线前至少在 staging 演练一次完整恢复**:`scripts/restore-drill.sh`(`DEPLOYMENT.md`「恢复演练」;2026-10-31 起同时演练媒体、Synapse 库与签名密钥,`BACKUP_AGE_IDENTITY` 验解密,`DRILL_STANDALONE=1` 在另一台机器上演练)。RPO 24 小时 / RTO 2 小时(用户 2026-10-30 接受);**PITR 只写了做法、没有配**(`DEPLOYMENT.md`「RPO / RTO」写了为什么不放进 compose)。
+- **Redis 有卷了**(`redis_data`,AOF 每秒落盘):重建 redis 容器不再丢队列里还没被 worker 取走的任务(找回密码邮件、导出、推送)。健康检查要 `PONG`,生产经 `REDISCLI_AUTH` 带密码。
+- **容器日志有上限**:每个服务 `json-file`,10 MB × 5 个文件(两份 compose 里的 `x-logging` 锚点)。要集中日志见 `DEPLOYMENT.md`「指标与集中日志」。
 - 部署前手动补一份:`$DC run --rm --no-deps backup /scripts/backup-db.sh /backups`(与 `DEPLOYMENT.md`「部署回滚」第 1 步同一条)。
 
 ## 9. 回滚
@@ -277,4 +282,4 @@
 
 ## 附录 B:本文用到的校验脚本
 
-`scripts/check-deploy-env.sh [ENV_FILE]`:一项一行 `PASS`/`FAIL`/`WARN`,有 `FAIL` 退出码 1,不打印密钥值。检查项:`SECRET_KEY` 存在且 ≥32 字节、`DEBUG` 不为 true、`ALLOWED_HOSTS` 存在且无 `*`、`DESK_URL` 存在且 https 且非 localhost、`ENCRYPTION_KEY` 存在且为 Fernet 格式、数据库/Redis 凭据存在、`NEXT_PUBLIC_API_URL` 为 https、`CORS_ALLOWED_ORIGINS` 无通配/localhost、开聊天时 `MATRIX_*` 齐全且 `MATRIX_JWT_SECRET` ≥32 字节;`SENTRY_DSN`、`EMAIL_HOST` 为空只给 `WARN`。测试:`backend/tests/test_check_deploy_env_script.py`。
+`scripts/check-deploy-env.sh [ENV_FILE]`:一项一行 `PASS`/`FAIL`/`WARN`,有 `FAIL` 退出码 1,不打印密钥值。检查项:`SECRET_KEY` 存在且 ≥32 字节、`DEBUG` 不为 true、`ALLOWED_HOSTS` 存在且无 `*`、`DESK_URL` 存在且 https 且非 localhost、`ENCRYPTION_KEY` 存在且为 Fernet 格式、数据库/Redis 凭据存在、`NEXT_PUBLIC_API_URL` 为 https、`CORS_ALLOWED_ORIGINS` 无通配/localhost、开聊天时 `MATRIX_*` 齐全且 `MATRIX_JWT_SECRET` ≥32 字节;`SECURE_SSL_REDIRECT` 开着时 `TLS_DOMAIN` 存在且 `${LETSENCRYPT_DIR:-/etc/letsencrypt}/live/$TLS_DOMAIN/fullchain.pem` 在(读不到就用 root 跑;首签 `ALLOW_NO_TLS_CERT=1`);`OPS_ALERT_WEBHOOK_URL`、`BACKUP_OFFSITE_REMOTE` 存在(或 `ALLOW_NO_ALERTS=1` / `ALLOW_NO_OFFSITE=1`,降为 WARN);设了异地就要 `BACKUP_AGE_RECIPIENT` 是 age / ssh 公钥(或 `ALLOW_PLAINTEXT_OFFSITE=1`)。`ALLOW_*` 可以写在文件里,也可以只在这次命令行上给。`SENTRY_DSN`、`EMAIL_HOST` 为空只给 `WARN`。测试:`backend/tests/test_check_deploy_env_script.py`、`backend/tests/test_deploy_hardening.py`。

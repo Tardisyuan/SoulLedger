@@ -12,16 +12,19 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 列出的那些(2026-10-12 核对:`DATABASE_URL`、`REDIS_URL`、`CELERY_*`、`SECRET_KEY`、`ALLOWED_HOSTS`、`ENCRYPTION_KEY`、
 `SENTRY_DSN`、`TRUSTED_PROXY_COUNT`、`DESK_URL`、`CORS_ALLOWED_ORIGINS`、`EMAIL_*`(不含 `EMAIL_TIMEOUT`)、
 `DEFAULT_FROM_EMAIL`、`SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`、`MEDIA_ROOT`、`MATRIX_*`)。下文提到的
-`PERM_IMPORT_OVERWRITE_ENABLED`、`SCHEDULER_*`、`AUDIT_LOG_RETENTION_DAYS`、`LOGIN_LOG_RETENTION_DAYS`、
-`EMAIL_TIMEOUT` 等不在其中:要改它们的默认值,得先把变量加进 `x-django-env`(清单见 `docs/DEPLOY.md`)。
+`PERM_IMPORT_OVERWRITE_ENABLED`、`SCHEDULER_RUN_KEEP_MIN` 等其余 `SCHEDULER_*`、`EMAIL_TIMEOUT` 等不在其中:
+要改它们的默认值,得先把变量加进 `x-django-env`(清单见 `docs/DEPLOY.md`)。2026-10-31 起 settings.py 读的**全部**
+`*_RETENTION_DAYS` 都在(默认值与 settings.py 相同,`tests/test_deploy_hardening.py` 逐项核对)。
 
 ## TLS 证书:首次签发(手动,一次)
 
 `certbot` 服务只负责续期。首签需要真实域名,不在 compose 里自动做。
 
 1. 域名的 DNS 指向这台主机,80 端口从公网可达。
-2. 先起 nginx(此时 `nginx.conf` 只听 80,`/.well-known/acme-challenge/` 从
-   `certbot_www` 卷提供):`$DC up -d nginx`
+2. 根 `.env` 设 `TLS_DOMAIN=<第 3 步 -d 的第一个域名>`,先起 nginx:`$DC up -d nginx`。
+   证书还不在,nginx 的入口脚本(`scripts/nginx-entrypoint.sh`)就只听 80,日志一行
+   `WARNING: TLS_DOMAIN=… but no certificate`;`/.well-known/acme-challenge/` 从 `certbot_www` 卷提供。
+   这一步 `scripts/check-deploy-env.sh` 会因为没有证书而 FAIL,首签这一次用 `ALLOW_NO_TLS_CERT=1 scripts/check-deploy-env.sh .env`。
 3. 签发(webroot,与续期同一个卷)。**先带 `--staging` 跑一遍**,通过后去掉再跑 ——
    Let's Encrypt 对失败的验证有速率限制:
 
@@ -32,9 +35,14 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
      --email ops@example.com --agree-tos --no-eff-email
    ```
 
-4. 编辑 `nginx.conf`:解开 `listen 443 ssl;`、`http2 on;` 与两行 `ssl_certificate*`,
-   把 `YOUR_DOMAIN` 换成第 3 步 `-d` 的第一个域名;然后 `$DC up -d nginx`。
-   (`tests/test_production.py` 要求 443 与证书两行同时开或同时关。)
+4. 不用改任何文件:入口脚本每 5 分钟看一次 `/etc/letsencrypt/live/$TLS_DOMAIN/fullchain.pem` 与
+   `privkey.pem`,出现了就写出 443 的监听与证书两行、加一个 80 端口的 server(只发 ACME 挑战,其余 301 到
+   https),`nginx -t` 通过后 reload(日志 `certificate state changed or renewed; reloading nginx (https)`)。
+   等不及就 `$DC restart nginx`。验:`curl -sI http://example.com/` 是 301 到 https,`curl -sI https://example.com/health/` 是 200。
+   网页、API、`/ws/`、`/_matrix` 仍是同一个 server、同一个源。
+   不用 Let's Encrypt 的证书也一样:把 `fullchain.pem` 与 `privkey.pem` 放到 `/etc/letsencrypt/live/$TLS_DOMAIN/`。
+   证书删掉或读不到时,下一次检查会退回只听 80(不会让 nginx 起不来);但 Django 的 `SECURE_SSL_REDIRECT`
+   仍会把 http 301 到 https,所以那时全站不可用 —— `check-deploy-env.sh` 部署前就拦这一点。
 5. `$DC up -d certbot`
 
 ## 续期
@@ -379,10 +387,27 @@ curl -s -o /dev/null -w '%{http_code}\n' https://example.com/_matrix/key/v2/serv
 - 验:`$DC run --rm --no-deps backup /scripts/backup-db.sh /backups`,看末尾 `Off-site copy complete.`;
   把 `BACKUP_OFFSITE_REMOTE` 临时改成不存在的远端再跑一次,应退出 1 并在 webhook 收到 `backup-db.sh FAILED`。
 
+### 备份加密(2026-10-31)
+
+- `BACKUP_AGE_RECIPIENT` 设成一把 [age](https://age-encryption.org) 公钥(`age1…`,或一行 `ssh-ed25519 …`)后,
+  每份备份写完再生成一份 `<文件名>.age`,**异地只传 `.age`**;容器启动时自动 `apk add age`。本机 `./backups/` 里的明文照留
+  (它和被 dump 的库在同一块盘上,加密它挡不住拿到这块盘的人),保留天数同样适用于 `.age`。
+- 设了 `BACKUP_OFFSITE_REMOTE` 而没设 `BACKUP_AGE_RECIPIENT`:**拒绝异地复制**,脚本退出 3 并告警;
+  确实要传明文才设 `ALLOW_PLAINTEXT_OFFSITE=1`(每次打印一行 `copying UNENCRYPTED backups off-site`)。
+- 生成密钥(在你自己的电脑上,不在服务器上):`age-keygen -o soulledger-backup.key`,把输出的 `Public key: age1…`
+  填进 `BACKUP_AGE_RECIPIENT`。**私钥文件不放在这台服务器上**,放进密码管理器;恢复演练用它
+  (`BACKUP_AGE_IDENTITY=<私钥文件>`)证明异地那份解得开。
+- **这些值不在任何备份里,必须另存(密码管理器),而且和备份分开放**:
+  `ENCRYPTION_KEY` 与 `ENCRYPTION_KEY_FALLBACKS`(丢了,库里的加密字段永久解不开 —— 备份恢复得出来,那些列也只是乱码)、
+  `SECRET_KEY` 与 `SECRET_KEY_FALLBACKS`(丢了,全部会话、JWT、密码重置链接、签名的媒体网址作废)、
+  `BACKUP_AGE_IDENTITY` 对应的 age 私钥(丢了,异地备份全部解不开)、`MATRIX_*` 全部与 `SYNAPSE_DB_PASSWORD`、`DB_PASSWORD`、`REDIS_PASSWORD`。
+  整份根 `.env` 存一份进密码管理器最省事;每次轮换(本文「密钥轮换」)之后更新那一份。
+
 ### 恢复演练
 
 `scripts/restore-drill.sh` 把**最新一份** db 备份恢复进同一台库上的临时库 `soulledger_drill_<pid>`,
-与线上库比对后删掉(成功、失败都删;`DRILL_KEEP=1` 保留):
+与线上库比对后删掉(成功、失败都删;`DRILL_KEEP=1` 保留);2026-10-31 起同一次演练也恢复媒体与聊天,
+全部恢复到临时位置(`mktemp` 目录、`*_drill_<pid>` 临时库),**不碰线上的卷和库**:
 
 ```bash
 $DC run --rm --no-deps --entrypoint bash backup /scripts/restore-drill.sh /backups
@@ -394,7 +419,30 @@ $DC run --rm --no-deps --entrypoint bash backup /scripts/restore-drill.sh /backu
 - 要用 Django 自己的 `migrate --check` 再核一次:`DRILL_KEEP=1` 跑完,
   `$DC run --rm --no-deps -e DATABASE_URL=postgres://soulledger:<密码>@db:5432/soulledger_drill_<pid> backend python manage.py migrate --check`,
   然后 `$DC exec db dropdb -U soulledger soulledger_drill_<pid>`。
+- 媒体:最新的 `soulledger_media_*.tar.gz` 必须存在并能解包,打印文件数(在 `backup` 容器里另打印线上 `/media` 的文件数)。
+- 聊天(有 Synapse 备份,或 `/synapse/homeserver.yaml` 在):最新的 `soulledger_synapse_<ts>.dump` 用 `pg_restore` 恢复进
+  `synapse_drill_<pid>`(C collation,Synapse 要求),打印 users / events / rooms 行数;`soulledger_synapse_data_*.tar.gz`
+  解包后必须有 `homeserver.yaml` 与 ed25519 的 `*.signing.key`,而且**和线上那把逐字节相同**(签名密钥变了,对所有客户端就是另一台 homeserver)。
+  聊天在用而两份备份缺一份 → 退出 1。
+- `BACKUP_AGE_IDENTITY=<age 私钥文件>`:改为挑最新的 `*.age`,先解密再做上面全部步骤 —— 证明异地那份能用。
 - 建议每月一次,以及每次改了备份脚本、换了镜像之后。临时库和线上库同在一台,数据量大时先看磁盘余量(约等于线上库大小)。
+
+**在另一台机器上演练**(证明「这台机器整个没了」也恢复得出来;每季度一次):
+
+```bash
+# 演练机上:取异地副本(只读),起一个一次性的库(要 pgvector,dump 里有 CREATE EXTENSION vector)
+rclone copy <BACKUP_OFFSITE_REMOTE> ./drill-backups --max-age 2d
+docker network create sl-drill
+docker run -d --rm --name sl-drill-pg --network sl-drill -e POSTGRES_USER=soulledger -e POSTGRES_PASSWORD=drill pgvector/pgvector:pg16
+# 演练(私钥从密码管理器取出放到 ./drill.key,演练完删掉)
+docker run --rm --network sl-drill -v "$PWD/drill-backups:/backups:ro" -v "$PWD/scripts:/scripts:ro" -v "$PWD/drill.key:/drill.key:ro" \
+  -e PGHOST=sl-drill-pg -e PGUSER=soulledger -e PGPASSWORD=drill -e PGDATABASE=postgres \
+  -e DRILL_STANDALONE=1 -e BACKUP_AGE_IDENTITY=/drill.key \
+  postgres:16-alpine sh -c 'apk add --no-cache bash age >/dev/null && bash /scripts/restore-drill.sh /backups'
+docker stop sl-drill-pg; docker network rm sl-drill; rm -f drill.key
+```
+
+`DRILL_STANDALONE=1`:那里没有线上库可比,只核对「恢复得进去、有迁移记录」并打印各表行数。
 
 ### RPO / RTO
 
@@ -405,7 +453,10 @@ $DC run --rm --no-deps --entrypoint bash backup /scripts/restore-drill.sh /backu
 | RPO(最多丢多久的数据) | **24 小时** | 每天 02:00 一份全量 dump;healthcheck 在最新一份超过 26 小时时转 unhealthy |
 | RTO(多久恢复服务) | **2 小时** | 停服务 + dropdb/createdb + 恢复(演练脚本打印实测耗时)+ 起服务 + 冒烟;媒体与聊天卷另计解包时间 |
 
-RPO 要比 24 小时更短,做法是 **WAL 归档 + 时间点恢复(PITR)**,这里只写做法,**现在不配,上线前再配**(用户 2026-10-30 定):
+RPO 要比 24 小时更短,做法是 **WAL 归档 + 时间点恢复(PITR)**,这里只写做法,**现在不配,上线前再配**(用户 2026-10-30 定)。
+2026-10-31 复核仍不放进 compose:只开 `archive_mode` 把 WAL `cp` 到备份卷不构成 PITR —— 还要定期基础备份
+(`pg_dump` 不能接 WAL)、按最老基础备份清 WAL、WAL 异地(否则和库同盘同坏),而 `archive_command` 一旦失败 WAL 会
+堆在 `pg_wal` 直到磁盘满、库停;这几样没有真服务器验不了,装一半比不装更危险。做法:
 
 1. `db` 服务加 `command: postgres -c wal_level=replica -c archive_mode=on -c archive_timeout=300 -c archive_command='…'`,
    `archive_command` 把每段 WAL 送到异地(用 WAL-G / pgBackRest 之类的工具,不要手写 `cp`:要处理失败重试与校验)。

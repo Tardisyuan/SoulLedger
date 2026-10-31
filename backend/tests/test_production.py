@@ -303,9 +303,9 @@ class TestDockerConfiguration:
 
     def test_nginx_does_not_listen_on_tls_without_a_certificate(self):
         """`listen 443 ssl` with no ssl_certificate is a fatal config error,
-        which is how nginx never started (IS-09). Both directives live on
-        commented lines until a certificate is mounted; they must be
-        enabled together."""
+        which is how nginx never started (IS-09). Since 2026-10-31 neither is in
+        nginx.conf: scripts/nginx-entrypoint.sh writes both together, only when
+        the certificate exists (tests/test_deploy_hardening.py)."""
         live = [
             line for line in _read(NGINX_CONF).splitlines()
             if not line.strip().startswith("#")
@@ -387,7 +387,12 @@ class TestDockerConfiguration:
         shared = {v.split(':')[0] for v in certbot['volumes'] if ':/var/www/certbot' in v}
         assert shared and shared == {v.split(':')[0] for v in nginx['volumes'] if ':/var/www/certbot' in v}
         marker = re.search(r"--deploy-hook 'touch (\S+)'", script).group(1)
-        assert marker in nginx['command'][-1] and 'nginx -s reload' in nginx['command'][-1]
+        # nginx's watcher lives in scripts/nginx-entrypoint.sh (its command) since 2026-10-31.
+        assert nginx['command'] == ['/bin/sh', '/nginx-entrypoint.sh']
+        entry = _read(os.path.join(REPO_ROOT, "scripts", "nginx-entrypoint.sh"))
+        assert marker == '/etc/letsencrypt/.deployed'
+        assert 'LE="${LETSENCRYPT_DIR:-/etc/letsencrypt}"' in entry
+        assert '"$LE/.deployed" -nt' in entry and 'nginx -s reload' in entry
 
     def test_prod_compose_mounts_a_file_that_exists(self):
         """A bind-mount source that does not exist is created by docker as

@@ -2,6 +2,15 @@
 # reached through it. `SECRET_KEY`, `DB_PASSWORD`, `REDIS_PASSWORD`,
 # `ALLOWED_HOSTS`, `ENCRYPTION_KEY`, `NEXT_PUBLIC_API_URL` come from the root
 # `.env` (see .env.example) — the base file reads them.
+
+# Same as docker-compose.yml's: anchors do not cross files, and the services
+# defined only here (pgbouncer, backup, certbot, nginx) need it too.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   db:
     volumes:
@@ -13,7 +22,10 @@ services:
           memory: 1g
 
   redis:
-    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    environment:
+      # redis-cli reads it: the base healthcheck then authenticates.
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     restart: always
     deploy:
       resources:
@@ -21,6 +33,7 @@ services:
           memory: 256m
 
   pgbouncer:
+    logging: *logging
     # A tag that exists. `1.23.1` never did (Docker Hub has `v1.23.1-p0..p3`),
     # so this merge could not start — measured 2026-09-13, "manifest unknown".
     image: edoburu/pgbouncer:v1.24.1-p1
@@ -148,6 +161,7 @@ services:
   # BACKUP_OFFSITE_REMOTE (an rclone destination) and OPS_ALERT_WEBHOOK_URL in
   # .env. rclone is installed at start only when an off-site remote is set.
   backup:
+    logging: *logging
     image: postgres:16-alpine
     volumes:
       - ./scripts:/scripts:ro
@@ -169,15 +183,32 @@ services:
       BACKUP_OFFSITE_REMOTE: ${BACKUP_OFFSITE_REMOTE:-}
       RCLONE_CONFIG: /rclone/rclone.conf
       OPS_ALERT_WEBHOOK_URL: ${OPS_ALERT_WEBHOOK_URL:-}
+      # Exit 3 (backups written, but no alert webhook / no off-site copy / an
+      # unencrypted off-site copy refused) instead of 0 — scripts/backup-db.sh.
+      # The explicit opt-outs below turn the first two into a printed warning.
+      BACKUP_STRICT: "1"
+      ALLOW_NO_ALERTS: ${ALLOW_NO_ALERTS:-}
+      ALLOW_NO_OFFSITE: ${ALLOW_NO_OFFSITE:-}
+      # age public key (age1… or ssh-ed25519 …): every file is also written
+      # encrypted as <name>.age, and only those go off-site. The private key
+      # is NOT on this host — docs/DEPLOYMENT.md「备份加密」.
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      ALLOW_PLAINTEXT_OFFSITE: ${ALLOW_PLAINTEXT_OFFSITE:-}
     entrypoint: ["sh", "-c"]
+    # `|| [ $$? -eq 3 ]`: a configuration gap (exit 3) still starts cron — the
+    # warning repeats in every nightly log and the healthcheck stays red —
+    # while a real failure (exit 1) keeps the restart loop.
     command:
       - >
         { [ -z "$$BACKUP_OFFSITE_REMOTE" ] || command -v rclone >/dev/null || apk add --no-cache rclone; } ;
-        /scripts/backup-db.sh /backups &&
+        { [ -z "$$BACKUP_AGE_RECIPIENT" ] || command -v age >/dev/null || apk add --no-cache age; } ;
+        { /scripts/backup-db.sh /backups || [ $$? -eq 3 ]; } &&
         echo '0 2 * * * /scripts/backup-db.sh /backups > /proc/1/fd/1 2>&1' > /etc/crontabs/root &&
         exec crond -f -l 8
     healthcheck:
-      test: ["CMD-SHELL", "find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q . && find /backups -name 'soulledger_media_*.tar.gz' -mmin -1560 | grep -q . && { [ ! -f /synapse/homeserver.yaml ] || { find /backups -name 'soulledger_synapse_*.dump' -mmin -1560 | grep -q . && find /backups -name 'soulledger_synapse_data_*.tar.gz' -mmin -1560 | grep -q .; }; }"]
+      # .backup-ok: the newest run exited 0 (backup-db.sh removes it first and
+      # touches it last), so exit 3's configuration gaps turn this red too.
+      test: ["CMD-SHELL", "test -f /backups/.backup-ok && find /backups -name 'soulledger_*.sql.gz' -mmin -1560 | grep -q . && find /backups -name 'soulledger_media_*.tar.gz' -mmin -1560 | grep -q . && { [ ! -f /synapse/homeserver.yaml ] || { find /backups -name 'soulledger_synapse_*.dump' -mmin -1560 | grep -q . && find /backups -name 'soulledger_synapse_data_*.tar.gz' -mmin -1560 | grep -q .; }; }"]
       interval: 5m
       timeout: 10s
       start_period: 5m
@@ -197,6 +228,7 @@ services:
   # old. The container keeps running on failure on purpose: a restart loop
   # would retry validation into Let's Encrypt's failed-validation rate limit.
   certbot:
+    logging: *logging
     image: certbot/certbot:v5.8.0
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
@@ -223,6 +255,7 @@ services:
     restart: always
 
   nginx:
+    logging: *logging
     image: nginx:alpine
     ports:
       - "80:80"
@@ -241,21 +274,14 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       # ACME challenges certbot writes; nginx.conf serves them from here.
       - certbot_www:/var/www/certbot:ro
-    # nginx plus a watcher: reload once certbot's deploy-hook has touched the
-    # marker, so a renewed certificate is served without a manual step.
-    command:
-      - /bin/sh
-      - -c
-      - |
-        touch /tmp/.reloaded
-        while :; do
-          sleep 300
-          if [ /etc/letsencrypt/.deployed -nt /tmp/.reloaded ]; then
-            echo "certificate renewed; reloading nginx"
-            nginx -s reload && touch /tmp/.reloaded
-          fi
-        done &
-        exec nginx -g 'daemon off;'
+      - ./scripts/nginx-entrypoint.sh:/nginx-entrypoint.sh:ro
+    environment:
+      # The certificate is /etc/letsencrypt/live/$TLS_DOMAIN/{fullchain,privkey}.pem
+      # (certbot's first `-d`). Present: HTTPS on 443 and 80 redirects; absent:
+      # plain HTTP on 80, nginx still starts. Rechecked every 5 minutes, and a
+      # renewal (certbot's deploy-hook touches /etc/letsencrypt/.deployed) reloads.
+      TLS_DOMAIN: ${TLS_DOMAIN:-}
+    command: ["/bin/sh", "/nginx-entrypoint.sh"]
     depends_on:
       - frontend
       - backend

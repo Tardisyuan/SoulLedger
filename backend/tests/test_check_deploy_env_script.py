@@ -1,5 +1,6 @@
 """scripts/check-deploy-env.sh: a good env passes, each bad value turns its own line red,
 and no secret value ever reaches the output."""
+import os
 import subprocess
 from pathlib import Path
 
@@ -19,13 +20,23 @@ def _good():
         "DB_PASSWORD": "dbpass",
         "REDIS_PASSWORD": "redispass",
         "NEXT_PUBLIC_API_URL": "https://example.com/api/v1",
+        "TLS_DOMAIN": "example.com",
+        "OPS_ALERT_WEBHOOK_URL": "https://hooks.example/ops",
+        "BACKUP_OFFSITE_REMOTE": "box:sl",
+        "BACKUP_AGE_RECIPIENT": "age1" + "q" * 58,
     }
 
 
-def _run(tmp_path, env):
+def _run(tmp_path, env, cert=True, **process_env):
+    """`cert`: a certificate for TLS_DOMAIN under the LETSENCRYPT_DIR the script is given."""
     f = tmp_path / ".env"
     f.write_text("".join(f"{k}={v}\n" for k, v in env.items()))
-    p = subprocess.run(["bash", str(SCRIPT), str(f)], capture_output=True, text=True)
+    le = tmp_path / "letsencrypt"
+    if cert:
+        (le / "live" / "example.com").mkdir(parents=True, exist_ok=True)
+        (le / "live" / "example.com" / "fullchain.pem").write_text("-----BEGIN CERTIFICATE-----\n")
+    run_env = {"PATH": os.environ["PATH"], "LETSENCRYPT_DIR": str(le), **process_env}
+    p = subprocess.run(["bash", str(SCRIPT), str(f)], capture_output=True, text=True, env=run_env)
     return p.returncode, p.stdout
 
 
