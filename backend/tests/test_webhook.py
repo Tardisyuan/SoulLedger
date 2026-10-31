@@ -208,6 +208,23 @@ class TestWebhookConfigSerializerFieldName:
         assert resp.status_code == status.HTTP_201_CREATED
         assert WebhookConfig.objects.filter(url="https://8.8.8.8/new-webhook", tenant=self.key.tenant).exists()
 
+    def test_create_returns_the_signing_secret_once_and_nothing_else_does(self):
+        """审查 2026-10-31 A8:此前这条路生成了密钥却不返回,外部系统永远验不了签。
+        变异:去掉 views 里 `instance._signing_secret = ...` → 第一段红;把字段从 read_only 改成取模型列 → 后几段红。"""
+        client = _api_key_client(self.raw_key)
+        resp = client.post("/api/v1/death-sync/webhooks/", {"url": "https://8.8.8.8/once", "events": []}, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        secret = resp.data["_signing_secret"]
+        created = WebhookConfig.objects.get(pk=resp.data["id"])
+        assert secret.startswith("whsec_") and created.signing_secret == secret
+        assert "signing_secret" not in resp.data
+        path = f"/api/v1/death-sync/webhooks/{created.pk}/"
+        for later in (client.get("/api/v1/death-sync/webhooks/"), client.get(path),
+                      client.patch(path, {"max_retries": 2}, format="json")):
+            assert later.status_code == status.HTTP_200_OK, later.content
+            assert "_signing_secret" not in later.content.decode()
+            assert secret not in later.content.decode()
+
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("url", ["https://127.0.0.1/hook", "https://10.0.0.5/hook", "https://169.254.169.254/x",

@@ -895,7 +895,7 @@ if not SENTRY_DSN and not DEBUG:
         stacklevel=2,
     )
 if SENTRY_DSN:
-    from apps.soul_assist.sentry import scrub_assist
+    from config.sentry_scrub import SCRUBBER, scrub_event
 
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -912,6 +912,8 @@ if SENTRY_DSN:
         ],
         traces_sample_rate=0.1,
         send_default_pii=False,
-        # 助手接口的请求体与栈帧局部变量是灵魂的原文(apps/soul_assist/sentry.py)。
-        before_send=scrub_assist,
+        # 默认打码只认确切键名、不递归;全项目的键表、查询串、JWT 与助手原文见 config/sentry_scrub.py。
+        event_scrubber=SCRUBBER,
+        before_send=scrub_event,
+        before_send_transaction=scrub_event,
     )

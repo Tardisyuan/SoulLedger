@@ -471,11 +471,13 @@ class WebhookViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         import secrets
         signing_secret = f"whsec_{secrets.token_urlsafe(32)}"
-        serializer.save(
+        instance = serializer.save(
             api_key=self.request.api_key,
             tenant=self.request.tenant,
             signing_secret=signing_secret,
         )
+        # Once, in this 201 only (see WebhookConfigSerializer); same as AdminWebhookViewSet.
+        instance._signing_secret = signing_secret
 
 
 class AdminWebhookViewSet(
