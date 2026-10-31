@@ -95,8 +95,6 @@ sentence never was, and both are enumerated as module constants below so the
 full set is readable in one place instead of being reconstructed out of a
 paragraph.
 """
-import datetime
-
 from apps.ledger.fungibility import offset_within_classes
 from apps.souls.dates import whole_years_between
 from apps.souls.models import Civilization
@@ -402,7 +400,11 @@ def sentence_elapsed_years(term_start, today=None) -> int | None:
     if term_start is None or term_start[0] is None:
         return None
     if today is None:
-        today = datetime.date.today()
+        # The project's day (`TIME_ZONE`), as everywhere else; `date.today()` is the server process's local day,
+        # which differs from it around midnight on a host whose clock is not in UTC (2026-10-31).
+        from django.utils import timezone
+
+        today = timezone.localdate()
     span = whole_years_between(term_start, (today.year, today.month, today.day))
     return max(span, 0)
 

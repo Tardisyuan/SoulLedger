@@ -1300,6 +1300,14 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 也随模块级 skipif 只在 PG 上跑 —— 它的 SQLite 对应是 test_data_scope_solver.py 的五种范围断言。
         "tests/test_datascope_b8_pg_performance.py::test_the_scope_actually_narrows_what_the_lists_return",
         "tests/test_datascope_b8_pg_performance.py::test_the_three_scoped_lists_use_indexes_and_stay_fast",
+        # 2026-10-31 勾魂交接与死亡同步同时到(capture.hand_over 锁序 灵魂 → 牒):各握一把的死锁只能在有行锁的引擎上
+        # 出现。串行行为在 tests/test_diyu_stations_capture_tudi_continents.py 每个引擎都跑。
+        "tests/test_capture_hand_over_and_a_death_do_not_deadlock.py::"
+        "test_a_hand_over_and_a_death_sync_at_once_do_not_deadlock",
+        # 2026-10-31 同一条 webhook 投递交给两个 worker(at-least-once):投递在行锁下进行,后到的醒来看到 SUCCESS
+        # 不再发。串行版 tests/test_a_failed_webhook_is_remembered.py::test_a_delivered_one_is_not_sent_twice 每个引擎都跑。
+        "tests/test_webhook_delivery_is_not_sent_twice.py::"
+        "test_two_workers_given_the_same_delivery_post_it_once",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"
