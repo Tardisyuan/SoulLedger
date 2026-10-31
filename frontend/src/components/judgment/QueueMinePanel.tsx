@@ -114,7 +114,7 @@ export function QueueMinePanel({
                       title={j.soul_name || undefined}
                       className={`min-w-0 flex-1 truncate text-left text-[oklch(var(--color-ink))] hover:underline ${j.id === currentId ? "font-semibold" : ""}`}
                     >
-                      {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
+                      {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason={t("judgment.soul_name_not_returned")} />}
                     </button>
                     {j.court ? (
                       <span className="truncate text-xs text-[oklch(var(--color-ink-subtle))] max-sm:hidden" title={j.court}>
