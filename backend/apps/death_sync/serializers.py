@@ -86,7 +86,14 @@ def validate_webhook_url_field(value):
 
 
 class WebhookConfigSerializer(serializers.ModelSerializer):
-    """Serializer for WebhookConfig (hides signing_secret).
+    """Serializer for WebhookConfig (the self-service, API-key endpoint).
+
+    The stored ``signing_secret`` is never a field. ``_signing_secret`` is the
+    plaintext and arrives exactly once, in the 201 of ``create`` — the same
+    shape as ``AdminWebhookConfigSerializer`` below: ``read_only``, and the
+    view sets it on the saved instance, so list / retrieve / update responses
+    never carry it. Before 2026-10-31 this path generated the secret and
+    returned nothing, so a key-created webhook could never be verified.
 
     ``create_time``, not ``created_at`` — WebhookConfig gets its audit
     timestamp from AuditUserFields, which names the field ``create_time``.
@@ -96,11 +103,13 @@ class WebhookConfigSerializer(serializers.ModelSerializer):
     served a single request, so there's no wire-format compatibility to
     preserve by keeping ``created_at`` as the JSON key via ``source=``.
     """
+    _signing_secret = serializers.CharField(read_only=True, required=False)
+
     class Meta:
         model = WebhookConfig
         fields = [
             'id', 'url', 'is_active', 'events', 'max_retries',
-            'timeout_seconds', 'create_time',
+            'timeout_seconds', 'create_time', '_signing_secret',
         ]
         read_only_fields = ['create_time']
 

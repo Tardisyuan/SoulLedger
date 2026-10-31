@@ -426,7 +426,11 @@ def test_sentry_is_wired_to_the_scrubber():
     from pathlib import Path
 
     source = (Path(__file__).resolve().parents[1] / "config" / "settings.py").read_text(encoding="utf-8")
-    assert "before_send=scrub_assist" in source
+    assert "before_send=scrub_event" in source
+    from config.sentry_scrub import scrub_event
+
+    event = {"request": {"url": "https://x/api/v1/me/assist/", "data": {"question": "秘密"}}}
+    assert "data" not in scrub_event(event, {})["request"]
 
 
 def test_me_tells_the_app_whether_to_show_the_entry(cn_tenant, eu_tenant, settings):

@@ -107,3 +107,17 @@ def public_only_session(allowed=()):
     session.mount("http://", _Adapter())
     session.mount("https://", _Adapter())
     return session
+
+
+def session_for(url, private_hosts=()):
+    """`public_only_session` for `url`, except a host listed in `private_hosts` may land on the addresses
+    it resolves to right now (the operator opted that host in; e.g. `ASSISTANT_PRIVATE_HOSTS_ALLOWED`).
+    Any other host must be public. Callers pass `allow_redirects=False`."""
+    host = (urlparse(url).hostname or "").lower()
+    ips = set()
+    if host and host in {h.lower() for h in private_hosts}:
+        try:
+            ips = {info[4][0] for info in socket.getaddrinfo(host, None)}
+        except (socket.gaierror, UnicodeError):
+            pass
+    return public_only_session(ips)

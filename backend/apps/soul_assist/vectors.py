@@ -18,6 +18,7 @@ from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
 
+from apps.core import outbound
 from apps.soul_assist import config, corpus
 
 logger = logging.getLogger(__name__)
@@ -56,13 +57,17 @@ class RebuildRunningError(Exception):
 
 
 def _post(url, payload, timeout):
-    """唯一出网的地方。不重试:提问时的 3 秒已经在 22 秒的总预算里。"""
+    """唯一出网的地方。不重试:提问时的 3 秒已经在 22 秒的总预算里。
+    不跟重定向;连上之后查对端是公网或运维放行的主机(`outbound.session_for`),否则当连不上。"""
     try:
-        resp = requests.post(url, json=payload, timeout=timeout)
+        with outbound.session_for(url, config.private_hosts_allowed()) as session:
+            resp = session.post(url, json=payload, timeout=timeout, allow_redirects=False)
     except requests.Timeout as exc:
         raise EmbeddingError("timeout") from exc
     except requests.RequestException as exc:
         raise EmbeddingError("connection", type(exc).__name__) from exc
+    except ValueError as exc:  # 对端是内网(outbound.require_public_ip)
+        raise EmbeddingError("connection", "private_address") from exc
     if resp.status_code == 404:  # Ollama:模型没拉下来
         raise EmbeddingError("model_not_found")
     if resp.status_code != 200:

@@ -414,3 +414,12 @@ def audit(user, description, changes, request=None, resource_id="config"):
         ip_address=get_client_ip(request) if request is not None else None,
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500] if request is not None else "",
     )
+
+
+def private_hosts_allowed():
+    """可以指向内网 / 本机的主机:`ASSISTANT_PRIVATE_HOSTS_ALLOWED` 加 env 里配的两个地址的主机。
+    保存时(admin_serializers)与连接时(platforms._get / vectors._post)同一份。"""
+    hosts = set(settings.ASSISTANT_PRIVATE_HOSTS_ALLOWED)
+    hosts |= {(urlsplit(u).hostname or "").lower()
+              for u in (settings.ASSISTANT_BASE_URL, settings.ASSISTANT_EMBEDDING_URL) if u}
+    return hosts - {""}
