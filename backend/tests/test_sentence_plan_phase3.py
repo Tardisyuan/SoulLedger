@@ -638,3 +638,13 @@ def test_the_global_admin_can_cancel(cn, eg, eu, judges):
     soul, p = _two_stops(cn, eg, eu)
     admin = plan.officer("g_admin", "ADMIN", None)  # only the hall-less ADMIN crosses halls (2026-10-29)
     assert _c(admin).post(f"{PLANS}{p.pk}/cancel/", {"reason": "修数据"}, format="json").status_code == 200
+
+
+def test_a_request_id_that_is_not_a_uuid_is_no_such_request(cn, eg, eu, judges):
+    """2026-10-31:路由收任意 `[^/.]+`,非 UUID 落到 UUIDField 查询上抛 Django ValidationError,DRF 不接 —— 500。
+    现在与「这个计划上没有这条请求」同一个回答:404 `not_found`,什么都不写。"""
+    soul, p = _two_stops(cn, eg, eu)
+    for action, body in (("decide", {"decision": "ACCEPT"}), ("withdraw", {})):
+        response = _c(judges["cn"]).post(f"{PLANS}{p.pk}/requests/not-a-uuid/{action}/", body, format="json")
+        assert response.status_code == 404 and response.data["code"] == "not_found", (action, response.data)
+    assert not SentencePlanRequest.all_objects.filter(plan=p).exists()

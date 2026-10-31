@@ -200,6 +200,14 @@ def request_from_amendment(judgment, plan_changes, reason):
 
 
 def _locked_pending_request(plan, request_id):
+    import uuid
+
+    try:
+        uuid.UUID(str(request_id))
+    except ValueError:
+        # The route takes any `[^/.]+`; a non-UUID reached the UUIDField lookup and raised a Django
+        # ValidationError, which DRF does not handle — a 500 for what is simply no such request.
+        raise PlanChangeRefusedError("No such request on this plan", "not_found", status=404) from None
     req = (
         SentencePlanRequest.all_objects.select_for_update(of=("self",))
         .filter(pk=request_id, plan_id=plan.pk, is_deleted=False).first()
