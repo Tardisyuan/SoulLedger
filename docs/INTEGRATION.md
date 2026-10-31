@@ -99,7 +99,8 @@
 ### 配置
 
 - 管理员在后台「死亡同步 › Webhook」里填地址;或用开了 `can_manage_webhooks` 的 Key 调
-  `death-sync/webhooks/`。签名密钥只在创建时显示一次,请交给接收方保存。
+  `death-sync/webhooks/`。签名密钥只在创建时显示一次(201 响应里的 `_signing_secret`;列表、详情、修改都不再返回),
+  请交给接收方保存。
 - `events` 填要订阅的事件类型,**留空 = 全部**。发事件的域:soul、workflow、notification、dispatch、
   deathsync、social,以及单独登记的 `SCHEDULER_RUN_FAILED`(某个殿的定时任务运行失败)。
 - 每个请求 POST 一段 JSON:

@@ -17840,7 +17840,14 @@ export interface components {
             position?: string;
         };
         /**
-         * @description Serializer for WebhookConfig (hides signing_secret).
+         * @description Serializer for WebhookConfig (the self-service, API-key endpoint).
+         *
+         *     The stored ``signing_secret`` is never a field. ``_signing_secret`` is the
+         *     plaintext and arrives exactly once, in the 201 of ``create`` — the same
+         *     shape as ``AdminWebhookConfigSerializer`` below: ``read_only``, and the
+         *     view sets it on the saved instance, so list / retrieve / update responses
+         *     never carry it. Before 2026-10-31 this path generated the secret and
+         *     returned nothing, so a key-created webhook could never be verified.
          *
          *     ``create_time``, not ``created_at`` — WebhookConfig gets its audit
          *     timestamp from AuditUserFields, which names the field ``create_time``.
@@ -17865,6 +17872,8 @@ export interface components {
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time?: string;
+            /** signing secret */
+            readonly _signing_secret?: string;
         };
         /**
          * @description Serializer for WorkflowTemplate.
@@ -21349,7 +21358,14 @@ export interface components {
             grievance_level?: string;
         };
         /**
-         * @description Serializer for WebhookConfig (hides signing_secret).
+         * @description Serializer for WebhookConfig (the self-service, API-key endpoint).
+         *
+         *     The stored ``signing_secret`` is never a field. ``_signing_secret`` is the
+         *     plaintext and arrives exactly once, in the 201 of ``create`` — the same
+         *     shape as ``AdminWebhookConfigSerializer`` below: ``read_only``, and the
+         *     view sets it on the saved instance, so list / retrieve / update responses
+         *     never carry it. Before 2026-10-31 this path generated the secret and
+         *     returned nothing, so a key-created webhook could never be verified.
          *
          *     ``create_time``, not ``created_at`` — WebhookConfig gets its audit
          *     timestamp from AuditUserFields, which names the field ``create_time``.
@@ -21374,6 +21390,8 @@ export interface components {
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time: string;
+            /** signing secret */
+            readonly _signing_secret: string;
         };
         /** @description 埃及称心,按本案采信的证据(apps/judgment/weighing.py)。 */
         Weighing: {
