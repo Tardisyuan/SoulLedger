@@ -75,6 +75,11 @@ export const dispatchKeys = {
   realmOptions: (targetTenantCode: string) => [...dispatchKeys.all, "realm-options", targetTenantCode] as const,
 };
 
+/** Death-sync registrations and summary (`app/death-sync/page.tsx` keys under `["death-sync", …]`). */
+export const deathSyncKeys = {
+  all: ["death-sync"] as const,
+};
+
 export const judgmentKeys = {
   all: ["judgments"] as const,
   list: (params?: Record<string, string>) => [...judgmentKeys.all, "list", params] as const,
