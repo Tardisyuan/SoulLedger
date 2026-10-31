@@ -7,7 +7,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { FlatList, ScrollView } from "react-native";
+import { FlatList, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -318,6 +318,9 @@ describe("report", () => {
     const calls = stubApi({ "POST /me/social/reports/": { status: 201, data: { counted: true, reports_remaining: 9 } } });
     wrap(<ReportScreen target="COMMENT" id="c1" preview="我记得扬州也有这道。" />);
     expect(screen.getByText("举报评论")).toBeTruthy();
+    // Han serif in an Android multiline input: under ~1.8 × the size the first line's top is cut (chat.test, 10-31).
+    const detail = StyleSheet.flatten(screen.getByTestId("report-detail").props.style);
+    expect(detail.lineHeight / detail.fontSize).toBeGreaterThanOrEqual(1.8);
     expect(screen.getByTestId("report-submit").props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText("辱骂骚扰")).toBeTruthy();
     fireEvent.press(screen.getByTestId("reason-ABUSE"));
