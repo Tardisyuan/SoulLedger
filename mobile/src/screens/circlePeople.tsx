@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 2, borderWidth: 1 },
   radio: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderLeftWidth: 2 },
-  detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 13, lineHeight: 21, textAlignVertical: "top" },
+  detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 13, lineHeight: 24, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
   /** A name is not something said: the interface face, not the serif (v3). */

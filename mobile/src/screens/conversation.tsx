@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
   composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
   // 24, not 20: the Han text is Noto Serif SC, whose glyph box is taller than 20 at 15 — Android clipped the top of
   // the first line. Padding stays 12 (the spacing scale), so one line is 48 tall on both platforms.
-  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 15, lineHeight: 24, maxHeight: 140 },
+  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 15, lineHeight: 27, maxHeight: 140 },
   send: { paddingHorizontal: ANDROID ? 0 : 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 18 },
   lockedLine: { minHeight: 44, borderWidth: 1, borderStyle: "dotted", justifyContent: "center", paddingHorizontal: 12 },

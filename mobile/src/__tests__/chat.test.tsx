@@ -472,11 +472,12 @@ describe("the conversation's eight states", () => {
     expect(StyleSheet.flatten(within(bubble).getByTestId("letter-corner-br").props.style)).toMatchObject({ right: 4, bottom: 4 });
     expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 24 });
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
-    // The Han placeholder is set in Noto Serif SC; a line height under its glyph box clips the top of the first
-    // line on Android (华为真机 2026-10-30: 15/20 cut 「向殿司陈情」 in half). Same line as circle's composer gives it.
+    // The Han placeholder is set in Noto Serif SC. In an Android multiline TextInput a line height under about
+    // 1.8 × the size clips the top of the first line (华为真机 2026-10-31: 15/20, 15/24, 15/26, 13/21, 13/23 all cut
+    // the dot off 「向」; 15/27 and 13/24 whole). 15/27 is circle's post box.
     const compose = StyleSheet.flatten(screen.getByTestId("compose").props.style);
     expect(compose.fontFamily).toBe(family.serifHan);
-    expect(compose.lineHeight / compose.fontSize).toBeGreaterThanOrEqual(1.6);
+    expect(compose.lineHeight / compose.fontSize).toBeGreaterThanOrEqual(1.8);
   });
 
   it("a hall is named in the interface language, falling back to the server's hall", () => {
