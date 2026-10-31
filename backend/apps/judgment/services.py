@@ -17,6 +17,16 @@ class CitationRefusedError(Exception):
     """
 
 
+def _is_uuid(value) -> bool:
+    import uuid
+
+    try:
+        uuid.UUID(str(value))
+    except ValueError:
+        return False
+    return True
+
+
 class StatuteCitationService:
     """Attaching and detaching the articles a verdict rests on.
 
@@ -39,7 +49,9 @@ class StatuteCitationService:
         """
         from apps.judgment.models import Statute
 
-        statute = Statute.all_objects.filter(pk=statute_id).first()
+        # A route segment is any `[^/.]+` (`uncite`); a non-UUID would raise Django's ValidationError at the
+        # lookup, which DRF answers 500 (2026-10-31). Not an id at all is "no such statute" too.
+        statute = Statute.all_objects.filter(pk=statute_id).first() if _is_uuid(statute_id) else None
         if statute is None:
             raise CitationRefusedError(f"No statute with id {statute_id}.")
         if statute.is_deleted:
@@ -493,7 +505,7 @@ class EvidenceAdmissionService:
             # tenant's: the caller learns nothing about records outside this case.
             record = SoulRecord.objects.filter(
                 pk=record_id, soul_id=locked.soul_id, cycle=locked.cycle,
-            ).first()
+            ).first() if _is_uuid(record_id) else None  # route segment `[^/.]+`: not an id is not evidence
             if record is None:
                 raise EvidenceRefusedError(f"Record {record_id} is not evidence in this case.")
             if record.record_type not in cls.SCORED_TYPES:
