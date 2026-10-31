@@ -15513,6 +15513,7 @@ export interface components {
             readonly reason: string;
             /** @description 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。 */
             readonly desired_remaining_days: number | null;
+            /** @default PENDING */
             readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
             /** @description 批准后,自决定时刻起还要等的天数。 */
             readonly approved_days: number | null;
@@ -18813,6 +18814,7 @@ export interface components {
             /** Format: uuid */
             readonly comment: string | null;
             readonly target_user: components["schemas"]["ModerationAuthor"];
+            /** @default OPEN */
             readonly status: components["schemas"]["SocialReportStatusEnum"];
             readonly report_count: number;
             readonly content_excerpt: string;

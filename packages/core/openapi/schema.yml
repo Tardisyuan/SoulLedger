@@ -34955,6 +34955,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
           readOnly: true
+          default: PENDING
         approved_days:
           type: integer
           readOnly: true
@@ -41390,6 +41391,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/SocialReportStatusEnum'
           readOnly: true
+          default: OPEN
         report_count:
           type: integer
           readOnly: true
