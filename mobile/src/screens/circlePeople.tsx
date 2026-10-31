@@ -559,7 +559,7 @@ export function CircleSearchScreen() {
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
-            style={[styles.searchInput, { color: t.ink }]}
+            style={[styles.searchInput, { color: t.ink, fontFamily: quoteFamily(q || tr("soul_app.circle.search.hint")) }]}
           />
         </View>
       </View>
@@ -713,7 +713,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
               placeholderTextColor={t.inkSubtle}
               multiline
               maxLength={500}
-              style={[styles.detail, { borderColor: t.hair, backgroundColor: t.s1, color: t.ink }]}
+              style={[styles.detail, { borderColor: t.hair, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(detail || tr("soul_app.circle.report.detail_hint")) }]}
             />
             <Button testID="report-submit" title={tr("soul_app.circle.report.submit")} onPress={send} busy={busy} disabled={!reason} style={styles.submit} />
           </View>
