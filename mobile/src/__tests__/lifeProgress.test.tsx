@@ -98,7 +98,10 @@ beforeEach(async () => {
   // The folded / opened rows are remembered per soul; a test that opens 审判 must not leave it open for the next.
   persistentStore.remove(`${LIFE_OPEN_PREFIX}${PROFILE.soul_code}`);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  jest.restoreAllMocks();
+  jest.useRealTimers();
+});
 
 describe("ferryWait (第 4 节:整年往下取整,不满一年写天数,当天可渡)", () => {
   const today = new Date(2026, 9, 29);
@@ -326,6 +329,9 @@ describe("推送落点", () => {
       expect(landingOf({ screen: "Life", judgment_id: J, kind })).toEqual({ screen: "Life", focus: { judgment: J } });
   });
 
+  // Fake timers from the landing on: "scrolled once, no wash" after a real-time sleep said nothing under load — the
+  // sleep could end before a scheduled scroll or wash ran. The 50 ms below are on the fake clock: every timer the
+  // landing set that is due by then has run. (Booting the app stays on real timers; under fake ones it never settles.)
   async function land(reduced: boolean, lifeData: unknown, wangsi: unknown[]) {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
     const inner = {};
@@ -337,8 +343,9 @@ describe("推送落点", () => {
       ok(0, 640);
     } as never);
     await openAs({ wangsi_delivered_at: "2026-10-28T12:00:00Z" }, { "/me/wangsi/": { status: 200, data: wangsi } }, lifeData);
+    jest.useFakeTimers();
     await act(async () => landOn(navigationRef.navigate as never, landingOf({ screen: "Life", judgment_id: J, kind: "wangsi_delivered" })!));
-    await act(async () => new Promise((r) => setTimeout(r, 50)));
+    await act(() => jest.advanceTimersByTimeAsync(50));
     return { scroll, measured, inner };
   }
 
