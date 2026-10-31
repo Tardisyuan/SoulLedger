@@ -139,7 +139,9 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   (`cameraPermissionSurvivesPlugins.test.ts` 守着)。
 - **jest 看不见、只有设备上才现形的几类(2026-10-11 一轮抓到六处)**:`opacity: 0` 的视图在 iOS 上收不到触摸(用透明文字,别用透明视图);
   受控 TextInput 被 React 回填旧值时 iOS 也发一次 `onChangeText`;嵌在页头下面的 `KeyboardAvoidingView` 要给 `keyboardVerticalOffset`
-  (它在窗口里的 y),否则少让出页头那么高;语言包里的 `↗` 在 iOS 上是彩色表情(`translate()` 现在统一补 U+FE0E)。
+  (它在窗口里的 y),否则少让出页头那么高;语言包里的 `↗` 在 iOS 上是彩色表情(`translate()` 现在统一补 U+FE0E);
+  安卓多行 TextInput 用宋体(Noto Serif SC)时,`lineHeight` 低于约 1.8 倍字号就裁掉第一行顶部(10-31 华为实测:15/24、15/26、13/23 裁,
+  15/27、13/24 完整;不设 `lineHeight` 也完整)。看「向」字上那一点在不在,10-30 就是把一张被裁的截图当成了修好。
   所以**界面改动合并后要真的上一次模拟器**,测试全绿不够。
 - **iOS 模拟器的钥匙串不强制生物验证**:`requireAuthentication: true` 的 secure-store 条目不弹面容就能读。面容相关只能真机验(清单在备忘 `real-device-checklist`)。
 - **本机连 115 的 Matrix 要先开隧道**:`ssh -f -N -L 8008:127.0.0.1:8008 tardis@pi`;runserver 的 `ALLOWED_HOSTS` 还要加本机局域网地址
