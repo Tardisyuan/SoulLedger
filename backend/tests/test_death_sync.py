@@ -546,7 +546,7 @@ class TestDeathRegistrationPermissionFix:
 
     Two of the paths this bug touches (POST with a fully valid payload,
     i.e. a real 201) run into an unrelated, pre-existing bug:
-    apps/death_sync/encrypted_json.py's EncryptedJSONField.get_prep_value()
+    apps/death_sync/encrypted_json.py's encrypted JSON field's get_prep_value()
     calls plain stdlib json.dumps() (no DjangoJSONEncoder) on
     source_payload, which contains a python `date` object once
     DeathRegistrationCreateSerializer validates death_date — so a *valid*
@@ -653,14 +653,9 @@ class TestDeathRegistrationEncryptedJSONFieldDateFix:
     def test_the_saved_request_record_is_processed_and_soul_is_dead(self):
         """Confirms the fix isn't just "doesn't crash" — the write actually
         completes and the domain transition happens, not just a 201 with a
-        half-saved row.
-
-        Deliberately not asserting on source_payload's decoded shape here:
-        EncryptedJSONField.from_db_value round-trips it back to a string
-        rather than a dict under this test's SQLite override (a separate,
-        pre-existing wrinkle in how this custom field composes with
-        SQLite's own JSONField handling — unrelated to the date-encoding
-        TypeError this test class exists to cover, and out of scope here).
+        half-saved row, and the payload reads back as the dict it was
+        (it used to come back as a str: the field JSON-encoded twice —
+        review 2026-10-31 A2, tests/test_encrypted_json_column.py).
         """
         resp = _api_key_client(self.raw_key).post(
             "/api/v1/death-sync/register/",
@@ -671,6 +666,7 @@ class TestDeathRegistrationEncryptedJSONFieldDateFix:
         assert record.status == DeathRegistrationStatus.PROCESSED
         self.soul.refresh_from_db()
         assert self.soul.current_state != SoulState.ALIVE
+        assert record.source_payload["death_date"] == "2026-06-01"
 
 
 @pytest.mark.django_db
