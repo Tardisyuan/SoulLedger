@@ -55,7 +55,9 @@ jest.mock("@soulledger/core/api/disposition", () => ({
 
 const auth = LocalAuthentication as unknown as { __state: { level: number; success: boolean; error: string } };
 const authenticate = LocalAuthentication.authenticateAsync as jest.Mock;
-const settle = () => act(async () => new Promise((r) => setTimeout(r, 400)));
+// Flush the updates still in flight before the test ends (act warnings otherwise). No real-time sleep: a "nothing
+// was sent" check waits for the refusal line instead, which only shows once the attempt is over.
+const settle = () => act(async () => {});
 const CANCELLED = translate("zh-Hans", "officer_app.biometric.cancelled");
 const FAILED = translate("zh-Hans", "officer_app.biometric.failed_any", { bio: "面容" });
 
@@ -96,7 +98,13 @@ const SCREENS = [
     sent: mockRelease,
     failureID: null,
     go: async () => {
-      renderOfficer(<ServingFact soulId="s-1" />, { user: { ...OFFICER, permissions: ["disposition.read", "disposition.execute"] } });
+      // In a ToastProvider: its refusal line is a toast, and "nothing was sent" waits for that line.
+      renderOfficer(
+        <ToastProvider>
+          <ServingFact soulId="s-1" />
+        </ToastProvider>,
+        { user: { ...OFFICER, permissions: ["disposition.read", "disposition.execute"] } }
+      );
       fireEvent.press(await screen.findByTestId("soul-release"));
       fireEvent.press(screen.getByTestId("soul-release-confirm"));
     },
@@ -115,7 +123,7 @@ describe.each(SCREENS)("$name", ({ sent, failureID, go }) => {
     auth.__state.success = false;
     await go();
     await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
-    await settle();
+    expect(await screen.findByText(FAILED)).toBeTruthy();
     expect(sent).not.toHaveBeenCalled();
     if (failureID) {
       expect(screen.getByTestId(failureID).props.children).toBe(FAILED);
@@ -128,7 +136,7 @@ describe.each(SCREENS)("$name", ({ sent, failureID, go }) => {
     auth.__state.error = "user_cancel";
     await go();
     await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
-    await settle();
+    expect(await screen.findByText(CANCELLED)).toBeTruthy();
     expect(sent).not.toHaveBeenCalled();
     if (failureID) {
       expect(screen.getByTestId(failureID).props.children).toBe(CANCELLED);
@@ -203,17 +211,21 @@ describe("期满释放 after the check (phone QA 10-29c)", () => {
       listeners.push(fn);
       return { remove: jest.fn() };
     }) as never);
+    // Fake timers: the wait has a 2 s cap (deviceCheck.ts `foreground`); a real-time sleep would say nothing
+    // about it under load. Advance well inside the cap, with no `active` yet: nothing may have gone out.
+    jest.useFakeTimers();
     try {
       await open();
       fireEvent.press(screen.getByTestId("soul-release-confirm"));
       await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
-      await act(async () => new Promise((r) => setTimeout(r, 50)));
+      await act(() => jest.advanceTimersByTimeAsync(1000));
       expect(mockRelease).not.toHaveBeenCalled();
       await act(async () => change("active"));
       await waitFor(() => expect(mockRelease).toHaveBeenCalledTimes(1));
     } finally {
       (AppState as { currentState: string }).currentState = was;
       listen.mockRestore();
+      jest.useRealTimers();
     }
     await settle();
   });

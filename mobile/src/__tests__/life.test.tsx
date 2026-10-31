@@ -297,6 +297,9 @@ describe("a record's basis", () => {
   });
 
   it("shows the statute code with its title and the life stage, and says nothing for a record without either", async () => {
+    // FadeIn (ui.tsx) animates opacity over 120 ms. On real timers a sleep to wait it out was load-dependent
+    // (one tick was enough when idle, not on the pre-push run); on fake timers the fade is run to its end below.
+    jest.useFakeTimers();
     await open(life(1, {
       records: [
         record("r1", { statute_snapshot: { code: "CN-GGG-F-01", title: { zh: "不妄语", en: "No false speech", egy: "" } }, life_stage: "OLD_AGE" }),
@@ -309,11 +312,8 @@ describe("a record's basis", () => {
     expect(screen.queryByTestId("record-stage-r2")).toBeNull();
     // The soul never sees where the record came from.
     expect(screen.queryByText(/证人|WITNESS/)).toBeNull();
-    // FadeIn (ui.tsx) animates opacity over 120 ms on real timers; one tick was enough when idle but
-    // not under load (the pre-push run went red). Wait out the whole fade inside act().
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    });
+    await act(() => jest.advanceTimersByTimeAsync(500));
+    jest.useRealTimers();
   });
 });
 
