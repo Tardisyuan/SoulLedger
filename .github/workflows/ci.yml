@@ -20,7 +20,7 @@ name: CI
 # Run length (2026-10-30, estimated from the job list below, not measured on
 # GitHub): ~120 runner-minutes a run (backend ~60: the whole suite serially on
 # PostgreSQL with migrations and coverage; frontend ~12, mobile ~6, officer ~6,
-# e2e 3 x ~12). Re-estimate from the first real runs.
+# e2e 3 x ~12; synapse ~5, added 2026-10-31). Re-estimate from the first real runs.
 # tests/test_ci_runs_on_a_budget.py holds these triggers.
 on:
   workflow_dispatch:
@@ -117,6 +117,12 @@ jobs:
           # local gates do: plain -n queues the slow migration round trips on one worker. Coverage and its
           # floor still apply (pytest-cov combines the workers).
           python -m pytest --tb=short -q -n auto --dist worksteal
+      # The multi-database guard (G3/G7) exists only under its own settings; the suite above skips it
+      # (review C21, 2026-10-31). Same PostgreSQL and Redis. `run-gates.sh --real-pg --full` runs it too.
+      - name: Multi-database guard
+        run: |
+          cd backend
+          python -m pytest --tb=short -q --no-cov --ds=config.settings_multidb -m multidb tests/test_multidb_shadow.py
       # ruff's version comes from requirements-dev.txt — the same pin the local
       # backend/.venv and the pre-push hook use. This used to install ruff
       # unpinned, i.e. whatever was newest on the day of the run. Installed above.
@@ -261,8 +267,11 @@ jobs:
         run: npm run typecheck --workspace @soulledger/mobile
       - name: Lint mobile
         run: npm run lint --workspace @soulledger/mobile
+      # `test:coverage` (the app's coverage thresholds) once mobile/package.json defines it, else plain
+      # `test` — never neither. run-gates.sh --full makes the same choice.
       - name: Test mobile
-        run: npm run test --workspace @soulledger/mobile
+        run: |
+          npm run --workspace @soulledger/mobile "$(node -p "require('./mobile/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")"
 
   # The officer app (灵魂簿 · 官员, mobile-officer/). Same JS gates as `mobile`. It imports
   # mobile/src's leaf modules in place (mobile-officer/src/shared.ts), so it is a separate job:
@@ -288,8 +297,68 @@ jobs:
         run: npm run typecheck --workspace @soulledger/officer
       - name: Lint officer
         run: npm run lint --workspace @soulledger/officer
+      # As `Test mobile`: test:coverage when mobile-officer/package.json defines it.
       - name: Test officer
-        run: npm run test --workspace @soulledger/officer
+        run: |
+          npm run --workspace @soulledger/officer "$(node -p "require('./mobile-officer/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'")"
+
+  # backend/tests/test_chat_synapse_integration.py against a real Synapse (review C21, 2026-10-31): it skips
+  # without SYNAPSE_TEST_URL, so it ran nowhere. Synapse is started by scripts/synapse-test.sh, not as a
+  # `services:` container — it must `generate` its config first and mount config/synapse from the checkout.
+  # The policy module's push callback reaches the test's live server through host.docker.internal.
+  synapse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    env:
+      SECRET_KEY: ci-test-key-not-for-production-32-bytes-min
+      DEBUG: 'true'
+      DATABASE_URL: postgres://soulledger:soulledger@localhost:5432/soulledger_test
+      REDIS_URL: redis://localhost:6379/0
+      SYNAPSE_TEST_URL: http://127.0.0.1:18008
+      SYNAPSE_TEST_PUSH: '1'
+      SYNAPSE_TEST_SERVER_NAME: soulledger.test
+      SYNAPSE_TEST_JWT_SECRET: ci-synapse-jwt-secret-not-for-production
+      SYNAPSE_TEST_SHARED_SECRET: ci-synapse-shared-secret-not-for-production
+      SYN_DOCKER_ARGS: -p 127.0.0.1:18008:8008 --add-host=host.docker.internal:host-gateway
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: soulledger_test
+          POSTGRES_USER: soulledger
+          POSTGRES_PASSWORD: soulledger
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U soulledger"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install --no-deps -r requirements.lock -r requirements-dev.txt
+      - name: Start Synapse
+        run: scripts/synapse-test.sh up
+      # A skip is a failure here: a wrong SYNAPSE_TEST_* would otherwise turn the whole job into a green no-op.
+      - name: Synapse integration tests
+        run: |
+          cd backend
+          python -m pytest --tb=short -q -rs --no-cov --liveserver 0.0.0.0:18099 tests/test_chat_synapse_integration.py 2>&1 | tee "$RUNNER_TEMP/synapse.log"
+          ! grep -q SKIPPED "$RUNNER_TEMP/synapse.log"
+      - name: Synapse log
+        if: failure()
+        run: docker logs --tail 200 sl-synapse-test
 
   # One leg per Playwright project, in parallel. Serial would be ~3x the wall
   # clock for no benefit, and a matrix keeps each engine's report separate so

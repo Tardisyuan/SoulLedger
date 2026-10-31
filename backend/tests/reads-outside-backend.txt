@@ -26,7 +26,7 @@ tests/test_chat_policy.py                                        config
 tests/test_chat_push_hook.py                                     config
 tests/test_chat_synapse_integration.py                           config
 tests/test_check_deploy_env_script.py                            scripts
-tests/test_ci_runs_on_a_budget.py                                .github
+tests/test_ci_runs_on_a_budget.py                                .github mobile mobile-officer package.json scripts
 tests/test_collection_scope.py                                   *
 tests/test_committed_schema_matches_the_backend.py               packages
 tests/test_credits_literature_quotes_the_corpus.py               config packages

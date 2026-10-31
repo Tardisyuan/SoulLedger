@@ -860,6 +860,55 @@ class TestAppJestSelection:
         assert _classify_app_jest(hook, ["mobile/src/navigation.tsx"], GATES_FULL="1")[0] == 1
 
 
+class TestCoverageOnFull:
+    """A3 (2026-10-31): jest's coverageThreshold (frontend/jest.config.js: global and packages/core/src) is
+    evaluated only under --coverage, and every local run passed --coverage=false — so only CI saw core's
+    branches fall to 70.58% against 74. `--full` now runs web jest with coverage, and each app's
+    `test:coverage` when the app defines one. A selective run stays without: a threshold is an aggregate
+    over every file under its key, and the related tests leave most of those unexecuted."""
+
+    CHANGED = "frontend/app.tsx\nmobile/src/a.ts\nmobile-officer/src/b.ts"
+
+    def _calls(self, checkouts, tmp_path, fake_backend, *args) -> list[str]:
+        main, _ = checkouts
+        for d in ("frontend", "mobile/src", "mobile-officer/src"):
+            (main / d).mkdir(parents=True, exist_ok=True)
+        (main / "frontend" / "jest.always-run.txt").write_text("")
+        for f in self.CHANGED.split("\n"):
+            (main / f).write_text("")
+        (main / "mobile" / "package.json").write_text('{"scripts": {"test": "jest", "test:coverage": "jest --coverage"}}\n')
+        (main / "mobile-officer" / "package.json").write_text('{"scripts": {"test": "jest"}}\n')
+        _git(main, "add", "-A")
+        _git(main, "commit", "-q", "-m", "js areas")
+        b = tmp_path / "bin"
+        b.mkdir()
+        log = tmp_path / "calls"
+        for tool in ("npx", "npm"):
+            (b / tool).write_text(f'#!/bin/bash\necho "{tool} $*" >> "{log}"\n')
+            (b / tool).chmod(0o755)
+        env = _clean_env(PREPUSH_CHANGED=self.CHANGED, PYTHON_BIN=fake_backend, RUFF_BIN=shutil.which("true"),
+                         DATABASE_URL="sqlite:///:memory:", REDIS_URL=os.environ.get("REDIS_URL", ""))
+        env["PATH"] = f"{b}:{env['PATH']}"
+        proc = subprocess.run(["bash", str(main / "scripts" / "run-gates.sh"), "--prepush", *args], cwd=main,
+                              env=env, capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        return log.read_text().splitlines()
+
+    def test_full_runs_web_jest_with_coverage_and_the_apps_coverage_script(self, checkouts, tmp_path, fake_backend):
+        calls = self._calls(checkouts, tmp_path, fake_backend, "--full")
+        (jest,) = [c for c in calls if c.startswith("npx jest ") and "--listTests" not in c]
+        assert " --coverage " in f"{jest} " and "--coverage=false" not in jest, jest
+        assert any(c.startswith("npm run --workspace mobile test:coverage ") for c in calls), calls
+        # The officer app has no test:coverage: its plain `test` still runs, it is not skipped.
+        assert any(c.startswith("npm run --workspace mobile-officer test ") for c in calls), calls
+
+    def test_a_selective_run_stays_without_coverage(self, checkouts, tmp_path, fake_backend):
+        calls = self._calls(checkouts, tmp_path, fake_backend)
+        (jest,) = [c for c in calls if c.startswith("npx jest ") and "--listTests" not in c]
+        assert "--coverage=false" in jest, jest
+        assert not any("test:coverage" in c for c in calls), calls
+
+
 
 
 def _push(hook, cwd: Path, remote_ref: str) -> subprocess.CompletedProcess:
@@ -1064,9 +1113,10 @@ class TestTheOfficerAppIsGated:
         runner = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         for script in ("typecheck", "lint"):
             assert f"npm run --workspace mobile-officer {script}" in runner
-        # jest goes through app_jest (2026-10-27), which runs the named workspace's own `test` script.
+        # jest goes through app_jest (2026-10-27), which runs the named workspace's own `test` script
+        # (`test:coverage` on --full when the app has one, 2026-10-31 — TestCoverageOnFull).
         assert re.search(r"^\s*app_jest mobile-officer ", runner, re.M)
-        assert 'npm run --workspace "$dir" test' in runner
+        assert 'npm run --workspace "$dir" "$script"' in runner and "local script=test\n" in runner
 
     def test_every_workspace_the_runner_names_exists(self):
         """`--workspace officer` named no workspace: npm refused, and the hook read that as a failed
@@ -1240,6 +1290,11 @@ class TestRealPostgres:
     PG_ONLY = "tests/test_x.py::test_needs_row_locks"
 
     def _gates(self, repo: Path, python: str, *args, changed=("backend/apps/souls/views.py",), **extra):
+        # REDIS_URL is forwarded as `_pytest_line` does (_clean_env strips it). Without it a machine with a
+        # Redis but no redis-server binary — the GitHub runner: a redis service, REDIS_URL set — passed the
+        # `fake_backend` skip and then had the gates refuse: "redis-server not found and the configured
+        # cache is unreachable" (CI, 2026-10-31, review A4).
+        extra.setdefault("REDIS_URL", os.environ.get("REDIS_URL", ""))
         env = _clean_env(PREPUSH_CHANGED="\n".join(changed), PYTHON_BIN=python, RUFF_BIN=shutil.which("true"),
                          GATES_PG_ONLY_TESTS=self.PG_ONLY, **extra)
         return subprocess.run(["bash", str(repo / "scripts" / "run-gates.sh"), "--prepush", "--real-pg", *args],
@@ -1279,31 +1334,47 @@ class TestRealPostgres:
         assert "PostgreSQL unreachable" in proc.stdout, proc.stdout
         assert "PYTEST TEMPLATE" not in proc.stdout
 
-    def test_a_reachable_postgres_runs_the_selection_plus_the_postgres_only_tests(
-        self, checkouts, fake_backend
-    ):
+    def _reachable(self, main: Path, python: str, *args) -> tuple[subprocess.CompletedProcess, list[list[str]]]:
+        """The gates against a listening stand-in PostgreSQL; returns the run and each pytest's argv."""
         import socket
 
-        main, _ = checkouts
-        # A stand-in selector, so the by-app branch runs (with none, the whole suite runs — PG-only included).
-        (main / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
         listener.listen()
         try:
             port = listener.getsockname()[1]
             (main / "backend" / ".env").write_text(f'DATABASE_URL="postgres://u:p@127.0.0.1:{port}/x"\n')
-            proc = self._gates(main, fake_backend, DATABASE_URL="sqlite:///:memory:")
+            proc = self._gates(main, python, *args, DATABASE_URL="sqlite:///:memory:")
         finally:
             listener.close()
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        m = re.search(r"^PYTEST TEMPLATE=\S* SECRET_KEY=\S* ARGS=(.*)$", proc.stdout, re.M)
-        assert m, proc.stdout
-        args = re.findall(r"\[([^\]]*)\]", m.group(1))
+        runs = re.findall(r"^PYTEST TEMPLATE=\S* SECRET_KEY=\S* ARGS=(.*)$", proc.stdout, re.M)
+        return proc, [re.findall(r"\[([^\]]*)\]", r) for r in runs]
+
+    def test_a_reachable_postgres_runs_the_selection_plus_the_postgres_only_tests(
+        self, checkouts, fake_backend
+    ):
+        main, _ = checkouts
+        # A stand-in selector, so the by-app branch runs (with none, the whole suite runs — PG-only included).
+        (main / "scripts" / "select-backend-tests.py").write_text("print('tests/test_souls.py')\n")
+        proc, runs = self._reachable(main, fake_backend)
+        assert len(runs) == 1, proc.stdout  # no multi-database guard without --full (next test)
+        args = runs[0]
         assert "--create-db" in args and "faulthandler_timeout=600" in args, args
         assert self.PG_ONLY in args and "tests/test_souls.py" in args, args
         assert "-m" in args and "not migration" in args, args
         assert "→ ruff, makemigrations: skipped — --real-pg runs pytest only" in proc.stdout
+
+    def test_full_also_runs_the_multidb_guard_that_the_suite_skips(self, checkouts, fake_backend):
+        """C21 (2026-10-31): tests/test_multidb_shadow.py exists only under --ds=config.settings_multidb,
+        so every ordinary run skips it. `--real-pg --full` runs it, on the same database, before the suite."""
+        main, _ = checkouts
+        proc, runs = self._reachable(main, fake_backend, "--full")
+        assert len(runs) == 2, proc.stdout
+        guard, suite = runs
+        assert "--ds=config.settings_multidb" in guard and "tests/test_multidb_shadow.py" in guard, guard
+        assert guard[guard.index("-m") + 1] == "multidb" and "--create-db" in guard, guard
+        assert "--ds=config.settings_multidb" not in suite and "tests/test_multidb_shadow.py" not in suite, suite
 
 
 class TestTheWholeRunOnAnotherMachine:
