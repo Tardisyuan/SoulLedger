@@ -121,6 +121,11 @@ def capture(pk) -> CaptureWarrant:
 
 def hand_over(pk, location: str = "") -> CaptureWarrant:
     with transaction.atomic():
+        # 锁序 灵魂 → 牒,与死亡登记同一个方向(`transition_to` 锁灵魂,再由 `close_on_death` 锁牒)。
+        # 此前这里先锁牒、`die()` 里才锁灵魂:同一个灵魂的交接与死亡同步同时到,两边各握一把等另一把 —— 死锁。
+        soul_id = CaptureWarrant.all_objects.filter(pk=pk).values_list("soul_id", flat=True).first()
+        if soul_id is not None:
+            Soul.lock(soul_id)
         warrant = _lock(pk)
         _assert_status(warrant, CaptureStatus.CAPTURED)
         # 先写成 HANDED_OVER,并告诉 `die()` 里的 `close_on_death` 这一张就是本次死亡的牒,不要再补发。
