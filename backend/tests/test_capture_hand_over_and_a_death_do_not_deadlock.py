@@ -26,15 +26,18 @@ NEEDS_ROW_LOCKS = pytest.mark.skipif(
     SQLITE, reason="SQLite serializes writers; the two paths cannot each hold one lock. Run on PostgreSQL.")
 
 
-def _wait_until_someone_waits_on_a_lock(timeout=10.0):
+def _wait_until_blocked_by(holder_pid, timeout=60.0):
+    """Poll until some session waits on a lock held by `holder_pid`. `pg_locks` / `pg_blocking_pids` are live
+    (unlike `pg_stat_activity`, which a transaction snapshots), and naming the holder rules out an unrelated
+    waiter. A condition, not a sleep: under load the hand-over may take seconds to get there (2026-10-31)."""
     deadline = time.monotonic() + timeout
     with connections["default"].cursor() as cursor:
         while time.monotonic() < deadline:
-            cursor.execute("select count(*) from pg_stat_activity "
-                           "where datname = current_database() and wait_event_type = 'Lock'")
+            cursor.execute("select count(*) from pg_locks where not granted and %s = any(pg_blocking_pids(pid))",
+                           [holder_pid])
             if cursor.fetchone()[0]:
                 return True
-            time.sleep(0.05)
+            time.sleep(0.02)
     return False
 
 
@@ -49,15 +52,18 @@ def test_a_hand_over_and_a_death_sync_at_once_do_not_deadlock():
     capture.capture(warrant.pk)
 
     soul_locked, release = threading.Event(), threading.Event()
-    outcome, errors = {}, []
+    outcome, errors, pids = {}, [], {}
 
     def death_sync():
         """死亡同步的形状:先锁灵魂,停住等交接也走到它要等的那把锁上,再登记死亡(→ close_on_death 锁牒)。"""
         try:
             with transaction.atomic():
                 Soul.lock(soul.pk)
+                with connection.cursor() as cursor:
+                    cursor.execute("select pg_backend_pid()")
+                    pids["death"] = cursor.fetchone()[0]
                 soul_locked.set()
-                release.wait(10)
+                release.wait(90)
                 outcome["death"] = Soul.all_objects.get(pk=soul.pk).die()
         except Exception as exc:  # pragma: no cover - 失败时报出来
             errors.append(exc)
@@ -66,7 +72,7 @@ def test_a_hand_over_and_a_death_sync_at_once_do_not_deadlock():
 
     def hand_over():
         try:
-            soul_locked.wait(10)
+            soul_locked.wait(30)
             capture.hand_over(warrant.pk)
             outcome["hand_over"] = "done"
         except capture.CaptureRefused as exc:
@@ -79,11 +85,11 @@ def test_a_hand_over_and_a_death_sync_at_once_do_not_deadlock():
     threads = [threading.Thread(target=death_sync), threading.Thread(target=hand_over)]
     for t in threads:
         t.start()
-    soul_locked.wait(10)
-    assert _wait_until_someone_waits_on_a_lock(), "the hand-over never reached a lock it had to wait on"
+    assert soul_locked.wait(30), "the death sync never took the soul lock"
+    assert _wait_until_blocked_by(pids["death"]), "the hand-over never waited on a lock the death sync holds"
     release.set()
     for t in threads:
-        t.join(30)
+        t.join(120)
 
     assert errors == [], errors
     assert outcome["death"] is not None

@@ -28,6 +28,23 @@ class _SlowOk:
     status_code = 200
 
 
+def _wait_until_blocked_by_me(timeout=30.0):
+    """From inside the sending worker's transaction: poll until another session waits on a lock this one holds.
+    `pg_locks` / `pg_blocking_pids` are live (`pg_stat_activity` would be snapshotted by this transaction).
+    Replaces a fixed `sleep(0.3)` that only hoped the second worker arrived in time (2026-10-31)."""
+    deadline = time.monotonic() + timeout
+    with connection.cursor() as cursor:
+        cursor.execute("select pg_backend_pid()")
+        me = cursor.fetchone()[0]
+        while time.monotonic() < deadline:
+            cursor.execute("select count(*) from pg_locks where not granted and %s = any(pg_blocking_pids(pid))",
+                           [me])
+            if cursor.fetchone()[0]:
+                return True
+            time.sleep(0.02)
+    return False
+
+
 @NEEDS_ROW_LOCKS
 @pytest.mark.django_db(transaction=True)
 def test_two_workers_given_the_same_delivery_post_it_once():
@@ -41,9 +58,14 @@ def test_two_workers_given_the_same_delivery_post_it_once():
                                                    event_type="SOUL_CREATED", payload_json={"soul_id": "x"})
     posts = []
 
+    waited = []
+
     def slow_post(*args, **kwargs):
         posts.append(1)
-        time.sleep(0.3)  # long enough for the second worker to arrive while the first is still sending
+        if len(posts) == 1:
+            # Hold the first POST open until the second worker is provably waiting on this row. Without the
+            # row lock nobody ever waits: this times out and the second worker POSTs too (posts == [1, 1]).
+            waited.append(_wait_until_blocked_by_me())
         return _SlowOk()
 
     barrier = threading.Barrier(2)
@@ -64,9 +86,10 @@ def test_two_workers_given_the_same_delivery_post_it_once():
         for t in threads:
             t.start()
         for t in threads:
-            t.join(30)
+            t.join(120)
 
     assert errors == []
     assert posts == [1]
+    assert waited == [True], "the second worker never waited on the row lock: the race was not exercised"
     delivery.refresh_from_db()
     assert delivery.status == EventWebhookStatus.SUCCESS and delivery.attempt == 1

@@ -24,6 +24,12 @@ def attempt_ceiling(webhook) -> int:
     return min(getattr(webhook, "max_retries", MAX_ATTEMPTS) or MAX_ATTEMPTS, MAX_ATTEMPTS)
 
 
+def retry_delay(attempt: int) -> int:
+    """第 `attempt` 次失败之后等几秒再试。`deliver_event_webhook` 的 `countdown` 与 `retry_pending_webhooks`
+    判「该不该捡」用的是同一个数。"""
+    return 2 ** attempt
+
+
 def _sign(secret: str, payload: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
@@ -64,7 +70,7 @@ def deliver_event_webhook(self, delivery_id):
         if attempt < ceiling:
             # 指数退避。`countdown` 而不是固定间隔:一个刚挂掉的端点通常不会在
             # 一秒后好起来,而每秒重试只会把它压得更久。
-            raise self.retry(countdown=2 ** attempt, exc=None)
+            raise self.retry(countdown=retry_delay(attempt), exc=None)
 
 
 def _deliver_locked(delivery_id):
@@ -156,16 +162,25 @@ def retry_pending_webhooks(older_than_seconds=300, limit=200):
 
     `older_than_seconds` 给正常入队的投递留出被 worker 取走的时间,免得刚写下的
     行立刻被这里重复入队一次。
+
+    FAILED 的行按**它自己的下一次尝试时间**算,不按 `create_time`(2026-10-31):失败的那次保存写下
+    `update_time`(`AuditUserFields` 的部分保存也写它),下一次尝试在 `update_time + retry_delay(attempt)`,
+    那是 `self.retry` 排好的时刻;过了它再加 `older_than_seconds` 还是 FAILED,才说明那次重试丢了。
+    此前按 `create_time`:一条早就建好、刚刚失败的投递会被立刻再入队,在退避到期之前多试一次。
     """
     from datetime import timedelta
+
+    from django.db.models import Q
 
     from apps.events.models import EventWebhookDelivery, EventWebhookStatus
 
     cutoff = timezone.now() - timedelta(seconds=older_than_seconds)
-    stale = EventWebhookDelivery.objects.filter(
-        status__in=[EventWebhookStatus.PENDING, EventWebhookStatus.FAILED],
-        create_time__lt=cutoff,
+    candidates = EventWebhookDelivery.objects.filter(
+        Q(status=EventWebhookStatus.PENDING, create_time__lt=cutoff)
+        | Q(status=EventWebhookStatus.FAILED, update_time__lt=cutoff)  # 必要条件;退避在下面逐行判
     ).order_by("create_time")[:limit]
+    stale = [d for d in candidates if d.status == EventWebhookStatus.PENDING
+             or d.update_time + timedelta(seconds=retry_delay(d.attempt)) <= cutoff]
 
     picked = 0
     for delivery in stale:

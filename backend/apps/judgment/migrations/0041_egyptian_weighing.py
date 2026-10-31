@@ -6,7 +6,14 @@ from django.db import migrations, models
 
 def weigh_open_egyptian_cases(apps, schema_editor):
     """Every Egyptian case is weighed (docs/01 §3.3; 2026-10-27). Open ones that were opened by hand or
-    reopened carried STANDARD; concluded ones keep the method they were concluded under."""
+    reopened carried STANDARD; concluded ones keep the method they were concluded under.
+
+    The reverse is a no-op on purpose (2026-10-31), because restoring is impossible and a guess is unsafe:
+    the forward overwrites whatever method an open case had (STANDARD, a trial method, …) and records none of
+    it, and open Egyptian cases that were already HEART_WEIGHING before this ran are indistinguishable from
+    the ones it changed. Setting them all back to STANDARD would rewrite the ones that were weighed all along.
+    Leaving HEART_WEIGHING is valid under the pre-0041 schema (the choice exists since 0002), so the rolled-back
+    code reads these rows fine; only the column additions above are undone."""
     Judgment = apps.get_model("judgment", "Judgment")
     Judgment._base_manager.using(schema_editor.connection.alias).filter(
         civilization="EGYPTIAN", verdict__isnull=True,
