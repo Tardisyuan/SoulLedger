@@ -25,11 +25,11 @@
 """
 import logging
 from dataclasses import dataclass
-from datetime import date
 from urllib.parse import urlsplit
 
 import requests
 from django.core.cache import cache
+from django.utils import timezone
 
 from apps.core import outbound
 from apps.soul_assist import config
@@ -210,7 +210,7 @@ def _fetch_table():
         if isinstance(cin, (int, float)) and isinstance(cout, (int, float)):
             prices[key] = [_per_million(cin), _per_million(cout),
                            _per_million(cread) if isinstance(cread, (int, float)) else None]
-    return {"as_of": date.today().isoformat(), "prices": prices}
+    return {"as_of": timezone.localdate().isoformat(), "prices": prices}
 
 
 def _table():
