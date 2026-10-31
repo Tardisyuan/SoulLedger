@@ -16,31 +16,15 @@ import { onAccessTokenChanged, onSessionResume } from "@soulledger/core/platform
 import { authApi } from "@soulledger/core/api/auth";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
-import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
-import {
-  dispositionKeys,
-  notificationKeys,
-  schedulerKeys,
-  socialKeys,
-  soulKeys,
-  workflowKeys,
-} from "@soulledger/core/query_keys";
+import { dispatchEvent, REALTIME_KEY_FAMILIES, type EventPayload } from "@/lib/events/event_registry";
 
 /**
- * What a socket that was down may have missed: the families the realtime handlers keep fresh
- * (`lib/events/eventHandlers.ts`), plus the unread badge, which lives outside `notificationKeys.all`.
+ * What a socket that was down may have missed: every family the realtime handlers keep fresh
+ * (`REALTIME_KEY_FAMILIES`, checked against the handlers in `eventRegistry.test.ts`).
  * Invalidated once on every `connected` after the first, so a push sent while the link was down is not
  * lost until the next unrelated event or a reload. Only queries on screen refetch; the rest are marked stale.
  */
-const KEYS_MISSED_WHILE_DISCONNECTED = [
-  notificationKeys.all,
-  notificationKeys.unreadCount,
-  soulKeys.all,
-  workflowKeys.all,
-  dispositionKeys.all,
-  socialKeys.all,
-  schedulerKeys.all,
-] as const;
+const KEYS_MISSED_WHILE_DISCONNECTED = REALTIME_KEY_FAMILIES;
 
 // ── Types ────────────────────────────────────────────────────────────
 

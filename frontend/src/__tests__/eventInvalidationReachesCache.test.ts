@@ -214,14 +214,9 @@ describe("a realtime push reaches the cache", () => {
       reaches: ["post feed", "post detail", "comment thread"],
     },
     {
-      name: "REACTION_ADDED on a post refreshes that post (its counts live on the row)",
+      name: "REACTION_ADDED (no backend sender) reaches nothing",
       payload: { domain: "social", event: "REACTION_ADDED", post_id: "p1" } as EventPayload,
-      reaches: ["post detail"],
-    },
-    {
-      name: "REACTION_REMOVED on a comment refreshes the comment threads",
-      payload: { domain: "social", event: "REACTION_REMOVED", comment_id: "c1" } as EventPayload,
-      reaches: ["comment thread"],
+      reaches: [],
     },
     {
       name: "USER_FOLLOWED refreshes both follow lists and the followed profile",
