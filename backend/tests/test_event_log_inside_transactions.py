@@ -679,7 +679,108 @@ def _wangsi(step):
     return path
 
 
+def _appeal(step):
+    """申诉(apps/judgment/appeals.py `_event`):提出 / 撤回 / 维持 / 改判,事件与申诉那一行同进退(审查 C23)。"""
+    from apps.judgment import appeals
+    from apps.judgment.models import JudgmentAppeal
+    from tests.test_judgment_appeals import make_case
+
+    def path():
+        case = make_case(_cn())
+        plan.walk_flow(case["judgment"])
+        account, judgment = case["account"], case["judgment"]
+        if step == "file":
+            return (lambda: appeals.file(SoulAccount.objects.get(pk=account.pk), judgment.pk, reason="冤"),
+                    lambda: JudgmentAppeal.all_objects.filter(judgment=judgment).exists(), "JUDGMENT_APPEAL_FILED")
+        appeal = appeals.file(account, judgment.pk, reason="冤")
+        status = lambda: JudgmentAppeal.all_objects.get(pk=appeal.pk).status  # noqa: E731
+        if step == "withdraw":
+            return (lambda: appeals.withdraw(SoulAccount.objects.get(pk=account.pk), appeal.pk),
+                    lambda: status() == "WITHDRAWN", "JUDGMENT_APPEAL_WITHDRAWN")
+        appeals.claim(appeal.pk, case["reviewer"])
+        if step == "uphold":
+            return (lambda: appeals.decide(appeal.pk, case["reviewer"], outcome="UPHELD", note="维持"),
+                    lambda: status() == "UPHELD", "JUDGMENT_APPEAL_DECIDED")
+        return (lambda: appeals.decide(appeal.pk, case["reviewer"], outcome="AMENDED", note="改判", verdict="PASSED"),
+                lambda: status() == "AMENDED", "JUDGMENT_APPEAL_DECIDED")
+    return path
+
+
+def _weighed_case(name="称心"):
+    from apps.judgment.models import JudgmentMethod
+
+    eg = plan.tenant("EG_DUAT")
+    soul = Soul.objects.create(name=name, tenant=eg, current_state=SoulState.JUDGING, death_year=2000)
+    return Judgment.objects.create(soul=soul, tenant=eg, civilization="EGYPTIAN", court="两真之殿",
+                                   judgment_method=JudgmentMethod.HEART_WEIGHING)
+
+
+def _confession_heard():
+    """42 条否定告白记满一轮(apps/judgment/confessions.py `record`):汇总事件与最后那一条同一事务。
+    这一殿只种一条,于是记下第一条就是记满。"""
+    from apps.judgment import confessions
+    from apps.judgment.models import NegativeConfession, Statute, StatuteCorpus
+
+    case = _weighed_case()
+    Statute.all_objects.create(tenant=case.tenant, civilization="EGYPTIAN", corpus=StatuteCorpus.NEGATIVE_CONFESSION,
+                               code="EG-NC-01", ordinal=1)
+    return (lambda: confessions.record(Judgment.all_objects.get(pk=case.pk), 1, True),
+            lambda: NegativeConfession.all_objects.filter(judgment=case).exists(), "NEGATIVE_CONFESSION_HEARD")
+
+
+def _conclude_hears_again(how, event_type):
+    """结案即重审(judgment/services.py 那条 `wavering or retry` 分支):埃及天平摇摆、地府 RETRY。
+    `weighing.open_retrial` 不自开事务,靠结案的那一个;它的 JUDGMENT_INITIATED 与结案的 JUDGMENT_CONCLUDED
+    任一条写不进去,结案与新案一起回滚。"""
+    def path():
+        if how == "wavering":
+            case, verdict = _weighed_case(), "PURGATORY"
+        else:
+            _soul, case = plan.open_case(_cn())
+            verdict = "RETRY"
+        written = (lambda: Judgment.all_objects.filter(retrial_of=case).exists()) if event_type == "JUDGMENT_INITIATED" \
+            else (lambda: Judgment.all_objects.get(pk=case.pk).is_final)
+        return (lambda: Judgment.all_objects.get(pk=case.pk).conclude(verdict, ""), written, event_type)
+    return path
+
+
+def _conclude_reopened():
+    """重开审判结案(judgment/services.py 非原审分支里的 `log_judgment_concluded`,REOPEN 那一支)。"""
+    from tests.test_sentence_plan_phase3 import _reopen_accepted
+
+    cn, eg, eu = _cn(), plan.tenant("EG_DUAT"), plan.tenant("EU_HEAVEN_HELL")
+    judges = {code: plan.officer(f"evlog_{code}", "JUDGE", t) for code, t in (("cn", cn), ("eg", eg), ("eu", eu))}
+    soul, p, retrial = _reopen_accepted(cn, eg, eu, judges)
+    plan.serve(soul, p, 3)
+    return (lambda: Judgment.all_objects.get(pk=retrial.pk).conclude("FAILED", ""),
+            lambda: Judgment.all_objects.get(pk=retrial.pk).is_final, "JUDGMENT_CONCLUDED")
+
+
+def _flow_rejected_reopens():
+    """原审流程被驳回 → 撤回处置、重开一案(`weighing.reweigh_after_rejection` → `open_retrial`),
+    JUDGMENT_INITIATED 与驳回那一次决定同一事务。"""
+    from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
+    _soul, case = plan.open_case(_cn())
+    case.conclude("FAILED", "")
+    flow = ApprovalWorkflow.all_objects.get(judgment=case)
+    return (lambda: ApprovalWorkflow.all_objects.get(pk=flow.pk).complete_node(flow.current_node_id, "FAILED"),
+            lambda: ApprovalWorkflow.all_objects.get(pk=flow.pk).status == ApprovalWorkflowStatus.REJECTED,
+            "JUDGMENT_INITIATED")
+
+
 PATHS = {
+    "appeal_file/JUDGMENT_APPEAL_FILED": _appeal("file"),
+    "appeal_withdraw/JUDGMENT_APPEAL_WITHDRAWN": _appeal("withdraw"),
+    "appeal_uphold/JUDGMENT_APPEAL_DECIDED": _appeal("uphold"),
+    "appeal_amend/JUDGMENT_APPEAL_DECIDED": _appeal("amend"),
+    "negative_confession/NEGATIVE_CONFESSION_HEARD": _confession_heard,
+    "conclude_wavering/JUDGMENT_INITIATED": _conclude_hears_again("wavering", "JUDGMENT_INITIATED"),
+    "conclude_wavering/JUDGMENT_CONCLUDED": _conclude_hears_again("wavering", "JUDGMENT_CONCLUDED"),
+    "conclude_retry/JUDGMENT_INITIATED": _conclude_hears_again("retry", "JUDGMENT_INITIATED"),
+    "conclude_retry/JUDGMENT_CONCLUDED": _conclude_hears_again("retry", "JUDGMENT_CONCLUDED"),
+    "conclude_reopened/JUDGMENT_CONCLUDED": _conclude_reopened,
+    "flow_rejected_reopens/JUDGMENT_INITIATED": _flow_rejected_reopens,
     "wangsi_file/WANGSI_GRIEVANCE_FILED": _wangsi("file"),
     "wangsi_uphold/WANGSI_GRIEVANCE_UPHELD": _wangsi("uphold"),
     "wangsi_reject/WANGSI_GRIEVANCE_REJECTED": _wangsi("reject"),
