@@ -39,7 +39,7 @@ from apps.core.permissions import TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social import media as post_media
-from apps.social.models import Comment, Follow, ModerationStatus, Post, PostMedia, Reaction, UserProfile
+from apps.social.models import Comment, Follow, ModerationStatus, Post, PostMedia, Reaction, UserProfile, Visibility
 from apps.social.moderation import record_hits, screen_content
 from apps.social.permissions import (
     IsAuthorOrReadOnly,
@@ -74,6 +74,33 @@ from apps.social.visibility import visible_posts
 FOLLOW_LIST_CAP = 500
 
 WITH_MEDIA = Prefetch("media", queryset=PostMedia.objects.order_by("position"), to_attr="live_media")
+
+
+def _announce_follow(event_type, follower, following, tenant):
+    """Follow / unfollow go to the two people concerned only: their lists and counts change, and the one
+    being followed gets the toast (`handleSocialEvent` aims it at `following_id`)."""
+    _announce(event_type, tenant, {"follower_id": str(follower.pk), "following_id": str(following.pk)},
+              user_ids=[follower.pk, following.pk])
+
+
+def _seen_by_others(post):
+    """A post someone else's feed can show: published and not PRIVATE. Only those are announced; the
+    author's own page is refreshed by their own mutation."""
+    return post.moderation_status == ModerationStatus.PUBLISHED and post.visibility != Visibility.PRIVATE
+
+
+def _announce(event_type, tenant, payload, user_ids=None):
+    """After commit, put a web-circle change on the bus (domain "social": WebSocket + tenant webhook) so the
+    web feed's handlers (`frontend/lib/events/eventHandlers.ts::handleSocialEvent`) refresh. Ids only, as
+    strings (the web compares them to `String(user.id)`); `user_ids=None` is the whole tenant. The soul
+    circle announces its own way (`soul_circle.publish_event`, SOCIAL_* to the souls concerned)."""
+    from apps.events.event_bus import event_bus
+
+    if tenant is None:
+        return
+    transaction.on_commit(lambda: event_bus.publish(
+        event_type=event_type, payload=payload, domain="social", tenant_code=tenant.code, user_ids=user_ids,
+    ))
 
 
 class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -136,6 +163,8 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
                 )
                 post_media.attach(post, self.request.user, media_ids)
                 record_hits(screening.hit_ids)
+                if _seen_by_others(post):
+                    _announce("POST_CREATED", post.tenant, {"post_id": str(post.pk), "user_id": str(post.author_id)})
             serializer.context["screening"] = screening.outcome
         except SocialError as exc:
             raise serializers.ValidationError({"media": [str(exc)]}, code=exc.code) from None
@@ -154,10 +183,15 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             if screening.status != ModerationStatus.PUBLISHED:
                 data["moderation_status"] = screening.status
                 data.update(screening.moderation_fields)
+        was_seen = _seen_by_others(serializer.instance)
         with transaction.atomic():
             super().perform_update(serializer)
             if screening:
                 record_hits(screening.hit_ids)
+            post = serializer.instance
+            # Also when an edit takes it out of others' feeds (PRIVATE, or held for review): they must drop it.
+            if was_seen or _seen_by_others(post):
+                _announce("POST_UPDATED", post.tenant, {"post_id": str(post.pk), "user_id": str(post.author_id)})
         if screening:
             serializer.context["screening"] = screening.outcome
 
@@ -165,9 +199,12 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         """The author's own delete never reaches the recycle bin (apps/social/apps.py
         registers officer-moderated deletes only), so — as for a soul deleting its
         own post — the images' rows and files really go."""
+        was_seen = _seen_by_others(instance)
         with transaction.atomic():
             super().perform_destroy(instance)
             post_media.purge_for_post(instance)
+            if was_seen:
+                _announce("POST_DELETED", instance.tenant, {"post_id": str(instance.pk), "user_id": str(instance.author_id)})
 
     @extend_schema(responses=PostListSerializer(many=True))
     @action(detail=False, methods=["get"])
@@ -312,7 +349,7 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         # The soul circle's screening (soul_circle.create_comment), not a second copy of it.
         screening = screen_content(tenant or post.tenant, serializer.validated_data["content"])
         with transaction.atomic():
-            CommentService.create_comment(
+            comment = CommentService.create_comment(
                 author=self.request.user,
                 post=post,
                 content=screening.content,
@@ -322,10 +359,20 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
                 **screening.moderation_fields,
             )
             record_hits(screening.hit_ids)
+            if comment.moderation_status == ModerationStatus.PUBLISHED and _seen_by_others(post):
+                _announce("COMMENT_CREATED", post.tenant, {
+                    "post_id": str(post.pk), "comment_id": str(comment.pk), "user_id": str(comment.author_id),
+                })
         serializer.context["screening"] = screening.outcome
 
     def perform_destroy(self, instance):
-        CommentService.delete_comment(instance)
+        was_seen = instance.moderation_status == ModerationStatus.PUBLISHED and _seen_by_others(instance.post)
+        with transaction.atomic():
+            CommentService.delete_comment(instance)
+            if was_seen:
+                _announce("COMMENT_DELETED", instance.post.tenant, {
+                    "post_id": str(instance.post_id), "comment_id": str(instance.pk), "user_id": str(instance.author_id),
+                })
 
 
 class ReactionViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -423,6 +470,8 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
             following=instance.following,
             tenant=instance.tenant,
         )
+        _announce_follow("USER_UNFOLLOWED", instance.follower, instance.following, instance.tenant)
+
     queryset = Follow.objects.select_related("follower", "following").all()
     http_method_names = ["get", "post", "delete", "head", "options"]
 
@@ -461,6 +510,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         following = serializer.validated_data["following"]
         tenant = getattr(self.request, "tenant", None)
         FollowService.follow(self.request.user, following, tenant)
+        _announce_follow("USER_FOLLOWED", self.request.user, following, tenant)
 
     @extend_schema(responses=FollowSerializer(many=True))
     @action(detail=False, methods=["get"], pagination_class=None)
@@ -524,9 +574,11 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         )
         if is_following:
             FollowService.unfollow(request.user, following_user, tenant)
+            _announce_follow("USER_UNFOLLOWED", request.user, following_user, tenant)
             return Response({"following": False})
         else:
             FollowService.follow(request.user, following_user, tenant)
+            _announce_follow("USER_FOLLOWED", request.user, following_user, tenant)
             return Response({"following": True})
 
 
