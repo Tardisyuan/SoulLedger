@@ -47,7 +47,10 @@ def hook(db):
 def _raw(row):
     table = row._meta.db_table
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT signing_secret FROM {connection.ops.quote_name(table)} WHERE id = %s", [row.pk])
+        cursor.execute(f"SELECT signing_secret FROM {connection.ops.quote_name(table)} WHERE id = %s",
+                       # The pk as this backend stores it: a UUID on PostgreSQL, 32 hex chars on SQLite (whose
+                       # driver refuses a bare `uuid.UUID`: "type 'UUID' is not supported").
+                       [row._meta.pk.get_db_prep_value(row.pk, connection)])
         return cursor.fetchone()[0]
 
 
