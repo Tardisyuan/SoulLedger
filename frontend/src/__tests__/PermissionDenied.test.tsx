@@ -32,12 +32,20 @@ describe("PermissionDenied", () => {
 
   // review-2026-11-01 Web 2:说缺的是哪个权限,用可读名称;原始权限码不出现在页面上。
   it("names the missing permission by its readable name, never by its code", () => {
+    // The file's default mock echoes unknown keys, which is "no name in the bundle" — so this test
+    // swaps in one that knows the name (and only then is there a line to draw).
+    const real = jest.requireMock("@/src/contexts/I18nContext").useI18n;
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = () => ({
+      t: (key: string, p?: Record<string, string>) =>
+        key === "permission.needs" ? `需要「${p?.names}」` : key === "permission.names.ledger.read" ? "查看功德" : key,
+    });
     const { rerender } = render(<PermissionDenied />);
     expect(screen.queryByTestId("permission-denied-needs")).toBeNull();
     rerender(<PermissionDenied permission="ledger.read" />);
-    expect(screen.getByTestId("permission-denied-needs")).toHaveTextContent("permission.needs");
+    expect(screen.getByTestId("permission-denied-needs")).toHaveTextContent("需要「查看功德」");
     expect(screen.queryByTestId("permission-denied-code")).toBeNull();
     expect(screen.getByTestId("permission-denied").textContent).not.toContain("ledger.read");
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = real;
   });
 
   it("reads the gate from RequirePermission / RequireAdmin, so a bare fallback still says what is missing", () => {
