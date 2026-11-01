@@ -5253,7 +5253,7 @@
         "locked": "Em Weshed",
         "next_at": "Medu Wa Hab Seth. Er {{time}}: Hab Wa Djer.",
         "throttled": "Ates Hru: Medu Wa Hab Seth. Er {{time}}: Hab Djer. Sesh-Ek Wenen.",
-        "block": "Khetem Shemes",
+        "block": "Shena",
         "decline": "Nen Shesep",
         "declined": "Dbh: Nen Shesep Seth"
       },
@@ -5266,7 +5266,7 @@
         "peer_retired": "Aq Khetem. Medu Wenen; Nen Redi Djer.",
         "marker": "Hru {{date}} Wehem Mesut · Hen Pehwy",
         "declined": "Nen Shesep Dbh Pen. Medu Wenen; Er Khet Hru Wa: Sesh Wehem.",
-        "peer_blocked": "Khetem Shemes Seth: Ba Pen. Wen Shemes Em Smen › Khetem Shemes Seth.",
+        "peer_blocked": "Shena Seth: Ba Pen. Sehen Shena Em Smen › Shena Seth.",
         "undeliverable": "Nen Iyi."
       },
       "unavailable": {
@@ -5278,7 +5278,7 @@
       "menu": {
         "report": "Sedjem",
         "profile": "Maa Per Ba",
-        "block": "Khetem Shemes"
+        "block": "Shena"
       },
       "new_marker": "Mawy",
       "older": "Shemes Tepyu",
@@ -5297,7 +5297,7 @@
         "ticket_invalid": "Wehem Hehy Ren Hesb Ba.",
         "declined": "Nen Shesep Dbh Pen.",
         "not_a_request": "Nen Dbh Em Weshed Djer.",
-        "peer_blocked": "Khetem Shemes Seth: Ba Pen.",
+        "peer_blocked": "Shena Seth: Ba Pen.",
         "undeliverable": "Nen Iyi."
       },
       "image": {
@@ -5309,18 +5309,18 @@
         "button": "Tut"
       },
       "block": {
-        "confirm": "Khetem Shemes",
-        "confirm_body": "Er Khet: Nen Shemes Er-Ek; Hen Pen Khetem Dy. Wen Shemes Em Smen › Khetem Shemes Seth.",
-        "confirm_title": "Khetem Shemes · {{name}}?",
-        "done": "Khetem Shemes Seth",
-        "failed": "Nen Khetem Shemes. Wehem Iri Er Khet."
+        "confirm": "Shena",
+        "confirm_body": "Er Khet: Nen Shemes Er-Ek; Hen Pen Khetem Dy. Sehen Shena Em Smen › Shena Seth.",
+        "confirm_title": "Shena · {{name}}?",
+        "done": "Shena Seth",
+        "failed": "Nen Shena. Wehem Iri Er Khet."
       },
       "blocks": {
-        "empty": "Nen Ba Em Khetem Shemes.",
-        "failed": "Nen Wen Shemes. Wehem Iri Er Khet.",
-        "title": "Khetem Shemes Seth",
-        "unblock": "Wen Shemes",
-        "unblocked": "Wen Shemes Seth"
+        "empty": "Nen Ba Em Shena.",
+        "failed": "Nen Sehen Shena. Wehem Iri Er Khet.",
+        "title": "Shena Seth",
+        "unblock": "Sehen Shena",
+        "unblocked": "Sehen Shena Seth"
       }
     },
     "circle": {
