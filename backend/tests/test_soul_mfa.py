@@ -408,7 +408,7 @@ class TestRecoveryCodes:
 
     def test_regenerating_voids_the_old_set(self, soul):
         secret, old = _enable(soul)
-        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "password", "password": PASSWORD}, format="json")
+        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "totp", "code": _code(secret)}, format="json")
         assert response.status_code == 200
         new = response.data["recovery_codes"]
         assert len(new) == 10 and not set(new) & set(old)
@@ -418,32 +418,53 @@ class TestRecoveryCodes:
         assert AuditLog.objects.filter(resource="mfa", description__contains="重新生成").exists()
 
     def test_regenerating_needs_an_enabled_account(self, soul):
-        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "password", "password": PASSWORD}, format="json")
+        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "totp", "code": "123456"}, format="json")
         assert response.status_code == 409 and response.data["code"] == "not_enabled"
 
-    def test_no_confirmation_a_wrong_one_or_a_recovery_code_changes_nothing(self, soul):
+    def test_no_confirmation_or_a_wrong_code_changes_nothing(self, soul):
         secret, old = _enable(soul)
         client = soul_client(soul)
-        for body in (None, {}, {"method": "password", "password": "nope"}, {"method": "totp", "code": "000000"},
-                     {"method": "recovery", "code": old[0]}):
+        for body in (None, {}, {"method": "totp", "code": "000000"}, {"method": "totp"}):
             response = client.post("/api/v1/me/mfa/recovery-codes/", body, format="json")
             assert response.status_code == 400 and "recovery_codes" not in response.data, body
         assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
         assert _verify(_pending(soul), recovery_code=old[0]).status_code == 200  # the old set still works
 
-    def test_the_six_number_code_confirms_too(self, soul):
+    def test_a_password_is_refused_with_its_own_code_even_the_right_one(self, soul):
+        """用户 2026-11-01:重新生成只收 6 位数字。此前收密码,而新恢复码关得掉两步验证(review P1 #3)。"""
+        _enable(soul)
+        client = soul_client(soul)
+        for password in (PASSWORD, "nope"):
+            response = client.post("/api/v1/me/mfa/recovery-codes/", {"method": "password", "password": password},
+                                   format="json")
+            assert (response.status_code, response.data["code"]) == (400, "totp_required"), password
+            assert "recovery_codes" not in response.data
+        assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+        assert not AuditLog.objects.filter(resource="mfa", description__contains="重新生成").exists()
+        assert SoulMfa.objects.get(account=soul).failed_attempts == 0  # not a guess at the second factor
+
+    def test_a_recovery_code_cannot_buy_a_new_set(self, soul):
+        _, old = _enable(soul)
+        client = soul_client(soul)
+        response = client.post("/api/v1/me/mfa/recovery-codes/", {"method": "recovery", "code": old[0]}, format="json")
+        assert (response.status_code, response.data["code"]) == (400, "totp_required")
+        response = client.post("/api/v1/me/mfa/recovery-codes/", {"method": "totp", "code": old[0]}, format="json")
+        assert (response.status_code, response.data["code"]) == (400, "wrong")
+        assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+
+    def test_the_six_number_code_confirms(self, soul):
         secret, old = _enable(soul)
         response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "totp", "code": _code(secret)}, format="json")
         assert response.status_code == 200 and not set(response.data["recovery_codes"]) & set(old)
 
-    def test_wrong_confirmations_share_the_lock_with_disable(self, soul):
+    def test_wrong_codes_share_the_lock_with_disable(self, soul):
         secret, _ = _enable(soul)
         client = soul_client(soul)
         url = "/api/v1/me/mfa/recovery-codes/"
         for _ in range(4):
-            assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 400
-        assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 429
-        assert client.post(url, {"method": "password", "password": PASSWORD}, format="json").status_code == 429
+            assert client.post(url, {"method": "totp", "code": "000000"}, format="json").status_code == 400
+        assert client.post(url, {"method": "totp", "code": "000000"}, format="json").status_code == 429
+        assert client.post(url, {"method": "totp", "code": _code(secret)}, format="json").status_code == 429
         assert client.post("/api/v1/me/mfa/disable/", {"method": "totp", "code": _code(secret)}, format="json").status_code == 429
         assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
 
@@ -715,6 +736,48 @@ class TestOfficerReset:
         assert item["title"] == "两步验证已关闭" and (cn_admin_user.display_name or cn_admin_user.username) in item["body"]
         assert item["status"] == "NO_DEVICE"
 
+    def test_the_notice_reaches_the_phone_that_was_signed_out_by_the_reset(self, soul, cn_admin_user, settings,
+                                                                           monkeypatch):
+        """review-2026-11-01 P2 #14:结束会话会停用推送登记,通知要先记下(选中那部手机),发送时照发。
+        修之前顺序反了,这条推送永远是 NO_DEVICE。"""
+        from apps.soul_push import services as push
+        from apps.soul_push.models import PushDevice, PushStatus
+        from tests.soul_push_support import FakeSender
+
+        settings.SOUL_PUSH_ENABLED = True
+        settings.SOUL_PUSH_SENDER = "tests.soul_push_support.FakeSender"
+        FakeSender.reset()
+        monkeypatch.setattr(push, "enqueue", lambda ids: None)
+        _enable(soul)
+        phone = PushDevice.objects.create(account=soul, soul=soul.soul, token="ExponentPushToken[lost-phone]",
+                                          platform="IOS", last_seen_at=timezone.now())
+        mfa.reset_by_officer(soul, actor=cn_admin_user, reason="手机丢了,已核对身份")
+        phone.refresh_from_db()
+        assert phone.is_active is False  # the reset still signs the phone out
+        notice = PushDelivery.objects.get(account=soul, kind="mfa_reset_by_officer")
+        assert notice.device_id == phone.pk and notice.status == PushStatus.QUEUED
+        assert not PushDelivery.objects.filter(account=soul, status=PushStatus.NO_DEVICE).exists()
+        assert push.send_deliveries([str(notice.pk)]) == 1
+        notice.refresh_from_db()
+        assert notice.status != PushStatus.CANCELLED
+        assert [m["to"] for m in FakeSender.batches[0]] == ["ExponentPushToken[lost-phone]"]
+        FakeSender.reset()
+
+    def test_other_kinds_still_skip_a_signed_out_phone(self, soul, settings):
+        """放行只给「发给被退出那部手机」的这一类;别的通知照旧不发到已停用的登记。"""
+        from apps.soul_push import services as push
+        from apps.soul_push.models import PushDevice, PushStatus
+
+        settings.SOUL_PUSH_ENABLED = True
+        settings.SOUL_PUSH_SENDER = "tests.soul_push_support.FakeSender"
+        phone = PushDevice.objects.create(account=soul, soul=soul.soul, token="ExponentPushToken[gone]",
+                                          platform="IOS", last_seen_at=timezone.now())
+        [row_id] = push.record_export_ready(soul, type("E", (), {"pk": "x1"})())
+        phone.is_active = False
+        phone.save(update_fields=["is_active"])
+        assert push.send_deliveries([row_id]) == 0
+        assert PushDelivery.objects.get(pk=row_id).status == PushStatus.CANCELLED
+
     def test_a_reason_is_required(self, soul, cn_admin_user):
         _enable(soul)
         client = officer_client(cn_admin_user)
@@ -791,7 +854,7 @@ class TestSetupNeedsThePassword:
             assert "secret" not in response.data
         assert not SoulMfa.objects.exists()
 
-    def test_wrong_passwords_spend_the_login_budget_and_lock_even_the_right_one(self, soul):
+    def test_wrong_passwords_lock_this_confirmation_and_even_the_right_one(self, soul):
         client = soul_client(soul)
         for left in (4, 3, 2, 1, 0):
             response = client.post(self.URL, {"password": "nope"}, format="json")
@@ -799,8 +862,8 @@ class TestSetupNeedsThePassword:
         locked = client.post(self.URL, {"password": PASSWORD}, format="json")
         assert (locked.status_code, locked.data["code"]) == (429, "rate_limited")
         assert not SoulMfa.objects.exists()
-        # The very counter the password login reads: signing in is locked out for this soul code too.
-        assert _login(soul).status_code == 429
+        # 2026-11-01(review P2 #16):its own count now; the login page is not locked out by it.
+        assert _login(soul).status_code == 200
 
     def test_a_right_password_while_enabled_is_still_a_conflict(self, soul):
         _enable(soul)

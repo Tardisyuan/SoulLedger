@@ -334,9 +334,9 @@ class TestRecoveryCodes:
         assert status["last_used_method"] == "recovery"
 
     def test_regenerate_voids_the_old_set_and_audits(self, api_client, admin_user):
-        _, old = _enable(admin_user)
+        row, old = _enable(admin_user)
         api_client.force_authenticate(admin_user)
-        r = api_client.post("/api/v1/auth/mfa/recovery-codes/", {"method": "password", "password": "admin123"}, format="json")
+        r = api_client.post("/api/v1/auth/mfa/recovery-codes/", {"method": "totp", "code": _code(row.secret)}, format="json")
         assert r.status_code == 200
         new = r.data["recovery_codes"]
         assert len(new) == 10 and not set(new) & set(old)
@@ -349,15 +349,37 @@ class TestRecoveryCodes:
 
 @pytest.mark.django_db
 class TestRegenerateNeedsConfirmation:
-    """重新生成与「关闭」同一个确认(6 位数字或密码)、同一把锁;确认不过,旧码原样有效、不返回新码。"""
+    """重新生成只收当前的 6 位动态码(用户 2026-11-01),与「关闭」同一把锁;确认不过,旧码原样有效、不返回新码。
+    此前也收密码,而新恢复码能关掉两步验证 —— 偷到密码就拆得掉第二因素(review-2026-11-01 P1 #3)。"""
 
     URL = "/api/v1/auth/mfa/recovery-codes/"
 
-    def test_no_confirmation_a_wrong_one_or_a_recovery_code_changes_nothing(self, api_client, admin_user):
+    def test_a_password_is_refused_with_its_own_code_even_the_right_one(self, api_client, admin_user):
+        _, old = _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        for password in ("admin123", "nope"):
+            r = api_client.post(self.URL, {"method": "password", "password": password}, format="json")
+            assert (r.status_code, r.data["code"]) == (400, "totp_required"), password
+            assert "recovery_codes" not in r.data
+        assert MfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+        assert not AuditLog.objects.filter(resource="mfa", description__contains="恢复码已重新生成").exists()
+        # Not a guess at the second factor: nothing counted toward the lock.
+        assert OfficerMfa.objects.get(user=admin_user).failed_attempts == 0
+
+    def test_a_recovery_code_cannot_buy_a_new_set(self, api_client, admin_user):
+        _, old = _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        r = api_client.post(self.URL, {"method": "recovery", "code": old[0]}, format="json")
+        assert (r.status_code, r.data["code"]) == (400, "totp_required")
+        # Typed into the six-digit box it is just a wrong code.
+        r = api_client.post(self.URL, {"method": "totp", "code": old[0]}, format="json")
+        assert (r.status_code, r.data["code"]) == (400, "wrong")
+        assert MfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+
+    def test_no_confirmation_or_a_wrong_code_changes_nothing(self, api_client, admin_user):
         row, old = _enable(admin_user)
         api_client.force_authenticate(admin_user)
-        for body in (None, {}, {"method": "password", "password": "nope"}, {"method": "totp", "code": "000000"},
-                     {"method": "recovery", "code": old[0]}):
+        for body in (None, {}, {"method": "totp", "code": "000000"}, {"method": "totp"}):
             r = api_client.post(self.URL, body, format="json")
             assert r.status_code == 400 and "recovery_codes" not in r.data, body
         assert MfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
@@ -372,21 +394,20 @@ class TestRegenerateNeedsConfirmation:
         r = api_client.post(self.URL, {"method": "totp", "code": _code(row.secret)}, format="json")
         assert r.status_code == 200 and not set(r.data["recovery_codes"]) & set(old)
 
-    def test_wrong_confirmations_share_the_lock_with_disable(self, api_client, admin_user):
-        _enable(admin_user)
+    def test_wrong_codes_share_the_lock_with_disable(self, api_client, admin_user):
+        row, _ = _enable(admin_user)
         api_client.force_authenticate(admin_user)
         for _ in range(4):
-            assert api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json").status_code == 400
-        locked = api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json")
+            assert api_client.post(self.URL, {"method": "totp", "code": "000000"}, format="json").status_code == 400
+        locked = api_client.post(self.URL, {"method": "totp", "code": "000000"}, format="json")
         assert locked.status_code == 429 and locked.data["code"] == "locked"
-        # Locked: the right password is refused here, and at disable even the right code is (one lock).
-        assert api_client.post(self.URL, {"method": "password", "password": "admin123"}, format="json").status_code == 429
-        row = OfficerMfa.objects.get(user=admin_user)
+        # Locked: the right code is refused here, and at disable too (one lock).
+        assert api_client.post(self.URL, {"method": "totp", "code": _code(row.secret)}, format="json").status_code == 429
         assert api_client.post("/api/v1/auth/mfa/disable/", {"method": "totp", "code": _code(row.secret)}, format="json").status_code == 429
 
     def test_not_enabled_is_a_conflict(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
-        assert api_client.post(self.URL, {"method": "password", "password": "admin123"}, format="json").status_code == 409
+        assert api_client.post(self.URL, {"method": "totp", "code": "123456"}, format="json").status_code == 409
 
 
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────
@@ -484,6 +505,31 @@ class TestDisableAndReset:
         assert log.user == admin_user and log.changes["reason"] == "手机丢了"
         # 没开启的账号:409,什么也不清。
         assert api_client.post(f"/api/v1/users/{judge_user.pk}/reset-mfa/", {"reason": "x"}, format="json").status_code == 409
+
+    def test_the_only_admin_can_be_reset_from_the_command_line(self, admin_user):
+        """review-2026-11-01 P3:唯一的 ADMIN 丢了手机和恢复码,没有别的管理员能替他重置;此前只能进 shell 手删行。"""
+        from django.core.management import CommandError, call_command
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        _enable(admin_user)
+        mfa.remember_device(admin_user)
+        RefreshToken.for_user(admin_user)
+        version_before = admin_user.session_version
+        with pytest.raises(CommandError):
+            call_command("reset_officer_mfa", admin_user.username, reason="  ")
+        assert mfa.is_enabled(admin_user)  # no reason, nothing done
+        with pytest.raises(CommandError):
+            call_command("reset_officer_mfa", "nobody-by-this-name", reason="手机丢了")
+        call_command("reset_officer_mfa", admin_user.username, reason="手机丢了,恢复码也没了")
+        assert not mfa.is_enabled(admin_user)
+        assert not OfficerMfa.objects.filter(user=admin_user).exists() and not MfaRecoveryCode.objects.exists()
+        assert not MfaRememberedDevice.objects.filter(user=admin_user).exists()
+        admin_user.refresh_from_db(fields=["session_version"])
+        assert admin_user.session_version == version_before + 1
+        log = AuditLog.objects.get(resource="mfa", resource_id=str(admin_user.pk), action="EXECUTE")
+        assert "reset_officer_mfa" in log.description and "恢复码也没了" in log.changes["reason"]
+        with pytest.raises(CommandError):  # already off
+            call_command("reset_officer_mfa", admin_user.username, reason="again")
 
     def test_reset_needs_user_manage(self, api_client, admin_user, judge_user):
         _enable(admin_user)

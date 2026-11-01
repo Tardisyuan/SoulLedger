@@ -327,7 +327,7 @@ describe("the managed state", () => {
     expect(screen.queryByTestId("mfa-disable")).toBeNull();
   });
 
-  it("regenerate asks to be confirmed (the same code-or-password box as disable), then shows the new codes", async () => {
+  it("regenerate asks for the six digits, then shows the new codes", async () => {
     mockApi.status.mockResolvedValue({ data: ON });
     renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-regen"));
@@ -348,15 +348,15 @@ describe("the managed state", () => {
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();
   });
 
-  it("regenerate by password when the phone is not at hand", async () => {
+  it("regenerate takes the six digits only: no password, no recovery code (2026-11-01)", async () => {
     mockApi.status.mockResolvedValue({ data: ON });
     renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-regen"));
-    fireEvent.press(screen.getByTestId("mfa-regen-method-password"));
-    expect(screen.getByTestId("mfa-regen-password").props.secureTextEntry).toBe(true);
-    fireEvent.changeText(screen.getByTestId("mfa-regen-password"), "my-password");
-    await press("mfa-regen-confirm");
-    expect(mockApi.regenerateRecoveryCodes).toHaveBeenCalledWith({ method: "password", password: "my-password" });
+    expect(screen.getByTestId("mfa-regen-code")).toBeTruthy();
+    expect(screen.queryByTestId("mfa-regen-method")).toBeNull();
+    expect(screen.queryByTestId("mfa-regen-method-password")).toBeNull();
+    expect(screen.queryByTestId("mfa-regen-password")).toBeNull();
+    expect(screen.queryByTestId("mfa-regen-recovery")).toBeNull();
   });
 
   it("a refused or failed regenerate shows no codes, keeps the box open, and a lock is told as a lock", async () => {

@@ -2,7 +2,7 @@
  * 个人中心「两步验证」(A12, `src/components/profile/MfaSection.tsx`): the off state (badge, the
  * explanation, the 开启 button, and the role-required note only when the role is required), the on
  * state (开启于 / 最近一次使用 / 恢复码剩几个 with 重新生成 / 关闭), the 关闭 dialog's danger button
- * gated on a code or password, and 完成 in the wizard flipping the cached user's `mfa_enabled`.
+ * gated on a code (重新生成: the 6 digits only), and 完成 in the wizard flipping the cached user's `mfa_enabled`.
  *
  * Written 2026-10-09 and NOT run (user instruction: write, don't run).
  */
@@ -103,7 +103,7 @@ describe("MfaSection — on", () => {
     expect(screen.queryByRole("button", { name: "mfa.setup.open" })).toBeNull();
   });
 
-  it("重新生成 asks to be confirmed (6-digit code or password, as 关闭 does), then shows the new set", async () => {
+  it("重新生成 asks for the 6-digit code only (no password, no recovery code: 2026-11-01), then shows the new set", async () => {
     status.mockResolvedValue({ data: ON });
     regenerate.mockResolvedValue({ data: { recovery_codes: Array.from({ length: 10 }, (_, i) => `new-${i}`) } });
     renderSection();
@@ -116,11 +116,13 @@ describe("MfaSection — on", () => {
     expect(action.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/mfa\.verify\.code_label/), { target: { value: "123456" } });
     expect(action.disabled).toBe(false);
-    fireEvent.click(screen.getByRole("radio", { name: "mfa.manage.confirm_by_password" }));
-    expect((screen.getByTestId("mfa-regenerate-confirm") as HTMLButtonElement).disabled).toBe(true); // the code no longer counts
-    fireEvent.change(screen.getByLabelText(/auth\.password/), { target: { value: "pw" } });
+    // Neither a password nor a recovery code is offered: there is no segment to switch to.
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByRole("radio", { name: "mfa.manage.confirm_by_password" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "mfa.manage.confirm_by_recovery" })).toBeNull();
+    expect(screen.queryByLabelText(/auth\.password/)).toBeNull();
     fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
-    await waitFor(() => expect(regenerate).toHaveBeenCalledWith({ method: "password", password: "pw" }));
+    await waitFor(() => expect(regenerate).toHaveBeenCalledWith({ method: "totp", code: "123456" }));
     expect(await screen.findByTestId("mfa-recovery-codes")).toBeTruthy();
     expect(screen.getByText("new-9")).toBeTruthy();
   });

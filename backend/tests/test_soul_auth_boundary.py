@@ -243,26 +243,42 @@ def test_a_wrong_password_and_an_unknown_code_answer_identically(cn_tenant):
     assert a.data == b.data
 
 
-def test_soul_login_is_limited_to_5_failures_per_soul_code(cn_tenant):
+def test_soul_login_is_limited_to_5_failures_per_soul_code_from_one_ip(cn_tenant):
     account, password = provision_with_password(dead_soul(cn_tenant))
     code = account.soul.soul_code
-    for i in range(5):
-        # 各次来自不同 IP:编号这一层不看 IP。
-        APIClient(REMOTE_ADDR=f"10.0.0.{i + 1}").post("/api/v1/soul-auth/login/",
-                                                      {"soul_code": code, "password": "wrong"}, format="json")
+    attacker = APIClient(REMOTE_ADDR="10.0.0.1")
+    for _ in range(5):
+        attacker.post("/api/v1/soul-auth/login/", {"soul_code": code, "password": "wrong"}, format="json")
+    blocked = attacker.post("/api/v1/soul-auth/login/", {"soul_code": code, "password": password}, format="json")
+    assert blocked.status_code == 429 and blocked.data["code"] == "rate_limited"
+    # 大小写/空白变体算同一个编号。
+    variant = attacker.post("/api/v1/soul-auth/login/", {"soul_code": f" {code.lower()} ", "password": password},
+                            format="json")
+    assert variant.status_code == 429
+    # review-2026-11-01 P2 #16:别人在别处错 5 次,不再把本人锁在门外。
+    owner = APIClient(REMOTE_ADDR="10.0.0.99").post("/api/v1/soul-auth/login/",
+                                                    {"soul_code": code, "password": password}, format="json")
+    assert owner.status_code == 200
+    # 别的编号不受影响。
+    other, other_password = provision_with_password(dead_soul(cn_tenant, name="乙"))
+    ok = attacker.post("/api/v1/soul-auth/login/", {"soul_code": other.soul.soul_code, "password": other_password},
+                       format="json")
+    assert ok.status_code == 200
+
+
+def test_soul_login_is_limited_to_20_failures_per_soul_code_across_ips(cn_tenant):
+    """换着 IP 猜同一个编号:编号层合计 20 次锁住它,哪个 IP 来都一样(各 IP 都没到 5 次)。"""
+    from apps.soul_accounts.me_views import CODE_ALL_IPS_ATTEMPTS, CODE_ATTEMPTS
+
+    account, password = provision_with_password(dead_soul(cn_tenant))
+    code = account.soul.soul_code
+    for i in range(CODE_ALL_IPS_ATTEMPTS):
+        response = APIClient(REMOTE_ADDR=f"10.1.{i // (CODE_ATTEMPTS - 1)}.{i % (CODE_ATTEMPTS - 1) + 1}").post(
+            "/api/v1/soul-auth/login/", {"soul_code": code, "password": "wrong"}, format="json")
+        assert response.status_code == 401, i
     blocked = APIClient(REMOTE_ADDR="10.0.0.99").post("/api/v1/soul-auth/login/",
                                                       {"soul_code": code, "password": password}, format="json")
     assert blocked.status_code == 429 and blocked.data["code"] == "rate_limited"
-    # 别的编号不受影响;大小写/空白变体算同一个编号。
-    other, other_password = provision_with_password(dead_soul(cn_tenant, name="乙"))
-    ok = APIClient(REMOTE_ADDR="10.0.0.99").post("/api/v1/soul-auth/login/",
-                                                 {"soul_code": other.soul.soul_code, "password": other_password},
-                                                 format="json")
-    assert ok.status_code == 200
-    variant = APIClient(REMOTE_ADDR="10.0.0.98").post("/api/v1/soul-auth/login/",
-                                                      {"soul_code": f" {code.lower()} ", "password": password},
-                                                      format="json")
-    assert variant.status_code == 429
 
 
 def test_soul_login_is_limited_to_50_failures_per_ip(cn_tenant):

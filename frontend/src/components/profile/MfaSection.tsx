@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { BaseModal } from "@/src/components/ui/Modal";
-import { TextField } from "@/src/components/ui/Field";
 import { CodeInput } from "@/src/components/auth/CodeInput";
 import { RecoveryCodesPanel } from "@/src/components/auth/RecoveryCodesPanel";
 import { MfaSetupWizard } from "@/src/components/profile/MfaSetupWizard";
@@ -154,30 +153,25 @@ export function MfaSection() {
   );
 }
 
-type OwnerMethod = "totp" | "password" | "recovery";
-
-/** 重新生成恢复码的「确认是本人」:6 位动态码或密码二选一。 */
-const ownerBody = (method: OwnerMethod, code: string, password: string) =>
-  method === "password" ? ({ method: "password", password } as const) : ({ method: "totp", code } as const);
+type OwnerMethod = "totp" | "recovery";
 
 /** 关闭要第二因素本身:6 位动态码或一枚恢复码;只凭密码不行(2026-10-29)。与重新生成同一把锁。 */
 const turnOffBody = (method: OwnerMethod, code: string) =>
   ({ method: method === "recovery" ? "recovery" : "totp", code: code.trim() } as const);
 
-/** 失败时对话框里说的话:被锁了说锁,其余说「检查动态码或密码」。 */
+/** 失败时对话框里说的话:被锁了说锁,其余说 `fallback`。 */
 function ownerFailure(err: unknown, fallback: string, t: (key: string) => string): string {
   return responseStatus(err) === 429 || responseCode(err) === "locked" ? t("officer_app.mfa.reasons.locked") : fallback;
 }
 
-/** 分段「动态码 / 密码」二选一 + 输入框 + 错误行。关闭与重新生成共用同一块。 */
+/** 输入框 + 错误行;关闭时上面多一组「动态码 / 恢复码」二选一。关闭与重新生成共用同一块。
+ * 重新生成只收 6 位动态码(用户 2026-11-01:密码、恢复码都不行),所以没有分段。 */
 function OwnerConfirmFields({
   label,
   method,
   onMethod,
   code,
   onCode,
-  password,
-  onPassword,
   error,
   disabled,
   secondFactor = false,
@@ -187,53 +181,44 @@ function OwnerConfirmFields({
   onMethod: (m: OwnerMethod) => void;
   code: string;
   onCode: (v: string) => void;
-  password: string;
-  onPassword: (v: string) => void;
   error: string | null;
   disabled: boolean;
-  /** 关闭用:第二种办法是恢复码而不是密码。 */
+  /** 关闭用:可以改用一枚恢复码。 */
   secondFactor?: boolean;
 }) {
   const { t } = useI18n();
-  const methods: OwnerMethod[] = secondFactor ? ["totp", "recovery"] : ["totp", "password"];
+  const methods: OwnerMethod[] = ["totp", "recovery"];
   return (
     <>
-      <div role="radiogroup" aria-label={label} className="grid grid-cols-2 border border-[oklch(var(--color-line-strong))]">
-        {methods.map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="radio"
-            aria-checked={method === m}
-            onClick={() => onMethod(m)}
-            className={cn(
-              "h-11 text-sm",
-              method === m ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]" : "text-[oklch(var(--color-ink))]"
-            )}
-          >
-            {t(m === "totp" ? "mfa.manage.confirm_by_totp" : m === "recovery" ? "mfa.manage.confirm_by_recovery" : "mfa.manage.confirm_by_password")}
-          </button>
-        ))}
-      </div>
+      {secondFactor ? (
+        <div role="radiogroup" aria-label={label} className="grid grid-cols-2 border border-[oklch(var(--color-line-strong))]">
+          {methods.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={method === m}
+              onClick={() => onMethod(m)}
+              className={cn(
+                "h-11 text-sm",
+                method === m ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]" : "text-[oklch(var(--color-ink))]"
+              )}
+            >
+              {t(m === "totp" ? "mfa.manage.confirm_by_totp" : "mfa.manage.confirm_by_recovery")}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {error ? (
         <p role="alert" className="text-sm font-medium text-[oklch(var(--color-danger))]">
           <span aria-hidden="true">! </span>
           {error}
         </p>
       ) : null}
-      {method === "totp" ? (
-        <CodeInput kind="totp" label={t("mfa.verify.code_label")} value={code} onChange={onCode} disabled={disabled} />
-      ) : method === "recovery" ? (
+      {method === "recovery" ? (
         <CodeInput kind="recovery" label={t("mfa.verify.recovery_label")} value={code} onChange={onCode} disabled={disabled} />
       ) : (
-        <TextField
-          type="password"
-          autoComplete="current-password"
-          label={t("auth.password")}
-          value={password}
-          onChange={(e) => onPassword(e.target.value)}
-          disabled={disabled}
-        />
+        <CodeInput kind="totp" label={t("mfa.verify.code_label")} value={code} onChange={onCode} disabled={disabled} />
       )}
     </>
   );
@@ -244,7 +229,6 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
   const { t } = useI18n();
   const [method, setMethod] = useState<OwnerMethod>("totp");
   const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const disable = useMutation({
     mutationFn: () => mfaApi.disable(turnOffBody(method, code)).then((r) => r.data),
@@ -291,11 +275,6 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
             setError(null);
             setCode(v);
           }}
-          password={password}
-          onPassword={(v) => {
-            setError(null);
-            setPassword(v);
-          }}
           error={error}
           disabled={disable.isPending}
         />
@@ -304,19 +283,17 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
   );
 }
 
-/** 重新生成恢复码:与关闭同一个确认(动态码或密码);旧码在确认通过之前原样有效,通过后立即作废。 */
+/** 重新生成恢复码:只收当前的 6 位动态码(用户 2026-11-01;与关闭同一把锁);旧码在确认通过之前原样有效,通过后立即作废。 */
 function RegenerateDialog({ onClose, onRegenerated }: { onClose: () => void; onRegenerated: (codes: string[]) => void }) {
   const { t } = useI18n();
-  const [method, setMethod] = useState<OwnerMethod>("totp");
   const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const regenerate = useMutation({
-    mutationFn: () => mfaApi.regenerateRecoveryCodes(ownerBody(method, code, password)).then((r) => r.data.recovery_codes),
+    mutationFn: () => mfaApi.regenerateRecoveryCodes({ method: "totp", code }).then((r) => r.data.recovery_codes),
     onSuccess: onRegenerated,
     onError: (err) => setError(ownerFailure(err, t("mfa.manage.disable_failed"), t)),
   });
-  const ready = method === "totp" ? code.length === 6 : password.length > 0;
+  const ready = code.length === 6;
 
   return (
     <BaseModal
@@ -339,20 +316,12 @@ function RegenerateDialog({ onClose, onRegenerated }: { onClose: () => void; onR
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.manage.regenerate_body")}</p>
         <OwnerConfirmFields
           label={t("mfa.manage.regenerate_title")}
-          method={method}
-          onMethod={(m) => {
-            setMethod(m);
-            setError(null);
-          }}
+          method="totp"
+          onMethod={() => {}}
           code={code}
           onCode={(v) => {
             setError(null);
             setCode(v);
-          }}
-          password={password}
-          onPassword={(v) => {
-            setError(null);
-            setPassword(v);
           }}
           error={error}
           disabled={regenerate.isPending}
