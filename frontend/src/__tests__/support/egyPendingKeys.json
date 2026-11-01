@@ -1,1 +1,6 @@
-[]
+[
+  "mfa.manage.regenerate_failed",
+  "officer_app.me.logout_pending_unsent",
+  "officer_app.me.logout_pending_drafts",
+  "sentence_plan.inbox_show_all"
+]

@@ -93,7 +93,6 @@
   "soul_accounts.account.provision_body": "Sekhem Tepy Iri (Wenen Unut 72, Khemen Em Aq Tepy). Em Wat: Hab Djes-Ef; Nen Wat: Em Djeret.",
   "soul_accounts.account.reset_title": "Wehem Sekhem Er {{name}}?",
   "soul_accounts.account.reset_body": "Sekhem Nen Djeret Nen Wenen Emu; Sekhem Mawy Wenen Unut 72, Khemen Em Aq. Em Wat: Hab Djes-Ef; Nen Wat: Em Djeret.",
-  "soul_accounts.account.provisioned": "Aq Ankh Pen Iri Seth",
   "soul_accounts.account.provision_existing": "Aq Ankh Pen Wenen; Nen Wehem Hab. Wehem Sekhem Er Sekhem Mawy",
   "soul_accounts.account.reset_queued": "Wehem Seth; Sekhem Mawy Hab Er Wat",
   "soul_accounts.account.reset_pending": "Wehem Seth; Nen Wat, Sekhem Mawy Em Djeret",

@@ -9,6 +9,7 @@ import {
   VIEW_ONLY_KINDS,
   decisionFailure,
   deskPath,
+  onlySoul,
   failureReasonKey,
   goneKey,
   hallChoiceOf,
@@ -304,5 +305,10 @@ describe("O-c / O-d / O-f", () => {
     expect(TODO_GROUPS.map((g) => g.kind)).toContain("sentence_change");
     expect(VIEW_ONLY_KINDS).toEqual(["sentence_change"]);
     expect(deskPath({ kind: "sentence_change", id: "r" })).toBe("/sentence-requests");
+    expect(deskPath({ kind: "sentence_change", id: "r", soul: "s 1" })).toBe("/sentence-requests?soul=s%201");
+    expect(onlySoul([{ soul_id: "s1" }, { soul_id: "s1" }], 2)).toBe("s1");
+    expect(onlySoul([{ soul_id: "s1" }, { soul_id: "s2" }], 2)).toBeUndefined(); // two souls: the whole list
+    expect(onlySoul([{ soul_id: "s1" }], 2)).toBeUndefined(); // the other row is not loaded yet
+    expect(onlySoul([{}], 1)).toBeUndefined(); // an older server
   });
 });

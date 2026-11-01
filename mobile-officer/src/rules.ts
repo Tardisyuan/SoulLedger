@@ -440,7 +440,7 @@ export function mfaManageFailureKey(error: unknown, fallback: string): string {
 }
 
 /** The desk page for the same item. Pages that are lists (cooldown, rebirth) are the list itself. */
-export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: string }): string {
+export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: string; soul?: string }): string {
   switch (target.kind) {
     case "dispatch":
     case "approval":
@@ -456,13 +456,19 @@ export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: str
     case "letter":
       return "/soul-inbox";
     case "sentence_change":
-      return "/sentence-requests";
+      return target.soul ? `/sentence-requests?soul=${encodeURIComponent(target.soul)}` : "/sentence-requests";
     case "judgment":
     case "wangsi":
       return `/judgment/${target.id}`;
     case "soul":
       return `/souls/${target.id}`;
   }
+}
+
+/** The one soul a whole sentence_change group is about, for its one 「在电脑上处理」 link; rows not all loaded, several souls, or an older server: none. */
+export function onlySoul(rows: readonly { soul_id?: string }[], count: number): string | undefined {
+  const souls = new Set(rows.map((r) => r.soul_id));
+  return rows.length === count && souls.size === 1 ? rows[0].soul_id || undefined : undefined;
 }
 
 export function deskUrl(target: Parameters<typeof deskPath>[0]): string {
