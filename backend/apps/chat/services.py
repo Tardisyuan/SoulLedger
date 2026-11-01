@@ -917,6 +917,12 @@ def hall_can_reply(conversation):
     return conversation.closed_at is None and conversation.soul_a.tenant_id == conversation.tenant_id
 
 
+def officer_signature(officer):
+    """回信的署名:官员的显示名。**不退回用户名** —— 那是登录名,不该给灵魂看(2026-11-01 上机发现:
+    `get_full_name` 读的是从来没人填的 first / last name,于是每封信都署「qa.officer.cn」)。"""
+    return officer.display_name or officer.get_full_name() or ""
+
+
 def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
     """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
     (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
@@ -932,7 +938,7 @@ def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
     event_id = client.send_message(
         conversation.room_id, body,
         as_localpart=settings.MATRIX_SERVICE_LOCALPART,
-        extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer),
+        extra={OFFICER: officer_signature(officer), OFFICER_TITLE: officer_title(officer),
                **({TXN: txn_id} if txn_id else {})},
     )
     conversation.last_message_at = timezone.now()

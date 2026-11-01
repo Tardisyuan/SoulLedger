@@ -80,6 +80,24 @@ def test_a_reply_is_signed_with_the_officers_position(cn_tenant, matrix):  # noq
     assert listed[0]["hall_names"]["zh-Hans"] == "第五殿"
 
 
+def test_a_reply_is_signed_with_the_display_name_and_never_the_login_name(cn_tenant, matrix):  # noqa: F811
+    """变异:`officer_signature` 退回 `officer.username` → 没有显示名的那封署了登录名,红。
+    变异:只看 `get_full_name` → 显示名那封署了登录名或空,红。"""
+    _hall(cn_tenant)
+    _, client = ready_soul(cn_tenant, name="甲")
+    inbox = client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
+    assert client.post(f"{CONVERSATIONS}{inbox['id']}/messages/", {"body": "在吗"}, format="json").status_code == 201
+
+    named = officer_client(_officer(cn_tenant, username="cui_login", display_name="崔珏"))
+    assert named.post(f"{INBOX}{inbox['id']}/reply/", {"body": "已收"}, format="json").status_code == 201
+    assert matrix.rooms[inbox["room_id"]]["messages"][-1]["officer"] == "崔珏"
+
+    bare = officer_client(_officer(cn_tenant, username="bare_login"))
+    assert bare.post(f"{INBOX}{inbox['id']}/reply/", {"body": "再收"}, format="json").status_code == 201
+    assert matrix.rooms[inbox["room_id"]]["messages"][-1]["officer"] == ""
+    assert "bare_login" not in str(matrix.rooms[inbox["room_id"]]["messages"][-1])
+
+
 def test_without_a_position_the_linked_actor_title_is_used(cn_tenant, matrix):  # noqa: F811
     """变异:`officer_title` 不退回 actor 头衔 → 空串,红。"""
     from apps.actors.models import Actor

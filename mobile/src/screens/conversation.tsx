@@ -794,7 +794,7 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
   const { t: tr } = useI18n();
   const line = sealed ? t.hair2 : t.ink;
   // Who replied and their position, as the backend stamped them on the event (either may be missing).
-  const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").trim();
+  const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").replace(/\s*·\s*$/, "").trim();
   return (
     <View style={styles.bubbleRow}>
       <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>

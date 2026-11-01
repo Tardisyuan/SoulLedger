@@ -457,6 +457,13 @@ describe("the conversation's eight states", () => {
     expect(within(screen.getByTestId("pending-queued")).getByText("等待送出")).toBeTruthy();
   });
 
+  it("a reply with neither a position nor a name is signed by the hall alone, with no dangling dot", () => {
+    openConversation(hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }), [
+      { ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "", officerTitle: "" },
+    ]);
+    expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿")).toBeTruthy();
+  });
+
   it("the hall: officer bubbles, writable; a hall left behind is sealed and offers the current one", () => {
     openConversation(
       hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }),
