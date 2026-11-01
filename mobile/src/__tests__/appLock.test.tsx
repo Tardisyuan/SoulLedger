@@ -170,10 +170,14 @@ describe("the lock", () => {
       renderApp();
       await screen.findByTestId("profile-card");
       await background();
+      // Hold the prompt open, so the lock is still on screen to be found (it unlocks the moment the prompt answers).
+      let recognise!: () => void;
+      bioMod.__state.gate = new Promise<void>((resolve) => (recognise = resolve));
       await foreground(LOCK_AFTER_MS / 60_000);
       await screen.findByTestId("app-lock");
       await waitFor(() => expect(bioMod.__state.prompts).toEqual(["Unlock Soul Ledger."]));
       expect(bioMod.__state.prompts.join()).not.toMatch(/[一-鿿]/);
+      await act(async () => recognise());
       await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
     } finally {
       persistentStore.remove(LOCALE_COOKIE);

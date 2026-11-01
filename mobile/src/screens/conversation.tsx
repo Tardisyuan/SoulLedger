@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
   smallButton: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
   band: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
   bandRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
-  requestActions: { flexDirection: "row", gap: 8, paddingTop: 12, paddingLeft: 23 },
+  requestActions: { flexDirection: "row", gap: 8, paddingTop: 12, paddingLeft: 24 },
   confirmSheet: { paddingHorizontal: 20, paddingTop: 20, gap: 12 },
   bandButton: { marginTop: 12 },
   nudge: { marginTop: 2 },
