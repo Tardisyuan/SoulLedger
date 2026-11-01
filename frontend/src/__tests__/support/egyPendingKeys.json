@@ -1,3 +1,5 @@
 [
-  "scheduler.jobs.chat_sync_all_rooms"
+  "scheduler.jobs.chat_sync_all_rooms",
+  "soul_app.chat.receipt.copied",
+  "soul_app.chat.receipt.delete"
 ]

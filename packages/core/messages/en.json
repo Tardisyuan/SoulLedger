@@ -5264,7 +5264,9 @@
         "read": "Read",
         "failed": "Not sent",
         "queued": "Waiting to send",
-        "retry": "Resend"
+        "retry": "Resend",
+        "delete": "Delete",
+        "copied": "Letter copied"
       },
       "request": {
         "outgoing_hint": "You do not follow each other yet. Once they reply, you can speak freely.",
