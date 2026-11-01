@@ -321,7 +321,7 @@
       "SENTENCE_NODE_ACTIVATED": "Sentence stage started",
       "SENTENCE_NODE_WAITING": "Sentence stage awaiting the soul",
       "SENTENCE_NODE_COMPLETED": "Sentence stage served",
-      "SENTENCE_NODE_REFUSED": "Sentence stage transfer refused",
+      "SENTENCE_NODE_REFUSED": "Sentence stage transfer did not go through",
       "SENTENCE_NODE_REDISPATCHED": "Sentence stage transfer resent",
       "SENTENCE_PLAN_AMENDED": "Sentence plan amended",
       "SENTENCE_REQUEST_CREATED": "Sentence request submitted",
