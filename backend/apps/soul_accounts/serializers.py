@@ -76,7 +76,8 @@ class SoulMfaVerifyResponseSerializer(SoulLoginResponseSerializer):
 class SoulMfaRefusalSerializer(serializers.Serializer):
     """`code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
     `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
-    wrong_password / not_enabled / already_enabled / not_started (setup and disable)."""
+    wrong_password / not_enabled / already_enabled / not_started (setup and disable), totp_required (regenerating
+    the recovery codes with a password or a recovery code)."""
 
     detail = serializers.CharField()
     code = serializers.CharField()
@@ -114,9 +115,10 @@ class SoulMfaRecoveryCodesSerializer(serializers.Serializer):
 
 
 class SoulMfaDisableRequestSerializer(serializers.Serializer):
+    """重新生成恢复码的确认:只收当前的 6 位数字(2026-11-01)。`method=password` / `recovery` → 400 `totp_required`。"""
+
     method = serializers.ChoiceField(choices=OWNER_CONFIRM_METHODS)
     code = serializers.CharField(required=False, allow_blank=True, max_length=32)
-    password = serializers.CharField(required=False, allow_blank=True, max_length=128, trim_whitespace=False)
 
 
 class SoulMfaTurnOffRequestSerializer(serializers.Serializer):

@@ -306,6 +306,10 @@ class SoulDeviceLogin(models.Model):
     last_used_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     revoked_reason = models.CharField(max_length=30, choices=DeviceLoginRevokeReason.choices, blank=True, default="")
+    #: 开启、或最近一次用它登录时那部手机的登录会话。「登录设备」里退出那台时,这条凭据一并失效
+    #: (`device_login.revoke_signed_out`)。会话行被清理后为空。
+    session = models.ForeignKey("authentication.SignInSession", on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name="+")
 
 
 class DataExportStatus(models.TextChoices):

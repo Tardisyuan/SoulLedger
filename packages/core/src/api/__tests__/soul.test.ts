@@ -447,14 +447,14 @@ describe("two-step verification (soul)", () => {
     await soulApi.mfaStatus();
     await soulApi.mfaSetup("pw");
     await expect(soulApi.mfaConfirm("123456")).resolves.toEqual(["a-b"]);
-    await expect(soulApi.mfaRegenerate({ method: "password", password: "pw" })).resolves.toEqual(["c-d"]);
+    await expect(soulApi.mfaRegenerate({ method: "totp", code: "654321" })).resolves.toEqual(["c-d"]);
     await soulApi.mfaDisable({ method: "recovery", code: "abcd-efgh" });
     await soulApi.mfaCancelSetup().catch(() => undefined);
     expect(seen.slice(0, 5).map((c) => [c.method, c.url, c.body])).toEqual([
       ["GET", "/me/mfa/", undefined],
       ["POST", "/me/mfa/setup/", { password: "pw" }],
       ["POST", "/me/mfa/confirm/", { code: "123456" }],
-      ["POST", "/me/mfa/recovery-codes/", { method: "password", password: "pw" }],
+      ["POST", "/me/mfa/recovery-codes/", { method: "totp", code: "654321" }],
       ["POST", "/me/mfa/disable/", { method: "recovery", code: "abcd-efgh" }],
     ]);
   });

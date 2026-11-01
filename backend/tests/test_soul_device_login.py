@@ -1,6 +1,6 @@
 """面容 / 指纹登录的服务端一半 + 打印交付单(2026-10-11,Design 第二十批)。
 
-钉住的东西:凭据只存哈希、开启要当前密码并与密码登录共用计数、登录响应与密码登录同形、
+钉住的东西:凭据只存哈希、开启要当前密码(与密码登录分开计数,2026-11-01)、登录响应与密码登录同形、
 两步验证照常要求、五种吊销时机各带各的原因、转生后旧凭据得到原因而不是「不认识」、
 打印交付单不改状态也不带密码。
 """
@@ -100,15 +100,23 @@ class TestEnableAndTurnOff:
         assert not SoulDeviceLogin.objects.exists()
         assert soul_client(soul).post("/api/v1/me/device-login/", {}, format="json").data["code"] == "wrong_password"
 
-    def test_wrong_passwords_spend_the_login_budget_and_then_429(self, soul):
+    def test_wrong_passwords_lock_this_confirmation_but_not_the_login_page(self, soul):
         client = soul_client(soul)
         for _ in range(5):
             assert client.post("/api/v1/me/device-login/", {"password": "nope"}, format="json").status_code == 400
         locked = client.post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json")
         assert locked.status_code == 429 and locked.data["code"] == "rate_limited"
         assert not SoulDeviceLogin.objects.exists()
-        # 同一份预算:密码登录页也被同一个编号的失败顶满。
-        assert _password_login(soul).status_code == 429
+        # 2026-11-01(review P2 #16):登录后的确认与登录页分开计数,这里错满不把登录页也锁住。
+        assert _password_login(soul).status_code == 200
+
+    def test_a_right_password_clears_the_confirmation_count(self, soul):
+        client = soul_client(soul)
+        for _ in range(4):
+            assert client.post("/api/v1/me/device-login/", {"password": "nope"}, format="json").status_code == 400
+        assert client.post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json").status_code == 201
+        wrong = client.post("/api/v1/me/device-login/", {"password": "nope"}, format="json")
+        assert wrong.status_code == 400 and wrong.data["remaining_attempts"] == 4
 
     def test_turning_off_revokes_with_turned_off_and_is_idempotent(self, soul):
         credential = _enable(soul)
@@ -182,13 +190,14 @@ class TestLogin:
         credential = _enable(soul)
         assert _device_login(other, credential).data["code"] == "device_login_invalid"
 
-    def test_guesses_are_counted_with_the_password_login_and_lock_at_five(self, soul):
+    def test_guesses_lock_the_face_login_at_five_but_not_the_password_login(self, soul):
         credential = _enable(soul)
         for _ in range(5):
             assert _device_login(soul, "guess").status_code == 401
         locked = _device_login(soul, credential)
         assert locked.status_code == 429 and locked.data["code"] == "rate_limited"
-        assert _password_login(soul).status_code == 429
+        # 2026-11-01(review P2 #16):面容登录另记一份,乱填凭据不再把密码登录也锁住。
+        assert _password_login(soul).status_code == 200
 
     def test_a_revoked_credential_is_not_a_guess_and_does_not_count(self, soul):
         credential = _enable(soul)

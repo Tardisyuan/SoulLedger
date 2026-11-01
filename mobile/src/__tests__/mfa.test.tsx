@@ -546,23 +546,20 @@ describe("the management page", () => {
     await expectNothingKept([...CODES, "307155"]);
   });
 
-  it("regenerating by password when the phone is not at hand", async () => {
-    const calls = await open(ON, { "POST /me/mfa/recovery-codes/": { status: 200, data: { recovery_codes: CODES } } });
+  it("regenerating takes the six digits only: no password, no recovery code (2026-11-01)", async () => {
+    await open(ON);
     fireEvent.press(screen.getByTestId("mfa-regen"));
-    fireEvent.press(await screen.findByTestId("regen-use-password"));
-    expect(screen.getByTestId("regen-password").props.secureTextEntry).toBe(true);
-    fireEvent.changeText(screen.getByTestId("regen-password"), "my-long-password");
-    fireEvent.press(screen.getByTestId("regen-confirm"));
-    await screen.findByTestId("recovery-codes");
-    expect(bodies(calls, "POST /me/mfa/recovery-codes/")).toEqual([{ method: "password", password: "my-long-password" }]);
-    await expectNothingKept(["my-long-password"]);
+    expect(await screen.findByTestId("regen-code")).toBeTruthy();
+    expect(screen.queryByTestId("regen-use-password")).toBeNull();
+    expect(screen.queryByTestId("regen-password")).toBeNull();
+    expect(screen.queryByTestId("regen-use-recovery")).toBeNull();
+    expect(screen.queryByTestId("regen-recovery")).toBeNull();
   });
 
-  it("a wrong number, a wrong password and a lock each say so; no new codes are shown", async () => {
+  it("a wrong number and a lock each say so; no new codes are shown", async () => {
     await open(ON, {
       "POST /me/mfa/recovery-codes/": [
         { status: 400, data: { detail: "x", code: "wrong", remaining_attempts: 4 } },
-        { status: 400, data: { detail: "x", code: "wrong_password", remaining_attempts: 3 } },
         { status: 429, data: { detail: "x", code: "locked", retry_after: 900, locked_until: new Date(Date.now() + 900_000).toISOString() } },
       ],
     });
@@ -571,11 +568,7 @@ describe("the management page", () => {
     fireEvent.press(screen.getByTestId("regen-confirm"));
     expect(await screen.findByText("! 数字不对")).toBeTruthy();
     expect(screen.getByText("还可以再试 4 次。")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("regen-use-password"));
-    fireEvent.changeText(await screen.findByTestId("regen-password"), "nope");
-    fireEvent.press(screen.getByTestId("regen-confirm"));
-    await waitFor(() => expect(screen.getByText("! 密码不对")).toBeTruthy());
-    fireEvent.changeText(screen.getByTestId("regen-password"), "nope2");
+    fireEvent.changeText(screen.getByTestId("regen-code"), "307156");
     fireEvent.press(screen.getByTestId("regen-confirm"));
     await screen.findByTestId("step-locked");
     expect(screen.getByTestId("regen-confirm").props.accessibilityState).toMatchObject({ disabled: true });

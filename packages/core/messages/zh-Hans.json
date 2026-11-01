@@ -4922,7 +4922,7 @@
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
-      "initial_password_expired": "初始密码已过期,请联系官员重置",
+      "initial_password_expired": "初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置",
       "rate_limited": "尝试过于频繁,请稍后再试",
       "invalid_old_password": "初始密码不正确",
       "password_unchanged": "新密码不能与原密码相同",

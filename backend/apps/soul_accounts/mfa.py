@@ -38,11 +38,22 @@ class SoulMfaPendingToken(Token):
     lifetime = core.PENDING_TOKEN_LIFETIME
 
 
-def issue_pending(account, method="password") -> str:
+def issue_pending(account, method="password", device_login=None) -> str:
     token = SoulMfaPendingToken()
     token["soul_account_id"] = str(account.pk)
     token["method"] = method  # 第一步用的办法:登录设备列表与「最近登录」据此显示是密码还是面容
+    if device_login is not None:
+        # 面容登录那一行凭据:第二步建出的会话记到它上面(退出这台设备时凭据一并失效)。
+        token["device_login_id"] = device_login.pk
     return str(token)
+
+
+def pending_device_login_id(raw):
+    """待验证凭据里记的面容凭据行 id;没有 / 读不出 → None。调用方已用 `account_from_pending` 验过它。"""
+    try:
+        return SoulMfaPendingToken(raw).get("device_login_id")
+    except Exception:  # noqa: BLE001 -- 已验过;这里只取一个标签
+        return None
 
 
 def pending_method(raw) -> str:
@@ -180,14 +191,15 @@ def confirm_setup(account, code, *, request=None):
     return "ok", [shown for shown, _ in pairs]
 
 
-def regenerate_recovery_codes(account, *, method, code="", password="", request=None):
-    """重新生成:先过与「关闭」同一个确认(`confirm`),过了才作废旧码。→ ("ok", 新码) 或 (拒绝体, [])。"""
+def regenerate_recovery_codes(account, *, method, code="", request=None):
+    """重新生成:先过 `core.confirm_owner`(只收当前的 6 位数字,2026-11-01),过了才作废旧码。
+    → ("ok", 新码) 或 (拒绝体, [])。"""
     with transaction.atomic():
         account = _lock(account)
         row = get_mfa(account)
         if row is None or not row.enabled:
             raise SoulAccountError("两步验证未开启。", "not_enabled", 409)
-        outcome = core.confirm_owner(row, account.user, method=method, code=code, password=password, request=request)
+        outcome = core.confirm_owner(row, method=method, code=code, request=request)
         if outcome["code"] != "ok":
             return outcome, []
         row.recovery_codes.all().delete()
@@ -242,12 +254,15 @@ def reset_by_officer(account, *, actor, reason, request=None):
             raise SoulAccountError("该账号已随转世停用。", "account_retired", 409)
         if not is_enabled(account):
             raise SoulAccountError("该灵魂没有开启两步验证。", "not_enabled", 409)
+        # 通知先记、再结束会话:`record_mfa_reset` 只挑登录还有效、仍登记着的手机,而 `end_account_sessions`
+        # 正是把它们全部停用的那一步。反过来的顺序下这条推送一部手机都选不中,永远是 NO_DEVICE
+        # (review-2026-11-01 P2 #14)。发送时设备已停用,这一类照发(`soul_push.services.SIGNED_OUT_NOTICE_KINDS`)。
+        name = (actor.display_name or actor.username)[:100]
+        ids = push.record_mfa_reset(account, name)
         void_all(account)
         end_account_sessions(account)  # 刷新令牌进黑名单 + sv+1:已签发的 access 当场 401,推送登记停用
         audit("EXECUTE", account.soul, f"官员关闭灵魂两步验证:{reason}", actor=actor, request=request,
               resource_id=account.pk, resource="mfa",
               changes={"mfa_enabled": [True, False], "reason": reason, "sessions_revoked": True})
-        name = (actor.display_name or actor.username)[:100]
-        ids = push.record_mfa_reset(account, name)
         if ids:
             transaction.on_commit(lambda: push.enqueue(ids))

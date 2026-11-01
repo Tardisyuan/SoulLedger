@@ -61,10 +61,13 @@ DEVICE_COOKIE_PATH = "/api/v1/auth/"
 
 ISSUER = "SoulLedger"
 
-#: 「确认是本人」(重新生成恢复码)收的两种办法;关闭两步验证只收第二因素本身(2026-10-29)。
+#: 「确认是本人」(重新生成恢复码)只收当前的 6 位动态码(用户 2026-11-01:此前也收密码,而新恢复码能关掉
+#: 两步验证 —— 偷到密码就拆得掉第二因素)。关闭两步验证只收第二因素本身(2026-10-29)。
 #: 两组都钉了 OpenAPI 枚举名(config/settings.py ENUM_NAME_OVERRIDES)。
-OWNER_CONFIRM_METHODS = ["totp", "password"]
+OWNER_CONFIRM_METHODS = ["totp"]
 SECOND_FACTOR_METHODS = ["totp", "recovery"]
+#: 重新生成时不再收、但客户端可能还会带来的办法:答 `totp_required`(400),而不是一条字段校验错。
+RETIRED_OWNER_CONFIRM_METHODS = ("password", "recovery")
 
 #: `Tenant.settings` 里的键:要求开启两步验证的角色名列表。ADMIN 不在列表里也始终要求。
 MFA_REQUIRED_ROLES_SETTING = "mfa_required_roles"
@@ -411,22 +414,19 @@ def _verify_locked(mfa, *, code, recovery_code, request) -> dict:
     return {"code": "ok", "method": "totp"}
 
 
-def confirm_owner(mfa, user, *, method, code="", password="", request=None) -> dict:
-    """重新生成恢复码前的「确认是本人」:6 位数字(`method=totp`,不收恢复码)或密码。
-    (关闭不走这里:它要第二因素本身,见 `confirm_second_factor`。)官员与灵魂共用这一处 —— 校验方式、原因码、错误计数、锁定都在这里。
-    错误数字与错误密码**记进同一把锁**(连续 5 次锁 15 分钟);锁着时连对的也不行。
-    → {"code": "ok"} 或 {"code": wrong|expired|locked|wrong_password, …}。"""
-    if method == "totp":
-        return verify_login_code(mfa, code=code or "", request=request)
-    with transaction.atomic():
-        mfa = _lock(mfa)
-        if mfa is None:
-            return {"code": "wrong_password", "remaining_attempts": 0, "lock_minutes": MFA_LOCK_SECONDS // 60}
-        if _lock_remaining(mfa) > 0:
-            return {"code": "locked", "retry_after": _lock_remaining(mfa)}
-        if not user.check_password(password or ""):
-            return _count_failure(mfa, "wrong_password", request=request)
-        return {"code": "ok"}
+def confirm_owner(mfa, *, method, code="", request=None) -> dict:
+    """重新生成恢复码前的「确认是本人」:只收当前的 6 位动态码(`method=totp`)。密码与恢复码都不行
+    (用户 2026-11-01:新恢复码能关掉两步验证,所以拿到它要的就是第二因素本身;恢复码换恢复码也不算)。
+    官员与灵魂共用这一处 —— 原因码、错误计数、锁定都与登录第二步同一把锁;锁着时连对的也不行。
+    → {"code": "ok"} 或 {"code": wrong|expired|locked|totp_required, …}。"""
+    if method != "totp":
+        return {"code": "totp_required"}
+    return verify_login_code(mfa, code=code or "", request=request)
+
+
+def retired_owner_method(data) -> bool:
+    """请求体还带着已不收的确认办法(`password` / `recovery`)。视图据此答 `totp_required`。"""
+    return hasattr(data, "get") and data.get("method") in RETIRED_OWNER_CONFIRM_METHODS
 
 
 def confirm_second_factor(mfa, *, method, code="", request=None) -> dict:

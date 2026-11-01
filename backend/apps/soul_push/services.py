@@ -542,6 +542,12 @@ def _message(delivery):
             "sound": "default", "priority": "high", "channelId": ANDROID_CHANNEL_ID}
 
 
+#: 本来就是发给刚被退出登录的那部手机的通知:记下之后同一笔业务停用了它的登记,发送时照发
+#: (官员关闭两步验证:灵魂的每部手机随之退出,而这条就是告诉它「为什么被退出、是谁关的」)。
+#: 设备转给了别的账号、账号已转世 —— 照旧不发。
+SIGNED_OUT_NOTICE_KINDS = frozenset({"mfa_reset_by_officer"})
+
+
 def _claim(delivery_ids):
     """把可发的行从 QUEUED 改成 SENDING 并返回它们。同一批 id 被两个 worker 拿到时,
     后一个在锁上等,醒来看到的已不是 QUEUED —— 不会两个都发。"""
@@ -554,7 +560,8 @@ def _claim(delivery_ids):
                 preferences[row.account_id] = PushPreference.objects.filter(account_id=row.account_id).first()
             preference = preferences[row.account_id]
             category = KIND_CATEGORY.get(row.kind)
-            if (not row.device.is_active or row.device.account_id != row.account_id
+            if ((not row.device.is_active and row.kind not in SIGNED_OUT_NOTICE_KINDS)
+                    or row.device.account_id != row.account_id
                     or row.account.retired_at is not None):
                 # 事件记下之后设备被注销、转给了别的账号、或账号已转世停用:不推。
                 row.status, row.error = PushStatus.CANCELLED, "设备已失效或已不属于该账号"
