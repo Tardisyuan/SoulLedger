@@ -81,10 +81,10 @@ def test_the_four_request_soul_theft_chain_is_broken(two_tenants, attacker):
     """The chain that moved a soul across tenants, replayed end to end."""
     tenant_a, tenant_b = two_tenants
     victim = Soul.objects.create(
-        name="VictimSoul", current_state=SoulState.ALIVE, tenant=tenant_a
+        name="VictimSoul", current_state=SoulState.JUDGING, tenant=tenant_a
     )
     own = Soul.objects.create(
-        name="AttackerSoul", current_state=SoulState.ALIVE, tenant=tenant_b
+        name="AttackerSoul", current_state=SoulState.JUDGING, tenant=tenant_b
     )
     client = _jwt_client(attacker, tenant_b)
 
@@ -134,10 +134,10 @@ def test_each_party_field_is_refused_on_its_own(two_tenants, attacker):
     """
     tenant_a, tenant_b = two_tenants
     own = Soul.objects.create(
-        name="SoloSoul", current_state=SoulState.ALIVE, tenant=tenant_b
+        name="SoloSoul", current_state=SoulState.JUDGING, tenant=tenant_b
     )
     other = Soul.objects.create(
-        name="OtherSoul", current_state=SoulState.ALIVE, tenant=tenant_a
+        name="OtherSoul", current_state=SoulState.JUDGING, tenant=tenant_a
     )
     client = _jwt_client(attacker, tenant_b)
 
@@ -184,7 +184,7 @@ def test_a_dispatch_can_still_be_proposed_and_its_reason_edited(two_tenants, att
     """
     tenant_a, tenant_b = two_tenants
     soul = Soul.objects.create(
-        name="EditableSoul", current_state=SoulState.ALIVE, tenant=tenant_b
+        name="EditableSoul", current_state=SoulState.JUDGING, tenant=tenant_b
     )
     client = _jwt_client(attacker, tenant_b)
 

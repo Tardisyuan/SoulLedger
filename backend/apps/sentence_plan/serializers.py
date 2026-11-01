@@ -28,7 +28,8 @@ class SentencePlanCancelSerializer(serializers.Serializer):
 class SentenceLastRefusalSerializer(serializers.Serializer):
     """调拨上一次为什么没成(`services.last_refusal`)。"""
 
-    status = serializers.ChoiceField(choices=["REJECTED", "CANCELLED"])
+    #: NOT_STARTED:系统没能发起调拨(例如还有一条手动调拨在途、执行地闭殿),没有调拨记录,`reason` 为空。
+    status = serializers.ChoiceField(choices=["REJECTED", "CANCELLED", "NOT_STARTED"])
     reason = serializers.CharField(allow_null=True)
     at = serializers.DateTimeField()
     #: 这一站已经重新发起过几次(`SENTENCE_NODE_REDISPATCHED` 事件数,不是模型字段)。

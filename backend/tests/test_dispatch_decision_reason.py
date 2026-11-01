@@ -38,7 +38,7 @@ def world(db):
     b = Tenant.objects.get_or_create(code="DR_B", defaults={"display_name": "DR B"})[0]
     mod_a = User.objects.create_user(username="dr_mod_a", password="x", role="MODERATOR", tenant=a)
     mod_b = User.objects.create_user(username="dr_mod_b", password="x", role="MODERATOR", tenant=b)
-    soul = Soul.objects.create(name="DecidedSoul", current_state=SoulState.ALIVE, tenant=a)
+    soul = Soul.objects.create(name="DecidedSoul", current_state=SoulState.JUDGING, tenant=a)
     record = DispatchRecord.objects.create(
         source_tenant=a, target_tenant=b, soul=soul, reason=ORIGINAL,
         dispatched_by=mod_a, status=DispatchStatus.PROPOSED, tenant=a,
