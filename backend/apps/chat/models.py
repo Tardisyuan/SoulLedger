@@ -128,6 +128,10 @@ class Conversation(models.Model):
     #: **只标最近一封还没人回的反馈**:官员回复时清空(`services.officer_reply`)。信本身还是一封普通的书信,
     #: 类别只是一个词 —— 不是新的会话种类,官员照旧在书信里回。私聊不写。
     feedback_tag = models.CharField(max_length=20, blank=True, default="", choices=FEEDBACK_TAGS)
+    #: 私聊请求的接收方拒绝了这一次申请(2026-11-01 用户定)。拒绝同时写 `closed_at`:房间就此只读,
+    #: 拒绝方的列表里不再出现;发起方看到「这次申请未被接受」,`CHAT_REQUEST_INTERVAL_SECONDS` 之后可以再申请一次
+    #: (新房间)。要永远不再收到,用拉黑(`ChatBlock`)。
+    declined_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -170,6 +174,33 @@ class Conversation(models.Model):
         if self.account_b_id == account_id:
             return self.account_a
         return None
+
+
+class ChatBlock(models.Model):
+    """一个灵魂账号拉黑了另一个(2026-11-01 用户定)。
+
+    **按那一世的账号记,不按灵魂**:与会话、禁言同一条「随账号」的规则 —— 对方转世之后的新账号不在黑名单里,
+    拉黑的一方转世之后的新账号也不带着黑名单走。
+
+    效果都在 `services.refusal` / `services.open_direct` 里:被拉黑的一方发不出、开不了新私聊,**只看到「无法送达」**
+    (`undeliverable`,不说是被拉黑);拉黑的一方在那个房间里同样不能说话(`peer_blocked`),直到在设置里解除。
+    租户不另存:两端都是灵魂账号,经 `blocker__soul__tenant` 一跳;所有读写都以 `blocker=当前账号` 为条件。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    blocker = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="chat_blocks")
+    blocked = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["blocker", "blocked"], name="chat_one_block_per_pair"),
+            models.CheckConstraint(condition=~models.Q(blocker=models.F("blocked")), name="chat_block_not_self"),
+        ]
+
+    def __str__(self):
+        return f"{self.blocker_id} blocks {self.blocked_id}"
 
 
 class InboxOfficerState(models.Model):

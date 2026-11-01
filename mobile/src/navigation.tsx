@@ -207,6 +207,7 @@ const lazyScreens = {
   mfa: () => (require("./screens/mfa") as typeof import("./screens/mfa")).MfaScreen,
   signIns: () => (require("./screens/signIns") as typeof import("./screens/signIns")).SignInsScreen,
   dataExport: () => (require("./screens/dataExport") as typeof import("./screens/dataExport")).DataExportScreen,
+  chatBlocks: () => (require("./screens/chatBlocks") as typeof import("./screens/chatBlocks")).ChatBlocksScreen,
 };
 
 function Help({ route }: NativeStackScreenProps<AppStackParams, "Help">) {
@@ -504,6 +505,13 @@ export function RootNavigator() {
               getComponent={lazyScreens.signIns}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.security.history")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="ChatBlocks"
+              getComponent={lazyScreens.chatBlocks}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.chat.blocks.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

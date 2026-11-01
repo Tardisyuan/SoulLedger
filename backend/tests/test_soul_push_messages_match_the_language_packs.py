@@ -40,7 +40,7 @@ def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
               for target in ("post", "comment")),
             *(f"content_{outcome}_{target}_reason" for outcome in ("hidden", "deleted")
               for target in ("post", "comment")),
-            "comment", "reply",
+            "comment", "reply", "social_muted", "social_muted_reason",
             "wangsi_upheld", "wangsi_upheld_late", "wangsi_delivered", "wangsi_rejected"} == kinds
     for locale, pack in MESSAGES.items():
         # egy 可以恰好缺 Design 还没给词的种类(egyPendingKeys.json 里的 `soul_push.<kind>`),别的不许缺。

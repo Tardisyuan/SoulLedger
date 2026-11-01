@@ -26,12 +26,19 @@ export type ChatMode =
   | { kind: "outgoing_locked"; nextAt: string; rejected: boolean }
   /** ⑤ I am muted: no composer; the hall button under the reason. */
   | { kind: "muted" }
-  /** ⑥ Read-only for good: the other soul was reborn (`closed`) or its account is closed. */
-  | { kind: "closed"; reason: "closed" | "peer_retired" }
+  /**
+   * ⑥ Read-only: the other soul was reborn (`closed`) or its account is closed; or (2026-11-01) they declined
+   * my request (`declined`), I blocked them (`peer_blocked`), or they blocked me -- told only `undeliverable`.
+   */
+  | { kind: "closed"; reason: ClosedReason }
   /** The hall I am in now: write freely. */
   | { kind: "hall" }
   /** A hall I have left: its letters stay, sealed; the current hall is offered instead. */
   | { kind: "hall_sealed" };
+
+export const CLOSED_REASONS = ["closed", "peer_retired", "declined", "peer_blocked", "undeliverable"] as const;
+export type ClosedReason = (typeof CLOSED_REASONS)[number];
+const isClosedReason = (code: string | null | undefined): code is ClosedReason => (CLOSED_REASONS as readonly unknown[]).includes(code);
 
 export interface ChatFacts {
   now: number;
@@ -45,7 +52,7 @@ export interface ChatFacts {
 
 export function chatMode(c: SoulConversation, facts: ChatFacts): ChatMode {
   const refusal = facts.refused?.code ?? c.refusal;
-  if (refusal === "closed" || refusal === "peer_retired") return { kind: "closed", reason: refusal };
+  if (isClosedReason(refusal)) return { kind: "closed", reason: refusal };
   if (c.kind === "OFFICER_INBOX") return refusal === "not_current_hall" ? { kind: "hall_sealed" } : { kind: "hall" };
   if (refusal === "muted") return { kind: "muted" };
   if (c.throttled && c.initiated_by_me && !facts.peerHasSpoken) {

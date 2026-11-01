@@ -19,7 +19,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { useChat, type Chat } from "../chat";
-import { chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatRules";
+import { CLOSED_REASONS, chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatRules";
 import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
@@ -257,8 +257,8 @@ export function LettersScreen() {
     const last = lastOf(chat, c.room_id);
     return { stamp: last ? listStamp(last.ts, now) : undefined, preview: last?.body, unread: (chat.timeline.rooms[c.room_id]?.unread ?? 0) > 0 };
   };
-  // Read-only for good — the other soul reborn, or its account closed: 已闭, never 待回复.
-  const shut = (c: SoulConversation) => c.refusal === "closed" || c.refusal === "peer_retired";
+  // Read-only — the other soul reborn, its account closed, my request declined, a block either way: 已闭, never 待回复.
+  const shut = (c: SoulConversation) => (CLOSED_REASONS as readonly unknown[]).includes(c.refusal);
   const awaiting = (c: SoulConversation) =>
     c.throttled && c.initiated_by_me && !(chat.timeline.rooms[c.room_id]?.messages ?? []).some((m) => m.sender !== chat.me);
 

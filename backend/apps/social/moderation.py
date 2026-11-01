@@ -523,6 +523,12 @@ def mute_user(user, tenant, days, *, actor, request=None, reason=""):
         audit("CREATE", tenant, mute.pk, f"禁言用户 {user.pk} {days} 天" + (f":{reason}" if reason else ""),
               actor=actor, request=request, changes={"user": user.pk, "days": int(days)})
         publish_event("SOCIAL_MUTED", tenant, [user.pk], {"until": mute.until.isoformat()})
+        # 告诉被禁言的灵魂(带理由):此前它要到发帖或写信被拒才知道,也不知道为什么(2026-11-01 审查 P3)。
+        from apps.soul_push import services as push
+
+        ids = push.record_social_muted(user.pk, mute, int(days))
+        if ids:
+            transaction.on_commit(lambda: push.enqueue(ids))
     return mute
 
 

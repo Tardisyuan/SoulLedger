@@ -30,6 +30,16 @@ export type SoulFeedbackTag = NonNullable<Schemas["MessageSend"]["feedback_tag"]
 export type SoulChatLookupResult = Schemas["ChatLookupResult"];
 /** Whom to open a letter with: a `user_id` the soul can already see (same civilization, a follow, an old room) or a lookup's ticket. */
 export type SoulChatTarget = number | { ticket: string };
+/**
+ * One soul I blocked (`GET /me/chat/blocks/`, backend `ChatBlockSerializer`): that life's `user_id` and display name.
+ * Written here rather than read from the generated schema until the schema is regenerated with the endpoint.
+ */
+export interface SoulChatBlock {
+  id: string;
+  peer_user: number;
+  peer_name: string;
+  created_at: string;
+}
 /** An uploaded, not yet sent letter image: its id and pixel size. */
 export type SoulChatImageUpload = Schemas["ChatImageUploaded"];
 /** A letter image's signed URL (site-root path, about an hour), for one viewer. */
@@ -60,6 +70,11 @@ export const SOUL_CHAT_ERROR_CODES = [
   "chat_not_configured",
   "not_found",
   "self_conversation",
+  // 书信申请的拒绝与拉黑 (2026-11-01). `undeliverable` is all a blocked soul is told -- never that it was blocked.
+  "declined",
+  "peer_blocked",
+  "undeliverable",
+  "not_a_request",
 ] as const;
 export type SoulChatErrorCode = (typeof SOUL_CHAT_ERROR_CODES)[number];
 
@@ -148,4 +163,11 @@ export const soulChatApi = {
       .post<SoulConversation>("/me/chat/conversations/", typeof target === "number" ? { target_user: target } : { ticket: target.ticket })
       .then((r) => r.data),
   conversations: () => soulHttp.get<SoulConversation[]>("/me/chat/conversations/").then((r) => r.data),
+  /** Turn down THEIR unanswered request, this once (409 `not_a_request` otherwise). It leaves my list; they may ask again in a day. */
+  decline: (conversationId: string) => soulHttp.post(`/me/chat/conversations/${conversationId}/decline/`).then(() => undefined),
+  /** Block the other soul of this conversation. Idempotent. They are told only `undeliverable`. */
+  block: (conversationId: string) => soulHttp.post<SoulChatBlock>(`/me/chat/conversations/${conversationId}/block/`).then((r) => r.data),
+  /** 设置 › 已拉黑. */
+  blocks: () => soulHttp.get<SoulChatBlock[]>("/me/chat/blocks/").then((r) => r.data),
+  unblock: (blockId: string) => soulHttp.delete(`/me/chat/blocks/${blockId}/`).then(() => undefined),
 };

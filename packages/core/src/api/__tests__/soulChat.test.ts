@@ -102,3 +102,27 @@ describe("chat refusals", () => {
     expect(soulChatRetryAt(refused(409, { code: "closed" }))).toBeNull();
   });
 });
+
+describe("decline and block (2026-11-01)", () => {
+  const refused = (status: number, data: unknown) =>
+    new AxiosError("x", "ERR_BAD_RESPONSE", undefined, null, { status, data, headers: {}, statusText: "" } as AxiosResponse);
+
+  it("declines, blocks, lists and unblocks under the soul token, each at its own path", async () => {
+    await soulChatApi.decline("c-1");
+    await soulChatApi.block("c-1");
+    await soulChatApi.blocks();
+    await soulChatApi.unblock("b-1");
+    expect(calls.map((c) => [c.method, c.url, c.auth])).toEqual([
+      ["post", "/me/chat/conversations/c-1/decline/", "Bearer SOUL"],
+      ["post", "/me/chat/conversations/c-1/block/", "Bearer SOUL"],
+      ["get", "/me/chat/blocks/", "Bearer SOUL"],
+      ["delete", "/me/chat/blocks/b-1/", "Bearer SOUL"],
+    ]);
+  });
+
+  it("a blocked soul's refusal reads as its own copy (`undeliverable`), not the general fallback", () => {
+    for (const code of ["undeliverable", "peer_blocked", "declined", "not_a_request"]) {
+      expect(soulChatErrorMessage(refused(403, { code }))).toEqual({ key: `soul_app.chat.errors.${code}` });
+    }
+  });
+});
