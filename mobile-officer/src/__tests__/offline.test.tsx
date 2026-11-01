@@ -462,7 +462,7 @@ describe("whose these are", () => {
   function Out() {
     const { signOut } = useSession();
     return (
-      <Pressable testID="out" onPress={signOut}>
+      <Pressable testID="out" onPress={() => signOut()}>
         <Text>out</Text>
       </Pressable>
     );

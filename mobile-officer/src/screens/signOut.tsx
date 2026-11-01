@@ -56,7 +56,7 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
       ) : null}
       <View style={{ flexDirection: "row", gap: space[3] }}>
         <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
-        <ActionButton testID={`${testID}-confirm`} kind="ink" title={t(pending ? "officer_app.me.logout_anyway" : "officer_app.me.logout_ok")} onPress={signOut} />
+        <ActionButton testID={`${testID}-confirm`} kind="ink" title={t(pending ? "officer_app.me.logout_anyway" : "officer_app.me.logout_ok")} onPress={() => signOut()} />
       </View>
     </View>
   );
