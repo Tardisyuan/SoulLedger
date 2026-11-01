@@ -49,7 +49,8 @@ export function soupNotTakenOf(error: unknown): boolean {
 /** 409 `reborn` / `complete` answers when the business forbids the rebirth (2026-10-27); the soul stays where it was.
  *  `term_not_served` (2026-10-29) also carries `term_end` — see `rebirthTermEndOf`. `disposition_not_executed`
  *  (2026-10-29): a disposition of this life was never executed. `origin_flow_open` (2026-10-29, review R): an
- *  original judgment's approval workflow is still running. */
+ *  original judgment's approval workflow is still running. `open_judgment` (2026-11-01): the soul still has an open
+ *  judgment (carries `open_judgment_ids`). */
 export function rebirthBlockedOf(
   error: unknown
 ):
@@ -59,11 +60,12 @@ export function rebirthBlockedOf(
   | "term_not_served"
   | "disposition_not_executed"
   | "origin_flow_open"
+  | "open_judgment"
   | null {
   const c = responseCode(error);
   return responseStatus(error) === 409 &&
     (c === "plan_in_progress" || c === "eternal_sentence" || c === "rebirth_not_approved" || c === "term_not_served" ||
-      c === "disposition_not_executed" || c === "origin_flow_open")
+      c === "disposition_not_executed" || c === "origin_flow_open" || c === "open_judgment")
     ? c
     : null;
 }

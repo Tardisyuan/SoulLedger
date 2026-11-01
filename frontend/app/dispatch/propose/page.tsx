@@ -250,6 +250,9 @@ function ProposeDispatchForm() {
     );
     // 目标殿在填表期间关了调拨:后端答 400 + code,翻译后放到目标殿那一栏下。
     if (byField.code === "target_dispatch_disabled") mapped.target_tenant_code = t("dispatch.target_tenant_closed");
+    // 灵魂不在冥府(在世、轮回中、终局、失踪)或受刑计划进行中:放到灵魂那一栏下(2026-11-01)。
+    if (byField.code === "soul_not_in_underworld") mapped.soul_id = t("dispatch.soul_not_in_underworld");
+    if (byField.code === "sentence_plan_active") mapped.soul_id = t("dispatch.soul_on_sentence_plan");
     setFieldErrors(mapped);
     if (Object.keys(mapped).length > 0) {
       queueMicrotask(() => focusFirstInvalid(formRef.current));

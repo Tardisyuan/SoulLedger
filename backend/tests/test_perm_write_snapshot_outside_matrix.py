@@ -582,7 +582,7 @@ def test_dispatch_record_create(role_clients, snapshot_tenants, role):
 
     clients, _ = role_clients
     home, other = snapshot_tenants
-    soul = _soul(home, f"wsnap-dc-{role}")
+    soul = _soul(home, f"wsnap-dc-{role}", "JUDGING")  # 调拨只收冥府里的灵魂(2026-11-01)
     response = clients[role].post(
         "/api/v1/dispatch/records/",
         {
@@ -696,7 +696,7 @@ def test_dispatch_execute(role_clients, snapshot_tenants, role):
 
     clients, _ = role_clients
     home, other = snapshot_tenants
-    soul = _soul(other, f"wsnap-de-{role}")
+    soul = _soul(other, f"wsnap-de-{role}", "JUDGING")  # 调拨只收冥府里的灵魂(2026-11-01)
     record = _dispatch_record(home, other, soul, status=DispatchStatus.APPROVED)
     response = clients[role].post(f"/api/v1/dispatch/records/{record.id}/execute/", {}, format="json")
     assert response.status_code == DISPATCH_EXECUTE[role], _msg(

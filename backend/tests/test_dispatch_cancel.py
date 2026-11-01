@@ -44,7 +44,7 @@ def world(db):
     mod_b = User.objects.create_user(username="cx_mod_b", password="x", role="MODERATOR", tenant=b)
     mod_c = User.objects.create_user(username="cx_mod_c", password="x", role="MODERATOR", tenant=c)
     judge_a = User.objects.create_user(username="cx_judge_a", password="x", role="JUDGE", tenant=a)
-    soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.ALIVE, tenant=a)
+    soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.JUDGING, tenant=a)
     record = DispatchRecord.objects.create(
         source_tenant=a, target_tenant=b, soul=soul, reason="x" * 30,
         dispatched_by=mod_a, status=DispatchStatus.PROPOSED, tenant=a,

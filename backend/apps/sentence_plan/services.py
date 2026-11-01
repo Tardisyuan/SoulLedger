@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 #: 「判官」= 持有这个码名的在职用户(ADMIN / JUDGE / MODERATOR),设计稿 §5.1。
 JUDGE_PERMISSION = "judgment.execute"
+#: 系统想调往下一站而调拨没能发起(`_dispatch` 里 `propose` 拒绝):记在 `SENTENCE_NODE_REFUSED` 的 `dispatch_status`。
+NOT_STARTED = "NOT_STARTED"
 #: `advance` 一次调用里最多走几步(每一步要么返回,要么把灵魂送回原属一次)。正常至多 2 步;
 #: 上限只防一个未来的缺陷把它变成死循环。
 MAX_ADVANCE_STEPS = 4
@@ -125,7 +127,8 @@ def _node_params(soul, node):
 # ── 查询 ────────────────────────────────────────────────────────────────
 
 def last_refusal(node):
-    """节点上一次调拨为什么没成:`{status: REJECTED|CANCELLED, reason, at}`;不是「被拒后退回 PENDING」则 None。
+    """节点上一次调拨为什么没成:`{status: REJECTED|CANCELLED|NOT_STARTED, reason, at}`;不是「被拒后退回 PENDING」则 None。
+    NOT_STARTED = 系统没能发起调拨(`_dispatch_not_started`),没有调拨记录,`reason` 为 None。
 
     从现有记录推导,不加模型字段:`on_dispatch_refused` 写的 `SENTENCE_NODE_REFUSED` 事件带 `dispatch_id`,
     拒绝理由是那条调拨记录的 `decision_reason`(`DispatchService.reject` 写的;`reason` 是发起时的原文)。事件 payload 不带理由
@@ -211,6 +214,25 @@ def _leave_waiting_station(soul, node):
     disposition = Disposition.all_objects.filter(pk=node.disposition_id).first()
     if disposition is not None:
         DispositionService._leave_served_realm(disposition, soul)
+
+
+def pardon_term(soul, node, now):
+    """赦免这一站(撤销计划、手动结束暂居):节点刚记 ABORTED 之后调。受着的刑记期满(`expired_at`,
+    `reincarnation._unserved_term` 才不再报 `term_not_served`),灵魂离开那一站的界域。永久刑期与没执行的处置
+    不记期满(前者不靠期满,后者 `assert_may_be_reborn` 按 ABORTED 节点当作已赦免)。调用方持有灵魂、节点的锁。"""
+    from apps.disposition.models import Disposition
+    from apps.disposition.services import DispositionService
+
+    if node.disposition_id is None:
+        return
+    served = (Disposition.all_objects.select_for_update(of=("self",))
+              .filter(pk=node.disposition_id, is_deleted=False).first())
+    if served is None:
+        return
+    if served.is_executed and not served.is_eternal and served.expired_at is None:
+        served.expired_at = now
+        served.save(update_fields=["expired_at"])
+    DispositionService._leave_served_realm(served, soul, node)
 
 
 def _holds_home_stop(nodes):
@@ -538,6 +560,7 @@ class SentencePlanService:
         node.status = SentenceNodeStatus.ABORTED
         node.completed_at = timezone.now()
         _save(node, "status", "completed_at")
+        pardon_term(soul, node, node.completed_at)
         if was_eternal and plan.status == SentencePlanStatus.HELD:
             plan.status = SentencePlanStatus.ACTIVE
             _save(plan, "status")
@@ -763,15 +786,38 @@ class SentencePlanService:
         target = Tenant.objects.filter(code=node.tenant_code).first()
         if target is None:
             logger.warning("sentence_plan: node %s names unknown tenant %s", node.pk, node.tenant_code)
+            SentencePlanService._dispatch_not_started(soul, plan, node)
             return
         try:
             record = DispatchService.propose(
                 soul.tenant, target, soul, None, f"受刑计划 {plan.pk} 节点 {node.order}",
             )
         except ValueError as exc:
-            # 例如一条存量的手动调拨还在 PROPOSED:不抢它,等它结束后的下一次推进。
+            # 例如一条存量的手动调拨还在 PROPOSED,或执行地闭殿:不抢它。此前只记 warning,节点停在 PENDING、
+            # 没有事件也没有待办,`retry_dispatch` 又因「从没被拒过」答 409(审查 11-01 P1 #6)。现在记成一次
+            # 「没发出去」的拒绝(`dispatch_status=NOT_STARTED`),`last_refusal` / 待办 / 重新发起都认它。
+            # 同一站连着失败只记一次(`advance` 会反复走到这里)。
             logger.warning("sentence_plan: plan %s node %s not dispatched: %s", plan.pk, node.pk, exc)
+            SentencePlanService._dispatch_not_started(soul, plan, node)
             return
         node.status = SentenceNodeStatus.DISPATCHING
         node.dispatch_record_id = record.pk
         _save(node, "status", "dispatch_record_id")
+
+    @staticmethod
+    def _dispatch_not_started(soul, plan, node):
+        """`_dispatch` 没能发起调拨:一条 `SENTENCE_NODE_REFUSED`(没有调拨记录)、通知原属判官。原因只进日志 ——
+        事件 payload 会出现在时间线上,`propose` 的英文报错不给那里看。"""
+        from apps.events.models import EventType, SoulEvent
+
+        latest = (SoulEvent.objects.filter(
+            soul_id=soul.pk, payload__node_id=str(node.pk),
+            event_type__in=(EventType.SENTENCE_NODE_REFUSED, EventType.SENTENCE_NODE_REDISPATCHED),
+        ).order_by("-create_time").values_list("event_type", "payload__dispatch_status").first())
+        if latest == (EventType.SENTENCE_NODE_REFUSED, NOT_STARTED):
+            return
+        record_event(soul, EventType.SENTENCE_NODE_REFUSED, {
+            "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
+            "tenant_code": node.tenant_code, "dispatch_id": None, "dispatch_status": NOT_STARTED,
+        })
+        notify_judges({plan.tenant_id}, "sentence_node_refused", _node_params(soul, node), plan.pk)

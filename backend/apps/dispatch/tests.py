@@ -55,7 +55,7 @@ class TestDispatchRecordCRUD:
         self.client = _jwt_client(self.user, self.tenant_a)
 
         self.soul = Soul.objects.create(
-            name="TestSoul", current_state=SoulState.ALIVE, tenant=self.tenant_a,
+            name="TestSoul", current_state=SoulState.JUDGING, tenant=self.tenant_a,
         )
 
     def test_list_empty(self):
@@ -173,7 +173,7 @@ class TestDispatchProposedHistory:
             username="dpuser2", password="test123", role="ADMIN", tenant=self.tenant_b,
         )
         self.soul = Soul.objects.create(
-            name="PropSoul", current_state=SoulState.ALIVE, tenant=self.tenant_a,
+            name="PropSoul", current_state=SoulState.JUDGING, tenant=self.tenant_a,
         )
         self.client_a = _jwt_client(self.user_a, self.tenant_a)
         self.client_b = _jwt_client(self.user_b, self.tenant_b)
@@ -255,7 +255,7 @@ class TestDispatchApproveReject:
             username="dauser2", password="test123", role="ADMIN", tenant=self.tenant_b,
         )
         self.soul = Soul.objects.create(
-            name="ApproveSoul", current_state=SoulState.ALIVE, tenant=self.tenant_a,
+            name="ApproveSoul", current_state=SoulState.JUDGING, tenant=self.tenant_a,
         )
         self.client_a = _jwt_client(self.user_a, self.tenant_a)
         self.client_b = _jwt_client(self.user_b, self.tenant_b)
@@ -351,7 +351,7 @@ class TestDispatchExecute:
             username="deuser2", password="test123", role="ADMIN", tenant=self.tenant_b,
         )
         self.soul = Soul.objects.create(
-            name="ExecSoul", current_state=SoulState.ALIVE, tenant=self.tenant_a,
+            name="ExecSoul", current_state=SoulState.JUDGING, tenant=self.tenant_a,
         )
         self.client_a = _jwt_client(self.user_a, self.tenant_a)
         self.client_b = _jwt_client(self.user_b, self.tenant_b)
@@ -414,7 +414,7 @@ class TestDispatchService:
             username="dsuser1", password="test123", role="ADMIN", tenant=self.tenant_a,
         )
         self.soul = Soul.objects.create(
-            name="SvcSoul", current_state=SoulState.ALIVE, tenant=self.tenant_a,
+            name="SvcSoul", current_state=SoulState.JUDGING, tenant=self.tenant_a,
         )
 
     def test_propose_creates_record(self):
@@ -794,8 +794,8 @@ class TestDispatchRecordTenantIsolation:
             username="dtiadmina", password="test123", role="ADMIN", tenant=None,
         )
 
-        self.soul_a = Soul.objects.create(name="DTI Soul A", current_state=SoulState.ALIVE, tenant=self.tenant_a)
-        self.soul_c = Soul.objects.create(name="DTI Soul C", current_state=SoulState.ALIVE, tenant=self.tenant_c)
+        self.soul_a = Soul.objects.create(name="DTI Soul A", current_state=SoulState.JUDGING, tenant=self.tenant_a)
+        self.soul_c = Soul.objects.create(name="DTI Soul C", current_state=SoulState.JUDGING, tenant=self.tenant_c)
 
         # Involves tenant_a (source) and tenant_b (target).
         self.record_ab = DispatchRecord.objects.create(

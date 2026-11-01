@@ -71,7 +71,8 @@ class RebirthBlocked(APIException):
     `eternal_sentence` —— 本世有未赦免的永久刑期(永久 = 不转生);
     `rebirth_not_approved` —— 本世最近一份转生申请驳回了或还没决定。没有申请的灵魂官员照样可以办。
     `term_not_served` —— 本世有执行了而刑期未满的处置(用户 2026-10-29:执行即开始服刑,刑满才能转世);
-    带 `term_end`,期满日那天(或之后)「期满释放」再办。"""
+    带 `term_end`,期满日那天(或之后)「期满释放」再办。
+    `open_judgment` —— 还有未结案的审判(2026-11-01),带 `open_judgment_ids`。"""
 
     status_code = 409
     default_code = "rebirth_blocked"
@@ -211,6 +212,13 @@ def assert_may_be_reborn(soul, disposition=None):
     if unexecuted:
         raise RebirthBlocked("disposition_not_executed",
                              "The soul has a disposition of this life that has not been executed.")
+    from apps.judgment.models import open_judgments
+
+    open_ids = [str(pk) for pk in open_judgments(soul).values_list("pk", flat=True)]
+    if open_ids:
+        # 还有未结案的审判(审查 11-01 P2 #10):它的结论还没出,转世就等于替它结了案。
+        raise RebirthBlocked("open_judgment", "The soul has an open judgment; conclude or withdraw it first.",
+                             open_judgment_ids=open_ids)
     latest = soul.rebirth_applications.filter(cycle=soul.life_index).order_by("-created_at").first()
     if latest is not None and latest.status != RebirthApplicationStatus.APPROVED:
         raise RebirthBlocked("rebirth_not_approved",

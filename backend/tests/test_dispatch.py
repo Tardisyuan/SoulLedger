@@ -73,7 +73,7 @@ def cn_soul(db, cn_tenant):
     soul = Soul.objects.create(
         name="测试灵魂",
         tenant=cn_tenant,
-        current_state="ALIVE",
+        current_state="JUDGING",
         birth_date="1990-01-15",
     )
     return soul
@@ -85,7 +85,7 @@ def eu_soul(db, eu_tenant):
     soul = Soul.objects.create(
         name="Test Soul EU",
         tenant=eu_tenant,
-        current_state="ALIVE",
+        current_state="JUDGING",
         birth_date="1990-01-15",
     )
     return soul
