@@ -41,7 +41,7 @@ import Svg, { Path } from "react-native-svg";
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
 import { bubbleStamp, chatMode, dayOf, type ChatMode, type ClosedReason } from "../chatRules";
-import { PlaqueFrame } from "../chrome";
+import { PlaqueFrame, usePageTheme } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
@@ -49,7 +49,7 @@ import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
 import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, ThemeContext, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
@@ -550,6 +550,7 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
  */
 function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onBlock?: () => void }) {
   const t = useTheme();
+  const page = usePageTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -563,25 +564,26 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
       <Pressable testID="chat-menu" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.post.more")} onPress={() => setOpen(true)} hitSlop={6} style={styles.icon}>
         <Icon name="more" size={18} color={t.inkMuted} />
       </Pressable>
+      <ThemeContext.Provider value={page}>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <View style={[styles.fill, { backgroundColor: t.scrim }]}>
+        <View style={[styles.fill, { backgroundColor: page.scrim }]}>
           <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
-          <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
-            <Pressable testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+          <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: page.s1, borderTopColor: page.hair2, paddingBottom: 20 + insets.bottom }]}>
+            <Pressable testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
               <Txt variant="bodyLg">{tr("soul_app.chat.menu.profile")}</Txt>
             </Pressable>
             <Pressable
               testID="chat-menu-report"
               accessibilityRole="button"
               onPress={go(() => navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: name }))}
-              style={[styles.menuRow, { borderBottomColor: t.hair }]}
+              style={[styles.menuRow, { borderBottomColor: page.hair }]}
             >
               <Txt variant="bodyLg" tone="neg">
                 {tr("soul_app.chat.menu.report")}
               </Txt>
             </Pressable>
             {onBlock ? (
-              <Pressable testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+              <Pressable testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: page.hair }]}>
                 <Txt variant="bodyLg" tone="neg">
                   {tr("soul_app.chat.menu.block")}
                 </Txt>
@@ -595,6 +597,7 @@ function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onB
           </View>
         </View>
       </Modal>
+      </ThemeContext.Provider>
     </>
   );
 }
