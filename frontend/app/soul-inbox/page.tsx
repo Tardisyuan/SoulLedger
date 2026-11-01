@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
 import { responseCode } from "@soulledger/core/api/client";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
-import { renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
+import { newReplyTxn, renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import {
@@ -429,12 +429,16 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
     mark(conversation.id);
   }, [messages.isSuccess, conversation.unread, conversation.id, mark]);
 
+  // 同一段文字重发用同一个事务号:响应丢了再点发送,服务器回第一次的结果,不会发两封(与官员 App 同一条规则)。
+  const attempt = useRef<{ body: string; txn: string } | null>(null);
   const submit = () => {
     if (!draft.body.trim() || reply.isPending) return;
+    if (attempt.current?.body !== draft.body) attempt.current = { body: draft.body, txn: newReplyTxn() };
     reply.mutate(
-      { id: conversation.id, body: draft.body },
+      { id: conversation.id, body: draft.body, txnId: attempt.current.txn },
       {
         onSuccess: () => {
+          attempt.current = null;
           draft.sent();
           showToast(t("soul_inbox.sent"), "success");
         },
@@ -622,9 +626,10 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
               </kbd>
             </Button>
           </div>
-          <TemplateManager isOpen={managing} onClose={() => setManaging(false)} />
         </form>
       )}
+      {/* 不放进上面的 <form>:弹层虽挂在 body 下,React 事件仍沿组件树冒泡,模板表单的提交会连带发出回复框里的字。 */}
+      {canReply && !replyBlocked && <TemplateManager isOpen={managing} onClose={() => setManaging(false)} />}
     </section>
   );
 }
@@ -651,7 +656,7 @@ function SoulInboxContent() {
   const listed = rows.find((r) => r.id === selectedId);
   // 那一封不在当前文件夹的这一页上(归档了、或在后面几页):单取一次。
   const single = useQuery({
-    queryKey: [...soulInboxKeys.all, "conversation", selectedId],
+    queryKey: [...soulInboxKeys.conversations(), selectedId],
     queryFn: async () => (await soulInboxApi.get(selectedId!)).data,
     enabled: !!selectedId && !!list.data && !listed,
   });

@@ -10,7 +10,7 @@
  */
 import { platform } from "@soulledger/core/platform";
 
-import { readOwned, writeOwned } from "./owner";
+import { heldByAnother, readOwned, writeOwned } from "./owner";
 
 export const DRAFTS_KEY = "officer_reply_drafts";
 export const DRAFT_KEEP = 20;
@@ -27,6 +27,7 @@ function read(): Draft[] {
 }
 
 function write(drafts: Draft[]): void {
+  if (heldByAnother(DRAFTS_KEY)) return;
   if (drafts.length === 0) platform().persistent.remove(DRAFTS_KEY);
   else writeOwned(DRAFTS_KEY, { drafts });
 }

@@ -109,7 +109,8 @@ export interface Chat {
   outbox: Outgoing[];
   /** The last refusal a send met, per conversation — newer than the list until the list reloads. */
   refused: Record<string, Refused>;
-  reload: () => Promise<void>;
+  /** `forget`: a conversation I just took out of my own list (a declined request): it did not "vanish". */
+  reload: (forget?: string) => Promise<void>;
   /** Try Synapse again now (the retry button; also flushes the queue). */
   reconnect: () => void;
   /** Returns the letter's txn id, so a screen can watch that one item in `outbox`. */
@@ -307,8 +308,10 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     save(outbox);
   }, [outbox, availability, save]);
 
-  const reload = useCallback(async () => {
+  const flushRef = useRef<() => void>(noop);
+  const reload = useCallback(async (forget?: string) => {
     const asked = session.current;
+    if (forget) convs.current = convs.current.filter((c) => c.id !== forget);
     try {
       const rows = await soulChatApi.conversations();
       if (asked !== session.current) return;
@@ -317,11 +320,14 @@ export function ChatProvider({ account, children }: { account: string | null; ch
       const vanished = convs.current.filter((p) => !rows.some((r) => r.id === p.id));
       if (vanished.length) setGone((g) => ({ ...g, ...Object.fromEntries(vanished.map((v) => [v.id, { ...v, refusal: "closed" }])) }));
       convs.current = rows;
+      const firstList = !listed.current;
       listed.current = true;
       known.current = new Set(rows.map((c) => c.room_id));
       setConversations(rows);
       setRefused({});
       setListError(false);
+      // Letters restored from disk wait for the list; Synapse may have been ready long before it came.
+      if (firstList && availabilityRef.current === "ready") flushRef.current();
     } catch (error) {
       if (soulChatErrorCode(error) === "chat_not_configured") setAvailability("not_configured");
       else setListError(true);
@@ -435,6 +441,9 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   const flush = useCallback(() => {
     for (const o of outboxRef.current) if (o.state === "queued") void deliver(o);
   }, [deliver]);
+  useEffect(() => {
+    flushRef.current = flush;
+  }, [flush]);
 
   // Sign in to Synapse, then long-poll /sync until signed out.
   useEffect(() => {

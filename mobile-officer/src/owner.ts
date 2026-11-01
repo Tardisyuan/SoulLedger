@@ -39,6 +39,20 @@ export function readOwned<T extends object>(key: string): T | null {
   }
 }
 
+/**
+ * The store says it belongs to someone other than whoever is signed in now. Writing would replace it: a send still in
+ * flight when the server ended the session reads "nothing of mine" and would wipe what was kept for the same officer's
+ * next sign-in. Garbage, or a store with no owner field, belongs to nobody and may be overwritten.
+ */
+export function heldByAnother(key: string): boolean {
+  try {
+    const parsed = JSON.parse(platform().persistent.get(key) ?? "null") as { owner?: unknown } | null;
+    return !!parsed && typeof parsed === "object" && "owner" in parsed && parsed.owner !== currentOwner();
+  } catch {
+    return false;
+  }
+}
+
 export function writeOwned(key: string, value: object): void {
   platform().persistent.set(key, JSON.stringify({ ...value, owner: currentOwner() }));
 }

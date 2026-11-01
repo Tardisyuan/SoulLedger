@@ -20,7 +20,7 @@ test.describe("Hall inbox", () => {
 
     await thread.getByLabel("以殿司名义回复").fill("已受理");
     await thread.getByRole("button", { name: "发送" }).click();
-    await expect.poll(() => api.lastCall("POST", "/chat/inbox/:id/reply/")?.body).toEqual({ body: "已受理" });
+    await expect.poll(() => api.lastCall("POST", "/chat/inbox/:id/reply/")?.body).toEqual({ body: "已受理", txn_id: expect.stringMatching(/^[A-Za-z0-9._~-]+$/) });
   });
 
   test("three columns on a desktop; at 393 the folders are a dropdown and the thread sits under the list", async ({ page }) => {

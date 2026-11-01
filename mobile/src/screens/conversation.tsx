@@ -256,7 +256,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     try {
       await soulChatApi.decline(c.id);
       toast(tr("soul_app.chat.request.declined"), "success");
-      await chat.reload();
+      await chat.reload(c.id);
       navigation.goBack();
     } catch (error) {
       const m = soulChatErrorMessage(error);

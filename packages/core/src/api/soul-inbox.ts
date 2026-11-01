@@ -33,6 +33,9 @@ export interface InboxListParams {
   hall?: number;
 }
 
+/** A fresh id for one reply (not one conversation): the server remembers it a week. */
+export const newReplyTxn = () => `or${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
+
 /** A reply (and a draft) is at most this long -- `OfficerReplySerializer.body`, `inbox.DRAFT_MAX_LENGTH`. */
 export const INBOX_REPLY_MAX = 4000;
 

@@ -41,7 +41,7 @@ export function useInboxMessages(id: string | null) {
 export function useInboxReply() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, body }: { id: string; body: string }) => (await soulInboxApi.reply(id, body)).data,
+    mutationFn: async ({ id, body, txnId }: { id: string; body: string; txnId: string }) => (await soulInboxApi.reply(id, body, txnId)).data,
     onSettled: () => qc.invalidateQueries({ queryKey: soulInboxKeys.all }),
   });
 }
@@ -50,6 +50,8 @@ const invalidateLists = (qc: ReturnType<typeof useQueryClient>) =>
   Promise.all([
     qc.invalidateQueries({ queryKey: soulInboxKeys.lists() }),
     qc.invalidateQueries({ queryKey: soulInboxKeys.folders() }),
+    // 不在当前列表页的会话(通知的 `?c=`、翻页之外)是单独取的:归档与指派的状态也要跟着刷新。
+    qc.invalidateQueries({ queryKey: soulInboxKeys.conversations() }),
   ]);
 
 export function useInboxMarkRead() {

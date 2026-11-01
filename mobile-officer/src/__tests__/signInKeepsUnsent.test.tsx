@@ -10,7 +10,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Pressable, Text } from "react-native";
 
 import { DRAFTS_KEY, clearDrafts, readDraft, saveDraft } from "../drafts";
-import { OUTBOX_KEY, clearOutbox, enqueueReply, outboxEntries } from "../outbox";
+import { OUTBOX_KEY, clearOutbox, enqueueReply, flushOutbox, outboxEntries } from "../outbox";
 import { MeTab } from "../screens/me";
 import { SignOutButton } from "../screens/signOut";
 import { SessionProvider, USER_KEY, useSession } from "../session";
@@ -106,6 +106,53 @@ describe("the server ended the session", () => {
     as(41);
     expect(outboxEntries()).toEqual([]);
     expect(readDraft("c-2")).toBe("");
+  });
+});
+
+// 2026-11-01 书信审计:发送途中会话被服务端结束,`fail` / `removeFromOutbox` 按「现在没有主人」读到空,写回去就清空了发件箱。
+// 变异:`run` 删掉主人变了就停 → 第一条红;`commit` 删掉 `heldByAnother` → 第二条红;`drafts.write` 删掉它 → 第三条红。
+describe("the server ends the session while the outbox is sending", () => {
+  const queueTwo = () => {
+    as(1);
+    enqueueReply({ id: "c1", name: "张三", text: "已受理", seen: [], txn: "t1" });
+    enqueueReply({ id: "c2", name: "李四", text: "已收到", seen: [], txn: "t2" });
+  };
+  const queued = () => outboxEntries().map((e) => [e.id, e.state]);
+
+  it("a request refused with 401: nothing is lost, and nothing more is asked", async () => {
+    queueTwo();
+    mockMessages.mockImplementation(async () => {
+      platform().persistent.remove(USER_KEY);
+      throw Object.assign(new Error("401"), { response: { status: 401 } });
+    });
+    await act(async () => void (await flushOutbox()));
+    expect(mockMessages).toHaveBeenCalledTimes(1);
+    as(1);
+    expect(queued()).toEqual([["c1", "queued"], ["c2", "queued"]]);
+  });
+
+  const serverTakesItAsTheSessionEnds = () =>
+    mockReply.mockImplementation(async () => {
+      platform().persistent.remove(USER_KEY);
+      return { data: {} };
+    });
+
+  it("a reply the server took as the session ended: the others stay, and the txn id goes with it", async () => {
+    queueTwo();
+    serverTakesItAsTheSessionEnds();
+    await act(async () => void (await flushOutbox()));
+    as(1);
+    expect(queued()).toEqual([["c1", "queued"], ["c2", "queued"]]);
+    expect(outboxEntries()[0].txn).toBe("t1");
+  });
+
+  it("a reply the server took as the session ended: the drafts stay", async () => {
+    queueTwo();
+    saveDraft("c2", "已收到");
+    serverTakesItAsTheSessionEnds();
+    await act(async () => void (await flushOutbox()));
+    as(1);
+    expect(readDraft("c2")).toBe("已收到");
   });
 });
 

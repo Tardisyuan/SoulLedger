@@ -7,6 +7,7 @@ import { soulChatApi, type SoulChatBlock } from "@soulledger/core/api/soul-chat"
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { useChat } from "../chat";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { Empty, Screen, SectionError, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
@@ -44,6 +45,7 @@ export function ChatBlocksScreen() {
   const [gone, setGone] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   useReloadOnRefocus(blocks.reload, { data: blocks.data, error: blocks.error });
+  const { reload } = useChat();
 
   const unblock = (id: string) => {
     if (busy) return;
@@ -54,6 +56,7 @@ export function ChatBlocksScreen() {
         () => {
           setGone((prev) => new Set(prev).add(id));
           toast(t("soul_app.chat.blocks.unblocked"), "success");
+          void reload(); // the list and any open conversation read `peer_blocked` from it
         },
         () => toast(t("soul_app.chat.blocks.failed"), "failure")
       )

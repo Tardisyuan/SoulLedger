@@ -157,7 +157,7 @@ it("replies with the typed text", async () => {
   const thread = await openThread();
   fireEvent.change(within(thread).getByLabelText(tZh("soul_inbox.reply_label")), { target: { value: "已受理" } });
   fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.send") }));
-  await waitFor(() => expect(apiMock.reply).toHaveBeenCalledWith("c1", "已受理"));
+  await waitFor(() => expect(apiMock.reply).toHaveBeenCalledWith("c1", "已受理", expect.any(String)));
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.sent"), "success"));
 });
 
@@ -340,6 +340,52 @@ it("a template is filled with the soul's and the hall's name and inserted", asyn
   expect(box.value).toBe("张三:第五殿已收悉。");
   expect(box.value).not.toMatch(/\{\{/);
   expect(apiMock.reply).not.toHaveBeenCalled();
+});
+
+// 2026-11-01 书信审计:模板管理曾写在回复 <form> 里,保存模板的提交沿 React 树冒泡,把回复框的字直接发给灵魂。
+// 变异:把 <TemplateManager> 移回 <form> 内 → reply 被调用,红。
+it("saving a template saves the template and sends nothing from the reply box", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  templatesMock.create.mockResolvedValue({ data: { id: "t9", title: "收悉", body: "已收悉。", created_at: "", updated_at: "" } });
+  renderPage();
+  const thread = await openThread();
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label")) as HTMLTextAreaElement;
+  fireEvent.change(box, { target: { value: "还没写完的回信" } });
+  fireEvent.click(await within(thread).findByRole("button", { name: tZh("soul_inbox.template.manage") }));
+  fireEvent.click(await screen.findByRole("button", { name: tZh("soul_inbox.template.new") }));
+  fireEvent.change(screen.getByLabelText(new RegExp(tZh("soul_inbox.template.title"))), { target: { value: "收悉" } });
+  fireEvent.change(screen.getByLabelText(new RegExp(tZh("soul_inbox.template.body"))), { target: { value: "已收悉。" } });
+  fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+  await waitFor(() => expect(templatesMock.create).toHaveBeenCalled());
+  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.template.saved"), "success"));
+  expect(apiMock.reply).not.toHaveBeenCalled();
+  expect(box.value).toBe("还没写完的回信");
+});
+
+// 变异:`submit` 每次都生成新事务号 → 重发的号不同,红。
+it("sending the same words again after a failure reuses the txn id; different words get a new one", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.reply.mockRejectedValue(http(503, { detail: "x", code: "chat_unavailable" }));
+  renderPage();
+  const thread = await openThread();
+  const box = within(thread).getByLabelText(tZh("soul_inbox.reply_label"));
+  const send = () => fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.send") }));
+  const sentTimes = async (n: number) => {
+    await waitFor(() => expect(apiMock.reply).toHaveBeenCalledTimes(n));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledTimes(n));
+  };
+  fireEvent.change(box, { target: { value: "已受理" } });
+  send();
+  await sentTimes(1);
+  send();
+  await sentTimes(2);
+  fireEvent.change(box, { target: { value: "已受理,另有说明" } });
+  send();
+  await sentTimes(3);
+  const txns = apiMock.reply.mock.calls.map((call) => call[2]);
+  expect(txns[0]).toEqual(expect.any(String));
+  expect(txns[1]).toBe(txns[0]);
+  expect(txns[2]).not.toBe(txns[0]);
 });
 
 it("deleting a template asks for its title first — templates are hard-deleted, there is no bin", async () => {
@@ -641,5 +687,19 @@ describe("?c= from a notification's 「打开来信」", () => {
     renderPage();
     expect(await screen.findByRole("region", { name: tZh("soul_inbox.thread_label", { name: "赵六" }) })).toBeInTheDocument();
     expect(apiMock.get).toHaveBeenCalledWith("c9");
+  });
+
+  // 变异:`invalidateLists` 不失效 `conversations()` → 按钮还是「归档」,红。
+  it("archiving a conversation fetched by id flips its button: the single fetch refreshes too", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    mockSearch = new URLSearchParams("c=c9");
+    apiMock.get.mockResolvedValueOnce({ data: conversation({ id: "c9", soul_name: "赵六", archived: false }) });
+    apiMock.get.mockResolvedValue({ data: conversation({ id: "c9", soul_name: "赵六", archived: true }) });
+    apiMock.archive.mockResolvedValue({ data: {} });
+    renderPage();
+    const thread = await screen.findByRole("region", { name: tZh("soul_inbox.thread_label", { name: "赵六" }) });
+    fireEvent.click(await within(thread).findByRole("button", { name: tZh("soul_inbox.archive") }));
+    expect(await within(thread).findByRole("button", { name: tZh("soul_inbox.unarchive") })).toBeInTheDocument();
+    expect(within(thread).queryByRole("button", { name: tZh("soul_inbox.archive") })).toBeNull();
   });
 });
