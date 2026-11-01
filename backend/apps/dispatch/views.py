@@ -241,16 +241,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        # Q3:受刑计划进行中的灵魂只能走计划(系统按节点发起调拨);无计划的照旧可手动调拨。
-        from apps.sentence_plan.services import in_progress_plan
-
-        soul = validated.get("soul")
-        if soul is not None and in_progress_plan(soul) is not None:
-            return Response(
-                {"error": "This soul has a sentence plan in progress; dispatches follow the plan",
-                 "code": "sentence_plan_active"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Q3(受刑计划进行中不许手动调拨)与灵魂状态在 `propose` 的灵魂行锁内判断(用户 2026-11-01),
+        # 拒绝经 `_refused` 答 400 + `code`(`sentence_plan_active` / `soul_not_in_underworld`)。
 
         set_current_user(request.user)
         set_current_request(request)
@@ -402,14 +394,6 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         body = DispatchSubmitSerializer(data=merged, context={"request": request, "draft": record})
         body.is_valid(raise_exception=True)
 
-        from apps.sentence_plan.services import in_progress_plan
-
-        if in_progress_plan(body.validated_data["soul"]) is not None:
-            return Response(
-                {"error": "This soul has a sentence plan in progress; dispatches follow the plan",
-                 "code": "sentence_plan_active"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         set_current_user(request.user)
         set_current_request(request)
         try:

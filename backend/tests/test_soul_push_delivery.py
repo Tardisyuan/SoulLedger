@@ -176,7 +176,10 @@ def _residence_tenants():
 def _dispatch(soul, away):
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.dispatch.services import DispatchService
+    from apps.souls.models import Soul, SoulState
 
+    # 调拨只收冥府里的灵魂(2026-11-01);`rebirth_ready_soul` 是 REINCARNATING,这里放回 DISPOSED。
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.DISPOSED)
     record = DispatchRecord.objects.create(
         source_tenant_id=soul.tenant_id, target_tenant=away, soul=soul, status=DispatchStatus.APPROVED,
         reason="暂居理由SECRET-DISPATCH", tenant_id=soul.tenant_id)

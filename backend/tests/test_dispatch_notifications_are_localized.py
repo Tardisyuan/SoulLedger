@@ -38,7 +38,7 @@ def hall(db):
         for t in tenants
     ]
     w.ua, w.ub, w.uc = users
-    w.soul = Soul.objects.create(name="孟婆之魂", current_state=SoulState.ALIVE, tenant=w.a)
+    w.soul = Soul.objects.create(name="孟婆之魂", current_state=SoulState.JUDGING, tenant=w.a)
     return w
 
 
@@ -92,7 +92,7 @@ def test_a_rejection_carries_the_reason_and_has_a_sentence_for_none(hall, django
     [row] = _read(hall.ua, "en")
     assert row["message"].endswith("Reason: 名额已满")
 
-    bare_soul = Soul.objects.create(name="乙之魂", current_state=SoulState.ALIVE, tenant=hall.a)
+    bare_soul = Soul.objects.create(name="乙之魂", current_state=SoulState.JUDGING, tenant=hall.a)
     with django_capture_on_commit_callbacks(execute=True):
         second = DispatchService.propose(hall.a, hall.b, bare_soul, hall.ua, "x" * 30)
         DispatchService.reject(DispatchRecord.objects.get(pk=second.pk), hall.ub, "")

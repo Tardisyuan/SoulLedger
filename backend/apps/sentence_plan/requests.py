@@ -30,6 +30,7 @@ from apps.sentence_plan.services import (
     _tenant_id,
     last_refusal,
     notify_judges,
+    pardon_term,
     record_event,
 )
 from apps.souls.models import Soul
@@ -765,6 +766,7 @@ def cancel(plan, *, reason, user):
                 node.status = SentenceNodeStatus.ABORTED
                 node.completed_at = now
                 _save(node, "status", "completed_at")
+                pardon_term(soul, node, now)  # 赦免 = 刑期就此止,否则转生报 term_not_served(审查 11-01 P1 #2)
         if soul.is_residing:
             DispatchService.end_residence(
                 soul, actor=user if getattr(user, "is_authenticated", False) else "system",

@@ -116,7 +116,7 @@ def cn_soul(db, cn_tenant):
     return Soul.objects.create(
         name="Concurrency Soul",
         tenant=cn_tenant,
-        current_state=SoulState.ALIVE,
+        current_state=SoulState.JUDGING,  # 只用于调拨;调拨只收冥府里的灵魂(2026-11-01)
         birth_date="1990-01-15",
     )
 

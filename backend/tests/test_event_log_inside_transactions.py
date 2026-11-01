@@ -535,7 +535,7 @@ def _cancel_proposed_dispatch():
 
     home, away = _cn(), plan.tenant("EG_DUAT")
     officer = plan.officer("evlog_cancel_mod", "MODERATOR", home)
-    soul = Soul.objects.create(name="取消之魂", tenant=home)
+    soul = Soul.objects.create(name="取消之魂", tenant=home, current_state="JUDGING")
     record = DispatchService.propose(home, away, soul, officer, "x" * 30)
     return (lambda: DispatchService.cancel_proposed(DispatchRecord.all_objects.get(pk=record.pk), officer, "改主意"),
             lambda: DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED, "STATE_CHANGED")
@@ -551,7 +551,7 @@ def _dispatch(step):
         home, away = _cn(), plan.tenant("EG_DUAT")
         sender = plan.officer("evlog_dsp_send", "MODERATOR", home)
         receiver = plan.officer("evlog_dsp_recv", "MODERATOR", away)
-        soul = Soul.objects.create(name="调拨之魂", tenant=home)
+        soul = Soul.objects.create(name="调拨之魂", tenant=home, current_state="JUDGING")
         status = lambda pk: DispatchRecord.all_objects.get(pk=pk).status  # noqa: E731
         if step == "propose":
             return (lambda: DispatchService.propose(home, away, Soul.all_objects.get(pk=soul.pk), sender, "x" * 30),
