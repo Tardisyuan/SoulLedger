@@ -1119,6 +1119,10 @@ paths:
         name: user
         schema:
           type: integer
+      - in: query
+        name: username
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -1241,6 +1245,10 @@ paths:
         name: user
         schema:
           type: integer
+      - in: query
+        name: username
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -1398,6 +1406,10 @@ paths:
         name: user
         schema:
           type: integer
+      - in: query
+        name: username
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -1494,6 +1506,10 @@ paths:
         name: user
         schema:
           type: integer
+      - in: query
+        name: username
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -2058,7 +2074,9 @@ paths:
   /api/v1/auth/mfa/recovery-codes/:
     post:
       operationId: v1_auth_mfa_recovery_codes_create
-      description: 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。
+      description: |-
+        重新生成:先确认是本人 —— 只收当前的 6 位动态码(与「关闭」同一把锁),过了才作废旧码。
+        带密码或恢复码来 → 400 `totp_required`,旧码原样有效(用户 2026-11-01)。
       tags:
       - v1
       requestBody:
@@ -4307,7 +4325,6 @@ paths:
         schema:
           type: string
           enum:
-          - DUPLICATE
           - FAILED
           - PENDING
           - PROCESSED
@@ -4315,7 +4332,6 @@ paths:
           * `PENDING` - Pending Validation
           * `PROCESSED` - Processed Successfully
           * `FAILED` - Processing Failed
-          * `DUPLICATE` - Duplicate - Already Processed
       - in: query
         name: tudi_god
         schema:
@@ -4439,7 +4455,7 @@ paths:
         How many of this tenant's registrations need a human.
 
         FAILED is the only anomalous state a row is ever written in: PENDING
-        is in flight and DUPLICATE is the idempotency check doing its job. The status
+        is in flight (a duplicate key writes no row; it is answered with the row it belongs to). The status
         goes on the wire so the dashboard links to the same filter it counted.
       tags:
       - v1
@@ -9950,6 +9966,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Judgment'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
+          description: ''
         '403':
           content:
             application/json:
@@ -10002,6 +10024,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Judgment'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WangsiRefusal'
           description: ''
         '403':
           content:
@@ -10527,6 +10555,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistError'
           description: ''
+  /api/v1/me/chat/blocks/:
+    get:
+      operationId: v1_me_chat_blocks_list
+      description: '`GET /me/chat/blocks/`:我拉黑的人(设置 › 书信 › 已拉黑)。不分页:这是一个人亲手拉黑的名单。'
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatBlock'
+          description: ''
+  /api/v1/me/chat/blocks/{block_id}/:
+    delete:
+      operationId: v1_me_chat_blocks_destroy
+      description: '`DELETE /me/chat/blocks/{id}/`:解除。别人的与不存在答同一个 404。'
+      parameters:
+      - in: path
+        name: block_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
   /api/v1/me/chat/conversations/:
     get:
       operationId: v1_me_chat_conversations_list
@@ -10584,6 +10653,74 @@ paths:
                 $ref: '#/components/schemas/Conversation'
           description: ''
         '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/conversations/{conversation_id}/block/:
+    post:
+      operationId: v1_me_chat_conversations_block_create
+      description: |-
+        `POST /me/chat/conversations/{id}/block/`:拉黑这个私聊里的对方。幂等。
+        对方此后只看到「无法送达」;我在这个会话里也不能说话,直到在 `DELETE /me/chat/blocks/{id}/` 解除。
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatBlock'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/conversations/{conversation_id}/decline/:
+    post:
+      operationId: v1_me_chat_conversations_decline_create
+      description: |-
+        `POST /me/chat/conversations/{id}/decline/`:拒绝这一次书信申请(只对别人发来、我还没回的)。
+        会话关闭、从我的列表里消失;对方看到「这次申请未被接受」,满一个请求间隔后可再申请。
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
           content:
             application/json:
               schema:
@@ -11113,7 +11250,7 @@ paths:
           description: ''
     post:
       operationId: v1_me_export_create
-      description: 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,与登录同一份预算)。
+      description: 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,登录后确认是本人的那份计数)。
       tags:
       - v1
       requestBody:
@@ -11401,8 +11538,8 @@ paths:
     post:
       operationId: v1_me_mfa_recovery_codes_create
       description: |-
-        重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
-        没带 / 错了 → 旧码原样有效。
+        重新生成要确认是本人 —— 只收当前的 6 位数字,与「关闭」同一把锁。带密码或恢复码来 → 400 `totp_required`
+        (用户 2026-11-01)。没带 / 错了 → 旧码原样有效。
       tags:
       - v1
       requestBody:
@@ -11448,9 +11585,8 @@ paths:
     post:
       operationId: v1_me_mfa_setup_create
       description: |-
-        当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
-        (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
-        满了答 429 `rate_limited`。
+        当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错 5 次答 429 `rate_limited`
+        (`confirm_current_password`:登录后确认是本人的那份计数,不与登录页共用,2026-11-01)。
       tags:
       - v1
       requestBody:
@@ -25364,6 +25500,28 @@ components:
           type: boolean
         mail:
           type: boolean
+    ChatBlock:
+      type: object
+      description: '`GET /me/chat/blocks/` 的一行:我拉黑的人。灵魂编号不出库,认得的是朋友圈的 user_id 与显示名。'
+      properties:
+        id:
+          type: string
+          format: uuid
+        peer_user:
+          type: integer
+          description: 被拉黑那一世账号的 user_id。
+        peer_name:
+          type: string
+          readOnly: true
+          description: 被拉黑那一世的显示名。
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - id
+      - peer_name
+      - peer_user
     ChatError:
       type: object
       properties:
@@ -26359,7 +26517,8 @@ components:
           nullable: true
           readOnly: true
           description: 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall`
-            / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。
+            / `closed` / `declined` 这次申请被拒 / `peer_blocked` 我拉黑了对方 / `undeliverable`
+            无法送达),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。
       required:
       - closed_at
       - created_at
@@ -27145,13 +27304,11 @@ components:
       - PENDING
       - PROCESSED
       - FAILED
-      - DUPLICATE
       type: string
       description: |-
         * `PENDING` - Pending Validation
         * `PROCESSED` - Processed Successfully
         * `FAILED` - Processing Failed
-        * `DUPLICATE` - Duplicate - Already Processed
     DeathRegistrationSummary:
       type: object
       description: |-
@@ -34165,23 +34322,20 @@ components:
       - code
     MfaDisableRequest:
       type: object
+      description: 重新生成恢复码的确认:只收当前的 6 位动态码(2026-11-01)。`method=password` / `recovery`
+        → 400 `totp_required`。
       properties:
         method:
           $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
         code:
-          type: string
-        password:
           type: string
       required:
       - method
     MfaOwnerConfirmMethodEnum:
       enum:
       - totp
-      - password
       type: string
-      description: |-
-        * `totp` - totp
-        * `password` - password
+      description: '* `totp` - totp'
     MfaRecoveryCodes:
       type: object
       properties:
@@ -34955,7 +35109,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
           readOnly: true
-          default: PENDING
         approved_days:
           type: integer
           readOnly: true
@@ -35140,10 +35293,15 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        can_reply:
+          type: boolean
+          readOnly: true
+          description: 殿司此刻能否回这封:未关闭,且灵魂此刻就在这个殿司。灵魂调走后为 false(回信 409 `not_current_hall`)。
       required:
       - archived
       - assigned_at
       - assignee
+      - can_reply
       - closed_at
       - created_at
       - feedback_tag
@@ -41391,7 +41549,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/SocialReportStatusEnum'
           readOnly: true
-          default: OPEN
         report_count:
           type: integer
           readOnly: true
@@ -42264,10 +42421,12 @@ components:
       enum:
       - REJECTED
       - CANCELLED
+      - NOT_STARTED
       type: string
       description: |-
         * `REJECTED` - REJECTED
         * `CANCELLED` - CANCELLED
+        * `NOT_STARTED` - NOT_STARTED
     SentenceNode:
       type: object
       properties:
@@ -43997,15 +44156,14 @@ components:
       - code
     SoulMfaDisableRequest:
       type: object
+      description: 重新生成恢复码的确认:只收当前的 6 位数字(2026-11-01)。`method=password` / `recovery`
+        → 400 `totp_required`。
       properties:
         method:
           $ref: '#/components/schemas/MfaOwnerConfirmMethodEnum'
         code:
           type: string
           maxLength: 32
-        password:
-          type: string
-          maxLength: 128
       required:
       - method
     SoulMfaRecoveryCodes:
@@ -44022,7 +44180,8 @@ components:
       description: |-
         `code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
         `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
-        wrong_password / not_enabled / already_enabled / not_started (setup and disable).
+        wrong_password / not_enabled / already_enabled / not_started (setup and disable), totp_required (regenerating
+        the recovery codes with a password or a recovery code).
       properties:
         detail:
           type: string
@@ -44856,6 +45015,9 @@ components:
           type: string
           format: date-time
           nullable: true
+        muted_reason:
+          type: string
+          description: 殿司写的禁言理由;没禁言或没写理由为空串。
         reports_remaining:
           type: integer
         unread_interactions:
@@ -44863,6 +45025,7 @@ components:
           description: 「互动」的未读行数(第四十批 S-a)
       required:
       - can_write
+      - muted_reason
       - muted_until
       - reports_remaining
       - unread_interactions
