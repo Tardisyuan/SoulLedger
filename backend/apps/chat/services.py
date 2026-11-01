@@ -565,9 +565,14 @@ def send_direct_message(account, conversation, body, *, request=None, image=None
             Conversation.objects.select_for_update(of=("self",))
             .select_related(*ACCOUNT_JOINS).get(pk=conversation.pk)
         )
-        error = refusal(conversation, account, conversation.other_account(account.pk))
+        peer = conversation.other_account(account.pk)
+        error = refusal(conversation, account, peer)
         if error is not None:
             raise error
+        # `refusal` 只因等待未满才放行被拉黑方:就此答等待。不能往下走 `refresh_throttle` —— 它可能解除节流,
+        # 而被拉黑方在房间里没有发言权,这一发只会变成 503。
+        if block_between(account, peer) == "by_peer":
+            raise _throttled(conversation.last_request_at + timedelta(seconds=settings.CHAT_REQUEST_INTERVAL_SECONDS))
         client = get_client()
         conversation = refresh_throttle(conversation, client=client)
         identity = _live_identity(account)
@@ -655,11 +660,14 @@ def decline_request(account, conversation_id, *, request=None):
         if conversation.closed_at is not None:
             raise ChatError("会话已关闭。", "closed", status=409)
         conversation = refresh_throttle(conversation)  # 我其实已经在 Matrix 里回过话了:那就不再是请求
-        if not conversation.throttled or conversation.initiator_id in (None, account.soul_id):
-            raise ChatError("只有别人发来、你还没回的书信申请可以拒绝。", "not_a_request", status=409)
-        conversation.declined_at = conversation.closed_at = timezone.now()
-        conversation.save(update_fields=["declined_at", "closed_at"])
-        audit("UPDATE", conversation, "拒绝私聊请求", actor=account.user, request=request)
+        is_request = conversation.throttled and conversation.initiator_id not in (None, account.soul_id)
+        if is_request:
+            conversation.declined_at = conversation.closed_at = timezone.now()
+            conversation.save(update_fields=["declined_at", "closed_at"])
+            audit("UPDATE", conversation, "拒绝私聊请求", actor=account.user, request=request)
+    # 事务外才答错:在里面抛会回滚 `refresh_throttle` 刚写的解除,而 Matrix 那边已经解除了,两边从此对不上。
+    if not is_request:
+        raise ChatError("只有别人发来、你还没回的书信申请可以拒绝。", "not_a_request", status=409)
     # 双方在房间里降到 0、记 `silenced_at`:`sync_rooms` 连「已关闭、还欠降权」的一起做。
     soul = account.soul
     transaction.on_commit(lambda: enqueue_sync_rooms(soul))

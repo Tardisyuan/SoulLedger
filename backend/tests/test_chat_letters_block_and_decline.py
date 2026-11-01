@@ -14,7 +14,7 @@ from apps.chat import services as svc
 from apps.chat.models import ChatBlock, Conversation, ConversationKind
 from apps.social import moderation
 from apps.soul_push.models import PushDelivery
-from tests.chat_support import can_speak, follow, matrix, mutual, mxid  # noqa: F401
+from tests.chat_support import FakeMatrix, can_speak, follow, matrix, mutual, mxid  # noqa: F401
 from tests.soul_account_support import officer_client, ready_soul
 from tests.soul_push_support import TOKEN_B, register
 
@@ -99,6 +99,19 @@ def test_only_the_receiver_of_an_unanswered_request_can_decline(cn_tenant, reque
     assert Conversation.objects.filter(declined_at__isnull=False).count() == 0
 
 
+def test_declining_a_request_i_already_answered_keeps_the_lifted_throttle(request_pair, matrix):  # noqa: F811
+    """我已在 Matrix 里回过话:拒绝答 `not_a_request`,但 `refresh_throttle` 解除节流这件事要留下 ——
+    Matrix 那边已经解除,回滚库里这一半,两边就对不上,界面还一直把它当请求。
+    变异:把 `not_a_request` 挪回事务里抛 → `throttled` 仍是 True,红。"""
+    a, a_client, b, b_client, conversation = request_pair
+    FakeMatrix.says(conversation.room_id, mxid(b), "我回过了")
+    refused = b_client.post(f"{CONVERSATIONS}{conversation.id}/decline/")
+    assert refused.status_code == 409 and refused.data["code"] == "not_a_request"
+    conversation.refresh_from_db()
+    assert conversation.throttled is False and conversation.responded_at is not None
+    assert conversation.declined_at is None and conversation.closed_at is None
+
+
 # ── 拉黑 ─────────────────────────────────────────────────────────────────
 
 
@@ -151,6 +164,23 @@ def test_a_blocked_sender_still_waiting_out_the_day_sees_the_usual_wait(request_
     sent = _send(a_client, conversation.id, "在吗")
     assert sent.status_code == 403 and sent.data["code"] == "undeliverable"
     assert _ids(a_client)[str(conversation.id)]["refusal"] == "undeliverable"
+
+
+def test_a_blocked_sender_still_waiting_is_answered_with_the_wait_even_if_the_throttle_could_lift(
+    request_pair, matrix, django_capture_on_commit_callbacks  # noqa: F811
+):
+    """等待中被拉黑,而两人其实已互关(节流本可解除):仍答等待,不解除节流,也不去 Synapse 碰壁变成 503。
+    变异:`send_direct_message` 删掉 `by_peer` 那条 → 走 `refresh_throttle` 后发送被拒,503,红。"""
+    a, a_client, b, b_client, conversation = request_pair
+    follow(b, a)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert b_client.post(f"{CONVERSATIONS}{conversation.id}/block/").status_code == 201
+    sent_before = len(FakeMatrix.sent)
+    waiting = _send(a_client, conversation.id, "在吗")
+    assert waiting.status_code == 429 and waiting.data["code"] == "request_throttled"
+    assert len(FakeMatrix.sent) == sent_before
+    conversation.refresh_from_db()
+    assert conversation.throttled is True
 
 
 def test_unblocking_in_settings_restores_the_conversation(request_pair, django_capture_on_commit_callbacks):

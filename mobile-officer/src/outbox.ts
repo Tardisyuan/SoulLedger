@@ -17,12 +17,12 @@
  * keeps it for the same officer's next sign-in (session.tsx, owner.ts `dropUnowned`). It is stored as
  * `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
  */
-import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
+import { newReplyTxn, soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
 import { useSyncExternalStore } from "react";
 
 import { clearDraft } from "./drafts";
-import { currentOwner, readOwned, writeOwned } from "./owner";
+import { currentOwner, heldByAnother, readOwned, writeOwned } from "./owner";
 
 export const OUTBOX_KEY = "officer_reply_outbox";
 
@@ -70,6 +70,7 @@ export const outboxEntries = (): OutboxEntry[] => {
 };
 
 function commit(next: OutboxEntry[]): void {
+  if (heldByAnother(OUTBOX_KEY)) return;
   snapshot = next;
   snapshotOwner = currentOwner();
   if (next.length === 0) platform().persistent.remove(OUTBOX_KEY);
@@ -87,8 +88,7 @@ export function useOutbox(): OutboxEntry[] {
   );
 }
 
-/** A fresh id for one reply (not one conversation): the server remembers it a week. */
-export const newReplyTxn = () => `or${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
+export { newReplyTxn };
 
 export const outboxEntry = (id: string): OutboxEntry | undefined => outboxEntries().find((e) => e.id === id);
 
@@ -141,7 +141,9 @@ export function flushOutbox(): Promise<number> {
 
 async function run(): Promise<number> {
   let sent = 0;
+  const owner = currentOwner();
   for (const entry of outboxEntries().filter((e) => e.state === "queued")) {
+    if (currentOwner() !== owner) break; // the session ended on the way: the rest wait for the next sign-in
     try {
       const { data: thread } = await soulInboxApi.messages(entry.id);
       // After a send that may have gone through, our own reply is in the thread: the server stamps every reply

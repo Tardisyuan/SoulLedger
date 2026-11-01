@@ -1038,8 +1038,50 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
     });
   });
 
+  // 变异:`reload` 不认 `forget` → 拒绝过的申请进 `gone`,在列表上变成错误文案的「已闭」,红。
+  it("a row that drops out of the list is kept read-only, unless I took it out myself", async () => {
+    const view = start();
+    await waitFor(() => expect(probe.availability).toBe("ready"));
+    const session = { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } };
+    stubApi({ "/me/chat/conversations/": { status: 200, data: [] }, "/me/chat/session/": session });
+    await act(async () => probe.reload(conv().id));
+    expect(probe.conversations).toEqual([]);
+    expect(probe.gone).toEqual({});
+
+    stubApi({ "/me/chat/conversations/": { status: 200, data: [conv()] }, "/me/chat/session/": session });
+    await act(async () => probe.reload());
+    stubApi({ "/me/chat/conversations/": { status: 200, data: [] }, "/me/chat/session/": session });
+    await act(async () => probe.reload());
+    expect(probe.gone[conv().id]).toMatchObject({ refusal: "closed" });
+    view.unmount();
+  });
+
   describe("across a restart (the outbox is on disk)", () => {
     beforeEach(() => persistentStore.remove(OUTBOX_KEY));
+
+    // 变异:`reload` 删掉首次成功后的 flush → 一直 queued,红。
+    it("the list fails on the first try and comes back later: the restored letter goes out then", async () => {
+      synapse.offline = true;
+      const first = start();
+      await waitFor(() => expect(probe.availability).toBe("unavailable"));
+      await act(async () => probe.send(conv(), "枯树那边风大"));
+      first.unmount();
+
+      const session = { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } };
+      stubApi({ "/me/chat/conversations/": { status: 500, data: {} }, "/me/chat/session/": session });
+      synapse.offline = false;
+      const second = start();
+      await waitFor(() => expect(probe.availability).toBe("ready"));
+      expect(probe.listError).toBe(true);
+      expect(probe.outbox[0].state).toBe("queued");
+      expect(synapse.sends).toHaveLength(0);
+
+      stubApi({ "/me/chat/conversations/": { status: 200, data: [conv()] }, "/me/chat/session/": session });
+      await act(async () => probe.reload());
+      await waitFor(() => expect(probe.outbox[0]?.state).toBe("sent"));
+      expect(synapse.sends).toHaveLength(1);
+      second.unmount();
+    });
 
     it("killed with a letter queued: the next start sends it, with the txn id it was given", async () => {
       synapse.offline = true;

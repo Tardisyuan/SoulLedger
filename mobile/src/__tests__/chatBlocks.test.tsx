@@ -119,7 +119,7 @@ describe("their request", () => {
     expect(screen.getByTestId("conversation-incoming")).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId("request-decline")));
     expect(decline).toHaveBeenCalledWith("c-req");
-    expect(chat.reload).toHaveBeenCalled();
+    expect(chat.reload).toHaveBeenCalledWith("c-req");
     expect(mockGoBack).toHaveBeenCalled();
   });
 
@@ -183,18 +183,23 @@ describe("设置 › 已拉黑", () => {
     const unblock = jest.spyOn(soulChatApi, "unblock").mockImplementation(
       () => new Promise<undefined>((resolve, reject) => (answer = (ok) => (ok ? resolve(undefined) : reject(new Error("x")))))
     );
-    wrap(chatState(), <ChatBlocksScreen />);
+    const chat = chatState();
+    wrap(chat, <ChatBlocksScreen />);
     expect(await screen.findByText("吴长明")).toBeTruthy();
     fireEvent.press(screen.getByTestId("unblock-b-1"));
     expect(unblock).toHaveBeenCalledWith("b-1");
     expect(screen.getByTestId("block-b-1")).toBeTruthy(); // not removed on a guess
+    expect(chat.reload).not.toHaveBeenCalled();
     await act(async () => answer(true));
     await waitFor(() => expect(screen.queryByTestId("block-b-1")).toBeNull());
+    // The letters list and any open conversation read `peer_blocked` from it (变异:删掉 reload → 红).
+    expect(chat.reload).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("block-b-2")).toBeTruthy();
 
     fireEvent.press(screen.getByTestId("unblock-b-2"));
     await act(async () => answer(false));
     expect(screen.getByTestId("block-b-2")).toBeTruthy(); // refused: the row stays
+    expect(chat.reload).toHaveBeenCalledTimes(1);
   });
 
   it("says so when nobody is blocked", async () => {
