@@ -265,6 +265,9 @@ export function LetterThread({
 
   const { conversation } = thread.data;
   const closed = conversation.closed_at != null;
+  // feat-letters: `can_reply` false = the soul was dispatched to another hall. Typed by hand until the schema is
+  // regenerated; absent (an older server) means the old rules below.
+  const moved = (conversation as { can_reply?: boolean }).can_reply === false;
   // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
   const assigned = conversation.assignee !== null;
   const flags = { archived: conversation.archived, closed, assigned };
@@ -359,6 +362,10 @@ export function LetterThread({
               tone="neutral"
               testID="letter-closed"
             >{`○ ${t("soul_inbox.closed")}`}</Notice>
+          </View>
+        ) : moved ? (
+          <View style={{ padding: space[4] }}>
+            <Notice tone="neutral" testID="letter-moved">{`○ ${t("officer_app.letter.moved")}`}</Notice>
           </View>
         ) : unassigned ? (
           // Nobody holds it: 由我来回 takes it (then the box appears), 转给别人 hands it on. No reply from here.

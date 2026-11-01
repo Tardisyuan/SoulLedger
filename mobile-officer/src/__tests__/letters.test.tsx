@@ -9,6 +9,7 @@ import { Dimensions, Image, StyleSheet } from "react-native";
 import { TodoTab } from "../screens/todo";
 import { Detail } from "../screens/detail";
 import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
+import { outboxReasonOf } from "../outbox";
 import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
@@ -87,6 +88,10 @@ describe("rules", () => {
   it("says why a reply failed without quoting anything", () => {
     expect(replyFailureKey(httpError(503, { code: "chat_not_configured" }))).toBe("officer_app.letter.unavailable");
     expect(replyFailureKey(httpError(409, { code: "closed" }))).toBe("soul_inbox.errors.closed");
+    // feat-letters: the soul was dispatched to another hall.
+    expect(replyFailureKey(httpError(409, { code: "not_current_hall" }))).toBe("officer_app.letter.moved");
+    expect(outboxReasonOf(httpError(409, { code: "not_current_hall" }))).toBe("moved");
+    expect(outboxReasonOf(httpError(409, { code: "closed" }))).toBe("archived");
     expect(replyFailureKey(new Error("Network Error"))).toBe("officer_app.letter.failed");
   });
 });
@@ -411,5 +416,27 @@ describe("who handles the letter", () => {
     await openThread();
     expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
     expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
+  });
+});
+
+// feat-letters: `can_reply: false` -- the soul was dispatched elsewhere; the box gives way to one line saying so.
+describe("a soul moved to another hall", () => {
+  const open = async (id: string) => {
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id }} onBack={() => {}} onSettled={jest.fn()} />);
+    await screen.findByTestId("letter-thread");
+  };
+
+  it("can_reply false: no reply box, the line instead", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m1", can_reply: false } });
+    await open("c-m1");
+    expect(screen.getByTestId("letter-moved")).toBeTruthy();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+  });
+
+  it("can_reply true: the box, and no such line", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m2", can_reply: true } });
+    await open("c-m2");
+    expect(screen.queryByTestId("letter-moved")).toBeNull();
+    expect(screen.getByTestId("letter-input")).toBeTruthy();
   });
 });

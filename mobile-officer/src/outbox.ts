@@ -27,7 +27,7 @@ import { currentOwner, readOwned, writeOwned } from "./owner";
 export const OUTBOX_KEY = "officer_reply_outbox";
 
 /** Why a queued reply did not go out; each has its own words (officer_app.outbox.<reason>). */
-export type OutboxReason = "answered" | "archived" | "left_hall" | "retry";
+export type OutboxReason = "answered" | "archived" | "left_hall" | "moved" | "retry";
 
 export interface OutboxEntry {
   /** The conversation. */
@@ -123,6 +123,8 @@ export function outboxReasonOf(error: unknown): OutboxReason {
   const status = statusOf(error);
   if (status === 403 || status === 404) return "left_hall";
   if (status === 409 && codeOf(error) === "closed") return "archived";
+  // The soul was dispatched elsewhere (feat-letters): not this hall's to answer now, retrying would not help.
+  if (status === 409 && codeOf(error) === "not_current_hall") return "moved";
   return "retry";
 }
 
