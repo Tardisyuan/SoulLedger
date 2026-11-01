@@ -1,1 +1,3 @@
-[]
+[
+  "scheduler.jobs.chat_sync_all_rooms"
+]

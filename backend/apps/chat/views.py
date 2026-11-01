@@ -61,6 +61,9 @@ def _error(exc):
     retry_at = getattr(exc, "retry_at", None)
     if retry_at is not None:
         response.data["retry_at"] = retry_at.isoformat()
+    assignee_name = getattr(exc, "assignee_name", None)
+    if assignee_name is not None:
+        response.data["assignee_name"] = assignee_name
     return response
 
 
@@ -215,10 +218,11 @@ class MeChatMessagesView(ChatView):
     **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
     消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
 
-    带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。
-    不能交给 Synapse 去重:后端代发不带客户端的设备,而被节流的房间里重发会先撞上
-    24 小时限制,答 429 —— 信其实已经送到。
-    ponytail: 同一个 txn_id 的两个请求**同时**到达仍可能各发一条;App 同一封信不并发送。
+    带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。这是两层:
+    * 第一次成功了:这里的缓存直接答。不能只靠 Synapse:被节流的房间里重发会先撞上 24 小时限制,答 429 ——
+      信其实已经送到;
+    * 第一次超时(Synapse 存下了、我们没收到响应):缓存里没有,再走一遍发送,`txn_id` 算出同一个 Matrix
+      事务号,Synapse 只存一条(`services._txn`)。两个请求同时到达同样如此。
     """
 
     TXN_TTL_SECONDS = 7 * 24 * 3600  # 发件箱在本机可以躺过重启与断网,比 Synapse 的 30–60 分钟长得多
@@ -244,12 +248,12 @@ class MeChatMessagesView(ChatView):
         tag = body.validated_data.get("feedback_tag", "")
         if conversation.kind == ConversationKind.OFFICER_INBOX:
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],
-                                              request=request, feedback_tag=tag)
+                                              request=request, feedback_tag=tag, txn_id=txn_id)
         elif tag:
             raise svc.ChatError("反馈只能写给殿司。", "feedback_to_hall_only", status=400)
         else:
             event_id = svc.send_direct_message(account, conversation, body.validated_data["body"],
-                                               request=request)
+                                               request=request, txn_id=txn_id)
         if txn_key:
             cache.set(txn_key, event_id, self.TXN_TTL_SECONDS)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
@@ -388,7 +392,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     @extend_schema(request=None, responses={200: InboxStateSerializer})
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):
-        """只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。"""
+        """只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信、或我回了这封,都取消归档。"""
         return Response(InboxStateSerializer(inbox.set_archived(self.get_object(), request.user, True)).data)
 
     @extend_schema(request=None, responses={200: InboxStateSerializer})
@@ -476,7 +480,6 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
             return _unavailable(exc)
         if txn_key:
             cache.set(txn_key, event_id, MeChatMessagesView.TXN_TTL_SECONDS)
-        inbox.after_reply(conversation, request.user)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
 
 

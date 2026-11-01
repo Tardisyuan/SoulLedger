@@ -6,6 +6,8 @@
 * 发消息要求发送者是房间成员、未停用,且 power level ≥ `events_default`
   (`events` 表里的类型除外 —— 后端建房时把它设成空表);低了是 403 `M_FORBIDDEN`;
 * 停用用户离开它的所有房间(真 Synapse 是后台异步做完的,这里立即);
+* 同一个(房间、发送者、事务号)再发一次,回第一次的 event_id、不存第二条 —— 排在权限判断之前,与 Synapse 一样;
+  没给事务号就是新消息(真客户端那时用 uuid);
 * `set_user_levels` 只在级别真变了才写 —— 与真实现同一条判断,于是「写了几次」可断言;
 * Synapse 模块(config/synapse/soulledger_policy.py)的节流规则:房间的 `io.soulledger.throttle`
   指向发送者时,只收带有效、未用过的一次性凭据的 `m.room.message`(凭据校验用后端同一个
@@ -48,6 +50,7 @@ class FakeMatrix:
     calls: list = []
     used: set = set()
     hooks: list = []  # 落库后待回调的 (room_id, event)
+    txns: dict = {}  # (room_id, sender, txn_id) → event_id
 
     def __init__(self):
         self.service_user = f"@soulledger:{SERVER_NAME}"
@@ -55,6 +58,7 @@ class FakeMatrix:
     @classmethod
     def reset(cls):
         cls.users, cls.rooms, cls.sent, cls.calls, cls.used, cls.hooks = {}, {}, [], [], set(), []
+        cls.txns = {}
 
     # ── 用户 ──
     def user_id(self, localpart):
@@ -96,9 +100,11 @@ class FakeMatrix:
     def set_room_throttle(self, room_id, initiator):
         FakeMatrix.rooms[room_id]["throttle"] = initiator
 
-    def send_message(self, room_id, body, *, as_localpart, extra=None):
+    def send_message(self, room_id, body, *, as_localpart, extra=None, txn_id=None):
         room = FakeMatrix.rooms[room_id]
         sender = self.user_id(as_localpart)
+        if txn_id and (room_id, sender, txn_id) in FakeMatrix.txns:
+            return FakeMatrix.txns[(room_id, sender, txn_id)]
         if FakeMatrix.users.get(as_localpart, {}).get("deactivated"):
             raise MatrixError("User is deactivated", errcode="M_USER_DEACTIVATED", status=403)
         if sender not in room["members"]:
@@ -115,6 +121,8 @@ class FakeMatrix:
                                   status=403)
             FakeMatrix.used.add(grant["nonce"])
         event_id = f"$evt{len(FakeMatrix.sent)}"
+        if txn_id:
+            FakeMatrix.txns[(room_id, sender, txn_id)] = event_id
         message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
                    "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),

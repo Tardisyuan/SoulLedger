@@ -1,7 +1,7 @@
 """跨殿总览(2026-10-25 用户决定):全局管理员一眼看每个殿积压了什么。`GET /tenants/overview/`(ADMIN)。
 
 每个殿一行,只有数,没有灵魂名:
-* `todo` —— 殿里等人处理的事:审批中的流程、调到本殿等批的提案、待决的缩短冷却申请、灵魂最后一封还没回的书信。
+* `todo` —— 殿里等人处理的事:审批中的流程、调到本殿等批的提案、待决的缩短冷却申请、灵魂最后一封还没回、殿司此刻回得了的书信。
   是**殿级**的数,不是某位官员的「待我处理」(那个在 `apps/officer_app/todo.py`,按人、按权限)。
 * `judgments` —— 未结案审判按此刻在哪儿分四格,互不相交:在城隍处 → 候着(`held_until` 未到,或埃及案到不了殿)→ 有人认领 → 无人认领。
 * `rebirth_quota` —— 本月转世配额用量,与 `GET /reincarnation/quota/` 同一个函数。
@@ -14,6 +14,7 @@ from django.utils import timezone
 
 
 def hall_row(tenant) -> dict:
+    from apps.chat.inbox import AWAITING_REPLY
     from apps.chat.models import Conversation, ConversationKind
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.judgment.models import (
@@ -36,7 +37,7 @@ def hall_row(tenant) -> dict:
         "cooldowns": CooldownShorteningRequest.objects.filter(
             soul__home_tenant=tenant, status=CooldownShorteningStatus.PENDING).count(),
         "letters_awaiting": Conversation.objects.filter(
-            tenant=tenant, kind=ConversationKind.OFFICER_INBOX, closed_at__isnull=True, last_from="soul").count(),
+            AWAITING_REPLY, tenant=tenant, kind=ConversationKind.OFFICER_INBOX).count(),
     }
     todo["total"] = sum(todo.values())
 

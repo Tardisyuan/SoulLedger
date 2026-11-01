@@ -201,7 +201,10 @@ class SynapseClient:
 
     def set_user_levels(self, room_id, levels):
         """把 `levels`({mxid: 级别})写进房间的 power level。**没变就不写** ——
-        每次写都是一条状态事件,会出现在双方的时间线上。返回是否写了。"""
+        每次写都是一条状态事件,会出现在双方的时间线上。返回是否写了。
+
+        先 GET 后 PUT,PUT 的是整张表:调用方要持有这个会话的行锁(`services.sync_levels` 与发送路径),
+        否则两个写入者会互相盖掉对方改的那一项。"""
         path = f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels"
         content = self._admin("GET", path)
         users = content.setdefault("users", {})
@@ -217,11 +220,16 @@ class SynapseClient:
         self._admin("PUT", f"/_matrix/client/v3/rooms/{room_id}/state/io.soulledger.throttle",
                     json={"initiator": initiator} if initiator else {})
 
-    def send_message(self, room_id, body, *, as_localpart, extra=None):
+    def send_message(self, room_id, body, *, as_localpart, extra=None, txn_id=None):
+        """`txn_id`:同一次发送的重试要传同一个(`services._txn`)。Synapse 按(房间、发送者、设备、事务号)去重,
+        重试拿回第一次的 event_id —— 响应超时的那条其实已经存下了。不传就是一条全新的消息。
+
+        ponytail: Synapse 的去重跟 access token 所属的设备走,而每次 JWT 登录是一个新设备;token 缓存到期
+        (`TOKEN_CACHE_SECONDS`)之后的重试去不了重。要跨过去就固定登录时的 `device_id`,但那会让旧 token 失效。"""
         token = self._token_for(as_localpart)
         content = {"msgtype": "m.text", "body": body, **(extra or {})}
         data = self._request(
-            "PUT", f"/_matrix/client/v3/rooms/{room_id}/send/m.room.message/{uuid.uuid4().hex}",
+            "PUT", f"/_matrix/client/v3/rooms/{room_id}/send/m.room.message/{txn_id or uuid.uuid4().hex}",
             token=token, json=content,
         )
         return data["event_id"]

@@ -152,6 +152,7 @@ MAINTENANCE_JOBS = {
     "social.cleanup_orphan_post_media": (registry.GLOBAL, "15 3 * * *"),
     "chat.reconcile_inbox": (registry.GLOBAL, "45 3 * * *"),
     "chat.cleanup_unsent_images": (registry.GLOBAL, "20 3 * * *"),  # 2026-10-10
+    "chat.sync_all_rooms": (registry.GLOBAL, "50 3 * * *"),  # 2026-11-02
 }
 
 

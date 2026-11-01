@@ -121,7 +121,8 @@ def _sentence_changes(scope):
 
 def _letters(scope, unassigned=False):
     """标给我、等我回的书信:收件箱「待回复」∩「交给我的」,最早来信在前。
-    `unassigned`:改为还没有人经办的(`assignee` 为空)—— 「未分配的书信」组。"""
+    `unassigned`:改为还没有人经办的 —— 「未分配的书信」组。经办人已不够格(停用、调走、失去回信权)的也算,
+    否则这封信卡在一个不会再回的人名下、谁的待办里都没有(`inbox.live_assignee`)。"""
     from django.db.models import F
 
     from apps.chat import inbox
@@ -129,9 +130,11 @@ def _letters(scope, unassigned=False):
 
     qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related("soul_a")
     qs = inbox.annotate_for(scope_to_tenant(qs, scope), scope.user)
-    who = {"assignee__isnull": True} if unassigned else {"assignee_id": scope.user.pk}
-    return qs.filter(inbox.folder_q("awaiting_reply"), **who).order_by(
+    qs = qs.filter(inbox.folder_q("awaiting_reply")).order_by(
         F("last_soul_message_at").asc(nulls_last=True), "created_at")
+    if unassigned:
+        return [c for c in qs.select_related("assignee") if inbox.live_assignee(c) is None]
+    return qs.filter(assignee_id=scope.user.pk)
 
 
 def _waiting_workflows(scope):

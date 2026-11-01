@@ -33,6 +33,7 @@ ponytail: 到期靠懒同步;要准点解禁再加一个按 `until` 排的任务
 
 **审计不含正文。** `audit()` 写的是「谁对哪个会话做了什么」,body 一个字都不传进去。
 """
+import hashlib
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -302,10 +303,31 @@ def _speaking_levels(conversation, identities):
     return levels
 
 
+def _locked(conversation_id):
+    """调用方在事务里。算发言权要的关联一并取回。"""
+    return (Conversation.objects.select_for_update(of=("self",)).select_related(*ACCOUNT_JOINS)
+            .get(pk=conversation_id))
+
+
 def sync_levels(conversation, *, client=None):
-    identities = _live_identities(conversation)
-    if identities:
-        (client or get_client()).set_user_levels(conversation.room_id, _speaking_levels(conversation, identities))
+    """在会话行锁下**重读事实**、算发言权、写进 Synapse,返回重读的那一行。
+
+    `set_user_levels` 先读后写整张表:不串行的话,一次同步会盖掉发送路径刚写的那一项,或把算得更早的旧结果
+    写在新结果后面(2026-11-01 审查)。锁按房间拿、一个房间一个事务,不跨房间。
+    ponytail: 锁内是一次 GET + 一次 PUT,最坏 2 ×(5+20)秒,其间这个房间的发送与落库排队(`send_direct_message`
+    本来就在同一把锁下发 HTTP)。真慢了再改成 Synapse 那一侧的乐观重试。"""
+    with transaction.atomic():
+        locked = _locked(conversation.pk)
+        identities = _live_identities(locked)
+        if identities:
+            (client or get_client()).set_user_levels(locked.room_id, _speaking_levels(locked, identities))
+    return locked
+
+
+def _sync_room(conversation, client):
+    locked = sync_levels(conversation, client=client)
+    if locked.closed_at is not None:
+        _mark_silenced(locked)
 
 
 def sync_rooms(soul, *, client=None):
@@ -316,14 +338,26 @@ def sync_rooms(soul, *, client=None):
     rows = Conversation.objects.filter(
         Q(soul_a=soul) | Q(soul_b=soul), Q(closed_at__isnull=True) | Q(silenced_at__isnull=True)
     )
-    rows = list(rows.select_related(*ACCOUNT_JOINS))
+    rows = list(rows)
     if not rows:
         return
     client = client or get_client()
     for conversation in rows:
-        sync_levels(conversation, client=client)
-        if conversation.closed_at is not None:
-            _mark_silenced(conversation)
+        _sync_room(conversation, client)
+
+
+def sync_all_rooms(client):
+    """每一个未关闭或还欠降权的房间对一遍发言权。定时任务 `chat.sync_all_rooms` 用:兜住入队失败与到期的禁言 ——
+    否则只有当事人下一次打开聊天才补。读不到的房间不中断其余的,收进 `failed`(同 `reconcile_all_inboxes`)。"""
+    done, failed = 0, {}
+    rows = Conversation.objects.filter(Q(closed_at__isnull=True) | Q(silenced_at__isnull=True))
+    for conversation in rows.iterator():
+        try:
+            _sync_room(conversation, client)
+            done += 1
+        except MatrixError as exc:
+            failed[conversation.room_id] = str(exc)
+    return done, failed
 
 
 def _mark_silenced(conversation):
@@ -453,7 +487,10 @@ def open_direct(account, target_user, *, request=None):
                                   and _request_interval_running(existing, account)):
         raise _block_refusal(block)
     if existing is not None:
-        return refresh_throttle(existing), False
+        if existing.throttled:  # 可能要写 power level:与别的写入者串行
+            with transaction.atomic():
+                existing = refresh_throttle(_locked(existing.pk))
+        return existing, False
 
     mutual = _mutual(account, target_account)
     if not mutual:
@@ -549,7 +586,18 @@ def _mark_image_sent(image, event_id, now):
     image.save(update_fields=["event_id", "sent_at"])
 
 
-def send_direct_message(account, conversation, body, *, request=None, image=None):
+def _txn(room_id, sender, key):
+    """同一次发送的 Matrix 事务号:响应丢了、客户端重试时算出来还是这一个,Synapse 只存一条。"""
+    return hashlib.sha256(f"{room_id}|{sender}|{key}".encode()).hexdigest()
+
+
+def _send_txn(conversation, identity, txn_id, image):
+    """图片按图(一张图只发一次),文字按客户端的 `txn_id`;都没有返回 None —— 没有任何东西能认出这是重试。"""
+    key = f"image:{image.pk}" if image is not None else f"client:{txn_id}" if txn_id else None
+    return _txn(conversation.room_id, identity.matrix_user_id, key) if key else None
+
+
+def send_direct_message(account, conversation, body, *, request=None, image=None, txn_id=None):
     """私聊经后端发一条。被节流时**这是 24 小时规则的唯一执行点**。
 
     `image`(已校验的 `ChatImage`):发一条图片消息,`body` 由调用方给成 `IMAGE_LABEL`。
@@ -561,10 +609,7 @@ def send_direct_message(account, conversation, body, *, request=None, image=None
     再拆成「锁内先占额度、锁外发送、失败退回」。
     """
     with transaction.atomic():
-        conversation = (
-            Conversation.objects.select_for_update(of=("self",))
-            .select_related(*ACCOUNT_JOINS).get(pk=conversation.pk)
-        )
+        conversation = _locked(conversation.pk)
         peer = conversation.other_account(account.pk)
         error = refusal(conversation, account, peer)
         if error is not None:
@@ -588,7 +633,8 @@ def send_direct_message(account, conversation, body, *, request=None, image=None
             event_id = _send_request(client, conversation, identity, body)
         else:
             event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
-                                           extra=_image_extra(image) if image else None)
+                                           extra=_image_extra(image) if image else None,
+                                           txn_id=_send_txn(conversation, identity, txn_id, image))
         now = timezone.now()
         if image is not None:
             _mark_image_sent(image, event_id, now)
@@ -612,13 +658,19 @@ def _send_request(client, conversation, identity, body):
     * 降权放在 `finally`,发送失败也降;降权本身失败(Synapse 那一刻不可达)只记日志 ——
       那时发起方停在 50 级,但模块仍然只放行带凭据的消息,而凭据只有这里签得出;下一次
       `sync_rooms`(取会话、禁言、调拨时)按 `_speaking_levels` 把它写回 0。
+
+    **事务号按「这一次等待」算,不按客户端给的:** 响应超时的那条已经存进 Synapse,而 `last_request_at` 随异常回滚了,
+    重试会通过 24 小时判断 —— 同一个等待里只算得出同一个事务号,于是 Synapse 只存一条,这次写下 `last_request_at`。
+    换一段话重试也是这样:这一等待的额度已经用在第一条上了。
     """
     mxid = identity.matrix_user_id
+    last = conversation.last_request_at
+    txn = _txn(conversation.room_id, mxid, f"request:{last.isoformat() if last else 'first'}")
     grant = sign_grant(settings.MATRIX_JWT_SECRET, conversation.room_id, mxid)
     client.set_user_levels(conversation.room_id, {mxid: SPEAK})
     try:
         return client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
-                                   extra={GRANT_KEY: grant})
+                                   extra={GRANT_KEY: grant}, txn_id=txn)
     finally:
         try:
             client.set_user_levels(conversation.room_id, {mxid: SILENT})
@@ -827,7 +879,7 @@ def open_officer_inbox(account, *, request=None):
 FEEDBACK_KEY = "io.soulledger.feedback"
 
 
-def send_inbox_message(account, conversation, body, *, request=None, image=None, feedback_tag=""):
+def send_inbox_message(account, conversation, body, *, request=None, image=None, feedback_tag="", txn_id=None):
     """灵魂在收件箱里发一条。没有 24 小时限制,也不受朋友圈禁言约束(待拍板:见报告)——
     禁言的是灵魂之间的发言,给殿司写信(申诉、求助)不在其列。只能写给**当前所在**的殿司。
 
@@ -842,7 +894,7 @@ def send_inbox_message(account, conversation, body, *, request=None, image=None,
     if feedback_tag:
         extra[FEEDBACK_KEY] = feedback_tag
     event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
-                                   extra=extra or None)
+                                   extra=extra or None, txn_id=_send_txn(conversation, identity, txn_id, image))
     now = timezone.now()
     if image is not None:
         _mark_image_sent(image, event_id, now)
@@ -920,11 +972,6 @@ def officer_title(officer):
     return (actor.title_zh or actor.title) if actor is not None else ""
 
 
-def hall_can_reply(conversation):
-    """殿司此刻能不能在这封收件箱里回信:没关闭,且灵魂**此刻**就在这个殿司。"""
-    return conversation.closed_at is None and conversation.soul_a.tenant_id == conversation.tenant_id
-
-
 def officer_signature(officer):
     """回信的署名:官员的显示名。**不退回用户名** —— 那是登录名,不该给灵魂看(2026-11-01 上机发现:
     `get_full_name` 读的是从来没人填的 first / last name,于是每封信都署「qa.officer.cn」)。"""
@@ -933,26 +980,36 @@ def officer_signature(officer):
 
 def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
     """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
-    (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
+    (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。
+
+    信已交给别的官员时拒绝(2026-11-02 用户定,ADMIN 也一样):要先转给自己。没人经办的照常可回,回了也不改经办人。
+    事务号带官员:服务账号替所有官员发,两位官员的号碰巧相同不能当成一条。"""
     if conversation.kind != ConversationKind.OFFICER_INBOX:
         raise ChatError("只有殿司收件箱可以由官员回复。", "not_inbox", status=409)
     if conversation.closed_at is not None:
         raise ChatError("会话已关闭(对方已转世)。", "closed", status=409)
-    if not hall_can_reply(conversation):
+    if not inbox.hall_can_reply(conversation):
         # 与灵魂那一侧同一条规则(`refusal` 的 `not_current_hall`):灵魂调走之后只能写给新殿司,
         # 原殿司也不再往这封里写 —— 否则灵魂收到一封回不了的信(2026-11-01 审查 P3)。回归之后又能写。
         raise ChatError("灵魂已不在这个殿司,这封信只读。", "not_current_hall", status=409)
+    assignee = inbox.live_assignee(conversation)
+    if assignee is not None and assignee.pk != officer.pk:
+        error = ChatError("这封信已交给别的官员,要先转给自己才能回。", "assigned_to_other", status=409)
+        error.assignee_name = assignee.display_name or assignee.username
+        raise error
     client = get_client()
     event_id = client.send_message(
         conversation.room_id, body,
         as_localpart=settings.MATRIX_SERVICE_LOCALPART,
         extra={OFFICER: officer_signature(officer), OFFICER_TITLE: officer_title(officer),
                **({TXN: txn_id} if txn_id else {})},
+        txn_id=_txn(conversation.room_id, client.service_user, f"officer:{officer.pk}:{txn_id}") if txn_id else None,
     )
     conversation.last_message_at = timezone.now()
     conversation.last_from = HALL
     conversation.feedback_tag = ""  # 反馈有人回了:列表上的「反馈 · 类别」到此为止
     conversation.save(update_fields=["last_message_at", "last_from", "feedback_tag"])
+    inbox.after_reply(conversation, officer)
     audit("EXECUTE", conversation, "殿司回复", actor=officer, request=request)
     return event_id
 
