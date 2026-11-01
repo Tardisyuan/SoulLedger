@@ -190,6 +190,8 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Falls back to STATUS_LABELS copy, which <DomainEnum> cannot express; carries title={dispatch.status} by hand.",
   [path.join("app", "dispatch", "propose", "page.tsx")]:
     "Inside an <option>, which can hold no child element.",
+  [path.join("app", "judgment", "page.tsx")]:
+    "The concluded tab's verdict and civilization filters are <select> options, which hold text only; each option's value is the raw member. The rows themselves render through <DomainEnum> / VerdictBadge.",
   [path.join("src", "components", "cross-judgments", "CrossJudgmentStops.tsx")]:
     "Realm names inside an <option>, which can hold no child element. The chosen realm is rendered elsewhere with <DomainEnum>.",
   [path.join("src", "components", "cross-judgments", "CrossJudgmentSeatForm.tsx")]:

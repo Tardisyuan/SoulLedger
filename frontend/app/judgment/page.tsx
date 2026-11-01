@@ -232,7 +232,7 @@ function JudgmentQueuePageContent() {
           clearLabel={t("filter.clear_one", { name: t("judgment.civilization") })}
           onChange={(v) => { setCivilization(v); setPage(1); }}
         />
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center justify-end gap-3">
         {buttonOn("judgment.export") && (
           <RequirePermission permissions="judgment.export">
             <ExportCsvButton

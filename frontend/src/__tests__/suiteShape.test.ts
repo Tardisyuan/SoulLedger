@@ -88,6 +88,8 @@ const COLLECTED_FILES = [
   // 2026-10-11 登录交付单:二维码矩阵、单上内容无密码、编号 3-4-3。
   "DeliverySlip.test.tsx",
   "DeathSyncPage.pagination.test.tsx",
+  // 2026-11-01 review Web 1:个人资料里的「默认视图」,未选时按角色勾选。
+  "DefaultViewSection.test.tsx",
   "DevicesSection.test.tsx",
   "DispositionPage.pagination.test.tsx",
   "DataTable.test.tsx",

@@ -54,6 +54,20 @@ jest.mock("next/navigation", () => ({
 
 const SECRET = "whsec_one_time_SECRET_7c2e";
 const EVENT_TYPES = ["SOUL_CREATED", "DEATH_SYNC_PROCESSED", "SCHEDULER_RUN_FAILED"];
+/** Each event's readable name, from the same table the panel reads (`EVENT_LABELS`). */
+const READABLE: Record<string, string> = {
+  SOUL_CREATED: tZh("souls.events.SOUL_CREATED"),
+  DEATH_SYNC_PROCESSED: tZh("souls.events.DEATH_SYNC_PROCESSED"),
+  SCHEDULER_RUN_FAILED: tZh("events.realtime.SCHEDULER_RUN_FAILED"),
+};
+/** The checkbox whose label carries this wire name (the code stays recoverable on the label). */
+function boxFor(form: HTMLElement, wire: string): HTMLInputElement {
+  const box = within(form)
+    .getAllByRole("checkbox")
+    .find((c) => (c as HTMLInputElement).labels?.[0]?.querySelector(".font-mono")?.textContent === wire);
+  if (!box) throw new Error(`no checkbox for ${wire}`);
+  return box as HTMLInputElement;
+}
 
 function hook(over: Record<string, unknown> = {}) {
   return {
@@ -160,19 +174,21 @@ describe("create: the checklist comes from the server and the secret is shown on
     await screen.findByText("https://hooks.example.org/a");
     fireEvent.click(screen.getByRole("button", { name: tZh("death_sync.webhooks.create") }));
     const form = await screen.findByRole("dialog");
-    // The checklist is the server's enum, rendered by wire name.
-    for (const ev of EVENT_TYPES) await within(form).findByLabelText(ev);
+    // The checklist is the server's enum: each box is named by its readable name (review-2026-11-01 Web 6),
+    // and the wire name — what the receiver sees in X-SoulLedger-Event — is still on the box's label.
+    await within(form).findByRole("checkbox", { name: new RegExp(`^${READABLE.SOUL_CREATED}`) });
     expect(deathSyncApi.webhookEventTypes).toHaveBeenCalled();
     // Exactly the server's list — a copy of the enum in the client would show more.
-    expect(within(form).getAllByRole("checkbox").map((c) => (c as HTMLInputElement).labels?.[0]?.textContent?.trim())).toEqual(EVENT_TYPES);
+    expect(within(form).getAllByRole("checkbox").map((c) => (c as HTMLInputElement).labels?.[0]?.querySelector(".font-mono")?.textContent)).toEqual(EVENT_TYPES);
+    for (const ev of EVENT_TYPES) expect(boxFor(form, ev).labels?.[0]).toHaveTextContent(READABLE[ev]);
     // Only active keys are offered.
     const select = within(form).getByLabelText(tZh("death_sync.webhooks.api_key")) as HTMLSelectElement;
     expect([...select.options].map((o) => o.value)).toEqual(["k1"]);
 
     fireEvent.change(within(form).getByLabelText(new RegExp(tZh("death_sync.webhooks.url"))), { target: { value: " https://hooks.example.org/new " } });
-    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/));
-    fireEvent.click(within(form).getByLabelText(/SCHEDULER_RUN_FAILED$/));
-    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/)); // untick again
+    fireEvent.click(boxFor(form, "SOUL_CREATED"));
+    fireEvent.click(boxFor(form, "SCHEDULER_RUN_FAILED"));
+    fireEvent.click(boxFor(form, "SOUL_CREATED")); // untick again
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.create") }));
 
     await waitFor(() =>
@@ -220,9 +236,10 @@ describe("edit and disable", () => {
     const form = await screen.findByRole("dialog");
     expect(within(form).queryByLabelText(tZh("death_sync.webhooks.api_key"))).toBeNull();
     expect(deathSyncApi.apiKeys).not.toHaveBeenCalled();
-    expect((await within(form).findByLabelText("DEATH_SYNC_PROCESSED")) as HTMLInputElement).toBeChecked();
+    await within(form).findByRole("checkbox", { name: new RegExp(`^${READABLE.DEATH_SYNC_PROCESSED}`) });
+    expect(boxFor(form, "DEATH_SYNC_PROCESSED")).toBeChecked();
     fireEvent.change(within(form).getByLabelText(new RegExp(tZh("death_sync.webhooks.url"))), { target: { value: "https://hooks.example.org/b" } });
-    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/));
+    fireEvent.click(boxFor(form, "SOUL_CREATED"));
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.save") }));
     await waitFor(() =>
       expect(deathSyncApi.updateWebhook).toHaveBeenCalledWith("w1", {
