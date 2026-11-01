@@ -1,6 +1,6 @@
 /** 待办按类型筛选 (Design batch 28 O2): multi-select chips with counts, remembered on this phone. */
 import { platform } from "@soulledger/core/platform";
-import { StyleSheet } from "react-native";
+import { Share, StyleSheet } from "react-native";
 import { fireEvent, screen } from "@testing-library/react-native";
 
 import { TODO_FILTER_KEY, TodoTab } from "../screens/todo";
@@ -162,6 +162,19 @@ describe("受刑计划变更 (O-f) and the page head (第四节 5)", () => {
     // The other groups still open.
     fireEvent.press(screen.getByTestId("todo-row-approval-a1"));
     expect(onOpen).toHaveBeenCalledWith({ kind: "approval", id: "a1" });
+  });
+
+  it.each([
+    ["one soul: the link lands on that soul", [{ ...sentence, soul_id: "s9" }], "/sentence-requests?soul=s9"],
+    ["two souls: the whole list", [{ ...sentence, soul_id: "s9" }, { ...sentence, id: "r2", soul_id: "s8" }], "/sentence-requests"],
+    ["an older server, no soul id: the whole list", [sentence], "/sentence-requests"],
+  ])("the desk link: %s", async (_name, rows, path) => {
+    const share = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction" });
+    mockTodo.mockResolvedValue({ data: { ...DATA, sentence_changes: group(rows) } });
+    mount();
+    fireEvent.press(await screen.findByTestId("todo-desk-sentence_change"));
+    expect(share.mock.calls[0][0].message?.endsWith(path)).toBe(true);
+    share.mockRestore();
   });
 
   it("an older server without the group draws none", async () => {

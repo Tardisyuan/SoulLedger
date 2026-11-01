@@ -291,7 +291,7 @@ function RegenerateDialog({ onClose, onRegenerated }: { onClose: () => void; onR
   const regenerate = useMutation({
     mutationFn: () => mfaApi.regenerateRecoveryCodes({ method: "totp", code }).then((r) => r.data.recovery_codes),
     onSuccess: onRegenerated,
-    onError: (err) => setError(ownerFailure(err, t("mfa.manage.disable_failed"), t)),
+    onError: (err) => setError(ownerFailure(err, t("mfa.manage.regenerate_failed"), t)),
   });
   const ready = code.length === 6;
 

@@ -220,10 +220,22 @@ describe("signing out says what would be lost", () => {
     fireEvent.press(screen.getByTestId("me-logout-retry"));
     await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "回信", expect.any(String)));
     await waitFor(() => expect(outboxEntries()).toEqual([]));
-    expect(await screen.findByText(translate("zh-Hans", "officer_app.me.logout_pending", { unsent: "0", drafts: "1" }))).toBeTruthy();
+    // Only what there is: no 「0 封」 once the reply has gone.
+    expect(await screen.findByText("还有 1 份回信草稿。退出后会从这台设备上清除。")).toBeTruthy();
+    expect(screen.queryByText(/0 封|回信没发出/)).toBeNull();
     expect(screen.queryByTestId("me-logout-retry")).toBeNull(); // nothing left to send
     fireEvent.press(screen.getByTestId("me-logout-confirm"));
     expect(session.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("only unsent replies: no 「0 份」, and the retry is offered", async () => {
+    enqueueReply({ id: "c-1", name: "李白", text: "回信", seen: [] });
+    renderOfficer(<MeTab onOpen={() => {}} />, { session: sessionOf(OFFICER) });
+    fireEvent.press(await screen.findByTestId("me-logout"));
+    expect(screen.getByText("还有 1 封回信没发出。退出后会从这台设备上清除。")).toBeTruthy();
+    expect(screen.queryByText(/0 份|回信草稿/)).toBeNull();
+    expect(screen.getByTestId("me-logout-retry")).toBeTruthy();
+    await settle();
   });
 
   it("with nothing pending, the plain question (我的), and the other places sign out at once", async () => {

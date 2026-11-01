@@ -3,5 +3,9 @@
   "soul_app.chat.receipt.copied",
   "soul_app.chat.receipt.delete",
   "official_notify.sentence_node_not_dispatched.body",
-  "official_notify.sentence_node_not_dispatched.title"
+  "official_notify.sentence_node_not_dispatched.title",
+  "mfa.manage.regenerate_failed",
+  "officer_app.me.logout_pending_unsent",
+  "officer_app.me.logout_pending_drafts",
+  "sentence_plan.inbox_show_all"
 ]

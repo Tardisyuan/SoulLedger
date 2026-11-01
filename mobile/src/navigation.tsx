@@ -111,13 +111,16 @@ function MainTabs() {
             <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               assist="letters"
-              action={{
-                icon: ANDROID ? "search" : "plus",
-                framed: !ANDROID,
-                label: t("soul_app.chat.new"),
-                testID: "chat-new",
-                onPress: () => navigation.navigate("FindSoul"),
-              }}
+              action={[
+                {
+                  icon: ANDROID ? "search" : "plus",
+                  framed: !ANDROID,
+                  label: t("soul_app.chat.new"),
+                  testID: "chat-new",
+                  onPress: () => navigation.navigate("FindSoul"),
+                },
+                { icon: "person", label: t("soul_app.settings.title"), testID: "letters-account", onPress: () => navigation.navigate("Settings") },
+              ]}
             />
           ) : route.name === "Circle" ? (
             <CircleBar navigate={(name) => navigation.navigate(name)} />
@@ -149,8 +152,9 @@ function MainTabs() {
 }
 
 /**
- * 朋友圈's bar (1a): find people and my page; settings stay on the life tab. 第四十批 S-a: 「互动」 at the right end,
- * with the unread count — read again each time the tab is shown.
+ * 朋友圈's bar (1a): find people and my page. 第四十批 S-a: 「互动」 at the right end, with the unread count — read
+ * again each time the tab is shown. No room for a fifth control (iOS holds the title centred with 44 per action on
+ * each side: at 393 four already leave it 41), so 设置 is on 我的's bar, one tap on from here.
  */
 function CircleBar({ navigate }: { navigate: (name: "CircleSearch" | "MyCircle" | "CircleInbox") => void }) {
   const { t } = useI18n();
@@ -574,7 +578,13 @@ export function RootNavigator() {
               name="MyCircle"
               component={MyCircleScreen}
               options={({ navigation }) => ({
-                header: () => <AppHeader title={t("soul_app.circle.me.title")} onBack={navigation.goBack} />,
+                header: () => (
+                  <AppHeader
+                    title={t("soul_app.circle.me.title")}
+                    onBack={navigation.goBack}
+                    action={{ icon: "person", label: t("soul_app.settings.title"), testID: "my-circle-settings", onPress: () => navigation.navigate("Settings") }}
+                  />
+                ),
               })}
             />
             <Stack.Screen

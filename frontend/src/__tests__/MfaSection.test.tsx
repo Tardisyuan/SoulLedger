@@ -136,7 +136,9 @@ describe("MfaSection — on", () => {
     fireEvent.click(await screen.findByRole("button", { name: "mfa.manage.regenerate" }));
     fireEvent.change(await screen.findByLabelText(/mfa\.verify\.code_label/), { target: { value: "000000" } });
     fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
-    expect((await screen.findByRole("alert")).textContent).toContain("mfa.manage.disable_failed");
+    const refused = (await screen.findByRole("alert")).textContent;
+    expect(refused).toContain("mfa.manage.regenerate_failed");
+    expect(refused).not.toContain("turn_off_failed"); // it is not the turn-off message
     fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("officer_app.mfa.reasons.locked"));
     expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();

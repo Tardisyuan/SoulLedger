@@ -27,6 +27,8 @@ export type TodoFacts = components["schemas"]["TodoFacts"] & { cross_civilizatio
  */
 export type TodoItemExtra = {
   request_kind?: string;
+  /** 受刑请求(kind = sentence_change):灵魂 id,桌面链接据此收窄(`deskPath`);旧服务器没有。 */
+  soul_id?: string;
   segment_order?: number;
   go?: number;
   total?: number;
