@@ -566,8 +566,8 @@ function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; op
           <Txt variant="caption" tone="muted">
             {tr("soul_app.chat.block.confirm_body")}
           </Txt>
-          <Button testID="block-confirm" kind="danger" title={tr("soul_app.chat.block.confirm")} busy={busy} onPress={onConfirm} />
           <Button testID="block-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={onClose} />
+          <Button testID="block-confirm" title={tr("soul_app.chat.block.confirm")} busy={busy} onPress={onConfirm} />
         </View>
       </View>
     </Modal>
@@ -655,7 +655,7 @@ function Band({
           {line("info", tr("soul_app.chat.request.incoming_hint"), "hint-incoming")}
           <View style={styles.requestActions}>
             <SmallButton testID="request-decline" title={tr("soul_app.chat.request.decline")} onPress={onDecline} />
-            <SmallButton testID="request-block" title={tr("soul_app.chat.request.block")} onPress={onBlock} />
+            <SmallButton testID="request-block" title={`${tr("soul_app.chat.request.block")}…`} onPress={onBlock} />
           </View>
         </View>
       );

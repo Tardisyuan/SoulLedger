@@ -5,7 +5,7 @@
  * `ask` decides: 我的 still asks (push stops on this device), the other two sign out at once as before.
  */
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { draftIds } from "../drafts";
 import { ActionButton } from "../kit";
@@ -38,7 +38,8 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
   return (
     // Replaces the button it was asked from (the page follows it down, me.tsx).
     <View testID={`${testID}-asking`} style={{ gap: space[3] }} onLayout={onAsk}>
-      <Notice tone={pending ? "neg" : "neutral"} testID={pending ? `${testID}-pending` : undefined}>
+      {/* Signing out is not a warning (Design batch 67 §三.4): the sentence says what is at stake. */}
+      <Notice tone="neutral" testID={pending ? `${testID}-pending` : undefined}>
         <Txt variant="caption">
           {pending ? t("officer_app.me.logout_pending", { unsent: String(unsent), drafts: String(drafts) }) : t("officer_app.me.logout_title")}
         </Txt>
@@ -46,7 +47,7 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
       {pending && unsent > 0 ? (
         <ActionButton
           testID={`${testID}-retry`}
-          kind="outline"
+          kind="primary"
           busy={busy}
           disabled={offline}
           accessibilityHint={offline ? t("officer_app.offline.banner_bare") : undefined}
@@ -54,10 +55,21 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
           onPress={retry}
         />
       ) : null}
-      <View style={{ flexDirection: "row", gap: space[3] }}>
-        <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
-        <ActionButton testID={`${testID}-confirm`} kind="ink" title={t(pending ? "officer_app.me.logout_anyway" : "officer_app.me.logout_ok")} onPress={() => signOut()} />
-      </View>
+      {pending ? (
+        <>
+          <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
+          <Pressable testID={`${testID}-confirm`} accessibilityRole="button" onPress={() => signOut()} hitSlop={8} style={{ alignSelf: "center", paddingVertical: space[2] }}>
+            <Txt variant="caption" style={{ textDecorationLine: "underline" }}>
+              {t("officer_app.me.logout_anyway")}
+            </Txt>
+          </Pressable>
+        </>
+      ) : (
+        <View style={{ flexDirection: "row", gap: space[3] }}>
+          <ActionButton testID={`${testID}-cancel`} kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
+          <ActionButton testID={`${testID}-confirm`} kind="ink" title={t("officer_app.me.logout_ok")} onPress={() => signOut()} />
+        </View>
+      )}
     </View>
   );
 }

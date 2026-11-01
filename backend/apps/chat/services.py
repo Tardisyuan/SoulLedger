@@ -258,6 +258,13 @@ def _block_refusal(block):
     return None
 
 
+def _request_interval_running(conversation, account):
+    """`account` 发起的申请还在一日一封的等待里。"""
+    last = conversation.last_request_at
+    return (conversation.throttled and conversation.initiator_id == account.soul_id and last is not None
+            and (timezone.now() - last).total_seconds() < settings.CHAT_REQUEST_INTERVAL_SECONDS)
+
+
 def refusal(conversation, account, peer_account=None):
     """`account` 此刻不能在这个会话里说话的理由(`ChatError`),能说则 None。"""
     if conversation.declined_at is not None:
@@ -270,9 +277,13 @@ def refusal(conversation, account, peer_account=None):
         return None
     if peer_account is None or not circle.is_current_soul(peer_account.user):
         return ChatError("对方账号已停用。", "peer_retired", status=409)
-    blocked = _block_refusal(block_between(account, peer_account))
-    if blocked is not None:
-        return blocked
+    block = block_between(account, peer_account)
+    # 被拉黑的发起方,一日一封的等待照常走完(Design 第六十七批 §三.1):等待中拉黑就变成「无法送达」,
+    # 等于告诉对方被拉黑了。这里放行,由发送路径照常答 `request_throttled`;等待过了才是「无法送达」。
+    if not (block == "by_peer" and _request_interval_running(conversation, account)):
+        blocked = _block_refusal(block)
+        if blocked is not None:
+            return blocked
     if circle.active_mute(account.user) is not None:
         return ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
     return None
@@ -431,15 +442,16 @@ def open_direct(account, target_user, *, request=None):
     target_soul = target_account.soul
     if circle.active_mute(account.user) is not None:
         raise ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
-    blocked = _block_refusal(block_between(account, target_account))
-    if blocked is not None:
-        raise blocked
-
     low, high = _pair(soul, target_soul)
     account_of = {soul.pk: account, target_soul.pk: target_account}
     existing = Conversation.objects.filter(
         kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, closed_at__isnull=True
     ).select_related(*ACCOUNT_JOINS).first()
+    block = block_between(account, target_account)
+    # 同 `refusal`:等待中的发起方照常回到它的会话,不因拉黑而露馅。
+    if block is not None and not (block == "by_peer" and existing is not None
+                                  and _request_interval_running(existing, account)):
+        raise _block_refusal(block)
     if existing is not None:
         return refresh_throttle(existing), False
 

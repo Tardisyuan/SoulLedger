@@ -180,6 +180,8 @@ const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
  * 第四节把它们标为「沿用」。新增一条之前先确认它真是密码义。
  */
 const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
+  // 第六十七批:找回密码页「之后可以自己重设」,说的是重设密码,中文省了「密码」。
+  "soul_app.forgot_password.no_email_note",
   // 第三十四批:重置密码窗口里的「确认重置」「重置失败」,中文省了「密码」,重置的就是密码。
   // (第三十五批的 users.import.template_notes 已撤:第五十四批改写后中文写出了「密码」。)
   // 第五十四批:邀请落地页「再输一次」「两次输入的不一样」,说的是新密码。
