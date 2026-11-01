@@ -226,6 +226,8 @@ MESSAGES = {
         "wangsi_upheld_late": {"title": "Nehet Maat", "body": "Nehet-Ek Maat. Wen Medjat Ba Er Maa Wesheb."},
         "wangsi_delivered": {"title": "Nehet Maat · Seshem Seth", "body": "Nehet-Ek Maat: Seshem Seth Em Nut Mut Nen Maat. Wen Medjat Ba Er Maa."},
         "wangsi_rejected": {"title": "Nehet Nen Maat", "body": "Nehet-Ek Nen Maat. Wen Medjat Ba Er Maa Wesheb."},
+        "social_muted": {"title": "Gerh Er-Ek", "body": "Gerh Hru {{days}}: Shemsu Maa Wa; Nen Shemes Ba."},
+        "social_muted_reason": {"title": "Gerh Er-Ek", "body": "Gerh Hru {{days}}: {{reason}}"},
     },
 }
 
