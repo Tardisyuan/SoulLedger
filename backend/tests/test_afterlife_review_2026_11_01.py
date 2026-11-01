@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService, SentencePlanActiveError, SoulNotDispatchableError
+from apps.disposition.expiry import expire_one
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.events.models import SoulEvent
@@ -319,3 +320,30 @@ def test_an_automatic_return_is_no_pardon(cn, eg):
     served.refresh_from_db()
     assert served.expired_at is None
     assert _code(soul) == "term_not_served"
+
+
+def test_a_planless_term_keeps_the_soul_in_residence_until_it_is_served(cn, eg):
+    """执行 = 开始服刑(用户 2026-10-29),无计划的暂居也一样:期满才回原属地。
+    变异:`_execute_during_residence` 不看 `serving` → 执行当场回原属地,红。
+    变异:`finish_serving` 去掉暂居分支 → 期满后还留在暂居地,红。"""
+    soul = _resident_without_plan(cn, eg)
+    term = Disposition.objects.create(soul=soul, tenant=eg, sentence_years=10, is_eternal=False)
+
+    assert DispositionService.execute(term) is True
+    soul.refresh_from_db()
+    assert soul.is_residing and soul.tenant_id == eg.pk
+    assert _code(soul) == "term_not_served"
+
+    expire_one(Disposition.all_objects.get(pk=term.pk), timezone.now())
+    soul.refresh_from_db()
+    assert not soul.is_residing and soul.tenant_id == cn.pk
+
+
+def test_a_planless_disposition_with_no_term_still_returns_at_once(cn, eg):
+    """没记刑期就没有期满日可等:照旧一执行就回。"""
+    soul = _resident_without_plan(cn, eg)
+    done = Disposition.objects.create(soul=soul, tenant=eg, is_eternal=False)
+
+    assert DispositionService.execute(done) is True
+    soul.refresh_from_db()
+    assert not soul.is_residing and soul.tenant_id == cn.pk

@@ -321,7 +321,7 @@
       "SENTENCE_NODE_ACTIVATED": "受刑节点开始",
       "SENTENCE_NODE_WAITING": "受刑节点待前往",
       "SENTENCE_NODE_COMPLETED": "受刑节点服完",
-      "SENTENCE_NODE_REFUSED": "受刑节点调拨被拒",
+      "SENTENCE_NODE_REFUSED": "受刑节点调拨未成",
       "SENTENCE_NODE_REDISPATCHED": "受刑节点重新调拨",
       "SENTENCE_PLAN_AMENDED": "受刑计划变更",
       "SENTENCE_REQUEST_CREATED": "受刑请求提交",

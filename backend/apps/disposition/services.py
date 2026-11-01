@@ -949,9 +949,13 @@ class DispositionService:
                     DispatchService.record_blocked_return(locked, ResidenceReturnBlockedError(open_ids), disposition)
                 SentencePlanService.advance(locked)
                 return True
-            if (locked.is_deleted or locked.is_residing or locked.current_state != SoulState.DISPOSED
+            if (locked.is_deleted or locked.current_state != SoulState.DISPOSED
                     or disposition.tenant_id != locked.tenant_id or disposition.is_eternal):
                 return False
+            if locked.is_residing:  # 无计划暂居:在暂居地服完了,回原属地(`_execute_during_residence` 推迟的那次回归)
+                DispositionService._leave_served_realm(disposition, locked)
+                DispositionService._return_home(locked, locked, disposition, "term served")
+                return True
             if not DispositionService._move_on(disposition, locked, "Disposition term served"):
                 return False
             DispositionService._leave_served_realm(disposition, locked)
@@ -1072,19 +1076,30 @@ class DispositionService:
                 return False
             DispositionService._mark_executed(disposition)
             node = SentencePlanService.on_disposition_executed(locked, disposition)
-            DispositionService._leave_served_realm(disposition, locked, node)
+            from apps.disposition.expiry import serving
+
+            if node is not None or not serving(disposition):
+                DispositionService._leave_served_realm(disposition, locked, node)
             if node is not None:
                 if node.status == "WAITING":
                     open_ids = list(open_judgments(locked).values_list("pk", flat=True))
                     DispatchService.record_blocked_return(locked, ResidenceReturnBlockedError(open_ids), disposition)
                 SentencePlanService.advance(locked)
                 return True
-            if not disposition.is_eternal:
-                try:
-                    DispatchService.end_residence(
-                        soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
-                        reason=f"disposition {disposition.pk} executed",
-                    )
-                except ResidenceReturnBlockedError as blocked:
-                    DispatchService.record_blocked_return(locked, blocked, disposition)
+            # 执行 = 开始服刑(用户 2026-10-29):还有刑期要服的留在暂居地,期满时 `finish_serving` 才回归。
+            if not disposition.is_eternal and not serving(disposition):
+                DispositionService._return_home(soul, locked, disposition, "executed")
         return True
+
+    @staticmethod
+    def _return_home(soul, locked, disposition, how):
+        """无计划暂居的处置了结:回原属地;被未结案审判拦下就记 `DISPATCH_RETURN_BLOCKED`。"""
+        from apps.dispatch.services import DispatchService, ResidenceReturnBlockedError
+
+        try:
+            DispatchService.end_residence(
+                soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION,
+                reason=f"disposition {disposition.pk} {how}",
+            )
+        except ResidenceReturnBlockedError as blocked:
+            DispatchService.record_blocked_return(locked, blocked, disposition)
