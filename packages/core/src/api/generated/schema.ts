@@ -978,7 +978,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。 */
+        /**
+         * @description 重新生成:先确认是本人 —— 只收当前的 6 位动态码(与「关闭」同一把锁),过了才作废旧码。
+         *     带密码或恢复码来 → 400 `totp_required`,旧码原样有效(用户 2026-11-01)。
+         */
         post: operations["v1_auth_mfa_recovery_codes_create"];
         delete?: never;
         options?: never;
@@ -2197,7 +2200,7 @@ export interface paths {
          * @description How many of this tenant's registrations need a human.
          *
          *     FAILED is the only anomalous state a row is ever written in: PENDING
-         *     is in flight and DUPLICATE is the idempotency check doing its job. The status
+         *     is in flight (a duplicate key writes no row; it is answered with the row it belongs to). The status
          *     goes on the wire so the dashboard links to the same filter it counted.
          */
         get: operations["v1_death_sync_registrations_summary_retrieve"];
@@ -4669,6 +4672,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/chat/blocks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `GET /me/chat/blocks/`:我拉黑的人(设置 › 书信 › 已拉黑)。不分页:这是一个人亲手拉黑的名单。 */
+        get: operations["v1_me_chat_blocks_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/blocks/{block_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description `DELETE /me/chat/blocks/{id}/`:解除。别人的与不存在答同一个 404。 */
+        delete: operations["v1_me_chat_blocks_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/chat/conversations/": {
         parameters: {
             query?: never;
@@ -4684,6 +4721,46 @@ export interface paths {
         put?: never;
         /** @description 把两类异常翻成响应,省得每个方法各写一遍 try。 */
         post: operations["v1_me_chat_conversations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/conversations/{conversation_id}/block/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `POST /me/chat/conversations/{id}/block/`:拉黑这个私聊里的对方。幂等。
+         *     对方此后只看到「无法送达」;我在这个会话里也不能说话,直到在 `DELETE /me/chat/blocks/{id}/` 解除。
+         */
+        post: operations["v1_me_chat_conversations_block_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/conversations/{conversation_id}/decline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `POST /me/chat/conversations/{id}/decline/`:拒绝这一次书信申请(只对别人发来、我还没回的)。
+         *     会话关闭、从我的列表里消失;对方看到「这次申请未被接受」,满一个请求间隔后可再申请。
+         */
+        post: operations["v1_me_chat_conversations_decline_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4889,7 +4966,7 @@ export interface paths {
         };
         get: operations["v1_me_export_retrieve"];
         put?: never;
-        /** @description 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,与登录同一份预算)。 */
+        /** @description 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,登录后确认是本人的那份计数)。 */
         post: operations["v1_me_export_create"];
         delete?: never;
         options?: never;
@@ -5019,8 +5096,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
-         *     没带 / 错了 → 旧码原样有效。
+         * @description 重新生成要确认是本人 —— 只收当前的 6 位数字,与「关闭」同一把锁。带密码或恢复码来 → 400 `totp_required`
+         *     (用户 2026-11-01)。没带 / 错了 → 旧码原样有效。
          */
         post: operations["v1_me_mfa_recovery_codes_create"];
         delete?: never;
@@ -5039,9 +5116,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description 当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
-         *     (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
-         *     满了答 429 `rate_limited`。
+         * @description 当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错 5 次答 429 `rate_limited`
+         *     (`confirm_current_password`:登录后确认是本人的那份计数,不与登录页共用,2026-11-01)。
          */
         post: operations["v1_me_mfa_setup_create"];
         delete: operations["v1_me_mfa_setup_destroy"];
@@ -11388,6 +11464,17 @@ export interface components {
             site?: boolean;
             mail?: boolean;
         };
+        /** @description `GET /me/chat/blocks/` 的一行:我拉黑的人。灵魂编号不出库,认得的是朋友圈的 user_id 与显示名。 */
+        ChatBlock: {
+            /** Format: uuid */
+            id: string;
+            /** @description 被拉黑那一世账号的 user_id。 */
+            peer_user: number;
+            /** @description 被拉黑那一世的显示名。 */
+            readonly peer_name: string;
+            /** Format: date-time */
+            created_at: string;
+        };
         ChatError: {
             detail: string;
             code: string;
@@ -11833,7 +11920,7 @@ export interface components {
              * @description 我发起的被节流私聊:何时可以再发一条请求;还没发过、或不受节流时为空。
              */
             readonly next_request_at: string | null;
-            /** @description 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed`),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。 */
+            /** @description 此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed` / `declined` 这次申请被拒 / `peer_blocked` 我拉黑了对方 / `undeliverable` 无法送达),能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。 */
             readonly refusal: string | null;
         };
         /**
@@ -12164,10 +12251,9 @@ export interface components {
          * @description * `PENDING` - Pending Validation
          *     * `PROCESSED` - Processed Successfully
          *     * `FAILED` - Processing Failed
-         *     * `DUPLICATE` - Duplicate - Already Processed
          * @enum {string}
          */
-        DeathRegistrationRequestStatusEnum: "PENDING" | "PROCESSED" | "FAILED" | "DUPLICATE";
+        DeathRegistrationRequestStatusEnum: "PENDING" | "PROCESSED" | "FAILED";
         /**
          * @description 200 body of `registrations/summary/`. Doc-only.
          *
@@ -15141,17 +15227,16 @@ export interface components {
         MfaCodeRequest: {
             code: string;
         };
+        /** @description 重新生成恢复码的确认:只收当前的 6 位动态码(2026-11-01)。`method=password` / `recovery` → 400 `totp_required`。 */
         MfaDisableRequest: {
             method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
             code?: string;
-            password?: string;
         };
         /**
          * @description * `totp` - totp
-         *     * `password` - password
          * @enum {string}
          */
-        MfaOwnerConfirmMethodEnum: "totp" | "password";
+        MfaOwnerConfirmMethodEnum: "totp";
         MfaRecoveryCodes: {
             recovery_codes: string[];
         };
@@ -15513,7 +15598,6 @@ export interface components {
             readonly reason: string;
             /** @description 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。 */
             readonly desired_remaining_days: number | null;
-            /** @default PENDING */
             readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
             /** @description 批准后,自决定时刻起还要等的天数。 */
             readonly approved_days: number | null;
@@ -15590,6 +15674,8 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly closed_at: string | null;
+            /** @description 殿司此刻能否回这封:未关闭,且灵魂此刻就在这个殿司。灵魂调走后为 false(回信 409 `not_current_hall`)。 */
+            readonly can_reply: boolean;
         };
         /**
          * @description `POST /users/invite/`(ADMIN):邀请一位官员。`tenant` 是殿的 code,只给没有殿的全局管理员用;
@@ -18814,7 +18900,6 @@ export interface components {
             /** Format: uuid */
             readonly comment: string | null;
             readonly target_user: components["schemas"]["ModerationAuthor"];
-            /** @default OPEN */
             readonly status: components["schemas"]["SocialReportStatusEnum"];
             readonly report_count: number;
             readonly content_excerpt: string;
@@ -19180,9 +19265,10 @@ export interface components {
         /**
          * @description * `REJECTED` - REJECTED
          *     * `CANCELLED` - CANCELLED
+         *     * `NOT_STARTED` - NOT_STARTED
          * @enum {string}
          */
-        SentenceLastRefusalStatusEnum: "REJECTED" | "CANCELLED";
+        SentenceLastRefusalStatusEnum: "REJECTED" | "CANCELLED" | "NOT_STARTED";
         SentenceNode: {
             /** Format: uuid */
             readonly id: string;
@@ -19919,10 +20005,10 @@ export interface components {
         SoulMfaCodeRequest: {
             code: string;
         };
+        /** @description 重新生成恢复码的确认:只收当前的 6 位数字(2026-11-01)。`method=password` / `recovery` → 400 `totp_required`。 */
         SoulMfaDisableRequest: {
             method: components["schemas"]["MfaOwnerConfirmMethodEnum"];
             code?: string;
-            password?: string;
         };
         SoulMfaRecoveryCodes: {
             recovery_codes: string[];
@@ -19930,7 +20016,8 @@ export interface components {
         /**
          * @description `code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
          *     `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
-         *     wrong_password / not_enabled / already_enabled / not_started (setup and disable).
+         *     wrong_password / not_enabled / already_enabled / not_started (setup and disable), totp_required (regenerating
+         *     the recovery codes with a password or a recovery code).
          */
         SoulMfaRefusal: {
             detail: string;
@@ -20323,6 +20410,8 @@ export interface components {
             can_write: boolean;
             /** Format: date-time */
             muted_until: string | null;
+            /** @description 殿司写的禁言理由;没禁言或没写理由为空串。 */
+            muted_reason: string;
             reports_remaining: number;
             /** @description 「互动」的未读行数(第四十批 S-a) */
             unread_interactions: number;
@@ -22774,6 +22863,7 @@ export interface operations {
                 tenant?: string;
                 trace_id?: string;
                 user?: number;
+                username?: string;
             };
             header?: never;
             path?: never;
@@ -22844,6 +22934,7 @@ export interface operations {
                 tenant?: string;
                 trace_id?: string;
                 user?: number;
+                username?: string;
             };
             header?: never;
             path?: never;
@@ -22958,6 +23049,7 @@ export interface operations {
                 tenant?: string;
                 trace_id?: string;
                 user?: number;
+                username?: string;
             };
             header?: never;
             path?: never;
@@ -23006,6 +23098,7 @@ export interface operations {
                 tenant?: string;
                 trace_id?: string;
                 user?: number;
+                username?: string;
             };
             header?: never;
             path: {
@@ -25371,9 +25464,8 @@ export interface operations {
                  * @description * `PENDING` - Pending Validation
                  *     * `PROCESSED` - Processed Successfully
                  *     * `FAILED` - Processing Failed
-                 *     * `DUPLICATE` - Duplicate - Already Processed
                  */
-                status?: "DUPLICATE" | "FAILED" | "PENDING" | "PROCESSED";
+                status?: "FAILED" | "PENDING" | "PROCESSED";
                 tudi_god?: string;
             };
             header?: never;
@@ -29616,6 +29708,14 @@ export interface operations {
                     "application/json": components["schemas"]["Judgment"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
+                };
+            };
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -29666,6 +29766,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WangsiRefusal"];
                 };
             };
             403: {
@@ -30151,6 +30259,53 @@ export interface operations {
             };
         };
     };
+    v1_me_chat_blocks_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatBlock"][];
+                };
+            };
+        };
+    };
+    v1_me_chat_blocks_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
     v1_me_chat_conversations_list: {
         parameters: {
             query?: never;
@@ -30210,6 +30365,79 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_conversations_block_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatBlock"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_conversations_decline_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
