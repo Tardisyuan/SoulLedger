@@ -1,1 +1,4 @@
-[]
+[
+  "soul_app.chat.receipt.copied",
+  "soul_app.chat.receipt.delete"
+]
