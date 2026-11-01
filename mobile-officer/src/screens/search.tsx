@@ -93,6 +93,7 @@ function SoulLookup({
   }, [text, onSearch]);
   // Back from a soul (or a tab switch): the kept search runs again, once.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a fetch started once on mount; its loading state is the point
     if (initialQuery.trim()) search();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount, with the query it was given
   }, []);
