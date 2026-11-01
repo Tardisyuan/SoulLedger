@@ -1,1 +1,6 @@
-[]
+[
+  "soul_inbox.errors.assigned_to_other",
+  "soul_inbox.assign.handled_by",
+  "soul_inbox.assign.take_over",
+  "officer_app.outbox.assigned"
+]

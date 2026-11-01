@@ -357,10 +357,14 @@ export function lettersUnavailable(error: unknown): boolean {
 }
 
 /** Why a reply (or the thread) failed, as an i18n key. */
+/** Someone else took the letter while this one was being written: the box is about to give way, so this is said as a toast. */
+export const ASSIGNED_TO_OTHER = "soul_inbox.errors.assigned_to_other";
+
 export function replyFailureKey(error: unknown): string {
   if (lettersUnavailable(error)) return "officer_app.letter.unavailable";
   // feat-letters: the soul was dispatched to another hall -- this one may not answer it now.
   if (statusOf(error) === 409 && (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "not_current_hall") return "officer_app.letter.moved";
+  if (statusOf(error) === 409 && (error as { response?: { data?: { code?: string } } })?.response?.data?.code === "assigned_to_other") return ASSIGNED_TO_OTHER;
   if (statusOf(error) === 409) return "soul_inbox.errors.closed";
   return "officer_app.letter.failed";
 }
