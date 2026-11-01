@@ -3,6 +3,7 @@
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { ViewingLock } from "@/src/components/impersonation/ViewingLock";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { MissingPermissionContext } from "./PermissionDenied";
 
 interface RequirePermissionProps {
   permissions: string | string[];
@@ -27,7 +28,11 @@ export function RequirePermission({
 
   // 刷新时权限还在路上:没有码不等于无权。有 fallback(拒绝页)的地方先画骨架，不闪 403;
   // 没有 fallback 的(藏一个按钮)本来就什么都不画。`!== false`:测试里手搓的 usePermissions 没有这一项。
-  if (!hasAccess) return <>{permissionsReady === false && fallback !== null ? <PermissionsPending /> : fallback}</>;
+  if (!hasAccess) {
+    if (permissionsReady === false && fallback !== null) return <PermissionsPending />;
+    // 拒绝页(`PermissionDenied`)从这里读到缺的是哪个权限,见 MissingPermissionContext。
+    return <MissingPermissionContext.Provider value={{ permissions: permArray }}>{fallback}</MissingPermissionContext.Provider>;
+  }
   // 代看(只读)期间写类控件置灰,见 ViewingLock。
   return <ViewingLock permissions={permArray}>{children}</ViewingLock>;
 }
@@ -56,7 +61,10 @@ export function RequireAdmin({
   fallback?: React.ReactNode;
 }) {
   const { isAdmin, permissionsReady } = usePermissions();
-  if (!isAdmin) return <>{permissionsReady === false && fallback !== null ? <PermissionsPending /> : fallback}</>;
+  if (!isAdmin) {
+    if (permissionsReady === false && fallback !== null) return <PermissionsPending />;
+    return <MissingPermissionContext.Provider value={{ admin: true }}>{fallback}</MissingPermissionContext.Provider>;
+  }
   return <>{children}</>;
 }
 

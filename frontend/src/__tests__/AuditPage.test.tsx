@@ -387,6 +387,21 @@ describe("AuditPage request parameters", () => {
     expect(searched).toEqual(["deleted"]);
   });
 
+  // review-2026-11-01 Web 6:按操作人筛 —— `username=`,精确,不混进 search。
+  it("filters by operator: sends username, offers the page's names, and clear-all drops it", async () => {
+    mockedList.mockResolvedValue({ data: { count: 2, results: [entry({ username: "cui" }), entry({ id: 2, username: "yama" })] } });
+    renderPage();
+    await screen.findAllByText("created a soul");
+    const box = screen.getByTestId("audit-operator");
+    const offered = Array.from(document.querySelectorAll("#audit-operators option")).map((o) => (o as HTMLOptionElement).value);
+    expect(offered.sort()).toEqual(["cui", "yama"]);
+    fireEvent.change(box, { target: { value: " cui " } });
+    await waitFor(() => expect(lastParams()).toEqual({ page: "1", page_size: "20", username: "cui" }));
+    expect(lastParams().search).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "audit.clear_filters" }));
+    await waitFor(() => expect(lastParams()).toEqual({ page: "1", page_size: "20" }));
+  });
+
   it("shows what the server matched, not a client-side filter of the page it had", async () => {
     renderPage();
     await screen.findByText("created a soul");

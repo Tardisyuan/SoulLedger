@@ -29,7 +29,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { DataTable, parseOrdering, type DataTableColumn } from "@/components/ui/data-table";
-import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
+import { ActionsMenu, ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
@@ -407,71 +407,42 @@ function UsersRoute() {
               ) : null}
             </td>}
             <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
-              <div className="flex items-center justify-end gap-1">
-                {user.mfa?.enabled ? (
-                  <RequirePermission permissions="user.manage">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setResetMfaUser(user)}>
-                      {t("mfa.admin.reset")}
-                    </Button>
-                  </RequirePermission>
-                ) : null}
-                {/* 以此人身份查看(W6):只给系统管理员(ADMIN);另一位管理员、自己、停用与灵魂账号的行不出现。 */}
-                {isAdmin && user.role !== "ADMIN" && user.role !== "SOUL" && user.is_active && user.id !== myId ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    data-testid="impersonate-open"
-                    onClick={() => setImpersonateUser(user)}
-                  >
-                    {t("admin.users.impersonate")}
-                  </Button>
-                ) : null}
-                <RequirePermission permissions="user.manage">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setEditingUser(user)}>
-                    {t("common.edit")}
-                  </Button>
-                </RequirePermission>
-                {/* 自己的密码走「修改密码」:重置会把自己也退出去。 */}
-                {user.id !== myId ? (
-                  <RequirePermission permissions="user.manage">
-                    <Button type="button" size="sm" variant="ghost" data-testid="password-reset-open" onClick={() => setResetPasswordUser(user)}>
-                      {t("users.reset_password.action")}
-                    </Button>
-                  </RequirePermission>
-                ) : null}
-                {user.role !== "SOUL" && user.is_active ? (
-                  <RequirePermission permissions="judgment.assign">
-                    <Button type="button" size="sm" variant="ghost" data-testid="handover-open" onClick={() => setHandoverUser(user)}>
-                      {t("officerHandover.action")}
-                    </Button>
-                  </RequirePermission>
-                ) : null}
-                <RequirePermission permissions="user.manage">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setRolesUser(user)}>
-                    {t("users.edit_roles")}
-                  </Button>
-                </RequirePermission>
-                <RequirePermission permissions="user.manage">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => user.is_active
-                      ? void requestDeactivate(user)
-                      : toggleStatusMutation.mutate({ id: String(user.id), isActive: true })}
-                    disabled={toggleStatusMutation.isPending}
-                  >
-                    {user.is_active ? t("users.deactivate") : t("users.activate")}
-                  </Button>
-                </RequirePermission>
-                <RequirePermission permissions="user.manage">
-                  {/* 幽灵按钮,不上冷玫红:红只给系统出错与「输入名称以确认」里的危险键(规范 v2 A1)。 */}
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteUser(user)}>
-                    {t("common.delete")}
-                  </Button>
-                </RequirePermission>
-              </div>
+              {/* 一行九颗按钮(review-2026-11-01 Web 6)→ 一个主动作「编辑」+「⋯」菜单。
+                  出现条件与原来逐颗相同;删除、停用照旧走各自的确认框。 */}
+              <ActionsMenu
+                menuLabel={t("users.row_menu", { name: user.username })}
+                primary={canManage ? { label: t("common.edit"), onSelect: () => setEditingUser(user) } : undefined}
+                items={[
+                  ...(canManage && user.mfa?.enabled ? [{ key: "mfa", label: t("mfa.admin.reset"), onSelect: () => setResetMfaUser(user) }] : []),
+                  // 以此人身份查看(W6):只给系统管理员(ADMIN);另一位管理员、自己、停用与灵魂账号的行不出现。
+                  ...(isAdmin && user.role !== "ADMIN" && user.role !== "SOUL" && user.is_active && user.id !== myId
+                    ? [{ key: "impersonate", label: t("admin.users.impersonate"), onSelect: () => setImpersonateUser(user) }]
+                    : []),
+                  // 自己的密码走「修改密码」:重置会把自己也退出去。
+                  ...(canManage && user.id !== myId
+                    ? [{ key: "password", label: t("users.reset_password.action"), onSelect: () => setResetPasswordUser(user) }]
+                    : []),
+                  ...(hasPermission("judgment.assign") && user.role !== "SOUL" && user.is_active
+                    ? [{ key: "handover", label: t("officerHandover.action"), onSelect: () => setHandoverUser(user) }]
+                    : []),
+                  ...(canManage
+                    ? [
+                        { key: "roles", label: t("users.edit_roles"), onSelect: () => setRolesUser(user) },
+                        {
+                          key: "status",
+                          label: user.is_active ? t("users.deactivate") : t("users.activate"),
+                          disabled: toggleStatusMutation.isPending,
+                          onSelect: () =>
+                            user.is_active
+                              ? void requestDeactivate(user)
+                              : toggleStatusMutation.mutate({ id: String(user.id), isActive: true }),
+                        },
+                        // 不上冷玫红:红只给系统出错与「输入名称以确认」里的危险键(规范 v2 A1)。
+                        { key: "delete", label: t("common.delete"), onSelect: () => setDeleteUser(user) },
+                      ]
+                    : []),
+                ]}
+              />
             </td>
           </>
         )}

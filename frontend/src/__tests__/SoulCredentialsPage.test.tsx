@@ -291,9 +291,39 @@ describe("retry and deliver", () => {
     soulAccountsApi.markDelivered.mockRejectedValue(http(409, { detail: "x", code: "credential_not_revealed" }));
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.credentials.actions.mark_delivered") }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: tZh("soul_accounts.credentials.deliver_confirm") }));
     await waitFor(() =>
       expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.credentials.deliver_not_revealed"), "error")
     );
+  });
+
+  // review-2026-11-01 Web 4:「标记已交付」一点即生效 → 先问一句。
+  it("mark delivered asks first; cancel sends nothing, confirm sends it", async () => {
+    asManager();
+    soulAccountsApi.credentials.mockResolvedValue(page([credential({ status: "REVEALED" })]));
+    soulAccountsApi.markDelivered.mockResolvedValue({ data: credential({ status: "DELIVERED" }) });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.credentials.actions.mark_delivered") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(soulAccountsApi.markDelivered).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.cancel") }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(soulAccountsApi.markDelivered).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.credentials.actions.mark_delivered") }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: tZh("soul_accounts.credentials.deliver_confirm") }));
+    await waitFor(() => expect(soulAccountsApi.markDelivered).toHaveBeenCalledWith("c1"));
+  });
+
+  it("a manager sees the three delivery steps; a reader does not", async () => {
+    asManager();
+    const { unmount } = renderPage();
+    expect(await screen.findByTestId("credential-steps")).toHaveTextContent(tZh("soul_accounts.credentials.steps.3"));
+    unmount();
+    asRole("soul_account.read");
+    renderPage();
+    await screen.findAllByText("张三");
+    expect(screen.queryByTestId("credential-steps")).toBeNull();
   });
 });
 

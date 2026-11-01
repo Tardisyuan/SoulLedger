@@ -67,6 +67,16 @@ beforeEach(() => {
   list.mockResolvedValue({ data: { count: ROWS.length, results: ROWS } });
 });
 
+/** The row's actions live behind 「⋯」 since review-2026-11-01 Web 6; this opens it and returns its items. */
+function menuOf(row: HTMLElement): HTMLElement[] {
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  const items = screen.queryAllByRole("menuitem");
+  // Close again (the trigger toggles) so the next row's menu is the only one open.
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  return items;
+}
+const labelsOf = (items: HTMLElement[]) => items.map((i) => i.textContent);
+
 describe("UsersPage · 两步验证 column", () => {
   it("renders the three states with glyph + text, dates only on the enabled one", async () => {
     renderPage();
@@ -89,9 +99,9 @@ describe("UsersPage · 两步验证 column", () => {
   it("offers 重置两步验证 on the enabled row only", async () => {
     renderPage();
     const on = (await screen.findByText("on-user")).closest("tr")!;
-    expect(within(on).getByRole("button", { name: "mfa.admin.reset" })).toBeTruthy();
+    expect(labelsOf(menuOf(on as HTMLElement))).toContain("mfa.admin.reset");
     for (const name of ["off-user", "missing-user"]) {
-      expect(within(screen.getByText(name).closest("tr")!).queryByRole("button", { name: "mfa.admin.reset" })).toBeNull();
+      expect(labelsOf(menuOf(screen.getByText(name).closest("tr")! as HTMLElement))).not.toContain("mfa.admin.reset");
     }
   });
 

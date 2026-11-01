@@ -1,5 +1,6 @@
 "use client";
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
@@ -53,6 +54,40 @@ const STATUSES = Object.keys(STATUS_TONES);
 const RETRYABLE_ERRORS = ["INTERNAL_ERROR", "NO_CITY_GOD"];
 const canRetry = (reg: DeathRegistration) =>
   reg.status === "FAILED" && RETRYABLE_ERRORS.includes(reg.error_code) && reg.retry_count < reg.max_retries;
+
+/**
+ * 失败行的下一步(review-2026-11-01 Web 5):此前只写原因,不说该做什么、去哪做。
+ * 不能重试的几类是「数据的答案」,原样重发也不行 —— 幂等键仍被占着,来源系统要改正并换一个键;
+ * 能重试的写明先做什么再点「重试」。链接只指本站里真能处理这件事的那一页。
+ */
+const NEXT_LINKS: Record<string, (reg: DeathRegistration) => { href: string; label: string } | null> = {
+  SOUL_NOT_FOUND: () => ({ href: "/souls", label: "death_sync.next.link_roster" }),
+  SOUL_NOT_ALIVE: (reg) => (reg.soul ? { href: `/souls/${reg.soul}`, label: "death_sync.next.link_soul" } : null),
+  INVALID_TRANSITION: (reg) => (reg.soul ? { href: `/souls/${reg.soul}`, label: "death_sync.next.link_soul" } : null),
+  NO_CITY_GOD: () => ({ href: "/city-gods", label: "death_sync.next.link_city_gods" }),
+};
+
+function FailureNextStep({ reg }: { reg: DeathRegistration }) {
+  const { t } = useI18n();
+  const key = `death_sync.next.${reg.error_code}`;
+  const exhausted = RETRYABLE_ERRORS.includes(reg.error_code) && reg.retry_count >= reg.max_retries;
+  const text = exhausted ? t("death_sync.next.retry_exhausted") : t(key);
+  const link = NEXT_LINKS[reg.error_code]?.(reg) ?? null;
+  return (
+    <p data-testid="death-sync-next" className="text-[oklch(var(--color-ink))]">
+      <span aria-hidden="true">→ </span>
+      {text === key ? t("death_sync.next.unknown") : text}
+      {link && (
+        <>
+          {" "}
+          <Link href={link.href} className="underline text-[oklch(var(--color-accent-ink))]">
+            {t(link.label)}
+          </Link>
+        </>
+      )}
+    </p>
+  );
+}
 
 export default function DeathSyncPage() {
   // useSearchParams needs a Suspense boundary or the route opts out of static
@@ -143,11 +178,11 @@ function DeathSyncRoute() {
       variant="page"
       title={
         <>
-          {t("death_sync.title") || "Death Registration"}
+          {t("death_sync.title")}
           <MenuGloss path="/death-sync" />
         </>
       }
-      subtitle={t("death_sync.subtitle") || "External death registration sync"}
+      subtitle={t("death_sync.subtitle")}
       tabs={<DeathSyncTabs />}
     >
       {/* 规范 v3 面板:surface-1 底 + 结构线,20 px 面板标题;v2 的分节纹撤掉。 */}
@@ -251,7 +286,7 @@ function DeathSyncRoute() {
                       reference IS the content of a sync row. Clause 3 is
                       not waivable though: a reference you cannot paste back
                       into the source system is a decoration, not a trace. */}
-                  {t("death_sync.reference") || "Ref"}:{" "}
+                  {t("death_sync.reference")}:{" "}
                   <IdentifierChip
                     id={reg.source_reference_id || reg.idempotency_key}
                     variant="inline"
@@ -268,6 +303,7 @@ function DeathSyncRoute() {
                     {reg.error_message && (
                       <p className="text-[oklch(var(--color-ink-muted))]">{reg.error_message}</p>
                     )}
+                    {reg.status === "FAILED" && <FailureNextStep reg={reg} />}
                   </div>
                 )}
                 {reg.retry_count > 0 && (

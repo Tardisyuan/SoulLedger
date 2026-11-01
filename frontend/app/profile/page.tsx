@@ -20,6 +20,7 @@ import { NotificationPreferences, NOTIFICATION_PREFS_ANCHOR } from "@/src/compon
 import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
 import { SingleKeyShortcutsToggle } from "@/src/components/layout/ShortcutHelp";
+import { DefaultViewSection } from "@/src/components/profile/DefaultViewSection";
 
 export default function ProfilePage() {
   const { t } = useI18n();
@@ -362,6 +363,15 @@ export default function ProfilePage() {
         <div className="py-3">
           <SingleKeyShortcutsToggle />
         </div>
+      </section>
+
+      {/* 默认视图(review-2026-11-01 Web 1):登录后先到哪。此前只在首次设置里出现一次。 */}
+      <section>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">庚 · </span>
+          {t("welcome.default_view")}
+        </h2>
+        <DefaultViewSection />
       </section>
       </>
       )}

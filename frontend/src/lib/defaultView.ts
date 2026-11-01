@@ -65,19 +65,34 @@ export async function saveDefaultView(view: DefaultView): Promise<DefaultView | 
   return data.default_view;
 }
 
-/** Unset keeps the old answer, /dashboard. */
-export function routeForView(view: DefaultView | null): string {
-  return ROUTES[view ?? "admin"];
+/** Who is signing in, as far as choosing a landing page needs to know. */
+export type ViewUser = { role?: string; permissions?: string[] } | null | undefined;
+
+/**
+ * The view for someone who never chose one (review-2026-11-01 Web 1): an
+ * administrator lands on /dashboard; an officer who can read judgments lands
+ * on the 待办 queue, which is what their day is. Anyone else — a viewer with
+ * no judgment access — keeps /dashboard rather than being sent to a 403.
+ */
+export function defaultViewFor(user: ViewUser): DefaultView {
+  if (!user || user.role === "ADMIN") return "admin";
+  return user.permissions?.includes("judgment.read") ? "operator" : "admin";
+}
+
+/** Unset falls back to the role's view; with no user at all, /dashboard. */
+export function routeForView(view: DefaultView | null, user?: ViewUser): string {
+  return ROUTES[view ?? defaultViewFor(user)];
 }
 
 /**
  * Where login lands: the server's value. If the server cannot be asked, the
- * operator still gets in — to the local value if one is left, else /dashboard.
+ * operator still gets in — to the local value if one is left, else the role's
+ * view. `user` is the one the login response just returned.
  */
-export async function defaultViewRoute(): Promise<string> {
+export async function defaultViewRoute(user?: ViewUser): Promise<string> {
   try {
-    return routeForView(await loadDefaultView());
+    return routeForView(await loadDefaultView(), user);
   } catch {
-    return routeForView(readLegacy());
+    return routeForView(readLegacy(), user);
   }
 }
