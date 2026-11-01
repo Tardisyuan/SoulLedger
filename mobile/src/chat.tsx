@@ -236,6 +236,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   const [outbox, setOutbox] = useState<Outgoing[]>(() => (account ? readOutbox(account).items : []));
   const [refused, setRefused] = useState<Record<string, Refused>>({});
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [listError, setListError] = useState(false);
+  const [gone, setGone] = useState<Record<string, SoulConversation>>({});
   const client = useRef<MatrixClient | null>(null);
   const since = useRef<string | null>(null);
   const known = useRef<Set<string>>(new Set());
@@ -251,6 +253,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   const listed = useRef(false);
   /** The sign-outs already counted when this account's session began. */
   const signOutsSeen = useRef(signOuts);
+  /** Bumped per account: a list still on its way when the account changed is the last account's, and is dropped. */
+  const session = useRef(0);
   // Each account starts from its own record, and a signed-out provider holds nobody's letters.
   // Swapped during render (React's "adjusting state when a prop changes"), so no commit, and so
   // no save below, ever pairs one account's name with another account's letters.
@@ -258,6 +262,16 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   if (outboxOwner !== account) {
     setOutboxOwner(account);
     setOutbox(account ? readOutbox(account).items : []);
+    // Nothing of the last account's stays on screen. This provider outlives a sign-out; left alone, the next
+    // account's first list made the last one's conversations "vanished", and they stayed listed, readable, under
+    // the wrong soul (found on a phone 2026-11-01: an Egyptian soul's hall letter in a Chinese soul's list).
+    setConversations(null);
+    setTimeline(EMPTY_TIMELINE);
+    setMe(null);
+    setRefused({});
+    setProgress({});
+    setGone({});
+    setListError(false);
   }
   // Declared before the save below: on an account's first commit its device goes to disk with its letters.
   useEffect(() => {
@@ -265,6 +279,9 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     signOutsSeen.current = signOuts;
     echoed.current = new Map();
     listed.current = false;
+    convs.current = [];
+    known.current = new Set();
+    session.current += 1;
   }, [account]);
 
   const save = useCallback(
@@ -289,12 +306,12 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     availabilityRef.current = availability;
     save(outbox);
   }, [outbox, availability, save]);
-  const [listError, setListError] = useState(false);
-  const [gone, setGone] = useState<Record<string, SoulConversation>>({});
 
   const reload = useCallback(async () => {
+    const asked = session.current;
     try {
       const rows = await soulChatApi.conversations();
+      if (asked !== session.current) return;
       // The list keeps closed rooms of this life (read-only, with `closed_at`), so a row dropping out
       // is rare — a backfill gap, say. Kept for this session, read-only, so an open screen does not go blank (1c ⑥).
       const vanished = convs.current.filter((p) => !rows.some((r) => r.id === p.id));

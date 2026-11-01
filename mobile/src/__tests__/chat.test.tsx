@@ -985,6 +985,29 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
     view.unmount();
   });
 
+  it("the next account on this phone finds nothing of the last one's conversations, not even as closed ones", async () => {
+    const view = start();
+    await waitFor(() => expect(probe.conversations?.map((c) => c.id)).toEqual(["c-direct"]));
+    clearOutbox();
+    view.rerender(
+      <ChatProvider account={null}>
+        <Probe />
+      </ChatProvider>
+    );
+    stubApi({
+      "/me/chat/conversations/": { status: 200, data: [] },
+      "/me/chat/session/": { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt" } },
+    });
+    view.rerender(
+      <ChatProvider account="ZZZZZZZZZZ">
+        <Probe />
+      </ChatProvider>
+    );
+    await waitFor(() => expect(probe.conversations).toEqual([]));
+    expect(probe.gone).toEqual({});
+    view.unmount();
+  });
+
   describe("signing out ends the Matrix session (RBAC A10)", () => {
     it("a sign-out logs the access token out on the homeserver", async () => {
       const view = start();
