@@ -2,7 +2,8 @@
  * Unsent replies and reply drafts across the end of a session (user, 2026-11-01):
  *   - the server ends it (401): kept; the SAME officer signing in again gets them back, another officer finds them
  *     gone from the phone (A7 「换人不留痕」 holds, checked at sign-in against the owner stored with them);
- *   - the officer signs out: told how many first, can try sending or stay; only 「仍然退出」 clears them.
+ *   - the officer signs out: told how many first, can try sending or stay; only 「仍然退出」 clears them;
+ *   - a password reset on this phone signs out with `keepUnsent`: kept, as after a 401.
  */
 import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
@@ -105,6 +106,43 @@ describe("the server ended the session", () => {
     as(41);
     expect(outboxEntries()).toEqual([]);
     expect(readDraft("c-2")).toBe("");
+  });
+});
+
+describe("signing out after a password reset keeps them, like a 401", () => {
+  function ResetThenSignIn({ id }: { id: number }) {
+    const { signIn, signOut, state } = useSession();
+    return (
+      <>
+        <Pressable testID="reset-done" onPress={() => signOut({ keepUnsent: true })} />
+        <Pressable testID="sign-in" onPress={() => void signIn("yama", "pw")}>
+          <Text testID="status">{`${state.status}:${id}`}</Text>
+        </Pressable>
+      </>
+    );
+  }
+
+  it.each([
+    [41, true],
+    [42, false],
+  ])("officer %s signing in next gets them back: %s", async (next, kept) => {
+    as(41);
+    platform().secure.set(REFRESH_TOKEN_KEY, "r-41");
+    seed();
+    renderOfficer(
+      <SessionProvider>
+        <ResetThenSignIn id={next} />
+      </SessionProvider>
+    );
+    await settle();
+    fireEvent.press(screen.getByTestId("reset-done"));
+    expect(screen.getByTestId("status").props.children).toBe(`signedOut:${next}`);
+    expect(platform().persistent.get(OUTBOX_KEY)).not.toBeNull();
+    mockLogin.mockResolvedValue({ data: { access: "a", refresh: "r", user: { ...OFFICER, id: next } } });
+    fireEvent.press(screen.getByTestId("sign-in"));
+    await waitFor(() => expect(screen.getByTestId("status").props.children).toBe(`signedIn:${next}`));
+    expect(outboxEntries().map((e) => e.id)).toEqual(kept ? ["c-1"] : []);
+    expect(readDraft("c-2")).toBe(kept ? "写了一半" : "");
   });
 });
 

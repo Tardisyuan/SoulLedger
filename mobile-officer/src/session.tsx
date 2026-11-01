@@ -48,7 +48,8 @@ export interface Session {
   state: SessionState;
   signIn: (username: string, password: string, tenantCode?: string) => Promise<SignInResult>;
   verifyMfa: (input: { pendingToken: string; code?: string; recoveryCode?: string; remember?: boolean }) => Promise<void>;
-  signOut: () => void;
+  /** `keepUnsent`: the outbox and the drafts stay, as when the server ends the session (a reset password did). */
+  signOut: (options?: { keepUnsent?: boolean }) => void;
   /** Two-step verification was turned on or off here: keep the cached profile (and so the banner) in step. */
   setMfaEnabled: (enabled: boolean) => void;
   /** The password must be changed before anything else (first sign-in, an administrator's reset, aged out), or has just been. */
@@ -192,15 +193,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
    * The push token is unregistered FIRST (that endpoint is authenticated), then the refresh token is
    * revoked server-side; the screen returns to login at once.
    */
-  const signOut = useCallback(() => {
+  const signOut = useCallback((options?: { keepUnsent?: boolean }) => {
     const refresh = getRefreshToken();
     setState({ status: "signedOut" });
-    platform().persistent.remove(USER_KEY);
-    clearVoiceNumbers();
-    clearDrafts();
-    clearOutbox();
-    clearReadCache();
-    clearKeptText();
+    if (options?.keepUnsent) {
+      // The password reset ended every session, this one included: kept for the same officer, as after a 401
+      // (user, 2026-11-01).
+      endedByServer();
+    } else {
+      platform().persistent.remove(USER_KEY);
+      clearVoiceNumbers();
+      clearDrafts();
+      clearOutbox();
+      clearReadCache();
+      clearKeptText();
+    }
     // `authApi.logout` reads the stored refresh token, so the tokens go only after it has been sent
     // -- and only if no quick sign-in in between has replaced them.
     const end = () => {

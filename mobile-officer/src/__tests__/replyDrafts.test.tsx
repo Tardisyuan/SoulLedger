@@ -132,7 +132,7 @@ describe("whose drafts these are", () => {
   function Probe() {
     const { signOut } = useSession();
     return (
-      <Pressable testID="out" onPress={signOut}>
+      <Pressable testID="out" onPress={() => signOut()}>
         <Text>out</Text>
       </Pressable>
     );

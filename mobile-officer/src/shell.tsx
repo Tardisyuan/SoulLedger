@@ -268,7 +268,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
               // The reset signed every device out, this one included, as of its next request; end it here and now.
               setResetLink(null);
               onResetDone?.();
-              signOut();
+              // Like a 401, not like 「退出登录」: unsent replies and drafts wait for the same officer (user, 2026-11-01).
+              signOut({ keepUnsent: true });
             }}
           />
         </View>

@@ -52,7 +52,7 @@ describe("signing out", () => {
   function Probe() {
     const { signOut } = useSession();
     return (
-      <Pressable testID="out" onPress={signOut}>
+      <Pressable testID="out" onPress={() => signOut()}>
         <Text>out</Text>
       </Pressable>
     );
