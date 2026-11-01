@@ -209,6 +209,18 @@ def test_a_diyu_death_without_a_warrant_issues_one_handed_over(cn_tenant, eu_ten
     assert not CaptureWarrant.objects.filter(soul=eu).exists()
 
 
+def test_a_warrant_closed_by_death_carries_the_case_and_the_cases_city_god(cn_tenant):
+    """Review 2026-11-01 P3: `close_on_death` runs before the case exists, so the warrant had no `judgment`, and it
+    matched its city god by birthplace while the case went to the city god the death was reported to."""
+    CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
+    reported_to = CityGod.objects.create(tenant=cn_tenant, name="石桥城隍", regions=["石桥"])
+    soul = _due(cn_tenant, origin_location="杭州")
+    case = soul.die(death_date=date.today(), city_god=reported_to)  # 土地公报给自己的城隍
+    (warrant,) = CaptureWarrant.objects.filter(soul=soul)
+    assert (warrant.judgment_id, warrant.city_god_id) == (case.pk, reported_to.pk)
+    assert case.city_god_id == reported_to.pk
+
+
 def test_the_hand_over_path_does_not_issue_a_second_warrant(cn_tenant):
     CityGod.objects.create(tenant=cn_tenant, name="杭州府城隍", regions=["杭州"])
     soul = _due(cn_tenant, origin_location="杭州")

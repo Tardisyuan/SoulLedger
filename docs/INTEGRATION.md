@@ -38,6 +38,8 @@
 - `soul_lookup` 用 `soul_id`,或 `name`(可再加 `birth_date` / `civilization`)找灵魂。
 - 幂等:可带请求头 `X-Idempotency-Key`;不带时按「本 Key + 请求体」算一个。同一个键重复提交返回
   **409** `{"status": "duplicate", "registration_id", "existing_status"}`,不会重复登记。
+  **登记失败(`FAILED`)的那条不占键**:原样重发会在同一条登记上重新处理(`registration_id` 不变),
+  例如殿里设好城隍之后重发 `NO_CITY_GOD` 的那条;成功或处理中的才答 409。批量里带了 `idempotency_key` 的项同样。
 - 成功 **201**:
 
 ```json
@@ -71,6 +73,7 @@
 | `VALIDATION_ERROR` | 批量项 | 该条字段不合法 |
 | `INTERNAL_ERROR` | 400 / 批量项 | 服务端处理出错;管理员可在后台重试这条 |
 | `HALL_INACTIVE` | 400 / 批量项 | 这个殿已停用,不再收新的死亡登记(已有数据照常可查) |
+| `NO_CITY_GOD` | 400 / 批量项 | 本殿没有能收这件案子的城隍(没有按出身地匹配的,也没有兜底城隍),不开案、不登记死亡;殿里设好城隍后原样重发即可 |
 
 ### 查询登记进度
 

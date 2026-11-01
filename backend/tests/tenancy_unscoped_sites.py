@@ -55,6 +55,7 @@ SITES = [
     ('apps/dispatch/capture.py', 'hand_over', 'Soul.all_objects', 1, 'PK', "the warrant's own soul, by its FK (the warrant was reached through get_object())"),
     ('apps/dispatch/capture.py', 'hand_over', 'CaptureWarrant.all_objects', 1, 'PK', "reads the soul_id of the warrant the viewset reached through get_object(), by its pk, to lock the soul first"),
     ('apps/dispatch/capture.py', 'close_on_death', 'CaptureWarrant.all_objects', 1, 'PK', "the open warrants of the one soul dying in this transaction, by soul_id; is_deleted=False is in the filter"),
+    ('apps/dispatch/capture.py', 'attach_judgment', 'CaptureWarrant.all_objects', 1, 'PK', "the handed-over warrants of the one soul whose case was just opened in this transaction, by soul_id; is_deleted=False is in the filter"),
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'Tenant.objects', 1, 'CODE', "the requesting hall by its globally unique code; only its civilization is read (Tenant has no tenant column)"),
     ('apps/sentence_plan/soul_view.py', 'soul_plan', 'Tenant.objects', 1, 'CODE', "halls named by the soul's own plan nodes, by globally unique code; only civilization is read"),
     ('apps/tenants/serializers.py', 'TenantCreateSerializer.validate_code', 'Tenant.objects', 1, 'GLOBAL', 'uniqueness check of a new hall code (Tenant has no tenant column; ADMIN only)'),

@@ -3753,8 +3753,7 @@
     "status": {
       "PENDING": "Pending",
       "PROCESSED": "Processed",
-      "FAILED": "Failed",
-      "DUPLICATE": "Duplicate"
+      "FAILED": "Failed"
     },
     "source_system": "Source system",
     "status_label": "Status",
