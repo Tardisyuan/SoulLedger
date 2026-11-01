@@ -27,6 +27,7 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { citationOf } from "@soulledger/core/config/statuteCitation";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -396,6 +397,8 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const markRead = useInboxMarkRead();
   const archive = useInboxArchive();
   const unassign = useInboxAssign();
+  const takeOver = useInboxAssign();
+  const { user } = useTenant();
   const [showEarlier, setShowEarlier] = useState(false);
   const [viewing, setViewing] = useState<number | null>(null);
   const [managing, setManaging] = useState(false);
@@ -404,6 +407,8 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   // 灵魂已调往别处(`can_reply: false`,或回信答 409 `not_current_hall`):不再画回复框,说一句为什么。
   const [movedAway, setMovedAway] = useState(false);
   const replyBlocked = canReply && (conversation.can_reply === false || movedAway);
+  // 指派给别人的信先「转给我」才能回(用户 2026-11-02,三端一致,后端答 409 `assigned_to_other`)。已归档的也一样。
+  const othersAssignee = conversation.assignee && conversation.assignee.user_id !== user?.id ? conversation.assignee : null;
   const draft = useDraft(conversation.id, canReply);
   const templates = useInboxTemplates(canReply);
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -566,7 +571,28 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
           {t("soul_inbox.errors.not_current_hall")}
         </p>
       )}
-      {canReply && !replyBlocked && (
+      {canReply && !replyBlocked && othersAssignee && (
+        <div data-testid="inbox-not-yours" className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[oklch(var(--color-ink-muted))]">
+          <span>{t("soul_inbox.assign.handled_by", { name: othersAssignee.display_name })}</span>
+          {user && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              loading={takeOver.isPending}
+              onClick={() =>
+                takeOver.mutate(
+                  { id: conversation.id, userId: user.id },
+                  { onError: () => showToast(t("soul_inbox.failed"), "error") }
+                )
+              }
+            >
+              {t("soul_inbox.assign.take_over")}
+            </Button>
+          )}
+        </div>
+      )}
+      {canReply && !replyBlocked && !othersAssignee && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -629,7 +655,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
         </form>
       )}
       {/* 不放进上面的 <form>:弹层虽挂在 body 下,React 事件仍沿组件树冒泡,模板表单的提交会连带发出回复框里的字。 */}
-      {canReply && !replyBlocked && <TemplateManager isOpen={managing} onClose={() => setManaging(false)} />}
+      {canReply && !replyBlocked && !othersAssignee && <TemplateManager isOpen={managing} onClose={() => setManaging(false)} />}
     </section>
   );
 }

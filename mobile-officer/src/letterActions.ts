@@ -4,7 +4,8 @@ import type { InboxOfficer } from "@soulledger/core/api/soul-inbox";
 export type LetterAction = "assign" | "unassign" | "archive" | "unarchive";
 
 /**
- * The ⋯ menu's rows for a thread. An archived letter offers only 取消归档 (and its reply is off); a closed thread
+ * The ⋯ menu's rows for a thread. An archived letter offers only 取消归档 (it can still be answered: the reply
+ * takes it out of the archive, on the server); a closed thread
  * (the soul was reborn) cannot be handed over -- the server answers 409 `closed` -- but can still be put back
  * and archived; an unassigned letter has nothing to put back.
  */

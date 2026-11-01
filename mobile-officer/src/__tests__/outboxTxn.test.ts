@@ -13,7 +13,12 @@ const mockMessages = jest.fn();
 const mockReply = jest.fn();
 jest.mock("@soulledger/core/api/soul-inbox", () => ({
   ...jest.requireActual("@soulledger/core/api/soul-inbox"),
-  soulInboxApi: { messages: (...a: unknown[]) => mockMessages(...a), reply: (...a: unknown[]) => mockReply(...a) },
+  soulInboxApi: {
+    messages: (...a: unknown[]) => mockMessages(...a),
+    reply: (...a: unknown[]) => mockReply(...a),
+    saveDraft: async () => ({ data: {} }),
+    clearDraft: async () => ({ data: {} }),
+  },
 }));
 
 const msg = (id: string, officer: boolean, body = "x", txn_id: string | null = null) => ({ event_id: id, from_officer: officer, body, timestamp: 1, sender_name: "n", officer_title: "", image: null, txn_id });

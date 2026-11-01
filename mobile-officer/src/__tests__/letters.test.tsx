@@ -9,7 +9,9 @@ import { Dimensions, Image, StyleSheet } from "react-native";
 import { TodoTab } from "../screens/todo";
 import { Detail } from "../screens/detail";
 import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
+import { clearDrafts, flushDraft, readDraft } from "../drafts";
 import { outboxReasonOf } from "../outbox";
+import { ToastProvider, translate } from "../shared";
 import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
@@ -32,6 +34,9 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
     reply: (...a: unknown[]) => mockReply(...a),
     markRead: (...a: unknown[]) => mockMarkRead(...a),
     assign: (...a: unknown[]) => mockAssign(...a),
+    draft: async () => ({ data: { draft: "", draft_saved_at: null, archived_at: null, last_read_at: null } }),
+    saveDraft: async () => ({ data: {} }),
+    clearDraft: async () => ({ data: {} }),
   },
   inboxTemplatesApi: { list: (...a: unknown[]) => mockTemplates(...a) },
 }));
@@ -92,6 +97,8 @@ describe("rules", () => {
     expect(replyFailureKey(httpError(409, { code: "not_current_hall" }))).toBe("officer_app.letter.moved");
     expect(outboxReasonOf(httpError(409, { code: "not_current_hall" }))).toBe("moved");
     expect(outboxReasonOf(httpError(409, { code: "closed" }))).toBe("archived");
+    expect(replyFailureKey(httpError(409, { code: "assigned_to_other" }))).toBe("soul_inbox.errors.assigned_to_other");
+    expect(outboxReasonOf(httpError(409, { code: "assigned_to_other" }))).toBe("assigned");
     expect(replyFailureKey(new Error("Network Error"))).toBe("officer_app.letter.failed");
   });
 });
@@ -416,6 +423,58 @@ describe("who handles the letter", () => {
     await openThread();
     expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
     expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
+  });
+});
+
+// User, 2026-11-02: an archived letter can be answered (the reply takes it out of the archive, on the server);
+// a letter someone else holds cannot, until 转给我, archived or not.
+describe("archived, and taken while writing", () => {
+  const ARCHIVED = { ...CONVO, archived: true, assignee: { user_id: 7, display_name: "阎罗" } };
+  afterEach(() => clearDrafts());
+  const open = async (onSettled = jest.fn()) => {
+    renderOfficer(
+      <ToastProvider>
+        <Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={onSettled} />
+      </ToastProvider>
+    );
+    await screen.findByTestId("letter-thread");
+    return onSettled;
+  };
+
+  it("an archived letter of mine has a live box; the reply goes out and the list behind refreshes", async () => {
+    mockGet.mockResolvedValue({ data: ARCHIVED });
+    mockReply.mockResolvedValue({ data: {} });
+    const onSettled = await open();
+    expect(screen.getByTestId("letter-archived")).toBeTruthy();
+    expect(screen.getByTestId("letter-input").props.editable).toBe(true);
+    expect(screen.getByTestId("letter-send").props.accessibilityState.disabled).toBeFalsy();
+    fireEvent.changeText(screen.getByTestId("letter-input"), "归档了也回");
+    fireEvent.press(screen.getByTestId("letter-send"));
+    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "归档了也回", expect.any(String)));
+    await waitFor(() => expect(onSettled).toHaveBeenCalled());
+  });
+
+  it("an archived letter someone else holds: the line, not the box", async () => {
+    mockGet.mockResolvedValue({ data: { ...ARCHIVED, assignee: { user_id: 9, display_name: "钟书吏" } } });
+    await open();
+    expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+  });
+
+  it("409 assigned_to_other: told, the thread reloads into 转给我, the words stay, the list refreshes", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 7, display_name: "阎罗" } } });
+    mockReply.mockRejectedValue(httpError(409, { code: "assigned_to_other" }));
+    const onSettled = await open();
+    fireEvent.changeText(screen.getByTestId("letter-input"), "写到一半被接走");
+    mockGet.mockResolvedValue({ data: { ...CONVO, assignee: { user_id: 9, display_name: "钟书吏" } } });
+    fireEvent.press(screen.getByTestId("letter-send"));
+    await screen.findByTestId("letter-not-yours");
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+    expect(screen.queryByTestId("letter-failed")).toBeNull();
+    expect(onSettled).toHaveBeenCalled();
+    await screen.findByText(translate("zh-Hans", "soul_inbox.errors.assigned_to_other"));
+    flushDraft();
+    expect(readDraft("c-1")).toBe("写到一半被接走");
   });
 });
 

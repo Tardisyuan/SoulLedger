@@ -6555,7 +6555,8 @@
       "chat_not_configured": "聊天服务未启用",
       "chat_unavailable": "聊天服务暂时不可用",
       "invalid_assignee": "这位官员不能经办本殿司的来信",
-      "not_current_hall": "灵魂已调往别处，暂不能回信"
+      "not_current_hall": "灵魂已调往别处，暂不能回信",
+      "assigned_to_other": "这封信已由别的官员经办，先转给自己才能回。你写的内容还留着。"
     },
     "folders": "文件夹",
     "folder": {
@@ -6614,7 +6615,9 @@
       "done": "已交给 {{name}}",
       "assignee": "经办 · {{name}}",
       "unassign": "收回",
-      "unassigned_done": "已收回"
+      "unassigned_done": "已收回",
+      "handled_by": "由 {{name}} 经办",
+      "take_over": "转给我"
     },
     "feedback": {
       "label": "反馈 · {{category}}",
@@ -7632,6 +7635,7 @@
       "answered": "这封书信已经由别的官员回过了。你写的内容还留着。",
       "archived": "这封书信已经归档。",
       "left_hall": "你已不在这一殿。",
+      "assigned": "这封信已由别的官员经办，没有发出。你写的内容还留着。",
       "retry": "没有发出，稍后再试",
       "view_existing": "看已有的回信",
       "discard": "删除我的草稿",

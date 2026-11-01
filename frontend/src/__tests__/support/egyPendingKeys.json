@@ -7,5 +7,9 @@
   "mfa.manage.regenerate_failed",
   "officer_app.me.logout_pending_unsent",
   "officer_app.me.logout_pending_drafts",
-  "sentence_plan.inbox_show_all"
+  "sentence_plan.inbox_show_all",
+  "soul_inbox.errors.assigned_to_other",
+  "soul_inbox.assign.handled_by",
+  "soul_inbox.assign.take_over",
+  "officer_app.outbox.assigned"
 ]
