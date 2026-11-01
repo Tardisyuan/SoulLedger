@@ -39,6 +39,9 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
   soulInboxApi: {
     messages: (...a: unknown[]) => mockMessages(...a),
     reply: (...a: unknown[]) => mockReply(...a),
+    draft: async () => ({ data: { draft: "", draft_saved_at: null, archived_at: null, last_read_at: null } }),
+    saveDraft: async () => ({ data: {} }),
+    clearDraft: async () => ({ data: {} }),
   },
 }));
 

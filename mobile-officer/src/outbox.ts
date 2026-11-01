@@ -21,13 +21,13 @@ import { newReplyTxn, soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
 import { useSyncExternalStore } from "react";
 
-import { clearDraft } from "./drafts";
+import { clearDraft, discardDraft, pushDrafts } from "./drafts";
 import { currentOwner, heldByAnother, readOwned, writeOwned } from "./owner";
 
 export const OUTBOX_KEY = "officer_reply_outbox";
 
 /** Why a queued reply did not go out; each has its own words (officer_app.outbox.<reason>). */
-export type OutboxReason = "answered" | "archived" | "left_hall" | "moved" | "retry";
+export type OutboxReason = "answered" | "archived" | "assigned" | "left_hall" | "moved" | "retry";
 
 export interface OutboxEntry {
   /** The conversation. */
@@ -104,7 +104,7 @@ export function removeFromOutbox(id: string): void {
 /** 「删除我的草稿」: the entry and the draft with it. */
 export function discardReply(id: string): void {
   removeFromOutbox(id);
-  clearDraft(id);
+  discardDraft(id);
 }
 
 /** Sign-out / the server ended the session. */
@@ -125,6 +125,8 @@ export function outboxReasonOf(error: unknown): OutboxReason {
   if (status === 409 && codeOf(error) === "closed") return "archived";
   // The soul was dispatched elsewhere (feat-letters): not this hall's to answer now, retrying would not help.
   if (status === 409 && codeOf(error) === "not_current_hall") return "moved";
+  // Another officer holds it now: only 转给我 changes that, and it is theirs to decide.
+  if (status === 409 && codeOf(error) === "assigned_to_other") return "assigned";
   return "retry";
 }
 
@@ -166,6 +168,9 @@ async function run(): Promise<number> {
       fail(entry.id, outboxReasonOf(e));
     }
   }
+  // The drafts wait for the same moments. Not a queued reply's: a PUT racing its POST would put the words back on the
+  // server after the reply cleared them.
+  if (currentOwner() === owner) pushDrafts(outboxEntries().map((e) => e.id));
   return sent;
 }
 

@@ -6553,7 +6553,8 @@
       "chat_not_configured": "Chat is not enabled",
       "chat_unavailable": "Chat is temporarily unavailable",
       "invalid_assignee": "That officer cannot take this hall's letters",
-      "not_current_hall": "This soul has been transferred elsewhere; you cannot reply for now"
+      "not_current_hall": "This soul has been transferred elsewhere; you cannot reply for now",
+      "assigned_to_other": "Another officer is handling this letter. Take it over before replying. What you wrote is kept."
     },
     "folders": "Folders",
     "folder": {
@@ -6612,7 +6613,9 @@
       "done": "Handed to {{name}}",
       "assignee": "With {{name}}",
       "unassign": "Take back",
-      "unassigned_done": "Taken back"
+      "unassigned_done": "Taken back",
+      "handled_by": "Handled by {{name}}",
+      "take_over": "Take it over"
     },
     "feedback": {
       "label": "Feedback · {{category}}",
@@ -7627,6 +7630,7 @@
       "answered": "Another officer already replied. Your draft is kept.",
       "archived": "This letter has been archived.",
       "left_hall": "You are no longer in this hall.",
+      "assigned": "Another officer is handling this letter, so it did not go out. What you wrote is kept.",
       "retry": "Not sent. Try again later.",
       "view_existing": "See the existing reply",
       "discard": "Delete my draft",
