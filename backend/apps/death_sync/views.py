@@ -209,7 +209,7 @@ class DeathRegistrationViewSet(
 
     def create(self, request, *args, **kwargs):
         """Register a death (single or batch)."""
-        from apps.death_sync.services import DeathSyncService
+        from apps.death_sync.services import DeathSyncService, RetryRefusedError
 
         api_key = request.api_key
         tenant = request.tenant
@@ -287,6 +287,14 @@ class DeathRegistrationViewSet(
                     "existing_status": existing.status,
                 }, status=status.HTTP_409_CONFLICT)
             raise
+        except RetryRefusedError as refused:
+            return Response({
+                "error": {
+                    "code": refused.code,
+                    "message": refused.record.error_message,
+                    "request_id": str(refused.record.id),
+                },
+            }, status=status.HTTP_409_CONFLICT)
 
         if result.status == DeathRegistrationStatus.FAILED:
             return Response({

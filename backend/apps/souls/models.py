@@ -892,14 +892,17 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             if city_gods.match(self.tenant_id, location or self.origin_location) is None:
                 raise city_gods.NoCityGodError()
 
+        from apps.dispatch import capture
+
         with transaction.atomic():
-            result = self.transition_to(
-                SoulState.JUDGING,
-                "Death recorded, judgment initiated",
-                account_origin=account_origin,
-                death_date=death_date or timezone.now().date(),
-                **({"origin_location": location} if location else {}),
-            )
+            with capture.death_reported_to(city_god):
+                result = self.transition_to(
+                    SoulState.JUDGING,
+                    "Death recorded, judgment initiated",
+                    account_origin=account_origin,
+                    death_date=death_date or timezone.now().date(),
+                    **({"origin_location": location} if location else {}),
+                )
             if not result:
                 return None
 
@@ -944,8 +947,6 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                                       city_god=city_god),
             )
             city_gods.received(judgment)
-            from apps.dispatch import capture
-
             capture.attach_judgment(self, judgment)  # 勾魂牒记下这件案子与它的城隍(close_on_death 那时还没有案)
             if self.civilization == Civilization.EGYPTIAN:
                 self._after_egyptian_death(judgment)

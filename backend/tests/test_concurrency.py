@@ -48,7 +48,7 @@ NEEDS_ROW_LOCKS = (
 
 from apps.authentication.models import User
 from apps.dispatch.models import DispatchRecord, DispatchStatus
-from apps.dispatch.services import DispatchService
+from apps.dispatch.services import DispatchService, SoulNotDispatchableError
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -1062,6 +1062,64 @@ class TestConcludeRechecksUnderTheLock:
         assert Disposition.all_objects.filter(judgment_id=case.pk).count() == 1
 
 
+@pytest.mark.django_db(transaction=True)
+class TestDispatchRechecksTheSoulUnderItsLock:
+    """调拨的状态检查在灵魂行锁内(`_check_proposable`、`execute`,2026-11-01)。串行版本在
+    tests/test_afterlife_review_2026_11_01.py 每个引擎都跑;「检查放回锁外」只有这里看得出来:调用方手里那份灵魂
+    和锁外读到的都还是 JUDGING,要等到锁才读得到别的事务刚提交的 REINCARNATING。"""
+
+    @staticmethod
+    def _while_the_soul_leaves_the_underworld(soul, attempt):
+        import time
+
+        from django.db import transaction
+
+        holding = threading.Event()
+        outcome = {}
+
+        def leave():
+            with transaction.atomic():
+                Soul.lock(soul.pk)
+                holding.set()
+                time.sleep(1.0)  # 让调拨走到这把锁上等着
+                Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.REINCARNATING)
+
+        def dispatch():
+            assert holding.wait(timeout=10), "the state change never took the lock"
+            try:
+                outcome["result"] = attempt()
+            except Exception as exc:  # surfaced in the caller's assertion
+                outcome["result"] = exc
+
+        threads = [_Thread(target=leave), _Thread(target=dispatch)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+        return outcome.get("result")
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_a_proposal_waits_for_the_soul_and_is_refused(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin):
+        result = self._while_the_soul_leaves_the_underworld(
+            cn_soul, lambda: DispatchService.propose(cn_tenant, eu_tenant, cn_soul, cn_admin, "race"))
+
+        assert isinstance(result, SoulNotDispatchableError), repr(result)
+        assert not DispatchRecord.objects.filter(soul=cn_soul).exists()
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_an_execution_waits_for_the_soul_and_is_refused(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin, eu_admin):
+        proposed = DispatchService.propose(cn_tenant, eu_tenant, cn_soul, cn_admin, "race")
+        approved = DispatchService.approve(proposed, eu_admin)
+        assert approved.status == DispatchStatus.APPROVED
+
+        result = self._while_the_soul_leaves_the_underworld(
+            cn_soul, lambda: DispatchService.execute(approved, eu_admin))
+
+        assert isinstance(result, SoulNotDispatchableError), repr(result)
+        assert DispatchRecord.objects.get(pk=proposed.pk).status == DispatchStatus.APPROVED
+        assert Soul.all_objects.get(pk=cn_soul.pk).tenant_id == cn_tenant.pk
+
+
 # ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
@@ -1362,6 +1420,10 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # 也随模块级 skipif 只在 PG 上跑 —— 它的 SQLite 对应是 test_data_scope_solver.py 的五种范围断言。
         "tests/test_datascope_b8_pg_performance.py::test_the_scope_actually_narrows_what_the_lists_return",
         "tests/test_datascope_b8_pg_performance.py::test_the_three_scoped_lists_use_indexes_and_stay_fast",
+        # 2026-11-01 调拨的状态检查在灵魂行锁内:提交 / 执行时灵魂正离开冥府,调拨等到锁、读到新状态、被拒。
+        # SQLite 没有行锁可等。串行版本在 tests/test_afterlife_review_2026_11_01.py 每个引擎都跑。
+        here + "TestDispatchRechecksTheSoulUnderItsLock::test_a_proposal_waits_for_the_soul_and_is_refused",
+        here + "TestDispatchRechecksTheSoulUnderItsLock::test_an_execution_waits_for_the_soul_and_is_refused",
         # 2026-10-31 勾魂交接与死亡同步同时到(capture.hand_over 锁序 灵魂 → 牒):各握一把的死锁只能在有行锁的引擎上
         # 出现。串行行为在 tests/test_diyu_stations_capture_tudi_continents.py 每个引擎都跑。
         "tests/test_capture_hand_over_and_a_death_do_not_deadlock.py::"

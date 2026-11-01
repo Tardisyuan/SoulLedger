@@ -21,11 +21,13 @@ RETRYABLE_ERRORS = ("INTERNAL_ERROR", "NO_CITY_GOD")
 
 
 class RetryRefusedError(Exception):
-    """A registration that may not be retried; `code` goes on the 409."""
+    """A registration that may not be retried; `code` goes on the 409. `record`: the row, for a resend (which named
+    only its key); its `error_code` / `error_message` then carry the refusal in memory, the stored ones stay."""
 
-    def __init__(self, code):
+    def __init__(self, code, record=None):
         super().__init__(code)
         self.code = code
+        self.record = record
 
 
 #: `DeathRegistrationRequest.source_system` of a registration a 土地公 made (no API key).
@@ -128,7 +130,12 @@ class DeathSyncService:
         """`_process` a new row; when its idempotency key already belongs to a FAILED row, run that row again
         (review 2026-11-01 #13). A failed registration answered nothing, so resending the same request — the same
         key — must not be held off as a duplicate: after the hall sets a city god, or the soul is entered, the
-        resend goes through. A key whose row is PENDING or PROCESSED stays a duplicate (IntegrityError)."""
+        resend goes through. A key whose row is PENDING or PROCESSED stays a duplicate (IntegrityError).
+
+        A resend spends the row's `retry_count` as `retry_failed` does, so the two share one `max_retries`, and past
+        it both refuse with MAX_RETRIES however the data changed; a new idempotency key is a new row and starts over.
+        They differ only in which rows they take: a resend brings its payload and may be answered differently, so it
+        runs any FAILED row; `retry_failed` reruns the stored one, so only RETRYABLE_ERRORS."""
         try:
             # Its own atomic: the failure row `_process` writes after its work rolled back is what collides
             # with the key, and outside a savepoint that IntegrityError would break a caller's transaction.
@@ -143,6 +150,11 @@ class DeathSyncService:
                 ).first()
                 if record is None or record.status != DeathRegistrationStatus.FAILED:
                     raise
+                if record.retry_count >= record.max_retries:
+                    record.error_code = "MAX_RETRIES"
+                    record.error_message = "This key has used up its retries; send the registration with a new key"
+                    raise RetryRefusedError("MAX_RETRIES", record) from None
+                record.retry_count += 1
                 record.error_code = ""
                 record.error_message = ""
                 record.source_payload = request_record.source_payload
@@ -392,6 +404,8 @@ class DeathSyncService:
                 ).first()
                 if result is None:
                     raise
+            except RetryRefusedError as refused:
+                result = refused.record
             results.append(result)
         return results
 
