@@ -20,6 +20,7 @@ import { adminHelpUrl, forgotFailureKey, passwordFailure, splitCommonReasons } f
 import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 
 import { useSession } from "../session";
+import { SignOutButton } from "./signOut";
 import { Button, FieldError, Icon, Input, Notice, PasswordMatch, PasswordRules, Screen, Txt, space, useI18n, usePasswordForm, useTheme, useToast } from "../shared";
 
 /** A back row over a screen. `locked`: leaving is not allowed now (the Android back key is swallowed too). */
@@ -119,7 +120,7 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
 export function ChangePasswordScreen({ onBack, required }: { onBack: () => void; required?: boolean }) {
   const { t } = useI18n();
   const toast = useToast();
-  const { state, signOut, setPasswordChangeRequired } = useSession();
+  const { state, setPasswordChangeRequired } = useSession();
   const minLength = passwordMinLength(state.status === "signedIn" ? state.user.role : undefined);
   const [oldPassword, setOld] = useState("");
   const [newPassword, setNew] = useState("");
@@ -209,7 +210,7 @@ export function ChangePasswordScreen({ onBack, required }: { onBack: () => void;
         <PasswordMatch next={newPassword} confirm={confirm} judged={confirmJudged} />
       </View>
       <Button testID="password-submit" title={t("common.save")} busy={busy} onPress={submit} />
-      {required ? <ActionButton testID="password-signout" kind="outline" title={t("officer_app.me.logout")} onPress={signOut} /> : null}
+      {required ? <SignOutButton testID="password-signout" kind="outline" /> : null}
     </AccountFrame>
   );
 }

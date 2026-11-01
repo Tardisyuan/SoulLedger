@@ -452,7 +452,8 @@ export function TabBar({ current, onSelect, unread, tabs }: { current: TabKey; o
             testID={`tab-${key}`}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            accessibilityLabel={tr(`officer_app.tabs.${key}`)}
+            // The ● is drawn, not read: the unread state goes into the label (review 2026-11-01).
+            accessibilityLabel={key === "notices" && unread ? tr("officer_app.tabs.notices_unread") : tr(`officer_app.tabs.${key}`)}
             onPress={() => onSelect(key)}
             style={styles.tab}
           >

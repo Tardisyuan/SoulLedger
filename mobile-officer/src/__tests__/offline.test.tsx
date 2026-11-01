@@ -2,7 +2,7 @@
  * Officer app offline (Design batch 28 O3): the banner, the read cache, decisions held back, and letter
  * replies queued on the phone and sent when the network returns.
  */
-import { platform } from "@soulledger/core/platform";
+import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { useEffect, useState } from "react";
 import { Image, Pressable, Text } from "react-native";
@@ -450,6 +450,8 @@ describe("a reply written offline", () => {
       await flushOutbox();
     });
     fireEvent.press(screen.getByTestId("outbox-discard-c-1"));
+    expect(outboxEntries()).toHaveLength(1); // asked first (review 2026-11-01)
+    fireEvent.press(screen.getByTestId("outbox-discard-ok-c-1"));
     expect(outboxEntries()).toEqual([]);
     expect(readDraft("c-1")).toBe("");
     expect(screen.queryByTestId("outbox-failed-c-1")).toBeNull();
@@ -490,20 +492,33 @@ describe("whose these are", () => {
     gone();
   });
 
-  it("a session the server ended clears them too", () => {
+  // User, 2026-11-01: a session the server ended keeps the unsent replies and the drafts for the same officer's next
+  // sign-in (signInKeepsUnsent.test.tsx); only the read cache and the profile go. With the profile gone nobody reads them.
+  it("a session the server ended clears the cache, and keeps the queue and the drafts unread until the next sign-in", async () => {
+    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, id: 41 }));
+    platform().secure.set(REFRESH_TOKEN_KEY, "r-41"); // a session to resume: signed in, then the server ends it
     seed();
     renderOfficer(<SessionProvider>{null}</SessionProvider>);
+    await settle(); // the profile asked at start
     act(() => platform().onUnauthorized());
-    gone();
+    platform().secure.remove(REFRESH_TOKEN_KEY);
+    expect(platform().persistent.get(CACHE_KEY)).toBeNull();
+    expect(cacheRead("list:todo")).toBeNull();
+    expect(platform().persistent.get(OUTBOX_KEY)).not.toBeNull();
+    expect(platform().persistent.get(DRAFTS_KEY)).not.toBeNull();
+    expect(outboxEntries()).toEqual([]); // nobody signed in: nobody's
+    expect(readDraft("c-1")).toBe("");
   });
 
-  it("a start with no refresh token to resume clears what the last officer left (A7)", () => {
+  it("a start with no refresh token to resume: the same -- the cache and the profile go, the queue waits (A7 at sign-in)", () => {
     platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, id: 41 }));
     seed();
     expect(cacheRead("list:todo")).not.toBeNull(); // there was something to clear
     renderOfficer(<SessionProvider>{null}</SessionProvider>);
-    gone();
+    expect(cacheRead("list:todo")).toBeNull();
     expect(platform().persistent.get(USER_KEY)).toBeNull();
+    expect(platform().persistent.get(OUTBOX_KEY)).not.toBeNull();
+    expect(outboxEntries()).toEqual([]);
   });
 
   describe("left behind by another officer (A7)", () => {

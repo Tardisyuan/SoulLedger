@@ -4,6 +4,7 @@
  * says so: 「◇ 待宣判 · 请在官员台」.
  */
 import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger/core/api/judgment";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { formatIsoDay, isDuatBarred, isHeldUntilFatedDate } from "@soulledger/core/domain/dates";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
@@ -126,7 +127,7 @@ export function QueueTab({
             glyph="§"
             title={`${row.case_number} · ${row.soul_name}`}
             lines={[
-              row.court,
+              courtLabel(t, row.court, locale),
               ...(group === "mine" && !row.is_final ? [{ one: `◇ ${t("officer_app.queue.desk_only")}` }] : []),
               // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
               ...(row.stale_since ? [{ one: `◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}` }] : []),
