@@ -2,7 +2,8 @@
  * 城隍初审(第五十三批 M-2 / M-3):一件案子的资料,两个整宽按钮 —— 解送十殿(主)、退回补正(描边)。
  * 点「解送十殿」先出一个底部小确认,可写批语;退回补正是底部弹层,批语必填,下面一句会通知本殿管理员。
  * 退回补正的案子只剩解送(后端不许再退)。改交与城隍管理留在网页上(「改交在网页上办」)。
- * `can_act=false` 时两个按钮置灰,上方一句「你不在这位城隍名下」。
+ * `can_act=false` 时两个按钮置灰,上方一句「你不在这位城隍名下」。没网时同样置灰,写一句为什么(同枉死申诉,review 2026-11-01)。
+ * 批语按案子与动作留着(keptText.ts):取消弹层、切 tab 再回来,写了一半的字还在。
  * 不持 `judgment.execute`(后端 city_god_views 解送 / 退回都要它)的人不画这两个按钮(RBAC A6)。
  */
 import { cityGodCasesApi, CITY_GOD_CASE_ERROR_CODES } from "@soulledger/core/api/judgment";
@@ -12,8 +13,12 @@ import { View } from "react-native";
 import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { formatWhen } from "../format";
 import { ActionButton, StateView, detailStateOf } from "../kit";
+import { useKeptText } from "../keptText";
 import { useCan } from "../session";
-import { Input, Notice, Screen, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { Input, Notice, Screen, Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
+
+/** `city_god_views` 解送 / 退回 serializers: `note` max_length=2000. */
+const CITY_GOD_NOTE_MAX = 2000;
 
 function refusalKey(e: unknown): string {
   if (!(e as { response?: unknown } | null)?.response) return "officer_app.confirm.reasons.network";
@@ -29,7 +34,11 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   const load = useCallback(() => cityGodCasesApi.get(id).then((r) => r.data), [id]);
   const { data: c, error, reload } = useRemote(load);
   const [sheet, setSheet] = useState<"send" | "return" | null>(null);
-  const [note, setNote] = useState("");
+  const [sendNote, setSendNote, dropSendNote] = useKeptText(`city_god:send:${id}`);
+  const [returnNote, setReturnNote, dropReturnNote] = useKeptText(`city_god:return:${id}`);
+  const note = sheet === "return" ? returnNote : sendNote;
+  const setNote = sheet === "return" ? setReturnNote : setSendNote;
+  const { offline } = useOnline();
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -39,10 +48,9 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
   if (state || !c) return <StateView state={state ?? "loading"} onRetry={() => void reload()} />;
 
   const open = c.city_god_status !== "SENT_ON" && canExecute;
-  const locked = !c.can_act;
+  const locked = !c.can_act || offline;
   const close = () => {
     setSheet(null);
-    setNote("");
     setFlagged(false);
     setFailure(null);
   };
@@ -57,6 +65,8 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
     confirmedDecision(t("officer_app.biometric.prompt"), () => (sheet === "send" ? cityGodCasesApi.sendOn(id, note.trim()) : cityGodCasesApi.returnCase(id, note.trim())))
       .then(() => {
         toast(t(sheet === "send" ? "cityGodCases.sent_on_toast" : "cityGodCases.returned_toast"), "success");
+        if (sheet === "send") dropSendNote();
+        else dropReturnNote();
         close();
         onSettled();
         if (sheet === "send") onDone();
@@ -104,7 +114,8 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
         ) : null}
         {open ? (
           <View style={{ gap: space[3] }}>
-            {locked ? <Txt variant="body" tone="muted" testID="city-god-case-cannot">{t("cityGodCases.cannot_act")}</Txt> : null}
+            {!c.can_act ? <Txt variant="body" tone="muted" testID="city-god-case-cannot">{t("cityGodCases.cannot_act")}</Txt> : null}
+            {offline && c.can_act ? <Txt variant="caption" tone="muted" testID="city-god-offline">{t("officer_app.offline.no_decide")}</Txt> : null}
             <ActionButton testID="city-god-send-on" kind="primary" disabled={locked} title={t("cityGodCases.send_on")} onPress={() => setSheet("send")} style={{ minHeight: 48 }} />
             {c.city_god_status === "PENDING" ? (
               <ActionButton testID="city-god-return" kind="outline" disabled={locked} title={t("cityGodCases.return")} onPress={() => setSheet("return")} style={{ minHeight: 48 }} />
@@ -120,6 +131,7 @@ export function CityGodCase({ id, onSettled, onDone }: { id: string; onSettled: 
             testID="city-god-note"
             label={t(sheet === "return" ? "cityGodCases.return_note" : "cityGodCases.send_on_note")}
             multiline
+            maxLength={CITY_GOD_NOTE_MAX}
             value={note}
             onChangeText={(v: string) => {
               setNote(v);

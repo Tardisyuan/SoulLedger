@@ -13,8 +13,9 @@
  * queued and ends the run; one that the server answers with an error marks the entry `failed` with a
  * reason (below) and the run goes on to the next. Bodies are never logged.
  *
- * It is cleared with the drafts on sign-out and on a session the server ended (session.tsx), and it is
- * stored as `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
+ * It is cleared with the drafts on sign-out (after the officer was told how many, me.tsx); a session the server ended
+ * keeps it for the same officer's next sign-in (session.tsx, owner.ts `dropUnowned`). It is stored as
+ * `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
  */
 import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
@@ -162,6 +163,12 @@ async function run(): Promise<number> {
     }
   }
   return sent;
+}
+
+/** 「先重试发送」 before signing out: every queued reply, and every failed one whose reason is "try again". */
+export function retryAll(): Promise<number> {
+  commit(outboxEntries().map((e) => (e.state === "failed" && (e.reason ?? "retry") === "retry" ? { ...e, state: "queued" as const, reason: undefined } : e)));
+  return flushOutbox();
 }
 
 /** 「重试」 on a failed row. */

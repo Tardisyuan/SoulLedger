@@ -1,8 +1,9 @@
 /**
  * Reply drafts, kept on this phone: one per conversation, the DRAFT_KEEP most recently edited.
  *
- * They belong to the signed-in officer, so sign-out and a session the server ended both call
- * `clearDrafts()` -- the next officer on the phone must not find the last one's words. (The server has
+ * They belong to the signed-in officer: sign-out calls `clearDrafts()` (after saying how many there are, me.tsx);
+ * a session the server ended keeps them for the same officer's next sign-in (owner.ts `dropUnowned`) -- the next
+ * officer on the phone must not find the last one's words. (The server has
  * its own per-officer draft, `soulInboxApi.saveDraft`, which the web inbox uses; this app does not
  * read or write it, so the two are separate drafts.) Stored as `{ owner, drafts }` (owner.ts): another
  * officer on this phone reads none of them. Bodies are never logged.
@@ -28,6 +29,12 @@ function read(): Draft[] {
 function write(drafts: Draft[]): void {
   if (drafts.length === 0) platform().persistent.remove(DRAFTS_KEY);
   else writeOwned(DRAFTS_KEY, { drafts });
+}
+
+/** The conversations with a draft, newest first (the sign-out question counts them). */
+export function draftIds(): string[] {
+  flushDraft();
+  return read().map((d) => d.id);
 }
 
 export function readDraft(id: string): string {
