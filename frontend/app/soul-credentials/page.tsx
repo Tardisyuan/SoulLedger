@@ -30,6 +30,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { RevealCredentialDialog } from "@/src/components/soul-accounts/RevealCredentialDialog";
 import { DeliverySlip } from "@/src/components/soul-accounts/DeliverySlip";
 import { loadSlipBundles, type SlipBundles } from "@/src/components/soul-accounts/slipTexts";
@@ -72,6 +73,8 @@ function CredentialsPageContent() {
   const [status, setStatus] = useState<string>("PENDING");
   const [page, setPage] = useState(1);
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
+  // 「标记已交付」先问一句(review-2026-11-01 Web 4):标了就离开待交付清单,没交到的灵魂从此没人跟进。
+  const [delivering, setDelivering] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
   const [slip, setSlip] = useState<{ data: CredentialSlip; texts: SlipBundles; reprint: boolean } | null>(null);
   // 从点打印到交付单卸载:期间所有打印按钮不可点,每一次有审计的打印才都真的印出来(mutate 的回调只认最后一次)。
@@ -247,6 +250,18 @@ function CredentialsPageContent() {
           : undefined
       }
     >
+      {/* 交付三步(review-2026-11-01 Web 4):此前页面只有按钮,不说先后。 */}
+      {canManage && (
+        <ol data-testid="credential-steps" className="mb-3 flex flex-col gap-1 px-3 text-xs text-[oklch(var(--color-ink-muted))] md:flex-row md:gap-6">
+          {(["1", "2", "3"] as const).map((n) => (
+            <li key={n} className="min-w-0 break-words">
+              <span aria-hidden="true" className="mr-1 font-mono text-[oklch(var(--color-ink))]">{n}</span>
+              {t(`soul_accounts.credentials.steps.${n}`)}
+            </li>
+          ))}
+        </ol>
+      )}
+
       {/* 账页(规范 v1 §2):不装框;表头 11 px 等宽,下接区块边界线,行与行之间是行线。 */}
       <div>
         <div
@@ -331,7 +346,7 @@ function CredentialsPageContent() {
                       variant="ghost"
                       className="text-[oklch(var(--color-accent-ink))]"
                       loading={deliver.isPending && deliver.variables === c.id}
-                      onClick={() => doDeliver(c)}
+                      onClick={() => setDelivering(c)}
                     >
                       {t("soul_accounts.credentials.actions.mark_delivered")}
                     </Button>
@@ -352,6 +367,19 @@ function CredentialsPageContent() {
       </div>
 
       {slip && <DeliverySlip slip={slip.data} texts={slip.texts} color={!mono} reprint={slip.reprint} />}
+      <ConfirmDialog
+        isOpen={delivering !== null}
+        variant="warning"
+        title={t("soul_accounts.credentials.deliver_confirm_title", { name: delivering?.soul_name ?? "" })}
+        message={t("soul_accounts.credentials.deliver_confirm_body")}
+        confirmText={t("soul_accounts.credentials.deliver_confirm")}
+        confirmLoading={deliver.isPending}
+        onCancel={() => setDelivering(null)}
+        onConfirm={() => {
+          if (delivering) doDeliver(delivering);
+          setDelivering(null);
+        }}
+      />
       {revealing && <RevealCredentialDialog key={revealing.id} credential={revealing} onClose={() => setRevealing(null)} />}
     </PageShell>
   );

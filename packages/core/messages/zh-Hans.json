@@ -2621,6 +2621,9 @@
         "not_cancelled": "这件案子的审批流程没有被撤销，不能这样重开。",
         "cannot_reopen": "灵魂已经安置，不能这样重开；请走重开申请或申诉。"
       }
+    },
+    "concluded_filter": {
+      "search": "搜灵魂姓名、案号"
     }
   },
   "audit": {
@@ -2767,7 +2770,8 @@
       "col_count": "条数",
       "row_label": "查看「{{name}}」的审计日志",
       "failed": "没能载入统计，请重试"
-    }
+    },
+    "filter_operator": "操作人（用户名）"
   },
   "profile": {
     "title": "个人中心",
@@ -2855,7 +2859,9 @@
       "load_failed": "登录设备加载失败",
       "sign_out_failed": "退出失败，请重试"
     },
-    "mfa_must_setup": "你的角色要求开启两步验证。开启后才能继续使用。"
+    "mfa_must_setup": "你的角色要求开启两步验证。开启后才能继续使用。",
+    "default_view_admin": "管理员",
+    "default_view_unset": "还没选过：按你的角色落地 —— 官员先到审判队列，管理员先到统计概览。"
   },
   "notifications": {
     "title": "通知中心",
@@ -3492,7 +3498,8 @@
       "locked": "两步验证已锁定，请 {{minutes}} 分钟后再试。",
       "admin_target_global_only": "只有全局管理员能对另一位管理员这样操作。",
       "second_factor_unavailable": "请先给自己的账号开启两步验证。"
-    }
+    },
+    "row_menu": "{{name}} 的更多操作"
   },
   "settings": {
     "title": "设置",
@@ -3592,7 +3599,73 @@
     "denied_title": "权限不足",
     "denied_message": "您没有权限访问此页面或执行此操作。",
     "ask_admin": "请找本殿管理员。",
-    "go_back": "返回上一页"
+    "go_back": "返回上一页",
+    "needs": "这一页需要「{{names}}」权限。",
+    "needs_admin": "这一页只对管理员开放。",
+    "names_or": "」或「",
+    "names": {
+      "actors": {
+        "read": "查看角色"
+      },
+      "capture": {
+        "read": "查看勾魂牒"
+      },
+      "city_god": {
+        "read": "查看城隍"
+      },
+      "dispatch": {
+        "manage": "管理调度",
+        "read": "查看调度"
+      },
+      "disposition": {
+        "read": "查看处置"
+      },
+      "judgment": {
+        "read": "查看审判"
+      },
+      "ledger": {
+        "read": "查看功德"
+      },
+      "menu": {
+        "read": "查看菜单"
+      },
+      "org": {
+        "read": "查看组织"
+      },
+      "realms": {
+        "read": "查看领域"
+      },
+      "reincarnation": {
+        "read": "查看轮回"
+      },
+      "scheduler": {
+        "read": "查看定时任务"
+      },
+      "session": {
+        "manage": "管理在线会话"
+      },
+      "social": {
+        "moderate": "审核灵魂朋友圈"
+      },
+      "soul": {
+        "read": "查看灵魂"
+      },
+      "soul_account": {
+        "read": "查看灵魂账号"
+      },
+      "soul_inbox": {
+        "read": "查看殿司收件箱"
+      },
+      "system": {
+        "settings": "系统设置"
+      },
+      "tudi": {
+        "read": "查看土地公"
+      },
+      "workflow": {
+        "read": "查看工作流"
+      }
+    }
   },
   "icon_picker": {
     "select": "选择图标",
@@ -3869,7 +3942,8 @@
       "INVALID_TRANSITION": "状态不允许转入审判",
       "INTERNAL_ERROR": "系统内部错误",
       "VALIDATION_ERROR": "登记内容不合格式",
-      "NO_CITY_GOD": "本殿没有可收案的城隍"
+      "NO_CITY_GOD": "本殿没有可收案的城隍",
+      "HALL_INACTIVE": "本殿已停用，不收新的登记"
     },
     "retry": {
       "action": "重试",
@@ -3884,6 +3958,20 @@
       "search": "灵魂姓名 / 来源编号 / 幂等键",
       "from": "收到日期起",
       "to": "收到日期止"
+    },
+    "next": {
+      "SOUL_NOT_FOUND": "在灵魂名册里按姓名、生辰核对；登记内容有误时，请来源系统改正后换一个幂等键重新提交（原样重发会被当成同一次）。",
+      "SOUL_NOT_ALIVE": "这个灵魂已不在阳世，多半已经登记过；到灵魂详情看他现在的状态，通常无需再处理。",
+      "INVALID_TRANSITION": "灵魂当前的状态不能转入审判；到灵魂详情看他的状态与时间线，再决定要不要人工处理。",
+      "INTERNAL_ERROR": "系统内部出错，可以点「重试」。",
+      "VALIDATION_ERROR": "登记内容不合格式（见上方原文）；请来源系统改正后换一个幂等键重新提交。",
+      "NO_CITY_GOD": "先在城隍页为本殿设一位能收案的城隍，再点「重试」。",
+      "HALL_INACTIVE": "本殿已停用；要收这条登记，先由管理员重新启用本殿。",
+      "retry_exhausted": "重试次数已用完；请把这一行的来源编号交给系统维护人员。",
+      "unknown": "请把这一行的来源编号交给系统维护人员核查。",
+      "link_roster": "去灵魂名册",
+      "link_soul": "看这个灵魂",
+      "link_city_gods": "去城隍页"
     }
   },
   "soul_accounts": {
@@ -3993,7 +4081,15 @@
         "printed_label": "打印于"
       },
       "print_mono": "黑白打印",
-      "print_mono_hint": "打印机只能印黑白时勾上。匾额会印成纯黑，字更清楚。"
+      "print_mono_hint": "打印机只能印黑白时勾上。匾额会印成纯黑，字更清楚。",
+      "steps": {
+        "1": "查看密码，或打印交付单",
+        "2": "当面交给灵魂本人",
+        "3": "交到之后再点「标记已交付」"
+      },
+      "deliver_confirm_title": "确认已把密码交给 {{name}}？",
+      "deliver_confirm_body": "标记后这一份会离开「待交付」清单，不再有人跟进。还没交到手就先别标。",
+      "deliver_confirm": "确认已当面交付"
     },
     "reveal": {
       "confirm_title": "查看初始密码？",
@@ -4065,7 +4161,9 @@
         "done": "已关闭两步验证",
         "not_enabled": "这个灵魂没有开启两步验证",
         "not_home_hall": "只有灵魂所属的本殿官员能关闭它的两步验证"
-      }
+      },
+      "provisioned_sent": "已开通本世账号。初始密码正发往 {{to}}；发送失败会转入「待交付」列表。",
+      "provisioned_pending": "已开通本世账号。没有联系方式，初始密码在「待交付」列表里，请查看或打印交付单后当面交给灵魂。"
     },
     "rebirth": {
       "title": "转生申请",
@@ -6357,7 +6455,12 @@
       "range_30d": "近 30 天",
       "range_90d": "近 90 天",
       "range_all": "全部时间"
-    }
+    },
+    "confirm_approve_title": "放行这一条？",
+    "confirm_approve_body": "举报会被驳回，内容照常显示；被词表拦下的也一并放行。",
+    "confirm_mute_title": "禁言 {{name}} {{n}} 天？",
+    "confirm_mute_body": "禁言期间对方不能发帖、评论。到期自动解除，也可以在「禁言」里提前解除。",
+    "tab_count_sr": "，{{n}} 条"
   },
   "soul_inbox": {
     "title": "殿司收件箱",
@@ -6382,7 +6485,8 @@
       "not_inbox": "这不是殿司收件箱",
       "chat_not_configured": "聊天服务未启用",
       "chat_unavailable": "聊天服务暂时不可用",
-      "invalid_assignee": "这位官员不能经办本殿司的来信"
+      "invalid_assignee": "这位官员不能经办本殿司的来信",
+      "not_current_hall": "灵魂已调往别处，暂不能回信"
     },
     "folders": "文件夹",
     "folder": {

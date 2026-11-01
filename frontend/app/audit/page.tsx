@@ -158,6 +158,10 @@ export default function AuditPage() {
   const [actionFilter, setActionFilter] = useState("");
   const [resourceFilter, setResourceFilter] = useState("");
   const [hallFilter, setHallFilter] = useState("");
+  // 操作人(review-2026-11-01 Web 6):按用户名精确筛(后端 `?username=`)。候选取本页出现过的名字(datalist),
+  // 也可以照样输入别的名字。
+  const [operator, setOperator] = useState("");
+  const debouncedOperator = useDebouncedValue(operator.trim());
   const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [ordering, setOrdering] = useState("");
   // 详情页的「本次请求的全部记录」链接带 `?trace=`。不记进本浏览器(属于一次到访),也不用 useSearchParams
@@ -197,6 +201,7 @@ export default function AuditPage() {
   if (actionFilter) filterParams.action = actionFilter;
   if (resourceFilter) filterParams.resource = resourceFilter;
   if (hallFilter) filterParams.tenant = hallFilter;
+  if (debouncedOperator) filterParams.username = debouncedOperator;
   if (dateFrom) filterParams.start_date = dateFrom;
   if (ordering) filterParams.ordering = ordering;
   if (traceFilter) filterParams.trace_id = traceFilter;
@@ -237,7 +242,7 @@ export default function AuditPage() {
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch],
+    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter, debouncedSearch, debouncedOperator],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
@@ -283,7 +288,7 @@ export default function AuditPage() {
     });
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
-  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search || traceFilter);
+  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search || traceFilter || operator);
   const clearFilters = () => {
     setActionFilter("");
     setResourceFilter("");
@@ -291,6 +296,7 @@ export default function AuditPage() {
     setDatePreset("");
     setSearch("");
     setTraceFilter("");
+    setOperator("");
     setPage(1);
   };
 
@@ -437,6 +443,22 @@ export default function AuditPage() {
             aria-label={t("audit.search_placeholder")}
             className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
           />
+          <input
+            type="text"
+            list="audit-operators"
+            data-testid="audit-operator"
+            value={operator}
+            onChange={(e) => { setOperator(e.target.value); setPage(1); }}
+            placeholder={t("audit.filter_operator")}
+            aria-label={t("audit.filter_operator")}
+            autoComplete="off"
+            className={cn(fieldControl({ size: "md" }), "w-40 min-w-0")}
+          />
+          <datalist id="audit-operators">
+            {[...new Set(logs.map((l) => l.username).filter((u): u is string => !!u))].map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
           <FilterChipSelect
             label={t("audit.filter_action")}
             value={actionFilter}

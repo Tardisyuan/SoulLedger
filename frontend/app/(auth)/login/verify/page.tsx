@@ -89,7 +89,7 @@ export default function LoginVerifyPage() {
       setRefreshToken(res.data.refresh);
       setUser(res.data.user);
       showToast(t("auth.login_success"), "success");
-      goTo(await defaultViewRoute());
+      goTo(await defaultViewRoute(res.data.user));
       return;
     } catch (err: unknown) {
       const data = responseData<MfaRefusal>(err);

@@ -165,6 +165,23 @@ describe("provision and reset", () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.account.provision_existing"), "info"));
   });
 
+  // review-2026-11-01 Web 3:开通之后说清初始密码去了哪。
+  it.each([
+    ["a contact on file: says it is being sent there", account(), "soul_accounts.account.provisioned_sent", { to: "z***@example.com" }],
+    ["no contact: says it is waiting in the pending list", account({ contact_email_masked: "" }), "soul_accounts.account.provisioned_pending", undefined],
+  ])("provision (201), %s", async (_name, created, key, params) => {
+    asRole("soul_account.read", "soul_account.manage");
+    soulAccountsApi.accounts.mockResolvedValue(page([PAST_LIFE]));
+    soulAccountsApi.provision.mockResolvedValue({ status: 201, data: created });
+    renderCard();
+    fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.account.actions.provision") }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("soul_accounts.account.actions.provision") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh(key, params), "success"));
+    // The bare "开通了" line, which said nothing about the password, is gone.
+    expect(mockShowToast).not.toHaveBeenCalledWith(tZh("soul_accounts.account.provisioned"), "success");
+  });
+
   it("a retired account (409) is reported by its code", async () => {
     asRole("soul_account.read", "soul_account.manage");
     soulAccountsApi.resetCredential.mockRejectedValue(http(409, { detail: "x", code: "account_retired" }));

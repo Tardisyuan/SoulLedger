@@ -55,6 +55,17 @@ function rowOf(name: string): HTMLElement {
   return tr;
 }
 
+
+/** The row's actions live behind 「⋯」 since review-2026-11-01 Web 6; this opens it and returns its items. */
+function menuOf(row: HTMLElement): HTMLElement[] {
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  const items = screen.queryAllByRole("menuitem");
+  // Close again (the trigger toggles) so the next row's menu is the only one open.
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  return items;
+}
+const labelsOf = (items: HTMLElement[]) => items.map((i) => i.textContent);
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockTenant.user = { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] };
@@ -78,11 +89,11 @@ describe("「以此人身份查看」入口", () => {
     renderPage();
     await screen.findByText("mengpo");
 
-    expect(within(rowOf("mengpo")).getByText(OPEN)).toBeInTheDocument();
+    expect(labelsOf(menuOf(rowOf("mengpo")))).toContain(OPEN);
     for (const name of ["yama", "cui", "gone", "soulx"]) {
-      expect(within(rowOf(name)).queryByText(OPEN)).toBeNull();
+      expect(labelsOf(menuOf(rowOf(name)))).not.toContain(OPEN);
     }
-    expect(screen.getAllByText(OPEN)).toHaveLength(1);
+    expect(screen.queryAllByText(OPEN)).toHaveLength(0);
   });
 
   it("不是管理员的人一行都看不到", async () => {
@@ -98,7 +109,8 @@ describe("「以此人身份查看」入口", () => {
     (startImpersonation as jest.Mock).mockReturnValue(new Promise(() => {}));
     renderPage();
     await screen.findByText("mengpo");
-    fireEvent.click(within(rowOf("mengpo")).getByText(OPEN));
+    fireEvent.click(within(rowOf("mengpo")).getByRole("button", { name: /^users\.row_menu/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: OPEN }));
 
     const start = await screen.findByTestId("impersonate-start");
     expect(screen.getByText("admin.impersonate.body")).toBeInTheDocument();

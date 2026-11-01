@@ -447,6 +447,21 @@ describe("defaultViewRoute", () => {
     expect(mockedSavePrefs).not.toHaveBeenCalled();
   });
 
+  // review-2026-11-01 Web 1:没选过默认视图时按角色落地 —— 官员进待办队列,不是仪表盘。
+  it("lands an officer who never chose on the queue, and an admin on /dashboard", async () => {
+    const judge = { role: "JUDGE", permissions: ["judgment.read"] };
+    expect(await defaultViewRoute(judge)).toBe("/judgment/queue");
+    expect(await defaultViewRoute(judge)).not.toBe("/dashboard");
+    expect(await defaultViewRoute({ role: "ADMIN", permissions: [] })).toBe("/dashboard");
+    // No judgment access: the queue would be a 403, so the dashboard it stays.
+    expect(await defaultViewRoute({ role: "VIEWER", permissions: ["soul.read"] })).toBe("/dashboard");
+    // A choice on the server still wins over the role.
+    mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
+    expect(await defaultViewRoute(judge)).toBe("/dashboard");
+    mockedPrefs.mockRejectedValue(new Error("offline"));
+    expect(await defaultViewRoute(judge)).toBe("/judgment/queue");
+  });
+
   it("still lets the operator in when the server cannot be asked", async () => {
     mockedPrefs.mockRejectedValue(new Error("offline"));
     expect(await defaultViewRoute()).toBe("/dashboard");

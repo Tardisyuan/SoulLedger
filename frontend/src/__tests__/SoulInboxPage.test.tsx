@@ -189,6 +189,29 @@ it("a refusal says what the server's code means", async () => {
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.errors.chat_unavailable"), "error"));
 });
 
+// feat-letters 2026-11-01:灵魂调往别处后 `can_reply: false`,回信答 409 `not_current_hall`。
+it("a soul transferred away: no reply box, and a line saying why", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.list.mockResolvedValue(page([conversation({ can_reply: false })]));
+  renderPage();
+  const thread = await openThread();
+  expect(await within(thread).findByTestId("inbox-moved-away")).toHaveTextContent(tZh("soul_inbox.errors.not_current_hall"));
+  expect(within(thread).queryByLabelText(tZh("soul_inbox.reply_label"))).toBeNull();
+});
+
+it("a 409 not_current_hall on send says why and takes the reply box away", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.reply.mockRejectedValue(http(409, { detail: "x", code: "not_current_hall" }));
+  renderPage();
+  const thread = await openThread();
+  expect(within(thread).queryByTestId("inbox-moved-away")).toBeNull();
+  fireEvent.change(within(thread).getByLabelText(tZh("soul_inbox.reply_label")), { target: { value: "x" } });
+  fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.send") }));
+  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.errors.not_current_hall"), "error"));
+  expect(await within(thread).findByTestId("inbox-moved-away")).toBeInTheDocument();
+  expect(within(thread).queryByLabelText(tZh("soul_inbox.reply_label"))).toBeNull();
+});
+
 it("an empty inbox says so and asks for no thread", async () => {
   asRole("soul_inbox.read");
   apiMock.list.mockResolvedValue(page([]));

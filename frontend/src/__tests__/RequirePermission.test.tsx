@@ -2,7 +2,9 @@
  * Tests for src/components/rbac/RequirePermission.tsx
  */
 import { render, screen } from "@testing-library/react";
+import { useContext } from "react";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { MissingPermissionContext } from "@/src/components/rbac/PermissionDenied";
 
 // RequirePermission asks for the raw answer so ViewingLock can grey (not hide) write controls while viewing (rbac-web M-4).
 const VIEWING = { evenWhileViewing: true };
@@ -234,5 +236,26 @@ describe("RequirePermission", () => {
     );
 
     expect(mockHasAnyPermission).toHaveBeenCalledWith(["soul.view"], VIEWING);
+  });
+
+  // review-2026-11-01 Web 2:拒绝页从门上读到缺的是什么,45 处 fallback 不用各写一遍。
+  it("tells its fallback which gate refused — the codes, or 'administrator'", () => {
+    function Probe() {
+      return <span data-testid="gate">{JSON.stringify(useContext(MissingPermissionContext))}</span>;
+    }
+    mockHasAnyPermission.mockReturnValue(false);
+    const { unmount } = render(
+      <RequirePermission permissions="judgment.read" fallback={<Probe />}>
+        <div>Protected Content</div>
+      </RequirePermission>
+    );
+    expect(screen.getByTestId("gate")).toHaveTextContent('{"permissions":["judgment.read"]}');
+    unmount();
+    render(
+      <RequireAdmin fallback={<Probe />}>
+        <div>Protected Content</div>
+      </RequireAdmin>
+    );
+    expect(screen.getByTestId("gate")).toHaveTextContent('{"admin":true}');
   });
 });

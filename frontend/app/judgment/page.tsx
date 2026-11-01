@@ -13,7 +13,11 @@ import { useSoul } from "@soulledger/core/hooks/useSouls";
 import { DataTable, parseOrdering, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { filterChipClass } from "@/src/components/ui/FilterChip";
+import { FilterChipSelect, filterChipClass } from "@/src/components/ui/FilterChip";
+import { fieldControl } from "@/src/components/ui/Field";
+import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
+import { resolveEnumDisplay } from "@soulledger/core/domain/enumDisplay";
+import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { DomainEnum, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { buttonVariants } from "@/src/components/ui/Button";
@@ -45,6 +49,9 @@ type Tab = "pending" | "concluded";
 /** `?soul=` 只认合法的灵魂 id(UUID);别的值忽略,也不带进任何请求(后端对坏 UUID 回 400)。 */
 /** 列菜单的偏好(「已结案」那张表),一个列表一份。 */
 const JUDGMENT_COLUMNS_KEY = "soulledger.judgment.columns";
+
+/** `Verdict` (apps/judgment/models.py) — the concluded tab filters on it. */
+const VERDICT_OPTIONS = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
 
 const SOUL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,17 +96,27 @@ function JudgmentQueuePageContent() {
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
+  // 「已结案」一面的筛选(review-2026-11-01 Web 6):此前一条都没有,只能翻页找。
+  // 搜索框从 `?q=` 起步;裁决、文明是后端 `JudgmentFilter` 已有的两个字段。只属于这次到访,不进 URL。
+  const [search, setSearch] = useState(q);
+  const [verdict, setVerdict] = useState("");
+  const [civilization, setCivilization] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim());
 
   const listParams = (which: Tab) => {
     const params: Record<string, string> = { has_verdict: which === "pending" ? "false" : "true" };
     if (ordering) params.ordering = ordering;
-    if (q) params.search = q;
+    if (which === "concluded") {
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (verdict) params.verdict = verdict;
+      if (civilization) params.civilization = civilization;
+    } else if (q) params.search = q;
     if (soul) params.soul = soul;
     return params;
   };
   const exportParams = listParams("concluded");
   const listQuery = (which: Tab, p: number) => ({
-    queryKey: ["judgments", which, p, ordering, q, soul],
+    queryKey: ["judgments", which, p, ordering, q, soul, ...(which === "concluded" ? [debouncedSearch, verdict, civilization] : [])],
     queryFn: async () => {
       const res = await judgmentApi.list({ page: String(p), ...listParams(which) });
       return res.data;
@@ -184,8 +201,38 @@ function JudgmentQueuePageContent() {
         <JudgmentClaimQueue key={`${q}|${soul}`} initialSearch={q} soul={soul} />
       ) : (
       <>
-      {/* 「已结案」没有筛选条;导出放在表上方右端,带当前的搜索 / 灵魂 / 排序(不带页码)。 */}
-      <div className="flex items-center justify-end gap-3 py-3">
+      {/* 「已结案」的筛选条:搜索 / 裁决 / 文明;导出在右端,带同一组筛选与灵魂、排序(不带页码)。 */}
+      <div data-testid="concluded-filters" className="flex flex-wrap items-center gap-3 py-3">
+        <input
+          type="search"
+          data-testid="concluded-search"
+          placeholder={t("judgment.concluded_filter.search")}
+          aria-label={t("judgment.concluded_filter.search")}
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          className={`${fieldControl({ size: "md" })} min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[200px]`}
+        />
+        <FilterChipSelect
+          label={t("judgment.verdict")}
+          value={verdict}
+          options={[
+            { value: "", label: t("filter.all") },
+            ...VERDICT_OPTIONS.map((v) => ({ value: v, label: resolveEnumDisplay(t, "judgment.verdicts", v).label ?? v })),
+          ]}
+          clearLabel={t("filter.clear_one", { name: t("judgment.verdict") })}
+          onChange={(v) => { setVerdict(v); setPage(1); }}
+        />
+        <FilterChipSelect
+          label={t("judgment.civilization")}
+          value={civilization}
+          options={[
+            { value: "", label: t("filter.all") },
+            ...CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: resolveEnumDisplay(t, "souls.civilizations", c).label ?? c })),
+          ]}
+          clearLabel={t("filter.clear_one", { name: t("judgment.civilization") })}
+          onChange={(v) => { setCivilization(v); setPage(1); }}
+        />
+        <div className="ml-auto flex items-center gap-3">
         {buttonOn("judgment.export") && (
           <RequirePermission permissions="judgment.export">
             <ExportCsvButton
@@ -205,6 +252,7 @@ function JudgmentQueuePageContent() {
           hintLabel={t("list.columns.hint")}
           resetLabel={t("list.columns.reset")}
         />
+        </div>
       </div>
       <DataTable<Judgment>
         linkedRows
@@ -215,7 +263,7 @@ function JudgmentQueuePageContent() {
            question. A `JUDGMENT_CONCLUDED` pushed by another operator moves a
            row between the two tabs without any of them changing, which is the
            case this exists to show. */
-        transitionKey={`${tab}|${page}|${ordering}|${soul}`}
+        transitionKey={`${tab}|${page}|${ordering}|${soul}|${debouncedSearch}|${verdict}|${civilization}`}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
@@ -256,6 +304,8 @@ function JudgmentQueuePageContent() {
           setPage(1);
         }}
         emptyMessage={t("judgment.no_judgments")}
+        isFiltered={Boolean(debouncedSearch || verdict || civilization)}
+        onClearFilters={() => { setSearch(""); setVerdict(""); setCivilization(""); setPage(1); }}
         page={page}
         totalPages={totalPages}
         totalCount={judgmentData?.count}
