@@ -17,9 +17,10 @@ import { onMfaSetupRequired, onPasswordChangeRequired } from "@soulledger/core/a
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { clearDrafts } from "./drafts";
-import { clearOutbox } from "./outbox";
-import { USER_KEY } from "./owner";
+import { DRAFTS_KEY, clearDrafts, flushDraft } from "./drafts";
+import { OUTBOX_KEY, clearOutbox, outboxEntries } from "./outbox";
+import { clearKeptText } from "./keptText";
+import { USER_KEY, dropUnowned } from "./owner";
 import { clearReadCache } from "./readCache";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
@@ -73,18 +74,27 @@ export function needsMfaSetup(user: Pick<LoginUser, "mfa_required" | "mfa_enable
   return !!user.mfa_required && !user.mfa_enabled;
 }
 
+/**
+ * The server ended the session (401, or nothing to resume at start). The profile, the voice numbers and the read
+ * cache go; the reply outbox and the drafts STAY (user, 2026-11-01): with the profile gone nobody reads them
+ * (owner.ts), and the next sign-in keeps them only for the same officer (`dropUnowned` in `land`). Sign-out by the
+ * officer still clears everything, after saying what is unsent (screens/signOut.tsx).
+ */
+function endedByServer(): void {
+  flushDraft();
+  platform().persistent.remove(USER_KEY);
+  clearVoiceNumbers();
+  clearReadCache();
+  clearKeptText();
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() => {
     const user = getRefreshToken() ? readStoredUser() : null;
     if (user) return { status: "signedIn", user };
-    // No session to resume (the refresh token is gone or unreadable): nothing of whoever was here may stay
-    // for the next officer -- the same clearing as a sign-out (RBAC review A7). Idempotent, so a second
-    // initializer run (StrictMode) is harmless.
-    platform().persistent.remove(USER_KEY);
-    clearVoiceNumbers();
-    clearDrafts();
-    clearOutbox();
-    clearReadCache();
+    // No session to resume (the refresh token is gone or unreadable): the same as a session the server ended
+    // (below). Idempotent, so a second initializer run (StrictMode) is harmless.
+    endedByServer();
     return { status: "signedOut" };
   });
 
@@ -92,16 +102,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAccessToken(response.access);
     setRefreshToken(response.refresh);
     platform().persistent.set(USER_KEY, JSON.stringify(response.user));
+    // Unsent replies and drafts kept from a session the server ended: the same officer gets them back, anyone else
+    // finds them gone (A7).
+    dropUnowned([DRAFTS_KEY, OUTBOX_KEY]);
+    // The outbox keeps a snapshot per owner: read it now under this officer, so none of another one's outlives the removal.
+    outboxEntries();
     setState({ status: "signedIn", user: response.user });
   }, []);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      platform().persistent.remove(USER_KEY);
-      clearVoiceNumbers();
-      clearDrafts();
-      clearOutbox();
-      clearReadCache();
+      endedByServer();
       setState({ status: "signedOut" });
     });
     return () => setUnauthorizedHandler(() => {});
@@ -189,6 +200,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     clearDrafts();
     clearOutbox();
     clearReadCache();
+    clearKeptText();
     // `authApi.logout` reads the stored refresh token, so the tokens go only after it has been sent
     // -- and only if no quick sign-in in between has replaced them.
     const end = () => {

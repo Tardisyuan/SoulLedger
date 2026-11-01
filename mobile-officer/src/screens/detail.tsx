@@ -17,6 +17,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
+import { useKeptText } from "../keptText";
 import { useCachedRemote } from "../readCache";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, verdictsAllowed, type ItemKind, type Verdict } from "../rules";
@@ -421,7 +422,8 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
   const { offline } = useOnline();
   const load = useCallback(() => judgmentApi.comments(id).then((r) => r.data), [id]);
   const { data, error, reload } = useRemote(load);
-  const [body, setBody] = useState("");
+  // Kept across a tab switch (keptText.ts): the shell unmounts the detail, and a half-written comment went with it.
+  const [body, setBody, dropBody] = useKeptText(`comment:${id}`);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -437,7 +439,7 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
     judgmentApi
       .addComment(id, text)
       .then(() => {
-        setBody("");
+        dropBody();
         void reload();
       })
       .catch(() => setFailed(true))

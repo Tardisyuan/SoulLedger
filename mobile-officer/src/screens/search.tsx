@@ -8,7 +8,8 @@
  */
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { soulsApi, type SoulListItem } from "@soulledger/core/api/souls";
-import { useCallback, useRef, useState } from "react";
+import { courtLabel } from "@soulledger/core/domain/courts";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 import { Row, StateView } from "../kit";
@@ -17,10 +18,24 @@ import { isDenied, looksLikeCaseNumber } from "../rules";
 import { useSession } from "../session";
 import { Input, Screen, SectionLabel, Txt, space, useI18n } from "../shared";
 
-export function SearchTab({ onOpenSoul, onOpenJudgment }: { onOpenSoul: (id: string) => void; onOpenJudgment?: (id: string) => void }) {
+/**
+ * `initialQuery` / `onSearch`: the last search, kept by the shell. Opening a soul unmounts this tab, and 返回 used to
+ * land on an empty box (review 2026-11-01); now the same search runs again on the way back.
+ */
+export function SearchTab({
+  onOpenSoul,
+  onOpenJudgment,
+  initialQuery,
+  onSearch,
+}: {
+  onOpenSoul: (id: string) => void;
+  onOpenJudgment?: (id: string) => void;
+  initialQuery?: string;
+  onSearch?: (query: string) => void;
+}) {
   return (
     <Screen testID="tab-search-screen" edges={["left", "right"]}>
-      <SoulLookup onOpen={onOpenSoul} onOpenJudgment={onOpenJudgment} />
+      <SoulLookup onOpen={onOpenSoul} onOpenJudgment={onOpenJudgment} initialQuery={initialQuery} onSearch={onSearch} />
     </Screen>
   );
 }
@@ -35,11 +50,21 @@ export function soulSearchTerm(query: string): string {
   return /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{10}$/.test(compact) ? compact : query;
 }
 
-function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; onOpenJudgment?: (id: string) => void }) {
+function SoulLookup({
+  onOpen,
+  onOpenJudgment,
+  initialQuery = "",
+  onSearch,
+}: {
+  onOpen: (id: string) => void;
+  onOpenJudgment?: (id: string) => void;
+  initialQuery?: string;
+  onSearch?: (query: string) => void;
+}) {
   const { t, enumLabel } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialQuery);
   const [result, setResult] = useState<{ status: "idle" | "loading" | "error" | "denied" | "done"; first: Page<SoulListItem> | null; query: string }>({ status: "idle", first: null, query: "" });
   // The 「案件」 group: only exact case-number matches. A failed or refused judgment search just shows no group.
   const [cases, setCases] = useState<Judgment[]>([]);
@@ -52,6 +77,7 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
     const query = text.trim();
     if (!query) return;
     const mine = ++sent.current;
+    onSearch?.(query);
     setResult({ status: "loading", first: null, query });
     setCases([]);
     if (looksLikeCaseNumber(query)) {
@@ -64,7 +90,12 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
       (r) => mine === sent.current && setResult({ status: "done", first: r.data, query }),
       (e: unknown) => mine === sent.current && setResult({ status: isDenied(e) ? "denied" : "error", first: null, query })
     );
-  }, [text]);
+  }, [text, onSearch]);
+  // Back from a soul (or a tab switch): the kept search runs again, once.
+  useEffect(() => {
+    if (initialQuery.trim()) search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount, with the query it was given
+  }, []);
 
   const souls = result.status === "done" && rows && rows.length > 0;
   return (
@@ -94,7 +125,7 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
               testID={`case-row-${j.id}`}
               strong
               title={j.case_number}
-              lines={[[j.soul_name, j.court].filter(Boolean).join(" · ")]}
+              lines={[[j.soul_name, courtLabel(t, j.court)].filter(Boolean).join(" · ")]}
               onPress={onOpenJudgment ? () => onOpenJudgment(j.id) : undefined}
               right={onOpenJudgment ? <Txt tone="muted">›</Txt> : undefined}
             />

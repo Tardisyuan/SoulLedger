@@ -1,1 +1,12 @@
-[]
+[
+  "officer_app.me.logout_pending",
+  "officer_app.me.logout_retry",
+  "officer_app.me.logout_anyway",
+  "officer_app.outbox.discard_confirm",
+  "officer_app.outbox.discard_ok",
+  "officer_app.wangsi.reject_title",
+  "officer_app.wangsi.reject_body",
+  "officer_app.wangsi.late_title",
+  "officer_app.wangsi.final",
+  "officer_app.tabs.notices_unread"
+]

@@ -153,8 +153,8 @@ describe("受刑计划变更 (O-f) and the page head (第四节 5)", () => {
     mockTodo.mockResolvedValue({ data: { ...DATA, sentence_changes: group([sentence]) } });
     renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
     expect(await screen.findByTestId("todo-group-sentence_change")).toBeTruthy();
-    expect(screen.getByText("受刑计划变更 · 1")).toBeTruthy();
-    expect(chip("sentence_change").props.accessibilityLabel).toBe("受刑计划变更 · 1");
+    expect(screen.getByText("受刑请求 · 1")).toBeTruthy();
+    expect(chip("sentence_change").props.accessibilityLabel).toBe("受刑请求 · 1");
     expect(screen.getByText("加项 / 减项")).toBeTruthy();
     fireEvent.press(screen.getByTestId("todo-row-sentence_change-r1"));
     expect(onOpen).not.toHaveBeenCalled();

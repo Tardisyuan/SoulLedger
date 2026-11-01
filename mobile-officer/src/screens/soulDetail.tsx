@@ -13,6 +13,7 @@ import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { reincarnationApi, type Reincarnation } from "@soulledger/core/api/reincarnation";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { originRegionLabel } from "@soulledger/core/domain/originRegion";
 import { diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { formatSoulCode } from "@soulledger/core/domain/soulCode";
@@ -25,6 +26,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { formatWhen } from "../format";
 import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
+import { hallLabel } from "../rules";
 import { useSession } from "../session";
 import { GUTTER, Notice, OneLine, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
@@ -183,7 +185,7 @@ function SoulHeader({ soul, code }: { soul: Soul; code: string | null }) {
           )}
           {soul.is_residing ? (
             // Words and a glyph, never a colour.
-            <Pill testID="soul-residing">{`▲ ${t("souls.detail.residing", { tenant: soul.home_tenant?.display_name ?? soul.home_civilization ?? "" })}`}</Pill>
+            <Pill testID="soul-residing">{`▲ ${t("souls.detail.residing", { tenant: hallLabel(t, soul.home_tenant) ?? soul.home_civilization ?? "" })}`}</Pill>
           ) : null}
         </View>
         {soul.merit_score != null ? (
@@ -336,7 +338,7 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
           key={j.id}
           testID={`soul-judgment-${j.id}`}
           minHeight={64}
-          title={[j.case_number, j.court].filter(Boolean).join(" · ")}
+          title={[j.case_number, courtLabel(t, j.court)].filter(Boolean).join(" · ")}
           lines={[{ one: t("officer_app.soul.judgment_meta", { n: String((j.cycle ?? 0) + 1), verdict: verdict(j), status: t(j.is_final ? "souls.detail.case_closed" : "souls.detail.case_open") }) }]}
           onPress={() => onOpen(j.id)}
           right={<Txt tone="muted">›</Txt>}

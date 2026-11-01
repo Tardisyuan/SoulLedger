@@ -7,20 +7,20 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { type ScrollView, View } from "react-native";
 
 import { canCheck, confirmWished, deviceCheck, setConfirmWished, useBioWord, type CheckResult } from "../deviceCheck";
-import { ActionButton, Row, Segmented } from "../kit";
+import { Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
+import { SignOutButton } from "./signOut";
 import { Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name" | "stats";
 
 export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
-  const { state, signOut } = useSession();
+  const { state } = useSession();
   const { themeChoice, setThemeChoice } = usePrefs();
-  const [asking, setAsking] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const user = state.status === "signedIn" ? state.user : null;
   const role = enumLabel("users.roles", user?.role);
@@ -132,21 +132,9 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
           <Txt variant="bodyLg">{`${t("officer_app.name")} · ${t("officer_app.me.version", { version })}`}</Txt>
         </Block>
 
-        {asking ? (
-          // Replaces the button it was asked from. The question is taller than that button, so the page follows it down:
-          // on an iPhone 17 the two answers opened under the tab bar and had to be scrolled to (2026-10-11).
-          <View style={{ gap: space[3] }} onLayout={() => scroll.current?.scrollToEnd({ animated: true })}>
-            <Notice tone="neutral">
-              <Txt variant="caption">{t("officer_app.me.logout_title")}</Txt>
-            </Notice>
-            <View style={{ flexDirection: "row", gap: space[3] }}>
-              <ActionButton testID="me-logout-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
-              <ActionButton testID="me-logout-confirm" kind="ink" title={t("officer_app.me.logout_ok")} onPress={signOut} />
-            </View>
-          </View>
-        ) : (
-          <ActionButton testID="me-logout" kind="ink-outline" title={t("officer_app.me.logout")} onPress={() => setAsking(true)} />
-        )}
+        {/* The question replaces the button. It is taller than that button, so the page follows it down: on an iPhone 17
+            the two answers opened under the tab bar and had to be scrolled to (2026-10-11). */}
+        <SignOutButton testID="me-logout" kind="ink-outline" ask onAsk={() => scroll.current?.scrollToEnd({ animated: true })} />
       </View>
     </Screen>
   );

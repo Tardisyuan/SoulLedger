@@ -2,8 +2,8 @@
  * 枉死申诉审核(Design 第五十九批 M-4 / M-4b / M-5):「待我处理 › 枉死申诉」的一行打开它,id 是审判。
  *
  * 死因、候至哪天、申诉原文(serif)只读;冤情等级可在这里改(四段,`PATCH judgment/<id>/` 的 `grievance_level`)。
- * 审核意见必填(同网页)。还押在城里时三个动作:不属实 / 属实 · 提前释放… / 属实 · 超度…,后两个先出底部确认
- * (ink 实底,不用危险色);等级不到「重」时两个「属实」置灰,原因写在它们之间。阳寿已到或已结案:只剩
+ * 审核意见必填(同网页)。还押在城里时三个动作:不属实… / 属实 · 提前释放… / 属实 · 超度…,都先出底部确认
+ * (ink 实底,不用危险色;结论一经记下就改不了,不属实也一样 —— review 2026-11-01);等级不到「重」时两个「属实」置灰,原因写在它们之间。阳寿已到或已结案:只剩
  * 不属实 / 属实(只记结论),上面一句 `late_hint`。规则都在服务端(`apps/judgment/wangsi.py`),这里只照着画。
  */
 import { judgmentApi, wangsiApi, WANGSI_ERROR_CODES, type Judgment } from "@soulledger/core/api/judgment";
@@ -14,6 +14,7 @@ import { View } from "react-native";
 
 import { confirmedDecision, notConfirmedKey, useBioWord } from "../deviceCheck";
 import { ActionButton, Segmented, StateView, detailStateOf } from "../kit";
+import { useKeptText } from "../keptText";
 import { useCan } from "../session";
 import { Input, Notice, Screen, SectionLabel, Sheet, Txt, family, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 
@@ -40,6 +41,19 @@ export function wangsiMode(
   return !j.verdict && !j.is_final && wangsiHeld(j, now) ? "held" : "late";
 }
 
+const SHEET_TITLE = {
+  release: "judgment.wangsi.release_title",
+  deliver: "judgment.wangsi.deliver_title",
+  reject: "officer_app.wangsi.reject_title",
+  late: "officer_app.wangsi.late_title",
+} as const;
+const SHEET_CONFIRM = {
+  release: "judgment.wangsi.uphold",
+  deliver: "judgment.wangsi.deliver",
+  reject: "judgment.wangsi.reject",
+  late: "judgment.wangsi.uphold_late",
+} as const;
+
 export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled: () => void; onDone: () => void }) {
   const { t, locale } = useI18n();
   const theme = useTheme();
@@ -49,8 +63,10 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
   const { offline } = useOnline();
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
   const { data: j, error, reload } = useRemote(load);
-  const [note, setNote] = useState("");
-  const [confirming, setConfirming] = useState<"release" | "deliver" | null>(null);
+  // Kept across a tab switch (keptText.ts): the detail unmounts, the words do not go with it.
+  const [note, setNote, dropNote] = useKeptText(`wangsi:${id}`);
+  // Every conclusion is final, so each is asked once more at the bottom: 不属实 and 属实(只记结论) as well (review 2026-11-01).
+  const [confirming, setConfirming] = useState<"release" | "deliver" | "reject" | "late" | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -80,6 +96,7 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
     confirmedDecision(t("officer_app.biometric.prompt"), () => wangsiApi.decideGrievance(id, upheld, note.trim(), deliver))
       .then(() => {
         setConfirming(null);
+        dropNote();
         onSettled();
         onDone();
       })
@@ -147,9 +164,9 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
             {noteMissing && canAct ? <Txt variant="caption" tone="muted" testID="wangsi-note-required">{t("officer_app.wangsi.note_required")}</Txt> : null}
             {mode === "late" ? <Txt variant="body" tone="muted" testID="wangsi-late-hint">{t("judgment.wangsi.late_hint")}</Txt> : null}
             {offline && canAct ? <Txt variant="caption" tone="muted" testID="wangsi-offline">{t("officer_app.offline.no_decide")}</Txt> : null}
-            <ActionButton testID="wangsi-reject" kind="ink-outline" disabled={locked || noteMissing} title={t("judgment.wangsi.reject")} onPress={() => decide(false)} style={{ minHeight: 48 }} />
+            <ActionButton testID="wangsi-reject" kind="ink-outline" disabled={locked || noteMissing} title={`${t("judgment.wangsi.reject")}…`} onPress={() => setConfirming("reject")} style={{ minHeight: 48 }} />
             {mode === "late" ? (
-              <ActionButton testID="wangsi-uphold-late" kind="primary" disabled={locked || noteMissing} title={t("judgment.wangsi.uphold_late")} onPress={() => decide(true)} style={{ minHeight: 48 }} />
+              <ActionButton testID="wangsi-uphold-late" kind="primary" disabled={locked || noteMissing} title={`${t("judgment.wangsi.uphold_late")}…`} onPress={() => setConfirming("late")} style={{ minHeight: 48 }} />
             ) : (
               <>
                 <ActionButton
@@ -180,22 +197,26 @@ export function WangsiReview({ id, onSettled, onDone }: { id: string; onSettled:
       </View>
       <Sheet open={confirming !== null} onClose={() => setConfirming(null)} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
         <View testID={`wangsi-sheet-${confirming ?? "none"}`} style={{ padding: space[5], gap: space[4] }}>
-          <Txt variant="title">{t(confirming === "deliver" ? "judgment.wangsi.deliver_title" : "judgment.wangsi.release_title", { name: j.soul_name })}</Txt>
+          <Txt variant="title">{t(SHEET_TITLE[confirming ?? "release"], { name: j.soul_name })}</Txt>
           <Txt variant="body">
             {confirming === "deliver"
               ? t("judgment.wangsi.deliver_body", { name: j.soul_name })
-              : t("judgment.wangsi.release_body", { name: j.soul_name, date: heldDay })}
+              : confirming === "reject"
+                ? t("officer_app.wangsi.reject_body", { name: j.soul_name })
+                : confirming === "late"
+                  ? t("judgment.wangsi.late_hint")
+                  : t("judgment.wangsi.release_body", { name: j.soul_name, date: heldDay })}
           </Txt>
           {confirming === "deliver" && sendsOn ? <Txt variant="body" testID="wangsi-sends-on">{t("judgment.wangsi.deliver_sends_on")}</Txt> : null}
-          <Txt variant="caption" tone="muted">{t("judgment.wangsi.release_irreversible")}</Txt>
+          <Txt variant="caption" tone="muted">{t(confirming === "reject" || confirming === "late" ? "officer_app.wangsi.final" : "judgment.wangsi.release_irreversible")}</Txt>
           <View style={{ flexDirection: "row", gap: space[3] }}>
             <ActionButton testID="wangsi-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setConfirming(null)} />
             <ActionButton
               testID="wangsi-confirm"
               kind="ink"
               busy={busy}
-              title={t(confirming === "deliver" ? "judgment.wangsi.deliver" : "judgment.wangsi.uphold")}
-              onPress={() => decide(true, confirming === "deliver")}
+              title={t(SHEET_CONFIRM[confirming ?? "release"])}
+              onPress={() => decide(confirming !== "reject", confirming === "deliver")}
             />
           </View>
         </View>

@@ -230,6 +230,8 @@ function OutboxRows({ onOpen }: { onOpen: (item: ItemRef) => void }) {
 function OutboxFailure({ entry, onOpen }: { entry: OutboxEntry; onOpen: (item: ItemRef) => void }) {
   const { t } = useI18n();
   const reason = entry.reason ?? "retry";
+  // 「删除我的草稿」 cannot be undone: asked in its own place first (review 2026-11-01).
+  const [discarding, setDiscarding] = useState(false);
   return (
     <View testID={`outbox-failed-${entry.id}`} style={styles.failure}>
       <Notice tone="neg">{t("officer_app.outbox.failed_title", { name: entry.name })}</Notice>
@@ -241,8 +243,17 @@ function OutboxFailure({ entry, onOpen }: { entry: OutboxEntry; onOpen: (item: I
         {reason === "answered" || reason === "archived" ? (
           <SmallButton testID={`outbox-view-${entry.id}`} title={t("officer_app.outbox.view_existing")} onPress={() => onOpen({ kind: "letter", id: entry.id })} />
         ) : null}
-        <SmallButton testID={`outbox-discard-${entry.id}`} title={t("officer_app.outbox.discard")} onPress={() => discardReply(entry.id)} />
+        {discarding ? null : <SmallButton testID={`outbox-discard-${entry.id}`} title={t("officer_app.outbox.discard")} onPress={() => setDiscarding(true)} />}
       </View>
+      {discarding ? (
+        <View testID={`outbox-discard-ask-${entry.id}`} style={{ gap: space[2] }}>
+          <Txt variant="body">{t("officer_app.outbox.discard_confirm")}</Txt>
+          <View style={styles.actions}>
+            <SmallButton testID={`outbox-discard-cancel-${entry.id}`} title={t("soul_app.common.cancel")} onPress={() => setDiscarding(false)} />
+            <SmallButton testID={`outbox-discard-ok-${entry.id}`} title={t("officer_app.outbox.discard_ok")} onPress={() => discardReply(entry.id)} />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

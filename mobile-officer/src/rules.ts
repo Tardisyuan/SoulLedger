@@ -55,8 +55,10 @@ export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: s
   { field: "reassignments", kind: "reassignment", label: "officer_app.todo.groups.reassignments" },
   { field: "cooldowns", kind: "cooldown", label: "officer_app.todo.groups.cooldowns" },
   { field: "rebirths", kind: "rebirth", label: "officer_app.todo.groups.rebirths" },
-  { field: "letters", kind: "letter", label: "officer_app.todo.groups.letters" },
-  { field: "sentence_changes", kind: "sentence_change", label: "officer_app.todo.group_sentence_change" },
+  // 待回书信 / 受刑计划变更 read as the web names the same lists (review 2026-11-01): 「待我回的书信」 (the home to-do
+  // strip) and 「受刑请求」 (the /sentence-requests page that this group's 「在电脑上处理」 opens).
+  { field: "letters", kind: "letter", label: "dashboard.todo.letters" },
+  { field: "sentence_changes", kind: "sentence_change", label: "sentence_plan.inbox_title" },
 ];
 
 /**
@@ -152,6 +154,15 @@ export function rebirthCross(detail: Pick<TodoItemDetail, "kind" | "facts" | "is
 /** A reject without a reason is refused HERE, before any request; the screen marks it on confirm. */
 export function reasonMissing(verdict: Verdict, reason: string): boolean {
   return verdict === "reject" && reason.trim() === "";
+}
+
+/**
+ * The longest reason the server takes for this kind (review 2026-11-01: the field had no limit, and a long one came
+ * back as a bare 400): a dispatch's `DispatchRejectSerializer.reason` 1000; a cooldown's note and a rebirth's
+ * soul-facing reason 2000. A workflow node's `notes` is a TextField with no limit; 2000 there too, like the rebirth.
+ */
+export function reasonMaxLength(kind: TodoKind): number {
+  return kind === "reassignment" ? 1000 : 2000;
 }
 
 /** Why a submit failed (the words are under officer_app confirm reasons), plus who handled it if known. */
