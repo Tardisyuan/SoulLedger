@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -28,6 +29,7 @@ import { SentenceRequestActions } from "@/src/components/sentence-plan/SentenceR
  * 一份计划同一时刻至多一条 PENDING 请求(约束 `unique_pending_sentence_request`),所以一行一份计划。
  * 列表里有两种:本租户是原属的(等我决定)与本租户提出的(可撤回);哪种由行上的按钮说明,
  * 按钮规则在 `SentenceRequestActions`。已决定的请求留在灵魂详情的计划面板里看。
+ * `?soul=<id>`(官员 App 分享的链接)把列表收窄到这一个灵魂,后端的 `soul` 过滤。
  */
 
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
@@ -37,13 +39,21 @@ function SentenceRequestsContent() {
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const [page, setPage] = useState(1);
-  const list = useSentencePlans({ pending_request: true, page });
+  const soul = useSearchParams()?.get("soul") || undefined;
+  const list = useSentencePlans({ pending_request: true, page, soul });
   const plans = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
   const mine = user?.tenant?.code;
 
   return (
     <PageShell variant="page" title={t("sentence_plan.inbox_title")} subtitle={t("sentence_plan.inbox_subtitle")}>
+      {soul && (
+        <p className="mb-3 text-sm">
+          <Link href="/sentence-requests" className="underline underline-offset-2">
+            {t("sentence_plan.inbox_show_all")}
+          </Link>
+        </p>
+      )}
       {list.isLoading ? (
         <ListSkeleton count={3} />
       ) : list.isError && !list.data ? (
@@ -97,7 +107,9 @@ function SentenceRequestsContent() {
 export default function SentenceRequestsPage() {
   return (
     <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
-      <SentenceRequestsContent />
+      <Suspense fallback={null}>
+        <SentenceRequestsContent />
+      </Suspense>
     </RequirePermission>
   );
 }

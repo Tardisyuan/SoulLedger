@@ -181,7 +181,7 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
           setCode("");
           onChanged();
         },
-        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.disable_failed")))
+        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.regenerate_failed")))
       )
       .finally(() => setBusy(false));
   };

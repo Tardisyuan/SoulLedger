@@ -164,12 +164,10 @@
       "regenerate_done_title": "Medu Ankh Wehem Wehem Mesut",
       "disable": "Khetem Aq Sep Sen",
       "disable_title": "Khetem Aq Sep Sen?",
-      "disable_body": "Er Khet Khetem: Aq Em Sekhem Wa. Maa Djes-Ek Tepy: Medu Ahet Iu Sekhem.",
       "confirm_by_totp": "Medu Ahet",
       "confirm_by_password": "Sekhem",
       "disable_confirm": "Khetem",
       "disabled_toast": "Aq Sep Sen Khetem Seth",
-      "disable_failed": "Nen Khetem. Maa Medu Ahet Iu Sekhem",
       "load_failed": "Nen Ini Aq Sep Sen",
       "confirm_by_recovery": "Medu Ankh Wehem",
       "turn_off_body": "Er Khet: Aq Em Sekhem Wa. Smen Em Medu Ahet Er Medu Ankh Wehem Wa — Nen Khetem Em Sekhem Wa.",
@@ -4133,7 +4131,6 @@
       "provision_body": "Sekhem Tepy Iri (Wenen Unut 72, Khemen Em Aq Tepy). Em Wat: Hab Djes-Ef; Nen Wat: Em Djeret.",
       "reset_title": "Wehem Sekhem Er {{name}}?",
       "reset_body": "Sekhem Nen Djeret Nen Wenen Emu; Sekhem Mawy Wenen Unut 72, Khemen Em Aq. Em Wat: Hab Djes-Ef; Nen Wat: Em Djeret.",
-      "provisioned": "Aq Ankh Pen Iri Seth",
       "provision_existing": "Aq Ankh Pen Wenen; Nen Wehem Hab. Wehem Sekhem Er Sekhem Mawy",
       "reset_queued": "Wehem Seth; Sekhem Mawy Hab Er Wat",
       "reset_pending": "Wehem Seth; Nen Wat, Sekhem Mawy Em Djeret",
@@ -5339,8 +5336,6 @@
         "title": "Sesh Medu",
         "visibility": "Aat Maa",
         "vis": {
-          "public": "Wen-Neb",
-          "public_hint": "Ba Neb Em Taui Pen. Nen Er Taui Ky.",
           "tenant": "Taui Pen",
           "tenant_hint": "Ba Neb Em Taui Pen Maa — Hena Nen Nehes. Nen Er Taui Ky.",
           "followers": "Nehesu Wa",
@@ -5663,7 +5658,6 @@
         "title": "Khetem Aq Sep Sen?",
         "body": "Khetem: Er Aq, Sekhem Wa. Medu Ankh Wehem Khery: Hedj.",
         "ok": "Khetem",
-        "use_password": "Iri Em Sekhem",
         "use_recovery": "Nen Medjat? Iri Em Medu Ankh Wehem"
       },
       "regen": {

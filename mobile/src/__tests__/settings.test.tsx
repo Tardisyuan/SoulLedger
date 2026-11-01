@@ -154,6 +154,38 @@ describe("the settings page is the one place for language and sign-out", () => {
     await act(async () => {});
   });
 
+  // review 2026-11-01: 书信 and 朋友圈 had no way to 设置.
+  it("书信's bar has the person icon beside its plus, and it opens 设置", async () => {
+    signedIn({
+      "/me/chat/conversations/": { status: 200, data: [] },
+      "/me/chat/session/": { status: 503, data: { code: "chat_unavailable" } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await pressTab("tab-Letters");
+    expect(screen.getByTestId("chat-new")).toBeTruthy();
+    const account = screen.getByTestId("letters-account");
+    expect(account.props.accessibilityLabel).toBe("设置");
+    fireEvent.press(account);
+    await waitFor(() => expect(route()?.name).toBe("Settings"));
+    await act(async () => {});
+  });
+
+  it("朋友圈's bar stays at its controls; 设置 is on 我的's bar", async () => {
+    signedIn({
+      "/me/social/feed/": { status: 200, data: { count: 0, next: null, previous: null, results: [] } },
+      "/me/social/status/": { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 5, unread_interactions: 0 } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await pressTab("tab-Circle");
+    expect(screen.queryByTestId("my-circle-settings")).toBeNull();
+    fireEvent.press(await screen.findByTestId("circle-me"));
+    fireEvent.press(await screen.findByTestId("my-circle-settings"));
+    await waitFor(() => expect(route()?.name).toBe("Settings"));
+    await act(async () => {});
+  });
+
   it("the same icon is on 本世 and 转生 (朋友圈 has search and my page there instead, 1a)", async () => {
     signedIn({
       "/me/past-lives/": { status: 200, data: [] },

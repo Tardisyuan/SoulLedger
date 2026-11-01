@@ -41,7 +41,7 @@ export function SignOutButton({ testID, kind, ask = false, onAsk }: { testID: st
       {/* Signing out is not a warning (Design batch 67 §三.4): the sentence says what is at stake. */}
       <Notice tone="neutral" testID={pending ? `${testID}-pending` : undefined}>
         <Txt variant="caption">
-          {pending ? t("officer_app.me.logout_pending", { unsent: String(unsent), drafts: String(drafts) }) : t("officer_app.me.logout_title")}
+          {pending ? t(unsent && drafts ? "officer_app.me.logout_pending" : unsent ? "officer_app.me.logout_pending_unsent" : "officer_app.me.logout_pending_drafts", { unsent: String(unsent), drafts: String(drafts) }) : t("officer_app.me.logout_title")}
         </Txt>
       </Notice>
       {pending && unsent > 0 ? (
