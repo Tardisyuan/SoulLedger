@@ -12,7 +12,9 @@ import type { PaginatedResponse } from "./users";
  * another officer reading, archiving or drafting changes nothing here.
  */
 type Schemas = components["schemas"];
-export type InboxConversation = Schemas["OfficerInbox"];
+/** `can_reply` (feat-letters, 2026-11-01): false once the soul has been transferred to another hall — a reply
+ *  then answers 409 `not_current_hall`. Hand-written and optional until the schema is regenerated. */
+export type InboxConversation = Schemas["OfficerInbox"] & { can_reply?: boolean };
 export type InboxMessage = Schemas["InboxMessage"];
 export type InboxFolderCounts = Schemas["InboxFolders"];
 export type InboxState = Schemas["InboxState"];

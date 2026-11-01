@@ -53,8 +53,19 @@ export function AccountCredentialModal(props: Props) {
       provision.mutate(
         { soulId: props.soulId, contacts },
         {
-          onSuccess: ({ created }) => {
-            showToast(t(created ? "soul_accounts.account.provisioned" : "soul_accounts.account.provision_existing"), created ? "success" : "info");
+          onSuccess: ({ account, created }) => {
+            if (!created) {
+              showToast(t("soul_accounts.account.provision_existing"), "info");
+            } else {
+              // review-2026-11-01 Web 3:开通之后说清初始密码去了哪 —— 发往联系方式,或进待交付列表。
+              const to = [account.contact_email_masked, account.contact_phone_masked].filter(Boolean).join(" / ");
+              showToast(
+                to
+                  ? t("soul_accounts.account.provisioned_sent", { to })
+                  : t("soul_accounts.account.provisioned_pending"),
+                "success"
+              );
+            }
             props.onClose();
           },
           onError: (error) => fail(error, "soul_accounts.account.failed"),

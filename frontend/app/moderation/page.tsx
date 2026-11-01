@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useHandledContent,
   useModerationReports,
@@ -33,12 +33,35 @@ import { cn } from "@/lib/utils";
 
 type Segment = "reports" | "words" | "mutes" | "handled";
 const SEGMENTS: Segment[] = ["reports", "words", "mutes", "handled"];
+const isSegment = (v: string | null): v is Segment => SEGMENTS.includes(v as Segment);
+
+/**
+ * 分段在地址栏里(`?segment=`,review-2026-11-01 Web 7):刷新、返回、分享链接都回到同一段。
+ * 「举报」是默认段,不写进地址。用 `history.replaceState` 而不是 router:换段不是一次导航,
+ * 不该进历史记录;Next 的 App Router 会把它同步进自己的状态。挂载后读一次(与审计页的 `?trace=` 同理,
+ * 不需要 Suspense 边界)。
+ */
+function useSegmentInUrl(): [Segment, (next: Segment) => void] {
+  const [current, setCurrent] = useState<Segment>("reports");
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("segment");
+    if (isSegment(fromUrl)) setCurrent(fromUrl);
+  }, []);
+  const change = (next: Segment) => {
+    setCurrent(next);
+    const url = new URL(window.location.href);
+    if (next === "reports") url.searchParams.delete("segment");
+    else url.searchParams.set("segment", next);
+    window.history.replaceState(window.history.state, "", url);
+  };
+  return [current, change];
+}
 
 function ModerationPageContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
-  const [segment, setSegment] = useState<Segment>("reports");
+  const [segment, setSegment] = useSegmentInUrl();
 
   // The switch's counts. Same query keys as the sections' first page, so these
   // are the requests the sections would make anyway, not extra ones.
@@ -83,9 +106,13 @@ function ModerationPageContent() {
               >
                 {t(`social_moderation.tabs.${value}`)}
                 {counts[value] !== undefined && (
-                  <span aria-hidden="true" className="font-mono text-2xs opacity-80">
-                    {counts[value]}
-                  </span>
+                  <>
+                    <span aria-hidden="true" className="font-mono text-2xs opacity-80">
+                      {counts[value]}
+                    </span>
+                    {/* 计数对读屏也要在(review-2026-11-01 Web 7):此前整个数字 aria-hidden。 */}
+                    <span className="sr-only">{t("social_moderation.tab_count_sr", { n: String(counts[value]) })}</span>
+                  </>
                 )}
               </button>
             );

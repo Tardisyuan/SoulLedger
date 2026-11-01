@@ -247,8 +247,8 @@ export default function LoginPage() {
 
       showToast(t("auth.login_success"), "success");
       // The operator's saved 默认视图, asked of the server with the token just
-      // stored; /dashboard when there is none.
-      window.location.href = await defaultViewRoute();
+      // stored; when there is none, the role's (officer → 待办队列, admin → /dashboard).
+      window.location.href = await defaultViewRoute(tokens.user);
       return;
     } catch (err: unknown) {
       const data = responseData<LoginFailedBody & LoginLockedBody>(err);

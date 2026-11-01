@@ -95,6 +95,8 @@ test.describe("Pending initial passwords", () => {
     await page.goto("/soul-credentials");
     await page.getByRole("button", { name: "已查看，待交付", exact: true }).click();
     await credentialRow(page, CREDENTIALS_REVEALED[0].id).getByRole("button", { name: "标记已交付" }).click();
+    // review-2026-11-01 Web 4: it asks first.
+    await page.getByRole("alertdialog").getByRole("button", { name: "确认已当面交付" }).click();
     await expect(page.getByText("已标记为线下交付")).toBeVisible();
     expect(api.lastCall("POST", "/soul-accounts/credentials/:id/mark-delivered/")?.path).toBe(
       `/soul-accounts/credentials/${CREDENTIALS_REVEALED[0].id}/mark-delivered/`

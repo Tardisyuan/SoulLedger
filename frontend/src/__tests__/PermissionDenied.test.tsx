@@ -2,7 +2,7 @@
  * Tests for src/components/rbac/PermissionDenied.tsx
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { PermissionDenied, MissingPermissionContext } from "@/src/components/rbac/PermissionDenied";
 import zh from "@soulledger/core/messages/zh-Hans.json";
 import en from "@soulledger/core/messages/en.json";
 import egy from "@soulledger/core/messages/egy.json";
@@ -30,11 +30,60 @@ describe("PermissionDenied", () => {
     expect(screen.queryByText("🔒")).toBeNull();
   });
 
-  it("names the missing permission code when given one, and only then", () => {
+  // review-2026-11-01 Web 2:说缺的是哪个权限,用可读名称;原始权限码不出现在页面上。
+  it("names the missing permission by its readable name, never by its code", () => {
     const { rerender } = render(<PermissionDenied />);
-    expect(screen.queryByTestId("permission-denied-code")).toBeNull();
+    expect(screen.queryByTestId("permission-denied-needs")).toBeNull();
     rerender(<PermissionDenied permission="ledger.read" />);
-    expect(screen.getByTestId("permission-denied-code")).toHaveTextContent("ledger.read");
+    expect(screen.getByTestId("permission-denied-needs")).toHaveTextContent("permission.needs");
+    expect(screen.queryByTestId("permission-denied-code")).toBeNull();
+    expect(screen.getByTestId("permission-denied").textContent).not.toContain("ledger.read");
+  });
+
+  it("reads the gate from RequirePermission / RequireAdmin, so a bare fallback still says what is missing", () => {
+    const real = jest.requireMock("@/src/contexts/I18nContext").useI18n;
+    const names: Record<string, string> = {
+      "permission.names.judgment.read": "查看审判",
+      "permission.needs_admin": "这一页只对管理员开放。",
+    };
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = () => ({
+      t: (key: string, p?: Record<string, string>) =>
+        key === "permission.needs" ? `需要「${p?.names}」` : (names[key] ?? key),
+    });
+    const { rerender } = render(
+      <MissingPermissionContext.Provider value={{ permissions: ["judgment.read"] }}>
+        <PermissionDenied />
+      </MissingPermissionContext.Provider>
+    );
+    expect(screen.getByTestId("permission-denied-needs")).toHaveTextContent("需要「查看审判」");
+    expect(screen.getByTestId("permission-denied").textContent).not.toContain("judgment.read");
+    // 语言包里没有名称的码:不写这一行,也不把码露出来。
+    rerender(
+      <MissingPermissionContext.Provider value={{ permissions: ["brand_new.read"] }}>
+        <PermissionDenied />
+      </MissingPermissionContext.Provider>
+    );
+    expect(screen.queryByTestId("permission-denied-needs")).toBeNull();
+    expect(screen.getByTestId("permission-denied").textContent).not.toContain("brand_new");
+    rerender(
+      <MissingPermissionContext.Provider value={{ admin: true }}>
+        <PermissionDenied />
+      </MissingPermissionContext.Provider>
+    );
+    expect(screen.getByTestId("permission-denied-needs")).toHaveTextContent("这一页只对管理员开放。");
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = real;
+  });
+
+  it("has a readable name in zh-Hans and en for every code a page gates on", () => {
+    const codes = ["actors.read", "capture.read", "city_god.read", "dispatch.manage", "dispatch.read", "disposition.read",
+      "judgment.read", "ledger.read", "menu.read", "org.read", "realms.read", "reincarnation.read", "scheduler.read",
+      "session.manage", "social.moderate", "soul.read", "soul_account.read", "soul_inbox.read", "system.settings",
+      "tudi.read", "workflow.read"];
+    const get = (b: unknown, code: string) => code.split(".").reduce<unknown>((n, k) => (n as Record<string, unknown>)?.[k], (b as { permission: { names: unknown } }).permission.names);
+    for (const code of codes) {
+      expect(typeof get(zh, code)).toBe("string");
+      expect(typeof get(en, code)).toBe("string");
+    }
   });
 
   it("should render the denied title via i18n", () => {

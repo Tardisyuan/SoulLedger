@@ -1002,3 +1002,22 @@ describe("枉死城 (第五十一批 F-2)", () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.held", { date: "2026-11-03" }), "error"));
   });
 });
+
+// review-2026-11-01 Web 6:「已结案」一面有筛选 —— 搜索、裁决、文明,带进请求;「待审」一面不画这一条。
+describe("已结案的筛选", () => {
+  it("待审没有这一条;已结案按裁决与文明筛,参数带进请求", async () => {
+    renderPage();
+    await screen.findByRole("button", { name: /已结案/ });
+    expect(screen.queryByTestId("concluded-filters")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /已结案/ }));
+    const bar = await screen.findByTestId("concluded-filters");
+    fireEvent.change(within(bar).getByLabelText(tZh("judgment.verdict")), { target: { value: "FAILED" } });
+    fireEvent.change(within(bar).getByLabelText(tZh("judgment.civilization")), { target: { value: "EGYPTIAN" } });
+    await waitFor(() =>
+      expect(judgmentApi.list).toHaveBeenCalledWith(expect.objectContaining({ has_verdict: "true", verdict: "FAILED", civilization: "EGYPTIAN", page: "1" }))
+    );
+    // 待审那一侧(只为计数)不带这两个参数。
+    const pendingCalls = judgmentApi.list.mock.calls.filter(([p]) => p.has_verdict === "false");
+    expect(pendingCalls.every(([p]) => p.verdict === undefined && p.civilization === undefined)).toBe(true);
+  });
+});

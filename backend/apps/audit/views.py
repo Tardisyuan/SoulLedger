@@ -51,6 +51,9 @@ class AuditLogFilter(filters.FilterSet):
     #: 其余人只看得到自己殿的行(`get_queryset` 已划界),这里再拒绝他们点别的殿的名 —— 403,
     #: 而不是一页恰好为空的 200。不存在的殿码是 400。
     tenant = filters.CharFilter(method="filter_tenant")
+    #: 审计页的「操作人」(review-2026-11-01 Web 6):按用户名精确匹配。行上带的是 `username`
+    #: 不是 id,所以页面只能按名字筛;`search` 也搜用户名,但它是模糊的、还连带资源与描述。
+    username = filters.CharFilter(field_name="user__username", lookup_expr="exact")
 
     class Meta:
         model = AuditLog

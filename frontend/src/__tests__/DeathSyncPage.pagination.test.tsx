@@ -235,6 +235,54 @@ describe("death registration retry", () => {
   });
 });
 
+// review-2026-11-01 Web 5:失败行写下一步,能处理的地方给链接;成功行没有这一行。
+describe("a failed row says what to do next", () => {
+  const failed = (id: string, error_code: string, extra: Record<string, unknown> = {}) => ({
+    ...row(0), id, source_system: `Registry ${id}`, status: "FAILED", error_code,
+    error_message: "", retry_count: 0, max_retries: 3, soul: null, ...extra,
+  });
+  const rowOf = (name: string) => screen.getByText(name).closest("tr") as HTMLElement;
+
+  it("links to where the fix is made, per reason", async () => {
+    mockGet.mockResolvedValue({ data: { count: 4, next: null, previous: null, results: [
+      failed("a", "SOUL_NOT_FOUND"),
+      failed("b", "SOUL_NOT_ALIVE", { soul: "s-9" }),
+      failed("c", "NO_CITY_GOD"),
+      { ...row(1), error_code: "", retry_count: 0, max_retries: 3 },
+    ] } });
+    renderPage();
+    await screen.findByText("Registry a");
+    expect(within(rowOf("Registry a")).getByRole("link", { name: "death_sync.next.link_roster" })).toHaveAttribute("href", "/souls");
+    expect(within(rowOf("Registry b")).getByRole("link", { name: "death_sync.next.link_soul" })).toHaveAttribute("href", "/souls/s-9");
+    expect(within(rowOf("Registry c")).getByRole("link", { name: "death_sync.next.link_city_gods" })).toHaveAttribute("href", "/city-gods");
+    expect(within(rowOf("Registry 1")).queryByTestId("death-sync-next")).toBeNull();
+  });
+
+  it("every reason the server writes has a next step in zh-Hans and en, and the page has no English fallback", () => {
+    const zh = require("@soulledger/core/messages/zh-Hans.json");
+    const en = require("@soulledger/core/messages/en.json");
+    for (const code of ["SOUL_NOT_FOUND", "SOUL_NOT_ALIVE", "INVALID_TRANSITION", "INTERNAL_ERROR", "VALIDATION_ERROR", "NO_CITY_GOD", "HALL_INACTIVE", "retry_exhausted", "unknown"]) {
+      expect(typeof zh.death_sync.next[code]).toBe("string");
+      expect(typeof en.death_sync.next[code]).toBe("string");
+    }
+    expect(typeof zh.death_sync.error.HALL_INACTIVE).toBe("string");
+  });
+
+  it("a spent retry says so instead of 'press retry'", async () => {
+    const real = jest.requireMock("@/src/contexts/I18nContext").useI18n;
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = () => ({
+      t: (key: string) => (key.startsWith("death_sync.next.") ? `T:${key}` : key),
+      formatDateTime: (v: string) => v,
+    });
+    mockGet.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [failed("e", "INTERNAL_ERROR", { retry_count: 3 })] } });
+    renderPage();
+    const next = await screen.findByTestId("death-sync-next");
+    expect(next).toHaveTextContent("T:death_sync.next.retry_exhausted");
+    expect(next).not.toHaveTextContent("T:death_sync.next.INTERNAL_ERROR");
+    jest.requireMock("@/src/contexts/I18nContext").useI18n = real;
+  });
+});
+
 describe("search, received dates and export (审计 2026-10-17 第 12 条)", () => {
   it("sends the server's filter names, back on page 1, and the export carries the same filters", async () => {
     mockSearch = new URLSearchParams("status=FAILED");

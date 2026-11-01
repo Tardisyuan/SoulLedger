@@ -103,6 +103,17 @@ const rowOf = (username: string) => {
   return tr as HTMLElement;
 };
 
+
+/** The row's actions live behind 「⋯」 since review-2026-11-01 Web 6; this opens it and returns its items. */
+function menuOf(row: HTMLElement): HTMLElement[] {
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  const items = screen.queryAllByRole("menuitem");
+  // Close again (the trigger toggles) so the next row's menu is the only one open.
+  fireEvent.click(within(row).getByRole("button", { name: /^users\.row_menu/ }));
+  return items;
+}
+const labelsOf = (items: HTMLElement[]) => items.map((i) => i.textContent);
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: ["user.manage"] };
@@ -153,11 +164,28 @@ describe("role chips", () => {
   });
 });
 
+// review-2026-11-01 Web 6:每行九颗按钮 → 「编辑」+「⋯」;其余都在菜单里。
+describe("row actions", () => {
+  it("draws two controls per row — edit and the menu — and the rest inside the menu", async () => {
+    renderPage();
+    await screen.findByText("multi1");
+    const row = rowOf("multi1");
+    const lastCell = row.querySelector("td:last-child") as HTMLElement;
+    expect(within(lastCell).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([
+      "common.edit",
+      expect.stringMatching(/^users\.row_menu/),
+    ]);
+    expect(within(row).queryByRole("button", { name: "common.delete" })).toBeNull();
+    expect(labelsOf(menuOf(row))).toEqual(expect.arrayContaining(["users.reset_password.action", "users.edit_roles", "users.deactivate", "common.delete"]));
+  });
+});
+
 describe("the roles dialog", () => {
   const openFor = async (username: string) => {
     renderPage();
     await screen.findByText(username);
-    fireEvent.click(within(rowOf(username)).getByRole("button", { name: "users.edit_roles" }));
+    fireEvent.click(within(rowOf(username)).getByRole("button", { name: /^users\.row_menu/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "users.edit_roles" }));
     return await screen.findByRole("dialog");
   };
 

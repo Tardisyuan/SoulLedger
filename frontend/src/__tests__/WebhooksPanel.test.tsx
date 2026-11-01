@@ -139,7 +139,10 @@ describe("access", () => {
     const active = rows.find((r) => within(r).queryByText("https://hooks.example.org/a"))!;
     const disabled = rows.find((r) => within(r).queryByText("https://hooks.example.org/old"))!;
     expect(within(active).getByText(tZh("death_sync.webhooks.status.ACTIVE"))).toBeInTheDocument();
-    expect(within(active).getByText("DEATH_SYNC_PROCESSED")).toBeInTheDocument();
+    // review-2026-11-01 Web 6:事件写可读名称,机器代码只在 title 里。
+    expect(within(active).getByTestId("webhook-events")).toHaveTextContent(tZh("souls.events.DEATH_SYNC_PROCESSED"));
+    expect(within(active).getByTestId("webhook-events")).not.toHaveTextContent("DEATH_SYNC_PROCESSED");
+    expect(within(active).getByTitle("DEATH_SYNC_PROCESSED")).toBeInTheDocument();
     expect(within(active).getByText("市立医院")).toBeInTheDocument();
     expect(within(active).getByRole("button", { name: tZh("death_sync.webhooks.disable") })).toBeInTheDocument();
     expect(within(disabled).getByText(tZh("death_sync.webhooks.status.DISABLED"))).toBeInTheDocument();
@@ -167,9 +170,9 @@ describe("create: the checklist comes from the server and the secret is shown on
     expect([...select.options].map((o) => o.value)).toEqual(["k1"]);
 
     fireEvent.change(within(form).getByLabelText(new RegExp(tZh("death_sync.webhooks.url"))), { target: { value: " https://hooks.example.org/new " } });
-    fireEvent.click(within(form).getByLabelText("SOUL_CREATED"));
-    fireEvent.click(within(form).getByLabelText("SCHEDULER_RUN_FAILED"));
-    fireEvent.click(within(form).getByLabelText("SOUL_CREATED")); // untick again
+    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/));
+    fireEvent.click(within(form).getByLabelText(/SCHEDULER_RUN_FAILED$/));
+    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/)); // untick again
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.create") }));
 
     await waitFor(() =>
@@ -219,7 +222,7 @@ describe("edit and disable", () => {
     expect(deathSyncApi.apiKeys).not.toHaveBeenCalled();
     expect((await within(form).findByLabelText("DEATH_SYNC_PROCESSED")) as HTMLInputElement).toBeChecked();
     fireEvent.change(within(form).getByLabelText(new RegExp(tZh("death_sync.webhooks.url"))), { target: { value: "https://hooks.example.org/b" } });
-    fireEvent.click(within(form).getByLabelText("SOUL_CREATED"));
+    fireEvent.click(within(form).getByLabelText(/SOUL_CREATED$/));
     fireEvent.click(within(form).getByRole("button", { name: tZh("common.save") }));
     await waitFor(() =>
       expect(deathSyncApi.updateWebhook).toHaveBeenCalledWith("w1", {

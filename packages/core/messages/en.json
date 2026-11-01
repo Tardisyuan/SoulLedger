@@ -2621,6 +2621,9 @@
         "not_cancelled": "This case's approval flow was not cancelled, so it cannot be reopened this way.",
         "cannot_reopen": "The soul has already been placed; ask for a reopening or an appeal instead."
       }
+    },
+    "concluded_filter": {
+      "search": "Search soul name or case number"
     }
   },
   "audit": {
@@ -2767,7 +2770,8 @@
       "col_count": "Entries",
       "row_label": "View audit log for \"{{name}}\"",
       "failed": "Couldn't load statistics, please try again"
-    }
+    },
+    "filter_operator": "Operator (username)"
   },
   "profile": {
     "title": "Personal Center",
@@ -2855,7 +2859,9 @@
       "load_failed": "Couldn't load your devices",
       "sign_out_failed": "Couldn't sign out. Please try again."
     },
-    "mfa_must_setup": "Your role requires two-step verification. Turn it on to carry on."
+    "mfa_must_setup": "Your role requires two-step verification. Turn it on to carry on.",
+    "default_view_admin": "Administrator",
+    "default_view_unset": "Not chosen yet: you land by role — officers on the judgment queue, administrators on the overview."
   },
   "notifications": {
     "title": "Notifications",
@@ -3492,7 +3498,8 @@
       "locked": "Two-step verification is locked. Try again in {{minutes}} minutes.",
       "admin_target_global_only": "Only the global administrator can do this to another administrator.",
       "second_factor_unavailable": "Turn on two-step verification on your own account first."
-    }
+    },
+    "row_menu": "More actions for {{name}}"
   },
   "settings": {
     "title": "Settings",
@@ -3592,7 +3599,73 @@
     "denied_title": "Permission Denied",
     "denied_message": "You don't have permission to access this page or perform this action.",
     "ask_admin": "Ask your hall's administrator.",
-    "go_back": "Go back"
+    "go_back": "Go back",
+    "needs": "This page needs the “{{names}}” permission.",
+    "needs_admin": "This page is open to administrators only.",
+    "names_or": "” or “",
+    "names": {
+      "actors": {
+        "read": "View figures"
+      },
+      "capture": {
+        "read": "View summons warrants"
+      },
+      "city_god": {
+        "read": "View City Gods"
+      },
+      "dispatch": {
+        "manage": "Manage transfers",
+        "read": "View transfers"
+      },
+      "disposition": {
+        "read": "View dispositions"
+      },
+      "judgment": {
+        "read": "View judgments"
+      },
+      "ledger": {
+        "read": "View merit"
+      },
+      "menu": {
+        "read": "View menus"
+      },
+      "org": {
+        "read": "View organizations"
+      },
+      "realms": {
+        "read": "View realms"
+      },
+      "reincarnation": {
+        "read": "View reincarnation"
+      },
+      "scheduler": {
+        "read": "View scheduled tasks"
+      },
+      "session": {
+        "manage": "Manage online sessions"
+      },
+      "social": {
+        "moderate": "Moderate the soul circle"
+      },
+      "soul": {
+        "read": "View souls"
+      },
+      "soul_account": {
+        "read": "View soul accounts"
+      },
+      "soul_inbox": {
+        "read": "View the hall inbox"
+      },
+      "system": {
+        "settings": "System settings"
+      },
+      "tudi": {
+        "read": "View Tudi Gong"
+      },
+      "workflow": {
+        "read": "View workflows"
+      }
+    }
   },
   "icon_picker": {
     "select": "Select Icon",
@@ -3869,7 +3942,8 @@
       "INVALID_TRANSITION": "State does not allow judgment",
       "INTERNAL_ERROR": "Internal error",
       "VALIDATION_ERROR": "Invalid registration data",
-      "NO_CITY_GOD": "No City God of this hall can take the case"
+      "NO_CITY_GOD": "No City God of this hall can take the case",
+      "HALL_INACTIVE": "This hall is deactivated and accepts no new registrations"
     },
     "retry": {
       "action": "Retry",
@@ -3884,6 +3958,20 @@
       "search": "Soul name / source reference / idempotency key",
       "from": "Received from",
       "to": "Received to"
+    },
+    "next": {
+      "SOUL_NOT_FOUND": "Check the name and birth date in the soul roster. If the registration is wrong, the source system must correct it and resubmit under a new idempotency key (resending it as is counts as the same request).",
+      "SOUL_NOT_ALIVE": "This soul is no longer among the living and has most likely been registered already; check its current state — usually nothing more is needed.",
+      "INVALID_TRANSITION": "The soul's current state cannot move into judgment; check its state and timeline before deciding whether to handle it by hand.",
+      "INTERNAL_ERROR": "An internal error; you can press “Retry”.",
+      "VALIDATION_ERROR": "The registration is malformed (see the text above); the source system must correct it and resubmit under a new idempotency key.",
+      "NO_CITY_GOD": "First give this hall a City God that can take the case on the City Gods page, then press “Retry”.",
+      "HALL_INACTIVE": "This hall is deactivated; an administrator must reactivate it before this registration can be taken.",
+      "retry_exhausted": "No retries left; pass this row's source reference to whoever maintains the system.",
+      "unknown": "Pass this row's source reference to whoever maintains the system to look into.",
+      "link_roster": "Open the soul roster",
+      "link_soul": "View this soul",
+      "link_city_gods": "Open City Gods"
     }
   },
   "soul_accounts": {
@@ -3993,7 +4081,15 @@
         "printed_label": "Printed"
       },
       "print_mono": "Print in black and white",
-      "print_mono_hint": "Tick this for a black-and-white printer. The band prints solid black, so the lettering stays sharp."
+      "print_mono_hint": "Tick this for a black-and-white printer. The band prints solid black, so the lettering stays sharp.",
+      "steps": {
+        "1": "View the password, or print the delivery slip",
+        "2": "Hand it to the soul in person",
+        "3": "Only then press “Mark delivered”"
+      },
+      "deliver_confirm_title": "Has the password reached {{name}}?",
+      "deliver_confirm_body": "Once marked, it leaves the pending list and nobody follows it up. If it has not been handed over yet, do not mark it.",
+      "deliver_confirm": "Yes, handed over in person"
     },
     "reveal": {
       "confirm_title": "View the initial password?",
@@ -4065,7 +4161,9 @@
         "done": "Two-step verification turned off",
         "not_enabled": "This soul has not turned two-step verification on",
         "not_home_hall": "Only an officer of the soul's own hall can turn off its two-step verification"
-      }
+      },
+      "provisioned_sent": "This life's account is open. The initial password is being sent to {{to}}; if sending fails it moves to the pending list.",
+      "provisioned_pending": "This life's account is open. There is no contact on file, so the initial password is waiting in the pending list — view it or print the slip and hand it to the soul in person."
     },
     "rebirth": {
       "title": "Rebirth applications",
@@ -6357,7 +6455,12 @@
       "range_30d": "Last 30 days",
       "range_90d": "Last 90 days",
       "range_all": "All time"
-    }
+    },
+    "confirm_approve_title": "Let this through?",
+    "confirm_approve_body": "The report is dismissed and the content stays up; anything the word list held back is approved too.",
+    "confirm_mute_title": "Mute {{name}} for {{n}} days?",
+    "confirm_mute_body": "While muted they cannot post or comment. It lifts by itself when it ends, or you can lift it early under “Mutes”.",
+    "tab_count_sr": ", {{n}} items"
   },
   "soul_inbox": {
     "title": "Hall inbox",
@@ -6382,7 +6485,8 @@
       "not_inbox": "This is not a hall inbox",
       "chat_not_configured": "Chat is not enabled",
       "chat_unavailable": "Chat is temporarily unavailable",
-      "invalid_assignee": "That officer cannot take this hall's letters"
+      "invalid_assignee": "That officer cannot take this hall's letters",
+      "not_current_hall": "This soul has been transferred elsewhere; you cannot reply for now"
     },
     "folders": "Folders",
     "folder": {
