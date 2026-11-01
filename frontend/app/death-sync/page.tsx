@@ -35,11 +35,10 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * PENDING / PROCESSED / FAILED 说的正是一次同步操作的结果。登记条目随之删除。
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  // 规范 v3:还没处理不是风险,中性;FAILED 是错误。ACCEPTED / PARTIAL 已从后端删去(2026-10-29):从没有行写过它们。
+  // 规范 v3:还没处理不是风险,中性;FAILED 是错误。ACCEPTED / PARTIAL 已从后端删去(2026-10-29),DUPLICATE 随后(2026-11-01):从没有行写过它们。
   PENDING: "neutral",
   PROCESSED: "success",
   FAILED: "error",
-  DUPLICATE: "neutral",
 };
 
 const STATUSES = Object.keys(STATUS_TONES);

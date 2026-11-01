@@ -726,5 +726,8 @@ class JudgmentService:
                     raise OpenCaseRefusedError(
                         f"The soul is {soul.current_state}; it cannot enter judgment.", "cannot_enter_judgment")
                 city_gods.received(judgment)
+                from apps.dispatch import capture
+
+                capture.attach_judgment(soul, judgment)
             enter_judgment_realm(soul, judgment)
             return judgment

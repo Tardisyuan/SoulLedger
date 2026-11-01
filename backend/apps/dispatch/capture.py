@@ -184,6 +184,19 @@ def close_on_death(soul) -> None:
         _event(warrant, "CAPTURE_HANDED_OVER", via="death")
 
 
+def attach_judgment(soul, judgment) -> None:
+    """The case this death opened, onto the warrant `close_on_death` closed for it (review 2026-11-01 P3).
+
+    `close_on_death` runs inside the ALIVE → JUDGING transition, before `Soul.die` has created the case, so the
+    warrant was left with no `judgment`; and it matched its city god by birthplace while the case went to the
+    city god the death was reported to (a 土地公's own, apps/death_sync/tudi.py). Called by the two openers of a
+    death's case (`Soul.die`, `JudgmentService.open_case`) once the case exists: the warrant takes the case and
+    the case's city god. `hand_over` sets its own warrant's case and is not touched (its `judgment` is set)."""
+    CaptureWarrant.all_objects.filter(
+        soul_id=soul.pk, status=CaptureStatus.HANDED_OVER, judgment__isnull=True, is_deleted=False,
+    ).update(judgment=judgment, city_god_id=judgment.city_god_id)
+
+
 def _event(warrant, event_type, **extra) -> None:
     from apps.events.services import EventService
 
