@@ -51,3 +51,31 @@ def test_disposed_back_to_judging_is_a_system_only_edge(cn_tenant, admin_user):
     assert Soul.objects.get(pk=soul.pk).current_state == SoulState.DISPOSED
     assert soul.transition_to(SoulState.JUDGING, "test", system="weighing_rejected")
     assert Soul.objects.get(pk=soul.pk).current_state == SoulState.JUDGING
+
+
+def test_death_by_hand_opens_the_case_die_opens(cn_tenant, admin_user):
+    """Review 2026-11-01 #4: ALIVE → JUDGING through /transition/ used to move the state only — a JUDGING soul with
+    no case and no city god. It is now recorded as /die/ records it."""
+    from apps.judgment.models import CityGodStatus, Judgment
+    from tests.city_god_support import default_city_god
+
+    city_god = default_city_god(cn_tenant)
+    soul = Soul.objects.create(name="手报死亡", tenant=cn_tenant)
+    res = officer_client(admin_user).post(f"/api/v1/souls/{soul.pk}/transition/",
+                                          {"new_state": SoulState.JUDGING, "reason": "by hand"}, format="json")
+    assert res.status_code == 200, res.data
+    assert Soul.objects.get(pk=soul.pk).current_state == SoulState.JUDGING
+    cases = list(Judgment.objects.filter(soul=soul))
+    assert len(cases) == 1
+    assert cases[0].city_god_id == city_god.pk and cases[0].city_god_status == CityGodStatus.PENDING
+
+
+def test_death_by_hand_without_a_city_god_is_refused_and_leaves_nothing(cn_tenant, admin_user):
+    from apps.judgment.models import Judgment
+
+    soul = Soul.objects.create(name="无城隍", tenant=cn_tenant)
+    res = officer_client(admin_user).post(f"/api/v1/souls/{soul.pk}/transition/",
+                                          {"new_state": SoulState.JUDGING, "reason": "by hand"}, format="json")
+    assert (res.status_code, res.data.get("code")) == (409, "no_city_god"), res.data
+    assert Soul.objects.get(pk=soul.pk).current_state == SoulState.ALIVE
+    assert not Judgment.objects.filter(soul=soul).exists()

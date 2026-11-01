@@ -944,6 +944,9 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                                       city_god=city_god),
             )
             city_gods.received(judgment)
+            from apps.dispatch import capture
+
+            capture.attach_judgment(self, judgment)  # 勾魂牒记下这件案子与它的城隍(close_on_death 那时还没有案)
             if self.civilization == Civilization.EGYPTIAN:
                 self._after_egyptian_death(judgment)
             return judgment
