@@ -142,6 +142,9 @@ export function ChatImageMessage({ image, mine, ts, now, onOpen, receipt }: { im
 /** 失败的图是不是还值得再试:服务器说了「不行」的(静音、已关闭、文件本身不合格)不再试。 */
 const retryable = (o: Outgoing) => o.state === "failed" && !o.refused;
 
+/** 重试与删除并排:上下放大点按区,左右不放大,免得两个键互相抢。 */
+export const ROW_HIT = { top: 15, bottom: 15, left: 4, right: 4 };
+
 /** 失败的原因行(有明确原因时);没有原因的失败只有「没能发出 · 重试」。 */
 function reasonKey(code: string): string | null {
   if (code === "images_unavailable") return "soul_app.chat.image.errors.images_unavailable";
@@ -149,8 +152,8 @@ function reasonKey(code: string): string | null {
   return (SOUL_CHAT_ERROR_CODES as readonly string[]).includes(code) ? `soul_app.chat.errors.${code === "self_conversation" ? "self" : code}` : null;
 }
 
-/** 还没送达的图:本地文件、发送中的遮罩与进度、失败的重试。 */
-export function PendingImage({ o, progress, onResend }: { o: Outgoing; progress: number | undefined; onResend: () => void }) {
+/** 还没送达的图:本地文件、发送中的遮罩与进度、失败的重试与删除。 */
+export function PendingImage({ o, progress, onResend, onDismiss }: { o: Outgoing; progress: number | undefined; onResend: () => void; onDismiss: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const width = useChatImageWidth();
@@ -191,12 +194,17 @@ export function PendingImage({ o, progress, onResend }: { o: Outgoing; progress:
               {`! ${tr("soul_app.chat.image.failed")}`}
             </AlertTxt>
             {retryable(o) ? (
-              <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={15}>
+              <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
                 <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                   {` · ${tr("soul_app.circle.media.retry")}`}
                 </Txt>
               </Pressable>
             ) : null}
+            <Pressable testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
+              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+                {` · ${tr("soul_app.chat.receipt.delete")}`}
+              </Txt>
+            </Pressable>
           </View>
         ) : null}
         {failed && reason ? (

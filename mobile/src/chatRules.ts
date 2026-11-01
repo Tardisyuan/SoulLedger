@@ -44,20 +44,22 @@ export interface ChatFacts {
   now: number;
   /** Someone other than me has written in this room (per the timeline this device has). */
   peerHasSpoken: boolean;
-  /** I have written in this room. */
+  /** I have written in this room, or a letter of mine is on its way to it. */
   iHaveSpoken: boolean;
   /** A refusal this device met on its last send, newer than the list: a code, and `retry_at` for a 429. */
   refused?: { code: string; retryAt: string | null } | null;
 }
 
 export function chatMode(c: SoulConversation, facts: ChatFacts): ChatMode {
-  const refusal = facts.refused?.code ?? c.refusal;
+  // A refusal whose time has come says nothing about now: the list decides again.
+  const refused = facts.refused?.retryAt && Date.parse(facts.refused.retryAt) <= facts.now ? null : facts.refused;
+  const refusal = refused?.code ?? c.refusal;
   if (isClosedReason(refusal)) return { kind: "closed", reason: refusal };
   if (c.kind === "OFFICER_INBOX") return refusal === "not_current_hall" ? { kind: "hall_sealed" } : { kind: "hall" };
   if (refusal === "muted") return { kind: "muted" };
   if (c.throttled && c.initiated_by_me && !facts.peerHasSpoken) {
-    if (facts.refused?.code === "request_throttled" && facts.refused.retryAt) {
-      return { kind: "outgoing_locked", nextAt: facts.refused.retryAt, rejected: true };
+    if (refused?.code === "request_throttled" && refused.retryAt) {
+      return { kind: "outgoing_locked", nextAt: refused.retryAt, rejected: true };
     }
     if (c.next_request_at && Date.parse(c.next_request_at) > facts.now) {
       return { kind: "outgoing_locked", nextAt: c.next_request_at, rejected: false };

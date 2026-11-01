@@ -14,6 +14,7 @@ import type { SoulConversation } from "@soulledger/core/api/soul-chat";
 import { EMPTY_TIMELINE, matrixHttp, type ChatMessage, type MatrixEvent } from "@soulledger/core/api/matrix";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from "expo-clipboard";
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
@@ -25,7 +26,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ChatContext, ChatProvider, OUTBOX_KEY, clearOutbox, readOutbox, useChat, useChatStatus, type Chat, type ChatStatus } from "../chat";
 import { chatMode, chatSections, dayOf, normalizeCode, sendsThroughBackend } from "../chatRules";
 import { AppHeader } from "../chrome";
-import { I18nProvider } from "../i18n";
+import { I18nProvider, translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { family } from "../fonts";
@@ -34,6 +35,8 @@ import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
 import { PROFILE, heldReply, pressTab, stubApi, type Reply, resetLoginMemory } from "./stubApi";
+
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(), getStringAsync: jest.fn() }));
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => {
@@ -129,6 +132,14 @@ describe("chatMode — the design's eight states from the server's facts", () =>
     });
   });
 
+  it("④ once retry_at has passed the refusal locks nothing: the list decides again", () => {
+    const mine = conv({ throttled: true, initiated_by_me: true, mutual: false });
+    const over = { code: "request_throttled", retryAt: new Date(NOW).toISOString() };
+    expect(chatMode(mine, facts({ refused: over })).kind).toBe("outgoing_open");
+    const next = new Date(NOW + 3_600_000).toISOString();
+    expect(chatMode({ ...mine, next_request_at: next }, facts({ refused: over }))).toEqual({ kind: "outgoing_locked", nextAt: next, rejected: false });
+  });
+
   it("⑤ muted, ⑥ closed / peer_retired — the server's refusal wins over everything else", () => {
     expect(chatMode(conv({ refusal: "muted" }), facts()).kind).toBe("muted");
     expect(chatMode(conv({ refusal: "closed", throttled: true, initiated_by_me: true }), facts())).toEqual({ kind: "closed", reason: "closed" });
@@ -185,12 +196,13 @@ function chatState(overrides: Partial<Chat> = {}): Chat {
     me: ME,
     outbox: [],
     refused: {},
-    reload: jest.fn(async () => {}),
+    reload: jest.fn(async () => true),
     reconnect: jest.fn(),
     send: jest.fn(),
     sendImages: jest.fn(),
     progress: {},
     resend: jest.fn(),
+    dismiss: jest.fn(),
     loadOlder: jest.fn(async () => {}),
     markRead: jest.fn(),
     openInbox: jest.fn(async () => hall()),
@@ -506,7 +518,7 @@ describe("the conversation's eight states", () => {
 describe("a conversation not in the list yet (audit 2026-10-17 #10)", () => {
   it("asks for the list once, with a skeleton, and only then says it is closed", async () => {
     let answer!: () => void;
-    const reload = jest.fn(() => new Promise<void>((resolve) => (answer = resolve)));
+    const reload = jest.fn(() => new Promise<boolean>((resolve) => (answer = () => resolve(true))));
     wrap(chatState({ conversations: [], reload }), <ConversationScreen id="c-new" landed />);
     expect(screen.queryByTestId("conversation-gone")).toBeNull();
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
@@ -514,6 +526,171 @@ describe("a conversation not in the list yet (audit 2026-10-17 #10)", () => {
     await act(async () => answer());
     expect(screen.getByTestId("conversation-gone")).toBeTruthy();
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("a list that did not come back is not 'closed': it says so, and the retry can still settle it", async () => {
+    const reload = jest.fn(async () => false);
+    wrap(chatState({ conversations: [], reload }), <ConversationScreen id="c-new" landed />);
+    expect(await screen.findByTestId("conversation-recheck-failed")).toBeTruthy();
+    expect(screen.queryByTestId("conversation-gone")).toBeNull();
+    reload.mockResolvedValue(true);
+    await act(async () => fireEvent.press(screen.getByText(translate("zh-Hans", "soul_app.common.retry"))));
+    expect(reload).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("conversation-gone")).toBeTruthy();
+    expect(screen.queryByTestId("conversation-recheck-failed")).toBeNull();
+  });
+
+  it("a conversation just opened while the list has never loaded: the retry, not a skeleton for ever", async () => {
+    const chat = chatState({ conversations: null, listError: true });
+    wrap(chat, <ConversationScreen id="c-new" />);
+    expect(screen.getByTestId("conversation-recheck-failed")).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByText(translate("zh-Hans", "soul_app.common.retry"))));
+    expect(chat.reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a letter that will not go can be taken off the thread", () => {
+  const failed = (body: string, refused?: { code: string; retryAt: string | null }) => ({
+    txnId: "t1",
+    conversationId: "c-direct",
+    roomId: "!direct:hs.test",
+    body,
+    ts: NOW,
+    state: "failed" as const,
+    refused,
+  });
+  const verdict = { code: "too_large", retryAt: null };
+
+  beforeEach(() => {
+    (Clipboard.setStringAsync as jest.Mock).mockReset().mockResolvedValue(true);
+  });
+
+  it("a final refusal: no 重发, and 删除 hands the words back to the box", () => {
+    const chat = openConversation(conv(), [], { outbox: [failed("在不在？", verdict)] });
+    expect(screen.queryByTestId("resend")).toBeNull();
+    fireEvent.press(screen.getByTestId("dismiss"));
+    expect(chat.dismiss).toHaveBeenCalledWith("t1");
+    expect(screen.getByTestId("compose").props.value).toBe("在不在？");
+    expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
+  });
+
+  it("what is already being written stays, under the words that came back", () => {
+    openConversation(conv(), [], { outbox: [failed("在不在？", verdict)] });
+    fireEvent.changeText(screen.getByTestId("compose"), "还有一句");
+    fireEvent.press(screen.getByTestId("dismiss"));
+    expect(screen.getByTestId("compose").props.value).toBe("在不在？\n还有一句");
+  });
+
+  it("no box to go back to (closed): the words are copied instead of lost", async () => {
+    const chat = openConversation(conv({ refusal: "closed" }), [], { outbox: [failed("在不在？", { code: "closed", retryAt: null })] });
+    composerGone();
+    await act(async () => fireEvent.press(screen.getByTestId("dismiss")));
+    expect(chat.dismiss).toHaveBeenCalledWith("t1");
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith("在不在？");
+  });
+
+  it("a fault with no verdict offers both: it may go on a retry, or it may never (a Synapse 403 has no code)", () => {
+    openConversation(conv(), [], { outbox: [failed("在不在？")] });
+    expect(screen.getByTestId("resend")).toBeTruthy();
+    expect(screen.getByTestId("dismiss")).toBeTruthy();
+  });
+
+  it("nothing to delete while it is still going", () => {
+    openConversation(conv(), [], { outbox: [{ ...failed("在不在？"), state: "sending" }] });
+    expect(screen.queryByTestId("dismiss")).toBeNull();
+  });
+});
+
+describe("their request while my reply is on its way", () => {
+  const theirs = conv({ throttled: true, initiated_by_me: false, mutual: false });
+  const item = (state: "sending" | "queued" | "sent" | "failed", conversationId = theirs.id) => ({
+    txnId: "t1",
+    conversationId,
+    roomId: theirs.room_id,
+    body: "好",
+    ts: NOW,
+    state,
+  });
+
+  it.each(["sending", "queued", "sent"] as const)("%s: answered — 拒绝 and 拉黑 are gone", (state) => {
+    openConversation(theirs, [], { outbox: [item(state)] });
+    expect(screen.getByTestId("conversation-free")).toBeTruthy();
+    expect(screen.queryByTestId("request-decline")).toBeNull();
+    expect(screen.queryByTestId("request-block")).toBeNull();
+  });
+
+  it("failed: nothing was said, they are back", () => {
+    openConversation(theirs, [], { outbox: [item("failed")] });
+    expect(screen.getByTestId("request-decline")).toBeTruthy();
+  });
+
+  it("a letter to someone else says nothing about this room", () => {
+    openConversation(theirs, [], { outbox: [item("sending", "another")] });
+    expect(screen.getByTestId("request-decline")).toBeTruthy();
+  });
+});
+
+describe("a lock that has run out", () => {
+  it("a refused request past its retry_at: the box is back, and the letter may be sent again", () => {
+    const c = conv({ throttled: true, initiated_by_me: true, mutual: false });
+    const refused = { code: "request_throttled", retryAt: new Date(NOW - 1).toISOString() };
+    openConversation(c, [], {
+      refused: { [c.id]: refused },
+      outbox: [{ txnId: "t1", conversationId: c.id, roomId: c.room_id, body: "在不在？", ts: NOW, state: "failed", refused }],
+    });
+    expect(screen.getByTestId("conversation-outgoing_open")).toBeTruthy();
+    expect(screen.getByTestId("compose")).toBeTruthy();
+    expect(screen.queryByTestId("dock-locked")).toBeNull();
+    expect(screen.queryByTestId("request-throttled")).toBeNull();
+    expect(screen.getByTestId("resend")).toBeTruthy();
+  });
+
+  describe("a mute, with the screen open", () => {
+    beforeEach(() => jest.useFakeTimers({ now: NOW }));
+    afterEach(() => jest.useRealTimers());
+    const settle = (ms = 0) => act(() => jest.advanceTimersByTimeAsync(ms));
+    const status = (mutedUntil: string | null) =>
+      stubApi({ "/me/social/status/": { status: 200, data: { can_write: mutedUntil === null, muted_until: mutedUntil, reports_remaining: 3 } } });
+
+    it("asks for the list when its time passes, and not before, and only once", async () => {
+      status(new Date(NOW + 30_000).toISOString());
+      const reload = jest.fn(async () => true);
+      openConversation(conv({ refusal: "muted" }), [], { reload });
+      await settle();
+      expect(reload).not.toHaveBeenCalled();
+      await settle(60_000);
+      expect(reload).toHaveBeenCalledTimes(1);
+      await settle(60_000);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("already over when the screen opens, and the list cannot answer: asked again on the next minute, then left alone", async () => {
+      status(new Date(NOW - 1).toISOString());
+      const reload = jest.fn<Promise<boolean>, []>().mockResolvedValueOnce(false).mockResolvedValue(true);
+      openConversation(conv({ refusal: "muted" }), [], { reload });
+      await settle();
+      expect(reload).toHaveBeenCalledTimes(1);
+      await settle(60_000);
+      expect(reload).toHaveBeenCalledTimes(2);
+      await settle(60_000);
+      expect(reload).toHaveBeenCalledTimes(2);
+    });
+
+    it("lifted (the status says no mute, the list still says muted): asks", async () => {
+      status(null);
+      const reload = jest.fn(async () => true);
+      openConversation(conv({ refusal: "muted" }), [], { reload });
+      await settle();
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("the status could not be read: that is not the end of a mute", async () => {
+      stubApi({ "/me/social/status/": { status: 500, data: {} } });
+      const reload = jest.fn(async () => true);
+      openConversation(conv({ refusal: "muted" }), [], { reload });
+      await settle(60_000);
+      expect(reload).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -845,6 +1022,8 @@ class FakeSynapse {
   loseNextSendResponse = false;
   /** A send does not wake the long-poll: its echo is not seen before the retry. */
   quiet = false;
+  /** Every access token is refused on /sync. */
+  unauthorized = false;
   events: MatrixEvent[] = [];
   /** `device|txn` → event id: Synapse's transaction cache is per (user, device) — MSC3970. `clear()` = it expired. */
   txns = new Map<string, string>();
@@ -900,6 +1079,11 @@ class FakeSynapse {
         return ok({ event_id: eventId });
       }
       if (method === "GET" && url === "/_matrix/client/v3/sync") {
+        const refuse = () => {
+          const response = { status: 401, data: { errcode: "M_UNKNOWN_TOKEN", error: "gone" }, headers: {}, config, statusText: "" } as AxiosResponse;
+          return new AxiosError("fail", "ERR_BAD_REQUEST", config, null, response);
+        };
+        if (this.unauthorized) throw refuse();
         const since = Number(config.params?.since ?? 0);
         if (since >= this.events.length && Number(config.params?.timeout) > 0) {
           await new Promise<void>((resolve, reject) => {
@@ -911,6 +1095,7 @@ class FakeSynapse {
             });
           });
           if (this.offline) throw new AxiosError("Network Error", "ERR_NETWORK", config);
+          if (this.unauthorized) throw refuse();
         }
         const events = this.events
           .slice(since)
@@ -989,6 +1174,54 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
     expect(synapse.events.map((e) => e.content.body)).toEqual(["枯树那边风大"]);
     // The echo carries the txn id back, so the pending bubble and the timeline message are one.
     await waitFor(() => expect(probe.timeline.rooms["!direct:hs.test"]?.messages[0]?.txnId).toBe(probe.outbox[0].txnId));
+    view.unmount();
+  });
+
+  it("a refused letter can be dismissed; one still on its way cannot", async () => {
+    const mine = conv({ throttled: true, initiated_by_me: true, mutual: false });
+    const held = heldReply();
+    stubApi({
+      "/me/chat/conversations/": { status: 200, data: [mine] },
+      "/me/chat/session/": { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } },
+      "/me/chat/conversations/c-direct/messages/": held.reply,
+    });
+    const view = start();
+    await waitFor(() => expect(probe.availability).toBe("ready"));
+    await act(async () => probe.send(mine, "枯树那边风大"));
+    const txn = probe.outbox[0].txnId;
+    await act(async () => probe.dismiss(txn));
+    expect(probe.outbox).toHaveLength(1);
+    await act(async () => held.answer({ status: 403, data: { detail: "no", code: "muted" } }));
+    await waitFor(() => expect(probe.outbox[0]?.state).toBe("failed"));
+    await act(async () => probe.dismiss(txn));
+    expect(probe.outbox).toEqual([]);
+    expect(persistentStore.get(OUTBOX_KEY)).toBeNull();
+    view.unmount();
+  });
+
+  it("reload says whether the list came back; a failure keeps the last list and is not 'nothing changed'", async () => {
+    stubApi({
+      "/me/chat/conversations/": [
+        { status: 200, data: [conv()] },
+        { status: 500, data: { detail: "boom" } },
+        { status: 200, data: [conv()] },
+      ],
+      "/me/chat/session/": { status: 200, data: { homeserver: "http://hs.test", user_id: ME, login_type: "org.matrix.login.jwt", token: "jwt", expires_in: 60 } },
+    });
+    const view = start();
+    await waitFor(() => expect(probe.conversations).toHaveLength(1));
+    let answer: boolean | undefined;
+    await act(async () => {
+      answer = await probe.reload();
+    });
+    expect(answer).toBe(false);
+    expect(probe.listError).toBe(true);
+    expect(probe.conversations).toHaveLength(1);
+    await act(async () => {
+      answer = await probe.reload();
+    });
+    expect(answer).toBe(true);
+    expect(probe.listError).toBe(false);
     view.unmount();
   });
 
@@ -1245,6 +1478,27 @@ describe("retrying the session: 5 → 10 → 20 → 30 → 30 s (fake timers)", 
     expect(probe.availability).toBe("unavailable");
     await expectNextAfter(5_000, () => synapse.syncs);
     await expectNextAfter(10_000, () => synapse.syncs);
+    view.unmount();
+  });
+
+  it("/sync keeps saying 401: one fresh login at once, then the backoff; a good sync starts the count over", async () => {
+    const synapse = new FakeSynapse();
+    synapse.install();
+    synapse.unauthorized = true;
+    const { calls, view } = start(grant);
+    await advance(0);
+    expect(sessions(calls)).toBe(2); // the first login, and the one straight after the first 401
+    await expectNextAfter(5_000, () => sessions(calls));
+    await expectNextAfter(10_000, () => sessions(calls));
+    synapse.unauthorized = false;
+    await advance(20_000);
+    expect(probe.availability).toBe("ready");
+    const before = sessions(calls);
+    synapse.unauthorized = true;
+    synapse.release(); // the long-poll ends in a 401: a token that lapsed, so again at once
+    await advance(0);
+    expect(sessions(calls)).toBe(before + 1);
+    await expectNextAfter(5_000, () => sessions(calls)); // and the backoff is back at 5 s
     view.unmount();
   });
 
