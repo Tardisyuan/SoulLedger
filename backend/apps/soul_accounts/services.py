@@ -420,17 +420,22 @@ def authenticate(soul_code, password):
     if not account.user.check_password(password):
         raise bad
     if initial_password_expired(account):
-        raise SoulAccountError("初始密码已过期,请联系官员重置。", "initial_password_expired", 401)
+        raise SoulAccountError("初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置。", "initial_password_expired", 401)
     return account
 
 
-def complete_login(account, *, request=None, method="password", trust_hash=""):
+def complete_login(account, *, request=None, method="password", trust_hash="", device_login=None):
     """密码(以及开着两步验证时的第二步)都过了:记登录时间、建登录设备、发令牌。
-    `trust_hash`:这次登录用的「30 天内不再询问」设备令牌的 sha256(退出这台时一并作废)。"""
+    `trust_hash`:这次登录用的「30 天内不再询问」设备令牌的 sha256(退出这台时一并作废)。
+    `device_login`:面容登录用的那一行凭据(`SoulDeviceLogin` 或它的 pk):记下这次的会话,退出这台时它跟着失效。"""
     from apps.authentication import signin_sessions
+    from apps.soul_accounts.models import SoulDeviceLogin
 
     update_last_login(None, account.user)
     session = signin_sessions.start(account.user, request, method=method, trust_hash=trust_hash)
+    if device_login is not None:
+        SoulDeviceLogin.objects.filter(pk=getattr(device_login, "pk", device_login), account=account).update(
+            session=session)
     return issue_tokens(account, session)
 
 
@@ -438,7 +443,7 @@ def change_password(account, old_password, new_password, push_token="", device_c
     from django.contrib.auth.password_validation import validate_password
 
     if initial_password_expired(account):
-        raise SoulAccountError("初始密码已过期,请联系官员重置。", "initial_password_expired", 403)
+        raise SoulAccountError("初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置。", "initial_password_expired", 403)
     user = account.user
     if not user.check_password(old_password):
         raise SoulAccountError("原密码不正确。", "invalid_old_password", 400)

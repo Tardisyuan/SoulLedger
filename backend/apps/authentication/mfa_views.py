@@ -78,9 +78,10 @@ class MfaRecoveryCodesSerializer(serializers.Serializer):
 
 
 class MfaDisableRequestSerializer(serializers.Serializer):
+    """重新生成恢复码的确认:只收当前的 6 位动态码(2026-11-01)。`method=password` / `recovery` → 400 `totp_required`。"""
+
     method = serializers.ChoiceField(choices=mfa.OWNER_CONFIRM_METHODS)
     code = serializers.CharField(required=False, allow_blank=True)
-    password = serializers.CharField(required=False, allow_blank=True)
 
 
 class MfaTurnOffRequestSerializer(serializers.Serializer):
@@ -96,6 +97,7 @@ _MESSAGES = {
     "locked": "两步验证已锁定,请稍后再试",
     "login_locked": "密码尝试过于频繁,请稍后再试",
     "wrong_password": "密码不对",
+    "totp_required": "重新生成恢复码要输入当前的 6 位动态码,密码与恢复码都不行",
 }
 
 
@@ -254,16 +256,17 @@ def complete_view(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def recovery_codes_view(request):
-    """重新生成:先确认是本人(6 位数字或密码,与「关闭」同一把锁;不收恢复码),过了才作废旧码。"""
+    """重新生成:先确认是本人 —— 只收当前的 6 位动态码(与「关闭」同一把锁),过了才作废旧码。
+    带密码或恢复码来 → 400 `totp_required`,旧码原样有效(用户 2026-11-01)。"""
+    if mfa.retired_owner_method(request.data):
+        return _refuse("totp_required", status.HTTP_400_BAD_REQUEST)
     serializer = MfaDisableRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
     row = mfa.get_mfa(request.user)
     if row is None or not row.enabled:
         return _refuse("not_enabled", status.HTTP_409_CONFLICT)
-    outcome = mfa.confirm_owner(
-        row, request.user, method=data["method"], code=data.get("code") or "", password=data.get("password") or "",
-        request=request)
+    outcome = mfa.confirm_owner(row, method=data["method"], code=data.get("code") or "", request=request)
     if outcome["code"] != "ok":
         return _refuse_outcome(outcome)
     return Response({"recovery_codes": mfa.regenerate_recovery_codes(row, request=request)})

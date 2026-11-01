@@ -409,6 +409,66 @@ class TestSoulSide:
         _as(phone).post("/api/v1/me/sessions/revoke-others/")
         assert not SoulMfaDevice.objects.exists()
 
+    def _face(self, account, credential, ua="Expo/1 CFNetwork/1494 Darwin/23.4", ip="203.0.113.30"):
+        return APIClient().post("/api/v1/soul-auth/device-login/",
+                                {"soul_code": account.soul.soul_code, "credential": credential}, format="json",
+                                HTTP_USER_AGENT=ua, REMOTE_ADDR=ip)
+
+    def test_revoking_a_phone_also_turns_off_its_face_login(self, cn_tenant):
+        """review-2026-11-01 P2 #17:退出一台登录设备,此前只退会话,那部手机的面容凭据还在 —— 丢的手机照样刷脸登进来。"""
+        from apps.soul_accounts.models import SoulDeviceLogin
+
+        account = self._account(cn_tenant)
+        here = self._login(account).data
+        lost = self._login(account, "Expo/1 CFNetwork/1 Darwin/1", ip="203.0.113.31").data
+        issued = _as(lost).post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json")
+        assert issued.status_code == 201
+        credential = issued.data["credential"]
+        mine = _as(here).post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json").data["credential"]
+        lost_session = signin_sessions.session_of(_token(lost))
+        assert _as(here).post(f"/api/v1/me/sessions/{lost_session.pk}/revoke/").status_code == 204
+        refused = self._face(account, credential)
+        assert (refused.status_code, refused.data["code"], refused.data["reason"]) == (
+            401, "device_login_revoked", "turned_off")
+        # Only that phone's: the one still signed in keeps its face login.
+        assert self._face(account, mine).status_code == 200
+        assert SoulDeviceLogin.objects.filter(revoked_at__isnull=True).count() == 1
+
+    def test_a_face_login_moves_the_credential_to_its_new_session(self, cn_tenant):
+        """凭据记的是「最近一次用它登录」那次的会话:手机再刷脸进来后,退出新的那台仍然撤得掉它。"""
+        account = self._account(cn_tenant)
+        here = self._login(account).data
+        phone = self._login(account, "Expo/1 CFNetwork/1 Darwin/1", ip="203.0.113.32").data
+        credential = _as(phone).post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json").data["credential"]
+        again = self._face(account, credential)
+        assert again.status_code == 200
+        new_session = signin_sessions.session_of(_token(again.data))
+        assert _as(here).post(f"/api/v1/me/sessions/{new_session.pk}/revoke/").status_code == 204
+        assert self._face(account, credential).data["code"] == "device_login_revoked"
+
+    def test_revoke_others_turns_off_every_other_phone_s_face_login(self, cn_tenant):
+        from apps.soul_accounts import device_login
+
+        account = self._account(cn_tenant)
+        here = self._login(account).data
+        mine = _as(here).post("/api/v1/me/device-login/", {"password": PASSWORD}, format="json").data["credential"]
+        unknown = device_login.issue(account)  # issued before sessions were recorded on it: no session
+        assert _as(here).post("/api/v1/me/sessions/revoke-others/").status_code == 200
+        assert self._face(account, unknown).data["code"] == "device_login_revoked"
+        assert self._face(account, mine).status_code == 200
+
+    def test_the_history_finds_failures_typed_with_spaces_or_lower_case(self, cn_tenant):
+        """review-2026-11-01 P3:登录记录按规范化后的编号记,手输 ` abc ` 的失败也在本人的记录里。"""
+        account = self._account(cn_tenant)
+        typed = f"  {account.soul.soul_code.lower()} "
+        assert APIClient().post("/api/v1/soul-auth/login/", {"soul_code": typed, "password": "wrong-password-1"},
+                                format="json", REMOTE_ADDR="203.0.113.40").status_code == 401
+        assert LoginLog.objects.filter(username=f"soul:{account.soul.soul_code}").count() == 1
+        assert not LoginLog.objects.filter(username__contains=" ").exists()
+        ok = self._login(account)
+        history = _as(ok.data).get("/api/v1/me/sign-ins/").data
+        assert [(r["ok"], r["count"]) for r in history] == [(True, 1), (False, 1)]
+
     def test_sign_in_history_merges_consecutive_failures_and_marks_method(self, cn_tenant):
         account = self._account(cn_tenant)
         for _ in range(3):

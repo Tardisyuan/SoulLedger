@@ -43,21 +43,50 @@ from apps.soul_accounts.serializers import (
     SoulTokenPairSerializer,
 )
 
-#: 两层,各 15 分钟一个窗口(2026-09-17 用户决定):
-#: 同一灵魂编号 5 次失败 —— 挡对单个账号猜密码;
+#: 三层,各 15 分钟一个窗口(2026-09-17 用户决定两层;2026-11-01 改成三层,review P2 #16):
+#: 同一灵魂编号、同一 IP 5 次失败 —— 挡一台机器对单个账号猜密码(强度与此前相同);
+#: 同一灵魂编号、所有 IP 合计 20 次 —— 挡换着 IP 对单个账号猜。此前编号这一层不看 IP、5 次就锁,
+#: 知道编号的任何人都能把那个灵魂锁在门外;现在要动用 4 个以上 IP 才锁得住它,而真本人在自己那个 IP 上不受
+#: 别的 IP 上那 5 次的影响;
 #: 同一 IP 50 次失败 —— 挡一台机器扫很多编号,又不至于把运营商 NAT 后面的一群人一起锁死。
+#: 编号的两层按「用途」分开计(`scope`):密码登录 `login`、面容登录 `face`、登录后的确认是本人 `confirm`,
+#: 一处的失败不再消耗另一处的预算;IP 那一层三处共用。成功只清本用途、本编号的两层,不清 IP 层。
 LOGIN_WINDOW_SECONDS = 900
 CODE_ATTEMPTS = 5
+CODE_ALL_IPS_ATTEMPTS = 20
 IP_ATTEMPTS = 50
 
 
-def _rate_keys(ip, soul_code):
-    """编号不以原文进缓存键:键名会出现在 Redis 的 MONITOR / 慢日志 / 备份里。哈希后的键
-    仍按编号区分,但从键反推不出编号。"""
+def _rate_keys(ip, soul_code, scope="login"):
+    """→ (IP 键, 编号+IP 键, 编号键)。编号不以原文进缓存键:键名会出现在 Redis 的 MONITOR / 慢日志 / 备份里。
+    哈希后的键仍按编号区分,但从键反推不出编号。"""
     import hashlib
 
-    digest = hashlib.sha256(soul_code.strip().upper().encode()).hexdigest()[:32]
-    return f"soul_login_rate:ip:{ip}", f"soul_login_rate:code:{digest}"
+    digest = hashlib.sha256(svc.normalize_soul_code(soul_code).encode()).hexdigest()[:32]
+    return (f"soul_login_rate:ip:{ip}", f"soul_login_rate:{scope}:code:{digest}:ip:{ip}",
+            f"soul_login_rate:{scope}:code:{digest}")
+
+
+_LIMITS = (IP_ATTEMPTS, CODE_ATTEMPTS, CODE_ALL_IPS_ATTEMPTS)
+
+
+def rate_limited(keys) -> bool:
+    return any(cache.get(key, 0) >= limit for key, limit in zip(keys, _LIMITS, strict=True))
+
+
+def count_failure(keys) -> int:
+    """三层各记一次;→ 这个编号在这台机器上还能再错几次(两层编号预算里小的那个)。"""
+    counts = []
+    for key in keys:
+        counts.append(cache.get(key, 0) + 1)
+        cache.set(key, counts[-1], timeout=LOGIN_WINDOW_SECONDS)
+    return max(0, min(CODE_ATTEMPTS - counts[1], CODE_ALL_IPS_ATTEMPTS - counts[2]))
+
+
+def clear_after_success(keys) -> None:
+    """成功只清这个编号(本用途)的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
+    就能把整台机器的扫描预算重置。"""
+    cache.delete_many(list(keys[1:]))
 
 
 #: 两种 200:令牌,或开着两步验证时的 `mfa_required` + 短时效的待验证凭据(去 /soul-auth/mfa/verify/)。
@@ -80,7 +109,7 @@ class IsCurrentSoulAccount(BasePermission):
             return False
         if account.must_change_password and not getattr(view, "allowed_before_password_change", False):
             if svc.initial_password_expired(account):
-                raise PermissionDenied({"detail": "初始密码已过期,请联系官员重置。", "code": "initial_password_expired"})
+                raise PermissionDenied({"detail": "初始密码已过期。绑定了联系邮箱的,可以在登录页点「忘记密码」用邮箱自己重置;否则请联系官员重置。", "code": "initial_password_expired"})
             raise PermissionDenied({"detail": "首次登录须先修改密码。", "code": "password_change_required"})
         return True
 
@@ -121,47 +150,52 @@ class SoulLoginView(APIView):
         body = SoulLoginRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         soul_code = body.validated_data["soul_code"]
-        ip_key, code_key = _rate_keys(ip, soul_code)
-        ip_attempts = cache.get(ip_key, 0)
-        code_attempts = cache.get(code_key, 0)
-        if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+        keys = _rate_keys(ip, soul_code)
+        if rate_limited(keys):
             return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         try:
             account = svc.authenticate(soul_code, body.validated_data["password"])
         except svc.SoulAccountError as exc:
-            cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            LoginLog.objects.create(username=f"soul:{soul_code}"[:150], status="FAILED", ip_address=ip,
+            count_failure(keys)
+            LoginLog.objects.create(username=sign_in_username(soul_code), status="FAILED", ip_address=ip,
                                     user_agent=user_agent, failure_reason=exc.code)
             return _error(exc)
-        return finish_first_step(account, soul_code, ip_key=ip_key, code_key=code_key, ip=ip,
+        return finish_first_step(account, soul_code, rate_keys=keys, ip=ip,
                                  user_agent=user_agent, device_token=body.validated_data.get("device_token"),
                                  request=request)
 
 
-def finish_first_step(account, soul_code, *, ip_key, code_key, ip, user_agent, device_token, request=None,
-                      method="password"):
+def sign_in_username(soul_code) -> str:
+    """登录记录里的 `username`:`soul:` + 规范化后的编号(去空白、大写)。「登录记录」页按它找这个灵魂的失败行;
+    原样记下用户手输的 ` abc ` 时,那几次失败在页上查不到(review-2026-11-01 P3)。"""
+    return f"soul:{svc.normalize_soul_code(soul_code)}"[:150]
+
+
+def finish_first_step(account, soul_code, *, rate_keys, ip, user_agent, device_token, request=None,
+                      method="password", device_login=None):
     """第一步(密码或面容凭据)过了之后的共同尾巴:清编号计数;开着两步验证且手机不在免询问期内 →
-    `mfa_required`,否则发令牌。**面容只代替密码,两步验证照常。**"""
+    `mfa_required`,否则发令牌。**面容只代替密码,两步验证照常。**
+    `device_login`:面容登录用的那一行凭据 —— 这次登录建出的会话记到它上面(经待验证凭据带到第二步也一样),
+    退出这台设备时它跟着失效。"""
     from apps.authentication.models import LoginLog
 
-    # 成功只清这个编号的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
-    # 就能把整台机器的扫描预算重置。
-    cache.delete(code_key)
+    clear_after_success(rate_keys)
     if soul_mfa.is_enabled(account) and not soul_mfa.device_remembered(account, device_token):
         # 第二步:第一步对了,令牌还不发。待验证凭据只开 /soul-auth/mfa/verify/ 这一扇门。
         # 殿名随之返回(此时已过第一步这一关),供「手机和恢复码都没有了」一屏使用。
         return Response({
-            "mfa_required": True, "pending_token": soul_mfa.issue_pending(account, method),
+            "mfa_required": True,
+            "pending_token": soul_mfa.issue_pending(account, method, device_login=device_login),
             "soul_code": account.soul.soul_code,
             "home_tenant": MeTenantSerializer(account.soul.home_tenant).data,
         })
     # 这次登录靠「这部手机不再询问」跳过了第二步:会话记着那枚设备令牌,退出这台时一并作废。
     tokens = svc.complete_login(account, request=request, method=method,
-                                trust_hash=soul_mfa.core._hash_device(device_token) if device_token else "")
-    LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
+                                trust_hash=soul_mfa.core._hash_device(device_token) if device_token else "",
+                                device_login=device_login)
+    LoginLog.objects.create(user=account.user, username=sign_in_username(soul_code), status="SUCCESS",
                             ip_address=ip, user_agent=user_agent, method=method)
     return Response({
         **tokens,

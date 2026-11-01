@@ -4,10 +4,10 @@
     POST /soul-auth/device-login/revoke/  关闭这部手机的凭据(幂等,不要求登录)
     POST /soul-auth/device-login/     用「编号 + 凭据」代替「编号 + 密码」登录;响应与密码登录逐字段相同
 
-登录的限流、失败计数、锁定与密码登录**共用同一组缓存键**(同一编号 5 次 / 同一 IP 50 次,15 分钟)。
+登录的限流与密码登录同一套三层(`me_views._rate_keys`:同一编号同一 IP 5 次 / 同一编号全部 IP 20 次 / 同一 IP 50 次,
+15 分钟),编号那两层**另记一份**(`scope="face"`,2026-11-01):乱填凭据不再消耗密码登录的预算,反之亦然。
 被吊销的凭据不算猜错(那是过期的真凭据,不是探测),所以不计数。
 """
-from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -19,13 +19,13 @@ from rest_framework.views import APIView
 from apps.soul_accounts import device_login
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import (
-    CODE_ATTEMPTS,
-    IP_ATTEMPTS,
     LOGIN_OUTCOME,
-    LOGIN_WINDOW_SECONDS,
     SoulAPIView,
     _rate_keys,
+    count_failure,
     finish_first_step,
+    rate_limited,
+    sign_in_username,
 )
 from apps.soul_accounts.mfa_views import _client_ip, confirm_current_password
 from apps.soul_accounts.serializers import (
@@ -49,8 +49,10 @@ class MeDeviceLoginView(SoulAPIView):
         refusal = confirm_current_password(request, self.account, body.validated_data["password"])
         if refusal is not None:
             return refusal
+        from apps.authentication import signin_sessions
+
         with transaction.atomic():
-            raw = device_login.issue(self.account)
+            raw = device_login.issue(self.account, session=signin_sessions.session_of(request.auth))
         return Response({"credential": raw}, status=status.HTTP_201_CREATED)
 
 
@@ -88,15 +90,14 @@ class SoulDeviceLoginView(APIView):
         body = SoulDeviceLoginRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         soul_code = body.validated_data["soul_code"]
-        ip_key, code_key = _rate_keys(ip, soul_code)
-        ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
-        if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+        keys = _rate_keys(ip, soul_code, scope="face")
+        if rate_limited(keys):
             return Response({"detail": "登录尝试过于频繁,请 15 分钟后再试。", "code": "rate_limited"},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         soul = Soul.objects.filter(soul_code=svc.normalize_soul_code(soul_code)).first()
         row = device_login.find(soul, body.validated_data["credential"])  # 哈希先算,编号存不存在耗时一样
-        username = f"soul:{soul_code}"[:150]
+        username = sign_in_username(soul_code)
         account = row.account if row is not None else None
         # 账号已停用而凭据没标(不该发生,转生时同事务标了):按转生答,而不是「不认识」。
         reason = (row.revoked_reason or "account_reincarnated") if row is not None and (
@@ -107,14 +108,13 @@ class SoulDeviceLoginView(APIView):
             return Response({"detail": "这部手机的面容/指纹登录已失效。", "code": "device_login_revoked",
                              "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
         if account is None or not account.user.is_active:
-            cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            count_failure(keys)
             LoginLog.objects.create(username=username, status="FAILED", ip_address=ip, user_agent=user_agent,
                                     failure_reason="device_login_invalid")
             return Response({"detail": "灵魂编号或凭据错误。", "code": "device_login_invalid"},
                             status=status.HTTP_401_UNAUTHORIZED)
         row.last_used_at = timezone.now()
         row.save(update_fields=["last_used_at"])
-        return finish_first_step(account, soul_code, ip_key=ip_key, code_key=code_key, ip=ip,
+        return finish_first_step(account, soul_code, rate_keys=keys, ip=ip,
                                  user_agent=user_agent, device_token=body.validated_data.get("device_token"),
-                                 request=request, method="face")
+                                 request=request, method="face", device_login=row)
