@@ -5161,7 +5161,24 @@
         "incoming_hint": "一封新信。你回了，就能自由说了；不回也可以。",
         "locked": "等对方回话",
         "next_at": "已发出一封。{{time}} 起可再发一封。",
-        "throttled": "一日一封，已发过了。{{time}} 起可再发。你写的留着。"
+        "throttled": "一日一封，已发过了。{{time}} 起可再发。你写的留着。",
+        "decline": "拒绝",
+        "block": "拉黑",
+        "declined": "已拒绝这次申请"
+      },
+      "block": {
+        "confirm_title": "拉黑{{name}}？",
+        "confirm_body": "拉黑之后，对方不能再给你写信，你们这段书信也停在这里。可在设置 › 已拉黑 里解除。",
+        "confirm": "拉黑",
+        "done": "已拉黑",
+        "failed": "没能拉黑，稍后再试"
+      },
+      "blocks": {
+        "title": "已拉黑",
+        "empty": "没有拉黑任何灵魂。",
+        "unblock": "解除",
+        "unblocked": "已解除",
+        "failed": "没能解除，稍后再试"
       },
       "muted": {
         "banner": "你被禁言 {{days}} 日。{{time}} 起可再与灵魂通信。此间仍可读，仍可写信给殿司。",
@@ -5170,7 +5187,10 @@
       "closed": {
         "peer_reborn": "她已转生去了。这段话留着，不能再添。",
         "peer_retired": "这个账号已停用。这段话留着，不能再添。",
-        "marker": "{{date}} 转生 · 会话止于此"
+        "marker": "{{date}} 转生 · 会话止于此",
+        "declined": "对方没有接受这次申请。这段话留着；一日之后可以再写一封。",
+        "undeliverable": "无法送达。",
+        "peer_blocked": "你已拉黑对方。在设置 › 已拉黑 里可以解除。"
       },
       "unavailable": {
         "banner": "一时送不出，正在重连",
@@ -5180,7 +5200,8 @@
       "not_configured": "此地尚未通书信。开通之后，此处自会出现。",
       "menu": {
         "report": "举报",
-        "profile": "看他的主页"
+        "profile": "看他的主页",
+        "block": "拉黑"
       },
       "new_marker": "新",
       "older": "更早的书信",
@@ -5196,7 +5217,11 @@
         "invalid_code": "灵魂编号须为 10 位。",
         "self": "不能写信给自己。",
         "ticket_expired": "这次查找已过期，请重新按编号查找。",
-        "ticket_invalid": "请重新按编号查找。"
+        "ticket_invalid": "请重新按编号查找。",
+        "declined": "对方没有接受这次申请。",
+        "peer_blocked": "你已拉黑对方。",
+        "undeliverable": "无法送达。",
+        "not_a_request": "这封已不是待回的申请。"
       },
       "image": {
         "failed": "没能发出",
@@ -5915,6 +5940,14 @@
     "reply": {
       "title": "{{name}} 回复了你的评论",
       "body": "{{text}}"
+    },
+    "social_muted": {
+      "title": "你已被禁言",
+      "body": "你被禁言 {{days}} 日，期间朋友圈只读，也不能与灵魂通信。"
+    },
+    "social_muted_reason": {
+      "title": "你已被禁言",
+      "body": "你被禁言 {{days}} 日：{{reason}}"
     }
   },
   "official_notify": {

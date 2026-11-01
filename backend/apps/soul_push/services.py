@@ -271,6 +271,9 @@ KIND_CATEGORY = {
     # 第四十批 S-a:别人评论了我的帖子 / 回复了我的评论(朋友圈 › 评论和回复)。
     "comment": "social_comments",
     "reply": "social_comments",
+    # 禁言(2026-11-01 审查 P3):殿司对灵魂的处置,与警告一样不给关;有理由的带理由。
+    "social_muted": None,
+    "social_muted_reason": None,
 }
 
 
@@ -362,6 +365,24 @@ def record_content_moderated(user_id, target_type, target_id, action, post_id=No
                    f"moderated:{target_id}:{action}:{timezone.now().timestamp()}"[:120],
                    {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"},
                    params=params)
+
+
+#: 朋友圈禁言(apps/social/moderation.py::mute_user)。**不经事件总线**(总线上的 `SOCIAL_MUTED` 只带 `until`,
+#: 给租户 webhook);理由只在这条推送里。此前禁言一声不响:灵魂要到发帖或写信被拒时才知道,而且不知道为什么。
+SOCIAL_MUTED_EVENT = "SOCIAL_MUTED"
+
+
+def record_social_muted(user_id, mute, days):
+    """被禁言的若是灵魂(有本世账号),记一条「你被禁言 N 日(:理由)」;官员、已转世的:不记。dedupe 用禁言 id。"""
+    from apps.soul_accounts.models import SoulAccount
+
+    account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
+    if account is None:
+        return []
+    reason = (mute.reason or "").strip()
+    kind = "social_muted_reason" if reason else "social_muted"
+    return _record(account, SOCIAL_MUTED_EVENT, None, kind, f"mute:{mute.pk}"[:120], {"screen": "Life"},
+                   params=lambda locale: {"days": str(days), **({"reason": reason} if reason else {})})
 
 
 #: 朋友圈里别人评论了我的帖子 / 回复了我的评论(第四十批 S-a,`apps/social/interactions.py::record_comment`)。

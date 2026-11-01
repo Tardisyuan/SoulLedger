@@ -54,6 +54,9 @@ MESSAGES = {
         # 第四十批 S-a:标题是 Design 的原文;正文是评论的开头(`{{text}}`,不再加字)。
         "comment": {"title": "{{name}} 评论了你的帖子", "body": "{{text}}"},
         "reply": {"title": "{{name}} 回复了你的评论", "body": "{{text}}"},
+        # 禁言(2026-11-01 审查 P3):殿司说了理由就带上,没写理由的用前一条。
+        "social_muted": {"title": "你已被禁言", "body": "你被禁言 {{days}} 日，期间朋友圈只读，也不能与灵魂通信。"},
+        "social_muted_reason": {"title": "你已被禁言", "body": "你被禁言 {{days}} 日：{{reason}}"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -176,6 +179,11 @@ MESSAGES = {
         },
         "comment": {"title": "{{name}} commented on your post", "body": "{{text}}"},
         "reply": {"title": "{{name}} replied to your comment", "body": "{{text}}"},
+        "social_muted": {
+            "title": "You are muted",
+            "body": "You are muted for {{days}} days: the circle is read-only and you cannot write to other souls.",
+        },
+        "social_muted_reason": {"title": "You are muted", "body": "You are muted for {{days}} days: {{reason}}"},
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
