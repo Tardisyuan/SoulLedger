@@ -168,7 +168,7 @@ def test_the_vestibule_comes_before_the_first_circle_in_the_placement_list():
 
     call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
     tenant = Tenant.objects.get(code="EU_HEAVEN_HELL")
-    judgment = SimpleNamespace(tenant_id=tenant.pk, soul=SimpleNamespace(civilization="EUROPEAN"),
+    judgment = SimpleNamespace(tenant_id=tenant.pk, tenant=tenant, soul=SimpleNamespace(civilization="EUROPEAN"),
                                judgment_method="STANDARD")
     codes = [r.realm_code for r in destination_options(judgment, Verdict.FAILED)]
     assert "EU_ANTINFERNO" in codes and D.EU_HELL_CIRCLES[1] in codes, codes
