@@ -212,6 +212,68 @@ it("a 409 not_current_hall on send says why and takes the reply box away", async
   expect(within(thread).queryByLabelText(tZh("soul_inbox.reply_label"))).toBeNull();
 });
 
+// 用户 2026-11-02:指派给别人的信先「转给我」才能回;已归档的信可以回,回完列表归属跟着刷新。
+describe("who may answer", () => {
+  const OTHER = { user_id: 7, display_name: "钟馗" };
+  const replyBox = (thread: HTMLElement) => within(thread).queryByLabelText(tZh("soul_inbox.reply_label"));
+  beforeEach(() => asRole("soul_inbox.read", "soul_inbox.reply"));
+
+  it("someone else's: one line and 转给我 instead of the box; taking it brings the box back", async () => {
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: OTHER })]));
+    apiMock.assign.mockResolvedValue({ data: conversation({ assignee: { user_id: 2, display_name: "op" } }) });
+    renderPage();
+    const thread = await openThread();
+    expect(within(thread).getByTestId("inbox-not-yours")).toHaveTextContent(tZh("soul_inbox.assign.handled_by", { name: "钟馗" }));
+    expect(replyBox(thread)).toBeNull();
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: { user_id: 2, display_name: "op" } })]));
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.assign.take_over") }));
+    await waitFor(() => expect(apiMock.assign).toHaveBeenCalledWith("c1", 2));
+    await waitFor(() => expect(replyBox(thread)).not.toBeNull());
+    expect(within(thread).queryByTestId("inbox-not-yours")).toBeNull();
+  });
+
+  it("mine, or nobody's: the box and no such line", async () => {
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: { user_id: 2, display_name: "op" } })]));
+    renderPage();
+    const thread = await openThread();
+    expect(replyBox(thread)).not.toBeNull();
+    expect(within(thread).queryByTestId("inbox-not-yours")).toBeNull();
+  });
+
+  it("archived and someone else's: still 转给我 first", async () => {
+    apiMock.list.mockResolvedValue(page([conversation({ archived: true, assignee: OTHER })]));
+    renderPage();
+    const thread = await openThread();
+    expect(within(thread).getByTestId("inbox-not-yours")).toBeInTheDocument();
+    expect(replyBox(thread)).toBeNull();
+  });
+
+  it("a 409 assigned_to_other on send says why, refreshes, and the box gives way", async () => {
+    apiMock.reply.mockRejectedValue(http(409, { detail: "x", code: "assigned_to_other" }));
+    renderPage();
+    const thread = await openThread();
+    fireEvent.change(replyBox(thread)!, { target: { value: "写到一半被接走" } });
+    apiMock.list.mockResolvedValue(page([conversation({ assignee: OTHER })]));
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.send") }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_inbox.errors.assigned_to_other"), "error"));
+    expect(await within(thread).findByTestId("inbox-not-yours")).toBeInTheDocument();
+    expect(replyBox(thread)).toBeNull();
+  });
+
+  it("an archived letter can be answered, and the reply refreshes the lists and the counts", async () => {
+    apiMock.list.mockResolvedValue(page([conversation({ archived: true })]));
+    renderPage();
+    const thread = await openThread();
+    fireEvent.change(replyBox(thread)!, { target: { value: "归档了也回" } });
+    apiMock.list.mockClear();
+    apiMock.folders.mockClear();
+    fireEvent.click(within(thread).getByRole("button", { name: tZh("soul_inbox.send") }));
+    await waitFor(() => expect(apiMock.reply).toHaveBeenCalledWith("c1", "归档了也回", expect.any(String)));
+    await waitFor(() => expect(apiMock.list).toHaveBeenCalled());
+    expect(apiMock.folders).toHaveBeenCalled();
+  });
+});
+
 it("an empty inbox says so and asks for no thread", async () => {
   asRole("soul_inbox.read");
   apiMock.list.mockResolvedValue(page([]));

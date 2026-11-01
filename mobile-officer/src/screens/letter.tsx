@@ -18,7 +18,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 
-import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
+import { clearDraft, flushDraft, mergeServerDraft, readDraft, scheduleDraft, settleDraft } from "../drafts";
 import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
 import { useCachedRemote } from "../readCache";
 import { formatWhen } from "../format";
@@ -26,6 +26,7 @@ import { ActionButton, Row, StateView, detailStateOf } from "../kit";
 import {
   hallLabel,
   lettersUnavailable,
+  ASSIGNED_TO_OTHER,
   replyFailureKey,
   replyReady,
   withTemplate,
@@ -119,11 +120,27 @@ export function LetterThread({
   const templates = useRemote(loadTemplates);
   // The words survive leaving the screen and the OS killing the app (drafts.ts); a reply that went out clears them.
   const [text, setText] = useState(() => readDraft(id));
+  // The box opens with this phone's words at once; the server's copy (the desk's) joins when it arrives, once per
+  // opening (the first time online). Anything done to the box meanwhile wins over an answer that was asked before it.
+  const touched = useRef(false);
   const edit = (next: string) => {
+    touched.current = true;
     setText(next);
     scheduleDraft(id, next);
   };
-  useEffect(() => flushDraft, []);
+  useEffect(() => settleDraft, []);
+  const askedServer = useRef(false);
+  useEffect(() => {
+    if (offline || askedServer.current) return;
+    askedServer.current = true;
+    if (outboxEntry) return; // the words are a reply on its way, not a draft to compare
+    soulInboxApi.draft(id).then(
+      (r) => {
+        if (!touched.current) setText(mergeServerDraft(id, r.data));
+      },
+      () => undefined,
+    );
+  }, [id, offline, outboxEntry]);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -157,6 +174,7 @@ export function LetterThread({
 
   const send = () => {
     if (sending.current || !replyReady(text)) return;
+    touched.current = true;
     const words = text.trim();
     if (attempt.current?.text !== words) attempt.current = { text: words, txn: newReplyTxn(), tried: false };
     const { txn } = attempt.current;
@@ -192,7 +210,14 @@ export function LetterThread({
         onDone?.();
       })
       // The text stays; the key says why (closed / unavailable / try again) without quoting anything.
-      .catch((e: unknown) => setFailure(replyFailureKey(e)))
+      .catch((e: unknown) => {
+        const key = replyFailureKey(e);
+        if (key !== ASSIGNED_TO_OTHER) return setFailure(key);
+        // Taken while this was being written: the reload swaps the box for 「转给我」, the words stay in the draft.
+        toast(t(key), "failure");
+        void thread.reload();
+        onSettled();
+      })
       .finally(() => {
         sending.current = false;
         setBusy(false);
@@ -375,7 +400,7 @@ export function LetterThread({
             onAssign={() => setSheet("assign")}
             onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
           />
-        ) : othersLetter && !conversation.archived ? (
+        ) : othersLetter ? (
           <View testID="letter-not-yours" style={{ padding: space[4], gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
             <Txt variant="body" tone="muted">{t("officer_app.letter.not_yours", { name: conversation.assignee?.display_name ?? "" })}</Txt>
             {canHandOn && meId !== undefined ? (
@@ -416,7 +441,7 @@ export function LetterThread({
               multiline
               maxLength={INBOX_REPLY_MAX}
               value={text}
-              editable={!queued && !conversation.archived}
+              editable={!queued}
               onChangeText={edit}
             />
             {queued ? (
@@ -438,7 +463,7 @@ export function LetterThread({
               testID="letter-send"
               kind="primary"
               busy={busy}
-              disabled={queued || conversation.archived}
+              disabled={queued}
               title={t("soul_inbox.send")}
               onPress={send}
             />
