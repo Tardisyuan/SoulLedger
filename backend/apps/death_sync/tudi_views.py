@@ -18,7 +18,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.death_sync.models import DeathRegistrationRequest, TudiGod
 from apps.death_sync.serializers import DeathRegistrationCreateSerializer, DeathRegistrationRequestSerializer
-from apps.death_sync.services import DeathSyncService
+from apps.death_sync.services import DeathSyncService, RetryRefusedError
 from apps.judgment.claims import is_assignable
 from apps.judgment.models import CityGod, CityGodRank
 
@@ -184,4 +184,6 @@ class TudiGodViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewS
             existing = DeathRegistrationRequest.objects.filter(
                 tenant=tudi.tenant, source_system="TUDI", idempotency_key=key).first()
             return Response(DeathRegistrationRequestSerializer(existing).data, status=status.HTTP_409_CONFLICT)
+        except RetryRefusedError as refused:
+            return Response(DeathRegistrationRequestSerializer(refused.record).data, status=status.HTTP_409_CONFLICT)
         return Response(DeathRegistrationRequestSerializer(record).data, status=status.HTTP_201_CREATED)

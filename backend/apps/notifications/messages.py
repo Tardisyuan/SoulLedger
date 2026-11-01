@@ -18,6 +18,7 @@ MESSAGES = {
         "sentence_node_done": {"title": "受刑节点结束", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"},
         "sentence_node_waiting": {"title": "刑满暂留", "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"},
         "sentence_node_refused": {"title": "受刑节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"},
+        "sentence_node_not_dispatched": {"title": "受刑节点未能发起调拨", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。"},
         "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
         "cross_sentence_submitted": {"title": "跨域审判节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请到用户管理为其重置。"},
@@ -80,6 +81,7 @@ MESSAGES = {
         "sentence_node_done": {"title": "Sentence stop ended", "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."},
         "sentence_node_waiting": {"title": "Held after serving", "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."},
         "sentence_node_refused": {"title": "Sentence stop refused", "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."},
+        "sentence_node_not_dispatched": {"title": "Sentence stop not dispatched", "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again."},
         "sentence_plan_completed": {"title": "Sentence plan completed", "body": "Soul {{soul}} has served every stop of its sentence plan."},
         "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "password_help_requested": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, reset it under User Management."},
@@ -250,6 +252,8 @@ SYSTEM_KINDS = {
 #: colleague's 「忘记密码」 but cannot open user management (ADMIN only), so
 #: their text says to ask an administrator instead (2026-09-25 decision).
 VARIANTS = {
+    # 系统没能发起调拨(`_dispatch_not_started`):没有哪个殿拒绝过,不能说「被拒」。
+    "sentence_node_refused": {"sentence_node_not_dispatched"},
     "password_help_requested": {"password_help_requested_moderator"},
     # 驳回没写理由时用无理由的句子(没有「理由：」后面空着的一行)。
     "dispatch_rejected": {"dispatch_rejected_bare"},
