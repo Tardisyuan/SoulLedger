@@ -46,6 +46,18 @@ def acquitted_to_rebirth(civilization, verdict) -> bool:
     return verdict == Verdict.PASSED and civilization == "CHINESE"
 
 
+def case_civilization(judgment) -> str:
+    """The cosmology this case is heard and concluded under: that of the hall it is filed in (review 2026-11-01 #12).
+
+    The same answer as `soul.civilization` whenever the soul is in that hall — every case but one. The one: an ORIGINAL
+    (or REOPEN) filed at home while the soul resides elsewhere. Read off the residence, its verdict was interpreted,
+    routed and given an approval flow under a foreign cosmology, against realms looked up in the home hall
+    (`route_realm` / `_tenant_realms` filter by `judgment.tenant_id`). An AMENDMENT is filed where the soul is.
+    A hall that names no civilization falls back to the soul's."""
+    tenant = judgment.tenant if judgment.tenant_id is not None else None
+    return (tenant.known_civilization if tenant is not None else None) or judgment.soul.civilization
+
+
 class JudgmentMethod(models.TextChoices):
     STANDARD = "STANDARD", "Standard Trial (Chinese/European/Greek)"
     HEART_WEIGHING = "HEART_WEIGHING", "Heart Weighing (Egyptian)"

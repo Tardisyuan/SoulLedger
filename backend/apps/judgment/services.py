@@ -226,12 +226,19 @@ class JudgmentConclusionService:
             # Step -2: the row lock, and who may conclude a claimed case. Only
             # when a caller is named — the API always names one; in-process
             # callers (seeders, test helpers) act as the system, not as an officer.
-            from apps.judgment.claims import _lock, assert_concludable, lock_for_conclude
+            # The verdict is re-read under that lock (review 2026-11-01 P0 #1): `judgment` is the caller's copy, read
+            # before the lock, so two concurrent conclusions both saw an open case and both went on — two retrials,
+            # two plan requests, two home nodes. The second now waits on the row lock, reads the verdict the first
+            # wrote, and is refused 409 `already_concluded` before anything is written.
+            from apps.judgment.claims import ClaimRefusedError, _lock, assert_concludable, lock_for_conclude
 
             if by is not None:
-                lock_for_conclude(judgment.pk, by)
+                locked = lock_for_conclude(judgment.pk, by)
             else:
-                assert_concludable(_lock(judgment.pk))
+                locked = _lock(judgment.pk)
+                assert_concludable(locked)
+            if locked.is_final or locked.verdict is not None:
+                raise ClaimRefusedError("This judgment has already been concluded.", "already_concluded")
 
             # Step -1 (Q17): an attached cross-tenant judgment must have ended —
             # its PASS nodes are copied into the plan below. Raises before
@@ -271,13 +278,15 @@ class JudgmentConclusionService:
             # docs/01_欧洲 §1.2,RETRY 送进炼狱期满就升了天堂);地府的待审所、希腊的草地同样不是刑罚,
             # 只是「还没被送走」(docs/02_希腊 §5.2),docs/11 第八步「重新审理」。欧洲的 PURGATORY 照旧送炼狱。
             # 重开 / 申诉改判成这些裁决在 sentence_plan/requests.py 拒绝(那两条路本身就是再审)。
-            from apps.judgment.models import acquitted_to_rebirth, hears_again
+            from apps.judgment.models import acquitted_to_rebirth, case_civilization, hears_again
             from apps.souls.models import Civilization
 
-            retry = judgment.kind == JudgmentKind.ORIGINAL and hears_again(judgment.soul.civilization, verdict)
+            # 按这件案子所在殿的文明,不按灵魂此刻的驻地(review 2026-11-01 #12;`case_civilization`)。
+            civilization = case_civilization(judgment)
+            retry = judgment.kind == JudgmentKind.ORIGINAL and hears_again(civilization, verdict)
             # 地府判无罪(`acquitted_to_rebirth`):不发落、不建刑期节点,流程走完直接候转世(docs/11 第六步)。
             acquitted = (judgment.kind == JudgmentKind.ORIGINAL
-                         and acquitted_to_rebirth(judgment.soul.civilization, verdict))
+                         and acquitted_to_rebirth(civilization, verdict))
             if acquitted and (destination_realm_id is not None or term_years is not None or eternal is not None):
                 from apps.disposition.destination import DestinationRefusedError
                 raise DestinationRefusedError(
@@ -301,7 +310,7 @@ class JudgmentConclusionService:
             # 读 `soul.civilization`),重开审判按原属文明路由(`conclude_reopened` → `_route_home_realm`)。
             # 此前两种都读管辖文明,暂居他乡的欧洲灵魂重开时核对与路由不是同一套宇宙观。
             gravity_civilization = (judgment.soul.home_civilization if judgment.kind == JudgmentKind.REOPEN
-                                    else judgment.soul.civilization)
+                                    else civilization)
             if (judgment.kind != JudgmentKind.AMENDMENT
                     and gravity_civilization == Civilization.EUROPEAN):
                 from apps.disposition.services import DispositionService
@@ -330,7 +339,7 @@ class JudgmentConclusionService:
             if (judgment.kind == JudgmentKind.ORIGINAL and not wavering and not retry
                     and judgment.duat_stage != DuatStage.EARLY_DEATH
                     and judgment.grievance_status != GrievanceStatus.DELIVERED
-                    and judgment.soul.civilization in VALID_CASE_TYPES_BY_CIVILIZATION):
+                    and civilization in VALID_CASE_TYPES_BY_CIVILIZATION):
                 if create_workflow is False:
                     if weighed is not None:
                         raise weighing.WeighingRefusedError(
@@ -711,10 +720,17 @@ class JudgmentService:
                 if open_ids:
                     raise OpenCaseRefusedError(
                         "This soul already has an open case. Conclude it before opening another.", "open_case", open_ids)
-            if "kind" not in fields:
-                plan = in_progress_plan(soul)
-                if plan is not None:
-                    fields.update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
+            plan = in_progress_plan(soul)
+            # A case on a soul that no conclusion can move is a case that never ends (review 2026-11-01 #10): an
+            # ORIGINAL concludes JUDGING → DISPOSED, an AMENDMENT / REOPEN acts on a sentence plan in progress. So a
+            # soul on its way to rebirth (REINCARNATING), lost (LOST), or disposed with no plan left to amend has no
+            # case opened on it — ADMIN included, since its exemption is for repairing, and this case cannot be closed.
+            if (soul.current_state in (SoulState.REINCARNATING, SoulState.LOST)
+                    or (soul.current_state == SoulState.DISPOSED and plan is None)):
+                raise OpenCaseRefusedError(
+                    f"The soul is {soul.current_state}; no case opened now could be concluded.", "cannot_enter_judgment")
+            if "kind" not in fields and plan is not None:
+                fields.update(kind=JudgmentKind.AMENDMENT, amends_plan_id=plan.pk)
             was_alive = soul.current_state == SoulState.ALIVE
             if was_alive:
                 fields.update(soul.opening_fields(timezone.now().date()))
@@ -726,5 +742,10 @@ class JudgmentService:
                     raise OpenCaseRefusedError(
                         f"The soul is {soul.current_state}; it cannot enter judgment.", "cannot_enter_judgment")
                 city_gods.received(judgment)
+                # Egypt, as at `Soul.die` (review 2026-11-01 P3): an early death recorded before this death goes
+                # straight to the Field of Reeds, concluded PASSED unweighed; any other case sets out for the hall.
+                # Before this the case kept `duat_stage=EARLY_DEATH` and waited, unweighed, for an officer.
+                if soul.civilization == "EGYPTIAN":
+                    soul._after_egyptian_death(judgment)
             enter_judgment_realm(soul, judgment)
             return judgment

@@ -1007,6 +1007,61 @@ class TestConcludeDestinationCapacityHoldsTheRealmLock:
         assert SoulPathEntry.all_objects.filter(realm=realm, left_at__isnull=True).count() == 1
 
 
+@pytest.mark.django_db(transaction=True)
+class TestConcludeRechecksUnderTheLock:
+    """审查 2026-11-01 P0 #1:结案拿到行锁之后重读裁决。顺序版本(每个引擎都跑)在
+    tests/test_judgment_review_2026_11_01.py。"""
+
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_two_officers_concluding_one_case_at_once_exactly_one_wins(self, db, cn_tenant):
+        """Two real connections, one case. A takes the row lock and lingers after it; B, arriving meanwhile, has
+        passed the view's `is_final` check on its own (pre-lock) read, waits on the lock, then reads A's verdict:
+        409 `already_concluded`. Before the recheck B wrote a second verdict and a second disposition."""
+        import time
+        from unittest.mock import patch
+
+        from django.db import connections
+
+        from apps.disposition.models import Disposition
+        from apps.sentence_plan.services import SentencePlanService
+
+        case = _pending_case(cn_tenant)
+        clients = {n: _admin_client(cn_tenant, f"conclude_{n}") for n in ("a", "b")}
+        real = SentencePlanService.open_cross_judgment
+        a_inside = threading.Event()
+        results, codes = {}, {}
+
+        def lingering(judgment):
+            if threading.current_thread().name == "a":
+                a_inside.set()
+                time.sleep(1.0)
+            return real(judgment)
+
+        def post(label):
+            try:
+                if label == "b":
+                    assert a_inside.wait(timeout=10), "A never took the lock"
+                response = clients[label].post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED"},
+                                               format="json")
+                results[label] = response.status_code
+                codes[label] = response.data.get("code")
+            except Exception as exc:  # surfaced in the assertions below
+                results[label] = repr(exc)
+            finally:
+                connections.close_all()
+
+        with patch.object(SentencePlanService, "open_cross_judgment", staticmethod(lingering)):
+            threads = [_Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=30)
+
+        assert results == {"a": 200, "b": 409}, results
+        assert codes.get("b") == "already_concluded", codes
+        assert Disposition.all_objects.filter(judgment_id=case.pk).count() == 1
+
+
 # ---------------------------------------------------------------------------
 # The guard for the skips themselves.
 # ---------------------------------------------------------------------------
@@ -1275,6 +1330,10 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # tests/test_conclude_destination.py 的 realm_full 测试每个引擎都跑。
         here + "TestConcludeDestinationCapacityHoldsTheRealmLock::"
         "test_two_officers_filling_the_last_seat_at_once_exactly_one_wins",
+        # 2026-11-01 审查 P0 #1:结案拿到行锁后重读裁决,第二个结案人等锁、读到第一个的裁决,409
+        # already_concluded。SQLite 没有行锁可等。顺序版本(拿旧对象再结一次)
+        # tests/test_judgment_review_2026_11_01.py 每个引擎都跑。
+        here + "TestConcludeRechecksUnderTheLock::test_two_officers_concluding_one_case_at_once_exactly_one_wins",
         # 2026-10-27 灵魂搜索的三元组索引(apps/souls/migrations/0047_soul_search_trigram.py):pg_trgm 与 GIN
         # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
         "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",

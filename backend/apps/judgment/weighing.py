@@ -85,8 +85,12 @@ def open_retrial(judgment, reason=WeighingResult.WAVERING.value, method=Judgment
         judgment_method=method, retrial_of=judgment,
         **{field: getattr(judgment, field) for field in RETRIAL_CARRIES},
     )
+    # The soul stands in the court the new case is heard in (review 2026-11-01 P3), as at any case opening
+    # (`JudgmentService.open_case`): after a refused flow it has just left the withdrawn disposition's realm.
     from apps.events.services import EventService
+    from apps.judgment.services import enter_judgment_realm
 
+    enter_judgment_realm(judgment.soul, retrial)
     EventService.log(judgment.soul, "JUDGMENT_INITIATED", {
         "judgment_id": str(retrial.pk), "retrial_of": str(judgment.pk),
         "reason": reason,

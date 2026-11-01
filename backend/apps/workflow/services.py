@@ -6,7 +6,7 @@ import logging
 
 from django.db import DatabaseError, transaction
 
-from apps.judgment.models import Judgment
+from apps.judgment.models import Judgment, case_civilization
 from apps.souls.models import Civilization
 from apps.workflow.models import (
     ApprovalNode,
@@ -672,7 +672,7 @@ class WorkflowService:
             ValueError: If case_type is not valid for the civilization
         """
         soul = judgment.soul
-        civilization = soul.civilization
+        civilization = case_civilization(judgment)  # the case's hall, not the residence (review 2026-11-01 #12)
 
         if case_type is None:
             case_type = cls.judgment_case_type(civilization, is_appeal)
@@ -745,7 +745,8 @@ class WorkflowService:
         from apps.souls.models import Soul
         from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
 
-        civilization = soul.civilization
+        # A judgment's flow runs under that case's hall (review 2026-11-01 #12), the same `tenant` it is filed in.
+        civilization = case_civilization(judgment) if judgment is not None else soul.civilization
         validation_error = cls.validate_civilization_case_type(civilization, case_type)
         if validation_error:
             if civilization == Civilization.GREEK and case_type == CaseType.APPEAL:

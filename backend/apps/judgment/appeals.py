@@ -11,7 +11,8 @@
   (撤回的也算一次);同一时刻至多一份没有结论的。
 * 复核人不能是作出原判的官员:结案人(`Judgment.concluded_by`)或认领人(`claimed_by`)。
 * 结论:维持(UPHELD)或改判(AMENDED)。改判时受刑计划未执行的部分改按新裁决
-  (`apps/sentence_plan/requests.amend_for_appeal`),已执行的每一站记一笔补偿功德(`COMPENSATION`)。
+  (`apps/sentence_plan/requests.amend_for_appeal`),已执行的每一站记一笔补偿功德(`COMPENSATION`)——
+  只在改轻时、且灵魂还在那一世时(review 2026-11-01 #9)。埃及的改判同样要天平同意(`weighing.weigh`)。
 
 上诉(用户 2026-10-27,docs/03_人物关系图.md、local-gates/流程退回规则草案.md「申诉审判流程」):一次复核**维持**之后,
 灵魂可用剩下的次数把申诉送进本文明的多站申诉流程(`CaseType.APPEAL` 模板:地府 魏征 → 原殿 → 上级殿 → 酆都大帝,
@@ -418,14 +419,30 @@ def _settle(soul, appeal, outcome, note, verdict=None, keep_foreign_stops=None):
         if verdict == judgment.verdict:
             raise AppealRefusedError("The new verdict is the one already given; uphold instead.",
                                      "verdict_unchanged", status=400)
+        # 埃及:改判同样是天平给的(review 2026-11-01 #9;docs/02 §5)—— FAILED 改 PASSED 必须心比羽轻,
+        # 与结案同一条 `weighing.weigh`,在任何写入之前拒绝。
+        from apps.judgment import weighing
+
+        weighed = None
+        if weighing.applies(judgment) and verdict not in weighing.WAVERING_VERDICTS:
+            try:
+                weighed = weighing.weigh(judgment, verdict)
+            except weighing.WeighingRefusedError as exc:
+                raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
+        lighter = _lighter(verdict, judgment.verdict)
         try:
             executed = plan_requests.amend_for_appeal(soul, judgment, verdict, keep_foreign=keep_foreign_stops)
         except plan_requests.PlanChangeRefusedError as exc:
             raise AppealRefusedError(str(exc), exc.code, status=exc.status, **exc.extra) from None
         judgment = _lock_judgment(appeal.judgment_id)
         judgment.verdict = verdict
-        judgment.save(update_fields=["verdict"])
-        compensations = _compensate(soul, judgment, appeal, executed)
+        fields = ["verdict"]
+        if weighed is not None:
+            judgment.weighing_result, judgment.heart_weight = weighed
+            fields += ["weighing_result", "heart_weight"]
+        judgment.save(update_fields=fields)
+        # 补偿只给改轻的(review #9):改重不是冤判,已服的刑不折功德。
+        compensations = _compensate(soul, judgment, appeal, executed) if lighter else []
         appeal.new_verdict = verdict
         SentencePlanService.advance(soul)
     appeal.status = outcome
@@ -434,6 +451,16 @@ def _settle(soul, appeal, outcome, note, verdict=None, keep_foreign_stops=None):
     appeal.save(update_fields=["status", "new_verdict", "decision_note", "decided_at"])
     _event(soul, "JUDGMENT_APPEAL_DECIDED", appeal, new_verdict=appeal.new_verdict,
            compensation_record_ids=[str(r.pk) for r in compensations])
+
+
+#: 裁决的轻重:PASSED < PURGATORY < FAILED(RETRY 与非欧洲的 PURGATORY 在改判里已被 `_refuse_undecided` 拒绝)。
+VERDICT_SEVERITY = {"PASSED": 0, "PURGATORY": 1, "FAILED": 2}
+
+
+def _lighter(new, old) -> bool:
+    """`new` 比 `old` 轻。不认识的裁决不算改轻(宁可少补,不多补)。"""
+    return (new in VERDICT_SEVERITY and old in VERDICT_SEVERITY
+            and VERDICT_SEVERITY[new] < VERDICT_SEVERITY[old])
 
 
 #: 已执行刑期折补偿:每多少年折 1 点功德,按处置所在的文明(2026-10-24 用户决定按文明分别折算)。
@@ -451,7 +478,12 @@ def compensation_weight(disposition):
 
 
 def _compensate(soul, judgment, appeal, executed):
-    """已执行的每一站一笔 MERIT / COMPENSATION,记在灵魂当前这一世(计入当前账本余额)。"""
+    """已执行的每一站一笔 MERIT / COMPENSATION,记在灵魂当前这一世(计入当前账本余额)。
+
+    只在审判那一世还没结束时(review 2026-11-01 #9):灵魂此后已转生的,补偿不落进新一世的账本(新一世不是被冤判的
+    那一世),也不补记回已结束的那一世(`SoulRecord.save` 的约定:不往结束了的一世里记事)。"""
+    if soul.life_index != judgment.cycle:
+        return []
     from apps.souls.record_models import EvidenceSource, RecordCategory, RecordType, SoulRecord
 
     rows = []
