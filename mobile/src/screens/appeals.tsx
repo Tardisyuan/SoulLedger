@@ -265,6 +265,34 @@ function Round({
 }
 
 /**
+ * The earliest open appeal deadline, said above the folded ledger (review 2026-11-01): the 「申诉 ›」 line sits inside
+ * 审判, which is closed by default, so a deadline could pass unseen. Pressing it opens 审判. Nothing while none is open.
+ */
+export function AppealDeadlineNote({ list, onOpen }: { list: MeJudgmentAppealList | null; onOpen: () => void }) {
+  const { t } = useI18n();
+  const day = useDay();
+  const theme = useTheme();
+  const { gutter } = useLayout();
+  const open = (list?.judgments ?? []).filter((j) => j.can_appeal || j.can_escalate).map((j) => j.deadline).filter(Boolean).sort();
+  if (!open.length) return null;
+  return (
+    <Pressable
+      testID="appeal-deadline-note"
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [styles.note, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && { backgroundColor: theme.s2 }]}
+    >
+      <Txt variant="body" style={styles.fill}>
+        {t("appeals.open_note", { n: String(open.length), date: day(open[0]) })}
+      </Txt>
+      <Txt variant="body" tone="muted">
+        ›
+      </Txt>
+    </Pressable>
+  );
+}
+
+/**
  * The appeal line at the foot of a concluded judgment's card. `row` absent → nothing (not appealable in this life).
  * `focused`: a decision push landed on this judgment — the latest round opens by itself.
  */
@@ -481,6 +509,7 @@ export function JudgmentAppealScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  note: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
   line: { marginTop: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, gap: 4 },
   entry: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12 },
   round: { paddingVertical: 8, gap: 4 },

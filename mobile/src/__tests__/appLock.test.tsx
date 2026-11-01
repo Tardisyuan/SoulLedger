@@ -4,6 +4,7 @@
  * (`authenticateAsync`), and AppState is driven by hand. What the doubles cannot say -- that the OS really shows the
  * prompt over a screen with no flash of the one underneath -- is the device's to check.
  */
+import { LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
@@ -158,6 +159,25 @@ describe("the lock", () => {
     await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
     expect(screen.queryByTestId("app-lock-cover")).toBeNull();
     expect(screen.getByTestId("profile-card")).toBeTruthy();
+  });
+
+  // review 2026-11-01: the system prompt's reason was fixed Chinese whatever the app's language.
+  it("the system prompt's reason is in the app's language", async () => {
+    persistentStore.set(LOCALE_COOKIE, "en");
+    try {
+      phone({ lock: true });
+      signedIn();
+      renderApp();
+      await screen.findByTestId("profile-card");
+      await background();
+      await foreground(LOCK_AFTER_MS / 60_000);
+      await screen.findByTestId("app-lock");
+      await waitFor(() => expect(bioMod.__state.prompts).toEqual(["Unlock Soul Ledger."]));
+      expect(bioMod.__state.prompts.join()).not.toMatch(/[一-鿿]/);
+      await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
+    } finally {
+      persistentStore.remove(LOCALE_COOKIE);
+    }
   });
 
   it("while locked, Android's back key is swallowed; once unlocked it is released", async () => {

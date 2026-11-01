@@ -15,13 +15,13 @@ import { useGone } from "../gone";
 import { useI18n } from "../i18n";
 import {
   APPLICATION_BADGES,
-  LIFE_PATH,
   LIFE_SECTIONS,
   SOUL_STATE_BADGES,
   badgeSpec,
   formatStamp,
   grouped,
   lexiconKey,
+  lifePath,
   lifePathIndex,
   lifeSectionsOpen,
   signedBalance,
@@ -63,7 +63,8 @@ import {
 } from "../ui";
 import type { AppStackParams, LifeFocus, LifeParams } from "../navTypes";
 import { realmName, useResidence } from "../residence";
-import { AppealLine, roundsOf } from "./appeals";
+import { AppealDeadlineNote, AppealLine, roundsOf } from "./appeals";
+import { ContactEmailNudge } from "./contactEmail";
 import { WangsiLine } from "./wangsi";
 import { CaptureCard, CaptureLine, ConfessionCard, DeliveredRow, FerryCard, VestibuleCard } from "./lifeProgress";
 import { useCurrentHall } from "../useCurrentHall";
@@ -487,7 +488,9 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
     : me.current_state === "JUDGING"
       ? tr(lexiconKey(lex, "judging"))
       : enumText(d, tr);
-  const at = lifePathIndex(me.current_state, planState);
+  // The road is the HOME civilization's: Egypt and Europe have no 「轮回中」 step (review 2026-11-01).
+  const at = lifePathIndex(me.current_state, planState, lex);
+  const total = lifePath(lex).length;
   return (
     <View testID="life-now" style={[styles.now, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
       <StageMotif testID="stage-motif" civ={t.civ} color={t.plaque} />
@@ -505,7 +508,7 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
       {at === null ? null : (
         <>
           <Txt testID="life-stage" variant="value" tone="muted" style={styles.small}>
-            {tr("soul_app.life.stage", { at: two(at + 1), total: two(LIFE_PATH.length) })}
+            {tr("soul_app.life.stage", { at: two(at + 1), total: two(total) })}
           </Txt>
           <LifePath at={at} lex={lex} />
         </>
@@ -619,18 +622,19 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const word = (step: LifePathStep) => tr(step === "JUDGING" ? lexiconKey(lex, "judging") : PATH_WORD[step]);
-  const span = 100 / LIFE_PATH.length;
-  const fit = stageWordFit(LIFE_PATH.map(word));
+  const path = lifePath(lex);
+  const span = 100 / path.length;
+  const fit = stageWordFit(path.map(word));
   return (
-    <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${word(LIFE_PATH[at])}`} style={styles.path}>
-      {LIFE_PATH.slice(1).map((step, i) => (
+    <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${word(path[at])}`} style={styles.path}>
+      {path.slice(1).map((step, i) => (
         <View
           key={step}
           testID={`path-seg-${i}`}
           style={[styles.segment, { left: `${span * (i + 0.5)}%`, width: `${span}%`, backgroundColor: i < at ? t.ink : t.hair }]}
         />
       ))}
-      {LIFE_PATH.map((step, i) => {
+      {path.map((step, i) => {
         const where = i < at ? "done" : i === at ? "here" : "ahead";
         return (
           <View key={step} style={styles.stage}>
@@ -838,6 +842,7 @@ export function MyLifeScreen() {
     ...(focus?.judgment ? { judgments: true } : {}),
     ...(focus?.disposition ? { dispositions: true } : {}),
     ...(focus?.delivered ? { judgments: true } : {}),
+    ...(focus?.appeals ? { judgments: true } : {}),
   };
   // 第六十二批 D-1:超度若已写在这一世枉死城那一行(审判那格底部,带日期),顶上就不另画「已超度」。
   // 两份数据都回来(或失败)之后才判断,免得先画后收。
@@ -880,6 +885,7 @@ export function MyLifeScreen() {
         onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
       >
         <Homecoming me={me} />
+        <ContactEmailNudge />
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
         <Now me={me} lex={residence.home} planState={planState} />
         {/* 第六十二批:位置类的卡在五段条正下方,固定顺序 勾魂牒 → 已超度 → 十三站 → 冥河 → 前庭(不按时间)。 */}
@@ -914,6 +920,10 @@ export function MyLifeScreen() {
             {t("soul_app.life.ledger_hint")}
           </Txt>
         </View>
+        <AppealDeadlineNote list={appeals.data} onOpen={() => {
+            if (!open.judgments) toggle("judgments");
+          }}
+        />
         {life.data ? (
           <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
             <LifeSections

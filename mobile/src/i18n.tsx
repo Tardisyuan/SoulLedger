@@ -42,11 +42,14 @@ interface I18n {
 
 const I18nContext = createContext<I18n | null>(null);
 
+/** The language the app is in, read where there is no React tree (the reason a system face / finger check shows). */
+export function storedLocale(): Locale {
+  const stored = platform().persistent.get(LOCALE_COOKIE);
+  return isLocale(stored) ? stored : DEFAULT_LOCALE;
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const stored = platform().persistent.get(LOCALE_COOKIE);
-    return isLocale(stored) ? stored : DEFAULT_LOCALE;
-  });
+  const [locale, setLocaleState] = useState<Locale>(storedLocale);
   const setLocale = useCallback((next: Locale) => {
     platform().persistent.set(LOCALE_COOKIE, next);
     setLocaleState(next);

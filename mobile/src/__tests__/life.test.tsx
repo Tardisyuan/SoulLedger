@@ -365,3 +365,35 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     expect(screen.queryByTestId("soul-continent")).toBeNull();
   });
 });
+
+describe("the five-stage road follows the home civilization (review 2026-11-01)", () => {
+  async function openAs(profile: { civilization: string; current_state: string }) {
+    stubApi({
+      "/me/": {
+        status: 200,
+        data: { ...PROFILE, home_civilization: profile.civilization, welcomed_civilizations: [profile.civilization], diyu_station: "", ...profile },
+      },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/past-lives/": { status: 200, data: [] },
+      "/me/sentence-plan/": { status: 200, data: { state: "none", rebirth_open: false, stations: [] } },
+    });
+    renderApp();
+    await screen.findByTestId("section-records-body");
+    await act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
+  }
+
+  it.each(["EGYPTIAN", "EUROPEAN"])("%s has no rebirth: no 「轮回中」 step, and the road counts four", async (civilization) => {
+    await openAs({ civilization, current_state: "DISPOSED" });
+    expect(screen.getByTestId("path-DISPOSED-here")).toBeTruthy();
+    expect(screen.getByTestId("path-SENTENCE-ahead")).toBeTruthy();
+    expect(screen.queryByTestId(/^path-REINCARNATING-/)).toBeNull();
+    expect(screen.queryByText("轮回中")).toBeNull();
+    expect(screen.getByTestId("life-stage").props.children).toBe("本世阶段 03 / 04");
+  });
+
+  it.each(["CHINESE", "GREEK"])("%s keeps the fifth step", async (civilization) => {
+    await openAs({ civilization, current_state: "DISPOSED" });
+    expect(screen.getByTestId("path-REINCARNATING-ahead")).toBeTruthy();
+    expect(screen.getByTestId("life-stage").props.children).toBe("本世阶段 03 / 05");
+  });
+});

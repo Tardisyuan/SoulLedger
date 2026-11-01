@@ -161,7 +161,8 @@ function CircleBar({ navigate }: { navigate: (name: "CircleSearch" | "MyCircle" 
       assist="circle"
       action={[
         { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigate("CircleSearch") },
-        { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigate("MyCircle") },
+        // A word, not the person icon: that icon opens 设置 on every other bar (review 2026-11-01).
+        { icon: "person", text: t("soul_app.circle.me.short"), label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigate("MyCircle") },
         {
           icon: "circle",
           text: t("soul_app.social.inbox"),

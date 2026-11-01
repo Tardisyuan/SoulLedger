@@ -89,7 +89,10 @@ describe("login", () => {
     });
     renderApp();
     await signIn(true);
-    fireEvent.changeText(screen.getByTestId("old-password"), "initial-pass");
+    // review 2026-11-01: the initial password was just typed at sign-in; it is carried, not asked for again.
+    expect(screen.queryByTestId("old-password")).toBeNull();
+    expect(screen.getByTestId("new-password-reveal")).toBeTruthy();
+    expect(screen.getByTestId("confirm-password-reveal")).toBeTruthy();
     fireEvent.changeText(screen.getByTestId("new-password"), "a-new-password");
     fireEvent.changeText(screen.getByTestId("confirm-password"), "a-new-password");
     fireEvent.press(screen.getByTestId("change-password-submit"));
@@ -99,6 +102,64 @@ describe("login", () => {
       old_password: "initial-pass",
       new_password: "a-new-password",
     });
+  });
+
+  // review 2026-11-01: 忘记密码 was a dead end for a soul that never added an email; the first home page asks.
+  it.each([
+    ["no contact email: the home page asks for one, once", "", true],
+    ["a contact email already: nothing is asked", "a***@example.com", false],
+  ])("after the forced change, %s", async (_name, email_masked, asked) => {
+    stubApi({
+      "/soul-auth/login/": {
+        status: 200,
+        data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: { ...PROFILE.account, must_change_password: true } },
+      },
+      "/me/password/": { status: 200, data: { access: "A2", refresh: "R2" } },
+      "/me/": { status: 200, data: PROFILE },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/contact-email/": { status: 200, data: { email_masked, can_change: true, mfa_enabled: false } },
+    });
+    renderApp();
+    await signIn(true);
+    fireEvent.changeText(screen.getByTestId("new-password"), "a-new-password");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "a-new-password");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    await screen.findByTestId("profile-card");
+    await act(async () => {});
+    if (!asked) {
+      expect(screen.queryByTestId("email-nudge")).toBeNull();
+      return;
+    }
+    expect(screen.getByTestId("email-nudge")).toHaveTextContent(/忘记密码/);
+    fireEvent.press(screen.getByTestId("email-nudge-later"));
+    expect(screen.queryByTestId("email-nudge")).toBeNull();
+  });
+
+  it("a carried initial password the server refuses brings the field back, with the refusal under it", async () => {
+    stubApi({
+      "/soul-auth/login/": {
+        status: 200,
+        data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: { ...PROFILE.account, must_change_password: true } },
+      },
+      "/me/password/": { status: 400, data: { code: "invalid_old_password" } },
+    });
+    renderApp();
+    await signIn(true);
+    fireEvent.changeText(screen.getByTestId("new-password"), "a-new-password");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "a-new-password");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    expect(await screen.findByTestId("old-password")).toBeTruthy();
+    expect(screen.getByText("初始密码不正确")).toBeTruthy();
+  });
+
+  it("a cold start into the forced change holds no password: the initial one is asked for", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    sessionStore.set("soulledger_access", "A");
+    stubApi({ "/me/": { status: 403, data: { code: "password_change_required" } } });
+    renderApp();
+    await screen.findByTestId("change-password-submit");
+    expect(screen.getByTestId("old-password")).toBeTruthy();
+    expect(screen.getByTestId("old-password-reveal")).toBeTruthy();
   });
 
   it("shows the server's refusal as copy, not as a code", async () => {

@@ -4725,20 +4725,20 @@
     },
     "forgot_password": {
       "link": "忘记密码",
-      "email_intro": "填写灵魂账号绑定的邮箱，我们把 6 位验证码发过去。",
+      "email_intro": "填写灵魂账号的联系邮箱，我们把 6 位验证码发过去。",
       "email": "邮箱",
       "email_invalid": "请填写有效的邮箱",
       "send": "发送验证码",
       "sending": "发送中…",
-      "sent_neutral": "如果这个邮箱绑定了灵魂账号，验证码已发出",
+      "sent_neutral": "如果这个邮箱是某个灵魂账号的联系邮箱，验证码已发出",
       "code": "验证码",
       "code_format": "验证码是 6 位数字",
       "resend": "重新发送",
       "ask_hall": "这个邮箱无法重设密码，请向所属殿司申请重置密码",
       "submit": "重设密码",
       "step1_kicker": "重设密码 · 第 1 步 / 共 2 步",
-      "step1_title": "填写绑定的邮箱",
-      "no_email_link": "没有绑定邮箱？",
+      "step1_title": "填写联系邮箱",
+      "no_email_link": "没有联系邮箱？",
       "step2_kicker": "重设密码 · 第 2 步 / 共 2 步",
       "step2_title": "设一个新密码",
       "sent_to": "发往 {{email}}。5 分钟内有效；没收到请看垃圾邮件。",
@@ -4747,9 +4747,9 @@
       "no_email_kicker": "重设密码",
       "no_email_title": "找殿司重设",
       "no_email_body": "没有绑定邮箱的灵魂，无法在 App 里自己重设密码。",
-      "no_email_step_1": "写信给所在殿的殿司，说明你的姓名和灵魂编号。",
+      "no_email_step_1": "到本殿窗口，带上交付单，说明你的姓名和灵魂编号。",
       "no_email_step_2": "殿司核对身份后为你重设，并告诉你临时密码。",
-      "no_email_note": "登录不上就没法在 App 里写信：请托同殿的灵魂转达，或在殿前的登记处当面说明。",
+      "no_email_note": "去不了殿里的，可以请同殿的灵魂写信给殿司代为转达。重设后登录，记得到「设置 › 联系邮箱」添加邮箱，下次就能自己重设。",
       "back_to_login": "回到登录",
       "err_expired_title": "验证码已过期",
       "err_expired_body": "5 分钟已过。重新发一个即可，已填的新密码会保留。",
@@ -4886,7 +4886,14 @@
       "expectation": "你在此表达的是{{hope}}。最终去向由判官裁定，是否跨文明亦由判官初审决定。",
       "expectation_word": "期望",
       "statement_hint": "你自己的话，会原样呈给判官。",
-      "residing_note": "你暂居{{current}}，转生仍归{{home}}受理。此页按{{home}}的规例。"
+      "residing_note": "你暂居{{current}}，转生仍归{{home}}受理。此页按{{home}}的规例。",
+      "state_reason": {
+        "ALIVE": "你还在世。本世结束、审判与处置都完成后，才能申请转生。",
+        "JUDGING": "审判还没结束。结案、处置执行完之后，才能申请转生。",
+        "DISPOSED": "处置已执行，但你还没进入轮回。殿司把你转入轮回之后，才能申请转生。",
+        "LOST": "你的记录处于「失踪」状态，暂不能申请。请写信给殿司。",
+        "SETTLED": "本世已结算，不再受理新的转生申请。"
+      }
     },
     "status": {
       "UNDER_REVIEW": "审批中",
@@ -4907,10 +4914,10 @@
       "cross_undecided": "待判官初审决定",
       "cross_yes": "是",
       "cross_no": "否",
-      "appeal": "申诉",
+      "appeal": "转生申诉",
       "appeal_hint": "每份申请只能申诉一次",
-      "appeal_submit": "提交申诉",
-      "appealed": "申诉已提交",
+      "appeal_submit": "提交转生申诉",
+      "appealed": "转生申诉已提交",
       "created_at": "提交时间",
       "flow": "流转",
       "handled_by": "受理方 {{home}}",
@@ -5080,7 +5087,9 @@
       "push_comments": "评论和回复",
       "push_review": "审核结果",
       "push_warning": "殿司警告",
-      "locked": "不能关"
+      "locked": "不能关",
+      "email_nudge_title": "添加联系邮箱",
+      "email_nudge_body": "忘记密码时，验证码发到联系邮箱。没有它，就只能到本殿窗口重设密码。"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -5226,7 +5235,7 @@
           "public": "公开",
           "public_hint": "本文明所有灵魂，包括没关注你的。不出本文明。",
           "tenant": "本文明",
-          "tenant_hint": "本文明已登录的灵魂。",
+          "tenant_hint": "本文明的所有灵魂都能看到，包括没关注你的。不出本文明。",
           "followers": "仅关注者",
           "followers_hint": "关注了你的灵魂。",
           "private": "仅自己",
@@ -5262,7 +5271,8 @@
       },
       "muted": {
         "body": "你被禁言，期间不能发帖和评论。写给殿司的书信不受影响。",
-        "until": "至 {{time}}"
+        "until": "至 {{time}}",
+        "reason": "殿司写的理由：{{reason}}"
       },
       "react": {
         "like": "喜",
@@ -5304,7 +5314,8 @@
         "name_saved": "显示名已改好",
         "name_length": "显示名要 2 到 20 个字。",
         "name_sensitive": "这个名字含有不允许的词，换一个吧。",
-        "name_taken": "本文明已有灵魂叫这个名字。"
+        "name_taken": "本文明已有灵魂叫这个名字。",
+        "short": "我的"
       },
       "list": {
         "following_title": "关注 {{n}}",
@@ -5628,11 +5639,15 @@
       "failed_mfa": "失败 {{n}} 次 · 验证码不对",
       "failed_face": "失败 {{n}} 次 · {{bio}}没认出",
       "stranger_title": "有不认识的设备或记录？",
-      "stranger_body": "先让那台退出，再改密码。改完后，除这部手机外全部退出。"
+      "stranger_body": "先让那台退出，再改密码。改完后，除这部手机外全部退出。",
+      "lost_phone_hint": "手机丢了？用另一部手机登录，在「登录设备与记录」让丢的那部退出，再改密码。"
     },
     "biometric": {
       "app_lock": "切回 App 时也要验证",
-      "app_lock_hint": "离开超过 5 分钟再回来，要先认一次{{bio}}"
+      "app_lock_hint": "离开超过 5 分钟再回来，要先认一次{{bio}}",
+      "prompt_login": "用来登录灵魂簿，不用输密码。",
+      "prompt_unlock": "用来解锁灵魂簿。",
+      "prompt_export": "用来确认是你本人，导出你的资料。"
     },
     "lock": {
       "title": "已锁定"
@@ -5669,7 +5684,7 @@
     },
     "help": {
       "title": "帮助",
-      "write": "写给本殿",
+      "write": "写信给殿司",
       "group_login": "登录与账号",
       "group_visit": "到殿须知",
       "group_contact": "联系",
@@ -5678,19 +5693,34 @@
       "q_login": "登录不了",
       "a_login": "先检查编号有没有输错。密码连续输错 5 次会锁 15 分钟，等一会儿再试。还是不行，点「忘记密码」。",
       "q_forgot": "忘记密码",
-      "a_forgot": "在登录页点「忘记密码」,验证码会发到你登记的联系邮箱。没有登记邮箱的，请到本殿窗口办理，带上交付单。",
+      "a_forgot": "在登录页点「忘记密码」，验证码会发到你的联系邮箱。还没有联系邮箱的，登录后到「设置 › 联系邮箱」添加；已经登录不上的，请到本殿窗口办理，带上交付单。",
       "q_phone": "手机丢了",
       "a_phone": "用另一部手机登录，到「账号安全 › 登录设备与记录」让丢的那部退出，再改密码。开了两步验证的，用恢复码登录。恢复码也没有了，请到本殿窗口办理。",
       "q_slip": "交付单是什么",
       "a_slip": "你到殿时领的那张纸，上面有你的编号和第一次登录用的密码。第一次登录后，这个密码就不能再用了。交付单请收好，到窗口办事时要用。",
       "q_contact": "怎么联系本殿",
-      "a_contact": "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。",
+      "a_contact": "在这页底部点「写信给殿司」，回复会出现在书信里。急事请到本殿窗口。",
       "in_person_title": "请到{{hall}},带上交付单",
       "in_person_body": "本殿还没开通书信，问题要到殿里当面办。",
       "address": "地址",
       "hours": "办理时间",
       "phone": "电话",
-      "unresolved": "还是没解决"
+      "unresolved": "还是没解决",
+      "group_terms": "名词解释",
+      "q_appeals": "三种申诉有什么不同",
+      "a_appeals": "审判申诉：对已结案审判的结果不服，在截止日前提出，每件审判最多两次，撤回也算一次。转生申诉：转生申请被驳回后，每份申请可以申诉一次。冤情申诉：押在枉死城、认为自己冤死时向城隍提出；查明不属实，之后可以再提。",
+      "q_merit": "功与过",
+      "a_merit": "功过记录是这一世的账：做的好事记功，过错记过。两者相减，就是「本世账目」上面那个数。",
+      "q_disposition": "处置",
+      "a_disposition": "审判结案之后，对你去向的安排：例如去哪里受刑、往哪一道投生。",
+      "q_sentence": "受刑计划",
+      "a_sentence": "处置里要服的刑，按站排成的一份计划。一站执行完才去下一站；全部完成后才能申请转生。",
+      "q_cooldown": "冷却期",
+      "a_cooldown": "转生申请被驳回之后的等待期，期内不能重新申请。每段冷却期可以申请缩短一次。",
+      "q_residing": "暂居",
+      "a_residing": "人在另一个文明，籍不变：页面换成那里的样子，转生与申诉仍由你原属的文明受理。",
+      "q_hall": "殿司",
+      "a_hall": "你所在殿的办事处。写信给殿司，由官员以殿司的名义回复。"
     },
     "feedback": {
       "kind_label": "关于什么",
@@ -5706,11 +5736,13 @@
       "shots_remove": "移除这张截图",
       "shots_limit": "最多 3 张",
       "note": "本殿官员会在书信里回你，和平常的书信在一处。",
-      "appeal_hint": "对审判结果有异议，请走申诉。",
+      "appeal_hint": "对审判结果有异议，请走审判申诉。",
       "send": "发出",
-      "failed": "没有发出去。检查网络后再试。",
+      "failed": "没能发出。检查网络后再试。",
       "see_letters": "去看书信",
-      "another": "再写一封"
+      "another": "再写一封",
+      "appeal_link": "去「本世 › 审判」申诉",
+      "send_needs_body": "先写下情况，才能发出。"
     },
     "social": {
       "inbox": "互动",
@@ -5730,8 +5762,8 @@
       "followed_two": "{{name}} 等 {{n}} 人关注了你"
     },
     "wangsi": {
-      "file": "申诉",
-      "file_title": "枉死城申诉",
+      "file": "冤情申诉",
+      "file_title": "枉死城 · 冤情申诉",
       "held": "押在枉死城 · 阳寿到 {{date}} 才受审",
       "released": "已出枉死城",
       "status": {
@@ -5745,8 +5777,8 @@
       "plea_label": "冤情",
       "plea_required": "写下你的冤情",
       "file_body": "城隍会调查核实。冤情重大且属实的，提前出枉死城受审；不属实就照旧押到阳寿那一天，之后可以再提。",
-      "submit": "提交申诉",
-      "submitted_toast": "申诉已提交",
+      "submit": "提交冤情申诉",
+      "submitted_toast": "冤情申诉已提交",
       "errors": {
         "not_found": "找不到这件案子",
         "not_pending": "这件案子已经不在审了",
@@ -7755,14 +7787,14 @@
       "ladder_running": "这份申诉已进入申诉流程，流程走完前不能撤回。",
       "origin_flow_open": "这件审判的审批流程还没走完，走完之后才能申诉或上诉"
     },
-    "file": "申诉",
+    "file": "审判申诉",
     "file_title": "对这件审判申诉",
     "file_body": "由另一位判官复核。每件审判最多申诉两次，撤回也算一次。",
     "reason_label": "理由",
     "reason_required": "请写理由",
     "evidence_label": "新证据 · 选填",
-    "submit": "提交申诉",
-    "submitted_toast": "申诉已提交",
+    "submit": "提交审判申诉",
+    "submitted_toast": "审判申诉已提交",
     "withdraw": "撤回",
     "withdraw_title": "撤回这次申诉？",
     "withdraw_body": "撤回也算一次。撤回后，这件审判还能申诉 {{left}} 次。",
@@ -7837,7 +7869,8 @@
     "escalate_hint": "上一次复核维持了原判。还不服，可以上诉。",
     "ladder_final_pending": "待作出结论",
     "escalate_reason_label": "补充理由 · 选填",
-    "escalate_last": "这是这件审判的最后一次申诉，之后不能再申诉。"
+    "escalate_last": "这是这件审判的最后一次申诉，之后不能再申诉。",
+    "open_note": "{{n}} 件审判可申诉 · 最早 {{date}} 截止"
   },
   "cityGods": {
     "title": "城隍",

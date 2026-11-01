@@ -13,7 +13,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import { AppState, StyleSheet, TextInput, View } from "react-native";
 
-import { EXPORT_PROMPT, bioEnabled, readCredential } from "../deviceLogin";
+import { bioEnabled, exportPrompt, readCredential } from "../deviceLogin";
 import { formatBytes, saveExport } from "../dataExport";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
@@ -218,7 +218,7 @@ export function DataExportScreen() {
     if (!bioEnabled()) return setAsking(true);
     setWorking(true);
     try {
-      const read = await readCredential(EXPORT_PROMPT);
+      const read = await readCredential(exportPrompt());
       if (read.status === "ok") {
         try {
           await soulApi.requestDataExport({ credential: read.credential });
