@@ -18,7 +18,8 @@ import { clearGone } from "../gone";
 import { I18nProvider } from "../i18n";
 import { ToastProvider } from "../feedback";
 import { installMobilePlatform } from "../platform";
-import { CircleScreen, ComposePostScreen, PostScreen } from "../screens/circle";
+import { CircleScreen, ComposePostScreen, MutedLock, PostScreen } from "../screens/circle";
+import { mutedReasonOf } from "../socialStatus";
 import { usePaged } from "../paged";
 import { themeFor, type ColorScheme } from "../theme";
 import { ThemeContext } from "../ui";
@@ -333,7 +334,33 @@ describe("reactions", () => {
   });
 });
 
+describe("the mute banner says the hall's reason (muted_reason, 2026-11-01)", () => {
+  it("shows the reason when there is one, and nothing for none or a blank one", () => {
+    const first = wrap(<MutedLock until="2026-11-08T12:00:00Z" reason={mutedReasonOf({ muted_reason: "  多次辱骂他人  " } as never)} />);
+    expect(screen.getByTestId("muted-lock-reason")).toHaveTextContent("殿司写的理由：多次辱骂他人");
+    first.unmount();
+    for (const status of [{ muted_reason: null }, { muted_reason: "   " }, {}]) {
+      const r = wrap(<MutedLock until="2026-11-08T12:00:00Z" reason={mutedReasonOf(status as never)} />);
+      expect(screen.queryByTestId("muted-lock-reason")).toBeNull();
+      expect(screen.getByTestId("muted-lock")).toBeTruthy();
+      r.unmount();
+    }
+  });
+});
+
 describe("posting", () => {
+  // review 2026-11-01: 「公开」 and 「本文明」 reach the same souls in a soul's circle; only one is offered.
+  it("offers three audiences, none of them a second name for 本文明; 本文明 says who that is", async () => {
+    stubApi({ "/me/social/status/": STATUS });
+    wrap(<ComposePostScreen />);
+    await act(async () => {});
+    expect(screen.queryByTestId("vis-PUBLIC")).toBeNull();
+    expect(screen.queryByText("公开")).toBeNull();
+    expect(screen.getAllByRole("radio").map((r) => r.props.testID)).toEqual(["vis-TENANT", "vis-FOLLOWERS", "vis-PRIVATE"]);
+    expect(screen.getByTestId("vis-TENANT")).toHaveTextContent(/本文明的所有灵魂都能看到，包括没关注你的/);
+    expect(screen.getByTestId("vis-TENANT").props.accessibilityState).toEqual({ checked: true });
+  });
+
   it("sends the text with the chosen audience; a pending answer lands the feed on its banner", async () => {
     const calls = stubApi({
       "/me/social/status/": STATUS,

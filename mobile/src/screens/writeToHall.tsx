@@ -104,6 +104,7 @@ export function FeedbackScreen() {
   const toast = useToast();
   const { gutter } = useLayout();
   const chat = useChat();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [kind, setKind] = useState<SoulFeedbackTag>("account");
   const [body, setBody] = useState("");
   const [shots, setShots] = useState<Shot[]>([]);
@@ -241,16 +242,38 @@ export function FeedbackScreen() {
           {t("soul_app.feedback.note")}
         </Txt>
         {kind === "record" ? (
-          <Txt testID="feedback-appeal-hint" variant="body" tone="muted">
-            {t("soul_app.feedback.appeal_hint")}
-          </Txt>
+          <View style={styles.group}>
+            <Txt testID="feedback-appeal-hint" variant="body" tone="muted">
+              {t("soul_app.feedback.appeal_hint")}
+            </Txt>
+            {/* 「请走申诉」 says where: the life tab, 审判 opened (review 2026-11-01). */}
+            <Pressable
+              testID="feedback-appeal-link"
+              accessibilityRole="link"
+              onPress={() => navigation.navigate("Tabs", { screen: "Life", params: { lifeFocus: { appeals: true } } })}
+              style={styles.link}
+            >
+              <Txt variant="body" style={styles.underline}>
+                {t("soul_app.feedback.appeal_link")}
+              </Txt>
+            </Pressable>
+          </View>
         ) : null}
         {failed ? (
           <Notice tone="neg" testID="feedback-failed">
             {t("soul_app.feedback.failed")}
           </Notice>
         ) : null}
-        <Button testID="feedback-send" title={t("soul_app.feedback.send")} onPress={() => void send()} busy={busy} disabled={!body.trim() || unavailable} />
+        <Button
+          testID="feedback-send"
+          title={t("soul_app.feedback.send")}
+          onPress={() => void send()}
+          busy={busy}
+          disabled={!body.trim() || unavailable}
+          // Greyed out, it says why (review 2026-11-01). Not configured is said by the notice at the top.
+          reason={!unavailable && !body.trim() ? t("soul_app.feedback.send_needs_body") : undefined}
+          reasonTestID="feedback-send-reason"
+        />
       </View>
     </Screen>
   );
@@ -259,6 +282,8 @@ export function FeedbackScreen() {
 const styles = StyleSheet.create({
   form: { paddingVertical: 24, gap: 20 },
   group: { gap: 8 },
+  link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
+  underline: { textDecorationLine: "underline" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { minHeight: 40, paddingHorizontal: 12, borderWidth: 1, justifyContent: "center" },
   shots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

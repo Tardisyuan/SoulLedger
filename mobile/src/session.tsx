@@ -98,13 +98,20 @@ export interface Session {
    */
   heldPassword: () => string | null;
   dropPassword: () => void;
+  /**
+   * True from the forced change of the initial password until `endFreshAccount`: the home page then asks, once,
+   * for a contact email -- without one 「忘记密码」 has nowhere to send the code (review 2026-11-01). Memory only.
+   */
+  freshAccount: () => boolean;
+  endFreshAccount: () => void;
   /** Step 2. Throws the axios error: the screen reads it with `soulMfaFailure`. */
   verifyMfa: (
     challenge: MfaChallenge,
     proof: { code: string } | { recoveryCode: string },
     remember: boolean
   ) => Promise<void>;
-  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  /** `initial`: the forced change of the initial password (it starts `freshAccount`). */
+  changePassword: (oldPassword: string, newPassword: string, initial?: boolean) => Promise<void>;
   signOut: () => void;
   refreshProfile: () => Promise<void>;
   retryBoot: () => void;
@@ -140,6 +147,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
   const { setLocale } = useI18n();
   const password = useRef<string | null>(null);
+  const fresh = useRef(false);
 
   /**
    * The account's language is the one the settings screen promises to follow:
@@ -289,7 +297,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const changePassword = useCallback(
-    async (oldPassword: string, newPassword: string) => {
+    async (oldPassword: string, newPassword: string, initial?: boolean) => {
       // 面容 / 指纹 on this phone survives its own password change (第二十批 §5): the credential goes along and the
       // server keeps it. That costs one system verification; if the soul declines it the request goes without,
       // and the credential lapses -- the sign-in page then says so.
@@ -305,6 +313,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         )
       );
       password.current = newPassword;
+      if (initial) fresh.current = true;
       await enter();
     },
     [enter]
@@ -322,6 +331,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     clearVoiceNumbers();
     clearSocialStatus();
     password.current = null;
+    fresh.current = false;
     setState({ status: "signedOut" });
     const end = () => {
       if (getRefreshToken() === refresh) clearSoulTokens();
@@ -358,6 +368,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       deviceSignIn,
       heldPassword: () => password.current,
       dropPassword: () => void (password.current = null),
+      freshAccount: () => fresh.current,
+      endFreshAccount: () => void (fresh.current = false),
       verifyMfa,
       changePassword,
       signOut,

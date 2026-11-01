@@ -81,6 +81,19 @@ function TerminalEmpty() {
 }
 
 /**
+ * The server's `soul_state` says only "not in a state that may apply" (`rebirth.py::eligibility`). Why is the
+ * soul's own state, which the profile already carries: said per state, so 「当前状态不能申请转生」 is never the whole
+ * answer (review 2026-11-01). A state not listed keeps the server's sentence.
+ */
+const SOUL_STATE_REASON: Record<string, string> = {
+  ALIVE: "soul_app.applications.state_reason.ALIVE",
+  JUDGING: "soul_app.applications.state_reason.JUDGING",
+  DISPOSED: "soul_app.applications.state_reason.DISPOSED",
+  LOST: "soul_app.applications.state_reason.LOST",
+  SETTLED: "soul_app.applications.state_reason.SETTLED",
+};
+
+/**
  * Whether the "apply" entry is offered. The server decides (`can_apply`), and
  * a refusal is always explained under the disabled button — the reason code,
  * and the cooling-off end date when there is one.
@@ -99,7 +112,10 @@ export function EligibilityCard({
 }) {
   const theme = useTheme();
   const { t } = useI18n();
-  const reason = list.reason ? soulCodeMessage(list.reason) : null;
+  const session = useContext(SessionContext);
+  const soulState = session?.state.status === "signedIn" ? session.state.profile.current_state : null;
+  const stateReason = list.reason === "soul_state" && soulState ? SOUL_STATE_REASON[soulState] : undefined;
+  const reason: SoulErrorMessage | null = stateReason ? { key: stateReason } : list.reason ? soulCodeMessage(list.reason) : null;
   const until = formatStamp(list.cooldown_until);
   // 受刑 1d: an unfinished sentence gets its own block (how many stations, where, until when) instead of the one-line reason.
   const sentence = !list.can_apply && list.reason === "sentence_in_progress";

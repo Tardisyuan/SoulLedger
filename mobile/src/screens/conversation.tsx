@@ -45,6 +45,7 @@ import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
+import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
@@ -82,6 +83,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const [viewing, setViewing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
+  const [mutedReason, setMutedReason] = useState<string | null>(null);
   // 书信申请的拒绝与拉黑 (2026-11-01): one request at a time; the block asks first.
   const [deciding, setDeciding] = useState(false);
   const [askBlock, setAskBlock] = useState(false);
@@ -149,7 +151,11 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     let alive = true;
     soulSocialApi
       .status()
-      .then((s) => alive && setMutedUntil(s.muted_until))
+      .then((s) => {
+        if (!alive) return;
+        setMutedUntil(s.muted_until);
+        setMutedReason(mutedReasonOf(s));
+      })
       .catch(() => {});
     return () => {
       alive = false;
@@ -387,6 +393,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       <Band
         mode={mode}
         mutedUntil={mutedUntil}
+        mutedReason={mutedReason}
         hall={hallName}
         onHall={() => void goHall()}
         now={now}
@@ -602,6 +609,7 @@ const CLOSED_COPY: Record<ClosedReason, string> = {
 function Band({
   mode,
   mutedUntil,
+  mutedReason,
   hall,
   onHall,
   now,
@@ -610,6 +618,7 @@ function Band({
 }: {
   mode: ChatMode;
   mutedUntil: string | null;
+  mutedReason: string | null;
   hall: string;
   onHall: () => void;
   now: number;
@@ -672,6 +681,12 @@ function Band({
             ),
             "muted-reason"
           )}
+          {/* The hall's own words, when it gave any (`muted_reason`, 2026-11-01); none → nothing. */}
+          {mutedReason ? (
+            <Txt testID="muted-hall-reason" variant="caption" tone="muted">
+              {tr("soul_app.circle.muted.reason", { reason: mutedReason })}
+            </Txt>
+          ) : null}
           <Button testID="muted-to-hall" kind="secondary" title={tr("soul_app.chat.muted.to_hall", { hall })} onPress={onHall} style={styles.bandButton} />
         </View>
       );

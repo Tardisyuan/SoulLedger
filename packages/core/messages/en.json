@@ -4727,20 +4727,20 @@
     },
     "forgot_password": {
       "link": "Forgot password",
-      "email_intro": "Enter the email bound to your soul account and we will send a 6-digit code to it.",
+      "email_intro": "Enter your soul account's contact email and we will send a 6-digit code to it.",
       "email": "Email",
       "email_invalid": "Enter a valid email address",
       "send": "Send code",
       "sending": "Sending…",
-      "sent_neutral": "If this email is bound to a soul account, a code has been sent",
+      "sent_neutral": "If this is a soul account's contact email, a code has been sent",
       "code": "Code",
       "code_format": "The code is 6 digits",
       "resend": "Resend",
       "ask_hall": "This email cannot reset a password. Ask your hall to reset your password",
       "submit": "Reset password",
       "step1_kicker": "Reset password · step 1 of 2",
-      "step1_title": "Enter your bound email",
-      "no_email_link": "No email bound?",
+      "step1_title": "Enter your contact email",
+      "no_email_link": "No contact email?",
       "step2_kicker": "Reset password · step 2 of 2",
       "step2_title": "Set a new password",
       "sent_to": "Sent to {{email}}. Valid for 5 minutes; if it has not arrived, check your spam folder.",
@@ -4749,9 +4749,9 @@
       "no_email_kicker": "Reset password",
       "no_email_title": "Ask your hall to reset it",
       "no_email_body": "A soul with no bound email cannot reset its own password in the app.",
-      "no_email_step_1": "Write to your hall with your name and soul code.",
+      "no_email_step_1": "Come to the hall's counter with your delivery slip, and give your name and soul code.",
       "no_email_step_2": "Once the hall has confirmed who you are, it resets the password and gives you a temporary one.",
-      "no_email_note": "Signed out, you cannot write letters in the app: ask a soul of your hall to pass it on, or explain in person at the hall's registry.",
+      "no_email_note": "If you cannot come, ask a soul of your hall to write to the hall for you. Once you are back in, add an address under Settings › Contact email, so next time you can reset it yourself.",
       "back_to_login": "Back to sign-in",
       "err_expired_title": "The code has expired",
       "err_expired_body": "Five minutes have passed. Send a new one; the new password you typed is kept.",
@@ -4888,7 +4888,14 @@
       "expectation": "What you state here is a {{hope}}. The judges decide where you go, and the first review decides whether you cross civilizations.",
       "expectation_word": "wish",
       "statement_hint": "Your own words, passed to the judges as written.",
-      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}'s rules."
+      "residing_note": "You are residing in {{current}}; rebirth is still decided by {{home}}. This page follows {{home}}'s rules.",
+      "state_reason": {
+        "ALIVE": "You are still alive. You can apply for rebirth once this life has ended and its judgment and disposition are complete.",
+        "JUDGING": "Your judgment is not over yet. You can apply for rebirth once it is concluded and its disposition carried out.",
+        "DISPOSED": "Your disposition has been carried out, but you have not entered the cycle of rebirth yet. You can apply once the hall moves you into it.",
+        "LOST": "Your record is marked lost, so you cannot apply for now. Please write to the hall.",
+        "SETTLED": "This life is settled; no new rebirth application can be made."
+      }
     },
     "status": {
       "UNDER_REVIEW": "Under review",
@@ -4909,10 +4916,10 @@
       "cross_undecided": "To be decided at first review",
       "cross_yes": "Yes",
       "cross_no": "No",
-      "appeal": "Appeal",
+      "appeal": "Rebirth appeal",
       "appeal_hint": "Each application can be appealed once",
-      "appeal_submit": "Submit appeal",
-      "appealed": "Appeal submitted",
+      "appeal_submit": "Submit rebirth appeal",
+      "appealed": "Rebirth appeal submitted",
       "created_at": "Submitted",
       "flow": "Progress",
       "handled_by": "Handled by {{home}}",
@@ -5082,7 +5089,9 @@
       "push_comments": "Comments and replies",
       "push_review": "Review results",
       "push_warning": "Hall warnings",
-      "locked": "Can't be turned off"
+      "locked": "Can't be turned off",
+      "email_nudge_title": "Add a contact email",
+      "email_nudge_body": "If you forget your password, the code goes to your contact email. Without one, only the hall's counter can reset it."
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -5253,7 +5262,7 @@
           "public": "Public",
           "public_hint": "Every soul in this civilization, including those who do not follow you. Never beyond it.",
           "tenant": "This civilization",
-          "tenant_hint": "Signed-in souls in this civilization.",
+          "tenant_hint": "Every soul in this civilization, including those who do not follow you. Never beyond it.",
           "followers": "Followers only",
           "followers_hint": "Souls who follow you.",
           "private": "Only me",
@@ -5289,7 +5298,8 @@
       },
       "muted": {
         "body": "You are muted: no posts or comments until then. Letters to the hall are not affected.",
-        "until": "Until {{time}}"
+        "until": "Until {{time}}",
+        "reason": "The hall's reason: {{reason}}"
       },
       "react": {
         "like": "Like",
@@ -5331,7 +5341,8 @@
         "name_saved": "Name changed",
         "name_length": "A name is 2 to 20 characters.",
         "name_sensitive": "That name contains a word that is not allowed. Try another.",
-        "name_taken": "Another soul in this civilization already has that name."
+        "name_taken": "Another soul in this civilization already has that name.",
+        "short": "Me"
       },
       "list": {
         "following_title": "{{n}} following",
@@ -5655,11 +5666,15 @@
       "failed_mfa": "Failed {{n}} times · wrong code",
       "failed_face": "Failed {{n}} times · {{bio}} not recognised",
       "stranger_title": "A device or record you don't recognise?",
-      "stranger_body": "Sign that device out first, then change your password. Changing it signs out everything except this phone."
+      "stranger_body": "Sign that device out first, then change your password. Changing it signs out everything except this phone.",
+      "lost_phone_hint": "Lost your phone? Sign in on another one, sign the lost phone out under “Devices and sign-ins”, then change your password."
     },
     "biometric": {
       "app_lock": "Also verify when returning to the app",
-      "app_lock_hint": "After 5 minutes away, check your {{bio}} first"
+      "app_lock_hint": "After 5 minutes away, check your {{bio}} first",
+      "prompt_login": "Sign in to Soul Ledger without a password.",
+      "prompt_unlock": "Unlock Soul Ledger.",
+      "prompt_export": "Confirm it is you, to export your records."
     },
     "lock": {
       "title": "Locked"
@@ -5696,7 +5711,7 @@
     },
     "help": {
       "title": "Help",
-      "write": "Write to your hall",
+      "write": "Write to the hall",
       "group_login": "Sign-in and account",
       "group_visit": "Before you come to the hall",
       "group_contact": "Contact",
@@ -5705,19 +5720,34 @@
       "q_login": "I cannot sign in",
       "a_login": "First check that the number is right. After 5 wrong passwords in a row the account is locked for 15 minutes; wait and try again. If it still fails, tap “Forgot password”.",
       "q_forgot": "I forgot my password",
-      "a_forgot": "On the sign-in page tap “Forgot password”; a code is sent to the contact e-mail you registered. If no e-mail is registered, come to the hall's counter and bring your delivery slip.",
+      "a_forgot": "On the sign-in page tap “Forgot password”; a code is sent to your contact email. No contact email yet? Add one under Settings › Contact email once signed in. Already unable to sign in? Come to the hall's counter with your delivery slip.",
       "q_phone": "I lost my phone",
       "a_phone": "Sign in on another phone, go to “Account security › Devices and sign-ins”, sign the lost phone out, then change your password. If two-step verification is on, sign in with a recovery code. If you have lost the recovery codes too, come to the hall's counter.",
       "q_slip": "What is the delivery slip",
       "a_slip": "The paper you were given when you arrived. It carries your number and the password for your first sign-in; after that first sign-in the password no longer works. Keep the slip: you need it at the counter.",
       "q_contact": "How do I contact the hall",
-      "a_contact": "Tap “Write to your hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter.",
+      "a_contact": "Tap “Write to the hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter.",
       "in_person_title": "Come to {{hall}} with your delivery slip",
       "in_person_body": "Letters aren't open here yet, so please ask in person.",
       "address": "Address",
       "hours": "Opening hours",
       "phone": "Phone",
-      "unresolved": "Still need help"
+      "unresolved": "Still need help",
+      "group_terms": "Terms",
+      "q_appeals": "The three kinds of appeal",
+      "a_appeals": "Judgment appeal: you dispute a concluded judgment; file it before its deadline, at most twice per judgment, and a withdrawal counts. Rebirth appeal: a rejected rebirth application can be appealed once. Grievance: held in the City of the Wrongly Dead and believing your death unjust, you petition the City God; if it is found untrue you may file again later.",
+      "q_merit": "Merit and demerit",
+      "a_merit": "Your records are this life's account: good deeds are merit, wrongs are demerit. Merit minus demerit is the number above “This life's ledger”.",
+      "q_disposition": "Disposition",
+      "a_disposition": "What is decided for you once a judgment is concluded: where you serve a sentence, or which path you are reborn into.",
+      "q_sentence": "Sentence plan",
+      "a_sentence": "The sentence in your disposition, laid out station by station. Each station is served before the next; rebirth can be applied for only once all are done.",
+      "q_cooldown": "Cooling-off period",
+      "a_cooldown": "The wait after a rebirth application is rejected; you cannot apply again until it ends. Each cooling-off period can be asked to be shortened once.",
+      "q_residing": "Residing",
+      "a_residing": "You are in another civilization but still belong to your own: the pages take on where you are, while rebirth and appeals stay with your home civilization.",
+      "q_hall": "The hall",
+      "a_hall": "The office of the hall you are in. Write to the hall and an officer replies in its name."
     },
     "feedback": {
       "kind_label": "What is it about",
@@ -5733,11 +5763,13 @@
       "shots_remove": "Remove this screenshot",
       "shots_limit": "Up to 3 screenshots",
       "note": "Officers of your hall will reply in your letters, in the same place as your other letters.",
-      "appeal_hint": "To dispute a judgment, use an appeal.",
+      "appeal_hint": "To dispute a judgment, file a judgment appeal.",
       "send": "Send",
-      "failed": "It was not sent. Check your connection and try again.",
+      "failed": "Not sent. Check your connection and try again.",
       "see_letters": "See your letters",
-      "another": "Write another"
+      "another": "Write another",
+      "appeal_link": "Go to This life › Judgments to appeal",
+      "send_needs_body": "Write what happened first, then it can be sent."
     },
     "social": {
       "inbox": "Activity",
@@ -5757,7 +5789,7 @@
       "followed_two": "{{name}} and {{n}} other followed you"
     },
     "wangsi": {
-      "file": "File a grievance",
+      "file": "Grievance",
       "file_title": "Grievance to the City God",
       "held": "Held in the City of Wrongful Death · judged from {{date}}",
       "released": "Out of the City of Wrongful Death",
@@ -7803,14 +7835,14 @@
       "ladder_running": "This appeal is in the appeal flow; it cannot be withdrawn until the flow is done.",
       "origin_flow_open": "This judgment's approval workflow has not finished; you can appeal once it has"
     },
-    "file": "Appeal",
+    "file": "Judgment appeal",
     "file_title": "Appeal this judgment",
     "file_body": "Another judge reviews it. Each judgment can be appealed at most twice; a withdrawn appeal counts as one.",
     "reason_label": "Why you're appealing",
     "reason_required": "Please give a reason",
     "evidence_label": "New evidence · optional",
-    "submit": "Submit appeal",
-    "submitted_toast": "Appeal submitted",
+    "submit": "Submit judgment appeal",
+    "submitted_toast": "Judgment appeal submitted",
     "withdraw": "Withdraw",
     "withdraw_title": "Withdraw this appeal?",
     "withdraw_body": "A withdrawn appeal still counts. After this you can appeal this judgment {{left}} more time.",
@@ -7885,7 +7917,8 @@
     "escalate_hint": "The last review upheld the verdict. If you still disagree, you can escalate.",
     "ladder_final_pending": "Decision pending",
     "escalate_reason_label": "Further reasons · optional",
-    "escalate_last": "This is the last appeal for this judgment; there can be none after it."
+    "escalate_last": "This is the last appeal for this judgment; there can be none after it.",
+    "open_note": "{{n}} judgment(s) open to appeal · the first closes {{date}}"
   },
   "cityGods": {
     "title": "City Gods",

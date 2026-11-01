@@ -142,19 +142,24 @@ describe("the form", () => {
     expect(screen.queryByTestId("shot-0")).toBeNull();
     expect(screen.getByTestId("feedback-note")).toHaveTextContent("本殿官员会在书信里回你，和平常的书信在一处。");
     expect(screen.getByTestId("feedback-send").props.accessibilityState.disabled).toBe(true);
+    // Greyed out, it says why (review 2026-11-01) -- and the reason goes once something is written.
+    expect(screen.getByTestId("feedback-send-reason")).toHaveTextContent("先写下情况，才能发出。");
     type("   ");
     expect(screen.getByTestId("feedback-send").props.accessibilityState.disabled).toBe(true);
     type("登录一直转圈");
     expect(screen.getByTestId("feedback-send").props.accessibilityState.disabled).toBe(false);
+    expect(screen.queryByTestId("feedback-send-reason")).toBeNull();
   });
 
-  it("the grey line 「对审判结果有异议，请走申诉。」 shows for 「我的记录有误」 and for no other category", async () => {
+  it("the grey line 「对审判结果有异议，请走审判申诉。」 shows for 「我的记录有误」 and for no other category, with a link there", async () => {
     stubApi({ "/me/chat/conversations/": { status: 200, data: [HALL] }, "/me/chat/session/": SESSION });
     renderForm();
     await up();
     expect(screen.queryByTestId("feedback-appeal-hint")).toBeNull();
     fireEvent.press(screen.getByTestId("kind-record"));
-    expect(screen.getByTestId("feedback-appeal-hint")).toHaveTextContent("对审判结果有异议，请走申诉。");
+    expect(screen.getByTestId("feedback-appeal-hint")).toHaveTextContent("对审判结果有异议，请走审判申诉。");
+    fireEvent.press(screen.getByTestId("feedback-appeal-link"));
+    expect(mockNavigate).toHaveBeenCalledWith("Tabs", { screen: "Life", params: { lifeFocus: { appeals: true } } });
     expect(screen.getByTestId("kind-record").props.accessibilityState.checked).toBe(true);
     expect(screen.getByTestId("kind-account").props.accessibilityState.checked).toBe(false);
     for (const k of ["app", "other", "account"]) {
@@ -351,7 +356,8 @@ describe("sending (the letters' own outbox)", () => {
       fireEvent.press(screen.getByTestId("feedback-send"));
     });
     await screen.findByTestId("feedback-failed");
-    expect(screen.getByText("没有发出去。检查网络后再试。")).toBeTruthy();
+    // One verb for sending (review 2026-11-01): 「没能发出」, as a letter image says it.
+    expect(screen.getByText("没能发出。检查网络后再试。")).toBeTruthy();
     expect(screen.getByTestId("feedback-body").props.value).toBe("没网也想写");
     expect(screen.queryByTestId("feedback-sent")).toBeNull();
     expect(sends(calls)).toHaveLength(0);

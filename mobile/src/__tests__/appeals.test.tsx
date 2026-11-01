@@ -11,7 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ToastProvider } from "../feedback";
 import { I18nProvider, translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
+import { AppealDeadlineNote, AppealLine, JudgmentAppealScreen, roundsOf } from "../screens/appeals";
 import { stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -108,6 +108,33 @@ it("an appealable judgment shows its deadline as a day and an 「申诉 ›」 t
   expect(screen.getByTestId(`appeal-deadline-${J}`).props.children).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   fireEvent.press(screen.getByTestId(`appeal-file-${J}`));
   expect(mockNavigate).toHaveBeenCalledWith("JudgmentAppeal", expect.objectContaining({ judgment: J, caseNumber: "CN-2026-0007" }));
+});
+
+// review 2026-11-01: the deadline lived only inside 审判, folded by default. Said above the ledger too.
+it("the earliest open deadline is said outside the fold, and pressing it opens 审判; none open → nothing", () => {
+  const onOpen = jest.fn();
+  const list = {
+    judgments: [
+      row({ judgment_id: "j2", deadline: "2026-11-20T12:00:00Z" }),
+      row(),
+      row({ judgment_id: "j3", can_appeal: false, refusal_code: "appeal_window_closed", deadline: "2026-10-01T12:00:00Z" }),
+    ],
+    results: [],
+  };
+  const first = wrap(<AppealDeadlineNote list={list as never} onOpen={onOpen} />);
+  expect(screen.getByTestId("appeal-deadline-note")).toHaveTextContent(/2 件审判可申诉 · 最早 2026年 · 11月8日 截止/);
+  fireEvent.press(screen.getByTestId("appeal-deadline-note"));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+  first.unmount();
+  wrap(<AppealDeadlineNote list={{ judgments: [row({ can_appeal: false })], results: [] } as never} onOpen={onOpen} />);
+  expect(screen.queryByTestId("appeal-deadline-note")).toBeNull();
+});
+
+it("the three appeals are three names: 审判申诉 here, never the bare 申诉", () => {
+  wrap(<AppealLine row={row()} rounds={[]} onChanged={() => {}} />);
+  expect(within(screen.getByTestId(`appeal-file-${J}`)).getByText("审判申诉 ›")).toBeTruthy();
+  for (const key of ["appeals.file", "soul_app.detail.appeal", "soul_app.wangsi.file"]) expect(translate("zh-Hans", key)).not.toBe("申诉");
+  expect(new Set(["appeals.file", "soul_app.detail.appeal", "soul_app.wangsi.file"].map((k) => translate("zh-Hans", k))).size).toBe(3);
 });
 
 it("a refused one says why in one grey line and offers no button", () => {
@@ -292,7 +319,7 @@ it("a refused withdrawal (already decided / in the appeal flow) is said in words
 it("the form refuses an empty reason locally, then sends the reason and goes back", async () => {
   const calls = stubApi({ "POST /me/judgment-appeals/": { status: 201, data: round() } });
   wrap(<JudgmentAppealScreen />);
-  expect(screen.getByTestId("appeal-submit").props.accessibilityLabel).toBe("提交申诉");
+  expect(screen.getByTestId("appeal-submit").props.accessibilityLabel).toBe("提交审判申诉");
   expect(screen.queryByTestId("appeal-escalate-last")).toBeNull();
   fireEvent.press(screen.getByTestId("appeal-submit"));
   expect(await screen.findByText("请写理由")).toBeTruthy();

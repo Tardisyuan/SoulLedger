@@ -16,7 +16,7 @@ import { Sheet, SHEET_CLOSE_DRAG_PT, SHEET_CLOSE_SPEED_PT_PER_MS, sheetReleaseCl
 import { I18nProvider, translate } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
-import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
+import { defaultLifeSection, lifePath, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX, stageWordFit } from "../screens/life";
 import { SessionProvider } from "../session";
 import { GUTTER_PT, space, themeFor, v3 } from "../theme";
@@ -178,6 +178,15 @@ describe("the life page's rules (补足 B11)", () => {
     expect(lifePathIndex("DISPOSED", "serving")).toBe(3);
     expect(lifePathIndex("REINCARNATING", "completed")).toBe(4);
     expect([lifePathIndex("LOST", "serving"), lifePathIndex("SETTLED", undefined), lifePathIndex("ASCENDED", undefined)]).toEqual([null, null, null]);
+  });
+
+  it("Egypt and Europe have no rebirth: their road stops at the sentence, and REINCARNATING has no place on it", () => {
+    expect(lifePath("eg")).toEqual(["ALIVE", "JUDGING", "DISPOSED", "SENTENCE"]);
+    expect(lifePath("eu")).toEqual(["ALIVE", "JUDGING", "DISPOSED", "SENTENCE"]);
+    for (const civ of ["cn", "gr", "neutral"] as const) expect(lifePath(civ)).toContain("REINCARNATING");
+    expect([lifePathIndex("REINCARNATING", "completed", "eg"), lifePathIndex("REINCARNATING", "completed", "eu")]).toEqual([null, null]);
+    expect(lifePathIndex("REINCARNATING", "completed", "gr")).toBe(4);
+    expect(lifePathIndex("DISPOSED", "serving", "eg")).toBe(3);
   });
 
   it("the balance: signed, with a real minus", () => {

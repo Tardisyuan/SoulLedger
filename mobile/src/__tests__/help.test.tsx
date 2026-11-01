@@ -21,10 +21,12 @@ const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, l
 /** The answers as Design wrote them (Batch28Content.dc.html, 「常见问题 · 第一版答案」), punctuation included. */
 const ANSWERS = {
   login: "先检查编号有没有输错。密码连续输错 5 次会锁 15 分钟，等一会儿再试。还是不行，点「忘记密码」。",
-  forgot: "在登录页点「忘记密码」,验证码会发到你登记的联系邮箱。没有登记邮箱的，请到本殿窗口办理，带上交付单。",
+  // review 2026-11-01: the same story as the 「没有联系邮箱？」 page (it said 「写信给殿司」 while this said 「到窗口」).
+  forgot: "在登录页点「忘记密码」，验证码会发到你的联系邮箱。还没有联系邮箱的，登录后到「设置 › 联系邮箱」添加；已经登录不上的，请到本殿窗口办理，带上交付单。",
   phone: "用另一部手机登录，到「账号安全 › 登录设备与记录」让丢的那部退出，再改密码。开了两步验证的，用恢复码登录。恢复码也没有了，请到本殿窗口办理。",
   slip: "你到殿时领的那张纸，上面有你的编号和第一次登录用的密码。第一次登录后，这个密码就不能再用了。交付单请收好，到窗口办事时要用。",
-  contact: "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。",
+  // One name for writing to the hall, the letters' own: 「写信给殿司」 (review 2026-11-01).
+  contact: "在这页底部点「写信给殿司」，回复会出现在书信里。急事请到本殿窗口。",
 };
 const QUESTIONS = { login: "登录不了", forgot: "忘记密码", phone: "手机丢了", slip: "交付单是什么", contact: "怎么联系本殿" };
 
@@ -125,12 +127,31 @@ describe("from settings, signed in", () => {
     }
   });
 
-  it("ends with 「没找到答案？」 and a bordered 「写给本殿」 that opens the form", async () => {
+  it("名词解释: the three appeals told apart, and the words the pages use", async () => {
+    await openFromSettings();
+    expect(within(screen.getByTestId("help-group-terms")).getByText("名词解释")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("help-q-appeals"));
+    const a = screen.getByTestId("help-a-appeals");
+    for (const name of ["审判申诉", "转生申诉", "冤情申诉"]) expect(a).toHaveTextContent(new RegExp(name));
+    for (const id of ["merit", "disposition", "sentence", "cooldown", "residing", "hall"]) expect(screen.getByTestId(`help-q-${id}`)).toBeTruthy();
+  });
+
+  it("the sign-in page's version has no 名词解释 either", async () => {
+    stubApi({});
+    renderApp();
+    await act(async () => {});
+    fireEvent.press(await screen.findByTestId("login-trouble"));
+    await screen.findByTestId("help");
+    expect(screen.queryByTestId("help-group-terms")).toBeNull();
+  });
+
+  it("ends with 「没找到答案？」 and a bordered 「写信给殿司」 that opens the form", async () => {
     await openFromSettings();
     const block = screen.getByTestId("help-write-block");
     expect(within(block).getByText("没找到答案？")).toBeTruthy();
     const button = within(block).getByTestId("help-write");
-    expect(within(button).getByText("写给本殿")).toBeTruthy();
+    expect(within(button).getByText("写信给殿司")).toBeTruthy();
+    expect(screen.queryByText("写给本殿")).toBeNull();
     fireEvent.press(button);
     await screen.findByTestId("feedback");
     expect(screen.getByTestId("feedback-send")).toBeTruthy();
