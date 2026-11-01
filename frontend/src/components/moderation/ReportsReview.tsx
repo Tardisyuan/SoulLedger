@@ -221,6 +221,9 @@ export function ReportsReview() {
   const [modReasonError, setModReasonError] = useState<"code" | "note" | null>(null);
   const [muteDays, setMuteDays] = useState(7);
   const [deleting, setDeleting] = useState(false);
+  // review-2026-11-01 Web 7:单键 A 不再直接放行、禁言不再一点即生效 —— 两者都先问一句。
+  // 「放行」按钮本身仍是一次点击(按钮是看着点的);只有不看就会误触的单键要确认。
+  const [confirming, setConfirming] = useState<"approve" | "mute" | null>(null);
   const [busy, setBusy] = useState(false);
 
   // A handled item leaves the queue; the selection then falls to the first
@@ -343,7 +346,7 @@ export function ReportsReview() {
   // J / K / A / H / W — ignored while typing, with a modifier, or under a dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || deleting) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || deleting || confirming) return;
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
       const key = e.key.toLowerCase();
       if (key === "j" || key === "k") {
@@ -354,7 +357,7 @@ export function ReportsReview() {
         }
       } else if (key === "a") {
         e.preventDefault();
-        approve();
+        if (selected && !busy) setConfirming("approve");
       } else if (key === "h") {
         e.preventDefault();
         hide();
@@ -654,7 +657,7 @@ export function ReportsReview() {
                       </option>
                     ))}
                   </select>
-                  <Button type="button" variant="ghost" size="sm" onClick={mute} disabled={busy}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming("mute")} disabled={busy}>
                     {t("social_moderation.actions.mute")}
                   </Button>
                 </span>
@@ -664,6 +667,26 @@ export function ReportsReview() {
           </div>
         </section>
       )}
+
+      <ConfirmDialog
+        isOpen={confirming !== null}
+        variant={confirming === "mute" ? "warning" : "info"}
+        title={
+          confirming === "mute"
+            ? t("social_moderation.confirm_mute_title", { name: selected?.author ?? "", n: String(muteDays) })
+            : t("social_moderation.confirm_approve_title")
+        }
+        message={t(confirming === "mute" ? "social_moderation.confirm_mute_body" : "social_moderation.confirm_approve_body")}
+        confirmText={t(confirming === "mute" ? "social_moderation.actions.mute" : "social_moderation.review.approve")}
+        confirmLoading={busy}
+        onConfirm={() => {
+          const what = confirming;
+          setConfirming(null);
+          if (what === "mute") mute();
+          else if (what === "approve") approve();
+        }}
+        onCancel={() => setConfirming(null)}
+      />
 
       {/* 官员删除进全局回收站(DELETED_BY_OFFICER,30 天内可恢复)—— 可撤回,警示按钮(橙)。 */}
       <ConfirmDialog

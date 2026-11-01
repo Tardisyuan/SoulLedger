@@ -85,13 +85,15 @@ test.describe("Circle moderation", () => {
     await expect(page.getByRole("region", { name: "审阅详情" })).toContainText("命中敏感词的帖子");
     await expect(page.getByRole("region", { name: "审阅详情" })).toContainText("因敏感词「还阳」待审");
     await page.locator("body").press("a");
+    // review-2026-11-01 Web 7: the single key asks first.
+    await page.getByRole("alertdialog").getByRole("button", { name: "放行" }).click();
     await expect.poll(() => api.countOf("POST", "/social-moderation/posts/:id/approve/")).toBe(1);
   });
 
   test("敏感词: the inline row adds on Enter; deleting goes through the batch bar", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
-    await page.getByRole("button", { name: "敏感词", exact: true }).click();
+    await page.getByRole("button", { name: /^敏感词\s*(，\d+ 条)?$/ }).click();
 
     await page.getByLabel("类别", { exact: true }).selectOption("PRIVACY");
     await page.getByLabel("命中后", { exact: true }).selectOption("MASK");
@@ -123,7 +125,7 @@ test.describe("Circle moderation", () => {
   test("敏感词: deleting several has no one name to type — a plain confirm with ✕", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
-    await page.getByRole("button", { name: "敏感词", exact: true }).click();
+    await page.getByRole("button", { name: /^敏感词\s*(，\d+ 条)?$/ }).click();
     for (const w of SENSITIVE_WORDS) await page.locator("tr", { hasText: w.word }).getByRole("checkbox").check();
     await page.getByRole("button", { name: "删除所选" }).click();
     const dialog = page.getByRole("alertdialog");
@@ -140,7 +142,7 @@ test.describe("Circle moderation", () => {
   test("禁言: the term is a meter; 解除禁言 asks first", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
-    await page.getByRole("button", { name: "禁言", exact: true }).click();
+    await page.getByRole("button", { name: /^禁言\s*(，\d+ 条)?$/ }).click();
     await expect(page.getByRole("meter")).toHaveCount(1);
     await page.getByRole("button", { name: "解除禁言" }).click();
     const dialog = page.getByRole("alertdialog");
@@ -153,7 +155,7 @@ test.describe("Circle moderation", () => {
   test("已处理: a hidden row opens read-only with 恢复可见; a deleted one points at the recycle bin", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
-    await page.getByRole("button", { name: "已处理", exact: true }).click();
+    await page.getByRole("button", { name: /^已处理\s*(，\d+ 条)?$/ }).click();
 
     await page.locator("tr", { hasText: "判词不公" }).getByRole("button").click();
     const drawer = page.getByRole("dialog");

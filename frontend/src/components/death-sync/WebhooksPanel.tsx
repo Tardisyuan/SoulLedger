@@ -18,7 +18,8 @@ import { PageSection } from "@/components/ui/page-section";
 import { Button } from "@/src/components/ui/Button";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { SelectField, TextField } from "@/src/components/ui/Field";
-import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
+import { MissingValue } from "@/src/components/ui/DomainValue";
+import { EVENT_LABELS } from "@/lib/events/eventHandlers";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 import { responseCode } from "@soulledger/core/api/client";
@@ -44,9 +45,22 @@ const DELIVERY_TONE: Record<WebhookDeliveryStatus, BadgeTone> = {
  * `ApiKeysPanel`. Closing the dialog drops it; the server cannot show it again.
  *
  * The event checklist is `GET admin-webhooks/event-types/` — the `EventType`
- * enum the delivery handler filters on — shown by its wire name, because that
- * name is what the receiver sees in `X-SoulLedger-Event`.
+ * enum the delivery handler filters on. Each is shown by its readable name
+ * (`EVENT_LABELS`, the one table every event type has a row in), with the wire name under it in
+ * small mono, because that name is what the receiver sees in
+ * `X-SoulLedger-Event` (review-2026-11-01 Web 6: the list showed codes only).
  */
+/** An event type by its readable name; the wire name stays in `title`. A type with no label shows raw. */
+function EventName({ value, className }: { value: string; className?: string }) {
+  const { t } = useI18n();
+  const key = EVENT_LABELS[value];
+  return (
+    <span title={value} className={className}>
+      {key ? t(key) : value}
+    </span>
+  );
+}
+
 export function WebhooksPanel() {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -127,8 +141,15 @@ export function WebhooksPanel() {
             <>
               <td className="px-3 py-2 font-mono text-xs break-all text-[oklch(var(--color-ink))]">{hook.url}</td>
               <td className="px-3 py-2 text-sm text-[oklch(var(--color-ink-muted))]">{hook.api_key_name}</td>
-              <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
-                {(hook.events ?? []).length === 0 ? t("death_sync.webhooks.all_events") : (hook.events ?? []).join(", ")}
+              <td data-testid="webhook-events" className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                {(hook.events ?? []).length === 0
+                  ? t("death_sync.webhooks.all_events")
+                  : (hook.events ?? []).map((ev, i) => (
+                      <span key={ev}>
+                        {i > 0 ? "、" : null}
+                        <EventName value={ev} />
+                      </span>
+                    ))}
               </td>
               <td className="px-3 py-2 whitespace-nowrap">
                 <StatusBadge
@@ -288,9 +309,12 @@ function WebhookDialog({
           <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("death_sync.webhooks.events_hint")}</p>
           <div className="grid max-h-64 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
             {(eventTypes.data ?? []).map((ev) => (
-              <label key={ev} className="flex items-center gap-2 font-mono text-xs">
-                <input type="checkbox" checked={events.includes(ev)} onChange={(e) => toggle(ev, e.target.checked)} />
-                {ev}
+              <label key={ev} className="flex items-start gap-2 text-xs">
+                <input type="checkbox" className="mt-0.5" checked={events.includes(ev)} onChange={(e) => toggle(ev, e.target.checked)} />
+                <span className="min-w-0">
+                  <EventName value={ev} className="block text-[oklch(var(--color-ink))]" />
+                  <span className="block break-all font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{ev}</span>
+                </span>
               </label>
             ))}
           </div>
@@ -418,7 +442,7 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
               {row.event_type === TEST_EVENT ? (
                 t("death_sync.webhooks.test_event")
               ) : (
-                <DomainEnum namespace="souls.events" value={row.event_type} />
+                <EventName value={row.event_type} />
               )}
             </td>
             <td className="px-3 py-2 font-mono text-xs break-all text-[oklch(var(--color-ink-muted))]">{row.webhook_url}</td>

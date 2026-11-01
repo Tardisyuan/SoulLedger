@@ -39,6 +39,18 @@ def test_a_numeric_user_id_still_filters(world):
     assert r.status_code == 200 and r.data["count"] == 1
 
 
+def test_username_filters_by_operator_exactly(world):
+    """review-2026-11-01 Web 6: the page filters by operator name; a prefix of a name is not that name."""
+    other = User.objects.create_user(username="au_mod2", password="x", role="MODERATOR", tenant=world["cn"])
+    AuditLog.objects.create(tenant=world["cn"], user=world["user"], action=AuditAction.UPDATE, resource="soul")
+    AuditLog.objects.create(tenant=world["cn"], user=other, action=AuditAction.UPDATE, resource="soul")
+    AuditLog.objects.create(tenant=world["cn"], user=None, action=AuditAction.UPDATE, resource="soul")
+    r = world["client"].get(LIST, {"username": "au_mod"})
+    assert r.status_code == 200 and r.data["count"] == 1
+    assert r.data["results"][0]["username"] == "au_mod"
+    assert world["client"].get(LIST, {"username": "au_mo"}).data["count"] == 0
+
+
 def test_trace_id_filters_the_list(world):
     for trace in ("t-1", "t-1", "t-2"):
         AuditLog.objects.create(tenant=world["cn"], action=AuditAction.UPDATE, resource="soul", trace_id=trace)

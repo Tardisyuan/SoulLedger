@@ -110,11 +110,14 @@ const asRole = (...permissions: string[]) =>
   (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions, tenant: { code: "CN_DIYU", display_name: "中国地府" } });
 const asAdmin = () =>
   (mockUser = { id: 1, username: "admin", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU", display_name: "中国地府" } });
-const segment = (key: string) => screen.getByRole("button", { name: tZh(`social_moderation.tabs.${key}`) });
+// The name is the label, then the count for screen readers (review-2026-11-01 Web 7) once it has loaded.
+const segment = (key: string) => screen.getByRole("button", { name: new RegExp(`^${tZh(`social_moderation.tabs.${key}`)}`) });
 const detail = () => screen.getByRole("region", { name: tZh("social_moderation.review.detail_label") });
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // The segment lives in ?segment= now; one test's segment must not open the next test's page.
+  window.history.replaceState(null, "", "/");
   apiMock.reports.mockResolvedValue(page([report()]));
   apiMock.content.mockResolvedValue(page([]));
   apiMock.item.mockResolvedValue({ data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 2 }) });
@@ -143,6 +146,21 @@ describe("page header", () => {
     // The old 「待审内容」 tab is gone: rule hits are in the 举报 queue now.
     expect(screen.queryByRole("button", { name: tZh("social_moderation.tabs.content") })).toBeNull();
     expect(segment("reports")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // review-2026-11-01 Web 7:分段进地址栏;计数读屏也读得到。
+  it("keeps the segment in ?segment= and opens on it; the count is in the button's name", async () => {
+    asRole("social.moderate");
+    window.history.replaceState(null, "", "/moderation?segment=mutes");
+    const { unmount } = renderPage();
+    await waitFor(() => expect(segment("mutes")).toHaveAttribute("aria-pressed", "true"));
+    fireEvent.click(segment("words"));
+    expect(window.location.search).toBe("?segment=words");
+    fireEvent.click(segment("reports"));
+    expect(window.location.search).toBe("");
+    await waitFor(() => expect(segment("reports")).toHaveAccessibleName(new RegExp(`^${tZh("social_moderation.tabs.reports")}.*1`)));
+    unmount();
+    window.history.replaceState(null, "", "/");
   });
 });
 
@@ -490,8 +508,34 @@ describe("举报 · the C-08 review layout", () => {
     // One row, not two.
     expect(within(list).getAllByRole("button")).toHaveLength(1);
     fireEvent.keyDown(document.body, { key: "a" });
+    // review-2026-11-01 Web 7:单键 A 先问一句。
+    const dialog = await screen.findByRole("alertdialog");
+    expect(apiMock.act).not.toHaveBeenCalled();
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.review.approve") }));
     await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p1", "approve", undefined, undefined));
     expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DISMISS", undefined, undefined, undefined);
+  });
+
+  it("A then 取消 approves nothing; 禁言 asks first too, and cancel sends nothing", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await screen.findByRole("list", { name: tZh("social_moderation.review.list_label") });
+    fireEvent.keyDown(document.body, { key: "a" });
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: tZh("common.cancel") }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.click(within(detail()).getByRole("button", { name: tZh("social_moderation.actions.mute") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.cancel") }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.click(within(detail()).getByRole("button", { name: tZh("social_moderation.actions.mute") }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: tZh("social_moderation.actions.mute") }));
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "MUTE", undefined, expect.any(Number), undefined));
   });
 
   it("a report against a user offers no hide or delete — there is no content to act on", async () => {

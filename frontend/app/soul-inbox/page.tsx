@@ -401,6 +401,9 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const [managing, setManaging] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const canReply = hasPermission("soul_inbox.reply") && !conversation.closed_at;
+  // 灵魂已调往别处(`can_reply: false`,或回信答 409 `not_current_hall`):不再画回复框,说一句为什么。
+  const [movedAway, setMovedAway] = useState(false);
+  const replyBlocked = canReply && (conversation.can_reply === false || movedAway);
   const draft = useDraft(conversation.id, canReply);
   const templates = useInboxTemplates(canReply);
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -437,6 +440,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
         },
         onError: (error) => {
           const code = responseCode(error);
+          if (code === "not_current_hall") setMovedAway(true);
           showToast(code ? t(`soul_inbox.errors.${code}`) : t("soul_inbox.failed"), "error");
         },
       }
@@ -553,7 +557,12 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
           </ol>
         </>
       )}
-      {canReply && (
+      {replyBlocked && (
+        <p data-testid="inbox-moved-away" role="status" className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">
+          {t("soul_inbox.errors.not_current_hall")}
+        </p>
+      )}
+      {canReply && !replyBlocked && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
