@@ -7,9 +7,10 @@
 `retired_at` 有且只有那一条写路径,但 post_save 会对每一次保存都触发,包括改密、
 重置凭据这些与聊天无关的写。
 
-**`on_commit`,不是立即;Synapse 那一半再交给 celery。** 停用要发 HTTP 到 Synapse:转世事务万一回滚,一个已经被
-停用、踢出所有房间的 Matrix 用户是回滚不掉的。聊天没启用或 Synapse 不可达时只记日志,
-不阻断转世(`services.deactivate_for_account`)—— 账号本身已经登不进来了。
+**库内关会话在注销的事务里;Synapse 那一半 `on_commit` 后交给 celery。** 关会话只写库,放在事务外的话,进程在提交之后
+死掉就没有任何东西补它:账号已注销、会话还开着,「一对灵魂一个未关闭会话」的唯一约束也一直占着(2026-11-01 审查)。
+停用要发 HTTP 到 Synapse:转世事务万一回滚,一个已经被停用、踢出所有房间的 Matrix 用户是回滚不掉的。
+聊天没启用或 Synapse 不可达时只记日志,不阻断转世(`services.deactivate_matrix_side`)—— 账号本身已经登不进来了。
 """
 import logging
 
@@ -62,20 +63,22 @@ def _retire_matrix_user(sender, instance, created, **kwargs):
     account_id = _payload(instance).get("account_id")
     if not account_id:
         return
-    transaction.on_commit(lambda: _deactivate(account_id))
-
-
-def _deactivate(account_id):
-    """库内关会话在这里(快、一定成功);Synapse 那一半进 celery,不拖住转世的请求。"""
     from apps.chat.services import close_conversations_for_account
-    from apps.chat.tasks import deactivate_matrix_task
     from apps.soul_accounts.models import SoulAccount
 
-    account = SoulAccount.objects.filter(pk=account_id).select_related("soul").first()
+    account = SoulAccount.objects.filter(pk=account_id).first()
     if account is None:
         return
+    # 这里抛错就让注销一起回滚:事件日志同一条规矩,不吞。
     ids = close_conversations_for_account(account)
+    transaction.on_commit(lambda: _deactivate(account.pk, ids))
+
+
+def _deactivate(account_id, conversation_ids):
+    """Synapse 那一半进 celery,不拖住转世的请求。入队失败只记日志:留下的一方由 `sync_rooms` 补降权。"""
+    from apps.chat.tasks import deactivate_matrix_task
+
     try:
-        deactivate_matrix_task.delay(account.pk, ids)
+        deactivate_matrix_task.delay(account_id, conversation_ids)
     except Exception:  # noqa: BLE001
-        logger.exception("chat: 停用 Matrix 用户入队失败 account=%s", account.pk)
+        logger.exception("chat: 停用 Matrix 用户入队失败 account=%s", account_id)

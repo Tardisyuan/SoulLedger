@@ -7,6 +7,12 @@
 「谁最后说话」(`Conversation.last_from`)不是官员私有的:那是信本身的事实,由
 `services.py` 的三个写点维护(灵魂经后端发、官员回复、Synapse 回调)。
 
+**「待回复」只有一个定义:`AWAITING_REPLY`(查询)与 `awaiting_reply`(一行已取出的会话),** 文件夹、官员待办、
+跨殿总览、经办人推送都用它们。灵魂已调走的那封不算:殿司回不了它。
+
+**经办人要看此刻还够不够格**(`live_assignee`):被停用、调走或失去 `soul_inbox.reply` 的官员,库里的
+`assignee` 留着(他恢复之后还是他的),但读出来一律按未指派算 —— 进「未分配」、不推送给他、不挡别人回信。
+
 文件夹(`folder=`):
 
     all             未归档
@@ -48,18 +54,45 @@ FOLDERS = ("all", "awaiting_reply", "replied", "drafts", "archived", "assigned_t
 #: 经办人要有的码名:能回复,才谈得上把回信交给他。
 ASSIGNEE_PERMISSION = "soul_inbox.reply"
 
+#: 「待回复」:最后一封是灵魂写的,且殿司此刻回得了(与 `hall_can_reply` + `last_from` 同一条规则)。
+AWAITING_REPLY = Q(last_from="soul", closed_at__isnull=True, soul_a__tenant_id=F("tenant_id"))
+
 #: 草稿与回复正文同一上限(`OfficerReplySerializer.body`)。
 DRAFT_MAX_LENGTH = 4000
 
 
+def hall_can_reply(conversation):
+    """殿司此刻能不能在这封收件箱里回信:没关闭,且灵魂**此刻**就在这个殿司。"""
+    return conversation.closed_at is None and conversation.soul_a.tenant_id == conversation.tenant_id
+
+
+def awaiting_reply(conversation):
+    """一行已取出的会话是不是在等回复。与 `AWAITING_REPLY` 同义(测试逐格对照)。"""
+    return conversation.last_from == "soul" and hall_can_reply(conversation)
+
+
+def live_assignee(conversation):
+    """此刻算数的经办人:他还是这个殿司里能回信的在职官员就是他,否则 None。规则同 `assign`。"""
+    from apps.judgment.claims import is_assignable
+
+    officer = conversation.assignee
+    if officer is None or not is_assignable(officer, conversation.tenant_id, ASSIGNEE_PERMISSION):
+        return None
+    return officer
+
+
 def annotate_for(qs, user):
     """给每个会话标上调用者自己的 `unread` / `archived` / `has_draft`,以及「是不是标给我的」。"""
+    from apps.perm.checker import check_permission
+
     mine = InboxOfficerState.objects.filter(conversation=OuterRef("pk"), user=user)
+    # 自己已不能回信:库里标给他的那些不算他的(`live_assignee`)。0 不是任何人的主键。
+    me = user.pk if check_permission(user, ASSIGNEE_PERMISSION) else 0
     return qs.annotate(
         my_read_at=Subquery(mine.values("last_read_at")[:1]),
         archived=Exists(mine.filter(archived_at__isnull=False)),
         has_draft=Exists(mine.exclude(draft="")),
-        assigned_to_me=ExpressionWrapper(Q(assignee_id=user.pk), output_field=BooleanField()),
+        assigned_to_me=ExpressionWrapper(Q(assignee_id=me), output_field=BooleanField()),
     ).annotate(
         # 未读 = 灵魂有一封我读过之后才来的信。殿司(包括同僚)的回复不算:收件箱里要「读」的是来信。
         unread=Case(
@@ -78,8 +111,7 @@ def folder_q(folder):
         return Q(archived=True)
     live = Q(archived=False)
     if folder == "awaiting_reply":
-        # 灵魂已调走的那封不算「待回复」:殿司回不了它(`services.hall_can_reply`,2026-11-01)。
-        return live & Q(last_from="soul", closed_at__isnull=True, soul_a__tenant_id=F("tenant_id"))
+        return live & AWAITING_REPLY
     if folder == "replied":
         return live & Q(last_from="hall")
     if folder == "drafts":
@@ -142,10 +174,11 @@ def save_draft(conversation, user, text):
 
 
 def after_reply(conversation, user):
-    """回复发出之后:这位官员的草稿清空、读到此刻 —— 回了就是读过了。"""
+    """回复发出之后:这位官员的草稿清空、读到此刻 —— 回了就是读过了;他归档过的也拿回来(2026-11-02 用户定),
+    别的官员的归档不动。"""
     InboxOfficerState.objects.update_or_create(
         conversation=conversation, user=user,
-        defaults={"draft": "", "draft_saved_at": None, "last_read_at": timezone.now()},
+        defaults={"draft": "", "draft_saved_at": None, "last_read_at": timezone.now(), "archived_at": None},
     )
 
 
@@ -205,15 +238,15 @@ PUSH_QUIET_MINUTES = 10
 def push_to_assignee(conversation, *, force=False):
     """给经办官员发一条手机推送(泛化计数,不含灵魂名与信的内容),落地到这个会话。
 
-    只在「等他回」时发:会话没关、最后一封是灵魂写的。`force`(刚被分派 / 改派)无视静默期,
+    只在「等他回」时发(`awaiting_reply`),经办人此刻还够格(`live_assignee`)。`force`(刚被分派 / 改派)无视静默期,
     但仍会开启静默期,于是紧接着来的信不重复响。官员的推送开关就是他登记的设备
     (`OfficerPushDevice`),没有设备或待办为 0 都不发。提交后才入队,失败不影响业务。"""
     from django.core.cache import cache
 
     from apps.officer_app.push import notify_users
 
-    officer = conversation.assignee
-    if officer is None or conversation.closed_at is not None or conversation.last_from != "soul":
+    officer = live_assignee(conversation)
+    if officer is None or not awaiting_reply(conversation):
         return
     key = f"officer_letter_push:{conversation.pk}"
     if force:

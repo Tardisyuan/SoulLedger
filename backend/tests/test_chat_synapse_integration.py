@@ -219,6 +219,28 @@ def test_the_request_rule_the_mute_and_retirement_against_synapse(cn_tenant, syn
     assert _say(b_token, room_id, "还在吗")[0] == 403
 
 
+def test_a_resent_transaction_is_one_event_even_with_a_new_grant(cn_tenant, synapse):
+    """`FakeMatrix` 的去重照的就是这一条:响应丢了之后的重试,事务号相同,Synapse 回第一次的 event_id、不存第二条,
+    哪怕第二次带的是新凭据、新正文。这是书信「重试不成第二封」(`services._send_request`)的全部依据。"""
+    from apps.chat import services
+    from apps.chat.matrix import get_client
+    from apps.chat.models import ChatIdentity
+
+    a, a_client = ready_soul(cn_tenant, name="甲")
+    b, _ = ready_soul(cn_tenant, name="乙")
+    follow(a, b)
+    opened = a_client.post(CONVERSATIONS, {"target_user": b.user_id}, format="json")
+    assert opened.status_code == 201 and opened.data["throttled"] is True, opened.data
+    conversation = Conversation.objects.get(pk=opened.data["id"])
+    identity = ChatIdentity.objects.get(account=a)
+    client = get_client()
+
+    first = services._send_request(client, conversation, identity, "打扰")
+    again = services._send_request(client, conversation, identity, "换句话再试")
+    assert again == first
+    assert [m["body"] for m in client.recent_messages(conversation.room_id)] == ["打扰"]
+
+
 @pytest.mark.skipif(not os.getenv("SYNAPSE_TEST_PUSH"), reason="没有 SYNAPSE_TEST_PUSH:模块的 push_url 没指向本次的 live_server")
 def test_a_new_message_calls_back_through_the_module_and_is_pushed(cn_tenant, synapse, live_server):
     """真 Synapse 的 `on_new_event` → 模块后台进程 → 后端回调 → 推送记录。

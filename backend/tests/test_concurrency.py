@@ -1334,6 +1334,9 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # already_concluded。SQLite 没有行锁可等。顺序版本(拿旧对象再结一次)
         # tests/test_judgment_review_2026_11_01.py 每个引擎都跑。
         here + "TestConcludeRechecksUnderTheLock::test_two_officers_concluding_one_case_at_once_exactly_one_wins",
+        # 2026-11-02 书信发言权:两次同步在会话行锁上排队,不交错「读表 → 写整张表」。SQLite 没有行锁可等;
+        # 串行版(重读事实) test_a_sync_reads_the_facts_again_under_the_lock 同文件,每个引擎都跑。
+        "tests/test_chat_review_2026_11_02.py::test_two_syncs_of_one_room_write_levels_one_at_a_time",
         # 2026-10-27 灵魂搜索的三元组索引(apps/souls/migrations/0047_soul_search_trigram.py):pg_trgm 与 GIN
         # 只在 PostgreSQL 上存在。同文件另两条(列清单、表达式)每个引擎都跑。
         "tests/test_soul_search_trigram.py::test_the_indexes_exist_on_postgresql",

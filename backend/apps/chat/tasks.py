@@ -36,6 +36,28 @@ def cleanup_unsent_images():
     return images.purge_all_stale()
 
 
+class RoomSyncError(Exception):
+    """有房间写不成 —— 让这次运行记 FAILURE 并告警。"""
+
+
+@shared_task(name="chat.sync_all_rooms")
+def sync_all_rooms():
+    """每天把所有房间的发言权对一遍(`services.sync_all_rooms`):入队失败的同步、到期的禁言在这里补上。
+    没变的房间只有一次 GET,不写。聊天没配置同 `reconcile_inbox`:记 SUCCESS,不告警。"""
+    from apps.chat import services
+    from apps.chat.matrix import MatrixNotConfiguredError, get_client
+
+    try:
+        client = get_client()
+    except MatrixNotConfiguredError:
+        return {"skipped": "chat_not_configured"}
+    done, failed = services.sync_all_rooms(client)
+    if failed:
+        sample = "; ".join(f"{room}: {err}" for room, err in list(failed.items())[:5])
+        raise RoomSyncError(f"{len(failed)} of {done + len(failed)} room(s) not synced: {sample}")
+    return {"synced": done}
+
+
 @shared_task(name="chat.sync_rooms", ignore_result=True)
 def sync_rooms_task(soul_id):
     """重算一个灵魂所有房间的发言权并写进 Synapse(`services.sync_rooms`)。

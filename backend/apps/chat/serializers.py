@@ -226,9 +226,18 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_can_reply(self, obj) -> bool:
-        from apps.chat.services import hall_can_reply
+        from apps.chat.inbox import hall_can_reply
 
         return hall_can_reply(obj)
+
+    def to_representation(self, obj):
+        from apps.chat.inbox import live_assignee
+
+        data = super().to_representation(obj)
+        # 不再够格的经办人按未指派给出(`live_assignee`),与官员待办、推送、回信判断同一个答案。
+        if obj.assignee_id is not None and live_assignee(obj) is None:
+            data["assignee"] = data["assigned_at"] = None
+        return data
 
 
 class InboxHallCountSerializer(serializers.Serializer):
@@ -282,6 +291,7 @@ class ChatErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
     code = serializers.CharField()
     retry_at = serializers.DateTimeField(required=False, help_text="429 时:何时可以再试。")
+    assignee_name = serializers.CharField(required=False, help_text="409 `assigned_to_other` 时:当前经办人的显示名。")
 
 
 #: 模板里允许的占位符。客户端发送前替换(`packages/core/src/soulInboxTemplates.ts`),服务端只校验。
