@@ -35,7 +35,9 @@ export function SentenceNodeRetry({ plan, node }: { plan: SentencePlan; node: Se
   const why =
     cancelled
       ? t("sentence_plan.last_refusal_cancelled")
-      : refusal.reason
+      : refusal.status === "NOT_STARTED"
+        ? t("sentence_plan.last_refusal_not_started")
+        : refusal.reason
         ? t("sentence_plan.last_refusal_rejected", { reason: refusal.reason })
         : t("sentence_plan.last_refusal_rejected_bare");
 

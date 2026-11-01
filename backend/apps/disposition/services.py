@@ -884,9 +884,15 @@ class DispositionService:
         from django.db import transaction
 
         from apps.disposition.expiry import serving
-        from apps.souls.models import SoulState
+        from apps.souls.models import Soul, SoulState
 
         with transaction.atomic():
+            # 灵魂行锁 + 租户检查,与另外两条执行分支同一套(审查 11-01 P1 #7):此前这里两样都没有,手动结束暂居
+            # (`end_residence`)之后,暂居地留下的处置照样能执行,于是暂居地替原文明把灵魂推进了轮回。
+            # 那些残留的处置在手动结束暂居时作废(`DispatchService.end_residence`),不会再挡转生。
+            soul = Soul.lock(soul.pk)
+            if soul.is_deleted or disposition.tenant_id != soul.tenant_id:
+                return False
             # 没有受刑计划节点的处置(阶段 1 之前、且没回填到的存量):照旧直接转移 —— 除非刑期还没满:
             # 执行 = 开始服刑,灵魂留在 DISPOSED、留在那个界域,期满(`finish_serving`)才做下面这次转移
             # (用户 2026-10-29)。

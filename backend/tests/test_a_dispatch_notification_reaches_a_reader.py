@@ -60,7 +60,7 @@ def target_operator(db, django_user_model, target_tenant):
 
 @pytest.fixture
 def soul(db, cn_tenant):
-    return Soul.objects.create(name="A soul in transit", tenant=cn_tenant)
+    return Soul.objects.create(name="A soul in transit", tenant=cn_tenant, current_state="JUDGING")
 
 
 def test_proposing_a_dispatch_notifies_the_target_tenant(

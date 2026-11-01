@@ -114,7 +114,7 @@ def test_new_soul_and_judgment_are_stamped_and_an_explicit_owner_is_kept(cn):
 
 def test_dispatch_moves_ownership_to_the_target_root_and_back(cn, eg):
     unit = _unit(cn, "D4")
-    soul = Soul.objects.create(name="客魂", tenant=cn, owner_org=unit)
+    soul = Soul.objects.create(name="客魂", tenant=cn, owner_org=unit, current_state="JUDGING")
     record = DispatchRecord.objects.create(
         source_tenant=cn, target_tenant=eg, soul=soul, status=DispatchStatus.APPROVED, reason="受罚", tenant=cn,
     )
@@ -130,7 +130,7 @@ def test_dispatch_moves_ownership_to_the_target_root_and_back(cn, eg):
 
 def test_residence_ends_at_the_home_root_when_the_source_unit_is_gone(cn, eg):
     unit = _unit(cn, "D5")
-    soul = Soul.objects.create(name="客魂二", tenant=cn, owner_org=unit)
+    soul = Soul.objects.create(name="客魂二", tenant=cn, owner_org=unit, current_state="JUDGING")
     record = DispatchRecord.objects.create(
         source_tenant=cn, target_tenant=eg, soul=soul, status=DispatchStatus.APPROVED, reason="受罚", tenant=cn,
     )

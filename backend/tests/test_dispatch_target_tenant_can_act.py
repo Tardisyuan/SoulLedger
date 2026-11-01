@@ -63,7 +63,7 @@ def both_sides(db):
     mod_c = User.objects.create_user(
         username="tt_mod_c", password="x", role="MODERATOR", tenant=c
     )
-    soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.ALIVE, tenant=a)
+    soul = Soul.objects.create(name="TravellingSoul", current_state=SoulState.JUDGING, tenant=a)
     record = DispatchRecord.objects.create(
         source_tenant=a, target_tenant=b, soul=soul,
         dispatched_by=mod_a, status=DispatchStatus.PROPOSED, tenant=a,

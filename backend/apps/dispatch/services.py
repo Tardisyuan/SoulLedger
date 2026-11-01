@@ -123,6 +123,30 @@ class TargetHallClosedError(ValueError):
         super().__init__(f"Hall {target_tenant.code} is not receiving transfers")
 
 
+#: 「人在冥府」的状态才能调拨(用户 2026-11-01 拍板):审判中、已处置(含受刑中、刑满暂留 —— 那些是计划节点
+#: 的状态,灵魂本身仍是 DISPOSED)。在世 ALIVE(含已转生回到人间的)、轮回中 REINCARNATING、终局 SETTLED、
+#: 失踪 LOST 都拒绝。
+DISPATCHABLE_SOUL_STATES = ("JUDGING", "DISPOSED")
+
+
+class SoulNotDispatchableError(ValueError):
+    """灵魂不在冥府(`DISPATCHABLE_SOUL_STATES` 之外):不能调拨。ValueError 的子类,视图照常答 400 并带 `code`。"""
+
+    code = "soul_not_in_underworld"
+
+    def __init__(self, state):
+        super().__init__(f"The soul is {state}, not in the underworld; it cannot be dispatched")
+
+
+class SentencePlanActiveError(ValueError):
+    """Q3:受刑计划进行中的灵魂只能走计划(系统按节点发起调拨);手动调拨拒绝。"""
+
+    code = "sentence_plan_active"
+
+    def __init__(self):
+        super().__init__("This soul has a sentence plan in progress; dispatches follow the plan")
+
+
 def _after_commit(send):
     """站内通知提交之后才发(与 `sentence_plan.services.notify_judges` 同一处理,`30052b65`)。
 
@@ -200,9 +224,18 @@ class DispatchService:
             raise ValueError(f"Realm {realm.realm_code} is not a realm of {target_tenant.code}")
 
     @staticmethod
-    def _check_proposable(source_tenant, target_tenant, soul):
-        """提交审批前的业务检查,`propose` 与 `submit` 共用(受刑计划的 `_dispatch` 走 `propose`)。"""
+    def _check_proposable(source_tenant, target_tenant, soul, *, manual):
+        """提交审批前的业务检查,`propose` 与 `submit` 共用(受刑计划的 `_dispatch` 走 `propose`,`manual=False`)。
+        **调用方持有灵魂行锁**,`soul` 是锁下读到的那一行:灵魂状态与「计划进行中」都在锁内判断(用户 2026-11-01;
+        此前计划检查只在视图里、锁外,状态根本不查)。"""
         DispatchService.check_target_accepts(target_tenant)
+        if soul.current_state not in DISPATCHABLE_SOUL_STATES:
+            raise SoulNotDispatchableError(soul.current_state)
+        if manual:
+            from apps.sentence_plan.services import in_progress_plan
+
+            if in_progress_plan(soul) is not None:
+                raise SentencePlanActiveError()
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
@@ -249,10 +282,14 @@ class DispatchService:
         Raises:
             ValueError: If soul doesn't belong to source tenant or active dispatch exists
         """
-        DispatchService._check_proposable(source_tenant, target_tenant, soul)
+        from apps.souls.models import Soul
+
         DispatchService.check_target_realm(target_tenant, target_realm)
 
         with transaction.atomic():
+            # `dispatcher=None` 是系统(受刑计划 `_dispatch`)发起的:它就是计划本身,不受「计划进行中」那条拦。
+            locked = Soul.lock(soul.pk)
+            DispatchService._check_proposable(source_tenant, target_tenant, locked, manual=dispatcher is not None)
             dispatch_record = DispatchRecord.objects.create(
                 source_tenant=source_tenant,
                 target_tenant=target_tenant,
@@ -303,11 +340,18 @@ class DispatchService:
         两次并发提交只有一次成功。`unique_active_dispatch` 从这一刻才开始约束这一行 ——
         撞上时是 IntegrityError,由视图答 400,与 `create` 同一处理。
         """
+        from apps.souls.models import Soul
+
         with transaction.atomic():
+            # 锁序:灵魂 → 调拨记录(与 `cancel` 等一致),所以灵魂先于 `save_draft` 锁记录。
+            soul_pk = fields["soul"].pk if fields.get("soul") is not None else record.soul_id
+            if soul_pk is not None:
+                Soul.lock(soul_pk)
             locked = DispatchService.save_draft(record, source_tenant=None, dispatcher=dispatcher, **fields)
             if locked.soul_id is None or locked.target_tenant_id is None:
                 raise ValueError("A dispatch needs a soul and a target civilization")
-            DispatchService._check_proposable(locked.source_tenant, locked.target_tenant, locked.soul)
+            DispatchService._check_proposable(locked.source_tenant, locked.target_tenant, Soul.lock(locked.soul_id),
+                                              manual=True)
             locked.status = DispatchStatus.PROPOSED
             locked.proposed_at = timezone.now()
             locked.save()
@@ -468,6 +512,9 @@ class DispatchService:
             # (例如被另一条路径调走又没回来)。在行锁下再问一次。
             if soul.tenant_id != dispatch_record.source_tenant_id or soul.is_residing:
                 raise ValueError("Soul is no longer held by the source tenant at its home")
+            # 提议到执行之间灵魂可能已离开冥府(转生、失踪):同一条状态规则,锁下再问一次。
+            if soul.current_state not in DISPATCHABLE_SOUL_STATES:
+                raise SoulNotDispatchableError(soul.current_state)
             old_tenant = soul.tenant
             source_owner_org_id = soul.owner_org_id
             soul.tenant = dispatch_record.target_tenant
@@ -650,6 +697,18 @@ class DispatchService:
                 description=f"暂居结束({trigger}):{locked.name} {residence.code} → {home.code} {reason}"[:500],
             )
             if trigger == DispatchService.RETURN_MANUAL:
+                # 暂居地还没执行的处置(手动调拨、不挂计划节点的)随暂居一起作废(审查 11-01 P1 #7):灵魂已不在那里,
+                # 它执行不了(`_execute_without_node` 查租户),留着又会让 `assert_may_be_reborn` 一直报
+                # `disposition_not_executed`。挂在节点上的由下面的 ABORTED 当作赦免。
+                from apps.core.recycle_bin import system_void
+                from apps.disposition.models import Disposition
+
+                left = Disposition.all_objects.filter(
+                    soul_id=locked.pk, tenant_id=residence.pk, is_executed=False, is_deleted=False,
+                    sentence_node_id__isnull=True,
+                )
+                if left.exists():
+                    system_void(left, f"residence_ended:{record.pk if record is not None else locked.pk}")
                 # 手动结束:这一站的节点 ABORTED,然后推进(设计稿 §3.3 调用点表)。自动回归由
                 # `SentencePlanService.advance` 发起,它自己接着推进,这里不再调。
                 from apps.sentence_plan.services import SentencePlanService
