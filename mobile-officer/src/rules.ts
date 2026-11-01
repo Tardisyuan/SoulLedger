@@ -161,7 +161,7 @@ export function reasonMissing(verdict: Verdict, reason: string): boolean {
  * back as a bare 400): a dispatch's `DispatchRejectSerializer.reason` 1000; a cooldown's note and a rebirth's
  * soul-facing reason 2000. A workflow node's `notes` is a TextField with no limit; 2000 there too, like the rebirth.
  */
-export function reasonMaxLength(kind: TodoKind): number {
+export function reasonMaxLength(kind: string): number {
   return kind === "reassignment" ? 1000 : 2000;
 }
 

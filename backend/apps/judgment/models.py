@@ -54,7 +54,7 @@ def case_civilization(judgment) -> str:
     routed and given an approval flow under a foreign cosmology, against realms looked up in the home hall
     (`route_realm` / `_tenant_realms` filter by `judgment.tenant_id`). An AMENDMENT is filed where the soul is.
     A hall that names no civilization falls back to the soul's."""
-    tenant = judgment.tenant if judgment.tenant_id is not None else None
+    tenant = judgment.tenant if getattr(judgment, "tenant_id", None) is not None else None
     return (tenant.known_civilization if tenant is not None else None) or judgment.soul.civilization
 
 

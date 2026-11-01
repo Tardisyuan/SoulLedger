@@ -17,6 +17,7 @@ tests/test_chat_hall_names.py                                    config
 tests/test_chat_image_cleanup_task.py                            config
 tests/test_chat_images.py                                        config
 tests/test_chat_inbox_folders.py                                 config
+tests/test_chat_letters_block_and_decline.py                     config
 tests/test_chat_lives.py                                         config
 tests/test_chat_lookup.py                                        config
 tests/test_chat_matrix_off_the_request.py                        config
