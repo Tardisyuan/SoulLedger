@@ -19,6 +19,7 @@
 事件与那一笔同一事务(CAPTURE_WARRANT_ISSUED / SOUL_CAPTURED / CAPTURE_HANDED_OVER / CAPTURE_WARRANT_CANCELLED),
 payload 不带经办官员与理由。
 """
+from contextlib import contextmanager
 from contextvars import ContextVar
 
 from django.db import transaction
@@ -31,6 +32,18 @@ from apps.souls.models import Civilization, Soul, SoulState
 
 #: `hand_over` 正在登记这一次死亡:那张牒已经写成 HANDED_OVER,`close_on_death` 不再补发。
 _handing_over: ContextVar[bool] = ContextVar("capture_handing_over", default=False)
+#: `Soul.die` 这次死亡报给了哪位城隍(土地公报给他的上级)。`transition_to` 的关键字参数都是灵魂的列,传不进去。
+_reported_to: ContextVar = ContextVar("capture_reported_to", default=None)
+
+
+@contextmanager
+def death_reported_to(city_god):
+    """在这段里登记的死亡,`close_on_death` 写牒和事件时用这位城隍 —— 就是案子要去的那位。"""
+    token = _reported_to.set(city_god)
+    try:
+        yield
+    finally:
+        _reported_to.reset(token)
 
 
 class CaptureRefused(APIException):
@@ -162,26 +175,38 @@ def cancel(pk, reason: str) -> CaptureWarrant:
 
 def close_on_death(soul) -> None:
     """死亡已经由别的路登记(在调用方 `Soul.transition_to` 的事务里):勾魂牒随之签发并交接。
-    还开着的牒补上拘到 / 交接时刻;地府灵魂没有牒就补一张(城隍按出身地配,配不到为空)。别的文明不发牒。"""
-    from apps.judgment import city_gods
-
+    还开着的牒补上拘到 / 交接时刻;地府灵魂没有牒就补一张。别的文明不发牒。
+    牒和事件里的城隍是案子要去的那位(`_case_city_god`):事件写下就不再改,此时案子还没开,不能等 `attach_judgment`。"""
     if _handing_over.get():
         return
     now = timezone.now()
     open_rows = list(CaptureWarrant.all_objects.select_for_update(of=("self",)).filter(
         soul_id=soul.pk, status__in=OPEN_CAPTURE, is_deleted=False))
-    if not open_rows and soul.civilization == Civilization.CHINESE:
+    if not open_rows and soul.civilization != Civilization.CHINESE:
+        return
+    city_god = _case_city_god(soul)
+    if not open_rows:
         warrant = CaptureWarrant.objects.create(
-            tenant_id=soul.tenant_id, soul=soul, city_god=city_gods.match(soul.tenant_id, soul.origin_location),
-            escort=suggested_escort(soul))
+            tenant_id=soul.tenant_id, soul=soul, city_god=city_god, escort=suggested_escort(soul))
         _event(warrant, "CAPTURE_WARRANT_ISSUED", via="death")
         open_rows = [warrant]
     for warrant in open_rows:
         warrant.status = CaptureStatus.HANDED_OVER
         warrant.captured_at = warrant.captured_at or now
         warrant.handed_over_at = now
-        warrant.save(update_fields=["status", "captured_at", "handed_over_at"])
+        warrant.city_god = city_god or warrant.city_god
+        warrant.save(update_fields=["status", "captured_at", "handed_over_at", "city_god"])
         _event(warrant, "CAPTURE_HANDED_OVER", via="death")
+
+
+def _case_city_god(soul):
+    """这次死亡的案子要去哪位城隍,与 `Soul.opening_fields` 同一条规则:报给了本殿的城隍就是他,否则按地名配。"""
+    from apps.judgment import city_gods
+
+    reported = _reported_to.get()
+    if reported is not None and reported.tenant_id == soul.tenant_id and not reported.is_deleted:
+        return reported
+    return city_gods.match(soul.tenant_id, soul.origin_location)
 
 
 def attach_judgment(soul, judgment) -> None:
@@ -191,10 +216,22 @@ def attach_judgment(soul, judgment) -> None:
     warrant was left with no `judgment`; and it matched its city god by birthplace while the case went to the
     city god the death was reported to (a 土地公's own, apps/death_sync/tudi.py). Called by the two openers of a
     death's case (`Soul.die`, `JudgmentService.open_case`) once the case exists: the warrant takes the case and
-    the case's city god. `hand_over` sets its own warrant's case and is not touched (its `judgment` is set)."""
-    CaptureWarrant.all_objects.filter(
-        soul_id=soul.pk, status=CaptureStatus.HANDED_OVER, judgment__isnull=True, is_deleted=False,
-    ).update(judgment=judgment, city_god_id=judgment.city_god_id)
+    the case's city god. `hand_over` sets the same case on its own warrant right after.
+
+    Only this death's warrant: the newest one handed over since the last rebirth. A warrant of an earlier life with
+    no case (closed before this method existed, or by a bare `souls/{id}/transition`) keeps having none — "handed
+    over, no case" alone also matches those, and hung them on this life's case (review 2026-11-01)."""
+    rows = CaptureWarrant.all_objects.filter(
+        soul_id=soul.pk, status=CaptureStatus.HANDED_OVER, judgment__isnull=True, is_deleted=False)
+    last_rebirth = soul.reincarnations.order_by("-reincarnated_at").values_list("reincarnated_at", flat=True).first()
+    if last_rebirth is not None:
+        rows = rows.filter(handed_over_at__gt=last_rebirth)
+    warrant = rows.order_by("-handed_over_at").first()
+    if warrant is None:
+        return
+    warrant.judgment = judgment
+    warrant.city_god_id = judgment.city_god_id
+    warrant.save(update_fields=["judgment", "city_god"])
 
 
 def _event(warrant, event_type, **extra) -> None:

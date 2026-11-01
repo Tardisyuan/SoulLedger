@@ -260,7 +260,8 @@ def build(user, request=None, kind=None, offset=0):
     # 受刑计划变更请求:只看。`target` 仍是这一条请求;App 不打开它,底栏「在电脑上处理」。
     sentence_changes = []
     if check_permission(user, "judgment.execute"):
-        sentence_changes = [_item("sentence_change", r.pk, r.plan.soul.name, r.create_time, request_kind=r.kind)
+        sentence_changes = [_item("sentence_change", r.pk, r.plan.soul.name, r.create_time, request_kind=r.kind,
+                                  soul_id=str(r.plan.soul_id))
                             for r in _sentence_changes(scope)]
     letters = []
     if check_permission(user, "soul_inbox.reply"):

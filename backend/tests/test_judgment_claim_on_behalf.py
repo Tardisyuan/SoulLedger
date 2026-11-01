@@ -124,6 +124,7 @@ def test_sentence_change_requests_are_a_todo_group_of_their_own(world):  # noqa:
     assert group["count"] == 1
     [item] = group["items"]
     assert (item["kind"], item["id"], item["title"], item["request_kind"]) == ("sentence_change", str(req.pk), "李四", "AMEND")
+    assert item["soul_id"] == str(soul.pk)  # 分享链接要点进单条,只有请求 id 找不到灵魂
     # 计入角标(`total()`):就是各组之和,除了未分配的书信。
     assert todo.total(world.users["a"]) == sum(g["count"] for f, g in body.items() if f != "unassigned_letters")
     # 别的殿看不到,也没有 `judgment.execute` 的人看不到。

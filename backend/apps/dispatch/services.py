@@ -701,14 +701,22 @@ class DispatchService:
                 # 它执行不了(`_execute_without_node` 查租户),留着又会让 `assert_may_be_reborn` 一直报
                 # `disposition_not_executed`。挂在节点上的由下面的 ABORTED 当作赦免。
                 from apps.core.recycle_bin import system_void
+                from apps.disposition.expiry import serving
                 from apps.disposition.models import Disposition
+                from apps.sentence_plan.services import pardon_served
 
-                left = Disposition.all_objects.filter(
-                    soul_id=locked.pk, tenant_id=residence.pk, is_executed=False, is_deleted=False,
-                    sentence_node_id__isnull=True,
+                here = Disposition.all_objects.filter(
+                    soul_id=locked.pk, tenant_id=residence.pk, is_deleted=False, sentence_node_id__isnull=True,
                 )
+                left = here.filter(is_executed=False)
                 if left.exists():
                     system_void(left, f"residence_ended:{record.pk if record is not None else locked.pk}")
+                # 已执行、正在服的:手动结束就是赦免这一段,与挂在节点上的同一笔(`pardon_term`),否则要等到期满日
+                # `_unserved_term` 才放行。永久刑期不算赦免,`serving` 不认它,`assert_may_be_reborn` 照旧挡。
+                now = timezone.now()
+                for served in here.select_for_update(of=("self",)).filter(is_executed=True):
+                    if serving(served):
+                        pardon_served(locked, served, None, now)
                 # 手动结束:这一站的节点 ABORTED,然后推进(设计稿 §3.3 调用点表)。自动回归由
                 # `SentencePlanService.advance` 发起,它自己接着推进,这里不再调。
                 from apps.sentence_plan.services import SentencePlanService
