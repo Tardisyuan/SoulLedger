@@ -103,6 +103,8 @@ describe("the settings page is the one place for language and sign-out", () => {
     // the bundles' own `language_name` said "Egyptian" and "中文" while login said "Kemet" and "简体中文".
     for (const name of ["简体中文", "English", "Kemet"]) expect(screen.getByText(name)).toBeTruthy();
     expect(screen.queryByText("Egyptian")).toBeNull();
+    // review 2026-11-01: what to do if the phone is lost is said here, beside the remedy, before it happens.
+    expect(screen.getByTestId("lost-phone-hint")).toHaveTextContent(/手机丢了.*登录设备与记录/);
     await act(async () => {}); // the page's permission read settles before the test ends
   });
 
@@ -135,6 +137,21 @@ describe("the settings page is the one place for language and sign-out", () => {
     fireEvent.press(entry);
     await screen.findByTestId("circle-inbox-empty");
     expect(route()?.name).toBe("CircleInbox");
+  });
+
+  // review 2026-11-01: the person icon opened 设置 on 本世 / 转生 and 我的主页 on 朋友圈. Now it means one thing.
+  it("朋友圈's 「我的」 entry is a word, not the person icon that opens 设置 elsewhere", async () => {
+    signedIn({
+      "/me/social/feed/": { status: 200, data: { count: 0, next: null, previous: null, results: [] } },
+      "/me/social/status/": { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 5, unread_interactions: 0 } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await pressTab("tab-Circle");
+    const me = await screen.findByTestId("circle-me");
+    expect(within(me).getByText("我的")).toBeTruthy();
+    expect(me.props.accessibilityLabel).toBe("我的主页");
+    await act(async () => {});
   });
 
   it("the same icon is on 本世 and 转生 (朋友圈 has search and my page there instead, 1a)", async () => {

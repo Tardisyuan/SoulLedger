@@ -61,7 +61,7 @@ import {
   useTheme,
   shade,
 } from "../ui";
-import { invalidateSocialStatus, useSocialStatus } from "../socialStatus";
+import { invalidateSocialStatus, mutedReasonOf, useSocialStatus } from "../socialStatus";
 import type { AppStackParams } from "../navTypes";
 import { PagedFooter, useFailure, useFeed, usePaged } from "../paged";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
@@ -82,8 +82,12 @@ export const REACTIONS: { type: SoulReactionType; key: string; glyph: string }[]
   { type: "ETERNAL_LIGHT", key: "soul_app.circle.react.eternal_light", glyph: "" },
 ];
 
+/**
+ * The choices a soul is offered. PUBLIC is not one: in a soul's circle it reaches exactly the souls TENANT reaches
+ * (`apps/social/soul_circle.py::visible_posts_for_soul` — "PUBLIC 与 TENANT 同义"), so two options named two
+ * audiences that are one (review 2026-11-01). A PUBLIC post already written reads as 本文明, which is what it is.
+ */
 const VISIBILITY: { value: SoulPostVisibility; label: string; hint: string }[] = [
-  { value: "PUBLIC", label: "soul_app.circle.compose.vis.public", hint: "soul_app.circle.compose.vis.public_hint" },
   { value: "TENANT", label: "soul_app.circle.compose.vis.tenant", hint: "soul_app.circle.compose.vis.tenant_hint" },
   { value: "FOLLOWERS", label: "soul_app.circle.compose.vis.followers", hint: "soul_app.circle.compose.vis.followers_hint" },
   { value: "PRIVATE", label: "soul_app.circle.compose.vis.private", hint: "soul_app.circle.compose.vis.private_hint" },
@@ -151,7 +155,7 @@ function ReactionSummary({ post }: { post: SoulPost }) {
 }
 
 /** The dashed note that stands where a muted soul's post / comment control would be (1c / 1d). */
-export function MutedLock({ until, testID = "muted-lock" }: { until: string | null; testID?: string }) {
+export function MutedLock({ until, reason, testID = "muted-lock" }: { until: string | null; reason?: string | null; testID?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   return (
@@ -172,6 +176,11 @@ export function MutedLock({ until, testID = "muted-lock" }: { until: string | nu
             text={tr("soul_app.circle.muted.until")}
             parts={{ time: <Mono>{formatStamp(until) ?? until}</Mono> }}
           />
+        ) : null}
+        {reason ? (
+          <Txt testID={`${testID}-reason`} variant="caption" tone="muted" style={styles.lockUntil}>
+            {tr("soul_app.circle.muted.reason", { reason })}
+          </Txt>
         ) : null}
       </View>
     </View>
@@ -607,7 +616,7 @@ export function ComposePostScreen() {
           {tr("soul_app.circle.compose.scope_note")}
         </Txt>
         {status.data && !status.data.can_write ? (
-          <MutedLock until={status.data.muted_until} />
+          <MutedLock until={status.data.muted_until} reason={mutedReasonOf(status.data)} />
         ) : (
           <Button
             testID="post-submit"
@@ -1025,7 +1034,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
       {open ? (
         <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 12 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>
           {muted ? (
-            <MutedLock until={status.data?.muted_until ?? null} />
+            <MutedLock until={status.data?.muted_until ?? null} reason={mutedReasonOf(status.data)} />
           ) : (
             <>
               {replyTo ? (

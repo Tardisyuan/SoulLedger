@@ -12,6 +12,7 @@
  */
 import { soulApi } from "@soulledger/core/api/soul";
 import { BIO_KEY } from "./loginRules";
+import { storedLocale, translate } from "./i18n";
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
@@ -97,11 +98,13 @@ export async function readBiometry(): Promise<Biometry> {
 /** On when the flag holds anything: `face` or `finger` (what the phone said when it was turned on). */
 export const bioEnabled = () => !!platform().persistent.get(BIO_KEY);
 
-/** The reason the system shows with its face / finger check. A system string, not in the language bundles (Design 第二十批 §四.4). */
-const PROMPT = "用来登录灵魂簿，不用输密码。";
-const prompt = () => PROMPT;
+/**
+ * The reason the system shows with its face / finger check. In the app's language (review 2026-11-01: it was fixed
+ * Chinese, so an English or Kemet soul read Chinese over its face check); read at the moment of asking.
+ */
+const prompt = () => translate(storedLocale(), "soul_app.biometric.prompt_login");
 /** Same kind of string, for 「导出我的资料」: the face / finger check stands in for the password there. */
-export const EXPORT_PROMPT = "用来确认是你本人，导出你的资料。";
+export const exportPrompt = () => translate(storedLocale(), "soul_app.biometric.prompt_export");
 
 export type CredentialRead = { status: "ok"; credential: string } | { status: "cancelled" } | { status: "invalidated" } | { status: "locked" } | { status: "failed" };
 

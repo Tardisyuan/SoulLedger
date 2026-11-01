@@ -502,10 +502,15 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
 
 export function ChangePasswordScreen() {
   const { t } = useI18n();
-  const { state, changePassword, signOut } = useSession();
+  const { state, changePassword, signOut, heldPassword } = useSession();
   const toast = useToast();
   const now = useNow();
-  const [oldPassword, setOld] = useState("");
+  // The forced change right after a password sign-in: the initial password was just typed and the session still
+  // holds it, so it is not asked for again (review 2026-11-01). A cold start, or a sign-in without a password, has
+  // none held: then the field is there. If the server refuses the carried one, the field comes back.
+  const [carried, setCarried] = useState(() => (state.status === "signedIn" ? null : heldPassword()));
+  const [typedOld, setOld] = useState("");
+  const oldPassword = carried ?? typedOld;
   const [newPassword, setNew] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -519,6 +524,7 @@ export function ChangePasswordScreen() {
   // Someone who changed the initial password long ago is typing their current one (Design 第二十二批).
   const said = (key: string) => (voluntary && key === "soul_app.errors.invalid_old_password" ? "profile.password_old_wrong" : key);
   const fieldError = (name: PasswordField) => (error && field === name ? t(said(error.key), error.params) : null);
+  const reveal = { show: t("soul_app.common.show"), hide: t("soul_app.common.hide") };
 
   const submit = async () => {
     // The checklist under the box says what is missing; nothing is sent until it is all met.
@@ -526,7 +532,7 @@ export function ChangePasswordScreen() {
     setBusy(true);
     setError(null);
     try {
-      await changePassword(oldPassword, newPassword);
+      await changePassword(oldPassword, newPassword, !voluntary);
       toast(t(voluntary ? "soul_app.change_password.success_others_out" : "soul_app.change_password.success"));
       if (voluntary && navigation.canGoBack()) navigation.goBack();
     } catch (e) {
@@ -534,6 +540,7 @@ export function ChangePasswordScreen() {
       // Too common / too like the name: said in the checklist (Design 第二十三批 §三), not as a one-line error.
       if (message.key === "soul_app.errors.weak_password") rejectCommon();
       else setError(message);
+      if (FIELD_OF[message.key] === "old") setCarried(null);
       setBusy(false);
     }
   };
@@ -544,15 +551,18 @@ export function ChangePasswordScreen() {
         {voluntary ? null : <Txt tone="muted">{t("soul_app.change_password.intro")}</Txt>}
         <ExpiryBox expiresAt={expiresAt} now={now} />
         <View style={styles.fields}>
-          <Input
-            testID="old-password"
-            label={t(voluntary ? "soul_app.change_password.current_password" : "soul_app.change_password.old_password")}
-            value={oldPassword}
-            onChangeText={setOld}
-            secureTextEntry
-            error={fieldError("old")}
-            {...fields.old}
-          />
+          {carried !== null ? null : (
+            <Input
+              testID="old-password"
+              label={t(voluntary ? "soul_app.change_password.current_password" : "soul_app.change_password.old_password")}
+              value={typedOld}
+              onChangeText={setOld}
+              secureTextEntry
+              secureToggle={reveal}
+              error={fieldError("old")}
+              {...fields.old}
+            />
+          )}
           <View ref={holdSection} collapsable={false} style={styles.ruleField}>
             <Input
               testID="new-password"
@@ -560,6 +570,7 @@ export function ChangePasswordScreen() {
               value={newPassword}
               onChangeText={setNew}
               secureTextEntry
+              secureToggle={reveal}
               error={fieldError("new")}
               {...fields.next}
             />
@@ -572,6 +583,7 @@ export function ChangePasswordScreen() {
               value={confirm}
               onChangeText={setConfirm}
               secureTextEntry
+              secureToggle={reveal}
               error={fieldError("confirm")}
               {...fields.confirm}
             />

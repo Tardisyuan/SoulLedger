@@ -23,7 +23,7 @@ import { stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
-const NEUTRAL = "如果这个邮箱绑定了灵魂账号，验证码已发出";
+const NEUTRAL = "如果这个邮箱是某个灵魂账号的联系邮箱，验证码已发出";
 const EMAIL = "soul@example.com";
 const REQUEST = "POST /auth/reset-password/";
 const CONFIRM = "POST /auth/set-new-password/";
@@ -107,9 +107,9 @@ describe("step 1: the email", () => {
   it("the sign-in screen opens it from beside the password label", async () => {
     stubApi({});
     await openForgot();
-    expect(screen.getByText("没有绑定邮箱？")).toBeTruthy();
+    expect(screen.getByText("没有联系邮箱？")).toBeTruthy();
     expect(screen.getByText("重设密码 · 第 1 步 / 共 2 步")).toBeTruthy();
-    expect(screen.getByText("填写绑定的邮箱")).toBeTruthy();
+    expect(screen.getByText("填写联系邮箱")).toBeTruthy();
   });
 
   it("「请填写有效的邮箱」 goes as soon as the address is plausible, not on the next send", async () => {
@@ -130,6 +130,11 @@ describe("step 1: the email", () => {
     expect(await screen.findByTestId("forgot-no-email-page")).toBeTruthy();
     expect(screen.getByText("找殿司重设")).toBeTruthy();
     expect(screen.getByText("殿司核对身份后为你重设，并告诉你临时密码。")).toBeTruthy();
+    // review 2026-11-01: the same way as the help page's 「忘记密码」 answer -- to the hall's window, with the slip --
+    // not 「写信给殿司」, which a soul that cannot sign in cannot do.
+    expect(screen.getByText("到本殿窗口，带上交付单，说明你的姓名和灵魂编号。")).toBeTruthy();
+    expect(screen.queryByText(/写信给所在殿/)).toBeNull();
+    expect(screen.getByText(/设置 › 联系邮箱/)).toBeTruthy();
     // The canvas's third step (bind an email under 「我 › 安全」) is a page the App does not have.
     expect(screen.queryByText(/我 › 安全/)).toBeNull();
     await act(async () => {

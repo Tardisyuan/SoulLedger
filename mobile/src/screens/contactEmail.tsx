@@ -13,14 +13,17 @@ import {
   soulErrorMessage,
   soulMfaFailure,
 } from "@soulledger/core/api/soul";
-import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import { useContext, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
+import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { stateOfFailure, type StepState } from "../mfa";
-import { Button, Input, Notice, Screen, Skeleton, Txt, useLayout, useRemote } from "../ui";
+import type { AppStackParams } from "../navTypes";
+import { SessionContext } from "../session";
+import { Button, Input, Notice, Screen, Skeleton, Txt, useLayout, useRemote, useTheme } from "../ui";
 import { DigitField, StepNotice } from "./mfaParts";
 
 type Step = "verify" | "email" | "code";
@@ -226,6 +229,63 @@ export function ContactEmailScreen() {
   );
 }
 
+/**
+ * After the forced change of the initial password (`freshAccount`), the home page asks once for a contact email:
+ * without one, 「忘记密码」 has nowhere to send the code and only the hall can reset it (review 2026-11-01).
+ * Nothing shows when the soul already has one, or when the status cannot be read.
+ */
+export function ContactEmailNudge() {
+  const session = useContext(SessionContext);
+  const [due, setDue] = useState(() => !!session?.freshAccount?.());
+  if (!due) return null;
+  return (
+    <NudgeCard
+      onEnd={() => {
+        session?.endFreshAccount?.();
+        setDue(false);
+      }}
+    />
+  );
+}
+
+function NudgeCard({ onEnd }: { onEnd: () => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const { gutter } = useLayout();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  const status = useRemote(soulApi.contactEmail);
+  const d = status.data;
+  if (!d || d.email_masked) return null;
+  return (
+    <View testID="email-nudge" style={[styles.nudge, { marginHorizontal: gutter, borderColor: theme.hair, backgroundColor: theme.s1 }]}>
+      <Txt variant="bodyLg" style={styles.nudgeTitle}>
+        {t("soul_app.settings.email_nudge_title")}
+      </Txt>
+      <Txt variant="body" tone="muted">
+        {t(d.can_change ? "soul_app.settings.email_nudge_body" : "soul_app.settings.email_in_person")}
+      </Txt>
+      <View style={styles.nudgeButtons}>
+        <Button testID="email-nudge-later" kind="secondary" title={t("soul_app.bio.ask_later")} onPress={onEnd} style={styles.fill} />
+        {d.can_change ? (
+          <Button
+            testID="email-nudge-add"
+            title={t("soul_app.settings.email_add")}
+            onPress={() => {
+              onEnd();
+              navigation.navigate("ContactEmail");
+            }}
+            style={styles.fill}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   page: { paddingVertical: 16, gap: 16 },
+  fill: { flex: 1 },
+  nudge: { borderWidth: 1, padding: 16, gap: 8, marginVertical: 12 },
+  nudgeTitle: { fontFamily: family.ui[600] },
+  nudgeButtons: { flexDirection: "row", gap: 8, marginTop: 4 },
 });

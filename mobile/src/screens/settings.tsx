@@ -560,6 +560,10 @@ export function SettingsScreen() {
         <NavRow testID="open-chat-blocks" label={t("soul_app.chat.blocks.title")} onPress={() => navigation.navigate("ChatBlocks")} />
         <EmailRow />
       </View>
+      {/* Said before it happens, where the remedy is (review 2026-11-01: 丢手机只能事后处理). */}
+      <Txt testID="lost-phone-hint" variant="caption" tone="subtle" style={[styles.emailHint, { paddingHorizontal: gutter }]}>
+        {t("soul_app.security.lost_phone_hint")}
+      </Txt>
       {/* 第二十八批 S3: its own section under 账号安全, one row. */}
       <GroupLabel testID="group-data">{t("soul_app.settings.group_data")}</GroupLabel>
       <View style={[styles.rows, { borderTopColor: theme.hair }]}>

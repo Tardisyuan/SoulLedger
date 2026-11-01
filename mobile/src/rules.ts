@@ -212,7 +212,20 @@ export function lifeSectionsOpen(touched: Partial<Record<LifeSectionKey, boolean
 export const LIFE_PATH = ["ALIVE", "JUDGING", "DISPOSED", "SENTENCE", "REINCARNATING"] as const;
 export type LifePathStep = (typeof LIFE_PATH)[number];
 
-export function lifePathIndex(state: string | null | undefined, planState: string | null | undefined): number | null {
+/**
+ * The two civilizations without rebirth (the same two LEXICON gives no-rebirth sentences; docs/01_埃及冥界整体架构,
+ * docs/01_欧洲天堂地狱整体架构): their road ends at the sentence, so no 「轮回中」 step is drawn (review 2026-11-01).
+ */
+const NO_REBIRTH: ReadonlySet<CivKey> = new Set<CivKey>(["eg", "eu"]);
+
+/** The steps this civilization's road has: all five, less 「轮回中」 where there is no rebirth. */
+export function lifePath(civ: CivKey): readonly LifePathStep[] {
+  return NO_REBIRTH.has(civ) ? LIFE_PATH.filter((s) => s !== "REINCARNATING") : LIFE_PATH;
+}
+
+/** `civ`: the soul's HOME civilization (its lexicon). A REINCARNATING soul of a civilization without rebirth has no place on the road. */
+export function lifePathIndex(state: string | null | undefined, planState: string | null | undefined, civ?: CivKey): number | null {
+  if (state === "REINCARNATING" && civ && NO_REBIRTH.has(civ)) return null;
   switch (state) {
     case "ALIVE":
       return 0;
