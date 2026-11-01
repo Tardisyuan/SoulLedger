@@ -1510,7 +1510,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信不会自动取消归档。 */
+        /** @description 只从**我的**默认文件夹里拿走;别的官员照旧看得见。灵魂再来信、或我回了这封,都取消归档。 */
         post: operations["v1_chat_inbox_archive_create"];
         delete?: never;
         options?: never;
@@ -4803,10 +4803,11 @@ export interface paths {
          *     **互关(或已解除节流)的私聊不走这里** —— 那种房间灵魂直接用 Matrix 发,后端不在
          *     消息路径上。这里照样接受,因为客户端不必分两条路;服务层判断之后仍然代发一次。
          *
-         *     带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。
-         *     不能交给 Synapse 去重:后端代发不带客户端的设备,而被节流的房间里重发会先撞上
-         *     24 小时限制,答 429 —— 信其实已经送到。
-         *     ponytail: 同一个 txn_id 的两个请求**同时**到达仍可能各发一条;App 同一封信不并发送。
+         *     带 `txn_id` 的重发(App 丢了响应、或重启后续送)回第一次的 event_id,不再发。这是两层:
+         *     * 第一次成功了:这里的缓存直接答。不能只靠 Synapse:被节流的房间里重发会先撞上 24 小时限制,答 429 ——
+         *       信其实已经送到;
+         *     * 第一次超时(Synapse 存下了、我们没收到响应):缓存里没有,再走一遍发送,`txn_id` 算出同一个 Matrix
+         *       事务号,Synapse 只存一条(`services._txn`)。两个请求同时到达同样如此。
          */
         post: operations["v1_me_chat_conversations_messages_create"];
         delete?: never;
@@ -11483,6 +11484,8 @@ export interface components {
              * @description 429 时:何时可以再试。
              */
             retry_at?: string;
+            /** @description 409 `assigned_to_other` 时:当前经办人的显示名。 */
+            assignee_name?: string;
         };
         /** @description 一张书信图的取图地址:签给调用者、约一小时有效、取文件时重新核对权限。 */
         ChatImage: {
@@ -20731,6 +20734,8 @@ export interface components {
             is_appeal?: boolean;
             /** @description 仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。 */
             request_kind?: string;
+            /** @description 仅受刑计划变更:灵魂 id(手机上点进这个灵魂看它的受刑计划)。 */
+            soul_id?: string;
             /** @description 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。 */
             feedback_tag?: string;
             /** @description 仅选站:本域排第几(1 = 发起殿)。 */
