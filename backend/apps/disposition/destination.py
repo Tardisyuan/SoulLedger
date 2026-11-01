@@ -14,7 +14,7 @@ from functools import cache
 
 from django.db.models import Count, Q
 
-from apps.judgment.models import JudgmentMethod, Verdict
+from apps.judgment.models import JudgmentMethod, Verdict, case_civilization
 from apps.realms.models import RETIRED_REALM_CODES, Realm, SoulPathEntry
 from apps.souls.models import Civilization
 
@@ -84,7 +84,7 @@ def _tenant_realms(judgment):
     """本案租户、本文明的全部界域,带 `occupancy`(此刻在那里的灵魂数:行程上未离开的一站)。"""
     return (
         Realm.all_objects.filter(
-            tenant_id=judgment.tenant_id, civilization=judgment.soul.civilization, is_deleted=False,
+            tenant_id=judgment.tenant_id, civilization=case_civilization(judgment), is_deleted=False,
         )
         .exclude(realm_code__in=RETIRED_REALM_CODES)  # 不再使用的界域不进选单(审查 L)
         .annotate(occupancy=Count("path_entries", filter=Q(path_entries__left_at__isnull=True)))
@@ -94,14 +94,14 @@ def _tenant_realms(judgment):
 
 def destination_options(judgment, verdict):
     """这件案子、这个候选裁决下可选的目的地:本案租户、本文明、裁决路由得到的门。"""
-    codes = allowed_realm_codes(judgment.soul.civilization, verdict, judgment.judgment_method)
+    codes = allowed_realm_codes(case_civilization(judgment), verdict, judgment.judgment_method)
     return _tenant_realms(judgment).filter(realm_code__in=codes)
 
 
 def inapplicable_destinations(judgment, verdict):
     """同一租户、同一文明里这个裁决去不了的界域 —— 选单照样列出、禁用并写明「不适用」
     (第三类 F 组 2.5),与 `destination_options` 合起来正是本案租户、本文明的全部界域。"""
-    codes = allowed_realm_codes(judgment.soul.civilization, verdict, judgment.judgment_method)
+    codes = allowed_realm_codes(case_civilization(judgment), verdict, judgment.judgment_method)
     return _tenant_realms(judgment).exclude(realm_code__in=codes)
 
 
@@ -122,7 +122,7 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
         raise DestinationRefusedError("A sentence is either eternal or a term in years, not both",
                                       "term_conflict")
     # 埃及的两个去处都不服刑:芦苇原是永生,第二死是「不再存在」(docs/02 §5.2、03 §五)。
-    if term_years is not None and judgment.soul.civilization == Civilization.EGYPTIAN:
+    if term_years is not None and case_civilization(judgment) == Civilization.EGYPTIAN:
         raise DestinationRefusedError("Neither the Field of Reeds nor the second death is served for a term",
                                       "term_not_applicable")
 
@@ -133,12 +133,12 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
         realm = (
             Realm.all_objects.select_for_update()
             .filter(pk=realm_id, tenant_id=judgment.tenant_id,
-                    civilization=soul.civilization, is_deleted=False)
+                    civilization=case_civilization(judgment), is_deleted=False)
             .first()
         )
         if realm is None:
             raise DestinationRefusedError("No such realm in this judgment's tenant", "realm_not_found")
-        if realm.realm_code not in allowed_realm_codes(soul.civilization, verdict, judgment.judgment_method):
+        if realm.realm_code not in allowed_realm_codes(case_civilization(judgment), verdict, judgment.judgment_method):
             raise DestinationRefusedError(
                 f"A {verdict} verdict cannot send a soul to {realm.realm_code}", "realm_not_allowed")
         if realm.capacity is not None:

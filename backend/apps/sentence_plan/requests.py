@@ -439,7 +439,8 @@ def _open_reopen_judgment(soul, plan, req):
         )
     except OpenCaseRefusedError as exc:
         if exc.code != "open_case":
-            raise
+            # e.g. `cannot_enter_judgment` on a LOST soul (review 2026-11-01 #10): a refusal, not a 500.
+            raise PlanChangeRefusedError(str(exc), exc.code, status=409) from None
         _refuse_open_case(exc.open_ids)
     plan.status = SentencePlanStatus.RETRIAL
     _save(plan, "status")
@@ -642,7 +643,11 @@ def amend_for_appeal(soul, judgment, verdict, *, keep_foreign=None):
             system_void(Disposition.all_objects.filter(pk=own.pk), why)
             from apps.souls.models import SoulState
 
-            soul.transition_to(SoulState.REINCARNATING, f"Appeal acquitted judgment {judgment.pk}")
+            # 答复要读(review 2026-11-01 #9):此前丢掉,灵魂停在原状态而处置已作废,申诉照样记「改判」。
+            if not soul.transition_to(SoulState.REINCARNATING, f"Appeal acquitted judgment {judgment.pk}"):
+                raise PlanChangeRefusedError(
+                    f"The soul is {soul.current_state}; it cannot go to rebirth on this amendment",
+                    "soul_cannot_reincarnate", status=409, soul_state=soul.current_state)
             return []
         reroute(own)
         return []

@@ -55,7 +55,7 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
     stamped — never concluded, never touched otherwise (user decision
     2026-10-17). `Judgment.save()` clears the stamp on the next activity.
     """
-    from apps.judgment.models import Judgment
+    from apps.judgment.models import DUAT_BARRED, Judgment
     from apps.tenants.managers import clear_current_tenant, set_current_tenant
     from apps.tenants.models import Tenant
 
@@ -80,6 +80,10 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
             created_at__lt=threshold,
             update_time__lt=threshold,
             stale_since__isnull=True,
+        # 被握住的案子不算滞留(review 2026-11-01 P3):枉死城候到阳寿那天、木乃伊 70 天(`held_until` 在今天之后),
+        # 或到不了两真之殿(`DUAT_BARRED`)—— 没人能认领、也没人能结(`claims._assert_not_held`),
+        # 「无进展」是规则使然,不是没人办。
+        ).exclude(held_until__gt=timezone.localdate()).exclude(duat_stage__in=DUAT_BARRED
         # `tenant_id` 必须一起取:批审计行按被改那一行的殿记(`audit.signals._row_tenant_id`),
         # 只取 id/stale_since 时它是延迟字段,每行多一条 SELECT(真 PG 实测 3 行 4 → 7 条)。
         ).only("id", "stale_since", "tenant_id")

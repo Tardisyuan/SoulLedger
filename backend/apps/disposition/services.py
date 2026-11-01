@@ -3,7 +3,7 @@ Disposition service — creates disposition from judgment verdict.
 Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition, MemoryResetMechanism
-from apps.judgment.models import OFFENCE_COURT, Judgment, JudgmentMethod, Verdict
+from apps.judgment.models import OFFENCE_COURT, Judgment, JudgmentMethod, Verdict, case_civilization
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.souls.models import Civilization, Soul
 
@@ -175,7 +175,7 @@ class DispositionService:
 
         soul = judgment.soul
         verdict = judgment.verdict
-        civilization = soul.civilization
+        civilization = case_civilization(judgment)  # the case's hall, not the residence (review 2026-11-01 #12)
 
         overridden = realm is not cls._AUTO or sentence_years is not None or is_eternal is not None
         if realm is cls._AUTO:
@@ -249,7 +249,8 @@ class DispositionService:
         """
         from apps.judgment.services import EvidenceAdmissionService
 
-        civilization = soul.civilization
+        # With a case: its hall's cosmology (review 2026-11-01 #12), the one `route_realm` looks the realm up in.
+        civilization = case_civilization(judgment) if judgment is not None else soul.civilization
         admitted = None
         if judgment is not None:
             admitted = LedgerService.get_admitted_routing_inputs(
