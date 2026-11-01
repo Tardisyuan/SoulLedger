@@ -52,6 +52,19 @@ def test_a_death_elsewhere_hangs_the_case_on_this_lifes_warrant_not_the_last_lif
     assert new.version == 3
 
 
+def test_with_no_warrant_of_this_life_the_last_lifes_is_not_taken_instead(cn_tenant):
+    """这一世没有交接的牒时,什么都不挂,不退而求其次拿上一世那张。
+    变异:`attach_judgment` 去掉 `handed_over_at__gt=last_rebirth` → 上一世的牒被挂上,红
+    (2026-11-02 实测:只有前两条测试时,这条变异是绿的 —— 取最新一张的排序把它盖住了)。"""
+    soul, old, _ = _reborn_with_an_old_warrant(cn_tenant)
+    case = soul.die(death_date=date.today())
+    CaptureWarrant.objects.exclude(pk=old.pk).filter(soul=soul).delete()
+
+    capture.attach_judgment(soul, case)
+
+    _assert_old_untouched(old)
+
+
 def test_a_hand_over_leaves_the_last_lifes_warrant_alone_too(cn_tenant):
     soul, old, _ = _reborn_with_an_old_warrant(cn_tenant)
     warrant = capture.issue(soul)
