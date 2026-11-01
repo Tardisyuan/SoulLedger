@@ -5264,7 +5264,9 @@
         "read": "已读",
         "failed": "未送出",
         "queued": "等待送出",
-        "retry": "重发"
+        "retry": "重发",
+        "delete": "删除",
+        "copied": "已复制这封信"
       },
       "request": {
         "outgoing_hint": "你们还没有互相关注。对方回话之后，就能自由说了。",

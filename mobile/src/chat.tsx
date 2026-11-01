@@ -109,8 +109,11 @@ export interface Chat {
   outbox: Outgoing[];
   /** The last refusal a send met, per conversation — newer than the list until the list reloads. */
   refused: Record<string, Refused>;
-  /** `forget`: a conversation I just took out of my own list (a declined request): it did not "vanish". */
-  reload: (forget?: string) => Promise<void>;
+  /**
+   * True when the list came back. False: what is on screen is still the last list (or none), not a new fact.
+   * `forget`: a conversation I just took out of my own list (a declined request): it did not "vanish".
+   */
+  reload: (forget?: string) => Promise<boolean>;
   /** Try Synapse again now (the retry button; also flushes the queue). */
   reconnect: () => void;
   /** Returns the letter's txn id, so a screen can watch that one item in `outbox`. */
@@ -120,6 +123,8 @@ export interface Chat {
   /** 0..1 while an image's file is going up, by txn id. Not persisted. */
   progress: Record<string, number>;
   resend: (txnId: string) => void;
+  /** Take a failed item off the thread; anything else stays (it is still going). A failed item is not on disk. */
+  dismiss: (txnId: string) => void;
   loadOlder: (roomId: string) => Promise<void>;
   markRead: (roomId: string, eventId: string) => void;
   openInbox: () => Promise<SoulConversation>;
@@ -144,12 +149,13 @@ const INERT: Chat = {
   me: null,
   outbox: [],
   refused: {},
-  reload: async () => {},
+  reload: async () => false,
   reconnect: noop,
   send: () => "",
   sendImages: () => [],
   progress: {},
   resend: noop,
+  dismiss: noop,
   loadOlder: async () => {},
   markRead: noop,
   openInbox: () => soulChatApi.openInbox(),
@@ -314,7 +320,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     if (forget) convs.current = convs.current.filter((c) => c.id !== forget);
     try {
       const rows = await soulChatApi.conversations();
-      if (asked !== session.current) return;
+      if (asked !== session.current) return false;
       // The list keeps closed rooms of this life (read-only, with `closed_at`), so a row dropping out
       // is rare — a backfill gap, say. Kept for this session, read-only, so an open screen does not go blank (1c ⑥).
       const vanished = convs.current.filter((p) => !rows.some((r) => r.id === p.id));
@@ -328,9 +334,11 @@ export function ChatProvider({ account, children }: { account: string | null; ch
       setListError(false);
       // Letters restored from disk wait for the list; Synapse may have been ready long before it came.
       if (firstList && availabilityRef.current === "ready") flushRef.current();
+      return true;
     } catch (error) {
       if (soulChatErrorCode(error) === "chat_not_configured") setAvailability("not_configured");
       else setListError(true);
+      return false;
     }
   }, []);
 
@@ -450,6 +458,8 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     if (!enabled) return;
     let alive = true;
     let retryMs = RETRY_MS;
+    /** 401s from /sync since the last good one. */
+    let rejected = 0;
     // In the background the long-poll stops (N4): the open request is aborted and the loop waits here until the
     // app is active again, then goes on at once (the same `wake` as the retry button). iOS's `inactive` (the
     // face prompt, the app switcher) is not the background and stops nothing.
@@ -525,6 +535,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           if (!alive) return;
           since.current = response.next_batch;
           retryMs = RETRY_MS; // connected and synced: the next failure waits 5 s again
+          rejected = 0;
           for (const room of Object.values(response.rooms?.join ?? {})) {
             for (const e of room.timeline?.events ?? []) {
               if (e.unsigned?.transaction_id) echoed.current.set(e.unsigned.transaction_id, e.event_id);
@@ -548,6 +559,10 @@ export function ChatProvider({ account, children }: { account: string | null; ch
           if (paused) continue; // aborted by going to the background: not a fault, nothing to report
           if (error instanceof MatrixRequestError && error.status === 401) {
             client.current = null; // the access token is gone: log in again with a fresh grant
+            // Once is a token that lapsed. A fresh grant refused too is the homeserver's fault, and without a wait
+            // this asked the backend for grants as fast as the network answered.
+            rejected += 1;
+            if (rejected > 1) await backoff();
             continue;
           }
           setAvailability("unavailable");
@@ -620,6 +635,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         const o = outboxRef.current.find((x) => x.txnId === txnId);
         if (o) void deliver(o);
       },
+      dismiss: (txnId) => setOutbox((all) => all.filter((o) => !(o.txnId === txnId && o.state === "failed"))),
       loadOlder: async (roomId) => {
         const from = timeline.rooms[roomId]?.prevBatch;
         if (!client.current || !from) return;

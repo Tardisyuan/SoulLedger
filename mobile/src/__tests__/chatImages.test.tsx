@@ -90,7 +90,7 @@ const picture = (id: string, sender: string, imageId: string, ts: number, width 
 function chatState(o: Partial<Chat> = {}): Chat {
   return {
     availability: "ready", conversations: [], listError: false, gone: {}, timeline: EMPTY_TIMELINE, me: ME, outbox: [], refused: {},
-    progress: {}, reload: jest.fn(async () => {}), reconnect: jest.fn(), send: jest.fn(), sendImages: jest.fn(), resend: jest.fn(),
+    progress: {}, reload: jest.fn(async () => true), reconnect: jest.fn(), send: jest.fn(), sendImages: jest.fn(), resend: jest.fn(), dismiss: jest.fn(),
     loadOlder: jest.fn(async () => {}), markRead: jest.fn(), openInbox: jest.fn(async () => hall()), openDirect: jest.fn(async () => conv()), ...o,
   };
 }
@@ -330,6 +330,7 @@ describe("an image on its way", () => {
     // No text bubble beside it, and nothing that offers a retry yet.
     expect(screen.queryByTestId("pending-sending")).toBeNull();
     expect(screen.queryByTestId("resend")).toBeNull();
+    expect(screen.queryByTestId("dismiss")).toBeNull();
     expect(screen.queryByTestId("pending-image-error")).toBeNull();
   });
 
@@ -345,13 +346,20 @@ describe("an image on its way", () => {
     expect(within(retry).getByText(" · 重试")).toBeTruthy();
     fireEvent.press(retry);
     expect(chat.resend).toHaveBeenCalledWith("t1");
+    expect(chat.dismiss).not.toHaveBeenCalled();
   });
 
   it("failed for a reason that will not change (the file is refused, a mute): says why and offers no retry", () => {
-    open(conv(), [], { outbox: [outgoing({ state: "failed", refused: { code: "too_large", retryAt: null } })] });
+    const chat = open(conv(), [], { outbox: [outgoing({ state: "failed", refused: { code: "too_large", retryAt: null } })] });
     expect(screen.getByTestId("pending-image-error")).toBeTruthy();
     expect(screen.getByTestId("pending-image-reason").props.children).toBe("每张不超过 5 MB");
     expect(screen.queryByTestId("resend")).toBeNull();
+    // It can still be taken off the thread; an image has no words to give back.
+    const dismiss = screen.getByTestId("dismiss");
+    expect(within(dismiss).getByText(" · 删除")).toBeTruthy();
+    fireEvent.press(dismiss);
+    expect(chat.dismiss).toHaveBeenCalledWith("t1");
+    expect(screen.getByTestId("compose").props.value).toBe("");
   });
 });
 

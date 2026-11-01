@@ -18,11 +18,12 @@
  * composer stays and still takes text — it queues — and only the send key
  * steps down to secondary (1c ⑦).
  */
-import { soulChatApi, soulChatErrorMessage } from "@soulledger/core/api/soul-chat";
+import { soulChatApi, soulChatErrorMessage, type SoulConversation } from "@soulledger/core/api/soul-chat";
 import { soulSocialApi } from "@soulledger/core/api/soul-social";
 import { hasRead, type ChatMessage } from "@soulledger/core/api/matrix";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import * as Clipboard from "expo-clipboard";
+import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   Animated,
   FlatList,
@@ -52,7 +53,7 @@ import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, sh
 import type { AppStackParams } from "../navTypes";
 import { useCurrentHall } from "../useCurrentHall";
 import { useNow } from "../useNow";
-import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage } from "./chatImages";
+import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage, ROW_HIT } from "./chatImages";
 import { compressWithSize, pickImages } from "./circleMedia";
 import { ANDROID, Glyph, Tag, hallOf, wash } from "./letters";
 
@@ -82,11 +83,14 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const toast = useToast();
   const [viewing, setViewing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
-  const [mutedUntil, setMutedUntil] = useState<string | null>(null);
+  /** `undefined`: not asked yet, or the status could not be read. `null`: the server says no mute is running. */
+  const [mutedUntil, setMutedUntil] = useState<string | null | undefined>(undefined);
   const [mutedReason, setMutedReason] = useState<string | null>(null);
   // 书信申请的拒绝与拉黑 (2026-11-01): one request at a time; the block asks first.
   const [deciding, setDeciding] = useState(false);
   const [askBlock, setAskBlock] = useState(false);
+  // The server said yes but the list could not be read again: read-only anyway (1c ⑥), until a newer list speaks.
+  const [blockedOver, setBlockedOver] = useState<SoulConversation[] | null | undefined>(undefined);
   const list = useRef<FlatList<Line>>(null);
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
   const c = chat.conversations?.find((row) => row.id === id) ?? chat.gone[id] ?? null;
@@ -98,8 +102,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     ? chatMode(c, {
         now,
         peerHasSpoken: messages.some((m) => m.sender !== chat.me),
-        iHaveSpoken: messages.some((m) => m.sender === chat.me),
-        refused: chat.refused[c.id] ?? null,
+        // A reply still on its way counts: 拒绝 / 拉黑 must not stay on offer under it. A failed one has not been said.
+        iHaveSpoken: messages.some((m) => m.sender === chat.me) || chat.outbox.some((o) => o.conversationId === c.id && o.state !== "failed"),
+        refused: blockedOver === chat.conversations ? { code: "peer_blocked", retryAt: null } : (chat.refused[c.id] ?? null),
       })
     : null;
 
@@ -159,20 +164,40 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       .catch(() => {});
     return () => {
       alive = false;
+      setMutedUntil(undefined);
     };
   }, [mode?.kind]);
+
+  // The mute ran out, or was lifted, with this screen open: the list says "muted" until it is asked again. Once it
+  // has answered, not again (the list may lag the status); while it cannot answer, again on each minute's tick.
+  const { reload } = chat;
+  const muteOver = mode?.kind === "muted" && mutedUntil !== undefined && (mutedUntil === null || Date.parse(mutedUntil) <= now);
+  const muteReloaded = useRef(false);
+  useEffect(() => {
+    if (!muteOver) muteReloaded.current = false;
+    else if (!muteReloaded.current) {
+      void reload().then((ok) => {
+        muteReloaded.current = ok;
+      });
+    }
+  }, [muteOver, now, reload]);
 
   // Not in the list yet — a push for a letter newer than the last sync (audit 2026-10-17 #10):
   // ask for the list once, with the skeleton up, before saying it is closed.
   const missing = !c && !!chat.conversations && chat.availability !== "not_configured";
-  const { reload } = chat;
   const asked = useRef<string | null>(null);
   const [rechecked, setRechecked] = useState<string | null>(null);
+  const [recheckFailed, setRecheckFailed] = useState(false);
+  // A list that did not come back says nothing about this conversation: "closed" only from a list that did.
+  const recheck = useCallback(() => {
+    setRecheckFailed(false);
+    void reload().then((ok) => (ok ? setRechecked(id) : setRecheckFailed(true)));
+  }, [id, reload]);
   useEffect(() => {
     if (!missing || asked.current === id) return;
     asked.current = id;
-    void reload().then(() => setRechecked(id));
-  }, [missing, id, reload]);
+    recheck();
+  }, [missing, id, recheck]);
 
   // Bubbles: the timeline, day dividers, and this device's sends not yet echoed back. Memoized on what they are
   // made of, so a re-render that changed none of it (a minute ticking, a refusal elsewhere) hands the list the
@@ -201,7 +226,24 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const inboxRoom = c?.kind === "OFFICER_INBOX";
   const hallTitle = c ? hallOf(c, locale) : "";
   const hallSealed = mode?.kind === "hall_sealed";
-  const { progress, resend } = chat;
+  const { progress, resend, dismiss } = chat;
+  const draftBack = useRef<((text: string) => void) | null>(null);
+  const composerOpen = !!mode && !["outgoing_locked", "muted", "closed", "hall_sealed"].includes(mode.kind);
+  // The words are the soul's: a deleted letter goes back to the box, and is also copied when no box is showing.
+  const takeBack = useCallback(
+    (o: Outgoing) => {
+      dismiss(o.txnId);
+      if (o.image) return;
+      draftBack.current?.(o.body);
+      if (!composerOpen) {
+        Clipboard.setStringAsync(o.body).then(
+          () => toast(tr("soul_app.chat.receipt.copied"), "success"),
+          () => {}
+        );
+      }
+    },
+    [dismiss, composerOpen, toast, tr]
+  );
   // One function for as long as what the rows show is the same, so the list does not redraw every row each render.
   const renderLine = useCallback(
     ({ item: line }: { item: Line }) => {
@@ -215,9 +257,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       }
       if (line.kind === "pending") {
         return line.o.image ? (
-          <PendingImage o={line.o} progress={progress[line.o.txnId]} onResend={() => resend(line.o.txnId)} />
+          <PendingImage o={line.o} progress={progress[line.o.txnId]} onResend={() => resend(line.o.txnId)} onDismiss={() => takeBack(line.o)} />
         ) : (
-          <PendingBubble o={line.o} onResend={() => resend(line.o.txnId)} now={now} />
+          <PendingBubble o={line.o} onResend={() => resend(line.o.txnId)} onDismiss={() => takeBack(line.o)} now={now} />
         );
       }
       if (line.m.image) {
@@ -237,7 +279,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       if (inboxRoom) return <OfficerBubble m={line.m} hall={hallTitle} sealed={hallSealed} now={now} />;
       return <Bubble m={line.m} now={now} landed={line.m.eventId === landedOn} />;
     },
-    [inboxRoom, room, me, progress, resend, now, gallery, tr, hallTitle, hallSealed, landedOn]
+    [inboxRoom, room, me, progress, resend, takeBack, now, gallery, tr, hallTitle, hallSealed, landedOn]
   );
 
   const goHall = async () => {
@@ -266,7 +308,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     }
   };
 
-  /** After the server says yes the list says `peer_blocked` and the screen turns read-only on its own. */
+  /** After the server says yes the list says `peer_blocked` and the screen turns read-only on its own; if the list cannot be read, `blockedOver` does it. */
   const block = async () => {
     if (!c || deciding) return;
     setDeciding(true);
@@ -274,7 +316,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       await soulChatApi.block(c.id);
       setAskBlock(false);
       toast(tr("soul_app.chat.block.done"), "success");
-      await chat.reload();
+      if (!(await chat.reload())) setBlockedOver(chat.conversations);
     } catch {
       toast(tr("soul_app.chat.block.failed"), "failure");
     } finally {
@@ -292,6 +334,10 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
           {chat.availability === "not_configured" ? (
             <Notice tone="neutral" testID="chat-not-configured">
               {tr("soul_app.chat.not_configured")}
+            </Notice>
+          ) : recheckFailed || (!chat.conversations && chat.listError) ? (
+            <Notice tone="neutral" onRetry={recheck} testID="conversation-recheck-failed">
+              {tr("soul_app.chat.unavailable.list")}
             </Notice>
           ) : chat.conversations && rechecked === id ? (
             <Notice tone="neutral" testID="conversation-gone">
@@ -392,7 +438,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       ) : null}
       <Band
         mode={mode}
-        mutedUntil={mutedUntil}
+        mutedUntil={mutedUntil ?? null}
         mutedReason={mutedReason}
         hall={hallName}
         onHall={() => void goHall()}
@@ -457,6 +503,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         hallName={hallName}
         onHall={() => void goHall()}
         bottom={insets.bottom}
+        restore={draftBack}
       />
       <BlockSheet name={c.peer_name} open={askBlock} busy={deciding} onConfirm={() => void block()} onClose={() => setAskBlock(false)} />
     </KeyboardAvoidingView>
@@ -749,7 +796,7 @@ function Body({ text, dim }: { text: string; dim?: boolean }) {
   return <Txt style={[styles.body, { fontFamily: quoteFamily(text), color: dim ? t.inkMuted : t.ink }]}>{text}</Txt>;
 }
 
-function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void; now: number }) {
+function PendingBubble({ o, onResend, onDismiss, now }: { o: Outgoing; onResend: () => void; onDismiss: () => void; now: number }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const failed = o.state === "failed";
@@ -777,9 +824,16 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
             {tr(receipt)}
           </Txt>
           {resendable ? (
-            <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={15}>
+            <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={ROW_HIT}>
               <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.retry")}
+              </Txt>
+            </Pressable>
+          ) : null}
+          {failed ? (
+            <Pressable testID="dismiss" accessibilityRole="button" onPress={onDismiss} hitSlop={ROW_HIT}>
+              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
+                {tr("soul_app.chat.receipt.delete")}
               </Txt>
             </Pressable>
           ) : null}
@@ -854,6 +908,7 @@ function Dock({
   hallName,
   onHall,
   bottom,
+  restore,
 }: {
   mode: ChatMode;
   /** Called with the text to send — on iOS, what the field holds once the keyboard has committed it. True: it went, empty the box. */
@@ -864,6 +919,8 @@ function Dock({
   hallName: string;
   onHall: () => void;
   bottom: number;
+  /** The screen hands a deleted letter's words back through this. */
+  restore: RefObject<((text: string) => void) | null>;
 }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -871,6 +928,7 @@ function Dock({
   // Here, not in the screen (R2): typing re-renders this composer only. The same component stays mounted across
   // the dock's states, so the words survive a lock and come back with the box, as they did in the screen.
   const [draft, setDraft] = useState("");
+  useImperativeHandle(restore, () => (text: string) => setDraft((held) => (held ? `${text}\n${held}` : text)), []);
   const pad = { paddingBottom: 16 + bottom, borderTopColor: t.hair };
   const { press, onEndEditing } = useCommittedSend(input, draft, (text) => {
     if (onSend(text)) setDraft("");

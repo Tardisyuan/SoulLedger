@@ -65,12 +65,13 @@ function chatState(overrides: Partial<Chat> = {}): Chat {
     me: "@me:hs.test",
     outbox: [],
     refused: {},
-    reload: jest.fn(async () => {}),
+    reload: jest.fn(async () => true),
     reconnect: jest.fn(),
     send: jest.fn(),
     sendImages: jest.fn(),
     progress: {},
     resend: jest.fn(),
+    dismiss: jest.fn(),
     loadOlder: jest.fn(async () => {}),
     markRead: jest.fn(),
     openInbox: jest.fn(async () => conv()),
@@ -80,7 +81,11 @@ function chatState(overrides: Partial<Chat> = {}): Chat {
 }
 
 function wrap(chat: Chat, children: ReactNode) {
-  return render(
+  return render(tree(chat, children));
+}
+
+function tree(chat: Chat, children: ReactNode) {
+  return (
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
         <ChatContext.Provider value={chat}>
@@ -137,6 +142,20 @@ describe("their request", () => {
     expect(block).toHaveBeenCalledWith("c-req");
     expect(chat.reload).toHaveBeenCalled();
     expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  it("拉黑 said yes but the list cannot be read: the screen goes read-only all the same", async () => {
+    jest.spyOn(soulChatApi, "block").mockResolvedValue({ id: "b-1", peer_user: 7, peer_name: "吴长明", created_at: "2026-11-01T02:00:00Z" });
+    const chat = chatState({ conversations: [conv()], reload: jest.fn(async () => false) });
+    const view = wrap(chat, <ConversationScreen id="c-req" />);
+    fireEvent.press(screen.getByTestId("request-block"));
+    await act(async () => fireEvent.press(screen.getByTestId("block-confirm")));
+    expect(screen.getByTestId("closed-reason").props.children).toBe(zh("soul_app.chat.closed.peer_blocked"));
+    expect(screen.queryByTestId("request-decline")).toBeNull();
+    expect(screen.queryByTestId("compose")).toBeNull();
+    // A newer list speaks for itself (say 设置 › 已拉黑 undid it meanwhile).
+    view.rerender(tree({ ...chat, conversations: [conv()] }, <ConversationScreen id="c-req" />));
+    expect(screen.getByTestId("conversation-incoming")).toBeTruthy();
   });
 
   it("a conversation that is not a request has no 拒绝 / 拉黑 band buttons", () => {
