@@ -131,6 +131,8 @@ EDGES = {
     'workflow.WorkflowTemplateVersion.template->workflow.WorkflowTemplate': ('U->S', "owned through the parent row (no tenant column of its own; the parent's tenant is the owner)"),
     'authentication.MfaRecoveryCode.mfa->authentication.OfficerMfa': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'chat.ChatIdentity.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
+    'chat.ChatBlock.blocker->soul_accounts.SoulAccount': ('U->U', 'the account that blocked; every read and write filters blocker=the caller (no tenant column on either side)'),
+    'chat.ChatBlock.blocked->soul_accounts.SoulAccount': ('U->U', 'the blocked account; may be in another civilization, as private chat may (no tenant column on either side)'),
     'chat.ChatImage.uploader->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'menus.Menu.parent->menus.Menu': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'menus.MenuButton.menu->menus.Menu': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),

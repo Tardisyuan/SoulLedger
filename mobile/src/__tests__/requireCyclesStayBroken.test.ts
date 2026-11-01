@@ -49,7 +49,7 @@ describe("leaf modules reach no screen", () => {
   // opt-apps2 S4: these load on first visit. A static import puts them back into the start-up evaluation (and
   // back into whatever cycle runs through navigation.tsx). Mutation: import ScanScreen at the top again -> red.
   it("navigation.tsx requires the rarely opened screens lazily, never imports them at the top", () => {
-    const lazy = ["./screens/scan", "./screens/about", "./screens/mfa", "./screens/signIns", "./screens/dataExport", "./screens/help"];
+    const lazy = ["./screens/scan", "./screens/about", "./screens/mfa", "./screens/signIns", "./screens/dataExport", "./screens/help", "./screens/chatBlocks"];
     expect(runtimeImports("navigation.tsx").filter((m) => lazy.includes(m))).toEqual([]);
     for (const m of lazy) expect(src("navigation.tsx")).toContain(`require("${m}")`);
     // …and none of them reaches back into navigation.tsx, so the late require meets no half-loaded module.

@@ -122,6 +122,7 @@ class MeSocialStatusView(SoulSocialView):
                     "user_id": request.user.pk,
                     "can_write": mute is None and circle.is_current_soul(request.user),
                     "muted_until": mute.until if mute else None,
+                    "muted_reason": mute.reason if mute else "",
                     "reports_remaining": mod.reports_remaining(request.user),
                     "unread_interactions": interactions.unread_count(request.user),
                 }

@@ -158,7 +158,7 @@ def test_dispatch_and_return_leave_soul_to_soul_speech_alone(
 
 
 def test_the_inbox_follows_the_hall_the_soul_is_in(cn_tenant, eu_tenant, matrix, django_capture_on_commit_callbacks):  # noqa: F811
-    """收件箱只能写给**当前所在**殿司:调走之后原殿司那封只能读(官员仍能回),新殿司另开一封。
+    """收件箱只能写给**当前所在**殿司:调走之后原殿司那封只能读(官员也不能再回,见 test_chat_letters_block_and_decline.py),新殿司另开一封。
     变异:删掉 `refusal` 里收件箱那条 `tenant_id` 判定 → 调走后仍能写给原殿司,红。
     变异:删掉 `apps/chat/signals.py` 的 `_soul_moved` → 调走后原殿司房间里灵魂仍能说话,红。"""
     a, a_client = ready_soul(cn_tenant, name="甲")
