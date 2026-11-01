@@ -7436,7 +7436,8 @@
       "handler": "Handled by {{name}}",
       "handler_none": "Handled by · unassigned",
       "not_yours": "{{name}} is handling this letter, so only they can reply. To take it, ask them to put it back or ask an admin to hand it to you.",
-      "assign_to_me": "Hand to me"
+      "assign_to_me": "Hand to me",
+      "moved": "This soul has been moved elsewhere, so you can't reply for now."
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
@@ -7458,7 +7459,8 @@
       "view_existing": "See the existing reply",
       "discard": "Delete my draft",
       "discard_confirm": "Delete this draft? What you wrote can't be recovered.",
-      "discard_ok": "Delete"
+      "discard_ok": "Delete",
+      "moved": "This soul has been moved elsewhere, so you can't reply for now. What you wrote is kept."
     },
     "list": {
       "more": "Load more",

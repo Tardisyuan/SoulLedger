@@ -8,5 +8,7 @@
   "officer_app.wangsi.reject_body",
   "officer_app.wangsi.late_title",
   "officer_app.wangsi.final",
-  "officer_app.tabs.notices_unread"
+  "officer_app.tabs.notices_unread",
+  "officer_app.letter.moved",
+  "officer_app.outbox.moved"
 ]

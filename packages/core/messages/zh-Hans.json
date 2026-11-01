@@ -7436,7 +7436,8 @@
       "handler": "经办 · {{name}}",
       "handler_none": "经办 · 未分配",
       "not_yours": "这封信由{{name}}经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。",
-      "assign_to_me": "转给我"
+      "assign_to_me": "转给我",
+      "moved": "灵魂已调往别处，暂不能回信。"
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
@@ -7458,7 +7459,8 @@
       "view_existing": "看已有的回信",
       "discard": "删除我的草稿",
       "discard_confirm": "删除这份草稿？写的内容不能找回。",
-      "discard_ok": "删除"
+      "discard_ok": "删除",
+      "moved": "灵魂已调往别处，暂不能回信。你写的内容还留着。"
     },
     "list": {
       "more": "加载更多",
