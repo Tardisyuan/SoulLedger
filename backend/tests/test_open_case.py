@@ -57,11 +57,15 @@ def test_a_living_soul_enters_judgment_and_a_judging_one_does_not_move(eu_tenant
     alive.refresh_from_db()
     assert alive.current_state == SoulState.JUDGING
 
+    # A DISPOSED soul with no plan in progress: no case opened now could be concluded (review 2026-11-01 P2 #10),
+    # so none is opened and the soul does not move.
     disposed = _soul(eu_tenant, SoulState.DISPOSED)
-    case = _open(disposed, kind=JudgmentKind.REOPEN)
+    with pytest.raises(OpenCaseRefusedError) as exc:
+        _open(disposed, kind=JudgmentKind.REOPEN)
+    assert exc.value.code == "cannot_enter_judgment"
     disposed.refresh_from_db()
     assert disposed.current_state == SoulState.DISPOSED
-    assert case.kind == JudgmentKind.REOPEN
+    assert not Judgment.objects.filter(soul=disposed).exists()
 
 
 @pytest.mark.django_db

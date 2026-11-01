@@ -237,6 +237,12 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         from django.db import transaction
 
         with transaction.atomic():
+            # Soul row first, then the disposition: the order every other writer takes (cancelling a plan locks
+            # the soul, then its nodes, then the disposition it pardons). Disposition-first deadlocked against it
+            # on PostgreSQL (test_cancelling_a_plan_while_it_advances_leaves_nothing_dispatching, 2026-11-01).
+            from apps.souls.models import Soul
+
+            Soul.lock(disposition.soul_id)
             locked = (
                 Disposition.objects.select_for_update()
                 .filter(pk=disposition.pk)

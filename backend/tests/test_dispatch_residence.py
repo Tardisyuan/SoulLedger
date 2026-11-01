@@ -932,6 +932,9 @@ def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_resi
     application.refresh_from_db()
     assert application.status == "REJECTED"
 
+    # A REINCARNATING soul cannot be dispatched (user 2026-11-01: only souls in the underworld move); this one is
+    # put back in DISPOSED first, so the residence this test is about can begin.
+    Soul.all_objects.filter(pk=account.soul.pk).update(current_state=SoulState.DISPOSED)
     _dispatch(account.soul, eg)
 
     assert client.get(f"{APPLY}{application.pk}/").data["can_appeal"] is True
