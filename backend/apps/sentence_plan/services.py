@@ -87,7 +87,7 @@ def notify_judges(tenant_ids, kind, params, related_id, related_resource="Senten
         from apps.events.services import EventService
         from apps.notifications import messages
 
-        title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
+        title, body = messages.render(messages.DEFAULT_LOCALE, messages.kind_for(kind.upper(), params) or kind, params)
         for user in judges_of(tenant_ids):
             EventService.notify_user(
                 user, title=title, message=body, notification_type=kind.upper(),
@@ -221,14 +221,19 @@ def pardon_term(soul, node, now):
     `reincarnation._unserved_term` 才不再报 `term_not_served`),灵魂离开那一站的界域。永久刑期与没执行的处置
     不记期满(前者不靠期满,后者 `assert_may_be_reborn` 按 ABORTED 节点当作已赦免)。调用方持有灵魂、节点的锁。"""
     from apps.disposition.models import Disposition
-    from apps.disposition.services import DispositionService
 
     if node.disposition_id is None:
         return
     served = (Disposition.all_objects.select_for_update(of=("self",))
               .filter(pk=node.disposition_id, is_deleted=False).first())
-    if served is None:
-        return
+    if served is not None:
+        pardon_served(soul, served, node, now)
+
+
+def pardon_served(soul, served, node, now):
+    """`pardon_term` 的那一笔,也给没挂节点的处置用(手动结束无计划的暂居)。调用方持有灵魂与这份处置的锁。"""
+    from apps.disposition.services import DispositionService
+
     if served.is_executed and not served.is_eternal and served.expired_at is None:
         served.expired_at = now
         served.save(update_fields=["expired_at"])
@@ -820,4 +825,5 @@ class SentencePlanService:
             "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
             "tenant_code": node.tenant_code, "dispatch_id": None, "dispatch_status": NOT_STARTED,
         })
-        notify_judges({plan.tenant_id}, "sentence_node_refused", _node_params(soul, node), plan.pk)
+        notify_judges({plan.tenant_id}, "sentence_node_refused",
+                      {**_node_params(soul, node), "kind": "sentence_node_not_dispatched"}, plan.pk)

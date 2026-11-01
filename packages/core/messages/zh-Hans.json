@@ -6151,6 +6151,10 @@
       "title": "受刑节点被拒",
       "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"
     },
+    "sentence_node_not_dispatched": {
+      "title": "受刑节点未能发起调拨",
+      "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。"
+    },
     "sentence_plan_completed": {
       "title": "受刑计划完成",
       "body": "灵魂「{{soul}}」的受刑计划已全部完成。"

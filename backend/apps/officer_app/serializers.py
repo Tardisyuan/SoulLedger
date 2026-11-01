@@ -22,6 +22,7 @@ class TodoItemSerializer(serializers.Serializer):
     soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
     is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
     request_kind = serializers.CharField(required=False, help_text="仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。")
+    soul_id = serializers.CharField(required=False, help_text="仅受刑计划变更:灵魂 id(手机上点进这个灵魂看它的受刑计划)。")
     feedback_tag = serializers.CharField(required=False, help_text="仅书信:从 App「帮助与反馈」来的信的类别码"
                                          "(account / record / app / other);还没人回时才有。")
     # 仅「待我选站」(kind = pick,第四十三批):`title` 是灵魂名,`id` 是流程。

@@ -6151,6 +6151,10 @@
       "title": "Sentence stop refused",
       "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."
     },
+    "sentence_node_not_dispatched": {
+      "title": "Sentence stop not dispatched",
+      "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again."
+    },
     "sentence_plan_completed": {
       "title": "Sentence plan completed",
       "body": "Soul {{soul}} has served every stop of its sentence plan."

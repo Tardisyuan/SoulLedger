@@ -234,3 +234,88 @@ def test_the_cancelled_plans_term_end_is_now(cn):
     plan_requests.cancel(p, reason="复核赦免", user=None)
     served = Disposition.all_objects.get(pk=plan.node(p, 1).disposition_id)
     assert before <= served.expired_at <= timezone.now()
+
+
+# ── 没能发起调拨的通知不说「被拒」──────────────────────────────────────────
+
+
+def test_a_dispatch_the_plan_could_not_start_does_not_tell_the_judge_it_was_refused(
+    cn, eg, django_capture_on_commit_callbacks,
+):
+    from apps.notifications import messages
+    from apps.notifications.models import UserNotification
+
+    judge = plan.officer("cn_not_started", "ADMIN", cn)
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)], name="没发出去")
+    DispatchService.propose(cn, eg, soul, None, "一条存量的手动调拨")  # 系统那条会被它挡住
+
+    with django_capture_on_commit_callbacks(execute=True):
+        plan.serve(soul, p, 1)
+
+    row = UserNotification.objects.get(user=judge, notification_type="SENTENCE_NODE_REFUSED")
+    assert row.title == "受刑节点未能发起调拨"
+    assert "没能发起调拨" in row.message and "{{" not in row.message
+    assert "被拒" not in row.title and "拒绝" not in row.message
+    assert messages.render("en", messages.kind_for(row.notification_type, row.params), row.params)[0] == (
+        "Sentence stop not dispatched")
+
+
+def test_a_real_refusal_still_says_refused():
+    from apps.notifications import messages
+
+    params = {"soul": "甲", "order": 2, "tenant": "EG_DUAT"}
+    kind = messages.kind_for("SENTENCE_NODE_REFUSED", params)
+    assert kind == "sentence_node_refused"
+    assert "拒绝" in messages.render("zh-Hans", kind, params)[1]
+
+
+# ── 手动结束无计划的暂居:正在服的处置 ────────────────────────────────────
+
+
+def _served_during_residence(cn, eg, **fields):
+    soul = _resident_without_plan(cn, eg)
+    served = Disposition.objects.create(soul=soul, tenant=eg, is_executed=True, executed_at=timezone.now(), **fields)
+    return soul, served
+
+
+def test_ending_a_planless_residence_by_hand_ends_the_term_being_served(cn, eg):
+    soul, served = _served_during_residence(cn, eg, sentence_years=10)
+    assert _code(soul) == "term_not_served"
+
+    DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_MANUAL, reason="召回")
+
+    served.refresh_from_db()
+    assert served.expired_at is not None and not served.is_deleted
+    assert _code(soul) != "term_not_served"
+
+
+def test_ending_a_planless_residence_by_hand_is_no_pardon_of_an_eternal_term(cn, eg):
+    soul, served = _served_during_residence(cn, eg, is_eternal=True)
+
+    DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_MANUAL, reason="召回")
+
+    served.refresh_from_db()
+    assert served.expired_at is None
+    assert _code(soul) == "eternal_sentence"
+
+
+def test_a_manual_end_leaves_a_term_at_home_running(cn, eg):
+    soul, at_residence = _served_during_residence(cn, eg, sentence_years=10)
+    at_home = Disposition.objects.create(soul=soul, tenant=cn, is_executed=True, executed_at=timezone.now(),
+                                         sentence_years=10)
+
+    DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_MANUAL, reason="召回")
+
+    at_residence.refresh_from_db()
+    at_home.refresh_from_db()
+    assert at_residence.expired_at is not None and at_home.expired_at is None
+
+
+def test_an_automatic_return_is_no_pardon(cn, eg):
+    soul, served = _served_during_residence(cn, eg, sentence_years=10)
+
+    DispatchService.end_residence(soul, actor="system", trigger=DispatchService.RETURN_ON_DISPOSITION, reason="执行完")
+
+    served.refresh_from_db()
+    assert served.expired_at is None
+    assert _code(soul) == "term_not_served"
