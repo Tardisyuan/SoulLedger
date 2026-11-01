@@ -134,6 +134,25 @@ def test_a_blocked_soul_only_sees_undeliverable(cn_tenant, request_pair, matrix,
     assert a_client.get(BLOCKS).data == []
 
 
+def test_a_blocked_sender_still_waiting_out_the_day_sees_the_usual_wait(request_pair, django_capture_on_commit_callbacks):
+    """等待中被拉黑,发信方看到的和没被拉黑时一样(Design 第六十七批 §三.1):倒计时照走,等待过了才「无法送达」。
+    变异:`refusal` 去掉 `_request_interval_running` 的放行 → 等待中就是 403,红。"""
+    a, a_client, b, b_client, conversation = request_pair
+    with django_capture_on_commit_callbacks(execute=True):
+        assert b_client.post(f"{CONVERSATIONS}{conversation.id}/block/").status_code == 201
+
+    row = _ids(a_client)[str(conversation.id)]
+    assert row["refusal"] is None and row["next_request_at"] is not None
+    assert _open(a_client, b).status_code == 200
+    waiting = _send(a_client, conversation.id, "在吗")
+    assert waiting.status_code == 429 and waiting.data["code"] == "request_throttled"
+
+    Conversation.objects.filter(pk=conversation.pk).update(last_request_at=timezone.now() - timedelta(days=2))
+    sent = _send(a_client, conversation.id, "在吗")
+    assert sent.status_code == 403 and sent.data["code"] == "undeliverable"
+    assert _ids(a_client)[str(conversation.id)]["refusal"] == "undeliverable"
+
+
 def test_unblocking_in_settings_restores_the_conversation(request_pair, django_capture_on_commit_callbacks):
     """解除只认自己的那一行:被拉黑的一方拿到 id 也删不掉(404,与不存在同一句)。解除后双方恢复。
     变异:`unblock` 不带 `blocker=account` → 甲把乙的拉黑删掉,红。
