@@ -179,7 +179,7 @@ describe("provision and reset", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("soul_accounts.account.actions.provision") }));
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh(key, params), "success"));
     // The bare "开通了" line, which said nothing about the password, is gone.
-    expect(mockShowToast).not.toHaveBeenCalledWith(tZh("soul_accounts.account.provisioned"), "success");
+    expect(mockShowToast).not.toHaveBeenCalledWith("已开通本世账号", "success");
   });
 
   it("a retired account (409) is reported by its code", async () => {

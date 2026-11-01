@@ -15,6 +15,12 @@ import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgme
 import type { CrossTenantJudgment } from "@soulledger/core/api";
 import { tZh } from "./support/zhBundle";
 
+let mockSearch = "";
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useSearchParams: () => new URLSearchParams(mockSearch),
+}));
+
 jest.mock("@soulledger/core/api/sentence-plans", () => ({
   sentencePlansApi: { list: jest.fn(), decide: jest.fn(), withdraw: jest.fn(), cancel: jest.fn() },
 }));
@@ -100,6 +106,23 @@ describe("受刑请求收件箱", () => {
     expect(planApi.list).toHaveBeenCalledWith(expect.objectContaining({ pending_request: true }));
     expect(screen.getByText(tZh("sentence_plan.request_remove", { order: "3" }))).toBeInTheDocument();
     expect(screen.getByText("另案已抵")).toBeInTheDocument();
+  });
+
+  it("?soul= 把列表收窄到这个灵魂,并给一条回到全部的路;没有它就是全部", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    mockSearch = "soul=s9";
+    const narrowed = renderWith(<SentenceRequestsPage />);
+    await screen.findByText("张三");
+    expect(planApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ pending_request: true, soul: "s9" }));
+    expect(screen.getByRole("link", { name: tZh("sentence_plan.inbox_show_all") }).getAttribute("href")).toBe("/sentence-requests");
+    narrowed.unmount();
+
+    mockSearch = "";
+    planApi.list.mockClear();
+    renderWith(<SentenceRequestsPage />);
+    await screen.findByText("张三");
+    expect(planApi.list.mock.calls[0][0].soul).toBeUndefined();
+    expect(screen.queryByRole("link", { name: tZh("sentence_plan.inbox_show_all") })).toBeNull();
   });
 
   it("原属判官批准:有批准 / 驳回、没有撤回;批准带上理由", async () => {

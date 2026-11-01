@@ -371,7 +371,8 @@ describe("the managed state", () => {
     await press("mfa-regen-confirm");
     expect(await screen.findByText("网络错误")).toBeTruthy();
     await press("mfa-regen-confirm");
-    expect(await screen.findByText("没能关闭，请检查动态码或密码")).toBeTruthy();
+    expect(await screen.findByText("没能重新生成，请检查动态码")).toBeTruthy();
+    expect(screen.queryByText(/没能关闭/)).toBeNull();
     await press("mfa-regen-confirm");
     expect(await screen.findByText("尝试次数过多，请稍后再试")).toBeTruthy();
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();

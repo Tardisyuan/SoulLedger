@@ -10,7 +10,7 @@ import { unassignedShown } from "../todoFacts";
 import { useCachedRemote, useOnBump } from "../readCache";
 
 import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
-import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, pickRowLines, todoTitle, type ItemKind } from "../rules";
+import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, onlySoul, pickRowLines, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
 import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
 import { formatWhen } from "../format";
@@ -166,7 +166,7 @@ function TodoGroupRows({
             testID={`todo-desk-${kind}`}
             kind="outline"
             title={t("officer_app.todo.on_desk_only")}
-            onPress={() => void Share.share({ message: deskUrl({ kind: "sentence_change", id: "" }) }).catch(() => {})}
+            onPress={() => void Share.share({ message: deskUrl({ kind: "sentence_change", id: "", soul: onlySoul(rows as TodoItemExtra[], group.count) }) }).catch(() => {})}
           />
         </View>
       ) : null}

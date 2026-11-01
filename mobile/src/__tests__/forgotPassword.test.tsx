@@ -23,7 +23,7 @@ import { stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
-const NEUTRAL = "如果这个邮箱是某个灵魂账号的联系邮箱，验证码已发出";
+const NEUTRAL = "如果这个邮箱是某个灵魂账号的联系邮箱，验证码已发送";
 const EMAIL = "soul@example.com";
 const REQUEST = "POST /auth/reset-password/";
 const CONFIRM = "POST /auth/set-new-password/";
