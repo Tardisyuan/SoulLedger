@@ -105,8 +105,9 @@ export interface MfaVerifyRequest {
  * accounts never reach these. `login` and `verify` send credentials so the API origin can set / read
  * the device cookie (`CORS_ALLOW_CREDENTIALS`).
  */
-/** 「确认是本人」: the 6-digit code or the password. A recovery code does not count. */
-export type MfaOwnerConfirmation = { method: "totp"; code: string } | { method: "password"; password: string };
+/** 重新生成恢复码前的「确认是本人」: the current 6-digit code only (2026-11-01). A password or a recovery code
+ * is refused with `totp_required`. */
+export type MfaOwnerConfirmation = { method: "totp"; code: string };
 /** Turning it off takes the second factor itself — the 6-digit code or one recovery code. The password alone
  *  does not (2026-10-29): someone who has the password must not be able to remove the factor that stops them. */
 export type MfaTurnOff = { method: "totp" | "recovery"; code: string };
@@ -126,7 +127,7 @@ export const mfaApi = {
   confirm: (code: string) => api.post<MfaRecoveryCodes>("/auth/mfa/confirm/", { code }),
   /** Step 4 完成 — the only call that turns it on. */
   complete: () => api.post<MfaStatus>("/auth/mfa/complete/"),
-  /** The 6-digit code or the password (the same lock as `disable`); the old set stays good until it passes. */
+  /** The current 6-digit code (the same lock as `disable`); the old set stays good until it passes. */
   regenerateRecoveryCodes: (data: MfaOwnerConfirmation) => api.post<MfaRecoveryCodes>("/auth/mfa/recovery-codes/", data),
   disable: (data: MfaTurnOff) => api.post<MfaStatus>("/auth/mfa/disable/", data),
 };

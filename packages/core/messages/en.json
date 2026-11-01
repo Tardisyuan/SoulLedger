@@ -4924,7 +4924,7 @@
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
-      "initial_password_expired": "The initial password has expired. Ask an officer to reset it",
+      "initial_password_expired": "The initial password has expired. If you have a contact email, reset it yourself with “Forgot password” on the sign-in page; otherwise ask an officer to reset it",
       "rate_limited": "Too many attempts. Try again later",
       "invalid_old_password": "The initial password is wrong",
       "password_unchanged": "The new password must differ from the old one",

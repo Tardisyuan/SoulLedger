@@ -1,8 +1,8 @@
 """灵魂 App 的「登录设备与记录」(Design 第二十八批 S1)。与官员 Web 同一套规则(`authentication.session_views`)。
 
     GET  /me/sessions/                 登录设备
-    POST /me/sessions/{id}/revoke/     退出一台
-    POST /me/sessions/revoke-others/   除这部手机外全部退出
+    POST /me/sessions/{id}/revoke/     退出一台(那台的面容 / 指纹登录一并失效)
+    POST /me/sessions/revoke-others/   除这部手机外全部退出(其余手机的面容 / 指纹登录一并失效)
     GET  /me/sign-ins/                 最近 90 天的登录记录,成功与失败都有,连续的失败合成一行带次数
 
 记录来自 `LoginLog`(登录各条路径本来就在写,密码错也写),不另建表;90 天之外的由
@@ -80,9 +80,12 @@ class MeSessionRevokeView(SoulAPIView):
     @extend_schema(request=None, responses={204: None, 400: shared.SessionRefusalSerializer,
                                             403: SoulErrorSerializer, 404: shared.SessionRefusalSerializer})
     def post(self, request, session_id):
+        from apps.soul_accounts import device_login
+
         refusal, session = shared.revoke_one(request.user, request.auth, session_id)
         if refusal is not None:
             return refusal
+        device_login.revoke_signed_out(self.account, sessions=[session.pk])
         audit("UPDATE", self.account.soul, f"灵魂退出登录设备:{session.label}", actor=request.user,
               request=request, resource="soul_session", resource_id=session.pk,
               changes={"session_revoked": str(session.pk), "label": session.label})
@@ -93,9 +96,12 @@ class MeSessionsRevokeOthersView(SoulAPIView):
     @extend_schema(request=None, responses={200: shared.RevokeOthersResponseSerializer,
                                             403: SoulErrorSerializer, 409: shared.SessionRefusalSerializer})
     def post(self, request):
+        from apps.soul_accounts import device_login
+
         refusal, count = shared.revoke_others(request.user, request.auth)
         if refusal is not None:
             return refusal
+        device_login.revoke_signed_out(self.account, keep_session=signin_sessions.session_of(request.auth))
         audit("UPDATE", self.account.soul, f"灵魂退出其他全部登录设备({count} 台)", actor=request.user,
               request=request, resource="soul_session", resource_id=self.account.pk,
               changes={"sessions_revoked": count})

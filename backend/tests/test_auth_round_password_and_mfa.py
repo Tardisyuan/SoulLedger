@@ -184,8 +184,8 @@ class TestMfaRowLock:
             lock.reset_mock()
             mfa.verify_login_code(row, code="000000")
             assert lock.call_count == 1  # login second step
-            mfa.confirm_owner(row, row.user, method="password", password="x")
-            assert lock.call_count == 2  # disable / regenerate by password
+            mfa.confirm_owner(row, method="totp", code="000000")
+            assert lock.call_count == 2  # regenerate (the six digits only)
 
 
 class TestSetupCodeThenSignIn:

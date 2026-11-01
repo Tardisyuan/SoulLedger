@@ -440,12 +440,13 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 type Asking = "disable" | "regen" | null;
 
-type ConfirmMethod = "totp" | "password" | "recovery";
+type ConfirmMethod = "totp" | "recovery";
 
 /**
- * 「确认是本人」:6 位数字,手机不在身边时 —— 重新生成恢复码改用密码,关闭(`secondFactor`)改用一枚恢复码:
- * 只凭密码关不掉两步验证(2026-10-29)。两处同一把锁,失败的几种状态(错了几次、锁到几点、网络)共用 `StepNotice`。
- * `password` 一格在恢复码模式下装的是恢复码。`id` 是两个弹层各自的 testID 前缀。
+ * 「确认是本人」:6 位数字。关闭(`secondFactor`)在手机不在身边时可以改用一枚恢复码;重新生成恢复码只收 6 位数字,
+ * 没有别的办法(2026-11-01 用户决定:密码、恢复码都不行;只凭密码关不掉两步验证,2026-10-29)。
+ * 两处同一把锁,失败的几种状态(错了几次、锁到几点、网络)共用 `StepNotice`。
+ * `password` 一格装的是恢复码。`id` 是两个弹层各自的 testID 前缀。
  */
 function OwnerFields({
   id, method, onMethod, digits, onDigits, password, onPassword, state, onState, busy, secondFactor = false,
@@ -468,7 +469,7 @@ function OwnerFields({
   };
   return (
     <>
-      <StepNotice state={state} password={method === "password"} />
+      <StepNotice state={state} />
       {method === "totp" ? (
         <>
           <DigitField
@@ -481,17 +482,19 @@ function OwnerFields({
             }}
             locked={busy || state.kind === "locked"}
           />
-          <TextLink
-            testID={secondFactor ? `${id}-use-recovery` : `${id}-use-password`}
-            title={tr(secondFactor ? "soul_app.mfa.disable.use_recovery" : "soul_app.mfa.disable.use_password")}
-            onPress={() => {
-              onPassword("");
-              onMethod(secondFactor ? "recovery" : "password");
-              onState({ kind: "idle" });
-            }}
-          />
+          {secondFactor ? (
+            <TextLink
+              testID={`${id}-use-recovery`}
+              title={tr("soul_app.mfa.disable.use_recovery")}
+              onPress={() => {
+                onPassword("");
+                onMethod("recovery");
+                onState({ kind: "idle" });
+              }}
+            />
+          ) : null}
         </>
-      ) : method === "recovery" ? (
+      ) : (
         <>
           <Input
             testID={`${id}-recovery`}
@@ -516,31 +519,6 @@ function OwnerFields({
             }}
           />
         </>
-      ) : (
-        <>
-          <Input
-            testID={`${id}-password`}
-            label={tr("soul_app.login.password")}
-            value={password}
-            onChangeText={(next) => {
-              onPassword(next);
-              idle();
-            }}
-            editable={!busy && state.kind !== "locked"}
-            secureTextEntry
-            textContentType="password"
-            autoComplete="current-password"
-            secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
-          />
-          <TextLink
-            testID={`${id}-use-code`}
-            title={tr("soul_app.mfa.login.use_code")}
-            onPress={() => {
-              onMethod("totp");
-              onState({ kind: "idle" });
-            }}
-          />
-        </>
       )}
     </>
   );
@@ -555,7 +533,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
   const [password, setPassword] = useState("");
   const [state, setState] = useState<StepState>({ kind: "idle" });
   const busy = state.kind === "busy";
-  const confirmReady = method === "totp" ? digits.length === 6 : method === "recovery" ? password.trim().length >= 8 : password.length > 0;
+  const confirmReady = method === "totp" ? digits.length === 6 : password.trim().length >= 8;
   const left = status.recovery_codes_remaining;
 
   const close = () => {
@@ -570,7 +548,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { stat
   const regenerate = async () => {
     setState({ kind: "busy" });
     try {
-      const codes = await soulApi.mfaRegenerate(method === "totp" ? { method: "totp", code: digits } : { method: "password", password });
+      const codes = await soulApi.mfaRegenerate({ method: "totp", code: digits });
       setAsking(null);
       setState({ kind: "idle" });
       setDigits("");

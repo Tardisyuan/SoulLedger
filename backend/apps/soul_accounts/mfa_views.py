@@ -6,11 +6,11 @@
     POST   /me/mfa/setup/               向导:新密钥 + otpauth 链接(重复开始作废上一把)
     DELETE /me/mfa/setup/               中途退出:未确认的密钥作废
     POST   /me/mfa/confirm/             向导:验一个 6 位数字 → 开启,并**只这一次**给出 10 个恢复码
-    POST   /me/mfa/recovery-codes/      重新生成恢复码(旧码立即作废;只要确认,不用输码)
+    POST   /me/mfa/recovery-codes/      重新生成恢复码(先输当前的 6 位数字;旧码立即作废)
     POST   /me/mfa/disable/             关闭(6 位数字或恢复码二选一;只凭密码不行)
 
 拒绝体统一是 `{"detail", "code", …}`,`code` ∈ wrong / expired / locked / pending_invalid / rate_limited /
-wrong_password / not_enabled / already_enabled / not_started。`/me/` 下的视图继承 `SoulAPIView`
+wrong_password / totp_required / not_enabled / already_enabled / not_started。`/me/` 下的视图继承 `SoulAPIView`
 (只认灵魂令牌,`must_change_password` 期间一概拒绝)。官员关闭在 `views.py::SoulAccountViewSet.reset_mfa`。
 """
 from datetime import timedelta
@@ -25,7 +25,15 @@ from rest_framework.views import APIView
 
 from apps.soul_accounts import device_login, mfa
 from apps.soul_accounts import services as svc
-from apps.soul_accounts.me_views import CODE_ATTEMPTS, IP_ATTEMPTS, LOGIN_WINDOW_SECONDS, SoulAPIView, _rate_keys
+from apps.soul_accounts.me_views import (
+    IP_ATTEMPTS,
+    LOGIN_WINDOW_SECONDS,
+    SoulAPIView,
+    _rate_keys,
+    clear_after_success,
+    count_failure,
+    rate_limited,
+)
 from apps.soul_accounts.serializers import (
     SoulMfaCodeRequestSerializer,
     SoulMfaDisableRequestSerializer,
@@ -46,6 +54,7 @@ _MESSAGES = {
     "wrong_password": "密码不对。",
     "pending_invalid": "这一步超时了,请重新输入密码。",
     "rate_limited": "尝试过于频繁,请 15 分钟后再试。",
+    "totp_required": "重新生成恢复码要输入当前的 6 位数字,密码与恢复码都不行。",
 }
 
 
@@ -84,18 +93,16 @@ def _ip_key(request):
 def confirm_current_password(request, account, password, credential=""):
     """「已登录不等于是本人」:敏感动作前输当前密码。对了 → None;错了 / 满了 → 拒绝响应。
     `credential`(开了面容登录的手机认过面容后取出的凭据)可代替密码,算同一份失败预算。
-    错的次数记进**密码登录的那两个计数**(同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,
-    和在登录页猜吃同一份预算,满了答 429 `rate_limited`。两步验证开启向导与面容登录开启共用这一处。"""
-    ip_key, code_key = _rate_keys(_client_ip(request), account.soul.soul_code)
-    ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
-    if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+    计数与登录同一套三层(`me_views._rate_keys`),编号那两层**单独一份**(`scope="confirm"`,2026-11-01):
+    在这里错 5 次答 429 `rate_limited`,但不再把登录页也锁住(此前共用,review P2 #16);对了就清零。
+    两步验证开启向导、面容登录开启、导出资料、改联系邮箱共用这一处。"""
+    keys = _rate_keys(_client_ip(request), account.soul.soul_code, scope="confirm")
+    if rate_limited(keys):
         return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
     proven = device_login.holds(account, credential) if credential else bool(password) and request.user.check_password(password)
     if not proven:
-        cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-        cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST,
-                       remaining_attempts=max(0, CODE_ATTEMPTS - code_attempts - 1))
+        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST, remaining_attempts=count_failure(keys))
+    clear_after_success(keys)
     return None
 
 
@@ -147,7 +154,8 @@ class SoulMfaVerifyView(APIView):
         LoginLog.objects.create(user=account.user, username=username, status="SUCCESS", ip_address=ip,
                                 user_agent=agent, method=method)
         tokens = svc.complete_login(account, request=request, method=method,
-                                    trust_hash=mfa.core._hash_device(device_token) if device_token else "")
+                                    trust_hash=mfa.core._hash_device(device_token) if device_token else "",
+                                    device_login=mfa.pending_device_login_id(data["pending_token"]))
         payload = {
             **tokens,
             "soul_code": account.soul.soul_code,
@@ -173,9 +181,8 @@ class MeMfaSetupView(SoulAPIView):
                    responses={200: SoulMfaSetupResponseSerializer, 400: SoulMfaRefusalSerializer,
                               409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
-        """当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
-        (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
-        满了答 429 `rate_limited`。"""
+        """当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错 5 次答 429 `rate_limited`
+        (`confirm_current_password`:登录后确认是本人的那份计数,不与登录页共用,2026-11-01)。"""
         body = SoulMfaSetupRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         refusal = confirm_current_password(request, self.account, body.validated_data["password"])
@@ -214,15 +221,16 @@ class MeMfaRecoveryCodesView(SoulAPIView):
                    responses={200: SoulMfaRecoveryCodesSerializer, 400: SoulMfaRefusalSerializer,
                               409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
-        """重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一把锁。用恢复码确认不行。
-        没带 / 错了 → 旧码原样有效。"""
+        """重新生成要确认是本人 —— 只收当前的 6 位数字,与「关闭」同一把锁。带密码或恢复码来 → 400 `totp_required`
+        (用户 2026-11-01)。没带 / 错了 → 旧码原样有效。"""
+        if mfa.core.retired_owner_method(request.data):
+            return _refuse("totp_required", status.HTTP_400_BAD_REQUEST)
         body = SoulMfaDisableRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:
             outcome, codes = mfa.regenerate_recovery_codes(
-                self.account, method=data["method"], code=data.get("code", ""), password=data.get("password", ""),
-                request=request)
+                self.account, method=data["method"], code=data.get("code", ""), request=request)
         except svc.SoulAccountError as exc:
             return _error(exc)
         if outcome["code"] != "ok":

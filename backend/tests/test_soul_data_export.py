@@ -180,7 +180,7 @@ def test_the_face_credential_stands_in_for_the_password_but_only_this_accounts_l
     assert _request(world.client, credential=mine).status_code == 400
 
 
-def test_wrong_passwords_spend_the_same_budget_as_login_and_then_429(world, queued):
+def test_wrong_passwords_spend_the_confirmation_budget_and_then_429(world, queued):
     codes = [_request(world.client, password="x").status_code for _ in range(6)]
     assert codes[:5] == [400] * 5 and codes[5] == 429
     # 满了之后连对的密码也不收。

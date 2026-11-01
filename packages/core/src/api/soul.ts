@@ -289,10 +289,11 @@ export const soulApi = {
   mfaConfirm: (code: string) =>
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/confirm/", { code }).then((r) => r.data.recovery_codes),
   /**
-   * The 6-digit code or the password (one lock, shared with `mfaDisable`; a recovery code does not count).
+   * The current 6-digit code only (2026-11-01: a password or a recovery code is refused with `totp_required`;
+   * one lock, shared with `mfaDisable`).
    * Until it passes the old set stays good; then it is void at once and the new ten are shown once.
    */
-  mfaRegenerate: (body: SoulMfaDisableRequest) =>
+  mfaRegenerate: (body: { method: "totp"; code: string }) =>
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/", body).then((r) => r.data.recovery_codes),
   mfaDisable: (body: SoulMfaTurnOffRequest) =>
     soulHttp.post<SoulMfaStatus>("/me/mfa/disable/", body).then((r) => r.data),

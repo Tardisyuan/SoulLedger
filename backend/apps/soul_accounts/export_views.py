@@ -50,7 +50,7 @@ class MeExportView(SoulAPIView):
                    responses={201: SoulDataExportSerializer, 400: SoulMfaRefusalSerializer,
                               409: SoulErrorSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
-        """申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,与登录同一份预算)。"""
+        """申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,登录后确认是本人的那份计数)。"""
         body = SoulDataExportRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         refusal = confirm_current_password(request, self.account, body.validated_data["password"],
