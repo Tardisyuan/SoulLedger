@@ -81,8 +81,8 @@ def test_a_new_message_is_pushed_to_the_other_side_only(pair, matrix):  # noqa: 
 def test_the_name_is_the_senders_life_in_this_conversation(cn_tenant, matrix, locale, expected,  # noqa: F811
                                                          django_capture_on_commit_callbacks):
     """名字取会话那一世发件方账号的显示名(与会话列表一致),文案按收件方的推送语言。
-    场景:甲转世那一刻关会话的提交后回调没跑成(进程在提交后、回调前退出)—— 旧房间仍开着,
-    甲的前世身份仍能发;这时甲的本世账号是「今生之甲」,而这条信是前世写的。
+    场景:2026-11-02 之前转世、提交后回调没跑成(进程在提交后、回调前退出)留下的旧房间仍开着(现在关会话与注销
+    同一事务,不再产生这种行),甲的前世身份仍能发;这时甲的本世账号是「今生之甲」,而这条信是前世写的。
     变异:名字改取发件灵魂此刻的本世账号(`current_account_of`)→ 显示「今生之甲」,红。"""
     from apps.reincarnation.models import Reincarnation
     from apps.soul_accounts import services as accounts
@@ -104,7 +104,8 @@ def test_the_name_is_the_senders_life_in_this_conversation(cn_tenant, matrix, lo
     new, _ = accounts.provision_account(a.soul, AccountOrigin.OFFICER)
     new.user.display_name = "今生之甲"
     new.user.save(update_fields=["display_name"])
-    assert Conversation.objects.get(pk=opened["id"]).closed_at is None
+    assert Conversation.objects.get(pk=opened["id"]).closed_at is not None  # 现在随注销一起关
+    Conversation.objects.filter(pk=opened["id"]).update(closed_at=None)  # 还原成那种旧行
 
     matrix.says(opened["room_id"], old_mxid, "前世的一封")
     deliver_hooks()
