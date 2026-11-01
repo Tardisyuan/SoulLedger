@@ -3742,8 +3742,7 @@
     "status": {
       "PENDING": "Nen Maa Djer",
       "PROCESSED": "Iri Seth",
-      "FAILED": "Nen Iri",
-      "DUPLICATE": "Sen Medu"
+      "FAILED": "Nen Iri"
     },
     "source_system": "Tepy Hemsu",
     "status_label": "Kheperu",

@@ -146,6 +146,22 @@ def test_the_decide_endpoint_takes_deliver(cn_tenant, admin_user):
     assert (res.data["grievance_status"], res.data["verdict"]) == ("DELIVERED", "PASSED")
 
 
+def test_delivering_a_five_heinous_case_is_refused_not_a_500(cn_tenant, admin_user):
+    """Review 2026-11-01 #11: 超度结案 PASSED,而五逆不能判 PASSED —— `PlanChangeRefusedError` 没被接住,答 500。
+    现在 400 `five_heinous_must_fail`,什么都没写。"""
+    from apps.judgment.models import ChineseOffence
+
+    soul, case = _filed(cn_tenant, admin_user)
+    Judgment.all_objects.filter(pk=case.pk).update(offence=ChineseOffence.FIVE_HEINOUS)
+    res = officer_client(admin_user).post(f"/api/v1/judgment/wangsi/{case.pk}/decide/",
+                                          {"upheld": True, "note": "属实", "deliver": True}, format="json")
+    assert (res.status_code, res.data.get("code")) == (400, "five_heinous_must_fail"), res.data
+    case = Judgment.all_objects.get(pk=case.pk)
+    assert (case.grievance_status, case.verdict, case.is_final) == (GrievanceStatus.FILED, None, False)
+    assert Soul.objects.get(pk=soul.pk).diyu_station != Soul.DiyuStation.LOTUS_TERRACE
+    assert not _events(soul, "WANGSI_GRIEVANCE_DELIVERED")
+
+
 # ── PATCH 不覆盖并发的审核 ───────────────────────────────────────────────
 
 

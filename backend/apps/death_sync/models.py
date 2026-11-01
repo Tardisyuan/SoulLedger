@@ -136,11 +136,12 @@ class ExternalApiKey(AuditUserFields, models.Model):
 
 class DeathRegistrationStatus(models.TextChoices):
     """ACCEPTED 与 PARTIAL 已删(2026-10-29 用户决定):历史上从来没有代码写过它们(按提交记录搜索为空),
-    筛选里却列着。迁移 death_sync 的 drop_unwritten_statuses 把可能存在的旧行改成最接近的状态。"""
+    筛选里却列着。迁移 death_sync 的 drop_unwritten_statuses 把可能存在的旧行改成最接近的状态。
+    DUPLICATE 同样删去(审查 2026-11-01 P3,迁移 drop_duplicate_status):重复的键答 409 并交回原来那一条,
+    从不另写一行,所以没有行会是 DUPLICATE。"""
     PENDING = "PENDING", "Pending Validation"
     PROCESSED = "PROCESSED", "Processed Successfully"
     FAILED = "FAILED", "Processing Failed"
-    DUPLICATE = "DUPLICATE", "Duplicate - Already Processed"
 
 
 class DeathRegistrationRequest(AuditUserFields, models.Model):

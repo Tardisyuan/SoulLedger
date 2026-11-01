@@ -102,9 +102,10 @@ class DeathSyncService:
             DeathRegistrationRequest instance
 
         Raises:
-            IntegrityError: On duplicate idempotency_key. Re-raised on purpose:
+            IntegrityError: On duplicate idempotency_key whose row did not fail. Re-raised on purpose:
                 the caller owns the answer (the single view turns it into a
                 409 with the existing row, process_batch returns that row).
+                A key whose row FAILED is run again on that row (`_process_or_replay`).
         """
         start_time = timezone.now()
 
@@ -120,7 +121,34 @@ class DeathSyncService:
             status=DeathRegistrationStatus.PENDING,
         )
 
-        return DeathSyncService._process(request_record, tenant, payload, start_time)
+        return DeathSyncService._process_or_replay(request_record, tenant, payload, start_time)
+
+    @staticmethod
+    def _process_or_replay(request_record, tenant, payload, start_time):
+        """`_process` a new row; when its idempotency key already belongs to a FAILED row, run that row again
+        (review 2026-11-01 #13). A failed registration answered nothing, so resending the same request — the same
+        key — must not be held off as a duplicate: after the hall sets a city god, or the soul is entered, the
+        resend goes through. A key whose row is PENDING or PROCESSED stays a duplicate (IntegrityError)."""
+        try:
+            # Its own atomic: the failure row `_process` writes after its work rolled back is what collides
+            # with the key, and outside a savepoint that IntegrityError would break a caller's transaction.
+            with transaction.atomic():
+                return DeathSyncService._process(request_record, tenant, payload, start_time)
+        except IntegrityError:
+            with transaction.atomic():
+                # Locked as retry_failed locks it: two resends cannot both run die().
+                record = DeathRegistrationRequest.objects.select_for_update().filter(
+                    tenant=tenant, source_system=request_record.source_system,
+                    idempotency_key=request_record.idempotency_key,
+                ).first()
+                if record is None or record.status != DeathRegistrationStatus.FAILED:
+                    raise
+                record.error_code = ""
+                record.error_message = ""
+                record.source_payload = request_record.source_payload
+                record.source_reference_id = request_record.source_reference_id
+                record.source_ip = request_record.source_ip
+                return DeathSyncService._process(record, tenant, payload, start_time)
 
     @staticmethod
     def _process(request_record, tenant, payload, start_time):
@@ -241,7 +269,7 @@ class DeathSyncService:
     @staticmethod
     def register_by_tudi(tudi, payload, idempotency_key=None):
         """土地公登记一条死亡(`POST /death-sync/tudi-gods/{id}/register-death/`):同一张表、同一条处理,
-        `api_key` 为空,`source_system` 是 "TUDI"。重复的 `idempotency_key` 与外部登记一样抛 IntegrityError。"""
+        `api_key` 为空,`source_system` 是 "TUDI"。重复的 `idempotency_key` 与外部登记一样:登记失败过的重跑那一条,其余抛 IntegrityError。"""
         request_record = DeathRegistrationRequest(
             tenant=tudi.tenant,
             tudi_god=tudi,
@@ -251,7 +279,7 @@ class DeathSyncService:
             source_payload=payload,
             status=DeathRegistrationStatus.PENDING,
         )
-        return DeathSyncService._process(request_record, tudi.tenant, payload, timezone.now())
+        return DeathSyncService._process_or_replay(request_record, tudi.tenant, payload, timezone.now())
 
     @staticmethod
     def retry_failed(registration_id, tenant):

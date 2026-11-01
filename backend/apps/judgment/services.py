@@ -742,6 +742,9 @@ class JudgmentService:
                     raise OpenCaseRefusedError(
                         f"The soul is {soul.current_state}; it cannot enter judgment.", "cannot_enter_judgment")
                 city_gods.received(judgment)
+                from apps.dispatch import capture
+
+                capture.attach_judgment(soul, judgment)
                 # Egypt, as at `Soul.die` (review 2026-11-01 P3): an early death recorded before this death goes
                 # straight to the Field of Reeds, concluded PASSED unweighed; any other case sets out for the hall.
                 # Before this the case kept `duat_stage=EARLY_DEATH` and waited, unweighed, for an officer.

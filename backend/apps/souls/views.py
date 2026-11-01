@@ -712,6 +712,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # ALIVE → JUDGING by hand is a death, so it is recorded the way /die/ records one (review 2026-11-01 #4):
+        # the same date checks, then `Soul.die`, which opens the case, hands it to a city god (409 no_city_god
+        # when the hall has none), and runs the Egyptian embalming / Duat routing. `transition_to` alone moved
+        # the state and left a JUDGING soul with no case. Death date / location come from the body as for /die/.
+        if new_state == SoulState.JUDGING:
+            return self.die(request, pk)
         # Only the hand-made moves are offered here (2026-10-27 user decision): death (ALIVE → JUDGING, gated on
         # soul.die above) and missing / recalled (DISPOSED ⇄ LOST). JUDGING → DISPOSED, DISPOSED → REINCARNATING /
         # SETTLED and REINCARNATING → ALIVE belong to concluding a judgment, a sentence plan and a rebirth; driven
