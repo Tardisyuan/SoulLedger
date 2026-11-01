@@ -469,6 +469,13 @@ describe("the conversation's eight states", () => {
     expect(within(screen.getByTestId("pending-queued")).getByText("等待送出")).toBeTruthy();
   });
 
+  it("the ⋯ menu sits on the page's ground, not the plaque's, so its red rows can be read", () => {
+    openConversation(conv({ peer_user: 7 }), []);
+    const ground = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor;
+    fireEvent.press(screen.getByTestId("chat-menu"));
+    expect(ground("chat-menu-sheet")).not.toBe(ground("header"));
+  });
+
   it("a reply with neither a position nor a name is signed by the hall alone, with no dangling dot", () => {
     openConversation(hall({ hall: "第五殿", hall_names: { "zh-Hans": "第五殿", en: "The Fifth Court", egy: "Yanluo Wesekhet" } }), [
       { ...msg("e1", "@officer:hs.test", "申诉已收。", NOW), officer: "", officerTitle: "" },

@@ -14,7 +14,7 @@ import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { AssistScreen } from "@soulledger/core/api/soul-assist";
-import { useContext, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
 import { Emblem, Icon, type IconName } from "./emblems";
@@ -37,13 +37,25 @@ export function onPlaqueTheme(t: Theme): Theme {
   return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
 }
 
+/**
+ * The page's theme, for what a bar's control opens away from the bar: a sheet is on the page's ground, not the
+ * plaque's. Without it the 书信 ⋯ menu was band-coloured, its 举报 / 拉黑 red on 匾色, unreadable (found 2026-11-02).
+ */
+const PageThemeContext = createContext<Theme | null>(null);
+export function usePageTheme(): Theme {
+  const t = useTheme();
+  return useContext(PageThemeContext) ?? t;
+}
+
 /** The band's ground, from the status bar down, with whatever row the caller puts on it. */
 export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNode; testID?: string }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <View testID={testID} style={{ backgroundColor: t.band, paddingTop: insets.top }}>
-      <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
+      <PageThemeContext.Provider value={t}>
+        <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
+      </PageThemeContext.Provider>
     </View>
   );
 }
