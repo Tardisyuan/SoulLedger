@@ -429,7 +429,8 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
     fireEvent.press(screen.getByTestId("login-submit"));
     await screen.findByTestId("change-password-submit");
     expect(screen.queryByText("下次用面容登录？")).toBeNull(); // not over the forced change
-    fireEvent.changeText(screen.getByTestId("old-password"), "initial-pass");
+    // The initial password typed at sign-in is carried to the change (review 2026-11-01), not asked for again.
+    expect(screen.queryByTestId("old-password")).toBeNull();
     fireEvent.changeText(screen.getByTestId("new-password"), "a-new-password");
     fireEvent.changeText(screen.getByTestId("confirm-password"), "a-new-password");
     fireEvent.press(screen.getByTestId("change-password-submit"));

@@ -22,9 +22,6 @@ import { useBiometry } from "./useBiometry";
 
 export const LOCK_AFTER_MS = 5 * 60 * 1000;
 
-/** The reason the system shows with its check. A system string, like the sign-in one (Design 第二十批 §四.4). */
-const PROMPT = "用来解锁灵魂簿。";
-
 type Phase = "off" | "cover" | "locked";
 
 export function AppLock() {
@@ -42,14 +39,15 @@ export function AppLock() {
     setFailed(false);
     let ok = false;
     try {
-      ok = (await LocalAuthentication.authenticateAsync({ promptMessage: PROMPT, disableDeviceFallback: true })).success;
+      // The reason the system shows with its check, in the app's language (review 2026-11-01).
+      ok = (await LocalAuthentication.authenticateAsync({ promptMessage: t("soul_app.biometric.prompt_unlock"), disableDeviceFallback: true })).success;
     } catch {
       ok = false;
     }
     setBusy(false);
     if (ok) setPhase("off");
     else setFailed(true);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const offSuspend = onSessionSuspend(() => {

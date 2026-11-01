@@ -44,6 +44,7 @@ import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { daysLeft, formatStamp, TAG_GLYPH } from "../rules";
+import { mutedReasonOf } from "../socialStatus";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
@@ -81,6 +82,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const [viewing, setViewing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
+  const [mutedReason, setMutedReason] = useState<string | null>(null);
   const list = useRef<FlatList<Line>>(null);
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
   const c = chat.conversations?.find((row) => row.id === id) ?? chat.gone[id] ?? null;
@@ -145,7 +147,11 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     let alive = true;
     soulSocialApi
       .status()
-      .then((s) => alive && setMutedUntil(s.muted_until))
+      .then((s) => {
+        if (!alive) return;
+        setMutedUntil(s.muted_until);
+        setMutedReason(mutedReasonOf(s));
+      })
       .catch(() => {});
     return () => {
       alive = false;
@@ -339,7 +345,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
           </Pressable>
         </View>
       ) : null}
-      <Band mode={mode} mutedUntil={mutedUntil} hall={hallName} onHall={() => void goHall()} now={now} />
+      <Band mode={mode} mutedUntil={mutedUntil} mutedReason={mutedReason} hall={hallName} onHall={() => void goHall()} now={now} />
       {/* Inverted: offset 0 is the newest letter, so the thread opens there and stays there as the
           keyboard shrinks the view; older pages join at the far end (the top) without moving it.
           Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
@@ -506,12 +512,14 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
 function Band({
   mode,
   mutedUntil,
+  mutedReason,
   hall,
   onHall,
   now,
 }: {
   mode: ChatMode;
   mutedUntil: string | null;
+  mutedReason: string | null;
   hall: string;
   onHall: () => void;
   now: number;
@@ -567,6 +575,12 @@ function Band({
             ),
             "muted-reason"
           )}
+          {/* The hall's own words, when it gave any (`muted_reason`, 2026-11-01); none → nothing. */}
+          {mutedReason ? (
+            <Txt testID="muted-hall-reason" variant="caption" tone="muted">
+              {tr("soul_app.circle.muted.reason", { reason: mutedReason })}
+            </Txt>
+          ) : null}
           <Button testID="muted-to-hall" kind="secondary" title={tr("soul_app.chat.muted.to_hall", { hall })} onPress={onHall} style={styles.bandButton} />
         </View>
       );

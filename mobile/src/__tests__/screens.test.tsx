@@ -127,6 +127,30 @@ describe("applying", () => {
     expect(mockNavigate).toHaveBeenCalledWith("NewApplication");
   });
 
+  // review 2026-11-01: 「当前状态不能申请转生」 alone did not say why. The soul's state (from the profile) says it.
+  it.each([
+    ["ALIVE", "你还在世"],
+    ["JUDGING", "审判还没结束"],
+    ["DISPOSED", "还没进入轮回"],
+  ])("soul_state while %s: the reason names the state, not only 「当前状态不能申请转生」", async (current_state, words) => {
+    stubApi({ "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "soul_state", cooldown_until: null, results: [] } } });
+    const session = { state: { status: "signedIn", profile: { ...PROFILE, current_state } } };
+    wrap(
+      <SessionContext.Provider value={session as never}>
+        <ApplicationsScreen />
+      </SessionContext.Provider>
+    );
+    const said = (await screen.findByTestId("eligibility-reason")).props.children as string;
+    expect(said).toContain(words);
+    expect(said).not.toBe("当前状态不能申请转生");
+  });
+
+  it("soul_state without a profile keeps the server's sentence", async () => {
+    stubApi({ "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "soul_state", cooldown_until: null, results: [] } } });
+    wrap(<ApplicationsScreen />);
+    expect((await screen.findByTestId("eligibility-reason")).props.children).toBe("当前状态不能申请转生");
+  });
+
   it("an unknown reason code is shown with its raw value, not dropped", async () => {
     stubApi({ "/me/rebirth-applications/": { status: 200, data: { can_apply: false, reason: "brand_new_rule", cooldown_until: null, results: [] } } });
     wrap(<ApplicationsScreen />);

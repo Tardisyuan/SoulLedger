@@ -11,8 +11,9 @@ import type { WangsiGrievanceParams } from "./screens/wangsi";
  * Where on the life page a push landed (第四十批 S-e): a judgment's row, a disposition's row in 去向, or the
  * 「暂居 · 原属」 block. Washed for two seconds; the param is forgotten when the page is left.
  * `delivered`(第六十二批):「已超度」那一行(或并进了超度日期的枉死城那一行)—— 滚到那里,不洗底色。
+ * `appeals`:反馈页「请走审判申诉」的链接 —— 只打开「审判」那一节(各件审判底下就是申诉行),不洗底色。
  */
-export type LifeFocus = { judgment?: string; disposition?: string; residence?: boolean; delivered?: boolean };
+export type LifeFocus = { judgment?: string; disposition?: string; residence?: boolean; delivered?: boolean; appeals?: boolean };
 
 /** The life tab's params: a sentence push that landed on its section (受刑 1d), or a row to wash (S-e). */
 export type LifeParams = { sentenceLanding?: SentenceLanding; lifeFocus?: LifeFocus };

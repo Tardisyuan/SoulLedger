@@ -13,7 +13,7 @@ import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { BIO_KEY, EXPORT_PROMPT } from "../deviceLogin";
+import { BIO_KEY } from "../deviceLogin";
 import { formatBytes, safeFileName } from "../dataExport";
 import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
@@ -206,7 +206,7 @@ describe("face instead of the password", () => {
     fireEvent.press(await screen.findByTestId("export-request"));
     await screen.findByTestId("export-queued");
     expect(calls.find((c) => c.method === "POST" && c.url === "/me/export/")?.body).toEqual({ credential: CRED });
-    expect(secure.__auth.prompts).toEqual([EXPORT_PROMPT]);
+    expect(secure.__auth.prompts).toEqual(["用来确认是你本人，导出你的资料。"]);
     expect(screen.queryByTestId("export-sheet")).toBeNull();
   });
 

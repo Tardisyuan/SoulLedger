@@ -14,6 +14,15 @@ import { soulSocialApi, type SoulSocialStatus } from "@soulledger/core/api/soul-
 
 import { useRemote } from "./ui";
 
+/**
+ * Why the hall muted this soul: `muted_reason` (feat-letters, 2026-11-01). Typed by hand until the OpenAPI schema is
+ * regenerated; a blank or absent reason is no reason (the banner then says none).
+ */
+export function mutedReasonOf(status: SoulSocialStatus | null | undefined): string | null {
+  const reason = (status as { muted_reason?: string | null } | null | undefined)?.muted_reason;
+  return reason?.trim() ? reason.trim() : null;
+}
+
 let inflight: Promise<SoulSocialStatus> | null = null;
 const readers = new Set<() => unknown>();
 

@@ -21,7 +21,7 @@ import { useCurrentHall } from "../useCurrentHall";
 
 /** [id, question key, answer key]. Written out so the copy harvest and the bundles' parity tests see every key. */
 type Faq = readonly [string, string, string];
-const GROUPS: readonly { id: "login" | "visit" | "contact"; title: string; items: readonly Faq[] }[] = [
+const GROUPS: readonly { id: "login" | "visit" | "contact" | "terms"; title: string; items: readonly Faq[] }[] = [
   {
     id: "login",
     title: "soul_app.help.group_login",
@@ -33,6 +33,20 @@ const GROUPS: readonly { id: "login" | "visit" | "contact"; title: string; items
   },
   { id: "visit", title: "soul_app.help.group_visit", items: [["slip", "soul_app.help.q_slip", "soul_app.help.a_slip"]] },
   { id: "contact", title: "soul_app.help.group_contact", items: [["contact", "soul_app.help.q_contact", "soul_app.help.a_contact"]] },
+  // The words the pages use without saying what they mean (review 2026-11-01), the three appeals first.
+  {
+    id: "terms",
+    title: "soul_app.help.group_terms",
+    items: [
+      ["appeals", "soul_app.help.q_appeals", "soul_app.help.a_appeals"],
+      ["merit", "soul_app.help.q_merit", "soul_app.help.a_merit"],
+      ["disposition", "soul_app.help.q_disposition", "soul_app.help.a_disposition"],
+      ["sentence", "soul_app.help.q_sentence", "soul_app.help.a_sentence"],
+      ["cooldown", "soul_app.help.q_cooldown", "soul_app.help.a_cooldown"],
+      ["residing", "soul_app.help.q_residing", "soul_app.help.a_residing"],
+      ["hall", "soul_app.help.q_hall", "soul_app.help.a_hall"],
+    ],
+  },
 ];
 
 function Question({ item }: { item: Faq }) {
