@@ -7186,7 +7186,8 @@
       "queue": "审判",
       "search": "查询",
       "notices": "通知",
-      "me": "我的"
+      "me": "我的",
+      "notices_unread": "通知 · 有未读"
     },
     "todo": {
       "groups": {
@@ -7359,7 +7360,10 @@
       "logout_ok": "退出",
       "notify_categories": "通知类别",
       "muted_count": "静音 {{n}} 类",
-      "muted_none": "全部接收"
+      "muted_none": "全部接收",
+      "logout_pending": "还有 {{unsent}} 封回信没发出、{{drafts}} 份回信草稿。退出后会从这台设备上清除。",
+      "logout_retry": "先重试发送",
+      "logout_anyway": "仍然退出"
     },
     "back": "返回",
     "areas": {
@@ -7468,7 +7472,8 @@
       "handler": "经办 · {{name}}",
       "handler_none": "经办 · 未分配",
       "not_yours": "这封信由{{name}}经办，回信框只给经办人。要接过来，请他放回，或请管理员转给你。",
-      "assign_to_me": "转给我"
+      "assign_to_me": "转给我",
+      "moved": "灵魂已调往别处，暂不能回信。"
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
@@ -7488,7 +7493,10 @@
       "left_hall": "你已不在这一殿。",
       "retry": "没有发出，稍后再试",
       "view_existing": "看已有的回信",
-      "discard": "删除我的草稿"
+      "discard": "删除我的草稿",
+      "discard_confirm": "删除这份草稿？写的内容不能找回。",
+      "discard_ok": "删除",
+      "moved": "灵魂已调往别处，暂不能回信。你写的内容还留着。"
     },
     "list": {
       "more": "加载更多",
@@ -7600,7 +7608,11 @@
       "row_meta": "{{city_god}} · 冤情 {{level}}",
       "review_title": "枉死申诉 · {{name}}",
       "note_required": "先写审核意见",
-      "level_saves": "点选即保存"
+      "level_saves": "点选即保存",
+      "reject_title": "认定{{name}}的申诉不属实？",
+      "reject_body": "申诉将记为不属实，连同你的审核意见。",
+      "late_title": "认定{{name}}的申诉属实？",
+      "final": "结论记下后不能更改。"
     },
     "judgment": {
       "flow_progress": "审批流程 · 第 {{n}} / {{total}} 站",

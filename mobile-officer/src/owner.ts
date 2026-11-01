@@ -5,6 +5,10 @@
  * this is for whatever a path that did not clear left behind: the next officer must never see the last one's
  * cases, and above all `flushOutbox` must never send the last one's replies under the next one's name.
  *
+ * A session the server ended (401) does NOT clear the outbox and the drafts (user, 2026-11-01): they stay, unread while
+ * nobody is signed in, and `dropUnowned` at the next sign-in keeps them for the same officer and removes them for any
+ * other -- "换人不留痕" (A7) holds, the same officer gets the words back.
+ *
  * The owner is read from the stored profile (session.tsx writes it on sign-in and removes it on sign-out),
  * so no store has to be told when the officer changes. `null` when nobody is stored.
  */
@@ -37,4 +41,9 @@ export function readOwned<T extends object>(key: string): T | null {
 
 export function writeOwned(key: string, value: object): void {
   platform().persistent.set(key, JSON.stringify({ ...value, owner: currentOwner() }));
+}
+
+/** At sign-in: whatever under `keys` is not the officer's now goes (A7); the same officer's stays. */
+export function dropUnowned(keys: readonly string[]): void {
+  for (const key of keys) if (platform().persistent.get(key) != null && readOwned(key) === null) platform().persistent.remove(key);
 }

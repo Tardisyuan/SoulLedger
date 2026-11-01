@@ -9,6 +9,7 @@ import { Dimensions, Image, StyleSheet } from "react-native";
 import { TodoTab } from "../screens/todo";
 import { Detail } from "../screens/detail";
 import { INBOX_REPLY_MAX } from "@soulledger/core/api/soul-inbox";
+import { outboxReasonOf } from "../outbox";
 import { TODO_GROUPS, noticeLanding, replyFailureKey, replyReady, withTemplate } from "../rules";
 import { OFFICER, httpError, renderOfficer } from "./harness";
 
@@ -87,6 +88,10 @@ describe("rules", () => {
   it("says why a reply failed without quoting anything", () => {
     expect(replyFailureKey(httpError(503, { code: "chat_not_configured" }))).toBe("officer_app.letter.unavailable");
     expect(replyFailureKey(httpError(409, { code: "closed" }))).toBe("soul_inbox.errors.closed");
+    // feat-letters: the soul was dispatched to another hall.
+    expect(replyFailureKey(httpError(409, { code: "not_current_hall" }))).toBe("officer_app.letter.moved");
+    expect(outboxReasonOf(httpError(409, { code: "not_current_hall" }))).toBe("moved");
+    expect(outboxReasonOf(httpError(409, { code: "closed" }))).toBe("archived");
     expect(replyFailureKey(new Error("Network Error"))).toBe("officer_app.letter.failed");
   });
 });
@@ -96,7 +101,7 @@ describe("the to-do group", () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, approvals: group([row("approval", "a1")]), letters: group([row("letter", "c-1"), row("letter", "c-2")]) } });
     const onOpen = jest.fn();
     renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
-    expect(await screen.findByText("待回书信 · 2")).toBeTruthy();
+    expect(await screen.findByText("待我回的书信 · 2")).toBeTruthy();
     const drawn = screen.root.findAll((n) => typeof n.props.testID === "string" && /^todo-group-/.test(n.props.testID)).map((n) => n.props.testID);
     expect([...new Set(drawn)]).toEqual(["todo-group-approval", "todo-group-letter"]);
     fireEvent.press(screen.getByTestId("todo-row-letter-c-1"));
@@ -107,8 +112,8 @@ describe("the to-do group", () => {
     const { unmount } = renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     await screen.findByText("审批节点 · 1");
     expect(screen.queryByTestId("todo-group-letter")).toBeNull();
-    // The group's heading ("待回书信 · n"); the filter chip of the same name is a separate Text.
-    expect(screen.queryByText(/待回书信 ·/)).toBeNull();
+    // The group's heading ("待我回的书信 · n"); the filter chip of the same name is a separate Text.
+    expect(screen.queryByText(/待我回的书信 ·/)).toBeNull();
     unmount();
     const { letters: _omitted, ...older } = { ...NONE, approvals: group([row("approval", "a1")]) };
     mockTodo.mockResolvedValue({ data: older });
@@ -121,7 +126,7 @@ describe("the to-do group", () => {
       data: { ...NONE, letters: group([{ ...row("letter", "c-1"), feedback_tag: "record" }, row("letter", "c-2"), { ...row("letter", "c-3"), feedback_tag: "app" }]) },
     });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
-    await screen.findByText("待回书信 · 3");
+    await screen.findByText("待我回的书信 · 3");
     expect(within(screen.getByTestId("todo-row-letter-c-1")).getByText("反馈 · 我的记录有误")).toBeTruthy();
     expect(within(screen.getByTestId("todo-row-letter-c-3")).getByText("反馈 · App 出了问题")).toBeTruthy();
     expect(within(screen.getByTestId("todo-row-letter-c-2")).queryByText(/反馈/)).toBeNull();
@@ -129,13 +134,13 @@ describe("the to-do group", () => {
   it("a category it does not know shows nothing rather than a raw code", async () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, letters: group([{ ...row("letter", "c-1"), feedback_tag: "from-a-newer-server" }]) } });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
-    await screen.findByText("待回书信 · 1");
+    await screen.findByText("待我回的书信 · 1");
     expect(within(screen.getByTestId("todo-row-letter-c-1")).queryByText(/反馈|from-a-newer-server/)).toBeNull();
   });
   it("a list of only letters is not the empty state", async () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, letters: group([row("letter", "c-1")]) } });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
-    expect(await screen.findByText("待回书信 · 1")).toBeTruthy();
+    expect(await screen.findByText("待我回的书信 · 1")).toBeTruthy();
     expect(screen.queryByText("此刻没有轮到你的事")).toBeNull();
   });
 });
@@ -411,5 +416,27 @@ describe("who handles the letter", () => {
     await openThread();
     expect(screen.getByTestId("letter-not-yours")).toBeTruthy();
     expect(screen.queryByTestId("letter-assign-to-me")).toBeNull();
+  });
+});
+
+// feat-letters: `can_reply: false` -- the soul was dispatched elsewhere; the box gives way to one line saying so.
+describe("a soul moved to another hall", () => {
+  const open = async (id: string) => {
+    renderOfficer(<Detail target={{ type: "todo", kind: "letter", id }} onBack={() => {}} onSettled={jest.fn()} />);
+    await screen.findByTestId("letter-thread");
+  };
+
+  it("can_reply false: no reply box, the line instead", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m1", can_reply: false } });
+    await open("c-m1");
+    expect(screen.getByTestId("letter-moved")).toBeTruthy();
+    expect(screen.queryByTestId("letter-input")).toBeNull();
+  });
+
+  it("can_reply true: the box, and no such line", async () => {
+    mockGet.mockResolvedValue({ data: { ...CONVO, id: "c-m2", can_reply: true } });
+    await open("c-m2");
+    expect(screen.queryByTestId("letter-moved")).toBeNull();
+    expect(screen.getByTestId("letter-input")).toBeTruthy();
   });
 });

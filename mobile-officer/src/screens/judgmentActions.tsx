@@ -23,6 +23,7 @@ import {
   type AdminAction,
   type JudgmentActionState,
 } from "../rules";
+import { useKeptText } from "../keptText";
 import { useCan } from "../session";
 import { Input, Notice, Sheet, Txt, space, useI18n, useOnline, useRemote, useTheme, useToast } from "../shared";
 import { PeoplePickerSheet, type PickPerson } from "./letterActions";
@@ -118,7 +119,8 @@ export function JudgmentActionBar({
     <Pressable
       testID="judgment-more"
       accessibilityRole="button"
-      accessibilityLabel="⋯"
+      // Read out as words, not "horizontal ellipsis" (review 2026-11-01); the letter's ⋯ says the same.
+      accessibilityLabel={t("officer_app.letter.more")}
       onPress={() => open("menu")}
       style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.inkSubtle }}
     >
@@ -299,7 +301,8 @@ export function JudgmentActionBar({
 function ReassignSheet({ data, holder, onClose, onDone }: { data: Judgment; holder: string; onClose: () => void; onDone: (name: string) => void }) {
   const { t } = useI18n();
   const load = useRemote<AssignableOfficer[]>(useCallback(() => judgmentApi.assignableOfficers([data.id]).then((r) => r.data), [data.id]));
-  const [reason, setReason] = useState("");
+  // Kept across closing the sheet and a tab switch (keptText.ts); gone once the server took it.
+  const [reason, setReason, dropReason] = useKeptText(`reassign:${data.id}`);
   const [flagged, setFlagged] = useState(false);
   const find = useCallback(
     (q: string): PickPerson[] => {
@@ -330,7 +333,10 @@ function ReassignSheet({ data, holder, onClose, onDone }: { data: Judgment; hold
           setFlagged(true);
           return Promise.resolve();
         }
-        return judgmentApi.reassign(data.id, person.id, reason.trim()).then(() => onDone(person.name));
+        return judgmentApi.reassign(data.id, person.id, reason.trim()).then(() => {
+          dropReason();
+          onDone(person.name);
+        });
       }}
     >
       <Input
@@ -403,7 +409,8 @@ function ReasonSheet({
 }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const [reason, setReason] = useState("");
+  // Kept per sheet and case (keptText.ts): 取消 or a tab switch no longer throws away a half-written reason.
+  const [reason, setReason, dropReason] = useKeptText(`${testID}:${data.id}`);
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -415,6 +422,7 @@ function ReasonSheet({
     setBusy(true);
     setFailed(false);
     onSubmit(reason)
+      .then(() => dropReason())
       .catch(() => setFailed(true))
       .finally(() => setBusy(false));
   };

@@ -7186,7 +7186,8 @@
       "queue": "Judgments",
       "search": "Look up",
       "notices": "Notices",
-      "me": "Me"
+      "me": "Me",
+      "notices_unread": "Notices · unread"
     },
     "todo": {
       "groups": {
@@ -7359,7 +7360,10 @@
       "logout_ok": "Sign out",
       "notify_categories": "Notification types",
       "muted_count": "{{n}} muted",
-      "muted_none": "All on"
+      "muted_none": "All on",
+      "logout_pending": "{{unsent}} unsent replies and {{drafts}} reply drafts are still on this device. Signing out removes them.",
+      "logout_retry": "Try sending first",
+      "logout_anyway": "Sign out anyway"
     },
     "back": "Back",
     "areas": {
@@ -7468,7 +7472,8 @@
       "handler": "Handled by {{name}}",
       "handler_none": "Handled by · unassigned",
       "not_yours": "{{name}} is handling this letter, so only they can reply. To take it, ask them to put it back or ask an admin to hand it to you.",
-      "assign_to_me": "Hand to me"
+      "assign_to_me": "Hand to me",
+      "moved": "This soul has been moved elsewhere, so you can't reply for now."
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
@@ -7488,7 +7493,10 @@
       "left_hall": "You are no longer in this hall.",
       "retry": "Not sent. Try again later.",
       "view_existing": "See the existing reply",
-      "discard": "Delete my draft"
+      "discard": "Delete my draft",
+      "discard_confirm": "Delete this draft? What you wrote can't be recovered.",
+      "discard_ok": "Delete",
+      "moved": "This soul has been moved elsewhere, so you can't reply for now. What you wrote is kept."
     },
     "list": {
       "more": "Load more",
@@ -7600,7 +7608,11 @@
       "row_meta": "{{city_god}} · grievance {{level}}",
       "review_title": "Grievance · {{name}}",
       "note_required": "Write the review note first",
-      "level_saves": "Tap a level to save it"
+      "level_saves": "Tap a level to save it",
+      "reject_title": "Find {{name}}'s grievance not upheld?",
+      "reject_body": "The grievance is recorded as not upheld, with your review note.",
+      "late_title": "Find {{name}}'s grievance upheld?",
+      "final": "A finding can't be changed once recorded."
     },
     "judgment": {
       "flow_progress": "Approval workflow · station {{n}} of {{total}}",

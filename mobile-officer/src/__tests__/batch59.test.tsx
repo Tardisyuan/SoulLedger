@@ -155,6 +155,7 @@ describe("枉死申诉 review", () => {
     expect(disabled("wangsi-deliver")).toBe(true);
     expect(screen.getByTestId("wangsi-release-gate")).toBeTruthy();
     fireEvent.press(screen.getByTestId("wangsi-reject"));
+    fireEvent.press(screen.getByTestId("wangsi-confirm"));
     await waitFor(() => expect(mockDecide).toHaveBeenCalledWith("j-1", false, "不实", false));
   });
 
@@ -219,6 +220,7 @@ describe("枉死申诉 review", () => {
     expect(screen.queryByTestId("wangsi-deliver")).toBeNull();
     fireEvent.changeText(screen.getByTestId("wangsi-note"), "查实");
     fireEvent.press(screen.getByTestId("wangsi-uphold-late"));
+    fireEvent.press(screen.getByTestId("wangsi-confirm"));
     await waitFor(() => expect(mockDecide).toHaveBeenCalledWith("j-1", true, "查实", false));
   });
 
@@ -228,6 +230,7 @@ describe("枉死申诉 review", () => {
     review();
     fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
     fireEvent.press(screen.getByTestId("wangsi-reject"));
+    fireEvent.press(screen.getByTestId("wangsi-confirm"));
     expect(await screen.findByText("只有这位城隍名下的官员或殿管理员能审核。")).toBeTruthy();
   });
 
@@ -290,6 +293,7 @@ describe("no_city_god is gone from the grievance review (2026-10-29)", () => {
     );
     fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
     fireEvent.press(screen.getByTestId("wangsi-reject"));
+    fireEvent.press(screen.getByTestId("wangsi-confirm"));
     expect(await screen.findByTestId("wangsi-failure")).toBeTruthy();
     expect(screen.queryByText("本殿没有可收案的城隍，先在城隍管理里设一位兜底城隍。")).toBeNull();
   });

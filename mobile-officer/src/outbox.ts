@@ -13,8 +13,9 @@
  * queued and ends the run; one that the server answers with an error marks the entry `failed` with a
  * reason (below) and the run goes on to the next. Bodies are never logged.
  *
- * It is cleared with the drafts on sign-out and on a session the server ended (session.tsx), and it is
- * stored as `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
+ * It is cleared with the drafts on sign-out (after the officer was told how many, me.tsx); a session the server ended
+ * keeps it for the same officer's next sign-in (session.tsx, owner.ts `dropUnowned`). It is stored as
+ * `{ owner, items }` (owner.ts): another officer on this phone reads it as empty and never sends it.
  */
 import { soulInboxApi } from "@soulledger/core/api/soul-inbox";
 import { platform } from "@soulledger/core/platform";
@@ -26,7 +27,7 @@ import { currentOwner, readOwned, writeOwned } from "./owner";
 export const OUTBOX_KEY = "officer_reply_outbox";
 
 /** Why a queued reply did not go out; each has its own words (officer_app.outbox.<reason>). */
-export type OutboxReason = "answered" | "archived" | "left_hall" | "retry";
+export type OutboxReason = "answered" | "archived" | "left_hall" | "moved" | "retry";
 
 export interface OutboxEntry {
   /** The conversation. */
@@ -122,6 +123,8 @@ export function outboxReasonOf(error: unknown): OutboxReason {
   const status = statusOf(error);
   if (status === 403 || status === 404) return "left_hall";
   if (status === 409 && codeOf(error) === "closed") return "archived";
+  // The soul was dispatched elsewhere (feat-letters): not this hall's to answer now, retrying would not help.
+  if (status === 409 && codeOf(error) === "not_current_hall") return "moved";
   return "retry";
 }
 
@@ -162,6 +165,12 @@ async function run(): Promise<number> {
     }
   }
   return sent;
+}
+
+/** 「先重试发送」 before signing out: every queued reply, and every failed one whose reason is "try again". */
+export function retryAll(): Promise<number> {
+  commit(outboxEntries().map((e) => (e.state === "failed" && (e.reason ?? "retry") === "retry" ? { ...e, state: "queued" as const, reason: undefined } : e)));
+  return flushOutbox();
 }
 
 /** 「重试」 on a failed row. */

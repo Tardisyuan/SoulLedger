@@ -115,6 +115,8 @@ const failOnActWarnings = () => {
 };
 afterEach(failOnActWarnings);
 afterAll(failOnActWarnings);
+// Typed text kept across a tab switch lives for the process (src/keptText.ts): one test's words must not open the next one's screen.
+afterEach(() => require("./src/keptText").clearKeptText());
 
 // findBy/waitFor wait 5 s, not RNTL's default 1 s. Most suites here boot the whole
 // app (session, navigator, every tab) and wait for a screen that follows a mocked

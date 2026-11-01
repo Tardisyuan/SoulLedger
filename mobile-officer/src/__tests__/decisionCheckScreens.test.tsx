@@ -81,6 +81,7 @@ const SCREENS = [
       renderOfficer(<WangsiReview id="j-1" onSettled={jest.fn()} onDone={jest.fn()} />);
       fireEvent.changeText(await screen.findByTestId("wangsi-note"), "不实");
       fireEvent.press(screen.getByTestId("wangsi-reject"));
+      fireEvent.press(screen.getByTestId("wangsi-confirm"));
     },
   },
   {

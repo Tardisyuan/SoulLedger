@@ -17,6 +17,7 @@ import {
   failureReasonKey,
   hallLabel,
   passVerdictsOf,
+  reasonMaxLength,
   reasonMissing,
   rebirthCross,
   todoTitle,
@@ -24,6 +25,7 @@ import {
   type Verdict,
 } from "../rules";
 import { submitDecision } from "../decisions";
+import { useKeptText } from "../keptText";
 import { effectLine, objectLines } from "../todoFacts";
 import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 import { PEOPLE_SHOWN } from "./letterActions";
@@ -64,7 +66,9 @@ export function DecisionSheet({
   // O-b: a rebirth's first review says 「不跨」 on the sheet and on the button; one already set to cross is the desk's.
   const cross = verdict === "approve" ? rebirthCross(detail) : null;
   const toDesk = () => void Share.share({ message: deskUrl({ kind: "rebirth", id: detail.id }) }).catch(() => {});
-  const [reason, setReason] = useState("");
+  // Kept by item and verdict (keptText.ts): closing the sheet, or leaving the detail by a tab switch, keeps the words; the
+  // next opening starts with them. Before this a new `key` per opening wiped a half-written reason (review 2026-11-01).
+  const [reason, setReason, dropReason] = useKeptText(`decision:${verdict}:${detail.kind}:${detail.id}`);
   // The soul's wish pre-fills the days (editable, same rules); with none the field starts empty as before.
   const [days, setDays] = useState(cooldown?.desiredDays != null ? String(cooldown.desiredDays) : "");
   const [flagged, setFlagged] = useState(false);
@@ -77,8 +81,8 @@ export function DecisionSheet({
   const [passVerdict, setPassVerdict] = useState<string | null>(null);
   const chosenPass = passVerdict ?? passChoices[0];
 
-  // A sheet opened again starts clean because the caller gives it a new `key` per opening; a failed
-  // submit never resets anything, so the reason typed stays.
+  // A sheet opened again starts clean (the caller gives it a new `key` per opening) except for the reason, which is
+  // kept above; a failed submit never resets anything.
 
   const needsDays = detail.kind === "cooldown" && verdict === "approve";
   const parsedDays = /^\d+$/.test(days.trim()) ? Number(days.trim()) : null;
@@ -103,6 +107,7 @@ export function DecisionSheet({
       .then(() => {
         // O-f: an approved dispatch has not moved the soul yet -- the receiving hall executes it on the desk.
         if (detail.kind === "reassignment" && verdict === "approve") toast(t("officer_app.dispatch.approved_next"), "success");
+        dropReason();
         onDone();
         onClose();
       })
@@ -167,6 +172,7 @@ export function DecisionSheet({
             testID="decision-reason"
             label={t("officer_app.confirm.reason_label")}
             multiline
+            maxLength={reasonMaxLength(detail.kind)}
             value={reason}
             onChangeText={setReason}
             error={flagged && missingReason ? t("officer_app.confirm.reason_required") : null}

@@ -5,11 +5,11 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Pressable, Text } from "react-native";
 
-import { platform } from "@soulledger/core/platform";
+import { REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import { DRAFTS_KEY, DRAFT_KEEP, clearDrafts, flushDraft, readDraft, saveDraft, scheduleDraft } from "../drafts";
 import { Detail } from "../screens/detail";
-import { SessionProvider, useSession } from "../session";
-import { httpError, renderOfficer } from "./harness";
+import { SessionProvider, USER_KEY, useSession } from "../session";
+import { OFFICER, httpError, renderOfficer } from "./harness";
 
 const mockConvo = jest.fn();
 const mockMessages = jest.fn();
@@ -152,7 +152,11 @@ describe("whose drafts these are", () => {
     expect(stored()).toBeNull();
   });
 
-  it("a session the server ended removes them too, even with the box open", async () => {
+  // User, 2026-11-01: the server ending the session keeps the words for the same officer (signInKeepsUnsent.test.tsx);
+  // with nobody signed in they are nobody's, and the box's last keystrokes are written under the officer they belong to.
+  it("a session the server ended keeps them, unread, even with the box open", async () => {
+    platform().persistent.set(USER_KEY, JSON.stringify({ ...OFFICER, id: 41 }));
+    platform().secure.set(REFRESH_TOKEN_KEY, "r-41"); // signed in, so the box is open under officer 41
     saveDraft("c-9", "旧官员的话");
     const { unmount } = renderOfficer(
       <SessionProvider>
@@ -162,9 +166,12 @@ describe("whose drafts these are", () => {
     await screen.findByTestId("letter-thread");
     fireEvent.changeText(screen.getByTestId("letter-input"), "正打到一半");
     act(() => platform().onUnauthorized());
-    expect(stored()).toBeNull();
-    unmount(); // the unmount flush must not restore what was just wiped
-    expect(stored()).toBeNull();
-    expect(readDraft("c-1")).toBe("");
+    unmount();
+    platform().secure.remove(REFRESH_TOKEN_KEY);
+    expect(readDraft("c-1")).toBe(""); // nobody is signed in now
+    const kept = JSON.parse(stored()!) as { owner: string; drafts: { id: string; text: string }[] };
+    expect(kept.owner).toBe("id:41");
+    expect(kept.drafts.map((d) => d.id).sort()).toEqual(["c-1", "c-9"]);
+    expect(kept.drafts.find((d) => d.id === "c-1")?.text).toBe("正打到一半");
   });
 });
