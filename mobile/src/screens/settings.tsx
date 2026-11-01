@@ -557,6 +557,7 @@ export function SettingsScreen() {
           state={devices.data ? String(devices.data.length) : devices.error ? t("soul_app.settings.row_load_failed") : null}
           onPress={() => navigation.navigate("SignIns")}
         />
+        <NavRow testID="open-chat-blocks" label={t("soul_app.chat.blocks.title")} onPress={() => navigation.navigate("ChatBlocks")} />
         <EmailRow />
       </View>
       {/* 第二十八批 S3: its own section under 账号安全, one row. */}

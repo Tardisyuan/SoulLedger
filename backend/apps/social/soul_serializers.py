@@ -215,6 +215,7 @@ class SoulSocialStatusSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     can_write = serializers.BooleanField()
     muted_until = serializers.DateTimeField(allow_null=True)
+    muted_reason = serializers.CharField(allow_blank=True, help_text="殿司写的禁言理由;没禁言或没写理由为空串。")
     reports_remaining = serializers.IntegerField()
     unread_interactions = serializers.IntegerField(help_text="「互动」的未读行数(第四十批 S-a)")
 

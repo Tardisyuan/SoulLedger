@@ -29,6 +29,7 @@ from apps.chat import services as svc
 from apps.chat.matrix import MatrixError, MatrixNotConfiguredError
 from apps.chat.models import Conversation, ConversationKind, InboxReplyTemplate
 from apps.chat.serializers import (
+    ChatBlockSerializer,
     ChatErrorSerializer,
     ChatLookupResultSerializer,
     ChatLookupSerializer,
@@ -96,6 +97,9 @@ class MeChatConversationsView(ChatView):
         account = self.account
         rows = Conversation.objects.filter(
             Q(account_a=account) | Q(account_b=account)
+        ).exclude(
+            # 我拒绝了的申请不再列给我(发起方那一侧照列,只读,`refusal=declined`)。
+            Q(declined_at__isnull=False) & ~Q(initiator=account.soul_id)
         ).select_related(*svc.ACCOUNT_JOINS, "tenant")
         context = {"soul_id": account.soul_id, "account": account}
         return Response(ConversationSerializer(rows, many=True, context=context).data)
@@ -128,6 +132,45 @@ class MeChatConversationsView(ChatView):
             ConversationSerializer(conversation, context={"soul_id": account.soul_id, "account": account}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+class MeChatDeclineView(ChatView):
+    """`POST /me/chat/conversations/{id}/decline/`:拒绝这一次书信申请(只对别人发来、我还没回的)。
+    会话关闭、从我的列表里消失;对方看到「这次申请未被接受」,满一个请求间隔后可再申请。"""
+
+    @extend_schema(request=None, responses={204: None, 404: ChatErrorSerializer, 409: ChatErrorSerializer,
+                                            503: ChatErrorSerializer})
+    def post(self, request, conversation_id):
+        svc.decline_request(self.account, conversation_id, request=request)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MeChatBlockConversationView(ChatView):
+    """`POST /me/chat/conversations/{id}/block/`:拉黑这个私聊里的对方。幂等。
+    对方此后只看到「无法送达」;我在这个会话里也不能说话,直到在 `DELETE /me/chat/blocks/{id}/` 解除。"""
+
+    @extend_schema(request=None, responses={201: ChatBlockSerializer, 404: ChatErrorSerializer})
+    def post(self, request, conversation_id):
+        block = svc.block_peer(self.account, conversation_id, request=request)
+        row = svc.blocks_of(self.account).get(pk=block.pk)
+        return Response(ChatBlockSerializer(row).data, status=status.HTTP_201_CREATED)
+
+
+class MeChatBlocksView(ChatView):
+    """`GET /me/chat/blocks/`:我拉黑的人(设置 › 书信 › 已拉黑)。不分页:这是一个人亲手拉黑的名单。"""
+
+    @extend_schema(responses={200: ChatBlockSerializer(many=True)})
+    def get(self, request):
+        return Response(ChatBlockSerializer(svc.blocks_of(self.account), many=True).data)
+
+
+class MeChatBlockView(ChatView):
+    """`DELETE /me/chat/blocks/{id}/`:解除。别人的与不存在答同一个 404。"""
+
+    @extend_schema(request=None, responses={204: None, 404: ChatErrorSerializer})
+    def delete(self, request, block_id):
+        svc.unblock(self.account, block_id, request=request)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ChatLookupThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):

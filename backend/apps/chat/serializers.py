@@ -35,7 +35,8 @@ class ConversationSerializer(serializers.ModelSerializer):
     next_request_at = serializers.SerializerMethodField(
         help_text="我发起的被节流私聊:何时可以再发一条请求;还没发过、或不受节流时为空。")
     refusal = serializers.SerializerMethodField(
-        help_text="此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed`),"
+        help_text="此刻不能在这里说话的原因码(`muted` / `peer_retired` / `not_current_hall` / `closed` / "
+                  "`declined` 这次申请被拒 / `peer_blocked` 我拉黑了对方 / `undeliverable` 无法送达),"
                   "能说为空。与发送时服务端拒绝的是同一个判断(`services.refusal`)。")
 
     class Meta:
@@ -94,6 +95,20 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_hall_names(self, obj) -> dict[str, str] | None:
         return obj.tenant.hall_names if obj.kind == ConversationKind.OFFICER_INBOX else None
+
+
+class ChatBlockSerializer(serializers.Serializer):
+    """`GET /me/chat/blocks/` 的一行:我拉黑的人。灵魂编号不出库,认得的是朋友圈的 user_id 与显示名。"""
+
+    id = serializers.UUIDField()
+    peer_user = serializers.IntegerField(source="blocked.user_id", help_text="被拉黑那一世账号的 user_id。")
+    peer_name = serializers.SerializerMethodField(help_text="被拉黑那一世的显示名。")
+    created_at = serializers.DateTimeField()
+
+    def get_peer_name(self, obj) -> str:
+        from apps.chat.identity import display_name
+
+        return display_name(obj.blocked)
 
 
 class ConversationCreateSerializer(serializers.Serializer):
@@ -200,13 +215,20 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
                                       help_text="「标给同僚」的经办人,殿司共享;没有为 null。")
     feedback_tag = serializers.CharField(read_only=True, help_text="从 App「帮助与反馈」来的信的类别码"
                                          "(account / record / app / other),还没人回时才有;否则空串。")
+    can_reply = serializers.SerializerMethodField(
+        help_text="殿司此刻能否回这封:未关闭,且灵魂此刻就在这个殿司。灵魂调走后为 false(回信 409 `not_current_hall`)。")
 
     class Meta:
         model = Conversation
         fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name", "hall_names",
                   "last_message_at", "last_soul_message_at", "last_from", "unread", "has_draft", "archived",
-                  "assignee", "assigned_at", "feedback_tag", "created_at", "closed_at"]
+                  "assignee", "assigned_at", "feedback_tag", "created_at", "closed_at", "can_reply"]
         read_only_fields = fields
+
+    def get_can_reply(self, obj) -> bool:
+        from apps.chat.services import hall_can_reply
+
+        return hall_can_reply(obj)
 
 
 class InboxHallCountSerializer(serializers.Serializer):

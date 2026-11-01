@@ -78,7 +78,8 @@ def folder_q(folder):
         return Q(archived=True)
     live = Q(archived=False)
     if folder == "awaiting_reply":
-        return live & Q(last_from="soul", closed_at__isnull=True)
+        # 灵魂已调走的那封不算「待回复」:殿司回不了它(`services.hall_can_reply`,2026-11-01)。
+        return live & Q(last_from="soul", closed_at__isnull=True, soul_a__tenant_id=F("tenant_id"))
     if folder == "replied":
         return live & Q(last_from="hall")
     if folder == "drafts":

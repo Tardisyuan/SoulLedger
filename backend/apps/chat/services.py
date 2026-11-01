@@ -49,7 +49,7 @@ from apps.chat.grant import KEY as GRANT_KEY
 from apps.chat.grant import sign as sign_grant
 from apps.chat.identity import deactivate_identity, display_name, ensure_identity
 from apps.chat.matrix import MatrixError, get_client, login_jwt
-from apps.chat.models import ChatIdentity, Conversation, ConversationKind
+from apps.chat.models import ChatBlock, ChatIdentity, Conversation, ConversationKind
 from apps.social import soul_circle as circle
 from apps.social.models import Follow
 
@@ -236,8 +236,32 @@ def _live_identities(conversation):
     return rows
 
 
+def block_between(account, peer_account):
+    """`"by_me"`:`account` 拉黑了对方;`"by_peer"`:对方拉黑了 `account`;都没有为 None。两边都拉黑时答 `"by_me"`
+    —— 自己拉黑的自己知道,说「无法送达」反而像在瞒他。"""
+    if account is None or peer_account is None:
+        return None
+    blockers = set(ChatBlock.objects.filter(
+        Q(blocker=account, blocked=peer_account) | Q(blocker=peer_account, blocked=account)
+    ).values_list("blocker_id", flat=True))
+    if account.pk in blockers:
+        return "by_me"
+    return "by_peer" if blockers else None
+
+
+def _block_refusal(block):
+    """被拉黑的一方**只看到「无法送达」**(2026-11-01 用户定):这句话不说原因,也不与别的拒绝共用措辞。"""
+    if block == "by_me":
+        return ChatError("你已拉黑对方。在设置里解除之后才能写信。", "peer_blocked", status=409)
+    if block == "by_peer":
+        return ChatError("无法送达。", "undeliverable", status=403)
+    return None
+
+
 def refusal(conversation, account, peer_account=None):
     """`account` 此刻不能在这个会话里说话的理由(`ChatError`),能说则 None。"""
+    if conversation.declined_at is not None:
+        return ChatError("这次书信申请未被接受。", "declined", status=409)
     if conversation.closed_at is not None:
         return ChatError("会话已关闭。", "closed", status=409)
     if conversation.kind == ConversationKind.OFFICER_INBOX:
@@ -246,6 +270,9 @@ def refusal(conversation, account, peer_account=None):
         return None
     if peer_account is None or not circle.is_current_soul(peer_account.user):
         return ChatError("对方账号已停用。", "peer_retired", status=409)
+    blocked = _block_refusal(block_between(account, peer_account))
+    if blocked is not None:
+        return blocked
     if circle.active_mute(account.user) is not None:
         return ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
     return None
@@ -404,6 +431,9 @@ def open_direct(account, target_user, *, request=None):
     target_soul = target_account.soul
     if circle.active_mute(account.user) is not None:
         raise ChatError("你已被禁言,期间不能私聊。", "muted", status=403)
+    blocked = _block_refusal(block_between(account, target_account))
+    if blocked is not None:
+        raise blocked
 
     low, high = _pair(soul, target_soul)
     account_of = {soul.pk: account, target_soul.pk: target_account}
@@ -413,10 +443,19 @@ def open_direct(account, target_user, *, request=None):
     if existing is not None:
         return refresh_throttle(existing), False
 
+    mutual = _mutual(account, target_account)
+    if not mutual:
+        # 被拒绝的申请:同一个发起方要等满一个请求间隔才能再申请(新房间),否则「拒绝」只是让他立刻再发一封。
+        declined = Conversation.objects.filter(
+            kind=ConversationKind.DIRECT, soul_a=low, soul_b=high, initiator=soul, declined_at__isnull=False
+        ).order_by("-declined_at").values_list("declined_at", flat=True).first()
+        interval = timedelta(seconds=settings.CHAT_REQUEST_INTERVAL_SECONDS)
+        if declined is not None and timezone.now() - declined < interval:
+            raise _throttled(declined + interval)
+
     client = get_client()
     mine = ensure_identity(account, client=client)
     theirs = ensure_identity(target_account, client=client)
-    mutual = _mutual(account, target_account)
 
     room_id = client.create_room(
         name=f"{display_name(account)} · {display_name(target_account)}",
@@ -584,6 +623,86 @@ def _throttled(retry_at):
     return error
 
 
+# ── 拒绝与拉黑(2026-11-01 用户定)────────────────────────────────────────
+
+
+def _not_found():
+    return ChatError("会话不存在。", "not_found", status=404)
+
+
+def decline_request(account, conversation_id, *, request=None):
+    """接收方拒绝**这一次**私聊请求:会话关闭(只读)、从拒绝方的列表里消失;发起方看到 `declined`,
+    满一个请求间隔后可以再申请(`open_direct`)。只对「别人发来、我还没回」的请求;回过话的会话要断就拉黑。
+
+    参与方按这一世的账号认,别人的会话与不存在答同一个 404。"""
+    with transaction.atomic():
+        conversation = (Conversation.objects.select_for_update(of=("self",)).select_related(*ACCOUNT_JOINS)
+                        .filter(pk=conversation_id, kind=ConversationKind.DIRECT).first())
+        if conversation is None or not conversation.has_account(account.pk):
+            raise _not_found()
+        if conversation.closed_at is not None:
+            raise ChatError("会话已关闭。", "closed", status=409)
+        conversation = refresh_throttle(conversation)  # 我其实已经在 Matrix 里回过话了:那就不再是请求
+        if not conversation.throttled or conversation.initiator_id in (None, account.soul_id):
+            raise ChatError("只有别人发来、你还没回的书信申请可以拒绝。", "not_a_request", status=409)
+        conversation.declined_at = conversation.closed_at = timezone.now()
+        conversation.save(update_fields=["declined_at", "closed_at"])
+        audit("UPDATE", conversation, "拒绝私聊请求", actor=account.user, request=request)
+    # 双方在房间里降到 0、记 `silenced_at`:`sync_rooms` 连「已关闭、还欠降权」的一起做。
+    soul = account.soul
+    transaction.on_commit(lambda: enqueue_sync_rooms(soul))
+    return conversation
+
+
+def _block_audit(action, account, block, description, request):
+    from apps.audit.models import AuditLog
+    from apps.core.client_ip import get_client_ip
+
+    AuditLog.objects.create(
+        tenant_id=account.soul.tenant_id, user=account.user, action=action, resource="chat_block",
+        resource_id=str(block.pk), description=description,
+        ip_address=get_client_ip(request) if request is not None else None,
+        user_agent=request.META.get("HTTP_USER_AGENT", "")[:500] if request is not None else "",
+    )
+
+
+def block_peer(account, conversation_id, *, request=None):
+    """在一个私聊会话里拉黑对方(那一世的账号)。幂等:已拉黑返回同一行。
+
+    房间不关:解除之后还是这段会话。双方的发言权由 `refusal` 算(我 `peer_blocked`、对方 `undeliverable`),
+    写进 Synapse 交给 celery。"""
+    conversation = (Conversation.objects.select_related(*ACCOUNT_JOINS)
+                    .filter(pk=conversation_id, kind=ConversationKind.DIRECT).first())
+    if conversation is None or not conversation.has_account(account.pk):
+        raise _not_found()
+    peer = conversation.other_account(account.pk)
+    if peer is None:
+        raise _not_found()
+    with transaction.atomic():
+        block, created = ChatBlock.objects.get_or_create(blocker=account, blocked=peer)
+        if created:
+            _block_audit("CREATE", account, block, f"拉黑私聊对方(会话 {conversation.pk})", request)
+    soul = account.soul
+    transaction.on_commit(lambda: enqueue_sync_rooms(soul))
+    return block
+
+
+def blocks_of(account):
+    return ChatBlock.objects.filter(blocker=account).select_related("blocked__user", "blocked__soul")
+
+
+def unblock(account, block_id, *, request=None):
+    """解除。只认自己的那一行:别人的与不存在答同一个 404。"""
+    with transaction.atomic():
+        block = ChatBlock.objects.filter(pk=block_id, blocker=account).first()
+        if block is None:
+            raise ChatError("没有这条拉黑记录。", "not_found", status=404)
+        _block_audit("DELETE", account, block, "解除私聊拉黑", request)
+        block.delete()
+    soul = account.soul
+    transaction.on_commit(lambda: enqueue_sync_rooms(soul))
+
+
 # ── 新书信推送 ───────────────────────────────────────────────────────────
 
 
@@ -633,8 +752,12 @@ def _recipient(conversation, sender):
     if sender_account is None:
         return None, None
     sender_life = conversation.account_a if conversation.account_a_id == sender_account else conversation.account_b
+    recipient = conversation.other_account(sender_account)
+    # 拉黑之后、Synapse 那边降权之前(celery 还没跑到)漏进来的一条:不推。
+    if block_between(recipient, sender_life) is not None:
+        return None, None
     name = display_name(sender_life)
-    return conversation.other_account(sender_account), lambda locale: name
+    return recipient, lambda locale: name
 
 
 # ── 官员收件箱 ───────────────────────────────────────────────────────────
@@ -777,6 +900,11 @@ def officer_title(officer):
     return (actor.title_zh or actor.title) if actor is not None else ""
 
 
+def hall_can_reply(conversation):
+    """殿司此刻能不能在这封收件箱里回信:没关闭,且灵魂**此刻**就在这个殿司。"""
+    return conversation.closed_at is None and conversation.soul_a.tenant_id == conversation.tenant_id
+
+
 def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
     """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
     (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
@@ -784,6 +912,10 @@ def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
         raise ChatError("只有殿司收件箱可以由官员回复。", "not_inbox", status=409)
     if conversation.closed_at is not None:
         raise ChatError("会话已关闭(对方已转世)。", "closed", status=409)
+    if not hall_can_reply(conversation):
+        # 与灵魂那一侧同一条规则(`refusal` 的 `not_current_hall`):灵魂调走之后只能写给新殿司,
+        # 原殿司也不再往这封里写 —— 否则灵魂收到一封回不了的信(2026-11-01 审查 P3)。回归之后又能写。
+        raise ChatError("灵魂已不在这个殿司,这封信只读。", "not_current_hall", status=409)
     client = get_client()
     event_id = client.send_message(
         conversation.room_id, body,

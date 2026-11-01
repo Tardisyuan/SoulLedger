@@ -18,6 +18,7 @@
  * composer stays and still takes text — it queues — and only the send key
  * steps down to secondary (1c ⑦).
  */
+import { soulChatApi, soulChatErrorMessage } from "@soulledger/core/api/soul-chat";
 import { soulSocialApi } from "@soulledger/core/api/soul-social";
 import { hasRead, type ChatMessage } from "@soulledger/core/api/matrix";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
@@ -38,7 +39,7 @@ import Svg, { Path } from "react-native-svg";
 
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
-import { bubbleStamp, chatMode, dayOf, type ChatMode } from "../chatRules";
+import { bubbleStamp, chatMode, dayOf, type ChatMode, type ClosedReason } from "../chatRules";
 import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
@@ -81,6 +82,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const [viewing, setViewing] = useState<number | null>(null);
   const [picking, setPicking] = useState(false);
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
+  // 书信申请的拒绝与拉黑 (2026-11-01): one request at a time; the block asks first.
+  const [deciding, setDeciding] = useState(false);
+  const [askBlock, setAskBlock] = useState(false);
   const list = useRef<FlatList<Line>>(null);
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
   const c = chat.conversations?.find((row) => row.id === id) ?? chat.gone[id] ?? null;
@@ -239,6 +243,39 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     }
   };
 
+  /** Their unanswered request, turned down this once: it leaves my list, so the screen closes. */
+  const decline = async () => {
+    if (!c || deciding) return;
+    setDeciding(true);
+    try {
+      await soulChatApi.decline(c.id);
+      toast(tr("soul_app.chat.request.declined"), "success");
+      await chat.reload();
+      navigation.goBack();
+    } catch (error) {
+      const m = soulChatErrorMessage(error);
+      toast(tr(m.key, m.params), "failure");
+    } finally {
+      setDeciding(false);
+    }
+  };
+
+  /** After the server says yes the list says `peer_blocked` and the screen turns read-only on its own. */
+  const block = async () => {
+    if (!c || deciding) return;
+    setDeciding(true);
+    try {
+      await soulChatApi.block(c.id);
+      setAskBlock(false);
+      toast(tr("soul_app.chat.block.done"), "success");
+      await chat.reload();
+    } catch {
+      toast(tr("soul_app.chat.block.failed"), "failure");
+    } finally {
+      setDeciding(false);
+    }
+  };
+
   if (!c || !mode) {
     return (
       <View style={[styles.fill, { backgroundColor: t.s0 }]}>
@@ -320,7 +357,15 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             right={
               <View style={styles.rightSlot}>
                 {sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} /> : null}
-                {c.peer_user != null ? <PeerMenu userId={c.peer_user} name={c.peer_name} /> : ANDROID ? null : <View style={styles.icon} />}
+                {c.peer_user != null ? (
+                  <PeerMenu
+                    userId={c.peer_user}
+                    name={c.peer_name}
+                    onBlock={mode.kind === "closed" && mode.reason === "peer_blocked" ? undefined : () => setAskBlock(true)}
+                  />
+                ) : ANDROID ? null : (
+                  <View style={styles.icon} />
+                )}
               </View>
             }
           />
@@ -339,7 +384,15 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
           </Pressable>
         </View>
       ) : null}
-      <Band mode={mode} mutedUntil={mutedUntil} hall={hallName} onHall={() => void goHall()} now={now} />
+      <Band
+        mode={mode}
+        mutedUntil={mutedUntil}
+        hall={hallName}
+        onHall={() => void goHall()}
+        now={now}
+        onDecline={() => void decline()}
+        onBlock={() => setAskBlock(true)}
+      />
       {/* Inverted: offset 0 is the newest letter, so the thread opens there and stays there as the
           keyboard shrinks the view; older pages join at the far end (the top) without moving it.
           Muted: the history stays fully legible — not dimmed, not blurred (1c ⑤). Only sealed rooms recede. */}
@@ -358,8 +411,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         // Inverted, the header sits under the newest letter and the footer above the oldest.
         ListHeaderComponent={
           <>
-            {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). */}
-            {!inbox && c.closed_at ? (
+            {/* Where the thread stops: the server's `closed_at` (the other soul's rebirth closed it). A declined
+                request also has `closed_at`, but no rebirth: its band says why, without this line. */}
+            {!inbox && c.closed_at && mode.kind === "closed" && mode.reason === "closed" ? (
               <Txt testID="closed-marker" variant="value" tone="subtle" style={styles.day}>
                 {tr("soul_app.chat.closed.marker", { date: dayOf(Date.parse(c.closed_at)) })}
               </Txt>
@@ -397,6 +451,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
         onHall={() => void goHall()}
         bottom={insets.bottom}
       />
+      <BlockSheet name={c.peer_name} open={askBlock} busy={deciding} onConfirm={() => void block()} onClose={() => setAskBlock(false)} />
     </KeyboardAvoidingView>
   );
 }
@@ -435,8 +490,11 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
   );
 }
 
-/** The top-right ⋯ (Design 聊天 ①): 「看他的主页」 opens the circle profile, 「举报」 the circle's account report. */
-function PeerMenu({ userId, name }: { userId: number; name: string }) {
+/**
+ * The top-right ⋯ (Design 聊天 ①): 「看他的主页」 opens the circle profile, 「举报」 the circle's account report,
+ * 「拉黑」 (2026-11-01) asks first (`BlockSheet`); absent once I have blocked them.
+ */
+function PeerMenu({ userId, name, onBlock }: { userId: number; name: string; onBlock?: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
@@ -468,6 +526,13 @@ function PeerMenu({ userId, name }: { userId: number; name: string }) {
                 {tr("soul_app.chat.menu.report")}
               </Txt>
             </Pressable>
+            {onBlock ? (
+              <Pressable testID="chat-menu-block" accessibilityRole="button" onPress={go(onBlock)} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+                <Txt variant="bodyLg" tone="neg">
+                  {tr("soul_app.chat.menu.block")}
+                </Txt>
+              </Pressable>
+            ) : null}
             <Pressable testID="chat-menu-cancel" accessibilityRole="button" onPress={() => setOpen(false)} style={styles.menuCancel}>
               <Txt variant="body" tone="muted">
                 {tr("soul_app.common.cancel")}
@@ -477,6 +542,28 @@ function PeerMenu({ userId, name }: { userId: number; name: string }) {
         </View>
       </Modal>
     </>
+  );
+}
+
+/** 拉黑 asks once: what it does, and where it is undone. */
+function BlockSheet({ name, open, busy, onConfirm, onClose }: { name: string; open: boolean; busy: boolean; onConfirm: () => void; onClose: () => void }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.fill, { backgroundColor: t.scrim }]}>
+        <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={tr("soul_app.common.cancel")} />
+        <View testID="block-sheet" accessibilityViewIsModal style={[styles.sheet, styles.confirmSheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
+          <Txt variant="bodyLg">{tr("soul_app.chat.block.confirm_title", { name })}</Txt>
+          <Txt variant="caption" tone="muted">
+            {tr("soul_app.chat.block.confirm_body")}
+          </Txt>
+          <Button testID="block-confirm" kind="danger" title={tr("soul_app.chat.block.confirm")} busy={busy} onPress={onConfirm} />
+          <Button testID="block-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={onClose} />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -503,18 +590,31 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
 
 // ── the band under the title ───────────────────────────────────────────
 
+/** Why a soul conversation is read-only. `undeliverable` is all a blocked soul is told (2026-11-01). */
+const CLOSED_COPY: Record<ClosedReason, string> = {
+  closed: "soul_app.chat.closed.peer_reborn",
+  peer_retired: "soul_app.chat.closed.peer_retired",
+  declined: "soul_app.chat.closed.declined",
+  peer_blocked: "soul_app.chat.closed.peer_blocked",
+  undeliverable: "soul_app.chat.closed.undeliverable",
+};
+
 function Band({
   mode,
   mutedUntil,
   hall,
   onHall,
   now,
+  onDecline,
+  onBlock,
 }: {
   mode: ChatMode;
   mutedUntil: string | null;
   hall: string;
   onHall: () => void;
   now: number;
+  onDecline: () => void;
+  onBlock: () => void;
 }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -540,13 +640,18 @@ function Band({
     case "outgoing_locked":
       return <View style={box}>{line("info", tr("soul_app.chat.request.outgoing_hint"), "hint-outgoing")}</View>;
     case "incoming":
-      return <View style={box}>{line("info", tr("soul_app.chat.request.incoming_hint"), "hint-incoming")}</View>;
-    case "closed":
+      // 2026-11-01: their request can be turned down this once, or its sender blocked.
       return (
         <View style={box}>
-          {line("lock", tr(mode.reason === "peer_retired" ? "soul_app.chat.closed.peer_retired" : "soul_app.chat.closed.peer_reborn"), "closed-reason")}
+          {line("info", tr("soul_app.chat.request.incoming_hint"), "hint-incoming")}
+          <View style={styles.requestActions}>
+            <SmallButton testID="request-decline" title={tr("soul_app.chat.request.decline")} onPress={onDecline} />
+            <SmallButton testID="request-block" title={tr("soul_app.chat.request.block")} onPress={onBlock} />
+          </View>
         </View>
       );
+    case "closed":
+      return <View style={box}>{line("lock", tr(CLOSED_COPY[mode.reason]), "closed-reason")}</View>;
     case "muted":
       return (
         <View style={box} testID="muted-band">
@@ -858,6 +963,8 @@ const styles = StyleSheet.create({
   smallButton: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
   band: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
   bandRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  requestActions: { flexDirection: "row", gap: 8, paddingTop: 12, paddingLeft: 23 },
+  confirmSheet: { paddingHorizontal: 20, paddingTop: 20, gap: 12 },
   bandButton: { marginTop: 12 },
   nudge: { marginTop: 2 },
   // flex-end in the inverted list is the visual top: a short thread starts under the band, as before.

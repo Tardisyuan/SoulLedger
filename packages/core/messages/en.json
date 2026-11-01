@@ -5161,7 +5161,24 @@
         "incoming_hint": "A first letter. Reply and you can speak freely; you may also leave it.",
         "locked": "Waiting for a reply",
         "next_at": "One letter sent. You may send another from {{time}}.",
-        "throttled": "One letter a day, and today's is sent. You may send again from {{time}}. Your draft is kept."
+        "throttled": "One letter a day, and today's is sent. You may send again from {{time}}. Your draft is kept.",
+        "decline": "Decline",
+        "block": "Block",
+        "declined": "Request declined"
+      },
+      "block": {
+        "confirm_title": "Block {{name}}?",
+        "confirm_body": "Once blocked, they cannot write to you, and this thread stops here. You can undo it in Settings › Blocked.",
+        "confirm": "Block",
+        "done": "Blocked",
+        "failed": "Could not block. Try again shortly."
+      },
+      "blocks": {
+        "title": "Blocked",
+        "empty": "You have not blocked anyone.",
+        "unblock": "Unblock",
+        "unblocked": "Unblocked",
+        "failed": "Could not unblock. Try again shortly."
       },
       "muted": {
         "banner": "You are muted for {{days}} days. You may write to souls again from {{time}}. You can still read, and still write to the hall.",
@@ -5170,7 +5187,10 @@
       "closed": {
         "peer_reborn": "They have been reborn. These words remain; nothing can be added.",
         "peer_retired": "This account is closed. These words remain; nothing can be added.",
-        "marker": "Reborn {{date}} · the thread ends here"
+        "marker": "Reborn {{date}} · the thread ends here",
+        "declined": "They did not accept this request. These words remain; you may write again in a day.",
+        "undeliverable": "Cannot be delivered.",
+        "peer_blocked": "You blocked this soul. You can undo it in Settings › Blocked."
       },
       "unavailable": {
         "banner": "Cannot send right now; reconnecting",
@@ -5180,7 +5200,8 @@
       "not_configured": "Letters are not open here yet. When they are, this appears.",
       "menu": {
         "report": "Report",
-        "profile": "Open profile"
+        "profile": "Open profile",
+        "block": "Block"
       },
       "new_marker": "New",
       "older": "Earlier letters",
@@ -5196,7 +5217,11 @@
         "invalid_code": "A soul code has 10 characters.",
         "self": "You cannot write to yourself.",
         "ticket_expired": "This search has expired. Look the code up again.",
-        "ticket_invalid": "Look the code up again."
+        "ticket_invalid": "Look the code up again.",
+        "declined": "They did not accept this request.",
+        "peer_blocked": "You blocked this soul.",
+        "undeliverable": "Cannot be delivered.",
+        "not_a_request": "This is no longer an unanswered request."
       },
       "image": {
         "failed": "Could not send",
@@ -5915,6 +5940,14 @@
     "reply": {
       "title": "{{name}} replied to your comment",
       "body": "{{text}}"
+    },
+    "social_muted": {
+      "title": "You are muted",
+      "body": "You are muted for {{days}} days: the circle is read-only and you cannot write to other souls."
+    },
+    "social_muted_reason": {
+      "title": "You are muted",
+      "body": "You are muted for {{days}} days: {{reason}}"
     }
   },
   "official_notify": {
