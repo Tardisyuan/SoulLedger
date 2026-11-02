@@ -538,7 +538,9 @@
         "stage_reincarnating": "轮回",
         "stage_reincarnating_hint": "尚未开始 · 需先完成处置",
         "stage_next_life": "下一世",
-        "stage_next_life_hint": "待处置与轮回完成后确定"
+        "stage_next_life_hint": "待处置与轮回完成后确定",
+        "stage_final": "终点",
+        "stage_final_hint": "这里没有转世,处置就是终点"
       },
       "ledger": {
         "not_yet": "未至",
@@ -8457,7 +8459,7 @@
       },
       "shared": "共用",
       "tests_title": "自动测试",
-      "tests_caption": "{{date}} 实测 · 三种浏览器引擎:Chromium / Firefox / Mobile Chrome",
+      "tests_caption": "{{date}} 实测 · 三种浏览器引擎：Chromium / Firefox / Mobile Chrome",
       "tests": {
         "backend": "后端",
         "web": "网页",
@@ -8580,21 +8582,22 @@
         }
       },
       "target": {
-        "death": "死亡登记",
+        "death": "灵魂详情 · 状态",
         "capture": "灵魂详情 · 勾魂卡",
         "city_god": "城隍初审",
-        "desk_offence": "审判台 · 罪目",
+        "desk_offence": "审判台 · 判决",
         "soul_plan": "灵魂详情 · 受刑计划",
         "rebirth_soup": "轮回 · 孟婆汤",
-        "desk_place": "审判台 · 去处",
+        "desk_place": "审判台 · 判决与去处",
         "realm_map": "界域 · 地图",
         "timeline": "灵魂详情 · 时间线",
         "confessions": "审判台 · 四十二条",
-        "scale": "称心之厅 · 天平",
+        "scale": "称心之厅 · 称重记录",
         "ferry": "灵魂详情 · 渡河",
         "desk": "审判台",
         "disposition": "处置",
-        "rebirth": "轮回"
+        "rebirth": "轮回",
+        "workflow_fork": "审批流 · 三判官分路"
       }
     },
     "enter": {

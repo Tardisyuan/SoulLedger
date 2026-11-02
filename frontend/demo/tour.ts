@@ -13,6 +13,8 @@ export interface TourStep {
   /** What to light up: a CSS selector, then text to find in a row. Not found = no highlight, never an error. */
   css?: string;
   text?: string;
+  /** Light up the enclosing block of what `text` found, not the row. */
+  up?: string;
   /** The desk's tab that holds it (an i18n key): opened first. */
   tab?: string;
 }
@@ -34,6 +36,8 @@ export function tourOf(rec: Recording): Tour | null {
   const named = soul ? String(soul.name) : name;
   const judgment = rowsNow(rec, "/judgment/").find((j) => j.soul === soul?.id);
   const desk = judgment ? `/judgment/${judgment.id}` : "/judgment";
+  const flow = rowsNow(rec, "/workflows/").find((w) => w.soul === soul?.id && w.case_type !== "REBIRTH_APPLICATION");
+  const flowRoute = flow ? `/workflow/${flow.id}` : "/workflow";
   const decision = "[data-testid='current-decision']";
   const death: TourStep = { n: 1, target: "death", route: soulRoute, css: "[data-testid='soul-state']" };
   const timeline = "main [data-testid='soul-route'], main ol";
@@ -62,8 +66,8 @@ export function tourOf(rec: Recording): Tour | null {
     ],
     gr: [
       death,
-      { n: 2, target: "ferry", route: soulRoute, css: "[data-testid='soul-identity'], [data-testid='soul-ferry-passage']" },
-      { n: 3, target: "desk", route: desk, css: decision },
+      { n: 2, target: "ferry", route: soulRoute, css: "[data-testid='soul-ferry-passage'], [data-testid='soul-identity']" },
+      { n: 3, target: "workflow_fork", route: flowRoute, text: "Rhadamanthus", up: "ol, ul" },
       { n: 4, target: "disposition", route: "/disposition", css: "main section" },
       { n: 5, target: "timeline", route: soulRoute, css: timeline },
       { n: 6, target: "rebirth", route: "/rebirths", text: named },

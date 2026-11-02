@@ -57,6 +57,50 @@ const translator = (lang) => {
   return walk;
 };
 
+// A finished life happened long ago, and every date on it has to say so. See `write_lives` in demo-seed.py.
+const LIVES = JSON.parse(readFileSync(process.env.DEMO_LIVES, "utf8"));
+const WHOLE_STAMP = /^\d{4}-\d\d-\d\dT[\d:.]+(?:Z|[+-]\d\d:\d\d)$/;
+const BARE_DATE = /^\d{4}-\d\d-\d\d$/;
+const moment = ({ year, month, day }) => {
+  const d = new Date(Date.UTC(2000, (month ?? 1) - 1, day ?? 1, 8));
+  d.setUTCFullYear(year);
+  return d.getTime();
+};
+const soulOf = (id) => (typeof id === "string" ? (LIVES.souls[id] ? id : LIVES.owner[id]) : undefined);
+function ownerIn(row) {
+  for (const field of ["soul", "soul_id", "judgment", "judgment_id", "workflow", "workflow_id", "plan", "plan_id", "origin_judgment_id"]) {
+    const value = row[field];
+    const found = soulOf(value && typeof value === "object" ? value.id : value);
+    if (found) return found;
+  }
+  return soulOf(row.id);
+}
+const isRecent = (s) => Number(s.slice(0, 4)) >= 2025;
+function historize(value, owner) {
+  if (Array.isArray(value)) return value.map((v) => historize(v, owner));
+  if (value && typeof value === "object") {
+    const mine = ownerIn(value) ?? owner;
+    const life = mine && LIVES.souls[mine];
+    if (life && typeof value.year === "number" && value.year >= 2025) return { ...value, year: life.year + (value.year - 2026) };
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, historize(v, mine)]));
+  }
+  if (typeof value !== "string" || !owner) return value;
+  const life = LIVES.souls[owner];
+  if (life && /^[A-Z]{2}-2026-\d+$/.test(value)) return value.replace("2026", life.year < 0 ? `${-life.year}BC` : String(life.year));
+  if (!isRecent(value)) return value;
+  if (!WHOLE_STAMP.test(value) && !BARE_DATE.test(value)) return value;
+  const moved = new Date(Date.parse(value) + moment(life) - Date.parse(life.first)).toISOString();
+  return BARE_DATE.test(value) ? moved.slice(0, moved.indexOf("T")) : moved;
+}
+/** A response's owner is its row's soul, or the soul its address names. */
+function historizeAll({ lists, docs }) {
+  const keyOwner = (key) => key.split(/[/?=&]/).map(soulOf).find(Boolean);
+  return {
+    lists: Object.fromEntries(Object.entries(lists).map(([k, l]) => [k, { ...l, rows: historize(l.rows, keyOwner(k)) }])),
+    docs: Object.fromEntries(Object.entries(docs).map(([k, d]) => [k, { ...d, b: historize(d.b, keyOwner(k)) }])),
+  };
+}
+
 const scrub = (v) => {
   if (Array.isArray(v)) return v.map(scrub);
   if (v && typeof v === "object") {
@@ -233,8 +277,8 @@ for (const role of Object.keys(ROLES)) {
     else await getAll(recEn, access, `${API}${key}`, "en");
   }
   const recordedAt = new Date().toISOString();
-  const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login)), ...translator("zh")(finish(rec)) };
-  const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login)), ...translator("en")(finish(recEn)) };
+  const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login)), ...translator("zh")(historizeAll(finish(rec))) };
+  const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login)), ...translator("en")(historizeAll(finish(recEn))) };
   writeFileSync(`${OUT}/${role}.zh.json`, JSON.stringify(out));
   writeFileSync(`${OUT}/${role}.en.json`, JSON.stringify(outEn));
   console.log(`${role}: ${Object.keys(out.lists).length} lists, ${Object.keys(out.docs).length} docs, ` +

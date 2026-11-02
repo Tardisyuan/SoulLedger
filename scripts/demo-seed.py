@@ -4,6 +4,7 @@ Data goes in through the same services production uses (`die`, `conclude`, the p
 workflow's `complete_node`), so what gets recorded is what the app really answers. Names are mythological; there is
 no real person's data in here. Every soul's fate is written out in `PLAN`; add a line to add a soul.
 """
+import json
 import math
 import os
 import random
@@ -31,6 +32,7 @@ from apps.audit.models import AuditAction, AuditLog  # noqa: E402
 from apps.authentication.models import User  # noqa: E402
 from apps.death_sync.models import DeathRegistrationRequest, ExternalApiKey, TudiGod, WebhookConfig  # noqa: E402
 from apps.dispatch.models import ParticipantRole  # noqa: E402
+from apps.disposition.models import Disposition  # noqa: E402
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService  # noqa: E402
 from apps.judgment import appeals, claims, confessions  # noqa: E402
 from apps.judgment.models import (  # noqa: E402
@@ -125,8 +127,12 @@ PLACES = {
     "EG_DUAT": ["Memphis", "Thebes", "Abydos", "Saqqara", "Amarna"], "GR_HADES": ["Thrace", "Corinth", "Phthia", "Argos", "Thebes"],
 }
 
+#: 判词,按各文明自己的说法(docs/01_*):埃及、欧洲没有转世。
 NOTES = {
-    "PASSED": "功过相抵后仍有余善,准入轮回。", "FAILED": "恶业深重,依律发落。",
+    "CN_DIYU": {"PASSED": "功过相抵后仍有余善,准入轮回。", "FAILED": "恶业深重,依律发落。"},
+    "EU_HEAVEN_HELL": {"PASSED": "生前无大罪,准入天堂。", "FAILED": "所犯之罪依《神曲》定层,入地狱。", "PURGATORY": "其罪可涤,入炼狱逐层洗炼。"},
+    "EG_DUAT": {"PASSED": "心不重于羽,入芦苇原。", "FAILED": "心重于羽,交阿米特吞噬。"},
+    "GR_HADES": {"PASSED": "善者往至福岛,千年后再择来生。", "FAILED": "恶者下塔尔塔罗斯。"},
 }
 
 
@@ -193,6 +199,7 @@ LIVES = {
 }
 DIED = {}
 PLANNED = {}
+FINISHED = {"failed", "passed", "reborn", "full", "purgatory"}
 
 
 def add_records(soul, kind, table, total, born, died):
@@ -209,7 +216,9 @@ def add_records(soul, kind, table, total, born, died):
 
 
 def make_soul(tenant, name, merit, demerit, i, *, fate=""):
-    born, died = LIVES.get(name) or (y := random.randint(1935, 1985), y + random.randint(38, 41))
+    # Only a finished life keeps its century: a case still open is open now, and so its soul died recently.
+    historic = fate in FINISHED and name in LIVES
+    born, died = LIVES[name] if historic else (y := random.randint(1935, 1985), y + random.randint(38, 41))
     fated = {}
     if fate == "due":  # 阳寿已到,还没发牒:`/judgment/capture-due` 列的就是这些。
         fated = {"fated_death_year": 2025, "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
@@ -226,7 +235,8 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
     add_records(soul, "MERIT", MERITS, merit, born, died)
     add_records(soul, "DEMERIT", DEMERITS, demerit, born, died)
     soul.refresh_from_db()
-    DIED[soul.pk] = died
+    if historic:
+        DIED[soul.pk] = died
     PLANNED[soul.pk] = (merit, demerit)
     return soul
 
@@ -279,7 +289,7 @@ def carry_out(soul, tenant, fate, judges, stats):
     case.concluded_by = judge
     case.save(update_fields=["concluded_by"])
     placed = Realm.all_objects.filter(realm_code=PLACED.get(soul.name, "")).first()
-    case.conclude(verdict, NOTES.get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
+    case.conclude(verdict, NOTES[tenant.code].get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
     if fate == "flow":
         walk(case, stop_before_last=True)
         return
@@ -452,7 +462,7 @@ def seed_cross_judgments(tenants):
     """One bench still sitting, one concluded. Both begin in the Fifth Court and sit with the Greeks."""
     cn, gr = tenants["CN_DIYU"], tenants["GR_HADES"]
     sitting = make_soul(cn, "哪吒", 52, 48, 0)
-    done = make_soul(cn, "项羽", 44, 61, 1)
+    done = make_soul(cn, "项羽", 44, 61, 1, fate="failed")
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
@@ -464,7 +474,7 @@ def seed_cross_judgments(tenants):
             CrossTenantJudgmentService.activate(cj)
             if conclude:
                 CrossTenantJudgmentService.conclude(cj, "PASS", None)
-                case.conclude(Verdict.FAILED, NOTES["FAILED"])
+                case.conclude(Verdict.FAILED, NOTES["CN_DIYU"]["FAILED"])
                 walk(case)
         except Exception as exc:
             print("  cross stuck:", title, type(exc).__name__, str(exc)[:200])
@@ -480,7 +490,12 @@ def seed_deleted(admin):
 
 def seed_sentence_requests():
     """待原审判官决定的计划变更请求。服务层拒绝「灵魂就在这里」的提请,而种子要的是摆在那等人决定的状态,所以直接写行。"""
-    reasons = ["冥河彼岸新出证人,请求重开此案。", "地府核定刑期有误,请原审复核。", "赦令已下,请原审确认是否重开。", "本殿执行时发现判词与卷宗不符。"]
+    reasons = {
+        "CN_DIYU": ["外邦新出证人,请求重开此案。", "地府核定刑期有误,请原审复核。"],
+        "EU_HEAVEN_HELL": ["新出证人,请求重审。", "赦罪令已下,请原审确认是否重开。"],
+        "EG_DUAT": ["真理殿堂发现判词与卷宗不符。", "请求重新称量。"],
+        "GR_HADES": ["冥河彼岸新出证人,请求重开此案。", "判官存疑,请米诺斯复核。"],
+    }
     plans = list(SentencePlan.all_objects.filter(status="ACTIVE").select_related("soul")[:40])
     made = {}
     for plan in plans:
@@ -488,7 +503,7 @@ def seed_sentence_requests():
         if made.get(code, 0) >= 2:
             continue
         other = "GR_HADES" if code != "GR_HADES" else "CN_DIYU"
-        SentencePlanRequest.all_objects.create(plan=plan, from_tenant_code=other, kind="REOPEN", reason=reasons[sum(made.values()) % len(reasons)], changes={})
+        SentencePlanRequest.all_objects.create(plan=plan, from_tenant_code=other, kind="REOPEN", reason=reasons[code][made.get(code, 0) % 2], changes={})
         made[code] = made.get(code, 0) + 1
     print("sentence requests:", made)
 
@@ -517,12 +532,19 @@ def seed_history():
 
 
 def backdate_deaths():
-    """`die()` 写的是今天:换成这个人真正死的那一年。"""
+    """`die()` 写的是今天。走完了的人换成他真正死的那一年;案子还开着的,死在开案那天(`spread_time` 之后调)。"""
     for soul in Soul.all_objects.exclude(current_state="ALIVE"):
         year = DIED.get(soul.pk)
         if year is None:
+            case = Judgment.all_objects.filter(soul=soul).order_by("created_at").first()
+            if case is None:
+                continue
+            day = case.created_at
+            Soul.all_objects.filter(pk=soul.pk).update(death_year=day.year, death_month=day.month, death_day=day.day)
             continue
         Soul.all_objects.filter(pk=soul.pk).update(death_year=year, death_month=random.randint(1, 12), death_day=random.randint(1, 28))
+    # 她在岸边等过:身份卡的「渡河」那一行(导览第二步)。在她过河之后才写,否则审判时认领不了。
+    Soul.all_objects.filter(name__startswith="Penelope").update(ferry_passage="UNBURIED")
     # 功过按年衰减:千年前的善恶算下来全是 0,表上一片空。演示写回人物本来的分数。
     for pk, (merit, demerit) in PLANNED.items():
         Soul.all_objects.filter(pk=pk).update(merit_score=merit, demerit_score=demerit)
@@ -585,6 +607,20 @@ def spread_time(started):
     print("timestamps moved:", len(rows), "rows in", len(span), "groups")
 
 
+def write_lives():
+    """For the recorder. A database column cannot hold 1255 BCE, so the stamps of a finished life are moved there when
+    recorded (`historize` in demo-record.mjs): each soul's first stamp lands on its death, and the rest keep their distance."""
+    souls = {}
+    for soul in Soul.all_objects.filter(pk__in=list(DIED)):
+        souls[str(soul.pk)] = {"year": soul.death_year, "month": soul.death_month, "day": soul.death_day, "first": soul.create_time.isoformat()}
+    owner = {}
+    for model, field in ((Judgment, "soul_id"), (ApprovalWorkflow, "soul_id"), (SentencePlan, "soul_id"), (Disposition, "soul_id")):
+        for pk, soul in model._base_manager.values_list("pk", field):
+            if str(soul) in souls:
+                owner[str(pk)] = str(soul)
+    Path(os.environ["DEMO_LIVES"]).write_text(json.dumps({"souls": souls, "owner": owner}))
+
+
 def seed_audit(users):
     verbs = [(AuditAction.LOGIN, "auth", "登录"), (AuditAction.UPDATE, "soul", "修改功过"), (AuditAction.CREATE, "judgment", "开案"),
              (AuditAction.UPDATE, "role", "调整角色权限"), (AuditAction.DELETE, "post", "删除违规帖")]
@@ -597,8 +633,9 @@ def seed_audit(users):
 
 
 def seed_notifications(demo_users):
-    texts = [("新案待认领", "第五殿队列有新案"), ("审批待办", "有一件结案等你批"), ("调拨通知", "有灵魂调入本殿")]
     for u in demo_users:
+        hall = {"CN_DIYU": "第五殿", "EU_HEAVEN_HELL": "炼狱", "EG_DUAT": "真理殿堂", "GR_HADES": "岔路草原"}.get(u.tenant.code if u.tenant else "", "本殿")
+        texts = [("新案待认领", f"{hall}队列有新案"), ("审批待办", "有一件结案等你批"), ("调拨通知", f"有灵魂调入{hall}")]
         for i, (title, body) in enumerate(texts):
             try:
                 UserNotification.objects.create(user=u, title=title, message=body, is_read=i == 0)
@@ -641,8 +678,9 @@ def main():
     seed_notifications(demo)
     seed_deleted(demo[0])
     seed_sentence_requests()
-    backdate_deaths()
     spread_time(started)
+    backdate_deaths()
+    write_lives()
     call_command("snapshot_balances", stdout=StringIO())
     seed_history()
     print("realms:", Realm.all_objects.count(), "users:", User.objects.count(), "workflows:", ApprovalWorkflow.all_objects.count())

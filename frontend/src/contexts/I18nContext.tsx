@@ -11,6 +11,7 @@ import {
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import defaultMessages from "@soulledger/core/messages/zh-Hans.json";
 import { publishTranslator } from "@/lib/i18n/activeTranslator";
+import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
@@ -147,8 +148,16 @@ function safeFormat(
   }
 }
 
+/** Intl prints the year of a BCE date with no era, so 1255 BCE would read as 1255. */
+function bceDate(locale: Locale, date: Date): string | null {
+  if (!(date.getUTCFullYear() <= 0)) return null;
+  return formatHistoricalDate({ year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() }, locale);
+}
+
 function formatDateWith(locale: Locale, value: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const date = value instanceof Date ? value : new Date(value);
+  const bce = bceDate(locale, date);
+  if (bce) return bce;
   return safeFormat(
     () => new Intl.DateTimeFormat(toIntlLocale(locale), options).format(date),
     value
@@ -172,6 +181,8 @@ function hasComponentOptions(options?: Intl.DateTimeFormatOptions): boolean {
 
 function formatDateTimeWith(locale: Locale, value: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const date = value instanceof Date ? value : new Date(value);
+  const bce = bceDate(locale, date);
+  if (bce) return bce;
   const resolved: Intl.DateTimeFormatOptions = hasComponentOptions(options)
     ? { ...options }
     : { dateStyle: "medium", timeStyle: "medium", ...options };

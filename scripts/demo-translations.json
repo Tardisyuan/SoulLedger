@@ -3,7 +3,8 @@
     "Chinese Afterlife": "中国地府",
     "European Afterlife": "欧洲天堂与地狱",
     "Egyptian Afterlife": "埃及冥界",
-    "Greek Afterlife": "希腊冥界"
+    "Greek Afterlife": "希腊冥界",
+    "I ask to return.": "我请求再入人世。"
   },
   "en": {
     "屈原·来世": "Qu Yuan, reborn",
@@ -109,6 +110,27 @@
     "录入错误,灵魂并不存在": "Entry error: no such soul",
     "姓名张冠李戴,已另建": "Wrong name; recreated",
     "汨罗土地": "Earth God of Miluo",
-    "会稽土地": "Earth God of Kuaiji"
+    "会稽土地": "Earth God of Kuaiji",
+    "生前无大罪,准入天堂。": "No grave sin in life; admitted to Heaven.",
+    "所犯之罪依《神曲》定层,入地狱。": "The sin decides the circle, after the Comedy; sent to Hell.",
+    "其罪可涤,入炼狱逐层洗炼。": "The sin can be cleansed; sent to Purgatory, terrace by terrace.",
+    "心不重于羽,入芦苇原。": "The heart is no heavier than the feather; to the Field of Reeds.",
+    "心重于羽,交阿米特吞噬。": "The heart is heavier than the feather; given to Ammit.",
+    "善者往至福岛,千年后再择来生。": "The good go to the Isles of the Blessed; after a thousand years they choose again.",
+    "恶者下塔尔塔罗斯。": "The wicked go down to Tartarus.",
+    "外邦新出证人,请求重开此案。": "A new witness from abroad; please reopen.",
+    "新出证人,请求重审。": "A new witness; asking for a rehearing.",
+    "赦罪令已下,请原审确认是否重开。": "An absolution has been issued; please confirm whether to reopen.",
+    "真理殿堂发现判词与卷宗不符。": "The Hall of Two Truths found the verdict does not match the file.",
+    "请求重新称量。": "Asking for the heart to be weighed again.",
+    "判官存疑,请米诺斯复核。": "The judges are in doubt; asking Minos to review.",
+    "炼狱队列有新案": "A new case in Purgatory's queue",
+    "真理殿堂队列有新案": "A new case in the Hall of Two Truths' queue",
+    "岔路草原队列有新案": "A new case at the Meadow's queue",
+    "本殿队列有新案": "A new case in the queue",
+    "有灵魂调入第五殿": "A soul has been transferred to the Fifth Court",
+    "有灵魂调入炼狱": "A soul has been transferred to Purgatory",
+    "有灵魂调入真理殿堂": "A soul has been transferred to the Hall of Two Truths",
+    "有灵魂调入岔路草原": "A soul has been transferred to the Meadow"
   }
 }

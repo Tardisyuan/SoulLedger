@@ -152,10 +152,13 @@ export function SoulLedgerSections({
   dispositions,
   reincarnations,
   events,
+  rebirth = true,
 }: {
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
   events: SoulEvent[];
+  /** False where this soul's afterlife has no rebirth (`hasRebirth`): the section has nothing to say. */
+  rebirth?: boolean;
 }) {
   const { t, formatDate, formatDateTime } = useI18n();
 
@@ -195,6 +198,8 @@ export function SoulLedgerSections({
         </div>
       ))}
 
+      {rebirth && (
+        <>
       <LedgerHeading
         title={t("souls.detail.timeline.stage_reincarnating")}
         count={reincarnations.length}
@@ -221,6 +226,8 @@ export function SoulLedgerSections({
             <span className={`${TIME} text-right`}>{r.cycle_count}</span>
           </div>
         ))
+      )}
+        </>
       )}
 
       <LedgerHeading title={t("souls.detail.ledger.events")} count={events.length} />

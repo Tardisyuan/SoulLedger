@@ -7,6 +7,7 @@ export DATABASE_URL="$SL_DEMO_DB_URL" REDIS_URL=redis://127.0.0.1:6399/0
 export CELERY_BROKER_URL=redis://127.0.0.1:6399/1 CELERY_RESULT_BACKEND=redis://127.0.0.1:6399/2
 # Recording only: an ADMIN without two-step verification would otherwise be refused everything (scripts/demo_settings.py).
 export DJANGO_SETTINGS_MODULE=demo_settings PYTHONPATH=/app/scripts
+export DEMO_LIVES=/sl-tmp/demo-lives.json
 export ALLOWED_HOSTS=localhost,127.0.0.1 CORS_ALLOWED_ORIGINS=http://localhost:3333
 PY=/app/backend/.venv/bin/python
 

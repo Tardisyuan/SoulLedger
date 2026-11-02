@@ -112,7 +112,8 @@ function shifted(raw: Recording): Recording {
   const days = Math.round(delta / 86400000) * 86400000;
   const recent = new Date(raw.recordedAt).getUTCFullYear() - 2;
   const text = JSON.stringify(raw)
-    .replace(STAMP, (s) => new Date(Date.parse(s) + delta).toISOString())
+    // A stamp from long ago is a life's history, not "two hours ago": it stays put.
+    .replace(STAMP, (s) => (Number(s.slice(0, 4)) < recent ? s : new Date(Date.parse(s) + delta).toISOString()))
     .replace(BARE_DATE, (whole, date: string) =>
       Number(date.slice(0, 4)) < recent ? whole : `"${new Date(Date.parse(date) + days).toISOString().slice(0, 10)}"`,
     );

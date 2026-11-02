@@ -91,6 +91,7 @@ import { OwnerOrgField } from "@/src/components/organizations/OwnerOrgField";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -1009,7 +1010,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          <div className="mt-6">
+          <div className={hasRebirth(judgment.civilization) || priorLives.length > 0 ? "mt-6" : "hidden"}>
             <JudgmentSectionHead title={t("judgment.queue.prior_cycles")} meta={String(priorLives.length)} />
             {priorLives.length === 0 ? (
               <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("judgment.queue.cycles_empty")}</p>

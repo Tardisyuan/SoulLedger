@@ -16,6 +16,7 @@ import type { Disposition } from "@soulledger/core/api/disposition";
 import type { Reincarnation } from "@soulledger/core/api/reincarnation";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { sectionMark } from "@/src/lib/sectionMark";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import {
   buildKarmaRows,
   buildBirthMarker,
@@ -111,6 +112,7 @@ export function SoulLifecycleTimeline({
   // Same reason as `tf` above: this is read by the `rows` memo, and an object
   // literal rebuilt every render would defeat it. It is copy keyed off `tf`
   // and nothing else, so `[tf]` is the whole of it.
+  const rebirth = hasRebirth(soul?.civilization);
   const stageLabels: Record<FutureStageKey, { title: string; hint: string }> = useMemo(() => ({
     JUDGING: {
       title: tf("souls.detail.timeline.stage_judging", "审判"),
@@ -120,15 +122,19 @@ export function SoulLifecycleTimeline({
       title: tf("souls.detail.timeline.stage_disposed", "处置"),
       hint: tf("souls.detail.timeline.stage_disposed_hint", "尚未开始 · 裁决后按判定结果分配去向"),
     },
-    REINCARNATING: {
-      title: tf("souls.detail.timeline.stage_reincarnating", "轮回"),
-      hint: tf("souls.detail.timeline.stage_reincarnating_hint", "尚未开始 · 需先完成处置"),
-    },
-    NEXT_LIFE: {
-      title: tf("souls.detail.timeline.stage_next_life", "下一世"),
-      hint: tf("souls.detail.timeline.stage_next_life_hint", "待处置与轮回完成后确定"),
-    },
-  }), [tf]);
+    REINCARNATING: rebirth
+      ? {
+          title: tf("souls.detail.timeline.stage_reincarnating", "轮回"),
+          hint: tf("souls.detail.timeline.stage_reincarnating_hint", "尚未开始 · 需先完成处置"),
+        }
+      : { title: tf("souls.detail.timeline.stage_final", "终点"), hint: tf("souls.detail.timeline.stage_final_hint", "这里没有转世,处置就是终点") },
+    NEXT_LIFE: rebirth
+      ? {
+          title: tf("souls.detail.timeline.stage_next_life", "下一世"),
+          hint: tf("souls.detail.timeline.stage_next_life_hint", "待处置与轮回完成后确定"),
+        }
+      : { title: tf("souls.detail.timeline.stage_final", "终点"), hint: tf("souls.detail.timeline.stage_final_hint", "这里没有转世,处置就是终点") },
+  }), [tf, rebirth]);
 
   // Built once and threaded into both the row builder and the expanded-detail
   // render below, so the collapsed summary and the rows underneath it cannot
