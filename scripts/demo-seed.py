@@ -59,6 +59,7 @@ from apps.social.models import (  # noqa: E402
     SocialMute,
     UserProfile,
 )
+from apps.social import soul_circle  # noqa: E402
 from apps.soul_accounts import rebirth  # noqa: E402
 from apps.soul_accounts import services as accounts  # noqa: E402
 from apps.soul_accounts.models import SoulAccount  # noqa: E402
@@ -412,6 +413,44 @@ def seed_death_sync(tenants):
                                                     source_ip="192.0.2.1", processing_duration_ms=120 + i)
 
 
+# The souls' own circle: what the soul app's feed shows. Only souls appear there, and only to their own civilization.
+SOUL_POSTS = [
+    ("曹操", "判官问我何以至此。对酒当歌,人生几何。他说这不算答辩。", [("项羽", "彼此彼此。")]),
+    ("白素贞", "雷峰塔的潮气比这里重。在此报个平安。", [("法海", "贫僧也在。")]),
+    ("法海", "有人说我多管闲事。此间判官也这么写。", []),
+    ("项羽", "无颜见江东父老,倒在这里见着了。", [("曹操", "来喝一杯?")]),
+    ("梁山伯", "转生形态那一栏我填了蝶。被退回来了。", [("祝英台", "下次一起填人道。")]),
+    ("祝英台", "和他一起递的转生申请。表格上没有「同去」这一栏。", []),
+    ("秦桧", "今日又有人跪我。不用了,真的。", []),
+    ("Khufu", "They asked what I built. I said a pyramid. They asked what else.", [("Akhenaten", "Ask them about the sun.")]),
+    ("Akhenaten", "One god was simpler. There are forty-two assessors here.", []),
+    ("Bata", "My heart spent years in a cedar tree. It weighed fine.", [("Khufu", "Mine took longer.")]),
+    ("Tristan", "The Second Circle is windy. Isolde would have hated it, and she is right beside me.", [("Lancelot", "Guinevere says the same.")]),
+    ("Lancelot", "Still the best knight in this circle. Nobody here is impressed.", []),
+    ("Sisyphus", "Slight progress today.", [("Tantalus", "It will not last.")]),
+    ("Tantalus", "The water is right there.", []),
+    ("Achilles", "The ferryman asked for my obol. I told him about my heel.", [("Patroclus", "He has heard about the heel.")]),
+    ("Eurydice", "Do not look back, they said. He looked.", []),
+]
+
+
+def seed_soul_circle():
+    made = 0
+    for name, text, replies in SOUL_POSTS:
+        author = accounts.current_account_of(Soul.all_objects.filter(name=name).first())
+        if author is None:
+            print("  no account for a post:", name)
+            continue
+        post = soul_circle.create_post(author.user, text, "TENANT")
+        for replier, reply in replies:
+            other = accounts.current_account_of(Soul.all_objects.filter(name=replier).first())
+            if other is not None:
+                soul_circle.create_comment(other.user, post.pk, reply)
+                soul_circle.toggle_reaction(other.user, post.pk, "LIKE")
+        made += 1
+    print("soul posts:", made)
+
+
 def seed_accounts(tenants):
     made = 0
     for soul in Soul.all_objects.filter(current_state__in=["JUDGING", "DISPOSED", "REINCARNATING"]):
@@ -674,6 +713,7 @@ def main():
     seed_social(tenants)
     seed_death_sync(tenants)
     seed_accounts(tenants)
+    seed_soul_circle()
     seed_appeals()
     seed_audit(list(User.objects.exclude(role="SOUL")[:12]))
     seed_notifications(demo)
