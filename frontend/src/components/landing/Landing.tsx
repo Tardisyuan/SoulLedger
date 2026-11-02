@@ -1,0 +1,182 @@
+"use client";
+
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { BrandMark } from "@/src/components/brand/BrandMark";
+import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
+import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import stats from "@/src/config/landing-stats.json";
+
+/** Which skin (`data-civ`, globals.css) each civilization wears. */
+export const CARD_SKIN: Record<string, SealCiv> = { CHINESE: "cn", EUROPEAN: "eu", EGYPTIAN: "eg", GREEK: "gr" };
+
+/** Design batch 70: the page's subject is the four cards, and the first screen is all of it (1280 × 800). */
+export function Landing({
+  kicker,
+  onEnter,
+  secondary,
+}: {
+  /** A line above the title. Only the demo has something to say there. */
+  kicker?: ReactNode;
+  /** Sign in with one click. Without it (the real product) a card goes to `/login?civ=…`. */
+  onEnter?: (skin: SealCiv, card: HTMLElement) => void;
+  /** Ways in other than the four cards. */
+  secondary?: ReactNode;
+}) {
+  const { t } = useI18n();
+  const { user } = useTenant();
+  return (
+    <div className="flex min-h-dvh flex-col bg-[oklch(var(--color-canvas))]">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] landing-gutter">
+        <div data-testid="landing-brand" className="flex min-w-0 items-center gap-3">
+          <BrandMark size={28} />
+          <span className="font-title text-md text-[oklch(var(--color-ink))]">灵魂簿</span>
+          <span className="truncate text-sm text-[oklch(var(--color-ink-muted))] max-md:hidden">SoulLedger</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="#how-built" className="text-sm text-[oklch(var(--color-ink-muted))] underline-offset-2 hover:underline max-md:hidden">
+            {t("demo.build.title")}
+          </a>
+          <span className="max-md:hidden"><LanguageSwitcher /></span>
+          <ThemeToggle />
+          {!onEnter && (
+            <Link
+              href={user ? "/dashboard" : "/login"}
+              data-testid="landing-console"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-control border border-[oklch(var(--color-ink))] px-4 text-sm font-medium text-[oklch(var(--color-ink))]"
+            >
+              {t("home.console")}
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
+        </div>
+      </header>
+
+      <main className="flex-1 landing-gutter">
+        <section className="pt-8">
+          {kicker && <p className="m-0 mb-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{kicker}</p>}
+          <h1 className="m-0 font-title text-xl text-[oklch(var(--color-ink))] md:text-display-lg">{t("demo.landing.title")}</h1>
+          <p className="mt-3 max-w-[44em] text-md text-[oklch(var(--color-ink-muted))]">{t("demo.landing.lede")}</p>
+        </section>
+
+        <section className="mt-6" aria-labelledby="landing-pick">
+          <h2 id="landing-pick" className="m-0 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("demo.landing.pick")}</h2>
+          <ul data-testid="landing-civs" className="m-0 mt-3 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-4">
+            {CIVILIZATION_OPTIONS.map((civ) => (
+              <CivCard key={civ} civ={civ} onEnter={onEnter} />
+            ))}
+          </ul>
+          {secondary}
+        </section>
+
+        <HowBuilt />
+      </main>
+
+      <footer className="shrink-0 border-t border-[oklch(var(--color-line))]">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 landing-gutter py-3">
+          <span className="font-title text-sm text-[oklch(var(--color-ink))]">{t("demo.landing.footer")}</span>
+          <span className="md:hidden"><LanguageSwitcher /></span>
+          <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("footer.version")}</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function CivCard({ civ, onEnter }: { civ: string; onEnter?: (skin: SealCiv, card: HTMLElement) => void }) {
+  const { t } = useI18n();
+  const skin = CARD_SKIN[civ];
+  const name = t(`demo.civ.${skin}.name`);
+  const body = (
+    <>
+      <span aria-hidden="true" className="pointer-events-none absolute -right-10 -bottom-10 opacity-10 max-md:hidden">
+        <Seal size={240} civ={skin} glyphs={null} court={name} />
+      </span>
+      <span className="relative shrink-0">
+        <Seal size={56} civ={skin} glyphs={null} court={name} />
+      </span>
+      <span className="relative flex min-w-0 flex-1 flex-col md:mt-8">
+        <span className="font-mono text-xs opacity-80">{t(`demo.civ.${skin}.realm`)}</span>
+        <span className="mt-1 font-title text-lg">{name}</span>
+        <span className="mt-2 text-sm">{t(`demo.civ.${skin}.line`)}</span>
+        <span className="mt-auto pt-4 text-sm font-semibold">
+          {t("demo.landing.enter_judge")} <span aria-hidden="true">→</span>
+        </span>
+      </span>
+    </>
+  );
+  const look =
+    "seal-on-band relative flex h-full min-h-37 w-full gap-4 band-colour overflow-hidden p-4 text-left transition-[transform,box-shadow] duration-fast hover:-translate-y-[3px] hover:shadow-overlay focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[oklch(var(--color-focus))] md:min-h-80 md:flex-col md:p-6";
+  return (
+    <li data-civ={skin} className="h-full">
+      {onEnter ? (
+        <button
+          type="button"
+          data-testid={`landing-card-${skin}`}
+          aria-label={t("demo.landing.card_label", { civ: name })}
+          onClick={(e) => onEnter(skin, e.currentTarget)}
+          className={look}
+        >
+          {body}
+        </button>
+      ) : (
+        <Link
+          href={`/login?civ=${skin}`}
+          data-testid={`landing-card-${skin}`}
+          aria-label={t("demo.landing.card_label", { civ: name })}
+          className={look}
+        >
+          {body}
+        </Link>
+      )}
+    </li>
+  );
+}
+
+const TESTS = ["backend", "web", "soul_app", "officer_app", "e2e"] as const;
+
+function HowBuilt() {
+  const { t } = useI18n();
+  const box = "border border-[oklch(var(--color-line-strong))] p-3 text-sm text-[oklch(var(--color-ink))]";
+  return (
+    <section id="how-built" className="mt-8 scroll-mt-20 border-t border-[oklch(var(--color-line-strong))] pt-8 pb-8" aria-labelledby="how-built-title">
+      <h2 id="how-built-title" className="m-0 text-lg text-[oklch(var(--color-ink))]">{t("demo.build.title")}</h2>
+      <p className="mt-2 max-w-[48em] text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.build.lede")}</p>
+      <div data-testid="landing-architecture" className="mt-6 grid gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className={box}>{t("demo.build.node.web")} <span className="block font-mono text-xs text-[oklch(var(--color-ink-muted))]">Next.js</span></div>
+          <div className={box}>{t("demo.build.node.soul_app")} <span className="block font-mono text-xs text-[oklch(var(--color-ink-muted))]">Expo</span></div>
+          <div className={box}>{t("demo.build.node.officer_app")} <span className="block font-mono text-xs text-[oklch(var(--color-ink-muted))]">Expo</span></div>
+        </div>
+        <div className="border-2 border-[oklch(var(--color-ink))] p-3 text-sm text-[oklch(var(--color-ink))]">
+          <span className="font-mono text-xs">packages/core</span> · {t("demo.build.node.core")}
+          <span className="mt-1 block text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.build.node.core_detail")}</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className={box}>{t("demo.build.node.backend")} <span className="block font-mono text-xs text-[oklch(var(--color-ink-muted))]">Django + Channels</span></div>
+          <div className={box}>{t("demo.build.node.letters")} <span className="block font-mono text-xs text-[oklch(var(--color-ink-muted))]">Matrix</span></div>
+        </div>
+        <p className="m-0 border border-dashed border-[oklch(var(--color-line-strong))] p-3 text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.build.node.tenancy")}</p>
+      </div>
+      <h3 className="mt-8 mb-0 text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("demo.build.tests_title")}</h3>
+      <dl data-testid="landing-numbers" className="m-0 mt-2 grid grid-cols-2 gap-4 md:grid-cols-5">
+        {TESTS.map((key) => (
+          <div key={key}>
+            <dd className="m-0 font-title text-xl text-[oklch(var(--color-ink))]">{stats.tests[key]}</dd>
+            <dt className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t(`demo.build.tests.${key}`)}</dt>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("demo.build.tests_caption", { date: stats.measured })}</p>
+      <p className="mt-6 text-sm">
+        <a href={stats.github} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center border border-[oklch(var(--color-ink))] px-4 text-[oklch(var(--color-ink))]">
+          {t("demo.build.github")} <span aria-hidden="true">&nbsp;↗</span>
+        </a>
+      </p>
+    </section>
+  );
+}

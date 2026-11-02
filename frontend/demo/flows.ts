@@ -6,6 +6,7 @@
  * happens here; nothing a visitor can do in a demo should end in an error.
  */
 import { inboxRead, inboxWrite, letterCounts } from "./inbox";
+import { tourOf } from "./tour";
 import {
   type Answer,
   type Recording,
@@ -594,6 +595,7 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
 
 /** The reads the server computes from the current state, which a recording of them could not follow. */
 export function derived(rec: Recording, path: string, query: URLSearchParams): Answer | null {
+  if (path === "/demo/tour/") return ok(tourOf(rec));
   if (path === "/judgment/next/" || path === "/judgment/previous/") return cursor(rec, path, query);
   const inbox = inboxRead(rec, path, query);
   if (inbox) return inbox;

@@ -20,7 +20,7 @@ const API_ORIGIN = process.env.DEMO_API_ORIGIN || "http://localhost:8000";
 const API = `${API_ORIGIN}/api/v1`;
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../frontend/demo/data");
 const PASSWORD = "demo-only-not-a-secret";
-const ROLES = { admin: "demo_admin", judge: "demo_judge", moderator: "demo_moderator" };
+const ROLES = { admin: "demo_admin", judge: "demo_judge", judge_eu: "demo_judge_eu", judge_eg: "demo_judge_eg", judge_gr: "demo_judge_gr", moderator: "demo_moderator" };
 const STATIC_ROUTES = `/dashboard /about /actors /admin/assistant /admin/assistant/usage /admin/stats /audit /audit/logins
   /audit/permissions /audit/sessions /audit/stats /city-god-cases /city-gods /corpus /cross-judgments /death-sync
   /death-sync/api-keys /death-sync/tudi-gods /death-sync/webhooks /dispatch /dispatch/propose /disposition /events /halls
@@ -42,6 +42,20 @@ const SECRET_KEYS = /^(access|refresh|token|password|secret|signing_secret|key_h
 
 // The demo has no two-step flows, so nothing may ask for them (the admin's reminder bar reads these off the login).
 const NO_TWO_STEP = /^(mfa_required|mfa_setup_required)$/;
+
+// What the seed wrote in one language, in the other (scripts/demo-translations.json).
+const TRANSLATIONS = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "demo-translations.json"), "utf8"));
+const translator = (lang) => {
+  const table = TRANSLATIONS[lang];
+  const pattern = new RegExp(Object.keys(table).sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+  const walk = (v) => {
+    if (typeof v === "string") return v.replace(pattern, (m) => table[m]);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return walk;
+};
 
 const scrub = (v) => {
   if (Array.isArray(v)) return v.map(scrub);
@@ -112,10 +126,10 @@ async function walk(page, route, rec) {
   }
 }
 
-async function getAll(rec, access, url) {
+async function getAll(rec, access, url, language = "zh-Hans") {
   let next = url;
   for (let i = 0; next && i < MAX_PAGES; i += 1) {
-    const res = await fetch(next, { headers: { Authorization: `Bearer ${access}`, "Accept-Language": "zh-Hans" } });
+    const res = await fetch(next, { headers: { Authorization: `Bearer ${access}`, "Accept-Language": language } });
     if ((res.headers.get("content-type") || "").indexOf("json") < 0) return null;
     const body = await res.json().catch(() => null);
     // A refused sweep records nothing: only a page's own request gets to say a role is refused something.
@@ -210,8 +224,19 @@ for (const role of Object.keys(ROLES)) {
   paths ??= schemaPaths();
   await sweep(rec, access, paths);
   await sweepOpenCases(rec, access);
-  const out = { role, recordedAt: new Date().toISOString(), login: scrub(login), ...finish(rec) };
-  writeFileSync(`${OUT}/${role}.json`, JSON.stringify(out));
+  // English: the same questions again, asked in English. What the backend only has in one language stays until the
+  // translations table above covers it; `scripts/demo-cjk-report.py` lists what is left.
+  const recEn = { lists: {}, docs: {}, errors: new Set(), swept: {} };
+  for (const key of [...Object.keys(rec.lists), ...Object.keys(rec.docs)]) {
+    const doc = rec.docs[key];
+    if (doc && doc.s !== 200) recEn.docs[key] = doc;
+    else await getAll(recEn, access, `${API}${key}`, "en");
+  }
+  const recordedAt = new Date().toISOString();
+  const out = { role, lang: "zh", recordedAt, login: translator("zh")(scrub(login)), ...translator("zh")(finish(rec)) };
+  const outEn = { role, lang: "en", recordedAt, login: translator("en")(scrub(login)), ...translator("en")(finish(recEn)) };
+  writeFileSync(`${OUT}/${role}.zh.json`, JSON.stringify(out));
+  writeFileSync(`${OUT}/${role}.en.json`, JSON.stringify(outEn));
   console.log(`${role}: ${Object.keys(out.lists).length} lists, ${Object.keys(out.docs).length} docs, ` +
     `${Math.round(JSON.stringify(out).length / 1024)} KB, ${Math.round((Date.now() - started) / 1000)} s; swept ${JSON.stringify(rec.swept)}; server errors: ${[...rec.errors].join(" | ") || "none"}`);
   await context.close();

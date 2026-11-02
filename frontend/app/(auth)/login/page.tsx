@@ -182,7 +182,11 @@ function PasswordLogin() {
   // `/login?help=1` (from the 忘记密码 page's "notify an administrator") opens the older help form.
   // Read after mount, not via useSearchParams: that hook would force this whole page behind Suspense.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("help") === "1") setHelpOpen(true);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("help") === "1") setHelpOpen(true);
+    // From a landing card: this civilization's colour until a sign-in decides the real one.
+    const civ = params.get("civ");
+    if (civ && ["cn", "eu", "eg", "gr"].includes(civ)) document.documentElement.dataset.civ = civ;
   }, []);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

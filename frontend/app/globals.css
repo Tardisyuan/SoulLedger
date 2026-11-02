@@ -1,6 +1,6 @@
 @import 'tailwindcss';
-/* The demo's recordings are 8 MB of prose, and Tailwind generates CSS from words it finds in files. The normal build stays as if the demo were not there; demo/ uses only classes the app already has. */
-@source not "../demo";
+/* The demo's recordings are 8 MB of prose, and Tailwind generates CSS from words it finds in files. The normal build stays as if the demo were not there. */
+@source not "../demo/data";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -877,6 +877,22 @@
   .seal[data-small] {
     border-width: 1px;
     outline-offset: -4px;
+  }
+  /* The landing page's cards: the band's own colour, and its 64px gutters (Design batch 70). */
+  .band-colour {
+    color: oklch(var(--color-on-main));
+    background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
+  }
+  .landing-gutter {
+    padding-inline: 1rem;
+  }
+  @media (min-width: 48rem) {
+    .landing-gutter {
+      padding-inline: 4rem;
+    }
+  }
+  .seal-on-band .seal {
+    color: inherit;
   }
   .identity-band .seal {
     color: inherit;

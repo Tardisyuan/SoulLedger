@@ -273,7 +273,7 @@ it("shows a typed miss, not a zero, when occupancy fails to load", async () => {
 it("is read-only without realms.manage and says why", async () => {
   renderPage();
   await screen.findByTestId("realm-tree");
-  expect(screen.getByText(/只有持 realms.manage 的人能改容量/)).toBeInTheDocument();
+  expect(screen.getByText(/只有持「管理界域」的人能改容量/)).toBeInTheDocument();
   // The old reason is no longer true — there IS a write route now.
   expect(screen.queryByText(/没有写入路由/)).toBeNull();
   expect(screen.queryByRole("button", { name: /改容量|的容量/ })).toBeNull();

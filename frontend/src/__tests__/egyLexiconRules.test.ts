@@ -255,11 +255,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 修订表 751 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
-  "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
-  "scheduler.manage_hint": ["scheduler.manage"],
-  "audit.needs_audit_read": ["audit.read"],
   "judgment.queue.read_only": ["judgment.execute"],
-  "permissions.matrix.confirm_menu_read_warning": ["menu.read"],
   "menus.permission_codename_placeholder": ["soul.read"],
   "menu_buttons.permission_placeholder": ["soul.create", "judgment.delete"],
   "menu_buttons.code_placeholder": ["add", "edit", "delete", "export"],
@@ -273,14 +269,9 @@ const TECHNICAL: Record<string, string[]> = {
   "welcome.hours_ago": ["h"],
   "footer.version": ["v0.1"],
   "ledger.copy_resource_id": ["{resource}"],
-  "menus.gate_visible_nonadmin": ["menu.manage"],
-  "menus.gate_permission_nonadmin": ["menu.manage"],
-  "menus.gate_roles_nonadmin": ["menu.manage"],
-  "menus.gate_menu_type_nonadmin": ["menu.manage"],
   // 第九节:搜索框提示「名字 / ID」,画布宽度门槛「≥ 1024 px」。
   "judgment.claim.search": ["ID"],
   "workflow.editor.narrow_title": ["px"],
-  "menus.gates_footnote": ["menu.manage"],
   // 键盘上的键名:抽屉页头的快捷键提示。
   "souls.preview.hint": ["J", "K", "Esc"],
   // 审阅详情的快捷键提示(C 组 08)。

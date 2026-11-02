@@ -23,6 +23,7 @@ ssh -o BatchMode=yes "$GATES_REMOTE" "cd $RWORK && if [ ! -d node_modules ]; the
 # --delete does nothing under --files-from, and a stale spec would keep running.
 ssh -o BatchMode=yes "$GATES_REMOTE" "rm -rf $RWORK/frontend/e2e/demo" || exit 1
 { git ls-files -z; git ls-files -z -o --exclude-standard; } \
+  | python3 -c 'import os,sys; sys.stdout.write("".join(p+"\0" for p in sys.stdin.read().split("\0") if p and os.path.exists(p)))' \
   | rsync -a --no-owner --no-group --delete --filter='P **/node_modules/' --filter='P backend/.venv/' --filter='P frontend/.next/' --filter='P .sl-*' \
       --from0 --files-from=- -r "$ROOT/" "$GATES_REMOTE:$RWORK/" || exit 1
 

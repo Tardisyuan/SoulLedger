@@ -11,6 +11,7 @@ import {
   type StatuteRef,
 } from "@soulledger/core/config/civilizationSigil";
 import type { JudgmentCitation, Statute, StatutePolarity } from "@soulledger/core/api";
+import { sectionMark } from "@/src/lib/sectionMark";
 
 /**
  * 附引条文 —— the articles a verdict rests on.
@@ -127,11 +128,12 @@ export function JudgmentSectionHead({
   id?: string;
   mark?: string;
 }) {
+  const { locale } = useI18n();
   return (
     <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
       {/* 区块标签用界面字体(2026-10-01 拍板);等宽只给右边的计数。它原先挂在外层 div 上,标签跟着继承成了等宽。 */}
       <h2 id={id} className="flex-1 text-2xs uppercase">
-        {mark && <span aria-hidden="true">{mark} · </span>}
+        {mark && <span aria-hidden="true">{sectionMark(mark, locale)} · </span>}
         {title}
       </h2>
       {meta ? <span className="font-mono tabular-nums">{meta}</span> : null}

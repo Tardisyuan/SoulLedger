@@ -331,6 +331,7 @@ const COLLECTED_FILES = [
   "domainNamespaceContract.test.ts",
   "drawerFocusTrap.test.tsx",
   "egyLexiconRules.test.ts",
+  "englishApiNames.test.ts",
   "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
   "exportFileName.test.ts",
@@ -428,6 +429,7 @@ const COLLECTED_FILES = [
   "globalSearch.test.tsx",
   "loadingScreensFitAPhone.test.ts",
   "passwordRulesMatchBackend.test.ts",
+  "permissionCodesStayOutOfCopy.test.ts",
   "rememberedFilters.test.tsx",
   "cityGodDisplay.test.tsx",
 ];

@@ -1,0 +1,73 @@
+/**
+ * 「一个灵魂的一生」(Design batch 70, T-6 / T-7): one soul per civilization, followed to its end, each step a real record
+ * of that soul. `GET /demo/tour/` is answered here (`flows.ts`), so the steps stay true to whatever the recording holds. A
+ * record a step needs that is not there sends it to the list instead of failing.
+ */
+import { type Recording, rowsNow } from "./store";
+
+export interface TourStep {
+  n: number;
+  /** demo.tour.target.<target>: the words for 「看这里」. */
+  target: string;
+  route: string;
+  /** What to light up: a CSS selector, then text to find in a row. Not found = no highlight, never an error. */
+  css?: string;
+  text?: string;
+  /** The desk's tab that holds it (an i18n key): opened first. */
+  tab?: string;
+}
+export interface Tour {
+  skin: string;
+  steps: TourStep[];
+}
+
+const PROTAGONIST: Record<string, string> = { CN_DIYU: "屈原", EU_HEAVEN_HELL: "Francesca da Rimini", EG_DUAT: "Nefertari", GR_HADES: "Penelope" };
+const SKIN: Record<string, string> = { CN_DIYU: "cn", EU_HEAVEN_HELL: "eu", EG_DUAT: "eg", GR_HADES: "gr" };
+const NAME_EN: Record<string, string> = { 屈原: "Qu Yuan" };
+
+export function tourOf(rec: Recording): Tour | null {
+  const code = (rec.login.user as { tenant?: { code?: string } }).tenant?.code ?? "";
+  if (!SKIN[code] || !rec.role.startsWith("judge")) return null;
+  const name = PROTAGONIST[code];
+  const soul = rowsNow(rec, "/souls/").find((s) => String(s.name).startsWith(name) || String(s.name).startsWith(NAME_EN[name] ?? name));
+  const soulRoute = soul ? `/souls/${soul.id}` : "/souls";
+  const named = soul ? String(soul.name) : name;
+  const judgment = rowsNow(rec, "/judgment/").find((j) => j.soul === soul?.id);
+  const desk = judgment ? `/judgment/${judgment.id}` : "/judgment";
+  const decision = "[data-testid='current-decision']";
+  const death: TourStep = { n: 1, target: "death", route: soulRoute, css: "[data-testid='soul-state']" };
+  const timeline = "main [data-testid='soul-route'], main ol";
+  const steps: Record<string, TourStep[]> = {
+    cn: [
+      death,
+      { n: 2, target: "capture", route: soulRoute, css: "[data-testid='capture-warrant'], [data-testid='soul-capture']" },
+      { n: 3, target: "city_god", route: "/city-god-cases", css: "main table" },
+      { n: 4, target: "desk_offence", route: desk, css: decision },
+      { n: 5, target: "soul_plan", route: soulRoute, css: "[data-testid='sentence-plan-card']" },
+      { n: 6, target: "rebirth_soup", route: "/rebirths", text: named },
+    ],
+    eu: [
+      death,
+      { n: 2, target: "desk_place", route: desk, css: decision },
+      { n: 3, target: "desk_offence", route: desk, css: "[data-testid='current-ruling']" },
+      { n: 4, target: "realm_map", route: "/realms", css: "[data-testid='topology-branches'], [data-testid='topology-schematic'], main section" },
+      { n: 5, target: "timeline", route: soulRoute, css: timeline },
+    ],
+    eg: [
+      death,
+      { n: 2, target: "confessions", route: desk, tab: "judgment.detail.confession", css: "[data-testid='negative-confessions']" },
+      { n: 3, target: "scale", route: desk, css: "[data-testid='weighing-recorded'], [data-testid='weighing-scale']" },
+      { n: 4, target: "desk_place", route: desk, css: decision },
+      { n: 5, target: "timeline", route: soulRoute, css: timeline },
+    ],
+    gr: [
+      death,
+      { n: 2, target: "ferry", route: soulRoute, css: "[data-testid='soul-identity'], [data-testid='soul-ferry-passage']" },
+      { n: 3, target: "desk", route: desk, css: decision },
+      { n: 4, target: "disposition", route: "/disposition", css: "main section" },
+      { n: 5, target: "timeline", route: soulRoute, css: timeline },
+      { n: 6, target: "rebirth", route: "/rebirths", text: named },
+    ],
+  };
+  return { skin: SKIN[code], steps: steps[SKIN[code]] };
+}

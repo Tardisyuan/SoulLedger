@@ -17,9 +17,9 @@ test.describe("Home page", () => {
   test("renders hero title and all four civilizations (A10)", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1")).toHaveText("灵魂账本");
-    await expect(page.getByText("跨文明灵魂管理系统")).toBeVisible();
-    await expect(page.getByRole("heading", { name: /文明体系/ })).toBeVisible();
+    await expect(page.locator("h1")).toHaveText("四种冥界，一本账。");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "选一个冥界" })).toBeVisible();
 
     // One column per civilization — the row is the page's whole point. Each name follows its
     // ink glyph (■●▲◆, aria-hidden), so match inside the list rather than by exact text.
@@ -27,7 +27,7 @@ test.describe("Home page", () => {
     for (const civilization of ["中国地府", "欧洲天堂与地狱", "埃及冥界", "希腊冥界"]) {
       await expect(civs.getByText(civilization)).toBeVisible();
     }
-    await expect(page.getByText("灵魂账本 v0.1")).toBeVisible();
+    await expect(page.getByText("灵魂账本 v0.1").first()).toBeVisible();
   });
 
   test("language switcher re-renders the page in the chosen locale", async ({ page }) => {
@@ -43,7 +43,7 @@ test.describe("Home page", () => {
 
     // Same slot, English copy — proves the locale actually propagated
     // through I18nContext rather than the control merely existing.
-    await expect(page.getByText("Every soul weighed, every life recorded")).toBeVisible();
+    await expect(page.getByText("Every turn of the wheel is on the record")).toBeVisible();
     await expect(page.getByText("万古轮回皆有录")).toHaveCount(0);
   });
 

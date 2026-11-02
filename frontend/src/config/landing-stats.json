@@ -1,0 +1,12 @@
+{
+  "measured": "2026-11-02",
+  "tests": {
+    "backend": "7,760",
+    "web": "5,641",
+    "soul_app": "1,201",
+    "officer_app": "1,095",
+    "e2e": "≈ 270"
+  },
+  "github": "https://github.com/Tardisyuan/SoulLedger",
+  "videos": []
+}

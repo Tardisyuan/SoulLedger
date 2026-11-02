@@ -15,6 +15,7 @@ import type { Judgment } from "@soulledger/core/api/judgment";
 import type { Disposition } from "@soulledger/core/api/disposition";
 import type { Reincarnation } from "@soulledger/core/api/reincarnation";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
+import { sectionMark } from "@/src/lib/sectionMark";
 import {
   buildKarmaRows,
   buildBirthMarker,
@@ -70,7 +71,7 @@ export function SoulLifecycleTimeline({
   // closure every render would make both recompute every render — i.e.
   // memoise nothing. This file used to build its own; so did
   // SoulKarmaLedgerCard, and so did the page above them before `b3a3e7c`.
-  const { t, tf } = useI18n();
+  const { t, tf, locale } = useI18n();
   const [tab, setTab] = useState<SpineTab>("all");
   const [includeSystemEvents, setIncludeSystemEvents] = useState(false);
   const [expandedSystemGroups, setExpandedSystemGroups] = useState<Record<string, boolean>>({});
@@ -219,7 +220,7 @@ export function SoulLifecycleTimeline({
           「庚」接在详情页「甲…己」之后。 */}
       <div className="flex items-end justify-between flex-wrap gap-3 pt-6 pb-1 mb-4 border-b border-[oklch(var(--color-block))]">
         <h2 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
-          <span aria-hidden="true">庚 · </span>
+          <span aria-hidden="true">{sectionMark("庚", locale)} · </span>
           {tf("souls.detail.timeline.title", "灵魂账页")}
         </h2>
         <div className="flex items-center gap-1 flex-wrap">

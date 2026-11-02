@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: true,
   workers: Number(process.env.PW_WORKERS) || 2,
   retries: 0,
-  use: { baseURL, trace: "off", screenshot: "only-on-failure", actionTimeout: 8000 },
+  use: { baseURL, locale: "zh-CN", trace: "off", screenshot: "only-on-failure", actionTimeout: 8000 },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /narrow/ },
     { name: "narrow", use: { ...devices["Pixel 5"] }, testMatch: /narrow/ },

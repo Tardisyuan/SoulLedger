@@ -117,7 +117,8 @@ export function menuGlossParts(
   if (!key) return { primary: node.name };
   const translated = t(key);
   if (translated === key) return { primary: node.name };
-  return { primary: translated, gloss: node.name };
+  // English reads as English. Kemet keeps the original beside it: its words are not ones a reader can place.
+  return locale === "en" ? { primary: translated } : { primary: translated, gloss: node.name };
 }
 
 /** 按 path 精确查找菜单树节点（用于页面 H1 旁边的中文原名对照）。 */

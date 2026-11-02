@@ -32,7 +32,7 @@ from apps.authentication.models import User  # noqa: E402
 from apps.death_sync.models import DeathRegistrationRequest, ExternalApiKey, TudiGod, WebhookConfig  # noqa: E402
 from apps.dispatch.models import ParticipantRole  # noqa: E402
 from apps.dispatch.services import CrossTenantJudgmentService, DispatchService  # noqa: E402
-from apps.judgment import appeals, claims  # noqa: E402
+from apps.judgment import appeals, claims, confessions  # noqa: E402
 from apps.judgment.models import (  # noqa: E402
     CityGod,
     CityGodStatus,
@@ -69,13 +69,12 @@ from tests.sentence_plan_support import execute_only, serve, stop_realm  # noqa:
 random.seed(20261102)
 NOW = timezone.now()
 
-HALL_NAMES = {"CN_DIYU": "中国地府", "EU_HEAVEN_HELL": "欧洲天堂地狱", "EG_DUAT": "埃及杜阿特", "GR_HADES": "希腊冥府"}
 CITY_GODS = {"CN_DIYU": "都城隍", "EU_HEAVEN_HELL": "Saint Peter's Gate", "EG_DUAT": "Thoth's Scribes", "GR_HADES": "Charon's Ferry"}
 
 OFFICERS = {
     "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "OFFICER"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "MODERATOR")],
     "EU_HEAVEN_HELL": [("minos", "Minos", "JUDGE"), ("uriel", "Uriel", "OFFICER"), ("beatrice", "Beatrice", "MODERATOR")],
-    "EG_DUAT": [("anubis", "Anubis", "JUDGE"), ("thoth", "Thoth", "OFFICER"), ("maat", "Ma'at", "MODERATOR")],
+    "EG_DUAT": [("anubis", "Anubis", "JUDGE"), ("horus", "Horus", "OFFICER"), ("maat", "Ma'at", "MODERATOR")],
     "GR_HADES": [("rhadamanthus", "Rhadamanthus", "JUDGE"), ("aeacus", "Aeacus", "OFFICER"), ("hermes", "Hermes", "MODERATOR")],
 }
 
@@ -90,7 +89,7 @@ OFFICERS = {
 #   reborn       the whole way round, once
 SOULS = {
     "CN_DIYU": [
-        ("屈原", 92, 8, "reborn"), ("窦娥", 70, 2, "queue"), ("梁山伯", 66, 5, "passed"), ("祝英台", 71, 4, "passed"),
+        ("屈原", 66, 58, "full"), ("窦娥", 70, 2, "queue"), ("梁山伯", 66, 5, "passed"), ("祝英台", 71, 4, "passed"),
         ("牛郎", 60, 10, "alive"), ("织女", 88, 1, "alive"), ("杜丽娘", 55, 12, "queue"), ("柳梦梅", 48, 9, "claimed"),
         ("白素贞", 40, 35, "flow"), ("法海", 30, 44, "flow"), ("曹操", 50, 80, "failed"), ("董卓", 4, 96, "failed"),
         ("秦桧", 3, 99, "failed"), ("陈世美", 12, 61, "queue"), ("潘金莲", 18, 52, "claimed"), ("聂小倩", 45, 20, "citygod"),
@@ -98,12 +97,12 @@ SOULS = {
         ("李靖", 64, 22, "due"), ("杨戬", 71, 17, "due"), ("钱塘君", 38, 49, "due"),
     ],
     "EU_HEAVEN_HELL": [
-        ("Tristan", 62, 30, "flow"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "queue"), ("Francesca da Rimini", 35, 45, "failed"),
+        ("Tristan", 62, 30, "purgatory"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "queue"), ("Francesca da Rimini", 35, 45, "failed"),
         ("Paolo Malatesta", 34, 46, "failed"), ("Faust", 41, 70, "failed"), ("Ulysses", 50, 60, "queue"), ("Orlando", 77, 13, "passed"),
-        ("Roland", 85, 9, "passed"), ("Guinevere", 60, 25, "alive"), ("Lancelot", 66, 31, "alive"), ("Percival", 90, 3, "alive"),
+        ("Roland", 85, 9, "passed"), ("Guinevere", 60, 25, "alive"), ("Lancelot", 66, 31, "purgatory"), ("Percival", 90, 3, "alive"),
     ],
     "EG_DUAT": [
-        ("Sinuhe", 72, 18, "queue"), ("Khufu", 44, 40, "flow"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
+        ("Sinuhe", 72, 18, "claimed"), ("Khufu", 44, 40, "flow"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
         ("Hatshepsut", 83, 12, "queue"), ("Akhenaten", 30, 65, "flow"), ("Ani the Scribe", 80, 6, "passed"), ("Tutu", 75, 8, "alive"),
         ("Merit-Neith", 68, 14, "alive"), ("Setne", 22, 58, "failed"), ("Bata", 57, 21, "flow"), ("Anpu", 61, 19, "queue"),
     ],
@@ -188,7 +187,7 @@ LIVES = {
     "Tristan": (490, 530), "Isolde": (495, 530), "Dido": (-840, -814), "Francesca da Rimini": (1255, 1285), "Paolo Malatesta": (1246, 1285),
     "Faust": (1480, 1540), "Ulysses": (-1240, -1170), "Orlando": (736, 778), "Roland": (736, 778),
     "Sinuhe": (-1990, -1920), "Khufu": (-2620, -2566), "Nefertari": (-1295, -1255), "Imhotep": (-2690, -2610), "Hatshepsut": (-1507, -1458),
-    "Akhenaten": (-1380, -1336), "Ani the Scribe": (-1300, -1240), "Setne": (-1281, -1225), "Bata": (-1250, -1205), "Anpu": (-1260, -1200),
+    "Ani the Scribe": (-1300, -1240), "Bata": (-1250, -1205), "Anpu": (-1260, -1200),
     "Orpheus": (-1300, -1250), "Eurydice": (-1295, -1265), "Sisyphus": (-1400, -1320), "Tantalus": (-1420, -1340), "Achilles": (-1250, -1184),
     "Patroclus": (-1255, -1185), "Odysseus": (-1240, -1160), "Penelope": (-1235, -1165), "Ixion": (-1380, -1310), "Alcestis": (-1300, -1240),
 }
@@ -216,6 +215,9 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
         fated = {"fated_death_year": 2025, "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
     elif fate == "alive":
         fated = {"fated_death_year": random.randint(2031, 2068), "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
+    if tenant.code == "GR_HADES":
+        fated["origin_region"] = "ASIA" if name in ASIA else "EUROPE" if name in EUROPE else ""
+        fated["ferry_passage"] = "UNBURIED" if name in UNBURIED else ""
     soul = Soul.objects.create(
         name=name, tenant=tenant, description=BIOS.get(name, ""),
         birth_year=born, birth_month=random.randint(1, 12), birth_day=random.randint(1, 28),
@@ -227,6 +229,25 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
     DIED[soul.pk] = died
     PLANNED[soul.pk] = (merit, demerit)
     return soul
+
+
+#: Where a concluded soul is sent: Dante's circles and terraces, the Greek meadow's two roads.
+PLACED = {
+    "Francesca da Rimini": "EU_HELL_2ND", "Paolo Malatesta": "EU_HELL_2ND", "Faust": "EU_HELL_8TH", "Tristan": "EU_PURGATORY_T7_LUST",
+    "Lancelot": "EU_PURGATORY_T7_LUST", "Sisyphus": "GR_TARTARUS", "Tantalus": "GR_TARTARUS", "Ixion": "GR_TARTARUS",
+}
+#: Which Greek judge: Rhadamanthus the souls of Asia, Aeacus those of Europe, Minos when they are in doubt (Gorgias 524a).
+ASIA = {"Tantalus", "Eurydice"}
+EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Hector", "Antigone"}
+#: 卡戎不渡未葬者:他在岸边等,队列里认领不了。
+UNBURIED = {"Alcestis"}
+
+
+def hear_confessions(case, *, upto=42, false_every=0):
+    """The 42 denials of the Hall of Two Truths."""
+    for row in confessions.clauses(case)[:upto]:
+        ordinal = row["ordinal"] if isinstance(row, dict) else row.ordinal
+        confessions.record(case, ordinal, not (false_every and ordinal % false_every == 0), "" if not false_every or ordinal % false_every else "证物与其所言相悖")
 
 
 def carry_out(soul, tenant, fate, judges, stats):
@@ -246,13 +267,19 @@ def carry_out(soul, tenant, fate, judges, stats):
     case.refresh_from_db()
     JudgmentComment.objects.create(judgment=case, author=judge, body=f"{soul.name}:卷宗已阅,证物齐备。", tenant=tenant)
     if fate == "claimed":
+        if tenant.code == "EG_DUAT":
+            hear_confessions(case, upto=26)
         return
-    verdict = Verdict.FAILED if fate == "failed" or (fate == "flow" and tenant.code == "CN_DIYU") else Verdict.PASSED
+    verdict = Verdict.FAILED if fate in ("failed", "full") or (fate == "flow" and tenant.code == "CN_DIYU") else Verdict.PASSED
+    if fate == "purgatory":
+        verdict = Verdict.PURGATORY
     if tenant.code == "EG_DUAT":  # The scale decides in the Hall of Two Truths; anything else is refused.
         verdict = Verdict.FAILED if soul.demerit_score > soul.merit_score else Verdict.PASSED
+        hear_confessions(case, false_every=6 if verdict == Verdict.FAILED else 0)
     case.concluded_by = judge
     case.save(update_fields=["concluded_by"])
-    case.conclude(verdict, NOTES.get(verdict, ""))
+    placed = Realm.all_objects.filter(realm_code=PLACED.get(soul.name, "")).first()
+    case.conclude(verdict, NOTES.get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
     if fate == "flow":
         walk(case, stop_before_last=True)
         return
@@ -261,9 +288,9 @@ def carry_out(soul, tenant, fate, judges, stats):
     plan = SentencePlan.all_objects.filter(soul=soul, origin_judgment_id=case.pk).first()
     if plan is not None and plan.nodes.exists():
         # "failed": the sentence is being served; the others have served it.
-        (execute_only if fate == "failed" else serve)(soul, plan, 1)
+        (execute_only if fate in ("failed", "purgatory") else serve)(soul, plan, 1)
         soul.refresh_from_db()
-    if fate == "reborn":
+    if fate in ("reborn", "full"):
         if soul.home_civilization == "CHINESE":
             drink_soup(soul)
             soul.refresh_from_db()
@@ -362,7 +389,8 @@ def seed_social(tenants):
 def seed_death_sync(tenants):
     for code, t in tenants.items():
         god = CityGod.all_objects.filter(tenant=t).first()
-        for name, regions in [(f"{PLACES[code][0]}土地", PLACES[code][:2]), (f"{PLACES[code][2]}土地", PLACES[code][2:4])]:
+        suffix = "土地" if code == "CN_DIYU" else " Earth God"
+        for name, regions in [(f"{PLACES[code][0]}{suffix}", PLACES[code][:2]), (f"{PLACES[code][2]}{suffix}", PLACES[code][2:4])]:
             TudiGod.objects.get_or_create(tenant=t, name=name, defaults={"regions": regions, "city_god": god})
         key = ExternalApiKey.objects.create(tenant=t, name=f"{code} 阳间户籍同步", system_type="GOVERNMENT",
                                             key_hash=f"demo-{code}", key_prefix="sl_demo_")
@@ -581,8 +609,10 @@ def seed_notifications(demo_users):
 
 def main():
     started = timezone.now()
-    for code, name in HALL_NAMES.items():
-        Tenant.objects.filter(code=code).update(display_name=name)
+    # A ledger decays with time, and these lives are centuries old; left alone, every heart would weigh nothing.
+    from apps.ledger import services as ledger_services
+    for civ in list(ledger_services.CIVILIZATION_DECAY_RATE):
+        ledger_services.CIVILIZATION_DECAY_RATE[civ] = 0.0
     tenants = {t.code: t for t in Tenant.objects.all()}
     print("tenants:", sorted(tenants))
     for code, name in CITY_GODS.items():
@@ -594,8 +624,11 @@ def main():
             if role == "JUDGE" and code not in judges:
                 judges[code] = u
     demo = [officer("demo_admin", "太史令", "ADMIN", None), officer("demo_judge", "崔判官", "JUDGE", tenants["CN_DIYU"]),
-            officer("demo_moderator", "孟婆", "MODERATOR", tenants["CN_DIYU"])]
-    judges["CN_DIYU"] = demo[1]
+            officer("demo_moderator", "孟婆", "MODERATOR", tenants["CN_DIYU"]),
+            officer("demo_judge_eu", "Saint Peter", "JUDGE", tenants["EU_HEAVEN_HELL"]),
+            officer("demo_judge_eg", "Thoth", "JUDGE", tenants["EG_DUAT"]),
+            officer("demo_judge_gr", "Minos", "JUDGE", tenants["GR_HADES"])]
+    judges.update(CN_DIYU=demo[1], EU_HEAVEN_HELL=demo[3], EG_DUAT=demo[4], GR_HADES=demo[5])
     seed_souls(tenants, judges)
     seed_queue_variety(tenants)
     seed_cross_judgments(tenants)

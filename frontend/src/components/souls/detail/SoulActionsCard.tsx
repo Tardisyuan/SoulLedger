@@ -72,7 +72,7 @@ export function SoulActionsCard({
   soupRefused?: boolean;
   onDrinkSoup?: () => Promise<void>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // 本月配额(第五十一批 Q-3):满了的道照样能选,选了它按钮置灰,下面写拒绝那句话 ——
   // 不放一个点了必然被拒的按钮。灵魂留在原处(待转世)。
   const chosen = quota?.find((r) => r.rebirth_form === rebirthForm);
@@ -128,7 +128,7 @@ export function SoulActionsCard({
               .filter((d) => d.is_executed && !d.expired_at && !d.is_eternal && d.term_end)
               .map((d) => (
                 <div key={`serving-${d.id}`} data-testid="soul-serving" className="space-y-2 text-center text-sm text-[oklch(var(--color-ink-muted))]">
-                  <p>{t("disposition.serving_until", { date: formatHistoricalDate(d.term_end) ?? "" })}</p>
+                  <p>{t("disposition.serving_until", { date: formatHistoricalDate(d.term_end, locale) ?? "" })}</p>
                   {d.can_release && onRelease && (
                     <RequirePermission permissions="disposition.execute">
                       <Button type="button" variant="secondary" size="sm" onClick={() => onRelease(d.id)} disabled={!!actionLoading}>

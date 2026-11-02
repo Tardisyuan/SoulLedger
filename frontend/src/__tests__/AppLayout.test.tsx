@@ -85,22 +85,31 @@ describe("menuGlossParts", () => {
     expect(result).toEqual({ primary: "审计日志" });
   });
 
-  it("pairs translated label (primary) with the Chinese DB name (gloss) under a foreign locale", () => {
+  it("English shows the translated label alone, with no Chinese beside it", () => {
     const result = menuGlossParts(
       auditLeaf,
       "en",
       t({ "breadcrumb.menu.audit": "Audit Log" })
     );
-    expect(result).toEqual({ primary: "Audit Log", gloss: "审计日志" });
+    expect(result).toEqual({ primary: "Audit Log" });
   });
 
-  it("pairs DIRECTORY group labels the same way, keyed by name instead of path", () => {
+  it("Kemet pairs the translated label (primary) with the Chinese DB name (gloss)", () => {
+    const result = menuGlossParts(
+      auditLeaf,
+      "egy",
+      t({ "breadcrumb.menu.audit": "Sesh Medu" })
+    );
+    expect(result).toEqual({ primary: "Sesh Medu", gloss: "审计日志" });
+  });
+
+  it("translates DIRECTORY group labels the same way, keyed by name instead of path", () => {
     const result = menuGlossParts(
       settingsGroup,
       "en",
       t({ "breadcrumb.menu.group_settings": "System Settings" })
     );
-    expect(result).toEqual({ primary: "System Settings", gloss: "系统设置" });
+    expect(result).toEqual({ primary: "System Settings" });
   });
 
   it("falls back to the Chinese name alone when no translation key is registered", () => {
@@ -192,13 +201,12 @@ describe("Breadcrumb", () => {
     mockLocale = "en";
   });
 
-  it("pairs both the group and the leaf crumb with their Chinese DB name under a foreign locale", () => {
+  it("reads in English alone: no Chinese original beside either crumb", () => {
     render(<Breadcrumb menus={menus} />);
     expect(screen.getByText("System Settings")).toBeInTheDocument();
     expect(screen.getByText("Audit Log")).toBeInTheDocument();
-    // Both Chinese originals should also be present, as the muted gloss.
-    expect(screen.getAllByText("系统设置").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("审计日志").length).toBeGreaterThan(0);
+    expect(screen.queryByText("系统设置")).toBeNull();
+    expect(screen.queryByText("审计日志")).toBeNull();
   });
 
   it("a route the menu tree does not hold reads its sidebar name, not the raw path segment", () => {
