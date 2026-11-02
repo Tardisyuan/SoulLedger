@@ -978,14 +978,14 @@
     "gate_is_active_effect": "Query-level gate. A non-ADMIN's request filters is_active=True before it reaches them — an inactive entry is absent from their tree, not dimmed.",
     "gate_is_active_nonadmin": "Read-only, no toggle shown — and even a role granted write access couldn't find an inactive row here, since their own reads filter it out too.",
     "gate_visible_effect": "Sidebar-only. An invisible-but-active entry still resolves via direct navigation — only the sidebar listing skips it.",
-    "gate_visible_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
+    "gate_visible_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
     "gate_permission_effect": "The codename Menu.get_codename() would use if anything called it — nothing does yet, so this is dormant, not a live gate. Blank derives a guess from path.",
-    "gate_permission_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
+    "gate_permission_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
     "gate_roles_effect": "Coarser than permission — controls which roles see this entry at all. Empty list = public, not \"nobody\".",
-    "gate_roles_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
+    "gate_roles_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
     "gate_menu_type_effect": "DIRECTORY / MENU / BUTTON. Decides which of the other fields are meaningful — a DIRECTORY has no page.",
-    "gate_menu_type_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
-    "gates_footnote": "All five require menu.manage to edit at all — ADMIN-only in the current role setup.",
+    "gate_menu_type_nonadmin": "Editing this menu at all requires \"Manage menus\" — ADMIN-only today.",
+    "gates_footnote": "All five require \"Manage menus\" to edit at all — ADMIN-only in the current role setup.",
     "show_deleted": "Show deleted",
     "deleted_badge": "Deleted",
     "delete_confirm_title": "Move to recycle bin?",
@@ -1095,7 +1095,7 @@
       "confirm_user_count": "{{count}} user(s) currently hold this role — this takes effect immediately on save.",
       "confirm_removed_label": "Will be removed:",
       "confirm_clear_warning": "This clears every codename {{role}} currently holds.",
-      "confirm_menu_read_warning": "menu.read is among what's being removed — holders of this role will see an empty navigation tree on their next login.",
+      "confirm_menu_read_warning": "\"View menus\" is among what's being removed — holders of this role will see an empty navigation tree on their next login.",
       "confirm_type_role_label": "Type the role name {{role}} to confirm:",
       "confirm_cancel": "Cancel",
       "confirm_submit": "Confirm save",
@@ -2062,7 +2062,7 @@
       "stat_deferred": "{{n}} deferred",
       "stat_remaining": "{{n}} left",
       "exhausted_title": "Queue is clear",
-      "read_only": "You may review this queue but not rule on it. Ruling needs the judgment.execute permission.",
+      "read_only": "You may review this queue but not rule on it. Ruling needs the \"Rule on cases\" permission.",
       "exhausted_with_deferred_title": "Only deferred cases remain",
       "exhausted_body": "{{n}} ruled on in this sitting.",
       "incomplete_title": "This case came back incomplete",
@@ -2677,7 +2677,7 @@
       "IMPERSONATE_START": "Started viewing as",
       "IMPERSONATE_END": "Stopped viewing as"
     },
-    "needs_audit_read": "Requires the audit.read permission",
+    "needs_audit_read": "Requires the \"View the audit log\" permission",
     "repeat_expand": "expand",
     "repeat_collapse": "collapse",
     "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row",
@@ -3046,7 +3046,7 @@
       "eternal_no": "No",
       "full": "full",
       "capacity_unrecorded": "Capacity not recorded",
-      "read_only": "Read-only · only holders of realms.manage can change capacity; every other column comes from the mythology corpus",
+      "read_only": "Read-only · only holders of \"Manage realms\" can change capacity; every other column comes from the mythology corpus",
       "empty_civ": "No realms are configured for this civilization",
       "occupancy_failed": "Occupancy failed to load",
       "not_a_place": "— · not a place",
@@ -3075,7 +3075,7 @@
       "GREEK": "Greece"
     },
     "switch_hint": "Switching changes only the civilization you view; the plaque and seal stay yours",
-    "manage_hint": "realms.manage · capacity can be edited in place",
+    "manage_hint": "\"Manage realms\" · capacity can be edited in place",
     "map": {
       "title": "Route map",
       "shape_line": "A single line",
@@ -3622,25 +3622,29 @@
         "read": "View dispositions"
       },
       "judgment": {
-        "read": "View judgments"
+        "read": "View judgments",
+        "execute": "Rule on cases"
       },
       "ledger": {
         "read": "View merit"
       },
       "menu": {
-        "read": "View menus"
+        "read": "View menus",
+        "manage": "Manage menus"
       },
       "org": {
         "read": "View organizations"
       },
       "realms": {
-        "read": "View realms"
+        "read": "View realms",
+        "manage": "Manage realms"
       },
       "reincarnation": {
         "read": "View reincarnation"
       },
       "scheduler": {
-        "read": "View scheduled tasks"
+        "read": "View scheduled tasks",
+        "manage": "Manage scheduled tasks"
       },
       "session": {
         "manage": "Manage online sessions"
@@ -3652,7 +3656,8 @@
         "read": "View souls"
       },
       "soul_account": {
-        "read": "View soul accounts"
+        "read": "View soul accounts",
+        "manage": "Manage soul accounts"
       },
       "soul_inbox": {
         "read": "View the hall inbox"
@@ -3665,6 +3670,9 @@
       },
       "workflow": {
         "read": "View workflows"
+      },
+      "audit": {
+        "read": "View the audit log"
       }
     }
   },
@@ -4008,7 +4016,7 @@
     "credentials": {
       "title": "Initial passwords awaiting delivery",
       "subtitle": "Soul passwords that could not be sent: view once, deliver in person, or retry sending",
-      "manage_hint": "soul_account.manage is required to view, mark delivered or retry",
+      "manage_hint": "\"Manage soul accounts\" is required to view, mark delivered or retry",
       "filters": {
         "label": "Filter by status",
         "PENDING": "Awaiting delivery",
@@ -4560,7 +4568,7 @@
     "rebuild_confirm_message": "Fills in missing schedule rows for every active tenant from the registry and removes rows no longer in it. Operator changes to enabled, cron and time zone are kept.",
     "rebuild_done": "Rebuilt: {{created}} created, {{updated}} updated, {{removed}} removed, {{legacy_removed}} legacy rows cleared",
     "rebuild_failed": "Rebuild failed",
-    "manage_hint": "Enabling, editing or running a job needs scheduler.manage",
+    "manage_hint": "Enabling, editing or running a job needs \"Manage scheduled tasks\"",
     "groups": {
       "global": "Global jobs",
       "tenant": "Tenant {{code}}",
@@ -8400,6 +8408,198 @@
     "role_admin": "Administrator",
     "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
     "role_moderator": "Moderator",
-    "role_moderator_desc": "Soul circle review: reports, mutes, sensitive words."
+    "role_moderator_desc": "Soul circle review: reports, mutes, sensitive words.",
+    "banner_short": "Demo · data stays in this browser",
+    "landing": {
+      "kicker": "Portfolio demo · no backend · resets on every sign-in",
+      "title": "Four underworlds, one ledger.",
+      "lede": "A back office for the afterlife: four underworlds, each judging the soul by its own rules. Pick one and walk in as its judge.",
+      "pick": "Choose an underworld",
+      "enter_judge": "Enter as judge",
+      "card_label": "{{civ}}, enter as judge",
+      "others": "Or look around as someone else",
+      "footer": "Every turn of the wheel is on the record"
+    },
+    "civ": {
+      "cn": {
+        "name": "Diyu",
+        "realm": "Diyu",
+        "line": "Ten courts in turn, six paths of rebirth — and a bowl of Meng Po's soup before the bridge."
+      },
+      "eu": {
+        "name": "Heaven and Hell",
+        "realm": "Paradiso · Inferno",
+        "line": "St Peter at the gate, Purgatory cleansing terrace by terrace, Dante's nine circles sinking by sin."
+      },
+      "eg": {
+        "name": "The Duat",
+        "realm": "Duat",
+        "line": "The heart on the scale against Maat's feather, and forty-two denials heard one by one."
+      },
+      "gr": {
+        "name": "Hades",
+        "realm": "Hades",
+        "line": "Three judges part the ways; after Er's thousand-year cycle, a drink from Lethe and a new life."
+      }
+    },
+    "build": {
+      "title": "How it's built",
+      "lede": "One Django backend, four front ends. The rules of the four underworlds are written once, in packages/core, and shared by all four.",
+      "node": {
+        "web": "Web console",
+        "soul_app": "Soul app",
+        "officer_app": "Officer app",
+        "core": "Rules shared by all four",
+        "core_detail": "Judgment, disposition and rebirth for all four underworlds, written once",
+        "backend": "Backend",
+        "letters": "Letters",
+        "tenancy": "Multi-tenant: each hall is its own tenant with its data kept apart; halls meet only through transfers and joint judgments."
+      },
+      "shared": "shared",
+      "tests_title": "Automated tests",
+      "tests_caption": "Measured {{date}} · three browser engines: Chromium, Firefox, Mobile Chrome",
+      "tests": {
+        "backend": "Backend",
+        "web": "Web",
+        "soul_app": "Soul app",
+        "officer_app": "Officer app",
+        "e2e": "End-to-end · per engine"
+      },
+      "video_soul": "Soul app, recorded",
+      "video_officer": "Officer app, recorded",
+      "github": "Read the source on GitHub"
+    },
+    "tour": {
+      "title": "A soul's life",
+      "title_civ": "A soul's life · {{civ}}",
+      "progress": "Step {{n}} of {{total}}",
+      "next": "Next",
+      "prev": "Back",
+      "skip": "Skip the tour",
+      "collapse": "Hide the tour",
+      "chip": "Tour {{n}}/{{total}}",
+      "look_here": "Look here: {{target}}",
+      "done_title": "That was one life",
+      "done_body": "That is how {{civ}} does it. In another underworld, the same soul walks a very different road.",
+      "try_another": "Try another underworld",
+      "stay": "Stay here",
+      "cn": {
+        "1": {
+          "name": "Death",
+          "body": "A death is registered among the living; the soul goes from Alive to Deceased."
+        },
+        "2": {
+          "name": "Summons",
+          "body": "The City God issues a summons warrant; the escorts bring the soul in."
+        },
+        "3": {
+          "name": "First review",
+          "body": "The City God reviews merit and demerit first; the wrongfully dead wait in their own city."
+        },
+        "4": {
+          "name": "The ten courts",
+          "body": "At the judgment desk a judge records the offence and the verdict; the offence decides the court."
+        },
+        "5": {
+          "name": "Sentence",
+          "body": "The disposition becomes a sentence plan, served stop by stop."
+        },
+        "6": {
+          "name": "Rebirth",
+          "body": "Term served: a bowl of Meng Po's soup, and rebirth into one of the six paths."
+        }
+      },
+      "eu": {
+        "1": {
+          "name": "Death",
+          "body": "The death is registered; the soul comes to the gate of Heaven."
+        },
+        "2": {
+          "name": "The gate",
+          "body": "At the gate St Peter weighs the life: Heaven, Purgatory, or Hell."
+        },
+        "3": {
+          "name": "Judgment",
+          "body": "The judge records the sin; by Dante's ordering, the graver the sin, the deeper the circle."
+        },
+        "4": {
+          "name": "Purgatory or Hell",
+          "body": "Purgatory cleanses terrace by terrace; the nine circles of Hell have no way out."
+        },
+        "5": {
+          "name": "Heaven",
+          "body": "Cleansed souls pass the Earthly Paradise into Heaven. Europe has no rebirth."
+        }
+      },
+      "eg": {
+        "1": {
+          "name": "Death",
+          "body": "Once the death is registered and the seventy days of embalming are over, the soul sets out for the Hall of Two Truths."
+        },
+        "2": {
+          "name": "The denials",
+          "body": "Before forty-two assessors the soul denies each wrong; each denial is recorded as true or untrue."
+        },
+        "3": {
+          "name": "The weighing",
+          "body": "The heart is weighed against Maat's feather; only a heart no heavier passes."
+        },
+        "4": {
+          "name": "Disposition",
+          "body": "Those who pass receive a disposition; a heavier heart goes to Ammit."
+        },
+        "5": {
+          "name": "The Field of Reeds",
+          "body": "The road ends in the Field of Reeds. Egypt has no rebirth; this life ends here."
+        }
+      },
+      "gr": {
+        "1": {
+          "name": "Death",
+          "body": "The death is registered; the soul comes to the bank of the Acheron."
+        },
+        "2": {
+          "name": "The crossing",
+          "body": "Charon ferries only the buried who can pay; the rest wait a hundred years on the bank."
+        },
+        "3": {
+          "name": "The three judges",
+          "body": "The three judges part the ways: the good to the Isles of the Blessed, the wicked down to Tartarus."
+        },
+        "4": {
+          "name": "The destination",
+          "body": "The disposition records where the soul goes, and for how long."
+        },
+        "5": {
+          "name": "A thousand years",
+          "body": "As in the myth of Er, the soul completes a thousand years below."
+        },
+        "6": {
+          "name": "Lethe",
+          "body": "It drinks from Lethe, forgets, and is born again."
+        }
+      },
+      "target": {
+        "death": "Death registration",
+        "capture": "Soul · summons card",
+        "city_god": "First review",
+        "desk_offence": "Judgment desk · offence",
+        "soul_plan": "Soul · sentence plan",
+        "rebirth_soup": "Rebirth · Meng Po's soup",
+        "desk_place": "Judgment desk · destination",
+        "realm_map": "Realms · map",
+        "timeline": "Soul · timeline",
+        "confessions": "Judgment desk · the forty-two",
+        "scale": "Hall of Two Truths · the scale",
+        "ferry": "Soul · the crossing",
+        "desk": "Judgment desk",
+        "disposition": "Disposition",
+        "rebirth": "Rebirth"
+      }
+    },
+    "enter": {
+      "entering": "Entering {{civ}}",
+      "skip": "Skip"
+    }
   }
 }

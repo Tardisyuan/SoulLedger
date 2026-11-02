@@ -47,7 +47,7 @@ The variable has to be set for `next start` as well: `next.config.js` reads it a
 
 ## Re-recording the data
 
-`frontend/demo/data/<role>.json` is recorded from the real backend, not written by hand. When the API or the seed changes:
+`frontend/demo/data/<role>.<zh|en>.json` is recorded from the real backend, not written by hand: six roles (four civilizations' judges, administrator, moderator), each asked in both languages; what the seed wrote in one language is carried across by `scripts/demo-translations.json`, and `scripts/demo-cjk-report.py` lists what the English recordings still say in Chinese. When the API or the seed changes:
 
 ```bash
 scripts/demo-record.sh        # needs GATES_REMOTE in .prepush.env; nothing heavy runs on this machine

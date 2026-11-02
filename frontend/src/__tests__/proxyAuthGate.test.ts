@@ -162,15 +162,41 @@ describe("locale 常量只有一份", () => {
 
   it("中间件写出的 cookie 名就是那个模块导出的那个", () => {
     // 行为侧的对照:上面两条断的是源码,这条断的是结果。
-    const res = proxy(request("/", {}));
+    const res = proxy(request("/", { [LOCALE_COOKIE]: DEFAULT_LOCALE }));
     expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe(DEFAULT_LOCALE);
   });
 });
 
+describe("a visitor who has not chosen follows the browser", () => {
+  const withLanguage = (value: string | null) => {
+    const req = request("/");
+    if (value !== null) req.headers.set("accept-language", value);
+    return proxy(req).cookies.get(LOCALE_COOKIE)?.value;
+  };
+
+  it.each([
+    ["zh-CN,zh;q=0.9,en;q=0.8", "zh-Hans"],
+    ["zh", "zh-Hans"],
+    ["ZH-tw", "zh-Hans"],
+    ["en-US,en;q=0.9,zh;q=0.1", "en"],
+    ["fr-FR", "en"],
+    ["egy", "en"],
+    [null, "en"],
+  ])("%s -> %s", (header, locale) => {
+    expect(withLanguage(header)).toBe(locale);
+  });
+
+  it("a choice already made wins over the browser", () => {
+    const req = request("/", { [LOCALE_COOKIE]: "egy" });
+    req.headers.set("accept-language", "zh-CN");
+    expect(proxy(req).cookies.get(LOCALE_COOKIE)?.value).toBe("egy");
+  });
+});
+
 describe("语言 cookie", () => {
-  it("没有 cookie 时落到默认语言", () => {
+  it("没有 cookie 时跟浏览器(没有 Accept-Language 就是英文)", () => {
     const res = proxy(request("/", {}));
-    expect(res.cookies.get("soulledger-locale")?.value).toBe("zh-Hans");
+    expect(res.cookies.get("soulledger-locale")?.value).toBe("en");
   });
 
   it.each(["zh-Hans", "en", "egy"])("认得 %s", (locale) => {
@@ -178,10 +204,10 @@ describe("语言 cookie", () => {
     expect(res.cookies.get("soulledger-locale")?.value).toBe(locale);
   });
 
-  it("不认得的语言值被换成默认值,而不是原样写回去", () => {
+  it("不认得的语言值被换成浏览器的语言,而不是原样写回去", () => {
     // 原样写回去意味着 cookie 里的任意字符串会一路流到渲染层。
     const res = proxy(request("/", { "soulledger-locale": "../../etc/passwd" }));
-    expect(res.cookies.get("soulledger-locale")?.value).toBe("zh-Hans");
+    expect(res.cookies.get("soulledger-locale")?.value).toBe("en");
   });
 });
 

@@ -32,3 +32,18 @@ test("393px: a post", async ({ page, context }) => {
   await expect(page.locator("main").getByText("窄屏发帖。").first()).toBeVisible();
   clean(seen, "393 post");
 });
+
+test("393px: the tour fits above the fold and reaches its second step", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await page.goto("/");
+  await page.getByTestId("landing-card-cn").click();
+  const card = page.getByTestId("demo-tour");
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  expect(box?.width).toBeLessThanOrEqual(393);
+  expect(box?.height).toBeLessThanOrEqual(page.viewportSize()!.height * 0.42);
+  await page.getByTestId("demo-tour-back").click();
+  await page.getByTestId("demo-tour-next").click();
+  await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 6");
+  clean(seen, "393 tour");
+});

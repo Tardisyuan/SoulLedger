@@ -32,6 +32,7 @@ import { termState, type TermState } from "@/src/lib/dispositionTerm";
 import { VerdictBadge as DomainVerdictBadge } from "@/src/components/ui/StatusBadge";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { responseCode } from "@soulledger/core/api/client";
+import { sectionMark } from "@/src/lib/sectionMark";
 
 /**
  * 处置(规范 v1 第三类 A·07):一页三段 —— 待执行 → 执行中 → 期满,就是处置本身的时间顺序。
@@ -70,7 +71,7 @@ export default function DispositionPage() {
 }
 
 function DispositionPageContent() {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const hall = useHall(useCourtOffice());
   usePlaque({ hall });
   const { user } = useTenant();
@@ -319,7 +320,7 @@ function DispositionPageContent() {
                 {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
                 {d.term_end && (
                   <span data-testid="disposition-serving-until" className="block">
-                    {t("disposition.serving_until", { date: formatHistoricalDate(d.term_end) ?? "" })}
+                    {t("disposition.serving_until", { date: formatHistoricalDate(d.term_end, locale) ?? "" })}
                   </span>
                 )}
               </span>
@@ -340,7 +341,7 @@ function DispositionPageContent() {
       {/* ── 丙 · 期满(已转世的不在此列):行尾「安排轮回」(规则 15 例外) ── */}
       <Section {...sectionProps("expired")}>
         {expired.map((d) => {
-          const end = formatHistoricalDate(d.term_end ?? null) ?? (d.expired_at ? formatDate(d.expired_at) : null);
+          const end = formatHistoricalDate(d.term_end ?? null, locale) ?? (d.expired_at ? formatDate(d.expired_at) : null);
           return (
             <Row key={d.id} archived={d.is_archived} testId="disposition-expired-row" cols="md:grid-cols-[1.3fr_1.3fr_1fr_8rem]">
               {soulLink(d)}
@@ -432,7 +433,7 @@ function VerdictBadge({ verdict }: { verdict: Disposition["verdict"] }) {
  * 起算没记录的不画进度 —— 画一条从零开始的条就是替它编了一个起点。
  */
 function TermBar({ term }: { term: TermState }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (term.kind === "eternal") {
     // 虚线空框只是示意;「永恒 · 不计时」由行末那一格说,这里不重复。
     return (
@@ -453,7 +454,7 @@ function TermBar({ term }: { term: TermState }) {
   const pct = Math.min(100, Math.round(term.fraction * 100));
   return (
     <span className="flex items-center gap-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-      <span>{formatHistoricalDate(term.start)}</span>
+      <span>{formatHistoricalDate(term.start, locale)}</span>
       <span
         role="meter"
         aria-valuemin={0}
@@ -466,7 +467,7 @@ function TermBar({ term }: { term: TermState }) {
           style={{ width: `${pct}%` }}
         />
       </span>
-      <span>{formatHistoricalDate(term.end)}</span>
+      <span>{formatHistoricalDate(term.end, locale)}</span>
     </span>
   );
 }
@@ -487,12 +488,12 @@ function Section({
   action?: ReactNode;
   children: ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <section className="mb-6" data-testid={testId}>
       <div className="flex items-end justify-between gap-3 pt-4 pb-1 border-b border-[oklch(var(--color-block))]">
         <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
-          <span aria-hidden="true">{mark} · </span>
+          <span aria-hidden="true">{sectionMark(mark, locale)} · </span>
           {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
         </h2>
         {count > 0 && action}

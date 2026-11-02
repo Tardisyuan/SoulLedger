@@ -47,7 +47,7 @@ export function JudgmentEvidenceAdmission({
   /** 未结案且持 judgment.execute。否则只读。 */
   canRule: boolean;
 }) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const { showToast } = useToast();
   const rule = useRuleEvidence(judgmentId);
   const [asking, setAsking] = useState<LedgerRecord | null>(null);
@@ -100,7 +100,7 @@ export function JudgmentEvidenceAdmission({
           {evidence.map((record) => {
             const ruling = rulings.get(record.id);
             const admitted = ruling?.admitted !== false;
-            const when = formatHistoricalDate(record.event_date) ?? formatDate(record.recorded_at);
+            const when = formatHistoricalDate(record.event_date, locale) ?? formatDate(record.recorded_at);
             const signed = record.type === "MERIT" ? record.original_weight : -record.original_weight;
             const label = record.description || record.category;
             const clause = clauseCode(record);

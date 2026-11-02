@@ -382,7 +382,7 @@ test.describe("Critical path: permission matrix save", () => {
 
     const confirm = page.getByRole("dialog");
     await expect(confirm).toContainText("此操作将清空 GUARDIAN 持有的全部权限。");
-    await expect(confirm).toContainText("被移除的权限中包含 menu.read");
+    await expect(confirm).toContainText("被移除的权限中包含「查看菜单」");
 
     const submit = page.getByRole("button", { name: "确认保存" });
     await expect(submit).toBeDisabled();

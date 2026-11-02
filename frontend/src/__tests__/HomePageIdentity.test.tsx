@@ -1,13 +1,9 @@
 /**
- * The landing page `/` (Design A10).
- *
- * `/` is public, so both states are asserted: an anonymous visitor gets four identical columns and
- * a console link to /login; a signed-in operator gets their own realm marked — once, in words as
- * well as the 3px rule — and a console link to /dashboard. "Renders nothing for an anonymous
- * visitor" is the half a test written only for the signed-in case would miss.
+ * The landing page (Design batch 70, in the real product too): four civilization cards are the way in. Each goes to
+ * sign-in with its civilization; a signed-in visitor's own link goes to the dashboard. The demo's one-click entry and its
+ * kicker are props, so without them the page has neither.
  */
 import { render, screen, within } from "@testing-library/react";
-
 import HomePage from "@/app/page";
 
 let mockUser: Record<string, unknown> | null = null;
@@ -15,86 +11,53 @@ let mockUser: Record<string, unknown> | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
-
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}(${Object.values(params).join(",")})` : key),
+    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
     locale: "zh-Hans",
+    setLocale: () => {},
     hydrated: true,
   }),
 }));
-
-jest.mock("@/src/contexts/ThemeContext", () => ({
-  useTheme: () => ({ theme: "dark", toggleTheme: jest.fn() }),
-}));
-
-jest.mock("@/components/LanguageSwitcher", () => ({
-  LanguageSwitcher: () => <div data-testid="language-switcher" />,
-}));
+jest.mock("@/components/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
+jest.mock("@/src/components/layout/ThemeToggle", () => ({ ThemeToggle: () => null }));
 
 beforeEach(() => {
   mockUser = null;
 });
 
-const civs = () => within(screen.getByTestId("landing-civs")).getAllByRole("listitem");
+describe("the landing page", () => {
+  it("has four cards in order, each linking to sign-in with its civilization", () => {
+    render(<HomePage />);
+    const links = within(screen.getByTestId("landing-civs")).getAllByRole("link");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/login?civ=cn", "/login?civ=eu", "/login?civ=eg", "/login?civ=gr"]);
+  });
 
-describe("the landing page (A10)", () => {
-  it("carries the balance mark, not the old line icon, and no civilization colour", () => {
+  it("names each card for a screen reader", () => {
+    render(<HomePage />);
+    expect(screen.getByTestId("landing-card-eg")).toHaveAttribute("aria-label", "demo.landing.card_label:demo.civ.eg.name");
+  });
+
+  it("carries no demo copy of its own", () => {
     const { container } = render(<HomePage />);
-    expect(within(screen.getByTestId("landing-brand")).getByText("灵魂簿")).toBeInTheDocument();
-    // Top row (24 / 32, one per width) and the large one beside the title.
-    expect(container.querySelectorAll("svg[data-brand-mark]")).toHaveLength(3);
-    // The page's own markup (ThemeToggle's hover is the shared control's, not this page's).
-    const own = [container.querySelector("main"), screen.getByTestId("landing-console"), screen.getByTestId("landing-brand")];
-    for (const el of own) expect(el!.outerHTML).not.toMatch(/--color-civ|--color-accent/);
+    expect(container.textContent).not.toContain("demo.landing.kicker");
+    expect(screen.queryByTestId("demo-enter-admin")).toBeNull();
   });
 
-  it("lists the four civilizations in order, each with its ink glyph, and no cards", () => {
+  it("anonymous: the console link goes to /login", () => {
     render(<HomePage />);
-    const items = civs();
-    expect(items.map((li) => li.getAttribute("data-civ"))).toEqual(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"]);
-    expect(items.map((li) => li.textContent?.trim()[0])).toEqual(["■", "●", "▲", "◆"]);
-    for (const li of items) expect(li.className).not.toMatch(/\bbg-/);
+    expect(screen.getByTestId("landing-console")).toHaveAttribute("href", "/login");
   });
 
-  it("the console is a link, not a button, and goes to /login for an anonymous visitor", () => {
-    render(<HomePage />);
-    const link = screen.getByTestId("landing-console");
-    expect(link.tagName).toBe("A");
-    expect(link).toHaveAttribute("href", "/login");
-    expect(link).toHaveTextContent("home.console→");
-    expect(link).not.toHaveTextContent("↗");
-  });
-});
-
-describe("the viewer's own realm is marked", () => {
-  it("marks exactly one column, the tenant's, in words as well as the rule", () => {
-    mockUser = { username: "yama", tenant: { code: "CN_DIYU" } };
-    render(<HomePage />);
-    const marked = civs().filter((li) => li.hasAttribute("data-mine"));
-    expect(marked.map((li) => li.getAttribute("data-civ"))).toEqual(["CHINESE"]);
-    expect(within(marked[0]).getByText("home.your_realm")).toBeInTheDocument();
-    expect(screen.getAllByText("home.your_realm")).toHaveLength(1);
-    expect(marked[0].className).toContain("border-t-3");
-  });
-
-  it("signed in: the console goes to /dashboard and the page says who is signed in", () => {
-    mockUser = { username: "yama", display_name: "阎罗", tenant: { code: "GR_HADES" } };
+  it("signed in: the console link goes to /dashboard", () => {
+    mockUser = { display_name: "崔判官", username: "cui", tenant: { code: "CN_DIYU" } };
     render(<HomePage />);
     expect(screen.getByTestId("landing-console")).toHaveAttribute("href", "/dashboard");
-    expect(screen.getAllByText("home.signed_in_as(阎罗)").length).toBeGreaterThan(0);
   });
 
-  it("marks nothing, and claims no one, for an anonymous visitor", () => {
+  it("shows how it is built, with the numbers from the stats file", () => {
     render(<HomePage />);
-    expect(civs().filter((li) => li.hasAttribute("data-mine"))).toEqual([]);
-    expect(screen.queryByText("home.your_realm")).not.toBeInTheDocument();
-    expect(screen.queryByText(/home\.signed_in_as/)).not.toBeInTheDocument();
-  });
-
-  it("marks nothing when the user has no tenant", () => {
-    mockUser = { username: "yama", tenant: null };
-    render(<HomePage />);
-    expect(screen.queryByText("home.your_realm")).not.toBeInTheDocument();
+    expect(screen.getByTestId("landing-architecture")).toHaveTextContent("packages/core");
+    expect(screen.getByTestId("landing-numbers")).toHaveTextContent("demo.build.tests.backend");
   });
 });

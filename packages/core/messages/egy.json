@@ -978,14 +978,14 @@
     "gate_is_active_effect": "Kheperu Hehy. Nen Sab Hery Nen Maa Khetem Menu.",
     "gate_is_active_nonadmin": "Maa Wa, Nen Wen-Khetem — Netjer Em Was Sesh: Nen Gem Sep Khetem, Setep-Ef Fekh-Ef.",
     "gate_visible_effect": "Gesu Menu Wa. Sep Em Ankh, Nen Maa: Aq Em Wat-Ha; Nen Em Sesh Gesu Menu.",
-    "gate_visible_nonadmin": "Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.",
+    "gate_visible_nonadmin": "Khemen Menu Pen: Sesen Was \"Iri Menu\" — Sab Hery Wa Shesep Seth.",
     "gate_permission_effect": "Ren Was En get_codename() — Nen Iri Djer, Wen-Khetem Em Sedjer, Nen Em Ankh. Nen Sesh: Ini Em Wat.",
-    "gate_permission_nonadmin": "Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.",
+    "gate_permission_nonadmin": "Khemen Menu Pen: Sesen Was \"Iri Menu\" — Sab Hery Wa Shesep Seth.",
     "gate_roles_effect": "Er Netjer, Nen Er Ren Was — Netjer Neb Maa Menu Pen. Sesh Shu ＝ Wen-Neb, Nen «Nen Remetj Maa».",
-    "gate_roles_nonadmin": "Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.",
+    "gate_roles_nonadmin": "Khemen Menu Pen: Sesen Was \"Iri Menu\" — Sab Hery Wa Shesep Seth.",
     "gate_menu_type_effect": "Per Seth / Menu / Aha. Iri Renu Wat Ankh Nen Ankh.",
-    "gate_menu_type_nonadmin": "Khemen Menu Pen: Sesen Was menu.manage — Sab Hery Wa Shesep Seth.",
-    "gates_footnote": "Wen-Khetem 5 Pen: Khemen Sesen Was menu.manage — Em Netjer Pen, Sab Hery Wa.",
+    "gate_menu_type_nonadmin": "Khemen Menu Pen: Sesen Was \"Iri Menu\" — Sab Hery Wa Shesep Seth.",
+    "gates_footnote": "Wen-Khetem 5 Pen: Khemen Sesen Was \"Iri Menu\" — Em Netjer Pen, Sab Hery Wa.",
     "show_deleted": "Maa Wehem Seth",
     "deleted_badge": "Wehem Seth",
     "delete_confirm_title": "Nehem Er Per Wehem?",
@@ -1095,7 +1095,7 @@
       "confirm_user_count": "Remetj {{count}} Em Netjer Pen; Sau Seth: Wenen Emu.",
       "confirm_removed_label": "Fekh:",
       "confirm_clear_warning": "Was Neb En {{role}} Fekh.",
-      "confirm_menu_read_warning": "menu.read Em Was Fekh — Remetj Em Netjer Pen Maa Wat Nen Wenen Em Aq Em Khet.",
+      "confirm_menu_read_warning": "\"Maa Menu\" Em Was Fekh — Remetj Em Netjer Pen Maa Wat Nen Wenen Em Aq Em Khet.",
       "confirm_type_role_label": "Sesh Ren Netjer {{role}} Er Smen:",
       "confirm_cancel": "Sehen",
       "confirm_submit": "Smen Sau",
@@ -2664,7 +2664,7 @@
       "IMPERSONATE_START": "Maa Em Ba Ky · Wah",
       "IMPERSONATE_END": "Maa Em Ba Ky · Sehen"
     },
-    "needs_audit_read": "Sesen Was audit.read",
+    "needs_audit_read": "Sesen Was",
     "repeat_expand": "Wen",
     "repeat_collapse": "Imen",
     "repeat_rule": "Ren Wa, Iri Wa, Khet Wa: {{minutes}} At",
@@ -3629,25 +3629,29 @@
         "read": "Maa Wetep"
       },
       "judgment": {
-        "read": "Maa Wedja"
+        "read": "Maa Wedja",
+        "execute": "Iri Wedja"
       },
       "ledger": {
         "read": "Maa Nefer"
       },
       "menu": {
-        "read": "Maa Menu"
+        "read": "Maa Menu",
+        "manage": "Iri Menu"
       },
       "org": {
         "read": "Maa Hut"
       },
       "realms": {
-        "read": "Maa Ta"
+        "read": "Maa Ta",
+        "manage": "Iri Ta"
       },
       "reincarnation": {
         "read": "Maa Wehem Mesut"
       },
       "scheduler": {
-        "read": "Maa Baku Ahet"
+        "read": "Maa Baku Ahet",
+        "manage": "Iri Baku Ahet"
       },
       "session": {
         "manage": "Iri Aq Em Khet"
@@ -3659,7 +3663,8 @@
         "read": "Maa Ba"
       },
       "soul_account": {
-        "read": "Maa Aq Ba"
+        "read": "Maa Aq Ba",
+        "manage": "Iri Aq Ba"
       },
       "soul_inbox": {
         "read": "Maa Sesh Wesekhet"
@@ -3672,7 +3677,8 @@
       },
       "workflow": {
         "read": "Maa Wat Hesy"
-      }
+      },
+      "audit": {}
     }
   },
   "welcome": {
@@ -3997,7 +4003,7 @@
     "credentials": {
       "title": "Sekhem Tepy Em Djeret",
       "subtitle": "Sekhem Ba Nen Hab: Maa Wa, Djeret, Wehem Hab",
-      "manage_hint": "Maa Sekhem, Sesh Djeret, Wehem Hab: Was soul_account.manage",
+      "manage_hint": "Maa Sekhem, Sesh Djeret, Wehem Hab: Was \"Iri Aq Ba\"",
       "filters": {
         "label": "Setep Em Kheperu",
         "PENDING": "Em Djeret",
@@ -4549,7 +4555,7 @@
     "rebuild_confirm_message": "Sesh Ahet Nen Wenen Er Per Neb Em Sesh Tepy; Nen Em Sesh Tepy: Khetem. Wen, Sesh Ahet, Ahet Sepat Khemen In Sab: Wenen.",
     "rebuild_done": "Kheper: {{created}} Iri, {{updated}} Khemen, {{removed}} Khetem, {{legacy_removed}} Sesh Tepy Khetem",
     "rebuild_failed": "Nen Wehem Iri Ahet",
-    "manage_hint": "Wen, Khemen Ahet, Iri: Was scheduler.manage",
+    "manage_hint": "Wen, Khemen Ahet, Iri: Was \"Iri Baku Ahet\"",
     "groups": {
       "global": "Baku Ta Neb",
       "tenant": "Per {{code}}",
@@ -8400,6 +8406,173 @@
     "role_judge": "Sab Wedja",
     "role_judge_desc": "Hru Sab: Shesep Sep, Khetem Wedja, Iri Wetep, Hesy.",
     "role_moderator": "Sab Maat",
-    "role_moderator_desc": "Maat Shemsu: Sedjem, Gerh, Medu Djeseru."
+    "role_moderator_desc": "Maat Shemsu: Sedjem, Gerh, Medu Djeseru.",
+    "banner_short": "Maa · Sesh Em Medjat Pen Wa",
+    "landing": {
+      "kicker": "Maa · Nen Per Hemsu · Aq Neb: Wehem Tepy",
+      "title": "Duat 4 · Sesh Wa.",
+      "lede": "Iri Ba Em Taui Neb: Duat 4, Wedja Mi Djedu Djes-Ef. Setep Wa: Aq Mi Sab Wedja.",
+      "pick": "Setep Duat",
+      "enter_judge": "Aq Mi Sab Wedja",
+      "card_label": "{{civ}} · Aq Mi Sab Wedja",
+      "others": "Er Aq Mi Ky",
+      "footer": "Wehem Mesut Neb: Em Sesh"
+    },
+    "civ": {
+      "cn": {
+        "name": "Duat Sherer",
+        "line": "Wesekhet 1 Er 10, Wehem Mesut Em Wat 6; Mu Mengpo Er Tepy."
+      },
+      "eu": {
+        "name": "Pet Hena Duat"
+      },
+      "eg": {
+        "name": "Duat Kemet",
+        "realm": "Duat",
+        "line": "Fai Ib · Shut Maat; Djed Nen 42, Wa Er Wa."
+      },
+      "gr": {
+        "name": "Duat Haunebut",
+        "realm": "Hades",
+        "line": "Wedja 3; Sesh Er, Renpet 1000; Mu Lethe, Wehem Mesut."
+      }
+    },
+    "build": {
+      "title": "Mi Iri Seth",
+      "node": {
+        "web": "Medjat Wesekhet",
+        "soul_app": "Medjat Ba",
+        "officer_app": "Medjat Sab",
+        "core": "Djedu Neb · Medjat 4",
+        "core_detail": "Wedja, Wetep, Wehem Mesut En Duat 4: Sesh Sep Wa",
+        "backend": "Per Hemsu",
+        "letters": "Shemes",
+        "tenancy": "Per Hemes: Wesekhet Wa = Per Hemes Wa; Sesh Mi Wesekhet. Wesekhet Ky: Hab-Ba Hena Wedja Taui Ky Wa."
+      },
+      "shared": "Neb",
+      "tests_title": "Sip",
+      "tests": {
+        "backend": "Per Hemsu",
+        "web": "Medjat Wesekhet",
+        "soul_app": "Medjat Ba",
+        "officer_app": "Medjat Sab",
+        "e2e": "Sip Wat Neb · Er 3"
+      },
+      "video_soul": "Medjat Ba · Tut Shem",
+      "video_officer": "Medjat Sab · Tut Shem"
+    },
+    "tour": {
+      "title": "Ankh Ba Wa",
+      "title_civ": "Ankh Ba Wa · {{civ}}",
+      "progress": "Wat {{n}} / {{total}}",
+      "next": "Wat Er Khet",
+      "prev": "Wat Em Hat",
+      "skip": "Sni Shem",
+      "collapse": "Imen Shem",
+      "chip": "Shem {{n}}/{{total}}",
+      "look_here": "Maa Dy: {{target}}",
+      "done_title": "Ankh Wa Khetem",
+      "done_body": "Mi {{civ}} Pen. Em Duat Ky: Ba Wa, Wat Ky.",
+      "try_another": "Setep Duat Ky",
+      "stay": "Smen Dy",
+      "cn": {
+        "1": {
+          "name": "Mut",
+          "body": "Senb Mut: Ba Em Ankh → Mut Seth."
+        },
+        "2": {
+          "name": "Medu Ini Ba",
+          "body": "Chenghuang Hab Medu Ini Ba; Sab Ini Shesep Ba."
+        },
+        "3": {
+          "name": "Maa Tepy"
+        },
+        "4": {
+          "name": "Wesekhet 1 Er 10",
+          "body": "Sab Wedja: Iru Isfet Hena Wedja; Iru Isfet Setep Wesekhet."
+        },
+        "5": {
+          "name": "Sekhet Wetep",
+          "body": "Wetep Em Sekhet Wetep: Sekhet Wa Khetem, Er Khet Sekhet Ky."
+        },
+        "6": {
+          "name": "Wehem Mesut",
+          "body": "Renpet Khetem: Mu Mengpo, Wehem Mesut Em Wat 6."
+        }
+      },
+      "eu": {
+        "1": {
+          "name": "Mut",
+          "body": "Mut Sesh Seth; Ba Iyi Er Sebkhet Pet."
+        },
+        "2": {
+          "name": "Sebkhet Pet"
+        },
+        "3": {
+          "name": "Wedja",
+          "body": "Sab Wedja Sesh Iru Isfet; Mi Dante: Isfet Wer, Duat Khery."
+        },
+        "4": {
+          "name": "Ta Hesmen Er Duat",
+          "body": "Ta Hesmen: Sekhet 7, Isfet Fekh Mi Sekhet. Duat 9: Nen Per."
+        },
+        "5": {
+          "name": "Pet",
+          "body": "Ba Nen Isfet: Paradiso Terrestre, Er Khet Pet. Nen Wehem Mesut Em Europa."
+        }
+      },
+      "eg": {
+        "1": {
+          "name": "Mut",
+          "body": "Mut Sesh Seth; Wet Hru 70, Er Khet Ba Shem Er Weret Maaty."
+        },
+        "2": {
+          "name": "Djed Nen",
+          "body": "Ba Djed Nen Isfet Er Netjer 42; Sesh: Maat Er Nen Maat."
+        },
+        "3": {
+          "name": "Fai Ib",
+          "body": "Ib Hena Shut Maat: Ib Nen Dens Er Shut = Menkh."
+        },
+        "4": {
+          "name": "Wetep",
+          "body": "Menkh: Wetep. Ib Dens Er Shut: Er Ammit."
+        },
+        "5": {
+          "name": "Sekhet Aaru",
+          "body": "Wat Pehwy: Sekhet Aaru. Nen Wehem Mesut Em Kemet: Ankh Pen Khetem Dy."
+        }
+      },
+      "gr": {
+        "1": {
+          "name": "Mut",
+          "body": "Mut Sesh Seth; Ba Iyi Er Acheron."
+        },
+        "2": {
+          "name": "Shem Itru",
+          "body": "Charon: Qeres Seth Hena Redi Er Itru Wa. Ky: Renpet 100 Hena Itru."
+        },
+        "3": {
+          "name": "Wesekhet Sab 3",
+          "body": "Sab Wedja 3: Nefer, Er Ta Nefer; Isfet, Er Tartaros."
+        },
+        "4": {
+          "name": "Wat Er Ta",
+          "body": "Wetep: Wat Er Ta Hena Renpet."
+        },
+        "5": {
+          "name": "Renpet 1000",
+          "body": "Mi Sesh Er: Renpet 1000 Em Duat."
+        },
+        "6": {
+          "name": "Mu Lethe",
+          "body": "Mu Lethe: Nen Rekh Ankh Tepy; Wehem Mesut."
+        }
+      }
+    },
+    "enter": {
+      "entering": "Aq Er {{civ}}",
+      "skip": "Sni"
+    }
   }
 }

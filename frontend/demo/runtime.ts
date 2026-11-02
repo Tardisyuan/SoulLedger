@@ -4,7 +4,7 @@
  */
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { api } from "@soulledger/core/api/client";
-import { type Answer, type DemoRole, DEMO_USERNAMES, allRows, currentRole, read, recording, resetOverlay, setRole } from "./store";
+import { type Answer, type DemoLang, type DemoRole, DEMO_USERNAMES, allRows, currentRole, langOf, read, recording, resetOverlay, setRole } from "./store";
 import { derived } from "./flows";
 import { write } from "./writes";
 
@@ -33,12 +33,12 @@ function freshSession(): void {
   }
 }
 
-async function auth(path: string, body: Record<string, unknown>): Promise<Answer | null> {
+async function auth(path: string, body: Record<string, unknown>, lang: DemoLang): Promise<Answer | null> {
   if (path === "/auth/login/" || path === "/auth/officer-login/") {
     const role = (Object.keys(DEMO_USERNAMES) as DemoRole[]).find((r) => DEMO_USERNAMES[r] === body.username) ?? "judge";
     freshSession();
     setRole(role);
-    const rec = await recording(role);
+    const rec = await recording(role, lang);
     return { status: 200, data: { ...rec.login, access: "demo-access", refresh: "demo-refresh" } };
   }
   if (path === "/auth/logout/") {
@@ -49,10 +49,10 @@ async function auth(path: string, body: Record<string, unknown>): Promise<Answer
   return null;
 }
 
-async function answer(method: string, path: string, query: URLSearchParams, body: Record<string, unknown>): Promise<Answer> {
-  const signed = method === "POST" ? await auth(path, body) : null;
+async function answer(method: string, path: string, query: URLSearchParams, body: Record<string, unknown>, lang: DemoLang): Promise<Answer> {
+  const signed = method === "POST" ? await auth(path, body, lang) : null;
   if (signed) return signed;
-  const rec = await recording(currentRole());
+  const rec = await recording(currentRole(), lang);
   return method === "GET" ? (derived(rec, path, query) ?? read(rec, path, query)) : write(rec, method, path, query, body);
 }
 
@@ -63,8 +63,8 @@ function csv(rows: Record<string, unknown>[]): string {
 }
 
 /** Every export is the list next to it, as CSV. The server's own column choices are not reproduced. */
-async function download(path: string): Promise<Blob> {
-  const rec = await recording(currentRole());
+async function download(path: string, lang: DemoLang): Promise<Blob> {
+  const rec = await recording(currentRole(), lang);
   const list = path.replace(/[^/]+\/$/, "");
   return new Blob([`﻿${csv(allRows(rec, list))}`], { type: "text/csv;charset=utf-8" });
 }
@@ -73,10 +73,11 @@ export async function axiosAnswer(config: InternalAxiosRequestConfig): Promise<A
   const url = new URL(api.getUri(config), "http://demo.invalid");
   const path = url.pathname.replace(API_PREFIX, "");
   const method = (config.method ?? "get").toUpperCase();
+  const lang = langOf(config.headers?.["Accept-Language"]);
   const result: Answer =
     config.responseType === "blob"
-      ? { status: 200, data: await download(path) }
-      : await answer(method, path, url.searchParams, parseBody(config.data));
+      ? { status: 200, data: await download(path, lang) }
+      : await answer(method, path, url.searchParams, parseBody(config.data), lang);
   const response: AxiosResponse = { data: result.data, status: result.status, statusText: String(result.status), headers: {}, config };
   if (result.status >= 400) {
     throw new AxiosError(`Request failed with status code ${result.status}`, AxiosError.ERR_BAD_REQUEST, config, null, response);
@@ -113,6 +114,6 @@ export async function fetchAnswer(rawUrl: string, init?: RequestInit): Promise<R
       },
     ]);
   }
-  const result = await answer(method, path, url.searchParams, parseBody(init?.body));
+  const result = await answer(method, path, url.searchParams, parseBody(init?.body), langOf(locale));
   return new Response(JSON.stringify(result.data), { status: result.status, headers: { "Content-Type": "application/json" } });
 }

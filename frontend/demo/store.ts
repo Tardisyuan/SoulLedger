@@ -7,8 +7,15 @@
  * nested field, so one write moves every screen that shows the row. Integer ids are only unique per table, so
  * their patches stay in their own collection.
  */
-export type DemoRole = "admin" | "judge" | "moderator";
-export const DEMO_USERNAMES: Record<DemoRole, string> = { admin: "demo_admin", judge: "demo_judge", moderator: "demo_moderator" };
+export type DemoRole = "admin" | "judge" | "judge_eu" | "judge_eg" | "judge_gr" | "moderator";
+export const DEMO_USERNAMES: Record<DemoRole, string> = {
+  admin: "demo_admin",
+  judge: "demo_judge",
+  judge_eu: "demo_judge_eu",
+  judge_eg: "demo_judge_eg",
+  judge_gr: "demo_judge_gr",
+  moderator: "demo_moderator",
+};
 
 type Row = Record<string, unknown>;
 interface ListRecord {
@@ -17,6 +24,7 @@ interface ListRecord {
 }
 export interface Recording {
   role: DemoRole;
+  lang: DemoLang;
   recordedAt: string;
   login: { user: Row };
   lists: Record<string, ListRecord>;
@@ -91,7 +99,10 @@ export function setRole(role: DemoRole): void {
   }
 }
 
-const loaded: Partial<Record<DemoRole, Promise<Recording>>> = {};
+const loaded: Record<string, Promise<Recording>> = {};
+export type DemoLang = "zh" | "en";
+/** A language the recording has for the one the app asks in. Kemet reads the English recording. */
+export const langOf = (acceptLanguage: unknown): DemoLang => (String(acceptLanguage ?? "").startsWith("zh") ? "zh" : "en");
 
 /** Timestamps move with the calendar: a case recorded as "two hours ago" reads that way whenever the demo is opened. */
 function shifted(raw: Recording): Recording {
@@ -108,8 +119,8 @@ function shifted(raw: Recording): Recording {
   return JSON.parse(text) as Recording;
 }
 
-export function recording(role: DemoRole): Promise<Recording> {
-  return (loaded[role] ??= import(`./data/${role}.json`).then((m) => shifted(m.default as Recording)));
+export function recording(role: DemoRole, lang: DemoLang): Promise<Recording> {
+  return (loaded[`${role}.${lang}`] ??= import(`./data/${role}.${lang}.json`).then((m) => shifted(m.default as Recording)));
 }
 
 export const nextSeq = () => ++overlay.seq;

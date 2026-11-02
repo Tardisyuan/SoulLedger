@@ -35,6 +35,7 @@ import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
  * `initialScale: 1` 与 `width: "device-width"` 必须成对:只给宽度,iOS Safari 在
  * 横竖屏切换后仍会自己缩放。刻意**不**设 `maximumScale` 或 `userScalable: false`
  * —— 禁用缩放是无障碍倒退,而这份配置本来就是为修无障碍缺陷而加的。 */
+const DemoTour = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoTour")) : null;
 const DemoBanner = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoBanner")) : null;
 
 export const viewport: Viewport = {
@@ -114,6 +115,7 @@ export default async function RootLayout({
                     <Suspense fallback={null}>
                       <RouteProgress />
                     </Suspense>
+                    {DemoTour && <DemoTour />}
                     <AppLayoutWrapper>
                       {children}
                     </AppLayoutWrapper>

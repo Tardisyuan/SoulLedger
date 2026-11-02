@@ -1,1 +1,26 @@
-[]
+[
+  "demo.build.github",
+  "demo.build.lede",
+  "demo.build.tests_caption",
+  "demo.civ.cn.realm",
+  "demo.civ.eu.line",
+  "demo.civ.eu.realm",
+  "demo.tour.cn.3.body",
+  "demo.tour.eu.2.body",
+  "demo.tour.target.capture",
+  "demo.tour.target.city_god",
+  "demo.tour.target.confessions",
+  "demo.tour.target.death",
+  "demo.tour.target.desk",
+  "demo.tour.target.desk_offence",
+  "demo.tour.target.desk_place",
+  "demo.tour.target.disposition",
+  "demo.tour.target.ferry",
+  "demo.tour.target.realm_map",
+  "demo.tour.target.rebirth",
+  "demo.tour.target.rebirth_soup",
+  "demo.tour.target.scale",
+  "demo.tour.target.soul_plan",
+  "demo.tour.target.timeline",
+  "permission.names.audit.read"
+]

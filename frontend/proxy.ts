@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 // `git log -p --all -- frontend/middleware.ts | grep config/locale` matched
 // **nothing**, ever. The three literals below lived here in their own copy
 // while a comment elsewhere announced the consolidation as done.
-import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
+import { LOCALE_COOKIE, isLocale, type Locale } from "@soulledger/core/config/locale";
 
 /** Request header the per-request nonce travels in; app/layout.tsx reads it
  *  for the one inline script this repo writes. */
@@ -82,6 +82,11 @@ const PUBLIC_PATHS = [
   "/(auth)/accept-invite",
 ];
 
+/** The browser's first language: Chinese if it starts with `zh`, English otherwise. Kemet is only ever chosen. */
+export function localeFromBrowser(acceptLanguage: string | null): Locale {
+  return /^\s*zh\b/i.test(acceptLanguage ?? "") ? "zh-Hans" : "en";
+}
+
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (p) => pathname === p || pathname === p.replace("(auth)/", "")
@@ -102,14 +107,17 @@ export function proxy(request: NextRequest) {
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   // `isLocale` rather than `SUPPORTED_LOCALES.includes`: it is the type
   // guard the rest of the app narrows with, so the two cannot disagree about
-  // what counts as a locale.
-  const locale = isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
+  // what counts as a locale. A visitor who has not chosen follows the browser.
+  const locale = isLocale(cookieLocale) ? cookieLocale : localeFromBrowser(request.headers.get("accept-language"));
+  // For this very request too: the layout reads the cookie to render, and the first page must not flash the wrong language.
+  request.cookies.set(LOCALE_COOKIE, locale);
 
   // Fresh per request. Next takes the nonce from the request's CSP header;
   // `x-nonce` is for our own inline script (app/layout.tsx).
   const nonce = btoa(crypto.randomUUID());
   const csp = contentSecurityPolicy(nonce, request.nextUrl.host);
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("cookie", request.cookies.toString());
   requestHeaders.set(NONCE_HEADER, nonce);
   requestHeaders.set("Content-Security-Policy", csp);
 

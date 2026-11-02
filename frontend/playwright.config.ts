@@ -15,6 +15,8 @@ export default defineConfig({
   reporter: process.env.CI ? [["html", { open: "never" }]] : "html",
   use: {
     baseURL,
+    // The app follows the browser's language; these specs assert Chinese copy. (browser-language.spec.ts tests the rule.)
+    locale: "zh-CN",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

@@ -978,14 +978,14 @@
     "gate_is_active_effect": "查询层面的开关。非管理员的请求会在到达之前先按 is_active=True 过滤——停用的条目从其菜单树中完全消失，而不是变灰显示。",
     "gate_is_active_nonadmin": "只读，不显示切换控件——即便某个角色被授予了写权限，也无法在这里找到已停用的行，因为他们自己的读取请求同样会把它过滤掉。",
     "gate_visible_effect": "仅影响侧边栏。激活但不可见的条目仍可通过直接导航访问，只是侧边栏列表不会展示它。",
-    "gate_visible_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
+    "gate_visible_nonadmin": "编辑此菜单需要「管理菜单」权限——目前仅管理员拥有。",
     "gate_permission_effect": "如果有代码调用 Menu.get_codename()，它会用到的权限码——目前还没有任何调用点，因此这是一个休眠开关，不是生效中的门禁。留空时会从路径推导一个猜测值。",
-    "gate_permission_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
+    "gate_permission_nonadmin": "编辑此菜单需要「管理菜单」权限——目前仅管理员拥有。",
     "gate_roles_effect": "比权限码更粗粒度——控制哪些角色能看到这个条目。空列表 = 公开，而不是「谁都看不见」。",
-    "gate_roles_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
+    "gate_roles_nonadmin": "编辑此菜单需要「管理菜单」权限——目前仅管理员拥有。",
     "gate_menu_type_effect": "目录 / 菜单 / 按钮。决定其余字段中哪些有意义——目录没有页面。",
-    "gate_menu_type_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
-    "gates_footnote": "这五项的编辑权限都需要 menu.manage——在当前的角色配置下仅管理员拥有。",
+    "gate_menu_type_nonadmin": "编辑此菜单需要「管理菜单」权限——目前仅管理员拥有。",
+    "gates_footnote": "这五项的编辑权限都需要「管理菜单」——在当前的角色配置下仅管理员拥有。",
     "show_deleted": "显示已删除",
     "deleted_badge": "已删除",
     "delete_confirm_title": "移至回收站？",
@@ -1095,7 +1095,7 @@
       "confirm_user_count": "{{count}} 名用户当前使用此角色，保存后立即生效。",
       "confirm_removed_label": "将被移除：",
       "confirm_clear_warning": "此操作将清空 {{role}} 持有的全部权限。",
-      "confirm_menu_read_warning": "被移除的权限中包含 menu.read——持有此角色的用户下次登录后将看到空白的导航栏。",
+      "confirm_menu_read_warning": "被移除的权限中包含「查看菜单」——持有此角色的用户下次登录后将看到空白的导航栏。",
       "confirm_type_role_label": "输入角色名称 {{role}} 以确认：",
       "confirm_cancel": "取消",
       "confirm_submit": "确认保存",
@@ -2062,7 +2062,7 @@
       "stat_deferred": "已延后 {{n}}",
       "stat_remaining": "剩余 {{n}}",
       "exhausted_title": "队列已清空",
-      "read_only": "你可以查阅这个队列，但不能裁决。裁决需要 judgment.execute 权限。",
+      "read_only": "你可以查阅这个队列，但不能裁决。裁决需要「裁决」权限。",
       "exhausted_with_deferred_title": "只剩下延后的条目",
       "exhausted_body": "本次会话共裁决 {{n}} 条。",
       "incomplete_title": "这一条取回来是残缺的",
@@ -2677,7 +2677,7 @@
       "IMPERSONATE_START": "开始代看",
       "IMPERSONATE_END": "结束代看"
     },
-    "needs_audit_read": "需要「查看审计日志」权限（audit.read）",
+    "needs_audit_read": "需要「查看审计日志」权限",
     "repeat_expand": "展开",
     "repeat_collapse": "收起",
     "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行",
@@ -3046,7 +3046,7 @@
       "eternal_no": "否",
       "full": "满",
       "capacity_unrecorded": "容量未记录",
-      "read_only": "只读 · 只有持 realms.manage 的人能改容量;其余各列来自神话语料,不经接口改",
+      "read_only": "只读 · 只有持「管理界域」的人能改容量;其余各列来自神话语料,不经接口改",
       "empty_civ": "此文明尚未配置界域",
       "occupancy_failed": "在押人数加载失败",
       "not_a_place": "— · 不是地方",
@@ -3075,7 +3075,7 @@
       "GREEK": "希腊"
     },
     "switch_hint": "切换只换查看的文明，匾与印仍是你所属的文明",
-    "manage_hint": "realms.manage · 容量可就地编辑",
+    "manage_hint": "「管理界域」 · 容量可就地编辑",
     "map": {
       "title": "路线图",
       "shape_line": "一条直线",
@@ -3622,25 +3622,29 @@
         "read": "查看处置"
       },
       "judgment": {
-        "read": "查看审判"
+        "read": "查看审判",
+        "execute": "裁决"
       },
       "ledger": {
         "read": "查看功德"
       },
       "menu": {
-        "read": "查看菜单"
+        "read": "查看菜单",
+        "manage": "管理菜单"
       },
       "org": {
         "read": "查看组织"
       },
       "realms": {
-        "read": "查看领域"
+        "read": "查看领域",
+        "manage": "管理界域"
       },
       "reincarnation": {
         "read": "查看轮回"
       },
       "scheduler": {
-        "read": "查看定时任务"
+        "read": "查看定时任务",
+        "manage": "管理定时任务"
       },
       "session": {
         "manage": "管理在线会话"
@@ -3652,7 +3656,8 @@
         "read": "查看灵魂"
       },
       "soul_account": {
-        "read": "查看灵魂账号"
+        "read": "查看灵魂账号",
+        "manage": "管理灵魂账号"
       },
       "soul_inbox": {
         "read": "查看殿司收件箱"
@@ -3665,6 +3670,9 @@
       },
       "workflow": {
         "read": "查看工作流"
+      },
+      "audit": {
+        "read": "查看审计日志"
       }
     }
   },
@@ -4008,7 +4016,7 @@
     "credentials": {
       "title": "待交付初始密码",
       "subtitle": "未能自动发送的灵魂初始密码：查看一次、线下交付，或重试发送",
-      "manage_hint": "需要 soul_account.manage 权限才能查看密码、标记交付或重试发送",
+      "manage_hint": "需要「管理灵魂账号」权限才能查看密码、标记交付或重试发送",
       "filters": {
         "label": "按状态筛选",
         "PENDING": "待交付",
@@ -4560,7 +4568,7 @@
     "rebuild_confirm_message": "按注册表为每个活跃租户补齐缺失的调度行，清理已不在注册表中的行。运维改过的启停、cron 与时区会保留。",
     "rebuild_done": "重建完成：新建 {{created}}，更新 {{updated}}，移除 {{removed}}，清理旧行 {{legacy_removed}}",
     "rebuild_failed": "重建失败",
-    "manage_hint": "需要 scheduler.manage 权限才能启停、编辑或运行",
+    "manage_hint": "需要「管理定时任务」权限才能启停、编辑或运行",
     "groups": {
       "global": "全局任务",
       "tenant": "租户 {{code}}",
@@ -8400,6 +8408,198 @@
     "role_admin": "管理员",
     "role_admin_desc": "四个文明都看得到:用户、角色权限、系统配置、审计。",
     "role_moderator": "版主",
-    "role_moderator_desc": "朋友圈审核:举报、禁言、敏感词。"
+    "role_moderator_desc": "朋友圈审核:举报、禁言、敏感词。",
+    "banner_short": "演示 · 数据只在本浏览器",
+    "landing": {
+      "kicker": "作品演示 · 没有后端 · 每次登录都回到原样",
+      "title": "四种冥界，一本账。",
+      "lede": "一个跨文明的冥府后台：四种冥界各按自己的规矩审一个灵魂。选一个，以它的判官身份进去。",
+      "pick": "选一个冥界",
+      "enter_judge": "以判官身份进入",
+      "card_label": "{{civ}}，以判官身份进入",
+      "others": "也可以换个身份看",
+      "footer": "万古轮回皆有录"
+    },
+    "civ": {
+      "cn": {
+        "name": "中国地府",
+        "realm": "Diyu",
+        "line": "十殿轮审，判入六道；过奈何桥前，先喝一碗孟婆汤。"
+      },
+      "eu": {
+        "name": "欧洲天堂与地狱",
+        "realm": "Paradiso · Inferno",
+        "line": "圣彼得守在天门，炼狱逐层涤罪，但丁的九层地狱按罪下沉。"
+      },
+      "eg": {
+        "name": "埃及冥界",
+        "realm": "Duat",
+        "line": "心放上天平，对面是玛阿特之羽；四十二条否定告白，一条一条地听。"
+      },
+      "gr": {
+        "name": "希腊冥界",
+        "realm": "Hades",
+        "line": "三位判官分路；按厄尔的故事走完千年，饮勒忒之水，再入人世。"
+      }
+    },
+    "build": {
+      "title": "这是怎么做的",
+      "lede": "一个 Django 后端，四个前端。四种冥界的规则只写一遍，放在 packages/core，四端共用。",
+      "node": {
+        "web": "网页后台",
+        "soul_app": "灵魂端 App",
+        "officer_app": "官员端 App",
+        "core": "四端共用的规则",
+        "core_detail": "四种冥界的审判、处置、转世只写一遍",
+        "backend": "后端",
+        "letters": "书信",
+        "tenancy": "多租户：每一殿一个租户，数据按殿隔开；跨殿只走调拨与会审。"
+      },
+      "shared": "共用",
+      "tests_title": "自动测试",
+      "tests_caption": "{{date}} 实测 · 三种浏览器引擎:Chromium / Firefox / Mobile Chrome",
+      "tests": {
+        "backend": "后端",
+        "web": "网页",
+        "soul_app": "灵魂端",
+        "officer_app": "官员端",
+        "e2e": "端到端 · 每种引擎"
+      },
+      "video_soul": "灵魂端 App 录屏",
+      "video_officer": "官员端 App 录屏",
+      "github": "在 GitHub 上看源码"
+    },
+    "tour": {
+      "title": "一个灵魂的一生",
+      "title_civ": "一个灵魂的一生 · {{civ}}",
+      "progress": "第 {{n}} / {{total}} 步",
+      "next": "下一步",
+      "prev": "上一步",
+      "skip": "跳过导览",
+      "collapse": "收起导览",
+      "chip": "导览 {{n}}/{{total}}",
+      "look_here": "看这里：{{target}}",
+      "done_title": "这一生走完了",
+      "done_body": "这是{{civ}}的走法。换一个冥界，同一个灵魂会走完全不同的路。",
+      "try_another": "换一个冥界",
+      "stay": "留在这里",
+      "cn": {
+        "1": {
+          "name": "死亡",
+          "body": "阳间登记死亡，灵魂从「在世」变为「身故」。"
+        },
+        "2": {
+          "name": "勾魂",
+          "body": "城隍签发勾魂牒，鬼差把灵魂拘来。"
+        },
+        "3": {
+          "name": "城隍初审",
+          "body": "城隍先看功过；枉死的，送进枉死城等候。"
+        },
+        "4": {
+          "name": "十殿审判",
+          "body": "判官在审判台定罪目、出判决；罪目决定送哪一殿。"
+        },
+        "5": {
+          "name": "发落受刑",
+          "body": "处置排成受刑计划，一站服完才到下一站。"
+        },
+        "6": {
+          "name": "孟婆汤与转世",
+          "body": "刑满喝一碗孟婆汤，投入六道之一。"
+        }
+      },
+      "eu": {
+        "1": {
+          "name": "死亡",
+          "body": "阳间登记死亡，灵魂来到天门前。"
+        },
+        "2": {
+          "name": "天门",
+          "body": "圣彼得在门前看生前功过：天堂、炼狱，还是地狱。"
+        },
+        "3": {
+          "name": "审判",
+          "body": "判官记下罪目；按但丁的分法，罪越重，沉得越深。"
+        },
+        "4": {
+          "name": "炼狱或地狱",
+          "body": "炼狱七层逐层涤罪；地狱九层，没有出口。"
+        },
+        "5": {
+          "name": "天堂",
+          "body": "涤净的灵魂经地上乐园升入天堂。欧洲没有转世。"
+        }
+      },
+      "eg": {
+        "1": {
+          "name": "死亡",
+          "body": "登记死亡，七十日防腐期满，灵魂才动身去双真理之厅。"
+        },
+        "2": {
+          "name": "否定告白",
+          "body": "在四十二位陪审神面前逐条否认罪过，每条记「如实」或「不实」。"
+        },
+        "3": {
+          "name": "称心",
+          "body": "心放上天平，对面是玛阿特之羽；不重于羽，才算通过。"
+        },
+        "4": {
+          "name": "处置",
+          "body": "通过的得到处置；比羽毛重的心，交给阿米特吞下。"
+        },
+        "5": {
+          "name": "芦苇之野",
+          "body": "路的尽头是芦苇之野。埃及没有转世，这一生到此为止。"
+        }
+      },
+      "gr": {
+        "1": {
+          "name": "死亡",
+          "body": "登记死亡，灵魂来到阿刻戎河边。"
+        },
+        "2": {
+          "name": "冥河渡口",
+          "body": "卡戎只渡已安葬、付了渡资的；其余在岸边等满一百年。"
+        },
+        "3": {
+          "name": "三判官",
+          "body": "三位判官分路：善者往福人之岛，恶者下塔尔塔罗斯。"
+        },
+        "4": {
+          "name": "去处",
+          "body": "处置记下灵魂去哪里、待多久。"
+        },
+        "5": {
+          "name": "千年",
+          "body": "按厄尔的故事，灵魂在下界走完一千年。"
+        },
+        "6": {
+          "name": "勒忒之水",
+          "body": "喝下勒忒之水，忘了前生，再入人世。"
+        }
+      },
+      "target": {
+        "death": "死亡登记",
+        "capture": "灵魂详情 · 勾魂卡",
+        "city_god": "城隍初审",
+        "desk_offence": "审判台 · 罪目",
+        "soul_plan": "灵魂详情 · 受刑计划",
+        "rebirth_soup": "轮回 · 孟婆汤",
+        "desk_place": "审判台 · 去处",
+        "realm_map": "界域 · 地图",
+        "timeline": "灵魂详情 · 时间线",
+        "confessions": "审判台 · 四十二条",
+        "scale": "称心之厅 · 天平",
+        "ferry": "灵魂详情 · 渡河",
+        "desk": "审判台",
+        "disposition": "处置",
+        "rebirth": "轮回"
+      }
+    },
+    "enter": {
+      "entering": "正在进入{{civ}}",
+      "skip": "跳过"
+    }
   }
 }

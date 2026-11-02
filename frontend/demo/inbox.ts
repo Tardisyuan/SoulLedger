@@ -7,12 +7,29 @@ import { type Answer, type Recording, addRow, patchRow, read, rowsNow } from "./
 type Row = Record<string, unknown>;
 
 const THREADS = [
-  { hoursAgo: 3, letters: ["判官大人:我母亲尚在阳间,年迈无依。此案若能早结,可否容我托梦一言?"] },
-  { hoursAgo: 19, letters: ["卷宗里写我贪财,可那笔银子是替同乡还的债,借据还在老宅的梁上。", "烦请查证。"] },
-  { hoursAgo: 52, letters: ["听闻隔壁殿的案子都结了,我的还要等多久?"], replied: "已在排期,前面还有两件,结案会即刻告知。" },
-  { hoursAgo: 120, letters: ["谢谢您上回回信。我想再问一句:转世之后,这些事还记得吗?"], replied: "饮过孟婆汤便不记得了。" },
+  {
+    hoursAgo: 3,
+    letters: { zh: ["判官大人:我母亲尚在阳间,年迈无依。此案若能早结,可否容我托梦一言?"], en: ["Your honour: my mother is still among the living, old and alone. If this case could end soon, might I speak to her in a dream?"] },
+  },
+  {
+    hoursAgo: 19,
+    letters: { zh: ["卷宗里写我贪财,可那笔银子是替同乡还的债,借据还在老宅的梁上。", "烦请查证。"], en: ["The file says I was greedy, but that silver paid a neighbour's debt. The note is still in the rafters of the old house.", "Please look into it."] },
+  },
+  {
+    hoursAgo: 52,
+    letters: { zh: ["听闻隔壁殿的案子都结了,我的还要等多久?"], en: ["I hear the cases next door are all closed. How much longer for mine?"] },
+    replied: { zh: "已在排期,前面还有两件,结案会即刻告知。", en: "It is scheduled, with two ahead of it. You will hear as soon as it closes." },
+  },
+  {
+    hoursAgo: 120,
+    letters: { zh: ["谢谢您上回回信。我想再问一句:转世之后,这些事还记得吗?"], en: ["Thank you for your last letter. One more question: after rebirth, will I remember any of this?"] },
+    replied: { zh: "饮过孟婆汤便不记得了。", en: "Not after the soup." },
+  },
 ];
-const HALLS: Record<string, string> = { CN_DIYU: "中国地府", EU_HEAVEN_HELL: "欧洲天堂地狱", EG_DUAT: "埃及杜阿特", GR_HADES: "希腊冥府" };
+const HALLS: Record<string, Record<string, string>> = {
+  zh: { CN_DIYU: "中国地府", EU_HEAVEN_HELL: "欧洲天堂与地狱", EG_DUAT: "埃及冥界", GR_HADES: "希腊冥界" },
+  en: { CN_DIYU: "Diyu", EU_HEAVEN_HELL: "Heaven and Hell", EG_DUAT: "The Duat", GR_HADES: "Hades" },
+};
 const INBOX = "/chat/inbox/";
 const idFor = (soulId: unknown) => `c0ffee00${String(soulId).slice(8)}`;
 const ago = (hours: number) => Date.now() - hours * 3600000;
@@ -28,7 +45,7 @@ function seedRows(rec: Recording): Row[] {
       soul_name: soul.name,
       soul_code: `DEMO${String(soul.id).slice(0, 6).toUpperCase()}`,
       tenant: 1,
-      tenant_name: HALLS[String(soul.tenant_code)] ?? soul.tenant_code,
+      tenant_name: HALLS[rec.lang][String(soul.tenant_code)] ?? soul.tenant_code,
       hall_names: {},
       last_message_at: at,
       last_soul_message_at: new Date(ago(thread.hoursAgo + 1)).toISOString(),
@@ -57,15 +74,15 @@ function messagesOf(rec: Recording, id: string): Row[] {
   const message = (body: string, fromOfficer: boolean, hours: number, n: number) => ({
     event_id: `$demo-${id}-${n}`,
     from_officer: fromOfficer,
-    sender_name: fromOfficer ? "崔判官" : soul.soul_name,
-    officer_title: fromOfficer ? "判官" : "",
+    sender_name: fromOfficer ? meOf(rec).display_name || meOf(rec).username : soul.soul_name,
+    officer_title: fromOfficer ? (rec.lang === "zh" ? "判官" : "Judge") : "",
     txn_id: null,
     body,
     image: null,
     timestamp: ago(hours),
   });
-  const base = thread.letters.map((body, n) => message(body, false, thread.hoursAgo + 1 - n * 0.1, n));
-  if (thread.replied) base.push(message(thread.replied, true, thread.hoursAgo, 9));
+  const base = thread.letters[rec.lang].map((body, n) => message(body, false, thread.hoursAgo + 1 - n * 0.1, n));
+  if (thread.replied) base.push(message(thread.replied[rec.lang], true, thread.hoursAgo, 9));
   return base;
 }
 

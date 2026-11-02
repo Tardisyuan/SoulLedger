@@ -38,6 +38,12 @@ export default function MenuButtonsPage() {
 
 function MenuButtonsPageContent() {
   const { t } = useI18n();
+  // The readable name; the code itself stays in `title`. A code with no name yet shows as itself rather than as nothing.
+  const permissionLabel = (code?: string | null) => {
+    const key = `permission.names.${code}`;
+    const name = code ? t(key) : "";
+    return name === key ? code : name;
+  };
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const { hasPermission } = usePermissions();
@@ -125,7 +131,7 @@ function MenuButtonsPageContent() {
                           <td className="px-3 py-2 text-[oklch(var(--color-ink))]">{t(b.label)}</td>
                           <td className="px-3 py-2 text-[oklch(var(--color-ink-muted))]">{t(b.where)}</td>
                           {/* 码名是标识符,等宽。 */}
-                          <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{b.permission}</td>
+                          <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]" title={b.permission ?? undefined}>{permissionLabel(b.permission)}</td>
                         </tr>
                       );
                     })}

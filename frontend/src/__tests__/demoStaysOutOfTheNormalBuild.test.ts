@@ -9,7 +9,7 @@ import { join, relative } from "node:path";
 
 const FRONTEND = join(__dirname, "..", "..");
 const GATE = 'process.env.NEXT_PUBLIC_DEMO_MODE === "1"';
-const ENTRY_POINTS = ["app/(auth)/login/page.tsx", "app/layout.tsx", "src/components/providers/PlatformProvider.tsx"];
+const ENTRY_POINTS = ["app/(auth)/login/page.tsx", "app/layout.tsx", "app/page.tsx", "src/components/providers/PlatformProvider.tsx"];
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -23,7 +23,7 @@ describe("the demo stays out of a normal build", () => {
   const files = ["app", "src", "lib", "components"].flatMap((d) => sources(join(FRONTEND, d)));
   const importers = files.filter((f) => /["']@\/demo\//.test(readFileSync(f, "utf8"))).map((f) => relative(FRONTEND, f));
 
-  it("is imported from exactly the three known places", () => {
+  it("is imported from exactly the known places", () => {
     expect(importers.sort()).toEqual([...ENTRY_POINTS].sort());
   });
 

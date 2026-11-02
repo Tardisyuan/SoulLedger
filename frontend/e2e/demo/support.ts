@@ -2,7 +2,7 @@ import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export type Role = "admin" | "judge" | "moderator";
+export type Role = "admin" | "judge" | "judge_eu" | "judge_eg" | "judge_gr" | "moderator";
 
 type Row = Record<string, unknown> & { id: string | number };
 interface Recording {
@@ -11,7 +11,8 @@ interface Recording {
   login: { user: { id: number } };
 }
 
-export const recording = (role: Role): Recording => JSON.parse(readFileSync(join(__dirname, "..", "..", "demo", "data", `${role}.json`), "utf8")) as Recording;
+export const recording = (role: Role, lang: "zh" | "en" = "zh"): Recording =>
+  JSON.parse(readFileSync(join(__dirname, "..", "..", "demo", "data", `${role}.${lang}.json`), "utf8")) as Recording;
 
 /** The rows of a list as recorded with no filter. */
 export const rows = (rec: Recording, path: string): Row[] => rec.lists[path]?.rows ?? [];
@@ -46,6 +47,7 @@ export async function enter(page: Page, role: Role): Promise<void> {
   await page.goto("/login");
   await page.getByTestId(`demo-enter-${role}`).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+  await page.getByTestId("user-menu").waitFor();
   await page.waitForLoadState("networkidle");
 }
 

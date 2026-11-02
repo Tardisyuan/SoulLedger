@@ -14,7 +14,7 @@ const DETAIL: [string, string][] = [
   ["/judgment/appeals/", "/judgment/appeals/"],
 ];
 
-const ROLES: Role[] = ["admin", "judge", "moderator"];
+const ROLES: Role[] = ["admin", "judge", "judge_eu", "judge_eg", "judge_gr", "moderator"];
 
 for (const role of ROLES) {
   const rec = recording(role);
@@ -53,10 +53,12 @@ for (const route of ["/login/verify", "/forgot-password", "/reset-password", "/v
   });
 }
 
-test("the landing page opens without signing in", async ({ page, context }) => {
+test("the landing page opens without signing in, four cards first", async ({ page, context }) => {
   const seen = watch(context, page);
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByTestId("demo-banner")).toBeVisible();
+  await expect(page.getByTestId("landing-civs").getByRole("button")).toHaveCount(4);
+  await expect(page.getByTestId("landing-numbers")).toBeVisible();
   clean(seen, "/");
 });

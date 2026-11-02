@@ -8,6 +8,7 @@ import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ROW_MARK_ROW, RowMark, isMinePending } from "@/src/components/judgment/RowMark";
 import { latest } from "./soulProgress";
+import { sectionMark } from "@/src/lib/sectionMark";
 
 /**
  * 区块标:天干序号 + 名称(+ 条数),mono 2xs,压在区块边界线上(规范 v1 灵魂详情)。
@@ -27,6 +28,7 @@ export function LedgerHeading({
   columns?: React.ReactNode;
   id?: string;
 }) {
+  const { locale } = useI18n();
   return (
     <h2
       id={id}
@@ -35,7 +37,7 @@ export function LedgerHeading({
       }`}
     >
       <span className={columns ? "max-sm:col-span-full max-sm:pb-1" : undefined}>
-        {mark && <span aria-hidden="true">{mark} · </span>}
+        {mark && <span aria-hidden="true">{sectionMark(mark, locale)} · </span>}
         {title}
         {count !== undefined && ` ${count}`}
       </span>
