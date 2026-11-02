@@ -4,6 +4,8 @@ import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
 import Link from "next/link";
@@ -71,6 +73,7 @@ function Occupancy({ held, capacity }: { held: number; capacity: number | null }
 
 function DashboardContent() {
   const { t, formatDateTime } = useI18n();
+  const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -223,10 +226,13 @@ function DashboardContent() {
    * in their fixed order, then any other state the payload carries (LOST, or
    * one this build does not know) so nothing it counted is dropped.
    */
-  const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
-  const lifecycleStates = orderLifecycle(LIFECYCLE, (stats?.state_distribution ?? []).map((s) => s.state));
   const stateCount = (state: string) =>
     stats?.state_distribution?.find((s) => s.state === state)?.count ?? 0;
+  const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
+  // No wheel in this hall: an empty 轮回中 row says something its doctrine does not. A count, should one exist, still shows.
+  const lifecycleStates = orderLifecycle(LIFECYCLE, (stats?.state_distribution ?? []).map((s) => s.state)).filter(
+    (state) => state !== "REINCARNATING" || hasRebirth(user?.tenant?.civilization) || stateCount(state) > 0,
+  );
 
   /** 各文明: all four civilizations, from the tenants that carry them. */
   const civCount = (civ: string) =>

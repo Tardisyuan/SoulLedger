@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { menusApi, type MenuItem } from "@soulledger/core/api";
 import { menuKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 
 /**
  * MenuItem 加上两个后端已经在返回、但 lib/api 的类型里还没登记的字段。
@@ -53,6 +54,21 @@ export function hideOutsideDiyu(menus: SidebarMenu[], civilization: string | und
   return keep(menus);
 }
 
+/** 欧洲、埃及没有轮回(`hasRebirth`):转生两项不出现,「轮回」这一组也不再有,留下的「处置」并进灵魂业务。 */
+const WHEEL_ONLY_PATHS = new Set(["/rebirths", "/rebirth-applications"]);
+
+export function hideTheWheel(menus: SidebarMenu[], civilization: string | undefined): SidebarMenu[] {
+  if (hasRebirth(civilization)) return menus;
+  const isWheel = (m: SidebarMenu) => WHEEL_ONLY_PATHS.has(m.path ?? "");
+  const moved = (menus.find((m) => m.name === "轮回")?.children ?? []).filter((m) => !isWheel(m as SidebarMenu));
+  return menus
+    .filter((m) => m.name !== "轮回")
+    .map((m) => {
+      const children = (m.children ?? []).filter((c) => !isWheel(c as SidebarMenu));
+      return m.children ? { ...m, children: m.name === "灵魂业务" ? [...children, ...moved] : children } : m;
+    });
+}
+
 /**
  * 侧边栏菜单树 —— AppLayout（侧边栏本身 + 面包屑）和需要展示"译名 + 中文原名"
  * 对照的页面标题（见 src/lib/menuI18n.ts、src/components/layout/MenuGloss.tsx）
@@ -70,7 +86,7 @@ export function useSidebarMenus() {
       const res = await menusApi.all();
       return normalizeMenus(res.data);
     },
-    select: (menus) => hideOutsideDiyu(menus, user?.tenant?.civilization),
+    select: (menus) => hideTheWheel(hideOutsideDiyu(menus, user?.tenant?.civilization), user?.tenant?.civilization),
     staleTime: 5 * 60 * 1000,
     enabled: !!user, // Only fetch when user is logged in
   });

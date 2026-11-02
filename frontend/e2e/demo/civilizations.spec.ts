@@ -140,6 +140,7 @@ for (const role of ["judge_eu", "judge_eg"] as Role[]) {
     const rec = recording(role);
     const pick = (list: string, want: (r: Record<string, unknown>) => boolean) => rows(rec, list).find(want)?.id;
     const routes = [
+      "/dashboard",
       "/disposition",
       "/notifications",
       "/social",
@@ -147,6 +148,14 @@ for (const role of ["judge_eu", "judge_eg"] as Role[]) {
       `/judgment/${pick("/judgment/", (j) => j.verdict != null)}`,
       `/souls/${pick("/souls/", (s) => s.current_state !== "ALIVE")}`,
     ];
+    test("the sidebar has no door to it", async ({ page }) => {
+      await enter(page, role);
+      await page.goto("/dashboard");
+      await page.waitForLoadState("networkidle");
+      await expect(page.getByRole("button", { name: "灵魂业务" }).or(page.getByRole("link", { name: "灵魂管理" })).first()).toBeVisible();
+      await expect(page.locator('a[href="/rebirths"], a[href="/rebirth-applications"]')).toHaveCount(0);
+      expect((await page.locator("aside, nav").allInnerTexts()).join("\n")).not.toMatch(NO_REBIRTH);
+    });
     for (const route of routes) {
       test(route.replace(/[0-9a-f-]{36}/, "<id>"), async ({ page }) => {
         await enter(page, role);
