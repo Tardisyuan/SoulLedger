@@ -62,3 +62,12 @@ test("the landing page opens without signing in, four cards first", async ({ pag
   await expect(page.getByTestId("landing-numbers")).toBeVisible();
   clean(seen, "/");
 });
+
+test("the banner stays on top when the page scrolls under it", async ({ page }) => {
+  await enter(page, "admin");
+  await page.goto("/dashboard");
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => window.scrollTo(0, 600));
+  const onTop = await page.evaluate(() => !!document.elementFromPoint(window.innerWidth / 2, 10)?.closest('[data-testid="demo-banner"]'));
+  expect(onTop).toBe(true);
+});

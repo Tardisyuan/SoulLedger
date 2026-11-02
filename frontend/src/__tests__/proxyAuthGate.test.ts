@@ -162,8 +162,9 @@ describe("locale 常量只有一份", () => {
 
   it("中间件写出的 cookie 名就是那个模块导出的那个", () => {
     // 行为侧的对照:上面两条断的是源码,这条断的是结果。
-    const res = proxy(request("/", { [LOCALE_COOKIE]: DEFAULT_LOCALE }));
-    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe(DEFAULT_LOCALE);
+    const req = request("/");
+    req.headers.set("accept-language", "zh-CN");
+    expect(proxy(req).cookies.get(LOCALE_COOKIE)?.value).toBe(DEFAULT_LOCALE);
   });
 });
 
