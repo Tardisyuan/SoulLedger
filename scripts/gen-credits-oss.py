@@ -6,7 +6,7 @@
 直接依赖从哪里来:
   server  backend/requirements.txt 列出的每个包(锁文件里的传递依赖不列)
   web     frontend/package.json 的 dependencies
-  app     mobile/package.json 的 dependencies
+  app     mobile/package.json 与 mobile-officer/package.json 的 dependencies
   shared  packages/core/package.json 与根 package.json 的 dependencies
 工作区自己的包(@soulledger/*)不算依赖。
 
@@ -28,7 +28,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "packages/core/src/config/creditsOss.json"
-NPM_GROUPS = {"web": ["frontend"], "app": ["mobile"], "shared": ["packages/core", "."]}
+NPM_GROUPS = {"web": ["frontend"], "app": ["mobile", "mobile-officer"], "shared": ["packages/core", "."]}
 
 
 def workspace_names():

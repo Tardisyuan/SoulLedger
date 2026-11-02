@@ -72,6 +72,8 @@ export function contentSecurityPolicy(nonce: string, host: string): string {
 const PUBLIC_PATHS = [
   "/",
   "/welcome",
+  // 致谢页:静态清单,不含租户数据;落地页的页脚链到它。
+  "/about",
   "/(auth)/login",
   "/(auth)/login/verify",
   "/(auth)/register",

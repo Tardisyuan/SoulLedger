@@ -45,6 +45,16 @@ DEMO_PUBLISH="-p 3334:3334" scripts/demo-remote.sh scripts/demo-serve-inner.sh  
 Or on any machine with the dependencies installed: `cd frontend && export NEXT_PUBLIC_DEMO_MODE=1 && npx next build && npx next start -p 3334`.
 The variable has to be set for `next start` as well: `next.config.js` reads it at both steps, and without it `next start` warns that it does not work with `output: "standalone"`. The app still runs, but the warning is right about that config.
 
+## Publishing
+
+The site follows the `demo` branch, not `main` (Vercel's Production branch is `demo`; `frontend/vercel.json` turns off
+deployments from `main`, and preview deployments are off in the project settings). A push to `main` changes nothing on
+the site. To publish what is on `main`:
+
+```bash
+git push origin main:demo
+```
+
 ## Re-recording the data
 
 `frontend/demo/data/<role>.<zh|en>.json` is recorded from the real backend, not written by hand: six roles (four civilizations' judges, administrator, moderator), each asked in both languages; what the seed wrote in one language is carried across by `scripts/demo-translations.json`, and `scripts/demo-cjk-report.py` lists what the English recordings still say in Chinese. When the API or the seed changes:

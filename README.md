@@ -4,11 +4,23 @@
 
 [English](README.en.md) | **中文**
 
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+[![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
+[![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
+[![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
+![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+
 > SoulLedger is a working full-stack web application (Django + Next.js) that tracks
 > souls through the afterlife pipelines of four different mythologies — Chinese,
 > European, Egyptian and Greek — each with a genuinely different data model. It is an
 > application, not a documentation repository. Full English README:
 > [README.en.md](README.en.md).
+
+**在线演示：<https://soulledger.tardisyuan.ltd>**（纯前端，数据是录好的，每次登录回原样）
 
 SoulLedger 是一个可运行的全栈应用（Django + Next.js，外加一个 Expo 灵魂端 App），在同一套
 系统里追踪灵魂在四种神话体系中的流转：中国地府、以基督教与但丁为主的「欧洲」死后世界、
@@ -621,6 +633,10 @@ Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=Fals
 ## 致谢
 
 菜单与权限系统的设计参考了 [Snowy](https://github.com/xiaonuobase/Snowy)（Apache-2.0）。
+
+代码、测试与文档用 [Claude Code](https://claude.com/claude-code) 协作完成，界面设计用 Claude Design。
+字体、开源软件、文献出处、模型与服务的完整清单在应用内的「关于 / 致谢」页（`/about`），
+数据在 [`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts)。
 
 维护者：Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
 

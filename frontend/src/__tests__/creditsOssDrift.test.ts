@@ -27,7 +27,7 @@ const requirementNames = () =>
 const EXPECTED: Record<(typeof OSS_GROUPS)[number], string[]> = {
   server: requirementNames(),
   web: deps("frontend/package.json"),
-  app: deps("mobile/package.json"),
+  app: [...deps("mobile/package.json"), ...deps("mobile-officer/package.json")],
   shared: [...deps("packages/core/package.json"), ...deps("package.json")],
 };
 

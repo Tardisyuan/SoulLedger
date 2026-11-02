@@ -283,8 +283,8 @@ function DashboardContent() {
 
             {/* 状态卡(Design A4):五个生命周期状态,五等分;393 宽下前四张 2 × 2,已终结是网格下的一行。
                 迷失与本版本不认得的状态不另起卡片 —— 它们在下面的图例账里,一个都不少。 */}
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-4">
-              {LIFECYCLE.map((state) => (
+            <div className={`grid grid-cols-2 gap-2 md:gap-4 ${emptyWheelRow("REINCARNATING") ? "md:grid-cols-4" : "md:grid-cols-5"}`}>
+              {LIFECYCLE.filter((state) => !emptyWheelRow(state)).map((state) => (
                 <StatCard
                   key={state}
                   label={

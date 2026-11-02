@@ -325,6 +325,11 @@
       "url": "https://www.npmjs.com/package/expo-constants"
     },
     {
+      "name": "expo-document-picker",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-document-picker"
+    },
+    {
       "name": "expo-file-system",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo-file-system"

@@ -8,7 +8,7 @@
 import LITERATURE from "./creditsLiterature.json";
 import OSS from "./creditsOss.json";
 
-export type CreditLicence = "OFL-1.1" | "CC0-1.0" | "PD";
+export type CreditLicence = "OFL-1.1" | "CC0-1.0" | "Bitstream-Vera" | "PD";
 
 export interface Credit {
   name: string;
@@ -21,6 +21,7 @@ export interface Credit {
 export const LICENCE_LABELS: Record<Exclude<CreditLicence, "PD">, { label: string; url: string }> = {
   "OFL-1.1": { label: "SIL Open Font License 1.1", url: "https://openfontlicense.org/open-font-license-official-text/" },
   "CC0-1.0": { label: "CC0 1.0", url: "https://creativecommons.org/publicdomain/zero/1.0/" },
+  "Bitstream-Vera": { label: "Bitstream Vera License", url: "https://dejavu-fonts.github.io/License.html" },
 };
 
 /**
@@ -36,7 +37,10 @@ export const FONT_CREDITS: Credit[] = [
   "Noto Sans SC",
   "Noto Serif SC",
   "Noto Sans Egyptian Hieroglyphs",
-].map((name) => ({ name, licence: "OFL-1.1" as const }));
+]
+  .map((name): Credit => ({ name, licence: "OFL-1.1" }))
+  // scripts/build-glyph-font.py: the status marks, cut from DejaVu Sans. Licence text beside each copy of the font.
+  .concat({ name: "SoulLedger Glyphs", detail: "DejaVu Sans 2.35", licence: "Bitstream-Vera" });
 
 // 纹样(Owen Jones《The Grammar of Ornament》Pl. LXII / LXVIII / VI / XXII)一节撤掉(2026-10-03):
 // 取自它的 v2 匾纹带与分节纹已从 Web 与 App 删光,不再随任何一端发布。身份带的纹样是 v3 的纯 CSS
@@ -116,5 +120,7 @@ export const SERVICE_CREDITS: ServiceCredit[] = [
  */
 export const DESIGN_CREDITS: { name: string; detail: string }[] = [
   // 纹样带质感(paper / papyrus / marble 及深色 *-w)在规范 v2 定稿的授权表里标「本项目自有」:Design 自制,非馆藏。
-  { name: "Claude Design", detail: "Anthropic · SoulLedger v2 · 朱印 · svg / icons / textures (paper · papyrus · marble)" },
+  { name: "Claude Design", detail: "Anthropic · SoulLedger v2 – v3 · svg / icons / textures (paper · papyrus · marble)" },
+  { name: "Claude Code", detail: "Anthropic · code, tests, docs" },
+  { name: "Snowy", detail: "xiaonuobase/Snowy · Apache-2.0 · menu & permission design" },
 ];
