@@ -3,7 +3,13 @@ Copyright 2026 Tardisyuan
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product bundles a subset of Noto Serif SC
-(mobile/assets/fonts/NotoSerifSC-Subset-400.ttf), which is licensed under
-the SIL Open Font License, Version 1.1. The full license text is in
-mobile/assets/fonts/OFL.txt.
+This product bundles subsets of Noto Serif SC
+(mobile/assets/fonts/NotoSerifSC-Subset-400.ttf and -600.ttf), which are
+licensed under the SIL Open Font License, Version 1.1. The full license text
+is in mobile/assets/fonts/OFL.txt.
+
+This product bundles SoulLedger Glyphs (frontend/public/fonts/SoulLedgerGlyphs.ttf
+and mobile/assets/fonts/SoulLedgerGlyphs.ttf), a subset of DejaVu Sans 2.35.
+Bitstream Vera Fonts Copyright (c) 2003 by Bitstream, Inc.; Arev Fonts Copyright
+(c) 2006 by Tavmjong Bah; DejaVu changes are in the public domain. The full
+license text is in SoulLedgerGlyphs-LICENSE.txt beside each copy of the font.

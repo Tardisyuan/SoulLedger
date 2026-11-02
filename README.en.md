@@ -4,11 +4,23 @@
 
 **English** | [中文](README.md)
 
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+[![Designed with Claude Design](https://img.shields.io/badge/Designed_with-Claude_Design-D97757?logo=claude&logoColor=white)](https://www.anthropic.com/)
+[![Live demo](https://img.shields.io/badge/Live_demo-soulledger.tardisyuan.ltd-000000?logo=vercel&logoColor=white)](https://soulledger.tardisyuan.ltd)
+[![CI](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml/badge.svg)](https://github.com/Tardisyuan/SoulLedger/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
+![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+
 > **`README.md` (Chinese) is the authority.** This translation has drifted before — it
 > sat 50 commits behind through the npm-workspaces move, and told readers to run
 > `npm test`, which does not evaluate the coverage threshold. Both files were
 > restructured together on 2026-10-08, and nothing checks that they stay level. Where
 > they disagree, believe the Chinese one, and please fix this file.
+
+**Live demo: <https://soulledger.tardisyuan.ltd>** (front end only, on recorded data; every sign-in starts over)
 
 SoulLedger is a working full-stack application — Django + Next.js, plus an Expo soul-side
 app — that tracks souls through an afterlife pipeline in four different mythologies at
@@ -690,6 +702,10 @@ the code. `git log` is the accurate record.
 
 The menu and permission system design draws on
 [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
+
+Code, tests and docs were written with [Claude Code](https://claude.com/claude-code); the interface was designed with Claude Design.
+The full list of fonts, open-source software, literature, models and services is on the app's About page (`/about`); the data is in
+[`packages/core/src/config/credits.ts`](packages/core/src/config/credits.ts).
 
 Maintainer: Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
 

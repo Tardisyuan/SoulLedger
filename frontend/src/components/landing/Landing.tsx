@@ -80,7 +80,11 @@ export function Landing({
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 landing-gutter py-3">
           <span className="font-title text-sm text-[oklch(var(--color-ink))]">{t("demo.landing.footer")}</span>
           <span className="md:hidden"><LanguageSwitcher /></span>
-          <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("footer.version")}</span>
+          <span className="flex flex-wrap items-center gap-4 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+            <a href="https://claude.com/claude-code" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">Built with Claude Code</a>
+            <a href="/about" className="underline-offset-2 hover:underline">{t("about.title")}</a>
+            <span>{t("footer.version")}</span>
+          </span>
         </div>
       </footer>
     </div>

@@ -1,10 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { clean, enter, watch } from "./support";
 
+test("the landing page's footer opens the credits without signing in", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('footer a[href="/about"]').click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(page.locator("main")).toContainText("SoulLedger Glyphs");
+  await expect(page.locator("main")).toContainText("Claude Code");
+});
+
 test("393px: the landing page and sign-in work and nothing overflows", async ({ page, context }) => {
   const seen = watch(context, page);
   await page.goto("/");
   await expect(page.getByTestId("demo-banner")).toBeVisible();
+  await expect(page.getByTestId("demo-github")).toBeVisible();
+  await expect(page.getByTestId("demo-github")).toHaveAttribute("href", "https://github.com/Tardisyuan/SoulLedger");
   await enter(page, "judge");
   const width = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(width).toBeLessThanOrEqual(0);
