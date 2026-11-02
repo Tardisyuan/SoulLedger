@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd .. && npx -y npm@11 ci --no-audit --no-fund",
+  "buildCommand": "npx next build",
+  "build": { "env": { "NEXT_PUBLIC_DEMO_MODE": "1", "NEXT_TELEMETRY_DISABLED": "1" } }
+}

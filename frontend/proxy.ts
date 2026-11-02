@@ -93,6 +93,11 @@ function isPublicPath(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // The demo signs in with one click: its two-step and password-mail pages have nothing behind them.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "1" && /^\/(login\/verify|register|forgot-password|reset-password|verify-email|accept-invite)(\/|$)/.test(pathname)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   // Locale handling
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   // `isLocale` rather than `SUPPORTED_LOCALES.includes`: it is the type

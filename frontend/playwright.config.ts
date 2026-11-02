@@ -4,6 +4,8 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Its own build and config: playwright.demo.config.ts.
+  testIgnore: "**/demo/**",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -337,12 +337,15 @@ export function PageShell({
         /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
            铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
            PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
-        <p
+        // A <div>, not a <p>: a page's loading subtitle is a <Skeleton>, itself a <div>. The HTML parser closes a <p> at a
+        // <div>, so the server's markup and the client's tree disagreed and React threw away the page (#418 on
+        // /cross-judgments/[id]; every server-rendered page with a loading subtitle was exposed).
+        <div
           data-page-shell-subtitle=""
           className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
         >
           {subtitle}
-        </p>
+        </div>
       ) : null}
     </>
   );

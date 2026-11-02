@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* The demo's recordings are 8 MB of prose, and Tailwind generates CSS from words it finds in files. The normal build stays as if the demo were not there; demo/ uses only classes the app already has. */
+@source not "../demo";
 
 @custom-variant dark (&:is(.dark *));
 
