@@ -1,6 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { clean, enter, watch } from "./support";
 
+test("the landing page's two app recordings load", async ({ page }) => {
+  await page.goto("/");
+  const videos = page.locator("#how-built video");
+  await expect(videos).toHaveCount(2);
+  for (const video of await videos.all()) {
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+  }
+});
+
 test("the landing page's footer opens the credits without signing in", async ({ page }) => {
   await page.goto("/");
   await page.locator('footer a[href="/about"]').click();
