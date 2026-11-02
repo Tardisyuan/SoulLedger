@@ -125,11 +125,14 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
-  response.cookies.set(LOCALE_COOKIE, locale, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
-  });
+  // Only when it is not there yet: a prefetch still in flight when the visitor picks a language would put the old one back.
+  if (cookieLocale !== locale) {
+    response.cookies.set(LOCALE_COOKIE, locale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+  }
 
   // Auth guard: check for refresh token cookie
   const refreshToken = request.cookies.get("soulledger_refresh")?.value;

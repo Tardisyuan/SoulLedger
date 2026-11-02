@@ -53,7 +53,7 @@ const ALL_ROUTES = [...new Set(routesFromDisk())].sort();
 /** 不需要登录的那几条,与 `proxy.ts` 的 `PUBLIC_PATHS` 对应。
  *  写死是有意的:这是一个**决定**,新增页面不该自动进来。下面第一条断言比对的
  *  正是「磁盘上的页面减去这几条」。 */
-const EXPECTED_PUBLIC = ["/", "/welcome", "/login", "/login/verify", "/forgot-password", "/reset-password", "/verify-email", "/accept-invite"];
+const EXPECTED_PUBLIC = ["/", "/welcome", "/about", "/login", "/login/verify", "/forgot-password", "/reset-password", "/verify-email", "/accept-invite"];
 
 function request(pathname: string, cookies: Record<string, string> = {}) {
   const req = new NextRequest(new URL(`http://localhost:3000${pathname}`));
@@ -189,7 +189,8 @@ describe("a visitor who has not chosen follows the browser", () => {
   it("a choice already made wins over the browser", () => {
     const req = request("/", { [LOCALE_COOKIE]: "egy" });
     req.headers.set("accept-language", "zh-CN");
-    expect(proxy(req).cookies.get(LOCALE_COOKIE)?.value).toBe("egy");
+    // Nothing written back: a response already in flight must not undo the choice the visitor just made.
+    expect(proxy(req).cookies.get(LOCALE_COOKIE)).toBeUndefined();
   });
 });
 
@@ -199,9 +200,9 @@ describe("语言 cookie", () => {
     expect(res.cookies.get("soulledger-locale")?.value).toBe("en");
   });
 
-  it.each(["zh-Hans", "en", "egy"])("认得 %s", (locale) => {
+  it.each(["zh-Hans", "en", "egy"])("认得 %s,不写回", (locale) => {
     const res = proxy(request("/", { "soulledger-locale": locale }));
-    expect(res.cookies.get("soulledger-locale")?.value).toBe(locale);
+    expect(res.cookies.get("soulledger-locale")).toBeUndefined();
   });
 
   it("不认得的语言值被换成浏览器的语言,而不是原样写回去", () => {

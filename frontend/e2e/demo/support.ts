@@ -45,6 +45,8 @@ export function clean(seen: Watch, where: string): void {
 
 export async function enter(page: Page, role: Role): Promise<void> {
   await page.goto("/login");
+  // The button is on the page before its handler is: a click ahead of hydration does nothing, and nothing says so.
+  await page.locator("html[data-civ]").waitFor({ state: "attached" });
   await page.getByTestId(`demo-enter-${role}`).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
   await page.getByTestId("user-menu").waitFor();
