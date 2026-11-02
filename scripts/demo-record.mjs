@@ -81,7 +81,7 @@ function historize(value, owner) {
   if (value && typeof value === "object") {
     const mine = ownerIn(value) ?? owner;
     const life = mine && LIVES.souls[mine];
-    if (life && typeof value.year === "number" && value.year >= 2025) return { ...value, year: life.year + (value.year - 2026) };
+    if (life && typeof value.year === "number" && value.year >= 2025) return { ...value, year: life.year + (value.year - 2026), month: life.month, day: life.day };
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, historize(v, mine)]));
   }
   if (typeof value !== "string" || !owner) return value;

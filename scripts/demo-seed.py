@@ -612,7 +612,8 @@ def write_lives():
     recorded (`historize` in demo-record.mjs): each soul's first stamp lands on its death, and the rest keep their distance."""
     souls = {}
     for soul in Soul.all_objects.filter(pk__in=list(DIED)):
-        souls[str(soul.pk)] = {"year": soul.death_year, "month": soul.death_month, "day": soul.death_day, "first": soul.create_time.isoformat()}
+        # From DIED, not the row: rebirth clears the death on a soul that has gone round.
+        souls[str(soul.pk)] = {"year": DIED[soul.pk], "month": soul.death_month or random.randint(1, 12), "day": soul.death_day or random.randint(1, 28), "first": soul.create_time.isoformat()}
     owner = {}
     for model, field in ((Judgment, "soul_id"), (ApprovalWorkflow, "soul_id"), (SentencePlan, "soul_id"), (Disposition, "soul_id")):
         for pk, soul in model._base_manager.values_list("pk", field):
