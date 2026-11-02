@@ -20,6 +20,7 @@ test("a browser in English gets English, from the first paint", async ({ page })
 
 test("a visitor's choice of language sticks", async ({ page }) => {
   await page.goto("/");
+  await page.locator("html[data-civ]").waitFor({ state: "attached" }); // hydrated: before this the select has no handler
   await page.locator("select").filter({ visible: true }).first().selectOption("zh-Hans");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("四种冥界,一本账。".replace(",", "，"));
   await page.reload();
