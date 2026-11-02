@@ -42,7 +42,8 @@ To look at a demo build by hand, on the gates' machine:
 DEMO_PUBLISH="-p 3334:3334" scripts/demo-remote.sh scripts/demo-serve-inner.sh   # then http://gates-host.lan:3334
 ```
 
-Or on any machine with the dependencies installed: `cd frontend && NEXT_PUBLIC_DEMO_MODE=1 npx next build && npx next start -p 3334`.
+Or on any machine with the dependencies installed: `cd frontend && export NEXT_PUBLIC_DEMO_MODE=1 && npx next build && npx next start -p 3334`.
+The variable has to be set for `next start` as well: `next.config.js` reads it at both steps, and without it `next start` warns that it does not work with `output: "standalone"`. The app still runs, but the warning is right about that config.
 
 ## Re-recording the data
 

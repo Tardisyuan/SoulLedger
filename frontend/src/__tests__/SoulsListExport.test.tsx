@@ -111,3 +111,16 @@ it("「显示已归档」开着时导出带 show_archived=1,已归档的行标�
   expect(marks).toHaveLength(1);
   expect(marks[0].closest("tr")).toHaveTextContent("沈青梧");
 });
+
+// 表头是「死亡时间、孟婆汤」,单元格曾是反的:日期落在孟婆汤一列下(演示数据第一次把两列都填满时才看出来)。
+it("死亡日期落在「死亡时间」列下,不落在孟婆汤列下", async () => {
+  mockRows = [
+    { id: "a1", name: "沈青梧", civilization: "CHINESE", current_state: "DISPOSED", birth_date: null, death_date: { year: 1303, month: 4, day: 6 }, merit_score: 1, demerit_score: 0, karmic_balance: 1, is_archived: false, date_problems: [], soup_taken_at: null },
+  ];
+  renderPage();
+  const headers = (await screen.findAllByRole("columnheader")).map((h) => h.textContent ?? "");
+  const column = headers.findIndex((h) => h.includes("souls.death"));
+  expect(column).toBeGreaterThan(0);
+  const cells = screen.getByText("沈青梧").closest("tr")!.querySelectorAll("td");
+  expect(cells[column]).toHaveTextContent("1303");
+});

@@ -4,6 +4,7 @@ Data goes in through the same services production uses (`die`, `conclude`, the p
 workflow's `complete_node`), so what gets recorded is what the app really answers. Names are mythological; there is
 no real person's data in here. Every soul's fate is written out in `PLAN`; add a line to add a soul.
 """
+import math
 import os
 import random
 import sys
@@ -21,7 +22,9 @@ import django  # noqa: E402
 
 django.setup()
 
+from django.apps import apps  # noqa: E402
 from django.core.management import call_command  # noqa: E402
+from django.db.models import DateTimeField  # noqa: E402
 from django.utils import timezone  # noqa: E402
 
 from apps.audit.models import AuditAction, AuditLog  # noqa: E402
@@ -38,10 +41,12 @@ from apps.judgment.models import (  # noqa: E402
     JudgmentComment,
     Verdict,
 )
+from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot  # noqa: E402
+from apps.ledger.snapshots import census_tenant  # noqa: E402
 from apps.notifications.models import UserNotification  # noqa: E402
 from apps.realms.models import Realm  # noqa: E402
 from apps.reincarnation.services import ReincarnationService, drink_soup  # noqa: E402
-from apps.sentence_plan.models import SentencePlan  # noqa: E402
+from apps.sentence_plan.models import SentencePlan, SentencePlanRequest  # noqa: E402
 from apps.social.models import (  # noqa: E402
     Comment,
     Follow,
@@ -54,6 +59,7 @@ from apps.social.models import (  # noqa: E402
 )
 from apps.soul_accounts import rebirth  # noqa: E402
 from apps.soul_accounts import services as accounts  # noqa: E402
+from apps.soul_accounts.models import SoulAccount  # noqa: E402
 from apps.souls.models import Soul  # noqa: E402
 from apps.souls.record_models import SoulRecord  # noqa: E402
 from apps.tenants.models import Tenant  # noqa: E402
@@ -89,6 +95,7 @@ SOULS = {
         ("白素贞", 40, 35, "flow"), ("法海", 30, 44, "flow"), ("曹操", 50, 80, "failed"), ("董卓", 4, 96, "failed"),
         ("秦桧", 3, 99, "failed"), ("陈世美", 12, 61, "queue"), ("潘金莲", 18, 52, "claimed"), ("聂小倩", 45, 20, "citygod"),
         ("宁采臣", 58, 6, "citygod"), ("刘伶", 33, 27, "alive"),
+        ("李靖", 64, 22, "due"), ("杨戬", 71, 17, "due"), ("钱塘君", 38, 49, "due"),
     ],
     "EU_HEAVEN_HELL": [
         ("Tristan", 62, 30, "flow"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "queue"), ("Francesca da Rimini", 35, 45, "failed"),
@@ -173,7 +180,23 @@ DEMERITS = {
 }
 
 
-def add_records(soul, kind, table, total, born):
+#: (born, died), by the person. Anyone not here is a recent life (see `make_soul`).
+LIVES = {
+    "屈原": (-340, -278), "窦娥": (1283, 1303), "梁山伯": (349, 373), "祝英台": (352, 374), "杜丽娘": (1570, 1586), "柳梦梅": (1566, 1630),
+    "白素贞": (1120, 1180), "法海": (813, 895), "曹操": (155, 220), "董卓": (138, 192), "秦桧": (1091, 1155), "陈世美": (1100, 1162),
+    "潘金莲": (1090, 1118), "聂小倩": (1640, 1658), "宁采臣": (1630, 1702), "刘伶": (221, 300), "项羽": (-232, -202), "哪吒": (-1100, -1085),
+    "Tristan": (490, 530), "Isolde": (495, 530), "Dido": (-840, -814), "Francesca da Rimini": (1255, 1285), "Paolo Malatesta": (1246, 1285),
+    "Faust": (1480, 1540), "Ulysses": (-1240, -1170), "Orlando": (736, 778), "Roland": (736, 778),
+    "Sinuhe": (-1990, -1920), "Khufu": (-2620, -2566), "Nefertari": (-1295, -1255), "Imhotep": (-2690, -2610), "Hatshepsut": (-1507, -1458),
+    "Akhenaten": (-1380, -1336), "Ani the Scribe": (-1300, -1240), "Setne": (-1281, -1225), "Bata": (-1250, -1205), "Anpu": (-1260, -1200),
+    "Orpheus": (-1300, -1250), "Eurydice": (-1295, -1265), "Sisyphus": (-1400, -1320), "Tantalus": (-1420, -1340), "Achilles": (-1250, -1184),
+    "Patroclus": (-1255, -1185), "Odysseus": (-1240, -1160), "Penelope": (-1235, -1165), "Ixion": (-1380, -1310), "Alcestis": (-1300, -1240),
+}
+DIED = {}
+PLANNED = {}
+
+
+def add_records(soul, kind, table, total, born, died):
     """Split a soul's score into a few entries. The scores on Soul are recalculated from these."""
     rows = table[soul.civilization]
     count = 2 if total < 40 else 3
@@ -183,24 +206,31 @@ def add_records(soul, kind, table, total, born):
             continue
         category, text = rows[(random.randint(0, 3) + j) % len(rows)]
         SoulRecord.objects.create(soul=soul, record_type=kind, category=category, description=text, weight=weight,
-                                  event_year=born + 18 + j * 9, event_month=random.randint(1, 12), event_day=random.randint(1, 28))
+                                  event_year=born + (died - born) * (j + 1) // (count + 1), event_month=random.randint(1, 12), event_day=random.randint(1, 28))
 
 
-def make_soul(tenant, name, merit, demerit, i):
-    born = random.randint(1940, 1985)
+def make_soul(tenant, name, merit, demerit, i, *, fate=""):
+    born, died = LIVES.get(name) or (y := random.randint(1935, 1985), y + random.randint(38, 41))
+    fated = {}
+    if fate == "due":  # 阳寿已到,还没发牒:`/judgment/capture-due` 列的就是这些。
+        fated = {"fated_death_year": 2025, "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
+    elif fate == "alive":
+        fated = {"fated_death_year": random.randint(2031, 2068), "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
     soul = Soul.objects.create(
         name=name, tenant=tenant, description=BIOS.get(name, ""),
         birth_year=born, birth_month=random.randint(1, 12), birth_day=random.randint(1, 28),
-        origin_location=PLACES[tenant.code][i % len(PLACES[tenant.code])],
+        origin_location=PLACES[tenant.code][i % len(PLACES[tenant.code])], **fated,
     )
-    add_records(soul, "MERIT", MERITS, merit, born)
-    add_records(soul, "DEMERIT", DEMERITS, demerit, born)
+    add_records(soul, "MERIT", MERITS, merit, born, died)
+    add_records(soul, "DEMERIT", DEMERITS, demerit, born, died)
     soul.refresh_from_db()
+    DIED[soul.pk] = died
+    PLANNED[soul.pk] = (merit, demerit)
     return soul
 
 
 def carry_out(soul, tenant, fate, judges, stats):
-    if fate == "alive":
+    if fate in ("alive", "due"):
         return
     case = soul.die(location=soul.origin_location)
     soul.refresh_from_db()
@@ -248,7 +278,7 @@ def seed_souls(tenants, judges):
     for code, rows in SOULS.items():
         tenant = tenants[code]
         for i, (name, merit, demerit, fate) in enumerate(rows):
-            soul = make_soul(tenant, name, merit, demerit, i)
+            soul = make_soul(tenant, name, merit, demerit, i, fate=fate)
             try:
                 carry_out(soul, tenant, fate, judges, stats)
             except Exception as exc:  # A soul stuck part way is still a soul; say which and carry on.
@@ -393,8 +423,8 @@ def seed_queue_variety(tenants):
 def seed_cross_judgments(tenants):
     """One bench still sitting, one concluded. Both begin in the Fifth Court and sit with the Greeks."""
     cn, gr = tenants["CN_DIYU"], tenants["GR_HADES"]
-    sitting = Soul.objects.create(name="哪吒", tenant=cn, merit_score=52, demerit_score=48, origin_location="陈塘关")
-    done = Soul.objects.create(name="项羽", tenant=cn, merit_score=44, demerit_score=61, origin_location="乌江")
+    sitting = make_soul(cn, "哪吒", 52, 48, 0)
+    done = make_soul(cn, "项羽", 44, 61, 1)
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
@@ -410,6 +440,121 @@ def seed_cross_judgments(tenants):
                 walk(case)
         except Exception as exc:
             print("  cross stuck:", title, type(exc).__name__, str(exc)[:200])
+
+
+def seed_deleted(admin):
+    """回收站里的几条。"""
+    for name, reason in (("无名氏甲", "重复录入"), ("Nameless of Thebes", "录入错误,灵魂并不存在"), ("张冠李", "姓名张冠李戴,已另建")):
+        soul = Soul.objects.create(name=name, tenant=Tenant.objects.get(code="CN_DIYU"), origin_location="金陵", birth_year=1950, birth_month=3, birth_day=9)
+        DIED[soul.pk] = 1990
+        soul.delete_with_cascade(user=admin, reason=reason)
+
+
+def seed_sentence_requests():
+    """待原审判官决定的计划变更请求。服务层拒绝「灵魂就在这里」的提请,而种子要的是摆在那等人决定的状态,所以直接写行。"""
+    reasons = ["冥河彼岸新出证人,请求重开此案。", "地府核定刑期有误,请原审复核。", "赦令已下,请原审确认是否重开。", "本殿执行时发现判词与卷宗不符。"]
+    plans = list(SentencePlan.all_objects.filter(status="ACTIVE").select_related("soul")[:40])
+    made = {}
+    for plan in plans:
+        code = plan.soul.tenant.code
+        if made.get(code, 0) >= 2:
+            continue
+        other = "GR_HADES" if code != "GR_HADES" else "CN_DIYU"
+        SentencePlanRequest.all_objects.create(plan=plan, from_tenant_code=other, kind="REOPEN", reason=reasons[sum(made.values()) % len(reasons)], changes={})
+        made[code] = made.get(code, 0) + 1
+    print("sentence requests:", made)
+
+
+def seed_history():
+    """一年的普查与月度账本:图才有走势。今天这一天是真普查,往前按它缩放;每个状态的走法不同,线不会平。"""
+    today = timezone.now().date()
+    for t in Tenant.objects.all():
+        now_row = census_tenant(t)
+        for d in range(1, 400):
+            grown = 0.35 + 0.65 * (1 - d / 400) ** 1.3
+            wave = lambda phase: 1 + 0.16 * math.sin(d / 9 + phase) + 0.07 * math.sin(d / 2.7 + phase * 3)  # noqa: E731
+            by_state = {k: max(0, round(n * (grown if k != "ALIVE" else 2 - grown) * wave(i))) for i, (k, n) in enumerate(now_row.by_state.items())}
+            total = sum(by_state.values())
+            by_realm = {k: max(0, round(n * grown * wave(i + 5))) for i, (k, n) in enumerate(now_row.by_realm.items())}
+            SoulCensusSnapshot.objects.update_or_create(tenant=t, day=today - timedelta(days=d), defaults=dict(
+                soul_count=total, by_state=by_state, by_civilization={t.civilization: total} if total else {}, by_realm=by_realm))
+        base = BalanceSnapshot.objects.filter(tenant=t).order_by("-month").first()
+        if base is None:
+            continue
+        month = base.month
+        for m in range(1, 12):
+            month = (month - timedelta(days=1)).replace(day=1)
+            BalanceSnapshot.objects.update_or_create(tenant=t, month=month, defaults=dict(
+                soul_count=max(1, round(base.soul_count * (1 - m / 16))), balance_total=round(base.balance_total * (1 - m / 13) + 9 * math.sin(m))))
+
+
+def backdate_deaths():
+    """`die()` 写的是今天:换成这个人真正死的那一年。"""
+    for soul in Soul.all_objects.exclude(current_state="ALIVE"):
+        year = DIED.get(soul.pk)
+        if year is None:
+            continue
+        Soul.all_objects.filter(pk=soul.pk).update(death_year=year, death_month=random.randint(1, 12), death_day=random.randint(1, 28))
+    # 功过按年衰减:千年前的善恶算下来全是 0,表上一片空。演示写回人物本来的分数。
+    for pk, (merit, demerit) in PLANNED.items():
+        Soul.all_objects.filter(pk=pk).update(merit_score=merit, demerit_score=demerit)
+
+
+#: 灵魂离最近一件事过了多久(天):队列里的新,已转世的旧。
+AGE_BY_STATE = {"ALIVE": (200, 1500), "JUDGING": (1, 16), "DISPOSED": (6, 120), "REINCARNATING": (20, 240), "TERMINATED": (60, 500)}
+#: 种子跑一秒,历史上算两小时:一个灵魂经历的事前后拉开,先后不变。
+STRETCH = 7200
+
+
+def spread_time(started):
+    """种子几十秒跑完,所有时间戳都挤在这几十秒里。把每个灵魂(或帖子)的一串事搬到它自己的过去,保持先后;
+    不属于谁的行各自散开。只动落在种子运行窗口里的值:`until`、`expires_at` 这些未来的时间不碰。"""
+    ended = timezone.now()
+    owner = {
+        "soul_id": {},
+        "judgment_id": dict(Judgment.all_objects.values_list("pk", "soul_id")),
+        "workflow_id": {w: s for w, s in ApprovalWorkflow.all_objects.values_list("pk", "soul_id")},
+        "plan_id": dict(SentencePlan.all_objects.values_list("pk", "soul_id")),
+        "account_id": dict(SoulAccount.objects.values_list("pk", "soul_id")),
+        "post_id": {},
+    }
+    states = dict(Soul.all_objects.values_list("pk", "current_state"))
+    rows = []
+    for model in apps.get_models():
+        fields = [f.name for f in model._meta.concrete_fields if isinstance(f, DateTimeField)]
+        if not fields:
+            continue
+        for values in model._base_manager.values("pk", *fields, *[k for k in owner if k in {f.attname for f in model._meta.concrete_fields}]):
+            stamps = {f: values[f] for f in fields if values[f] is not None and started <= values[f] <= ended}
+            if not stamps:
+                continue
+            if model is Soul:
+                group = ("soul", values["pk"])
+            elif model is Post:
+                group = ("post", values["pk"])
+            else:
+                group = next((("post" if k == "post_id" else "soul", owner[k].get(values[k], values[k])) for k in owner if values.get(k)), (model.__name__, values["pk"]))
+            rows.append((model, values["pk"], stamps, group))
+    span = {}
+    for _, _, stamps, group in rows:
+        low, high = span.get(group, (None, None))
+        vals = list(stamps.values())
+        span[group] = (min(vals + ([low] if low else [])), max(vals + ([high] if high else [])))
+    ages = {}
+    for group in span:
+        if group[0] == "soul":
+            low, high = AGE_BY_STATE.get(states.get(group[1]), (5, 90))
+        elif group[0] == "post":
+            low, high = (1, 45)
+        else:
+            low, high = (1, 90)
+        ages[group] = timedelta(days=random.uniform(low, high))
+    for model, pk, stamps, group in rows:
+        low, high = span[group]
+        length = (high - low).total_seconds() * STRETCH
+        start = ended - ages[group] - timedelta(seconds=length)
+        model._base_manager.filter(pk=pk).update(**{f: start + timedelta(seconds=(t - low).total_seconds() * STRETCH) for f, t in stamps.items()})
+    print("timestamps moved:", len(rows), "rows in", len(span), "groups")
 
 
 def seed_audit(users):
@@ -435,6 +580,7 @@ def seed_notifications(demo_users):
 
 
 def main():
+    started = timezone.now()
     for code, name in HALL_NAMES.items():
         Tenant.objects.filter(code=code).update(display_name=name)
     tenants = {t.code: t for t in Tenant.objects.all()}
@@ -460,7 +606,12 @@ def main():
     seed_appeals()
     seed_audit(list(User.objects.exclude(role="SOUL")[:12]))
     seed_notifications(demo)
+    seed_deleted(demo[0])
+    seed_sentence_requests()
+    backdate_deaths()
+    spread_time(started)
     call_command("snapshot_balances", stdout=StringIO())
+    seed_history()
     print("realms:", Realm.all_objects.count(), "users:", User.objects.count(), "workflows:", ApprovalWorkflow.all_objects.count())
 
 

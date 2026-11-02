@@ -536,15 +536,15 @@ function SoulsList({
               )}
             </td>
             )}
-            {showsColumn("soup") && (
-              <td className="px-4 py-3 text-xs whitespace-nowrap">
-                <SoupCell soul={soul} onChanged={() => void refetch()} />
-              </td>
-            )}
             {showsColumn("death") && (
               /* 02 档：日期是元数据，不是正文。 */
               <td className="px-4 py-3 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
+              </td>
+            )}
+            {showsColumn("soup") && (
+              <td className="px-4 py-3 text-xs whitespace-nowrap">
+                <SoupCell soul={soul} onChanged={() => void refetch()} />
               </td>
             )}
           </>

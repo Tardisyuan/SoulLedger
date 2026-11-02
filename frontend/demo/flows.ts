@@ -5,11 +5,13 @@
  * ponytail: these imitate the server's outcome, not its rules. A real refusal (not your claim, wrong order, quota) never
  * happens here; nothing a visitor can do in a demo should end in an error.
  */
+import { inboxRead, inboxWrite, letterCounts } from "./inbox";
 import {
   type Answer,
   type Recording,
   addRow,
   deleteRow,
+  dropFromList,
   getOverlay,
   listOf,
   newId,
@@ -492,6 +494,65 @@ function soulDies(rec: Recording, path: string): Answer | null {
   return detail(rec, "/souls/", m[1]);
 }
 
+/**
+ * `GET /judgment/next/`, `previous/`: the triage queue's cursor. The server counts live rows, so a recording of it can
+ * never tick down: same order and same counting here (`_pending_queue`, `_cursor_order`, backend/apps/judgment/views.py).
+ * What a case's card carries (soul, ledger, realms) is recorded per case, under `?at=<id>`.
+ */
+function cursor(rec: Recording, path: string, query: URLSearchParams): Answer {
+  const me = meOf(rec).id;
+  const skips = new Set(query.getAll("skip").flatMap((v) => v.split(",")));
+  const includeDeferred = ["1", "true", "yes"].includes((query.get("include_deferred") ?? "").toLowerCase());
+  const created = (row: Row) => String(row.created_at);
+  const queue = rowsNow(rec, "/judgment/")
+    .filter((row) => inQueue(row) && (includeDeferred || !row.deferred_at))
+    .sort((a, b) => Number(b.claimed_by === me) - Number(a.claimed_by === me) || created(a).localeCompare(created(b)));
+  const left = queue.filter((row) => !skips.has(String(row.id)));
+  const at = query.get("at");
+  const after = query.get("after");
+  const before = path.endsWith("previous/");
+  const anchor = queue.findIndex((row) => row.id === (at ?? after));
+  let target: Row | undefined;
+  if (before) target = anchor > 0 ? queue[anchor - 1] : undefined;
+  else if (after) target = queue.slice(anchor + 1).find((row) => !skips.has(String(row.id)));
+  else if (at) target = rowsNow(rec, "/judgment/").find((row) => row.id === at);
+  else target = left[0];
+  const counts = {
+    total: queue.length,
+    remaining: left.length,
+    skipped: queue.length - left.length,
+    position: left.length ? queue.length - left.length + 1 : null,
+  };
+  if (!target) return ok({ ...counts, judgment: null });
+  const card = read(rec, "/judgment/next/", new URLSearchParams({ at: String(target.id) })).data as Row;
+  return ok({ ...card, ...counts, judgment: { ...(card.judgment as Row | undefined), ...target } });
+}
+
+function sentenceRequest(rec: Recording, path: string, body: Row): Answer | null {
+  const m = /^\/sentence-plans\/([^/]+)\/requests\/([^/]+)\/(decide|withdraw)\/$/.exec(path);
+  if (!m) return null;
+  const status = m[3] === "withdraw" ? "WITHDRAWN" : body.accept === false ? "REJECTED" : "ACCEPTED";
+  patchRow("/sentence-plans/", m[2], { status, decision_reason: String(body.reason ?? ""), decided_at: now() });
+  return detail(rec, "/sentence-plans/", m[1]);
+}
+
+function recycleBin(rec: Recording, path: string, body: Row): Answer | null {
+  const bin = "/recycle-bin/";
+  if (path === `${bin}hard-delete/`) {
+    dropFromList(bin, String(body.id));
+    return ok(null, 204);
+  }
+  if (path !== `${bin}restore/`) return null;
+  const entries = rowsNow(rec, bin).filter((row) => row.cascade_id === body.cascade_id);
+  for (const entry of entries) {
+    dropFromList(bin, String(entry.id));
+    if (entry.entity_type !== "soul") continue;
+    const template = rowsNow(rec, "/souls/")[0] ?? {};
+    addRow("/souls/", { ...template, id: entry.id, name: entry.label, current_state: "ALIVE", death_date: null, is_archived: false, create_time: now() });
+  }
+  return ok({ restored: entries.length });
+}
+
 /** A write with mainline behaviour, or null for the generic rule. */
 export function flow(rec: Recording, method: string, path: string, _query: URLSearchParams, body: Row): Answer | null {
   const edited = roleEdit(rec, method, path, body);
@@ -500,8 +561,15 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
   const approve = /^\/workflows\/([^/]+)\/approve_node\/$/.exec(path);
   if (approve) return approveNode(rec, approve[1], body);
   if (path === "/notifications/mark_all_read/") {
-    rowsNow(rec, "/notifications/").forEach((n) => patchRow("/notifications/", String(n.id), { is_read: true }));
-    return ok({ updated: true });
+    const unread = rowsNow(rec, "/notifications/").filter((n) => !n.is_read);
+    unread.forEach((n) => patchRow("/notifications/", String(n.id), { is_read: true }));
+    return ok({ marked_read: unread.length });
+  }
+  if (path === "/notifications/batch-read/" || path === "/notifications/batch-delete/") {
+    const ids = (body.ids ?? []) as number[];
+    if (path.endsWith("batch-read/")) ids.forEach((id) => patchRow("/notifications/", id, { is_read: true }));
+    else ids.forEach((id) => deleteRow("/notifications/", id));
+    return ok(path.endsWith("batch-read/") ? { marked_read: ids.length } : { deleted: ids.length });
   }
   for (const [pattern, collection, patch] of STATUS_MOVES) {
     const m = pattern.exec(path);
@@ -511,6 +579,9 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
     }
   }
   return (
+    inboxWrite(rec, path, body) ??
+    sentenceRequest(rec, path, body) ??
+    recycleBin(rec, path, body) ??
     judgmentWrite(rec, path, body) ??
     moderation(rec, path, body) ??
     social(rec, path, body) ??
@@ -523,6 +594,21 @@ export function flow(rec: Recording, method: string, path: string, _query: URLSe
 
 /** The reads the server computes from the current state, which a recording of them could not follow. */
 export function derived(rec: Recording, path: string, query: URLSearchParams): Answer | null {
+  if (path === "/judgment/next/" || path === "/judgment/previous/") return cursor(rec, path, query);
+  const inbox = inboxRead(rec, path, query);
+  if (inbox) return inbox;
+  // 待办的件数跟着这个世界走:录制时的数字是「这个账号本人待办」,而演示里这些事都归他。
+  if (path === "/officer-app/todo/") {
+    const todo = read(rec, path, query).data as Record<string, { count: number; items: unknown[] }>;
+    const flows = rowsNow(rec, "/workflows/").filter((w) => w.status === "IN_PROGRESS");
+    const count = (n: number) => ({ count: n, items: [] });
+    return ok({
+      ...todo,
+      approvals: count(flows.filter((w) => w.case_type !== "REBIRTH_APPLICATION").length),
+      rebirths: count(flows.filter((w) => w.case_type === "REBIRTH_APPLICATION").length),
+      ...letterCounts(rec),
+    });
+  }
   if (path === "/judgment/" && (query.has("group") || query.has("has_verdict") || query.has("verdict_null"))) {
     const me = meOf(rec).id;
     const group = query.get("group");
