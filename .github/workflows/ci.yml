@@ -431,3 +431,43 @@ jobs:
           name: playwright-report-${{ matrix.project }}
           path: frontend/playwright-report/
           retention-days: 7
+
+  # The Vercel demo (docs/DEPLOYMENT-demo.md) answers from recorded data. Nothing else notices when a page starts
+  # reading what the recording does not have. Red here, with the page right: re-record with scripts/demo-record.sh.
+  e2e-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: frontend
+    env:
+      NEXT_PUBLIC_DEMO_MODE: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - name: Install Playwright browsers
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+      - name: Build the demo
+        run: |
+          cd frontend
+          npx next build
+      - name: Check the demo is in the bundle
+        run: bash scripts/check-demo-bundle.sh present frontend/.next
+      - name: Run the demo's E2E tests
+        run: |
+          cd frontend
+          npx playwright test -c playwright.demo.config.ts
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: demo-e2e-failures
+          path: frontend/test-results/
