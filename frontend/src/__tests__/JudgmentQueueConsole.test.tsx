@@ -75,7 +75,10 @@ function cursor(judgment: typeof JUDGMENT | null, remaining = 2) {
             karmic_balance: 42,
             record_count: 1,
             records: [
-              { id: "r-1", record_type: "MERIT", category: "", description: "修桥铺路", weight: 30, recorded_at: "2026-01-01T00:00:00Z" },
+              // The shape `LedgerService.compute_balance` sends: `type`, unsigned magnitudes.
+              { id: "r-1", type: "MERIT", category: "", description: "修桥铺路", original_weight: 30, effective_weight: 18.5, recorded_at: "2026-01-01T00:00:00Z" },
+              { id: "r-2", type: "DEMERIT", category: "", description: "苛待仆役", original_weight: 10, effective_weight: 2.25, recorded_at: "2026-01-01T00:00:00Z" },
+              { id: "r-3", type: "JUDGMENT", category: "", description: "判决存证", original_weight: 0, effective_weight: 0, recorded_at: "2026-01-01T00:00:00Z" },
             ],
           }
         : null,
@@ -198,6 +201,13 @@ describe("JudgmentQueueConsole", () => {
     expect(screen.getByText("judgment.queue.identity")).toBeInTheDocument();
     expect(screen.getByText("judgment.queue.case")).toBeInTheDocument();
     expect(screen.getByText("修桥铺路")).toBeInTheDocument();
+    // Each row on its own side, signed. It read `record_type`, which this payload does not have, so every deed
+    // was 罪业 with a plus (found in the demo, 2026-11-02).
+    const row = (text: string) => screen.getByText(text).closest("tr") as HTMLElement;
+    expect(within(row("修桥铺路")).getByText("+18.5")).toBeInTheDocument();
+    expect(within(row("苛待仆役")).getByText("-2.25")).toBeInTheDocument();
+    expect(row("修桥铺路")).not.toHaveTextContent(row("苛待仆役").querySelector("td")?.textContent ?? "\0");
+    expect(screen.queryByText("判决存证")).not.toBeInTheDocument();
     // Heading and the grid's <caption> both carry the label.
     expect(screen.getAllByText("judgment.queue.prior_cycles").length).toBeGreaterThan(0);
     expect(screen.getByText("天道")).toBeInTheDocument();
