@@ -171,7 +171,8 @@
       "load_failed": "Nen Ini Aq Sep Sen",
       "confirm_by_recovery": "Medu Ankh Wehem",
       "turn_off_body": "Er Khet: Aq Em Sekhem Wa. Smen Em Medu Ahet Er Medu Ankh Wehem Wa — Nen Khetem Em Sekhem Wa.",
-      "turn_off_failed": "Nen Khetem. Maa Medu."
+      "turn_off_failed": "Nen Khetem. Maa Medu.",
+      "regenerate_failed": "Nen Iri Wehem. Maa Medu Ahet."
     },
     "banner": {
       "text": "Per Pen Dbh Netjer-Ek Wen Aq Sep Sen. Sedjem Pen Wenen Er Wen Seth.",
@@ -317,7 +318,7 @@
       "SENTENCE_NODE_ACTIVATED": "Sekhet Wetep Tepy Seth",
       "SENTENCE_NODE_WAITING": "Sekhet Wetep · Ba Nen Iyi Djer",
       "SENTENCE_NODE_COMPLETED": "Sekhet Wetep Khetem Seth",
-      "SENTENCE_NODE_REFUSED": "Hab-Ba Sekhet Wetep Khesef",
+      "SENTENCE_NODE_REFUSED": "Hab-Ba Sekhet Wetep: Nen Menkh",
       "SENTENCE_NODE_REDISPATCHED": "Wehem Hab-Ba Sekhet Wetep",
       "SENTENCE_PLAN_AMENDED": "Sesh Wetep Khemen Seth",
       "SENTENCE_REQUEST_CREATED": "Dbh Wetep Hab Seth",
@@ -4595,7 +4596,8 @@
       "authentication_prune_expired_push_registrations": "Khetem Sesh Sedjem Em Aq Mut",
       "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…)",
       "officer_app_check_receipts": "Sedjem Sab: Ini Sesh Hab",
-      "workflow_pick_reminders_for_tenant": "Sedjem Sab Ta Ky: Setep Sekhet"
+      "workflow_pick_reminders_for_tenant": "Sedjem Sab Ta Ky: Setep Sekhet",
+      "chat_sync_all_rooms": "Senb Was Medu · Hen Shemes"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -5242,7 +5244,9 @@
         "read": "Maa Seth",
         "failed": "Nen Hab",
         "queued": "Em Smen Hab",
-        "retry": "Wehem Hab"
+        "retry": "Wehem Hab",
+        "copied": "Shemes Senn Seth",
+        "delete": "Fekh"
       },
       "request": {
         "outgoing_hint": "Nen Senb Djer. Er Khet Weshed-Ef, Medu Wa.",
@@ -6293,6 +6297,10 @@
     "workflow_timeout_failed": {
       "body": "{{soul}} · {{workflow}}: Unut Khetem Em «{{node}}», Iri Nen Iri. Wat Smen Dy: Iri Em Djeret.",
       "title": "Wat Hesy: Unut Khetem · Nen Iri"
+    },
+    "sentence_node_not_dispatched": {
+      "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) · Hab-Ba Nen Tepy. Sekhet Em Smen Djer; Iri Khet, Er Khet Wehem Tepy.",
+      "title": "Sekhet Wetep: Hab-Ba Nen Tepy"
     }
   },
   "social_moderation": {
@@ -6536,7 +6544,8 @@
       "chat_not_configured": "Per Medu Nen Wenen",
       "chat_unavailable": "Per Medu Nen Wenen Emu",
       "invalid_assignee": "Nen Hab Ky Er Sab Pen",
-      "not_current_hall": "Ba Hab-Ba Seth Er Ky: Nen Hab Wesheb Emu"
+      "not_current_hall": "Ba Hab-Ba Seth Er Ky: Nen Hab Wesheb Emu",
+      "assigned_to_other": "Sesh Pen Em Sab Ky. «Hab Er-I» Tepy, Er Khet Wesheb. Sesh-Ek Wenen."
     },
     "folders": "Aat Sesh",
     "folder": {
@@ -6595,7 +6604,9 @@
       "done": "Hab Ky Seth: {{name}}",
       "assignee": "Hab Ky Er {{name}}",
       "unassign": "Sehen",
-      "unassigned_done": "Sehen Seth"
+      "unassigned_done": "Sehen Seth",
+      "handled_by": "Sab: {{name}}",
+      "take_over": "Hab Er-I"
     },
     "feedback": {
       "label": "Sesh Er Wesekhet · {{category}}",
@@ -6795,7 +6806,8 @@
     "list_empty": "Nen Shepet Em Setep Pen",
     "list_subtitle": "Shepet: Per Tepy Er Sekhet Em Taui Pen",
     "list_title": "Shepet",
-    "last_refusal_not_started": "Hab-Ba Pehwy Nen Tepy (Mi: Hab-Ba Ky Em Shem, Er Per Hemes Khetem)"
+    "last_refusal_not_started": "Hab-Ba Pehwy Nen Tepy (Mi: Hab-Ba Ky Em Shem, Er Per Hemes Khetem)",
+    "inbox_show_all": "Dbh Wetep Neb"
   },
   "seal": {
     "aria": "Khetem En {{court}}"
@@ -7500,7 +7512,9 @@
       "push_unanswered": "Sedjem Sab Nen Wen Djer. Hemsu Dbh: Setep «Redi Wenen», Er Khet Wehem Iri.",
       "logout_pending": "Wesheb Nen Hab {{unsent}} · Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh.",
       "logout_retry": "Wehem Hab Tepy",
-      "logout_anyway": "Per Aq Emu"
+      "logout_anyway": "Per Aq Emu",
+      "logout_pending_unsent": "Wesheb Nen Hab {{unsent}}: Em Medjat Pen. Per Aq: Fekh.",
+      "logout_pending_drafts": "Sesh Tepy {{drafts}}: Em Medjat Pen. Per Aq: Fekh."
     },
     "login": {
       "username": "Ren Aq",
@@ -7615,7 +7629,8 @@
       "discard": "Fekh Sesh Tepy-I",
       "discard_confirm": "Fekh Sesh Tepy Pen? Nen Wehem Ini.",
       "discard_ok": "Fekh",
-      "moved": "Ba Hab-Ba Seth Er Ky: Nen Hab Wesheb Emu. Sesh-Ek Wenen."
+      "moved": "Ba Hab-Ba Seth Er Ky: Nen Hab Wesheb Emu. Sesh-Ek Wenen.",
+      "assigned": "Sesh Pen Em Sab Ky: Nen Hab. Sesh-Ek Wenen."
     },
     "list": {
       "more": "Ini Ky",

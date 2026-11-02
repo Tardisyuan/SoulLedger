@@ -1,15 +1,1 @@
-[
-  "scheduler.jobs.chat_sync_all_rooms",
-  "soul_app.chat.receipt.copied",
-  "soul_app.chat.receipt.delete",
-  "official_notify.sentence_node_not_dispatched.body",
-  "official_notify.sentence_node_not_dispatched.title",
-  "mfa.manage.regenerate_failed",
-  "officer_app.me.logout_pending_unsent",
-  "officer_app.me.logout_pending_drafts",
-  "sentence_plan.inbox_show_all",
-  "soul_inbox.errors.assigned_to_other",
-  "soul_inbox.assign.handled_by",
-  "soul_inbox.assign.take_over",
-  "officer_app.outbox.assigned"
-]
+[]
