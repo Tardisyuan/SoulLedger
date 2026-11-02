@@ -35,7 +35,8 @@ const idFor = (soulId: unknown) => `c0ffee00${String(soulId).slice(8)}`;
 const ago = (hours: number) => Date.now() - hours * 3600000;
 
 function seedRows(rec: Recording): Row[] {
-  const souls = rowsNow(rec, "/souls/").filter((s) => s.current_state !== "ALIVE" && typeof s.id === "string").slice(0, THREADS.length);
+  // The letters speak of Meng Po's soup: Diyu's souls only.
+  const souls = rowsNow(rec, "/souls/").filter((s) => s.tenant_code === "CN_DIYU" && s.current_state !== "ALIVE" && typeof s.id === "string").slice(0, THREADS.length);
   return souls.map((soul, i) => {
     const thread = THREADS[i];
     const at = new Date(ago(thread.hoursAgo)).toISOString();

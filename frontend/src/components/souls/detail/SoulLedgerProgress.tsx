@@ -10,6 +10,7 @@ import { RouteTopology } from "@/src/components/realms/RouteTopology";
 import { buildTopology } from "@/src/lib/routeTopology";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { latest, stepStatuses } from "./soulProgress";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 
 /**
  * 户头进度(四格)+ 行程条。两者读的是同一组 `StepStatus`,所以「当前」在两处
@@ -77,7 +78,7 @@ export function SoulLedgerProgress({
     t("souls.states.ALIVE"),
     t("souls.detail.timeline.stage_judging"),
     t("souls.detail.timeline.stage_disposed"),
-    t("souls.detail.timeline.stage_reincarnating"),
+    hasRebirth(soul.civilization) ? t("souls.detail.timeline.stage_reincarnating") : t("souls.detail.timeline.stage_final"),
   ];
 
   return (

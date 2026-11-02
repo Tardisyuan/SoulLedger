@@ -131,3 +131,90 @@ test("China: the ten courts, the stations, Meng Po", async ({ page }) => {
   await page.goto("/rebirths");
   await expect(page.locator("main")).toContainText("屈原");
 });
+
+const NO_REBIRTH = /轮回|转世|转生|rebirth|reincarnat/i;
+/** Copy that really does say there is none, and the app's fixed labels that apply to every civilization. */
+const SAYS_THERE_IS_NONE = /没有转生|没有转世|无转世|no rebirth/i;
+for (const role of ["judge_eu", "judge_eg"] as Role[]) {
+  test.describe(`${role}: its afterlife has no wheel`, () => {
+    const rec = recording(role);
+    const pick = (list: string, want: (r: Record<string, unknown>) => boolean) => rows(rec, list).find(want)?.id;
+    const routes = [
+      "/disposition",
+      "/notifications",
+      "/social",
+      "/sentence-requests",
+      `/judgment/${pick("/judgment/", (j) => j.verdict != null)}`,
+      `/souls/${pick("/souls/", (s) => s.current_state !== "ALIVE")}`,
+    ];
+    for (const route of routes) {
+      test(route.replace(/[0-9a-f-]{36}/, "<id>"), async ({ page }) => {
+        await enter(page, role);
+        await page.goto(route);
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(300);
+        const lines = (await page.locator("main").innerText()).split("\n");
+        expect(lines.filter((line) => NO_REBIRTH.test(line) && !SAYS_THERE_IS_NONE.test(line))).toEqual([]);
+      });
+    }
+  });
+}
+
+for (const [role, name] of [["judge", "屈原"], ["judge_eu", "Francesca da Rimini"], ["judge_eg", "Nefertari"], ["judge_gr", "Penelope"]] as [Role, string][]) {
+  test(`${name} lived in one stretch of history: no 2026 on the soul, its case or its flow`, async ({ page }) => {
+    const rec = recording(role);
+    const soul = rows(rec, "/souls/").find((s) => String(s.name).startsWith(name));
+    const judgment = rows(rec, "/judgment/").find((j) => j.soul === soul?.id);
+    const flow = rows(rec, "/workflows/").find((w) => w.soul === soul?.id);
+    await enter(page, role);
+    await page.getByTestId("demo-tour-skip").click().catch(() => {});
+    for (const route of [`/souls/${soul?.id}`, `/judgment/${judgment?.id}`, `/workflow/${flow?.id}`]) {
+      await page.goto(route);
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(300);
+      const lines = (await page.locator("main").innerText()).split("\n");
+      expect(lines.filter((line) => /2026/.test(line)), route).toEqual([]);
+    }
+  });
+}
+
+for (const route of ["queue", "open"]) {
+  test(`1280x800: the tour card does not cover the verdict keys (${route})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await enter(page, "judge_eg");
+    const open = rows(recording("judge_eg"), "/judgment/").find((j) => j.verdict == null && j.claimed_by != null)?.id;
+    await page.goto(route === "queue" ? "/judgment/queue" : `/judgment/${open}`);
+    await page.waitForLoadState("networkidle");
+    const key = page.getByText("重审", { exact: true }).filter({ visible: true }).first();
+    await key.scrollIntoViewIfNeeded();
+    await expect(page.getByTestId("demo-tour")).toBeVisible();
+    await page.waitForTimeout(700);
+    const covered = await key.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return !!top?.closest("[data-testid='demo-tour']");
+    });
+    expect(covered).toBe(false);
+  });
+}
+
+test("the seal is gone within a second, and Esc skips it", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("landing-card-eg").click();
+  await expect(page.getByTestId("demo-entrance")).toBeVisible();
+  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 1500 });
+  await page.goto("/");
+  await page.getByTestId("landing-card-cn").click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 300 });
+});
+
+test("Greece: the tour's second step lights the crossing line, the third the judges' fork", async ({ page }) => {
+  await enter(page, "judge_gr");
+  await page.getByTestId("demo-tour-back").click();
+  await page.getByTestId("demo-tour-next").click();
+  await expect(page.getByTestId("soul-ferry-passage")).toHaveClass(/demo-tour-target/);
+  await page.getByTestId("demo-tour-next").click();
+  await expect(page).toHaveURL(/\/workflow\//);
+  await expect(page.locator(".demo-tour-target")).toContainText("Rhadamanthus");
+});

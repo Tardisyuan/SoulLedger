@@ -89,7 +89,8 @@ const KEYS = Object.keys(EGY);
 
 const placeholders = (s: string) => [...s.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map((m) => m[1]).sort();
 /** 去掉占位符后的正文 —— 占位符名是代码,不是文案。 */
-const prose = (s: string) => s.replace(/\{\{\s*\w+\s*\}\}/g, "");
+// 第七十一批:`packages/core` 这样的 x/y(小写路径)不是词,切词前去掉。只这一种。
+const prose = (s: string) => s.replace(/\{\{\s*\w+\s*\}\}/g, "").replace(/\b[a-z]+\/[a-z]+\b/g, "");
 type Rule = (_value: string, _key: string) => boolean;
 const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
@@ -531,6 +532,8 @@ const ROOTS_TWELVE = [
  * 原样;MODERATOR 只作代码示例(见下面那条);A(快捷键)与 N 是键名 / 变量名。
  */
 const PROPER_NAMES = [
+  // 第七十一批:产品名与但丁的篇名,各语言都不译。
+  "GitHub", "Django", "Chromium", "Firefox", "Mobile Chrome", "Inferno",
   "Qinguang", "Chujiang", "Songdi", "Wuguan", "Yanluo", "Biancheng", "Taishan", "Dushi", "Pingdeng", "Zhuanlun",
   "Daishensuo", "Tianjie", "Mengpo", "Sherer", "Yangliu",
   "Limbo", "Malebolge", "Acheron", "Lethe", "Dante", "Culpa", "Poena", "Superbia", "Invidia", "Ira", "Acedia",

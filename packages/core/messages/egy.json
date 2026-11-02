@@ -3678,7 +3678,9 @@
       "workflow": {
         "read": "Maa Wat Hesy"
       },
-      "audit": {}
+      "audit": {
+        "read": "Maa Medew Maa"
+      }
     }
   },
   "welcome": {
@@ -8421,10 +8423,13 @@
     "civ": {
       "cn": {
         "name": "Duat Sherer",
-        "line": "Wesekhet 1 Er 10, Wehem Mesut Em Wat 6; Mu Mengpo Er Tepy."
+        "line": "Wesekhet 1 Er 10, Wehem Mesut Em Wat 6; Mu Mengpo Er Tepy.",
+        "realm": "Duat Sherer"
       },
       "eu": {
-        "name": "Pet Hena Duat"
+        "name": "Pet Hena Duat",
+        "line": "Sab Sebkhet Pet; Ta Hesmen; Duat 9 En Dante: Isfet Wer, Duat Khery.",
+        "realm": "Paradiso · Inferno"
       },
       "eg": {
         "name": "Duat Kemet",
@@ -8459,7 +8464,10 @@
         "e2e": "Sip Wat Neb · Er 3"
       },
       "video_soul": "Medjat Ba · Tut Shem",
-      "video_officer": "Medjat Sab · Tut Shem"
+      "video_officer": "Medjat Sab · Tut Shem",
+      "github": "Maa Medu Em GitHub",
+      "lede": "Django Wa, Medjat 4. Djedu Duat 4: Sesh Sep Wa Em packages/core · Medjat Neb.",
+      "tests_caption": "Hesb {{date}} · 3: Chromium, Firefox, Mobile Chrome"
     },
     "tour": {
       "title": "Ankh Ba Wa",
@@ -8506,7 +8514,8 @@
           "body": "Mut Sesh Seth; Ba Iyi Er Sebkhet Pet."
         },
         "2": {
-          "name": "Sebkhet Pet"
+          "name": "Sebkhet Pet",
+          "body": "Sab Sebkhet Pet Maa Ankh: Pet, Ta Hesmen, Er Duat."
         },
         "3": {
           "name": "Wedja",
@@ -8568,6 +8577,24 @@
           "name": "Mu Lethe",
           "body": "Mu Lethe: Nen Rekh Ankh Tepy; Wehem Mesut."
         }
+      },
+      "target": {
+        "capture": "Ba · Medu Ini Ba",
+        "city_god": "Maa Tepy",
+        "confessions": "Wedja · Djed Nen 42",
+        "death": "Ba · Kheperu",
+        "desk": "Wedja",
+        "desk_offence": "Wedja · Khet Wedja",
+        "desk_place": "Wedja · Khet Wedja Hena Wat",
+        "disposition": "Wetep",
+        "ferry": "Ba · Shem Itru",
+        "realm_map": "Ta · Tut Wat",
+        "rebirth": "Wehem Mesut",
+        "rebirth_soup": "Wehem Mesut · Mu Mengpo",
+        "scale": "Weret Maaty · Sesh Fai Ib",
+        "soul_plan": "Ba · Sekhet Wetep",
+        "timeline": "Ba · Sesh Hru",
+        "workflow_fork": "Wat Hesy · Sab Wedja 3"
       }
     },
     "enter": {

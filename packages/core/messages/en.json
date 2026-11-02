@@ -538,7 +538,9 @@
         "stage_reincarnating": "Rebirth",
         "stage_reincarnating_hint": "Not started · disposition must complete first",
         "stage_next_life": "Next life",
-        "stage_next_life_hint": "Settled once disposition and rebirth complete"
+        "stage_next_life_hint": "Settled once disposition and rebirth complete",
+        "stage_final": "The end",
+        "stage_final_hint": "There is no rebirth here: the disposition is where it ends"
       },
       "ledger": {
         "not_yet": "Not yet",
@@ -8580,21 +8582,22 @@
         }
       },
       "target": {
-        "death": "Death registration",
+        "death": "Soul · state",
         "capture": "Soul · summons card",
         "city_god": "First review",
-        "desk_offence": "Judgment desk · offence",
+        "desk_offence": "Judgment desk · verdict",
         "soul_plan": "Soul · sentence plan",
         "rebirth_soup": "Rebirth · Meng Po's soup",
-        "desk_place": "Judgment desk · destination",
+        "desk_place": "Judgment desk · verdict and destination",
         "realm_map": "Realms · map",
         "timeline": "Soul · timeline",
         "confessions": "Judgment desk · the forty-two",
-        "scale": "Hall of Two Truths · the scale",
+        "scale": "Hall of Two Truths · weighing record",
         "ferry": "Soul · the crossing",
         "desk": "Judgment desk",
         "disposition": "Disposition",
-        "rebirth": "Rebirth"
+        "rebirth": "Rebirth",
+        "workflow_fork": "Workflow · the three judges' fork"
       }
     },
     "enter": {

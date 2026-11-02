@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import { SoulLedgerSections } from "./SoulLedgerSections";
 import { SoulLedgerProgress } from "./SoulLedgerProgress";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 
 /**
  * 生命周期时间线的锚点。「灵魂事件」页(/events)的灵魂链接带 `#lifecycle`。
@@ -90,7 +91,7 @@ export function SoulTimelineColumn({
         />
       </div>
       <div className={PANEL}>
-        <SoulLedgerSections dispositions={dispositions} reincarnations={reincarnations} events={events} />
+        <SoulLedgerSections rebirth={hasRebirth(soul?.civilization)} dispositions={dispositions} reincarnations={reincarnations} events={events} />
       </div>
       {/* Soul lifecycle spine — the one reverse-chronological story
           across lives (docs/design-handoff/BRIEF.md §4.1): karma entries,

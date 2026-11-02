@@ -30,21 +30,34 @@ function save(state: State): void {
   }
 }
 
+/** The seal (Design batches 70, 71): colour spreads from the card, the seal lands, and the colour narrows to the identity
+ *  band over the page, which by then is underneath; the real band takes over as it goes. At most 700 ms. */
 const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,oklch(var(--color-main)) 16%,transparent)}
 @keyframes demo-seal-spread{from{clip-path:circle(0 at var(--x) var(--y))}to{clip-path:circle(150vmax at var(--x) var(--y))}}
-@keyframes demo-seal-drop{0%{opacity:0;transform:scale(1.15)}85%{opacity:1;transform:scale(.98)}100%{opacity:1;transform:scale(1)}}
-@keyframes demo-seal-leave{to{opacity:0}}
+@keyframes demo-seal-drop{0%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}85%{opacity:1;transform:translate(-50%,-50%) scale(.98)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes demo-seal-narrow{to{top:var(--band-top);left:var(--band-left);height:var(--band-height)}}
+@keyframes demo-seal-to-slot{to{left:calc(var(--band-height)/2 + 8px);transform:translate(-50%,-50%) scale(.5)}}
+@keyframes demo-seal-name-out{to{opacity:0}}
 @keyframes demo-seal-fade{from{opacity:1}to{opacity:0}}
-.demo-seal{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:demo-seal-spread 200ms ease-out both,demo-seal-leave 250ms ease-in 450ms both}
-.demo-seal-mark{animation:demo-seal-drop 250ms ease-out 200ms both}
+.demo-seal{--band-top:calc(1.75rem + 52px);--band-left:0px;--band-height:48px;position:fixed;top:0;left:0;right:0;height:100vh;z-index:9999;overflow:hidden;animation:demo-seal-spread 200ms ease-out both,demo-seal-narrow 250ms ease-in-out 450ms forwards}
+@media (min-width:769px){.demo-seal{--band-left:252px;--band-height:64px}}
+.demo-seal-mark,.demo-seal-name{position:absolute;left:50%;transform:translate(-50%,-50%)}
+.demo-seal-mark{top:50%;animation:demo-seal-drop 250ms ease-out 200ms both,demo-seal-to-slot 250ms ease-in-out 450ms forwards}
+.demo-seal-name{top:calc(50% + 72px);animation:demo-seal-name-out 150ms ease-in 450ms forwards}
+.demo-seal-skip{position:absolute;top:8px;right:8px;animation:demo-seal-name-out 100ms ease-in 450ms forwards}
 @media (prefers-reduced-motion:reduce){.demo-seal{background:oklch(var(--color-canvas));animation:demo-seal-fade 150ms ease-out both}.demo-seal>*{display:none}}`;
 
-function findTarget(css?: string, text?: string): Element | null {
-  const byCss = css ? document.querySelector(css) : null;
-  if (byCss || !text) return byCss;
+function findTarget(css?: string, text?: string, up?: string): Element | null {
+  // In the order written, not document order: the row before the card that contains it.
+  for (const selector of css?.split(/,\s*/) ?? []) {
+    const found = document.querySelector(selector);
+    if (found) return found;
+  }
+  if (!text) return null;
   const main = document.querySelector("main");
   const rows = main ? Array.from(main.querySelectorAll("tr, li, article")) : [];
-  return rows.find((row) => row.textContent?.includes(text)) ?? null;
+  const row = rows.find((candidate) => candidate.textContent?.includes(text)) ?? null;
+  return (up && row?.closest(up)) || row;
 }
 
 /** The seal on the way in from a card: at most 700 ms, over the page, which does not wait for it. */
@@ -89,8 +102,8 @@ function EntranceOverlay() {
     >
       <span aria-live="polite" className="sr-only">{t("demo.enter.entering", { civ: name })}</span>
       <span className="demo-seal-mark"><Seal size={96} civ={run.skin} glyphs={null} court={name} /></span>
-      <span className="demo-seal-mark font-title text-lg">{name}</span>
-      <button type="button" onClick={() => setRun(null)} className="absolute top-2 right-2 h-11 min-w-11 px-3 text-sm">
+      <span className="demo-seal-name whitespace-nowrap font-title text-lg">{name}</span>
+      <button type="button" onClick={() => setRun(null)} className="demo-seal-skip h-11 min-w-11 px-3 text-sm">
         {t("demo.enter.skip")}
       </button>
     </div>
@@ -106,6 +119,7 @@ export default function DemoTour() {
   const router = useRouter();
   const [tour, setTour] = useState<Tour | null>(null);
   const [state, setState] = useState<State>(START);
+  const [lift, setLift] = useState(0);
   const username = user?.username ?? null;
 
   useEffect(() => {
@@ -138,7 +152,7 @@ export default function DemoTour() {
         const tab = Array.from(document.querySelectorAll<HTMLElement>("[role='tab']")).find((el) => el.textContent?.includes(label));
         if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
       }
-      const found = findTarget(step?.css, step?.text);
+      const found = findTarget(step?.css, step?.text, step?.up);
       tries += 1;
       if (found && (found as HTMLElement).offsetParent !== null) {
         lit = found;
@@ -152,6 +166,22 @@ export default function DemoTour() {
       lit?.classList.remove("demo-tour-target");
     };
   }, [here, step, showing, t]);
+
+  // The verdict keys are what the page is for: the card sits above the bar that holds them.
+  useEffect(() => {
+    if (!showing) {
+      setLift(0);
+      return;
+    }
+    const measure = () => {
+      const bar = document.querySelector("[class*='bottom-(--bottom-bar)'], [data-testid='verdict-bar']");
+      const box = bar?.getBoundingClientRect();
+      setLift(box && box.top < window.innerHeight && box.bottom > window.innerHeight * 0.5 ? window.innerHeight - box.top + 12 : 0);
+    };
+    measure();
+    const timer = setInterval(measure, 300);
+    return () => clearInterval(timer);
+  }, [showing, pathname]);
 
   const update = (next: Partial<State>) => {
     const merged = { ...state, ...next };
@@ -209,7 +239,7 @@ export default function DemoTour() {
     } else {
       const last = state.step === total - 1;
       card = (
-        <aside data-testid="demo-tour" data-civ={tour.skin} className={panel}>
+        <aside data-testid="demo-tour" data-civ={tour.skin} className={panel} style={lift ? { bottom: lift } : undefined}>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs text-[oklch(var(--color-ink-muted))]">{t("demo.tour.title_civ", { civ })}</span>
             <span className="flex shrink-0 items-center gap-2">
