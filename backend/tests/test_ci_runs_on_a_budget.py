@@ -109,3 +109,10 @@ def test_the_app_jobs_run_test_coverage_once_the_app_defines_it(job, app):
     package defines it and plain `test` otherwise — never neither."""
     (command,) = [r for r in _runs(job) if "package.json" in r]
     assert f"require('./{app}/package.json').scripts['test:coverage'] ? 'test:coverage' : 'test'" in command, command
+
+
+def test_the_demo_build_is_checked_against_its_recording():
+    """演示版答的是录制数据:页面开始读录制里没有的东西时,只有这个 job 会红(用户 2026-11-02)。"""
+    job = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))["jobs"]["e2e-demo"]
+    assert job["env"]["NEXT_PUBLIC_DEMO_MODE"] == "1"
+    assert any("playwright.demo.config.ts" in step.get("run", "") for step in job["steps"])
