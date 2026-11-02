@@ -230,8 +230,10 @@ function DashboardContent() {
     stats?.state_distribution?.find((s) => s.state === state)?.count ?? 0;
   const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
   // No wheel in this hall: an empty 轮回中 row says something its doctrine does not. A count, should one exist, still shows.
+  const emptyWheelRow = (state: string) =>
+    state === "REINCARNATING" && !hasRebirth(user?.tenant?.civilization) && stateCount(state) === 0;
   const lifecycleStates = orderLifecycle(LIFECYCLE, (stats?.state_distribution ?? []).map((s) => s.state)).filter(
-    (state) => state !== "REINCARNATING" || hasRebirth(user?.tenant?.civilization) || stateCount(state) > 0,
+    (state) => !emptyWheelRow(state),
   );
 
   /** 各文明: all four civilizations, from the tenants that carry them. */
@@ -499,7 +501,7 @@ function DashboardContent() {
                     {loading ? (
                       <Skeleton className="col-span-4 h-32 w-full" />
                     ) : (
-                      stats?.state_distribution?.map((s) => (
+                      stats?.state_distribution?.filter((s) => !emptyWheelRow(s.state)).map((s) => (
                         <div
                           key={s.state}
                           data-breakdown-row={s.state}

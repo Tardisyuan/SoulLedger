@@ -36,9 +36,9 @@ for (const role of ROLES) {
         await expect(page.getByTestId("demo-banner")).toBeVisible();
         const main = page.locator("main").first();
         await expect(main).toBeVisible();
-        const text = (await main.innerText()).trim();
-        expect(text, `error copy on ${route}`).not.toMatch(BROKEN);
-        expect(text.length, `an empty shell on ${route}`).toBeGreaterThan(20);
+        // networkidle says nothing here: the data is already in the bundle, and the first paint can come after it.
+        await expect.poll(async () => (await main.innerText()).trim().length, { message: `an empty shell on ${route}` }).toBeGreaterThan(20);
+        expect((await main.innerText()).trim(), `error copy on ${route}`).not.toMatch(BROKEN);
         clean(seen, route);
       });
     }
