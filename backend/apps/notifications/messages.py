@@ -146,6 +146,7 @@ MESSAGES = {
         "sentence_node_done": {"title": "Sekhet Wetep Seth", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) Wetep Seth."},
         "sentence_node_waiting": {"title": "Hemes Smen", "body": "{{soul}}: Sekhet {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."},
         "sentence_node_refused": {"title": "Sekhet Khesef Seth", "body": "{{tenant}}: Hab Sekhet {{order}} En {{soul}} Khesef Seth. Sekhet Em Smen."},
+        "sentence_node_not_dispatched": {"title": "Sekhet Wetep: Hab-Ba Nen Tepy", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) · Hab-Ba Nen Tepy. Sekhet Em Smen Djer; Iri Khet, Er Khet Wehem Tepy."},
         "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth."},
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
         "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
