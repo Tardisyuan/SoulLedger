@@ -8389,5 +8389,17 @@
     "no_match": "No matching unit",
     "implied": "Included via parent",
     "no_tenant": "No hall"
+  },
+  "demo": {
+    "banner": "Demo · your data stays in this browser; sign in again to reset it",
+    "login_title": "Choose who to enter as",
+    "login_desc": "This is a portfolio demo: no backend, no password. Whatever you change stays in this tab and resets when you sign out or back in.",
+    "enter_as": "Enter as {{role}}",
+    "role_judge": "Judge",
+    "role_judge_desc": "An officer's day: claim cases, conclude them, issue dispositions, approve.",
+    "role_admin": "Administrator",
+    "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
+    "role_moderator": "Moderator",
+    "role_moderator_desc": "Soul circle review: reports, mutes, sensitive words."
   }
 }

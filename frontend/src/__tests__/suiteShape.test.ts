@@ -321,6 +321,7 @@ const COLLECTED_FILES = [
   "dataGridToneContract.test.ts",
   "dangerButtonPlacement.test.ts",
   "datascopeOwnerOrg.test.tsx",
+  "demoStaysOutOfTheNormalBuild.test.ts",
   "dialogsAreNotHandRolled.test.ts",
   "designGuardContract.test.ts",
   "rootAttributes.test.tsx",

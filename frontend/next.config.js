@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 
+// The Vercel demo (docs/DEPLOYMENT-demo.md): no backend anywhere, every request answered in the browser.
+const demo = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+
 const nextConfig = {
-  output: "standalone",
+  // Vercel packages the app itself; standalone is for this repo's Dockerfile.
+  output: demo ? undefined : "standalone",
   // `@soulledger/core` is a workspace package that ships TypeScript source, not
   // a build — there is no `dist/`, and deliberately so: one compiler (this one,
   // and Expo's for the native client) sees the same files the editor does, and
@@ -16,7 +20,9 @@ const nextConfig = {
   },
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || (demo ? "/api/v1" : "http://localhost:8000/api/v1"),
+    // Always defined, for the same reason as the DSN below: the demo's only entry points are folded out on this literal.
+    NEXT_PUBLIC_DEMO_MODE: demo ? "1" : "",
     // Always defined (empty when unset), so Next inlines it as a literal and
     // `instrumentation-client.ts` can drop the Sentry SDK from a DSN-less build.
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || "",

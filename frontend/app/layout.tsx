@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import dynamic from "next/dynamic";
 // CJK 两支:包自带的 index.css 各含 101 条 @font-face,每条带自己的 unicode-range,
 // 浏览器只取页面真正用到的分片。必须在 globals.css 之前 import,让 Tailwind 的
 // base 层能覆盖它们带来的任何默认值。见 app/fonts.ts 顶部关于为何不走 next/font/local。
@@ -34,6 +35,8 @@ import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
  * `initialScale: 1` 与 `width: "device-width"` 必须成对:只给宽度,iOS Safari 在
  * 横竖屏切换后仍会自己缩放。刻意**不**设 `maximumScale` 或 `userScalable: false`
  * —— 禁用缩放是无障碍倒退,而这份配置本来就是为修无障碍缺陷而加的。 */
+const DemoBanner = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoBanner")) : null;
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -95,6 +98,7 @@ export default async function RootLayout({
         <PlatformProvider />
         <QueryProvider>
           <I18nProvider initialLocale={locale}>
+            {DemoBanner && <DemoBanner />}
             <ThemeProvider>
               <TenantProvider>
                 {/* ONE realtime provider. `SocialEventBusProvider` used to sit

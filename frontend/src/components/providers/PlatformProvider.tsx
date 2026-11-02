@@ -22,6 +22,12 @@ import { installWebPlatform } from "@/lib/platform/web";
  */
 installWebPlatform();
 
+// The demo build (docs/DEPLOYMENT-demo.md) answers every request in the browser. The bundler folds this literal, so
+// a normal build has none of it: demoStaysOutOfTheNormalBuild.test.ts, scripts/check-demo-bundle.sh.
+if (process.env.NEXT_PUBLIC_DEMO_MODE === "1") {
+  require("@/demo/install");
+}
+
 export function PlatformProvider() {
   return null;
 }

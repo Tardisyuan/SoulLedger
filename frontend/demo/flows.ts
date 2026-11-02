@@ -1,0 +1,571 @@
+/**
+ * The demo's main lines: writes that have to move state the way the server would, and the reads whose answers the
+ * server computes (the queue's groups and counts). Everything else takes the generic rule in `writes.ts`.
+ *
+ * ponytail: these imitate the server's outcome, not its rules. A real refusal (not your claim, wrong order, quota) never
+ * happens here; nothing a visitor can do in a demo should end in an error.
+ */
+import {
+  type Answer,
+  type Recording,
+  addRow,
+  deleteRow,
+  getOverlay,
+  listOf,
+  newId,
+  patchRow,
+  read,
+  rowsNow,
+} from "./store";
+
+type Row = Record<string, unknown>;
+const now = () => new Date().toISOString();
+const qs = () => new URLSearchParams();
+const ok = (data: unknown, status = 200): Answer => ({ status, data });
+
+function meOf(rec: Recording) {
+  const user = rec.login.user as Row & { id: number; username: string; display_name?: string };
+  return { id: user.id, name: user.display_name || user.username, tenant: user.tenant };
+}
+
+const find = (rec: Recording, path: string, id: unknown) => rowsNow(rec, path).find((row) => String(row.id) === String(id));
+
+function detail(rec: Recording, collection: string, id: string): Answer {
+  return read(rec, `${collection}${id}/`, qs());
+}
+
+// ── Judgment queue ──────────────────────────────────────────────────────────────────────────────
+
+const isPending = (row: Row) => !row.is_final && row.verdict == null;
+
+function groupOf(row: Row, me: number): string {
+  if (row.deferred_at) return "deferred";
+  if (row.claimed_by == null) return "unclaimed";
+  return row.claimed_by === me ? "mine" : "others";
+}
+
+/** The queue never sees a case still before the city god, or held, the same as the server's PENDING. */
+const inQueue = (row: Row) => isPending(row) && row.city_god_status !== "PENDING" && row.city_god_status !== "RETURNED";
+
+function claimPatch(action: string, body: Row, me: ReturnType<typeof meOf>): Row | null {
+  switch (action) {
+    case "claim":
+      return { claimed_by: me.id, claimed_by_name: me.name, claimed_at: now(), deferred_at: null, defer_reason: "" };
+    case "release":
+      return { claimed_by: null, claimed_by_name: null, claimed_at: null };
+    case "defer":
+      return { deferred_at: now(), deferred_by: me.id, deferred_by_name: me.name, defer_reason: String(body.reason ?? "") };
+    case "undefer":
+      return { deferred_at: null, deferred_by: null, deferred_by_name: null, defer_reason: "" };
+    case "reassign":
+      return { claimed_by: body.to, claimed_by_name: null, claimed_at: now() };
+    default:
+      return null;
+  }
+}
+
+function logEvent(rec: Recording, soul: unknown, soulName: unknown, type: string, payload: Row): void {
+  const template = rowsNow(rec, "/events/").find((e) => e.event_type === type) ?? rowsNow(rec, "/events/")[0] ?? {};
+  addRow("/events/", { ...template, id: newId(), soul, soul_name: soulName, event_type: type, payload, created_at: now(), timestamp: now() });
+}
+
+/** A new approval flow for a case just concluded: a recorded flow of the same civilization, restarted. */
+function startFlow(rec: Recording, judgment: Row): string | null {
+  const templates = Object.entries(rec.docs)
+    .filter(([k, d]) => /^\/workflows\/[^/]+\/$/.test(k) && d.s === 200 && (d.b as Row)?.judgment && Array.isArray((d.b as Row)?.nodes))
+    .map(([, d]) => d.b as Row);
+  const owner = (t: Row) => find(rec, "/judgment/", t.judgment)?.civilization;
+  const template = templates.find((t) => owner(t) === judgment.civilization) ?? templates[0];
+  if (!template) return null;
+  const id = newId();
+  const nodes = (template.nodes as Row[]).map((node, i) => ({
+    ...node,
+    id: newId(),
+    workflow: id,
+    status: "PENDING",
+    verdict: "",
+    notes: "",
+    decided_at: null,
+    approver: null,
+    approver_username: null,
+    approver_display_name: null,
+    activated_at: i === 0 ? now() : null,
+  }));
+  const row = {
+    ...template,
+    id,
+    number: `WF-D${getOverlay().seq}`,
+    judgment: judgment.id,
+    judgment_verdict: judgment.verdict,
+    judgment_case_number: judgment.case_number,
+    soul: judgment.soul,
+    soul_name: judgment.soul_name,
+    status: "IN_PROGRESS",
+    nodes,
+    current_node: nodes[0]?.id ?? null,
+    current_node_detail: nodes[0] ?? null,
+    created_at: now(),
+    completed_at: null,
+    is_overdue: false,
+    is_appeal: false,
+    cross_civilization: false,
+  };
+  getOverlay().docs[`/workflows/${id}/`] = row;
+  addRow("/workflows/", row);
+  return id;
+}
+
+function conclude(rec: Recording, id: string, body: Row): Answer {
+  const row = find(rec, "/judgment/", id);
+  if (!row) return ok({});
+  const verdict = String(body.verdict ?? "PASSED");
+  const concluded = { ...row, verdict };
+  const flowId = body.create_workflow === false ? null : startFlow(rec, concluded);
+  patchRow("/judgment/", id, {
+    verdict,
+    notes: String(body.notes ?? row.notes ?? ""),
+    is_final: true,
+    concluded_at: now(),
+    can_edit: false,
+    conclude_refusal: "",
+    claimed_by: row.claimed_by ?? meOf(rec).id,
+    claimed_by_name: row.claimed_by_name ?? meOf(rec).name,
+    deferred_at: null,
+    workflow: flowId,
+    draft_verdict: null,
+  });
+  patchRow("/souls/", String(row.soul), { current_state: "DISPOSED" });
+  logEvent(rec, row.soul, row.soul_name, "JUDGMENT_CONCLUDED", { judgment_id: id, verdict });
+  // 地府判无罪不发落(apps/judgment/services.py);其余都出一条处置。
+  if (!(row.civilization === "CHINESE" && verdict === "PASSED")) {
+    const dispositions = rowsNow(rec, "/disposition/");
+    const civilizationOf = (d: Row) => find(rec, "/souls/", d.soul)?.civilization;
+    const template = dispositions.find((d) => civilizationOf(d) === row.civilization) ?? dispositions[0] ?? {};
+    addRow("/disposition/", {
+      ...template,
+      id: newId(),
+      soul: row.soul,
+      soul_name: row.soul_name,
+      judgment: id,
+      verdict,
+      section: "pending",
+      soul_state: "DISPOSED",
+      soul_reborn: false,
+      is_executed: false,
+      executed_at: null,
+      term_start: null,
+      term_end: null,
+      expired_at: null,
+      flow_waiting: flowId,
+      can_release: false,
+      notes: "",
+      created_at: now(),
+    });
+  }
+  return detail(rec, "/judgment/", id);
+}
+
+function judgmentWrite(rec: Recording, path: string, body: Row): Answer | null {
+  if (path === "/judgment/batch/") {
+    const ids = (body.ids ?? body.judgment_ids ?? []) as string[];
+    const patch = claimPatch(String(body.operation), body, meOf(rec));
+    if (patch) ids.forEach((id) => patchRow("/judgment/", id, patch));
+    return ok({ updated: ids.length, results: ids.map((id) => find(rec, "/judgment/", id)) });
+  }
+  const m = /^\/judgment\/([0-9a-f-]{36})\/([a-z-]+)\/$/.exec(path);
+  if (!m) return null;
+  const [, id, action] = m;
+  if (action === "conclude") return conclude(rec, id, body);
+  const patch = claimPatch(action, body, meOf(rec));
+  if (!patch) return null;
+  patchRow("/judgment/", id, patch);
+  return detail(rec, "/judgment/", id);
+}
+
+// ── Approval flows ──────────────────────────────────────────────────────────────────────────────
+
+function finishFlow(rec: Recording, flow: Row, passed: boolean): void {
+  const judgment = flow.judgment ? find(rec, "/judgment/", flow.judgment) : undefined;
+  const dispositions = rowsNow(rec, "/disposition/").filter((d) => flow.judgment && d.judgment === flow.judgment);
+  dispositions.forEach((d) => patchRow("/disposition/", String(d.id), { flow_waiting: null }));
+  if (passed && flow.soul && judgment?.verdict === "PASSED" && dispositions.length === 0) {
+    patchRow("/souls/", String(flow.soul), { current_state: "REINCARNATING" });
+  }
+  if (flow.soul) logEvent(rec, flow.soul, flow.soul_name, passed ? "WORKFLOW_COMPLETED" : "WORKFLOW_REJECTED", { workflow_id: flow.id });
+}
+
+function approveNode(rec: Recording, id: string, body: Row): Answer {
+  const answer = read(rec, `/workflows/${id}/`, qs());
+  const flow = answer.data as Row;
+  const nodes = ((flow.nodes ?? []) as Row[]).slice().sort((a, b) => Number(a.node_order) - Number(b.node_order));
+  const node = nodes.find((n) => n.id === body.node_id) ?? nodes.find((n) => n.id === flow.current_node);
+  if (!node) return answer;
+  const me = meOf(rec);
+  const passed = !/^(FAILED|REJECTED|REJECT)$/.test(String(body.verdict));
+  const decided = {
+    status: passed ? "APPROVED" : "REJECTED",
+    verdict: String(body.verdict ?? ""),
+    notes: String(body.notes ?? ""),
+    decided_at: now(),
+    approver: me.id,
+    approver_display_name: me.name,
+    approver_username: me.name,
+  };
+  patchRow("/nodes/", String(node.id), decided);
+  const next = passed ? nodes.find((n) => Number(n.node_order) > Number(node.node_order) && n.status === "PENDING") : undefined;
+  if (next) {
+    const activated = { activated_at: now() };
+    patchRow("/nodes/", String(next.id), activated);
+    patchRow("/workflows/", id, { current_node: next.id, current_node_detail: { ...next, ...activated } });
+  } else {
+    patchRow("/workflows/", id, {
+      status: passed ? "COMPLETED" : "REJECTED",
+      current_node: null,
+      current_node_detail: null,
+      completed_at: now(),
+    });
+    finishFlow(rec, flow, passed);
+  }
+  return detail(rec, "/workflows/", id);
+}
+
+// ── Simple status moves ─────────────────────────────────────────────────────────────────────────
+
+const STATUS_MOVES: [RegExp, string, (body: Row, me: ReturnType<typeof meOf>) => Row][] = [
+  [/^\/dispatch\/records\/([^/]+)\/approve\/$/, "/dispatch/records/", () => ({ status: "APPROVED" })],
+  [/^\/dispatch\/records\/([^/]+)\/reject\/$/, "/dispatch/records/", (b) => ({ status: "REJECTED", rejection_reason: b.reason ?? "" })],
+  [/^\/dispatch\/records\/([^/]+)\/execute\/$/, "/dispatch/records/", () => ({ status: "EXECUTED", executed_at: now() })],
+  [/^\/dispatch\/records\/([^/]+)\/cancel\/$/, "/dispatch/records/", () => ({ status: "CANCELLED" })],
+  [/^\/dispatch\/records\/([^/]+)\/submit\/$/, "/dispatch/records/", () => ({ status: "PROPOSED", proposed_at: now() })],
+  [/^\/dispatch\/records\/([^/]+)\/return-home\/$/, "/dispatch/records/", () => ({ status: "RETURNED", returned_at: now() })],
+  [/^\/disposition\/([^/]+)\/execute\/$/, "/disposition/", () => ({ is_executed: true, executed_at: now(), term_start: now(), section: "executing" })],
+  [/^\/disposition\/([^/]+)\/release\/$/, "/disposition/", () => ({ expired_at: now(), section: "expired", can_release: false })],
+  [/^\/notifications\/([^/]+)\/mark_read\/$/, "/notifications/", () => ({ is_read: true })],
+  [/^\/users\/([^/]+)\/activate\/$/, "/users/", () => ({ is_active: true })],
+  [/^\/users\/([^/]+)\/deactivate\/$/, "/users/", () => ({ is_active: false })],
+  [/^\/users\/([^/]+)\/assign_roles\/$/, "/users/", (b) => ({ ...(b.role ? { role: b.role } : {}), ...(b.extra_roles ? { extra_roles: b.extra_roles } : {}) })],
+  [/^\/social-moderation\/mutes\/([^/]+)\/lift\/$/, "/social-moderation/mutes/", (_b, me) => ({
+    lifted_at: now(),
+    is_active: false,
+    lifted_by: { user_id: me.id, display_name: me.name },
+  })],
+  [/^\/judgment\/appeals\/([^/]+)\/claim\/$/, "/judgment/appeals/", (_b, me) => ({ status: "IN_REVIEW", reviewer: me.id, claimed_at: now() })],
+  [/^\/judgment\/appeals\/([^/]+)\/decide\/$/, "/judgment/appeals/", (b) => ({ status: b.outcome === "UPHELD" || b.outcome === "upheld" ? "UPHELD" : "OVERTURNED", decision_note: b.note ?? "", decided_at: now() })],
+  [/^\/judgment\/city-god-cases\/([^/]+)\/send_on\/$/, "/judgment/city-god-cases/", () => ({ city_god_status: "SENT_ON", sent_on_at: now() })],
+  [/^\/judgment\/city-god-cases\/([^/]+)\/return\/$/, "/judgment/city-god-cases/", (b) => ({ city_god_status: "RETURNED", city_god_note: b.note ?? "" })],
+];
+
+const CONTENT_MOVES: Record<string, string> = { approve: "PUBLISHED", restore: "PUBLISHED", hide: "HIDDEN" };
+
+function moderation(rec: Recording, path: string, body: Row): Answer | null {
+  const me = meOf(rec);
+  const report = /^\/social-moderation\/reports\/([^/]+)\/resolve\/$/.exec(path);
+  if (report) {
+    const row = find(rec, "/social-moderation/reports/", report[1]);
+    const resolution = String(body.resolution ?? "DISMISS");
+    const contentStatus = resolution === "HIDE" ? "HIDDEN" : resolution === "DELETE" ? "DELETED" : row?.content_status;
+    patchRow("/social-moderation/reports/", report[1], {
+      status: resolution === "DISMISS" ? "DISMISSED" : "RESOLVED",
+      resolution,
+      resolution_note: String(body.note ?? ""),
+      resolved_at: now(),
+      content_status: contentStatus,
+    });
+    if (row?.post && resolution === "HIDE") patchRow("/social/posts/", String(row.post), { moderation_status: "HIDDEN" });
+    if (row?.post && resolution === "DELETE") deleteRow("/social/posts/", String(row.post));
+    if (row?.post && resolution !== "DISMISS") {
+      const author = row.target_user as Row;
+      addRow("/social-moderation/handled/", {
+        type: "POST",
+        id: row.post,
+        post: row.post,
+        author,
+        excerpt: row.content_excerpt,
+        handling: resolution === "DELETE" ? "DELETED" : "HIDDEN",
+        reason: String(body.note ?? ""),
+        handled_by: { user_id: me.id, display_name: me.name },
+        handled_at: now(),
+        media_count: row.media_count ?? 0,
+      });
+    }
+    if (resolution === "MUTE" && row?.target_user) addMute(rec, row.target_user as Row, Number(body.mute_days) || 7, String(body.note ?? ""));
+    return detail(rec, "/social-moderation/reports/", report[1]);
+  }
+  const content = /^\/social-moderation\/(posts|comments)\/([^/]+)\/(approve|hide|restore|delete)\/$/.exec(path);
+  if (content) {
+    const [, kind, id, action] = content;
+    const collection = `/social/${kind}/`;
+    if (action === "delete") deleteRow(collection, id);
+    else patchRow(collection, id, { moderation_status: CONTENT_MOVES[action], moderation_reason: String(body.reason ?? ""), moderated_at: now() });
+    return ok({ id, moderation_status: CONTENT_MOVES[action] ?? "DELETED" });
+  }
+  if (path === "/social-moderation/mutes/") {
+    const target = find(rec, "/users/", body.user);
+    const named = { user_id: body.user, display_name: target?.display_name ?? target?.username ?? String(body.user) };
+    return ok(addMute(rec, named, Number(body.days ?? body.mute_days) || 7, String(body.reason ?? "")), 201);
+  }
+  return null;
+}
+
+function addMute(rec: Recording, user: Row, days: number, reason: string): Row {
+  const me = meOf(rec);
+  const row = {
+    id: newId(),
+    user,
+    until: new Date(Date.now() + days * 86400000).toISOString(),
+    reason,
+    created_at: now(),
+    created_by: { user_id: me.id, display_name: me.name },
+    lifted_at: null,
+    lifted_by: null,
+    is_active: true,
+  };
+  addRow("/social-moderation/mutes/", row);
+  return row;
+}
+
+// ── The soul circle ─────────────────────────────────────────────────────────────────────────────
+
+function social(rec: Recording, path: string, body: Row): Answer | null {
+  const me = meOf(rec);
+  const by = { author: me.id, author_name: me.name, author_username: me.name, create_time: now(), moderation_status: "PUBLISHED" };
+  if (path === "/social/posts/") {
+    const row = {
+      ...by,
+      id: newId(),
+      content: String(body.content ?? ""),
+      visibility: body.visibility ?? "PUBLIC",
+      comment_count: 0,
+      reaction_count: 0,
+      media: [],
+      reaction_counts: { LIKE: 0, LOVE: 0, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
+      my_reaction: null,
+      edited_at: null,
+    };
+    addRow("/social/posts/", row);
+    return ok(row, 201);
+  }
+  if (path === "/social/comments/") {
+    const row = { ...by, id: newId(), post: body.post, parent: body.parent ?? null, content: String(body.content ?? ""), reaction_count: 0, my_reaction: null };
+    addRow("/social/comments/", row);
+    const post = find(rec, "/social/posts/", body.post);
+    if (post) patchRow("/social/posts/", String(post.id), { comment_count: Number(post.comment_count ?? 0) + 1 });
+    return ok(row, 201);
+  }
+  if (path === "/social/reactions/") {
+    const collection = body.post ? "/social/posts/" : "/social/comments/";
+    const id = String(body.post ?? body.comment);
+    const target = find(rec, collection, id);
+    const counts = { ...(target?.reaction_counts as Row | undefined) };
+    const type = String(body.reaction_type);
+    if (type in counts) counts[type] = Number(counts[type]) + 1;
+    if (target) patchRow(collection, id, { my_reaction: type, reaction_count: Number(target.reaction_count ?? 0) + 1, reaction_counts: counts });
+    return ok({ id: newId(), reaction_type: type, post: body.post ?? null, comment: body.comment ?? null, user: me.id }, 201);
+  }
+  return null;
+}
+
+// ── Users, roles, dispatch creation, souls ──────────────────────────────────────────────────────
+
+function roles(rec: Recording, path: string, body: Row): Answer | null {
+  const current = () => (read(rec, "/perm/roles/", qs()).data as Row[]) ?? [];
+  const save = (rows: Row[]) => {
+    getOverlay().docs["/perm/roles/"] = rows;
+  };
+  const created = (fields: Row): Row => ({
+    id: 1000 + getOverlay().seq++,
+    description: "",
+    user_count: 0,
+    member_count: 0,
+    permission_count: 0,
+    workflow_template_count: 0,
+    is_builtin: false,
+    version: 0,
+    update_time: now(),
+    ...fields,
+  });
+  if (path === "/perm/roles/create/") {
+    const row = created({ name: body.name, display_name: body.display_name ?? body.name, description: body.description ?? "" });
+    save([...current(), row]);
+    return ok(row, 201);
+  }
+  const copy = /^\/perm\/roles\/(\d+)\/copy\/$/.exec(path);
+  if (copy) {
+    const source = current().find((r) => String(r.id) === copy[1]);
+    const row = created({ ...source, ...created({}), name: body.name, display_name: body.display_name ?? body.name, permission_count: source?.permission_count ?? 0 });
+    save([...current(), row]);
+    return ok(row, 201);
+  }
+  return null;
+}
+
+function roleEdit(rec: Recording, method: string, path: string, body: Row): Answer | null {
+  const m = /^\/perm\/roles\/(\d+)\/$/.exec(path);
+  if (!m || (method !== "PUT" && method !== "DELETE" && method !== "PATCH")) return null;
+  const rows = (read(rec, "/perm/roles/", qs()).data as Row[]) ?? [];
+  const next = method === "DELETE" ? rows.filter((r) => String(r.id) !== m[1]) : rows.map((r) => (String(r.id) === m[1] ? { ...r, ...body, update_time: now() } : r));
+  getOverlay().docs["/perm/roles/"] = next;
+  return method === "DELETE" ? ok(null, 204) : ok(next.find((r) => String(r.id) === m[1]));
+}
+
+function users(rec: Recording, path: string, body: Row): Answer | null {
+  if (path === "/users/" || path === "/users/invite/") {
+    const template = rowsNow(rec, "/users/")[0] ?? {};
+    const me = meOf(rec);
+    const row = {
+      ...template,
+      id: 100000 + getOverlay().seq++,
+      username: body.username ?? String(body.email ?? "").split("@")[0],
+      email: body.email ?? "",
+      first_name: body.first_name ?? "",
+      last_name: body.last_name ?? "",
+      display_name: body.display_name ?? body.username,
+      role: body.role ?? template.role,
+      tenant: me.tenant ?? template.tenant,
+      is_active: true,
+      create_time: now(),
+      extra_roles: [],
+      invite_pending: path === "/users/invite/",
+      mfa: { enabled: false, required: false, confirmed_at: null, last_used_at: null },
+    };
+    addRow("/users/", row);
+    return ok(row, 201);
+  }
+  const batch = /^\/users\/batch_(activate|deactivate)\/$/.exec(path);
+  if (batch) {
+    const ids = (body.user_ids ?? []) as string[];
+    ids.forEach((id) => patchRow("/users/", id, { is_active: batch[1] === "activate" }));
+    return ok({ updated: ids.length });
+  }
+  return null;
+}
+
+function dispatchCreate(rec: Recording, path: string, body: Row): Answer | null {
+  if (path !== "/dispatch/records/" && path !== "/dispatch/records/drafts/") return null;
+  const soul = find(rec, "/souls/", body.soul);
+  const tenants = rowsNow(rec, "/dispatch/records/");
+  const target = tenants.find((d) => d.target_tenant === body.target_tenant);
+  const row = {
+    ...(tenants[0] ?? {}),
+    ...body,
+    id: newId(),
+    soul_name: soul?.name ?? "",
+    source_tenant: meOf(rec).tenant ? (meOf(rec).tenant as Row).id : tenants[0]?.source_tenant,
+    source_tenant_code: meOf(rec).tenant ? (meOf(rec).tenant as Row).code : tenants[0]?.source_tenant_code,
+    target_tenant_code: target?.target_tenant_code ?? tenants[0]?.target_tenant_code,
+    status: path.endsWith("drafts/") ? "DRAFT" : "PROPOSED",
+    proposed_at: now(),
+    executed_at: null,
+    returned_at: null,
+  };
+  addRow("/dispatch/records/", row);
+  return ok(row, 201);
+}
+
+function soulDies(rec: Recording, path: string): Answer | null {
+  const m = /^\/souls\/([^/]+)\/die\/$/.exec(path);
+  if (!m) return null;
+  const soul = find(rec, "/souls/", m[1]);
+  if (!soul) return null;
+  const when = new Date();
+  patchRow("/souls/", m[1], { current_state: "JUDGING", death_date: { year: when.getFullYear(), month: when.getMonth() + 1, day: when.getDate() } });
+  const template = rowsNow(rec, "/judgment/").find((j) => j.civilization === soul.civilization) ?? rowsNow(rec, "/judgment/")[0] ?? {};
+  addRow("/judgment/", {
+    ...template,
+    id: newId(),
+    case_number: `DEMO-${getOverlay().seq}`,
+    soul: m[1],
+    soul_name: soul.name,
+    verdict: null,
+    is_final: false,
+    concluded_at: null,
+    notes: "",
+    claimed_by: null,
+    claimed_by_name: null,
+    deferred_at: null,
+    can_edit: true,
+    city_god_status: "SENT_ON",
+    created_at: now(),
+    workflow: null,
+  });
+  logEvent(rec, m[1], soul.name, "JUDGMENT_INITIATED", {});
+  return detail(rec, "/souls/", m[1]);
+}
+
+/** A write with mainline behaviour, or null for the generic rule. */
+export function flow(rec: Recording, method: string, path: string, _query: URLSearchParams, body: Row): Answer | null {
+  const edited = roleEdit(rec, method, path, body);
+  if (edited) return edited;
+  if (method !== "POST") return null;
+  const approve = /^\/workflows\/([^/]+)\/approve_node\/$/.exec(path);
+  if (approve) return approveNode(rec, approve[1], body);
+  if (path === "/notifications/mark_all_read/") {
+    rowsNow(rec, "/notifications/").forEach((n) => patchRow("/notifications/", String(n.id), { is_read: true }));
+    return ok({ updated: true });
+  }
+  for (const [pattern, collection, patch] of STATUS_MOVES) {
+    const m = pattern.exec(path);
+    if (m) {
+      patchRow(collection, m[1], patch(body, meOf(rec)));
+      return detail(rec, collection, m[1]);
+    }
+  }
+  return (
+    judgmentWrite(rec, path, body) ??
+    moderation(rec, path, body) ??
+    social(rec, path, body) ??
+    roles(rec, path, body) ??
+    users(rec, path, body) ??
+    dispatchCreate(rec, path, body) ??
+    soulDies(rec, path)
+  );
+}
+
+/** The reads the server computes from the current state, which a recording of them could not follow. */
+export function derived(rec: Recording, path: string, query: URLSearchParams): Answer | null {
+  if (path === "/judgment/" && (query.has("group") || query.has("has_verdict") || query.has("verdict_null"))) {
+    const me = meOf(rec).id;
+    const group = query.get("group");
+    const hasVerdict = query.get("has_verdict");
+    const rows = rowsNow(rec, path).filter((row) => {
+      if (group && (!inQueue(row) || groupOf(row, me) !== group)) return false;
+      if (hasVerdict === "true" && row.verdict == null) return false;
+      if ((hasVerdict === "false" || query.get("verdict_null") === "true") && row.verdict != null) return false;
+      return true;
+    });
+    return listOf(rows, query, {});
+  }
+  // The review queue's default is what is still open; what was handled moved to the 已处理 tab (`moderation`).
+  if (path === "/social-moderation/reports/" && !query.has("status")) {
+    return listOf(rowsNow(rec, path).filter((row) => row.status === "OPEN"), query, {});
+  }
+  // The real feed is who you follow; a visitor came to see the circle, so here it is everyone's posts.
+  if (path === "/social/posts/feed/") return listOf(rowsNow(rec, "/social/posts/"), query, {});
+  if (path === "/judgment/queue-counts/") {
+    const me = meOf(rec).id;
+    const open = rowsNow(rec, "/judgment/").filter(inQueue);
+    const count = (g: string) => open.filter((row) => groupOf(row, me) === g).length;
+    return ok({ total: open.length, mine: count("mine"), unclaimed: count("unclaimed"), others: count("others"), deferred: count("deferred") });
+  }
+  if (path === "/dispatch/records/proposed/" || path === "/dispatch/records/history/") {
+    const pending = path.endsWith("proposed/");
+    const rows = rowsNow(rec, "/dispatch/records/").filter((d) => (d.status === "PROPOSED") === pending && d.status !== "DRAFT");
+    return listOf(rows, query, {});
+  }
+  if (path === "/disposition/") {
+    const all = rowsNow(rec, path);
+    const counts: Record<string, number> = {};
+    for (const row of all) counts[String(row.section)] = (counts[String(row.section)] ?? 0) + 1;
+    const recorded = (rec.lists[path]?.extra.section_counts ?? {}) as Record<string, number>;
+    const sectionCounts = Object.fromEntries(Object.keys({ ...recorded, ...counts }).map((k) => [k, counts[k] ?? 0]));
+    return listOf(all, query, { section_counts: sectionCounts });
+  }
+  const workflow = /^\/workflows\/([^/]+)\/$/.exec(path);
+  if (workflow) {
+    const answer = read(rec, path, query);
+    const row = answer.data as Row | null;
+    if (answer.status === 200 && row && row.status === "IN_PROGRESS") return ok({ ...row, can_approve: true });
+    return answer;
+  }
+  return null;
+}

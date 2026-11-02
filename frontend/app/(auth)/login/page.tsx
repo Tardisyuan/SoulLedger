@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
@@ -165,7 +166,13 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
   );
 }
 
+const DemoLogin = process.env.NEXT_PUBLIC_DEMO_MODE === "1" ? dynamic(() => import("@/demo/DemoLogin")) : null;
+
 export default function LoginPage() {
+  return DemoLogin ? <DemoLogin /> : <PasswordLogin />;
+}
+
+function PasswordLogin() {
   const { t, formatDate } = useI18n();
   const { showToast } = useToast();
   const { setUser } = useTenant();
