@@ -32,6 +32,6 @@ trap 'ssh -o BatchMode=yes "$GATES_REMOTE" "docker rm -f $NAME" >/dev/null 2>&1'
 trap 'exit 130' INT TERM
 # shellcheck disable=SC2029
 ssh -o BatchMode=yes "$GATES_REMOTE" "docker run --rm --init --name $NAME --network ${GATES_REMOTE_NET:-sl-gates} \
-    --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
+    ${DEMO_PUBLISH:-} --cpus ${DEMO_CPUS:-8} --memory ${DEMO_MEMORY:-16g} --shm-size 2g -v $RWORK:/app -v $RDIR/tmp/demo:/sl-tmp -w /app \
     -e SL_PG_BASE='$BASE_URL' -e SL_DEMO_DB_URL='$BASE_URL/sl_demo_record' -e PW_WORKERS=${PW_WORKERS:-4} -e CI= \
     $IMG bash /app/$1"

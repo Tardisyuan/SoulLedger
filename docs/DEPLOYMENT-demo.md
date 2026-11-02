@@ -36,11 +36,13 @@ Anything the recording does not know reads as empty and logs a `console.info("[d
 4. **Node.js Version**: 22.x. `.nvmrc` says 20.19.5 for this machine; the repo's gates are also green on 22.
 5. Deploy. `next.config.js` turns `output: "standalone"` off in demo mode, and `proxy.ts` runs as Vercel's middleware.
 
-Local look at a demo build (on the machine that builds it):
+To look at a demo build by hand, on the gates' machine:
 
 ```bash
-cd frontend && NEXT_PUBLIC_DEMO_MODE=1 npx next build && PORT=3334 npx next start
+DEMO_PUBLISH="-p 3334:3334" scripts/demo-remote.sh scripts/demo-serve-inner.sh   # then http://gates-host.lan:3334
 ```
+
+Or on any machine with the dependencies installed: `cd frontend && NEXT_PUBLIC_DEMO_MODE=1 npx next build && npx next start -p 3334`.
 
 ## Re-recording the data
 
