@@ -172,7 +172,7 @@ const hasHemsu = (v: string) => /\bHemsu\b/.test(prose(v));
  * 「连接」是 soul_app.forgot_password.err_offline_title(中文只写「没有连接」,egy 写「连不上 Per Hemsu」)。
  * Design 给的「后台」没有收:2026-09-26 实测没有任何含 Hemsu 的键中文写「后台」,放进去是一条没人用过的放行。
  */
-const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
+const isSystemZh = (zh: string) => /系统|服务器|后端|队列|连接/.test(zh);
 
 /**
  * Sekhem 只表密码(第四节:它曾担设置 / 权限 / 按钮 / 选择 / 加载 / 开关 / 切换 / 状态 / 搜索九义,全部拆净)。
