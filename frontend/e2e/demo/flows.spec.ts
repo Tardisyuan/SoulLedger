@@ -198,10 +198,10 @@ test("a second tab starts from the seed", async ({ context, page }) => {
 
 test("a disposition can be carried out, and the realm's list moves", async ({ page, context }) => {
   const seen = watch(context, page);
-  await enter(page, "moderator");
+  await enter(page, "admin");
   await page.goto("/disposition");
   const before = await page.locator("main").innerText();
-  await page.getByRole("button", { name: "执行处置" }).first().click();
+  await page.getByRole("button", { name: "执行处置", disabled: false }).first().click();
   await page.getByRole("dialog").or(page.getByRole("alertdialog")).getByRole("button", { name: /确认|执行/ }).last().click();
   await expect.poll(async () => (await page.locator("main").innerText()) !== before).toBe(true);
   clean(seen, "disposition execute");
@@ -226,4 +226,120 @@ test("an export downloads a CSV of the list", async ({ page, context }) => {
   await page.getByRole("button", { name: /导出/ }).first().click();
   await download;
   clean(seen, "export");
+});
+
+test("the triage queue counts down as cases are ruled on", async ({ page, context }) => {
+  const seen = watch(context, page);
+  const total = (recording("judge").docs["/judgment/next/"].b as { total: number }).total;
+  await enter(page, "judge");
+  await page.goto("/judgment/queue");
+  await expect(page.locator("main")).toContainText(`第 1 / 共 ${total} 条`);
+  await expect(page.locator("main")).toContainText(`剩余 ${total}`);
+  await page.keyboard.press("1");
+  await expect(page.locator("main")).toContainText(`剩余 ${total - 1}`, { timeout: 15000 });
+  await expect(page.locator("main")).toContainText("已裁决 1");
+  await expect(page.locator("main")).toContainText(`第 2 / 共 ${total} 条`);
+  clean(seen, "triage queue");
+});
+
+test("the bell lists unread notifications, and reading them clears the badge", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "judge");
+  await page.goto("/dashboard");
+  const bell = page.getByRole("button", { name: /^通知中心 \(\d+\)$/ });
+  const before = Number(/\((\d+)\)/.exec((await bell.getAttribute("aria-label")) ?? "")?.[1]);
+  expect(before).toBeGreaterThan(0);
+  await bell.click();
+  await expect(page.getByRole("link", { name: /查看全部/ }).first()).toBeVisible();
+  await page.goto("/notifications");
+  await page.getByRole("button", { name: "标为已读" }).first().click();
+  await expect(page.getByRole("button", { name: `通知中心 (${before - 1})` })).toBeVisible();
+  await page.getByRole("button", { name: "全部已读" }).click();
+  await expect(page.getByRole("button", { name: "通知中心", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "通知中心", exact: true })).toBeVisible();
+  clean(seen, "bell");
+});
+
+test("the souls died on different days, and the dashboard's trend is not a flat line", async ({ page, context }) => {
+  const seen = watch(context, page);
+  const deaths = rows(recording("admin"), "/souls/").map((s) => JSON.stringify(s.death_date)).filter((d) => d !== "null");
+  expect(new Set(deaths).size).toBeGreaterThan(deaths.length * 0.8);
+  const events = rows(recording("admin"), "/events/").map((e) => String(e.create_time ?? e.created_at ?? e.timestamp).slice(0, 10));
+  expect(new Set(events).size).toBeGreaterThan(5);
+  await enter(page, "admin");
+  await page.goto("/dashboard");
+  await expect(page.locator("main svg polyline").first()).toBeAttached();
+  const lines = await page.locator("main svg polyline").evaluateAll((els) => els.map((e) => e.getAttribute("points") ?? ""));
+  const shapes = lines.map((l) => new Set(l.trim().split(/\s+/).map((p) => p.split(",")[1])).size);
+  expect(Math.max(...shapes)).toBeGreaterThan(3);
+  clean(seen, "time");
+});
+
+test("a sentence request can be decided", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "judge");
+  await page.goto("/sentence-requests");
+  const main = page.locator("main");
+  await expect(main.getByRole("button", { name: /批准|同意/ }).first()).toBeVisible();
+  const before = await main.getByRole("button", { name: /批准|同意/ }).count();
+  await main.getByRole("button", { name: /批准|同意/ }).first().click();
+  const dialog = page.getByRole("dialog").or(page.getByRole("alertdialog"));
+  if (await dialog.isVisible().catch(() => false)) {
+    const why = dialog.locator("textarea").first();
+    if (await why.isVisible().catch(() => false)) await why.fill("演示:准");
+    await dialog.getByRole("button", { name: /批准|同意|确认/ }).last().click();
+  }
+  await expect(main.getByRole("button", { name: /批准|同意/ })).toHaveCount(before - 1);
+  clean(seen, "sentence requests");
+});
+
+test("the recycle bin has entries, and restoring one puts the soul back", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "admin");
+  await page.goto("/recycle-bin");
+  await expect(page.locator("main")).toContainText("无名氏甲");
+  const row = page.locator("main tr").filter({ hasText: "无名氏甲" });
+  await row.getByRole("button", { name: /恢复/ }).click();
+  const dialog = page.getByRole("dialog").or(page.getByRole("alertdialog"));
+  if (await dialog.isVisible().catch(() => false)) await dialog.getByRole("button", { name: /恢复|确认/ }).last().click();
+  await expect(page.locator("main")).not.toContainText("无名氏甲");
+  await page.goto("/souls");
+  await expect(page.locator("main")).toContainText("无名氏甲");
+  clean(seen, "recycle bin");
+});
+
+test("capture warrants are due", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "judge");
+  await page.goto("/judgment/capture-due");
+  await expect(page.locator("main")).toContainText("李靖");
+  clean(seen, "capture due");
+});
+
+test("a letter can be read and answered", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "moderator");
+  await page.goto("/soul-inbox");
+  const main = page.locator("main");
+  await main.getByText("未读", { exact: true }).first().click();
+  await expect(main).toContainText("托梦");
+  const box = main.locator("textarea").filter({ visible: true }).first();
+  await box.fill("已阅。待结案后再议。");
+  await main.getByRole("button", { name: /发送|回信|回复/ }).filter({ visible: true }).first().click();
+  await expect(main).toContainText("已阅。待结案后再议。");
+  clean(seen, "inbox");
+});
+
+test("each soul's values sit under their own column headers", async ({ page, context }) => {
+  const seen = watch(context, page);
+  await enter(page, "judge");
+  await page.goto("/souls");
+  await expect(page.locator("main tbody tr").first()).toBeVisible();
+  const headers = (await page.locator("main").getByRole("columnheader").allInnerTexts()).map((h) => h.trim());
+  const column = headers.findIndex((h) => h.includes("死亡时间"));
+  expect(column).toBeGreaterThan(0);
+  const named = page.locator("main tbody tr").filter({ hasText: "项羽" }).first();
+  await expect(named.locator("td").nth(column)).toContainText("前202年");
+  clean(seen, "souls columns");
 });

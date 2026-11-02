@@ -38,6 +38,7 @@ const OVERLAY_KEY = "soulledger_demo_overlay";
 const ROLE_KEY = "soulledger_demo_role";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STAMP = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)/g;
+const BARE_DATE = /"(\d{4}-\d\d-\d\d)"/g;
 const PAGING = new Set(["page", "page_size"]);
 const NO_FILTER = new Set(["page", "page_size", "ordering", "search", "q", "format"]);
 
@@ -95,7 +96,16 @@ const loaded: Partial<Record<DemoRole, Promise<Recording>>> = {};
 /** Timestamps move with the calendar: a case recorded as "two hours ago" reads that way whenever the demo is opened. */
 function shifted(raw: Recording): Recording {
   const delta = Date.now() - Date.parse(raw.recordedAt);
-  return JSON.parse(JSON.stringify(raw).replace(STAMP, (s) => new Date(Date.parse(s) + delta).toISOString())) as Recording;
+  // Every stamp moves by the same amount, so the spread between them is kept. Whole days for a bare date (the census's
+  // `day`), and only dates near the recording: 1283-05-01 is someone's birthday, not a stamp.
+  const days = Math.round(delta / 86400000) * 86400000;
+  const recent = new Date(raw.recordedAt).getUTCFullYear() - 2;
+  const text = JSON.stringify(raw)
+    .replace(STAMP, (s) => new Date(Date.parse(s) + delta).toISOString())
+    .replace(BARE_DATE, (whole, date: string) =>
+      Number(date.slice(0, 4)) < recent ? whole : `"${new Date(Date.parse(date) + days).toISOString().slice(0, 10)}"`,
+    );
+  return JSON.parse(text) as Recording;
 }
 
 export function recording(role: DemoRole): Promise<Recording> {
@@ -114,6 +124,11 @@ export function patchRow(collection: string, id: string | number, fields: Row): 
 
 export function deleteRow(collection: string, id: string | number): void {
   overlay.deleted.push(isUuid(String(id)) ? String(id) : `${collection}#${id}`);
+}
+
+/** Takes a row out of one list only, whatever kind of id it has. */
+export function dropFromList(collection: string, id: string | number): void {
+  overlay.deleted.push(`${collection}#${id}`);
 }
 
 export function addRow(collection: string, row: Row): void {

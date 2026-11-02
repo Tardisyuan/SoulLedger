@@ -161,6 +161,8 @@ async function sweepOpenCases(rec, access) {
       await getAll(rec, access, `${API}/judgment/${row.id}/destinations/?candidate_verdict=${verdict}`);
     }
     await getAll(rec, access, `${API}/workflows/flow-preview/?judgment=${row.id}`);
+    // The triage queue's card for this case; the demo computes the cursor around it.
+    await getAll(rec, access, `${API}/judgment/next/?at=${row.id}`);
   }
 }
 
