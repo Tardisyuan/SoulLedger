@@ -8389,5 +8389,17 @@
     "implied": "Em It Seth",
     "no_match": "Nen Gem Hut",
     "no_tenant": "Nen Wesekhet"
+  },
+  "demo": {
+    "banner": "Maa · Sesh-Ek Em Medjat Pen Wa; Wehem Aq: Wehem Tepy",
+    "enter_as": "Aq Mi {{role}}",
+    "login_desc": "Medjat Pen Em Maa: Nen Per Hemsu, Nen Sekhem. Khemen-Ek Wenen Em Medjat Pen Wa; Per Aq Er Wehem Aq: Wehem Tepy.",
+    "login_title": "Setep Netjer, Aq",
+    "role_admin": "Sab Hery",
+    "role_admin_desc": "Maa Taui Neb 4: Ren Aq, Netjer Hena Was, Smen, Medew Maa.",
+    "role_judge": "Sab Wedja",
+    "role_judge_desc": "Hru Sab: Shesep Sep, Khetem Wedja, Iri Wetep, Hesy.",
+    "role_moderator": "Sab Maat",
+    "role_moderator_desc": "Maat Shemsu: Sedjem, Gerh, Medu Djeseru."
   }
 }
