@@ -563,13 +563,14 @@ export const QUEUE_LEDGER_NUMBERS_ARE_SUMMARY_NUMBERS: SameNumbers<
   NumericFields<LedgerSummary>
 > = true;
 
+/** One row of `LedgerService.compute_balance(...)["records"]`: the magnitudes are unsigned, `type` says which side. */
 export interface QueueLedgerRecord {
   id: string;
-  record_type: string;
+  type: string;
   category: string;
   description: string;
-  weight: number;
-  effective_weight?: number;
+  original_weight: number;
+  effective_weight: number;
   recorded_at: string;
 }
 

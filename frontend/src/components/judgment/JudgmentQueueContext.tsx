@@ -113,8 +113,8 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
       type: "enum",
       header: t("judgment.queue.ledger_type"),
       value: (row) => ({
-        tone: row.record_type === "MERIT" ? "success" : "error",
-        label: row.record_type === "MERIT" ? t("judgment.queue.merit") : t("judgment.queue.demerit"),
+        tone: row.type === "MERIT" ? "success" : "error",
+        label: row.type === "MERIT" ? t("judgment.queue.merit") : t("judgment.queue.demerit"),
       }),
     },
     {
@@ -128,7 +128,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
       key: "weight",
       type: "numeric",
       header: t("judgment.queue.ledger_weight"),
-      value: (row) => row.effective_weight ?? row.weight,
+      value: (row) => (row.type === "MERIT" ? row.effective_weight : -row.effective_weight),
       format: signed,
       tone: karmaTone,
       width: "10ch",
@@ -232,7 +232,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
       <DataGrid<QueueLedgerRecord>
         caption={t("judgment.queue.ledger")}
         columns={columns}
-        data={ledger.records}
+        data={ledger.records.filter((row) => row.type === "MERIT" || row.type === "DEMERIT")}
         keyExtractor={(row, i) => row.id ?? String(i)}
         emptyMessage={t("judgment.queue.ledger_empty")}
       />
