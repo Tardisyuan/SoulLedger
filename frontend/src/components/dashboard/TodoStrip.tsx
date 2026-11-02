@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import { deathSyncApi, dispatchApi, judgmentApi, officerAppApi } from "@soulledger/core/api";
 import { todoKeys } from "@soulledger/core/query_keys";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
@@ -108,6 +110,7 @@ function TodoCell({
 
 export function TodoStrip() {
   const { t } = useI18n();
+  const { user } = useTenant();
   const { hasPermission, isAdmin } = usePermissions();
   const canDispatch = hasPermission("dispatch.read");
   const canJudge = hasPermission("judgment.read");
@@ -230,13 +233,15 @@ export function TodoStrip() {
               clearText={t("dashboard.todo.none")}
             />
           )}
-          <TodoCell
-            label={t("dashboard.todo.rebirths")}
-            query={officerCount("rebirths")}
-            href="/rebirth-applications"
-            linkText={t("dashboard.todo.go_approve")}
-            clearText={t("dashboard.todo.none")}
-          />
+          {hasRebirth(user?.tenant?.civilization) && (
+            <TodoCell
+              label={t("dashboard.todo.rebirths")}
+              query={officerCount("rebirths")}
+              href="/rebirth-applications"
+              linkText={t("dashboard.todo.go_approve")}
+              clearText={t("dashboard.todo.none")}
+            />
+          )}
           <TodoCell
             label={t("dashboard.todo.cooldowns")}
             query={officerCount("cooldowns")}

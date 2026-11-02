@@ -1,5 +1,6 @@
 "use client";
 
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
@@ -93,13 +94,13 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   // 转世配额(第五十一批 Q-1):初值是这一殿 `settings` 里存的上限;「本月已办」取 `/reincarnation/quota/`,
   // 那个接口只答调用者自己的殿 —— 改的是别的殿时不画这一列,免得把自己殿的数写到别人名下。
-  // 埃及冥府没有转世,整段不画,也不发这个字段。
+  // 埃及、欧洲没有转世,整段不画,也不发这个字段。
   const { tenantCode } = useTenant();
-  const hasRebirth = tenant.civilization !== "EGYPTIAN";
+  const rebirth = hasRebirth(tenant.civilization);
   const [quotaStart] = useState(() => initialQuota(tenant));
   const [quota, setQuota] = useState<Record<string, string>>(quotaStart);
   const ownHall = tenantCode === tenant.code;
-  const quotaUsage = useRebirthQuota(hasRebirth && ownHall);
+  const quotaUsage = useRebirthQuota(rebirth && ownHall);
   const usedOf = (form: string) => quotaUsage.data?.find((r) => r.rebirth_form === form)?.used;
   // 安全 · 两步验证(A12):每角色一行,开关写 `mfa_required_roles`。行从 /tenants/{code}/mfa-roles/ 来;
   // 没拉到就不发这个字段,免得把一份空清单写进去。
@@ -139,7 +140,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
       return;
     }
     const quotaPatch: Record<string, number | null> = {};
-    for (const f of hasRebirth ? QUOTA_FORMS : []) {
+    for (const f of rebirth ? QUOTA_FORMS : []) {
       const next = parseQuotaLimit(quota[f]);
       if (next === undefined) {
         setErrors({ rebirth_monthly_quota: t("tenants.settings.rebirth_quota_invalid") });
@@ -239,7 +240,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
 
         {/* 转世配额 (第五十一批 Q-1):每道一行,道 / 每月上限 / 本月已办;跟整页一起保存。
             调到比已办还低不拦,旁边说一句;0 是「本月不办这一道」,也说一句。 */}
-        {hasRebirth ? (
+        {rebirth ? (
           <section className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-rebirth-quota">
             <h3 className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">{t("tenants.settings.rebirth_quota_title")}</h3>
             <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("tenants.settings.rebirth_quota_body")}</p>
