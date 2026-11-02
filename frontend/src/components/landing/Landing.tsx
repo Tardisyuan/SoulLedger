@@ -176,6 +176,15 @@ function HowBuilt() {
         ))}
       </dl>
       <p className="mt-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("demo.build.tests_caption", { date: stats.measured })}</p>
+      <div className="mt-8 grid grid-cols-2 gap-4 md:max-w-xl">
+        {stats.videos.map((video) => (
+          <figure key={video.key} className="m-0">
+            {/* Starts only when asked: no motion for those who turned it off, and no download for those who never look. */}
+            <video src={video.src} controls muted loop playsInline preload="metadata" className="w-full border border-[oklch(var(--color-line-strong))]" />
+            <figcaption className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t(`demo.build.${video.key}`)}</figcaption>
+          </figure>
+        ))}
+      </div>
       <p className="mt-6 text-sm">
         <a href={stats.github} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center border border-[oklch(var(--color-ink))] px-4 text-[oklch(var(--color-ink))]">
           {t("demo.build.github")} <span aria-hidden="true">&nbsp;↗</span>

@@ -45,6 +45,12 @@ DEMO_PUBLISH="-p 3334:3334" scripts/demo-remote.sh scripts/demo-serve-inner.sh  
 Or on any machine with the dependencies installed: `cd frontend && export NEXT_PUBLIC_DEMO_MODE=1 && npx next build && npx next start -p 3334`.
 The variable has to be set for `next start` as well: `next.config.js` reads it at both steps, and without it `next start` warns that it does not work with `output: "standalone"`. The app still runs, but the warning is right about that config.
 
+## The app recordings
+
+`frontend/public/demo-videos/` holds two short clips of the apps, recorded on a phone with `scrcpy` against the demo's
+seeded world (`DEMO_PUBLISH="-p 8011:8000" scripts/demo-remote.sh scripts/demo-app-backend-inner.sh`, with Metro started
+with `EXPO_PUBLIC_API_URL` pointing at it). The phone's status bar is cropped off.
+
 ## Publishing
 
 The site follows the `demo` branch, not `main` (Vercel's Production branch is `demo`; `frontend/vercel.json` turns off

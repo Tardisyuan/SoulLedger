@@ -8,5 +8,8 @@
     "e2e": "≈ 270"
   },
   "github": "https://github.com/Tardisyuan/SoulLedger",
-  "videos": []
+  "videos": [
+    { "key": "video_soul", "src": "/demo-videos/app-soul.mp4" },
+    { "key": "video_officer", "src": "/demo-videos/app-officer.mp4" }
+  ]
 }
