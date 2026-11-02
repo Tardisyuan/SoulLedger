@@ -10,7 +10,8 @@ import names from "@/src/lib/i18n/referenceNames.en.json";
  * ponytail: this is a display table, not a data migration. Whatever is not listed stays Chinese, and a name an
  * administrator renames stops matching. The real fix is `name_en` columns on those tables.
  *
- * Skipped where the response fills an edit form: the form would send the English back as the new name.
+ * Skipped where the response fills an edit form, and undone on every write (`originalNames`): a form filled from a
+ * translated list row would otherwise send the English back as the new name.
  */
 const EDIT_FORMS = /^\/?(workflow\/templates\/|organizations\/\d+\/$|perm\/permissions\/\d+\/$|nodes\/)/;
 const TABLE = names as Record<string, string>;
@@ -30,11 +31,27 @@ export function englishNames(value: unknown): unknown {
   return value;
 }
 
+const REVERSED: Record<string, string> = Object.fromEntries(Object.entries(TABLE).map(([zh, en]) => [en, zh]));
+
+/** What goes back to the server, undone: a form filled from a translated row must not rename the record in English. */
+export function originalNames(value: unknown): unknown {
+  if (typeof value === "string") return REVERSED[value] ?? value;
+  if (Array.isArray(value)) return value.map(originalNames);
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, originalNames(v)]));
+  }
+  return value;
+}
+
 export function isTranslated(url: string | undefined, method: string | undefined): boolean {
   return getLocale() === "en" && (method ?? "get").toLowerCase() === "get" && !EDIT_FORMS.test(url ?? "");
 }
 
 export function installEnglishNames(api: AxiosInstance): void {
+  api.interceptors.request.use((config) => {
+    if (getLocale() === "en" && (config.method ?? "get").toLowerCase() !== "get") config.data = originalNames(config.data);
+    return config;
+  });
   api.interceptors.response.use((res: AxiosResponse) => {
     if (isTranslated(res.config.url, res.config.method)) res.data = englishNames(res.data);
     return res;

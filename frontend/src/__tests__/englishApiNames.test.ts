@@ -1,6 +1,7 @@
 /** An English reader sees reference names in English; what people typed, and the forms that edit those names, are left alone. */
 import { configurePlatform } from "@soulledger/core/platform";
-import { englishNames, isTranslated } from "@/lib/i18n/englishApiNames";
+import { englishNames, isTranslated, originalNames } from "@/lib/i18n/englishApiNames";
+import names from "@/src/lib/i18n/referenceNames.en.json";
 
 jest.mock("@soulledger/core/platform", () => {
   const actual = jest.requireActual("@soulledger/core/platform");
@@ -45,5 +46,25 @@ describe("isTranslated", () => {
 
   it.each(["/workflow/templates/3/", "/organizations/12/", "/perm/permissions/4/"])("not the form that edits it: %s", (url) => {
     expect(isTranslated(url, "get")).toBe(false);
+  });
+});
+
+describe("originalNames: English reference names are for reading only", () => {
+  const [zh, en] = Object.entries(names as Record<string, string>)[0];
+
+  it("reads in English and writes back the original, so an edit cannot rename the record", () => {
+    const shown = englishNames({ name: zh, note: "写给殿司" }) as { name: string; note: string };
+    expect(shown.name).toBe(en);
+    expect(originalNames({ name: shown.name, nested: [{ name: en }], note: shown.note })).toEqual({
+      name: zh,
+      nested: [{ name: zh }],
+      note: "写给殿司",
+    });
+  });
+
+  it("leaves what is not plain JSON alone", () => {
+    const form = new FormData();
+    expect(originalNames(form)).toBe(form);
+    expect(originalNames(undefined)).toBeUndefined();
   });
 });
