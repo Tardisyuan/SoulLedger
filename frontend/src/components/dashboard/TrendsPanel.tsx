@@ -5,6 +5,8 @@ import { useLedgerTrends } from "@soulledger/core/hooks/useLedgerTrends";
 import type { LedgerTrendPoint, LedgerTrendRange } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { hasRebirth } from "@/src/lib/hasRebirth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -114,6 +116,7 @@ function Sparkline({ values, xs }: { values: number[]; xs: number[] }) {
  */
 export function TrendsPanel() {
   const { t, formatDateTime } = useI18n();
+  const civilization = useTenant().user?.tenant?.civilization;
   const [range, setRange] = useState<LedgerTrendRange>("30d");
   const [dimension, setDimension] = useState<Dimension>("state");
   const { data, isLoading, isError, refetch } = useLedgerTrends(range);
@@ -122,7 +125,9 @@ export function TrendsPanel() {
   const cells: Cell[] = useMemo(() => {
     if (dimension === "state") {
       const present = [...new Set([...points.flatMap((p) => Object.keys(p.by_state)), "LOST"])];
-      return orderLifecycle(LIFECYCLE, present).map((key) => ({
+      const emptyWheel = (key: string) =>
+        key === "REINCARNATING" && !hasRebirth(civilization) && !points.some((p) => p.by_state[key]);
+      return orderLifecycle(LIFECYCLE, present).filter((key) => !emptyWheel(key)).map((key) => ({
         key,
         glyph: soulStateGlyph(key),
         namespace: "souls.states",
@@ -135,7 +140,7 @@ export function TrendsPanel() {
       namespace: "tenant.civilizations",
       pick: (p) => p.by_civilization[key] ?? 0,
     }));
-  }, [dimension, points]);
+  }, [civilization, dimension, points]);
 
   const formatDay = (day: string) => formatDateTime(`${day}T12:00:00Z`, { month: "numeric", day: "numeric", timeZone: "UTC" });
   const since = data?.since ?? points[0]?.day;

@@ -529,7 +529,9 @@
         "stage_reincarnating": "Wehem Mesut",
         "stage_reincarnating_hint": "Nen Shesep · Wetep Seth Em Tepy",
         "stage_next_life": "Ankh Khery",
-        "stage_next_life_hint": "Smen Er Khet Wetep Hena Wehem Mesut Khetem Seth"
+        "stage_next_life_hint": "Smen Er Khet Wetep Hena Wehem Mesut Khetem Seth",
+        "stage_final": "Wat Pehwy",
+        "stage_final_hint": "Nen Wehem Mesut Dy: Wetep = Wat Pehwy"
       },
       "ledger": {
         "not_yet": "Nen Shesep",
@@ -8493,7 +8495,8 @@
           "body": "Chenghuang Hab Medu Ini Ba; Sab Ini Shesep Ba."
         },
         "3": {
-          "name": "Maa Tepy"
+          "name": "Maa Tepy",
+          "body": "Chenghuang Maa Tepy: Nefer Hena Isfet. Mut Tepy Er Hru Mut Smen: Smen Em Nut Mut."
         },
         "4": {
           "name": "Wesekhet 1 Er 10",

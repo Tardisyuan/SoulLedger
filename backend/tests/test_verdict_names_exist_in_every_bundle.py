@@ -119,7 +119,8 @@ def test_the_three_bundles_agree_on_these_namespaces():
     )
     for path in (("souls", "detail"), ("workflow", "verdicts")):
         prefix = ".".join(path) + "."
-        waiting = {k[len(prefix):] for k in pending if k.startswith(prefix)}
+        # Only this level is compared, so a nested key waits under its first segment.
+        waiting = {k[len(prefix):].split(".")[0] for k in pending if k.startswith(prefix)}
         sets = [
             set(_node(locale, *path)) | (waiting if locale == "egy" else set()) for locale in LOCALES
         ]

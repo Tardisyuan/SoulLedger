@@ -339,6 +339,7 @@ const COLLECTED_FILES = [
   "errorIsNotAnEmptyState.test.ts",
   "focusRingContract.test.ts",
   "gridPopupKeyboardContract.test.tsx",
+  "hideTheWheel.test.ts",
   "historicalDateLocale.test.ts",
   "HomePageIdentity.test.tsx",
   "inkOnSurfaceContract.test.ts",
