@@ -166,6 +166,10 @@ for (const [role, name] of [["judge", "屈原"], ["judge_eu", "Francesca da Rimi
     const soul = rows(rec, "/souls/").find((s) => String(s.name).startsWith(name));
     const judgment = rows(rec, "/judgment/").find((j) => j.soul === soul?.id);
     const flow = rows(rec, "/workflows/").find((w) => w.soul === soul?.id);
+    // The case itself says when, and it is that life's: a reborn soul's death is cleared, but its case is not.
+    expect(String(judgment?.case_number)).not.toContain("null");
+    expect(Math.abs(new Date(String(judgment?.created_at)).getUTCFullYear())).toBeGreaterThan(50);
+    expect(new Date(String(judgment?.created_at)).getUTCFullYear()).toBeLessThan(2000);
     await enter(page, role);
     await page.getByTestId("demo-tour-skip").click().catch(() => {});
     for (const route of [`/souls/${soul?.id}`, `/judgment/${judgment?.id}`, `/workflow/${flow?.id}`]) {
