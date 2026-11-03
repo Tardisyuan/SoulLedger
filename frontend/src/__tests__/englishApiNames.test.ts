@@ -68,3 +68,22 @@ describe("originalNames: English reference names are for reading only", () => {
     expect(originalNames(undefined)).toBeUndefined();
   });
 });
+
+describe("the table itself", () => {
+  const table = names as Record<string, string>;
+
+  it("never gives two Chinese strings one English string: a write could not tell which to restore", () => {
+    const owners = new Map<string, string[]>();
+    for (const [zh, en] of Object.entries(table)) owners.set(en, [...(owners.get(en) ?? []), zh]);
+    expect([...owners].filter(([, zh]) => zh.length > 1)).toEqual([]);
+  });
+
+  // menuI18n.ts `DIRECTORY_KEYS` and useSidebarMenus.ts `hideTheWheel` find these by their Chinese name.
+  it.each(["概览", "灵魂业务", "流程协作", "组织与领域", "社交", "轮回", "系统设置", "全局"])("leaves the menu group %s to the code that matches on it", (group) => {
+    expect(table[group]).toBeUndefined();
+  });
+
+  it("does not reach the corpus", () => {
+    for (const statute of ["不仁門", "焚修門", "傲慢", "贪婪", "奪紀奪算"]) expect(table[statute]).toBeUndefined();
+  });
+});

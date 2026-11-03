@@ -11,7 +11,10 @@ import names from "@/src/lib/i18n/referenceNames.en.json";
  * administrator renames stops matching. The real fix is `name_en` columns on those tables.
  *
  * Skipped where the response fills an edit form, and undone on every write (`originalNames`): a form filled from a
- * translated list row would otherwise send the English back as the new name.
+ * translated list row would otherwise send the English back as the new name. So English values are unique.
+ *
+ * Not in the table: the menu's group names (the sidebar finds them by their Chinese name, `useSidebarMenus.ts`,
+ * `menuI18n.ts`) and the corpus, which stays in its original language.
  */
 const EDIT_FORMS = /^\/?(workflow\/templates\/|organizations\/\d+\/$|perm\/permissions\/\d+\/$|nodes\/)/;
 const TABLE = names as Record<string, string>;
