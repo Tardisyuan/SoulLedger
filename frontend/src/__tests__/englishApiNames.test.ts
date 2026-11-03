@@ -103,7 +103,8 @@ describe("the table itself", () => {
   });
 
   // menuI18n.ts `DIRECTORY_KEYS` and useSidebarMenus.ts `hideTheWheel` find these by their Chinese name.
-  it.each(["概览", "灵魂业务", "流程协作", "组织与领域", "社交", "轮回", "系统设置", "全局"])("leaves the menu group %s to the code that matches on it", (group) => {
+  // 系统设置 is not here on purpose: it is also a permission's name (/permissions), and the sidebar shows the same English.
+  it.each(["概览", "灵魂业务", "流程协作", "组织与领域", "社交", "轮回", "全局"])("leaves the menu group %s to the code that matches on it", (group) => {
     expect(table[group]).toBeUndefined();
   });
 
