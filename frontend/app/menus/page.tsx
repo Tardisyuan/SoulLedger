@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi, permApi, PAGE_SIZE, type Permission } from "@soulledger/core/api";
 import { menuKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { menuGlossParts } from "@/src/lib/menuI18n";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -33,7 +34,7 @@ export default function MenusPage() {
 }
 
 function MenusPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -282,7 +283,7 @@ function MenusPageContent() {
         isOpen={pendingDelete !== null}
         title={t("menus.delete_confirm_title")}
         message={t("menus.delete_confirm_message", {
-          name: pendingDelete?.name ?? "",
+          name: pendingDelete ? menuGlossParts(pendingDelete, locale, t).primary : "",
           days: "30",
         })}
         confirmText={t("menus.delete_confirm_action")}

@@ -6,6 +6,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TreeName } from "@/src/components/ui/TreeRow";
+import { menuGlossParts } from "@/src/lib/menuI18n";
 import type { MenuItemFull } from "./menuTypes";
 
 /** One menu row's seven `<td>`s — DataTable supplies the surrounding `<tr>`. */
@@ -21,7 +22,7 @@ export function MenuRowCells({
   onEdit: (menu: MenuItemFull) => void;
   onDelete: (menu: MenuItemFull) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Same resolution as the sidebar (static table first, whole of lucide only for a name outside it).
   const MenuIcon = useMenuIcon(menu.icon);
   // Deleted-row state (Stage 4 §4.7): ink-subtle text, strikethrough
@@ -38,7 +39,7 @@ export function MenuRowCells({
             <MenuIcon className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" />
           ) : null}
           <span className={`font-medium ${isDeleted ? "line-through text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}>
-            {menu.name}
+            {menuGlossParts(menu, locale, t).primary}
           </span>
           {isDeleted && (
             <Badge className="shrink-0" glyph="↺">

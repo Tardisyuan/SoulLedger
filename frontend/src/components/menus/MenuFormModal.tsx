@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { permApi } from "@soulledger/core/api";
 import { permKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { menuGlossParts } from "@/src/lib/menuI18n";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
@@ -53,7 +54,7 @@ export function MenuFormModal({
   /** Locks the submit button while a create/update is in flight. */
   isSubmitting?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { isAdmin } = usePermissions();
 
   // Unique prefix so field ids never collide across multiple Modal instances.
@@ -159,7 +160,7 @@ export function MenuFormModal({
             onChange={(e) => setForm({ ...form, parent: e.target.value ? Number(e.target.value) : null })}
             options={[
               { value: "", label: t("menus.parent_none") },
-              ...parentOptions.map((m) => ({ value: String(m.id), label: m.name })),
+              ...parentOptions.map((m) => ({ value: String(m.id), label: menuGlossParts(m, locale, t).primary })),
             ]}
           />
         </div>
