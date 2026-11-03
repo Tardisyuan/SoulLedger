@@ -22,6 +22,7 @@ import type { ReactNode } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkflowPage from "@/app/workflow/page";
+import { originalNames } from "@/lib/i18n/englishApiNames";
 import { workflowApi } from "@soulledger/core/api";
 import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
 import {
@@ -202,8 +203,10 @@ describe("the 编辑 button hands the editor a saveable template", () => {
       expect(steps.has(node.node_type)).toBe(false);
       expect(NODE_TYPE_VALUES).toContain(node.node_type as NodeTypeMember);
     }
-    // 名字与殿号照旧透传——修的是类型，不是别的。
-    expect(payload.nodes_json[0].node_name).toBe("秦广王 · 分流");
-    expect(payload.nodes_json[9].node_name).toBe("转轮王 · 终审");
+    // English on screen; the request interceptor's `originalNames` puts back what the preset says before it is stored.
+    expect(payload.nodes_json[0].node_name).toBe("King Qinguang · triage");
+    const sent = originalNames(payload) as typeof payload;
+    expect(sent.nodes_json[0].node_name).toBe("秦广王 · 分流");
+    expect(sent.nodes_json[9].node_name).toBe("转轮王 · 终审");
   });
 });

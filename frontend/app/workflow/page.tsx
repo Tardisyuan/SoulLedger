@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { englishNames } from "@/lib/i18n/englishApiNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { ListSkeleton } from "@/components/ui/skeleton";
@@ -48,8 +49,10 @@ export default function WorkflowPage() {
 }
 
 function WorkflowPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
+  /** Presets live in the config in Chinese, with no API response to translate them. Applied after `nodeTypeFor` and `presetRouting`, which read the Chinese; a save is undone by the request interceptor. */
+  const shown = <T,>(value: T): T => (locale === "en" ? (englishNames(value) as T) : value);
 
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -272,7 +275,7 @@ function WorkflowPageContent() {
                               : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                           }`}
                         >
-                          {tmpl.name}
+                          {shown(tmpl.name)}
                         </button>
                       ))}
                     </div>
@@ -355,13 +358,13 @@ function WorkflowPageContent() {
                         `presetPreviewModel`——`nodeTypeFor` 那一步就在它里面。 */}
                     {!editingTemplateId && selectedTemplate && currentTemplate && (
                       <TemplatePreview
-                        model={presetPreviewModel(currentTemplate)}
+                        model={shown(presetPreviewModel(currentTemplate))}
                         actions={
                           <>
                             <Button
                               type="button"
                               onClick={() => {
-                                setViewingTemplate({
+                                setViewingTemplate(shown({
                                   ...currentTemplate,
                                   nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                     id: n.id,
@@ -374,7 +377,7 @@ function WorkflowPageContent() {
                                     // 保存后存下的类型是同一个。
                                     node_type: nodeTypeFor(n.type),
                                   })),
-                                });
+                                }));
                                 setViewModalOpen(true);
                               }}
                             >
@@ -385,7 +388,7 @@ function WorkflowPageContent() {
                                 type="button"
                                 variant="secondary"
                                 onClick={() => {
-                                  setEditingTemplateData({
+                                  setEditingTemplateData(shown({
                                     name: currentTemplate.name,
                                     description: currentTemplate.description,
                                     civilization: currentTemplate.civilization,
@@ -409,7 +412,7 @@ function WorkflowPageContent() {
                                       // 不按 order 直走的预设（希腊）带上去向，否则编辑器画成直线。
                                       ...presetRouting(currentTemplate, n.id),
                                     })),
-                                  });
+                                  }));
                                   setTab("editor");
                                 }}
                               >
