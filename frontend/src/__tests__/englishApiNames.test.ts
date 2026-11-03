@@ -2,6 +2,7 @@
 import { configurePlatform } from "@soulledger/core/platform";
 import { englishNames, isTranslated, originalNames } from "@/lib/i18n/englishApiNames";
 import names from "@/src/lib/i18n/referenceNames.en.json";
+import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
 
 jest.mock("@soulledger/core/platform", () => {
   const actual = jest.requireActual("@soulledger/core/platform");
@@ -47,6 +48,17 @@ describe("isTranslated", () => {
   it.each(["/workflow/templates/3/", "/organizations/12/", "/perm/permissions/4/"])("not the form that edits it: %s", (url) => {
     expect(isTranslated(url, "get")).toBe(false);
   });
+
+  it("the demo has no server to protect, so its templates read in English, and only those", () => {
+    process.env.NEXT_PUBLIC_DEMO_MODE = "1";
+    try {
+      expect(isTranslated("/workflow/templates/3/", "get")).toBe(true);
+      expect(isTranslated("/workflow/templates/", "get")).toBe(true);
+      expect(isTranslated("/organizations/12/", "get")).toBe(false);
+    } finally {
+      delete process.env.NEXT_PUBLIC_DEMO_MODE;
+    }
+  });
 });
 
 describe("originalNames: English reference names are for reading only", () => {
@@ -71,6 +83,18 @@ describe("originalNames: English reference names are for reading only", () => {
 
 describe("the table itself", () => {
   const table = names as Record<string, string>;
+
+  // Not `type`: it is read only by `nodeTypeFor` and never shown, and it is words like 等待 and 结束 that a person could type.
+  const presets = Object.values(WORKFLOW_TEMPLATES);
+  const shownInPresets = [...new Set(presets.flatMap((p) => [p.name, p.description, ...p.nodes.flatMap((n) => [n.name, n.court])]))];
+
+  it("has every Chinese string a preset shows", () => {
+    expect(shownInPresets.filter((s) => /[\u3400-\u9fff]/.test(s) && !table[s])).toEqual([]);
+  });
+
+  it("restores them on the way back, so a template saved from a preset stores what the preset says", () => {
+    for (const s of shownInPresets) expect(originalNames(englishNames(s))).toBe(s);
+  });
 
   it("never gives two Chinese strings one English string: a write could not tell which to restore", () => {
     const owners = new Map<string, string[]>();

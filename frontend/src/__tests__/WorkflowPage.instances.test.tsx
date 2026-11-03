@@ -297,7 +297,7 @@ describe("WorkflowPage editor tab", () => {
     renderPage();
 
     await screen.findByText("workflow.predefined_templates");
-    fireEvent.click(screen.getAllByText("紧急审判流程")[0]);
+    fireEvent.click(screen.getAllByText("Urgent judgment flow")[0]);
     fireEvent.click(screen.getByText("common.edit"));
 
     expect(screen.getByTestId("editor-priority")).toHaveTextContent("1");

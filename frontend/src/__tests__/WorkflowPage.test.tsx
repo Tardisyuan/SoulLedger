@@ -40,7 +40,7 @@ describe("WorkflowPage template list", () => {
 
     expect(await screen.findByText("workflow.predefined_templates")).toBeInTheDocument();
     // CHINESE_ROUTINE is the initial selection.
-    expect(screen.getAllByText("十殿审判流程").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ten Courts judgment flow").length).toBeGreaterThan(0);
     expect(screen.getByText("workflow.nodes_count(10)")).toBeInTheDocument();
   });
 
@@ -117,8 +117,8 @@ describe("WorkflowPage template list", () => {
 
     await screen.findByText("workflow.predefined_templates");
     // CHINESE_ROUTINE: 秦广王 · 分流 (第一殿) … 转轮王 · 终审 (第十殿).
-    expect(screen.getByText("第一殿")).toBeInTheDocument();
-    expect(screen.getByText("第十殿")).toBeInTheDocument();
+    expect(screen.getByText("First Court")).toBeInTheDocument();
+    expect(screen.getByText("Tenth Court")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
     // Absence: an off-by-one still renders ten plausible chips.
@@ -170,7 +170,7 @@ describe("WorkflowPage template list", () => {
     renderPage();
 
     await screen.findByText("workflow.predefined_templates");
-    const appealButton = screen.getAllByText(/申诉|复审/)[0];
+    const appealButton = screen.getAllByText("Appeal flow")[0];
     fireEvent.click(appealButton);
 
     expect(screen.queryByText("workflow.nodes_count(10)")).not.toBeInTheDocument();
@@ -301,7 +301,7 @@ describe("WorkflowPage detail modal", () => {
 
     expect(await screen.findByText("workflow.detail.nodes")).toBeInTheDocument();
     expect(mockedTemplateGet).not.toHaveBeenCalled();
-    expect(screen.getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("King Qinguang · triage").length).toBeGreaterThan(0);
   });
 
   /**
@@ -345,9 +345,9 @@ describe("WorkflowPage detail modal", () => {
     expect(dialog.queryByTitle("终审")).not.toBeInTheDocument();
     // The names and courts are untouched pass-throughs, asserted so a green
     // above cannot have come from a modal that listed no nodes at all.
-    expect(dialog.getByText("秦广王 · 分流")).toBeInTheDocument();
-    expect(dialog.getByText("转轮王 · 终审")).toBeInTheDocument();
-    expect(dialog.getByText("第一殿")).toBeInTheDocument();
+    expect(dialog.getByText("King Qinguang · triage")).toBeInTheDocument();
+    expect(dialog.getByText("King Zhuanlun · final hearing")).toBeInTheDocument();
+    expect(dialog.getByText("First Court")).toBeInTheDocument();
   });
 
   it("fetches the full template when viewing a backend one", async () => {

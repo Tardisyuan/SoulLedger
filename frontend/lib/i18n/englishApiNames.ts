@@ -16,7 +16,9 @@ import names from "@/src/lib/i18n/referenceNames.en.json";
  * Not in the table: the menu's group names (the sidebar finds them by their Chinese name, `useSidebarMenus.ts`,
  * `menuI18n.ts`) and the corpus, which stays in its original language.
  */
-const EDIT_FORMS = /^\/?(workflow\/templates\/|organizations\/\d+\/$|perm\/permissions\/\d+\/$|nodes\/)/;
+const EDIT_FORMS = /^\/?(organizations\/\d+\/$|perm\/permissions\/\d+\/$|nodes\/)/;
+/** Filling an edit form too, but the demo has no server to protect, and its template pages should read in English. */
+const TEMPLATE_FORMS = /^\/?workflow\/templates\//;
 const TABLE = names as Record<string, string>;
 const PREFIXES: [string, string][] = [["转生申请: ", "Rebirth application: "]];
 
@@ -47,7 +49,8 @@ export function originalNames(value: unknown): unknown {
 }
 
 export function isTranslated(url: string | undefined, method: string | undefined): boolean {
-  return getLocale() === "en" && (method ?? "get").toLowerCase() === "get" && !EDIT_FORMS.test(url ?? "");
+  if (getLocale() !== "en" || (method ?? "get").toLowerCase() !== "get" || EDIT_FORMS.test(url ?? "")) return false;
+  return process.env.NEXT_PUBLIC_DEMO_MODE === "1" || !TEMPLATE_FORMS.test(url ?? "");
 }
 
 export function installEnglishNames(api: AxiosInstance): void {

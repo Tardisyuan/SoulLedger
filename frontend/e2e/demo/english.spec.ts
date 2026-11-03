@@ -35,6 +35,7 @@ const PAGES: [Role, string][] = [
   ["admin", "/dashboard"], ["admin", "/users"], ["admin", "/permissions"], ["admin", "/audit"],
   ["moderator", "/moderation"], ["moderator", "/soul-inbox"], ["judge", "/profile"], ["judge", "/about"],
   ["judge", "/actors"], ["judge_eu", "/actors"], ["judge_eg", "/actors"], ["judge_gr", "/actors"], ["admin", "/tenants"],
+  ["judge", "/workflow"], ["judge_eu", "/workflow"], ["judge_eg", "/workflow"], ["judge_gr", "/workflow"],
 ];
 const detail = (role: Role, list: string, route: string, row = 0): [Role, string] => [role, `${route}${rows(recording(role, "en"), list)[row]?.id}`];
 for (const role of ["judge", "judge_eu", "judge_eg", "judge_gr"] as Role[]) {
