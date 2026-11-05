@@ -132,9 +132,9 @@ CHINESE_ACTORS = [
     ("黑无常", "黑无常", "Black Impermanence", "Hei Wuchang", ActorRole.CONDUIT, "DY_00_PURGATORY",
      "黑无常", "黑无常", "Black Wuchang", "HeiWuchang",
      "Black Impermanence (八爷 范无救) - captures wicked souls with chains of darkness"),
-    ("判官", "判官", "Registrar", "Panguan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
-     "判官", "判官", "Clerk-Registrar of the Dead", "Panguan",
-     "Registrars who compile and verify the Book of Life and Death"),
+    ("判官", "判官", "Judge", "Panguan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
+     "判官", "判官", "Judge of the Dead", "Panguan",
+     "Judges who compile and verify the Book of Life and Death"),
     # 钟馗 IS KEPT AND LABELLED, NOT REMOVED. He does not appear anywhere in
     # 《玉历宝钞》, so nothing in the ten-court system gives him a torture-chamber
     # post; "assists in torture" was a modern popular reading written as if it
@@ -184,7 +184,7 @@ CHINESE_ACTORS = [
      "as a seated judge, and the popular four-registrar lists that do place him "
      "usually give him the 赏善司 instead"),
     ("崔府君", "崔府君", "Cui Fujun", "Cuifujun", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
-     "崔判官", "崔判官", "Cui the Registrar", "Cuifujun",
+     "崔判官", "崔判官", "Judge Cui", "Cuifujun",
      "崔珏 - senior registrar and judge of the underworld courts; keeps the "
      "Ledger of Life and Death and assists the Ten Kings"),
     ("地藏王菩萨", "地藏王菩萨", "Ksitigarbha", "Dizang", ActorRole.OVERSEER, "DY_COURT_01_QINGUANG",
@@ -307,7 +307,7 @@ CHINESE_ACTORS = [
     ("陆判", "陆判", "Judge Lu", "Lupan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "陆判官", "陆判官", "Judge Lu", "Lupan",
      "Underworld judge of 《聊斋志异·陆判》, where the text calls him only 陆判 or "
-     "陆公 (the name 陆之道 is a later folk addition). Popular lists of the 四大判官 "
+     "陆公 (the name 陆之道 is a later folk addition). This project's docs "
      "give him the 阴律司, revising the underworld's laws - an office with no "
      "source, absent from the 城隍 twenty-four bureaus (docs/02 §四)"),
     ("枷锁将军", "枷锁将军", "General of Cangue and Chains", "Jiasuo", ActorRole.GUARDIAN,

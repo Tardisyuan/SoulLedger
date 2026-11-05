@@ -244,3 +244,13 @@ def test_realm_and_actor_kept_the_english_name_they_had():
     assert {"name_en", "description_en"} <= realm_columns
     assert "name_en_2" not in realm_columns
     assert {"display_name_en", "description_en"} <= {f.name for f in Tenant._meta.concrete_fields}
+
+
+def test_the_source_checked_english_replaces_in_the_right_order():
+    """A plain table of replacements would turn "Greater Burning" into "Burning" if its order were wrong."""
+    from importlib import import_module
+
+    module = import_module("apps.actors.migrations.0018_english_names_follow_their_sources")
+    assert module.replace_all("Great Burning Hell", module.REPLACEMENTS) == "Burning Hell"
+    assert module.replace_all("Greater Burning Hell", module.REPLACEMENTS) == "Great Burning Hell"
+    assert module.replace_all("Greater Howling Hell", module.REPLACEMENTS) == "Great Howling Hell"

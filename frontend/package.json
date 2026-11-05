@@ -1,7 +1,7 @@
 {
   "name": "soul-ledger-frontend",
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.9.0 <23"
   },
   "version": "0.1.0",
   "private": true,

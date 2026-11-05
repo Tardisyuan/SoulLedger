@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.9.0 <23"
   },
   "_overrides_notes": {
     "_": "npm honours `overrides` only in the package it installs from — for this workspace that is the ROOT, and only this file. frontend/package.json used to carry its own copy; it was inert and read as live. Do not re-add them there.",
