@@ -546,7 +546,6 @@ export default function SoulDetailPage() {
     if (!soul) return;
     try {
       await deleteSoulMutation.mutateAsync(soul.id);
-      showToast(t("souls.detail.delete_success"), "success");
       router.push("/souls");
     } catch (error) {
       // 其他失败由 hook 报;可归档的 409 在这里换屏。
