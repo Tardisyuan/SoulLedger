@@ -10,6 +10,7 @@ import { CONTINENTS, type Soul, type SoulBaptism, type SoulContinent, type SoulD
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { type HistoricalDate } from "@/lib/utils";
 
 interface SoulEditModalProps {
@@ -241,7 +242,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             label={t("souls.form.birth_date_label")}
             type="date"
             value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
+            onChange={(e) => {
+              setBirthDate(e.target.value)
+              clearFieldError('birth_date')
+            }}
+            max={localDateString()}
+            error={getError('birth_date')}
             disabled={updateMutation.isPending}
           />
           <TextField
