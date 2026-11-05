@@ -29,8 +29,9 @@ So four cosmologies want four differently-shaped answers: a balance, a
 comparison, two unrelated numbers, and two parallel repayments on a clock
 nobody started. Serving all of them one
 shape built around a net total does not simplify the model, it silently applies
-the Chinese one to everybody — and it is not harmless. Run against real data, a
-net balance passes an Egyptian soul on a mechanic his tradition does not have.
+the Chinese one to everybody — and it is not harmless. The Egyptian reading does
+offset good against wrongs (`_egyptian_reading`, docs/02 §3.2), but what it answers
+is a heart against a fixed feather, not a balance with a sign.
 
 Held as a dict of builders rather than an if/elif chain for the same reason
 REBIRTH_CAPABLE_CIVILIZATIONS in services.py is a frozenset: adding GREEK
@@ -113,8 +114,9 @@ from apps.souls.models import Civilization
 #
 # 1 is the smallest weight a SoulRecord can carry (the field's default, and the
 # floor of its documented 1-100 range), so it is the lightest thing this system
-# is able to put on a scale. Choosing it says: a heart with any recorded
-# wrongdoing beyond a single minimal deed is heavier than the feather. That is a
+# is able to put on a scale. Choosing it says: a heart whose wrongdoing, after the
+# good it carries is taken off (`_egyptian_reading`), comes to more than a single
+# minimal deed is heavier than the feather. That is a
 # harsh instrument, and it is meant to be — it is the one property the sources
 # actually assert, and softening it to a comfortable allowance (10, 20) would be
 # inventing an Egyptian doctrine of tolerable sin in order to make the reading
