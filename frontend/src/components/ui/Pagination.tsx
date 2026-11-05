@@ -69,7 +69,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
         <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))] whitespace-nowrap">
           {t("pagination.info", {
             page: String(page),
-            total: String(totalPages),
+            total: String(Math.max(1, totalPages)),
             count: String(count),
           })}
         </p>

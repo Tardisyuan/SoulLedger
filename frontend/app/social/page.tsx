@@ -63,7 +63,7 @@ export default function SocialFeedPage() {
   const isError = tab === "feed" ? feedError : allError;
   const refetch = tab === "feed" ? refetchFeed : refetchAll;
   const paged = data && !Array.isArray(data) ? data : null;
-  const totalPages = paged ? Math.ceil(paged.count / PAGE_SIZE) : 0;
+  const totalPages = paged ? Math.max(1, Math.ceil(paged.count / PAGE_SIZE)) : 0;
 
   /**
    * The `pagination` slot is filled directly here rather than left to a
