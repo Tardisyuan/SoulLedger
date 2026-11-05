@@ -56,7 +56,7 @@ export function ImpersonationBanner() {
       role="status"
       data-testid="impersonation-banner"
       style={{ height: IMPERSONATION_BANNER_HEIGHT }}
-      className="sticky top-(--conn-h) z-progress flex items-center gap-3 border-b border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
+      className="sticky top-0 z-progress flex items-center gap-3 border-b border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span className="shrink-0 font-semibold">
         <span aria-hidden="true">◐ </span>
