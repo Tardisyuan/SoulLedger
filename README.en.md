@@ -50,7 +50,7 @@ See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
 | Civilization | What its ledger actually says | Shape of the answer |
 |---|---|---|
 | **Chinese** | A cumulative account (功過格). Merit and demerit offset each other; the running total *is* the verdict. | One signed number |
-| **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. Merit does not appear — there is no offsetting step. | Pass/fail against a fixed counterweight |
+| **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. The heart's weight is wrongdoing minus good deeds, never below zero: good deeds lighten the heart rather than earn a separate credit. The forty-two denials are the interrogation and do not enter the weighing. | Pass/fail against a fixed counterweight |
 | **European** | Two unrelated facts. *Culpa* (guilt) and *poena* (penalty remaining after absolution) do not reduce each other, and this system holds no data from which poena could honestly be derived. | Two independent quantities, one of them explicitly unavailable |
 | **Greek** | Plato's two myths disagree with each other: the *Gorgias* stamps a soul and stops, the *Republic*'s Er returns it after a thousand years. So 21 of the 23 transcribed articles have polarity `PROCEDURE` — **they are rules of the court, not names of offences**. | A procedure, not a quantity |
 
