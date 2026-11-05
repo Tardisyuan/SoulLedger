@@ -468,10 +468,12 @@ def impact_of_changes(changes):
         {
             "workflow_id": str(node.workflow_id),
             "workflow_name": node.workflow.workflow_name,
+            "workflow_name_en": node.workflow.workflow_name_en,
             "tenant_id": node.workflow.tenant_id,
             "status": node.workflow.status,
             "node_order": node.node_order,
             "node_name": node.node_name,
+            "node_name_en": node.node_name_en,
             "approver_roles": [node.approver_role],
             "caused_by": causes({node.approver_role}),
         }

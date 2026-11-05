@@ -71,6 +71,7 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
     """
     id = serializers.CharField(required=False, allow_blank=True)
     node_name = serializers.CharField(max_length=255)
+    name_en = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     node_type = serializers.ChoiceField(
         choices=["TRIAL", "EVALUATION", "APPEAL", "FINAL", "EXECUTION"],
         default="TRIAL"
@@ -202,7 +203,9 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "name_en",
             "description",
+            "description_en",
             "civilization",
             "case_type",
             "priority",
@@ -332,7 +335,9 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "name_en",
             "description",
+            "description_en",
             "civilization",
             "case_type",
             # Unlike `nodes`, one integer per row is not the payload this
@@ -378,6 +383,7 @@ class WorkflowSegmentSerializer(serializers.Serializer):
     realm_name = serializers.CharField()
     civilization = serializers.CharField()
     name = serializers.CharField()
+    name_en = serializers.CharField(allow_blank=True)
     state = serializers.CharField()
     go = serializers.IntegerField()
     total = serializers.IntegerField()
@@ -411,6 +417,7 @@ class CrossFlowAtSerializer(serializers.Serializer):
     segment = serializers.IntegerField()
     realm_name = serializers.CharField()
     node_name = serializers.CharField()
+    node_name_en = serializers.CharField(allow_blank=True)
     hall = serializers.CharField(allow_blank=True)
 
 
@@ -441,6 +448,7 @@ class JumpSourceSerializer(serializers.Serializer):
 
     key = serializers.CharField()
     node_name = serializers.CharField()
+    node_name_en = serializers.CharField(allow_blank=True)
     via = serializers.ChoiceField(
         choices=["on_fail", "branch"],
         help_text="on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。")
@@ -555,7 +563,8 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             cache[node.segment_id] = jump_sources(list(ApprovalNode.objects.filter(segment_id=node.segment_id)))
         from apps.workflow.segments import jump_via
 
-        return [{"key": str(s.pk), "node_name": s.node_name, "via": jump_via(node.pk, s.on_fail_id)}
+        return [{"key": str(s.pk), "node_name": s.node_name, "node_name_en": s.node_name_en,
+                 "via": jump_via(node.pk, s.on_fail_id)}
                 for s in cache[node.segment_id].get(node.pk, [])]
 
     def to_representation(self, node):
@@ -604,6 +613,7 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "id",
             "workflow",
             "node_name",
+            "node_name_en",
             "node_order",
             "node_type",
             "approver_type",
@@ -883,6 +893,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "soul",
             "soul_name",
             "workflow_name",
+            "workflow_name_en",
             "case_type",
             "priority",
             "status",
@@ -1002,6 +1013,7 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "workflow_name",
+            "workflow_name_en",
             "soul",
             "soul_name",
             "case_type",
@@ -1124,6 +1136,7 @@ class WorkflowRemindSerializer(serializers.Serializer):
 class FlowPreviewStationSerializer(serializers.Serializer):
     node_order = serializers.IntegerField(help_text="站序;勾掉的站以它送进 `skip_node_orders`。")
     node_name = serializers.CharField()
+    node_name_en = serializers.CharField(allow_blank=True)
     court_code = serializers.CharField(allow_blank=True)
     approver = serializers.CharField(allow_null=True, help_text="具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。")
     approver_role = serializers.CharField(allow_null=True, help_text="按角色派时的角色成员(客户端翻译)。")
@@ -1146,6 +1159,7 @@ class FlowPreviewSerializer(serializers.Serializer):
     generated, and the other realms that will follow (`segments.flow_preview`)."""
 
     name = serializers.CharField()
+    name_en = serializers.CharField(allow_blank=True)
     stations = FlowPreviewStationSerializer(many=True)
     foreign = FlowPreviewForeignSerializer(many=True)
     nothing_to_pick = serializers.BooleanField(

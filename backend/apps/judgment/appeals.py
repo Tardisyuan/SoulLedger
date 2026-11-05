@@ -293,7 +293,7 @@ def ladder(appeal):
             state = "PASSED"
         else:
             state = "AHEAD"
-        stations.append({"order": position, "node": node.pk, "name": node.node_name, "is_final": node.pk == final_pk,
+        stations.append({"order": position, "node": node.pk, "name": node.node_name, "name_en": node.node_name_en, "is_final": node.pk == final_pk,
                          "state": state, "note": (node.notes or None) if state in ("PASSED", "REJECTED") else None})
     awaiting = (appeal.status in OPEN_APPEAL_STATUSES
                 and (running or workflow.status == ApprovalWorkflowStatus.COMPLETED))

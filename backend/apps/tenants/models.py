@@ -25,6 +25,9 @@ class Tenant(AuditUserFields, models.Model):
     code = models.CharField(max_length=50, unique=True, db_index=True)
     display_name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
+    # Blank = show the source, which for the four seeded halls is English already.
+    display_name_en = models.CharField(max_length=200, blank=True, default="")
+    description_en = models.TextField(blank=True, default="")
     settings = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
     #: 这个殿接不接收别的殿调来暂居的灵魂(`DispatchService.check_target_accepts`)。关掉是例外:

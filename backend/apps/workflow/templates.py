@@ -14,6 +14,7 @@
 import logging
 
 from apps.souls.models import Civilization
+from apps.workflow.english import NAME_EN
 from apps.workflow.models import CaseType, NodeType
 from apps.workflow.node_shape import normalize_template_node
 
@@ -619,6 +620,8 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
     for position, raw in enumerate(source["nodes"], start=1):
         node = normalize_template_node(raw, position)
         node["node_type"] = str(node["node_type"])
+        if node["node_name"] in NAME_EN:
+            node["name_en"] = NAME_EN[node["node_name"]]
         node["court_code"] = COURT_SPELLING.get(node.get("court_code") or "", node.get("court_code") or "")
         node["id"] = f"n{node['node_order']}"
         # The editor's 审批人 select reads `approver_type` and shows 职能角色 when it is absent. The backend
@@ -636,7 +639,8 @@ def seed_template(civilization, case_type) -> tuple[str, list[dict]]:
         nodes[order - 1]["branches"] = [{**b, "target": f"n{b['target']}"} for b in branches]
     if key in PASS_BRANCHES:
         # A branch makes the flow a graph, and a graph needs every PASS edge written and a 结束 (validation.py).
-        end = {"node_name": BRANCH_END_NAME, "node_order": len(nodes) + 1, "node_type": "FINAL",
+        end = {"node_name": BRANCH_END_NAME, "name_en": NAME_EN.get(BRANCH_END_NAME, ""),
+               "node_order": len(nodes) + 1, "node_type": "FINAL",
                "court_code": nodes[-1]["court_code"], "kind": "END", "id": f"n{len(nodes) + 1}",
                "approver_type": "SYSTEM"}
         for here, after in zip(nodes, [*nodes[1:], end], strict=True):
@@ -657,5 +661,9 @@ def formal_template(civilization, case_type) -> dict | None:
     key = (civilization, case_type)
     if key in FAIL_ROUTES:
         name, nodes = seed_template(civilization, case_type)
-        return {"name": name, "nodes": nodes}
-    return WORKFLOW_TEMPLATES.get(key)
+        return {"name": name, "name_en": NAME_EN.get(name, ""), "nodes": nodes}
+    template = WORKFLOW_TEMPLATES.get(key)
+    if template is None:
+        return None
+    return {**template, "name_en": NAME_EN.get(template["name"], ""),
+            "nodes": [{**node, "name_en": NAME_EN.get(node["name"], "")} for node in template["nodes"]]}

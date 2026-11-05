@@ -189,7 +189,8 @@ def build_local(workflow, template, civilization, skip_node_orders=(), user=None
     now = timezone.now()
     segment = WorkflowSegment.objects.create(
         workflow=workflow, order=1, tenant_id=workflow.tenant_id, civilization=civilization,
-        name=template["name"], state=SegmentState.LOCAL_PICKED, picked_by=user, picked_at=now,
+        name=template["name"], name_en=template.get("name_en", ""), state=SegmentState.LOCAL_PICKED,
+        picked_by=user, picked_at=now,
         default_node_count=station_count(template["nodes"]),
     )
     first = WorkflowService._create_nodes(workflow, template, civilization, segment=segment, enter=False)
@@ -285,6 +286,7 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
         stations.append({
             "node_order": node["node_order"],
             "node_name": node["node_name"],
+            "node_name_en": node.get("name_en") or "",
             "court_code": node.get("court_code") or "",
             # 一个具名的人(角色 / 冥官);按角色派、不止一人时只给角色,由客户端翻译。
             "approver": (actor["name_zh"] or actor["name"]) if actor else (
@@ -302,7 +304,7 @@ def flow_preview(soul, case_type, tenant, template, judgment=None):
                             "default_node_count": station_count(realm_template["nodes"]),
                             # 那一段建好就是 PICKED(`_foreign_segment`):客户端写「全部必须走」,不写「由该域判官选站」。
                             "nothing_to_pick": _template_nothing_to_pick(realm_template)})
-    return {"name": template["name"], "stations": stations, "foreign": foreign,
+    return {"name": template["name"], "name_en": template.get("name_en", ""), "stations": stations, "foreign": foreign,
             "nothing_to_pick": _template_nothing_to_pick(template)}
 
 
@@ -319,6 +321,7 @@ def _template_sources(nodes):
                 seen.append(target)
                 sources.setdefault(target["node_order"], []).append(
                     {"key": str(node["node_order"]), "node_name": node["node_name"],
+                     "node_name_en": node.get("name_en") or "",
                      "via": jump_via(target_id, node.get("on_fail"))})
     return sources
 
@@ -357,6 +360,7 @@ def _foreign_segment(workflow, realm, order):
         civilization, case_type_for(civilization, workflow.case_type), realm)
     segment = WorkflowSegment.objects.create(
         workflow=workflow, order=order, tenant=realm, civilization=civilization, name=template["name"],
+        name_en=template.get("name_en", ""),
         state=SegmentState.AWAITING_PICK, default_node_count=station_count(template["nodes"]),
     )
     offset = max(workflow.nodes.values_list("node_order", flat=True), default=0)
@@ -938,6 +942,7 @@ def segment_row(segment, workflow, request=None, now=None):
         "realm_name": _realm(segment.tenant),
         "civilization": segment.civilization,
         "name": segment.name,
+        "name_en": segment.name_en,
         "state": phase(segment, workflow),
         "go": sum(1 for n in nodes if n.status != NodeStatus.SKIPPED),
         "total": len(nodes),
@@ -1017,7 +1022,7 @@ def cross_summary(workflow, request=None):
     if current is not None and current.segment_id in by_pk:
         seg = by_pk[current.segment_id]
         at = {"segment": seg.order, "realm_name": _realm(seg.tenant), "node_name": current.node_name,
-              "hall": current.court_code}
+              "node_name_en": current.node_name_en, "hall": current.court_code}
     return {
         "id": str(workflow.pk),
         "number": workflow.number,

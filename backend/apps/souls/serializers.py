@@ -610,6 +610,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     # 所属机构(数据范围 B3a):建时可显式给,缺省按 `default_owner_org`;建后持 soul.update 可改。
     owner_org = owner_org_field()
     owner_org_name = serializers.CharField(source="owner_org.name", read_only=True, default=None)
+    owner_org_name_en = serializers.CharField(source="owner_org.name_en", read_only=True, default=None)
 
     def validate_owner_org(self, value):
         return check_owner_org(value, self.context, "soul", self.instance, "soul.update")
@@ -630,7 +631,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
-            "soup_taken_at", "desired_rebirth_form", "owner_org", "owner_org_name",
+            "soup_taken_at", "desired_rebirth_form", "owner_org", "owner_org_name", "owner_org_name_en",
             *ARCHIVE_FIELDS,
         ]
         read_only_fields = [

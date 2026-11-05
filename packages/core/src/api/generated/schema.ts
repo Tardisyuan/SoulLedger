@@ -10469,6 +10469,7 @@ export interface components {
             title_en?: string;
             title_egy?: string;
             description?: string;
+            description_en?: string;
             powers_json?: unknown;
             icon_url?: string;
             is_active?: boolean;
@@ -10643,6 +10644,7 @@ export interface components {
             /** Format: uuid */
             node: string;
             name: string;
+            name_en: string;
             is_final: boolean;
             state: components["schemas"]["AppealLadderStateEnum"];
             note: string | null;
@@ -10699,6 +10701,7 @@ export interface components {
             /** Format: uuid */
             workflow: string;
             node_name: string;
+            node_name_en?: string;
             node_order: number;
             node_type?: components["schemas"]["ApprovalNodeNodeTypeEnum"];
             approver_type?: components["schemas"]["ApprovalNodeApproverTypeEnum"];
@@ -10832,6 +10835,7 @@ export interface components {
             readonly soul_name: string;
             /** @description e.g., 十殿审判流程, 欧西里斯称重 */
             workflow_name: string;
+            workflow_name_en?: string;
             case_type?: components["schemas"]["CaseTypeEnum"];
             /** @description 0=normal, 1=urgent, 2=critical */
             priority?: number;
@@ -10872,6 +10876,7 @@ export interface components {
             readonly number: string;
             /** @description e.g., 十殿审判流程, 欧西里斯称重 */
             workflow_name: string;
+            workflow_name_en?: string;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -12025,6 +12030,7 @@ export interface components {
             segment: number;
             realm_name: string;
             node_name: string;
+            node_name_en: string;
             hall: string;
         };
         CrossFlowGate: {
@@ -12072,6 +12078,7 @@ export interface components {
             readonly initiating_tenant: number;
             readonly initiating_tenant_code: string;
             readonly initiating_tenant_display_name: string;
+            readonly initiating_tenant_display_name_en: string;
             readonly status: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             readonly concluded_at: string | null;
@@ -12103,6 +12110,7 @@ export interface components {
             initiating_tenant: number;
             readonly initiating_tenant_code: string;
             readonly initiating_tenant_display_name: string;
+            readonly initiating_tenant_display_name_en: string;
             status?: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             concluded_at?: string | null;
@@ -12122,9 +12130,11 @@ export interface components {
             participant_tenant: number;
             readonly participant_tenant_code: string;
             readonly participant_tenant_display_name: string;
+            readonly participant_tenant_display_name_en: string;
             /** Format: uuid */
             participant_actor?: string | null;
             readonly participant_actor_name: string | null;
+            readonly participant_actor_name_en: string | null;
             role?: components["schemas"]["CrossTenantJudgmentParticipantRoleEnum"];
             /** Format: date-time */
             readonly joined_at: string;
@@ -13108,6 +13118,7 @@ export interface components {
         FactHistory: {
             kind: components["schemas"]["FactHistoryKindEnum"];
             name: string;
+            name_en: string;
             actor: string | null;
             /** @description `workflow.verdicts.*` 的码;发起与当前节点为空。 */
             verdict: string;
@@ -13126,6 +13137,7 @@ export interface components {
         FactHistoryKindEnum: "start" | "decided" | "current";
         FactNode: {
             name: string;
+            name_en: string;
             /** @description 第几步(只数需要人决定的节点)。 */
             index: number;
             total: number;
@@ -13133,6 +13145,7 @@ export interface components {
             is_last: boolean | null;
             /** @description 批准后交给的节点;最后一步或不确定时为 null。 */
             next_name: string | null;
+            next_name_en: string | null;
         };
         FactSoul: {
             name: string;
@@ -13187,6 +13200,7 @@ export interface components {
          */
         FlowPreview: {
             name: string;
+            name_en: string;
             stations: components["schemas"]["FlowPreviewStation"][];
             foreign: components["schemas"]["FlowPreviewForeign"][];
             /** @description 没有一站能跳过(终审、自动节点、锁着的驳回 / 分支目标):客户端跳过选站这一步(第四十五批)。 */
@@ -13204,6 +13218,7 @@ export interface components {
             /** @description 站序;勾掉的站以它送进 `skip_node_orders`。 */
             node_order: number;
             node_name: string;
+            node_name_en: string;
             court_code: string;
             /** @description 具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。 */
             approver: string | null;
@@ -13592,6 +13607,7 @@ export interface components {
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name: string;
+            readonly judge_name_en: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
             /** Format: uuid */
@@ -13693,6 +13709,7 @@ export interface components {
             readonly grievance_decided_at: string | null;
             owner_org?: number;
             readonly owner_org_name: string;
+            readonly owner_org_name_en: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13726,6 +13743,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly workflow_name_en: string | null;
             readonly ladder: components["schemas"]["AppealLadder"] | null;
             /** Format: uuid */
             readonly soul: string;
@@ -13938,6 +13956,7 @@ export interface components {
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name: string;
+            readonly judge_name_en: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
             /** Format: uuid */
@@ -14039,6 +14058,7 @@ export interface components {
             readonly grievance_decided_at: string | null;
             owner_org?: number;
             readonly owner_org_name: string;
+            readonly owner_org_name_en: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14114,6 +14134,7 @@ export interface components {
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name: string;
+            readonly judge_name_en: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
             /** Format: uuid */
@@ -14214,6 +14235,7 @@ export interface components {
             readonly grievance_decided_at: string | null;
             owner_org?: number;
             readonly owner_org_name: string;
+            readonly owner_org_name_en: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14325,6 +14347,7 @@ export interface components {
         JumpSource: {
             key: string;
             node_name: string;
+            node_name_en: string;
             /**
              * @description on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。
              *
@@ -14643,6 +14666,7 @@ export interface components {
         LoginTenantRef: {
             code: string;
             display_name: string;
+            display_name_en: string;
             civilization: string;
             seal_glyphs: string[];
         };
@@ -14755,10 +14779,12 @@ export interface components {
             /** Format: uuid */
             workflow_id: string;
             workflow_name: string;
+            workflow_name_en: string;
             tenant_id: number | null;
             status: string;
             node_order: number;
             node_name: string;
+            node_name_en: string;
             approver_roles: string[];
             caused_by: components["schemas"]["MatrixConflictCause"][];
         };
@@ -14900,6 +14926,7 @@ export interface components {
             readonly workflow_number: string | null;
             readonly workflow_status: string | null;
             readonly workflow_name: string | null;
+            readonly workflow_name_en: string | null;
             readonly ladder: components["schemas"]["AppealLadder"] | null;
         };
         MeJudgmentAppealList: {
@@ -15115,6 +15142,7 @@ export interface components {
         Menu: {
             readonly id: number;
             name: string;
+            name_en?: string;
             path?: string;
             icon?: string;
             order?: number;
@@ -15176,6 +15204,7 @@ export interface components {
         MenuCreateUpdate: {
             readonly id: number;
             name: string;
+            name_en?: string;
             path?: string;
             icon?: string;
             order?: number;
@@ -15195,6 +15224,7 @@ export interface components {
         MenuTree: {
             readonly id: number;
             name: string;
+            name_en?: string;
             path?: string;
             icon?: string;
             order?: number;
@@ -15854,6 +15884,8 @@ export interface components {
             readonly id: number;
             /** @description 组织名称：如 第一殿、冥王厅 */
             name: string;
+            /** @description English name; blank = show `name` */
+            name_en?: string;
             /** @description 唯一编码：如 DIYU_01、HEAVEN_01 */
             code: string;
             /**
@@ -16860,6 +16892,7 @@ export interface components {
             /** Format: uuid */
             workflow?: string;
             node_name?: string;
+            node_name_en?: string;
             node_order?: number;
             node_type?: components["schemas"]["ApprovalNodeNodeTypeEnum"];
             approver_type?: components["schemas"]["ApprovalNodeApproverTypeEnum"];
@@ -16952,6 +16985,7 @@ export interface components {
             readonly soul_name?: string;
             /** @description e.g., 十殿审判流程, 欧西里斯称重 */
             workflow_name?: string;
+            workflow_name_en?: string;
             case_type?: components["schemas"]["CaseTypeEnum"];
             /** @description 0=normal, 1=urgent, 2=critical */
             priority?: number;
@@ -17086,6 +17120,7 @@ export interface components {
             readonly initiating_tenant?: number;
             readonly initiating_tenant_code?: string;
             readonly initiating_tenant_display_name?: string;
+            readonly initiating_tenant_display_name_en?: string;
             readonly status?: components["schemas"]["CrossTenantJudgmentStatusEnum"];
             /** Format: date-time */
             readonly concluded_at?: string | null;
@@ -17336,6 +17371,7 @@ export interface components {
             /** Format: uuid */
             judge?: string | null;
             readonly judge_name?: string;
+            readonly judge_name_en?: string;
             /** @description Court name, e.g. 第一殿 */
             court?: string;
             /** Format: uuid */
@@ -17437,6 +17473,7 @@ export interface components {
             readonly grievance_decided_at?: string | null;
             owner_org?: number;
             readonly owner_org_name?: string;
+            readonly owner_org_name_en?: string;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17471,6 +17508,7 @@ export interface components {
         PatchedMenuCreateUpdate: {
             readonly id?: number;
             name?: string;
+            name_en?: string;
             path?: string;
             icon?: string;
             order?: number;
@@ -17505,6 +17543,8 @@ export interface components {
             readonly id?: number;
             /** @description 组织名称：如 第一殿、冥王厅 */
             name?: string;
+            /** @description English name; blank = show `name` */
+            name_en?: string;
             /** @description 唯一编码：如 DIYU_01、HEAVEN_01 */
             code?: string;
             /**
@@ -17681,6 +17721,7 @@ export interface components {
             readonly desired_rebirth_form?: string | null;
             owner_org?: number;
             readonly owner_org_name?: string;
+            readonly owner_org_name_en?: string;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17784,7 +17825,9 @@ export interface components {
          *     `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
          */
         PatchedTenantSettings: {
+            display_name_en?: string;
             description?: string;
+            description_en?: string;
             dispatch_enabled?: boolean;
             /** @description 殿司展示名(简体中文) */
             hall_name?: string;
@@ -17984,7 +18027,9 @@ export interface components {
             readonly id?: string;
             /** @description Template name, e.g., 十殿审判流程 */
             name?: string;
+            name_en?: string;
             description?: string;
+            description_en?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
             /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
@@ -18003,11 +18048,13 @@ export interface components {
             readonly id: number;
             codename: string;
             name: string;
+            name_en?: string;
             category: string;
         };
         PermissionCreateUpdate: {
             codename: string;
             name: string;
+            name_en?: string;
             category: string;
         };
         /**
@@ -19656,6 +19703,7 @@ export interface components {
             readonly desired_rebirth_form: string | null;
             owner_org?: number;
             readonly owner_org_name: string;
+            readonly owner_org_name_en: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -20592,6 +20640,8 @@ export interface components {
             readonly id: number;
             readonly code: string;
             display_name: string;
+            display_name_en?: string;
+            description_en?: string;
             description?: string;
             is_active?: boolean;
             dispatch_enabled?: boolean;
@@ -20619,7 +20669,9 @@ export interface components {
             /** @description 大写字母开头,只含大写字母、数字、下划线。 */
             code: string;
             display_name: string;
+            display_name_en?: string;
             description?: string;
+            description_en?: string;
             civilization: components["schemas"]["CivilizationEnum"];
             /** @description 殿司展示名(简体中文) */
             hall_name?: string;
@@ -20640,6 +20692,7 @@ export interface components {
             tenant_id: number;
             tenant_code: string;
             tenant_name: string;
+            tenant_name_en: string;
             dispatch_enabled: boolean;
             total_souls: number;
             state_breakdown: {
@@ -20728,6 +20781,9 @@ export interface components {
             target: components["schemas"]["TodoTarget"];
             /** @description 仅审批节点:轮到的节点名。 */
             node_name?: string;
+            node_name_en?: string;
+            /** @description 仅审批节点:`title` 的英文;空 = 用 `title`。 */
+            title_en?: string;
             /** @description 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。 */
             soul_code?: string;
             /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
@@ -20774,6 +20830,8 @@ export interface components {
             kind: string;
             id: string;
             title: string;
+            /** @description `title` 的英文;空 = 用 `title`。 */
+            title_en?: string;
             /** Format: date-time */
             created_at: string;
             actionable: boolean;
@@ -21303,6 +21361,7 @@ export interface components {
             id: number;
             code: string;
             name: string;
+            name_en: string;
         };
         /**
          * @description `User.preferences`, as the API reads and writes it.
@@ -21361,6 +21420,7 @@ export interface components {
             id: number;
             code: string;
             display_name: string;
+            display_name_en: string;
         };
         /**
          * @description User serializer for updates (email, role, is_active, organization, position).
@@ -21586,6 +21646,7 @@ export interface components {
             realm_name: string;
             civilization: string;
             name: string;
+            name_en: string;
             state: string;
             go: number;
             total: number;
@@ -21662,7 +21723,9 @@ export interface components {
             readonly id: string;
             /** @description Template name, e.g., 十殿审判流程 */
             name: string;
+            name_en?: string;
             description?: string;
+            description_en?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
             /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
@@ -21690,7 +21753,9 @@ export interface components {
             readonly id: string;
             /** @description Template name, e.g., 十殿审判流程 */
             name: string;
+            name_en?: string;
             description?: string;
+            description_en?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
             /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
@@ -21722,6 +21787,8 @@ export interface components {
         WorkflowTemplateNode: {
             id?: string;
             node_name: string;
+            /** @default  */
+            name_en: string;
             /** @default TRIAL */
             node_type: components["schemas"]["WorkflowTemplateNodeNodeTypeEnum"];
             /** @default  */

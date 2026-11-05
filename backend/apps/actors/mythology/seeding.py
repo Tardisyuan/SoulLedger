@@ -24,6 +24,7 @@ from apps.actors.mythology.actors_egyptian import (
     ASSESSOR_REALM_CODE,
     ASSESSOR_SOURCE_EDITION,
 )
+from apps.actors.mythology.english import ACTOR_DESCRIPTION_EN, REALM_DESCRIPTION_EN
 from apps.actors.mythology.realms import REALM_PARENTS, REALM_TOPOLOGY
 from apps.actors.mythology.statutes_egyptian import (
     NEGATIVE_CONFESSION_FIELD,
@@ -44,12 +45,12 @@ REALM_TOPOLOGY_FIELDS = (
 )
 REALM_FIELDS = (
     "name_local", "name_zh", "name_en", "name_egy", "realm_type", "tier",
-    "description", "memory_reset_mechanism", "is_eternal", "cycle_limit",
+    "description", "description_en", "memory_reset_mechanism", "is_eternal", "cycle_limit",
     *REALM_TOPOLOGY_FIELDS,
 )
 ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
-    "title", "title_zh", "title_en", "title_egy", "description",
+    "title", "title_zh", "title_en", "title_egy", "description", "description_en",
     # `is_active` 在比对集合里,因为有两处真实消费方读它(2026-08-30 全仓核实):
     #   apps/actors/views.py:31                       queryset = filter(is_active=True)
     #   .../commands/migrate_actors_to_users.py:152   is_active=actor.is_active
@@ -244,6 +245,7 @@ class MythologySeeder:
                 "realm_type": realm_type,
                 "tier": tier,
                 "description": description,
+                "description_en": REALM_DESCRIPTION_EN.get(description, ""),
                 "memory_reset_mechanism": memory_reset,
                 "is_eternal": is_eternal,
                 "cycle_limit": cycle_limit,
@@ -363,6 +365,7 @@ class MythologySeeder:
                 "title_en": title_en,
                 "title_egy": title_egy,
                 "description": description,
+                "description_en": ACTOR_DESCRIPTION_EN.get(description, ""),
                 # `{}` and not "leave whatever is there" for an actor with no
                 # aliases: `powers_json` is compared field-wise, so a value has
                 # to be supplied for every row or an aliasless actor would
@@ -437,6 +440,7 @@ class MythologySeeder:
                 "title_en": title,
                 "title_egy": "",
                 "description": self._assessor_description(row),
+                "description_en": "",  # written in English; compared field-wise, so it has to be supplied
                 "powers_json": powers,
                 # 与 `_seed_actors` 同一个理由(见那里的注释)。这一行是补上的:
                 # `is_active` 被加进 `ACTOR_FIELDS` 时,`ASSESSOR_FIELDS` 是它的

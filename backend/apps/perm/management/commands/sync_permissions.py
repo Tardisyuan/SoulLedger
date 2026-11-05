@@ -26,6 +26,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.perm.cache import invalidate_all_permissions
+from apps.perm.english import PERMISSION_NAME_EN
 from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
 
 
@@ -62,7 +63,8 @@ class Command(BaseCommand):
                 self.stdout.write(line)
                 if dry_run:
                     continue
-                perm = Permission.objects.create(codename=codename, name=name, category=category)
+                perm = Permission.objects.create(codename=codename, name=name, category=category,
+                                                 name_en=PERMISSION_NAME_EN.get(codename, ""))
                 RolePermission.objects.bulk_create(
                     [RolePermission(role=roles[r], permission=perm) for r in granted]
                 )

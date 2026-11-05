@@ -243,8 +243,10 @@ class WorkflowService:
         """
         return {
             "name": f"{civilization} 审批流程",
+            "name_en": f"{civilization} approval flow",
             "nodes": [
-                {"name": "审批节点", "court": civilization, "type": NodeType.TRIAL, "order": 1},
+                {"name": "审批节点", "name_en": "Approval step", "court": civilization, "type": NodeType.TRIAL,
+                 "order": 1},
             ],
         }
 
@@ -383,6 +385,7 @@ class WorkflowService:
         return (
             {
                 "name": db_template.name,
+                "name_en": db_template.name_en,
                 "nodes": db_template.nodes_json,
                 "version_id": db_template.published_version_id,
             },
@@ -472,6 +475,7 @@ class WorkflowService:
                 workflow=workflow,
                 segment=segment,
                 node_name=node_def["node_name"],
+                node_name_en=node_def.get("name_en") or "",
                 node_order=order_offset + node_def["node_order"],
                 node_type=node_def["node_type"],
                 court_code=node_def["court_code"],
@@ -781,6 +785,7 @@ class WorkflowService:
                 judgment=judgment,
                 soul=soul,
                 workflow_name=template["name"],
+                workflow_name_en=template.get("name_en") or "",
                 case_type=case_type,
                 priority=priority,
                 status=ApprovalWorkflowStatus.PENDING,
@@ -973,6 +978,7 @@ class WorkflowService:
         from apps.notifications import messages
 
         params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name, "node": node.node_name,
+                  "workflow_en": workflow.workflow_name_en, "node_en": node.node_name_en,
                   **extra, "kind": kind}
         if category:
             params["category"] = category  # 超时的转交 / 提醒走「审批超时」类

@@ -300,6 +300,9 @@ def render(locale, kind, params):
     # 与前端「egy 缺键读 zh-Hans」同一条规则。
     entry = MESSAGES[locale].get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
     title, body = entry["title"], entry["body"]
+    if locale == "en":
+        # A name with English of its own travels beside the source (`workflow` / `workflow_en`); blank = the source.
+        params = {**params, **{k[:-3]: v for k, v in params.items() if k.endswith("_en") and v}}
     if params.get("realm_civ"):
         names = CIVILIZATION_NAMES.get(locale, CIVILIZATION_NAMES[DEFAULT_LOCALE])
         params = {**params, "realm": names.get(params["realm_civ"], params.get("realm", ""))}

@@ -39,6 +39,7 @@ class AppealLadderStationSerializer(serializers.Serializer):
     node = serializers.UUIDField()
     #: 审批流程的节点名。
     name = serializers.CharField()
+    name_en = serializers.CharField(allow_blank=True)
     is_final = serializers.BooleanField()
     state = serializers.ChoiceField(choices=appeals.LADDER_STATES)
     #: 这站的结论原文(节点的 notes);只有已决的站(PASSED / REJECTED)有。
@@ -64,12 +65,14 @@ class _AppealBase(serializers.ModelSerializer):
     workflow_status = serializers.CharField(source="workflow.status", read_only=True, allow_null=True, default=None)
     workflow_name = serializers.CharField(source="workflow.workflow_name", read_only=True, allow_null=True,
                                           default=None)
+    workflow_name_en = serializers.CharField(source="workflow.workflow_name_en", read_only=True, allow_null=True,
+                                             default=None)
     #: 上诉时的站梯(`appeals.ladder`);一次复核为 null。不带审批人。
     ladder = serializers.SerializerMethodField()
 
     FIELDS = ("id", "judgment", "case_number", "round", "reason", "evidence", "status", "original_verdict",
               "new_verdict", "current_verdict", "judgment_concluded_at", "decision_note", "decided_at",
-              "create_time", "compensations", "workflow", "workflow_number", "workflow_status", "workflow_name",
+              "create_time", "compensations", "workflow", "workflow_number", "workflow_status", "workflow_name", "workflow_name_en",
               "ladder")
 
     @extend_schema_field(AppealLadderSerializer(allow_null=True))

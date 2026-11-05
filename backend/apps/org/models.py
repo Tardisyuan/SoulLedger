@@ -38,6 +38,7 @@ class Organization(AuditUserFields):
         max_length=100,
         help_text="组织名称：如 第一殿、冥王厅"
     )
+    name_en = models.CharField(max_length=200, blank=True, default="", help_text="English name; blank = show `name`")
     code = models.CharField(
         max_length=50,
         unique=True,
