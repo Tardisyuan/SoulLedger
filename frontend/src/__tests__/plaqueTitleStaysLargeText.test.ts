@@ -166,6 +166,39 @@ describe("身份带底色(文明色压暗 10%)上的白字", () => {
 });
 
 /**
+ * 灵魂详情身份带上的案号与「全部 N 场」是 `<a>`,不是 `<button>`:按钮继承带上的白字,而 base 层的
+ * `a` 规则把链接染成 ink-muted(悬停 accent-ink)。上面那组只量白字,看不见这件事 —— 所以这里按
+ * globals.css 决定链接**实际**是什么颜色,再量。`.identity-band` 在 utilities 层,压得过 base 层
+ * 的 `a` 和它的 :hover,所以有这条 `color: inherit` 就是白字,没有就落回 base 的颜色。
+ */
+function bandLinkToken(): string {
+  if (/color:\s*inherit;/.test(ruleBody(".identity-band a"))) return "--color-on-main";
+  const base = /\n {2}a \{\s*@apply text-\[oklch\(var\((--color-[a-z-]+)\)\)\]/.exec(CSS)?.[1];
+  if (!base) throw new Error("globals.css 的 base `a` 规则改了形状 —— 跟着改这个读取器");
+  return base;
+}
+
+describe("身份带上的链接(案号)", () => {
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s · %s ≥ 4.5:1", (theme, civ) => {
+    const { pct, shade } = bandMix();
+    const band = mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct);
+    expect({ token: bandLinkToken(), ok: contrastRatio(rgb(theme, bandLinkToken()), band) >= 4.5 }).toEqual({
+      token: "--color-on-main",
+      ok: true,
+    });
+  });
+
+  it("base 的 `a` 颜色确实托不住:这条规则是承重的,不是多余的", () => {
+    const base = /\n {2}a \{\s*@apply text-\[oklch\(var\((--color-[a-z-]+)\)\)\]/.exec(CSS)?.[1] as string;
+    const { pct, shade } = bandMix();
+    const under = THEMES.flatMap((theme) =>
+      CIVS.filter((civ) => contrastRatio(rgb(theme, base), mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct)) < 4.5),
+    );
+    expect(under).toHaveLength(THEMES.length * CIVS.length);
+  });
+});
+
+/**
  * 印(规范 v3 描边印)是图形,门槛是 WCAG 1.4.11 的 3:1。它是 currentColor:身份带上随带上的
  * 白字(`.identity-band .seal { color: inherit }`),别处是匾色本身 —— 落在 canvas(审判队列的
  * 裁决条、判决页)或 surface-1(导航、确认层、印字弹窗)上。surface-2 / 3 上不放印:深色地府
