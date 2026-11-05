@@ -114,7 +114,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       ...(hasFatedDate && fatedDate !== historicalDateToInputValue(soul.fated_death_date)
         ? { fated_death_date: fatedDate || null }
         : {}),
-      origin_location: originLocation || undefined,
+      // 空串是「清掉籍贯」;发 undefined 等于没动,清不掉。
+      origin_location: originLocation,
       origin_region: originRegion,
       ...(hasDuatPassage ? { duat_passage: duatPassage } : {}),
       ...(hasInfernoFacts ? { baptism, denied_immortality: deniedImmortality, neutral_in_life: neutralInLife } : {}),
