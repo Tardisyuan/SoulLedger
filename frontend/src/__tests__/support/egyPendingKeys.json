@@ -1,4 +1,6 @@
 [
+  "disposition.overdue_since",
+  "disposition.term_overdue",
   "workflow.detail.end_stop",
   "workflow.detail.not_your_stop",
   "workflow.detail.refusals.final_review_required",
