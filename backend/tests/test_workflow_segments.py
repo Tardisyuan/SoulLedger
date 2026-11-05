@@ -735,7 +735,7 @@ def test_the_preview_and_the_detail_name_the_stations_that_jump_to_a_target(w):
     first = _nodes(wf, 1)[0]
     detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
     rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
-    assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审", "via": "on_fail"}], 4: []}
+    assert rows == {1: [], 2: [], 3: [{"key": str(first.pk), "node_name": "初审", "node_name_en": "", "via": "on_fail"}], 4: []}
 
 
 # ── 没有可选的站(Design 第四十五批)────────────────────────────────────────
@@ -818,8 +818,8 @@ def test_jump_sources_say_whether_they_come_by_a_branch_or_by_a_rejection(w):
     route, division, _final, _end = _nodes(wf, 1)
     detail = officer_client(w.cn_judge).get(f"{WF}{wf.pk}/").data
     rows = {n["node_order"]: n["jump_target_of"] for n in detail["nodes"]}
-    assert rows[2] == [{"key": str(route.pk), "node_name": "分流", "via": "branch"}]
-    assert rows[3] == [{"key": str(division.pk), "node_name": "分区", "via": "on_fail"}]
+    assert rows[2] == [{"key": str(route.pk), "node_name": "分流", "node_name_en": "", "via": "branch"}]
+    assert rows[3] == [{"key": str(division.pk), "node_name": "分区", "node_name_en": "", "via": "on_fail"}]
     assert rows[1] == []  # absence: the routing step is nobody's target
 
 
