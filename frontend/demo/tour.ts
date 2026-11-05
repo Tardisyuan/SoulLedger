@@ -31,7 +31,10 @@ export function tourOf(rec: Recording): Tour | null {
   const code = (rec.login.user as { tenant?: { code?: string } }).tenant?.code ?? "";
   if (!SKIN[code] || !rec.role.startsWith("judge")) return null;
   const name = PROTAGONIST[code];
-  const soul = rowsNow(rec, "/souls/").find((s) => String(s.name).startsWith(name) || String(s.name).startsWith(NAME_EN[name] ?? name));
+  // The first life by its own name: the same person gone round is another row, 「屈原·来世」, which /rebirths lists.
+  const souls = rowsNow(rec, "/souls/");
+  const isCalled = (s: { name?: unknown }, match: (a: string, b: string) => boolean) => [name, NAME_EN[name] ?? name].some((n) => match(String(s.name), n));
+  const soul = souls.find((s) => isCalled(s, (a, b) => a === b)) ?? souls.find((s) => isCalled(s, (a, b) => a.startsWith(b)));
   const soulRoute = soul ? `/souls/${soul.id}` : "/souls";
   const named = soul ? String(soul.name) : name;
   const judgment = rowsNow(rec, "/judgment/").find((j) => j.soul === soul?.id);

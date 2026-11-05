@@ -7,12 +7,14 @@ import { Button } from "@/src/components/ui/Button";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import stats from "@/src/config/landing-stats.json";
 import { ENTRANCE, ROLE_OF_SKIN, SKINS, TOUR_KEY, useEnter } from "./DemoEntrances";
+import { DEMO_USERNAMES } from "./store";
 import type { Tour } from "./tour";
 
 /** Where the visitor is in the tour. In the tab, so a refresh keeps it and a new tab starts fresh, like the rest of the demo. */
-type State = { step: number; collapsed: boolean; finished: boolean; closed: boolean };
-const START: State = { step: 0, collapsed: false, finished: false, closed: false };
+type State = { step: number; collapsed: boolean; finished: boolean; skipped: boolean; closed: boolean };
+const START: State = { step: 0, collapsed: false, finished: false, skipped: false, closed: false };
 
 function load(): State {
   try {
@@ -32,7 +34,8 @@ function save(state: State): void {
 
 /** The seal (Design batches 70, 71): colour spreads from the card, the seal lands, and the colour narrows to the identity
  *  band over the page, which by then is underneath; the real band takes over as it goes. At most 700 ms. */
-const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,oklch(var(--color-main)) 16%,transparent)}
+const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));outline-offset:4px;box-shadow:0 0 0 8px color-mix(in srgb,oklch(var(--color-main)) 16%,transparent);scroll-margin-top:9.5rem}
+body:has([data-testid='demo-tour']:not([data-finished])) main{padding-bottom:max(45vh,22rem)}
 @keyframes demo-seal-spread{from{clip-path:circle(0 at var(--x) var(--y))}to{clip-path:circle(150vmax at var(--x) var(--y))}}
 @keyframes demo-seal-drop{0%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}85%{opacity:1;transform:translate(-50%,-50%) scale(.98)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes demo-seal-narrow{to{top:var(--band-top);left:var(--band-left);height:var(--band-height)}}
@@ -47,17 +50,30 @@ const STYLES = `.demo-tour-target{outline:2px solid oklch(var(--color-main));out
 .demo-seal-skip{position:absolute;top:8px;right:8px;animation:demo-seal-name-out 100ms ease-in 450ms forwards}
 @media (prefers-reduced-motion:reduce){.demo-seal{background:oklch(var(--color-canvas));animation:demo-seal-fade 150ms ease-out both}.demo-seal>*{display:none}}`;
 
+/** A page kept alive behind the current one is still in the document, with its own `main`, and takes up no room. */
+const onScreen = (element: Element) => element.getClientRects().length > 0;
+
 function findTarget(css?: string, text?: string, up?: string): Element | null {
   // In the order written, not document order: the row before the card that contains it.
   for (const selector of css?.split(/,\s*/) ?? []) {
-    const found = document.querySelector(selector);
+    const found = Array.from(document.querySelectorAll(selector)).find(onScreen);
     if (found) return found;
   }
   if (!text) return null;
-  const main = document.querySelector("main");
+  const main = Array.from(document.querySelectorAll("main")).find(onScreen);
   const rows = main ? Array.from(main.querySelectorAll("tr, li, article")) : [];
   const row = rows.find((candidate) => candidate.textContent?.includes(text)) ?? null;
   return (up && row?.closest(up)) || row;
+}
+
+/** Centred if the card leaves it clear, otherwise at the top: the page has room to spare below it while the card is up (STYLES). */
+function reveal(target: Element): void {
+  target.scrollIntoView({ block: "center", behavior: "auto" });
+  const card = document.querySelector("[data-testid='demo-tour']")?.getBoundingClientRect();
+  const box = target.getBoundingClientRect();
+  if (card && box.bottom > card.top && box.top < card.bottom && box.right > card.left && box.left < card.right) {
+    target.scrollIntoView({ block: "start", behavior: "auto" });
+  }
 }
 
 /** The seal on the way in from a card: at most 700 ms, over the page, which does not wait for it. */
@@ -146,23 +162,27 @@ export default function DemoTour() {
     if (!here || !showing) return;
     let tries = 0;
     let lit: Element | null = null;
+    let again: ReturnType<typeof setTimeout> | undefined;
     const timer = setInterval(() => {
       if (step?.tab) {
         const label = t(step.tab);
-        const tab = Array.from(document.querySelectorAll<HTMLElement>("[role='tab']")).find((el) => el.textContent?.includes(label));
+        const tab = Array.from(document.querySelectorAll<HTMLElement>("[role='tab']")).find((el) => onScreen(el) && el.textContent?.includes(label));
         if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
       }
       const found = findTarget(step?.css, step?.text, step?.up);
       tries += 1;
-      if (found && (found as HTMLElement).offsetParent !== null) {
+      if (found) {
         lit = found;
         found.classList.add("demo-tour-target");
-        found.scrollIntoView({ block: "center", behavior: "auto" });
+        reveal(found);
+        // Once more when the card has settled above the verdict bar (`lift`, measured every 300 ms).
+        again = setTimeout(() => reveal(found), 350);
       }
       if (lit || tries > 25) clearInterval(timer);
     }, 120);
     return () => {
       clearInterval(timer);
+      clearTimeout(again);
       lit?.classList.remove("demo-tour-target");
     };
   }, [here, step, showing, t]);
@@ -203,8 +223,8 @@ export default function DemoTour() {
     if (state.finished) {
       card = (
         <aside data-testid="demo-tour" data-finished="" className={panel}>
-          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t("demo.tour.done_title")}</p>
-          <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{t("demo.tour.done_body", { civ })}</p>
+          <p className="m-0 font-title text-lg text-[oklch(var(--color-ink))]">{t(state.skipped ? "demo.tour.skipped_title" : "demo.tour.done_title")}</p>
+          <p className="mt-1 mb-0 text-sm text-[oklch(var(--color-ink-muted))]">{state.skipped ? t("demo.tour.skipped_body") : t("demo.tour.done_body", { civ })}</p>
           <ul className="m-0 mt-3 flex list-none gap-2 p-0">
             {SKINS.filter((skin) => skin !== tour.skin).map((skin) => (
               <li key={skin} data-civ={skin}>
@@ -219,6 +239,10 @@ export default function DemoTour() {
               </li>
             ))}
           </ul>
+          <p className="m-0 mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[oklch(var(--color-ink))]">
+            <a data-testid="demo-tour-how-built" href="/#how-built" className="underline underline-offset-2">{t("demo.build.title")}</a>
+            <a href={stats.github} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{t("demo.build.github")}</a>
+          </p>
           <div className="mt-3 flex items-center justify-between gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => router.push("/")}>{t("demo.tour.try_another")}</Button>
             <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-stay" onClick={() => update({ closed: true })}>{t("demo.tour.stay")}</Button>
@@ -259,7 +283,7 @@ export default function DemoTour() {
             {state.step > 0 ? (
               <Button type="button" variant="ghost" size="sm" onClick={() => go(state.step - 1)}>{t("demo.tour.prev")}</Button>
             ) : (
-              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-skip" onClick={() => update({ finished: true })}>{t("demo.tour.skip")}</Button>
+              <Button type="button" variant="ghost" size="sm" data-testid="demo-tour-skip" onClick={() => update({ finished: true, skipped: true })}>{t("demo.tour.skip")}</Button>
             )}
             {here ? (
               <button type="button" data-testid="demo-tour-next" className="band-colour h-9 px-3 text-sm font-semibold" onClick={() => (last ? update({ finished: true }) : go(state.step + 1))}>
@@ -274,6 +298,18 @@ export default function DemoTour() {
         </aside>
       );
     }
+  }
+
+  // The administrator has no tour, and lands on the densest page there is.
+  if (!card && username === DEMO_USERNAMES.admin && pathname === "/dashboard" && !state.closed) {
+    card = (
+      <aside data-testid="demo-admin-hint" className={panel}>
+        <p className="m-0 text-sm text-[oklch(var(--color-ink))]">{t("demo.admin_hint")}</p>
+        <div className="mt-2 flex justify-end">
+          <Button type="button" variant="ghost" size="sm" onClick={() => update({ closed: true })}>{t("common.close")}</Button>
+        </div>
+      </aside>
+    );
   }
 
   return (

@@ -25,7 +25,6 @@ for (const [skin, role] of SKINS) {
     await expect(card).toBeVisible();
     let steps = 0;
     const dark: string[] = [];
-    await page.getByTestId("demo-tour-back").click();
     const total = skin === "cn" || skin === "gr" ? 6 : 5;
     for (; steps < total; steps += 1) {
       await expect(page.getByTestId("demo-tour-progress")).toContainText(`${steps + 1} / ${total}`);
@@ -47,7 +46,6 @@ for (const [skin, role] of SKINS) {
 test("the tour survives a reload and a wrong page, and folds to a chip", async ({ page, context }) => {
   const seen = watch(context, page);
   await enter(page, "judge_eg");
-  await page.getByTestId("demo-tour-back").click();
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 5");
   await page.reload();
