@@ -25,6 +25,11 @@ describe("Pagination", () => {
     expect(screen.getByText(/Next/)).toBeInTheDocument();
   });
 
+  it("an empty list is page 1 of 1, not 1 of 0", () => {
+    render(<Pagination page={1} totalPages={0} count={0} onPageChange={() => {}} />);
+    expect(screen.getByText(/Page 1 of 1/)).toBeInTheDocument();
+  });
+
   it("disables previous button on first page", () => {
     render(<Pagination page={1} totalPages={5} count={50} onPageChange={() => {}} />);
     const prevBtn = screen.getByText(/Previous/).closest("button");
