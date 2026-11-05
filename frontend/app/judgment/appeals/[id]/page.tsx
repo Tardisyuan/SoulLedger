@@ -211,7 +211,7 @@ function AppealReviewContent({ id }: { id: string }) {
         <PageSection title={t("appeals.original_verdict")}>
           <Row label={t("judgment.case_number")}>
             <Link href={`/judgment/${appeal.judgment}`} className="underline underline-offset-2">
-              <CaseNumber value={appeal.case_number} variant="inline" />
+              <CaseNumber value={appeal.case_number} variant="inline" plain />
             </Link>
           </Row>
           <Row label={t("appeals.original_verdict")}>
