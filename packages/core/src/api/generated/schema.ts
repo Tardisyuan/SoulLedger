@@ -10327,6 +10327,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{id}/terminate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description End a running flow on the record: administrators only (`workflow.terminate`), with a written reason.
+         *
+         *     The flow ends CANCELLED, `end_reason` ADMIN_TERMINATED (`ApprovalWorkflow.terminate` says why that state).
+         *     The audit row and the WORKFLOW_TERMINATED event are in the same transaction. 400 `reason_required`;
+         *     409 `workflow_finished` when it had already ended.
+         */
+        post: operations["v1_workflows_terminate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/case-types/": {
         parameters: {
             query?: never;
@@ -12913,6 +12936,7 @@ export interface components {
          *     * `WORKFLOW_ASSIGNED` - Workflow Assigned
          *     * `WORKFLOW_APPROVED` - Workflow Approved
          *     * `WORKFLOW_REJECTED` - Workflow Rejected
+         *     * `WORKFLOW_TERMINATED` - Workflow Terminated
          *     * `DISPATCH_CREATED` - Dispatch Created
          *     * `DISPATCH_APPROVED` - Dispatch Approved
          *     * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -12970,7 +12994,7 @@ export interface components {
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_DELIVERED" | "NEGATIVE_CONFESSION_HEARD" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "REINCARNATION_COMPLETED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "WORKFLOW_TERMINATED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_APPEAL_DECIDED" | "CITY_GOD_RECEIVED" | "CITY_GOD_SENT_ON" | "CITY_GOD_RETURNED" | "MENGPO_SOUP_TAKEN" | "PURGATORY_ASCENDED" | "OFFICER_HANDOVER" | "DUAT_PASSAGE_CHANGED" | "DIYU_STATION_CHANGED" | "CAPTURE_WARRANT_ISSUED" | "SOUL_CAPTURED" | "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_UPHELD" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_DELIVERED" | "NEGATIVE_CONFESSION_HEARD" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -17662,7 +17686,7 @@ export interface components {
             readonly current_state?: components["schemas"]["CurrentStateEnum"];
             readonly tenant_code?: string;
             readonly tenant?: number;
-            readonly civilization?: string;
+            civilization?: string;
             readonly home_tenant?: components["schemas"]["SoulHomeTenant"];
             readonly home_civilization?: string;
             readonly is_residing?: boolean;
@@ -19645,7 +19669,7 @@ export interface components {
             readonly current_state: components["schemas"]["CurrentStateEnum"];
             readonly tenant_code: string;
             readonly tenant: number;
-            readonly civilization: string;
+            civilization?: string;
             readonly home_tenant: components["schemas"]["SoulHomeTenant"];
             readonly home_civilization: string;
             readonly is_residing: boolean;
@@ -27541,6 +27565,7 @@ export interface operations {
                  *     * `WORKFLOW_ASSIGNED` - Workflow Assigned
                  *     * `WORKFLOW_APPROVED` - Workflow Approved
                  *     * `WORKFLOW_REJECTED` - Workflow Rejected
+                 *     * `WORKFLOW_TERMINATED` - Workflow Terminated
                  *     * `DISPATCH_CREATED` - Dispatch Created
                  *     * `DISPATCH_APPROVED` - Dispatch Approved
                  *     * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -27597,7 +27622,7 @@ export interface operations {
                  *     * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED" | "WORKFLOW_TERMINATED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -27670,6 +27695,7 @@ export interface operations {
                  *     * `WORKFLOW_ASSIGNED` - Workflow Assigned
                  *     * `WORKFLOW_APPROVED` - Workflow Approved
                  *     * `WORKFLOW_REJECTED` - Workflow Rejected
+                 *     * `WORKFLOW_TERMINATED` - Workflow Terminated
                  *     * `DISPATCH_CREATED` - Dispatch Created
                  *     * `DISPATCH_APPROVED` - Dispatch Approved
                  *     * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -27726,7 +27752,7 @@ export interface operations {
                  *     * `NEGATIVE_CONFESSION_HEARD` - Negative Confession Heard
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "CAPTURE_HANDED_OVER" | "CAPTURE_WARRANT_CANCELLED" | "CAPTURE_WARRANT_ISSUED" | "CITY_GOD_RECEIVED" | "CITY_GOD_RETURNED" | "CITY_GOD_SENT_ON" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "DIYU_STATION_CHANGED" | "DUAT_PASSAGE_CHANGED" | "JUDGMENT_APPEAL_DECIDED" | "JUDGMENT_APPEAL_FILED" | "JUDGMENT_APPEAL_WITHDRAWN" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "MENGPO_SOUP_TAKEN" | "NEGATIVE_CONFESSION_HEARD" | "NOTIFICATION_CREATED" | "OFFICER_HANDOVER" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "PURGATORY_ASCENDED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CAPTURED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WANGSI_GRIEVANCE_DELIVERED" | "WANGSI_GRIEVANCE_FILED" | "WANGSI_GRIEVANCE_REJECTED" | "WANGSI_GRIEVANCE_UPHELD" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED" | "WORKFLOW_TERMINATED";
                 /** @description 1 hides events whose actor is empty or 'system' */
                 exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
@@ -41212,6 +41238,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowStats"];
+                };
+            };
+        };
+    };
+    v1_workflows_terminate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Approval Workflow. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowReason"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowReason"];
+                "multipart/form-data": components["schemas"]["WorkflowReason"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

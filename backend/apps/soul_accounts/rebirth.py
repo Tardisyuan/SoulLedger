@@ -287,13 +287,13 @@ def _project(application):
         status = application.appeal_workflow.status
         if status == "COMPLETED":
             return RebirthApplicationStatus.APPROVED
-        if status == "REJECTED":
+        if status in ("REJECTED", "CANCELLED"):  # CANCELLED: an administrator ended it (`terminate`); not left open
             return RebirthApplicationStatus.APPEAL_REJECTED
         return RebirthApplicationStatus.APPEALING
     status = application.workflow.status
     if status == "COMPLETED":
         return RebirthApplicationStatus.APPROVED
-    if status == "REJECTED":
+    if status in ("REJECTED", "CANCELLED"):
         return RebirthApplicationStatus.REJECTED
     return RebirthApplicationStatus.UNDER_REVIEW
 

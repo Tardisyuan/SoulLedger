@@ -849,6 +849,17 @@ class WorkflowService:
         return {"related_resource": "workflow", "related_id": str(workflow.id)}
 
     @staticmethod
+    def terminate(workflow, user=None, reason: str = "") -> bool:
+        """`ApprovalWorkflow.terminate` and its event, one transaction: no event row, no termination."""
+        from apps.events.services import EventService
+
+        with transaction.atomic():
+            if not workflow.terminate(user=user, reason=reason):
+                return False
+            EventService.log_workflow_terminated(workflow, reason, actor=getattr(user, "username", None) or "system")
+        return True
+
+    @staticmethod
     def record_events(workflow, created: bool = False, node=None) -> None:
         """Write the workflow's own events onto the soul's timeline (WORKFLOW_CREATED / _APPROVED / _REJECTED).
 

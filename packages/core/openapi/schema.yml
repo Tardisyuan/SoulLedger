@@ -6968,6 +6968,7 @@ paths:
           - WORKFLOW_ASSIGNED
           - WORKFLOW_CREATED
           - WORKFLOW_REJECTED
+          - WORKFLOW_TERMINATED
         description: |-
           * `SOUL_CREATED` - Soul Created
           * `STATE_CHANGED` - State Changed
@@ -6984,6 +6985,7 @@ paths:
           * `WORKFLOW_ASSIGNED` - Workflow Assigned
           * `WORKFLOW_APPROVED` - Workflow Approved
           * `WORKFLOW_REJECTED` - Workflow Rejected
+          * `WORKFLOW_TERMINATED` - Workflow Terminated
           * `DISPATCH_CREATED` - Dispatch Created
           * `DISPATCH_APPROVED` - Dispatch Approved
           * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -7216,6 +7218,7 @@ paths:
           - WORKFLOW_ASSIGNED
           - WORKFLOW_CREATED
           - WORKFLOW_REJECTED
+          - WORKFLOW_TERMINATED
         description: |-
           * `SOUL_CREATED` - Soul Created
           * `STATE_CHANGED` - State Changed
@@ -7232,6 +7235,7 @@ paths:
           * `WORKFLOW_ASSIGNED` - Workflow Assigned
           * `WORKFLOW_APPROVED` - Workflow Approved
           * `WORKFLOW_REJECTED` - Workflow Rejected
+          * `WORKFLOW_TERMINATED` - Workflow Terminated
           * `DISPATCH_CREATED` - Dispatch Created
           * `DISPATCH_APPROVED` - Dispatch Approved
           * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -23012,6 +23016,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkflowStats'
           description: ''
+  /api/v1/workflows/{id}/terminate/:
+    post:
+      operationId: v1_workflows_terminate_create
+      description: |-
+        End a running flow on the record: administrators only (`workflow.terminate`), with a written reason.
+
+        The flow ends CANCELLED, `end_reason` ADMIN_TERMINATED (`ApprovalWorkflow.terminate` says why that state).
+        The audit row and the WORKFLOW_TERMINATED event are in the same transaction. 400 `reason_required`;
+        409 `workflow_finished` when it had already ended.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Approval Workflow.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowReason'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/workflows/case-types/:
     get:
       operationId: v1_workflows_case_types_list
@@ -28738,6 +28796,7 @@ components:
       - WORKFLOW_ASSIGNED
       - WORKFLOW_APPROVED
       - WORKFLOW_REJECTED
+      - WORKFLOW_TERMINATED
       - DISPATCH_CREATED
       - DISPATCH_APPROVED
       - DISPATCH_REJECTED
@@ -28810,6 +28869,7 @@ components:
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
         * `WORKFLOW_APPROVED` - Workflow Approved
         * `WORKFLOW_REJECTED` - Workflow Rejected
+        * `WORKFLOW_TERMINATED` - Workflow Terminated
         * `DISPATCH_CREATED` - Dispatch Created
         * `DISPATCH_APPROVED` - Dispatch Approved
         * `DISPATCH_REJECTED` - Dispatch Rejected
@@ -39085,7 +39145,6 @@ components:
           readOnly: true
         civilization:
           type: string
-          readOnly: true
         home_tenant:
           allOf:
           - $ref: '#/components/schemas/SoulHomeTenant'
@@ -43278,7 +43337,6 @@ components:
           readOnly: true
         civilization:
           type: string
-          readOnly: true
         home_tenant:
           allOf:
           - $ref: '#/components/schemas/SoulHomeTenant'
@@ -43481,7 +43539,6 @@ components:
       - archive_reason
       - archived_at
       - archived_by_name
-      - civilization
       - create_time
       - current_state
       - date_problems

@@ -304,6 +304,7 @@
       "WORKFLOW_ASSIGNED": "Workflow assigned",
       "WORKFLOW_APPROVED": "Workflow approved",
       "WORKFLOW_REJECTED": "Workflow rejected",
+      "WORKFLOW_TERMINATED": "Workflow ended by an administrator",
       "DISPATCH_CREATED": "Dispatch created",
       "DISPATCH_APPROVED": "Dispatch approved",
       "DISPATCH_REJECTED": "Dispatch rejected",
@@ -651,6 +652,7 @@
         "civilization_mismatch": "Not your civilization",
         "invalid_origin_region": "Not a valid value. Region of origin: {{europe}} or {{asia}}; leave blank for {{unknown}}",
         "invalid_date": "Invalid date",
+        "birth_in_future": "Birth date is in the future",
         "death_before_birth": "Death is before birth",
         "implausible_lifespan": "Implausible lifespan",
         "duplicate_in_file": "Duplicate of an earlier row",
@@ -4312,7 +4314,7 @@
     "flow_waiting": {
       "approval_in_progress": "The approval workflow is still running: execution waits for it to finish.",
       "approval_rejected": "A station refused the approval workflow: reopen or appeal the case; it cannot be executed.",
-      "approval_cancelled": "The approval workflow was cancelled with the joint judgment and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
+      "approval_cancelled": "The approval workflow was stopped, by a cancelled joint judgment or by an administrator, and never finished: it cannot be executed as is. The hall lead (an officer who can reassign cases) can reopen this judgment as a new case."
     }
   },
   "reincarnation": {

@@ -53,12 +53,19 @@ MANUAL_FLOWS_DECIDE_THE_JUDGMENT = False
 #: BRANCH_SKIPPED — the branch the case selects leads to a station that was picked away (`_pass_successor`).
 END_REASON_BRANCH_SKIPPED = "BRANCH_SKIPPED"
 SYSTEM_END_REASONS = frozenset({END_REASON_BRANCH_SKIPPED, "SOUL_DEVOURED"})
+#: An administrator ended the flow on the record (`ApprovalWorkflow.terminate`). CANCELLED, never REJECTED: see there.
+END_REASON_TERMINATED = "ADMIN_TERMINATED"
 
 
 def judgment_deciding(queryset):
     """`queryset` of workflows narrowed to those that decide their judgment (`ApprovalWorkflow.decides_judgment`,
     in SQL), for the readers that ask "has this judgment's flow completed"."""
     return queryset if MANUAL_FLOWS_DECIDE_THE_JUDGMENT else queryset.filter(manually_started=False)
+
+
+def _is_final_review(node) -> bool:
+    """A segment's final (`segments.mark_required`) or, on a flow without segments, a FINAL-type stop."""
+    return node.kind not in AUTOMATIC_KINDS and (node.is_required or node.node_type == NodeType.FINAL)
 
 
 class _NowhereToAdvanceError(Exception):
@@ -79,6 +86,13 @@ class EscalationRefusedError(ValueError):
     越级推进最多推到终审那一站(用户 2026-10-29,审查 A):终审本身不能被越过,越级也不能让流程直接走完。"""
 
     code = "escalate_past_final"
+
+
+class FinalReviewRequiredError(EscalationRefusedError):
+    """`advance_to_next` does not move past a final review, nor onto 结束 (user 2026-11-06): the case needs a
+    decision. Nothing was written. A flow nobody can decide ends through `terminate` instead."""
+
+    code = "final_review_required"
 
 #: How many times one workflow may be sent back by 驳回到 (`ApprovalNode.reject_to`).
 #:
@@ -984,6 +998,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         then order), not the next one by order: in a graph template the order is not the path, and advancing by
         order walked into a branch the case does not take. Nowhere to go (the stop is the last, or its branch
         leads to a skipped station) answers False and changes nothing — advance never ends a flow.
+
+        A final review is not moved past, and 结束 is not stepped onto (user 2026-11-06): both raise
+        `FinalReviewRequiredError`, nothing written. Standing on 结束 used to leave a flow that nothing could finish.
         """
         from django.db import transaction
         from django.utils import timezone
@@ -996,12 +1013,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             if self.current_node_id is None:
                 # No pointer yet (a hand-built flow): point it at the stop the flow stands on, as before.
                 next_node = self._fallback_current()
-                if next_node is None:
+                if next_node is None or next_node.kind == NodeKind.END:
                     return False  # nothing left, or standing at a gate: only the realm's pick moves it on
             else:
                 stuck = ApprovalNode.objects.select_for_update().filter(pk=self.current_node_id).first()
                 if stuck is None or stuck.status != NodeStatus.PENDING:
                     return False
+                if _is_final_review(stuck):
+                    raise FinalReviewRequiredError("The final review cannot be advanced past; decide it instead")
                 try:
                     with transaction.atomic():
                         # The stop moved past is SKIPPED, not left PENDING: the order-based default in
@@ -1018,13 +1037,14 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                         next_node = self._pass_successor(stuck)
                         if next_node is None or next_node is BRANCH_SKIPPED:
                             raise _NowhereToAdvanceError
+                        if next_node.kind == NodeKind.END:
+                            raise FinalReviewRequiredError("Advancing here would reach the end undecided; decide it")
                         self._skip_jumped(stuck, next_node, now)
                 except _NowhereToAdvanceError:
                     return False
 
             # `_make_current`, not `_enter`: advance moves the pointer and decides
-            # nothing, so it does not run an automatic node either — pointing it at
-            # 结束 must not complete a flow whose current step nobody decided.
+            # nothing, so it does not run an automatic node either.
             # A stop in a segment its realm has not picked is not pointed at either: the flow waits at the gate.
             gate = self._unpicked_segment(next_node)
             if gate is not None:
@@ -1068,7 +1088,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             )
             if node is None or node.status != NodeStatus.PENDING:
                 return False
-            if node.kind not in AUTOMATIC_KINDS and (node.is_required or node.node_type == NodeType.FINAL):
+            if _is_final_review(node):
                 # The final review is where escalation stops (user 2026-10-29, review A): a segment's final
                 # (`segments.mark_required`) or, on a flow without segments, a FINAL-type stop.
                 raise EscalationRefusedError("The final review cannot be escalated past; decide it instead")
@@ -1092,6 +1112,39 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # the flow nobody decided. Raised inside the atomic block, so the escalation above is undone.
                 raise EscalationRefusedError("Escalating past the last stop would complete the flow; decide it instead")
             self.save()
+        return True
+
+    def terminate(self, user=None, reason: str = "") -> bool:
+        """An administrator ends a running flow on the record (user 2026-11-06). False when it had already ended.
+
+        CANCELLED, the state `TERMINAL_WORKFLOW_STATUSES` already gives a flow that ended neither passed nor refused:
+        - COMPLETED would release an unapproved disposition and run every completion hook on nobody's decision.
+        - REJECTED would withdraw the conclusion at once (`reweigh_after_rejection`), as if a judge had refused it.
+        CANCELLED stops holding the soul's rebirth (`origin_flow_open` only counts running flows). The disposition
+        stays at `approval_cancelled`, whose way out is the hall lead's `reopen-cancelled`.
+
+        `_finish` runs no hook for CANCELLED, so the two kinds of flow something else waits on are settled here: an
+        appeal ladder closes upheld (`on_ladder_finished`: "驳回或被撤掉 = 维持原判"), and a rebirth application follows
+        through `_project` on this save. A merged cross-realm judgment stays with its convener, who concludes or cancels.
+        """
+        from django.db import transaction
+        from django.utils import timezone
+
+        with transaction.atomic():
+            self._lock_and_reload()
+            if self.status in TERMINAL_WORKFLOW_STATUSES:
+                return False
+            now = timezone.now()
+            self.nodes.filter(status=NodeStatus.PENDING).update(
+                status=NodeStatus.SKIPPED, skip_kind=SkipKind.CANCELLED, skipped_by=user, skip_reason=reason,
+                decided_at=now)
+            self.segments.filter(state=SegmentState.AWAITING_PICK).update(
+                state=SegmentState.SKIPPED, version=models.F("version") + 1)
+            self._finish(ApprovalWorkflowStatus.CANCELLED, now, end_reason=END_REASON_TERMINATED)
+            if self.case_type == CaseType.APPEAL:
+                from apps.judgment import appeals
+
+                appeals.on_ladder_finished(self, self.status, self.end_reason)
         return True
 
 

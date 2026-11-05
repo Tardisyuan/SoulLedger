@@ -285,6 +285,23 @@ def _workflow_decision(verdict, event_type):
     return path
 
 
+def _workflow_terminated():
+    """An administrator ends a flow (`WorkflowService.terminate`): the view adds its audit row in the same atomic."""
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+    from apps.workflow.services import WorkflowService
+    from tests.soul_account_support import dead_soul
+
+    tenant = _cn()
+    wf = ApprovalWorkflow.objects.create(soul=dead_soul(tenant, name="结束灵魂"), workflow_name="普通审批",
+                                         case_type="STANDARD", status=ApprovalWorkflowStatus.IN_PROGRESS, tenant=tenant)
+    wf.current_node = ApprovalNode.objects.create(workflow=wf, node_name="初审", node_order=1, node_type="EVALUATION",
+                                                  approver_type="ROLE", approver_role="JUDGE", status=NodeStatus.PENDING)
+    wf.save(update_fields=["current_node"])
+    return (lambda: WorkflowService.terminate(ApprovalWorkflow.all_objects.get(pk=wf.pk), reason="卡死"),
+            lambda: ApprovalWorkflow.all_objects.get(pk=wf.pk).status == ApprovalWorkflowStatus.CANCELLED,
+            "WORKFLOW_TERMINATED")
+
+
 def _purgatory_review_ascends():
     """2026-10-27(docs-others E-1):炼狱复核的最后一站通过 → 灵魂升天堂,PURGATORY_ASCENDED 与那次决定同一事务。"""
     from apps.authentication.models import User
@@ -835,6 +852,7 @@ PATHS = {
     "workflow_approve/WORKFLOW_APPROVED": _workflow_decision("PASSED", "WORKFLOW_APPROVED"),
     "workflow_reject/WORKFLOW_REJECTED": _workflow_decision("FAILED", "WORKFLOW_REJECTED"),
     "workflow_timeout_reject/WORKFLOW_REJECTED": _workflow_timeout_reject,
+    "workflow_terminate/WORKFLOW_TERMINATED": _workflow_terminated,
     "purgatory_review/PURGATORY_ASCENDED": _purgatory_review_ascends,
     "officer_handover/OFFICER_HANDOVER": _handover,
     "duat_release/DUAT_PASSAGE_CHANGED": _duat_passage("NAMELESS", ""),
@@ -979,3 +997,13 @@ def test_a_successful_rebirth_decision_commits_workflow_and_application_together
     assert RebirthApplication.objects.get(pk=application.pk).status == "REJECTED"
     assert SoulEvent.all_objects.filter(event_type="REBIRTH_STATUS_CHANGED",
                                         payload__application_id=str(application.pk)).count() == 1
+
+
+def test_a_terminated_rebirth_flow_does_not_leave_the_application_under_review():
+    """`_project` read only COMPLETED and REJECTED, so a CANCELLED flow left the application open for good."""
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow.services import WorkflowService
+
+    _account, application = _submitted_application()
+    assert WorkflowService.terminate(application.workflow, reason="卡死") is True
+    assert RebirthApplication.objects.get(pk=application.pk).status == "REJECTED"

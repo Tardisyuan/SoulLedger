@@ -304,6 +304,7 @@
       "WORKFLOW_ASSIGNED": "工作流指派",
       "WORKFLOW_APPROVED": "工作流通过",
       "WORKFLOW_REJECTED": "工作流驳回",
+      "WORKFLOW_TERMINATED": "工作流被管理员结束",
       "DISPATCH_CREATED": "调度创建",
       "DISPATCH_APPROVED": "调度批准",
       "DISPATCH_REJECTED": "调度驳回",
@@ -651,6 +652,7 @@
         "civilization_mismatch": "不是本文明",
         "invalid_origin_region": "取值不对：出身地域填 {{europe}} / {{asia}}；留空 = {{unknown}}",
         "invalid_date": "日期格式不对",
+        "birth_in_future": "出生日期在未来",
         "death_before_birth": "死亡早于出生",
         "implausible_lifespan": "寿命不合理",
         "duplicate_in_file": "与文件中前面的行重复",
@@ -4312,7 +4314,7 @@
     "flow_waiting": {
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
-      "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
+      "approval_cancelled": "审批流程因联审取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
     }
   },
   "reincarnation": {
