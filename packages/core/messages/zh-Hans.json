@@ -1596,8 +1596,20 @@
       "status": "状态",
       "refusals": {
         "escalate_past_final": "越级推进最多到终审这一站：终审要由审批人判，不能越过。",
-        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。"
-      }
+        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。",
+        "no_successor": "这一站后面没有可去的站，流程不能再推进。",
+        "final_review_required": "推进不能越过终审：终审要由审批人判。"
+      },
+      "not_your_stop": "这一站不由你裁决，这里只能查看。",
+      "end_stop": "流程已到结束节点，这里没有裁决。",
+      "terminate": "结束流程",
+      "terminate_reason_label": "结束理由",
+      "terminate_reason_placeholder": "写明为什么结束这个流程",
+      "terminate_needs_reason": "结束流程必须说明理由",
+      "terminate_confirm_title": "结束这个流程？",
+      "terminate_confirm_message": "结束后不能再推进或裁决。理由会记入审计日志。",
+      "terminate_success": "流程已结束",
+      "terminate_error": "结束流程失败"
     },
     "verdicts": {
       "passed": "通过",

@@ -1596,8 +1596,20 @@
       "status": "Status",
       "refusals": {
         "escalate_past_final": "Escalation stops at the final review: the final review has to be decided, not escalated past.",
-        "five_heinous_must_fail": "This judgment is passed on one of the five heinous crimes: it cannot be approved."
-      }
+        "five_heinous_must_fail": "This judgment is passed on one of the five heinous crimes: it cannot be approved.",
+        "no_successor": "There is no stop after this one, so the workflow cannot advance.",
+        "final_review_required": "Advancing cannot pass the final review: it has to be decided by its approver."
+      },
+      "not_your_stop": "This stop is not yours to decide; you can only view it.",
+      "end_stop": "The workflow has reached its end node; there is nothing to decide here.",
+      "terminate": "End workflow",
+      "terminate_reason_label": "Reason for ending",
+      "terminate_reason_placeholder": "Say why this workflow is ending",
+      "terminate_needs_reason": "Ending a workflow needs a reason",
+      "terminate_confirm_title": "End this workflow?",
+      "terminate_confirm_message": "It cannot be advanced or decided afterwards. The reason goes into the audit log.",
+      "terminate_success": "Workflow ended",
+      "terminate_error": "Failed to end the workflow"
     },
     "verdicts": {
       "passed": "Passed",

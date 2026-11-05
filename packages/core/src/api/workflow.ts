@@ -515,6 +515,9 @@ export const workflowApi = {
    */
   escalate: (id: string, data: { reason: string }) =>
     api.post<ApprovalWorkflow>(`/workflows/${id}/escalate/`, data),
+  /** 管理员结束流程(理由必填):走不下去的流程的出口。 */
+  terminate: (id: string, data: { reason: string }) =>
+    api.post<ApprovalWorkflow>(`/workflows/${id}/terminate/`, data),
   /**
    * ApprovalWorkflowViewSet.approve_node (backend/apps/workflow/views.py:190)
    * — a detail action on the *workflow*, not a route on ApprovalNodeViewSet.

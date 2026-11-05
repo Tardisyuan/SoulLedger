@@ -24,6 +24,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Spinner } from "@/src/components/ui/Spinner";
 import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
@@ -98,9 +99,9 @@ const subscribeHash = (onChange: () => void) => {
 const useHash = () => useSyncExternalStore(subscribeHash, () => window.location.hash.slice(1), () => "");
 
 /** Coded refusals with a sentence of their own (`workflow.detail.refusals.<code>`, 2026-10-29): escalating past the
- *  final review (review A) and approving a five-heinous case judged PASSED (review J). Others fall back to the
- *  server's `error`. */
-const CODED_REFUSALS = ["escalate_past_final", "five_heinous_must_fail"] as const;
+ *  final review (review A), approving a five-heinous case judged PASSED (review J), advancing past the last stop or
+ *  past the final review. Others fall back to the server's `error`. */
+const CODED_REFUSALS = ["escalate_past_final", "five_heinous_must_fail", "no_successor", "final_review_required"] as const;
 
 function codedRefusal(err: unknown, t: (key: string) => string): string | null {
   const code = responseCode(err);
@@ -111,7 +112,7 @@ export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, formatDateTime, locale } = useI18n();
   const { showToast } = useToast();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const myTenant = useTenant().user?.tenant?.code ?? null;
 
   // Falling back to the raw enum was the §4.6 leak in miniature: a status
@@ -127,6 +128,9 @@ export default function WorkflowDetailPage() {
   const [activeTab, setActiveTab] = useState<"nodes" | "history">("nodes");
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
+  const [terminateOpen, setTerminateOpen] = useState(false);
+  const [terminateReason, setTerminateReason] = useState("");
+  const [terminateConfirming, setTerminateConfirming] = useState(false);
   // 推进也要写理由(2026-10-29):后端把被越过的那一站记 SKIPPED 并写审计,与越级推进同一个要求。
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [advanceReason, setAdvanceReason] = useState("");
@@ -200,8 +204,8 @@ export default function WorkflowDetailPage() {
       setAdvanceOpen(false);
       refetch();
     },
-    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
-      showToast(err?.response?.data?.error || t("workflow.detail.advance_error"), "error");
+    onError: (err: unknown) => {
+      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.advance_error")), "error");
     },
   });
 
@@ -220,6 +224,22 @@ export default function WorkflowDetailPage() {
     },
     onError: (err: unknown) => {
       showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.escalate_error")), "error");
+    },
+  });
+
+  // 结束流程(管理员):走不下去的流程的出口。理由必填,落审计;确认之后不能再推进或裁决。
+  const terminateMutation = useMutation({
+    mutationFn: (reason: string) => workflowApi.terminate(id, { reason }),
+    onSuccess: () => {
+      showToast(t("workflow.detail.terminate_success"), "success");
+      setTerminateReason("");
+      setTerminateOpen(false);
+      setTerminateConfirming(false);
+      refetch();
+    },
+    onError: (err: unknown) => {
+      setTerminateConfirming(false);
+      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.terminate_error")), "error");
     },
   });
 
@@ -351,7 +371,9 @@ export default function WorkflowDetailPage() {
   // a 3 px bar on the current node's row, when this operator is the one who can
   // decide it. Same gate as the 提交判决 button: `workflow.approve` **and** the server's `can_approve`
   // (this node designates me and it is the current stop) — the codename alone marked every holder (rbac-web M-6).
-  const waitingOnMe = workflow.status !== "COMPLETED" && hasPermission("workflow.approve") && workflow.can_approve === true;
+  // 结束节点没有东西可裁决:`can_approve` 只看「是不是当前站、是不是指定的人」,不看节点种类。
+  const canDecide = workflow.can_approve === true && currentNode?.kind !== "END";
+  const waitingOnMe = workflow.status !== "COMPLETED" && hasPermission("workflow.approve") && canDecide;
   // 最近一步: the node decided last, by `decided_at`.
   const lastDecided = sortedNodes
     .filter((n) => n.decided_at)
@@ -508,7 +530,7 @@ export default function WorkflowDetailPage() {
           {activeTab === "history" && (
             <div className="px-3">
               <WorkflowSegmentHistory workflow={workflow} />
-              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} currentNode={workflow.current_node} />
+              <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} verdictGlyphs={VERDICT_GLYPH} statusGlyphs={STATUS_GLYPH} currentNode={workflow.current_node} />
             </div>
           )}
         </section>
@@ -571,6 +593,14 @@ export default function WorkflowDetailPage() {
                 </ul>
               )}
 
+              {!canDecide && (
+                <p data-testid="workflow-no-decision" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  {t(currentNode.kind === "END" ? "workflow.detail.end_stop" : "workflow.detail.not_your_stop")}
+                </p>
+              )}
+
+              {canDecide && (
+              <>
               {/* 判决键, v3 A1: 74 high, glyph over text, equal widths; the
                   chosen one 2 px ink. Still a radio group underneath — the
                   inputs are visually hidden, the labels are the keys. Four
@@ -649,10 +679,12 @@ export default function WorkflowDetailPage() {
                   {t("officer_app.detail.wait_cosigner", { name: waitingOn })}
                 </p>
               )}
+              </>
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* 不是本站指定的审批人:后端 403 `not designated`,按钮就不画(`can_approve`,rbac-web M-6)。 */}
-                {workflow.can_approve === true && (
+                {canDecide && (
                 <RequirePermission permissions="workflow.approve">
                   <Button
                     type="button"
@@ -679,6 +711,11 @@ export default function WorkflowDetailPage() {
                     {t("workflow.detail.escalate")}
                   </Button>
                 </RequirePermission>
+                {isAdmin && (
+                  <Button type="button" variant="ghost" onClick={() => setTerminateOpen((v) => !v)} aria-expanded={terminateOpen}>
+                    {t("workflow.detail.terminate")}
+                  </Button>
+                )}
               </div>
 
               {advanceOpen && (
@@ -744,6 +781,43 @@ export default function WorkflowDetailPage() {
                   </div>
                 </RequirePermission>
               )}
+
+              {isAdmin && terminateOpen && (
+                <div className="space-y-2">
+                  <TextAreaField
+                    id="terminate-reason"
+                    label={t("workflow.detail.terminate_reason_label")}
+                    required
+                    value={terminateReason}
+                    onChange={(e) => setTerminateReason(e.target.value)}
+                    placeholder={t("workflow.detail.terminate_reason_placeholder")}
+                    rows={3}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (!terminateReason.trim()) {
+                          showToast(t("workflow.detail.terminate_needs_reason"), "error");
+                          return;
+                        }
+                        setTerminateConfirming(true);
+                      }}
+                    >
+                      {t("workflow.detail.terminate")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <ConfirmDialog
+                isOpen={terminateConfirming}
+                title={t("workflow.detail.terminate_confirm_title")}
+                message={t("workflow.detail.terminate_confirm_message")}
+                confirmText={t("workflow.detail.terminate")}
+                confirmLoading={terminateMutation.isPending}
+                onConfirm={() => terminateMutation.mutate(terminateReason.trim())}
+                onCancel={() => setTerminateConfirming(false)}
+              />
             </section>
           )}
 
@@ -788,8 +862,11 @@ export default function WorkflowDetailPage() {
               <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-1">
                 <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{formatDateTime(lastDecided.decided_at!)}</span>
                 <span className="text-sm text-[oklch(var(--color-ink))]">
-                  {localNodeName(lastDecided, locale)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? "?"} </span>
-                  <DomainEnum namespace="workflow.verdicts" value={lastDecided.verdict} />
+                  {/* 跳过、越级的站没有判决:写节点的状态(已跳过 / 已升级 / 已经过)。 */}
+                  {localNodeName(lastDecided, locale)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? STATUS_GLYPH[lastDecided.status] ?? "?"} </span>
+                  {lastDecided.verdict
+                    ? <DomainEnum namespace="workflow.verdicts" value={lastDecided.verdict} />
+                    : <DomainEnum namespace="workflow.status" value={lastDecided.status} />}
                 </span>
                 {lastDecided.notes && (
                   <p className="col-start-2 font-serif text-md leading-6 text-[oklch(var(--color-ink))] break-words">{lastDecided.notes}</p>
