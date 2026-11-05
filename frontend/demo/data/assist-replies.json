@@ -1,0 +1,375 @@
+{
+  "recordedAt": null,
+  "replies": [
+    {
+      "question": {
+        "zh-Hans": "各殿待审一共多少件？",
+        "en": "How many cases are awaiting judgment across all halls?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "哪个殿积压最多？",
+        "en": "Which hall has the largest backlog?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "卡住最久的流程停在哪一步？",
+        "en": "Where is the longest-stuck workflow waiting?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "越级推进会留下什么记录？",
+        "en": "What record does escalating a workflow leave?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "各殿待批准的调拨有几件？",
+        "en": "How many dispatches are awaiting approval across the halls?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "回归原属会立即生效吗？",
+        "en": "Does a return to the home hall take effect at once?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "哪些任务连续失败？",
+        "en": "Which tasks have failed several times in a row?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "重建调度会改掉手动改过的设置吗？",
+        "en": "Will rebuilding the schedules overwrite settings changed by hand?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "各殿待回复的信有几封？",
+        "en": "How many letters await a reply across the halls?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "等了多久算积压？",
+        "en": "How long a wait counts as a backlog?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "全部待处理的受刑请求有几件？",
+        "en": "How many sentence requests are pending in all?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "改站由谁批准？",
+        "en": "Who approves a change of station?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这一页是做什么的？",
+        "en": "What is this page for?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这里的改动会写入审计吗？",
+        "en": "Are changes made here written to the audit log?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "本殿待审有多少件？",
+        "en": "How many cases await judgment in this hall?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "我能把案子改派给谁？",
+        "en": "Who can I reassign a case to?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "为什么我点不了审批？",
+        "en": "Why can't I approve?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "卡住的流程我能越级推进吗？",
+        "en": "Can I escalate a stuck workflow?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "待我批准的调拨有几件？",
+        "en": "How many dispatches are waiting for my approval?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "批准和执行有什么区别？",
+        "en": "What is the difference between approving and executing?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "本殿有几封待回复？",
+        "en": "How many letters in this hall await a reply?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "回复会署谁的名？",
+        "en": "Whose name does a reply go out under?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "本殿待处理的请求有几件？",
+        "en": "How many requests are pending in this hall?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "为什么我不能批准？",
+        "en": "Why can't I approve?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "为什么我不能管理用户？",
+        "en": "Why can't I manage users?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这一页我能做什么？",
+        "en": "What can I do on this page?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "我的队列有多少？",
+        "en": "How many are in my queue?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "为什么我不能结案？",
+        "en": "Why can't I close the case?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "待我审批的有几件？",
+        "en": "How many are waiting for my approval?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这个流程下一步是什么？",
+        "en": "What is the next step in this workflow?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "这份调拨走到哪一步了？",
+        "en": "What step has this dispatch reached?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "调拨后案子归哪一殿？",
+        "en": "Which hall does the case belong to after the dispatch?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "有几封待我回复？",
+        "en": "How many letters are waiting for my reply?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "回复里能引用律条吗？",
+        "en": "Can a reply cite the statutes?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "待我处理的有几件？",
+        "en": "How many are waiting for me?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "改站需要谁批准？",
+        "en": "Who has to approve a change of station?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    },
+    {
+      "question": {
+        "zh-Hans": "我在这里能做什么？",
+        "en": "What can I do here?"
+      },
+      "answer": {
+        "zh-Hans": "",
+        "en": ""
+      }
+    }
+  ]
+}
