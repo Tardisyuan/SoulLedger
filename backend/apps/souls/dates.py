@@ -29,6 +29,8 @@ import datetime
 import re
 from typing import NamedTuple
 
+from django.utils import timezone
+
 _LEGACY_STR_RE = re.compile(r"^(-?\d{1,6})-(\d{1,2})-(\d{1,2})$")
 
 
@@ -378,6 +380,19 @@ def check_soul_dates(birth, death) -> list[DateProblem]:
     return problems
 
 
+def check_birth_date(birth) -> list[DateProblem]:
+    """A birth after today has not happened (user 2026-11-06). Only what is certainly later: a birth "some time this
+    year" is not in the future. The one rule here that reads the clock, so a third function and not a pair rule."""
+    today = timezone.localdate()
+    if birth[0] is None or compare_historical_dates(birth, (today.year, today.month, today.day)) <= 0:
+        return []
+    return [DateProblem(
+        ERROR,
+        "birth_in_future",
+        f"birth date {format_historical_date(*birth)} is in the future.",
+    )]
+
+
 def date_warning_fingerprint(event, death) -> str:
     """Stable fingerprint of the two values that decide ``event_after_death``.
 
@@ -484,12 +499,11 @@ def check_record_date(event, birth, death, *, ack_fingerprint: str | None = None
 # other two.
 #
 # What it does NOT check, deliberately: that a term start is in the past.
-# Nothing above this line has an opinion about "now" either — a soul may be
-# recorded as having died in 612 BCE or last week, and no rule here compares
-# either to the clock. `apps.ledger.readings` does compare a term start to
+# Of the rules in this file only `check_birth_date` reads the clock: a birth
+# cannot be in the future (user 2026-11-06), while a death, a record or a term
+# start has no such rule. `apps.ledger.readings` does compare a term start to
 # today, because elapsed time is what it reports, and it floors the answer at
-# zero rather than reporting a negative span. A rule about the future would be
-# a third kind of comparison and it has not been asked for.
+# zero rather than reporting a negative span.
 # ----------------------------------------------------------------------
 
 #: `SoulState.ALIVE`'s stored value, spelled out because this module cannot

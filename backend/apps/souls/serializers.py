@@ -4,15 +4,18 @@ REST serializers for Soul app.
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 
 from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.tenant import is_tenant_exempt
 from apps.org.ownership import check_owner_org, owner_org_field
 from apps.souls import acheron
-from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
+from apps.souls.dates import ERROR, WARNING, check_birth_date, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
 from apps.souls.record_models import SoulRecord
+from apps.tenants.models import Tenant
 
 
 class SoulDateProblemSerializer(serializers.Serializer):
@@ -532,6 +535,16 @@ def _is_eval_soul(serializer, obj) -> bool:
     return obj.pk == tagged_ids(serializer.context)[0]
 
 
+class SoulCivilizationRefusedError(APIException):
+    """400 with a scalar `code` beside the field's own message list (a `ValidationError` would wrap the code)."""
+
+    status_code = 400
+    default_code = "civilization_mismatch"
+
+    def __init__(self, code, message):
+        super().__init__({"code": code, "civilization": [message]})
+
+
 class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
     """Soul detail. Field access is enforced in two layers, deliberately.
 
@@ -567,7 +580,9 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     # serializer has always exposed it; the detail serializer did not, so
     # clients that read a soul then POST a judgment (which requires
     # `civilization`) got a 400 back.
-    civilization = serializers.CharField(read_only=True)
+    # Written only on create (user 2026-11-06): `_settle_hall` decides what it does. On an update it is ignored, so a
+    # client PUTting back what it read (UNKNOWN included) is not refused.
+    civilization = serializers.CharField(required=False)
     # 2026-09-17:调拨是暂居。`tenant` / `civilization` 是此刻管辖;`home_tenant` 是原属,
     # 转生资格按它。`is_residing` = 两者不同。与 /api/v1/me/ 同名同形。
     home_tenant = SoulHomeTenantSerializer(read_only=True)
@@ -613,7 +628,47 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     owner_org_name_en = serializers.CharField(source="owner_org.name_en", read_only=True, default=None)
 
     def validate_owner_org(self, value):
+        if self.instance is None and self._creates_for_any_hall():
+            return value  # the hall is not known yet: `_settle_hall` checks it
         return check_owner_org(value, self.context, "soul", self.instance, "soul.update")
+
+    def _creates_for_any_hall(self) -> bool:
+        """A global administrator outside any hall: the one caller whose new soul goes where `civilization` says."""
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return getattr(request, "tenant", None) is None and is_tenant_exempt(user)
+
+    def _settle_hall(self, attrs) -> None:
+        """Take `civilization` out of `attrs`, and on create file the soul under the hall it names (user 2026-11-06).
+
+        A caller bound to a hall creates in that hall; naming another civilization is refused, as the CSV import
+        refuses it (`civilization_mismatch`). A global administrator gets the civilization's seed hall from
+        `CIVILIZATION_TENANT`, the same one-hall-per-civilization routing every civilization filter reads. A hall
+        created later with `declared_civilization` is reached by entering it (`hall_view`), not from here. An
+        inactive seed hall is `Soul.save`'s refusal (`hall_inactive`, 400 under `tenant`). Naming nothing keeps the
+        old answer: `Tenant is required`.
+        """
+        asked = attrs.pop("civilization", None)
+        if self.instance is not None:
+            return
+        any_hall = self._creates_for_any_hall()
+        if asked is not None:
+            if asked not in Civilization.values:
+                raise SoulCivilizationRefusedError("invalid_civilization", "Unknown civilization.")
+            if any_hall:
+                hall = Tenant.objects.filter(code=CIVILIZATION_TENANT.get(asked)).first()
+                if hall is None:
+                    raise SoulCivilizationRefusedError("invalid_civilization", "This civilization has no hall.")
+                attrs["tenant"] = hall
+            else:
+                request = self.context.get("request")
+                bound = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+                expected = bound.known_civilization if bound is not None else None
+                if expected is not None and asked != expected:
+                    raise SoulCivilizationRefusedError("civilization_mismatch", "This hall is of another civilization.")
+        org = attrs.get("owner_org")
+        if any_hall and org is not None and org.tenant_id != getattr(attrs.get("tenant"), "pk", None):
+            raise serializers.ValidationError({"owner_org": ["No such organization in this hall."]})
 
     def get_desired_rebirth_form(self, obj) -> str | None:
         from apps.reincarnation.services import approved_desired_form
@@ -653,6 +708,7 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         because the soul's dates are. `manage.py check_soul_dates` reports
         the mismatch instead.
         """
+        self._settle_hall(attrs)
         # 阳寿 is only ever compared with the date of death as a full CE date (`Soul.die`, `held_until` is a
         # DateField); a BCE or partial fated date would be accepted here and silently ignored there (2026-10-27).
         if attrs.get("fated_death_year") is not None and (
@@ -690,6 +746,11 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
                 and self.instance.current_state != SoulState.ALIVE):
             raise serializers.ValidationError({"duat_passage": [
                 "An early death is recorded before death; this soul's case has already opened."]})
+        if _touches_dates(attrs, self.instance, "birth"):
+            # About one date, so unlike the pair rules below it can name its field.
+            future = check_birth_date(_date_after_write(attrs, self.instance, "birth"))
+            if future:
+                raise serializers.ValidationError({"birth_date": [p.message for p in future]})
         if not _touches_dates(attrs, self.instance, "birth", "death"):
             return attrs
         _reject_errors(check_soul_dates(
@@ -703,7 +764,8 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
         if self.instance is not None:
             return self.instance.civilization
         request = self.context.get("request")
-        tenant = getattr(request, "tenant", None) or getattr(getattr(request, "user", None), "tenant", None)
+        tenant = (attrs.get("tenant") or getattr(request, "tenant", None)
+                  or getattr(getattr(request, "user", None), "tenant", None))
         return tenant.civilization if tenant is not None else None
 
     def create(self, validated_data):

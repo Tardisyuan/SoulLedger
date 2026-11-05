@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from django.db import transaction
 from django.db.models.functions import Lower
 
-from apps.souls.dates import check_soul_dates, validate_historical_date
+from apps.souls.dates import check_birth_date, check_soul_dates, validate_historical_date
 from apps.souls.models import Civilization, Soul
 from apps.tenants.models import Tenant
 
@@ -202,6 +202,8 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
                 date_bad = True
                 res.add(col, "invalid_date")
         if not date_bad:
+            for problem in check_birth_date(dates["birth_date"]):
+                res.add("birth_date", problem.code)
             for problem in check_soul_dates(dates["birth_date"], dates["death_date"]):
                 res.add("death_date", problem.code)  # death_before_birth / implausible_lifespan
 

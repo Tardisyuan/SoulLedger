@@ -50,6 +50,18 @@ class TestSoulDateEnforcement:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "cannot die before it is born" in str(resp.data)
 
+    def test_a_birth_in_the_future_is_a_field_error(self):
+        resp = self._post(birth_date={"year": 2999})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "in the future" in str(resp.data["birth_date"])
+        assert not Soul.objects.filter(name="Dated Soul").exists()
+
+    def test_editing_only_the_name_does_not_read_a_stored_future_birth(self):
+        """A row written before the rule must stay editable: fixing its name is not setting its birth."""
+        soul = Soul.objects.create(name="Legacy", tenant=self.tenant, birth_year=2999)
+        resp = self.client.patch(f"{BASE}/{soul.pk}/", {"name": "Renamed"}, format="json")
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
     def test_bce_death_before_bce_birth_is_refused(self):
         resp = self._post(birth_date={"year": -580}, death_date={"year": -612})
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
