@@ -10,6 +10,7 @@ import { CONTINENTS, type Soul, type SoulBaptism, type SoulContinent, type SoulD
 import { OriginRegionField } from "@/src/components/souls/OriginRegion";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { type HistoricalDate } from "@/lib/utils";
 
 interface SoulEditModalProps {
@@ -114,7 +115,8 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       ...(hasFatedDate && fatedDate !== historicalDateToInputValue(soul.fated_death_date)
         ? { fated_death_date: fatedDate || null }
         : {}),
-      origin_location: originLocation || undefined,
+      // 空串是「清掉籍贯」;发 undefined 等于没动,清不掉。
+      origin_location: originLocation,
       origin_region: originRegion,
       ...(hasDuatPassage ? { duat_passage: duatPassage } : {}),
       ...(hasInfernoFacts ? { baptism, denied_immortality: deniedImmortality, neutral_in_life: neutralInLife } : {}),
@@ -240,7 +242,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             label={t("souls.form.birth_date_label")}
             type="date"
             value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
+            onChange={(e) => {
+              setBirthDate(e.target.value)
+              clearFieldError('birth_date')
+            }}
+            max={localDateString()}
+            error={getError('birth_date')}
             disabled={updateMutation.isPending}
           />
           <TextField

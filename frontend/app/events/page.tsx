@@ -102,7 +102,7 @@ function SoulEventsContent() {
   const rows = useMemo(() => buildEventRows(data?.results ?? []), [data?.results]);
   const labels = useMemo(() => makeSystemEventLabels(t), [t]);
 
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+  const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 0;
   const isFiltered = Boolean(search || eventType || actor || datePreset);
   const clearFilters = () => {
     setSearchInput("");

@@ -1,4 +1,18 @@
 [
+  "disposition.overdue_since",
+  "disposition.term_overdue",
   "souls.events.WORKFLOW_TERMINATED",
-  "souls.import.row_codes.birth_in_future"
+  "souls.import.row_codes.birth_in_future",
+  "workflow.detail.end_stop",
+  "workflow.detail.not_your_stop",
+  "workflow.detail.refusals.final_review_required",
+  "workflow.detail.refusals.no_successor",
+  "workflow.detail.terminate",
+  "workflow.detail.terminate_confirm_message",
+  "workflow.detail.terminate_confirm_title",
+  "workflow.detail.terminate_error",
+  "workflow.detail.terminate_needs_reason",
+  "workflow.detail.terminate_reason_label",
+  "workflow.detail.terminate_reason_placeholder",
+  "workflow.detail.terminate_success"
 ]

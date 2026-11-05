@@ -4,11 +4,10 @@ import { localName, localNodeName } from "@soulledger/core/domain/localName";
 import { useEffect } from "react";
 import type { MatrixConflict, MatrixWorkflowConflict, Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel } from "@/src/lib/domainNames";
 import { Button } from "@/src/components/ui/Button";
 import { BATCH_BAR } from "@/components/ui/data-table";
 import type { CellFailure } from "./useMatrixCells";
-
-const roleName = (roleMeta: Record<string, Role>, role: string) => roleMeta[role]?.display_name || role;
 
 /**
  * 部分失败横幅 PartialFailBanner(E-11a):「已存 N 项，失败 M 项」,逐格写原因,
@@ -55,7 +54,7 @@ export function PartialFailBanner({
           const perm = permsById[f.permissionId];
           return (
             <li key={`${f.role}:${f.permissionId}`} className="text-[oklch(var(--color-ink))]">
-              {roleName(roleMeta, f.role)}
+              {roleLabel(t, f.role, roleMeta[f.role])}
               {" · "}
               {perm ? `${perm.category} · ${localName(perm, locale)}` : f.permissionId}
               {"："}
@@ -98,7 +97,7 @@ export function ImpactConflictBanner({
   const { t, locale } = useI18n();
   if (conflicts.length + workflowConflicts.length === 0) return null;
   const causes = (c: MatrixConflict | MatrixWorkflowConflict) =>
-    c.caused_by.map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
+    c.caused_by.map((x) => `${roleLabel(t, x.role, roleMeta[x.role])}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
   return (
     <div id={CONFLICT_BANNER_ID} tabIndex={-1} role="status" className="border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-2 text-sm">
       <p className="flex min-h-11 items-center font-medium text-[oklch(var(--color-ink))]">

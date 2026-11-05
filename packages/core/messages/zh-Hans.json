@@ -456,7 +456,6 @@
       "confirm_delete_action": "移入回收站",
       "deleting": "删除中...",
       "delete_confirm_message": "会移入回收站，不会真的抹去。可在「系统设置 › 回收站」恢复，其审判、处置记录一并保留。",
-      "delete_success": "删除成功",
       "error_update": "更新失败",
       "error_delete": "删除失败",
       "failed": "失败",
@@ -1598,8 +1597,20 @@
       "status": "状态",
       "refusals": {
         "escalate_past_final": "越级推进最多到终审这一站：终审要由审批人判，不能越过。",
-        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。"
-      }
+        "five_heinous_must_fail": "这件审判犯五逆却判了通过：不能批准。",
+        "no_successor": "这一站后面没有可去的站，流程不能再推进。",
+        "final_review_required": "推进不能越过终审：终审要由审批人判。"
+      },
+      "not_your_stop": "这一站不由你裁决，这里只能查看。",
+      "end_stop": "流程已到结束节点，这里没有裁决。",
+      "terminate": "结束流程",
+      "terminate_reason_label": "结束理由",
+      "terminate_reason_placeholder": "写明为什么结束这个流程",
+      "terminate_needs_reason": "结束流程必须说明理由",
+      "terminate_confirm_title": "结束这个流程？",
+      "terminate_confirm_message": "结束后不能再推进或裁决。理由会记入审计日志。",
+      "terminate_success": "流程已结束",
+      "terminate_error": "结束流程失败"
     },
     "verdicts": {
       "passed": "通过",
@@ -2126,7 +2137,7 @@
       "concluded_at": "结案时间",
       "notes": "备注",
       "render_verdict": "宣判",
-      "conclude_success": "审判成功完结",
+      "conclude_success": "已落判，待审批",
       "conclude_error": "审判完结失败",
       "select_verdict": "请选择裁决",
       "concluding": "结案处理中...",
@@ -3131,7 +3142,8 @@
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及杜阿特",
-      "GREEK": "希腊冥界"
+      "GREEK": "希腊冥界",
+      "UNKNOWN": "未归属文明"
     },
     "root": "根",
     "organizations_count": "{{count}} 个组织",
@@ -4315,7 +4327,9 @@
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
       "approval_cancelled": "审批流程因联审取消或管理员结束而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
-    }
+    },
+    "term_overdue": "期满未释放",
+    "overdue_since": "期满于 {{date}}"
   },
   "reincarnation": {
     "form_label": "轮回形态",
@@ -8414,7 +8428,7 @@
     "role_judge_desc": "官员日常:认领案件、结案、出处置、审批。",
     "role_admin": "管理员",
     "role_admin_desc": "四个文明都看得到:用户、角色权限、系统配置、审计。",
-    "role_moderator": "版主",
+    "role_moderator": "殿主",
     "role_moderator_desc": "朋友圈审核:举报、禁言、敏感词。",
     "banner_short": "演示 · 数据只在本浏览器",
     "landing": {

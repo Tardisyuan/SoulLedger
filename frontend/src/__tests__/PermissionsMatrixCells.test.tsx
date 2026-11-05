@@ -339,7 +339,7 @@ describe("impact", () => {
     expect(api.impact).toHaveBeenCalledWith([{ role: "JUDGE", permission_id: 2, action: "revoke" }]);
     const banner = await screen.findByRole("status");
     expect(within(banner).getByText(/跨文明移交 · 两级,2,判官复核/)).toBeInTheDocument();
-    expect(within(banner).getByText(/判官「改灵魂」/)).toBeInTheDocument();
+    expect(within(banner).getByText(/users\.roles\.JUDGE「改灵魂」/)).toBeInTheDocument();
     expect(stateOf(cell("JUDGE", "soul.update"))).toBe("conflict");
     expect(glyphOf(cell("JUDGE", "soul.update"))).toBe("◇");
     // Toggled back: nothing pending, no stale conflict drawn.

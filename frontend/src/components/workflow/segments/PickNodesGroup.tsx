@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { officerAppApi } from "@soulledger/core/api";
+import { responseStatus } from "@soulledger/core/api/client";
 import { todoKeys } from "@soulledger/core/query_keys";
 import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { pickHall } from "@soulledger/core/domain/workflowSegments";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -19,13 +21,17 @@ import { PickStationsSheet } from "./PickStationsSheet";
  */
 export function PickNodesGroup() {
   const { t, locale } = useI18n();
+  // 代看 / 进殿查看的令牌进不了官员 App 的接口(`NotImpersonating`),同首页待办条:不发这个请求。
+  const viewing = useImpersonation() !== null;
   const todo = useQuery({
     queryKey: todoKeys.item("officer"),
     queryFn: async () => (await officerAppApi.todo()).data,
+    enabled: !viewing,
     staleTime: 60_000,
   });
   const [picking, setPicking] = useState<{ id: string; order: number } | null>(null);
-  if (todo.isError && !todo.data) return <QueryError onRetry={() => void todo.refetch()} />;
+  // 403 是「没有这份待办」,不是系统错误。
+  if (todo.isError && !todo.data && responseStatus(todo.error) !== 403) return <QueryError onRetry={() => void todo.refetch()} />;
   const group = todo.data?.pick_nodes;
   const items = group?.items ?? [];
   if (!group || items.length === 0) return null;

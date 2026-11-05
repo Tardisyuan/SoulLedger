@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { permApi, usersApi, type Role, type RoleMembersChange, type RoleMembersRefused, type User } from "@soulledger/core/api";
 import { permKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
@@ -27,9 +28,6 @@ function refusedOf(error: unknown): RoleMembersRefused | null {
 
 const holds = (u: User, role: string) => u.role === role || (u.extra_roles ?? []).includes(role);
 // 没绑殿的账号(全局管理员)归在「未归殿」下,与机构选择器同一个词。
-const tenantName = (u: { tenant?: { code?: string; display_name?: string } | null }, none: string) =>
-  u.tenant?.display_name || u.tenant?.code || none;
-
 /**
  * 角色抽屉的「成员」页签(rbac-snowy 2026-10-29,决定第 6 条):谁持有这个角色(主角色在前,兼任另标),
  * 以及从角色这一侧一次授一批人(选人按殿分组)、移除兼任。服务端与「设置角色」是同一套规则;
@@ -128,7 +126,7 @@ export function RoleMembersSection({ role }: { role: Role }) {
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium text-[oklch(var(--color-ink))]">{u.username}</span>
                   <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-                    {[tenantName(u, t("org_select.no_tenant")), localName(u.organization, locale)].filter(Boolean).join(" · ")}
+                    {[tenantLabel(t, u.tenant, locale) || t("org_select.no_tenant"), localName(u.organization, locale)].filter(Boolean).join(" · ")}
                     {!u.is_active && ` · ${t("users.inactive")}`}
                   </span>
                 </span>
@@ -168,7 +166,7 @@ function GrantPicker({
   onSubmit: (ids: number[], kind: "primary" | "extra") => void;
   onCancel: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<"primary" | "extra">("extra");
   const [picked, setPicked] = useState<Set<number>>(new Set());
@@ -178,7 +176,7 @@ function GrantPicker({
   });
   const groups = new Map<string, User[]>();
   for (const u of candidates.data ?? []) {
-    const key = tenantName(u, t("org_select.no_tenant"));
+    const key = tenantLabel(t, u.tenant, locale) || t("org_select.no_tenant");
     groups.set(key, [...(groups.get(key) ?? []), u]);
   }
   const toggle = (id: number, on: boolean) =>

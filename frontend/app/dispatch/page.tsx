@@ -1,5 +1,4 @@
 "use client";
-import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -8,6 +7,7 @@ import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -93,7 +93,7 @@ function DispatchPageContent() {
   const tenantsQuery = useTenantNames({ enabled: !!user, staleTime: 60_000 });
   const tenantOptions = [
     { value: "", label: t("dispatch.filter.all_tenants") },
-    ...(tenantsQuery.data ?? []).map((tenant) => ({ value: String(tenant.id), label: localName(tenant, locale, "display_name") })),
+    ...(tenantsQuery.data ?? []).map((tenant) => ({ value: String(tenant.id), label: tenantLabel(t, tenant, locale) })),
   ];
   const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};

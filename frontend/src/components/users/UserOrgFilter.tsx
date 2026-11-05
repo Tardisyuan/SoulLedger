@@ -3,6 +3,7 @@
 import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
 
 /**
@@ -10,10 +11,10 @@ import { OrgTreeSelect } from "@/src/components/organizations/OrgTreeSelect";
  * (服务端 `?organization=` 含下级);「全部机构」= 不筛。与机构页、用户弹层共用 `["organizations"]` 这把键。
  */
 export function UserOrgFilter({ value, onChange }: { value: number | null; onChange: (id: number | null) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const orgs = useAllOrganizations();
   const tenants = useTenantNames();
-  const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, x.display_name || x.code]));
+  const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, tenantLabel(t, x, locale)]));
   return (
     <OrgTreeSelect
       mode="single"

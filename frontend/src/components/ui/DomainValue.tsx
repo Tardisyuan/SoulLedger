@@ -265,11 +265,14 @@ export function CaseNumber({
   value,
   variant = "chip",
   href,
+  plain = false,
 }: {
   value: string | null | undefined;
   variant?: "chip" | "inline" | "band";
   /** 给了就渲染成指向这一场审判的链接(灵魂详情的身份带),不再是复制按钮;案号照样整段、不截断。 */
   href?: string;
+  /** 只写案号、不带复制按钮:放在外层的 `<button>` / `<Link>` 里时用,交互内容不能嵌套。 */
+  plain?: boolean;
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -299,6 +302,18 @@ export function CaseNumber({
       >
         {value}
       </Link>
+    );
+  }
+  if (plain) {
+    return (
+      <span
+        title={value}
+        className={`${variant === "band" ? CASE_NUMBER_BAND_CLASS : IDENTIFIER_VARIANT_CLASSES[variant]} whitespace-nowrap`}
+        data-identifier-variant={variant}
+        data-case-number={value}
+      >
+        {value}
+      </span>
     );
   }
   return (

@@ -138,7 +138,7 @@ function CityGodCasesContent() {
             <>
               <td className="px-3 py-2 whitespace-nowrap">
                 <button type="button" className={cn(ROW_LINK, "text-left")} data-testid={`city-god-case-${c.id}`} onClick={() => setOpenId(c.id)}>
-                  <CaseNumber value={c.case_number} variant="inline" />
+                  <CaseNumber value={c.case_number} variant="inline" plain />
                 </button>
               </td>
               <td className={cn("px-3 py-2 text-sm", greyed ? SUBTLE : "text-[oklch(var(--color-ink))]")} data-can-act={c.can_act}>

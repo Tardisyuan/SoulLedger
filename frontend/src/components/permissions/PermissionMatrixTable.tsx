@@ -6,6 +6,7 @@ import { Permission, Role } from "@soulledger/core/api";
 import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
 import { matrixCellKey } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel } from "@/src/lib/domainNames";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CellFailure } from "./useMatrixCells";
@@ -198,10 +199,6 @@ const MatrixCell = memo(function MatrixCell({
   );
 });
 
-function roleLabel(roleMeta: Record<string, Role>, role: string) {
-  return roleMeta[role]?.display_name || role;
-}
-
 /**
  * 类别整列「全选 / 全不选」(rbac-snowy 2026-10-29)。对象是这个类别里当前看得见、且不是规则格的码;
  * 都已勾上就是「全不选」,否则「全选」。一个都没有(全是规则格,如 ADMIN 列)就不出现。
@@ -325,7 +322,7 @@ export function PermissionMatrixTable({
                     key={r}
                     className="sticky top-0 z-30 min-w-[96px] border-b border-l border-[oklch(var(--color-line-strong))] border-l-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 text-center font-medium text-[oklch(var(--color-ink))] shadow-[0_2px_6px_oklch(0_0_0/0.08)]"
                   >
-                    <div>{roleLabel(roleMeta, r)}</div>
+                    <div>{roleLabel(t, r, roleMeta[r])}</div>
                     <div className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-muted))]">{r}</div>
                   </th>
                 ))}
@@ -364,7 +361,7 @@ export function PermissionMatrixTable({
             >
               {roleNames.map((r) => (
                 <option key={r} value={r}>
-                  {r} · {roleLabel(roleMeta, r)}
+                  {r} · {roleLabel(t, r, roleMeta[r])}
                 </option>
               ))}
             </select>
