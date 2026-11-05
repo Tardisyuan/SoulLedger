@@ -1,7 +1,5 @@
 "use client";
 
-import { api } from "@soulledger/core/api/client";
-import { installEnglishNames } from "@/lib/i18n/englishApiNames";
 import { installWebPlatform } from "@/lib/platform/web";
 
 /**
@@ -23,7 +21,6 @@ import { installWebPlatform } from "@/lib/platform/web";
  * for its side effect is the kind of line a tidy-up deletes.
  */
 installWebPlatform();
-installEnglishNames(api);
 
 // The demo build (docs/DEPLOYMENT-demo.md) answers every request in the browser. The bundler folds this literal, so
 // a normal build has none of it: demoStaysOutOfTheNormalBuild.test.ts, scripts/check-demo-bundle.sh.
