@@ -200,8 +200,14 @@ export default function WorkflowDetailPage() {
       setAdvanceOpen(false);
       refetch();
     },
-    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
-      showToast(err?.response?.data?.error || t("workflow.detail.advance_error"), "error");
+    onError: (err: unknown) => {
+      // no_successor:后端的那句英文不上屏,这里本来就有一句「流程没有推进」。
+      showToast(
+        responseCode(err) === "no_successor"
+          ? t("workflow.detail.advance_no_movement")
+          : responseError(err) || t("workflow.detail.advance_error"),
+        "error",
+      );
     },
   });
 
@@ -219,7 +225,12 @@ export default function WorkflowDetailPage() {
       refetch();
     },
     onError: (err: unknown) => {
-      showToast(codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.escalate_error")), "error");
+      showToast(
+        responseCode(err) === "no_pending_node"
+          ? t("workflow.detail.escalate_error")
+          : codedRefusal(err, t) ?? (responseError(err) || t("workflow.detail.escalate_error")),
+        "error",
+      );
     },
   });
 
