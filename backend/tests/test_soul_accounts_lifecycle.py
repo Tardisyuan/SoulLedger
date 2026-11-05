@@ -222,6 +222,30 @@ def test_officer_endpoints_are_tenant_scoped_and_codename_gated(cn_tenant, eu_te
     assert officer_client(judge_user).get("/api/v1/soul-accounts/accounts/").status_code == 403
 
 
+def test_a_soft_deleted_soul_leaves_the_officer_lists_with_its_credential_untouched(cn_tenant):
+    from apps.authentication.models import User
+
+    kept_account, _ = provision_with_password(dead_soul(cn_tenant, name="留下的魂"))
+    gone_account, password = provision_with_password(dead_soul(cn_tenant, name="删掉的魂"))
+    kept = InitialCredential.objects.get(account=kept_account)
+    gone = InitialCredential.objects.get(account=gone_account)
+    gone_account.soul.delete_with_cascade()
+    client = officer_client(User.objects.create_user(username="mod", password="x", role="MODERATOR", tenant=cn_tenant))
+
+    def listed(url):
+        body = client.get(url).data
+        return {row["id"] for row in (body["results"] if isinstance(body, dict) else body)}
+
+    assert listed("/api/v1/soul-accounts/credentials/") == {str(kept.pk)}
+    assert listed("/api/v1/soul-accounts/accounts/") == {str(kept_account.pk)}
+    assert client.post(f"/api/v1/soul-accounts/credentials/{gone.pk}/reveal/").status_code == 404
+    assert client.post(f"/api/v1/soul-accounts/accounts/{gone_account.pk}/reset-credential/",
+                       {}, format="json").status_code == 404
+    # 只隐藏:那份凭据还是原来的状态、原来的明文。
+    gone.refresh_from_db()
+    assert (gone.status, gone.secret) == (CredentialStatus.PENDING, password)
+
+
 def test_contacts_are_masked_for_officers_and_redacted_in_audit(cn_tenant, admin_user):
     soul = dead_soul(cn_tenant)
     client = officer_client(admin_user)
