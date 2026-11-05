@@ -93,7 +93,7 @@ function DispatchPageContent() {
   const tenantsQuery = useTenantNames({ enabled: !!user, staleTime: 60_000 });
   const tenantOptions = [
     { value: "", label: t("dispatch.filter.all_tenants") },
-    ...(tenantsQuery.data ?? []).map((tenant) => ({ value: String(tenant.id), label: localName(tenant, locale, "display_name") || tenant.code })),
+    ...(tenantsQuery.data ?? []).map((tenant) => ({ value: String(tenant.id), label: localName(tenant, locale, "display_name") })),
   ];
   const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};

@@ -728,7 +728,7 @@ def test_the_preview_and_the_detail_name_the_stations_that_jump_to_a_target(w):
     soul, _case = plan.open_case(w.cn)
     preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
     assert [s["jump_target_of"] for s in preview["stations"]] == [
-        [], [], [{"key": "1", "node_name": "初审", "via": "on_fail"}], []]
+        [], [], [{"key": "1", "node_name": "初审", "node_name_en": "", "via": "on_fail"}], []]
 
     _soul, response = _start(w, [])
     wf = ApprovalWorkflow.objects.get(pk=response.data["id"])
@@ -809,8 +809,8 @@ def test_jump_sources_say_whether_they_come_by_a_branch_or_by_a_rejection(w):
     soul, _case = plan.open_case(w.cn)
     preview = officer_client(w.cn_judge).get(PREVIEW, {"soul": str(soul.pk), "case_type": "ROUTINE"}).json()
     assert {s["node_order"]: s["jump_target_of"] for s in preview["stations"]} == {
-        2: [{"key": "1", "node_name": "分流", "via": "branch"}],
-        3: [{"key": "2", "node_name": "分区", "via": "on_fail"}],
+        2: [{"key": "1", "node_name": "分流", "node_name_en": "", "via": "branch"}],
+        3: [{"key": "2", "node_name": "分区", "node_name_en": "", "via": "on_fail"}],
     }
 
     _soul, started = _start(w, [])

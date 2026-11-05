@@ -29,7 +29,7 @@ NAME_EN = {
     "第九殿-平等王": "Ninth Court · King Pingdeng",
     "第二殿-楚江王": "Second Court · King Chujiang",
     "第五殿": "Fifth Court",
-    "第五殿-阎罗王": "Fifth Court · King Yama",
+    "第五殿-阎罗王": "Fifth Court · King Yanluo",
     "第八殿-都市王": "Eighth Court · King Dushi",
     "第六殿-卞城王": "Sixth Court · King Biancheng",
     "第十殿-转轮王": "Tenth Court · King Zhuanlun",
@@ -45,9 +45,10 @@ NAME_EN = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     for name, english in NAME_EN.items():
-        Organization._base_manager.filter(name=name, name_en="").update(name_en=english)
+        Organization._base_manager.using(db).filter(name=name, name_en="").update(name_en=english)
 
 
 class Migration(migrations.Migration):

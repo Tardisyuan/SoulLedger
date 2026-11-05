@@ -38,13 +38,13 @@ from apps.actors.models import ActorRole
 # test_seed_mythology asserts king N is in DY_COURT_NN and nowhere else.
 # --------------------------------------------------------------------------
 CHINESE_ACTORS = [
-    ("阎罗王", "阎罗王", "Yanluo King", "Yanluo", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
+    ("阎罗王", "阎罗王", "King Yanluo", "Yanluo", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "第五殿阎罗王", "第五殿阎罗王", "Fifth Court Yanluo", "Yanluo",
      "Fifth court judge - the best-known of the ten kings. He sat at the first "
      "court and was demoted here for leniency, by his own account: 「吾本前居第一"
      "殿，因憐屈死，屢放還陽伸雪；降調司掌…叫喚大地獄、並十六誅心小地獄」. His "
      "court tries the intent behind the act, and the 望乡台 stands in it"),
-    ("秦广王", "秦广王", "Qinguang Wang", "Qinguang", ActorRole.JUDGE, "DY_COURT_01_QINGUANG",
+    ("秦广王", "秦广王", "King Qinguang", "Qinguang", ActorRole.JUDGE, "DY_COURT_01_QINGUANG",
      "第一殿秦广王", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      "First court judge - evaluates the Ledger of Life and Death"),
     # FOUR OF THESE DESCRIPTIONS CONTRADICTED THE COURT THEY SIT IN. The realm
@@ -66,36 +66,36 @@ CHINESE_ACTORS = [
     # the capital and his docket is unfilial conduct; 泰山王 "judge of the
     # mountains", which borrows 泰山府君 and is not what 《玉历》 gives the
     # seventh court. All four now say what their own realm row says.
-    ("楚江王", "楚江王", "Chujiang Wang", "Chujiang", ActorRole.JUDGE, "DY_COURT_02_CHUJIANG",
+    ("楚江王", "楚江王", "King Chujiang", "Chujiang", ActorRole.JUDGE, "DY_COURT_02_CHUJIANG",
      "第二殿楚江王", "第二殿楚江王", "Second Court Chujiang", "Chujiang",
      "Second court judge - presides over 活大地狱, the mildest punishment court: "
      "abduction, appropriating what belongs to others, maiming"),
-    ("宋帝王", "宋帝王", "Songdi Wang", "Songdi", ActorRole.JUDGE, "DY_COURT_03_SONGDI",
+    ("宋帝王", "宋帝王", "King Songdi", "Songdi", ActorRole.JUDGE, "DY_COURT_03_SONGDI",
      "第三殿宋帝王", "第三殿宋帝王", "Third Court Songdi", "Songdi",
      "Third court judge - presides over 黑绳大地狱: defying one's elders, "
      "inciting litigation, betraying a trust"),
-    ("五官王", "五官王", "Wuguan Wang", "Wuguan", ActorRole.JUDGE, "DY_COURT_04_WUGUAN",
+    ("五官王", "五官王", "King Wuguan", "Wuguan", ActorRole.JUDGE, "DY_COURT_04_WUGUAN",
      "第四殿五官王", "第四殿五官王", "Fourth Court Wuguan", "Wuguan",
      "Fourth court judge - presides over 合大地狱: withholding grain tax and rent, "
      "fraud in trade"),
-    ("卞城王", "卞城王", "Biancheng Wang", "Biancheng", ActorRole.JUDGE, "DY_COURT_06_BIANCHENG",
+    ("卞城王", "卞城王", "King Biancheng", "Biancheng", ActorRole.JUDGE, "DY_COURT_06_BIANCHENG",
      "第六殿卞城王", "第六殿卞城王", "Sixth Court Biancheng", "Biancheng",
      "Sixth court judge - presides over 大叫唤大地狱: sacrilege against images "
      "and scriptures, irreverence toward heaven and earth"),
-    ("泰山王", "泰山王", "Taishan Wang", "Taishan", ActorRole.JUDGE, "DY_COURT_07_TAISHAN",
+    ("泰山王", "泰山王", "King Taishan", "Taishan", ActorRole.JUDGE, "DY_COURT_07_TAISHAN",
      "第七殿泰山王", "第七殿泰山王", "Seventh Court Taishan", "Taishan",
      "Seventh court judge - presides over 热恼大地狱: taking bones for medicine, "
      "and the scattering of kin from one another"),
-    ("都市王", "都市王", "Dushi Wang", "Dushi", ActorRole.JUDGE, "DY_COURT_08_DUSHI",
+    ("都市王", "都市王", "King Dushi", "Dushi", ActorRole.JUDGE, "DY_COURT_08_DUSHI",
      "第八殿都市王", "第八殿都市王", "Eighth Court Dushi", "Dushi",
      "Eighth court judge - presides over 大热恼大地狱: unfilial conduct, the "
      "parent left unkept in life and unburied in death. 「都市」 is the capital, "
      "not a marketplace"),
-    ("平等王", "平等王", "Pingdeng Wang", "Pingdeng", ActorRole.JUDGE, "DY_COURT_09_PINGDENG",
+    ("平等王", "平等王", "King Pingdeng", "Pingdeng", ActorRole.JUDGE, "DY_COURT_09_PINGDENG",
      "第九殿平等王", "第九殿平等王", "Ninth Court Pingdeng", "Pingdeng",
      "Ninth court judge - presides over 阿鼻大地狱, the deepest hell: murder, arson, "
      "poisoning, the gravest crimes"),
-    ("转轮王", "转轮王", "Zhuanlun Wang", "Zhuanlun", ActorRole.JUDGE, "DY_COURT_10_ZHUANLUN",
+    ("转轮王", "转轮王", "King Zhuanlun", "Zhuanlun", ActorRole.JUDGE, "DY_COURT_10_ZHUANLUN",
      "第十殿转轮王", "第十殿转轮王", "Tenth Court Zhuanlun", "Zhuanlun",
      "Tenth court - the wheel of rebirth; assigns fate for the next life"),
     # 孟婆 MOVED FROM THE HOLDING PEN TO THE TENTH COURT. 《玉历宝钞》

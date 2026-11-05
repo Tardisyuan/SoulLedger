@@ -116,9 +116,10 @@ describe("WorkflowPage template list", () => {
     renderPage();
 
     await screen.findByText("workflow.predefined_templates");
-    // CHINESE_ROUTINE: 秦广王 · 分流 (第一殿) … 转轮王 · 终审 (第十殿).
-    expect(screen.getByText("First Court")).toBeInTheDocument();
-    expect(screen.getByText("Tenth Court")).toBeInTheDocument();
+    // CHINESE_ROUTINE: 秦广王 · 分流 (第一殿) … 转轮王 · 终审 (第十殿). `t` echoes its key here, so `courtLabel` shows the
+    // stored spelling; the English comes from the pack (`courtLabel.test.ts`).
+    expect(screen.getByText("第一殿")).toBeInTheDocument();
+    expect(screen.getByText("第十殿")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
     // Absence: an off-by-one still renders ten plausible chips.
@@ -347,7 +348,7 @@ describe("WorkflowPage detail modal", () => {
     // above cannot have come from a modal that listed no nodes at all.
     expect(dialog.getByText("King Qinguang · triage")).toBeInTheDocument();
     expect(dialog.getByText("King Zhuanlun · final hearing")).toBeInTheDocument();
-    expect(dialog.getByText("First Court")).toBeInTheDocument();
+    expect(dialog.getByText("第一殿")).toBeInTheDocument();
   });
 
   it("fetches the full template when viewing a backend one", async () => {

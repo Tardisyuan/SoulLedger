@@ -1483,6 +1483,7 @@
       "exit_down": "下移出口",
       "field": {
         "name": "名称",
+        "name_en": "英文名",
         "kind": "类型",
         "stage": "阶段",
         "court": "殿号",

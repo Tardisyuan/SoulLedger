@@ -386,6 +386,7 @@ describe("WorkflowEditor — the inspector edits in place", () => {
     const labels = Array.from(form().querySelectorAll("label")).map((l) => l.textContent);
     expect(labels).toEqual([
       "workflow.editor.field.name",
+      "workflow.editor.field.name_en",
       "workflow.editor.field.kind",
       "workflow.editor.field.stage",
       "workflow.editor.field.court",

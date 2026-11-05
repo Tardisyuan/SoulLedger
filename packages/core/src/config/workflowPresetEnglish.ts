@@ -86,7 +86,7 @@ export const PRESET_ENGLISH: Readonly<Record<string, string>> = {
   "都市王 · 七审": "King Dushi · seventh hearing",
   "酆都大帝 · 直审": "Great Emperor of Fengdu · direct hearing",
   "酆都大帝 · 终审": "Great Emperor of Fengdu · final",
-  "阎罗王 · 四审": "King Yama · fourth hearing",
+  "阎罗王 · 四审": "King Yanluo · fourth hearing",
   "阿鼻地狱入狱": "Committal to Avici Hell",
   "阿鼻地狱流程": "Avici Hell flow",
   "魏征 · 察查司": "Wei Zheng · Bureau of Inquiry",
