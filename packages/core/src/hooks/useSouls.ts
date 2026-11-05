@@ -59,8 +59,9 @@ export function useCreateSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
       notify("souls.form.create_success", "success");
     },
-    onError: () => {
-      notify("souls.form.create_error", "error");
+    onError: (error) => {
+      // 字段错误由表单画在字段下(`SoulCreateModal`)。
+      if (!isFieldValidationError(error)) notify("souls.form.create_error", "error");
     },
   });
 }

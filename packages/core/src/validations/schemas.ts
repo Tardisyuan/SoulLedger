@@ -52,7 +52,7 @@ export const soulCreateSchema = z.object({
     error: '请选择文明',
   }),
   birth_date: z.string().optional().nullable(),
-  origin_location: z.string().max(200, '地点最多200位').optional().nullable(),
+  origin_location: z.string().max(255, '地点最多255位').optional(),
   // 出身地域(第四十五批):"" 是不详。与 `SoulOriginRegion` 同三个值。
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
 })
@@ -62,7 +62,7 @@ export const soulUpdateSchema = z.object({
   birth_date: z.string().optional().nullable(),
   death_date: z.string().optional().nullable(),
   fated_death_date: z.string().optional().nullable(),
-  origin_location: z.string().max(200, '地点最多200位').optional(),
+  origin_location: z.string().max(255, '地点最多255位').optional(),
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   duat_passage: z.enum(['', 'EARLY_DEATH', 'NAMELESS', 'IMPROPER_BURIAL']).optional(),
   // 只地府:四大部洲(docs/07 §人道);'' 是不详。与 `SoulContinent` 同五个值。

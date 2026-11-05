@@ -154,6 +154,26 @@ export { BaseModal as Modal };
 
 // ── SoulCreateModal ─────────────────────────────────
 
+const SOUL_CREATE_FIELDS = ["name", "civilization", "birth_date", "origin_location"] as const;
+type SoulCreateField = (typeof SOUL_CREATE_FIELDS)[number];
+
+/**
+ * DRF 的 400:`{字段: [消息]}`。这张表单画得出来的字段落到字段下,其余(`origin_region`、
+ * `non_field_errors`、`detail`)归到 `general`。不是 400 对象体时两边都空:`useCreateSoul` 已经报过了。
+ */
+function soulCreateErrorsOf(error: unknown): { fields: Partial<Record<SoulCreateField, string>>; general?: string } {
+  const response = (error as { response?: { status?: number; data?: unknown } })?.response;
+  const out: ReturnType<typeof soulCreateErrorsOf> = { fields: {} };
+  if (response?.status !== 400 || typeof response.data !== "object" || response.data === null || Array.isArray(response.data)) return out;
+  for (const [key, value] of Object.entries(response.data as Record<string, unknown>)) {
+    const message = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
+    if (!message) continue;
+    if ((SOUL_CREATE_FIELDS as readonly string[]).includes(key)) out.fields[key as SoulCreateField] = message;
+    else out.general ??= message;
+  }
+  return out;
+}
+
 interface SoulCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -192,6 +212,8 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [loading, setLoading] = useState(false);
+  const [serverErrors, setServerErrors] = useState<Partial<Record<SoulCreateField, string>>>({});
+  const clearServerError = (field: SoulCreateField) => setServerErrors(({ [field]: _drop, ...rest }) => rest);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -201,6 +223,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       setBirthDate("");
       setOriginLocation("");
       setOriginRegion("");
+      setServerErrors({});
     }
   }, [isOpen]);
 
@@ -211,7 +234,8 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       name: name.trim(),
       civilization,
       birth_date: birthDate || null,
-      origin_location: originLocation || null,
+      // 模型是 `CharField(blank=True)`,不收 null:留空发 ""。发 null 时这个选填项留空必定 400。
+      origin_location: originLocation,
       origin_region: originRegion,
     };
 
@@ -220,6 +244,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       return;
     }
 
+    setServerErrors({});
     setLoading(true);
     try {
       if (!result.data) {
@@ -233,10 +258,12 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
       await createSoul.mutateAsync(result.data);
       onCreated();
       onClose();
-    } catch {
-      // Swallowed deliberately — the hook's onError has already told the user.
-      // Rethrowing or toasting here is the double-report; leaving the modal
-      // open is the recovery.
+    } catch (error) {
+      // The hook toasts every failure except a 400 with an object body, which is
+      // this form's to draw. Leaving the modal open is the recovery.
+      const { fields, general } = soulCreateErrorsOf(error);
+      setServerErrors(fields);
+      if (general) showToast(general, "error");
     } finally {
       setLoading(false);
     }
@@ -310,9 +337,10 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           onChange={(e) => {
             setName(e.target.value)
             clearFieldError('name')
+            clearServerError('name')
           }}
           disabled={loading}
-          error={getError('name')}
+          error={getError('name') ?? serverErrors.name}
           placeholder={t("souls.form.name_placeholder")}
         />
         <SelectField
@@ -322,9 +350,10 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           onChange={(e) => {
             setCivilization(e.target.value as typeof civilization)
             clearFieldError('civilization')
+            clearServerError('civilization')
           }}
           disabled={loading}
-          error={getError('civilization')}
+          error={getError('civilization') ?? serverErrors.civilization}
           options={CIVILIZATION_OPTIONS.map((civ) => ({
             value: civ,
             label: t(`souls.civilizations.${civ}`),
@@ -335,8 +364,12 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           label={t("souls.form.birth_date_label")}
           type="date"
           value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
+          onChange={(e) => {
+            setBirthDate(e.target.value)
+            clearServerError('birth_date')
+          }}
           disabled={loading}
+          error={serverErrors.birth_date}
         />
         {/* 籍贯(自由文本)与出身地域(归类)同一行(Design W-1)。 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
@@ -345,8 +378,13 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             label={t("souls.form.location_label")}
             type="text"
             value={originLocation}
-            onChange={(e) => setOriginLocation(e.target.value)}
+            onChange={(e) => {
+              setOriginLocation(e.target.value)
+              clearFieldError('origin_location')
+              clearServerError('origin_location')
+            }}
             disabled={loading}
+            error={getError('origin_location') ?? serverErrors.origin_location}
             placeholder={t("souls.form.location_placeholder")}
           />
           <OriginRegionField
