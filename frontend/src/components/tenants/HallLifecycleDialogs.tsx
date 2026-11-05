@@ -1,11 +1,11 @@
 "use client";
 
-import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant, type TenantCreateBody } from "@soulledger/core/api";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -152,7 +152,7 @@ export function DeactivateHallDialog({ tenant, onClose }: { tenant: Tenant; onCl
     <BaseModal
       isOpen
       onClose={() => !deactivate.isPending && onClose()}
-      title={t("halls.deactivate_title", { name: localName(tenant, locale, "display_name") })}
+      title={t("halls.deactivate_title", { name: tenantLabel(t, tenant, locale) })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={deactivate.isPending}>

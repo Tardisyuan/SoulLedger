@@ -2,10 +2,10 @@
 
 import { Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel } from "@/src/lib/domainNames";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextField } from "@/src/components/ui/Field";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { RoleDiff } from "./matrixDiff";
 
 /**
@@ -78,7 +78,7 @@ export function MatrixSaveConfirmModal({
                 {/* A role the meta table does not know falls back to its translated
                     built-in name, never to the raw member (§4.6; found by ENUM_FIELDS
                     gaining `role`). */}
-                {roleMeta[diff.role]?.display_name || <DomainEnum namespace="users.roles" value={diff.role} />}
+                {roleLabel(t, diff.role, roleMeta[diff.role])}
               </h4>
               <span className="text-xs font-mono text-[oklch(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
             </div>
