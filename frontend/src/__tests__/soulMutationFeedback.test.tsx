@@ -137,6 +137,22 @@ describe("creating a soul", () => {
     expect(onCreated).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("sends a blank origin as an empty string, which the model accepts and null is not", async () => {
+    mockedCreate.mockResolvedValue({ data: { id: "s-1" } });
+    renderModal();
+    submitWithName("孟婆");
+    await waitFor(() => expect(mockedCreate).toHaveBeenCalledTimes(1));
+    expect(mockedCreate.mock.calls[0][0].origin_location).toBe("");
+  });
+
+  it("draws a 400's field error on the field, with no toast beside it", async () => {
+    mockedCreate.mockRejectedValue({ response: { status: 400, data: { origin_location: ["太长了"] } } });
+    renderModal();
+    submitWithName("孟婆");
+    expect(await screen.findByText("太长了")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
 });
 
 describe("editing a soul", () => {
