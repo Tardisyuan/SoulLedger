@@ -74,7 +74,7 @@ it("escalate_past_final reads as its own sentence, not the server's English", as
 });
 
 it("advancing with nowhere to go reads as its own sentence, not the server's English", async () => {
-  mockUser = { ...mockUser, permissions: [...mockUser.permissions, "workflow.advance"] };
+  mockUser = { id: 2, username: "judge", role: "JUDGE", permissions: ["workflow.read", "workflow.advance"] };
   workflowApi.advance.mockImplementation(() => refused("no_successor", "No next node available or workflow already completed"));
   renderPage();
   fireEvent.click(await screen.findByRole("button", { name: tZh("workflow.detail.advance") }));
