@@ -138,6 +138,7 @@ class Realm(AuditUserFields, models.Model):
         related_name="sub_realms",
     )
     description = models.TextField(blank=True)
+    description_en = models.TextField(blank=True, default="")  # blank = show `description`
     # Constrained to MemoryResetMechanism rather than restating the values:
     # this was a bare CharField, so the realm-side vocabulary
     # (MENGPO/LETHE/SPELL/NONE) agreed with apps.disposition only by

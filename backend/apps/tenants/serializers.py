@@ -56,6 +56,8 @@ class TenantSerializer(serializers.ModelSerializer):
             "id",
             "code",
             "display_name",
+            "display_name_en",
+            "description_en",
             "description",
             "is_active",
             "dispatch_enabled",
@@ -96,7 +98,7 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tenant
-        fields = ["description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
+        fields = ["display_name_en", "description", "description_en", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
                   "soul_rebirth_cooldown_days", "mfa_required_roles", *VISIT_SETTINGS, SELF_SERVICE_SETTING,
                   "rebirth_monthly_quota"]
 
@@ -191,7 +193,7 @@ class TenantCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tenant
-        fields = ["code", "display_name", "description", "civilization", "hall_name", "hall_name_en", "hall_name_egy"]
+        fields = ["code", "display_name", "display_name_en", "description", "description_en", "civilization", "hall_name", "hall_name_en", "hall_name_egy"]
 
     def validate_code(self, value):
         if Tenant.objects.filter(code=value).exists():

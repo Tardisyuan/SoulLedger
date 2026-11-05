@@ -435,7 +435,7 @@ class LedgerOverviewStatsView(APIView):
         # Per-tenant soul counts with state breakdown (single query, no N+1)
         tenant_state_data = (
             soul_qs
-            .values('tenant', 'tenant__code', 'tenant__display_name', 'tenant__dispatch_enabled',
+            .values('tenant', 'tenant__code', 'tenant__display_name', 'tenant__display_name_en', 'tenant__dispatch_enabled',
                     'tenant__is_active', 'current_state')
             .annotate(count=Count('id'))
             .order_by('tenant__code')
@@ -450,6 +450,7 @@ class LedgerOverviewStatsView(APIView):
                     "tenant_id": tid,
                     "tenant_code": row['tenant__code'],
                     "tenant_name": row['tenant__display_name'],
+                    "tenant_name_en": row['tenant__display_name_en'],
                     # 停用的殿不收调拨(`DispatchService.check_target_accepts`),发起移交页据此禁用它。
                     "dispatch_enabled": bool(row['tenant__dispatch_enabled'] and row['tenant__is_active']),
                     "total_souls": 0,
@@ -468,6 +469,7 @@ class LedgerOverviewStatsView(APIView):
         empty_halls = [
             {
                 "tenant_id": hall.pk, "tenant_code": hall.code, "tenant_name": hall.display_name,
+                "tenant_name_en": hall.display_name_en,
                 "dispatch_enabled": hall.dispatch_enabled, "total_souls": 0,
                 "state_breakdown": {s: 0 for s in SoulState.values},
             }

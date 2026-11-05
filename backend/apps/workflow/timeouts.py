@@ -134,6 +134,7 @@ def _tell_admins(workflow_pk, node_pk) -> None:
     node = ApprovalNode.objects.get(pk=node_pk)
     kind = "workflow_timeout_failed"
     params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name, "node": node.node_name,
+              "workflow_en": workflow.workflow_name_en, "node_en": node.node_name_en,
               "kind": kind, "category": "approval_timeout"}
     title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
     from apps.authentication.models import User

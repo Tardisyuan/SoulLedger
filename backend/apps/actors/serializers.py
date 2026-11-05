@@ -16,7 +16,7 @@ class ActorSerializer(serializers.ModelSerializer):
             "id", "name", "civilization", "role", "realm", "realm_code",
             "name_zh", "name_en", "name_egy",
             "title", "title_zh", "title_en", "title_egy",
-            "description", "powers_json", "icon_url", "is_active",
+            "description", "description_en", "powers_json", "icon_url", "is_active",
         ]
 
 
@@ -85,7 +85,7 @@ class ActorLocalizedSerializer(serializers.ModelSerializer):
             "name_zh", "name_en", "name_egy",
             "display_name", "display_title",
             "title", "title_zh", "title_en", "title_egy",
-            "description", "icon_url", "is_active", "assessor_index",
+            "description", "description_en", "icon_url", "is_active", "assessor_index",
         ]
 
     def get_display_name(self, obj) -> str:

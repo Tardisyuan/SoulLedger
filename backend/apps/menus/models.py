@@ -25,6 +25,8 @@ class Menu(AuditUserFields, models.Model):
     - BUTTON: 页面内操作按钮，绑定 permission codename
     """
     name = models.CharField(max_length=100)
+    # Blank = show `name`. The sidebar and menuI18n find groups by `name`, so English never goes there.
+    name_en = models.CharField(max_length=200, blank=True, default="")
     path = models.CharField(max_length=200, blank=True)
     icon = models.CharField(max_length=50, blank=True)
     order = models.IntegerField(default=0)

@@ -13,6 +13,7 @@ class Permission(AuditUserFields):
     # Unique among LIVE rows only — see Role.name for why. Was `unique=True`.
     codename = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
+    name_en = models.CharField(max_length=200, blank=True, default="")  # blank = show `name`
     category = models.CharField(max_length=50)  # soul, ledger, judgment, system
 
     class Meta:

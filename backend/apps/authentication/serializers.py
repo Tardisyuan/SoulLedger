@@ -32,6 +32,7 @@ class UserTenantRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     code = serializers.CharField()
     display_name = serializers.CharField()
+    display_name_en = serializers.CharField(allow_blank=True)
 
 
 class UserOrganizationRefSerializer(serializers.Serializer):
@@ -45,6 +46,7 @@ class UserOrganizationRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     code = serializers.CharField()
     name = serializers.CharField()
+    name_en = serializers.CharField(allow_blank=True)
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +138,7 @@ class LoginTenantRefSerializer(serializers.Serializer):
 
     code = serializers.CharField()
     display_name = serializers.CharField()
+    display_name_en = serializers.CharField(allow_blank=True)
     civilization = serializers.CharField()
     seal_glyphs = serializers.ListField(child=serializers.CharField())
 
@@ -645,13 +648,15 @@ class UserManagementSerializer(serializers.ModelSerializer):
     @extend_schema_field(UserTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
         if obj.tenant:
-            return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name}
+            return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name,
+                    "display_name_en": obj.tenant.display_name_en}
         return None
 
     @extend_schema_field(UserOrganizationRefSerializer(allow_null=True))
     def get_organization(self, obj):
         if obj.organization:
-            return {"id": obj.organization.id, "code": obj.organization.code, "name": obj.organization.name}
+            return {"id": obj.organization.id, "code": obj.organization.code, "name": obj.organization.name,
+                    "name_en": obj.organization.name_en}
         return None
 
 

@@ -48,6 +48,7 @@ class Actor(AuditUserFields, models.Model):
     title_en = models.CharField(max_length=255, blank=True)
     title_egy = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
+    description_en = models.TextField(blank=True, default="")  # blank = show `description`
     powers_json = models.JSONField(default=dict, blank=True)
     icon_url = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)

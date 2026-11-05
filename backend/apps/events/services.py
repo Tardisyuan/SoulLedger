@@ -135,6 +135,7 @@ class EventService:
         EventService.log(workflow.soul, EventType.WORKFLOW_CREATED, {
             "workflow_id": str(workflow.id),
             "workflow_name": workflow.workflow_name,
+            "workflow_name_en": workflow.workflow_name_en,
             "status": workflow.status,
         }, actor)
 
@@ -145,11 +146,13 @@ class EventService:
         payload = {
             "workflow_id": str(workflow.id),
             "workflow_name": workflow.workflow_name,
+            "workflow_name_en": workflow.workflow_name_en,
             "status": workflow.status,
         }
         if node:
             payload["node_id"] = str(node.id)
             payload["node_name"] = node.node_name
+            payload["node_name_en"] = node.node_name_en
             payload["verdict"] = node.verdict
         EventService.log(workflow.soul, EventType.WORKFLOW_APPROVED, payload, actor)
 
@@ -160,11 +163,13 @@ class EventService:
         payload = {
             "workflow_id": str(workflow.id),
             "workflow_name": workflow.workflow_name,
+            "workflow_name_en": workflow.workflow_name_en,
             "status": workflow.status,
         }
         if node:
             payload["node_id"] = str(node.id)
             payload["node_name"] = node.node_name
+            payload["node_name_en"] = node.node_name_en
             payload["verdict"] = node.verdict
             payload["reason"] = node.notes or ""
         EventService.log(workflow.soul, EventType.WORKFLOW_REJECTED, payload, actor)
@@ -223,7 +228,8 @@ class EventService:
         from apps.workflow.services import WorkflowService
 
         # 存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。
-        params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name}
+        params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name,
+                  "workflow_en": workflow.workflow_name_en}
         title, body = messages.render(messages.DEFAULT_LOCALE, "workflow_assigned", params)
         EventService.notify_user(
             user=user,

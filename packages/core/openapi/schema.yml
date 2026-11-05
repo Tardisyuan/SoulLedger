@@ -23353,6 +23353,8 @@ components:
           maxLength: 255
         description:
           type: string
+        description_en:
+          type: string
         powers_json: {}
         icon_url:
           oneOf:
@@ -23706,6 +23708,8 @@ components:
           format: uuid
         name:
           type: string
+        name_en:
+          type: string
         is_final:
           type: boolean
         state:
@@ -23716,6 +23720,7 @@ components:
       required:
       - is_final
       - name
+      - name_en
       - node
       - note
       - order
@@ -23776,6 +23781,9 @@ components:
           type: string
           format: uuid
         node_name:
+          type: string
+          maxLength: 255
+        node_name_en:
           type: string
           maxLength: 255
         node_order:
@@ -24066,6 +24074,9 @@ components:
           type: string
           description: e.g., 十殿审判流程, 欧西里斯称重
           maxLength: 255
+        workflow_name_en:
+          type: string
+          maxLength: 255
         case_type:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
@@ -24199,6 +24210,9 @@ components:
         workflow_name:
           type: string
           description: e.g., 十殿审判流程, 欧西里斯称重
+          maxLength: 255
+        workflow_name_en:
+          type: string
           maxLength: 255
         soul:
           type: string
@@ -26765,11 +26779,14 @@ components:
           type: string
         node_name:
           type: string
+        node_name_en:
+          type: string
         hall:
           type: string
       required:
       - hall
       - node_name
+      - node_name_en
       - realm_name
       - segment
     CrossFlowGate:
@@ -26865,6 +26882,9 @@ components:
         initiating_tenant_display_name:
           type: string
           readOnly: true
+        initiating_tenant_display_name_en:
+          type: string
+          readOnly: true
         status:
           allOf:
           - $ref: '#/components/schemas/CrossTenantJudgmentStatusEnum'
@@ -26930,6 +26950,7 @@ components:
       - initiating_tenant
       - initiating_tenant_code
       - initiating_tenant_display_name
+      - initiating_tenant_display_name_en
       - order_locked
       - participants
       - status
@@ -26964,6 +26985,9 @@ components:
         initiating_tenant_display_name:
           type: string
           readOnly: true
+        initiating_tenant_display_name_en:
+          type: string
+          readOnly: true
         status:
           $ref: '#/components/schemas/CrossTenantJudgmentStatusEnum'
         concluded_at:
@@ -26980,6 +27004,7 @@ components:
       - initiating_tenant
       - initiating_tenant_code
       - initiating_tenant_display_name
+      - initiating_tenant_display_name_en
       - title
     CrossTenantJudgmentOrder:
       type: object
@@ -27011,11 +27036,18 @@ components:
         participant_tenant_display_name:
           type: string
           readOnly: true
+        participant_tenant_display_name_en:
+          type: string
+          readOnly: true
         participant_actor:
           type: string
           format: uuid
           nullable: true
         participant_actor_name:
+          type: string
+          readOnly: true
+          nullable: true
+        participant_actor_name_en:
           type: string
           readOnly: true
           nullable: true
@@ -27056,9 +27088,11 @@ components:
       - judgment
       - node_order
       - participant_actor_name
+      - participant_actor_name_en
       - participant_tenant
       - participant_tenant_code
       - participant_tenant_display_name
+      - participant_tenant_display_name_en
       - sentence_is_eternal
       - sentence_memory_reset
       - sentence_notes
@@ -29149,6 +29183,8 @@ components:
           $ref: '#/components/schemas/FactHistoryKindEnum'
         name:
           type: string
+        name_en:
+          type: string
         actor:
           type: string
           nullable: true
@@ -29171,6 +29207,7 @@ components:
       - kind
       - mine
       - name
+      - name_en
       - verdict
     FactHistoryKindEnum:
       enum:
@@ -29187,6 +29224,8 @@ components:
       properties:
         name:
           type: string
+        name_en:
+          type: string
         index:
           type: integer
           description: 第几步(只数需要人决定的节点)。
@@ -29200,11 +29239,16 @@ components:
           type: string
           nullable: true
           description: 批准后交给的节点;最后一步或不确定时为 null。
+        next_name_en:
+          type: string
+          nullable: true
       required:
       - index
       - is_last
       - name
+      - name_en
       - next_name
+      - next_name_en
       - total
     FactSoul:
       type: object
@@ -29282,6 +29326,8 @@ components:
       properties:
         name:
           type: string
+        name_en:
+          type: string
         stations:
           type: array
           items:
@@ -29296,6 +29342,7 @@ components:
       required:
       - foreign
       - name
+      - name_en
       - nothing_to_pick
       - stations
     FlowPreviewForeign:
@@ -29326,6 +29373,8 @@ components:
           description: 站序;勾掉的站以它送进 `skip_node_orders`。
         node_name:
           type: string
+        node_name_en:
+          type: string
         court_code:
           type: string
         approver:
@@ -29351,6 +29400,7 @@ components:
       - is_required
       - jump_target_of
       - node_name
+      - node_name_en
       - node_order
     Follow:
       type: object
@@ -30183,6 +30233,9 @@ components:
         judge_name:
           type: string
           readOnly: true
+        judge_name_en:
+          type: string
+          readOnly: true
         court:
           type: string
           description: Court name, e.g. 第一殿
@@ -30446,6 +30499,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -30506,11 +30562,13 @@ components:
       - is_archived
       - is_final
       - judge_name
+      - judge_name_en
       - judgment_method
       - karmic_balance
       - kind
       - merit_score
       - owner_org_name
+      - owner_org_name_en
       - realm_name
       - reassign_reason
       - reassign_requested_at
@@ -30604,6 +30662,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        workflow_name_en:
+          type: string
+          readOnly: true
+          nullable: true
         ladder:
           allOf:
           - $ref: '#/components/schemas/AppealLadder'
@@ -30670,6 +30732,7 @@ components:
       - status
       - workflow
       - workflow_name
+      - workflow_name_en
       - workflow_number
       - workflow_status
     JudgmentAppealCreate:
@@ -31076,6 +31139,9 @@ components:
         judge_name:
           type: string
           readOnly: true
+        judge_name_en:
+          type: string
+          readOnly: true
         court:
           type: string
           description: Court name, e.g. 第一殿
@@ -31339,6 +31405,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31422,11 +31491,13 @@ components:
       - is_archived
       - is_final
       - judge_name
+      - judge_name_en
       - judgment_method
       - karmic_balance
       - kind
       - merit_score
       - owner_org_name
+      - owner_org_name_en
       - realm_name
       - reassign_reason
       - reassign_requested_at
@@ -31577,6 +31648,9 @@ components:
           format: uuid
           nullable: true
         judge_name:
+          type: string
+          readOnly: true
+        judge_name_en:
           type: string
           readOnly: true
         court:
@@ -31837,6 +31911,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31896,11 +31973,13 @@ components:
       - is_archived
       - is_final
       - judge_name
+      - judge_name_en
       - judgment_method
       - karmic_balance
       - kind
       - merit_score
       - owner_org_name
+      - owner_org_name_en
       - realm_name
       - reassign_reason
       - reassign_requested_at
@@ -32130,6 +32209,8 @@ components:
           type: string
         node_name:
           type: string
+        node_name_en:
+          type: string
         via:
           allOf:
           - $ref: '#/components/schemas/ViaEnum'
@@ -32141,6 +32222,7 @@ components:
       required:
       - key
       - node_name
+      - node_name_en
       - via
     KarmaBucket:
       type: object
@@ -32778,6 +32860,8 @@ components:
           type: string
         display_name:
           type: string
+        display_name_en:
+          type: string
         civilization:
           type: string
         seal_glyphs:
@@ -32788,6 +32872,7 @@ components:
       - civilization
       - code
       - display_name
+      - display_name_en
       - seal_glyphs
     LogoutRequest:
       type: object
@@ -33025,6 +33110,8 @@ components:
           format: uuid
         workflow_name:
           type: string
+        workflow_name_en:
+          type: string
         tenant_id:
           type: integer
           nullable: true
@@ -33033,6 +33120,8 @@ components:
         node_order:
           type: integer
         node_name:
+          type: string
+        node_name_en:
           type: string
         approver_roles:
           type: array
@@ -33046,11 +33135,13 @@ components:
       - approver_roles
       - caused_by
       - node_name
+      - node_name_en
       - node_order
       - status
       - tenant_id
       - workflow_id
       - workflow_name
+      - workflow_name_en
     MeAccount:
       type: object
       properties:
@@ -33412,6 +33503,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        workflow_name_en:
+          type: string
+          readOnly: true
+          nullable: true
         ladder:
           allOf:
           - $ref: '#/components/schemas/AppealLadder'
@@ -33436,6 +33531,7 @@ components:
       - status
       - workflow
       - workflow_name
+      - workflow_name_en
       - workflow_number
       - workflow_status
     MeJudgmentAppealList:
@@ -34053,6 +34149,9 @@ components:
         name:
           type: string
           maxLength: 100
+        name_en:
+          type: string
+          maxLength: 200
         path:
           type: string
           maxLength: 200
@@ -34199,6 +34298,9 @@ components:
         name:
           type: string
           maxLength: 100
+        name_en:
+          type: string
+          maxLength: 200
         path:
           type: string
           maxLength: 200
@@ -34242,6 +34344,9 @@ components:
         name:
           type: string
           maxLength: 100
+        name_en:
+          type: string
+          maxLength: 200
         path:
           type: string
           maxLength: 200
@@ -35725,6 +35830,10 @@ components:
           type: string
           description: 组织名称：如 第一殿、冥王厅
           maxLength: 100
+        name_en:
+          type: string
+          description: English name; blank = show `name`
+          maxLength: 200
         code:
           type: string
           description: 唯一编码：如 DIYU_01、HEAVEN_01
@@ -37302,6 +37411,9 @@ components:
         node_name:
           type: string
           maxLength: 255
+        node_name_en:
+          type: string
+          maxLength: 255
         node_order:
           type: integer
         node_type:
@@ -37494,6 +37606,9 @@ components:
         workflow_name:
           type: string
           description: e.g., 十殿审判流程, 欧西里斯称重
+          maxLength: 255
+        workflow_name_en:
+          type: string
           maxLength: 255
         case_type:
           $ref: '#/components/schemas/CaseTypeEnum'
@@ -37815,6 +37930,9 @@ components:
           type: string
           readOnly: true
         initiating_tenant_display_name:
+          type: string
+          readOnly: true
+        initiating_tenant_display_name_en:
           type: string
           readOnly: true
         status:
@@ -38356,6 +38474,9 @@ components:
         judge_name:
           type: string
           readOnly: true
+        judge_name_en:
+          type: string
+          readOnly: true
         court:
           type: string
           description: Court name, e.g. 第一殿
@@ -38619,6 +38740,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -38693,6 +38817,9 @@ components:
         name:
           type: string
           maxLength: 100
+        name_en:
+          type: string
+          maxLength: 200
         path:
           type: string
           maxLength: 200
@@ -38755,6 +38882,10 @@ components:
           type: string
           description: 组织名称：如 第一殿、冥王厅
           maxLength: 100
+        name_en:
+          type: string
+          description: English name; blank = show `name`
+          maxLength: 200
         code:
           type: string
           description: 唯一编码：如 DIYU_01、HEAVEN_01
@@ -39138,6 +39269,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -39322,7 +39456,12 @@ components:
         读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
         `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
       properties:
+        display_name_en:
+          type: string
+          maxLength: 200
         description:
+          type: string
+        description_en:
           type: string
         dispatch_enabled:
           type: boolean
@@ -39690,7 +39829,12 @@ components:
           type: string
           description: Template name, e.g., 十殿审判流程
           maxLength: 255
+        name_en:
+          type: string
+          maxLength: 255
         description:
+          type: string
+        description_en:
           type: string
         civilization:
           $ref: '#/components/schemas/CivilizationEnum'
@@ -39738,6 +39882,9 @@ components:
         name:
           type: string
           maxLength: 200
+        name_en:
+          type: string
+          maxLength: 200
         category:
           type: string
           maxLength: 50
@@ -39753,6 +39900,9 @@ components:
           type: string
           maxLength: 100
         name:
+          type: string
+          maxLength: 200
+        name_en:
           type: string
           maxLength: 200
         category:
@@ -43310,6 +43460,9 @@ components:
         owner_org_name:
           type: string
           readOnly: true
+        owner_org_name_en:
+          type: string
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -43350,6 +43503,7 @@ components:
       - merit_score
       - name
       - owner_org_name
+      - owner_org_name_en
       - records
       - soul_code
       - soup_taken_at
@@ -45429,6 +45583,11 @@ components:
         display_name:
           type: string
           maxLength: 200
+        display_name_en:
+          type: string
+          maxLength: 200
+        description_en:
+          type: string
         description:
           type: string
         is_active:
@@ -45494,7 +45653,12 @@ components:
         display_name:
           type: string
           maxLength: 200
+        display_name_en:
+          type: string
+          maxLength: 200
         description:
+          type: string
+        description_en:
           type: string
         civilization:
           $ref: '#/components/schemas/CivilizationEnum'
@@ -45543,6 +45707,8 @@ components:
           type: string
         tenant_name:
           type: string
+        tenant_name_en:
+          type: string
         dispatch_enabled:
           type: boolean
         total_souls:
@@ -45557,6 +45723,7 @@ components:
       - tenant_code
       - tenant_id
       - tenant_name
+      - tenant_name_en
       - total_souls
     ThresholdReading:
       type: object
@@ -45727,6 +45894,11 @@ components:
         node_name:
           type: string
           description: 仅审批节点:轮到的节点名。
+        node_name_en:
+          type: string
+        title_en:
+          type: string
+          description: 仅审批节点:`title` 的英文;空 = 用 `title`。
         soul_code:
           type: string
           description: 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。
@@ -45802,6 +45974,9 @@ components:
           type: string
         title:
           type: string
+        title_en:
+          type: string
+          description: '`title` 的英文;空 = 用 `title`。'
         created_at:
           type: string
           format: date-time
@@ -46916,10 +47091,13 @@ components:
           type: string
         name:
           type: string
+        name_en:
+          type: string
       required:
       - code
       - id
       - name
+      - name_en
     UserPreferences:
       type: object
       description: |-
@@ -47028,9 +47206,12 @@ components:
           type: string
         display_name:
           type: string
+        display_name_en:
+          type: string
       required:
       - code
       - display_name
+      - display_name_en
       - id
     UserUpdate:
       type: object
@@ -47483,6 +47664,8 @@ components:
           type: string
         name:
           type: string
+        name_en:
+          type: string
         state:
           type: string
         go:
@@ -47531,6 +47714,7 @@ components:
       - go
       - is_local
       - name
+      - name_en
       - no_picker
       - order
       - picked_at
@@ -47635,7 +47819,12 @@ components:
           type: string
           description: Template name, e.g., 十殿审判流程
           maxLength: 255
+        name_en:
+          type: string
+          maxLength: 255
         description:
+          type: string
+        description_en:
           type: string
         civilization:
           $ref: '#/components/schemas/CivilizationEnum'
@@ -47697,7 +47886,12 @@ components:
           type: string
           description: Template name, e.g., 十殿审判流程
           maxLength: 255
+        name_en:
+          type: string
+          maxLength: 255
         description:
+          type: string
+        description_en:
           type: string
         civilization:
           $ref: '#/components/schemas/CivilizationEnum'
@@ -47754,6 +47948,10 @@ components:
           type: string
         node_name:
           type: string
+          maxLength: 255
+        name_en:
+          type: string
+          default: ''
           maxLength: 255
         node_type:
           allOf:

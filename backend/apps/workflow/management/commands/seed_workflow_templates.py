@@ -38,6 +38,7 @@ from django.db import transaction
 from apps.souls.models import CIVILIZATION_TENANT
 from apps.tenants.models import Tenant
 from apps.workflow import versioning
+from apps.workflow.english import NAME_EN
 from apps.workflow.models import WorkflowTemplate
 from apps.workflow.templates import FAIL_ROUTES, seed_template
 from apps.workflow.validation import validate_template_nodes
@@ -80,7 +81,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"    a live template 「{other.name}」 already serves this pair; left alone")
                 return "skipped"
             row = WorkflowTemplate.objects.create(
-                name=name, civilization=civilization, case_type=case_type, tenant=tenant, is_active=True)
+                name=name, name_en=NAME_EN.get(name, ""), civilization=civilization, case_type=case_type,
+                tenant=tenant, is_active=True)
             versioning.save_draft(row, nodes)
             versioning.publish(row)
             return "created"

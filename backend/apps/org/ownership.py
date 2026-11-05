@@ -26,6 +26,7 @@ def tenant_root(tenant):
         with transaction.atomic():
             return Organization.objects.create(
                 name=(tenant.hall_name or tenant.display_name or tenant.code)[:100],
+                name_en=(tenant.hall_name_en or tenant.display_name_en or "")[:200],
                 code=root_code(tenant),
                 category=tenant.known_civilization or "",
                 tenant=tenant,

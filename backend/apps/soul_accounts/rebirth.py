@@ -37,6 +37,7 @@ from apps.soul_accounts.models import (
 )
 from apps.soul_accounts.services import SoulAccountError
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
+from apps.workflow.english import NAME_EN
 
 DEFAULT_COOLDOWN_DAYS = 30
 COOLDOWN_SETTING = REBIRTH_COOLDOWN_SETTING
@@ -158,7 +159,7 @@ REFUSALS = {
 }
 
 
-def _create_workflow(soul, nodes, *, name, original=None):
+def _create_workflow(soul, nodes, *, name, name_en, original=None):
     from apps.workflow.models import (
         ApprovalNode,
         ApprovalWorkflow,
@@ -168,13 +169,14 @@ def _create_workflow(soul, nodes, *, name, original=None):
     )
 
     workflow = ApprovalWorkflow.objects.create(
-        soul=soul, workflow_name=name, case_type=CaseType.REBIRTH_APPLICATION,
+        soul=soul, workflow_name=name, workflow_name_en=name_en, case_type=CaseType.REBIRTH_APPLICATION,
         status=ApprovalWorkflowStatus.PENDING, is_appeal=original is not None,
         original_workflow=original, tenant=soul.home_tenant,
     )
     created = [
         ApprovalNode.objects.create(
-            workflow=workflow, node_name=node_name, node_order=order, node_type=node_type,
+            workflow=workflow, node_name=node_name, node_name_en=NAME_EN.get(node_name, ""),
+            node_order=order, node_type=node_type,
             court_code="转生申请", approver_type="ROLE", approver_role=role, status=NodeStatus.PENDING,
             required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED"],
         )
@@ -220,7 +222,8 @@ def submit(account, desired_form=None, statement=""):
             raise SoulAccountError("本文明的再生不走六道,不能指定一道。", "rebirth_form_not_applicable", 400) from None
         try:
             with transaction.atomic():
-                workflow = _create_workflow(soul, REBIRTH_NODES, name=f"转生申请: {soul.soul_code}")
+                workflow = _create_workflow(soul, REBIRTH_NODES, name=f"转生申请: {soul.soul_code}",
+                                            name_en=f"Rebirth application: {soul.soul_code}")
                 application = RebirthApplication.objects.create(
                     soul=soul, account=account, cycle=account.cycle, desired_form=desired_form,
                     statement=statement, status=RebirthApplicationStatus.UNDER_REVIEW, workflow=workflow,
@@ -258,6 +261,7 @@ def appeal(account, application_id, statement=""):
             raise SoulAccountError(REFUSALS["application_open"], "application_open", 409)
         workflow = _create_workflow(
             account.soul, APPEAL_NODES, name=f"转生申请申诉: {account.soul.soul_code}",
+            name_en=f"Rebirth application appeal: {account.soul.soul_code}",
             original=application.workflow,
         )
         old = application.status

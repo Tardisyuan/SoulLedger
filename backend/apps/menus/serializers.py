@@ -33,7 +33,7 @@ class MenuTreeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
         fields = [
-            "id", "name", "path", "icon", "order", "parent",
+            "id", "name", "name_en", "path", "icon", "order", "parent",
             "menu_type", "permission", "roles", "is_active",
             "visible", "cache", "component", "children", "buttons",
         ]
@@ -80,7 +80,7 @@ class MenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
         fields = [
-            "id", "name", "path", "icon", "order", "parent",
+            "id", "name", "name_en", "path", "icon", "order", "parent",
             "menu_type", "permission", "roles", "is_active",
             "visible", "cache", "component", "children", "buttons",
             # Recycle bin (Stage 4 §4.7): the "show deleted" toggle on the
@@ -184,7 +184,7 @@ class MenuCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
         fields = [
-            "id", "name", "path", "icon", "order", "parent",
+            "id", "name", "name_en", "path", "icon", "order", "parent",
             "menu_type", "permission", "roles", "is_active",
             "visible", "cache", "component",
         ]

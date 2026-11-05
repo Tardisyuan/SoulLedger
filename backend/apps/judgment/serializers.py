@@ -158,6 +158,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     """
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judge_name = serializers.CharField(source="judge.name", read_only=True)
+    judge_name_en = serializers.CharField(source="judge.name_en", read_only=True)
     citations = JudgmentCitationSerializer(many=True, read_only=True)
     # 认领 / 暂缓(apps/judgment/claims.py)。全部只读:只有那几个动作能写,它们在行锁下写。
     claimed_by_name = serializers.SerializerMethodField()
@@ -205,6 +206,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     # 建后持 judgment.assign 可改,已结案的案子也可以(归属是管理上的事,不是判决的依据)。
     owner_org = owner_org_field()
     owner_org_name = serializers.CharField(source="owner_org.name", read_only=True, default=None)
+    owner_org_name_en = serializers.CharField(source="owner_org.name_en", read_only=True, default=None)
 
     def validate_owner_org(self, value):
         return check_owner_org(value, self.context, "judgment", self.instance, "judgment.assign")
@@ -212,7 +214,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     class Meta:
         model = Judgment
         fields = [
-            "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name",
+            "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name", "judge_name_en",
             "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at", "untimely", "held_until", "duat_stage", "ferry_barred",
@@ -236,7 +238,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             # 申诉那几列只读,只经 `/judgment/wangsi/{id}/grievance|decide/` 写(apps/judgment/wangsi.py)。
             "offence", "wrongful_death_cause", "grievance_level",
             "grievance_status", "grievance_plea", "grievance_note", "grievance_decided_at",
-            "owner_org", "owner_org_name",
+            "owner_org", "owner_org_name", "owner_org_name_en",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。

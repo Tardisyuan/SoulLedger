@@ -151,6 +151,8 @@ NODE_TYPE_VALUES = ("TRIAL", "EVALUATION", "APPEAL", "FINAL", "EXECUTION")
 CARRIED_NODE_KEYS = (
     "id",
     "actor",
+    # English beside `node_name`, which stays the record and what lookups read.
+    "name_en",
     "approver_type",
     "approver_role",
     "on_pass",

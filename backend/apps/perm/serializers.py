@@ -12,13 +12,13 @@ from .models import Permission, Role, RolePermission
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = ["id", "codename", "name", "category"]
+        fields = ["id", "codename", "name", "name_en", "category"]
 
 
 class PermissionCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = ["codename", "name", "category"]
+        fields = ["codename", "name", "name_en", "category"]
 
     def validate_codename(self, value):
         if not value.replace(".", "").replace("_", "").isalnum():
@@ -230,10 +230,12 @@ class MatrixWorkflowConflictSerializer(serializers.Serializer):
 
     workflow_id = serializers.UUIDField()
     workflow_name = serializers.CharField()
+    workflow_name_en = serializers.CharField(allow_blank=True)
     tenant_id = serializers.IntegerField(allow_null=True)
     status = serializers.CharField()
     node_order = serializers.IntegerField()
     node_name = serializers.CharField()
+    node_name_en = serializers.CharField(allow_blank=True)
     approver_roles = serializers.ListField(child=serializers.CharField())
     caused_by = MatrixConflictCauseSerializer(many=True)
 

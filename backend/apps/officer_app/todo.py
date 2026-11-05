@@ -249,7 +249,8 @@ def build(user, request=None, kind=None, offset=0):
         apps_by_wf[app.workflow_id] = apps_by_wf[app.appeal_workflow_id] = app
 
     approvals = [_item("approval", wf.pk, wf.workflow_name, node.activated_at or wf.created_at,
-                       node_name=node.node_name) for wf, node in plain]
+                       node_name=node.node_name, node_name_en=node.node_name_en, title_en=wf.workflow_name_en)
+                 for wf, node in plain]
     rebirths = [_item("rebirth", apps_by_wf[wf.pk].pk, wf.soul.name, wf.created_at, **_rebirth_facts(wf))
                 for wf in rebirth_wfs if wf.pk in apps_by_wf]
 
@@ -356,6 +357,7 @@ def detail(user, kind, pk, request=None):
             # O-b:初审批准底页按它写「不跨」或只给「在电脑上继续」。
             facts["cross_civilization"] = app.cross_civilization
         return {"kind": kind, "id": str(pk), "title": wf.soul.name if kind == "rebirth" else wf.workflow_name,
+                "title_en": "" if kind == "rebirth" else wf.workflow_name_en,
                 "workflow_id": str(wf.pk), "created_at": wf.created_at, "facts": facts,
                 **(_rebirth_facts(wf) if kind == "rebirth" else {}), **_workflow_state(wf, user)}
     if kind == "cooldown":

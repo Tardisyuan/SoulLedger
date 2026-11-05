@@ -231,6 +231,9 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         max_length=255,
         help_text="e.g., 十殿审判流程, 欧西里斯称重"
     )
+    # Copied from the template with `workflow_name`, for the same reason: a later rename of the template does not
+    # rewrite what a running flow was called. Blank = show `workflow_name`.
+    workflow_name_en = models.CharField(max_length=255, blank=True, default="")
     case_type = models.CharField(
         max_length=30,
         choices=CaseType.choices,
@@ -1101,6 +1104,10 @@ class WorkflowTemplate(AuditUserFields, models.Model):
 
     name = models.CharField(max_length=255, help_text="Template name, e.g., 十殿审判流程")
     description = models.TextField(blank=True, default="")
+    # English for a reader of that language; `name` / `description` stay the record. Blank = show the source.
+    # Each node in `nodes_json` carries its own `name_en` beside `node_name` (`node_shape.CARRIED_NODE_KEYS`).
+    name_en = models.CharField(max_length=255, blank=True, default="")
+    description_en = models.TextField(blank=True, default="")
 
     # Template categorization
     from apps.souls.models import Civilization
@@ -1281,6 +1288,7 @@ class WorkflowSegment(models.Model):
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="workflow_segments")
     civilization = models.CharField(max_length=30)
     name = models.CharField(max_length=255, help_text="该域默认流程的名字")
+    name_en = models.CharField(max_length=255, blank=True, default="")
     state = models.CharField(max_length=20, choices=SegmentState.choices)
     picked_by = models.ForeignKey(
         "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
@@ -1318,6 +1326,9 @@ class ApprovalNode(AuditUserFields, models.Model):
 
     # Node definition
     node_name = models.CharField(max_length=255)
+    # Copied from the template node's `name_en` when the flow is built. Blank = show `node_name`. Lookups
+    # (`nodeTypeFor`, the approver's name in a label) read `node_name`, never this.
+    node_name_en = models.CharField(max_length=255, blank=True, default="")
     node_order = models.IntegerField()
     node_type = models.CharField(
         max_length=20,

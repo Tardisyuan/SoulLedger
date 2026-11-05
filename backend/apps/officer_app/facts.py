@@ -41,14 +41,14 @@ def _is_last(node, nodes) -> bool | None:
                    and n.kind not in AUTOMATIC_KINDS for n in nodes)
 
 
-def _next_name(node, nodes) -> str | None:
+def _next_node(node, nodes):
     if node.branches_json:
         return None
     if node.on_pass_id:
-        return node.on_pass.node_name
+        return node.on_pass
     later = [n for n in nodes if n.node_order > node.node_order and n.status == NodeStatus.PENDING
              and n.kind not in AUTOMATIC_KINDS]
-    return later[0].node_name if later else None
+    return later[0] if later else None
 
 
 def _deadline(node):
@@ -68,7 +68,7 @@ def _history(wf, node, nodes, user, tenant_id=None) -> list:
     def visible(owner_id):
         return tenant_id is None or owner_id == tenant_id
 
-    steps = [{"kind": "start", "name": "", "actor": _name(wf.create_user) if visible(wf.tenant_id) else None,
+    steps = [{"kind": "start", "name": "", "name_en": "", "actor": _name(wf.create_user) if visible(wf.tenant_id) else None,
               "verdict": "", "comment": "", "at": wf.created_at, "mine": False}]
     for n in nodes:
         if n.pk == getattr(node, "pk", None) or n.status not in DECIDED:
@@ -76,10 +76,10 @@ def _history(wf, node, nodes, user, tenant_id=None) -> list:
         who = decision_codes.handled_by(n)
         if n.segment_id is not None and not visible(n.segment.tenant_id):
             who = None
-        steps.append({"kind": "decided", "name": n.node_name, "actor": who["name"] if who else None,
+        steps.append({"kind": "decided", "name": n.node_name, "name_en": n.node_name_en, "actor": who["name"] if who else None,
                       "verdict": n.verdict, "comment": n.notes, "at": n.decided_at, "mine": False})
     if node is not None:
-        steps.append({"kind": "current", "name": node.node_name, "actor": None, "verdict": "", "comment": "",
+        steps.append({"kind": "current", "name": node.node_name, "name_en": node.node_name_en, "actor": None, "verdict": "", "comment": "",
                       "at": node.activated_at, "mine": node.can_approve(user)})
     return steps
 
@@ -113,12 +113,15 @@ def workflow_facts(wf, user, tenant, *, reason) -> dict:
         "attachments": attachments_of(wf.judgment, user, tenant),
     }
     if node is not None:
+        following = _next_node(node, nodes)
         facts["node"] = {
             "name": node.node_name,
+            "name_en": node.node_name_en,
             "index": next((i for i, n in enumerate(steps, 1) if n.pk == node.pk), len(steps)),
             "total": len(steps),
             "is_last": _is_last(node, nodes),
-            "next_name": _next_name(node, nodes),
+            "next_name": following.node_name if following else None,
+            "next_name_en": following.node_name_en if following else None,
         }
         facts["deadline"] = _deadline(node)
     return facts

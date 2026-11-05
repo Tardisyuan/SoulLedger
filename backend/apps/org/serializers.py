@@ -22,7 +22,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organization
-        fields = ["id", "name", "code", "category", "parent", "level", "sort", "tenant"]
+        fields = ["id", "name", "name_en", "code", "category", "parent", "level", "sort", "tenant"]
 
     def validate(self, attrs):
         """A unit cannot sit under itself or under one of its own sub-units (the
