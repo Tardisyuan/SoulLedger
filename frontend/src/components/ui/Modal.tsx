@@ -6,6 +6,7 @@ import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useCreateSoul } from "@soulledger/core/hooks/useSouls";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import {
@@ -366,10 +367,12 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           value={birthDate}
           onChange={(e) => {
             setBirthDate(e.target.value)
+            clearFieldError('birth_date')
             clearServerError('birth_date')
           }}
           disabled={loading}
-          error={serverErrors.birth_date}
+          max={localDateString()}
+          error={getError('birth_date') ?? serverErrors.birth_date}
         />
         {/* 籍贯(自由文本)与出身地域(归类)同一行(Design W-1)。 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">

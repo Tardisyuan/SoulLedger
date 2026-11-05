@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -361,7 +362,8 @@ export default function SoulDetailPage() {
   // 译回操作卡认的那个名字。失效与拒绝文案逐条照旧。
 
   const dieMutation = useMutation({
-    mutationFn: (soulId: string) => soulsApi.die(soulId, {}),
+    // 发用户本地的日期:不发时服务端按 UTC 取「今天」,东八区凌晨标记会写成前一天。
+    mutationFn: (soulId: string) => soulsApi.die(soulId, { death_date: localDateString() }),
     onSuccess: () => {
       // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
       // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。

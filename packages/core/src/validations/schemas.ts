@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { CIVILIZATION_OPTIONS } from '../config/civilizations'
+import { localDateString } from '../domain/dates'
 
 // No JIT. On the first object parse zod 4 probes `new Function("")` to decide
 // whether it may compile a fast path. It catches the failure, but under the
@@ -35,6 +36,9 @@ export const loginSchema = z.object({
 
 // ── Soul ─────────────────────────────────────────────
 
+// 只比「YYYY-MM-DD」:公元前的年份以 - 开头,字典序上小于任何公元后的日期。
+const birthDate = z.string().optional().nullable().refine((v) => !v || v <= localDateString(), '出生日期不能晚于今天')
+
 export const soulCreateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   // Derived from CIVILIZATION_OPTIONS, not retyped. This enum spelled three
@@ -51,7 +55,7 @@ export const soulCreateSchema = z.object({
   civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
   }),
-  birth_date: z.string().optional().nullable(),
+  birth_date: birthDate,
   origin_location: z.string().max(255, '地点最多255位').optional(),
   // 出身地域(第四十五批):"" 是不详。与 `SoulOriginRegion` 同三个值。
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
@@ -59,7 +63,7 @@ export const soulCreateSchema = z.object({
 
 export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
-  birth_date: z.string().optional().nullable(),
+  birth_date: birthDate,
   death_date: z.string().optional().nullable(),
   fated_death_date: z.string().optional().nullable(),
   origin_location: z.string().max(255, '地点最多255位').optional(),
