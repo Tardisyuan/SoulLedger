@@ -43,7 +43,7 @@ export default function UserProfilePage() {
   });
 
   const posts = postsData?.results ?? [];
-  const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;
+  const totalPages = postsData ? Math.max(1, Math.ceil(postsData.count / PAGE_SIZE)) : 0;
 
   /**
    * Same split as app/social/page.tsx, for the same reason: `Pagination` is
