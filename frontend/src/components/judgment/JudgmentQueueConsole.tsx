@@ -244,12 +244,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   return (
     <div className="text-[oklch(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[oklch(var(--color-hairline))]/50">
-        <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1">
+      {/* 窄屏把题目放在自己那一行,进度和两个按钮排第二行(393 宽四样挤一行时题目折两行,56 高撑出 48 的定高)。 */}
+      <div className="min-h-12 flex flex-wrap items-center px-6 gap-x-4 max-sm:pt-2 border-b border-[oklch(var(--color-hairline))]/50">
+        <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1 max-sm:basis-full">
           {t("judgment.queue.title")}
         </h1>
         <p
-          className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))]"
+          className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))] max-sm:flex-1"
           aria-live="polite"
         >
           {progressText}

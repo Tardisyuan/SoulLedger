@@ -804,6 +804,11 @@
     display: inline;
     margin: 0 8px 0 0;
   }
+  /* 带上的链接随带上的白字:base 层的 `a` 是 ink-muted(悬停 accent-ink),落在匾色底上看不清
+     (灵魂详情的案号与「全部 N 场」)。守卫:plaqueTitleStaysLargeText「身份带上的链接」。 */
+  .identity-band a {
+    color: inherit;
+  }
   /* 收起:只留印与殿名(v3 `is-compact`)。没有殿名(租户没给展示名)时留题字,不然带上只剩一枚印。 */
   .identity-band[data-compact] .identity-brand,
   .identity-band[data-compact] .identity-court ~ [data-tier] {
