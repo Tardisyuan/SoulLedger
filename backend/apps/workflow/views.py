@@ -589,7 +589,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return _hook_refused(exc)
         if not advanced:
             return Response(
-                {"error": "No next node available or workflow already completed"},
+                {"code": "no_successor", "error": "No next node available or workflow already completed"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         from apps.audit.models import AuditAction, AuditLog
@@ -633,7 +633,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         reason = (request.data.get("reason") or "").strip()
         if not reason:
             return Response(
-                {"error": "reason is required", "detail": "越级推进必须说明理由"},
+                {"code": "reason_required", "error": "reason is required", "detail": "越级推进必须说明理由"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -653,7 +653,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return _hook_refused(exc)
         if not escalated:
             return Response(
-                {"error": "No pending node to escalate past"},
+                {"code": "no_pending_node", "error": "No pending node to escalate past"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

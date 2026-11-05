@@ -448,6 +448,7 @@ class TestApprovalWorkflowAPI:
             f"Expected 400 (no next node), got {response.status_code}. A 200 "
             f"here is the interface reporting a move it did not make."
         )
+        assert response.data["code"] == "no_successor"
         wf.refresh_from_db()
         assert wf.current_node == node2, "advance moved the pointer anyway"
 

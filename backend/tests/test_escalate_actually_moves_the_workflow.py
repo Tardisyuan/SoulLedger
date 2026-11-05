@@ -173,9 +173,17 @@ def test_escalate_still_demands_a_reason(stuck):
     """The cost of the override is that it is visible. Unchanged."""
     wf, _, client = stuck
     resp = client.post(f"{WORKFLOWS}/{wf.pk}/escalate/", {}, format="json")
-    assert resp.status_code == 400
+    assert (resp.status_code, resp.data["code"]) == (400, "reason_required")
     wf.refresh_from_db()
     assert wf.current_node.node_order == 1
+
+
+@pytest.mark.django_db
+def test_nothing_left_to_escalate_past_is_a_coded_refusal(stuck):
+    wf, _, client = stuck
+    ApprovalNode.objects.filter(workflow=wf).update(status=NodeStatus.SKIPPED)
+    resp = client.post(f"{WORKFLOWS}/{wf.pk}/escalate/", {"reason": "r"}, format="json")
+    assert (resp.status_code, resp.data["code"]) == (400, "no_pending_node")
 
 
 @pytest.mark.django_db
