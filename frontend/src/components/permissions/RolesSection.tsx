@@ -7,6 +7,7 @@ import { permApi, type Role, type RoleDeleteRefusal } from "@soulledger/core/api
 import { roleDeleteRefusal, useCopyRole, useDeleteRole } from "@soulledger/core/hooks/usePermissionMatrix";
 import { permKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
@@ -85,7 +86,7 @@ export function RolesSection({
                 onClick={() => show(role.id)}
                 className={`${ROW_LINK} text-left`}
               >
-                {role.display_name || role.name}
+                {roleLabel(t, role.name, role)}
               </button>
             </td>
             <td className="px-3 py-2 font-mono text-xs">{role.name}</td>
@@ -149,7 +150,7 @@ function RoleDrawer({
     <Drawer
       isOpen={role !== null}
       onClose={onClose}
-      title={role ? t("permissions.roles.drawer_title", { name: role.display_name || role.name }) : ""}
+      title={role ? t("permissions.roles.drawer_title", { name: roleLabel(t, role.name, role) }) : ""}
       hint={t("souls.preview.hint")}
       onNext={onNext}
       onPrev={onPrev}
@@ -259,6 +260,7 @@ function RoleDrawerBody({
         value={displayName}
         onChange={(e) => setDisplayName(e.target.value)}
         maxLength={100}
+        disabled={role.is_builtin} /* 内置角色的名字来自语言包,这里改了不会显示。 */
       />
       <div>
         <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("permissions.codename")}</div>
@@ -382,7 +384,7 @@ function RoleDrawerBody({
       <Modal
         isOpen={deleting}
         onClose={() => !del.isPending && setDeleting(false)}
-        title={t("permissions.roles.recycle_title", { name: role.display_name || role.name })}
+        title={t("permissions.roles.recycle_title", { name: roleLabel(t, role.name, role) })}
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setDeleting(false)} disabled={del.isPending}>

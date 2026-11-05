@@ -8426,7 +8426,7 @@
     "role_judge_desc": "An officer's day: claim cases, conclude them, issue dispositions, approve.",
     "role_admin": "Administrator",
     "role_admin_desc": "Sees all four civilizations: users, roles and permissions, configuration, audit.",
-    "role_moderator": "Moderator",
+    "role_moderator": "Realm Lead",
     "role_moderator_desc": "Soul circle review: reports, mutes, sensitive words.",
     "banner_short": "Demo · data stays in this browser",
     "landing": {

@@ -1,12 +1,12 @@
 "use client";
 
-import { localName } from "@soulledger/core/domain/localName";
 import { hasRebirth } from "@/src/lib/hasRebirth";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, REBIRTH_COOLDOWN_SETTING, REBIRTH_QUOTA_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { SIX_PATHS } from "@/src/components/souls/RebirthFormSelect";
@@ -175,7 +175,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
     <BaseModal
       isOpen
       onClose={() => !save.isPending && onClose()}
-      title={t("tenants.settings.title", { name: localName(tenant, locale, "display_name") })}
+      title={t("tenants.settings.title", { name: tenantLabel(t, tenant, locale) })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>

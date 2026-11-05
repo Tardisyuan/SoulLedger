@@ -6,6 +6,7 @@ import { authApi } from "@soulledger/core/api";
 import { passwordReasonKeys, splitCommonReasons } from "@soulledger/core/api/auth";
 import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -243,12 +244,12 @@ export default function ProfilePage() {
             ) : (
               <span
                 className="truncate"
-                title={user?.tenant?.display_name || user?.tenant?.code || undefined}
+                title={tenantLabel(t, user?.tenant, locale) || undefined}
               >
                 {/* /auth/profile/ is UserSerializer, which has no `tenant`
                     field at all — the two leading branches this expression
                     used to start with were dead. */}
-                {user?.tenant?.display_name || user?.tenant?.code || "-"}
+                {tenantLabel(t, user?.tenant, locale) || "-"}
               </span>
             )}
           </dd>

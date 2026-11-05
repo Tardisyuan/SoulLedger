@@ -19,6 +19,7 @@ import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
@@ -49,7 +50,7 @@ type WordDraft = { id: string; word: string; category: SensitiveWordCategory | "
  * 读别的文明词表的路径,服务端也只放 ADMIN。
  */
 export function SensitiveWordsSection() {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const fail = useFailureToast();
   const [page, setPage] = useState(1);
@@ -365,7 +366,7 @@ export function SensitiveWordsSection() {
               </option>
               {(tenants.data ?? []).map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.display_name}
+                  {tenantLabel(t, c, locale)}
                 </option>
               ))}
             </select>
@@ -383,7 +384,7 @@ export function SensitiveWordsSection() {
             </option>
             {sources.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.display_name}
+                {tenantLabel(t, c, locale)}
               </option>
             ))}
           </select>

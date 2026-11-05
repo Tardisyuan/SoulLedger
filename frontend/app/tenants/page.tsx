@@ -1,9 +1,9 @@
 "use client";
-import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { tenantsApi, PAGE_SIZE, type Tenant } from "@soulledger/core/api";
@@ -83,7 +83,7 @@ function TenantsPageContent() {
           <>
             {/* 停用的殿整行灰字(K-1)。 */}
             <td className={`px-4 py-3 font-medium ${tenant.is_active === false ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}>
-              {localName(tenant, locale, "display_name")}
+              {tenantLabel(t, tenant, locale)}
             </td>
             <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{tenant.code}</td>
             <td className="px-4 py-3">

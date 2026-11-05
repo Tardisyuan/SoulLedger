@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import {
@@ -742,7 +743,7 @@ export default function SoulDetailPage() {
             </span>
           ) : (
             <span data-testid="soul-residing" title={soul.home_tenant.code}>
-              {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: soul.home_tenant.display_name })}
+              {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: tenantLabel(t, soul.home_tenant, locale) })}
             </span>
           )}
         </>

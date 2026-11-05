@@ -8,6 +8,7 @@ import { judgmentKeys, crossJudgmentKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -191,7 +192,7 @@ export default function CrossJudgmentDetailPage() {
           <>
             {/* 展示名,不是 `initiating_tenant`:那是租户主键(IDENTIFIER_POLICY 第 4 条),
                 `initiating_tenant_display_name` 是 2026-09-24 为这一格加的。 */}
-            {t("crossJudgments.initiated_by")}: {localName(judgment, locale, "initiating_tenant_display_name") || judgment?.initiating_tenant_code}
+            {t("crossJudgments.initiated_by")}: {tenantLabel(t, { code: judgment?.initiating_tenant_code, display_name: localName(judgment, locale, "initiating_tenant_display_name") })}
             {originId && (
               <span data-testid="cross-origin">
                 {" · "}
@@ -305,7 +306,7 @@ export default function CrossJudgmentDetailPage() {
                       键已补进 `crossJudgments.participant_roles`。 */}
                   <span className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
                     {/* 席位租户的展示名,不是 `participant_tenant`(主键)。 */}
-                    <span>{localName(p, locale, "participant_tenant_display_name") || p.participant_tenant_code}</span>
+                    <span>{tenantLabel(t, { code: p.participant_tenant_code, display_name: localName(p, locale, "participant_tenant_display_name") })}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
                         标记报红 —— 而这里它只是两个存在的值之间的分隔符。 */}

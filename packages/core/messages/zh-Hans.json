@@ -8426,7 +8426,7 @@
     "role_judge_desc": "官员日常:认领案件、结案、出处置、审批。",
     "role_admin": "管理员",
     "role_admin_desc": "四个文明都看得到:用户、角色权限、系统配置、审计。",
-    "role_moderator": "版主",
+    "role_moderator": "殿主",
     "role_moderator_desc": "朋友圈审核:举报、禁言、敏感词。",
     "banner_short": "演示 · 数据只在本浏览器",
     "landing": {

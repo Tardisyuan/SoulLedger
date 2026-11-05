@@ -9,6 +9,7 @@ import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel, tenantLabel } from "@/src/lib/domainNames";
 import { showToast } from "@/src/components/ui/Toast";
 import { useSecondFactor } from "./SecondFactorPrompt";
 import { Button } from "@/src/components/ui/Button";
@@ -23,7 +24,7 @@ interface UserModalProps {
 }
 
 export function UserModal({ isOpen, onClose, user }: UserModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const queryClient = useQueryClient();
   const isEditing = !!user;
 
@@ -129,7 +130,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
    * the fourth copy of that omission this repo has recorded. Since 2026-09-12
    * `User.role` is validated against `perm.Role` (a role created on the
    * permissions screen can be held), so any fixed list here is wrong the
-   * moment an admin creates one. `display_name` is server data, not UI copy.
+   * moment an admin creates one. Labels go through `roleLabel`, as the filter's do.
    *
    * While the list is loading (or if it fails) the current value is kept as
    * the only option so the form never shows a blank select and a save never
@@ -138,8 +139,8 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const rolesQuery = useRoles({ enabled: isOpen });
   const roleOptions =
     rolesQuery.data && rolesQuery.data.length > 0
-      ? rolesQuery.data.map((r) => ({ value: r.name, label: r.display_name || r.name }))
-      : [{ value: formData.role ?? "VIEWER", label: formData.role ?? "VIEWER" }];
+      ? rolesQuery.data.map((r) => ({ value: r.name, label: roleLabel(t, r.name, r) }))
+      : [{ value: formData.role ?? "VIEWER", label: roleLabel(t, formData.role ?? "VIEWER") }];
 
   /**
    * 所属机构与职务(2026-10-16 起只由管理员在这里设,`PATCH /users/{id}/`;新建也可,`POST /users/`)。
@@ -353,7 +354,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             disabled={createMutation.isPending}
             options={[
               { value: "", label: t("users.tenant_pick") },
-              ...tenantChoices.map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),
+              ...tenantChoices.map((x) => ({ value: String(x.id), label: tenantLabel(t, x, locale) })),
             ]}
           />
         )}
