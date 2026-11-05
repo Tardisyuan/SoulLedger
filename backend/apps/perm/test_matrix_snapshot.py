@@ -1039,6 +1039,7 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
         "workflow.escalate",
         "workflow.export",
         "workflow.read",
+        "workflow.terminate",
         "workflow.update",
     ], workflow_forced_onto_the_dict_path
     assert not Permission.objects.filter(codename__startswith="workflow.").exists()

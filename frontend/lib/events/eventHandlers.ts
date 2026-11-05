@@ -108,6 +108,7 @@ export const EVENT_LABELS: Record<string, string> = {
   WORKFLOW_ASSIGNED: "souls.events.WORKFLOW_ASSIGNED",
   WORKFLOW_APPROVED: "souls.events.WORKFLOW_APPROVED",
   WORKFLOW_REJECTED: "souls.events.WORKFLOW_REJECTED",
+  WORKFLOW_TERMINATED: "souls.events.WORKFLOW_TERMINATED",
 
   // Dispatch events
   DISPATCH_CREATED: "souls.events.DISPATCH_CREATED",

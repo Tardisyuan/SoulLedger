@@ -1653,6 +1653,7 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "workflow.delete",
         "workflow.escalate",
         "workflow.read",
+        "workflow.terminate",
         "workflow.update",
     }, sorted(seeded)
 

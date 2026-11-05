@@ -1,1 +1,4 @@
-[]
+[
+  "souls.events.WORKFLOW_TERMINATED",
+  "souls.import.row_codes.birth_in_future"
+]

@@ -23,6 +23,7 @@ from apps.workflow.models import (
     ApprovalNode,
     ApprovalWorkflow,
     EscalationRefusedError,
+    FinalReviewRequiredError,
     NodeStatus,
     VerdictRefusedError,
     WorkflowTemplate,
@@ -267,6 +268,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'remind': ['workflow.read'],
         'advance': ['workflow.advance'],
         'escalate': ['workflow.escalate'],
+        'terminate': ['workflow.terminate'],
         'approve_node': ['workflow.approve'],
         'stats': ['workflow.read'],
         # W-1 选站列表(生成之前):只读模板与审批人名,同 `approver-preview`。
@@ -585,6 +587,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         node = workflow.current_node  # None on a hand-built flow with no pointer: advance only sets it
         try:
             advanced = workflow.advance_to_next(user=request.user, reason=reason)
+        except FinalReviewRequiredError as exc:
+            return Response({"code": exc.code, "error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except _hook_refusals() as exc:
             return _hook_refused(exc)
         if not advanced:
@@ -677,6 +681,46 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
         )
 
+        return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
+
+    @extend_schema(request=WorkflowReasonSerializer, responses={200: ApprovalWorkflowSerializer,
+                                                                400: OpenApiTypes.OBJECT, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"])
+    def terminate(self, request, pk=None):
+        """End a running flow on the record: administrators only (`workflow.terminate`), with a written reason.
+
+        The flow ends CANCELLED, `end_reason` ADMIN_TERMINATED (`ApprovalWorkflow.terminate` says why that state).
+        The audit row and the WORKFLOW_TERMINATED event are in the same transaction. 400 `reason_required`;
+        409 `workflow_finished` when it had already ended.
+        """
+        workflow = self.get_object()
+        reason = (request.data.get("reason") or "").strip()
+        if not reason:
+            return Response(
+                {"code": "reason_required", "error": "reason is required", "detail": "结束流程必须说明理由"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from django.db import transaction
+
+        from apps.audit.models import AuditAction, AuditLog
+
+        node = workflow.current_node
+        with transaction.atomic():
+            if not WorkflowService.terminate(workflow, user=request.user, reason=reason):
+                return Response({"code": "workflow_finished", "error": "This workflow has already ended"},
+                                status=status.HTTP_409_CONFLICT)
+            AuditLog.objects.create(
+                tenant=getattr(workflow, "tenant", None),
+                user=request.user,
+                action=AuditAction.EXECUTE,
+                resource="workflow.terminate",
+                resource_id=str(workflow.id),
+                description=f"结束流程：{getattr(node, 'node_name', '-')} — {reason}"[:500],
+                changes={"stopped_at": str(getattr(node, "id", "")) or None,
+                         "stopped_at_name": getattr(node, "node_name", None), "reason": reason},
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+            )
         return Response(ApprovalWorkflowSerializer(workflow, context={"request": request}).data)
 
     @extend_schema(request=WorkflowNodeActionSerializer, responses=ApprovalWorkflowSerializer)

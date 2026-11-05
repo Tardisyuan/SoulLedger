@@ -264,6 +264,7 @@ DEFAULT_PERMISSIONS = [
     ("workflow.approve", "审批工作流", "workflow"),
     ("workflow.advance", "推进工作流", "workflow"),
     ("workflow.escalate", "越级推进工作流", "workflow"),
+    ("workflow.terminate", "结束工作流", "workflow"),
     ("workflow.export", "导出工作流", "workflow"),
     # cross-tenant judgment 权限
     #
@@ -380,6 +381,8 @@ ROLE_PERMISSIONS = {
         # dict for any unseeded codename — so ADMIN held escalate over the
         # socket and was denied it over REST. Found by the Stage 7 design review.
         "workflow.escalate",
+        # Administrators only (user 2026-11-06): ending a flow nobody decided.
+        "workflow.terminate",
     ],
     "JUDGE": [
         "soul.read", "soul.die", "soul.transition", "soul.export",

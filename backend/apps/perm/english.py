@@ -78,6 +78,7 @@ PERMISSION_NAME_EN = {
     "workflow.create": "Create workflows",
     "workflow.delete": "Delete workflows",
     "workflow.escalate": "Escalate workflows",
+    "workflow.terminate": "End workflows",
     "workflow.export": "Export workflows",
     "workflow.read": "View workflows",
     "workflow.update": "Edit workflows",

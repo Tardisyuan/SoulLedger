@@ -140,6 +140,18 @@ class EventService:
         }, actor)
 
     @staticmethod
+    def log_workflow_terminated(workflow, reason: str, actor: str = "system") -> None:
+        """An administrator ended the flow (`ApprovalWorkflow.terminate`). In that transaction."""
+        from apps.events.models import EventType
+        EventService.log(workflow.soul, EventType.WORKFLOW_TERMINATED, {
+            "workflow_id": str(workflow.id),
+            "workflow_name": workflow.workflow_name,
+            "workflow_name_en": workflow.workflow_name_en,
+            "status": workflow.status,
+            "reason": reason,
+        }, actor)
+
+    @staticmethod
     def log_workflow_approved(workflow, node=None, actor: str = "system") -> None:
         """Log workflow approval and publish realtime event."""
         from apps.events.models import EventType

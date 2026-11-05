@@ -31,6 +31,7 @@ from apps.workflow.models import (
     ApprovalWorkflow,
     ApprovalWorkflowStatus,
     CaseType,
+    FinalReviewRequiredError,
     NodeKind,
     NodeStatus,
 )
@@ -587,3 +588,97 @@ def test_ladders_do_not_open_from_a_judgment(cn):
         res = admin.post("/api/v1/workflows/create_from_judgment/", {"judgment_id": str(judgment.pk), **body},
                          format="json")
         assert (res.status_code, res.data["code"]) == (400, "appeal_not_from_judgment"), res.data
+
+
+# ── advance stops at the final review; an administrator can end a flow on the record (user 2026-11-06) ──────
+
+
+def test_advance_refuses_a_final_review_and_writes_nothing(cn):
+    flow = _workflow(cn, [_node(1, node_type="FINAL"), _node(2)])
+    first = flow.current_node_id
+    res = officer_client(sp.officer("adv_final", "ADMIN", cn)).post(
+        f"/api/v1/workflows/{flow.pk}/advance/", {"reason": "卡住"}, format="json")
+    assert (res.status_code, res.data["code"]) == (400, "final_review_required"), res.data
+    flow.refresh_from_db()
+    assert flow.current_node_id == first and flow.current_node.status == NodeStatus.PENDING
+    assert not AuditLog.objects.filter(resource="workflow.advance", resource_id=str(flow.pk)).exists()
+
+
+def test_advance_never_steps_onto_the_end_node(cn):
+    flow = _workflow(cn, [_node(1), _node(2, kind="END", approver_type="SYSTEM")], validated=False)
+    first = flow.current_node_id
+    with pytest.raises(FinalReviewRequiredError):
+        ApprovalWorkflow.all_objects.get(pk=flow.pk).advance_to_next(reason="卡住")
+    flow.refresh_from_db()
+    assert flow.current_node_id == first
+    assert flow.current_node.status == NodeStatus.PENDING, "the refused advance left its skip behind"
+
+
+def test_advance_may_still_reach_a_final_review(cn):
+    flow = _workflow(cn, [_node(1), _node(2, node_type="FINAL")])
+    assert flow.advance_to_next(reason="卡住")
+    flow.refresh_from_db()
+    assert flow.current_node.node_order == 2
+
+
+def _terminate(client, flow, **body):
+    return client.post(f"/api/v1/workflows/{flow.pk}/terminate/", body, format="json")
+
+
+def test_terminate_ends_the_flow_on_the_record(cn):
+    flow = _three_stops(cn)
+    admin = officer_client(sp.officer("term_admin", "ADMIN", cn))
+    assert (_terminate(admin, flow).status_code, _terminate(admin, flow).data["code"]) == (400, "reason_required")
+    res = _terminate(admin, flow, reason="审批人已不在任")
+    assert res.status_code == 200, res.data
+    flow.refresh_from_db()
+    assert (flow.status, flow.end_reason, flow.current_node_id) == ("CANCELLED", "ADMIN_TERMINATED", None)
+    assert flow.completed_at is not None
+    # Skipped on the record, not left PENDING and not marked approved.
+    assert set(flow.nodes.values_list("status", "skip_kind", "skip_reason")) == {
+        (NodeStatus.SKIPPED, "CANCELLED", "审批人已不在任")}
+    row = AuditLog.objects.get(resource="workflow.terminate", resource_id=str(flow.pk))
+    assert row.changes["reason"] == "审批人已不在任"
+    event = SoulEvent.all_objects.get(soul_id=flow.soul_id, event_type="WORKFLOW_TERMINATED")
+    assert event.payload["reason"] == "审批人已不在任"
+    # Once: the second call changes nothing and records nothing.
+    assert (_terminate(admin, flow, reason="再来").status_code, _terminate(admin, flow, reason="再来").data["code"]) == (
+        409, "workflow_finished")
+    assert AuditLog.objects.filter(resource="workflow.terminate", resource_id=str(flow.pk)).count() == 1
+
+
+@pytest.mark.parametrize("role", ["JUDGE", "MODERATOR"])
+def test_only_an_administrator_may_terminate(cn, role):
+    flow = _three_stops(cn)
+    res = _terminate(officer_client(sp.officer(f"term_{role}", role, cn)), flow, reason="越权")
+    assert res.status_code == 403, res.data
+    flow.refresh_from_db()
+    assert flow.status == ApprovalWorkflowStatus.IN_PROGRESS
+
+
+def test_a_terminated_origin_flow_releases_rebirth_and_leaves_the_disposition_a_way_out(cn):
+    soul, judgment, disposition = _diyu_failed(cn)
+    assert weighing.origin_flow_open(soul=soul) is True
+    flow = _origin_flow(judgment)
+    admin = officer_client(sp.officer("term_origin", "ADMIN", cn))
+    assert _terminate(admin, flow, reason="卡死").status_code == 200
+
+    assert weighing.origin_flow_open(soul=soul) is False
+    disposition.refresh_from_db()
+    # Not passed, so not released: nobody approved this sentence.
+    assert weighing.unfinished_flow(disposition) == "approval_cancelled"
+    judgment.refresh_from_db()
+    assert judgment.verdict == Verdict.FAILED, "ending the flow is not a refusal: the conclusion stands until reopened"
+    # The way out that state already has.
+    reopened = admin.post(f"/api/v1/judgment/{judgment.pk}/reopen-cancelled/", format="json")
+    assert reopened.status_code == 201, reopened.data
+    assert Judgment.all_objects.get(pk=reopened.data["id"]).retrial_of_id == judgment.pk
+
+
+def test_a_terminated_appeal_ladder_closes_the_appeal_upheld(case):
+    sp.walk_flow(case["judgment"])
+    _upheld_once(case)
+    appeal = JudgmentAppeal.all_objects.get(pk=_file(case, escalate=True).data["id"])
+    assert WorkflowService.terminate(appeal.workflow, reason="卡死") is True
+    appeal.refresh_from_db()
+    assert appeal.status == "UPHELD"
