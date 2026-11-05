@@ -75,14 +75,14 @@ CIVILIZATION_DECAY_RATE = {
     # EGYPTIAN gets 0.0 for the same reason EUROPEAN does, and the argument
     # was made once and not carried across.
     #
-    # `MAAT_FEATHER_WEIGHT` (readings.py) is justified in prose: "1 is the
-    # smallest weight a SoulRecord can carry ... a heart with any recorded
-    # wrongdoing beyond a single minimal deed is heavier than the feather.
-    # That is a harsh instrument, and it is meant to be." But `heart_weight` is
-    # the *decayed and rounded* demerit total, and EGYPTIAN was sharing the
-    # generic rate. Measured 2026-08-29: three recorded wrongs of weight 1
-    # decayed to a heart_weight of 1 and passed the weighing; so did a single
-    # wrong of weight 3 committed 150 years before death.
+    # `MAAT_FEATHER_WEIGHT` (readings.py) is 1, the smallest weight a SoulRecord
+    # can carry. `heart_weight` is demerit minus merit, floored at zero: the good
+    # a heart carries lightens it (docs/02 §3.2, user 2026-10-27), and that is the
+    # only thing that may. Both totals are the *decayed and rounded* ones, and
+    # EGYPTIAN was sharing the generic rate. Measured 2026-08-29, when the heart
+    # was still the demerit total alone: three recorded wrongs of weight 1 decayed
+    # to a heart_weight of 1 and passed the weighing; so did a single wrong of
+    # weight 3 committed 150 years before death.
     #
     # This file already made this exact argument for EUROPEAN -- "a label that
     # contradicts the arithmetic under it is worse than either alone" -- and
