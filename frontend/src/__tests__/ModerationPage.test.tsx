@@ -686,7 +686,7 @@ describe("敏感词 · E-08b", () => {
     tenantsMock.list.mockResolvedValue(
       page([
         { id: 1, code: "CN_DIYU", display_name: "中国地府" },
-        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" },
+        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱" },
       ])
     );
     apiMock.copyWords.mockResolvedValue({ data: { copied: 5, skipped: 1 } });
@@ -695,7 +695,7 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
     const dialog = await screen.findByRole("dialog", { name: tZh("social_moderation.words.copy_from") });
     const select = within(dialog).getByLabelText(tZh("social_moderation.words.copy_source"));
-    await within(select).findByRole("option", { name: "欧洲天堂地狱" });
+    await within(select).findByRole("option", { name: "欧洲天堂与地狱" });
     expect(within(select).queryByRole("option", { name: "中国地府" })).toBeNull();
     const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.words.copy_confirm") });
     expect(confirm).toBeDisabled();
@@ -709,7 +709,7 @@ describe("敏感词 · E-08b", () => {
 
   it("a hall's ADMIN is not asked for a target: it copies into its own hall", async () => {
     asAdmin();
-    tenantsMock.list.mockResolvedValue(page([{ id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" }]));
+    tenantsMock.list.mockResolvedValue(page([{ id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱" }]));
     renderPage();
     fireEvent.click(segment("words"));
     fireEvent.click(await screen.findByRole("button", { name: tZh("social_moderation.words.copy_from") }));
@@ -722,7 +722,7 @@ describe("敏感词 · E-08b", () => {
     tenantsMock.list.mockResolvedValue(
       page([
         { id: 1, code: "CN_DIYU", display_name: "中国地府" },
-        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱" },
+        { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱" },
       ])
     );
     apiMock.copyWords.mockResolvedValue({ data: { copied: 2, skipped: 0 } });

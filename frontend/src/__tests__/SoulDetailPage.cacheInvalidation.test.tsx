@@ -281,7 +281,7 @@ describe("SoulDetailPage shows a residence", () => {
     });
     renderPage();
     const residing = await screen.findByTestId("soul-residing");
-    expect(residing).toHaveTextContent("中国地府");
+    expect(residing).toHaveTextContent("organization.civilizations.CHINESE");
     expect(residing).toHaveAttribute("title", "CN_DIYU");
   });
 

@@ -244,7 +244,8 @@ def test_advance_rereads_the_flow_under_its_lock(cn):
 
 def test_advance_with_nowhere_to_go_changes_nothing(cn):
     flow = _workflow(cn, [_node(1)])
-    assert flow.advance_to_next(reason="x") is False
+    with pytest.raises(FinalReviewRequiredError):
+        flow.advance_to_next(reason="x")
     flow.refresh_from_db()
     assert flow.current_node.status == NodeStatus.PENDING and flow.status == ApprovalWorkflowStatus.IN_PROGRESS
 
@@ -593,6 +594,7 @@ def test_ladders_do_not_open_from_a_judgment(cn):
 # ── advance stops at the final review; an administrator can end a flow on the record (user 2026-11-06) ──────
 
 
+@pytest.mark.django_db(transaction=True)
 def test_advance_refuses_a_final_review_and_writes_nothing(cn):
     flow = _workflow(cn, [_node(1, node_type="FINAL"), _node(2)])
     first = flow.current_node_id
