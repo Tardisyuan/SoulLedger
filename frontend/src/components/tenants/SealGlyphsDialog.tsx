@@ -1,11 +1,11 @@
 "use client";
 
-import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
 import { tenantKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
@@ -77,7 +77,7 @@ export function SealGlyphsDialog({ tenant, onClose }: { tenant: Tenant | null; o
     <BaseModal
       isOpen={tenant !== null}
       onClose={() => !save.isPending && onClose()}
-      title={t("tenants.seal.title", { name: localName(tenant, locale, "display_name") })}
+      title={t("tenants.seal.title", { name: tenantLabel(t, tenant, locale) })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>
@@ -115,7 +115,7 @@ export function SealGlyphsDialog({ tenant, onClose }: { tenant: Tenant | null; o
         {civ ? (
           <div className="flex flex-col items-center gap-1" data-testid="seal-preview">
             <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("tenants.seal.preview")}</span>
-            <Seal size={52} civ={civ} glyphs={glyphs} court={tenant?.display_name} />
+            <Seal size={52} civ={civ} glyphs={glyphs} court={tenantLabel(t, tenant, locale)} />
           </div>
         ) : null}
       </form>

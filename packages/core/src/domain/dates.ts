@@ -196,3 +196,9 @@ export function isHeldUntilFatedDate(j: { held_until?: string | null }, now: Dat
 export function isDuatBarred(j: { duat_stage?: string | null }): boolean {
   return j.duat_stage === "NAMELESS" || j.duat_stage === "IMPROPER_BURIAL";
 }
+
+/** `YYYY-MM-DD` in the user's own time zone (`toISOString` would give the UTC day). */
+export function localDateString(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

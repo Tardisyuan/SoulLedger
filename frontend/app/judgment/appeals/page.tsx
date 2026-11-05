@@ -117,7 +117,7 @@ function AppealQueueContent() {
             <>
               <td className="px-3 py-2 whitespace-nowrap">
                 <Link href={`/judgment/appeals/${a.id}`} className={ROW_LINK}>
-                  <CaseNumber value={a.case_number} variant="inline" />
+                  <CaseNumber value={a.case_number} variant="inline" plain />
                 </Link>
               </td>
               <td className="px-3 py-2 text-sm whitespace-nowrap text-[oklch(var(--color-ink))]">{a.soul_name}</td>

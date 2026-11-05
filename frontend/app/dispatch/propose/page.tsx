@@ -1,5 +1,4 @@
 "use client";
-import { localName } from "@soulledger/core/domain/localName";
 import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +13,7 @@ import {
 } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -204,7 +204,7 @@ function ProposeDispatchForm() {
    */
   const sourceCode = user?.tenant?.code;
   const tenantName = (tn: { tenant_code: string; tenant_name: string; tenant_name_en?: string }) =>
-    localName(tn, locale, "tenant_name") || tn.tenant_code;
+    tenantLabel(t, { code: tn.tenant_code, display_name: tn.tenant_name, display_name_en: tn.tenant_name_en }, locale);
   // 关了调拨的殿(`dispatch_enabled=false`)仍列出来但禁用,右侧写原因;后端的
   // `check_target_accepts` 是真正的门,这里只是不让人填了再被拒。
   const closed = (tn: { dispatch_enabled?: boolean }) => tn.dispatch_enabled === false;

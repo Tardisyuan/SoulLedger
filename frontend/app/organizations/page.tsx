@@ -2,6 +2,7 @@
 import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import type { Organization } from "@soulledger/core/api";
+import { isCivilizationOption } from "@soulledger/core/config/civilizations";
 import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -93,7 +94,8 @@ function OrganizationsPageContent() {
 
   // Group by category (civilization)
   const grouped: Record<string, Organization[]> = organizations.reduce((acc, org) => {
-    const category = org.category || "UNKNOWN";
+    // Only the civilizations have copy; anything else goes under the one 「未归属文明」 heading.
+    const category = isCivilizationOption(org.category) ? org.category : "UNKNOWN";
     if (!acc[category]) acc[category] = [];
     acc[category].push(org);
     return acc;
@@ -190,7 +192,7 @@ function OrganizationsPageContent() {
       )}
       <div className="space-y-6">
         {Object.entries(grouped).map(([category, orgs]) => {
-          const name = t(`organization.civilizations.${category}`) || category;
+          const name = t(`organization.civilizations.${category}`);
           const isCollapsed = collapsed[category];
 
           return (

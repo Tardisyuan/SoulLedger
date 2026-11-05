@@ -1,5 +1,6 @@
 "use client";
 
+import { localDateString } from "@soulledger/core/domain/dates";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
@@ -35,11 +36,6 @@ interface Props {
   onClose: () => void;
 }
 
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
 export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
   const { t } = useI18n();
   const qc = useQueryClient();
@@ -47,7 +43,7 @@ export function TudiRegisterDeathDialog({ soul, tudi, onClose }: Props) {
   const [soulId, setSoulId] = useState(soul?.id ?? "");
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
-  const [deathDate, setDeathDate] = useState(today);
+  const [deathDate, setDeathDate] = useState(() => localDateString());
   const [location, setLocation] = useState("");
   const [report, setReport] = useState("");
   const [refusal, setRefusal] = useState<string | null>(null);

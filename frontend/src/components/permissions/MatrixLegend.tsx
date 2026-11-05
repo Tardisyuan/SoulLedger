@@ -2,6 +2,7 @@
 
 import { Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel } from "@/src/lib/domainNames";
 import { codenameOf, findCountParadox, findNonSubsetPair } from "./matrixDiff";
 
 type NonSubsetPair = ReturnType<typeof findNonSubsetPair>;
@@ -34,8 +35,8 @@ export function MatrixLegend({
       {nonSubsetPair && (
         <p className="text-[oklch(var(--color-ink-muted))]">
           {t("permissions.matrix.legend_nonsubset", {
-            roleA: roleMeta[nonSubsetPair.a]?.display_name || nonSubsetPair.a,
-            roleB: roleMeta[nonSubsetPair.b]?.display_name || nonSubsetPair.b,
+            roleA: roleLabel(t, nonSubsetPair.a, roleMeta[nonSubsetPair.a]),
+            roleB: roleLabel(t, nonSubsetPair.b, roleMeta[nonSubsetPair.b]),
             codenamesA: nonSubsetPair.aOnly.map((id) => codenameOf(permsById, id)).slice(0, 4).join(", "),
             codenamesB: nonSubsetPair.bOnly.map((id) => codenameOf(permsById, id)).slice(0, 4).join(", "),
           })}
@@ -44,9 +45,9 @@ export function MatrixLegend({
       {countParadox && (
         <p className="text-[oklch(var(--color-ink-muted))]">
           {t("permissions.matrix.legend_countparadox", {
-            higher: roleMeta[countParadox.higher]?.display_name || countParadox.higher,
+            higher: roleLabel(t, countParadox.higher, roleMeta[countParadox.higher]),
             higherCount: String(countParadox.higherCount),
-            lower: roleMeta[countParadox.lower]?.display_name || countParadox.lower,
+            lower: roleLabel(t, countParadox.lower, roleMeta[countParadox.lower]),
             lowerCount: String(countParadox.lowerCount),
             codenames: countParadox.exclusiveToLower.map((id) => codenameOf(permsById, id)).join(", "),
           })}

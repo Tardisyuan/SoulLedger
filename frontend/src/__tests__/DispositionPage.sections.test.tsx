@@ -3,7 +3,7 @@
  *
  * 段由服务端决定:每段一次 `?section=` 查询,段标上的数是服务端的 `count`,不是本页行数;
  * 期满由服务端的期满检查写下,前端不再从 `term_start + 年限` 推算 —— 过了终点而检查还没跑到
- * 的行仍在「执行中」(条满、余 0 天),**不许**被前端挪进期满。期满段带 `soul_reborn=false`。
+ * 的行仍在「执行中」(条满、期满未释放),**不许**被前端挪进期满。期满段带 `soul_reborn=false`。
  * 此外:待执行有判决列(字形 ✓ ✕ ◇ ↺),行尾动作只在待执行与期满(规则 15),永恒画虚线框。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -63,9 +63,9 @@ describe("termState:期限条的读数,不再判期满", () => {
     expect(running.daysLeft).toBeGreaterThan(365);
   });
 
-  it("过了终点也只是画满、余 0 天 —— 期满是服务端说了算", () => {
+  it("过了终点也只是画满、标 overdue —— 期满是服务端说了算", () => {
     const past = termState(row({ id: "b", term_start: { year: year - 5, month: 1, day: 1 }, term_end: { year: year - 2, month: 1, day: 1 } }), NOW);
-    expect(past).toMatchObject({ kind: "running", fraction: 1, daysLeft: 0 });
+    expect(past).toMatchObject({ kind: "running", fraction: 1, daysLeft: 0, overdue: true });
   });
 
   it("永恒、缺期限、缺起算各有其读数", () => {
@@ -157,7 +157,8 @@ describe("处置页按服务端分三段", () => {
     expect(names("disposition-expired-row")).toEqual(["Soul x"]);
     const [overdue] = screen.getAllByTestId("disposition-running-row");
     expect(within(overdue).getByRole("meter")).toHaveAttribute("aria-valuenow", "100");
-    expect(within(overdue).getByText("disposition.days_left:0")).toBeInTheDocument();
+    expect(within(overdue).getByText("disposition.term_overdue")).toBeInTheDocument();
+    expect(within(overdue).queryByText("disposition.days_left:0")).toBeNull();
   });
 
   it("待执行的判决列带字形;没有审判的写未记录", async () => {

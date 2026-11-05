@@ -446,7 +446,6 @@
       "confirm_delete_action": "Nehem Er Per Wehem",
       "deleting": "Em Wehem Seth...",
       "delete_confirm_message": "Nehem Er Per Wehem; Nen Fekh Djet. Ankh Wehem Em Smen Hemsu › Per Wehem; Wedja Hena Wetep Smen.",
-      "delete_success": "Ba Wehem Seth",
       "error_update": "Nen Khemen",
       "error_delete": "Nen Wehem Seth",
       "failed": "Nen Kheper",
@@ -2124,7 +2123,7 @@
       "concluded_at": "Ahet Khetem",
       "notes": "Medu Seth",
       "render_verdict": "Djed Wedja",
-      "conclude_success": "Wedja Khetem Seth",
+      "conclude_success": "Wedja Khetem Seth · Nen Wedja Djer",
       "conclude_error": "Nen Khetem Wedja",
       "select_verdict": "Setep Wedja",
       "concluding": "Em Khetem...",
@@ -3129,7 +3128,8 @@
       "CHINESE": "Duat Sherer",
       "EGYPTIAN": "Duat Kemet",
       "EUROPEAN": "Duat Europa",
-      "GREEK": "Duat Haunebut"
+      "GREEK": "Duat Haunebut",
+      "UNKNOWN": "Sesh Nefer Isfet"
     },
     "root": "Tepy",
     "organizations_count": "Hut {{count}}",
@@ -8412,7 +8412,7 @@
     "role_admin_desc": "Maa Taui Neb 4: Ren Aq, Netjer Hena Was, Smen, Medew Maa.",
     "role_judge": "Sab Wedja",
     "role_judge_desc": "Hru Sab: Shesep Sep, Khetem Wedja, Iri Wetep, Hesy.",
-    "role_moderator": "Sab Maat",
+    "role_moderator": "Heri-Tep Per Ahet",
     "role_moderator_desc": "Maat Shemsu: Sedjem, Gerh, Medu Djeseru.",
     "banner_short": "Maa · Sesh Em Medjat Pen Wa",
     "landing": {

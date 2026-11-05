@@ -1,11 +1,13 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { localDateString } from "@soulledger/core/domain/dates";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import {
@@ -361,7 +363,8 @@ export default function SoulDetailPage() {
   // 译回操作卡认的那个名字。失效与拒绝文案逐条照旧。
 
   const dieMutation = useMutation({
-    mutationFn: (soulId: string) => soulsApi.die(soulId, {}),
+    // 发用户本地的日期:不发时服务端按 UTC 取「今天」,东八区凌晨标记会写成前一天。
+    mutationFn: (soulId: string) => soulsApi.die(soulId, { death_date: localDateString() }),
     onSuccess: () => {
       // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
       // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
@@ -546,7 +549,6 @@ export default function SoulDetailPage() {
     if (!soul) return;
     try {
       await deleteSoulMutation.mutateAsync(soul.id);
-      showToast(t("souls.detail.delete_success"), "success");
       router.push("/souls");
     } catch (error) {
       // 其他失败由 hook 报;可归档的 409 在这里换屏。
@@ -741,7 +743,7 @@ export default function SoulDetailPage() {
             </span>
           ) : (
             <span data-testid="soul-residing" title={soul.home_tenant.code}>
-              {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: soul.home_tenant.display_name })}
+              {tf("souls.detail.residing", "Residing here · home: {{tenant}}", { tenant: tenantLabel(t, soul.home_tenant, locale) })}
             </span>
           )}
         </>

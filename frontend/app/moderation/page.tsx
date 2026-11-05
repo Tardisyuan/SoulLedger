@@ -1,6 +1,5 @@
 "use client";
 
-import { localName } from "@soulledger/core/domain/localName";
 import { useEffect, useState } from "react";
 import {
   useHandledContent,
@@ -9,6 +8,7 @@ import {
   useSocialMutes,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -73,7 +73,7 @@ function ModerationPageContent() {
     handled: useHandledContent({}).data?.count,
   };
 
-  const scope = localName(user?.tenant, locale, "display_name") || t("social_moderation.scope_all");
+  const scope = tenantLabel(t, user?.tenant, locale) || t("social_moderation.scope_all");
 
   return (
     <PageShell

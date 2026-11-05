@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { CIVILIZATION_OPTIONS } from '../config/civilizations'
+import { localDateString } from '../domain/dates'
 
 // No JIT. On the first object parse zod 4 probes `new Function("")` to decide
 // whether it may compile a fast path. It catches the failure, but under the
@@ -35,6 +36,9 @@ export const loginSchema = z.object({
 
 // ── Soul ─────────────────────────────────────────────
 
+// 只比「YYYY-MM-DD」:公元前的年份以 - 开头,字典序上小于任何公元后的日期。
+const birthDate = z.string().optional().nullable().refine((v) => !v || v <= localDateString(), '出生日期不能晚于今天')
+
 export const soulCreateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   // Derived from CIVILIZATION_OPTIONS, not retyped. This enum spelled three
@@ -48,21 +52,24 @@ export const soulCreateSchema = z.object({
   // UNKNOWN is a symptom of a misconfigured tenant, not a cosmology anyone
   // would deliberately choose. UNKNOWN is absent from CIVILIZATION_OPTIONS for
   // the same reason, so deriving keeps that property instead of restating it.
+  //
+  // Optional because only an administrator bound to no hall chooses: everyone else
+  // creates in their own hall and the form has no such field for them.
   civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
-  }),
-  birth_date: z.string().optional().nullable(),
-  origin_location: z.string().max(200, '地点最多200位').optional().nullable(),
+  }).optional(),
+  birth_date: birthDate,
+  origin_location: z.string().max(255, '地点最多255位').optional(),
   // 出身地域(第四十五批):"" 是不详。与 `SoulOriginRegion` 同三个值。
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
 })
 
 export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
-  birth_date: z.string().optional().nullable(),
+  birth_date: birthDate,
   death_date: z.string().optional().nullable(),
   fated_death_date: z.string().optional().nullable(),
-  origin_location: z.string().max(200, '地点最多200位').optional(),
+  origin_location: z.string().max(255, '地点最多255位').optional(),
   origin_region: z.enum(['', 'EUROPE', 'ASIA']).optional(),
   duat_passage: z.enum(['', 'EARLY_DEATH', 'NAMELESS', 'IMPROPER_BURIAL']).optional(),
   // 只地府:四大部洲(docs/07 §人道);'' 是不详。与 `SoulContinent` 同五个值。

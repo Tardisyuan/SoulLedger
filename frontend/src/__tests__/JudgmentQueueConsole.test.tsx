@@ -908,6 +908,8 @@ describe("useHall", () => {
     expect(renderHook(() => useHall("")).result.current).toBeUndefined();
     currentUser = mockUser;
     expect(renderHook(() => useHall("规制司")).result.current).toBe("规制司");
+    // 未绑殿的全局管理员:不写「第十殿」。
+    expect(renderHook(() => useCourtOffice()).result.current).toBeUndefined();
   });
 });
 

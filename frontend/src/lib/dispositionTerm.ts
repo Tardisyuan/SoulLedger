@@ -10,15 +10,15 @@ import { daysLeft, historicalDateMs, termFraction } from "@soulledger/core/domai
  * 起点是 `term_start`,终点是服务端算好的 `term_end`(与期满检查同一个算法)。服务端没给
  * `term_end` 而起点与年限都在时才自己加年限 —— 旧载荷的兜底,不是另一套判定。
  *
- * 过了终点、检查还没跑到的行(检查一天一次)仍是「执行中」:条画满、余 0 天,
- * 不在前端把它挪进「期满」。
+ * 过了终点、检查还没跑到的行(检查一天一次)仍排在「执行中」,不在前端把它挪进「期满」:条画满,
+ * `overdue` 为真,行末写「期满未释放」,不写「余 0 天 · 服刑中」。
  */
 export type TermState =
   | { kind: "eternal" }
   /** 非永恒却没记期限(希腊 FAILED 的正常情形,见 Disposition.sentence_years 的注释)。 */
   | { kind: "no_term" }
   | { kind: "no_start"; years: number }
-  | { kind: "running"; start: HistoricalDate; end: HistoricalDate; fraction: number; daysLeft: number };
+  | { kind: "running"; start: HistoricalDate; end: HistoricalDate; fraction: number; daysLeft: number; overdue: boolean };
 
 export function termState(
   d: Pick<Disposition, "is_eternal" | "sentence_years" | "term_start" | "term_end">,
@@ -32,6 +32,7 @@ export function termState(
   const end: HistoricalDate = d.term_end ?? { ...start, year: start.year + years };
   const from = historicalDateMs(start);
   const to = historicalDateMs(end);
+  const left = daysLeft(to, now);
   return {
     kind: "running",
     start,
@@ -39,6 +40,7 @@ export function termState(
     // A zero-length or inverted term has nothing to measure (the soul app hides its bar);
     // this page always draws one, and a term with no length is served.
     fraction: termFraction(from, to, now) ?? 1,
-    daysLeft: daysLeft(to, now),
+    daysLeft: left,
+    overdue: left === 0,
   };
 }

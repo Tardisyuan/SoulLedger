@@ -9,6 +9,7 @@ import { userKeys } from "@soulledger/core/query_keys";
 import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useDebouncedValue } from "@soulledger/core/hooks/useDebouncedValue";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { roleLabel, tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { UserModal } from "@/src/components/users/UserModal";
@@ -147,7 +148,7 @@ function UsersRoute() {
   const rolesQuery = useRoles();
   const roleFilterOptions = (rolesQuery.data ?? []).map((r) => ({
     value: r.name,
-    label: r.is_builtin ? t(`users.roles.${r.name}`) : r.display_name || r.name,
+    label: roleLabel(t, r.name, r),
   }));
   // The same table, by name, for the badge in each row. A custom role has no
   // `users.roles.*` entry and cannot — its name is data, not UI copy — so
@@ -371,7 +372,7 @@ function UsersRoute() {
               <UserRoleChips role={user.role} extraRoles={user.extra_roles} customLabelOf={customRoleLabel} />
             </td>}
             {show("tenant") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
-              {user.tenant?.display_name || user.tenant?.code || "-"}
+              {tenantLabel(t, user.tenant, locale) || "-"}
             </td>}
             {/* 机构与职务只由管理员在编辑弹层里设(`PATCH /users/{id}/`);此前列表上没有,机构页的「查看人员」因此总是空的也没人看得出。 */}
             {show("organization") && <td data-testid="user-organization" className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>

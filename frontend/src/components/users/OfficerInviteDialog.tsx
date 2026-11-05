@@ -7,6 +7,7 @@ import { userKeys } from "@soulledger/core/query_keys";
 import { useRoles } from "@soulledger/core/hooks/usePermissionMatrix";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
@@ -25,7 +26,7 @@ const FIELD_OF: Record<string, "email" | "role" | "username"> = {
 };
 
 export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
@@ -120,7 +121,7 @@ export function OfficerInviteDialog({ isOpen, onClose }: { isOpen: boolean; onCl
               clear("tenant");
               setTenant(e.target.value);
             }}
-            options={[{ value: "", label: "" }, ...tenantChoices.map((x) => ({ value: x.code, label: x.display_name || x.code }))]}
+            options={[{ value: "", label: "" }, ...tenantChoices.map((x) => ({ value: x.code, label: tenantLabel(t, x, locale) }))]}
           />
         )}
         <TextField

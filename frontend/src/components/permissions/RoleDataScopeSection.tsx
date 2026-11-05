@@ -13,6 +13,7 @@ import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
 import { useTenantNames } from "@soulledger/core/hooks/useTenants";
 import { useDataScopeResources, useRoleDataScope, useSaveRoleDataScope } from "@soulledger/core/hooks/useRoleDataScope";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
@@ -26,7 +27,7 @@ const FOLLOW = "";
  * ADMIN 角色恒为全部、不可改;只有无殿管理员能改,别人只读(后端同样拦)。
  */
 export function RoleDataScopeSection({ role }: { role: Role }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const { isTenantExempt } = usePermissions();
   const headingId = useId();
@@ -37,7 +38,7 @@ export function RoleDataScopeSection({ role }: { role: Role }) {
   const resources = useDataScopeResources(!fixed);
   const orgs = useAllOrganizations({ enabled: !fixed });
   const tenants = useTenantNames({ enabled: !fixed });
-  const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, x.display_name || x.code]));
+  const tenantNames = new Map((tenants.data ?? []).map((x) => [x.id, tenantLabel(t, x, locale)]));
   const save = useSaveRoleDataScope();
   const [draft, setDraft] = useState<RoleDataScopeConfig | null>(null);
   const current = draft ?? config.data;

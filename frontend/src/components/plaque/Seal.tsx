@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
@@ -101,7 +102,7 @@ export function Seal({
   const two = shown.length === 2;
   const small = size <= 32;
   const fontSize = Math.round(size * (two ? EG_TWO_GLYPH_SCALE : small ? SMALL_GLYPH_SCALE : GLYPH_SCALE));
-  const label = t("seal.aria", { court: court ?? user?.tenant?.display_name ?? "" });
+  const label = t("seal.aria", { court: court ?? tenantLabel(t, user?.tenant) });
 
   return (
     <span

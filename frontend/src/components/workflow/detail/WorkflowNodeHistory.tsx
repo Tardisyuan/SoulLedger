@@ -25,6 +25,7 @@ export function WorkflowNodeHistory({
   nodes,
   verdictColors,
   verdictGlyphs,
+  statusGlyphs,
   currentNode,
 }: {
   nodes: ApprovalNode[];
@@ -32,6 +33,8 @@ export function WorkflowNodeHistory({
   currentNode?: string | null;
   verdictColors: Record<string, string>;
   verdictGlyphs: Record<string, string>;
+  /** 没有判决的站(跳过、越级、自动经过)按状态取字形。 */
+  statusGlyphs: Record<string, string>;
 }) {
   const { t, locale, formatDateTime } = useI18n();
   // 自动分流那一步(第四十五批 W-5):没有判决可写,记成「按出身地域分流：欧洲 → 初审 · Aeacus」。
@@ -71,8 +74,10 @@ export function WorkflowNodeHistory({
                   needs no hand-rolled attribute, unlike the string-form
                   badge in the Nodes tab above. It nests inside Badge for
                   the same reason the status badge does. */}
-              <Badge className={verdictColors[node.verdict ?? ""] || ""} glyph={verdictGlyphs[node.verdict ?? ""] ?? "?"}>
-                <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
+              <Badge className={verdictColors[node.verdict ?? ""] || ""} glyph={verdictGlyphs[node.verdict ?? ""] ?? statusGlyphs[node.status] ?? "?"}>
+                {node.verdict
+                  ? <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
+                  : <DomainEnum namespace="workflow.status" value={node.status} />}
               </Badge>
             </div>
             <div className="text-xs text-[oklch(var(--color-ink-muted))]">

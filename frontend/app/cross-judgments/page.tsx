@@ -9,6 +9,7 @@ import Link from "next/link";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { tenantLabel } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
@@ -191,7 +192,7 @@ export default function CrossJudgmentsPage() {
               </td>
               {columnVis.isVisible("initiated_by") && <td className="px-3 py-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 {/* 展示名在前、代码在后(列表接口两样都给)。 */}
-                {localName(j, locale, "initiating_tenant_display_name") || j.initiating_tenant_code}
+                {tenantLabel(t, { code: j.initiating_tenant_code, display_name: localName(j, locale, "initiating_tenant_display_name") })}
                 <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{j.initiating_tenant_code}</span>
               </td>}
               {columnVis.isVisible("status") && <td className="px-3 py-2 whitespace-nowrap">
