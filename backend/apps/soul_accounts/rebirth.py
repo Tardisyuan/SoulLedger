@@ -159,7 +159,7 @@ REFUSALS = {
 }
 
 
-def _create_workflow(soul, nodes, *, name, name_en, original=None):
+def _create_workflow(soul, nodes, *, name, name_en="", original=None):
     from apps.workflow.models import (
         ApprovalNode,
         ApprovalWorkflow,
