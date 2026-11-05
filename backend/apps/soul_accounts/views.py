@@ -70,7 +70,9 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     filterset_fields = ["soul", "cycle"]
 
     def get_queryset(self):
-        qs = SoulAccount.objects.select_related("soul", "user", "mfa").order_by("soul", "cycle")
+        # 回收站里的灵魂不上官员列表(只隐藏,账号与凭据的状态不动;恢复后原样回来)。
+        qs = SoulAccount.objects.filter(soul__is_deleted=False).select_related(
+            "soul", "user", "mfa").order_by("soul", "cycle")
         return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=ProvisionRequestSerializer,
@@ -164,7 +166,9 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
 
     def get_queryset(self):
         svc.expire_due_credentials()
-        qs = InitialCredential.objects.select_related("soul", "account__user", "revealed_by", "delivered_by")
+        # 回收站里的灵魂不上待交付列表,也看不了明文、打不了交付单(只隐藏,凭据状态不动;恢复后原样回来)。
+        qs = InitialCredential.objects.filter(soul__is_deleted=False).select_related(
+            "soul", "account__user", "revealed_by", "delivered_by")
         return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=None, responses={200: RevealedCredentialSerializer, 409: SoulErrorSerializer,
