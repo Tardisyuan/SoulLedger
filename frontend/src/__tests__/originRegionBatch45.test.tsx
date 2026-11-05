@@ -401,7 +401,7 @@ describe("流程详情:分流一步与没走到的站(W-5)", () => {
   });
 
   it("历史:「按出身地域分流 → 亚洲 → Rhadamanthus」,不画判决徽章", () => {
-    wrap(<WorkflowNodeHistory nodes={ROUTED_NODES} verdictColors={{}} verdictGlyphs={{}} currentNode={null} />);
+    wrap(<WorkflowNodeHistory nodes={ROUTED_NODES} verdictColors={{}} verdictGlyphs={{}} statusGlyphs={{}} currentNode={null} />);
     const line = document.querySelector("[data-auto-routed]")!;
     expect(line).toHaveTextContent(
       tZh("workflow.history.auto_routed", { region: "亚洲", node: "Rhadamanthus" })
@@ -411,7 +411,7 @@ describe("流程详情:分流一步与没走到的站(W-5)", () => {
 
   it("正在分区判官那一站时(它还是 PENDING),也认得走的是亚洲那条", () => {
     const running = ROUTED_NODES.map((n) => (n.id === "n3" ? { ...n, status: "PENDING", verdict: null } : n));
-    wrap(<WorkflowNodeHistory nodes={running} verdictColors={{}} verdictGlyphs={{}} currentNode="n3" />);
+    wrap(<WorkflowNodeHistory nodes={running} verdictColors={{}} verdictGlyphs={{}} statusGlyphs={{}} currentNode="n3" />);
     expect(document.querySelector("[data-auto-routed]")).toHaveTextContent("亚洲");
     expect(document.querySelector("[data-auto-routed]")).not.toHaveTextContent("不详");
   });
