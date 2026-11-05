@@ -181,6 +181,11 @@ def test_civilization_must_be_the_importers_own(world):
     assert _errors(r) == [{("civilization", "civilization_mismatch")}, set()]
 
 
+def test_a_future_birth_is_a_cell_error_on_birth_date(world):
+    r = _post(world["client"], PREVIEW, HEADER + _row(birth_date="2999"))
+    assert _errors(r) == [{("birth_date", "birth_in_future")}]
+
+
 def test_cross_tenant_commit_is_refused_and_writes_nothing(world):
     r = _post(world["client"], COMMIT, HEADER + _row(name="Sennedjem", civilization="EGYPTIAN"))
     assert r.status_code == 422

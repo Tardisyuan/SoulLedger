@@ -16,6 +16,7 @@ from apps.souls.dates import (
     ERROR,
     MAX_PLAUSIBLE_LIFESPAN_YEARS,
     WARNING,
+    check_birth_date,
     check_record_date,
     check_soul_dates,
     check_term_start,
@@ -96,6 +97,20 @@ class TestSoulRules:
     def test_a_living_soul_is_not_missing_anything(self):
         """Most souls in the system have no death date. That is not an error."""
         assert check_soul_dates((1943, 5, 2), (None, None, None)) == []
+
+    def test_a_birth_is_refused_only_when_it_is_certainly_later_than_today(self):
+        import datetime
+
+        from django.utils import timezone
+
+        today = timezone.localdate()
+        tomorrow = today + datetime.timedelta(days=1)
+        assert _codes(check_birth_date((2999, None, None))) == ["birth_in_future"]
+        assert _codes(check_birth_date((tomorrow.year, tomorrow.month, tomorrow.day))) == ["birth_in_future"]
+        assert check_birth_date((today.year, today.month, today.day)) == []
+        assert check_birth_date((today.year, None, None)) == []  # "some time this year"
+        assert check_birth_date((-612, None, None)) == []
+        assert check_birth_date((None, None, None)) == []
 
     def test_death_before_birth_is_an_error(self):
         problems = check_soul_dates((2019, None, None), (1943, None, None))

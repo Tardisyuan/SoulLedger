@@ -352,6 +352,7 @@ export const SOUL_IMPORT_ROW_CODES = [
   "invalid_origin_region",
   "invalid_characters",
   "invalid_date",
+  "birth_in_future",
   "death_before_birth",
   "implausible_lifespan",
   "duplicate_in_file",
