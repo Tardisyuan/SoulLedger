@@ -25,7 +25,7 @@ django.setup()
 
 from django.apps import apps  # noqa: E402
 from django.core.management import call_command  # noqa: E402
-from django.db.models import DateTimeField  # noqa: E402
+from django.db.models import DateTimeField, Q  # noqa: E402
 from django.utils import timezone  # noqa: E402
 
 from apps.audit.models import AuditAction, AuditLog  # noqa: E402
@@ -89,44 +89,64 @@ OFFICERS = {
 #   flow         concluded, the approval flow half walked
 #   failed       concluded FAILED, flow walked, sentence being served
 #   passed       concluded PASSED, flow walked, waiting to be reborn
+#   served       the sentence served and the soup drunk: the last page of the first life (the tour's protagonist)
 #   reborn       the whole way round, once
+#   full         as reborn, by way of a FAILED verdict and a served sentence
+# A case still open is open now, so its soul died this year: those are ordinary people. The ancients all have finished lives.
 SOULS = {
     "CN_DIYU": [
-        ("屈原", 66, 58, "full"), ("窦娥", 70, 2, "queue"), ("梁山伯", 66, 5, "passed"), ("祝英台", 71, 4, "passed"),
-        ("牛郎", 60, 10, "alive"), ("织女", 88, 1, "alive"), ("杜丽娘", 55, 12, "queue"), ("柳梦梅", 48, 9, "claimed"),
-        ("白素贞", 40, 35, "flow"), ("法海", 30, 44, "flow"), ("曹操", 50, 80, "failed"), ("董卓", 4, 96, "failed"),
-        ("秦桧", 3, 99, "failed"), ("陈世美", 12, 61, "queue"), ("潘金莲", 18, 52, "claimed"), ("聂小倩", 45, 20, "citygod"),
-        ("宁采臣", 58, 6, "citygod"), ("刘伶", 33, 27, "alive"),
+        # Twice: the first life, which the tour follows, and the same person gone round, whom /rebirths lists.
+        ("屈原", 86, 12, "served"), ("屈原", 86, 12, "full"), ("窦娥", 70, 2, "passed"), ("梁山伯", 66, 5, "passed"), ("祝英台", 71, 4, "passed"),
+        ("牛郎", 60, 10, "alive"), ("织女", 88, 1, "alive"), ("杜丽娘", 55, 12, "passed"), ("柳梦梅", 48, 9, "passed"),
+        ("白素贞", 40, 35, "failed"), ("法海", 30, 44, "failed"), ("曹操", 50, 80, "failed"), ("董卓", 4, 96, "failed"),
+        ("秦桧", 3, 99, "failed"), ("陈世美", 12, 61, "failed"), ("潘金莲", 18, 52, "failed"), ("聂小倩", 45, 20, "passed"),
+        ("宁采臣", 58, 6, "passed"), ("刘伶", 33, 27, "alive"),
         ("李靖", 64, 22, "due"), ("杨戬", 71, 17, "due"), ("钱塘君", 38, 49, "due"),
+        ("周德海", 70, 2, "queue"), ("林秀英", 55, 12, "queue"), ("陈建国", 12, 61, "queue"), ("王桂兰", 48, 9, "claimed"), ("赵志强", 18, 52, "claimed"),
+        ("孙玉梅", 40, 35, "flow"), ("马国栋", 30, 44, "flow"), ("胡春花", 45, 20, "citygod"), ("郑立民", 58, 6, "citygod"),
     ],
     "EU_HEAVEN_HELL": [
-        ("Tristan", 62, 30, "purgatory"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "queue"), ("Francesca da Rimini", 35, 45, "failed"),
-        ("Paolo Malatesta", 34, 46, "failed"), ("Faust", 41, 70, "failed"), ("Ulysses", 50, 60, "queue"), ("Orlando", 77, 13, "passed"),
+        ("Tristan", 62, 30, "purgatory"), ("Isolde", 64, 28, "passed"), ("Dido", 40, 55, "failed"), ("Francesca da Rimini", 35, 45, "failed"),
+        ("Paolo Malatesta", 34, 46, "failed"), ("Faust", 41, 70, "failed"), ("Ulysses", 50, 60, "failed"), ("Orlando", 77, 13, "passed"),
         ("Roland", 85, 9, "passed"), ("Guinevere", 60, 25, "alive"), ("Lancelot", 66, 31, "purgatory"), ("Percival", 90, 3, "alive"),
+        ("Marco Bellini", 40, 55, "queue"), ("Anna Keller", 50, 60, "queue"),
     ],
     "EG_DUAT": [
-        ("Sinuhe", 72, 18, "claimed"), ("Khufu", 44, 40, "flow"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
-        ("Hatshepsut", 83, 12, "queue"), ("Akhenaten", 30, 65, "flow"), ("Ani the Scribe", 80, 6, "passed"), ("Tutu", 75, 8, "alive"),
-        ("Merit-Neith", 68, 14, "alive"), ("Setne", 22, 58, "failed"), ("Bata", 57, 21, "flow"), ("Anpu", 61, 19, "queue"),
+        ("Sinuhe", 72, 18, "passed"), ("Khufu", 44, 40, "passed"), ("Nefertari", 91, 4, "passed"), ("Imhotep", 95, 2, "passed"),
+        ("Hatshepsut", 83, 12, "passed"), ("Akhenaten", 30, 65, "failed"), ("Ani the Scribe", 80, 6, "passed"), ("Tutu", 75, 8, "alive"),
+        ("Merit-Neith", 68, 14, "alive"), ("Setne", 22, 58, "failed"), ("Bata", 57, 21, "passed"), ("Anpu", 61, 19, "passed"),
+        ("Karim Mansour", 72, 18, "claimed"), ("Laila Hassan", 83, 12, "queue"), ("Omar Naguib", 61, 19, "queue"),
+        ("Mona Fahmy", 44, 40, "flow"), ("Tarek Sabry", 30, 65, "flow"), ("Hoda Saleh", 57, 21, "flow"),
     ],
     "GR_HADES": [
-        ("Orpheus", 74, 16, "queue"), ("Eurydice", 80, 5, "passed"), ("Sisyphus", 9, 93, "failed"), ("Tantalus", 6, 97, "failed"),
-        ("Achilles", 66, 42, "flow"), ("Patroclus", 73, 11, "passed"), ("Odysseus", 69, 37, "queue"), ("Penelope", 94, 2, "reborn"),
-        ("Antigone", 88, 7, "alive"), ("Hector", 86, 10, "alive"), ("Ixion", 5, 88, "failed"), ("Alcestis", 92, 3, "queue"),
+        ("Orpheus", 74, 16, "passed"), ("Eurydice", 80, 5, "passed"), ("Sisyphus", 9, 93, "failed"), ("Tantalus", 6, 97, "failed"),
+        ("Achilles", 66, 42, "passed"), ("Patroclus", 73, 11, "passed"), ("Odysseus", 69, 37, "passed"),
+        # Twice, for the reason 屈原 is.
+        ("Penelope", 94, 2, "served"), ("Penelope", 94, 2, "reborn"),
+        ("Antigone", 88, 7, "alive"), ("Hector", 86, 10, "alive"), ("Ixion", 5, 88, "failed"), ("Alcestis", 92, 3, "passed"),
+        ("Nikos Pappas", 74, 16, "queue"), ("Eleni Vlachou", 69, 37, "queue"), ("Stavros Kouris", 66, 42, "flow"), ("Katerina Doukas", 92, 3, "queue"),
     ],
 }
 
 BIOS = {
-    "屈原": "楚三闾大夫,投汨罗而死。", "窦娥": "含冤负屈,六月飞雪。", "曹操": "挟天子以令诸侯。", "秦桧": "以莫须有之罪杀岳飞。",
+    "屈原": "楚三闾大夫,谏怀王不听,再放逐,自沉汨罗(《史记·屈原贾生列传》)。", "窦娥": "含冤负屈,六月飞雪。", "曹操": "挟天子以令诸侯。", "秦桧": "以莫须有之罪杀岳飞。",
     "Faust": "Sold his soul for knowledge and did not read the terms.", "Sisyphus": "Cheated death twice; pushes a stone uphill.",
     "Orpheus": "Looked back.", "Tantalus": "Served his son to the gods.", "Imhotep": "Architect of the Step Pyramid.",
     "Nefertari": "The one for whom the sun shines.", "Roland": "Blew the horn too late at Roncevaux.",
+    "Francesca da Rimini": "Daughter of Guido da Polenta of Ravenna, killed with Paolo by her husband at Rimini; Dante meets her in the second circle (Inferno V).",
+    "Percival": "Perceval the Welshman, the knight of the Grail in Chretien de Troyes's Conte du Graal.",
+    "Penelope": "Queen of Ithaca, who kept the suitors off for twenty years (Odyssey).",
 }
 
 PLACES = {
     "CN_DIYU": ["汨罗", "楚州", "会稽", "钱塘", "长安", "洛阳", "金陵"], "EU_HEAVEN_HELL": ["Ravenna", "Rimini", "Carthage", "Wittenberg", "Camelot", "Ithaca"],
     "EG_DUAT": ["Memphis", "Thebes", "Abydos", "Saqqara", "Amarna"], "GR_HADES": ["Thrace", "Corinth", "Phthia", "Argos", "Thebes"],
 }
+
+#: Where the person really came from, ahead of the pool above. Keyed by name, read in `make_soul`.
+ORIGIN = {"屈原": "秭归", "Francesca da Rimini": "Ravenna", "Percival": "Wales", "Nefertari": "Thebes", "Penelope": "Ithaca"}
+#: Where they died, when that is not where they came from.
+DIED_AT = {"屈原": "汨罗", "Francesca da Rimini": "Rimini"}
 
 #: 判词,按各文明自己的说法(docs/01_*):埃及、欧洲没有转世。
 NOTES = {
@@ -135,6 +155,9 @@ NOTES = {
     "EG_DUAT": {"PASSED": "心不重于羽,入芦苇原。", "FAILED": "心重于羽,交阿米特吞噬。"},
     "GR_HADES": {"PASSED": "善者往至福岛,千年后再择来生。", "FAILED": "恶者下塔尔塔罗斯。"},
 }
+
+#: A sentence of its own. Docs/10 第三类: 殉节 counts among the deaths by one's own hand, whatever the cause.
+NOTE_OF = {"屈原": "其志可悯,其功可录;唯自沉汨罗,列枉死之例,受罚后准入轮回。"}
 
 
 def officer(username, display, role, tenant, password="demo-only-not-a-secret"):
@@ -195,12 +218,54 @@ LIVES = {
     "Faust": (1480, 1540), "Ulysses": (-1240, -1170), "Orlando": (736, 778), "Roland": (736, 778),
     "Sinuhe": (-1990, -1920), "Khufu": (-2620, -2566), "Nefertari": (-1295, -1255), "Imhotep": (-2690, -2610), "Hatshepsut": (-1507, -1458),
     "Ani the Scribe": (-1300, -1240), "Bata": (-1250, -1205), "Anpu": (-1260, -1200),
-    "Orpheus": (-1300, -1250), "Eurydice": (-1295, -1265), "Sisyphus": (-1400, -1320), "Tantalus": (-1420, -1340), "Achilles": (-1250, -1184),
+    "Percival": (495, 545), "Akhenaten": (-1380, -1336), "Orpheus": (-1300, -1250), "Eurydice": (-1295, -1265), "Sisyphus": (-1400, -1320), "Tantalus": (-1420, -1340), "Achilles": (-1250, -1184),
     "Patroclus": (-1255, -1185), "Odysseus": (-1240, -1160), "Penelope": (-1235, -1165), "Ixion": (-1380, -1310), "Alcestis": (-1300, -1240),
 }
 DIED = {}
 PLANNED = {}
-FINISHED = {"failed", "passed", "reborn", "full", "purgatory"}
+FINISHED = {"failed", "passed", "served", "reborn", "full", "purgatory"}
+#: Not a finished fate, but the transfer below ends the life: it keeps its own century.
+TRANSFERRED_LONG_AGO = {"Percival"}
+
+#: The four the tour follows, written by hand: (category, deed, weight, year). Each side adds up to the SOULS row.
+#: Sources: 《史记·屈原贾生列传》; Inferno V; Odyssey 2, 19, 23; docs/02_奥西里斯审判详解.md §3.2 for the heart's two pans,
+#: and for Nefertari the Abu Simbel small temple and her letter to Puduhepa of Hatti. A demerit of hers is this demo's own reading.
+DEEDS = {
+    "屈原": {
+        "MERIT": [("WISDOM", "任楚怀王左徒,明于治乱,娴于辞令", 30, -318), ("HONESTY", "谏怀王勿入秦,王不听", 30, -299), ("PIETY", "放逐中作《离骚》,不改其志", 26, -296)],
+        "DEMERIT": [("OTHER", "自沉汨罗,列枉死之例", 12, -278)],
+    },
+    "Francesca da Rimini": {
+        "MERIT": [("PIETY", "Married at Ravenna to seal her father's peace with the Malatesta", 35, 1275)],
+        "DEMERIT": [("OTHER", "Adultery with Paolo Malatesta, her husband's brother (Inferno V)", 45, 1285)],
+    },
+    "Nefertari": {
+        "MERIT": [("PIETY", "Honoured beside Hathor in the small temple at Abu Simbel", 40, -1265), ("HONESTY", "Wrote to Queen Puduhepa of Hatti to keep the peace of the treaty", 31, -1258), ("CHARITY", "Gave bread to the hungry", 20, -1270)],
+        "DEMERIT": [("OTHER", "Raised her voice in the palace", 4, -1275)],
+    },
+    "Penelope": {
+        "MERIT": [("HONESTY", "Kept faith with Odysseus through twenty years", 44, -1174), ("COMPASSION", "Received the stranger at her hearth and had him bathed (Odyssey 19)", 20, -1174), ("WISDOM", "Knew her husband by the test of the bed (Odyssey 23)", 30, -1174)],
+        "DEMERIT": [("DECEPTION", "Unwove by night what she wove by day, to put off the suitors (Odyssey 2)", 2, -1180)],
+    },
+}
+#: The same four's last days: `date` is the death's month and day, the rest are days after it, at each `mark` in `carry_out`.
+#: Handed to the recorder (`write_lives`), which spreads their stamps by these; everyone else keeps the seed's own spacing.
+PACE = {
+    # 五月初五 by tradition. Forty-nine days through the courts (7 × 7), thirty years in the sentence.
+    "屈原": {"date": (5, 5), "verdict": 49, "flow": 56, "served": 11013, "reborn": 11016},
+    "Francesca da Rimini": {"date": (9, 8), "verdict": 1, "flow": 2, "served": 3},
+    # Seventy days of embalming before she may set out (docs/01_埃及冥界整体架构.md, Herodotus II.86-88).
+    "Nefertari": {"date": (3, 17), "verdict": 70, "flow": 72, "served": 75},
+    # The thousand years of Er's myth (Republic 615a).
+    "Penelope": {"date": (10, 2), "verdict": 3, "flow": 5, "served": 365250, "reborn": 365255},
+}
+#: soul pk -> [(when it happened, days after the death)], in the seed's clock until `spread_time` moves them.
+MARKS = {}
+
+
+def mark(soul_pk, name, stage):
+    if name in PACE and stage in PACE[name]:
+        MARKS.setdefault(soul_pk, []).append((timezone.now(), PACE[name][stage]))
 
 
 def add_records(soul, kind, table, total, born, died):
@@ -218,12 +283,12 @@ def add_records(soul, kind, table, total, born, died):
 
 def make_soul(tenant, name, merit, demerit, i, *, fate=""):
     # Only a finished life keeps its century: a case still open is open now, and so its soul died recently.
-    historic = fate in FINISHED and name in LIVES
+    historic = (fate in FINISHED or name in TRANSFERRED_LONG_AGO) and name in LIVES
     born, died = LIVES[name] if historic else (y := random.randint(1935, 1985), y + random.randint(38, 41))
     fated = {}
     if fate == "due":  # 阳寿已到,还没发牒:`/judgment/capture-due` 列的就是这些。
         fated = {"fated_death_year": 2025, "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
-    elif fate == "alive":
+    elif fate == "alive" and not historic:
         fated = {"fated_death_year": random.randint(2031, 2068), "fated_death_month": random.randint(1, 12), "fated_death_day": random.randint(1, 28)}
     if tenant.code == "GR_HADES":
         fated["origin_region"] = "ASIA" if name in ASIA else "EUROPE" if name in EUROPE else ""
@@ -231,10 +296,16 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
     soul = Soul.objects.create(
         name=name, tenant=tenant, description=BIOS.get(name, ""),
         birth_year=born, birth_month=random.randint(1, 12), birth_day=random.randint(1, 28),
-        origin_location=PLACES[tenant.code][i % len(PLACES[tenant.code])], **fated,
+        origin_location=ORIGIN.get(name) or PLACES[tenant.code][i % len(PLACES[tenant.code])], **fated,
     )
-    add_records(soul, "MERIT", MERITS, merit, born, died)
-    add_records(soul, "DEMERIT", DEMERITS, demerit, born, died)
+    if name in DEEDS:
+        for kind, rows in DEEDS[name].items():
+            for category, text, weight, year in rows:
+                SoulRecord.objects.create(soul=soul, record_type=kind, category=category, description=text, weight=weight,
+                                          event_year=year, event_month=random.randint(1, 12), event_day=random.randint(1, 28))
+    else:
+        add_records(soul, "MERIT", MERITS, merit, born, died)
+        add_records(soul, "DEMERIT", DEMERITS, demerit, born, died)
     soul.refresh_from_db()
     if historic:
         DIED[soul.pk] = died
@@ -245,13 +316,14 @@ def make_soul(tenant, name, merit, demerit, i, *, fate=""):
 #: Where a concluded soul is sent: Dante's circles and terraces, the Greek meadow's two roads.
 PLACED = {
     "Francesca da Rimini": "EU_HELL_2ND", "Paolo Malatesta": "EU_HELL_2ND", "Faust": "EU_HELL_8TH", "Tristan": "EU_PURGATORY_T7_LUST",
-    "Lancelot": "EU_PURGATORY_T7_LUST", "Sisyphus": "GR_TARTARUS", "Tantalus": "GR_TARTARUS", "Ixion": "GR_TARTARUS",
+    "Lancelot": "EU_PURGATORY_T7_LUST", "Dido": "EU_HELL_2ND", "Ulysses": "EU_HELL_8TH", "Sisyphus": "GR_TARTARUS", "Tantalus": "GR_TARTARUS", "Ixion": "GR_TARTARUS",
 }
 #: Which Greek judge: Rhadamanthus the souls of Asia, Aeacus those of Europe, Minos when they are in doubt (Gorgias 524a).
 ASIA = {"Tantalus", "Eurydice"}
-EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Hector", "Antigone"}
+EUROPE = {"Orpheus", "Sisyphus", "Achilles", "Patroclus", "Odysseus", "Penelope", "Ixion", "Hector", "Antigone",
+          "Alcestis", "Nikos Pappas", "Eleni Vlachou", "Stavros Kouris", "Katerina Doukas"}
 #: 卡戎不渡未葬者:他在岸边等,队列里认领不了。
-UNBURIED = {"Alcestis"}
+UNBURIED = {"Katerina Doukas"}
 
 
 def hear_confessions(case, *, upto=42, false_every=0):
@@ -264,7 +336,8 @@ def hear_confessions(case, *, upto=42, false_every=0):
 def carry_out(soul, tenant, fate, judges, stats):
     if fate in ("alive", "due"):
         return
-    case = soul.die(location=soul.origin_location)
+    name = soul.name
+    case = soul.die(location=DIED_AT.get(name, soul.origin_location))
     soul.refresh_from_db()
     if case is None:
         case = Judgment.all_objects.filter(soul=soul).first()
@@ -281,7 +354,7 @@ def carry_out(soul, tenant, fate, judges, stats):
         if tenant.code == "EG_DUAT":
             hear_confessions(case, upto=26)
         return
-    verdict = Verdict.FAILED if fate in ("failed", "full") or (fate == "flow" and tenant.code == "CN_DIYU") else Verdict.PASSED
+    verdict = Verdict.FAILED if fate in ("failed", "full") or (fate in ("flow", "served") and tenant.code == "CN_DIYU") else Verdict.PASSED
     if fate == "purgatory":
         verdict = Verdict.PURGATORY
     if tenant.code == "EG_DUAT":  # The scale decides in the Hall of Two Truths; anything else is refused.
@@ -290,23 +363,28 @@ def carry_out(soul, tenant, fate, judges, stats):
     case.concluded_by = judge
     case.save(update_fields=["concluded_by"])
     placed = Realm.all_objects.filter(realm_code=PLACED.get(soul.name, "")).first()
-    case.conclude(verdict, NOTES[tenant.code].get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
+    case.conclude(verdict, NOTE_OF.get(name) or NOTES[tenant.code].get(verdict, ""), **({"destination_realm_id": placed.pk} if placed else {}))
+    mark(soul.pk, name, "verdict")
     if fate == "flow":
         walk(case, stop_before_last=True)
         return
     walk(case)
+    mark(soul.pk, name, "flow")
     soul.refresh_from_db()
     plan = SentencePlan.all_objects.filter(soul=soul, origin_judgment_id=case.pk).first()
     if plan is not None and plan.nodes.exists():
         # "failed": the sentence is being served; the others have served it.
         (execute_only if fate in ("failed", "purgatory") else serve)(soul, plan, 1)
         soul.refresh_from_db()
-    if fate in ("reborn", "full"):
+    mark(soul.pk, name, "served")
+    if fate in ("served", "reborn", "full"):
         if soul.home_civilization == "CHINESE":
             drink_soup(soul)
             soul.refresh_from_db()
+    if fate in ("reborn", "full"):
         form = "HUMAN" if soul.home_civilization == "CHINESE" else "OTHER"
         ReincarnationService.complete_rebirth(soul=soul, disposition=None, new_identity=f"{soul.name}·来世", rebirth_form=form)
+        mark(soul.pk, name, "reborn")
     stats[fate] = stats.get(fate, 0) + 1
 
 
@@ -453,7 +531,9 @@ def seed_soul_circle():
 
 def seed_accounts(tenants):
     made = 0
-    for soul in Soul.all_objects.filter(current_state__in=["JUDGING", "DISPOSED", "REINCARNATING"]):
+    # The circle's authors have accounts even when their road has ended: their posts are the point of having them here.
+    authors = {name for name, _, replies in SOUL_POSTS for name in [name, *(r for r, _ in replies)]}
+    for soul in Soul.all_objects.filter(Q(current_state__in=["JUDGING", "DISPOSED", "REINCARNATING"]) | Q(name__in=authors)):
         try:
             if accounts.current_account_of(soul) is None:
                 accounts.provision_account(soul, "OFFICER")
@@ -581,7 +661,8 @@ def backdate_deaths():
             day = case.created_at
             Soul.all_objects.filter(pk=soul.pk).update(death_year=day.year, death_month=day.month, death_day=day.day)
             continue
-        Soul.all_objects.filter(pk=soul.pk).update(death_year=year, death_month=random.randint(1, 12), death_day=random.randint(1, 28))
+        month, day = PACE.get(soul.name, {}).get("date") or (random.randint(1, 12), random.randint(1, 28))
+        Soul.all_objects.filter(pk=soul.pk).update(death_year=year, death_month=month, death_day=day)
     # 她在岸边等过:身份卡的「渡河」那一行(导览第二步)。在她过河之后才写,否则审判时认领不了。
     Soul.all_objects.filter(name__startswith="Penelope").update(ferry_passage="UNBURIED")
     # 功过按年衰减:千年前的善恶算下来全是 0,表上一片空。演示写回人物本来的分数。
@@ -643,6 +724,10 @@ def spread_time(started):
         length = (high - low).total_seconds() * STRETCH
         start = ended - ages[group] - timedelta(seconds=length)
         model._base_manager.filter(pk=pk).update(**{f: start + timedelta(seconds=(t - low).total_seconds() * STRETCH) for f, t in stamps.items()})
+    for pk, marks in MARKS.items():
+        low, high = span[("soul", pk)]
+        start = ended - ages[("soul", pk)] - timedelta(seconds=(high - low).total_seconds() * STRETCH)
+        MARKS[pk] = [(start + timedelta(seconds=(t - low).total_seconds() * STRETCH), days) for t, days in marks]
     print("timestamps moved:", len(rows), "rows in", len(span), "groups")
 
 
@@ -652,7 +737,8 @@ def write_lives():
     souls = {}
     for soul in Soul.all_objects.filter(pk__in=list(DIED)):
         # From DIED, not the row: rebirth clears the death on a soul that has gone round.
-        souls[str(soul.pk)] = {"year": DIED[soul.pk], "month": soul.death_month or random.randint(1, 12), "day": soul.death_day or random.randint(1, 28), "first": soul.create_time.isoformat()}
+        souls[str(soul.pk)] = {"year": DIED[soul.pk], "month": soul.death_month or random.randint(1, 12), "day": soul.death_day or random.randint(1, 28), "first": soul.create_time.isoformat(),
+                             "pace": [[t.isoformat(), days] for t, days in MARKS.get(soul.pk, [])]}
     owner = {}
     for model, field in ((Judgment, "soul_id"), (ApprovalWorkflow, "soul_id"), (SentencePlan, "soul_id"), (Disposition, "soul_id")):
         for pk, soul in model._base_manager.values_list("pk", field):

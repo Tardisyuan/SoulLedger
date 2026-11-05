@@ -119,7 +119,7 @@ test("Greece: three judges at the fork; the unburied wait on the bank", async ({
   await page.goto(`/workflow/${flow?.id}`);
   await expect(page.locator("main")).toContainText(/拉达曼|Rhadamanth|埃阿科斯|Aeacus|米诺斯|Minos/);
   await page.goto("/judgment");
-  await expect(page.locator("main")).toContainText("Alcestis");
+  await expect(page.locator("main")).toContainText("Katerina Doukas");
 });
 
 test("China: the ten courts, the stations, Meng Po", async ({ page }) => {
