@@ -417,7 +417,7 @@ def test_a_role_a_template_designates_cannot_be_deleted(world):
     assert response.status_code == 400, response.content
     assert response.data["code"] == "role_referenced_by_workflow_templates"
     assert [(t["template_id"], t["template_name"], t["steps"]) for t in response.data["templates"]] == [
-        (str(tpl.pk), "稽核流", [{"step_order": 2, "step_name": "稽核"}])
+        (str(tpl.pk), "稽核流", [{"step_order": 2, "step_name": "稽核", "step_name_en": ""}])
     ]
     auditor.refresh_from_db()
     assert auditor.is_deleted is False

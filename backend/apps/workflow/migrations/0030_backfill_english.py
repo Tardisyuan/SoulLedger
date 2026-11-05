@@ -114,7 +114,7 @@ NAME_EN = {
     "都市王 · 七审": "King Dushi · seventh hearing",
     "酆都大帝 · 直审": "Great Emperor of Fengdu · direct hearing",
     "酆都大帝 · 终审": "Great Emperor of Fengdu · final",
-    "阎罗王 · 四审": "King Yama · fourth hearing",
+    "阎罗王 · 四审": "King Yanluo · fourth hearing",
     "阿努比斯 · 引导与称量": "Anubis · leads and weighs",
     "阿米特 · 吞噬": "Ammit · devours",
     "阿鼻地狱": "Avici Hell",
@@ -158,35 +158,38 @@ def without_english_nodes(nodes):
     return [{k: v for k, v in n.items() if k != "name_en"} if isinstance(n, dict) else n for n in nodes]
 
 
-def _rewrite_nodes(model, rewrite):
-    for pk, nodes in model._base_manager.values_list("pk", "nodes_json").iterator():
+def _rewrite_nodes(model, rewrite, db):
+    for pk, nodes in model._base_manager.using(db).values_list("pk", "nodes_json").iterator():
         rewritten = rewrite(nodes)
         if rewritten != nodes:
-            model._base_manager.filter(pk=pk).update(nodes_json=rewritten)
+            model._base_manager.using(db).filter(pk=pk).update(nodes_json=rewritten)
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Template = apps.get_model("workflow", "WorkflowTemplate")
     Version = apps.get_model("workflow", "WorkflowTemplateVersion")
     Workflow = apps.get_model("workflow", "ApprovalWorkflow")
     Node = apps.get_model("workflow", "ApprovalNode")
     Segment = apps.get_model("workflow", "WorkflowSegment")
     # Soft-deleted rows too: the recycle bin can bring them back. `_base_manager` is the plain one on a historical model.
-    for pk, name, description in Template._base_manager.values_list("pk", "name", "description").iterator():
-        Template._base_manager.filter(pk=pk).update(name_en=english(name), description_en=english(description))
-    _rewrite_nodes(Template, with_english_nodes)
-    _rewrite_nodes(Version, with_english_nodes)
+    for pk, name, description in Template._base_manager.using(db).values_list("pk", "name", "description").iterator():
+        Template._base_manager.using(db).filter(pk=pk).update(name_en=english(name), description_en=english(description))
+    _rewrite_nodes(Template, with_english_nodes, db)
+    _rewrite_nodes(Version, with_english_nodes, db)
     for model, source, target in ((Workflow, "workflow_name", "workflow_name_en"), (Node, "node_name", "node_name_en"),
                                   (Segment, "name", "name_en")):
-        for name in model._base_manager.filter(**{target: ""}).values_list(source, flat=True).distinct().iterator():
+        rows = model._base_manager.using(db)
+        for name in rows.filter(**{target: ""}).values_list(source, flat=True).distinct().iterator():
             found = english(name)
             if found:
-                model._base_manager.filter(**{source: name, target: ""}).update(**{target: found})
+                model._base_manager.using(db).filter(**{source: name, target: ""}).update(**{target: found})
 
 
 def backwards(apps, schema_editor):
-    _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplate"), without_english_nodes)
-    _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplateVersion"), without_english_nodes)
+    db = schema_editor.connection.alias
+    _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplate"), without_english_nodes, db)
+    _rewrite_nodes(apps.get_model("workflow", "WorkflowTemplateVersion"), without_english_nodes, db)
 
 
 class Migration(migrations.Migration):

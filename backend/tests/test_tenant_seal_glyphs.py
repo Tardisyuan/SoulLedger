@@ -142,7 +142,8 @@ def test_login_and_profile_carry_civilization_and_glyphs(api_client, django_user
     django_user_model.objects.create_user(username="gr_judge", password="pw-123456", role="JUDGE", tenant=gr)
     resp = api_client.post("/api/v1/auth/login/", {"username": "gr_judge", "password": "pw-123456"}, format="json")
     assert resp.status_code == 200, resp.content
-    expected = {"code": "GR_HADES", "display_name": "Hades", "civilization": "GREEK", "seal_glyphs": ["Ω"]}
+    expected = {"code": "GR_HADES", "display_name": "Hades", "display_name_en": "", "civilization": "GREEK",
+                "seal_glyphs": ["Ω"]}
     assert resp.json()["user"]["tenant"] == expected
 
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.json()['access']}")

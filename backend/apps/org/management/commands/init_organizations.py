@@ -134,7 +134,7 @@ ORGANIZATION_NAME_EN = {
     "第三殿-宋帝王": "Third Court · King Songdi",
     "第九殿-平等王": "Ninth Court · King Pingdeng",
     "第二殿-楚江王": "Second Court · King Chujiang",
-    "第五殿-阎罗王": "Fifth Court · King Yama",
+    "第五殿-阎罗王": "Fifth Court · King Yanluo",
     "第八殿-都市王": "Eighth Court · King Dushi",
     "第六殿-卞城王": "Sixth Court · King Biancheng",
     "第十殿-转轮王": "Tenth Court · King Zhuanlun",

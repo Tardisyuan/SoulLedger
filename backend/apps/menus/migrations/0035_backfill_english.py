@@ -63,11 +63,12 @@ BY_GROUP_NAME = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for path, english in BY_PATH.items():
-        Menu._base_manager.filter(path=path, name_en="").update(name_en=english)
+        Menu._base_manager.using(db).filter(path=path, name_en="").update(name_en=english)
     for name, english in BY_GROUP_NAME.items():
-        Menu._base_manager.filter(path="", name=name, name_en="").update(name_en=english)
+        Menu._base_manager.using(db).filter(path="", name=name, name_en="").update(name_en=english)
 
 
 class Migration(migrations.Migration):

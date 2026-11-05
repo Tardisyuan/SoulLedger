@@ -14,11 +14,12 @@ DESCRIPTION_EN = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     for name, english in DISPLAY_NAME_EN.items():
-        Tenant._base_manager.filter(display_name=name, display_name_en="").update(display_name_en=english)
+        Tenant._base_manager.using(db).filter(display_name=name, display_name_en="").update(display_name_en=english)
     for description, english in DESCRIPTION_EN.items():
-        Tenant._base_manager.filter(description=description, description_en="").update(description_en=english)
+        Tenant._base_manager.using(db).filter(description=description, description_en="").update(description_en=english)
 
 
 class Migration(migrations.Migration):

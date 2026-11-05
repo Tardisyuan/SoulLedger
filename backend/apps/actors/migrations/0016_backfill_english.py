@@ -38,9 +38,10 @@ DESCRIPTION_EN = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     for description, english in DESCRIPTION_EN.items():
-        Actor._base_manager.filter(description=description, description_en="").update(description_en=english)
+        Actor._base_manager.using(db).filter(description=description, description_en="").update(description_en=english)
 
 
 class Migration(migrations.Migration):

@@ -86,9 +86,10 @@ PERMISSION_NAME_EN = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     for codename, english in PERMISSION_NAME_EN.items():
-        Permission._base_manager.filter(codename=codename, name_en="").update(name_en=english)
+        Permission._base_manager.using(db).filter(codename=codename, name_en="").update(name_en=english)
 
 
 class Migration(migrations.Migration):

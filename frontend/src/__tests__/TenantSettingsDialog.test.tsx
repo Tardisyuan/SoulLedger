@@ -95,6 +95,8 @@ describe("TenantSettingsDialog", () => {
     const [code, patch] = update.mock.calls[0];
     expect(code).toBe("CN_DIYU");
     expect(patch).toEqual({
+      display_name_en: "",
+      description_en: "",
       hall_name: "第五殿",
       hall_name_en: "The Fifth Court",
       hall_name_egy: "Yanluo Wesekhet",

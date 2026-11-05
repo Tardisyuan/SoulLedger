@@ -17,9 +17,10 @@ DESCRIPTION_EN = {
 
 
 def forwards(apps, schema_editor):
+    db = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for description, english in DESCRIPTION_EN.items():
-        Realm._base_manager.filter(description=description, description_en="").update(description_en=english)
+        Realm._base_manager.using(db).filter(description=description, description_en="").update(description_en=english)
 
 
 class Migration(migrations.Migration):

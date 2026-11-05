@@ -1483,6 +1483,7 @@
       "exit_down": "Move exit down",
       "field": {
         "name": "Name",
+        "name_en": "English",
         "kind": "Kind",
         "stage": "Stage",
         "court": "Court",

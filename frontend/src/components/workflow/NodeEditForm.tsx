@@ -135,7 +135,7 @@ export function NodeEditForm({
       />
 
       <label htmlFor={id("node-name-en")} className={LABEL}>
-        {t("common.name_en")}
+        {t("workflow.editor.field.name_en")}
       </label>
       <input
         id={id("node-name-en")}

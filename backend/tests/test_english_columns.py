@@ -81,6 +81,21 @@ def _names_in_code():
                 yield node.get("name") or node.get("node_name")
 
 
+def test_the_ten_kings_read_the_same_as_an_actor_and_as_a_station():
+    from apps.actors.mythology.actors_chinese import CHINESE_ACTORS
+
+    actor_english = {row[0]: row[2] for row in CHINESE_ACTORS}
+    kings = ["秦广王", "楚江王", "宋帝王", "五官王", "阎罗王", "卞城王", "泰山王", "都市王", "平等王", "转轮王"]
+    assert [k for k in kings if not actor_english[k].startswith("King ")] == []
+    stations = {source.split(" · ")[0]: english for source, english in NAME_EN.items() if " · " in source}
+    for king in kings:
+        assert stations[king].startswith(f"{actor_english[king]} · "), king
+    for source, english in ORGANIZATION_NAME_EN.items():
+        king = source.split("-")[-1]
+        if king in kings:
+            assert english.endswith(actor_english[king]), source
+
+
 # ── the backfill ────────────────────────────────────────────────────
 
 
