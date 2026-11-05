@@ -38,7 +38,7 @@ export function Landing({
           <span className="truncate text-sm text-[oklch(var(--color-ink-muted))] max-md:hidden">SoulLedger</span>
         </div>
         <div className="flex items-center gap-3">
-          <a href="#how-built" className="text-sm text-[oklch(var(--color-ink-muted))] underline-offset-2 hover:underline max-md:hidden">
+          <a href="/#how-built" className="whitespace-nowrap text-sm text-[oklch(var(--color-ink-muted))] underline-offset-2 hover:underline">
             {t("demo.build.title")}
           </a>
           <span className="max-md:hidden"><LanguageSwitcher /></span>
@@ -79,6 +79,10 @@ export function Landing({
       <footer className="shrink-0 border-t border-[oklch(var(--color-line))]">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 landing-gutter py-3">
           <span className="font-title text-sm text-[oklch(var(--color-ink))]">{t("demo.landing.footer")}</span>
+          <span data-testid="landing-author" className="text-xs text-[oklch(var(--color-ink-muted))]">
+            {t("demo.author.line", { name: stats.author.name })}{" "}
+            <a href={stats.author.github} target="_blank" rel="noreferrer" className="underline underline-offset-2">GitHub</a>
+          </span>
           <span className="md:hidden"><LanguageSwitcher /></span>
           <span className="flex flex-wrap items-center gap-4 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
             <a href="https://claude.com/claude-code" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">Built with Claude Code</a>
@@ -180,7 +184,7 @@ function HowBuilt() {
         {stats.videos.map((video) => (
           <figure key={video.key} className="m-0">
             {/* Starts only when asked: no motion for those who turned it off, and no download for those who never look. */}
-            <video src={video.src} controls muted loop playsInline preload="metadata" className="w-full border border-[oklch(var(--color-line-strong))]" />
+            <video src={video.src} poster={video.poster} controls muted loop playsInline preload="metadata" className="w-full border border-[oklch(var(--color-line-strong))]" />
             <figcaption className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t(`demo.build.${video.key}`)}</figcaption>
           </figure>
         ))}

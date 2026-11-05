@@ -61,7 +61,6 @@ test("393px: the tour fits above the fold and reaches its second step", async ({
   const box = await card.boundingBox();
   expect(box?.width).toBeLessThanOrEqual(393);
   expect(box?.height).toBeLessThanOrEqual(page.viewportSize()!.height * 0.42);
-  await page.getByTestId("demo-tour-back").click();
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 6");
   clean(seen, "393 tour");
