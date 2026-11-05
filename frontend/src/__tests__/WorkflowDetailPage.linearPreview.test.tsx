@@ -150,6 +150,9 @@ describe("待我处理 bar", () => {
     await preview();
     expect(bars()).toHaveLength(0);
     expect(screen.queryByRole("button", { name: tZh("workflow.detail.submit_decision") })).toBeNull();
+    // 填了没有去处的表单也不画。
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByTestId("workflow-no-decision")).toHaveTextContent(tZh("workflow.detail.not_your_stop"));
   });
 
   it("the designated approver sees the submit button", async () => {

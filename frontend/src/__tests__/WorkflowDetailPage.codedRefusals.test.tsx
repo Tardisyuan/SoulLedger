@@ -15,7 +15,7 @@ jest.mock("@soulledger/core/api", () => ({
   workflowApi: { get: jest.fn(), approveNode: jest.fn(), advance: jest.fn(), escalate: jest.fn() },
 }));
 const { workflowApi } = jest.requireMock("@soulledger/core/api") as {
-  workflowApi: Record<"get" | "escalate" | "approveNode", jest.Mock>;
+  workflowApi: Record<"get" | "escalate" | "approveNode" | "advance", jest.Mock>;
 };
 
 jest.mock("next/navigation", () => ({
@@ -71,6 +71,16 @@ it("escalate_past_final reads as its own sentence, not the server's English", as
   await escalate();
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("workflow.detail.refusals.escalate_past_final"), "error"));
   expect(mockShowToast).not.toHaveBeenCalledWith("The final review cannot be escalated past", "error");
+});
+
+it("advancing with nowhere to go reads as its own sentence, not the server's English", async () => {
+  mockUser = { ...mockUser, permissions: [...mockUser.permissions, "workflow.advance"] };
+  workflowApi.advance.mockImplementation(() => refused("no_successor", "No next node available or workflow already completed"));
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: tZh("workflow.detail.advance") }));
+  fireEvent.change(document.getElementById("advance-reason") as HTMLElement, { target: { value: "走不动" } });
+  fireEvent.click(screen.getAllByRole("button", { name: tZh("workflow.detail.advance") })[1]);
+  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("workflow.detail.refusals.no_successor"), "error"));
 });
 
 it("an uncoded refusal still shows the server's error", async () => {
