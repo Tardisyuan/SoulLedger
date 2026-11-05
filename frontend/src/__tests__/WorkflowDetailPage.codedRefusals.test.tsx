@@ -81,6 +81,7 @@ it("advancing with nowhere to go reads as its own sentence, not the server's Eng
   fireEvent.change(document.getElementById("advance-reason") as HTMLElement, { target: { value: "走不动" } });
   fireEvent.click(screen.getAllByRole("button", { name: tZh("workflow.detail.advance") })[1]);
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("workflow.detail.refusals.no_successor"), "error"));
+  expect(mockShowToast).not.toHaveBeenCalledWith("No next node available or workflow already completed", "error");
 });
 
 it("an uncoded refusal still shows the server's error", async () => {
@@ -94,18 +95,6 @@ it("no_pending_node reads as the page's own sentence, not the server's English",
   await escalate();
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("workflow.detail.escalate_error"), "error"));
   expect(mockShowToast).not.toHaveBeenCalledWith("No pending node to escalate past", "error");
-});
-
-it("no_successor on advance reads as the page's own sentence, not the server's English", async () => {
-  mockUser = { id: 2, username: "judge", role: "JUDGE", permissions: ["workflow.read", "workflow.advance"] };
-  const english = "No next node available or workflow already completed";
-  workflowApi.advance.mockImplementation(() => refused("no_successor", english));
-  renderPage();
-  fireEvent.click((await screen.findAllByRole("button", { name: tZh("workflow.detail.advance") }))[0]);
-  fireEvent.change(document.getElementById("advance-reason") as HTMLElement, { target: { value: "告假" } });
-  fireEvent.click(screen.getAllByRole("button", { name: tZh("workflow.detail.advance") })[1]);
-  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("workflow.detail.advance_no_movement"), "error"));
-  expect(mockShowToast).not.toHaveBeenCalledWith(english, "error");
 });
 
 it("five_heinous_must_fail on approval reads as its own sentence", async () => {
