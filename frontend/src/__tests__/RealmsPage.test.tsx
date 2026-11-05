@@ -101,7 +101,8 @@ it("opens a realm's structured facts on 说明 and never prints the maintainer p
   expect(within(tree).queryByTestId("realm-facts")).toBeNull();
   fireEvent.click(tree.querySelector('[data-facts-toggle="FACTS_REALM"]')!);
   const facts = within(tree).getByTestId("realm-facts");
-  expect(facts).toHaveTextContent("MENGPO");
+  expect(facts).toHaveTextContent("孟婆汤");
+  expect(facts).not.toHaveTextContent("MENGPO");
   expect(facts).toHaveTextContent("轮回上限");
   expect(facts).toHaveTextContent("3");
   expect(facts).toHaveTextContent("入界无需审判");

@@ -223,6 +223,13 @@ describe("灵魂详情的受刑计划面板", () => {
     for (const raw of ["ACTIVE", "COMPLETED", "PENDING", "AMEND"]) expect(screen.queryByText(raw)).toBeNull();
   });
 
+  it("永恒去处不说「已完成」:节点写永久刑期,计划不写完成", async () => {
+    planApi.list.mockResolvedValue(page([plan({ status: "COMPLETED", completed_at: "2026-09-02T00:00:00Z", nodes: [node(1, "EG_DUAT", "ETERNAL")] })]));
+    renderWith(<SentencePlanCard soulId="s1" />);
+    expect(await screen.findByText(tZh("sentence_plan.node_states.ETERNAL"))).toBeInTheDocument();
+    expect(screen.queryByText(tZh("sentence_plan.plan_states.COMPLETED"))).toBeNull();
+  });
+
   it("两站之间(灵魂在原属)没有当前站,并说明", async () => {
     as("JUDGE", "CN_DIYU", ...JUDGE);
     planApi.list.mockResolvedValue(page([plan({ nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING")], requests: [] })]));

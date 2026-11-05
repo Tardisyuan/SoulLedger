@@ -49,6 +49,10 @@ export const CURRENT_NODE_STATUSES = ["DISPATCHING", "ACTIVE", "WAITING", "ETERN
 /** 还能决定 / 撤回 / 撤销的计划状态(`IN_PROGRESS_PLAN_STATUSES`)。 */
 export const OPEN_PLAN_STATUSES = ["ACTIVE", "RETRIAL", "HELD"];
 
+/** The plan is over but the soul stays where it is for good: 「已完成」 beside 「永久刑期」 reads as if it had got out. */
+export const endsForever = (plan: { status: string; nodes: { status: string }[] }) =>
+  plan.status === "COMPLETED" && plan.nodes.some((n) => n.status === "ETERNAL");
+
 export function refusalKey(error: unknown): string {
   const code = responseCode(error);
   return code !== null && (SENTENCE_PLAN_REFUSAL_CODES as readonly string[]).includes(code)

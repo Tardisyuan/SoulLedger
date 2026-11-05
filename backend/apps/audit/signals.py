@@ -458,7 +458,8 @@ def _create_audit_log(action, instance, changes=None):
             changes=changes,
             ip_address=ip_address,
             user_agent=user_agent,
-            description=f"{action} {instance._meta.verbose_name}",
+            # Empty, not a sentence: the row's action and resource say it, and the screens name them in the reader's language.
+            description="",
             trace_id=trace_id,
         ))
     except Exception as e:

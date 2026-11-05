@@ -25,7 +25,6 @@ for (const [skin, role] of SKINS) {
     await expect(card).toBeVisible();
     let steps = 0;
     const dark: string[] = [];
-    await page.getByTestId("demo-tour-back").click();
     const total = skin === "cn" || skin === "gr" ? 6 : 5;
     for (; steps < total; steps += 1) {
       await expect(page.getByTestId("demo-tour-progress")).toContainText(`${steps + 1} / ${total}`);
@@ -47,7 +46,6 @@ for (const [skin, role] of SKINS) {
 test("the tour survives a reload and a wrong page, and folds to a chip", async ({ page, context }) => {
   const seen = watch(context, page);
   await enter(page, "judge_eg");
-  await page.getByTestId("demo-tour-back").click();
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("demo-tour-progress")).toContainText("2 / 5");
   await page.reload();
@@ -119,7 +117,7 @@ test("Greece: three judges at the fork; the unburied wait on the bank", async ({
   await page.goto(`/workflow/${flow?.id}`);
   await expect(page.locator("main")).toContainText(/拉达曼|Rhadamanth|埃阿科斯|Aeacus|米诺斯|Minos/);
   await page.goto("/judgment");
-  await expect(page.locator("main")).toContainText("Alcestis");
+  await expect(page.locator("main")).toContainText("Katerina Doukas");
 });
 
 test("China: the ten courts, the stations, Meng Po", async ({ page }) => {

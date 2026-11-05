@@ -820,7 +820,7 @@ EGYPTIAN_REALMS = [
      "have not been transcribed here and inventing them is how this repository has gone "
      "wrong before.",
      "SPELL", False, None),
-    ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Sekhet Aaru", RealmType.BLISS, 1,
+    ("EG_AARU", "芦苇原", "芦苇原", "Field of Reeds (Aaru)", "Sekhet Aaru", RealmType.BLISS, 1,
      "Egyptian paradise - eternal life in the Field of Reeds (inside or beyond the Duat is left "
      "open: docs/01 §2.1)", "NONE", True, None),
     # EG_AM_TYAT IS GONE, AND IS NOT COMING BACK.
