@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import type { Organization } from "@soulledger/core/api";
 import { useAllOrganizations } from "@soulledger/core/hooks/useOrganizations";
@@ -78,7 +79,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function OrganizationsPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -124,7 +125,7 @@ function OrganizationsPageContent() {
           <tr key={org.id} className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
             <td className="py-2 px-3">
               <TreeName depth={depth}>
-                <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{org.name}</span>
+                <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{localName(org, locale)}</span>
                 <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
                   {org.level === 0 ? t("organization.root") : `L${org.level}`}
                 </Badge>
@@ -134,7 +135,7 @@ function OrganizationsPageContent() {
             {canManage && (
               <td className="w-11 px-3 py-2 text-right">
                 <ActionsMenu
-                  menuLabel={t("org.actions_label", { name: org.name })}
+                  menuLabel={t("org.actions_label", { name: localName(org, locale) })}
                   items={[
                     { key: "child", label: t("org.create_child"), onSelect: () => setFormMode({ kind: "create", parent: org }) },
                     { key: "edit", label: t("org.edit"), onSelect: () => setFormMode({ kind: "edit", org }) },

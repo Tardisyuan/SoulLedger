@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useId, useState } from "react";
 import type { Organization } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -36,7 +37,7 @@ type Props =
  */
 export function OrgTreeSelect(props: Props) {
   const { organizations, label, tenantNames, disabled, disabledIds, error } = props;
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const name = useId();
   const errorId = `${name}-error`;
   const [query, setQuery] = useState("");
@@ -59,7 +60,7 @@ export function OrgTreeSelect(props: Props) {
   if (q) {
     const keep = new Set<number>();
     for (const o of organizations) {
-      if (o.name.toLowerCase().includes(q) || o.code.toLowerCase().includes(q)) {
+      if (o.name.toLowerCase().includes(q) || (o.name_en ?? "").toLowerCase().includes(q) || o.code.toLowerCase().includes(q)) {
         keep.add(o.id);
         ancestors(o.id).forEach((a) => keep.add(a));
       }
@@ -138,7 +139,7 @@ export function OrgTreeSelect(props: Props) {
                     disabled={viaParent || off}
                     onChange={(e) => toggle(o.id, e.target.checked)}
                   />
-                  {o.name}
+                  {localName(o, locale)}
                   <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{o.code}</span>
                   {viaParent && <span className="text-xs">{t("org_select.implied")}</span>}
                 </label>

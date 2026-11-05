@@ -64,7 +64,7 @@ export default function PermissionsPage() {
 }
 
 function PermissionsPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { hasPermission, isTenantExempt } = usePermissions();
   // 写(建 / 改 / 删码与角色、矩阵保存、导入)只给没绑殿的 ADMIN 且持 system.settings —— 与后端
   // `CanWriteGlobalSettings` 同一条件:角色与授权是所有殿共用的配置。别的持码者只读。
@@ -239,7 +239,7 @@ function PermissionsPageContent() {
   function matchesFilter(perm: Permission): boolean {
     const needle = filterText.trim().toLowerCase();
     if (!needle) return true;
-    return perm.codename.toLowerCase().includes(needle) || perm.name.toLowerCase().includes(needle);
+    return perm.codename.toLowerCase().includes(needle) || perm.name.toLowerCase().includes(needle) || (perm.name_en ?? "").toLowerCase().includes(needle);
   }
 
   function rowHasDifference(perm: Permission): boolean {
@@ -329,6 +329,7 @@ function PermissionsPageContent() {
 
   const permissionColumns = buildPermissionColumns({
     t,
+    locale,
     canManagePermissions,
     onEdit: (perm) => { setEditingPerm(perm); setIsEditOpen(true); },
     onDelete: (perm) => { setDeletingPerm(perm); setIsDeleteOpen(true); },

@@ -1,5 +1,6 @@
 "use client";
 
+import { localNodeName } from "@soulledger/core/domain/localName";
 import Link from "next/link";
 import type { CrossTenantJudgment, WorkflowSegment } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -16,7 +17,7 @@ const MUTED = "text-xs text-[oklch(var(--color-ink-muted))]";
  * 还没生成时只写「还没生成审批流程 · 结案时勾选生成」。只在挂了原审判的跨域审判上出现。
  */
 export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useTenant();
   const mine = user?.tenant?.code ?? null;
   const flow = judgment.workflow ?? null;
@@ -46,7 +47,7 @@ export function CrossJudgmentFlow({ judgment }: { judgment: CrossTenantJudgment 
                 ? t("crossJudgments.flow.at", {
                     order: circled(flow.at.segment),
                     realm: realmAt(flow.at.segment, flow.at.realm_name),
-                    node: flow.at.node_name,
+                    node: localNodeName(flow.at, locale),
                     hall: flow.at.hall,
                   })
                 : flow.at_gate

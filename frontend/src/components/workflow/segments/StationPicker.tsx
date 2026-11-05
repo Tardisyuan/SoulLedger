@@ -56,7 +56,7 @@ export function StationPicker({
   /** 外域判官那份(W-2):「本域排第 2 · 前面：中国 8 站」,代替外域行。 */
   footnote?: ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const final = rows.find((r) => r.required);
   const skippable = rows.filter((r) => !r.required);
   const skipCount = skippable.filter((r) => skipped.has(r.key)).length;
@@ -134,7 +134,7 @@ export function StationPicker({
                         {" "}
                         <Badge tone="neutral">{t("workflow.pick.final_badge")}</Badge>
                         <span className="block text-xs text-[oklch(var(--color-ink-muted))]">
-                          {row.required ? t("workflow.pick.final_reason") : jumpReason(t, sources)}
+                          {row.required ? t("workflow.pick.final_reason") : jumpReason(t, sources, locale)}
                         </span>
                       </>
                     )}

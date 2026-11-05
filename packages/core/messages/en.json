@@ -882,6 +882,8 @@
     }
   },
   "common": {
+    "name_en": "English name",
+    "description_en": "English description",
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save",

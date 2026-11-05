@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import type { AppealLadder, AppealLadderStation, JudgmentAppeal } from "@soulledger/core/api";
 import { finalStationName } from "@soulledger/core/domain/appeals";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -44,27 +45,29 @@ export function EscalatedTag() {
   );
 }
 
-export function stationName(station: AppealLadderStation, t: T) {
+export function stationName(station: AppealLadderStation, t: T, locale?: string) {
+  const name = localName(station, locale);
   return station.is_final
-    ? t("appeals.ladder_final", { name: finalStationName(station.name) })
-    : t("appeals.ladder_station", { n: String(station.order), name: station.name });
+    ? t("appeals.ladder_final", { name: finalStationName(name) })
+    : t("appeals.ladder_station", { n: String(station.order), name });
 }
 
 /** 队列「当前」一格:第 n / 站数 站 · 站名 · 审理中(站数不含终审);待终审时 ◇ 站梯走完 · 待终审。流程不在跑时 null。 */
-export function ladderCurrentText(ladder: AppealLadder | null, t: T) {
+export function ladderCurrentText(ladder: AppealLadder | null, t: T, locale?: string) {
   if (awaitingFinal(ladder)) return `${GLYPH.AWAITING_FINAL} ${t("appeals.ladder_state.AWAITING_FINAL")}`;
   const station = ladder?.stations.find((s) => s.state === "CURRENT");
   if (!ladder || !station) return null;
+  const name = localName(station, locale);
   const total = ladder.stations.filter((s) => !s.is_final).length;
   return [
-    station.is_final ? t("appeals.ladder_final", { name: finalStationName(station.name) }) : t("appeals.ladder_progress", { n: String(station.order), total: String(total) }),
-    ...(station.is_final ? [] : [station.name]),
+    station.is_final ? t("appeals.ladder_final", { name: finalStationName(name) }) : t("appeals.ladder_progress", { n: String(station.order), total: String(total) }),
+    ...(station.is_final ? [] : [name]),
     t("appeals.ladder_state.CURRENT"),
   ].join(" · ");
 }
 
 export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "ladder" | "workflow_status" | "status"> }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (!appeal.ladder) return null;
   const over = ladderOver(appeal);
   const final = finalStation(appeal.ladder);
@@ -90,7 +93,7 @@ export function AppealLadderView({ appeal }: { appeal: Pick<JudgmentAppeal, "lad
         <span aria-hidden="true" className="font-mono">{GLYPH[s.state]}</span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <span className={s.state === "CURRENT" ? "font-medium" : undefined}>{stationName(s, t)}</span>
+            <span className={s.state === "CURRENT" ? "font-medium" : undefined}>{stationName(s, t, locale)}</span>
             {state && <span className="text-xs">{state}</span>}
           </div>
           {s.note && <p className="font-serif whitespace-pre-wrap">{s.note}</p>}

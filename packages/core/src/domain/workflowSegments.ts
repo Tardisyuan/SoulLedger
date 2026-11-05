@@ -1,3 +1,4 @@
+import { localNodeName } from "./localName";
 import type { ApprovalNode, ApprovalWorkflow, JumpSource, WorkflowSegment } from "../api/workflow";
 import { civilizationLabel, realmLabel } from "../config/civilizations";
 import { courtLabel } from "./courts";
@@ -38,9 +39,13 @@ export const runningJumpSources = (sources: readonly JumpSource[] | undefined, s
  * 锁住的理由(第四十五批 W-6):分流的去处(`via: "branch"`)写「X按出身地域分流到这里」,驳回转来的照旧写
  * 「X驳回时会转到这里」;两种来源都有时各写一句。老后端没有 `via` 时按驳回读。
  */
-export function jumpReason(t: (key: string, p?: Record<string, string>) => string, sources: readonly JumpSource[]): string {
+export function jumpReason(
+  t: (key: string, p?: Record<string, string>) => string,
+  sources: readonly JumpSource[],
+  locale?: string,
+): string {
   const names = (via: "branch" | "on_fail") =>
-    sources.filter((s) => (s.via ?? "on_fail") === via).map((s) => s.node_name).join("、");
+    sources.filter((s) => (s.via ?? "on_fail") === via).map((s) => localNodeName(s, locale)).join("、");
   const branch = names("branch");
   const fail = names("on_fail");
   return [

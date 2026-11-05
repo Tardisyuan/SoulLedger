@@ -11,6 +11,7 @@ import type {
 export interface TemplateNode {
   id?: string;
   node_name: string;
+  name_en?: string;
   node_type: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
   court_code: string;
   approver_role: string;
@@ -59,6 +60,7 @@ export interface TemplateNode {
 /** The canvas `data` for the 0020/0021 fields of a stored node. */
 export function extendedData(n: Partial<TemplateNode>): Record<string, unknown> {
   return {
+    labelEn: n.name_en ?? "",
     kind: n.kind ?? "APPROVAL",
     signers: n.signers ?? [],
     threshold: n.threshold ?? null,

@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -200,7 +202,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   /** 来源队列(链接上的 `?from=`,见 src/lib/backSource.ts);没写就是审判列表。J / K 带着它走。 */
   const from = sourceFrom(useSearchParams()?.get(FROM_PARAM));
   const back = from ?? "/judgment";
-  const { t, formatDate, formatDateTime } = useI18n();
+  const { t, locale, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
@@ -570,7 +572,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。右栏是案号(v3 `identity-case`),
   // 可复制,本页只这一处(用户 2026-10-02;CASE_NUMBER_POLICY)—— 页头 eyebrow 不再重复。
   // 殿名:这个案子的殿;案子没记殿(`court` 是空串)就写刑名司。
-  const hall = useHall(judgment?.court || t("plaque.office.trials"));
+  const hall = useHall(courtLabel(t, judgment?.court, locale) || t("plaque.office.trials"));
   usePlaque({ title: t("plaque.desk"), hall, caseNumber: judgment?.case_number });
 
   if (isLoading) {
@@ -864,7 +866,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       {/* 所属机构(数据范围 B3a):持 judgment.assign 可改,已结案的也可以。 */}
       <OwnerOrgField
         orgId={judgment.owner_org}
-        orgName={judgment.owner_org_name}
+        orgName={localName(judgment, locale, "owner_org_name")}
         tenantId={null}
         canChange={hasPermission("judgment.assign") && !judgment.is_archived}
         onSave={async (orgId) => {
@@ -936,7 +938,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           <dl className="mt-3 divide-y divide-[oklch(var(--color-rule))]">
             <MetaRow label={t("judgment.detail.civilization")}>{civilisation}</MetaRow>
             <MetaRow label={t("judgment.detail.court")}>
-              <DomainText value={judgment.court} />
+              <DomainText value={courtLabel(t, judgment.court, locale)} />
             </MetaRow>
             {/* v3 灵魂栏:所在界域(案子挂的那一站 `realm_id`,没挂写「未记录」)· 审判方式 · 世次 / 种类。 */}
             <MetaRow label={t("judgment.detail.current_realm")}>
@@ -1084,12 +1086,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <p
                 className="max-w-full truncate font-mono text-xs text-[oklch(var(--color-ink-subtle))]"
                 title={
-                  [judgment.judge_name, judgment.concluded_at && formatDateTime(judgment.concluded_at)]
+                  [localName(judgment, locale, "judge_name"), judgment.concluded_at && formatDateTime(judgment.concluded_at)]
                     .filter(Boolean)
                     .join(" · ") || undefined
                 }
               >
-                <DomainText value={judgment.judge_name} />
+                <DomainText value={localName(judgment, locale, "judge_name")} />
                 <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-tertiary))]">·</span>
                 {judgment.concluded_at ? (
                   <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>

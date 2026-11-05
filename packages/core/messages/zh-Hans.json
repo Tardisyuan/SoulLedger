@@ -882,6 +882,8 @@
     }
   },
   "common": {
+    "name_en": "英文名称",
+    "description_en": "英文说明",
     "close": "关闭",
     "cancel": "取消",
     "save": "保存",

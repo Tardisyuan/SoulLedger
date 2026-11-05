@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/src/contexts/I18nContext";
+import { localNodeName } from "@soulledger/core/domain/localName";
 import type { ApprovalNode } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,7 @@ export function WorkflowLinearPreview({
   endLabel: string;
   label: string;
 }) {
+  const { locale } = useI18n();
   return (
     <div className="pt-3">
       <p className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</p>
@@ -49,7 +52,7 @@ export function WorkflowLinearPreview({
                   current && "font-semibold shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
                 )}
               >
-                {node.node_name}
+                {localNodeName(node, locale)}
               </span>
               <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">→</span>
             </li>

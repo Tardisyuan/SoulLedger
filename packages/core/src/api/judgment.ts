@@ -35,6 +35,7 @@ export interface Judgment extends ArchiveFields {
   /** models.py:37 — the only nullable FK on the model. */
   judge: string | null;
   judge_name: string | null;
+  judge_name_en?: string | null;
   /** `blank=True` CharField/TextField: empty string, never null. */
   court: string;
   evidence_json: Record<string, unknown>;
@@ -182,6 +183,7 @@ export interface Judgment extends ArchiveFields {
   /** 所属机构(数据范围):id 与名字;持 `judgment.assign` 可改(`PATCH owner_org`,目标在自己的范围内)。 */
   owner_org?: number | null;
   owner_org_name?: string | null;
+  owner_org_name_en?: string | null;
 }
 
 type Schemas = components["schemas"];

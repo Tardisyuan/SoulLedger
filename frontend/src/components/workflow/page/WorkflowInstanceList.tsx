@@ -226,7 +226,7 @@ export function WorkflowInstanceList({
   workflows: ApprovalWorkflowListItem[];
   isLoading: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <div className="space-y-4">
@@ -259,7 +259,7 @@ export function WorkflowInstanceList({
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{workflowTitle(wf, t)}</div>
+                <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{workflowTitle(wf, t, locale)}</div>
                 <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                   {wf.number ? (
                     <>

@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { type BackendTemplate } from "@/src/components/workflow/page/types";
@@ -22,7 +23,7 @@ export function DeleteTemplateModal({
   template: BackendTemplate | null;
   isPending: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <NameConfirmDialog
@@ -38,7 +39,7 @@ export function DeleteTemplateModal({
       }}
       message={
         <div className="space-y-3">
-          <p>{t("workflow.delete_confirm_msg", { name: template?.name || "" })}</p>
+          <p>{t("workflow.delete_confirm_msg", { name: localName(template, locale) })}</p>
           <p className="text-[oklch(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
         </div>
       }

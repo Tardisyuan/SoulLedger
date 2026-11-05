@@ -1,3 +1,4 @@
+import { localName } from "@soulledger/core/domain/localName";
 import { Permission } from "@soulledger/core/api";
 import type { DataGridColumn } from "@/components/ui/data-grid";
 
@@ -9,18 +10,20 @@ import type { DataGridColumn } from "@/components/ui/data-grid";
  */
 export function buildPermissionColumns({
   t,
+  locale,
   canManagePermissions,
   onEdit,
   onDelete,
 }: {
   t: (key: string, params?: Record<string, string>) => string;
+  locale?: string;
   canManagePermissions: boolean;
   onEdit: (perm: Permission) => void;
   onDelete: (perm: Permission) => void;
 }): DataGridColumn<Permission>[] {
   return [
     { type: "identifier", key: "codename", header: t("permissions.codename"), pinned: true, width: "220px", value: (perm) => perm.codename },
-    { type: "text", key: "name", header: t("permissions.name"), pinned: true, value: (perm) => perm.name },
+    { type: "text", key: "name", header: t("permissions.name"), pinned: true, value: (perm) => localName(perm, locale) },
     {
       type: "enum",
       key: "category",

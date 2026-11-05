@@ -1,5 +1,6 @@
 "use client";
 
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -243,7 +244,7 @@ export default function WorkflowDetailPage() {
     hall,
     meta: workflow
       ? [
-          workflow.template_version_number ? `${workflowTitle(workflow, t)} v${workflow.template_version_number}` : workflowTitle(workflow, t),
+          workflow.template_version_number ? `${workflowTitle(workflow, t, locale)} v${workflow.template_version_number}` : workflowTitle(workflow, t, locale),
           stepIndex >= 0 ? t("plaque.step", { k: String(stepIndex + 1), n: String(sortedNodes.length) }) : null,
         ]
           .filter(Boolean)
@@ -368,7 +369,7 @@ export default function WorkflowDetailPage() {
        Below 1024 they stack in reading order: current node first. */
     <PageShell
       variant="full"
-      title={workflowTitle(workflow, t)}
+      title={workflowTitle(workflow, t, locale)}
       backLink={backLink}
       actions={
         <div className="flex items-center gap-2">
@@ -470,7 +471,7 @@ export default function WorkflowDetailPage() {
                         {notReached ? "–" : isPast ? VERDICT_GLYPH[node.verdict ?? ""] ?? STATUS_GLYPH[node.status] ?? "?" : isCurrent ? "◐" : "·"}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm break-words">{node.node_name}</span>
+                        <span className="block text-sm break-words">{localNodeName(node, locale)}</span>
                         <span className="block text-xs font-normal text-[oklch(var(--color-ink-muted))]">
                           <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={courtLabel(t, node.court_code, locale)} />
                           {" · "}
@@ -523,7 +524,7 @@ export default function WorkflowDetailPage() {
                 <div className="min-w-0">
                   <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
                     <span aria-hidden="true">{KIND_GLYPH[currentNode.kind ?? "APPROVAL"]} </span>
-                    {currentNode.node_name}
+                    {localNodeName(currentNode, locale)}
                   </h2>
                   <p className="text-xs text-[oklch(var(--color-ink-muted))]">
                     <DomainText value={courtLabel(t, currentNode.court_code, locale)} /> · <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} />
@@ -787,7 +788,7 @@ export default function WorkflowDetailPage() {
               <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-1">
                 <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{formatDateTime(lastDecided.decided_at!)}</span>
                 <span className="text-sm text-[oklch(var(--color-ink))]">
-                  {lastDecided.node_name} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? "?"} </span>
+                  {localNodeName(lastDecided, locale)} · <span aria-hidden="true">{VERDICT_GLYPH[lastDecided.verdict ?? ""] ?? "?"} </span>
                   <DomainEnum namespace="workflow.verdicts" value={lastDecided.verdict} />
                 </span>
                 {lastDecided.notes && (

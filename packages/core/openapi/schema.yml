@@ -23720,7 +23720,6 @@ components:
       required:
       - is_final
       - name
-      - name_en
       - node
       - note
       - order
@@ -26786,7 +26785,6 @@ components:
       required:
       - hall
       - node_name
-      - node_name_en
       - realm_name
       - segment
     CrossFlowGate:
@@ -29207,7 +29205,6 @@ components:
       - kind
       - mine
       - name
-      - name_en
       - verdict
     FactHistoryKindEnum:
       enum:
@@ -29246,9 +29243,7 @@ components:
       - index
       - is_last
       - name
-      - name_en
       - next_name
-      - next_name_en
       - total
     FactSoul:
       type: object
@@ -29342,7 +29337,6 @@ components:
       required:
       - foreign
       - name
-      - name_en
       - nothing_to_pick
       - stations
     FlowPreviewForeign:
@@ -29400,7 +29394,6 @@ components:
       - is_required
       - jump_target_of
       - node_name
-      - node_name_en
       - node_order
     Follow:
       type: object
@@ -32222,7 +32215,6 @@ components:
       required:
       - key
       - node_name
-      - node_name_en
       - via
     KarmaBucket:
       type: object
@@ -32872,7 +32864,6 @@ components:
       - civilization
       - code
       - display_name
-      - display_name_en
       - seal_glyphs
     LogoutRequest:
       type: object
@@ -33037,6 +33028,8 @@ components:
           format: uuid
         template_name:
           type: string
+        template_name_en:
+          type: string
         tenant_id:
           type: integer
           nullable: true
@@ -33047,6 +33040,8 @@ components:
         step_order:
           type: integer
         step_name:
+          type: string
+        step_name_en:
           type: string
         approver_roles:
           type: array
@@ -33135,13 +33130,11 @@ components:
       - approver_roles
       - caused_by
       - node_name
-      - node_name_en
       - node_order
       - status
       - tenant_id
       - workflow_id
       - workflow_name
-      - workflow_name_en
     MeAccount:
       type: object
       properties:
@@ -33188,6 +33181,10 @@ components:
         can_escalate:
           type: boolean
         escalation_stations:
+          type: array
+          items:
+            type: string
+        escalation_stations_en:
           type: array
           items:
             type: string
@@ -42184,6 +42181,8 @@ components:
           format: uuid
         template_name:
           type: string
+        template_name_en:
+          type: string
         tenant_id:
           type: integer
           nullable: true
@@ -45723,7 +45722,6 @@ components:
       - tenant_code
       - tenant_id
       - tenant_name
-      - tenant_name_en
       - total_souls
     ThresholdReading:
       type: object
@@ -47097,7 +47095,6 @@ components:
       - code
       - id
       - name
-      - name_en
     UserPreferences:
       type: object
       description: |-
@@ -47211,7 +47208,6 @@ components:
       required:
       - code
       - display_name
-      - display_name_en
       - id
     UserUpdate:
       type: object
@@ -47714,7 +47710,6 @@ components:
       - go
       - is_local
       - name
-      - name_en
       - no_picker
       - order
       - picked_at
@@ -47792,6 +47787,8 @@ components:
         step_order:
           type: integer
         step_name:
+          type: string
+        step_name_en:
           type: string
       required:
       - step_name

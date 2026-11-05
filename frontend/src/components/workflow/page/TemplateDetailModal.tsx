@@ -1,5 +1,6 @@
 "use client";
 
+import { localName, localNodeName } from "@soulledger/core/domain/localName";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
@@ -30,7 +31,7 @@ export function TemplateDetailModal({
     <BaseModal
       isOpen={isOpen}
       onClose={() => onClose()}
-      title={template?.name || t("workflow.template_detail")}
+      title={localName(template, locale) || t("workflow.template_detail")}
     >
       {template && (
         <div className="space-y-4">
@@ -49,7 +50,7 @@ export function TemplateDetailModal({
           </div>
           <div>
             <span className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("workflow.detail.notes")}</span>
-            <p className="text-sm text-[oklch(var(--color-ink))]"><DomainText value={template.description} /></p>
+            <p className="text-sm text-[oklch(var(--color-ink))]"><DomainText value={localName(template, locale, "description")} /></p>
           </div>
           <div>
             <span className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
@@ -59,7 +60,7 @@ export function TemplateDetailModal({
                   built locally with a `nodes_json` key. Read both. */}
               {((template.nodes_json || template.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
                 <div key={idx} className="bg-[oklch(var(--color-surface-3))] p-2 text-sm">
-                  <div className="font-medium text-[oklch(var(--color-ink))]">{node.node_name}</div>
+                  <div className="font-medium text-[oklch(var(--color-ink))]">{localNodeName(node, locale)}</div>
                   <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                     {node.court_code && (
                   <span className="inline-flex items-center gap-1">

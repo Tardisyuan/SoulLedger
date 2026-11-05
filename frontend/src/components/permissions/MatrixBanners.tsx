@@ -1,5 +1,6 @@
 "use client";
 
+import { localName, localNodeName } from "@soulledger/core/domain/localName";
 import { useEffect } from "react";
 import type { MatrixConflict, MatrixWorkflowConflict, Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -31,7 +32,7 @@ export function PartialFailBanner({
   onLocate: (f: CellFailure) => void;
   onDismiss: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <div role="alert" className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-surface-1))] px-4 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-3">
@@ -56,7 +57,7 @@ export function PartialFailBanner({
             <li key={`${f.role}:${f.permissionId}`} className="text-[oklch(var(--color-ink))]">
               {roleName(roleMeta, f.role)}
               {" · "}
-              {perm ? `${perm.category} · ${perm.name}` : f.permissionId}
+              {perm ? `${perm.category} · ${localName(perm, locale)}` : f.permissionId}
               {"："}
               <span className="text-[oklch(var(--color-ink-muted))]">{reason(f)}</span>
             </li>
@@ -94,7 +95,7 @@ export function ImpactConflictBanner({
   roleMeta: Record<string, Role>;
   permsById: Record<number, Permission>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (conflicts.length + workflowConflicts.length === 0) return null;
   const causes = (c: MatrixConflict | MatrixWorkflowConflict) =>
     c.caused_by.map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
@@ -109,9 +110,9 @@ export function ImpactConflictBanner({
           <li key={`${c.template_id}:${c.step_order}`} className="text-[oklch(var(--color-ink))]">
             {t("permissions.matrix.conflict_line", {
               causes: causes(c),
-              template: c.template_name,
+              template: localName(c, locale, "template_name"),
               step: String(c.step_order),
-              step_name: c.step_name,
+              step_name: localName(c, locale, "step_name"),
             })}
           </li>
         ))}
@@ -119,9 +120,9 @@ export function ImpactConflictBanner({
           <li key={`${w.workflow_id}:${w.node_order}`} className="text-[oklch(var(--color-ink))]">
             {t("permissions.matrix.conflict_workflow_line", {
               causes: causes(w),
-              workflow: w.workflow_name,
+              workflow: localName(w, locale, "workflow_name"),
               step: String(w.node_order),
-              step_name: w.node_name,
+              step_name: localNodeName(w, locale),
             })}
           </li>
         ))}

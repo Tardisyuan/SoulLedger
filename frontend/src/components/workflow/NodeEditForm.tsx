@@ -13,6 +13,7 @@ type ApproverType = "ACTOR" | "ROLE" | "SYSTEM";
 // Node data stored in React Flow nodes (camelCase for data field)
 export interface NodeDataUpdates {
   label?: string;
+  labelEn?: string;
   nodeType?: string;
   courtCode?: string;
   approverRole?: string;
@@ -131,6 +132,18 @@ export function NodeEditForm({
         className={`${CONTROL} font-medium`}
         value={(d.label as string) ?? ""}
         onChange={(e) => set({ label: e.target.value })}
+      />
+
+      <label htmlFor={id("node-name-en")} className={LABEL}>
+        {t("common.name_en")}
+      </label>
+      <input
+        id={id("node-name-en")}
+        type="text"
+        maxLength={255}
+        className={CONTROL}
+        value={(d.labelEn as string) ?? ""}
+        onChange={(e) => set({ labelEn: e.target.value })}
       />
 
       <label htmlFor={id("node-kind")} className={LABEL}>

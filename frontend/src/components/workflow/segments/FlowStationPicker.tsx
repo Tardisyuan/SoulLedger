@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { useQuery } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
 import { courtLabel } from "@soulledger/core/domain/courts";
@@ -52,13 +54,13 @@ export function FlowStationPicker({
   if (!preview.data) return <ListSkeleton count={4} />;
   const rows: PickRow[] = preview.data.stations.map((s, i) => ({
     key: String(s.node_order),
-    label: `${i + 1} · ${s.node_name}`,
+    label: `${i + 1} · ${localNodeName(s, locale)}`,
     hall: courtLabel(t, s.court_code, locale),
     who: s.approver ?? (s.approver_role ? <DomainEnum namespace="users.roles" value={s.approver_role} /> : null),
     required: s.is_required,
     jumpSources: s.jump_target_of,
   }));
   return (
-    <StationPicker flowName={preview.data.name} rows={rows} skipped={skipped} onChange={onChange} foreign={preview.data.foreign} />
+    <StationPicker flowName={localName(preview.data, locale)} rows={rows} skipped={skipped} onChange={onChange} foreign={preview.data.foreign} />
   );
 }

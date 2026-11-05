@@ -4,6 +4,7 @@
  * 规则在后端(`apps/workflow/segments.py`),读法在 core(`domain/workflowSegments`,官员台同一份):这里只画。
  * App 只看、只批当前站、只选本域那一段;加减站、再提醒、按默认流程走都在电脑上(Design 回复 O-3:「在电脑上继续」)。
  */
+import { localNodeName } from "@soulledger/core/domain/localName";
 import type { ApprovalNode, ApprovalWorkflow, JumpSource, WorkflowSegment } from "@soulledger/core/api/workflow";
 import { workflowApi } from "@soulledger/core/api/workflow";
 import { courtLabel } from "@soulledger/core/domain/courts";
@@ -215,9 +216,9 @@ function StationRow({ node, sources, on, onToggle }: { node: ApprovalNode; sourc
   const sub = node.is_required
     ? t("workflow.pick.final_reason")
     : sources.length > 0
-      ? jumpReason(t, sources)
+      ? jumpReason(t, sources, locale)
       : [courtLabel(t, node.court_code, locale), who].filter(Boolean).join(" · ");
-  const label = locked ? `${stationNo(node)} · ${node.node_name} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${node.node_name}`;
+  const label = locked ? `${stationNo(node)} · ${localNodeName(node, locale)} · ${t("workflow.pick.final_badge")}` : `${stationNo(node)} · ${localNodeName(node, locale)}`;
   return (
     <Pressable
       testID={`pick-station-${node.id}`}
@@ -371,7 +372,7 @@ export function WorkflowSegments({ workflow, onPick }: { workflow: ApprovalWorkf
                     >
                       <Txt variant="body" tone={look.skipped || look.notReached ? "subtle" : "ink"} style={styles.glyph}>{look.glyph}</Txt>
                       <Txt variant={isCurrent ? "bodyLg" : "body"} tone={look.skipped || look.notReached ? "subtle" : "ink"} style={[{ flex: 1 }, look.skipped ? styles.struck : null]}>
-                        {`${stationNo(node)} ${node.node_name}`}
+                        {`${stationNo(node)} ${localNodeName(node, locale)}`}
                       </Txt>
                       <Txt variant="caption" tone={look.skipped || look.notReached ? "subtle" : "muted"} testID={`segment-node-state-${node.id}`}>{right}</Txt>
                     </View>

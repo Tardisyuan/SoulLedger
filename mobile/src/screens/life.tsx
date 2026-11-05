@@ -1,3 +1,4 @@
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
@@ -228,7 +229,7 @@ export function LifeSections({
             <LandingWash key={j.id} on={focus?.judgment === j.id} testID={`judgment-${j.id}`}>
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
-                <DataRow label={tr(lexiconKey(lex, "court"))}>{j.court || unrecorded}</DataRow>
+                <DataRow label={tr(lexiconKey(lex, "court"))}>{courtLabel(tr, j.court, locale) || unrecorded}</DataRow>
                 <DataRow label={tr("soul_app.life.judge")}>
                   {j.judge ? (locale === "zh-Hans" ? j.judge.name_zh || j.judge.name : j.judge.name) : unrecorded}
                 </DataRow>

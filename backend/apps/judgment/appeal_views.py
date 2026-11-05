@@ -39,7 +39,7 @@ class AppealLadderStationSerializer(serializers.Serializer):
     node = serializers.UUIDField()
     #: 审批流程的节点名。
     name = serializers.CharField()
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
     is_final = serializers.BooleanField()
     state = serializers.ChoiceField(choices=appeals.LADDER_STATES)
     #: 这站的结论原文(节点的 notes);只有已决的站(PASSED / REJECTED)有。
@@ -138,6 +138,8 @@ class MeAppealableJudgmentSerializer(serializers.Serializer):
     can_escalate = serializers.BooleanField()
     #: 上诉时要过的各站名(按顺序,上诉确认页列出);不能上诉时为空。
     escalation_stations = serializers.ListField(child=serializers.CharField())
+    #: The same stations in English (the source where a station has none), index for index.
+    escalation_stations_en = serializers.ListField(child=serializers.CharField(), required=False)
     #: 审判本身的文明(上诉建的就是这个文明的申诉流程,`appeals.escalation_stations`);U-2「申诉流程 · 文明名」用它。
     civilization = serializers.ChoiceField(choices=Civilization.choices)
 
@@ -240,13 +242,15 @@ class MeJudgmentAppealsView(SoulAPIView):
         for judgment in judgments:
             refusal = appeals.appeal_refusal(judgment, account)
             can_escalate = refusal is None and appeals.escalation_refusal(judgment, account) is None
+            stations = appeals.escalation_stations(judgment) if can_escalate else []
             rows.append({
                 "judgment_id": judgment.pk, "case_number": judgment.case_number, "verdict": judgment.verdict,
                 "concluded_at": judgment.concluded_at, "deadline": appeals.deadline(judgment),
                 "rounds_used": judgment.appeals.filter(is_deleted=False).count(),
                 "can_appeal": refusal is None, "refusal_code": refusal.code if refusal else None,
                 "can_escalate": can_escalate,
-                "escalation_stations": appeals.escalation_stations(judgment) if can_escalate else [],
+                "escalation_stations": [source for source, _ in stations],
+                "escalation_stations_en": [english for _, english in stations],
                 "civilization": judgment.civilization,
             })
         mine = JudgmentAppeal.objects.filter(soul=account.soul, judgment__cycle=account.cycle).select_related(

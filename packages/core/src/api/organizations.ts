@@ -13,6 +13,8 @@ import type { PaginatedResponse } from "./users";
 export interface Organization {
   id: number;
   name: string;
+  /** English; blank = show `name`. */
+  name_en?: string;
   code: string;
   category?: string;
   parent: number | null;
@@ -27,6 +29,7 @@ export interface Organization {
 /** Writable fields of POST / PATCH /organizations/ (`org.manage`); `level` and `tenant` are server-set. */
 export interface OrganizationInput {
   name: string;
+  name_en?: string;
   code: string;
   category: string;
   parent: number | null;

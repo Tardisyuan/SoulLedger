@@ -1,5 +1,6 @@
 "use client";
 
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery, type UseQueryResult } from "@tanstack/react-query";
@@ -126,7 +127,7 @@ const LINE_STRONG = "border-[oklch(var(--color-line-strong))]";
 const KEYCAP = `border ${LINE_STRONG} px-[6px] font-mono text-xs ${MUTED}`;
 
 export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useTenant();
   const router = useRouter();
   // 审判与律条要 judgment.read,灵魂要 soul.read:不持码就不发(rbac-web L-6),那一组也不出现 —— 与 403 时一样。
@@ -202,7 +203,7 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
     if (!q) return [];
     return flattenPages(menus).filter((m) => {
       const key = menuTranslationKey(m);
-      return [m.name, m.path ?? "", key ? t(key) : ""].some((s) => s.toLowerCase().includes(q));
+      return [m.name, m.name_en ?? "", m.path ?? "", key ? t(key) : ""].some((s) => s.toLowerCase().includes(q));
     });
   }, [menus, term, t]);
 
@@ -261,12 +262,12 @@ export function GlobalSearch({ menus }: { menus: readonly SidebarMenu[] }) {
         remote<Judgment>("judgment", judgments, (j) => ({
           key: `judgment:${j.id}`,
           href: `/judgment/${j.id}`,
-          recent: { kind: "judgment", id: j.id, href: `/judgment/${j.id}`, title: j.case_number, sub: [j.soul_name, j.court].filter(Boolean).join(" · ") },
+          recent: { kind: "judgment", id: j.id, href: `/judgment/${j.id}`, title: j.case_number, sub: [j.soul_name, courtLabel(t, j.court, locale)].filter(Boolean).join(" · ") },
           node: (
             <>
-              <span className="min-w-0 flex-1 truncate" title={[j.case_number, j.soul_name, j.court].filter(Boolean).join(" · ")}>
+              <span className="min-w-0 flex-1 truncate" title={[j.case_number, j.soul_name, courtLabel(t, j.court, locale)].filter(Boolean).join(" · ")}>
                 <span className="font-mono"><Hit text={j.case_number ?? ""} q={term} /></span>
-                <span className={MUTED}> · <Hit text={j.soul_name ?? ""} q={term} />{j.court ? ` · ${j.court}` : ""}</span>
+                <span className={MUTED}> · <Hit text={j.soul_name ?? ""} q={term} />{j.court ? ` · ${courtLabel(t, j.court, locale)}` : ""}</span>
               </span>
               {exact(j) && (
                 <span data-testid="search-exact-case" className="shrink-0 bg-[oklch(var(--color-ink))] px-[6px] text-xs text-[oklch(var(--color-surface-1))]">

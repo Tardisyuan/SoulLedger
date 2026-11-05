@@ -171,6 +171,12 @@ export function MenuFormModal({
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           required
         />
+        <TextField
+          label={t("common.name_en")}
+          value={form.name_en}
+          maxLength={200}
+          onChange={(e) => setForm({ ...form, name_en: e.target.value })}
+        />
         {form.menu_type !== "DIRECTORY" && (
           <TextField
             id={pathId}

@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import type { Disposition, Judgment, Reincarnation, SoulEvent } from "@soulledger/core/api";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -63,7 +65,7 @@ const byNewest = <T,>(items: T[], at: (x: T) => string | null | undefined) =>
  * 下面一行小字是庭与判官 —— 都是判决自己带的。
  */
 export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const { user } = useTenant();
 
   // 判词:最近一份**已宣判且写了判词**的判决。判词是 `notes` —— 判官结案时写下的那段话。
@@ -71,7 +73,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
     judgments.filter((j) => j.is_final && (j.notes ?? "").trim()),
     (j) => j.concluded_at ?? j.created_at
   );
-  const signature = quoted ? [quoted.court, quoted.judge_name].filter(Boolean).join(" ") : "";
+  const signature = quoted ? [courtLabel(t, quoted.court, locale), localName(quoted, locale, "judge_name")].filter(Boolean).join(" ") : "";
 
   if (judgments.length === 0) {
     return <p className="px-4 py-6 text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.no_judgments")}</p>;
@@ -80,7 +82,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
   return (
     <div data-testid="soul-judgment-history">
       {byNewest(judgments, (j) => j.concluded_at ?? j.created_at).map((j) => {
-        const bench = [j.court, j.judge_name].filter(Boolean).join(" · ");
+        const bench = [courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ");
         const mine = isMinePending(j, user?.id);
         return (
           <div

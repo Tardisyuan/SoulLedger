@@ -1,5 +1,6 @@
 "use client";
 
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalNode, type ApprovalWorkflow, type WorkflowSegment } from "@soulledger/core/api";
@@ -157,7 +158,7 @@ export function AdjustStationsSheet({
           )}
           {current && (
             <li data-locked="current" className={lockedRow}>
-              <span>{t("workflow.adjust.locked_current", { node: `${stationNo(current)} ${current.node_name}` })}</span>
+              <span>{t("workflow.adjust.locked_current", { node: `${stationNo(current)} ${localNodeName(current, locale)}` })}</span>
               <span className="text-xs">{t("workflow.adjust.locked")}</span>
             </li>
           )}
@@ -185,7 +186,7 @@ export function AdjustStationsSheet({
                     className="h-4 w-4 shrink-0 accent-[oklch(var(--color-accent))]"
                   />
                   <span className={`min-w-0 flex-1 break-words ${on ? "" : "line-through"}`}>
-                    <span className="font-mono">{stationNo(n)}</span> {n.node_name}
+                    <span className="font-mono">{stationNo(n)}</span> {localNodeName(n, locale)}
                     {n.court_code ? (
                       <span className="text-xs">
                         {" · "}
@@ -194,7 +195,7 @@ export function AdjustStationsSheet({
                     ) : null}
                     {sources.length > 0 ? (
                       <span className="block text-xs text-[oklch(var(--color-ink-muted))]">
-                        {t("workflow.pick.jump_target_reason", { source: sources.map((s) => s.node_name).join("、") })}
+                        {t("workflow.pick.jump_target_reason", { source: sources.map((s) => localNodeName(s, locale)).join("、") })}
                       </span>
                     ) : null}
                   </span>

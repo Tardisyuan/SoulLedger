@@ -72,6 +72,7 @@ export interface CrossTenantJudgmentListItem {
   /** `Tenant.display_name`, beside the code (added 2026-09-24): the detail page
    *  printed the pk under 「发起方」 for want of it. */
   initiating_tenant_display_name: string;
+  initiating_tenant_display_name_en?: string;
   status: string;
   concluded_at: string | null;
   conclusion_type: string | null;
@@ -111,8 +112,10 @@ export interface CrossTenantJudgmentParticipant {
   participant_tenant_code: string;
   /** `Tenant.display_name` of the seat's tenant (added 2026-09-24). */
   participant_tenant_display_name: string;
+  participant_tenant_display_name_en?: string;
   participant_actor: string | null;
   participant_actor_name: string | null;
+  participant_actor_name_en?: string | null;
   role: string;
   joined_at: string;
   /**

@@ -37,6 +37,7 @@ export interface LedgerStatsOverview {
     tenant_id: number;
     tenant_code: string;
     tenant_name: string;
+    tenant_name_en?: string;
     /** `Tenant.dispatch_enabled`:false 的殿不收调拨 —— 发起移交页的目标殿单选据此禁用并说明。 */
     dispatch_enabled: boolean;
     total_souls: number;

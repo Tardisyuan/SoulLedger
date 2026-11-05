@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { permApi, usersApi, type Role, type RoleMembersChange, type RoleMembersRefused, type User } from "@soulledger/core/api";
@@ -35,7 +36,7 @@ const tenantName = (u: { tenant?: { code?: string; display_name?: string } | nul
  * 绑殿的管理员只看得到、改得了本殿的人。主角色不能在这里移除 —— 先给那个人授别的主角色。
  */
 export function RoleMembersSection({ role }: { role: Role }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -127,7 +128,7 @@ export function RoleMembersSection({ role }: { role: Role }) {
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium text-[oklch(var(--color-ink))]">{u.username}</span>
                   <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-                    {[tenantName(u, t("org_select.no_tenant")), u.organization?.name].filter(Boolean).join(" · ")}
+                    {[tenantName(u, t("org_select.no_tenant")), localName(u.organization, locale)].filter(Boolean).join(" · ")}
                     {!u.is_active && ` · ${t("users.inactive")}`}
                   </span>
                 </span>

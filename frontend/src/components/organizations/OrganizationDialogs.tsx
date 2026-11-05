@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import Link from "next/link";
 import { organizationNotEmptyOf, type Organization, type OrganizationNotEmpty } from "@soulledger/core/api";
@@ -64,6 +65,7 @@ function OrganizationForm({
   const save = useSaveOrganization();
   const editing = mode.kind === "create" ? null : mode.org;
   const [name, setName] = useState(editing?.name ?? "");
+  const [nameEn, setNameEn] = useState(editing?.name_en ?? "");
   const [code, setCode] = useState(editing?.code ?? "");
   const [category, setCategory] = useState<string>(
     (editing ? editing.category : mode.kind === "create" ? mode.parent?.category : undefined) ?? CIVILIZATION_OPTIONS[0],
@@ -83,7 +85,7 @@ function OrganizationForm({
     save.mutate(
       {
         id: editing?.id,
-        data: { name: name.trim(), code: code.trim(), category: effectiveCategory, parent, sort: Number(sort) || 0 },
+        data: { name: name.trim(), name_en: nameEn.trim(), code: code.trim(), category: effectiveCategory, parent, sort: Number(sort) || 0 },
       },
       { onSuccess: onClose },
     );
@@ -113,6 +115,7 @@ function OrganizationForm({
         }}
       >
         <TextField label={t("org.form.name")} required value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+        <TextField label={t("common.name_en")} value={nameEn} maxLength={200} onChange={(e) => setNameEn(e.target.value)} />
         <TextField label={t("tenants.code")} required mono value={code} maxLength={50} onChange={(e) => setCode(e.target.value)} />
         <SelectField
           label={t("souls.civilization")}
@@ -154,7 +157,7 @@ export function OrganizationDeleteDialog({
   /** 只有名下灵魂 / 审判挡着时,在这里挑一个同殿机构「转移到…」再删(`?move_to=`,数据范围 B3a)。 */
   organizations?: readonly Organization[];
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const del = useDeleteOrganization();
   const [blocked, setBlocked] = useState<OrganizationNotEmpty | null>(null);
   const [moveTo, setMoveTo] = useState<number | null>(null);
@@ -183,7 +186,7 @@ export function OrganizationDeleteDialog({
       <Modal
         isOpen
         onClose={close}
-        title={t("org.delete_blocked_title", { name: org.name })}
+        title={t("org.delete_blocked_title", { name: localName(org, locale) })}
         footer={
           <div className="flex justify-end gap-3">
             {canViewPeople && blocked.people > 0 && (
@@ -231,7 +234,7 @@ export function OrganizationDeleteDialog({
   return (
     <ConfirmDialog
       isOpen
-      title={t("org.delete_title", { name: org.name })}
+      title={t("org.delete_title", { name: localName(org, locale) })}
       message={t("org.delete_body")}
       confirmText={t("org.delete")}
       confirmLoading={del.isPending}

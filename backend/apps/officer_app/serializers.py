@@ -79,19 +79,19 @@ class FactHallSerializer(serializers.Serializer):
 
 class FactNodeSerializer(serializers.Serializer):
     name = serializers.CharField()
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
     index = serializers.IntegerField(help_text="第几步(只数需要人决定的节点)。")
     total = serializers.IntegerField()
     is_last = serializers.BooleanField(
         allow_null=True, help_text="批准后流程是否结束。null = 有条件分支、无从判断:App 用通用的一句。")
     next_name = serializers.CharField(allow_null=True, help_text="批准后交给的节点;最后一步或不确定时为 null。")
-    next_name_en = serializers.CharField(allow_null=True, allow_blank=True)
+    next_name_en = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class FactHistorySerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["start", "decided", "current"])
     name = serializers.CharField(allow_blank=True)
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
     actor = serializers.CharField(allow_null=True)
     verdict = serializers.CharField(allow_blank=True, help_text="`workflow.verdicts.*` 的码;发起与当前节点为空。")
     comment = serializers.CharField(allow_blank=True)

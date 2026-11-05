@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -51,7 +52,7 @@ const STATUS_GLYPH: Record<string, string> = {
 const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
 export default function CrossJudgmentDetailPage() {
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
@@ -190,7 +191,7 @@ export default function CrossJudgmentDetailPage() {
           <>
             {/* 展示名,不是 `initiating_tenant`:那是租户主键(IDENTIFIER_POLICY 第 4 条),
                 `initiating_tenant_display_name` 是 2026-09-24 为这一格加的。 */}
-            {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant_display_name || judgment?.initiating_tenant_code}
+            {t("crossJudgments.initiated_by")}: {localName(judgment, locale, "initiating_tenant_display_name") || judgment?.initiating_tenant_code}
             {originId && (
               <span data-testid="cross-origin">
                 {" · "}
@@ -292,10 +293,10 @@ export default function CrossJudgmentDetailPage() {
                   className="grid grid-cols-[1fr_auto] gap-x-3 py-2 border-b border-[oklch(var(--color-rule))]"
                 >
                   <span
-                    title={p.participant_actor_name || p.participant_actor || undefined}
+                    title={localName(p, locale, "participant_actor_name") || p.participant_actor || undefined}
                     className="min-w-0 truncate font-medium text-[oklch(var(--color-ink))]"
                   >
-                    {p.participant_actor_name || p.participant_actor}
+                    {localName(p, locale, "participant_actor_name") || p.participant_actor}
                   </span>
                   {/* `DomainEnum`,不是裸成员。`p.role` 是
                       `ParticipantRole`(ADVISOR / CO_JUDGE / CHAIRMAN),而三份
@@ -304,7 +305,7 @@ export default function CrossJudgmentDetailPage() {
                       键已补进 `crossJudgments.participant_roles`。 */}
                   <span className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
                     {/* 席位租户的展示名,不是 `participant_tenant`(主键)。 */}
-                    <span>{p.participant_tenant_display_name || p.participant_tenant_code}</span>
+                    <span>{localName(p, locale, "participant_tenant_display_name") || p.participant_tenant_code}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
                         标记报红 —— 而这里它只是两个存在的值之间的分隔符。 */}

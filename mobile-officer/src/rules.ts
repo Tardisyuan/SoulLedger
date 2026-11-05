@@ -3,6 +3,7 @@
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each; the one that
  * sends a decision is `decisions.ts` (cq-apps 2026-10-30 #9).
  */
+import { localName } from "@soulledger/core/domain/localName";
 import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
 import type { DispatchRecord } from "@soulledger/core/api/dispatch";
 import {
@@ -26,10 +27,14 @@ export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
  * 转生申请的标题:后端给的是灵魂名,「转生申请 · 名」(申诉:「转生申请申诉 · 名」)在这里按语言包拼。
  * 其他种类的 `title` 原样。
  */
-export function todoTitle(item: { kind: string; title: string; is_appeal?: boolean; total?: number }, t: (key: string, vars?: Record<string, string>) => string): string {
+export function todoTitle(
+  item: { kind: string; title: string; title_en?: string; is_appeal?: boolean; total?: number },
+  t: (key: string, vars?: Record<string, string>) => string,
+  locale?: string,
+): string {
   // 待我选站:「{灵魂} · 本域 N 站」,N 是本域这一段的站数(默认流程)。
   if (item.kind === "pick") return t("workflow.pick_group.row_title", { soul: item.title, n: String(item.total ?? 0) });
-  if (item.kind !== "rebirth" || !item.title) return item.title;
+  if (item.kind !== "rebirth" || !item.title) return localName(item, locale, "title");
   return t(item.is_appeal ? "soul_accounts.rebirth.appeal_title" : "soul_accounts.rebirth.detail_title", { name: item.title });
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { memo, useId } from "react";
 import { Permission, Role } from "@soulledger/core/api";
 import { ADMIN_ROLE_NAME, ROLE_FORBIDDEN_CODENAMES, capabilityForbids } from "@soulledger/core/api/perm";
@@ -107,7 +108,7 @@ export interface MatrixCellInfo {
 }
 
 /** What one cell draws, worked out by its row so the memoised cell compares strings, not the `info` closures. */
-function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: ReturnType<typeof useI18n>["t"]) {
+function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: ReturnType<typeof useI18n>["t"], locale?: string) {
   const key = matrixCellKey(role, perm.id);
   const failure = info.failure(key);
   const rule = ruleState(role, perm.codename, info.heldCodenames?.(role));
@@ -123,7 +124,7 @@ function describeCell(info: MatrixCellInfo, role: string, perm: Permission, t: R
     state === "lock"
       ? `${t("permissions.matrix.lock_word")} · ${ADMIN_ROLE_NAME}　${t("permissions.matrix.lock_hint")}`
       : state === "deny"
-        ? `${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: perm.name || perm.codename })} role_forbidden_permission`
+        ? `${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: localName(perm, locale) || perm.codename })} role_forbidden_permission`
         : state === "failed" && failure
       ? `${t("permissions.matrix.state.failed")}: ${info.failureReason(failure)}`
       : state === "on" || state === "off"
@@ -158,6 +159,7 @@ const MatrixCell = memo(function MatrixCell({
   onToggle: (role: string, permId: number) => void;
   variant: "grid" | "switch";
 }) {
+  const { locale } = useI18n();
   const descId = useId();
   const key = matrixCellKey(role, perm.id);
   const ruled = state === "lock" || state === "deny";
@@ -167,7 +169,7 @@ const MatrixCell = memo(function MatrixCell({
         type="button"
         role={variant === "grid" ? "checkbox" : "switch"}
         aria-checked={granted}
-        aria-label={variant === "grid" ? `${role} — ${perm.codename}` : `${perm.name} ${perm.codename}`}
+        aria-label={variant === "grid" ? `${role} — ${perm.codename}` : `${localName(perm, locale)} ${perm.codename}`}
         aria-describedby={words ? descId : undefined}
         title={words || undefined}
         data-cell={key}
@@ -270,7 +272,7 @@ export function PermissionMatrixTable({
   mobileRole: string;
   onMobileRoleChange: (role: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   if (!matrixReady) {
     return (
@@ -380,13 +382,13 @@ export function PermissionMatrixTable({
                 {visible.map((perm) => (
                   <li key={perm.id} className="flex min-h-12 items-center justify-between gap-3 border-t border-[oklch(var(--color-line))] px-4 py-0.5">
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-[oklch(var(--color-ink))]">{perm.name}</span>
+                      <span className="block text-sm font-medium text-[oklch(var(--color-ink))]">{localName(perm, locale)}</span>
                       <span className="block font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{perm.codename}</span>
                     </span>
                     <MatrixCell
                       role={role}
                       perm={perm}
-                      {...describeCell(info, role, perm, t)}
+                      {...describeCell(info, role, perm, t, locale)}
                       disabled={isSaving}
                       onToggle={onToggle}
                       variant="switch"
@@ -423,7 +425,7 @@ function MatrixGroup({
   categoryTally: (perms: Permission[], role: string) => string;
   info: MatrixCellInfo;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <>
       {/* 类别头(Design A6):44 高、s2 底、「类别 · 条数」;每列是「已授 / 总数」,ADMIN 列写「全部」。
@@ -463,7 +465,7 @@ function MatrixGroup({
             scope="row"
             className="sticky left-0 z-10 border-t border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 text-left font-normal shadow-[2px_0_6px_oklch(0_0_0/0.06)]"
           >
-            <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{perm.name}</div>
+            <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{localName(perm, locale)}</div>
             <div className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{perm.codename}</div>
           </th>
           {roleNames.map((role) => (
@@ -471,7 +473,7 @@ function MatrixGroup({
               <MatrixCell
                 role={role}
                 perm={perm}
-                {...describeCell(info, role, perm, t)}
+                {...describeCell(info, role, perm, t, locale)}
                 disabled={isSaving}
                 onToggle={onToggle}
                 variant="grid"
