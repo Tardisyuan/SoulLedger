@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -22,7 +23,7 @@ import { civSkinOf } from "@/src/lib/civSkin";
 import { CreateHallDialog, DeactivateHallDialog, useHallActiveMutation } from "@/src/components/tenants/HallLifecycleDialogs";
 
 function TenantsPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [page, setPage] = useState(1);
@@ -82,7 +83,7 @@ function TenantsPageContent() {
           <>
             {/* 停用的殿整行灰字(K-1)。 */}
             <td className={`px-4 py-3 font-medium ${tenant.is_active === false ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}>
-              {tenant.display_name}
+              {localName(tenant, locale, "display_name")}
             </td>
             <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{tenant.code}</td>
             <td className="px-4 py-3">

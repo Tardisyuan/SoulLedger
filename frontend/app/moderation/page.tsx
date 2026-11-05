@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useEffect, useState } from "react";
 import {
   useHandledContent,
@@ -58,7 +59,7 @@ function useSegmentInUrl(): [Segment, (next: Segment) => void] {
 }
 
 function ModerationPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [segment, setSegment] = useSegmentInUrl();
@@ -72,7 +73,7 @@ function ModerationPageContent() {
     handled: useHandledContent({}).data?.count,
   };
 
-  const scope = user?.tenant?.display_name ?? t("social_moderation.scope_all");
+  const scope = localName(user?.tenant, locale, "display_name") || t("social_moderation.scope_all");
 
   return (
     <PageShell

@@ -1,5 +1,7 @@
 "use client";
 
+import { localName, localNodeName } from "@soulledger/core/domain/localName";
+import { presetLabel } from "@soulledger/core/config/workflowPresetEnglish";
 import { type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -85,16 +87,16 @@ export interface TemplatePreviewModel {
  * `node_count` 是列表行唯一真有的那个数；`??` 后面那半是给不带它的对象兜底，
  * 与合并前逐字一致。
  */
-export function backendPreviewModel(tmpl: WorkflowTemplateListItem): TemplatePreviewModel {
+export function backendPreviewModel(tmpl: WorkflowTemplateListItem, locale?: string): TemplatePreviewModel {
   return {
-    name: tmpl.name,
+    name: localName(tmpl, locale),
     civilization: tmpl.civilization,
     caseType: tmpl.case_type,
-    description: tmpl.description,
+    description: localName(tmpl, locale, "description"),
     nodeCount: tmpl.node_count ?? (tmpl.nodes_json || []).length,
     nodes: tmpl.nodes_json
       ? tmpl.nodes_json.map((node: FlowNode) => ({
-          name: node.node_name,
+          name: localNodeName(node, locale),
           court: node.court_code,
           nodeType: node.node_type,
         }))
@@ -113,15 +115,15 @@ export function backendPreviewModel(tmpl: WorkflowTemplateListItem): TemplatePre
  * 存下去的是同一个。`src/__tests__/TemplatePreview.test.tsx` 断言这一格显示的
  * 是成员、并且断言中文步骤名**不出现**在任何 `title` 上。
  */
-export function presetPreviewModel(tmpl: PresetTemplate): TemplatePreviewModel {
+export function presetPreviewModel(tmpl: PresetTemplate, locale?: string): TemplatePreviewModel {
   return {
-    name: tmpl.name,
+    name: presetLabel(tmpl.name, locale),
     civilization: tmpl.civilization,
     caseType: tmpl.caseType,
-    description: tmpl.description,
+    description: presetLabel(tmpl.description, locale),
     nodeCount: tmpl.nodes.length,
     nodes: tmpl.nodes.map((n) => ({
-      name: n.name,
+      name: presetLabel(n.name, locale),
       court: n.court,
       nodeType: nodeTypeFor(n.type),
     })),

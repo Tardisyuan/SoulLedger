@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -99,7 +100,7 @@ export function StartWorkflowDialog({
   onClose: () => void;
   lockedSoul?: Soul;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -176,7 +177,7 @@ export function StartWorkflowDialog({
     [templates.data, soul, caseType]
   );
   const caseTypeLabel = (value: string) => resolveEnumDisplay(t, "workflow.case_types", value).label ?? value;
-  const defaultName = usable[0]?.name ?? (caseType ? caseTypeLabel(caseType) : "");
+  const defaultName = (usable[0] ? localName(usable[0], locale) : "") || (caseType ? caseTypeLabel(caseType) : "");
 
   const start = useMutation({
     mutationFn: async () =>
@@ -387,7 +388,7 @@ export function StartWorkflowDialog({
               }}
               options={[
                 { value: "", label: t("workflow.start.template_default", { name: defaultName }) },
-                ...usable.map((tpl) => ({ value: tpl.id, label: tpl.name })),
+                ...usable.map((tpl) => ({ value: tpl.id, label: localName(tpl, locale) })),
               ]}
             />
           ) : (

@@ -7,6 +7,7 @@
  * the system (the row ends with ↗︎); offline a PDF row is greyed with 「联网后才能打开」; no attachments, no section.
  * A soul's name opens its detail (O-15, `SoulLink`) when the server sent the soul's id; its code beside it never does.
  */
+import { localName } from "@soulledger/core/domain/localName";
 import type { FactAttachment, FactHistory, FactSoul, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -23,7 +24,7 @@ type OpenSoul = ((id: string) => void) | undefined;
 type Hall = { code: string; display_name: string } | null | undefined;
 
 export function TodoFactsView({ detail, onOpenSoul }: { detail: TodoItemDetail; onOpenSoul?: (id: string) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const f = detail.facts;
   if (!f) return null;
   const hall = (h: Hall) => hallLabel(t, h) ?? "";
@@ -32,7 +33,7 @@ export function TodoFactsView({ detail, onOpenSoul }: { detail: TodoItemDetail; 
       {f.node ? (
         <View testID="facts-node" style={{ gap: space[1] }}>
           <Txt variant="caption" tone="muted">{t("officer_app.detail.node", { n: String(f.node.index), total: String(f.node.total) })}</Txt>
-          <Txt variant="bodyLg">{f.node.name}</Txt>
+          <Txt variant="bodyLg">{localName(f.node, locale)}</Txt>
         </View>
       ) : null}
       {detail.kind === "reassignment" ? <DispatchHeader f={f} hall={hall} /> : null}
@@ -152,15 +153,15 @@ function Souls({ f, onOpenSoul }: { f: TodoFacts; onOpenSoul: OpenSoul }) {
 
 /** 前面几步: a vertical timeline. A comment shows at most 2 lines. */
 function History({ steps }: { steps: FactHistory[] }) {
-  const { t, enumLabel } = useI18n();
+  const { t, enumLabel, locale } = useI18n();
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const { shown, hidden, foldAt } = historyView(steps, expanded);
   const line = (s: FactHistory): string => {
     if (s.kind === "start") return [t("officer_app.detail.requester"), s.actor, formatWhen(s.at)].filter(Boolean).join(" · ");
-    if (s.kind === "current") return [s.name, s.mine ? t("officer_app.detail.history_yours") : null].filter(Boolean).join(" · ");
+    if (s.kind === "current") return [localName(s, locale), s.mine ? t("officer_app.detail.history_yours") : null].filter(Boolean).join(" · ");
     const verdict = s.verdict ? enumLabel("workflow.verdicts", s.verdict) : null;
-    return [s.name, s.actor, verdict?.state === "known" ? verdict.label : s.verdict, formatWhen(s.at)].filter(Boolean).join(" · ");
+    return [localName(s, locale), s.actor, verdict?.state === "known" ? verdict.label : s.verdict, formatWhen(s.at)].filter(Boolean).join(" · ");
   };
   const row = (s: FactHistory, i: number) => (
     <View key={`${s.kind}-${i}`} testID={`facts-step-${s.kind}`} style={{ flexDirection: "row", gap: space[3] }}>

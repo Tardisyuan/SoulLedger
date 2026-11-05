@@ -16,6 +16,8 @@ export interface FlowNode {
   // so a node persisted without one comes back without the key.
   id?: string | number;
   node_name: string;
+  /** English inside a template's JSON; blank = `node_name`. */
+  name_en?: string;
   status?: string;
   node_type?: string;
   court_code?: string;
@@ -48,7 +50,10 @@ export interface FrontendNode {
 export interface TemplatePreviewData {
   id?: string | number;
   name: string;
+  /** English; blank = show the source. A preset's comes from `workflowPresetEnglish`, and is saved with it. */
+  name_en?: string;
   description?: string;
+  description_en?: string;
   civilization: string;
   case_type?: string;
   caseType?: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,7 +68,7 @@ export default function UsersPage() {
 }
 
 function UsersRoute() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hall = useHall(t("plaque.office.rules"));
   usePlaque({ hall });
   const router = useRouter();
@@ -374,7 +375,7 @@ function UsersRoute() {
             </td>}
             {/* 机构与职务只由管理员在编辑弹层里设(`PATCH /users/{id}/`);此前列表上没有,机构页的「查看人员」因此总是空的也没人看得出。 */}
             {show("organization") && <td data-testid="user-organization" className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
-              {[user.organization?.name, user.position].filter(Boolean).join(" · ") || "-"}
+              {[localName(user.organization, locale), user.position].filter(Boolean).join(" · ") || "-"}
             </td>}
             {show("status") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}

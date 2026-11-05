@@ -197,11 +197,13 @@ class MatrixChangesResultSerializer(serializers.Serializer):
 class WorkflowStepRefSerializer(serializers.Serializer):
     step_order = serializers.IntegerField()
     step_name = serializers.CharField()
+    step_name_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class TemplateRefFieldsSerializer(serializers.Serializer):
     template_id = serializers.UUIDField()
     template_name = serializers.CharField()
+    template_name_en = serializers.CharField(required=False, allow_blank=True)
     tenant_id = serializers.IntegerField(allow_null=True)
     civilization = serializers.CharField()
     is_active = serializers.BooleanField()
@@ -221,6 +223,7 @@ class MatrixConflictCauseSerializer(serializers.Serializer):
 class MatrixConflictSerializer(TemplateRefFieldsSerializer):
     step_order = serializers.IntegerField()
     step_name = serializers.CharField()
+    step_name_en = serializers.CharField(required=False, allow_blank=True)
     approver_roles = serializers.ListField(child=serializers.CharField())
     caused_by = MatrixConflictCauseSerializer(many=True)
 
@@ -230,12 +233,12 @@ class MatrixWorkflowConflictSerializer(serializers.Serializer):
 
     workflow_id = serializers.UUIDField()
     workflow_name = serializers.CharField()
-    workflow_name_en = serializers.CharField(allow_blank=True)
+    workflow_name_en = serializers.CharField(required=False, allow_blank=True)
     tenant_id = serializers.IntegerField(allow_null=True)
     status = serializers.CharField()
     node_order = serializers.IntegerField()
     node_name = serializers.CharField()
-    node_name_en = serializers.CharField(allow_blank=True)
+    node_name_en = serializers.CharField(required=False, allow_blank=True)
     approver_roles = serializers.ListField(child=serializers.CharField())
     caused_by = MatrixConflictCauseSerializer(many=True)
 

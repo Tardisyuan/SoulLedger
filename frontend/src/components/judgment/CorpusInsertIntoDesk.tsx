@@ -1,5 +1,6 @@
 "use client";
 
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,7 @@ const deskHref = (judgmentId: string, statuteId: string) =>
  */
 /** Design A3: a full-width primary — 44 in the rail, 56 in the phone's bottom bar. */
 export function CorpusInsertIntoDesk({ statuteId, size = "sm" }: { statuteId: string; size?: ButtonSize }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useTenant();
   // Read in render: the rail only renders once the corpus has loaded client-side, and
   // `lastOpenCase` answers null (not a throw) where there is no localStorage.
@@ -92,7 +93,7 @@ export function CorpusInsertIntoDesk({ statuteId, size = "sm" }: { statuteId: st
                     <Link href={deskHref(j.id, statuteId)} className="text-sm hover:underline">
                       <DomainText value={j.soul_name} />
                     </Link>
-                    <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{j.court}</span>
+                    <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{courtLabel(t, j.court, locale)}</span>
                   </li>
                 ))}
               </ul>

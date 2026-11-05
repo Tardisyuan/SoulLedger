@@ -3,10 +3,9 @@ import { isDirectory } from "@/src/hooks/useSidebarMenus";
 import type { Locale } from "@/src/contexts/I18nContext";
 
 /**
- * 菜单名（Menu.name）是数据库自由文本，没有 i18n 字段（见
- * backend/apps/menus/models.py：name 是普通 CharField）。非 zh-Hans 语言下，
- * 导航本身按设计保持中文原文、不加注 —— 唯一的例外是面包屑和页面 H1，
- * 这两处补一个"译名 中文原名"的对照，别的地方都不加，免得到处都是噪音。
+ * 菜单名（Menu.name）是数据库自由文本，英文在 `Menu.name_en`（2026-11-05 起）；空的、以及 egy，走下面这张
+ * 语言包键表。非 zh-Hans 语言下，导航按译名显示 —— egy 在面包屑和页面 H1 上另补中文原名的对照。
+ * `name` 本身不改，所以这里和 `hideTheWheel` 按 `name` 找分组始终找得到。
  *
  * 叶子菜单按 path 建 key（path 比 name 稳 —— name 在 Stage 7 的菜单编辑器里
  * 随时可能被改，path 基本对应固定路由）。目录分组没有 path，只能按 name 建
@@ -89,7 +88,7 @@ const DIRECTORY_KEYS: Record<string, string> = {
   "全局": "breadcrumb.menu.group_global",
 };
 
-type GlossableNode = Pick<SidebarMenu, "path" | "name" | "menu_type">;
+type GlossableNode = Pick<SidebarMenu, "path" | "name" | "menu_type" | "name_en">;
 
 /** 给定一个菜单树节点，找它对应的译名 key；新增/改名后未登记则返回 null。 */
 export function menuTranslationKey(node: GlossableNode): string | null {
@@ -113,6 +112,8 @@ export function menuGlossParts(
   t: (key: string) => string
 ): MenuGlossParts {
   if (locale === "zh-Hans") return { primary: node.name };
+  // The row's own English first: a menu an administrator added has no key below.
+  if (locale === "en" && node.name_en) return { primary: node.name_en };
   const key = menuTranslationKey(node);
   if (!key) return { primary: node.name };
   const translated = t(key);

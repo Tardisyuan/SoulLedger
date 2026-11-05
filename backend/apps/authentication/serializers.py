@@ -32,7 +32,7 @@ class UserTenantRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     code = serializers.CharField()
     display_name = serializers.CharField()
-    display_name_en = serializers.CharField(allow_blank=True)
+    display_name_en = serializers.CharField(required=False, allow_blank=True)
 
 
 class UserOrganizationRefSerializer(serializers.Serializer):
@@ -46,7 +46,7 @@ class UserOrganizationRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     code = serializers.CharField()
     name = serializers.CharField()
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ class LoginTenantRefSerializer(serializers.Serializer):
 
     code = serializers.CharField()
     display_name = serializers.CharField()
-    display_name_en = serializers.CharField(allow_blank=True)
+    display_name_en = serializers.CharField(required=False, allow_blank=True)
     civilization = serializers.CharField()
     seal_glyphs = serializers.ListField(child=serializers.CharField())
 

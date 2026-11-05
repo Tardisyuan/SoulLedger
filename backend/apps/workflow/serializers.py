@@ -383,7 +383,7 @@ class WorkflowSegmentSerializer(serializers.Serializer):
     realm_name = serializers.CharField()
     civilization = serializers.CharField()
     name = serializers.CharField()
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
     state = serializers.CharField()
     go = serializers.IntegerField()
     total = serializers.IntegerField()
@@ -417,7 +417,7 @@ class CrossFlowAtSerializer(serializers.Serializer):
     segment = serializers.IntegerField()
     realm_name = serializers.CharField()
     node_name = serializers.CharField()
-    node_name_en = serializers.CharField(allow_blank=True)
+    node_name_en = serializers.CharField(required=False, allow_blank=True)
     hall = serializers.CharField(allow_blank=True)
 
 
@@ -448,7 +448,7 @@ class JumpSourceSerializer(serializers.Serializer):
 
     key = serializers.CharField()
     node_name = serializers.CharField()
-    node_name_en = serializers.CharField(allow_blank=True)
+    node_name_en = serializers.CharField(required=False, allow_blank=True)
     via = serializers.ChoiceField(
         choices=["on_fail", "branch"],
         help_text="on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。")
@@ -1136,7 +1136,7 @@ class WorkflowRemindSerializer(serializers.Serializer):
 class FlowPreviewStationSerializer(serializers.Serializer):
     node_order = serializers.IntegerField(help_text="站序;勾掉的站以它送进 `skip_node_orders`。")
     node_name = serializers.CharField()
-    node_name_en = serializers.CharField(allow_blank=True)
+    node_name_en = serializers.CharField(required=False, allow_blank=True)
     court_code = serializers.CharField(allow_blank=True)
     approver = serializers.CharField(allow_null=True, help_text="具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。")
     approver_role = serializers.CharField(allow_null=True, help_text="按角色派时的角色成员(客户端翻译)。")
@@ -1159,7 +1159,7 @@ class FlowPreviewSerializer(serializers.Serializer):
     generated, and the other realms that will follow (`segments.flow_preview`)."""
 
     name = serializers.CharField()
-    name_en = serializers.CharField(allow_blank=True)
+    name_en = serializers.CharField(required=False, allow_blank=True)
     stations = FlowPreviewStationSerializer(many=True)
     foreign = FlowPreviewForeignSerializer(many=True)
     nothing_to_pick = serializers.BooleanField(

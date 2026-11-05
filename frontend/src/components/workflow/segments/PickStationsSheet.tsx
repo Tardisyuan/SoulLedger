@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow } from "@soulledger/core/api";
@@ -80,7 +82,7 @@ export function PickStationsSheet({
   const rows: PickRow[] = workflow
     ? segmentNodes(workflow, order).map((n) => ({
         key: n.id,
-        label: `${stationNo(n)} · ${n.node_name}`,
+        label: `${stationNo(n)} · ${localNodeName(n, locale)}`,
         hall: <DomainText value={courtLabel(t, n.court_code, locale)} />,
         who: n.approver_role ? <DomainEnum namespace="users.roles" value={n.approver_role} /> : null,
         required: !!n.is_required,
@@ -128,7 +130,7 @@ export function PickStationsSheet({
             />
           )}
           <StationPicker
-            flowName={segment.name}
+            flowName={localName(segment, locale)}
             rows={rows}
             skipped={skipped}
             onChange={setSkipped}

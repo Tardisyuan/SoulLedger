@@ -20,7 +20,7 @@ export function PermissionFormModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { codename: string; name: string; category: string }) => void;
+  onSubmit: (data: { codename: string; name: string; name_en: string; category: string }) => void;
   isPending: boolean;
   error: string | null;
   title: string;
@@ -63,12 +63,14 @@ export function PermissionFormModal({
   const errorId = `${formId}-error`;
   const [codename, setCodename] = useState("");
   const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [category, setCategory] = useState(existingCategories[0] ?? "");
 
   useEffect(() => {
     if (isOpen) {
       setCodename(initialData?.codename ?? "");
       setName(initialData?.name ?? "");
+      setNameEn(initialData?.name_en ?? "");
       setCategory(initialData?.category ?? existingCategories[0] ?? "");
     }
     // existingCategories intentionally excluded, and this is the deliberate
@@ -94,12 +96,13 @@ export function PermissionFormModal({
     if (!codename.trim()) return;
     if (!name.trim()) return;
     if (!category.trim()) return;
-    onSubmit({ codename: codename.trim(), name: name.trim(), category: category.trim() });
+    onSubmit({ codename: codename.trim(), name: name.trim(), name_en: nameEn.trim(), category: category.trim() });
   }
 
   function handleClose() {
     setCodename("");
     setName("");
+    setNameEn("");
     setCategory(existingCategories[0] ?? "");
     onClose();
   }
@@ -158,6 +161,13 @@ export function PermissionFormModal({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("permissions.name_placeholder")}
+        />
+        <TextField
+          label={t("common.name_en")}
+          type="text"
+          maxLength={200}
+          value={nameEn}
+          onChange={(e) => setNameEn(e.target.value)}
         />
         <div>
           {/* 分类提示改走 `Field` 的 `description`:它此前是一段谁也没引用的

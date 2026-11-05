@@ -24,6 +24,7 @@
  * 数据是 `GET /me/judgment-appeals/`:`judgments` 只列本世已结案的原审,所以没有这一行的审判
  * (未结案、复审、前世)不画申诉行。
  */
+import { localName } from "@soulledger/core/domain/localName";
 import {
   appealRefusalKey,
   soulApi,
@@ -73,7 +74,7 @@ function EscalatedTag() {
 
 /** U-3 ~ U-5:上诉那一轮的站梯。不写复核人(同申诉)。 */
 function Ladder({ round }: { round: MeJudgmentAppeal }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const theme = useTheme();
   const ladder = round.ladder;
   if (!ladder) return null;
@@ -104,7 +105,7 @@ function Ladder({ round }: { round: MeJudgmentAppeal }) {
         <View style={styles.fill}>
           <View style={styles.entryLine}>
             <Txt variant="body" tone={faint ? "subtle" : "ink"} style={styles.fill}>
-              {s.is_final ? t("appeals.ladder_final", { name: finalStationName(s.name) }) : t("appeals.ladder_station", { n: String(s.order), name: s.name })}
+              {s.is_final ? t("appeals.ladder_final", { name: finalStationName(localName(s, locale)) }) : t("appeals.ladder_station", { n: String(s.order), name: localName(s, locale) })}
             </Txt>
             {state ? (
               <Txt testID={`appeal-station-state-${round.id}-${s.order}`} variant="caption" tone="muted">
@@ -158,7 +159,7 @@ function Round({
   roundsFiled: number;
   onWithdrawn: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // 2026年 · 11月28日 / Abed, like 卒 in the same cell -- never the ISO value (phone QA 10-29b).
   const day = useDay();
   const toast = useToast();
@@ -205,7 +206,7 @@ function Round({
       ) : null}
       {round.workflow_name ? (
         <Txt testID={`appeal-ladder-${round.id}`} variant="caption" tone="muted">
-          {t("appeals.ladder", { name: round.workflow_name })}
+          {t("appeals.ladder", { name: localName(round, locale, "workflow_name") })}
         </Txt>
       ) : null}
       <Ladder round={round} />
@@ -307,7 +308,7 @@ export function AppealLine({
   focused?: boolean;
   onChanged: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // 2026年 · 11月28日 / Abed, like 卒 in the same cell -- never the ISO value (phone QA 10-29b).
   const day = useDay();
   const theme = useTheme();
@@ -336,7 +337,7 @@ export function AppealLine({
                   verdict: row.verdict,
                   deadline: row.deadline,
                   escalate: true,
-                  stations: row.escalation_stations,
+                  stations: (locale === "en" && row.escalation_stations_en) || row.escalation_stations,
                   civilization: row.civilization,
                 })
               }

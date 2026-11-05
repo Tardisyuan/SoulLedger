@@ -13,6 +13,8 @@ export interface ApprovalWorkflowListItem {
   /** 审批编号(`WF-0582`,全局一个序列,创建时发、永不改)。给人读的名字;`id` 仍是路由与 API 的身份。 */
   number?: string;
   workflow_name: string;
+  /** English copied from the template; blank = show `workflow_name`. */
+  workflow_name_en?: string;
   /** Primary key. Not a name -- see `soul_name`. */
   soul: string;
   /** Added to the list serializer 2026-08-30. The list row printed `soul`
@@ -79,6 +81,7 @@ export interface WorkflowSegment {
   realm_name: string;
   civilization: string;
   name: string;
+  name_en?: string;
   state: WorkflowSegmentState;
   /** Stations that run / all of the segment's stations. */
   go: number;
@@ -144,6 +147,7 @@ export interface FlowPreviewStation {
   /** The station's order; an unticked one goes into `skip_node_orders` by this number. */
   node_order: number;
   node_name: string;
+  node_name_en?: string;
   court_code: string;
   /** A named officer, or the one person a role resolves to; null when a role has several. */
   approver: string | null;
@@ -163,12 +167,14 @@ export interface FlowPreviewStation {
 export interface JumpSource {
   key: string;
   node_name: string;
+  node_name_en?: string;
   /** 第四十五批:`branch` = 条件分支的去处(按出身地域分流),`on_fail` = 驳回转来。老后端没有时按驳回读。 */
   via?: "on_fail" | "branch";
 }
 
 export interface FlowPreview {
   name: string;
+  name_en?: string;
   stations: FlowPreviewStation[];
   /** Realms that follow in cross-realm judgment order; their own judges pick their stations. */
   foreign: {
@@ -188,7 +194,7 @@ export interface CrossJudgmentWorkflowSummary {
   id: string;
   number: string;
   status: string;
-  at: { segment: number; realm_name: string; node_name: string; hall: string } | null;
+  at: { segment: number; realm_name: string; node_name: string; node_name_en?: string; hall: string } | null;
   at_gate: { segment: number; realm_name: string; days: number | null } | null;
   /** Stations to run in the segments already picked. */
   fixed: number;
@@ -207,6 +213,8 @@ export interface ApprovalNode {
   id: string;
   workflow: string;
   node_name: string;
+  /** English copied from the template node; blank = show `node_name`. */
+  node_name_en?: string;
   node_type: string;
   court_code: string;
   node_order: number;
@@ -315,6 +323,8 @@ export interface TemplateSigner {
 export interface WorkflowTemplateNode {
   id?: string;
   node_name: string;
+  /** English; blank = show `node_name`. Copied to the `ApprovalNode` when a flow is built. */
+  name_en?: string;
   node_type: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
   court_code: string;
   approver_role: string;
@@ -339,7 +349,10 @@ export interface WorkflowTemplateNode {
 export interface WorkflowTemplateListItem {
   id: string;
   name: string;
+  /** English; blank = show the source. */
+  name_en?: string;
   description: string;
+  description_en?: string;
   civilization: string;
   case_type: string;
   /**

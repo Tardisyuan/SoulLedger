@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
@@ -709,7 +711,7 @@ export default function SoulDetailPage() {
       {/* 规范 v1 页头副行「文明 · 殿 · 判官」:殿与判官取最近一份判决的
           `court` / `judge_name`。没有判决、或判决没写,就不出现 —— 这是摘要,
           空着的那一格在「全部审判」里有它的 MissingValue。 */}
-      {[lastJudgment?.court, lastJudgment?.judge_name].filter(Boolean).map((part, i) => (
+      {[courtLabel(t, lastJudgment?.court, locale), localName(lastJudgment, locale, "judge_name")].filter(Boolean).map((part, i) => (
         <span key={i} className="contents">
           <span aria-hidden="true">·</span>
           <span>{part}</span>
@@ -867,7 +869,7 @@ export default function SoulDetailPage() {
       {soul && !loading && (
         <OwnerOrgField
           orgId={soul.owner_org}
-          orgName={soul.owner_org_name}
+          orgName={localName(soul, locale, "owner_org_name")}
           tenantId={soul.tenant}
           canChange={hasPermission("soul.update") && !readOnlyAway && !archived}
           onSave={async (orgId) => {

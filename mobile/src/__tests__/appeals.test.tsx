@@ -57,6 +57,7 @@ const row = (over: Record<string, unknown> = {}): MeAppealableJudgment => ({
   ...over,
 }) as MeAppealableJudgment;
 const round = (over: Record<string, unknown> = {}): MeJudgmentAppeal => ({
+  workflow_name_en: null,
   id: "a1",
   judgment: J,
   case_number: "CN-2026-0007",

@@ -41,7 +41,7 @@ const TAB_FILTER: Record<Tab, Record<string, string>> = {
 };
 
 function AppealQueueContent() {
-  const { t, formatDate, formatDateTime } = useI18n();
+  const { t, locale, formatDate, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const [tab, setTab] = useState<Tab>("PENDING");
   const [page, setPage] = useState(1);
@@ -129,7 +129,7 @@ function AppealQueueContent() {
               </td>
               {tab === "PENDING" && (
                 <td className="px-3 py-2 text-sm whitespace-nowrap" data-testid={`appeal-current-${a.id}`}>
-                  {a.workflow ? (ladderCurrentText(a.ladder, t) ?? <MissingValue kind="unrecorded" />) : t("appeals.status.PENDING")}
+                  {a.workflow ? (ladderCurrentText(a.ladder, t, locale) ?? <MissingValue kind="unrecorded" />) : t("appeals.status.PENDING")}
                 </td>
               )}
               <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">{formatDateTime(a.create_time)}</td>

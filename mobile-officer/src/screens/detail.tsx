@@ -215,7 +215,7 @@ function TodoDetail({
   /** Shown instead of the shared 「已不在」 when a 404 means "not readable from this hall", not "gone". */
   whenGone?: ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   const { offline } = useOnline();
@@ -273,7 +273,7 @@ function TodoDetail({
             </Notice>
           ) : null}
           <SectionLabel>{t(`officer_app.kinds.${kind}`)}</SectionLabel>
-          <Txt variant="title">{todoTitle(data, t)}</Txt>
+          <Txt variant="title">{todoTitle(data, t, locale)}</Txt>
           {data.soul_code ? (
             <OneLine variant="caption" tone="muted" testID="detail-soul-code">
               {data.soul_code}

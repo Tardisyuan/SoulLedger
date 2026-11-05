@@ -289,6 +289,8 @@ function caseTypeRefused(error: unknown): boolean {
 }
 
 export interface WorkflowTemplateInput {
+  name_en?: string;
+  description_en?: string;
   name: string;
   description: string;
   civilization: CivilizationOption;
@@ -358,6 +360,8 @@ export default function WorkflowEditor({
   // Form state - initialized from query data
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
+  const [templateNameEn, setTemplateNameEn] = useState("");
+  const [templateDescriptionEn, setTemplateDescriptionEn] = useState("");
   // GREEK is in the union because `GREEK_ROUTINE` is one of the presets this
   // editor can be opened with. The two guards below only call `setTemplateCiv`
   // for a value they recognise and otherwise leave the state at its "CHINESE"
@@ -503,6 +507,8 @@ export default function WorkflowEditor({
       const civ = existingTemplate.civilization;
       setTemplateName(existingTemplate.name || "");
       setTemplateDescription(existingTemplate.description || "");
+      setTemplateNameEn(existingTemplate.name_en || "");
+      setTemplateDescriptionEn(existingTemplate.description_en || "");
       // Validate civilization value against the one list, not a hand-written
       // or-chain: an unrecognised value leaves the state at its "CHINESE"
       // default, so a member missing from the check is a silent relabelling.
@@ -528,6 +534,8 @@ export default function WorkflowEditor({
       const civ = initialTemplateData.civilization;
       setTemplateName(initialTemplateData.name || "");
       setTemplateDescription(initialTemplateData.description || "");
+      setTemplateNameEn(initialTemplateData.name_en || "");
+      setTemplateDescriptionEn(initialTemplateData.description_en || "");
       if (isCivilizationOption(civ)) {
         setTemplateCiv(civ);
       }
@@ -597,6 +605,7 @@ export default function WorkflowEditor({
     return nodes.map((n, idx) => ({
       id: n.id,
       node_name: n.data.label as string,
+      name_en: ((n.data.labelEn as string | undefined) ?? "").trim(),
       node_type: n.data.nodeType as TemplateNode["node_type"],
       court_code: (n.data.courtCode as string) || "",
       approver_role: (n.data.approverRole as string) || "",
@@ -655,13 +664,15 @@ export default function WorkflowEditor({
   const finish = useCallback(() => {
     onSave?.({
       name: templateName,
+      name_en: templateNameEn.trim(),
       description: templateDescription,
+      description_en: templateDescriptionEn.trim(),
       civilization: templateCiv,
       case_type: templateCaseType,
       priority: templatePriority,
       nodes: getTemplateNodes(),
     });
-  }, [onSave, templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes]);
+  }, [onSave, templateName, templateNameEn, templateDescription, templateDescriptionEn, templateCiv, templateCaseType, templatePriority, getTemplateNodes]);
 
   // 存草稿. A save writes the template's DRAFT version (backend 0018): it
   // changes what the editor reopens, never what a workflow runs on.
@@ -1391,13 +1402,15 @@ export default function WorkflowEditor({
   const templatePayload = useCallback(
     (): WorkflowTemplateInput => ({
       name: templateName,
+      name_en: templateNameEn.trim(),
       description: templateDescription,
+      description_en: templateDescriptionEn.trim(),
       civilization: templateCiv,
       case_type: templateCaseType,
       priority: templatePriority,
       nodes: getTemplateNodes(),
     }),
-    [templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes]
+    [templateName, templateNameEn, templateDescription, templateDescriptionEn, templateCiv, templateCaseType, templatePriority, getTemplateNodes]
   );
   const handleSave = useCallback(() => {
     saveMutation.mutate(templatePayload());
@@ -1560,7 +1573,7 @@ export default function WorkflowEditor({
           {t("workflow.editor.narrow_title")}
         </div>
         <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
-          {templateName || t("workflow.editor.template_name_placeholder")}
+          {(locale === "en" && templateNameEn) || templateName || t("workflow.editor.template_name_placeholder")}
         </h2>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
           <span>{t(`workflow.civilizations.${templateCiv}`)}</span>
@@ -1625,6 +1638,14 @@ export default function WorkflowEditor({
           onChange={(e) => setTemplateName(e.target.value)}
           placeholder={t("workflow.editor.template_name_placeholder")}
           aria-label={t("workflow.editor.template_name_placeholder")}
+          className="w-[180px] shrink-0 h-(--control-h-sm) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]"
+        />
+        <input
+          type="text"
+          value={templateNameEn}
+          onChange={(e) => setTemplateNameEn(e.target.value)}
+          placeholder={t("common.name_en")}
+          aria-label={t("common.name_en")}
           className="w-[180px] shrink-0 h-(--control-h-sm) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]"
         />
         <label className={TOOL_SELECT}>

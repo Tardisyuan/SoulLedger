@@ -1,5 +1,6 @@
 "use client";
 
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { AnimatePresence, LayoutGroup, m } from "motion/react";
 import { judgmentApi, type Judgment } from "@soulledger/core/api";
@@ -47,7 +48,7 @@ export function QueueMinePanel({
   onOpen: (id: string) => void;
   onReassign: (judgment: Judgment) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useTenant();
   const d = useReducedMotionDurations();
   const query = useInfiniteQuery({
@@ -118,7 +119,7 @@ export function QueueMinePanel({
                     </button>
                     {j.court ? (
                       <span className="truncate text-xs text-[oklch(var(--color-ink-subtle))] max-sm:hidden" title={j.court}>
-                        {j.court}
+                        {courtLabel(t, j.court, locale)}
                       </span>
                     ) : null}
                     {canAssign && (

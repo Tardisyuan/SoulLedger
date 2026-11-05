@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant } from "@soulledger/core/api";
@@ -42,7 +43,7 @@ const isSealCiv = (civ: string): civ is SealCiv => civ in DEFAULT_SEAL_GLYPHS;
  * 于是不用重新登录印文就换了。
  */
 export function SealGlyphsDialog({ tenant, onClose }: { tenant: Tenant | null; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user, setUser } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -76,7 +77,7 @@ export function SealGlyphsDialog({ tenant, onClose }: { tenant: Tenant | null; o
     <BaseModal
       isOpen={tenant !== null}
       onClose={() => !save.isPending && onClose()}
-      title={t("tenants.seal.title", { name: tenant?.display_name ?? "" })}
+      title={t("tenants.seal.title", { name: localName(tenant, locale, "display_name") })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>

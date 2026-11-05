@@ -43,6 +43,8 @@ import { AUTO_ROUTE_GLYPH, EXIT_HANDLE_PREFIX, KIND_GLYPH, ROLE_GLYPH, type Bran
  */
 type CardData = {
   label: string;
+  /** English beside `label`; blank = show `label`. */
+  labelEn?: string;
   nodeType: string;
   courtCode: string;
   approverRole: string;
@@ -69,6 +71,7 @@ function EditableNodeComponent({
   dragging?: boolean;
 }) {
   const { t, locale } = useI18n();
+  const shownLabel = (locale === "en" && data.labelEn) || data.label;
   const role = data.role ?? "step";
   const issues = data.issueCount ?? 0;
   const kind = data.kind === "COUNTERSIGN" || data.kind === "NOTIFY" || data.kind === "END" ? data.kind : "APPROVAL";
@@ -108,11 +111,11 @@ function EditableNodeComponent({
       </div>
       {/* 第二行:类型字形 + 名称;有问题时右端 `!` */}
       <div className="mt-0.5 flex justify-between gap-2 text-sm font-medium">
-        <span className="truncate" title={data.label}>
+        <span className="truncate" title={shownLabel}>
           <span aria-hidden="true" title={data.autoRoute ? t("workflow.editor.auto_route.kind") : t(`workflow.editor.kind.${kind}`)}>
             {data.autoRoute ? AUTO_ROUTE_GLYPH : KIND_GLYPH[kind]}
           </span>{" "}
-          {data.label}
+          {shownLabel}
         </span>
         {issues > 0 && (
           <span className="font-semibold text-[oklch(var(--color-danger))]" title={t("workflow.editor.issues", { n: String(issues) })}>

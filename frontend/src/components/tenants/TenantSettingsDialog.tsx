@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { hasRebirth } from "@/src/lib/hasRebirth";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +19,7 @@ import { TextAreaField, TextField, fieldControl } from "@/src/components/ui/Fiel
 import { MissingValue } from "@/src/components/ui/DomainValue";
 
 type FieldName = keyof TenantSettingsPatch;
-const FIELDS: FieldName[] = ["hall_name", "hall_name_en", "hall_name_egy", "description", "dispatch_enabled", "soul_rebirth_cooldown_days", "mfa_required_roles", "visit_address", "visit_hours", "visit_phone", "rebirth_monthly_quota"];
+const FIELDS: FieldName[] = ["display_name_en", "description_en", "hall_name", "hall_name_en", "hall_name_egy", "description", "dispatch_enabled", "soul_rebirth_cooldown_days", "mfa_required_roles", "visit_address", "visit_hours", "visit_phone", "rebirth_monthly_quota"];
 
 /** DRF 的 400 按字段给 `{field: [msg, …]}`;只认已知字段,每个摊平成一句。别的形状返回空表。 */
 export function tenantSettingsErrors(error: unknown): Partial<Record<FieldName, string>> {
@@ -74,7 +75,7 @@ function initialQuota(tenant: Tenant): Record<string, string> {
  * 400 的字段信息原样显示在各自字段下。
  */
 export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const initialCooldown = tenant.settings?.[REBIRTH_COOLDOWN_SETTING];
@@ -82,7 +83,9 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
     hall_name: tenant.hall_name ?? "",
     hall_name_en: tenant.hall_name_en ?? "",
     hall_name_egy: tenant.hall_name_egy ?? "",
+    display_name_en: tenant.display_name_en ?? "",
     description: tenant.description ?? "",
+    description_en: tenant.description_en ?? "",
     dispatch_enabled: Boolean(tenant.dispatch_enabled),
     cooldown: typeof initialCooldown === "number" ? String(initialCooldown) : "",
     visit_address: String(tenant.settings?.visit_address ?? ""),
@@ -153,7 +156,9 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
       hall_name: form.hall_name.trim(),
       hall_name_en: form.hall_name_en.trim(),
       hall_name_egy: form.hall_name_egy.trim(),
+      display_name_en: form.display_name_en.trim(),
       description: form.description.trim(),
+      description_en: form.description_en.trim(),
       dispatch_enabled: form.dispatch_enabled,
       soul_rebirth_cooldown_days: days,
       visit_address: form.visit_address.trim(),
@@ -170,7 +175,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
     <BaseModal
       isOpen
       onClose={() => !save.isPending && onClose()}
-      title={t("tenants.settings.title", { name: tenant.display_name })}
+      title={t("tenants.settings.title", { name: localName(tenant, locale, "display_name") })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>
@@ -214,6 +219,22 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
           rows={3}
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
+          disabled={save.isPending}
+        />
+        <TextAreaField
+          label={t("common.description_en")}
+          error={errors.description_en}
+          rows={3}
+          value={form.description_en}
+          onChange={(e) => set("description_en", e.target.value)}
+          disabled={save.isPending}
+        />
+        <TextField
+          label={t("common.name_en")}
+          error={errors.display_name_en}
+          value={form.display_name_en}
+          onChange={(e) => set("display_name_en", e.target.value)}
+          maxLength={200}
           disabled={save.isPending}
         />
         <TextField

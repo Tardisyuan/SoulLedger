@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -51,7 +52,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 };
 
 function DispatchPageContent() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hall = useHall(useCourtOffice());
   usePlaque({ hall });
   const buttonOn = useMenuButtonConfig();
@@ -92,7 +93,7 @@ function DispatchPageContent() {
   const tenantsQuery = useTenantNames({ enabled: !!user, staleTime: 60_000 });
   const tenantOptions = [
     { value: "", label: t("dispatch.filter.all_tenants") },
-    ...(tenantsQuery.data ?? []).map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),
+    ...(tenantsQuery.data ?? []).map((tenant) => ({ value: String(tenant.id), label: localName(tenant, locale, "display_name") || tenant.code })),
   ];
   const debouncedSearch = useDebouncedValue(search.trim());
   const filterParams: Record<string, string> = {};

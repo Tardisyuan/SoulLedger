@@ -77,6 +77,9 @@ interface CivilizationGroup {
  * No detail route exists for an actor, so the row is not a link.
  */
 function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
+  const { locale } = useI18n();
+  // `display_name` is `name_en` for an English reader (`get_localized_name`): lead with it and do not say it twice.
+  const english = locale === "en" && Boolean(actor.display_name);
   return (
     <tr
       data-actor-card={actor.name}
@@ -92,10 +95,10 @@ function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
 
             `icon` is not a field on ANY actor serializer either (the model
             column is `icon_url`, empty on all 130 rows), so no icon column. */}
-        <div className="font-medium text-[oklch(var(--color-ink))]">{actor.name}</div>
+        <div className="font-medium text-[oklch(var(--color-ink))]">{english ? actor.display_name : actor.name}</div>
         <div className="text-xs text-[oklch(var(--color-ink-subtle))]">
-          {actor.display_name || actor.name}
-          {" · "}
+          {!english && (actor.display_name || actor.name)}
+          {!english && " · "}
           <DomainText value={actor.display_title} />
         </div>
       </td>

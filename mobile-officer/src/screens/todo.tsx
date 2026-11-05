@@ -1,4 +1,5 @@
 /** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoItemExtra, type TodoKind } from "@soulledger/core/api/officer-app";
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -300,13 +301,13 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
       ? wangsi.map((one) => ({ one }))
       : cityGod
         ? cityGod.filter(Boolean).map((one) => ({ one }))
-        : [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
+        : [tag, request, item.soul_code, localNodeName(item, locale), formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
       glyph={pick?.atGate ? "◌" : "◐"}
       strong
-      title={todoTitle(item, t) || t(`officer_app.kinds.${item.kind}`)}
+      title={todoTitle(item, t, locale) || t(`officer_app.kinds.${item.kind}`)}
       lines={lines}
       highlight={highlight}
       gone={gone?.has(goneKey({ type: "todo", kind: item.target.kind, id: item.target.id }))}

@@ -25,6 +25,7 @@ export type MenuItemFull = MenuItem & {
 /** The editor form's shape, shared by the page (which owns the state) and the modal. */
 export interface MenuFormState {
   name: string;
+  name_en: string;
   path: string;
   icon: string;
   order: number;

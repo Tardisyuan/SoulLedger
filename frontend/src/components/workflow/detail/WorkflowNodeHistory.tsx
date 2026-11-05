@@ -1,5 +1,6 @@
 "use client";
 
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { type ApprovalNode } from "@soulledger/core/api";
 import { isAutoRouteBranches, originRegionLabel, routedRegion } from "@soulledger/core/domain/originRegion";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -40,7 +41,7 @@ export function WorkflowNodeHistory({
     return routed
       ? t("workflow.history.auto_routed", {
           region: originRegionLabel(t, routed.region, locale),
-          node: routed.target?.node_name ?? "",
+          node: localNodeName(routed.target, locale),
         })
       : null;
   };
@@ -64,7 +65,7 @@ export function WorkflowNodeHistory({
         ) : (
           <li key={node.id} className="py-3 border-b border-[oklch(var(--color-rule))]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{node.node_name}</span>
+              <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{localNodeName(node, locale)}</span>
               {/* <DomainEnum> sets its own `title` from the raw member —
                   that is the whole point of the component — so this one
                   needs no hand-rolled attribute, unlike the string-form

@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -175,7 +177,7 @@ export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
 
 /** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。 */
 export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialSearch?: string; soul?: string } = {}) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
   const { hasPermission, isAdmin } = usePermissions();
@@ -469,7 +471,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
             <option value="">{t("judgment.claim.court_all")}</option>
             {courts.map((c) => (
               <option key={c.court} value={c.court}>
-                {c.pending === undefined ? c.court : `${c.court} · ${c.pending}`}
+                {c.pending === undefined ? courtLabel(t, c.court, locale) : `${courtLabel(t, c.court, locale)} · ${c.pending}`}
               </option>
             ))}
           </select>
@@ -720,8 +722,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                           </span>
                         )}
                       </td>
-                      <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[j.court, j.judge_name].filter(Boolean).join(" · ") || undefined}>
-                        {[j.court, j.judge_name].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
+                      <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || undefined}>
+                        {[courtLabel(t, j.court, locale), localName(j, locale, "judge_name")].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
                       </td>
                       <td className="px-2 text-right text-xs whitespace-nowrap" data-testid="merit-demerit-cell">
                         {/* 功 / 过分开写(v3 `<b>功</b> / 过`),不是净值;VIEWER 两个字段都不在,写「未记录」。 */}

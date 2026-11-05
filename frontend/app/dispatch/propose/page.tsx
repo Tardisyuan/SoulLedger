@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -52,7 +53,7 @@ export default function ProposeDispatchPage() {
 }
 
 function ProposeDispatchForm() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // 题字自己报:壳的默认是面包屑末段,而这一页的末段是路径段 `propose`(原样印在了身份带上)。
   usePlaque({ title: t("dispatch.propose"), hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
@@ -202,7 +203,8 @@ function ProposeDispatchForm() {
    * numbering sample — identity by numbering law, not by colour (§1.8).
    */
   const sourceCode = user?.tenant?.code;
-  const tenantName = (tn: { tenant_code: string; tenant_name: string }) => tn.tenant_name || tn.tenant_code;
+  const tenantName = (tn: { tenant_code: string; tenant_name: string; tenant_name_en?: string }) =>
+    localName(tn, locale, "tenant_name") || tn.tenant_code;
   // 关了调拨的殿(`dispatch_enabled=false`)仍列出来但禁用,右侧写原因;后端的
   // `check_target_accepts` 是真正的门,这里只是不让人填了再被拒。
   const closed = (tn: { dispatch_enabled?: boolean }) => tn.dispatch_enabled === false;

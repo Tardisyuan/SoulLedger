@@ -24,7 +24,7 @@ export function WorkflowInfoCard({
   statusLabel: (status?: string | null) => string;
   statusGlyph?: string;
 }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
 
   const DT = "py-2 text-xs text-[oklch(var(--color-ink-muted))]";
   const DD = "py-2 text-sm text-[oklch(var(--color-ink))] min-w-0 break-words";
@@ -39,7 +39,7 @@ export function WorkflowInfoCard({
         <dd className={`${DD} font-medium`}>{workflow.soul_name || workflow.soul}</dd>
         <dt className={DT}>{t("workflow.detail.template")}</dt>
         <dd className={DD}>
-          {workflowTitle(workflow, t)}
+          {workflowTitle(workflow, t, locale)}
           {workflow.template_version_number != null && (
             <span className="ml-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">v{workflow.template_version_number}</span>
           )}

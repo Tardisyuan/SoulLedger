@@ -292,6 +292,7 @@ def _template_ref(template):
     return {
         "template_id": str(template.pk),
         "template_name": template.name,
+        "template_name_en": template.name_en,
         "tenant_id": template.tenant_id,
         "civilization": template.civilization,
         "is_active": template.is_active,
@@ -315,7 +316,7 @@ def role_template_references(templates=None):
             role = step.get("approver_role") or ""
             if step.get("approver_type") == "ROLE" and role:
                 per_role.setdefault(role, []).append(
-                    {"step_order": step["node_order"], "step_name": step["node_name"]}
+                    {"step_order": step["node_order"], "step_name": step["node_name"], "step_name_en": step.get("name_en") or ""}
                 )
         for role, steps in per_role.items():
             refs.setdefault(role, []).append({**_template_ref(template), "steps": steps})
@@ -447,6 +448,7 @@ def impact_of_changes(changes):
                     **_template_ref(template),
                     "step_order": step["node_order"],
                     "step_name": step["node_name"],
+                    "step_name_en": step.get("name_en") or "",
                     "approver_roles": sorted(roles),
                     "caused_by": causes(roles),
                 })

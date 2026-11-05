@@ -1,5 +1,6 @@
 "use client";
 
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
@@ -71,7 +72,7 @@ const VERDICTS: { code: VerdictCode; key: string }[] = [
 
 
 export function JudgmentQueueConsole({ at }: { at?: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const queue = useJudgmentQueue({ at });
   const [notes, setNotes] = useState("");
@@ -98,7 +99,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
   // 案子没记殿或队列空了就写刑名司。
-  const hall = useHall(judgment?.court || t("plaque.office.trials"));
+  const hall = useHall(courtLabel(t, judgment?.court, locale) || t("plaque.office.trials"));
   usePlaque({ title: t("plaque.queue"), hall });
 
   // Notes belong to the case in front of the operator, never to the next one.
@@ -432,7 +433,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             >
               <div className="min-w-0 space-y-4">
                 <SoulIdentityPanel soul={cursor.soul} />
-                <CaseFactsPanel court={judgment.court} confession={judgment.confession} stale={Boolean(judgment.stale_since)} />
+                <CaseFactsPanel court={courtLabel(t, judgment.court, locale)} confession={judgment.confession} stale={Boolean(judgment.stale_since)} />
                 <RealmOptionsPanel realms={cursor.realm_options} />
               </div>
               <div className="min-w-0 space-y-4">

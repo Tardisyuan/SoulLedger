@@ -4,6 +4,8 @@ import type { PaginatedResponse } from "./users";
 export interface MenuItem {
   id: number;
   name: string;
+  /** English; blank = show `name`. Lookups (`menuI18n`, `hideTheWheel`) read `name`. */
+  name_en?: string;
   path: string;
   icon: string | null;
   order: number;

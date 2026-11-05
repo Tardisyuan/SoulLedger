@@ -133,6 +133,7 @@ function MenusPageContent() {
   const [iconError, setIconError] = useState(false);
   const [form, setForm] = useState<MenuFormState>({
     name: "",
+    name_en: "",
     path: "",
     icon: "",
     order: 0,
@@ -147,7 +148,7 @@ function MenusPageContent() {
 
   const openCreate = () => {
     setForm({
-      name: "", path: "", icon: "", order: 0, component: "",
+      name: "", name_en: "", path: "", icon: "", order: 0, component: "",
       roles: [], is_active: true, visible: true, permission: "",
       menu_type: "MENU", parent: null,
     });
@@ -158,6 +159,7 @@ function MenusPageContent() {
   const openEdit = (menu: MenuItemFull) => {
     setForm({
       name: menu.name,
+      name_en: menu.name_en ?? "",
       path: menu.path,
       icon: menu.icon || "",
       order: menu.order,

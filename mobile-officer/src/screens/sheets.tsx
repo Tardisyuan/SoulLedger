@@ -59,7 +59,7 @@ export function DecisionSheet({
   /** The server accepted it. The caller reloads the item and the list. */
   onDone: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const bio = useBioWord();
   const theme = useTheme();
   const toast = useToast();
@@ -90,8 +90,8 @@ export function DecisionSheet({
   const missingReason = reasonMissing(verdict, reason);
 
   const hall = (h: { code: string; display_name: string } | null | undefined) => hallLabel(t, h) ?? "";
-  const effect = effectLine(detail, verdict, hall, parsedDays ?? cooldown?.desiredDays ?? null);
-  const [objectTop, objectBottom] = objectLines({ ...detail, title: todoTitle(detail, t) }, hall, t);
+  const effect = effectLine(detail, verdict, hall, parsedDays ?? cooldown?.desiredDays ?? null, locale);
+  const [objectTop, objectBottom] = objectLines({ ...detail, title: todoTitle(detail, t, locale) }, hall, t);
 
   const confirm = () => {
     if (missingReason || daysInvalid) {

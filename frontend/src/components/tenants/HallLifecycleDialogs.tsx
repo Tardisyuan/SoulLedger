@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantsApi, type Tenant, type TenantCreateBody } from "@soulledger/core/api";
@@ -119,6 +120,7 @@ export function CreateHallDialog({ onClose }: { onClose: () => void }) {
           ]}
         />
         <TextField label={t("halls.name")} value={form.display_name} onChange={set("display_name")} required maxLength={200} />
+        <TextField label={t("common.name_en")} value={form.display_name_en ?? ""} onChange={set("display_name_en")} maxLength={200} />
         <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
           <legend className="mb-1 text-sm text-[oklch(var(--color-ink))]">{t("halls.hall_names")}</legend>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -134,6 +136,7 @@ export function CreateHallDialog({ onClose }: { onClose: () => void }) {
           </div>
         </fieldset>
         <TextAreaField label={t("halls.description_optional")} value={form.description ?? ""} onChange={set("description")} rows={2} />
+        <TextAreaField label={t("common.description_en")} value={form.description_en ?? ""} onChange={set("description_en")} rows={2} />
       </form>
     </BaseModal>
   );
@@ -143,13 +146,13 @@ export function CreateHallDialog({ onClose }: { onClose: () => void }) {
  * 停用确认(K-3):不用危险色 —— 可逆、不删数据。两条后果分行写,第二条点明「重试也一样」;末句「殿不能删除」。
  */
 export function DeactivateHallDialog({ tenant, onClose }: { tenant: Tenant; onClose: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const deactivate = useHallActiveMutation(onClose);
   return (
     <BaseModal
       isOpen
       onClose={() => !deactivate.isPending && onClose()}
-      title={t("halls.deactivate_title", { name: tenant.display_name })}
+      title={t("halls.deactivate_title", { name: localName(tenant, locale, "display_name") })}
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={deactivate.isPending}>

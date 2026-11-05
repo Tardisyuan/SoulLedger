@@ -2,6 +2,7 @@
  * Pure rules for the waiting-item detail (Design batch 34, O-01) and the unassigned-letters group (O-04).
  * No React here, so the jest files can pin each one.
  */
+import { localName } from "@soulledger/core/domain/localName";
 import type { FactHistory, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 
 import type { Verdict } from "./rules";
@@ -47,18 +48,19 @@ export interface EffectLine {
  * `to` is the days the officer typed for a cooldown (falls back to what the soul asked).
  */
 export function effectLine(
-  detail: Pick<TodoItemDetail, "kind" | "facts" | "title">,
+  detail: Pick<TodoItemDetail, "kind" | "facts" | "title" | "title_en">,
   verdict: Verdict,
   hall: (h: HallRef) => string,
   to?: number | null,
+  locale?: string,
 ): EffectLine | null {
   const f: TodoFacts | undefined = detail.facts;
   if (!f) return null;
-  const name = f.soul?.name ?? detail.title;
+  const name = f.soul?.name ?? localName(detail, locale, "title");
   if (detail.kind === "approval") {
     if (verdict !== "approve" || !f.node) return null;
     if (f.node.is_last === true) return { key: "approve_effect.approval_last", values: {} };
-    return f.node.next_name ? { key: "approve_effect.approval", values: { next: f.node.next_name } } : null;
+    return f.node.next_name ? { key: "approve_effect.approval", values: { next: localName(f.node, locale, "next_name") } } : null;
   }
   if (detail.kind === "reassignment") {
     const n = String(f.soul_count ?? f.souls?.length ?? 0);

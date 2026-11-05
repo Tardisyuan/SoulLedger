@@ -1,4 +1,5 @@
 "use client";
+import { localName } from "@soulledger/core/domain/localName";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
@@ -57,7 +58,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 const CROSS_COLUMNS_KEY = "soulledger.cross-judgments.columns";
 
 export default function CrossJudgmentsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });
   const buttonOn = useMenuButtonConfig();
@@ -190,7 +191,7 @@ export default function CrossJudgmentsPage() {
               </td>
               {columnVis.isVisible("initiated_by") && <td className="px-3 py-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 {/* 展示名在前、代码在后(列表接口两样都给)。 */}
-                {j.initiating_tenant_display_name || j.initiating_tenant_code}
+                {localName(j, locale, "initiating_tenant_display_name") || j.initiating_tenant_code}
                 <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{j.initiating_tenant_code}</span>
               </td>}
               {columnVis.isVisible("status") && <td className="px-3 py-2 whitespace-nowrap">

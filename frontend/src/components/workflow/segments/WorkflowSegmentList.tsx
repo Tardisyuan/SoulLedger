@@ -1,5 +1,6 @@
 "use client";
 
+import { localNodeName } from "@soulledger/core/domain/localName";
 import { useState, type ReactNode } from "react";
 import type { ApprovalNode, ApprovalWorkflow, WorkflowSegment } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -140,7 +141,7 @@ export function WorkflowSegmentList({ workflow, myTenant }: { workflow: Approval
                       <span aria-hidden="true" className="text-center">{state.glyph}</span>
                       <span className="min-w-0 text-sm">
                         <span className={state.skipped ? "line-through" : undefined}>
-                          <span className="font-mono">{stationNo(node)}</span> {node.node_name}
+                          <span className="font-mono">{stationNo(node)}</span> {localNodeName(node, locale)}
                         </span>
                         {node.court_code ? (
                           <span className="text-xs font-normal">

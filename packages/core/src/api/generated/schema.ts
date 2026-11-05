@@ -10644,7 +10644,7 @@ export interface components {
             /** Format: uuid */
             node: string;
             name: string;
-            name_en: string;
+            name_en?: string;
             is_final: boolean;
             state: components["schemas"]["AppealLadderStateEnum"];
             note: string | null;
@@ -12030,7 +12030,7 @@ export interface components {
             segment: number;
             realm_name: string;
             node_name: string;
-            node_name_en: string;
+            node_name_en?: string;
             hall: string;
         };
         CrossFlowGate: {
@@ -13118,7 +13118,7 @@ export interface components {
         FactHistory: {
             kind: components["schemas"]["FactHistoryKindEnum"];
             name: string;
-            name_en: string;
+            name_en?: string;
             actor: string | null;
             /** @description `workflow.verdicts.*` 的码;发起与当前节点为空。 */
             verdict: string;
@@ -13137,7 +13137,7 @@ export interface components {
         FactHistoryKindEnum: "start" | "decided" | "current";
         FactNode: {
             name: string;
-            name_en: string;
+            name_en?: string;
             /** @description 第几步(只数需要人决定的节点)。 */
             index: number;
             total: number;
@@ -13145,7 +13145,7 @@ export interface components {
             is_last: boolean | null;
             /** @description 批准后交给的节点;最后一步或不确定时为 null。 */
             next_name: string | null;
-            next_name_en: string | null;
+            next_name_en?: string | null;
         };
         FactSoul: {
             name: string;
@@ -13200,7 +13200,7 @@ export interface components {
          */
         FlowPreview: {
             name: string;
-            name_en: string;
+            name_en?: string;
             stations: components["schemas"]["FlowPreviewStation"][];
             foreign: components["schemas"]["FlowPreviewForeign"][];
             /** @description 没有一站能跳过(终审、自动节点、锁着的驳回 / 分支目标):客户端跳过选站这一步(第四十五批)。 */
@@ -13218,7 +13218,7 @@ export interface components {
             /** @description 站序;勾掉的站以它送进 `skip_node_orders`。 */
             node_order: number;
             node_name: string;
-            node_name_en: string;
+            node_name_en?: string;
             court_code: string;
             /** @description 具名的冥官 / 唯一的那个人;按角色派且不止一人时 null。 */
             approver: string | null;
@@ -14347,7 +14347,7 @@ export interface components {
         JumpSource: {
             key: string;
             node_name: string;
-            node_name_en: string;
+            node_name_en?: string;
             /**
              * @description on_fail = 驳回时转来;branch = 条件分支的去处(如按出身地域分流)。客户端据此写锁住的理由(第四十五批)。
              *
@@ -14666,7 +14666,7 @@ export interface components {
         LoginTenantRef: {
             code: string;
             display_name: string;
-            display_name_en: string;
+            display_name_en?: string;
             civilization: string;
             seal_glyphs: string[];
         };
@@ -14755,11 +14755,13 @@ export interface components {
             /** Format: uuid */
             template_id: string;
             template_name: string;
+            template_name_en?: string;
             tenant_id: number | null;
             civilization: string;
             is_active: boolean;
             step_order: number;
             step_name: string;
+            step_name_en?: string;
             approver_roles: string[];
             caused_by: components["schemas"]["MatrixConflictCause"][];
         };
@@ -14779,12 +14781,12 @@ export interface components {
             /** Format: uuid */
             workflow_id: string;
             workflow_name: string;
-            workflow_name_en: string;
+            workflow_name_en?: string;
             tenant_id: number | null;
             status: string;
             node_order: number;
             node_name: string;
-            node_name_en: string;
+            node_name_en?: string;
             approver_roles: string[];
             caused_by: components["schemas"]["MatrixConflictCause"][];
         };
@@ -14811,6 +14813,7 @@ export interface components {
             refusal_code: string | null;
             can_escalate: boolean;
             escalation_stations: string[];
+            escalation_stations_en?: string[];
             civilization: components["schemas"]["CivilizationEnum"];
         };
         MeCaptureWarrant: {
@@ -19158,6 +19161,7 @@ export interface components {
             /** Format: uuid */
             template_id: string;
             template_name: string;
+            template_name_en?: string;
             tenant_id: number | null;
             civilization: string;
             is_active: boolean;
@@ -20692,7 +20696,7 @@ export interface components {
             tenant_id: number;
             tenant_code: string;
             tenant_name: string;
-            tenant_name_en: string;
+            tenant_name_en?: string;
             dispatch_enabled: boolean;
             total_souls: number;
             state_breakdown: {
@@ -21361,7 +21365,7 @@ export interface components {
             id: number;
             code: string;
             name: string;
-            name_en: string;
+            name_en?: string;
         };
         /**
          * @description `User.preferences`, as the API reads and writes it.
@@ -21420,7 +21424,7 @@ export interface components {
             id: number;
             code: string;
             display_name: string;
-            display_name_en: string;
+            display_name_en?: string;
         };
         /**
          * @description User serializer for updates (email, role, is_active, organization, position).
@@ -21646,7 +21650,7 @@ export interface components {
             realm_name: string;
             civilization: string;
             name: string;
-            name_en: string;
+            name_en?: string;
             state: string;
             go: number;
             total: number;
@@ -21704,6 +21708,7 @@ export interface components {
         WorkflowStepRef: {
             step_order: number;
             step_name: string;
+            step_name_en?: string;
         };
         /**
          * @description Serializer for WorkflowTemplate.

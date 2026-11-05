@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { permApi, type Role, type RoleDeleteRefusal } from "@soulledger/core/api";
@@ -171,7 +172,7 @@ function RoleDrawerBody({
   onOpenMatrix: (role: string) => void;
   canManage: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const copy = useCopyRole();
@@ -411,14 +412,14 @@ function RoleDrawerBody({
               <ul className="mt-2 space-y-1" aria-label={t("permissions.roles.referencing")}>
                 {refusal.templates.map((tpl) => (
                   <li key={tpl.template_id} className="text-[oklch(var(--color-ink))]">
-                    {tpl.template_name}
+                    {localName(tpl, locale, "template_name")}
                     {!tpl.is_active && (
                       <Badge tone="neutral" className="ml-2">
                         {t("permissions.roles.inactive")}
                       </Badge>
                     )}
                     <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-                      {tpl.steps.map((s) => `#${s.step_order} ${s.step_name}`).join(" · ")}
+                      {tpl.steps.map((s) => `#${s.step_order} ${localName(s, locale, "step_name")}`).join(" · ")}
                     </span>
                   </li>
                 ))}

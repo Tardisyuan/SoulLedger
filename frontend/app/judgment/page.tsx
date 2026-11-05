@@ -1,5 +1,7 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { courtLabel } from "@soulledger/core/domain/courts";
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -74,7 +76,7 @@ function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => vo
 }
 
 function JudgmentQueuePageContent() {
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });
   const buttonOn = useMenuButtonConfig();
@@ -269,7 +271,7 @@ function JudgmentQueuePageContent() {
         onRetry={() => refetch()}
         keyExtractor={(judgment) => String(judgment.id)}
         renderRow={(judgment) => {
-          const bench = [judgment.court, judgment.judge_name].filter(Boolean).join(" · ");
+          const bench = [courtLabel(t, judgment.court, locale), localName(judgment, locale, "judge_name")].filter(Boolean).join(" · ");
           return (
             <>
               <td className="px-3 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap max-w-64 truncate" title={judgment.soul_name || undefined}>

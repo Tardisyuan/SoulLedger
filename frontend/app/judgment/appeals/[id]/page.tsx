@@ -1,5 +1,6 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
 import { use, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -93,7 +94,7 @@ function Decision({ appeal }: { appeal: JudgmentAppeal }) {
 }
 
 function AppealReviewContent({ id }: { id: string }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, locale, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const { showToast } = useToast();
@@ -197,7 +198,7 @@ function AppealReviewContent({ id }: { id: string }) {
         <Link href={`/souls/${appeal.soul}`} className="underline underline-offset-2">{appeal.soul_name}</Link>
         {appeal.workflow && (
           <Link data-testid="appeal-workflow" href={`/workflow/${appeal.workflow}`} className="underline underline-offset-2">
-            {t("appeals.ladder", { name: appeal.workflow_name ?? "" })} · <span className="font-mono">{appeal.workflow_number}</span>
+            {t("appeals.ladder", { name: localName(appeal, locale, "workflow_name") })} · <span className="font-mono">{appeal.workflow_number}</span>
           </Link>
         )}
         {appeal.status === "IN_REVIEW" && appeal.reviewer_name && (
@@ -221,7 +222,7 @@ function AppealReviewContent({ id }: { id: string }) {
           </Row>
         </PageSection>
         {appeal.ladder ? (
-          <PageSection title={t("appeals.ladder", { name: appeal.workflow_name ?? "" })}>
+          <PageSection title={t("appeals.ladder", { name: localName(appeal, locale, "workflow_name") })}>
             <AppealLadderView appeal={appeal} />
             {!(awaiting && over) && (
               <Link data-testid="appeal-ladder-open" href={`/workflow/${appeal.workflow}${ladderAnchor(appeal.ladder)}`} className="mt-3 inline-block text-sm underline underline-offset-2">

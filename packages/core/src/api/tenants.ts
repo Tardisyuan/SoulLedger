@@ -15,6 +15,9 @@ export interface Tenant {
   civilization?: string;
   /** 匾上的印字,0–2 个;空 = 用文明默认字。只有 ADMIN 能改(`updateSealGlyphs`)。 */
   seal_glyphs?: string[];
+  /** English; blank = show `display_name` / `description`. */
+  display_name_en?: string;
+  description_en?: string;
   /** 殿司展示名(三语),空的后端退回 zh 再退回 `display_name`。只有 ADMIN 能改(`updateSettings`)。 */
   hall_name?: string;
   hall_name_en?: string;
@@ -44,7 +47,9 @@ export type TenantMfaRoleRow = components["schemas"]["TenantMfaRoleRow"];
  * `null` = 删掉这个键,回到默认 30 天。
  */
 export interface TenantSettingsPatch {
+  display_name_en?: string;
   description?: string;
+  description_en?: string;
   dispatch_enabled?: boolean;
   hall_name?: string;
   hall_name_en?: string;
@@ -65,8 +70,10 @@ export interface TenantSettingsPatch {
 export interface TenantCreateBody {
   code: string;
   display_name: string;
+  display_name_en?: string;
   civilization: string;
   description?: string;
+  description_en?: string;
   hall_name?: string;
   hall_name_en?: string;
   hall_name_egy?: string;

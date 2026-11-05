@@ -1,11 +1,12 @@
 "use client";
 
+import { localName } from "@soulledger/core/domain/localName";
+import { presetEnglish, presetLabel } from "@soulledger/core/config/workflowPresetEnglish";
 import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { englishNames } from "@/lib/i18n/englishApiNames";
 import { useToast } from "@/src/contexts/ToastContext";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { ListSkeleton } from "@/components/ui/skeleton";
@@ -51,8 +52,6 @@ export default function WorkflowPage() {
 function WorkflowPageContent() {
   const { t, locale } = useI18n();
   const { showToast } = useToast();
-  /** Presets live in the config in Chinese, with no API response to translate them. Applied after `nodeTypeFor` and `presetRouting`, which read the Chinese; a save is undone by the request interceptor. */
-  const shown = <T,>(value: T): T => (locale === "en" ? (englishNames(value) as T) : value);
 
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -244,7 +243,7 @@ function WorkflowPageContent() {
                             : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                         }`}
                       >
-                        <div title={tmpl.name} className="text-sm font-medium truncate">{tmpl.name}</div>
+                        <div title={localName(tmpl, locale)} className="text-sm font-medium truncate">{localName(tmpl, locale)}</div>
                         <div className="text-xs text-[oklch(var(--color-ink-subtle))] mt-1">
                           <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>
@@ -275,7 +274,7 @@ function WorkflowPageContent() {
                               : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:border-[oklch(var(--color-accent))]/50"
                           }`}
                         >
-                          {shown(tmpl.name)}
+                          {presetLabel(tmpl.name, locale)}
                         </button>
                       ))}
                     </div>
@@ -296,7 +295,7 @@ function WorkflowPageContent() {
                       const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
                       return (
                         <TemplatePreview
-                          model={backendPreviewModel(tmpl)}
+                          model={backendPreviewModel(tmpl, locale)}
                           actions={
                             <>
                               <Button
@@ -358,17 +357,20 @@ function WorkflowPageContent() {
                         `presetPreviewModel`——`nodeTypeFor` 那一步就在它里面。 */}
                     {!editingTemplateId && selectedTemplate && currentTemplate && (
                       <TemplatePreview
-                        model={shown(presetPreviewModel(currentTemplate))}
+                        model={presetPreviewModel(currentTemplate, locale)}
                         actions={
                           <>
                             <Button
                               type="button"
                               onClick={() => {
-                                setViewingTemplate(shown({
+                                setViewingTemplate({
                                   ...currentTemplate,
+                                  name_en: presetEnglish(currentTemplate.name),
+                                  description_en: presetEnglish(currentTemplate.description),
                                   nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                     id: n.id,
                                     node_name: n.name,
+                                    name_en: presetEnglish(n.name),
                                     court_code: n.court,
                                     // `n.type` 是中文步骤名，不是 NodeType 成员——
                                     // 原样放进 node_type 是「编辑预设必定 400」的
@@ -377,7 +379,7 @@ function WorkflowPageContent() {
                                     // 保存后存下的类型是同一个。
                                     node_type: nodeTypeFor(n.type),
                                   })),
-                                }));
+                                });
                                 setViewModalOpen(true);
                               }}
                             >
@@ -388,9 +390,11 @@ function WorkflowPageContent() {
                                 type="button"
                                 variant="secondary"
                                 onClick={() => {
-                                  setEditingTemplateData(shown({
+                                  setEditingTemplateData({
                                     name: currentTemplate.name,
+                                    name_en: presetEnglish(currentTemplate.name),
                                     description: currentTemplate.description,
+                                    description_en: presetEnglish(currentTemplate.description),
                                     civilization: currentTemplate.civilization,
                                     case_type: currentTemplate.caseType,
                                     // Carried through, or the three 紧急审判流程
@@ -402,6 +406,7 @@ function WorkflowPageContent() {
                                     nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                       id: n.id,
                                       node_name: n.name,
+                                      name_en: presetEnglish(n.name),
                                       court_code: n.court,
                                       // 这一行就是缺陷所在：原本是 `n.type`，把
                                       //「分流」「初审」「终审」…送进 WorkflowEditor，
@@ -412,7 +417,7 @@ function WorkflowPageContent() {
                                       // 不按 order 直走的预设（希腊）带上去向，否则编辑器画成直线。
                                       ...presetRouting(currentTemplate, n.id),
                                     })),
-                                  }));
+                                  });
                                   setTab("editor");
                                 }}
                               >
