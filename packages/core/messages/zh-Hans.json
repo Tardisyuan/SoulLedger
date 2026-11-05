@@ -3141,7 +3141,8 @@
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及杜阿特",
-      "GREEK": "希腊冥界"
+      "GREEK": "希腊冥界",
+      "UNKNOWN": "未归属文明"
     },
     "root": "根",
     "organizations_count": "{{count}} 个组织",
