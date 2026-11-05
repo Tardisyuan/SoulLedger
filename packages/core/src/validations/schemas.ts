@@ -52,9 +52,12 @@ export const soulCreateSchema = z.object({
   // UNKNOWN is a symptom of a misconfigured tenant, not a cosmology anyone
   // would deliberately choose. UNKNOWN is absent from CIVILIZATION_OPTIONS for
   // the same reason, so deriving keeps that property instead of restating it.
+  //
+  // Optional because only an administrator bound to no hall chooses: everyone else
+  // creates in their own hall and the form has no such field for them.
   civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
-  }),
+  }).optional(),
   birth_date: birthDate,
   origin_location: z.string().max(255, '地点最多255位').optional(),
   // 出身地域(第四十五批):"" 是不详。与 `SoulOriginRegion` 同三个值。

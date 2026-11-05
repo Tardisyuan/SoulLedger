@@ -5,12 +5,14 @@ import { Dialog } from "@base-ui/react/dialog";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { useCreateSoul } from "@soulledger/core/hooks/useSouls";
 import { localDateString } from "@soulledger/core/domain/dates";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import {
   CIVILIZATION_OPTIONS,
+  TENANT_CODE_TO_CIVILIZATION,
   type CivilizationOption,
 } from "@soulledger/core/config/civilizations";
 import { soulCreateSchema } from "@soulledger/core/validations/schemas";
@@ -210,6 +212,9 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const [name, setName] = useState("");
   const [originRegion, setOriginRegion] = useState<SoulOriginRegion>("");
   const [civilization, setCivilization] = useState<CivilizationOption>("CHINESE");
+  // 绑了殿的账号建到自己的殿,没有可选的文明,也不发这个字段;只有未绑殿的全局管理员选。
+  const ownTenantCode = useTenant().user?.tenant?.code;
+  const isBound = !!ownTenantCode;
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -233,7 +238,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
 
     const formData = {
       name: name.trim(),
-      civilization,
+      ...(isBound ? {} : { civilization }),
       birth_date: birthDate || null,
       // 模型是 `CharField(blank=True)`,不收 null:留空发 ""。发 null 时这个选填项留空必定 400。
       origin_location: originLocation,
@@ -344,22 +349,24 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           error={getError('name') ?? serverErrors.name}
           placeholder={t("souls.form.name_placeholder")}
         />
-        <SelectField
-          id={civilizationId}
-          label={t("souls.form.civilization_label")}
-          value={civilization}
-          onChange={(e) => {
-            setCivilization(e.target.value as typeof civilization)
-            clearFieldError('civilization')
-            clearServerError('civilization')
-          }}
-          disabled={loading}
-          error={getError('civilization') ?? serverErrors.civilization}
-          options={CIVILIZATION_OPTIONS.map((civ) => ({
-            value: civ,
-            label: t(`souls.civilizations.${civ}`),
-          }))}
-        />
+        {!isBound && (
+          <SelectField
+            id={civilizationId}
+            label={t("souls.form.civilization_label")}
+            value={civilization}
+            onChange={(e) => {
+              setCivilization(e.target.value as typeof civilization)
+              clearFieldError('civilization')
+              clearServerError('civilization')
+            }}
+            disabled={loading}
+            error={getError('civilization') ?? serverErrors.civilization}
+            options={CIVILIZATION_OPTIONS.map((civ) => ({
+              value: civ,
+              label: t(`souls.civilizations.${civ}`),
+            }))}
+          />
+        )}
         <TextField
           id={birthDateId}
           label={t("souls.form.birth_date_label")}
@@ -395,7 +402,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={originRegion}
             onChange={setOriginRegion}
             disabled={loading}
-            civilization={civilization}
+            civilization={isBound ? TENANT_CODE_TO_CIVILIZATION[ownTenantCode ?? ""] : civilization}
           />
         </div>
       </form>
