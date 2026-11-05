@@ -163,6 +163,7 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   重步骤之间等负载回到 12 以下再点;模拟器截图会慢一帧,操作后截两张看第二张。
 - **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
   2026-10-11 灵魂端和官员端的恢复码框都漏了;编号框(`auth.tsx`、`letters.tsx`)早就设了。
+  **这个值只在 iOS 有效(2026-11-05 查明)**:RN 安卓没有 `ascii-capable`,落回默认键盘,搜狗照样当拼音。`mobile/src/ui.tsx` 的 `Input` 现在在安卓上把它换成 `visible-password`(遮罩中的密码框除外),直接用 `Input` 就行。
 - **2026-10-30 第二轮设备验证得到的四条事实**:
   - 改了 JS 依赖(如官员端删 `react-native-screens`)之后,unRAID 上还在跑的旧 Metro 会报 `Unable to resolve "react-native"`,
     读起来像依赖坏了。10-31 起 `metro sync` / `metro open` 比对 Metro 容器的依赖哈希(`SL_DEPS`),不一致就先同步再自动重启 Metro

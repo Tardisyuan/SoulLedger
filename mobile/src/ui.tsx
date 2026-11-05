@@ -949,6 +949,11 @@ export function Input({
                 // A password field is typed in Latin letters; revealed, the pinyin keyboard would compose it. The caller may still override.
                 {...(rest.secureTextEntry && !rest.keyboardType ? { keyboardType: "ascii-capable" as const } : null)}
                 {...rest}
+                // Android has no "ascii-capable": it falls back to the default keyboard, and a pinyin one composes the
+                // letters. "visible-password" is its Latin keyboard; never on a masked field, whose mask it would drop.
+                {...(Platform.OS === "android" && (rest.keyboardType ?? (rest.secureTextEntry ? "ascii-capable" : undefined)) === "ascii-capable" && !(rest.secureTextEntry && !revealed)
+                  ? { keyboardType: "visible-password" as const }
+                  : null)}
                 secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
                 onFocus={(e) => {
                   setFocused(true);
