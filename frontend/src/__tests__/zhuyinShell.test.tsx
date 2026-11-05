@@ -34,7 +34,7 @@ beforeEach(() => {
 describe("印", () => {
   it("读屏读「{殿名}之印」,印文本身不念", () => {
     render(<Seal size={52} />);
-    const seal = screen.getByRole("img", { name: "第五殿之印" });
+    const seal = screen.getByRole("img", { name: "organization.civilizations.CHINESE之印" });
     expect(seal).toHaveAttribute("data-civ", "cn");
     expect(seal.querySelector(".seal-glyphs")).toHaveAttribute("aria-hidden", "true");
   });

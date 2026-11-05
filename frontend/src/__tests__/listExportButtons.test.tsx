@@ -75,7 +75,7 @@ describe("/dispatch", () => {
     expect(buttons).toHaveLength(2);
     fireEvent.click(buttons[0]);
     await waitFor(() => expect(dispatchApi.exportCsv).toHaveBeenCalledWith({ section: "proposed" }));
-    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(csv.data, expect.stringMatching(/^dispatch\.title-plaque\.office\.court\.cn-\d{8}-\d{4}\.csv$/)));
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(csv.data, expect.stringMatching(/^dispatch\.title-\d{8}-\d{4}\.csv$/)));
     fireEvent.click(buttons[1]);
     await waitFor(() => expect(dispatchApi.exportCsv).toHaveBeenLastCalledWith({ section: "history" }));
   });
