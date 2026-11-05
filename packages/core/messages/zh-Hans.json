@@ -2135,7 +2135,7 @@
       "concluded_at": "结案时间",
       "notes": "备注",
       "render_verdict": "宣判",
-      "conclude_success": "审判成功完结",
+      "conclude_success": "已落判，待审批",
       "conclude_error": "审判完结失败",
       "select_verdict": "请选择裁决",
       "concluding": "结案处理中...",

@@ -2135,7 +2135,7 @@
       "concluded_at": "Concluded at",
       "notes": "Notes",
       "render_verdict": "Render Verdict",
-      "conclude_success": "Judgment concluded successfully",
+      "conclude_success": "Judgment recorded; awaiting approval",
       "conclude_error": "Failed to conclude judgment",
       "select_verdict": "Please select a verdict",
       "concluding": "Concluding...",
