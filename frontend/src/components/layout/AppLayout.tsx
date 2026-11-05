@@ -46,8 +46,7 @@ import { useImpersonation } from "@/src/components/impersonation/useImpersonatio
  * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 48px(PageShell 的筛选栏吸在两者
  *   下沿,`--below-band` = 52 + 身份带此刻的高度)。
  * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含导航与问一问面板)的一条警示条
- *   (`ConnectionBanner`,Design E 组:它是全局状态)。它出现时 `--conn-h` 把工具条、导航和代看条
- *   整体往下推 28px,不盖住任何东西。
+ *   (`ConnectionBanner`,Design E 组:它是全局状态),浮在内容上,不推动内容。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
 /** domMax arrives after first paint (`motionFeatures.ts`); an `m` element renders unanimated until then. */
@@ -105,19 +104,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const viewing = useImpersonation() !== null;
   useEffect(() => {
     if (!viewing) return;
-    document.documentElement.style.setProperty("--imp-h", `calc(${IMPERSONATION_BANNER_HEIGHT} + var(--conn-h))`);
+    document.documentElement.style.setProperty("--imp-h", IMPERSONATION_BANNER_HEIGHT);
     return () => {
       document.documentElement.style.removeProperty("--imp-h");
     };
   }, [viewing]);
-  // 连接条(fixed,28px = `h-7`)也算进吸顶偏移:它曾盖住工具条的上半截和代看条。
-  useEffect(() => {
-    if (!bannerShown) return;
-    document.documentElement.style.setProperty("--conn-h", "1.75rem");
-    return () => {
-      document.documentElement.style.removeProperty("--conn-h");
-    };
-  }, [bannerShown]);
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
@@ -194,8 +185,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     >
       {t("nav.skip_to_main")}
     </a>
-    {/* 连接条是 fixed,不占文档流:这一格替它占住那 28px。 */}
-    <div aria-hidden="true" className="h-(--conn-h)" />
     <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
       <aside className="sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block">
@@ -403,8 +392,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <OfficerAssistPanel assist={assist} belowBanner={bannerShown} />
       <ShortcutHelp />
 
-      {/* 视口最顶、横跨立柱与面板。代价:它在加载后一会儿才出现,那 28px 的位移可能把按钮从指针下
-          挪走(曾让 E2E 头像测试 16 次里 1 次点空);换来的是不再盖住工具条和代看条。 */}
+      {/* 视口最顶、横跨立柱与面板;fixed,浮在内容上 —— 它在加载后一会儿才出现,在文档流里
+          那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里 1 次点空)。 */}
       <ConnectionBanner />
 
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
