@@ -254,7 +254,8 @@
     "undeclared": "Not declared",
     "by_deployment": "All configured per deployment",
     "default": "Default",
-    "reference": "Cited for comparison"
+    "reference": "Cited for comparison",
+    "author": "Author"
   },
   "souls": {
     "title": "Souls",
@@ -434,7 +435,7 @@
       "render_judgment": "Render Judgment",
       "start_judgment": "Start Judgment",
       "verdict_passed": "Passed",
-      "verdict_failed": "Failed",
+      "verdict_failed": "Condemned",
       "verdict_purgatory": "Purgatory",
       "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
@@ -587,7 +588,13 @@
       "case_closed": "Concluded",
       "case_all": "All {{n}} ›",
       "load_more": "Load more records",
-      "load_more_failed": "Some records did not load; try again"
+      "load_more_failed": "Some records did not load; try again",
+      "memory_mechanisms": {
+        "MENGPO": "Meng Po's soup",
+        "LETHE": "The water of Lethe",
+        "SPELL": "Spell recitation",
+        "NONE": "No reset"
+      }
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -1601,7 +1608,7 @@
     },
     "verdicts": {
       "passed": "Passed",
-      "failed": "Failed",
+      "failed": "Condemned",
       "confirmed": "Confirmed",
       "rejected": "Rejected",
       "skipped": "Skipped"
@@ -2037,7 +2044,7 @@
     "view": "View",
     "verdicts": {
       "passed": "Passed",
-      "failed": "Failed",
+      "failed": "Condemned",
       "purgatory": "Purgatory",
       "retry": "Retry"
     },
@@ -2751,7 +2758,16 @@
       "rolepermission": "Role permission",
       "menu": "Menu",
       "menubutton": "Menu button",
-      "fieldpermission": "Field permission"
+      "fieldpermission": "Field permission",
+      "statute": "Statute",
+      "organization": "Organization",
+      "workflowtemplate": "Workflow template",
+      "actor": "Actor",
+      "realm": "Realm",
+      "loginlog": "Login log",
+      "post": "Post",
+      "auth": "Sign-in",
+      "disposition": "Disposition"
     },
     "timeline": {
       "all_resources": "All permission resources",
@@ -8449,16 +8465,16 @@
     },
     "build": {
       "title": "How it's built",
-      "lede": "One Django backend, four front ends. The rules of the four underworlds are written once, in packages/core, and shared by all four.",
+      "lede": "One Django backend, three front ends (web, soul app, officer app). The rules of the four underworlds live in the backend; packages/core holds the API client, hooks, domain configuration and language packs the three share.",
       "node": {
         "web": "Web console",
         "soul_app": "Soul app",
         "officer_app": "Officer app",
-        "core": "Rules shared by all four",
-        "core_detail": "Judgment, disposition and rebirth for all four underworlds, written once",
-        "backend": "Backend",
+        "core": "Shared by all three",
+        "core_detail": "API client, hooks, domain configuration, language packs. The rules are not here.",
+        "backend": "Backend · the rules of all four underworlds",
         "letters": "Letters",
-        "tenancy": "Multi-tenant: each hall is its own tenant with its data kept apart; halls meet only through transfers and joint judgments."
+        "tenancy": "Multi-tenant: each underworld is one tenant with its data kept apart; underworlds meet only through transfers and joint judgments."
       },
       "shared": "shared",
       "tests_title": "Automated tests",
@@ -8485,7 +8501,7 @@
       "chip": "Tour {{n}}/{{total}}",
       "look_here": "Look here: {{target}}",
       "done_title": "That was one life",
-      "done_body": "That is how {{civ}} does it. In another underworld, the same soul walks a very different road.",
+      "done_body": "That is how {{civ}} does it. Change underworld and the rules change with it.",
       "try_another": "Try another underworld",
       "stay": "Stay here",
       "cn": {
@@ -8499,7 +8515,7 @@
         },
         "3": {
           "name": "First review",
-          "body": "The City God reviews merit and demerit first; the wrongfully dead wait in their own city."
+          "body": "The City God reviews merit and demerit first; the wrongfully dead wait in their own city. This step shows the whole hall's cases."
         },
         "4": {
           "name": "The ten courts",
@@ -8532,8 +8548,8 @@
           "body": "Purgatory cleanses terrace by terrace; the nine circles of Hell have no way out."
         },
         "5": {
-          "name": "Heaven",
-          "body": "Cleansed souls pass the Earthly Paradise into Heaven. Europe has no rebirth."
+          "name": "This life stops here",
+          "body": "Hell has no way out. Francesca stays in the second circle, and this life stops here. Europe has no rebirth."
         }
       },
       "eg": {
@@ -8573,7 +8589,7 @@
         },
         "4": {
           "name": "The destination",
-          "body": "The disposition records where the soul goes, and for how long."
+          "body": "A disposition records where a soul goes and for how long. This step shows the whole hall's dispositions."
         },
         "5": {
           "name": "A thousand years",
@@ -8601,11 +8617,17 @@
         "disposition": "Disposition",
         "rebirth": "Rebirth",
         "workflow_fork": "Workflow · the three judges' fork"
-      }
+      },
+      "skipped_title": "Tour skipped",
+      "skipped_body": "Look around on your own, or try another underworld."
     },
     "enter": {
       "entering": "Entering {{civ}}",
       "skip": "Skip"
+    },
+    "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions, and the corpus are in the menu on the left.",
+    "author": {
+      "line": "{{name}} decided the domain model, the source research and the standard of verification."
     }
   }
 }

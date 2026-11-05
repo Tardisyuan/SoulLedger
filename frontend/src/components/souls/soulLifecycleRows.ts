@@ -217,13 +217,14 @@ export function buildJudgmentMarkers(
 
 export function buildDispositionMarkers(
   dispositions: Disposition[],
-  labels: { executed: (realm: string) => string; eternal: string; memoryReset: (years: string) => string }
+  labels: { executed: (realm: string) => string; eternal: string; memoryReset: (mechanism: string) => string }
 ): MarkerRow[] {
   return dispositions
     .filter((d) => d.is_executed)
     .map((d) => {
       const realm = d.realm_name || d.realm_code || "";
-      const metaParts = [d.is_eternal ? labels.eternal : labels.memoryReset(d.memory_reset)];
+      const resets = d.memory_reset && d.memory_reset !== "NONE";
+      const metaParts = d.is_eternal ? [labels.eternal] : resets ? [labels.memoryReset(d.memory_reset)] : [];
       return {
         id: `disposition-${d.id}`,
         kind: "marker" as const,

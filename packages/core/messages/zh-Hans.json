@@ -226,7 +226,7 @@
     "civ_desc": {
       "CHINESE": "十殿阎王、孟婆汤、六道轮回",
       "EUROPEAN": "基督教审判、炼狱、但丁地狱、忘川河",
-      "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇之地",
+      "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇原",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
     },
     "your_realm": "你所属的冥府",
@@ -254,7 +254,8 @@
     "undeclared": "未声明",
     "by_deployment": "均按部署配置",
     "default": "默认",
-    "reference": "参照"
+    "reference": "参照",
+    "author": "作者"
   },
   "souls": {
     "title": "灵魂",
@@ -468,8 +469,8 @@
       "copy_id_aria": "复制灵魂 ID",
       "reading": {
         "threshold_hint": "心重 {{weight}} · 羽重 {{counterweight}}（{{scale}}）",
-        "threshold_pass": "未重于费斯之羽",
-        "threshold_fail": "重于费斯之羽",
+        "threshold_pass": "未重于玛阿特之羽",
+        "threshold_fail": "重于玛阿特之羽",
         "culpa_label": "罪责（Culpa）",
         "culpa_records": "{{count}} 项记录",
         "poena_label": "补赎（Poena）",
@@ -587,7 +588,13 @@
       "case_closed": "已结",
       "case_all": "全部 {{n}} 场 ›",
       "load_more": "加载更多记录",
-      "load_more_failed": "部分记录没有加载出来，请再点一次"
+      "load_more_failed": "部分记录没有加载出来，请再点一次",
+      "memory_mechanisms": {
+        "MENGPO": "孟婆汤",
+        "LETHE": "勒忒之水",
+        "SPELL": "诵咒",
+        "NONE": "不重置"
+      }
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -2751,7 +2758,16 @@
       "rolepermission": "角色权限",
       "menu": "菜单",
       "menubutton": "菜单按钮",
-      "fieldpermission": "字段权限"
+      "fieldpermission": "字段权限",
+      "statute": "律条",
+      "organization": "机构",
+      "workflowtemplate": "工作流模板",
+      "actor": "人物",
+      "realm": "界域",
+      "loginlog": "登录日志",
+      "post": "帖子",
+      "auth": "登录",
+      "disposition": "处置"
     },
     "timeline": {
       "all_resources": "全部权限资源",
@@ -8449,16 +8465,16 @@
     },
     "build": {
       "title": "这是怎么做的",
-      "lede": "一个 Django 后端，四个前端。四种冥界的规则只写一遍，放在 packages/core，四端共用。",
+      "lede": "一个 Django 后端，三个前端（网页、灵魂端、官员端）。四种冥界的规则写在后端；packages/core 放三端共用的接口、hooks、领域配置和语言包。",
       "node": {
         "web": "网页后台",
         "soul_app": "灵魂端 App",
         "officer_app": "官员端 App",
-        "core": "四端共用的规则",
-        "core_detail": "四种冥界的审判、处置、转世只写一遍",
-        "backend": "后端",
+        "core": "三端共用的层",
+        "core_detail": "接口客户端、hooks、领域配置、语言包。规则不在这里。",
+        "backend": "后端 · 四种冥界的规则",
         "letters": "书信",
-        "tenancy": "多租户：每一殿一个租户，数据按殿隔开；跨殿只走调拨与会审。"
+        "tenancy": "多租户：每个冥界一个租户，数据按租户隔开；跨冥界只走调拨与会审。"
       },
       "shared": "共用",
       "tests_title": "自动测试",
@@ -8485,7 +8501,7 @@
       "chip": "导览 {{n}}/{{total}}",
       "look_here": "看这里：{{target}}",
       "done_title": "这一生走完了",
-      "done_body": "这是{{civ}}的走法。换一个冥界，同一个灵魂会走完全不同的路。",
+      "done_body": "这是{{civ}}的走法。换一个冥界，走的是另一套规矩。",
       "try_another": "换一个冥界",
       "stay": "留在这里",
       "cn": {
@@ -8499,7 +8515,7 @@
         },
         "3": {
           "name": "城隍初审",
-          "body": "城隍先看功过；枉死的，送进枉死城等候。"
+          "body": "城隍先看功过；枉死的，送进枉死城等候。这一步看的是全殿的案子。"
         },
         "4": {
           "name": "十殿审判",
@@ -8532,8 +8548,8 @@
           "body": "炼狱七层逐层涤罪；地狱九层，没有出口。"
         },
         "5": {
-          "name": "天堂",
-          "body": "涤净的灵魂经地上乐园升入天堂。欧洲没有转世。"
+          "name": "这一生停在这里",
+          "body": "地狱没有出口。Francesca 留在第二圈，这一生停在这里。欧洲没有转世。"
         }
       },
       "eg": {
@@ -8554,8 +8570,8 @@
           "body": "通过的得到处置；比羽毛重的心，交给阿米特吞下。"
         },
         "5": {
-          "name": "芦苇之野",
-          "body": "路的尽头是芦苇之野。埃及没有转世，这一生到此为止。"
+          "name": "芦苇原",
+          "body": "路的尽头是芦苇原。埃及没有转世，这一生到此为止。"
         }
       },
       "gr": {
@@ -8569,11 +8585,11 @@
         },
         "3": {
           "name": "三判官",
-          "body": "三位判官分路：善者往福人之岛，恶者下塔尔塔罗斯。"
+          "body": "三位判官分路：善者往至福岛，恶者下塔尔塔罗斯。"
         },
         "4": {
           "name": "去处",
-          "body": "处置记下灵魂去哪里、待多久。"
+          "body": "处置记下灵魂去哪里、待多久。这一步看的是全殿的处置。"
         },
         "5": {
           "name": "千年",
@@ -8601,11 +8617,17 @@
         "disposition": "处置",
         "rebirth": "轮回",
         "workflow_fork": "审批流 · 三判官分路"
-      }
+      },
+      "skipped_title": "导览已跳过",
+      "skipped_body": "可以留在这里自己看，也可以换一个冥界。"
     },
     "enter": {
       "entering": "正在进入{{civ}}",
       "skip": "跳过"
+    },
+    "admin_hint": "管理员看得到四个冥界。这里是全局数字；审计、用户与权限、语料在左边的菜单里。",
+    "author": {
+      "line": "作者 {{name}} 决定领域建模、考据和验证标准。"
     }
   }
 }

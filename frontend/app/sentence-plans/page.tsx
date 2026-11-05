@@ -23,7 +23,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { fieldControl } from "@/src/components/ui/Field";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { CURRENT_NODE_STATUSES, NODE_TONES, PLAN_TONES, TenantName } from "@/src/components/sentence-plan/sentencePlanDisplay";
+import { CURRENT_NODE_STATUSES, NODE_TONES, PLAN_TONES, TenantName, endsForever } from "@/src/components/sentence-plan/sentencePlanDisplay";
 
 /*
  * 受刑计划列表(审计 2026-10-17 第 8 条):本殿原属、或本殿有一站的计划(`SentencePlanViewSet.get_queryset`)。
@@ -134,7 +134,7 @@ function SentencePlansContent() {
                     <Link href={`/souls/${plan.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline underline-offset-2">
                       {plan.soul_name}
                     </Link>
-                    <StatusBadge namespace="sentence_plan.plan_states" value={plan.status} tone={PLAN_TONES[plan.status] ?? "neutral"} />
+                    {!endsForever(plan) && <StatusBadge namespace="sentence_plan.plan_states" value={plan.status} tone={PLAN_TONES[plan.status] ?? "neutral"} />}
                     {current && (
                       <span className="flex items-center gap-2 text-sm">
                         {t("sentence_plan.stop", { order: String(current.order) })}
