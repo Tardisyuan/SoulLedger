@@ -52,11 +52,11 @@ it("the case title column is pinned and cannot be hidden; the hint shows", async
 it("hiding a column drops header and cells, persists, and survives a remount", async () => {
   const { unmount } = renderPage();
   await screen.findByText("联合案甲");
-  expect(screen.getByText("欧洲天堂", { exact: false })).toBeInTheDocument();
+  expect(screen.getByText("organization.civilizations.EUROPEAN", { exact: false })).toBeInTheDocument();
   open();
   fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "crossJudgments.initiated_by" }));
   expect(headers()).not.toContain("crossJudgments.initiated_by");
-  expect(screen.queryByText("欧洲天堂", { exact: false })).toBeNull();
+  expect(screen.queryByText("organization.civilizations.EUROPEAN", { exact: false })).toBeNull();
   expect(JSON.parse(localStorage.getItem(COLS)!)).toEqual({ hidden: "initiated_by" });
   unmount();
   renderPage();

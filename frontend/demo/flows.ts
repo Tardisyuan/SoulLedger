@@ -215,7 +215,12 @@ function approveNode(rec: Recording, id: string, body: Row): Answer {
     approver_username: me.name,
   };
   patchRow("/nodes/", String(node.id), decided);
-  const next = passed ? nodes.find((n) => Number(n.node_order) > Number(node.node_order) && n.status === "PENDING") : undefined;
+  let next = passed ? nodes.find((n) => Number(n.node_order) > Number(node.node_order) && n.status === "PENDING") : undefined;
+  // Reaching the end stop finishes the flow, as `_enter` does on the server: nothing is left to decide there.
+  if (next?.kind === "END") {
+    patchRow("/nodes/", String(next.id), { status: "TRAVERSED", decided_at: now() });
+    next = undefined;
+  }
   if (next) {
     const activated = { activated_at: now() };
     patchRow("/nodes/", String(next.id), activated);
