@@ -68,6 +68,7 @@ import {
   PALETTE_TYPES,
   WorkflowInspector,
   WorkflowLinearPreview,
+  nodeName,
   WorkflowPalette,
   WorkflowReadOnlyList,
   type InspectorTab,
@@ -1319,7 +1320,7 @@ export default function WorkflowEditor({
     const idx = selectedNodeId ? nodes.findIndex((n) => n.id === selectedNodeId) : -1;
     return nodes.slice(0, Math.max(idx, 0)).map((n, i) => ({
       value: n.id,
-      label: `N${i + 1}「${(typeof n.data.label === "string" && n.data.label) || t("workflow.editor.unnamed")}」`,
+      label: `N${i + 1}「${nodeName(n, t)}」`,
     }));
   }, [selectedNodeId, nodes, t]);
 
