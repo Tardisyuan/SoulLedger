@@ -172,7 +172,7 @@ export function SoulLifecycleTimeline({
       ...buildDispositionMarkers(dispositions, {
         executed: (realm) => tf("souls.detail.timeline.disposed", "处置执行 · {{realm}}", { realm: realm || t("souls.detail.destination") }),
         eternal: t("souls.detail.eternal"),
-        memoryReset: (years) => `${t("souls.detail.memory_reset")}: ${years}`,
+        memoryReset: (mechanism) => `${t("souls.detail.memory_reset")}: ${t(`souls.detail.memory_mechanisms.${mechanism}`)}`,
       })
     );
 

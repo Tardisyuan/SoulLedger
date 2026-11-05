@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, isMfaRequired } from "@soulledger/core/api";
+import { api } from "@soulledger/core/api/client";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { Button } from "@/src/components/ui/Button";
 import { Seal, type SealCiv } from "@/src/components/plaque/Seal";
@@ -10,6 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 import { DEMO_USERNAMES, type DemoRole } from "./store";
+import type { Tour } from "./tour";
 
 export const ROLE_OF_SKIN: Record<SealCiv, DemoRole> = { cn: "judge", eu: "judge_eu", eg: "judge_eg", gr: "judge_gr" };
 export const SKINS = Object.keys(ROLE_OF_SKIN) as SealCiv[];
@@ -23,6 +25,13 @@ export function startEntrance(skin: SealCiv, card?: HTMLElement): void {
   window.dispatchEvent(new CustomEvent(ENTRANCE_EVENT, { detail: { skin, origin } }));
 }
 export const ENTRANCE = ENTRANCE_EVENT;
+
+/** A judge opens on the soul the tour follows, and the moderator on the page made for that role; the rest on the usual default. */
+async function firstPage(role: DemoRole, user: Parameters<typeof defaultViewRoute>[0]): Promise<string> {
+  if (role === "moderator") return "/moderation";
+  const { data } = await api.get<Tour | null>("/demo/tour/");
+  return data?.steps[0]?.route ?? defaultViewRoute(user);
+}
 
 /** One sign-in, through the same `authApi.login` the real page uses (the demo answers it). The tour starts over with it. */
 export function useEnter() {
@@ -42,7 +51,7 @@ export function useEnter() {
     setRefreshToken(data.refresh);
     if (data.user) setUser(data.user);
     // Soft navigation: the seal keeps playing over it, and the page does not wait for the seal.
-    router.push(await defaultViewRoute(data.user));
+    router.push(await firstPage(role, data.user));
   };
   return { entering, enter };
 }

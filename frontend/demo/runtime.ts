@@ -90,10 +90,22 @@ function sse(events: object[]): Response {
   return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
-const ASSIST_ANSWER: Record<string, string> = {
-  "zh-Hans": "这是演示环境,「问一问」没有连接模型。正式环境里,它会依据律条与本案卷宗作答,并给出出处。",
-  en: "This is the demo, so Ask is not connected to a model. In production it answers from the statutes and the case file, with citations.",
+const NOT_RECORDED = {
+  "zh-Hans": "这是演示环境,「问一问」没有连接模型,只回放录好的回答,这个问题没有录。正式环境里,它会依据律条与本案卷宗作答,并给出出处。",
+  en: "This is the demo, so Ask is not connected to a model: it replays recorded answers, and this question has none. In production it answers from the statutes and the case file, with citations.",
 };
+const RECORDED = {
+  "zh-Hans": "(录制的回答:在测试环境问过一次,这里回放,不是现场生成)",
+  en: "(A recorded answer: asked once in the test environment and replayed here, not generated now)",
+};
+
+/** A suggested question gets its recorded answer, labelled as one (`data/assist-replies.json`, filled by hand). */
+async function assistAnswer(question: unknown, locale: string): Promise<string> {
+  const lang = locale === "zh-Hans" ? "zh-Hans" : "en";
+  const { replies } = (await import("./data/assist-replies.json")).default;
+  const answer = replies.find((r) => r.question["zh-Hans"] === question || r.question.en === question)?.answer[lang];
+  return answer ? `${RECORDED[lang]}\n\n${answer}` : NOT_RECORDED[lang];
+}
 
 export async function fetchAnswer(rawUrl: string, init?: RequestInit): Promise<Response> {
   const url = new URL(rawUrl, "http://demo.invalid");
@@ -101,7 +113,7 @@ export async function fetchAnswer(rawUrl: string, init?: RequestInit): Promise<R
   const method = (init?.method ?? "GET").toUpperCase();
   const locale = new Headers(init?.headers).get("Accept-Language") ?? "zh-Hans";
   if (method === "POST" && /assist/.test(path)) {
-    const text = ASSIST_ANSWER[locale] ?? ASSIST_ANSWER.en;
+    const text = await assistAnswer(parseBody(init?.body).question, locale);
     const now = new Date().toISOString();
     return sse([
       { event: "meta", conversation_id: "dec0de00-0000-4000-8000-a55157000000" },

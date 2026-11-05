@@ -11,11 +11,17 @@
   "videos": [
     {
       "key": "video_soul",
-      "src": "/demo-videos/app-soul.mp4"
+      "src": "/demo-videos/app-soul.mp4",
+      "poster": "/demo-videos/app-soul.jpg"
     },
     {
       "key": "video_officer",
-      "src": "/demo-videos/app-officer.mp4"
+      "src": "/demo-videos/app-officer.mp4",
+      "poster": "/demo-videos/app-officer.jpg"
     }
-  ]
+  ],
+  "author": {
+    "name": "Tardisyuan",
+    "github": "https://github.com/Tardisyuan"
+  }
 }

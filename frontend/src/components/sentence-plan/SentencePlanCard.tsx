@@ -22,6 +22,7 @@ import {
   REQUEST_TONES,
   RequestChanges,
   TenantName,
+  endsForever,
   refusalKey,
 } from "./sentencePlanDisplay";
 import { SentenceNodeRetry } from "./SentenceNodeRetry";
@@ -84,6 +85,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
 
   const current = plan.nodes.find((n) => CURRENT_NODE_STATUSES.includes(n.status));
   const open = OPEN_PLAN_STATUSES.includes(plan.status);
+  const forever = endsForever(plan);
   const isHome = isAdmin || (!!user?.tenant?.code && user.tenant.code === plan.tenant_code);
   const canCancel = open && isHome && hasPermission("sentence_plan.cancel");
 
@@ -106,11 +108,13 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
   return (
     <section data-plan-id={plan.id} aria-label={t("sentence_plan.plan_label", { cycle: String(plan.cycle) })} className="space-y-3">
       <header className="flex flex-wrap items-center gap-2">
-        <Badge tone={PLAN_TONES[plan.status] ?? "neutral"}>
-          <DomainEnum namespace="sentence_plan.plan_states" value={plan.status} />
-        </Badge>
+        {!forever && (
+          <Badge tone={PLAN_TONES[plan.status] ?? "neutral"}>
+            <DomainEnum namespace="sentence_plan.plan_states" value={plan.status} />
+          </Badge>
+        )}
         <span className={MUTED}>{t("sentence_plan.cycle", { cycle: String(plan.cycle) })}</span>
-        {plan.completed_at && <span className={MUTED}>{formatDateTime(plan.completed_at)}</span>}
+        {plan.completed_at && !forever && <span className={MUTED}>{formatDateTime(plan.completed_at)}</span>}
       </header>
       {plan.status === "CANCELLED" && plan.cancel_reason && (
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">

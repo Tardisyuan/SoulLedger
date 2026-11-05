@@ -43,10 +43,30 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const metadata: Metadata = {
-  title: "SoulLedger",
-  description: "Cross-civilization soul management system",
-};
+const DEMO_TITLE = "SoulLedger · 四种冥界，一本账";
+const DEMO_DESCRIPTION = "四种冥界，各按自己的规矩审一个灵魂。Four underworlds, each judging a soul by its own rules.";
+
+export const metadata: Metadata =
+  process.env.NEXT_PUBLIC_DEMO_MODE === "1"
+    ? {
+        // The demo's link is the one that gets passed around, so it is the one that needs a preview.
+        metadataBase: new URL("https://soulledger.tardisyuan.ltd"),
+        title: DEMO_TITLE,
+        description: DEMO_DESCRIPTION,
+        openGraph: {
+          type: "website",
+          siteName: "SoulLedger",
+          url: "/",
+          title: DEMO_TITLE,
+          description: DEMO_DESCRIPTION,
+          images: [{ url: "/og-image.png", width: 1200, height: 630, alt: DEMO_TITLE }],
+        },
+        twitter: { card: "summary_large_image", title: DEMO_TITLE, description: DEMO_DESCRIPTION, images: ["/og-image.png"] },
+      }
+    : {
+        title: "SoulLedger",
+        description: "Cross-civilization soul management system",
+      };
 
 /** 首帧就把主题类写到 `<html>` 上,在 React 接管之前。
  *

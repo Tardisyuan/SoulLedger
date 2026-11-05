@@ -4,6 +4,7 @@ import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { auditResourceLabel } from "@/src/components/audit/auditLabels";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { hasRebirth } from "@/src/lib/hasRebirth";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -437,7 +438,7 @@ function DashboardContent() {
                             >
                               <div className="min-w-0">
                                 <div title={log.description || log.resource} className="truncate text-sm text-[oklch(var(--color-ink))]">
-                                  {log.description || log.resource}
+                                  {log.description || auditResourceLabel(t, log.resource)}
                                 </div>
                                 <div className="text-xs text-[oklch(var(--color-ink-muted))]">{log.user}</div>
                               </div>

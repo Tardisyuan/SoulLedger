@@ -347,7 +347,7 @@ export default function AuditPage() {
           <TreeName depth={lead ? 0 : 1}>
             <div className="min-w-0">
               <div className="text-[oklch(var(--color-ink))]">
-                {impersonationSummary(g, t) ?? (g.descriptions.length > 0 ? g.descriptions.map((d) => describeAudit(d, t)).join(" · ") : g.resources.join(" + "))}
+                {impersonationSummary(g, t) ?? (g.descriptions.length > 0 ? g.descriptions.map((d) => describeAudit(d, t)).join(" · ") : g.resources.map((r) => auditResourceLabel(t, r)).join(" + "))}
                 {lead && repeats > 1 && (
                   <button
                     type="button"
