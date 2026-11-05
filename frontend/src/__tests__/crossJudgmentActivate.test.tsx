@@ -161,13 +161,13 @@ describe("cross-judgment detail — activate", () => {
       judgment({
         initiating_tenant: 9041,
         initiating_tenant_display_name: "中国地府",
-        participants: [{ ...participant, participant_tenant: 9052, participant_tenant_display_name: "欧洲天堂地狱" }],
+        participants: [{ ...participant, participant_tenant: 9052, participant_tenant_display_name: "欧洲天堂与地狱" }],
       })
     );
 
     await screen.findByText("Joint");
     expect(screen.getByText(/发起方.*中国地府/)).toBeTruthy();
-    expect(screen.getByText("欧洲天堂地狱")).toBeTruthy();
+    expect(screen.getByText("欧洲天堂与地狱")).toBeTruthy();
     expect(screen.queryByText(/9041/)).toBeNull();
     expect(screen.queryByText(/9052/)).toBeNull();
   });

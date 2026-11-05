@@ -435,7 +435,7 @@ describe("dispatch drafts and the target realm", () => {
     const realm = () => screen.getByLabelText(/dispatch\.target_realm/);
     await waitFor(() => expect(realm()).toHaveValue("r-meadow"));
     (dispatchApi.updateDraft as jest.Mock).mockResolvedValue({ data: DRAFT });
-    fireEvent.click(screen.getByRole("radio", { name: /杜阿特/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /civilizations\.EGYPTIAN/ }));
     await waitFor(() => expect(dispatchApi.realmOptions).toHaveBeenCalledWith("EG_DUAT"));
     // What is sent, not what the <select> shows: a select cannot display a value
     // it has no option for, so its DOM value would read "" even if the form kept
@@ -476,7 +476,7 @@ describe("dispatch drafts and the target realm", () => {
 
   it("a hall that is not receiving transfers is listed but disabled, with the reason beside it", async () => {
     renderPage([{ tenant_id: 3, tenant_code: "EG_DUAT", tenant_name: "杜阿特", dispatch_enabled: false }]);
-    const closed = await screen.findByRole("radio", { name: /杜阿特/ });
+    const closed = await screen.findByRole("radio", { name: /civilizations\.EGYPTIAN/ });
     expect(closed).toBeDisabled();
     expect(screen.getByText("dispatch.target_tenant_closed")).toBeInTheDocument();
     // Absence as well as presence: an open hall is still choosable and carries no such note.
