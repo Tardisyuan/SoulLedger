@@ -3,6 +3,7 @@
 import { useId, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import type { Edge, Node } from "@xyflow/react";
+import { getLocale } from "@soulledger/core/platform";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import type { TemplateSigner, WorkflowNodeKind } from "@soulledger/core/api";
@@ -169,9 +170,10 @@ export function WorkflowPalette({
   );
 }
 
-function nodeName(node: Node | undefined, t: TFunc): string {
+export function nodeName(node: Node | undefined, t: TFunc): string {
+  const english = getLocale() === "en" && typeof node?.data.labelEn === "string" ? node.data.labelEn.trim() : "";
   const label = typeof node?.data.label === "string" ? node.data.label.trim() : "";
-  return label || t("workflow.editor.unnamed");
+  return english || label || t("workflow.editor.unnamed");
 }
 
 /** "N3「楚江王 · 初审」" — how a node is named in the issue list and exits. */

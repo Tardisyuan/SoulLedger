@@ -131,7 +131,8 @@ function WorkflowPageContent() {
   // 身份带(A1):编辑器页签题「审批流编辑器」,右栏「模板名 · 已发布 vN」。版本取模板列表里
   // 那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,这里不写。其他页签退回面包屑。
   const editingRow = editingTemplateId ? templates.find((x) => String(x.id) === editingTemplateId) : undefined;
-  const editingName = editingRow?.name ?? editingTemplateData?.name;
+  const editingSource = editingRow ?? editingTemplateData;
+  const editingName = editingSource ? localName(editingSource, locale) : undefined;
   const hall = useHall(t("plaque.office.rules"));
   usePlaque({
     hall,

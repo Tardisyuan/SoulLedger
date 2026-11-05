@@ -341,6 +341,7 @@ const COLLECTED_FILES = [
   "focusRingContract.test.ts",
   "gridPopupKeyboardContract.test.tsx",
   "hideTheWheel.test.ts",
+  "workflowEditorNodeName.test.ts",
   "historicalDateLocale.test.ts",
   "HomePageIdentity.test.tsx",
   "inkOnSurfaceContract.test.ts",
