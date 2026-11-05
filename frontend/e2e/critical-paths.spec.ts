@@ -73,7 +73,8 @@ test.describe("Critical path: login and create a soul", () => {
     await expect(form).toBeVisible();
 
     await form.getByLabel("名称 *").fill("新入册的旅人");
-    await form.getByLabel("文明").selectOption("EGYPTIAN");
+    // A hall-bound officer creates in their own hall: no civilization select, and none is sent.
+    await expect(form.getByLabel("文明")).toHaveCount(0);
     await form.getByLabel("出生日期").fill("1901-05-06");
     await page.getByRole("button", { name: "创建灵魂", exact: true }).click();
 
@@ -81,9 +82,8 @@ test.describe("Critical path: login and create a soul", () => {
     await expect.poll(() => api.countOf("POST", "/souls/")).toBe(1);
     expect(api.lastCall("POST", "/souls/")?.body).toEqual({
       name: "新入册的旅人",
-      civilization: "EGYPTIAN",
       birth_date: "1901-05-06",
-      origin_location: null,
+      origin_location: "",
       // 出身地域(batch 45): the form defaults to 不详, sent as "".
       origin_region: "",
     });
@@ -495,7 +495,7 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(drawer.getByRole("textbox", { name: "显示名称 *" })).toHaveValue("守卫");
     await drawer.getByRole("button", { name: "更多操作" }).click();
     await drawer.getByRole("button", { name: /移入回收站…/ }).click();
-    const confirm = page.getByRole("dialog", { name: /将「守卫」移入回收站/ });
+    const confirm = page.getByRole("dialog", { name: /将「守护者」移入回收站/ });
     await confirm.getByRole("button", { name: "移入回收站", exact: true }).click();
     await expect(confirm.getByRole("alert")).toContainText("仍被 1 条审批流引用");
     await expect(confirm.getByRole("alert")).toContainText("跨文明调度 · 两级");

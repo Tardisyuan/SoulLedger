@@ -222,7 +222,7 @@ test("the seal is gone within a second, and Esc skips it", async ({ page }) => {
 
 test("Greece: the tour's second step lights the crossing line, the third the judges' fork", async ({ page }) => {
   await enter(page, "judge_gr");
-  await page.getByTestId("demo-tour-back").click();
+  // A judge lands on the protagonist's page: the first step is already where it points, no 回到这一步 to press.
   await page.getByTestId("demo-tour-next").click();
   await expect(page.getByTestId("soul-ferry-passage")).toHaveClass(/demo-tour-target/);
   await page.getByTestId("demo-tour-next").click();
