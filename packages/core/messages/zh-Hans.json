@@ -455,7 +455,6 @@
       "confirm_delete_action": "移入回收站",
       "deleting": "删除中...",
       "delete_confirm_message": "会移入回收站，不会真的抹去。可在「系统设置 › 回收站」恢复，其审判、处置记录一并保留。",
-      "delete_success": "删除成功",
       "error_update": "更新失败",
       "error_delete": "删除失败",
       "failed": "失败",

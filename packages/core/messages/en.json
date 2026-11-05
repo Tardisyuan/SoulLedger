@@ -455,7 +455,6 @@
       "confirm_delete_action": "Move to recycle bin",
       "deleting": "Deleting...",
       "delete_confirm_message": "It moves to the recycle bin and is not erased. It can be restored from Settings › Recycle bin, with its judgments and dispositions.",
-      "delete_success": "Soul deleted",
       "error_update": "Update failed",
       "error_delete": "Delete failed",
       "failed": "Failed",
