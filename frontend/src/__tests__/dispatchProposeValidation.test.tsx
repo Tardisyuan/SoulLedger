@@ -124,14 +124,14 @@ function renderPage(extraTenants: object[] = []) {
  * would let a broken debounce pass.
  */
 async function fillValid() {
-  await screen.findByRole("radio", { name: /冥界/ });
+  await screen.findByRole("radio", { name: /civilizations\.GREEK/ });
 
   const soulInput = screen.getByLabelText(/dispatch\.target_soul/);
   fireEvent.click(soulInput);
   fireEvent.change(soulInput, { target: { value: "孟" } });
   fireEvent.click(await screen.findByRole("option", { name: /孟婆/ }));
 
-  fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
+  fireEvent.click(screen.getByRole("radio", { name: /civilizations\.GREEK/ }));
   fireEvent.change(screen.getByLabelText(/dispatch\.reason/), {
     target: { value: LONG_REASON },
   });
@@ -293,10 +293,10 @@ describe("proposing a dispatch", () => {
 describe("the dispatch form, 规范 v1", () => {
   it("lists every civilization with its numbering sample; the source row is disabled and says so", async () => {
     renderPage();
-    const source = await screen.findByRole("radio", { name: /地府/ });
+    const source = await screen.findByRole("radio", { name: /civilizations\.CHINESE/ });
     expect(source).toBeDisabled();
     expect(source.closest("label")).toHaveTextContent("dispatch.source_label");
-    const target = screen.getByRole("radio", { name: /冥界/ });
+    const target = screen.getByRole("radio", { name: /civilizations\.GREEK/ });
     expect(target).toBeEnabled();
     // GREEK's sample, verbatim — and never on the source row.
     expect(target.closest("label")).toHaveTextContent("523a");
@@ -305,7 +305,7 @@ describe("the dispatch form, 规范 v1", () => {
 
   it("the approval-flow panel follows the real state machine: submit, target approves, target executes", async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /civilizations\.GREEK/ }));
     const flow = screen.getByRole("complementary", { name: "dispatch.flow.title" });
     expect(flow.querySelectorAll("li")).toHaveLength(3);
     // A draft is not a step of the approval flow: saving one starts nothing.
@@ -323,7 +323,7 @@ describe("the dispatch form, 规范 v1", () => {
     // Read-only means there is no search box to change it with.
     expect(screen.queryByLabelText(/dispatch\.target_soul/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: /冥界/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /civilizations\.GREEK/ }));
     fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: LONG_REASON } });
     fireEvent.click(screen.getByText("dispatch.submit_proposal"));
     await waitFor(() =>
@@ -343,7 +343,7 @@ describe("the dispatch form, 规范 v1", () => {
 
   it("放弃… asks first once something is filled in, and leaves at once when nothing is", async () => {
     renderPage();
-    await screen.findByRole("radio", { name: /冥界/ });
+    await screen.findByRole("radio", { name: /civilizations\.GREEK/ });
     fireEvent.click(screen.getByText("dispatch.discard"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("dispatch.discard_title")).not.toBeInTheDocument();
@@ -385,7 +385,7 @@ describe("dispatch drafts and the target realm", () => {
     expect(realm).toBeDisabled();
     expect(dispatchApi.realmOptions).not.toHaveBeenCalled();
 
-    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /civilizations\.GREEK/ }));
     await screen.findByRole("option", { name: "塔尔塔罗斯" });
     expect(dispatchApi.realmOptions).toHaveBeenCalledWith("GR_HADES");
     expect(dispatchApi.realmOptions).not.toHaveBeenCalledWith("CN_DIYU");
@@ -395,7 +395,7 @@ describe("dispatch drafts and the target realm", () => {
   it("存草稿 saves an incomplete form without a reason check and switches to editing that draft", async () => {
     (dispatchApi.createDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, id: "new1" } });
     renderPage();
-    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /civilizations\.GREEK/ }));
     fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "口业" } });
     fireEvent.click(screen.getByText("dispatch.save_draft"));
     await waitFor(() =>
@@ -414,7 +414,7 @@ describe("dispatch drafts and the target realm", () => {
     (dispatchApi.submitDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, status: "PROPOSED" } });
     renderPage();
     expect(await screen.findByText("沈青梧")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("radio", { name: /冥界/ })).toBeChecked());
+    await waitFor(() => expect(screen.getByRole("radio", { name: /civilizations\.GREEK/ })).toBeChecked());
     expect(screen.getByLabelText(/dispatch\.reason/)).toHaveValue("口业");
     await waitFor(() => expect(screen.getByLabelText(/dispatch\.target_realm/)).toHaveValue("r-meadow"));
 
@@ -466,7 +466,7 @@ describe("dispatch drafts and the target realm", () => {
     (dispatchApi.createDraft as jest.Mock).mockResolvedValue({ data: { ...DRAFT, id: "new2" } });
     (dispatchApi.discardDraft as jest.Mock).mockResolvedValue({ status: 204 });
     renderPage();
-    await screen.findByRole("radio", { name: /冥界/ });
+    await screen.findByRole("radio", { name: /civilizations\.GREEK/ });
     fireEvent.change(screen.getByLabelText(/dispatch\.reason/), { target: { value: "写了一半" } });
     fireEvent.click(screen.getByText("dispatch.discard"));
     fireEvent.click(await screen.findByText("dispatch.discard_confirm"));
@@ -480,7 +480,7 @@ describe("dispatch drafts and the target realm", () => {
     expect(closed).toBeDisabled();
     expect(screen.getByText("dispatch.target_tenant_closed")).toBeInTheDocument();
     // Absence as well as presence: an open hall is still choosable and carries no such note.
-    expect(screen.getByRole("radio", { name: /冥界/ })).not.toBeDisabled();
+    expect(screen.getByRole("radio", { name: /civilizations\.GREEK/ })).not.toBeDisabled();
     expect(screen.getAllByText("dispatch.target_tenant_closed")).toHaveLength(1);
   });
 
@@ -505,7 +505,7 @@ describe("dispatch drafts and the target realm", () => {
       response: { status: 400, data: { target_realm: ["Realm X is not a realm of GR_HADES"] } },
     });
     renderPage();
-    fireEvent.click(await screen.findByRole("radio", { name: /冥界/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: /civilizations\.GREEK/ }));
     fireEvent.click(screen.getByText("dispatch.save_draft"));
     expect(await screen.findByText("Realm X is not a realm of GR_HADES")).toBeInTheDocument();
     expect(screen.getByLabelText(/dispatch\.target_realm/)).toHaveAttribute("aria-invalid", "true");
