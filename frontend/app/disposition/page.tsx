@@ -317,10 +317,10 @@ function DispositionPageContent() {
               {archivedMark(d)}
               <span>
                 {term.kind === "running" && term.fraction > 0.9 && <span aria-hidden="true">◐ </span>}
-                {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
+                {term.kind !== "running" ? termLabel(term, t) : term.overdue ? t("disposition.term_overdue") : t("disposition.days_left", { n: String(term.daysLeft) })}
                 {d.term_end && (
                   <span data-testid="disposition-serving-until" className="block">
-                    {t("disposition.serving_until", { date: formatHistoricalDate(d.term_end, locale) ?? "" })}
+                    {t(term.kind === "running" && term.overdue ? "disposition.overdue_since" : "disposition.serving_until", { date: formatHistoricalDate(d.term_end, locale) ?? "" })}
                   </span>
                 )}
               </span>

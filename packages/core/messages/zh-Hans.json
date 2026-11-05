@@ -4325,7 +4325,9 @@
       "approval_in_progress": "审批流程还没走完：走完之后才能执行。",
       "approval_rejected": "审批流程被驳回：这件案子要重开或申诉，不能直接执行。",
       "approval_cancelled": "审批流程因联审取消而中止，没有走完：不能直接执行。殿主（能改派案子的官员）可对这件审判「重开一案」。"
-    }
+    },
+    "term_overdue": "期满未释放",
+    "overdue_since": "期满于 {{date}}"
   },
   "reincarnation": {
     "form_label": "轮回形态",
