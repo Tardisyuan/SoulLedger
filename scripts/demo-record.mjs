@@ -76,6 +76,18 @@ function ownerIn(row) {
   return soulOf(row.id);
 }
 const isRecent = (s) => Number(s.slice(0, 4)) >= 2025;
+const DAY = 86400000;
+/** A stamp's place in its life: its distance from the first stamp, or, for the four the tour follows, the days written in the seed's `PACE`. */
+function lifeTime(ms, life) {
+  const first = Date.parse(life.first);
+  let [from, days] = [first, 0];
+  for (const [when, at] of life.pace ?? []) {
+    const to = Date.parse(when);
+    if (ms <= to) return moment(life) + (days + (at - days) * (to > from ? Math.max(ms - from, 0) / (to - from) : 1)) * DAY;
+    [from, days] = [to, at];
+  }
+  return moment(life) + days * DAY + ms - from;
+}
 function historize(value, owner) {
   if (Array.isArray(value)) return value.map((v) => historize(v, owner));
   if (value && typeof value === "object") {
@@ -89,7 +101,7 @@ function historize(value, owner) {
   if (life && /^[A-Z]{2}-2026-\d+$/.test(value)) return value.replace("2026", life.year < 0 ? `${-life.year}BC` : String(life.year));
   if (!isRecent(value)) return value;
   if (!WHOLE_STAMP.test(value) && !BARE_DATE.test(value)) return value;
-  const moved = new Date(Date.parse(value) + moment(life) - Date.parse(life.first)).toISOString();
+  const moved = new Date(lifeTime(Date.parse(value), life)).toISOString();
   return BARE_DATE.test(value) ? moved.slice(0, moved.indexOf("T")) : moved;
 }
 /** A response's owner is its row's soul, or the soul its address names. */
@@ -101,12 +113,14 @@ function historizeAll({ lists, docs }) {
   };
 }
 
+// The recorder's own sign-in writes a login-log row, and auditing that writes another: neither happened in the story.
+const recordersOwn = (row) => row?.resource === "loginlog";
 const scrub = (v) => {
-  if (Array.isArray(v)) return v.map(scrub);
+  if (Array.isArray(v)) return v.filter((row) => !recordersOwn(row)).map(scrub);
   if (v && typeof v === "object") {
     return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEYS.test(k)).map(([k, x]) => [k, NO_TWO_STEP.test(k) ? false : scrub(x)]));
   }
-  if (typeof v === "string") return v.replaceAll(API, "/api/v1").replaceAll(API_ORIGIN, "");
+  if (typeof v === "string") return v.replaceAll(API, "/api/v1").replaceAll(API_ORIGIN, "").replaceAll("HeadlessChrome", "Chrome");
   return v;
 };
 

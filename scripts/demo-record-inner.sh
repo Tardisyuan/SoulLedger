@@ -5,7 +5,8 @@ set -u
 source /app/scripts/demo-backend-up.sh || exit 1
 trap 'demo_pg "DROP DATABASE IF EXISTS sl_demo_record WITH (FORCE)"' EXIT
 
-rm -f /app/frontend/demo/data/*
+# Only what this script writes: assist-replies.json is recorded by hand, against the test environment.
+rm -f /app/frontend/demo/data/*.zh.json /app/frontend/demo/data/*.en.json
 cd /app/backend || exit 1
 "$PY" manage.py spectacular --format openapi-json --file /sl-tmp/schema.json >/dev/null 2>&1 || exit 1
 export DEMO_SCHEMA=/sl-tmp/schema.json
