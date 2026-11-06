@@ -9001,6 +9001,7 @@
     },
     "deadline": {
       "days": "{{n}} days",
+      "held": "Waiting to be heard · no deadline yet",
       "none": "None",
       "over": "{{n}} days over"
     },

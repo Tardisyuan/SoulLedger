@@ -77,6 +77,10 @@ it("deadline and days waited", () => {
   expect(deadlineText(t, { deadline_remaining_seconds: null })).toBe("不计");
   expect(deadlineText(t, { deadline_remaining_seconds: 86_400 * 2 + 5 })).toBe("3 日");
   expect(deadlineText(t, { deadline_remaining_seconds: -86_400 })).toBe("超 1 日");
+  // 候审中:期限还没开始,不按「从候至那天起」的剩余天数写。
+  expect(deadlineText(t, { deadline_remaining_seconds: 86_400 * 10_956, held_until: "2056-11-01" })).toBe("候审中 · 不计期限");
+  expect(deadlineText(t, { deadline_remaining_seconds: 86_400, conclude_refusal: "at_city_god" })).toBe("候审中 · 不计期限");
+  expect(deadlineText(t, { deadline_remaining_seconds: 86_400, duat_stage: "NAMELESS" })).toBe("候审中 · 不计期限");
   const now = Date.parse("2026-11-06T12:00:00Z");
   expect(waitedDays({ claimable_since: "2026-11-02T11:00:00Z", created_at: "2026-10-01T00:00:00Z" }, now)).toBe(4);
   expect(waitedDays({ claimable_since: null, created_at: "2026-11-05T00:00:00Z" }, now)).toBe(1);
