@@ -33,6 +33,7 @@ from apps.sentence_plan.services import (
     notify_judges,
     pardon_term,
     record_event,
+    soul_params,
 )
 from apps.souls.models import Soul
 
@@ -159,7 +160,7 @@ def _create_request(plan, soul, *, from_tenant_code, kind, changes, reason, user
     record_event(soul, EventType.SENTENCE_REQUEST_CREATED, {
         "sentence_plan_id": str(plan.pk), "request_id": str(req.pk), "kind": kind, "from_tenant": from_tenant_code,
     }, tenant_id=plan.tenant_id)
-    notify_judges({plan.tenant_id}, "sentence_request_pending", {"soul": soul.name, **hall_params([from_tenant_code])},
+    notify_judges({plan.tenant_id}, "sentence_request_pending", {**soul_params(soul), **hall_params([from_tenant_code])},
                   plan.pk)
     return req
 
@@ -270,7 +271,7 @@ def decide(plan, request_id, *, accept, reason, user):
         record_event(soul, EventType.SENTENCE_REQUEST_DECIDED, {
             "sentence_plan_id": str(plan.pk), "request_id": str(req.pk), "kind": req.kind, "status": req.status,
         }, tenant_id=plan.tenant_id)
-        notify_judges({_tenant_id(req.from_tenant_code)}, "sentence_request_decided", {"soul": soul.name}, plan.pk)
+        notify_judges({_tenant_id(req.from_tenant_code)}, "sentence_request_decided", soul_params(soul), plan.pk)
         SentencePlanService.advance(soul)
     return req
 
@@ -409,7 +410,7 @@ def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None
     )
     tenant_ids = {_tenant_id(code) for code in touched_codes} | {plan.tenant_id}
     notify_judges({t for t in tenant_ids if t}, "sentence_plan_amended",
-                  {"soul": soul.name, **hall_params(touched_codes)}, plan.pk)
+                  {**soul_params(soul), **hall_params(touched_codes)}, plan.pk)
 
 
 # ── 重开审判(Q7、N1=(a))────────────────────────────────────────────────

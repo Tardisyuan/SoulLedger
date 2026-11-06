@@ -596,6 +596,8 @@ const PROPER_NAMES = [
   "hooks", "Francesca", "Wangsi",
   // v4 第十一批(Design,2026-11-06):《理想国》照希腊原名 Politeia(与 Gorgias 同,判官落印时选的两篇文书之一)。
   "Politeia",
+  // v4 第十二批(Design,2026-11-07):阿墨勒斯河(《理想国》621a 勒忒平原上的河),照希腊原名(GR 6,导览第 6 站)。
+  "Ameles",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",

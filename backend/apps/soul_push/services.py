@@ -432,7 +432,10 @@ def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     if preference is not None and category and not getattr(preference, category):
         return []
     locale = preference.locale if preference else messages.DEFAULT_LOCALE
-    title, body = messages.render(locale, kind, **(params(locale) if params else {}))
+    # 受刑一族的推送按灵魂原属文明选词(第十二批 1.2:地府的「受刑计划有变动」)。按去处类型分的那几组
+    # (天界的停留期、炼狱的涤罪……)语言包与副本里都有,这里还没传 `place`:后端不知道站的去处类型。
+    civ = messages.PLAN_CIV_SHORT.get(account.soul.home_civilization) if kind.startswith("sentence_") else None
+    title, body = messages.render(locale, kind, civ=civ, **(params(locale) if params else {}))
     title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []

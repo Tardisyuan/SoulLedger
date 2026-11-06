@@ -10,16 +10,16 @@ DEFAULT_LOCALE = "zh-Hans"
 
 MESSAGES = {
     "zh-Hans": {
-        "sentence_plan_cancelled": {"title": "受刑计划已撤销", "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。"},
-        "sentence_plan_amended": {"title": "受刑计划变更", "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。"},
-        "sentence_request_pending": {"title": "受刑计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。"},
-        "sentence_request_decided": {"title": "受刑计划请求已决定", "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原判官决定，打开查看。"},
-        "sentence_node_active": {"title": "受刑节点开始", "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"},
-        "sentence_node_done": {"title": "受刑节点结束", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。"},
+        "sentence_plan_cancelled": {"title": "去处计划已撤销", "body": "灵魂「{{soul}}」的受刑计划已撤销，剩余刑期免除，按计划完成处理。", "title_by_civ": {"cn": "受刑计划已撤销"}},
+        "sentence_plan_amended": {"title": "去处计划变更", "body": "灵魂「{{soul}}」的受刑计划已变更，涉及 {{tenant}}。", "title_by_civ": {"cn": "受刑计划变更"}},
+        "sentence_request_pending": {"title": "去处计划请求待决", "body": "{{tenant}} 就灵魂「{{soul}}」的受刑计划提出了请求，等待原判官决定。", "title_by_civ": {"cn": "受刑计划请求待决"}},
+        "sentence_request_decided": {"title": "去处计划请求已决定", "body": "你就灵魂「{{soul}}」受刑计划提出的请求已由原判官决定，打开查看。", "title_by_civ": {"cn": "受刑计划请求已决定"}},
+        "sentence_node_active": {"title": "去处节点开始", "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。", "title_by_civ": {"cn": "受刑节点开始"}},
+        "sentence_node_done": {"title": "去处节点结束", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）已结束。", "title_by_civ": {"cn": "受刑节点结束"}},
         "sentence_node_waiting": {"title": "刑满暂留", "body": "灵魂「{{soul}}」在 {{tenant}} 的第 {{order}} 站刑满，因有未结案审判暂留当地；结案或撤案后回归。"},
-        "sentence_node_refused": {"title": "受刑节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。"},
-        "sentence_node_not_dispatched": {"title": "受刑节点未能发起调拨", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。"},
-        "sentence_plan_completed": {"title": "受刑计划完成", "body": "灵魂「{{soul}}」的受刑计划已全部完成。"},
+        "sentence_node_refused": {"title": "去处节点被拒", "body": "{{tenant}} 拒绝了灵魂「{{soul}}」受刑计划第 {{order}} 站的调拨，该节点已退回待执行。", "title_by_civ": {"cn": "受刑节点被拒"}},
+        "sentence_node_not_dispatched": {"title": "去处节点未能发起调拨", "body": "灵魂「{{soul}}」受刑计划第 {{order}} 站（{{tenant}}）没能发起调拨，该节点仍待执行，请处理后重新发起。", "title_by_civ": {"cn": "受刑节点未能发起调拨"}},
+        "sentence_plan_completed": {"title": "去处计划完成", "body": "灵魂「{{soul}}」的去处计划已全部完成。", "title_by_civ": {"cn": "受刑计划完成"}, "body_by_civ": {"cn": "灵魂「{{soul}}」的受刑计划已全部完成。"}},
         "cross_sentence_submitted": {"title": "跨域审判节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请到用户管理为其重置。"},
         "password_help_requested_moderator": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"},
@@ -73,16 +73,16 @@ MESSAGES = {
         "wangsi_grievance_filed": {"title": "枉死城有新申诉", "body": "灵魂「{{soul}}」提出了冤情申诉，等待审核。"},
     },
     "en": {
-        "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
-        "sentence_plan_amended": {"title": "Sentence plan changed", "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}."},
-        "sentence_request_pending": {"title": "Sentence plan request pending", "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge."},
-        "sentence_request_decided": {"title": "Sentence plan request decided", "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see."},
-        "sentence_node_active": {"title": "Sentence stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."},
-        "sentence_node_done": {"title": "Sentence stop ended", "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended."},
+        "sentence_plan_cancelled": {"title": "Placement plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete.", "title_by_civ": {"cn": "Sentence plan cancelled"}},
+        "sentence_plan_amended": {"title": "Placement plan changed", "body": "The sentence plan of soul {{soul}} has changed, involving {{tenant}}.", "title_by_civ": {"cn": "Sentence plan changed"}},
+        "sentence_request_pending": {"title": "Placement plan request pending", "body": "{{tenant}} has filed a request on the sentence plan of soul {{soul}}. It awaits the original judge.", "title_by_civ": {"cn": "Sentence plan request pending"}},
+        "sentence_request_decided": {"title": "Placement plan request decided", "body": "The original judge has decided your request on the sentence plan of soul {{soul}}. Open it to see.", "title_by_civ": {"cn": "Sentence plan request decided"}},
+        "sentence_node_active": {"title": "Placement stop begun", "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}.", "title_by_civ": {"cn": "Sentence stop begun"}},
+        "sentence_node_done": {"title": "Placement stop ended", "body": "Stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} has ended.", "title_by_civ": {"cn": "Sentence stop ended"}},
         "sentence_node_waiting": {"title": "Held after serving", "body": "Soul {{soul}} has served stop {{order}} in {{tenant}} and stays there while a judgment is open. It returns once the judgment is concluded or withdrawn."},
-        "sentence_node_refused": {"title": "Sentence stop refused", "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again."},
-        "sentence_node_not_dispatched": {"title": "Sentence stop not dispatched", "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again."},
-        "sentence_plan_completed": {"title": "Sentence plan completed", "body": "Soul {{soul}} has served every stop of its sentence plan."},
+        "sentence_node_refused": {"title": "Placement stop refused", "body": "{{tenant}} refused the transfer for stop {{order}} of the sentence plan of soul {{soul}}. The stop is pending again.", "title_by_civ": {"cn": "Sentence stop refused"}},
+        "sentence_node_not_dispatched": {"title": "Placement stop not dispatched", "body": "The transfer for stop {{order}} ({{tenant}}) of the sentence plan of soul {{soul}} could not be started. The stop is still pending; sort out the cause and start it again.", "title_by_civ": {"cn": "Sentence stop not dispatched"}},
+        "sentence_plan_completed": {"title": "Placement plan completed", "body": "Soul {{soul}} has completed every stop of its placement plan.", "title_by_civ": {"cn": "Sentence plan completed"}, "body_by_civ": {"cn": "Soul {{soul}} has served every stop of its sentence plan."}},
         "cross_sentence_submitted": {"title": "Cross-realm judgment stop filled in", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "password_help_requested": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, reset it under User Management."},
         "password_help_requested_moderator": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."},
@@ -142,17 +142,17 @@ MESSAGES = {
         "password_help_requested": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
         "password_help_requested_moderator": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."},
         "dispatch_return_blocked": {"title": "Ankh Er Taui Khesef", "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui."},
-        "sentence_node_active": {"title": "Sekhet Wetep Tepy", "body": "{{soul}}: Iyi Seth. Sekhet {{order}} Wetep Em {{tenant}}."},
-        "sentence_node_done": {"title": "Sekhet Wetep Seth", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) Wetep Seth."},
+        "sentence_node_active": {"title": "Sekhet Wetep Tepy", "body": "{{soul}}: Iyi Seth. Sekhet {{order}} Wetep Em {{tenant}}.", "title_by_civ": {"cn": "Sekhet Wetep Tepy"}},
+        "sentence_node_done": {"title": "Sekhet Wetep Seth", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) Wetep Seth.", "title_by_civ": {"cn": "Sekhet Wetep Seth"}},
         "sentence_node_waiting": {"title": "Hemes Smen", "body": "{{soul}}: Sekhet {{order}} Em {{tenant}} Wetep Seth; Hemes Smen Em Wedja. Wedja Pehwy, Iyi Er Taui Tepy."},
-        "sentence_node_refused": {"title": "Sekhet Khesef Seth", "body": "{{tenant}}: Hab Sekhet {{order}} En {{soul}} Khesef Seth. Sekhet Em Smen."},
-        "sentence_node_not_dispatched": {"title": "Sekhet Wetep: Hab-Ba Nen Tepy", "body": "{{soul}}: Sekhet {{order}} ({{tenant}}) · Hab-Ba Nen Tepy. Sekhet Em Smen Djer; Iri Khet, Er Khet Wehem Tepy."},
-        "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth."},
+        "sentence_node_refused": {"title": "Sekhet Khesef Seth", "body": "{{tenant}}: Hab Sekhet {{order}} En {{soul}} Khesef Seth. Sekhet Em Smen.", "title_by_civ": {"cn": "Sekhet Khesef Seth"}},
+        "sentence_node_not_dispatched": {"body": "{{soul}}: Sekhet {{order}} ({{tenant}}) · Hab-Ba Nen Tepy. Sekhet Em Smen Djer; Iri Khet, Er Khet Wehem Tepy.", "title": "Sekhet Wetep: Hab-Ba Nen Tepy", "title_by_civ": {"cn": "Sekhet Wetep: Hab-Ba Nen Tepy"}},
+        "sentence_plan_completed": {"title": "Wetep Neb Seth", "body": "{{soul}}: Sekhet Neb Wetep Seth.", "title_by_civ": {"cn": "Wetep Neb Seth"}, "body_by_civ": {"cn": "{{soul}}: Sekhet Neb Wetep Seth."}},
         "cross_sentence_submitted": {"title": "Sekhet Sesh Seth", "body": "{{tenant}}: Sekhet {{order}} En {{soul}} Sesh Seth."},
-        "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}."},
-        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Sab Wedja Tepy Er Wedja."},
-        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh-Ek Wedja Seth In Sab Wedja Tepy."},
-        "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."},
+        "sentence_plan_amended": {"title": "Wetep Khemen Seth", "body": "{{soul}}: Wetep Khemen Seth Em {{tenant}}.", "title_by_civ": {"cn": "Wetep Khemen Seth"}},
+        "sentence_request_pending": {"title": "Dbh Wetep Em Smen", "body": "{{tenant}}: Dbh Wetep En {{soul}}. Sab Wedja Tepy Er Wedja.", "title_by_civ": {"cn": "Dbh Wetep Em Smen"}},
+        "sentence_request_decided": {"title": "Dbh Wetep Wedja Seth", "body": "{{soul}}: Dbh-Ek Wedja Seth In Sab Wedja Tepy.", "title_by_civ": {"cn": "Dbh Wetep Wedja Seth"}},
+        "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth.", "title_by_civ": {"cn": "Wetep Sehen Seth"}},
         "soul_inbox_assigned": {"title": "Sesh Hab Er-Ek", "body": "{{soul}}: Sesh Hab In {{by}} Er-Ek."},
         "judgment_reassign_requested": {"title": "Dbh Hab Ky", "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"},
         "dispatch_proposed": {"title": "Dbh Hab-Ba Iyi", "body": "{{source}}: Dbh Hab-Ba Ba «{{soul}}» Er Wesekhet-Ek. Er Hesy-Ek."},
@@ -295,11 +295,18 @@ CIVILIZATION_NAMES = {
 }
 
 
+#: 文明 → 语言包 `_by_civ` 用的短码(与 packages/core 的 `civShortCode` 同一张表)。
+PLAN_CIV_SHORT = {"CHINESE": "cn", "EUROPEAN": "eu", "EGYPTIAN": "eg", "GREEK": "gr"}
+
+
 def render(locale, kind, params):
     # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `official_notify.<kind>`):读作 zh-Hans,
     # 与前端「egy 缺键读 zh-Hans」同一条规则。
     entry = MESSAGES[locale].get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
-    title, body = entry["title"], entry["body"]
+    # 受刑计划一层的词按计划所属文明换(Design v4 第十二批 1.2):底键是中性的「去处计划」,
+    # 地府用 `<字段>_by_civ.cn` 保留「受刑计划」。`plan_civ` 是灵魂原属文明(`SentencePlan` 归它)。
+    civ = PLAN_CIV_SHORT.get(params.get("plan_civ") or "")
+    title, body = (entry.get(f"{f}_by_civ", {}).get(civ) or entry[f] for f in ("title", "body"))
     if locale == "en":
         # A name with English of its own travels beside the source (`workflow` / `workflow_en`); blank = the source.
         params = {**params, **{k[:-3]: v for k, v in params.items() if k.endswith("_en") and v}}
