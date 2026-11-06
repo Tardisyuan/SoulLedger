@@ -101,6 +101,13 @@ describe("soul_app copy", () => {
       ...["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => `soul_app.welcome.realm.${c}`),
       "common.value.unrecorded",
       "common.value.unrecognized",
+      // v4 第十批第 4 条: Europe and Egypt name this life without a number (core's thisLifeLabel builds these).
+      "souls.life_label.this_life",
+      "souls.life_label.this_life_prior",
+      // 第十批第 3 条: the station states by place (core's nodeStateNamespace builds the key; one per civilization here).
+      "sentence_plan.node_states_by_civ.eu.PURGATORY.ACTIVE",
+      "sentence_plan.node_states_by_civ.eg.ANNIHILATION.ETERNAL",
+      "sentence_plan.node_states_by_civ.gr.BLISS.ACTIVE",
       // The settings switches and the primer's list build their keys from the category.
       ...["rebirth", "judgment", "residence"].flatMap((c) => [
         `soul_app.settings.${c}`,

@@ -85,6 +85,13 @@ export const TENANT_CODE_TO_CIVILIZATION: Record<string, string> = {
   GR_HADES: "GREEK",
 };
 
+/** `cn` / `eu` / `eg` / `gr` from a civilization (`EUROPEAN`) or a tenant code (`EU_HEAVEN_HELL`); `undefined` for neither. */
+export function civShortCode(civilizationOrTenant: string | null | undefined): string | undefined {
+  if (!civilizationOrTenant) return undefined;
+  const civ = CIVILIZATION_SHORT_CODES[civilizationOrTenant] ?? civilizationOrTenant.split("_")[0].toLowerCase();
+  return Object.values(CIVILIZATION_SHORT_CODES).includes(civ) ? civ : undefined;
+}
+
 export function getCivilizationFromTenantCode(code: string): string {
   return TENANT_CODE_TO_CIVILIZATION[code] || code;
 }

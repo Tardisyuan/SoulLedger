@@ -8,6 +8,7 @@
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { pillarIsWide } from "@soulledger/core/domain/pillar";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -223,7 +224,7 @@ export function PlaqueHeader({
   const session = useContext(SessionContext);
   const me = session?.state.status === "signedIn" ? session.state.profile : null;
   if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} action={action} assist={assist} />;
-  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
+  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), thisLifeLabel(tr, me.civilization, me.account.cycle + 1) ?? tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
     .filter(Boolean)
     .join(" · ");
   return (

@@ -300,3 +300,30 @@ for (const role of Object.keys(ROLES)) {
   await context.close();
 }
 await browser.close();
+
+// The soul entrance (frontend/demo/DemoSoul.tsx): one soul per underworld, signed in through the soul app's own
+// login (demo-seed.py `seed_soul_logins`), and what its screens read under `/me/`. No browser: the web has no soul
+// pages to walk, so the paths are the ones the screens ask for. Letters live in Synapse and are not here
+// (frontend/demo/data/soul-letters.json is written by hand).
+const SOUL_PATHS = ["/me/", "/me/life/", "/me/past-lives/", "/me/sentence-plan/", "/me/rebirth-applications/", "/me/social/status/", "/me/social/feed/"];
+const SOUL_LOGINS = process.env.DEMO_SOUL_LOGINS ? JSON.parse(readFileSync(process.env.DEMO_SOUL_LOGINS, "utf8")) : {};
+for (const [civ, { soul_code, name }] of Object.entries(SOUL_LOGINS)) {
+  const res = await fetch(`${API}/soul-auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ soul_code, password: PASSWORD }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.access) throw new Error(`soul login refused for ${civ} (${name}): ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+  const recordedAt = new Date().toISOString();
+  for (const [lang, language] of [["zh", "zh-Hans"], ["en", "en"]]) {
+    const rec = { lists: {}, docs: {}, errors: new Set(), swept: {} };
+    for (const path of SOUL_PATHS) {
+      const status = await getAll(rec, body.access, `${API}${path}`, language);
+      if (status !== 200) rec.errors.add(`${status} ${path}`);
+    }
+    const out = { role: `soul_${civ}`, lang, recordedAt, login: { user: {} }, ...translator(lang)(historizeAll(finish(rec))) };
+    writeFileSync(`${OUT}/soul_${civ}.${lang}.json`, JSON.stringify(out));
+    console.log(`soul_${civ} (${name}) ${lang}: ${Object.keys(out.docs).length} docs, ${Object.keys(out.lists).length} lists; refused: ${[...rec.errors].join(" | ") || "none"}`);
+  }
+}

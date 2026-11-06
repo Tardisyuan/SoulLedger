@@ -1,6 +1,7 @@
 "use client";
 
 import { localName } from "@soulledger/core/domain/localName";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { courtLabel } from "@soulledger/core/domain/courts";
 import { use, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -1047,7 +1048,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </MetaRow>
             <MetaRow label={t("judgment.claim.col_cycle_kind")}>
               <span data-testid="desk-life-kind">
-                {judgment.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(judgment.cycle + 1) })}
+                {judgment.cycle == null ? <MissingValue kind="unrecorded" /> : (thisLifeLabel(t, judgment.civilization, judgment.cycle + 1) ?? t("souls.detail.life_number", { n: String(judgment.cycle + 1) }))}
                 {" / "}
                 <DomainEnum namespace="judgment.claim.kinds" value={judgment.kind} />
               </span>

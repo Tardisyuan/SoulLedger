@@ -5,7 +5,7 @@
 import type { MeProfile, MeSentencePlan } from "@soulledger/core/api/soul";
 
 import { translate } from "../i18n";
-import { liveContent, soulRoute } from "../soulRoute";
+import { liveContent, soulRoute } from "@soulledger/core/domain/soulRoute";
 import { PROFILE } from "./stubApi";
 
 const tr = (key: string, params?: Record<string, string>) => translate("zh-Hans", key, params);

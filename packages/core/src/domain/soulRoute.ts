@@ -11,10 +11,11 @@
  * Not drawn: 地府 鬼门关 (a label on the map, not a station of `DiyuStation`) and 希腊 三判官 (its only words
  * are the demo tour's, `demo.tour.gr.3.name`; the three judges sit at 审判岔路, which is drawn).
  */
-import type { MeProfile, MeSentencePlan, MeSentenceStation } from "@soulledger/core/api/soul";
-import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
+import type { MeProfile, MeSentencePlan, MeSentenceStation } from "../api/soul";
+import { DIYU_STATIONS, diyuStationOrdinal } from "./diyuStations";
 
-import type { CivKey } from "./theme";
+/** The skins (mobile theme.ts `CivKey`): the road is drawn for the four civilizations; "neutral" has none. */
+type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
 
 type Tr = (key: string, params?: Record<string, string>) => string;
 

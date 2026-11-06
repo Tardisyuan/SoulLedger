@@ -1,4 +1,5 @@
 import { courtLabel } from "@soulledger/core/domain/courts";
+import { thisLifeLabel } from "@soulledger/core/domain/lifeLabel";
 import { soulApi, soulErrorMessage, type MeJudgmentAppealList, type MeLife, type MeProfile, type MeRecord, type MeWangsiCase } from "@soulledger/core/api/soul";
 import { formatHistoricalDate } from "@soulledger/core/domain/dates";
 import { verdictNamespace } from "@soulledger/core/domain/verdictNames";
@@ -74,7 +75,7 @@ import { SentenceSection, useSentencePlan, type SentenceLanding } from "./senten
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { useLiveProgress } from "../liveProgress";
-import { soulRoute, type RouteStep, type SoulRoute } from "../soulRoute";
+import { soulRoute, type RouteStep, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -380,7 +381,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   // v4 (V4Batch07 05 App): no band — the page's ground with the header light, the seal in the civilization's
   // colour, the name in the serif at 30/38 and everything else in the page's inks.
   const on = t.ink;
-  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
+  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), thisLifeLabel(tr, me.civilization, me.account.cycle + 1) ?? tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
     .filter(Boolean)
     .join(" · ");
   const copy = () =>
