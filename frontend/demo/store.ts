@@ -132,11 +132,14 @@ export function soulRecording(civ: string, lang: DemoLang): Promise<Recording | 
   const name = `soul_${civ}`;
   // The same template as `recording`'s, so the bundler's context is the same set of files, recorded or not.
   return (soulLoaded[`${name}.${lang}`] ??= import(`./data/${name}.${lang}.json`).then(
-    (m) => shifted(m.default as Recording),
-    () => null,
+    (m) => (soulReady[`${name}.${lang}`] = shifted(m.default as Recording)),
+    () => (soulReady[`${name}.${lang}`] = null),
   ));
 }
 const soulLoaded: Record<string, Promise<Recording | null>> = {};
+const soulReady: Record<string, Recording | null> = {};
+/** What `soulRecording` has already resolved to, in the same render: `undefined` while it is still loading. */
+export const soulRecordingNow = (civ: string, lang: DemoLang): Recording | null | undefined => soulReady[`soul_${civ}.${lang}`];
 
 export const nextSeq = () => ++overlay.seq;
 

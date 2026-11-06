@@ -216,11 +216,39 @@ for (const route of ["queue", "open"]) {
   });
 }
 
-test("the seal is gone within a second, and Esc skips it", async ({ page }) => {
+test("the seal goes once the console is under it, and Esc skips it", async ({ page }) => {
   await page.goto("/");
-  await page.getByTestId("landing-card-eg").click();
+  await page.waitForLoadState("networkidle");
+  // A slow machine, where the sign-in outlasts the seal: the seal used to go at 700 ms and leave the landing page up for
+  // about a second more (CPU x4: seal gone at 1476 ms, URL changed at 2228 ms, the soul's page at 3073 ms).
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  // Watched in the page, every frame: a check from the test runner polls too slowly to see a gap of a few hundred ms.
+  await page.evaluate(() => {
+    const seen = { seal: false, landingAfter: 0, waitingAfter: 0, gone: false };
+    (window as unknown as { __seal: typeof seen }).__seal = seen;
+    let after = 0;
+    const tick = () => {
+      const sealUp = !!document.querySelector("[data-testid='demo-entrance']");
+      if (sealUp) seen.seal = true;
+      if (seen.seal && !sealUp) {
+        seen.gone = true;
+        after++;
+        if (document.querySelector("[data-testid^='landing-card-']")) seen.landingAfter++;
+        if (document.querySelector("[data-civ-loading], [data-testid='permissions-pending']")) seen.waitingAfter++;
+      }
+      if (after < 30) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await page.getByTestId("landing-card-cn").click();
   await expect(page.getByTestId("demo-entrance")).toBeVisible();
-  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 1500 });
+  await expect(page.getByTestId("demo-entrance")).toHaveCount(0, { timeout: 6000 });
+  await expect(page).not.toHaveURL(/\/$/);
+  await page.waitForTimeout(1000);
+  // Frames after the seal went in which the landing page, or a route still waiting, was what showed.
+  expect(await page.evaluate(() => (window as unknown as { __seal: object }).__seal)).toEqual({ seal: true, landingAfter: 0, waitingAfter: 0, gone: true });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
   await page.goto("/");
   await page.getByTestId("landing-card-cn").click();
   await page.keyboard.press("Escape");
