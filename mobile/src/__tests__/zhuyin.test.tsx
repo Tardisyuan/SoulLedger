@@ -36,6 +36,15 @@ jest.mock("expo-font", () => {
   };
 });
 
+// React Native's jest window (750 × 1334, scale 2, fontScale 2) unless a block says otherwise: at fontScale 2 the
+// app's layout is "stacked" (≥ 1.7×), so the tab bar's own tests set 1× (they read the 1× capsule).
+const RN_JEST_WINDOW = { width: 750, height: 1334, scale: 2, fontScale: 2 };
+const mockWindow = { ...RN_JEST_WINDOW };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => mockWindow,
+}));
+
 /** The seal beside words is hidden from assistive tech; queries must ask for it. */
 const H = { includeHiddenElements: true };
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
@@ -267,7 +276,10 @@ describe("no civilization display face on any bar (v3; v2's 匾题字 and Ma Sha
 });
 
 describe("the tab bar (补足 B11 / C14)", () => {
-  const bar = (titles: string[], index = 0) => {
+  // At 1× text: RN's jest window is 2×, where the bar is the stacked rows (handoff 2d), not the capsule.
+  beforeEach(() => Object.assign(mockWindow, { fontScale: 1 }));
+  afterEach(() => Object.assign(mockWindow, RN_JEST_WINDOW));
+  const bar =(titles: string[], index = 0) => {
     const routes = ["Life", "Applications", "Letters", "Circle"].map((name) => ({ key: `${name}-k`, name }));
     const descriptors = Object.fromEntries(routes.map((r, i) => [r.key, { options: { title: titles[i] } }]));
     const navigation = { emit: () => ({ defaultPrevented: false }), navigate: jest.fn() };
@@ -285,9 +297,10 @@ describe("the tab bar (补足 B11 / C14)", () => {
     expect(label("Letters")).toMatchObject({ color: t.plaque, fontFamily: "SoulLedgerSans_600", fontSize: 11 });
     expect(label("Life")).toMatchObject({ color: t.inkMuted, fontFamily: "SoulLedgerSans_400" });
     expect(label("Life").color).not.toBe(t.plaque);
-    // A round capsule on the opaque card (用户 2026-11-06: not v4's 70% until a device pass), 64 high, 14 from the sides.
+    // A round capsule on the opaque card (用户 2026-11-06: not v4's 70% until a device pass), 64 high.
     expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v4.light.card, borderRadius: 999, minHeight: 64 });
-    expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ paddingHorizontal: 14, backgroundColor: v4.light.main });
+    // v4's 14 is off the App's spacing scale (补足 A2): 16.
+    expect(flat(screen.getByTestId("tab-bar-ground"))).toMatchObject({ paddingHorizontal: 16, backgroundColor: v4.light.main });
   });
 
   it("one label past the pillar's threshold (core's pillarIsWide): all four may take two lines, not only that one", () => {

@@ -217,11 +217,15 @@ describe("contrast, at the worst App ground", () => {
     expect(worst(t.metal, scheme)).toBeGreaterThanOrEqual(3);
   });
 
-  it("why inkSubtle is not v4's --faint: under AA on its own canvas in both schemes, and under 3:1 on light's card2", () => {
-    // light 3.13 on --main, 2.94 on --card2; dark 3.91 on --main.
+  it("why inkSubtle is not v4's --faint: under AA on every light ground (under 3:1 on card2), and in dark on the raised grounds", () => {
+    // Measured (r24, 2026-11-06): light 3.13 on --main, 3.33 on --card, 2.94 on --card2; dark 4.70 on --main
+    // (passes there), 4.29 on --card, 3.91 on --card2. Third-ink text sits on cards and sheets in both schemes,
+    // so --faint fails somewhere in each: inkSubtle stays --sub.
     expect(contrast(v4.light.faint, v4.light.main)).toBeLessThan(4.5);
     expect(contrast(v4.light.faint, v4.light.card2)).toBeLessThan(3);
-    expect(contrast(v4.dark.faint, v4.dark.main)).toBeLessThan(4.5);
+    expect(contrast(v4.dark.faint, v4.dark.main)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(v4.dark.faint, v4.dark.card)).toBeLessThan(4.5);
+    expect(contrast(v4.dark.faint, v4.dark.card2)).toBeLessThan(4.5);
     for (const s of SCHEMES) expect(skin("cn", s).inkSubtle).toBe(v4[s].sub);
   });
 });
