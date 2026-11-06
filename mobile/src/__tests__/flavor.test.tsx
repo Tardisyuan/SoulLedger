@@ -55,17 +55,17 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 /**
- * v3 (2026-10-02) supersedes 补足 C15: a sub-page's title bar is one row on the identity band's
- * ground — no ornament band, no texture, and the title at 20 in v3's title serif (Noto Serif SC
- * 600, v3 第一批「标题与展示大字用衬线」).
+ * v4 (2026-11-06) supersedes v3's band: a sub-page's title bar is one row on the page's own ground (the header
+ * light behind it, once laid out) — no ornament band, no texture, and the title at 20 in the title serif.
  */
-describe("the band on every other title bar (v3)", () => {
-  it.each(CIVS)("%s: the band ground, no ornament band, the title in the title serif at 20", async (civ) => {
+describe("every other title bar (v4: no band)", () => {
+  it.each(CIVS)("%s: the page's ground, no ornament band, the title in the title serif at 20 in ink", async (civ) => {
     wrap(<AppHeader title="设置" onBack={jest.fn()} />, civ);
     const theme = themeFor(CIVILIZATION[civ], "dark");
-    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.band);
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.s0);
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).not.toBe(theme.band);
     expect(screen.queryAllByTestId(/^plaque-band-/)).toEqual([]);
-    expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "NotoSerifSC_600", color: theme.onPlaque });
+    expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "NotoSerifSC_600", color: theme.ink });
     // v1's 6pt band is gone, not doubled under the plaque's; v2's dark-scheme top highlight too.
     expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
     expect(screen.getByTestId("header").children).toHaveLength(1);

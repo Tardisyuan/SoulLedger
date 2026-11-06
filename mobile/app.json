@@ -76,7 +76,8 @@
       ],
       "./plugins/withSceneLifecycle",
       ["./plugins/withAndroidShortcuts", { "app": "soul" }],
-      ["./plugins/withAppIntents", { "app": "soul" }]
+      ["./plugins/withAppIntents", { "app": "soul" }],
+      "./plugins/withLiveActivity"
     ]
   }
 }

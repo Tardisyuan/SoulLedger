@@ -1,45 +1,33 @@
 /**
- * The navigator's chrome, drawn by the app instead of the platform — v3: every title bar is
- * the identity band (the civilization's colour with 10% #111, `Theme.band`), as the life tab
- * draws it. A tab's root wears the short band (the Web's 116 band at phone width, round-7
- * `.queue-mobile .identity-band`): the meta line in mono, then the outline seal (38) and the
- * title at 20 in v3's title serif (Noto Serif SC 600, `titleFamily`). Every other bar is one row on the same ground.
- * No ornament band, no texture, no civilization display face (v2's 匾, gone 2026-10-02).
- * Before sign-in, or for a civilization the app does not know, the band is the neutral one
- * and has no seal. The tab bar marks its current item with a 2px rule in the colour.
+ * The navigator's chrome, drawn by the app instead of the platform — v4 (V4Batch07 05 App): no band. Every
+ * title bar is the page's own ground with the header light (`GlowTop`) and the civilization's pattern behind
+ * it. A tab's root wears the big title: the outline seal (38) in the civilization's colour, the title in the
+ * serif at 30/38 and its sub line (civilization · life · hall) in --sub. Every other bar is one row, title 20.
+ * Before sign-in, or for a civilization the app does not know, the light is grey and there is no seal.
+ * The tab bar is v4's floating capsule.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { pillarIsWide } from "@soulledger/core/domain/pillar";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { AssistScreen } from "@soulledger/core/api/soul-assist";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
-import { Emblem, Icon, type IconName } from "./emblems";
+import { BandPattern, GlowTop, Icon, type IconName } from "./emblems";
 import { family, quoteFamily, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./useCurrentHall";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
-import type { Theme } from "./theme";
-import { MAX_FONT_SCALE, ThemeContext, Txt, enumText, shade, useLayout, useTheme } from "./ui";
+import { radius, type Theme } from "./theme";
+import { MAX_FONT_SCALE, Txt, enumText, useLayout, useTheme } from "./ui";
 
 /**
- * The theme for what sits ON a plaque: every ink is onPlaque (>= 4.5 on every 匾色,
- * theme.test), the grounds are the plaque, hairlines are onPlaque at low alpha. So a
- * bar's own parts — a back chevron in `inkMuted`, a title in `ink` — need no second
- * code path to be read on it.
- */
-export function onPlaqueTheme(t: Theme): Theme {
-  const on = t.onPlaque;
-  return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
-}
-
-/**
- * The page's theme, for what a bar's control opens away from the bar: a sheet is on the page's ground, not the
- * plaque's. Without it the 书信 ⋯ menu was band-coloured, its 举报 / 拉黑 red on 匾色, unreadable (found 2026-11-02).
+ * The page's theme, for what a bar's control opens away from the bar. Since v4 the bar is on the page's own
+ * ground, so it is the same theme; kept so a sheet opened from a bar never depends on where the bar is drawn
+ * (the 书信 ⋯ menu was once band-coloured, its 举报 / 拉黑 red on 匾色, 2026-11-02).
  */
 const PageThemeContext = createContext<Theme | null>(null);
 export function usePageTheme(): Theme {
@@ -47,15 +35,26 @@ export function usePageTheme(): Theme {
   return useContext(PageThemeContext) ?? t;
 }
 
-/** The band's ground, from the status bar down, with whatever row the caller puts on it. */
+/**
+ * The top of a page, from the status bar down, with whatever row the caller puts on it. v4 (V4Batch07 05 App)
+ * draws no band: the page's own ground with the header light (`GlowTop`, the civilization's glow) and its pattern
+ * behind the title, so what sits here is read in the page's own inks. (v3's solid `band` under onPlaque, gone
+ * 2026-11-06.) The neutral skin's glow is a grey and it has no pattern.
+ */
 export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNode; testID?: string }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const [height, setHeight] = useState(0);
   return (
-    <View testID={testID} style={{ backgroundColor: t.band, paddingTop: insets.top }}>
-      <PageThemeContext.Provider value={t}>
-        <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
-      </PageThemeContext.Provider>
+    <View testID={testID} onLayout={(e) => setHeight(e.nativeEvent.layout.height)} style={[styles.frame, { backgroundColor: t.s0, paddingTop: insets.top }]}>
+      {height ? (
+        <>
+          <GlowTop testID={`${testID}-glow`} color={t.glow} scheme={t.scheme} width={width} height={height} />
+          <BandPattern civ={t.civ} color={t.glow} width={width} height={height} ringBase={height} />
+        </>
+      ) : null}
+      <PageThemeContext.Provider value={t}>{children}</PageThemeContext.Provider>
     </View>
   );
 }
@@ -76,7 +75,7 @@ export interface HeaderAction {
 
 /**
  * The right end of a bar: 「问一问」 when the page has one, then its actions, else the account
- * icon, else an empty 44pt slot. Drawn on the plaque.
+ * icon, else an empty 44pt slot.
  */
 function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderAction[]; onAccount?: () => void; assist?: AssistScreen }) {
   const t = useTheme();
@@ -152,7 +151,7 @@ interface BarProps {
   onAccount?: () => void;
 }
 
-/** The bar row, drawn inside a PlaqueFrame (so its theme is `onPlaqueTheme`). */
+/** The bar row, drawn inside a PlaqueFrame, in the page's inks. */
 function Bar({ title, serif, onBack, action, onAccount, assist }: BarProps) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -230,14 +229,17 @@ export function PlaqueHeader({
   return (
     <PlaqueFrame>
       <View style={styles.plaque}>
-        <Txt testID="plaque-meta" numberOfLines={1} style={styles.plaqueMeta}>
-          {meta}
-        </Txt>
         <View style={styles.plaqueRow}>
-          <OutlineSeal civ={t.civ} size={38} color={t.onPlaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
-          <Txt testID="plaque-title" accessibilityRole="header" numberOfLines={2} style={[styles.plaqueTitle, { fontFamily: titleFamily(title) }]}>
-            {title}
-          </Txt>
+          <OutlineSeal civ={t.civ} size={38} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <View style={styles.plaqueText}>
+            {/* v4 大标题: the title in the serif at 30/38, the line under it in --sub 13 (「第三世 · 地府」). */}
+            <Txt testID="plaque-title" accessibilityRole="header" variant="display" numberOfLines={2} style={{ fontFamily: titleFamily(title) }}>
+              {title}
+            </Txt>
+            <Txt testID="plaque-meta" variant="caption" tone="muted" numberOfLines={1}>
+              {meta}
+            </Txt>
+          </View>
           <BarEnd action={action} onAccount={onAccount} assist={assist} />
         </View>
       </View>
@@ -245,40 +247,41 @@ export function PlaqueHeader({
   );
 }
 
-const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cycle", Letters: "letter", Circle: "circle" };
+const TAB_ICONS: Record<string, IconName> = { Life: "tabLife", Applications: "tabRebirth", Letters: "tabLetters", Circle: "tabCircle" };
 
 const STACKED_TAB_LABEL_SCALE = 1.5;
 
 /**
- * 补足 B11: the current tab is a 2px 匾色 rule on top and its label in ink 600; the others
- * ink3. C14: the same width rule as the web's pillar (`pillarIsWide`, from core) — when
- * any label is too long for one line, all four labels go to two lines at 11, with 4pt
- * sides; a label that still does not fit is cut, and read whole by its accessibility label.
+ * v4 悬浮胶囊 (V4Batch07 02 外壳 ⑦ / 05 App): a capsule 14 from the screen's sides, 64 high, round, on the
+ * card at 70% — icon 22 over an 11 label; the current item is the civilization's colour (`plaque`, v4 --civT,
+ * which holds 4.5:1 on its scheme's grounds) on 18% of its glow. C14: when any label is too long for one line
+ * (`pillarIsWide`, the web's pillar rule) all of them may take two lines; a label that still does not fit is cut
+ * and read whole by its accessibility label. At >= 1.7x text (handoff 2d) the items become rows, as before.
+ *
+ * ponytail: v4 floats the capsule over the page with a 20pt blur, so content slides under it. Here it sits at the
+ * page's foot on the page's own ground — no blur without a new native module (expo-blur), and over the page each
+ * tab's list, FAB and 问一问 button would need the bar's height as clearance. Both want a device pass first.
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  // v3: the bar wears v3's neutrals; the current item's emblem and rule are the civilization's
-  // colour. Its label stays ink 600: v3 sets it in the colour too, but every dark civilization
-  // colour is under 4.5:1 on the dark surface (3.13–4.27), so as text it would fail AA.
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  // Handoff 2d (supersedes 1g rule 五): at >= 1.7x text the items become rows — same
-  // component, same selected state — instead of dropping their labels.
   const { stack } = useLayout();
   const labels = state.routes.map((route) => descriptors[route.key].options.title ?? route.name);
   const wide = pillarIsWide(labels);
   return (
+    <View testID="tab-bar-ground" style={[styles.capsuleGround, { backgroundColor: t.s0, paddingBottom: Math.max(insets.bottom - 12, 8) }]}>
     <View
       testID="tab-bar"
       style={[
         stack ? styles.tabsStacked : styles.tabs,
-        { backgroundColor: t.s1, borderTopColor: t.hair, paddingBottom: Math.max(insets.bottom, 8) },
+        { backgroundColor: `${t.s1}B3`, borderColor: t.hair2 },
       ]}
     >
       {state.routes.map((route, index) => {
         const selected = state.index === index;
         const { tabBarBadge } = descriptors[route.key].options;
         const label = labels[index];
-        const color = selected ? t.ink : t.inkSubtle;
+        const color = selected ? t.plaque : t.inkMuted;
         return (
           <Pressable
             key={route.key}
@@ -292,35 +295,29 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             }}
             style={({ pressed }) => [
               stack ? [styles.tabRow, { borderBottomColor: t.hair }] : [styles.tab, wide && styles.tabWide],
-              pressed && { backgroundColor: t.s2 },
+              !selected && pressed && { backgroundColor: t.s2 },
             ]}
           >
-            <View
-              testID={selected ? "tab-current-rule" : undefined}
-              style={[stack ? styles.tabRuleSide : styles.tabRule, { backgroundColor: selected ? t.plaque : "transparent" }]}
-            />
+            {selected ? <View testID="tab-current-pill" style={[styles.tabCurrent, { backgroundColor: `${t.glow}2E` }]} /> : null}
             <View style={styles.tabIcon}>
               {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
-              {selected ? (
-                <Emblem civ={t.civ} size={24} stroke={t.plaque} strokeWidth={2.2} />
-              ) : (
-                <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={18} color={t.inkSubtle} strokeWidth={1.2} />
-              )}
+              <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={22} color={color} strokeWidth={1.5} />
             </View>
             <Txt
               testID={`tab-${route.name}-label`}
               variant="label"
-              numberOfLines={2}
-              // Stacked, four rows share the screen with the page: the label stops at 1.5x (12 → 18pt,
-              // still above the 17pt body of a default-size system) instead of the app's 2.35 cap.
+              numberOfLines={wide || stack ? 2 : 1}
+              // Stacked, four rows share the screen with the page: the label stops at 1.5x (11 → 16.5pt)
+              // instead of the app's 2.35 cap.
               maxFontSizeMultiplier={stack ? STACKED_TAB_LABEL_SCALE : MAX_FONT_SCALE}
-              style={[styles.tabLabel, wide && styles.tabLabelWide, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
+              style={[styles.tabLabel, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
             >
               {label}
             </Txt>
           </Pressable>
         );
       })}
+    </View>
     </View>
   );
 }
@@ -337,22 +334,21 @@ const styles = StyleSheet.create({
   barTitle: { fontSize: 20, lineHeight: 28, letterSpacing: 0 },
   /** 16 from the edge, as 1e draws it: the bar's 4 plus this. */
   titleStart: { paddingLeft: 12 },
-  tabs: { flexDirection: "row", borderTopWidth: 1 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4, paddingVertical: 8 },
-  tabWide: { justifyContent: "flex-start" },
-  tabsStacked: { flexDirection: "column", borderTopWidth: 1 },
+  frame: { overflow: "hidden" },
+  /** v4 capsule: 14 from the sides, 64 high (6 + 52 + 6), round; the page's ground around it. */
+  capsuleGround: { paddingHorizontal: 14, paddingTop: 8 },
+  tabs: { flexDirection: "row", minHeight: 64, padding: 6, gap: 4, borderWidth: 1, borderRadius: radius.pill },
+  tab: { flex: 1, minHeight: 52, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 2, borderRadius: radius.pill },
+  tabWide: { justifyContent: "flex-start", paddingTop: 4 },
+  tabsStacked: { flexDirection: "column", borderWidth: 1, borderRadius: radius.dialog, overflow: "hidden" },
   tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
-  tabRuleSide: { position: "absolute", top: 0, bottom: 0, left: 0, width: 2 },
-  tabRule: { position: "absolute", top: -1, left: "25%", right: "25%", height: 2 },
-  tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
-  tabBadge: { position: "absolute", top: -4, right: -4, width: 8, height: 8 },
-  /** B11: 12; C14 wide: 11, two lines. */
-  tabLabel: { fontSize: 12, lineHeight: 16, letterSpacing: 0, textAlign: "center" },
-  tabLabelWide: { fontSize: 11, lineHeight: 16 },
-  /** v3 short band at phone width: the meta line, then the seal row. */
-  plaque: { paddingTop: 12, paddingBottom: 12, paddingLeft: 16, paddingRight: 4, gap: 12 },
+  tabCurrent: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.pill },
+  tabIcon: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
+  tabBadge: { position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: radius.pill },
+  /** v4: 11 / 14 under a 22 icon. */
+  tabLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0, textAlign: "center" },
+  /** v4 page header: the seal, then the big title over its sub line. */
+  plaque: { paddingTop: 12, paddingBottom: 16, paddingLeft: 16, paddingRight: 4 },
   plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  /** v3 第一批: titles in Noto Serif SC 600 (`titleFamily`, set where the title is known). */
-  plaqueTitle: { flex: 1, minWidth: 0, fontSize: 20, lineHeight: 28 },
-  plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6, paddingRight: 12 },
+  plaqueText: { flex: 1, minWidth: 0 },
 });

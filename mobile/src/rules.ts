@@ -218,6 +218,11 @@ export type LifePathStep = (typeof LIFE_PATH)[number];
  */
 const NO_REBIRTH: ReadonlySet<CivKey> = new Set<CivKey>(["eg", "eu"]);
 
+/** Whether this (home) civilization rebirths at all: v4 draws no 转生 tab for 欧洲 and 埃及 (V4Batch07 05 App). */
+export function hasRebirth(civ: CivKey): boolean {
+  return !NO_REBIRTH.has(civ);
+}
+
 /** The steps this civilization's road has: all five, less 「轮回中」 where there is no rebirth. */
 export function lifePath(civ: CivKey): readonly LifePathStep[] {
   return NO_REBIRTH.has(civ) ? LIFE_PATH.filter((s) => s !== "REINCARNATING") : LIFE_PATH;

@@ -9,7 +9,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
-import { BandPattern, Emblem, Icon, StageMotif } from "../emblems";
+import { BandPattern, Emblem, GlowTop, Icon, StageMotif } from "../emblems";
 import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
 import { useGone } from "../gone";
@@ -72,6 +72,8 @@ import { useCurrentHall } from "../useCurrentHall";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
+import { useLiveProgress } from "../liveProgress";
+import { soulRoute, type RouteStep, type SoulRoute } from "../soulRoute";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -373,7 +375,9 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   useEffect(() => {
     Animated.timing(height, { toValue: (small ? BAND_SMALL : BAND_FULL) * k, duration: bandCompact, useNativeDriver: false }).start();
   }, [small, k, bandCompact, height]);
-  const on = t.onPlaque;
+  // v4 (V4Batch07 05 App): no band — the page's ground with the header light, the seal in the civilization's
+  // colour, the name in the serif at 30/38 and everything else in the page's inks.
+  const on = t.ink;
   const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
     .filter(Boolean)
     .join(" · ");
@@ -383,17 +387,18 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
   return (
-    <View testID="plaque" style={{ backgroundColor: t.band, paddingTop: insets.top }}>
+    <View testID="plaque" style={[styles.bandFrame, { backgroundColor: t.s0, paddingTop: insets.top }]}>
+      <GlowTop testID="band-glow" color={t.glow} scheme={t.scheme} width={width} height={insets.top + BAND_FULL * k} />
       <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
         {/* Drawn for the band at its tallest (large text stacks it), clipped by the band as it compacts. */}
-        <BandPattern testID="band-pattern" civ={t.civ} color={on} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
+        <BandPattern testID="band-pattern" civ={t.civ} color={t.glow} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
         {small ? null : (
-          <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: on }]}>
+          <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: t.inkMuted }]}>
             {meta}
           </Txt>
         )}
         <View style={styles.bandRow}>
-          <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={t.plaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
           <View testID="band-text" style={styles.bandText}>
             <View style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
@@ -514,6 +519,109 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
           <LifePath at={at} lex={lex} />
         </>
       )}
+    </View>
+  );
+}
+
+/** How many walked places stay named above "here"; the rest fold into 「已走过 n 处」 (map.soul.behind). */
+const ROUTE_BEHIND = 2;
+/** How many places ahead are named; past that 「后面还有 n 处」 (map.soul.ahead). */
+const ROUTE_AHEAD = 3;
+
+/**
+ * v4 「你现在在哪」 (V4Batch07 05 App, 灵魂端 · 本世; S12 soul.here.* · map.soul.*): the place in the serif at
+ * 30/38, v4's sentence for it, then the road drawn top to bottom — walked in a solid line in the civilization's
+ * colour, "here" in the metal with 「你现在在这里」, ahead dashed in --sub. Only the trunk (「支线不画」). A road
+ * that ends (湮灭, 永罚) ends in `neg`. Nothing moves; there is nothing to still under reduce motion.
+ */
+function HereRoute({ route }: { route: SoulRoute }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const { gutter } = useLayout();
+  const from = Math.max(0, route.at - ROUTE_BEHIND);
+  const to = Math.min(route.steps.length, route.at + 1 + ROUTE_AHEAD);
+  const shown = route.steps.slice(from, to);
+  const rest = route.steps.length - to;
+  const here = route.steps[route.at];
+  return (
+    <View testID="life-now" style={[styles.here, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <Txt variant="label" style={[styles.hereEyebrow, { color: t.metal }]}>
+        {tr("soul_app.life.here")}
+      </Txt>
+      <Txt testID="life-here-place" accessibilityRole="header" variant="display" style={{ fontFamily: titleFamily(route.place) }}>
+        {route.place}
+      </Txt>
+      {route.line ? (
+        <Txt testID="life-here-line" variant="bodyLg" style={styles.hereLine}>
+          {route.line}
+        </Txt>
+      ) : null}
+      <View testID="life-route" accessible accessibilityLabel={`${tr("map.soul.here")} · ${here.label}${here.sub ? ` · ${here.sub}` : ""}`} style={styles.route}>
+        {from > 0 ? <RouteRow kind="walked" testID="route-behind" text={tr("map.soul.behind", { n: String(from) })} muted /> : null}
+        {shown.map((step, i) => {
+          const index = from + i;
+          const kind = index < route.at ? "walked" : index === route.at ? "here" : "ahead";
+          return <RouteRow key={step.id} kind={kind} step={step} last={index === route.steps.length - 1} testID={`route-${step.id}`} />;
+        })}
+        {rest > 0 ? <RouteRow kind="ahead" testID="route-ahead" text={tr("map.soul.ahead", { n: String(rest) })} muted last /> : null}
+      </View>
+    </View>
+  );
+}
+
+function RouteRow({
+  kind,
+  step,
+  text,
+  muted,
+  last,
+  testID,
+}: {
+  kind: "walked" | "here" | "ahead";
+  step?: RouteStep;
+  text?: string;
+  muted?: boolean;
+  last?: boolean;
+  testID: string;
+}) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const end = step?.end;
+  const mark = kind === "walked" ? t.plaque : kind === "here" ? (end ? t.neg : t.metal) : end ? t.neg : t.inkMuted;
+  return (
+    <View testID={testID} style={[styles.routeRow, kind === "here" && styles.routeRowHere]}>
+      <View style={styles.routeRail}>
+        {/* v4 dashes the road ahead; RN draws a dashed border only when all four sides are, so it is the hairline here. */}
+        {last ? null : <View style={[styles.routeLine, { backgroundColor: kind === "walked" ? t.plaque : t.hair2 }]} />}
+        <View
+          testID={`${testID}-mark`}
+          style={[
+            styles.routeDot,
+            kind === "here" ? [styles.routeDotHere, { borderColor: mark, backgroundColor: t.s0 }] : { borderColor: mark, backgroundColor: kind === "walked" ? mark : t.s0 },
+          ]}
+        />
+      </View>
+      <View style={styles.routeText}>
+        {kind === "here" ? (
+          <>
+            <Txt variant="label" style={[styles.hereEyebrow, { color: end ? t.neg : t.metal }]}>
+              {tr("map.soul.here")}
+            </Txt>
+            <Txt variant="title" style={{ fontFamily: titleFamily(step?.label ?? "") }}>
+              {step?.label}
+            </Txt>
+            {step?.sub ? (
+              <Txt variant="caption" tone="muted">
+                {step.sub}
+              </Txt>
+            ) : null}
+          </>
+        ) : (
+          <Txt variant={muted ? "caption" : "body"} tone={kind === "ahead" || muted ? "muted" : "ink"} style={end ? { color: t.neg } : undefined}>
+            {text ?? step?.label}
+          </Txt>
+        )}
+      </View>
     </View>
   );
 }
@@ -834,6 +942,12 @@ export function MyLifeScreen() {
   const [compact, setCompact] = useState(false);
   const theme = useTheme();
   const { gutter } = useLayout();
+  const hall = useCurrentHall();
+  const [now] = useState(() => Date.now());
+  // v4 「你现在在哪」 and the lock screen's live progress read the same place (soulRoute.ts).
+  const route =
+    state.status === "signedIn" ? soulRoute({ me: state.profile, civ: residence.home, plan: sentence.data, hall, now }, t) : null;
+  useLiveProgress(route, state.status === "signedIn" ? state.profile.name : "");
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const planState = sentence.data?.state;
@@ -888,11 +1002,13 @@ export function MyLifeScreen() {
         <Homecoming me={me} />
         <ContactEmailNudge />
         {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
-        <Now me={me} lex={residence.home} planState={planState} />
+        {/* v4: where the data places the soul on its road, the place and the road; otherwise the state and the five stages. */}
+        {route ? <HereRoute route={route} /> : <Now me={me} lex={residence.home} planState={planState} />}
         {/* 第六十二批:位置类的卡在五段条正下方,固定顺序 勾魂牒 → 已超度 → 十三站 → 冥河 → 前庭(不按时间)。 */}
         {onTheRoad && me.capture_warrant?.status === "HANDED_OVER" ? null : <CaptureCard warrant={me.capture_warrant} />}
         {deliveredRow ? <DeliveredRow at={me.wangsi_delivered_at} holdRef={delivered.hold} /> : null}
-        {stations ? <StationsCard station={me.diyu_station} /> : null}
+        {/* The thirteen stations are the road above once it is drawn (地府 always has one when it has a station). */}
+        {stations && !route ? <StationsCard station={me.diyu_station} /> : null}
         <FerryCard ferry={me.greek_ferry} />
         <VestibuleCard vestibule={me.european_vestibule} />
         <Balance me={me} lex={residence.home} />
@@ -1115,8 +1231,10 @@ const styles = StyleSheet.create({
   bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   bandText: { flex: 1, minWidth: 0, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "baseline", columnGap: 8 },
-  // The soul's name: v3's title serif (Noto Serif SC 600) via `titleFamily(me.name)`.
-  name: { fontSize: 20, lineHeight: 28, flexShrink: 1 },
+  bandFrame: { overflow: "hidden" },
+  // The soul's name: the title serif (Noto Serif SC 600) via `titleFamily(me.name)`, v4's big title 30/38
+  // (the text column, 38 + 4 + the code's 16, still fits beside the 64pt seal).
+  name: { fontSize: 30, lineHeight: 38, flexShrink: 1 },
   nameSmall: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
   code: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
   /** 16 + 14 + 14 = 44. Full, the band has room below the row for the even split. */
@@ -1134,6 +1252,19 @@ const styles = StyleSheet.create({
   nowGlyph: { fontSize: 56, lineHeight: 64 },
   nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
   small: { fontSize: 11, lineHeight: 16 },
+  /** v4 「你现在在哪」: 12 / 600 in the metal, the place at 30/38, its sentence 15/24, then the road. */
+  here: { paddingTop: 24, paddingBottom: 24, borderBottomWidth: 1 },
+  hereEyebrow: { fontFamily: family.ui[600], letterSpacing: 0 },
+  hereLine: { marginTop: 6, fontFamily: family.ui[400] },
+  route: { marginTop: 22 },
+  /** A 28 rail (the line at its centre, 2.5 wide) and the words 12 beside it; a row is 48, "here" 96. */
+  routeRow: { flexDirection: "row", gap: 12, minHeight: 48 },
+  routeRowHere: { minHeight: 96 },
+  routeRail: { width: 28, alignItems: "center" },
+  routeLine: { position: "absolute", top: 18, bottom: -4, left: 12.75, width: 2.5, borderRadius: 2 },
+  routeDot: { marginTop: 7, width: 14, height: 14, borderRadius: 999, borderWidth: 2 },
+  routeDotHere: { marginTop: 2, width: 24, height: 24, borderWidth: 4 },
+  routeText: { flex: 1, minWidth: 0, paddingTop: 4 },
   stations: { paddingTop: 16, paddingBottom: 16, gap: 12, borderBottomWidth: 1 },
   stationsHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   stationsStrip: { flexDirection: "row", justifyContent: "space-between" },
