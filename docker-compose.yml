@@ -82,6 +82,12 @@ x-django-env: &django-env
   MATRIX_JWT_SECRET: ${MATRIX_JWT_SECRET:-}
   MATRIX_REGISTRATION_SHARED_SECRET: ${MATRIX_REGISTRATION_SHARED_SECRET:-}
   MATRIX_USER_SALT: ${MATRIX_USER_SALT:-}
+  # 判决文书的真 PDF(docs/DEPLOYMENT.md「判决文书 PDF」)。后端 → gotenberg,gotenberg 的 Chromium → frontend,
+  # 都在 compose 网络里。前端的服务端再直连 backend 取数据(frontend 的 VERDICT_PRINT_API_URL),
+  # 所以 production 的 ALLOWED_HOSTS 要含 `backend`(书信推送回调同样要它)。清空任一项 = 关掉,下载退回浏览器打印。
+  # 超时 VERDICT_PDF_TIMEOUT_SECONDS 不在这里设,用 settings.py 的默认 30 秒。
+  VERDICT_PDF_RENDERER_URL: http://gotenberg:3000
+  VERDICT_PDF_FRONTEND_URL: http://frontend:3000
 
 services:
   db:
@@ -269,8 +275,31 @@ services:
       db:
         condition: service_healthy
 
+  # 无头 Chromium 渲染服务(Gotenberg,Apache-2.0),只给判决文书出 PDF:apps/judgment/verdict_pdf.py。
+  # 不发布端口;只许打开前端(allow-list),LibreOffice 的路由关掉。服务不在时下载答 503、网页退回浏览器打印,
+  # 不影响其余服务。
+  gotenberg:
+    logging: *logging
+    image: gotenberg/gotenberg:8.20.1
+    command:
+      - gotenberg
+      - --api-timeout=60s
+      - --chromium-allow-list=^http://frontend:3000/.*
+      - --libreoffice-disable-routes=true
+      - --log-level=warn
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   frontend:
     logging: *logging
+    environment:
+      # 判决文书打印页(app/verdict-print/page.tsx)在服务端向后端取数据:compose 网络里直连,不经 nginx。
+      VERDICT_PRINT_API_URL: http://backend:8000/api/v1
     build:
       # Root context: `frontend` is an npm workspace and its `@soulledger/core`
       # dependency lives in `packages/core`, outside `./frontend`.

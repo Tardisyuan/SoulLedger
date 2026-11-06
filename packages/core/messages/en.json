@@ -8842,7 +8842,8 @@
     "reading": "Reading"
   },
   "doc": {
-    "download_pdf": "Download PDF"
+    "download_pdf": "Download PDF",
+    "pdf_fallback": "The PDF service is unavailable; opening the browser's print dialog instead — choose “Save as PDF” there."
   },
   "empty": {
     "body": "The queue is clear. New cases appear here.",

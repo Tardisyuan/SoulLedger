@@ -526,6 +526,17 @@ CHAT_REQUEST_INTERVAL_SECONDS = int(os.getenv("CHAT_REQUEST_INTERVAL_SECONDS", s
 # 客户端的类路径。测试换成假实现(tests/chat_support.py),于是单元测试一条 HTTP 都不发。
 MATRIX_CLIENT = os.getenv("MATRIX_CLIENT", "apps.chat.matrix.SynapseClient")
 
+# 判决文书的真 PDF(apps/judgment/verdict_pdf.py;docs/DEPLOYMENT.md「判决文书 PDF」)。
+# 渲染服务是 Gotenberg(无头 Chromium),它打开前端的只读打印页 `/verdict-print`。两个地址都是 compose 网络里的:
+# 后端 → Gotenberg,Gotenberg → 前端。任一项为空 = 没部署:`GET /judgment/{id}/verdict-document.pdf/` 答 503
+# `verdict_pdf_not_configured`,网页退回浏览器打印。
+VERDICT_PDF_RENDERER_URL = os.getenv("VERDICT_PDF_RENDERER_URL", "")
+VERDICT_PDF_FRONTEND_URL = os.getenv("VERDICT_PDF_FRONTEND_URL", "")
+# 等 Gotenberg 出一份 PDF 的秒数(打开页面、取数据、等字体都在里面)。
+VERDICT_PDF_TIMEOUT_SECONDS = int(os.getenv("VERDICT_PDF_TIMEOUT_SECONDS", "30"))
+# 打印页取数据用的一次性键在缓存里留多久;出完 PDF 就删,这只是兜底。
+VERDICT_PDF_TOKEN_TTL_SECONDS = int(os.getenv("VERDICT_PDF_TOKEN_TTL_SECONDS", "120"))
+
 # apps.soul_assist — 灵魂端助手(docs/ARCHITECTURE-soul-assist.md)。
 # 默认关:关着时 /me/assist/ 一律 503 `assistant_not_configured`,不访问任何供应商。
 # 打开之后还要每殿打开:Tenant.settings["assistant_enabled"] = true(灵魂读原属殿;官员读请求所在殿,

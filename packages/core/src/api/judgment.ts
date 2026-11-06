@@ -698,6 +698,10 @@ export const judgmentApi = {
   unarchive: (id: string) => api.post<Judgment>(`/judgment/${id}/unarchive/`),
   conclude: (id: string, data: ConcludeJudgmentPayload | object) => api.post<Judgment>(`/judgment/${id}/conclude/`, data),
   get: (id: string) => api.get<JudgmentDetail>(`/judgment/${id}/`),
+  /** 判决文书的 PDF(`JudgmentViewSet.verdict_document_pdf`):与 `get` 同一个读。`locale` 是文书的语言(界面语言)。
+   *  没结案 409、没有文书 404、渲染服务没配或不在 503 —— 网页在任何失败时退回浏览器打印。 */
+  verdictDocumentPdf: (id: string, locale: string) =>
+    api.get<Blob>(`/judgment/${id}/verdict-document.pdf/`, { params: { locale }, responseType: "blob" }),
   /** Admit / not admit one ledger record as evidence. 409 once concluded. */
   ruleEvidence: (id: string, recordId: string, data: EvidenceRulingPayload) =>
     api.put<EvidenceRulingResult>(`/judgment/${id}/evidence/${recordId}/`, data),

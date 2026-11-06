@@ -205,6 +205,38 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 排查:按状态看 `soul_push_pushdelivery.status` 与 `error`。`FAILED` + `DeviceNotRegistered` 是 App 被卸载或
   token 失效,属正常;成片 `FAILED` + `HTTP 4xx` / `UNAUTHORIZED` 看上面的访问令牌;`QUEUED` 堆积看 worker 与 beat。
 
+## 判决文书 PDF(Gotenberg)
+
+审判页判决文书上的「下载 PDF」直接下载一个真 PDF(2026-11-07)。地府文书竖排(`writing-mode: vertical-rl`),
+后端排版库排不对,所以 PDF 由无头 Chromium 打开**前端那一份文书**出:同一个 `VerdictPaper`、同一份
+`verdict-doc.css` / `print.css`(`@page verdict`,A4)、同一批自托管字体。「打印」照旧走浏览器打印。
+
+- 服务:compose 的 `gotenberg`(`gotenberg/gotenberg:8.20.1`,Apache-2.0,**不发布端口**)。命令行只许 Chromium
+  打开 `http://frontend:3000/…`(`--chromium-allow-list`),LibreOffice 路由关掉。production 限 1 GB 内存。
+  镜像约 1.5 GB(含 Chromium 与 LibreOffice;以 `docker image ls` 为准)。
+- 一次下载的路径(全在 compose 网络里,细节在 `backend/apps/judgment/verdict_pdf.py` 文件头):
+  1. 浏览器 `GET /api/v1/judgment/{id}/verdict-document.pdf/?locale=…`:与判决详情同一个权限(`judgment.read`)、
+     同一个租户划界;后端用详情的序列化器备好数据,放进缓存(Redis),键是 256 位随机串。
+  2. 后端把 `http://frontend:3000/verdict-print?key=…` 交给 gotenberg。
+  3. 前端那一页在**服务端**用键向 `http://backend:8000/api/v1/judgment/verdict-print/<键>/` 取数据,渲染文书;
+     字体到齐后 gotenberg 出 PDF。PDF 出完即删缓存里的那份数据。这条取数据的路径 nginx 对外一律 403。
+- 环境变量:
+  - backend:`VERDICT_PDF_RENDERER_URL`(compose 里是 `http://gotenberg:3000`)、`VERDICT_PDF_FRONTEND_URL`
+    (`http://frontend:3000`)。**任一项为空就是关着**:接口答 503 `verdict_pdf_not_configured`,网页提示一句后退回浏览器打印。
+    `VERDICT_PDF_TIMEOUT_SECONDS`(默认 30)、`VERDICT_PDF_TOKEN_TTL_SECONDS`(默认 120)一般不改。
+  - frontend(运行时,不是构建参数):`VERDICT_PRINT_API_URL`(compose 里是 `http://backend:8000/api/v1`)。
+  - **`ALLOWED_HOSTS` 要含 `backend`**:前端的服务端按 `Host: backend:8000` 访问后端(书信推送回调同样要它)。
+    没加的话取数据 400 `DisallowedHost`,下载退回浏览器打印。
+- 部署:`docker compose -f docker-compose.yml -f docker-compose.production.yml pull gotenberg`,
+  再 `up -d gotenberg backend frontend`(后端与前端要拿到新的环境变量)。验:登录后在一件已结的案子上点「下载 PDF」,
+  得到以案号命名的 `.pdf`;或在主机上 `docker compose exec backend python -c "import requests; print(requests.get('http://gotenberg:3000/health').status_code)"`。
+- 接口的错误码:没结案 409 `judgment_not_concluded`;结了但没有文书(重审,或不是四文明之一)404 `no_verdict_document`;
+  gotenberg 连不上、超时、或没给回 PDF 503 `verdict_pdf_unavailable`(gotenberg 的日志里有原因,常见的是打印页 404 —— 看
+  `VERDICT_PRINT_API_URL` 与 `ALLOWED_HOSTS`)。
+- 演示站(`NEXT_PUBLIC_DEMO_MODE=1`)没有后端,「下载 PDF」仍是浏览器打印。
+- 集成测试 `backend/tests/test_verdict_document_pdf.py::test_gotenberg_renders_the_real_print_page` 只在设了
+  `VERDICT_PDF_RENDERER_URL` 与 `VERDICT_PDF_FRONTEND_URL` 时跑,条件写在它的 skip 原因里;门禁容器里没有这个服务,其余测试都换掉了渲染调用。
+
 ## 灵魂聊天(Matrix / Synapse)
 
 - 单 Synapse homeserver(不联邦)。compose 的 `synapse` 服务(`matrixdotorg/synapse:v1.161.0`,

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
-import type { JudgmentDetail } from "@soulledger/core/api/judgment";
+import { judgmentApi, type JudgmentDetail } from "@soulledger/core/api/judgment";
 import type { HistoricalDate } from "@soulledger/core/domain/dates";
 import { localName } from "@soulledger/core/domain/localName";
 import { verdictDocument, type VerdictDocumentText } from "@soulledger/core/domain/verdictDocument";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { saveBlob } from "@/src/lib/saveBlob";
 import { Button } from "@/src/components/ui/Button";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 
@@ -18,14 +20,19 @@ import { CaseNumber } from "@/src/components/ui/DomainValue";
  * 只给已结的案子(`is_final`,且裁决是通过 / 不过 / 炼狱)渲染;别的返回 null —— 落印不可撤回
  * (`judgment.desk.irreversible`),文书上没有任何改判或撤回的入口。
  *
- * 打印与「下载 PDF」走同一条浏览器打印路径(定稿:「浏览器里『打印』走同一份 @page A4 样式」):
+ * 「打印」走浏览器打印(定稿:「浏览器里『打印』走同一份 @page A4 样式」):
  * 点了之后把一份文书挂到 body 下(`data-print-verdict-doc`),`print.css` 在打印时只留它、一页 A4;
- * 「下载 PDF」另把 `document.title` 暂换成案号,打印对话框「存为 PDF」的默认文件名就是案号。
- * 打印完(`afterprint`)卸下、还原标题。屏幕上的这张卡带 `data-print-hide`:整页打印案卷时不重复印一份。
+ * 打印完(`afterprint`)卸下。屏幕上的这张卡带 `data-print-hide`:整页打印案卷时不重复印一份。
+ *
+ * 「下载 PDF」直接下载一个真 PDF(用户 2026-11-07):`GET /judgment/{id}/verdict-document.pdf/`,后端让无头 Chromium
+ * 打开 `app/verdict-print`,那一页渲染的是下面同一个 `VerdictPaper`、同一份 CSS,所以 PDF 与打印出来的一样。
+ * 服务不在(503)或别的失败:提示一句,退回浏览器打印 —— 把 `document.title` 暂换成案号,「存为 PDF」的默认文件名就是案号。
+ * 演示站(`NEXT_PUBLIC_DEMO_MODE`)没有后端,直接走后一条。
  */
 export interface VerdictDocumentProps {
   judgment: Pick<
     JudgmentDetail,
+    | "id"
     | "civilization"
     | "verdict"
     | "is_final"
@@ -83,8 +90,8 @@ function DocSeal({ doc }: { doc: VerdictDocumentText }) {
   );
 }
 
-/** 一张纸:屏幕上的卡与打印用的那份是同一个组件。 */
-function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; caseNumber: string }) {
+/** 一张纸:屏幕上的卡、打印用的那份、PDF 打印页(`app/verdict-print`)是同一个组件。 */
+export function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; caseNumber: string }) {
   return (
     <article data-verdict-paper="" data-civ={doc.civ} data-account={doc.account} data-vertical={doc.vertical ? "" : undefined}>
       {doc.civ === "eg" && (
@@ -123,11 +130,10 @@ function VerdictPaper({ doc, caseNumber }: { doc: VerdictDocumentText; caseNumbe
 
 const yearOf = (d: HistoricalDate | null | undefined) => d?.year ?? null;
 
-export function VerdictDocument({ judgment, soul, disposition }: VerdictDocumentProps) {
+/** 文书的字:网页上的卡与 PDF 打印页同一个算法、同一组输入。不是已结的案子就是 null。 */
+export function useVerdictDoc({ judgment, soul, disposition }: VerdictDocumentProps): VerdictDocumentText | null {
   const { t, locale } = useI18n();
-  const [printing, setPrinting] = useState(false);
-
-  const doc = judgment.is_final
+  return judgment.is_final
     ? verdictDocument(
         {
           civilization: judgment.civilization,
@@ -153,6 +159,15 @@ export function VerdictDocument({ judgment, soul, disposition }: VerdictDocument
         t
       )
     : null;
+}
+
+export function VerdictDocument(props: VerdictDocumentProps) {
+  const { judgment } = props;
+  const { t, locale } = useI18n();
+  const { showToast } = useToast();
+  const [printing, setPrinting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const doc = useVerdictDoc(props);
   if (!doc) return null;
 
   const print = (asPdf: boolean) => {
@@ -170,11 +185,25 @@ export function VerdictDocument({ judgment, soul, disposition }: VerdictDocument
     window.print();
   };
 
+  const downloadPdf = async () => {
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === "1") return print(true);
+    setDownloading(true);
+    try {
+      const { data } = await judgmentApi.verdictDocumentPdf(judgment.id, locale);
+      saveBlob(data, `${judgment.case_number || judgment.id}.pdf`, "application/pdf");
+    } catch {
+      showToast(t("doc.pdf_fallback"), "info");
+      print(true);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <section data-verdict-doc="" data-print-hide="">
       <VerdictPaper doc={doc} caseNumber={judgment.case_number} />
       <div data-verdict-doc-actions="" className="mt-3 flex items-center gap-2">
-        <Button type="button" variant="secondary" size="sm" onClick={() => print(true)}>
+        <Button type="button" variant="secondary" size="sm" loading={downloading} onClick={downloadPdf}>
           <DownloadIcon />
           {t("doc.download_pdf")}
         </Button>
@@ -192,5 +221,35 @@ export function VerdictDocument({ judgment, soul, disposition }: VerdictDocument
           document.body
         )}
     </section>
+  );
+}
+
+/**
+ * PDF 打印页(`app/verdict-print`)的那一份:挂到 body 下,与「打印」挂的同一个形状(`print.css` 只认 body 的直接孩子),
+ * 无头 Chromium 按 print 媒体出 PDF。文书挂好、当前语言包到了(`ready`)、字体加载完,才在 body 上写
+ * `data-verdict-ready="1"` —— 后端交给 Gotenberg 的 `waitForExpression` 等的就是它(`apps/judgment/verdict_pdf.py`)。
+ */
+export function VerdictPrintSheet(props: VerdictDocumentProps) {
+  const { ready } = useI18n();
+  const doc = useVerdictDoc(props);
+  const hasDoc = doc !== null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (!mounted || !ready || !hasDoc) return;
+    let live = true;
+    void document.fonts.ready.then(() => {
+      if (live) document.body.dataset.verdictReady = "1";
+    });
+    return () => {
+      live = false;
+    };
+  }, [mounted, ready, hasDoc]);
+  if (!doc || !mounted) return null;
+  return createPortal(
+    <div data-print-doc="" data-print-verdict-doc="">
+      <VerdictPaper doc={doc} caseNumber={props.judgment.case_number} />
+    </div>,
+    document.body
   );
 }
