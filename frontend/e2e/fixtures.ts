@@ -1739,7 +1739,7 @@ export class ApiMock {
     });
     this.on("GET", "/tenants/", paginated([
       { id: 1, code: "CN_DIYU", display_name: "中国地府", is_active: true },
-      { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱", is_active: true },
+      { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂与地狱", is_active: true },
     ]));
     this.on("GET", "/realms/", paginated(REALMS));
     this.on("GET", "/actors/", paginated([

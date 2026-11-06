@@ -86,7 +86,7 @@ SoulLedger 是一个**多租户**跨文明灵魂管理系统。三个文明（Ch
 | 租户代码 | 名称 | 体系 | 代表地域 | 审判者 |
 |---------|------|------|---------|--------|
 | CN_DIYU | 中国地府 | Diyu | 十八层地狱、十殿阎王 | 阎罗王、判官 |
-| EU_HEAVEN_HELL | 欧洲天堂地狱 | Heaven/Hell/Purgatory | 九层天堂、七层炼狱、九层地狱 | St. Peter、Hades、Satan |
+| EU_HEAVEN_HELL | 欧洲天堂与地狱 | Heaven/Hell/Purgatory | 九层天堂、七层炼狱、九层地狱 | St. Peter、Hades、Satan |
 | EG_DUAT | 埃及冥界 | Duat | Aaru、Duat 深层 | Osiris、Anubis、Thoth |
 | GR_HADES | 希腊冥界（后加） | 柏拉图的冥府 | 岔路草原、福岛、塔耳塔罗斯 | 见 `seed_tenants` 与 `apps/actors/` |
 

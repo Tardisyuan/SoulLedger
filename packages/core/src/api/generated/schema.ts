@@ -16127,7 +16127,7 @@ export interface components {
              * @description 所属文明体系
              *
              *     * `CHINESE` - 中国地府
-             *     * `EUROPEAN` - 欧洲天堂地狱
+             *     * `EUROPEAN` - 欧洲天堂与地狱
              *     * `EGYPTIAN` - 埃及冥界
              *     * `GREEK` - 希腊冥界
              */
@@ -16142,7 +16142,7 @@ export interface components {
         };
         /**
          * @description * `CHINESE` - 中国地府
-         *     * `EUROPEAN` - 欧洲天堂地狱
+         *     * `EUROPEAN` - 欧洲天堂与地狱
          *     * `EGYPTIAN` - 埃及冥界
          *     * `GREEK` - 希腊冥界
          * @enum {string}
@@ -17801,7 +17801,7 @@ export interface components {
              * @description 所属文明体系
              *
              *     * `CHINESE` - 中国地府
-             *     * `EUROPEAN` - 欧洲天堂地狱
+             *     * `EUROPEAN` - 欧洲天堂与地狱
              *     * `EGYPTIAN` - 埃及冥界
              *     * `GREEK` - 希腊冥界
              */
