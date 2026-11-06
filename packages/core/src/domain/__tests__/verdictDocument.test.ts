@@ -61,6 +61,10 @@ describe("地府(定稿第五、六批)", () => {
     expect(verdictDocument({ ...base, verdict: "FAILED", offence: "FIVE_HEINOUS" }, tz)!.ruling).toBe("犯五逆，不经各殿，解送第九殿阿鼻大地狱。");
   });
 
+  it("存疑不是终判:发回待审所,不出文书(措辞审查 CN-1)", () => {
+    expect(verdictDocument({ ...base, verdict: "PURGATORY", realmCode: "DY_00_PURGATORY" }, tz)).toBeNull();
+  });
+
   it("英文界面横排、阿拉伯数字", () => {
     const doc = verdictDocument({ ...base, han: false, judgeName: "King Qinguang" }, ten)!;
     expect(doc.vertical).toBe(false);
@@ -79,10 +83,20 @@ describe("欧洲", () => {
     expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_4TH" }, tz)!.sins).toBeUndefined();
   });
 
-  it("前庭、否认灵魂不灭落第 6 圈、炼狱第 n 台、天国不写罪", () => {
+  it("第一圈林勃不是刑罚,也不是大罪(措辞审查 EU-1)", () => {
+    const limbo = verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_HELL_1ST", citedDeadlySins: ["pride"] }, tz)!;
+    expect(limbo.ruling).toBe("未受洗，又没有更重的罪，入第一圈林勃。此处不施刑罚。");
+    expect(limbo.ruling).not.toContain("大罪");
+    expect(limbo.sins).toBeUndefined();
+  });
+
+  it("前庭、否认灵魂不灭落第 6 圈、炼狱第 n 层、天国不写罪", () => {
     expect(verdictDocument({ ...eu, verdict: "FAILED", realmCode: "EU_ANTINFERNO" }, tz)!.ruling).toBe("登记为中立者，留在地狱前庭。");
-    expect(verdictDocument({ ...eu, verdict: "FAILED", failReasons: ["DENIED_IMMORTALITY"] }, tz)!.ruling).toBe("有未悔的大罪，下地狱第 6 圈。");
-    expect(verdictDocument({ ...eu, verdict: "PURGATORY", realmCode: "EU_PURGATORY_T5_AVARICE" }, tz)!.ruling).toBe("无未悔的大罪，入炼狱第 5 台，由下而上涤罪。");
+    // 否认灵魂不灭不是大罪,不借「有未悔的大罪」那一句(措辞审查 EU-2);炼狱用「层」(docs/03,EU-16)。
+    const heresy = verdictDocument({ ...eu, verdict: "FAILED", failReasons: ["DENIED_IMMORTALITY"] }, tz)!;
+    expect(heresy.ruling).toBe("否认灵魂不灭，入地狱第六圈。");
+    expect(heresy.ruling).not.toContain("大罪");
+    expect(verdictDocument({ ...eu, verdict: "PURGATORY", realmCode: "EU_PURGATORY_T5_AVARICE" }, tz)!.ruling).toBe("无未悔的大罪，入炼狱第 5 层，由下而上涤罪。");
     expect(verdictDocument({ ...eu, citedDeadlySins: ["pride"] }, tz)!.sins).toBeUndefined();
   });
 });

@@ -97,7 +97,7 @@ MESSAGES = {
         },
         "wangsi_upheld": {
             "title": "Grievance upheld: released early",
-            "body": "Your grievance was found true and you have been released early from the City of the Wrongfully Dead. "
+            "body": "Your grievance was found true and you have been released early from the City of Wrongful Death. "
                     "Open Soul Ledger to see it.",
         },
         "wangsi_upheld_late": {
@@ -106,7 +106,7 @@ MESSAGES = {
         },
         "wangsi_delivered": {
             "title": "Grievance upheld: delivered",
-            "body": "Your grievance was found true and you have been delivered from the City of the Wrongfully Dead. "
+            "body": "Your grievance was found true and you have been delivered from the City of Wrongful Death. "
                     "Open Soul Ledger to see it.",
         },
         "wangsi_rejected": {

@@ -43,6 +43,15 @@ export function useCourtOffice(): string | undefined {
   return t(`plaque.office.court.${civ === "neutral" ? "cn" : civ}`);
 }
 
+/**
+ * 此刻所在的殿的文明短码(`cn` / `eu` / `eg` / `gr`),认不出是 undefined。申诉只在本殿审,
+ * 所以申诉页拿它给 `verdictNamespace`(欧洲的 PURGATORY 叫「炼狱」,不叫「存疑」)。
+ */
+export function useHallCivilization(): string | undefined {
+  const civ = civSkinOf(useHallCode());
+  return civ === "neutral" ? undefined : civ;
+}
+
 /** 此刻所在的殿:进殿查看时是所进的殿,否则是账号绑的殿;都没有是 null。 */
 function useHallCode(): string | null {
   const viewed = useImpersonation()?.hallView?.code;

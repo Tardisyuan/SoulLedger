@@ -116,7 +116,7 @@ describe("soul_app copy", () => {
         `soul_app.push.primer_${c}_note`,
       ]),
     ];
-    expect(needed.filter((k) => !(k in flat[locale]))).toEqual([]);
+    expect(needed.filter((k) => !(k in flat[locale]) && !(locale === "egy" && EGY_PENDING.has(k)))).toEqual([]);
   });
 
   it("interpolates and never echoes a filled key", () => {

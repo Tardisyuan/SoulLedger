@@ -132,8 +132,10 @@ EUROPEAN_ACTORS = [
     # ferryman of the dead belongs on the mountain of penance. The title also
     # said Styx, which is the Roman poets' river and contradicts this repo's own
     # docs/04; Virgil, Aeneid 6.295-297 and Dante both put him on Acheron.
+    # 冥河 is the Styx, which in Dante is the fifth circle's marsh (Phlegyas's), and Charon is no god:
+    # the title is the Acheron's ferryman (docs/03; wording review 2026-11-06, EU-21).
     ("Charon", "卡戎", "Charon", "Kharon", ActorRole.CONDUIT, "EU_ACHERON",
-     "冥河渡神卡戎", "冥河渡神卡戎", "Charon - Ferryman of Acheron", "Kharon",
+     "阿刻戎河的摆渡人卡戎", "阿刻戎河的摆渡人卡戎", "Charon - Ferryman of Acheron", "Kharon",
      "Ferryman of Acheron - takes the dead across at the threshold of the "
      "underworld (Virgil, Aeneid 6.295-297; Dante, Inferno III; Euripides, "
      "Alcestis 252-256 has the same crossing as a lake). Roman poets often "
@@ -250,24 +252,26 @@ EUROPEAN_ACTORS = [
     # to express "restores rather than erases" would encode that difference in
     # the one column that does not mean it, and would split a pair the source
     # states in a single sentence.
-    ("Lethe", "忘川", "River Lethe", "Lethe", ActorRole.CONDUIT,
+    ("Lethe", "勒特河", "River Lethe", "Lethe", ActorRole.CONDUIT,
      "EU_EARTHLY_PARADISE",
-     "忘川河神", "忘川河神", "Lethe - River of Forgetfulness", "Lethe",
+     "勒特河", "勒特河", "Lethe - River of Forgetfulness", "Lethe",
      "Spirit of the river Lethe - at the summit of Mount Purgatory the souls "
      "who have finished their penance are drawn through it and lose the memory "
      "of their sins (Dante, Purgatorio XXVIII, XXXI). Not Virgil's Lethe, drunk "
      "before rebirth to forget a whole past life (Aeneid 6.703ff): that one "
      "belongs to a cosmology with reincarnation in it, and this one does not. "
      "Dante pairs it with Eunoe, which stands in the same realm"),
-    # `name_zh` is a transliteration and is labelled as one. 忘川 is a received
-    # Chinese term with its own history; Eunoè has no counterpart because the
-    # river is Dante's invention, so 「欧诺埃河」 is this repository writing the
-    # Greek down in Chinese characters and not a rendering with a source behind
-    # it. Whoever knows what the standard 神曲 translations use should replace it
-    # and say which translation.
+    # `name_zh` is a transliteration and is labelled as one. Dante's Lethe is not
+    # the Greek one (docs/03 §5.1), so it is not 忘川 — that word belongs to the
+    # Greek river of forgetting drunk before rebirth — but 勒特河, the river's
+    # name written down; Eunoè has no counterpart because the river is Dante's
+    # invention, so 「欧诺埃河」 likewise. Neither is a 河神: Matelda says both
+    # streams come straight from God's will (Purg. XXVIII), so the title is the
+    # river (wording review 2026-11-06, EU-7). Whoever knows what the standard
+    # 神曲 translations use should check both and say which translation.
     ("Eunoe", "欧诺埃河", "River Eunoe", "Eunoe", ActorRole.CONDUIT,
      "EU_EARTHLY_PARADISE",
-     "欧诺埃河神", "欧诺埃河神", "Eunoe - River of Good Remembrance", "Eunoe",
+     "欧诺埃河", "欧诺埃河", "Eunoe - River of Good Remembrance", "Eunoe",
      "Spirit of the river Eunoe, the second of the two streams of the Earthly "
      "Paradise: a soul drinks from it after Lethe and the memory of the good it "
      "did is given back, after which it is 'pure and ready to rise to the "

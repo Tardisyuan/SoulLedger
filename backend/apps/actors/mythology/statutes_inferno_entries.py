@@ -54,7 +54,7 @@ INFERNO_ENTRIES = [
         "kind": None,
         "index": None,
         "name": None,
-        "title_zh": "第一圈·幽冥边境",
+        "title_zh": "第一圈·林勃",
         "title_en": "Limbo",
         "cantos": "Inf. IV",
         "guardian": None,
@@ -747,12 +747,12 @@ INFERNO_ENTRIES = [
         "cantos": "Inf. XXXIV",
         "guardian": "Lucifer",
         "aristotle": "matta bestialitade",
-        "sinners_zh": "背叛恩主者；Judas、Brutus、Cassius 在路济弗尔的三张嘴中",
+        "sinners_zh": "背叛恩主者；Judas、Brutus、Cassius 在撒旦的三张嘴中",
         "sinners_en": (
             "Those who betrayed a benefactor; Judas, Brutus and Cassius are in "
             "Lucifer's three mouths."
         ),
-        "contrapasso_zh": "完全埋在冰下，姿态各异，无一能出声；三名首恶被路济弗尔的三张嘴永远咀嚼。",
+        "contrapasso_zh": "完全埋在冰下，姿态各异，无一能出声；三名首恶被撒旦的三张嘴永远咀嚼。",
         "contrapasso_en": (
             "Wholly buried under the ice in every posture and wholly silent; "
             "the three chief traitors are chewed forever in Lucifer's three "
