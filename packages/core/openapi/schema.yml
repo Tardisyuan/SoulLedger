@@ -7410,12 +7410,20 @@ paths:
         description: Which field to use when ordering the results.
         schema:
           type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - in: query
+        name: returned
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -7844,6 +7852,14 @@ paths:
         description: Which field to use when ordering the results.
         schema:
           type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
+      - in: query
+        name: returned
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -8062,6 +8078,14 @@ paths:
         description: Which field to use when ordering the results.
         schema:
           type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
+      - in: query
+        name: returned
+        schema:
+          type: boolean
       - name: search
         required: false
         in: query
@@ -8166,6 +8190,14 @@ paths:
         carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
         term_conflict, eternal_not_allowed, destination_not_applicable. There is
         no undo window: the conclusion is written when this call returns.
+
+        `fail_reasons` / `fail_reason_note` (v4 D6): a FAILED original case needs
+        a reason from its hall's set (`apps/judgment/fail_reasons.py`); Egypt's
+        are listed by the scale and cannot be chosen. Greek PASSED / FAILED need
+        `greek_account` (GORGIAS / REPUBLIC, D8) and a Greek FAILED needs
+        `greek_curability` (CURABLE / INCURABLE, D7); INCURABLE is Tartarus for
+        ever, and a different door, a term or `eternal: false` is refused
+        (`incurable_is_eternal_in_tartarus`). All refusals 400 with a `code`.
       parameters:
       - in: path
         name: id
@@ -8206,7 +8238,12 @@ paths:
   /api/v1/judgment/{id}/defer/:
     post:
       operationId: v1_judgment_defer_create
-      description: '暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。'
+      description: |-
+        暂缓(v4 叫「待定」)。`{"reason": "…"}` 必填(用户 2026-11-06 D5:仍必填,按住圆钮后弹理由框)。
+        暂缓的案子默认不再出现在 `next/`,期限停表(`apps/judgment/deadline.py`)。
+
+        没给理由或只有空白:400 `{"error", "code": "defer_reason_required"}` —— 理由框据此提示,不必解析
+        DRF 的字段错误。别的形状错误(超过 500 字等)仍是 DRF 的字段错误。
       parameters:
       - in: path
         name: id
@@ -8245,6 +8282,12 @@ paths:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
         '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentClaimRefusal'
+          description: ''
+        '400':
           content:
             application/json:
               schema:
@@ -9580,6 +9623,23 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/v1/judgment/hall-stats/:
+    get:
+      operationId: v1_judgment_hall_stats_retrieve
+      description: |-
+        本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
+        范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentHallStats'
           description: ''
   /api/v1/judgment/handover/:
     post:
@@ -21445,7 +21505,9 @@ paths:
   /api/v1/tenants/{code}/settings/:
     patch:
       operationId: v1_tenants_settings_partial_update
-      description: 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。
+      description: |-
+        殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关、审判期限天数与殿的时区
+        (v4,系统自设)。只收已知字段,`settings` 里别的键不动。
       parameters:
       - in: path
         name: code
@@ -29544,6 +29606,22 @@ components:
       - offset
       - unoffset_demerit
       - unusable_merit
+    GreekAccountEnum:
+      enum:
+      - GORGIAS
+      - REPUBLIC
+      type: string
+      description: |-
+        * `GORGIAS` - 《高尔吉亚》
+        * `REPUBLIC` - 《理想国》
+    GreekCurabilityEnum:
+      enum:
+      - CURABLE
+      - INCURABLE
+      type: string
+      description: |-
+        * `CURABLE` - 可医
+        * `INCURABLE` - 不可医
     GrievanceLevelEnum:
       enum:
       - NONE
@@ -30555,6 +30633,46 @@ components:
         owner_org_name_en:
           type: string
           readOnly: true
+        fail_reasons:
+          readOnly: true
+        fail_reason_note:
+          type: string
+          readOnly: true
+        greek_account:
+          allOf:
+          - $ref: '#/components/schemas/GreekAccountEnum'
+          readOnly: true
+        greek_curability:
+          allOf:
+          - $ref: '#/components/schemas/GreekCurabilityEnum'
+          readOnly: true
+        concluded_tz:
+          type: string
+          readOnly: true
+        concluded_at_local:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        claimable_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        deadline_remaining_seconds:
+          type: integer
+          nullable: true
+          description: 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。
+          readOnly: true
+        is_overdue:
+          type: boolean
+          description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -30583,13 +30701,18 @@ components:
       - city_god_note
       - city_god_status
       - civilization
+      - claimable_since
       - claimed_at
       - claimed_by
       - claimed_by_name
       - conclude_refusal
       - concluded_at
+      - concluded_at_local
+      - concluded_tz
       - created_at
       - cycle
+      - deadline_at
+      - deadline_remaining_seconds
       - defer_reason
       - deferred_at
       - deferred_by
@@ -30603,8 +30726,12 @@ components:
       - draft_version
       - duat_stage
       - evidence_count
+      - fail_reason_note
+      - fail_reasons
       - ferry_barred
       - flow_cancelled
+      - greek_account
+      - greek_curability
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -30614,6 +30741,7 @@ components:
       - id
       - is_archived
       - is_final
+      - is_overdue
       - judge_name
       - judge_name_en
       - judgment_method
@@ -31032,6 +31160,26 @@ components:
         eternal:
           type: boolean
           nullable: true
+        fail_reasons:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          maxItems: 10
+        fail_reason_note:
+          type: string
+          default: ''
+          maxLength: 500
+        greek_account:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/GreekAccountEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        greek_curability:
+          default: ''
+          oneOf:
+          - $ref: '#/components/schemas/GreekCurabilityEnum'
+          - $ref: '#/components/schemas/BlankEnum'
       required:
       - verdict
     JudgmentConcludeVerdictEnum:
@@ -31461,6 +31609,46 @@ components:
         owner_org_name_en:
           type: string
           readOnly: true
+        fail_reasons:
+          readOnly: true
+        fail_reason_note:
+          type: string
+          readOnly: true
+        greek_account:
+          allOf:
+          - $ref: '#/components/schemas/GreekAccountEnum'
+          readOnly: true
+        greek_curability:
+          allOf:
+          - $ref: '#/components/schemas/GreekCurabilityEnum'
+          readOnly: true
+        concluded_tz:
+          type: string
+          readOnly: true
+        concluded_at_local:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        claimable_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        deadline_remaining_seconds:
+          type: integer
+          nullable: true
+          description: 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。
+          readOnly: true
+        is_overdue:
+          type: boolean
+          description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31495,6 +31683,11 @@ components:
           - $ref: '#/components/schemas/JudgmentFlowProgress'
           nullable: true
           readOnly: true
+        cited_deadly_sins:
+          type: array
+          items:
+            type: string
+          readOnly: true
       required:
       - admitted_balance
       - amends_plan_id
@@ -31504,19 +31697,25 @@ components:
       - can_edit
       - case_number
       - citations
+      - cited_deadly_sins
       - city_god
       - city_god_name
       - city_god_note
       - city_god_status
       - civilization
+      - claimable_since
       - claimed_at
       - claimed_by
       - claimed_by_name
       - conclude_refusal
       - concluded_at
+      - concluded_at_local
+      - concluded_tz
       - created_at
       - cross_judgment_id
       - cycle
+      - deadline_at
+      - deadline_remaining_seconds
       - defer_reason
       - deferred_at
       - deferred_by
@@ -31531,9 +31730,13 @@ components:
       - duat_stage
       - evidence_admissions
       - evidence_count
+      - fail_reason_note
+      - fail_reasons
       - ferry_barred
       - flow_cancelled
       - flow_progress
+      - greek_account
+      - greek_curability
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -31543,6 +31746,7 @@ components:
       - id
       - is_archived
       - is_final
+      - is_overdue
       - judge_name
       - judge_name_en
       - judgment_method
@@ -31660,6 +31864,54 @@ components:
       - total
       - waiting
       - workflow
+    JudgmentHallStats:
+      type: object
+      description: '`GET /judgment/hall-stats/`:v4 概览屏的数。每个数的定义见 `apps/judgment/hall_stats.py`。'
+      properties:
+        timezone:
+          type: string
+        pending:
+          type: integer
+        overdue:
+          type: integer
+        concluded_this_month:
+          type: integer
+        month_done_pct:
+          type: integer
+          nullable: true
+        avg_days:
+          type: number
+          format: double
+          nullable: true
+        returned_this_month:
+          type: integer
+        weeks:
+          type: array
+          items:
+            $ref: '#/components/schemas/JudgmentHallStatsWeek'
+      required:
+      - avg_days
+      - concluded_this_month
+      - month_done_pct
+      - overdue
+      - pending
+      - returned_this_month
+      - timezone
+      - weeks
+    JudgmentHallStatsWeek:
+      type: object
+      properties:
+        week_start:
+          type: string
+          format: date
+        concluded:
+          type: integer
+        previous_quarter:
+          type: integer
+      required:
+      - concluded
+      - previous_quarter
+      - week_start
     JudgmentKindEnum:
       enum:
       - ORIGINAL
@@ -31967,6 +32219,46 @@ components:
         owner_org_name_en:
           type: string
           readOnly: true
+        fail_reasons:
+          readOnly: true
+        fail_reason_note:
+          type: string
+          readOnly: true
+        greek_account:
+          allOf:
+          - $ref: '#/components/schemas/GreekAccountEnum'
+          readOnly: true
+        greek_curability:
+          allOf:
+          - $ref: '#/components/schemas/GreekCurabilityEnum'
+          readOnly: true
+        concluded_tz:
+          type: string
+          readOnly: true
+        concluded_at_local:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        claimable_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        deadline_remaining_seconds:
+          type: integer
+          nullable: true
+          description: 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。
+          readOnly: true
+        is_overdue:
+          type: boolean
+          description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31994,13 +32286,18 @@ components:
       - city_god_note
       - city_god_status
       - civilization
+      - claimable_since
       - claimed_at
       - claimed_by
       - claimed_by_name
       - conclude_refusal
       - concluded_at
+      - concluded_at_local
+      - concluded_tz
       - created_at
       - cycle
+      - deadline_at
+      - deadline_remaining_seconds
       - defer_reason
       - deferred_at
       - deferred_by
@@ -32014,8 +32311,12 @@ components:
       - draft_version
       - duat_stage
       - evidence_count
+      - fail_reason_note
+      - fail_reasons
       - ferry_barred
       - flow_cancelled
+      - greek_account
+      - greek_curability
       - grievance_decided_at
       - grievance_note
       - grievance_plea
@@ -32025,6 +32326,7 @@ components:
       - id
       - is_archived
       - is_final
+      - is_overdue
       - judge_name
       - judge_name_en
       - judgment_method
@@ -32139,10 +32441,16 @@ components:
           type: integer
         total:
           type: integer
+        overdue:
+          type: integer
+        returned:
+          type: integer
       required:
       - deferred
       - mine
       - others
+      - overdue
+      - returned
       - total
       - unclaimed
     JudgmentQueueCursor:
@@ -38800,6 +39108,46 @@ components:
         owner_org_name_en:
           type: string
           readOnly: true
+        fail_reasons:
+          readOnly: true
+        fail_reason_note:
+          type: string
+          readOnly: true
+        greek_account:
+          allOf:
+          - $ref: '#/components/schemas/GreekAccountEnum'
+          readOnly: true
+        greek_curability:
+          allOf:
+          - $ref: '#/components/schemas/GreekCurabilityEnum'
+          readOnly: true
+        concluded_tz:
+          type: string
+          readOnly: true
+        concluded_at_local:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        claimable_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        deadline_remaining_seconds:
+          type: integer
+          nullable: true
+          description: 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。
+          readOnly: true
+        is_overdue:
+          type: boolean
+          description: 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。
+          readOnly: true
         is_archived:
           type: boolean
           readOnly: true
@@ -39561,6 +39909,14 @@ components:
             maximum: 100000
             minimum: 0
             nullable: true
+        judgment_deadline_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          nullable: true
+        timezone:
+          type: string
+          maxLength: 64
     PatchedTudiGod:
       type: object
       properties:
@@ -45682,6 +46038,13 @@ components:
           type: boolean
           readOnly: true
           description: 书信是否开着(服务器级 `MATRIX_ENABLED`)。
+        judgment_deadline_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        hall_timezone:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -45691,7 +46054,9 @@ components:
       - code
       - created_at
       - display_name
+      - hall_timezone
       - id
+      - judgment_deadline_days
       - letters_on
       - seal_glyphs
     TenantCreate:

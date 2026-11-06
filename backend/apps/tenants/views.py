@@ -9,7 +9,14 @@ from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission, IsGlobalAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
+from apps.tenants.models import (
+    DEADLINE_SETTING,
+    REBIRTH_COOLDOWN_SETTING,
+    SELF_SERVICE_SETTING,
+    TIMEZONE_SETTING,
+    VISIT_SETTINGS,
+    Tenant,
+)
 from apps.tenants.serializers import (
     HallOverviewSerializer,
     HallViewStartSerializer,
@@ -30,6 +37,8 @@ def _snapshot(tenant):
     for key in VISIT_SETTINGS:  # 没填 = None(存的是去空格后的值,空的不存键)
         snap[key] = (tenant.settings or {}).get(key)
     snap[SELF_SERVICE_SETTING] = (tenant.settings or {}).get(SELF_SERVICE_SETTING) is not False  # 缺省 = 开
+    snap[DEADLINE_SETTING] = (tenant.settings or {}).get(DEADLINE_SETTING)
+    snap[TIMEZONE_SETTING] = (tenant.settings or {}).get(TIMEZONE_SETTING)
     snap["seal_glyphs"] = list(tenant.seal_glyphs or [])
     return snap
 
@@ -198,7 +207,8 @@ class TenantViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, mixins.CreateMo
     @action(detail=True, methods=["patch"], url_path="settings",
             permission_classes=[TenantPermission, IsAdminPermission])
     def hall_settings(self, request, code=None):
-        """殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。"""
+        """殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关、审判期限天数与殿的时区
+        (v4,系统自设)。只收已知字段,`settings` 里别的键不动。"""
         from django.db import transaction
 
         # `settings` is one JSON column merged key by key: read it under the row lock, or two admins saving

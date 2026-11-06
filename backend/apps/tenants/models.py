@@ -15,6 +15,32 @@ SELF_SERVICE_SETTING = "soul_contact_email_self_service"
 #: 殿管理员在后台设,满了的灵魂留在 REINCARNATING 里候位)。读的是 `apps/reincarnation/services.py::quota_of`。
 REBIRTH_QUOTA_SETTING = "rebirth_monthly_quota"
 
+#: `Tenant.settings` 里的审判期限天数(v4 D10,用户 2026-11-06):从案子可认领起算,待定期间不计
+#: (`apps/judgment/deadline.py`)。缺键 = 本文明的默认值。**系统自设,非出典**:docs/ 各文明文档里都没有
+#: 审判期限(地府的七七斋期是另一回事,埃及的 70 天在开审之前,见 docs/11、docs/02_奥西里斯 的「系统自设」一节)。
+DEADLINE_SETTING = "judgment_deadline_days"
+DEFAULT_DEADLINE_DAYS = {"CHINESE": 7, "GREEK": 7, "EGYPTIAN": 12, "EUROPEAN": 7}
+
+#: `Tenant.settings` 里殿的时区(IANA 名)。判决文书的时辰按落印那一刻、所在殿的时区写死(v4 D12,
+#: `Judgment.concluded_tz`);周统计也按它分周。缺键 = 本文明的默认值。系统自设,非出典。
+TIMEZONE_SETTING = "timezone"
+DEFAULT_HALL_TIMEZONE = {
+    "CHINESE": "Asia/Shanghai", "GREEK": "Europe/Athens", "EGYPTIAN": "Africa/Cairo", "EUROPEAN": "Europe/Rome",
+}
+
+
+def valid_timezone(name) -> bool:
+    from zoneinfo import ZoneInfo
+
+    if not isinstance(name, str) or not name:
+        return False
+    try:
+        ZoneInfo(name)
+    except (ValueError, KeyError, OSError):  # ZoneInfoNotFoundError is a KeyError
+        return False
+    return True
+
+
 #: 「到殿办理」三项(书信没开时灵魂 App 帮助页显示):`settings` 键 → 最大长度。选填,去空格后为空 = 没填(不存键)。
 VISIT_SETTINGS = {"visit_address": 80, "visit_hours": 40, "visit_phone": 40}
 
@@ -80,6 +106,22 @@ class Tenant(AuditUserFields, models.Model):
 
         civ = self.civilization
         return None if civ == UNKNOWN_CIVILIZATION else civ
+
+    @property
+    def judgment_deadline_days(self) -> int | None:
+        """本殿的审判期限天数:设置里的,否则本文明的默认值;认不出文明是 None(不计期限)。"""
+        days = (self.settings or {}).get(DEADLINE_SETTING)
+        if isinstance(days, int) and not isinstance(days, bool) and days > 0:
+            return days
+        return DEFAULT_DEADLINE_DAYS.get(self.known_civilization)
+
+    @property
+    def hall_timezone(self) -> str:
+        """本殿的时区:设置里的(合法的 IANA 名),否则本文明的默认值,再否则 UTC。"""
+        name = (self.settings or {}).get(TIMEZONE_SETTING)
+        if valid_timezone(name):
+            return name
+        return DEFAULT_HALL_TIMEZONE.get(self.known_civilization, "UTC")
 
     @property
     def hall_names(self):

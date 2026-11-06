@@ -593,12 +593,13 @@ GREEK_REALMS = [
     # whether its wrongs are curable — not to the place; the same Tartarus holds
     # both kinds. A per-soul column for it already exists (`Disposition
     # .is_eternal`, which `create_from_judgment` copies off this flag), so the
-    # shape is not missing. The input is: nothing in this system distinguishes
-    # an incurable soul from a curable one, and no widening of this field would
-    # supply it. Changing this to True would make every Greek soul sent left an
-    # ἀνίατος, which is the smaller of the two populations and the one Plato
-    # treats as remarkable. See `DispositionService._route_greek` and
-    # tests/test_greek_sentence_basis.py.
+    # shape is not missing. Since 2026-11-06 (v4 D7) the input is there too: the
+    # judge stamps the soul curable or incurable (Gorgias 526b-c,
+    # `Judgment.greek_curability`) and an INCURABLE stamp sets the
+    # disposition's `is_eternal` — on the soul, not here. Changing this to True
+    # would still make every Greek soul sent left an ἀνίατος, which is the
+    # smaller of the two populations and the one Plato treats as remarkable.
+    # See `DispositionService._route_greek` and tests/test_greek_sentence_basis.py.
     # THE CROSSING, AND WHY IT IS A SECOND ROW RATHER THAN A MOVE.
     # `EU_ACHERON` already exists and Charon stands on it — but realms/0018 says
     # in as many words why that row stays EUROPEAN: "every anchor those rows
