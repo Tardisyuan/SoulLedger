@@ -13,8 +13,9 @@
  * 落印走 `confirmedDecision`(我的 › 批准前验证面容 / 指纹),同其他决定。
  */
 import { concludeRefusalOf, judgmentApi, type ConcludeJudgmentPayload, type Judgment, type JudgmentDetail } from "@soulledger/core/api/judgment";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Animated, BackHandler, PanResponder, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Animated, BackHandler, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Circle } from "react-native-svg";
 
 import { submitVerdict } from "../decisions";
@@ -155,33 +156,26 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     snapBack();
   };
 
-  // 拖动只在顶上那张卡上,且只认横向;被挡的方向只出得去 14。
-  const latest = useRef({ canAct, blocked, threshold, pass, fail, snapBack, flashBlocked });
-  useEffect(() => {
-    latest.current = { canAct, blocked, threshold, pass, fail, snapBack, flashBlocked };
-  });
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, g) => latest.current.canAct && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderMove: (_, g) => {
-          const side: Side = g.dx < 0 ? "left" : "right";
-          if (side === latest.current.blocked) {
-            pan.setValue(Math.sign(g.dx) * Math.min(Math.abs(g.dx), BLOCKED_DRAG));
-            if (Math.abs(g.dx) > BLOCKED_DRAG * 2) latest.current.flashBlocked();
-          } else pan.setValue(g.dx);
-        },
-        onPanResponderRelease: (_, g) => {
-          const side: Side = g.dx < 0 ? "left" : "right";
-          const { blocked: b, threshold: th } = latest.current;
-          if (side !== b && Math.abs(g.dx) > th) (side === "right" ? latest.current.pass : latest.current.fail)();
-          else latest.current.snapBack();
-        },
-        onPanResponderTerminate: () => latest.current.snapBack(),
-      }),
-    [pan]
-  );
+  // 拖动只在顶上那张卡上,且只认横向;被挡的方向只出得去 14。每次渲染都新建(同 ui.tsx 的下拉刷新):
+  // GestureDetector 留着原生的 handler,只换配置与回调,拖到一半重渲染(提示条出现)也不断。
+  const drag = Gesture.Pan()
+    .withTestId("swipe-drag")
+    .runOnJS(true)
+    .enabled(canAct)
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-12, 12])
+    .onUpdate((e) => {
+      const side: Side = e.translationX < 0 ? "left" : "right";
+      if (side === blocked) {
+        pan.setValue(Math.sign(e.translationX) * Math.min(Math.abs(e.translationX), BLOCKED_DRAG));
+        if (Math.abs(e.translationX) > BLOCKED_DRAG * 2) flashBlocked();
+      } else pan.setValue(e.translationX);
+    })
+    .onEnd((e, ok) => {
+      const side: Side = e.translationX < 0 ? "left" : "right";
+      if (ok && side !== blocked && Math.abs(e.translationX) > threshold) (side === "right" ? pass : fail)();
+      else snapBack();
+    });
 
   // 按住:0.5 秒走满一圈;不到就松手,退回原样。
   const holdIn = () => {
@@ -289,10 +283,9 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
                 );
               }
               return (
+                <GestureDetector key={j.id} gesture={drag}>
                 <Animated.View
-                  key={j.id}
                   testID={`swipe-card-${j.id}`}
-                  {...responder.panHandlers}
                   style={[
                     styles.card,
                     { backgroundColor: theme.s1, borderColor: theme.hair2, transformOrigin: "bottom", transform: [{ translateX: pan }, { translateY: lift }, { rotate }] },
@@ -303,6 +296,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
                   <Stamp label={t("judgment.verdicts.failed")} color={theme.neg} opacity={failInk} style={{ top: space[6], right: space[5], transform: [{ rotate: "12deg" }] }} />
                   <Stamp label={t("judgment.queue.defer")} color={theme.inkMuted} opacity={deferInk} dashed style={{ top: space[6], alignSelf: "center" }} />
                 </Animated.View>
+                </GestureDetector>
               );
             })
         )}
