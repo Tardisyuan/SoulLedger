@@ -691,7 +691,7 @@ export function JudgmentClaimQueue({
               <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_cycle_kind")}</th>
               <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
               <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
-              <th scope="col" className="px-2 py-1 text-right font-normal">{t("queue.col.deadline")}</th>
+              <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("queue.col.deadline")}</th>
               <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
             </tr>
           </thead>
@@ -784,6 +784,15 @@ export function JudgmentClaimQueue({
                             {" · "}
                             <DomainEnum namespace="souls.civilizations" value={j.civilization} />
                             {j.stale_since && <StaleBadge className="ml-2" />}
+                          </span>
+                          {/* <640px 期限一列收起(用户 2026-11-07),同一句以小字并到案号下面,「不计」照写。 */}
+                          <span
+                            data-testid="deadline-inline"
+                            className={`sm:hidden block whitespace-nowrap text-2xs font-mono tabular-nums ${
+                              deadlineOf(j).over ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-subtle))]"
+                            }`}
+                          >
+                            {`${t("queue.col.deadline")} · ${deadlineOf(j).text}`}
                           </span>
                           {/* 枉死(第五十一批 F-2):方框徽标,ink 字 —— 审判的事实,不是警告;候审期间旁边写「候至 日期」。 */}
                           {j.untimely && (
@@ -902,7 +911,7 @@ export function JudgmentClaimQueue({
                         </td>
                         <td
                           data-testid="deadline-cell"
-                          className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap ${
+                          className={`px-2 text-right font-mono text-xs tabular-nums whitespace-nowrap max-sm:hidden ${
                             deadlineOf(j).over ? "text-[oklch(var(--color-warning))]" : "text-[oklch(var(--color-ink-muted))]"
                           }`}
                         >
