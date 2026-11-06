@@ -1,7 +1,10 @@
 /**
  * @jest-environment node
  *
- * 身份带题字必须始终是 WCAG 意义上的「大号文字」,而它的白字对比度按真实底色量。
+ * 身份带题字必须始终是 WCAG 意义上的「大号文字」,而它的字对比度按真实底色量。
+ *
+ * (v4 阶段 2,2026-11-06:身份带不再是匾色实底上的白字,而是 canvas 上的一片文明光、ink 的字;
+ * 下面讲「白字」「压暗 10%」的两段是 v3 / 阶段 1 的历史,对应的检查已换成按光最亮处量。)
  *
  * 为什么这条规则存在。规范 v3 的四个文明色里,**深色埃及 #5f7fbe 与深色希腊
  * #5a8480 上的白字达不到 4.5:1** —— 实测 3.99:1 与 4.16:1,与 v3 自己令牌页上
@@ -110,72 +113,60 @@ describe("身份带题字始终是大号文字,且是 Noto Serif SC 600", () => 
   });
 });
 
-/** `.identity-band { … background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111); }` → 0.9 与 [17,17,17]。 */
-function bandMix(): { pct: number; shade: Rgb } {
-  const rule = /\n {2}\.identity-band \{([^}]*)\}/.exec(CSS)?.[1];
-  const m = rule && /background:\s*color-mix\(in srgb, oklch\(var\(--color-main\)\) (\d+)%, #([0-9a-f]{3})\);/.exec(rule);
-  if (!m) throw new Error("globals.css 的 .identity-band 不是 color-mix(in srgb, main N%, #xxx) —— 跟着改这个读取器");
-  const shade = [...m[2]].map((h) => parseInt(h + h, 16)) as unknown as Rgb;
-  return { pct: Number(m[1]) / 100, shade };
-}
-
-/** `color-mix(in srgb, a p, b)`:在 gamma 编码的 sRGB 里线性插值(CSS Color 5)。 */
-const mixSrgb = (a: Rgb, b: Rgb, p: number): Rgb =>
-  a.map((v, i) => Math.round(v * p + b[i] * (1 - p))) as unknown as Rgb;
+/** `color-mix(in srgb, fg p, transparent)` 叠在不透明的 bg 上:在 gamma 编码的 sRGB 里逐通道 fg·p + bg·(1−p)。 */
+const over = (fg: Rgb, bg: Rgb, p: number): Rgb =>
+  fg.map((v, i) => Math.round(v * p + bg[i] * (1 - p))) as unknown as Rgb;
 
 const CIVS = ["cn", "eu", "eg", "gr"] as const;
 const rgb = (theme: (typeof THEMES)[number], name: string): Rgb =>
   oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
 
+/** v4 `--glowA`(深 .30 / 浅 .24)。读不到就抛:当成 0 = 没有光,对比度只会更好看,检查就失效了。 */
+function glowAlpha(theme: (typeof THEMES)[number]): number {
+  const raw = Number(TOKENS_BY_THEME[theme]["--glow-alpha"]);
+  if (!(raw > 0 && raw < 1)) throw new Error(`--glow-alpha 在 ${theme} 读不到 —— 跟着改这个读取器`);
+  return raw;
+}
+
 /**
- * 实测值(2026-11-06,规范 v4 的 solid,`color-mix(main 90%, #111)`),两位小数,
- * 用与本测试同一套换算(globalsCssTokens)离线算出,未在 jest 里跑过:
- *
- *            地府   欧洲   埃及   希腊
- *   深色     9.48  10.26   9.35   9.37
- *   浅色     6.57   7.20   6.42   6.45
- *
- * v3 时是 深 6.27 / 5.95 / 4.66 / 4.82、浅 8.75 / 10.23 / 9.48 / 9.71:v4 的深色 solid 更暗,
- * 浅色 solid 更亮(浅色 solid 本身就是主按钮底,白字 5.62–6.39)。
+ * 身份带(v4,2026-11-06 阶段 2):不再是匾色实底上的白字,而是 canvas 上的一片文明光、ink 的字。
+ * 光是椭圆渐变,最亮处(圆心)= glow 按 --glow-alpha 混进 canvas;字与印按这一处量 —— 别处的底更接近
+ * canvas,只会更清楚。v3 / 阶段 1 的「main 90% + #111 上的白字」那组实测表随实底一起撤掉。
  */
-const MEASURED: Record<string, number> = {
-  "dark:cn": 9.48, "dark:eu": 10.26, "dark:eg": 9.35, "dark:gr": 9.37,
-  "light:cn": 6.57, "light:eu": 7.2, "light:eg": 6.42, "light:gr": 6.45,
-};
+const bandBrightest = (theme: (typeof THEMES)[number], civ: (typeof CIVS)[number]): Rgb =>
+  over(rgb(theme, `--color-civ-${civ}-glow`), rgb(theme, "--color-canvas"), glowAlpha(theme));
 
-describe("身份带底色(文明色压暗 10%)上的白字", () => {
-  const { pct, shade } = bandMix();
-
-  it("读到的混入就是 v3 的 90% / #111", () => {
-    expect({ pct, shade }).toEqual({ pct: 0.9, shade: [17, 17, 17] });
+describe("身份带(canvas 上的文明光)上的字", () => {
+  it("读到的身份带就是 v4 的光:glow 的椭圆渐变垫 canvas,字是 ink", () => {
+    const rule = ruleBody(".identity-band");
+    expect(rule).toMatch(/color: oklch\(var\(--color-ink\)\);/);
+    expect(rule).toMatch(/radial-gradient\(70% 260px at 30% var\(--glow-y\), color-mix\(in srgb, oklch\(var\(--color-glow\)\) calc\(var\(--glow-alpha\) \* 100%\), transparent\), transparent 70%\),\s*oklch\(var\(--color-canvas\)\);/);
+    expect(rule).not.toMatch(/--color-main/);
   });
 
-  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s · %s ≥ 4.5:1,且等于实测表", (theme, civ) => {
-    const band = mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct);
-    const ratio = contrastRatio(rgb(theme, "--color-on-main"), band);
-    expect(Number(ratio.toFixed(2))).toBe(MEASURED[`${theme}:${civ}`]);
-    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s · %s:ink 在光最亮处 ≥ 4.5:1", (theme, civ) => {
+    expect(contrastRatio(rgb(theme, "--color-ink"), bandBrightest(theme, civ))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("混入确实让白字更清楚:每一格都比未混入的文明色高", () => {
+  it("光确实压低了对比度(量的是有光的那一处,不是 canvas 本身)", () => {
     for (const theme of THEMES) {
       for (const civ of CIVS) {
-        const raw = contrastRatio(rgb(theme, "--color-on-main"), rgb(theme, `--color-civ-${civ}`));
-        const band = contrastRatio(rgb(theme, "--color-on-main"), mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct));
-        expect(band).toBeGreaterThan(raw);
+        const plain = contrastRatio(rgb(theme, "--color-ink"), rgb(theme, "--color-canvas"));
+        expect(contrastRatio(rgb(theme, "--color-ink"), bandBrightest(theme, civ))).toBeLessThan(plain);
       }
     }
   });
 });
 
 /**
- * 灵魂详情身份带上的案号与「全部 N 场」是 `<a>`,不是 `<button>`:按钮继承带上的白字,而 base 层的
- * `a` 规则把链接染成 ink-muted(悬停 accent-ink)。上面那组只量白字,看不见这件事 —— 所以这里按
- * globals.css 决定链接**实际**是什么颜色,再量。`.identity-band` 在 utilities 层,压得过 base 层
- * 的 `a` 和它的 :hover,所以有这条 `color: inherit` 就是白字,没有就落回 base 的颜色。
+ * 灵魂详情身份带上的案号与「全部 N 场」是 `<a>`,不是 `<button>`:base 层的 `a` 规则把链接染成 ink-muted
+ * (悬停 accent-ink)。所以这里按 globals.css 决定链接**实际**是什么颜色,再量。`.identity-band` 在
+ * utilities 层,压得过 base 层的 `a` 和它的 :hover,所以有这条 `color: inherit` 就是带的字色(v4 起 ink),
+ * 没有就落回 base 的颜色。(v3 时那条 inherit 让白字压过 base 的灰,是承重的;v4 的带是浅底 ink 字,
+ * base 的 ink-muted 在光上也有 5.1 以上 —— inherit 留着,是为了链接与旁边的字同一个颜色。)
  */
 function bandLinkToken(): string {
-  if (/color:\s*inherit;/.test(ruleBody(".identity-band a"))) return "--color-on-main";
+  if (/color:\s*inherit;/.test(ruleBody(".identity-band a"))) return "--color-ink";
   const base = /\n {2}a \{\s*@apply text-\[oklch\(var\((--color-[a-z-]+)\)\)\]/.exec(CSS)?.[1];
   if (!base) throw new Error("globals.css 的 base `a` 规则改了形状 —— 跟着改这个读取器");
   return base;
@@ -183,21 +174,10 @@ function bandLinkToken(): string {
 
 describe("身份带上的链接(案号)", () => {
   it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s · %s ≥ 4.5:1", (theme, civ) => {
-    const { pct, shade } = bandMix();
-    const band = mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct);
-    expect({ token: bandLinkToken(), ok: contrastRatio(rgb(theme, bandLinkToken()), band) >= 4.5 }).toEqual({
-      token: "--color-on-main",
+    expect({ token: bandLinkToken(), ok: contrastRatio(rgb(theme, bandLinkToken()), bandBrightest(theme, civ)) >= 4.5 }).toEqual({
+      token: "--color-ink",
       ok: true,
     });
-  });
-
-  // v4(2026-11-06):深色带更暗,base 的 ink-muted 压在上面是 4.60–5.05,四格碰巧过了;浅色四格是 1.0–1.1。
-  // 所以这条现在只断言浅色那四格 —— 浅色仍让 `color: inherit` 承重。
-  it("base 的 `a` 颜色确实托不住(浅色):这条规则是承重的,不是多余的", () => {
-    const base = /\n {2}a \{\s*@apply text-\[oklch\(var\((--color-[a-z-]+)\)\)\]/.exec(CSS)?.[1] as string;
-    const { pct, shade } = bandMix();
-    const under = CIVS.filter((civ) => contrastRatio(rgb("light", base), mixSrgb(rgb("light", `--color-civ-${civ}`), shade, pct)) < 4.5);
-    expect(under).toHaveLength(CIVS.length);
   });
 });
 
@@ -228,10 +208,9 @@ const SEAL_MEASURED: Record<string, number> = {
 const ruleBody = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.]/g, "\\$&")} \\{([^}]*)\\}`).exec(CSS)?.[1] ?? "";
 
 describe("印的描边与印文 ≥ 3:1(图形)", () => {
-  it("印是 currentColor 的文明字色,身份带上改随白字 —— 下面两组量的就是这两种颜色", () => {
+  it("印是 currentColor 的文明字色,身份带上也是(v4 删了随白字的那条)—— 下面两组量的就是这一种颜色", () => {
     expect(ruleBody(".seal")).toMatch(/color: oklch\(var\(--color-main-ink\)\);[\s\S]*border: 2px solid currentColor;/);
-    expect(ruleBody(".identity-band .seal")).toMatch(/color: inherit;/);
-    expect(ruleBody(".identity-band")).toMatch(/color: oklch\(var\(--color-on-main\)\);/);
+    expect(ruleBody(".identity-band .seal")).toBe("");
   });
 
   it.each(
@@ -244,9 +223,8 @@ describe("印的描边与印文 ≥ 3:1(图形)", () => {
     expect(ratio).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("身份带上 %s · %s 的白印 ≥ 3:1", (theme, civ) => {
-    const { pct, shade } = bandMix();
-    const ratio = contrastRatio(rgb(theme, "--color-on-main"), mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct));
-    expect(ratio).toBeGreaterThanOrEqual(3);
+  // 离线按 hex 近似算过(2026-11-06,未在 jest 里跑):最紧的是浅色欧洲 3.83、深色欧洲 3.95。
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("身份带光最亮处 %s · %s 的印(civT)≥ 3:1", (theme, civ) => {
+    expect(contrastRatio(rgb(theme, `--color-civ-${civ}-ink`), bandBrightest(theme, civ))).toBeGreaterThanOrEqual(3);
   });
 });

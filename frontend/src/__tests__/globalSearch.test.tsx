@@ -8,10 +8,14 @@
  * - 没输入时列最近打开的(按用户存在本地);没有记录只有提示行;
  * - 防抖 200ms;每类各自返回各自显示(慢的那类还是骨架,快的已经出结果);
  * - 命中字 600 + 下划线,不用颜色。
+ * - v4(第七批 S02):最上面一组「指令」—— 页面经 useShellCommands 登记的,输入时按文字筛;↵ 执行、不跳页;
+ *   Tab 换一类;有判决类指令时底栏写「判决类指令只对当前这一件生效」。
  */
+import { useMemo } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
+import { useShellCommands } from "@/src/lib/shellCommands";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { tZh } from "./support/zhBundle";
 
@@ -324,5 +328,52 @@ describe("全局搜索", () => {
     expect(mockPush).toHaveBeenCalledWith("/souls?q=%E9%AD%82");
     // 「查看全部」不进最近打开。
     expect(window.localStorage.getItem("soulledger.search.recent.7")).toBeNull();
+  });
+});
+
+describe("v4 命令面板:指令", () => {
+  function PassCommand({ run }: { run: () => void }) {
+    const commands = useMemo(() => [{ id: "pass", label: "通过 · 沈魂", hint: "CN-2026-0001 · 落印即定，不能撤回", verdict: true, run }], [run]);
+    useShellCommands(commands);
+    return null;
+  }
+
+  it("页面登记的指令排在最上;↵ 执行、不跳页、不进最近打开;底栏说明判决只对当前这一件", async () => {
+    const run = jest.fn();
+    render(<PassCommand run={run} />);
+    renderSearch();
+    await open();
+    expect(input()).toHaveAttribute("placeholder", tZh("cmdk.placeholder"));
+    await search("通过");
+    await waitFor(() => expect(options()[0]?.getAttribute("data-option-key")).toBe("command:pass"));
+    expect(groups()[0]).toBe("command");
+    expect(screen.getByText(tZh("cmdk.verdict_scope"))).toBeTruthy();
+    fireEvent.keyDown(input(), { key: "Enter" });
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
+    expect(window.localStorage.getItem("soulledger.search.recent.7")).toBeNull();
+  });
+
+  it("Tab 跳到下一类的第一条,Shift+Tab 回来", async () => {
+    render(<PassCommand run={jest.fn()} />);
+    renderSearch();
+    await open();
+    await search("通过");
+    await waitFor(() => expect(groups()).toEqual(["command", "judgment", "soul", "statute"]));
+    expect(selected()?.getAttribute("data-option-key")).toBe("command:pass");
+    fireEvent.keyDown(input(), { key: "Tab" });
+    expect(selected()?.getAttribute("data-option-key")).toBe("judgment:j1");
+    fireEvent.keyDown(input(), { key: "Tab", shiftKey: true });
+    expect(selected()?.getAttribute("data-option-key")).toBe("command:pass");
+  });
+
+  it("没登记、也不匹配时没有「指令」这一组(断言不在场)", async () => {
+    renderSearch();
+    await open();
+    await search("魂");
+    await waitFor(() => expect(options()).toHaveLength(4));
+    expect(groups()).not.toContain("command");
+    expect(screen.queryByText(tZh("cmdk.verdict_scope"))).toBeNull();
   });
 });

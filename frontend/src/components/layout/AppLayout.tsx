@@ -23,7 +23,9 @@ import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEnt
 import { Plaque, PlaqueProvider, shortBandFor, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Bell } from "lucide-react";
+import { navItems } from "@/src/lib/navSections";
+import { DensityToggle, HoursChip } from "@/src/components/layout/ShellChrome";
 // 「问一问」的推开只在 ≥ 1024 px(canvas 1a),且主内容区让出 420 后仍有 720(Design E 组);否则它是覆盖层。
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useRoomBeside } from "@/src/hooks/useRoomBeside";
@@ -134,13 +136,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [menus]);
 
   // 手风琴:当前页所在的一级项默认打开;导航落进另一组时跟过去。点当前打开的那一项收起。
+  // 侧栏按 v4 三组画,「概览」「灵魂业务」两个目录已拆开(`navSections`),所以侧栏的「一级项」按拆开后的算;
+  // 底栏仍按后端的一级项(前 4 个 +「更多」)。
   const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
+  const currentNav = useMemo(() => groupOfPath(navItems(menus), pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
   const [openGroup, setOpenGroup] = useState<number | null>(null);
   const nav = useNavMode();
   const [openFor, setOpenFor] = useState<number | null>(null);
-  if (currentGroup !== openFor) {
-    setOpenFor(currentGroup);
-    setOpenGroup(currentGroup);
+  if (currentNav !== openFor) {
+    setOpenFor(currentNav);
+    setOpenGroup(currentNav);
   }
   const crumbs = useBreadcrumbs(menus);
   // 页面经 `usePlaque` 报的题字 / 殿名 / 右栏优先;没报的退回面包屑末段与租户名。
@@ -161,12 +166,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const notifications = unread?.results ?? [];
 
   const onBar =
-    "flex min-h-11 items-center justify-center text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-canvas))] aria-expanded:text-[oklch(var(--color-ink))]";
-  const navToggleLabel = nav.forced
-    ? t("nav.collapse_locked")
-    : nav.collapsed
-      ? t("nav.expand_menu")
-      : t("nav.collapse_menu");
+    "flex min-h-11 items-center justify-center text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-surface-2))] aria-expanded:text-[oklch(var(--color-ink))]";
 
   return (
     <LazyMotion features={loadMotionFeatures}>
@@ -191,49 +191,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <GlobalNav
           menus={menus}
           allMenuPaths={allMenuPaths}
-          currentId={currentGroup}
+          currentId={currentNav}
           openId={openGroup}
           onToggle={(id) => setOpenGroup((g) => (g === id ? null : id))}
           collapsed={nav.collapsed}
           user={user}
+          mode={nav}
         />
       </aside>
 
       <div ref={mainBoxRef} className="min-w-0 max-[768px]:pb-14">
-        {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。 */}
+        {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。
+            v4:工具条与身份带同一片页头光(`.shell-glow`,globals.css);收起按钮挪进了侧栏(v4 S01)。
+            右侧顺序照 v4:时辰 · 舒适 / 紧凑 · 问一问 · 搜索 · 通知 · 用户。 */}
         <header
           data-testid="global-topbar"
-          className={`sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] pl-4 ${
+          className={`shell-glow sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] pl-4 ${
             assist.pushed ? "pr-[436px]" : "pr-4"
           }`}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            {/* 769–1199 强制收起:按钮仍在、不可用,可访问名说明原因(给审判台的裁决栏留宽度)。 */}
-            <button
-              type="button"
-              data-testid="nav-toggle"
-              aria-controls="global-nav"
-              aria-expanded={!nav.collapsed}
-              aria-disabled={nav.forced || undefined}
-              aria-label={navToggleLabel}
-              aria-keyshortcuts="["
-              title={nav.forced ? navToggleLabel : `${navToggleLabel} ([)`}
-              onClick={nav.toggle}
-              className={`hidden h-11 w-11 shrink-0 items-center justify-center min-[769px]:flex ${
-                nav.forced
-                  ? "cursor-not-allowed bg-[oklch(var(--color-disabled-surface))] text-[oklch(var(--color-disabled-ink))]"
-                  : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))]"
-              }`}
-            >
-              {nav.collapsed ? (
-                <PanelLeftOpen aria-hidden="true" size={18} strokeWidth={1.6} />
-              ) : (
-                <PanelLeftClose aria-hidden="true" size={18} strokeWidth={1.6} />
-              )}
-            </button>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <Breadcrumb menus={menus} />
+            {user ? <HoursChip /> : null}
           </div>
           <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+            {user ? <DensityToggle /> : null}
             {/* 问一问 (canvas 1b): the connection state left the masthead, so it leads the group. */}
             <OfficerAssistEntry assist={assist} />
             {/* 全局搜索(v3 A8):顺序 搜索 / 通知 / 头像;1440 是 240 宽的搜索框样按钮,≤768 是 44 的图标。 */}

@@ -4,7 +4,7 @@
  * 决定(2026-10-01,用户拍板):
  *   - ≥ 1200 导航展开 252 / 收起 68 由用户选,存在 `localStorage["soulledger-nav-mode"]`,
  *     `[` 切换(焦点在输入框里不算);769–1199 强制收起,开合按钮还在但不可用,并说出原因;
- *   - 文明色只出现在当前项上:3px 左标(`--color-metal`,v4 2026-11-06)+ 8% main 混进 surface-1 的底;
+ *   - 文明色只出现在当前项上:3px 左标(`--color-metal`,v4 2026-11-06)+ `.nav-current` 的底(v4:深色 glow 20%,浅色 card + 阴影);
  *   - 图标按 `menu.icon`(lucide 名)画,不认得就是中性方块,不按路径写死。
  *
  * jsdom 没有排版、没有 matchMedia:宽度靠给 `window.matchMedia` 打桩来说;
@@ -17,8 +17,8 @@ import * as lucide from "lucide-react";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
 const MESSAGES: Record<string, string> = {
-  "nav.expand_menu": "展开菜单",
-  "nav.collapse_menu": "收起菜单",
+  "nav.expand_sidebar": "展开侧栏",
+  "nav.collapse_sidebar": "收起侧栏",
   "nav.collapse_locked": "窗口宽度不足 1200 像素,导航固定收起",
   "judgment.case_number": "案号",
 };
@@ -87,6 +87,7 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 import { AppLayout } from "@/src/components/layout/AppLayout";
 import { BottomBar, GlobalNav, NAV_MODE_KEY } from "@/src/components/layout/GlobalNav";
 import { iconResolver } from "@/src/lib/menuIcons";
+import { navItems, navSections } from "@/src/lib/navSections";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
 import { GlobalSearchPlaceholder } from "@/src/components/layout/GlobalSearchEntry";
@@ -142,12 +143,12 @@ describe("导航模式:≥ 1200 由用户选,并且记住", () => {
   it("默认展开;按钮切到收起,写进 localStorage,再按回到展开", () => {
     renderLayout();
     expect(nav()).not.toHaveAttribute("data-collapsed");
-    expect(toggle()).toHaveAccessibleName("收起菜单");
+    expect(toggle()).toHaveAccessibleName("收起侧栏");
 
     fireEvent.click(toggle());
     expect(nav()).toHaveAttribute("data-collapsed", "true");
     expect(window.localStorage.getItem(NAV_MODE_KEY)).toBe("collapsed");
-    expect(toggle()).toHaveAccessibleName("展开菜单");
+    expect(toggle()).toHaveAccessibleName("展开侧栏");
 
     fireEvent.click(toggle());
     expect(nav()).not.toHaveAttribute("data-collapsed");
@@ -234,17 +235,17 @@ describe("769–1199:强制收起,按钮在而不可用,并说出原因", () => 
 });
 
 describe("文明色只落在当前项上", () => {
-  /** 导航里每个读文明色(`--color-main` 或 v4 的 `--color-metal`)的元素。 */
-  const mainReaders = () => Array.from(nav().querySelectorAll<HTMLElement>("*")).filter((el) => /--color-(main|metal)/.test(el.getAttribute("class") ?? ""));
+  /** 导航里每个带文明色的元素:读 `--color-main` / `--color-metal` / `--color-glow`,或挂 `.nav-current`(v4:深色 glow 20%,浅色 card + 阴影)。 */
+  const mainReaders = () => Array.from(nav().querySelectorAll<HTMLElement>("*")).filter((el) => /--color-(main|metal|glow)|\bnav-current\b/.test(el.getAttribute("class") ?? ""));
 
-  it("展开:恰好两处 —— 当前二级项的 8% 底,和它里面的 3px 左标", () => {
+  it("展开:恰好两处 —— 当前二级项的 `.nav-current` 底(v4),和它里面的 3px 左标", () => {
     render(<Nav />);
     const current = screen.getByRole("link", { name: "菜单" });
     expect(current).toHaveAttribute("aria-current", "page");
     const mark = within(current).getByTestId("nav-current-mark");
 
     expect(mainReaders()).toEqual([current, mark]);
-    expect(current.className).toContain("bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]");
+    expect(current.className).toMatch(/(^|\s)nav-current(\s|$)/);
     expect(current.className).toContain("font-semibold");
     expect(current.className).toContain("text-[oklch(var(--color-ink))]");
     expect(mark.className).toContain("w-[3px]");
@@ -253,7 +254,7 @@ describe("文明色只落在当前项上", () => {
     expect(screen.getByRole("button", { name: "系统设置" }).className).not.toContain("--color-main");
     expect(screen.getByRole("link", { name: "Sekhem Tepy Em Djeret" }).className).not.toContain("--color-main");
     expect(nav().className).not.toContain("--color-main");
-    expect(nav().className).toContain("bg-[oklch(var(--color-surface-1))]");
+    expect(nav().className).toContain("bg-[oklch(var(--color-side))]");
   });
 
   it("收起:子项藏起来了,当前态落在它那一组的图标上 —— 仍然只有底与左标两处", () => {
@@ -275,7 +276,7 @@ describe("文明色只落在当前项上", () => {
     expect(current).toHaveAttribute("aria-current", "page");
     expect(current.className).toContain("font-semibold");
     expect(current.className).toContain("text-[oklch(var(--color-ink))]");
-    expect(current.className).toContain("bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]");
+    expect(current.className).toMatch(/(^|\s)nav-current(\s|$)/);
     expect(current.className).not.toContain("text-[oklch(var(--color-main))]");
     const marks = within(bar).getAllByTestId("bar-current-mark");
     expect(marks).toHaveLength(1);
@@ -531,6 +532,107 @@ describe("品牌位(A9 §一):天平标加「灵魂簿」,文明印不在导航�
     render(<Nav collapsed />);
     expect(brand().textContent).toBe("");
     expect(within(brand()).getByRole("img", { name: "灵魂簿" })).toBeInTheDocument();
+  });
+});
+
+// 规范 v4 第七批 S01(用户 2026-11-06「照定稿」):三组菜单、殿司卡、侧栏里的搜索入口、⌘\。
+describe("v4 侧栏:工作 / 灵魂 / 系统 三组", () => {
+  const sectionIds = () => Array.from(nav().querySelectorAll("[data-nav-section]")).map((s) => s.getAttribute("data-nav-section"));
+
+  it("一级项按组排,组名来自 nav.group.*;空组不画", () => {
+    render(<Nav />);
+    expect(sectionIds()).toEqual(["work", "souls", "system"]);
+    const work = nav().querySelector('[data-nav-section="work"]') as HTMLElement;
+    expect(work).toHaveAccessibleName("nav.group.work");
+    expect(within(work).getByRole("link", { name: "概览" })).toBeInTheDocument();
+    const system = nav().querySelector('[data-nav-section="system"]') as HTMLElement;
+    expect(within(system).getByRole("button", { name: "系统设置" })).toBeInTheDocument();
+    expect(within(system).getByRole("button", { name: "审计" })).toBeInTheDocument();
+    // Absence: 灵魂 is not in 工作.
+    expect(within(work).queryByRole("link", { name: "灵魂" })).toBeNull();
+  });
+
+  it("navSections:「概览」「灵魂业务」两个目录拆开,审判类页面进「工作」;其余目录仍是一项;认不出的目录落「系统」", () => {
+    const tree = [
+      menu({ id: 1, name: "概览", path: "", menu_type: "DIRECTORY", children: [menu({ id: 11, name: "仪表盘", path: "/dashboard" })] }),
+      menu({
+        id: 2,
+        name: "灵魂业务",
+        path: "",
+        menu_type: "DIRECTORY",
+        children: [
+          menu({ id: 21, name: "灵魂管理", path: "/souls" }),
+          menu({ id: 22, name: "审判队列", path: "/judgment" }),
+          menu({ id: 23, name: "申诉复核", path: "/judgment/appeals" }),
+          menu({ id: 24, name: "功德管理", path: "/ledger" }),
+        ],
+      }),
+      menu({ id: 3, name: "轮回", path: "", menu_type: "DIRECTORY", children: [menu({ id: 31, name: "处置", path: "/disposition" })] }),
+      menu({ id: 4, name: "流程协作", path: "", menu_type: "DIRECTORY", children: [menu({ id: 41, name: "审批流程", path: "/workflow" })] }),
+      menu({ id: 5, name: "管理员新建的组", path: "", menu_type: "DIRECTORY", children: [] }),
+    ];
+    const ids = navSections(tree).map((s) => [s.id, s.items.map((m) => m.id)]);
+    expect(ids).toEqual([
+      ["work", [11, 22, 23]],
+      ["souls", [21, 24, 3]],
+      ["system", [4, 5]],
+    ]);
+    // Absence: the two flattened directories are not items themselves.
+    expect(navItems(tree).map((m) => m.id)).not.toContain(1);
+    expect(navItems(tree).map((m) => m.id)).not.toContain(2);
+  });
+
+  it("收起时组名只给读屏(sr-only),组仍有名字", () => {
+    render(<Nav collapsed />);
+    const heading = document.getElementById("nav-section-system") as HTMLElement;
+    expect(heading.className).toMatch(/(^|\s)sr-only(\s|$)/);
+    expect(nav().querySelector('[data-nav-section="system"]')).toHaveAccessibleName("nav.group.system");
+  });
+});
+
+describe("v4 收起按钮在侧栏里,⌘\\ 与 [ 同一个开关", () => {
+  beforeEach(() => setViewport(1440));
+
+  it("按钮在侧栏(不在工具条);⌘\\ 与 Ctrl \\ 切换,在输入框里也接;单按 \\ 不算", () => {
+    const { container } = renderLayout();
+    expect(nav()).toContainElement(toggle());
+    expect(screen.getByTestId("global-topbar")).not.toContainElement(toggle());
+    fireEvent.keyDown(document.body, { key: "\\", metaKey: true });
+    expect(nav()).toHaveAttribute("data-collapsed", "true");
+    const input = document.createElement("input");
+    container.appendChild(input);
+    fireEvent.keyDown(input, { key: "\\", ctrlKey: true });
+    expect(nav()).not.toHaveAttribute("data-collapsed");
+    fireEvent.keyDown(document.body, { key: "\\" });
+    expect(nav()).not.toHaveAttribute("data-collapsed");
+  });
+});
+
+describe("v4 殿司卡与搜索入口", () => {
+  afterEach(() => {
+    mockUser = null;
+  });
+  const user = { username: "yama", display_name: "阎罗", role: "ADMIN" as const };
+
+  it("菜单里没有「各殿概况」(/halls):殿司卡只是一张卡,不是链接", () => {
+    render(<GlobalNav menus={MENUS} allMenuPaths={ALL_PATHS} currentId={null} openId={null} onToggle={() => {}} collapsed={false} user={user} />);
+    expect(screen.getByTestId("hall-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("hall-switch")).toBeNull();
+  });
+
+  it("有 /halls(全局管理员):殿司卡是去 /halls 的链接,名字是 shell.hall_switch", () => {
+    const withHalls = [...MENUS, menu({ id: 9, name: "全局", path: "", menu_type: "DIRECTORY", children: [menu({ id: 10, name: "各殿概况", path: "/halls" })] })];
+    render(<GlobalNav menus={withHalls} allMenuPaths={[...ALL_PATHS, "/halls"]} currentId={null} openId={null} onToggle={() => {}} collapsed={false} user={user} />);
+    const link = screen.getByTestId("hall-switch");
+    expect(link).toHaveAttribute("href", "/halls");
+    expect(link).toHaveAttribute("title", "shell.hall_switch");
+  });
+
+  it("侧栏的「搜索、跳转、下指令」打开同一个命令面板", async () => {
+    mockUser = user;
+    renderLayout();
+    fireEvent.click(screen.getByTestId("nav-search-hint"));
+    expect(await screen.findByRole("dialog", { name: "search.dialog_label" })).toBeInTheDocument();
   });
 });
 
