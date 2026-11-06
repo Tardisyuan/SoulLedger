@@ -76,6 +76,7 @@ export function Landing({
               <CivCard key={civ} civ={civ} onEnter={onEnter} />
             ))}
           </ul>
+          <ConsolePreview />
           {secondary}
         </section>
 
@@ -146,6 +147,37 @@ function CivCard({ civ, onEnter }: { civ: string; onEnter?: (skin: SealCiv, card
         </Link>
       )}
     </li>
+  );
+}
+
+/**
+ * 「进去之后是这样」(v4 第八批落地页,`landing.preview_label`):卡片下面一张控制台缩略图,定稿只在手机宽度画(≥ md 时首屏
+ * 本来就是四张卡,这一块不出现)。静态图,不是缩小渲染的组件 —— 不为落地页多拉一整套控制台的代码与数据。
+ * 图是演示站的地府判官概览(1280 × 772,去掉演示横幅那一条,深浅各一张,`public/v4/console-preview-*.jpg`);按主题只显示一张,
+ * `loading="lazy"` + `display: none` 的那张浏览器不取(globals.css 与 `.v4-emblem` 同一条规则)。
+ * 演示站改版后要重截:截法写在提交信息里。
+ */
+function ConsolePreview() {
+  const { t } = useI18n();
+  return (
+    <figure data-testid="landing-preview" className="m-0 mt-6 md:hidden">
+      <figcaption className="mb-2 text-xs text-[oklch(var(--color-ink-muted))]">{t("landing.preview_label")}</figcaption>
+      <div className="h-55 overflow-hidden rounded-panel border border-[oklch(var(--color-line))]">
+        {(["light", "dark"] as const).map((theme) => (
+          <img
+            key={theme}
+            src={`/v4/console-preview-${theme}.jpg`}
+            data-theme={theme}
+            alt=""
+            width={1280}
+            height={772}
+            loading="lazy"
+            decoding="async"
+            className="v4-themed block h-full w-full object-cover object-left-top"
+          />
+        ))}
+      </div>
+    </figure>
   );
 }
 
