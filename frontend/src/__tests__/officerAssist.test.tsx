@@ -354,7 +354,7 @@ describe("the four notices (1f)", () => {
     scripts.push(refuse(503, { detail: "本殿尚未开通助手。", code: "assistant_not_configured" }));
     await openAndAsk();
     expect(await screen.findByText("本殿还没有开通问一问")).toBeInTheDocument();
-    expect(screen.getByText(/询问本殿殿主或管理员/)).toBeInTheDocument();
+    expect(screen.getByText(/有问题请问管理员/)).toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId("officer-assist-panel")).getByRole("button", { name: "关闭" }));
     await waitFor(() => expect(screen.queryByTestId("officer-assist-entry")).not.toBeInTheDocument());
     // ⌘J does not bring it back either.
@@ -393,10 +393,10 @@ describe("the four notices (1f)", () => {
     expect(screen.queryByTestId("officer-assist-interrupted")).not.toBeInTheDocument();
   });
 
-  it("④ the fixed empty answer shows 「ask your lead」; a normal answer does not", async () => {
+  it("④ the fixed empty answer shows 「ask the administrator」 (batch 12); a normal answer does not", async () => {
     scripts.push(reply(OFFICER_EMPTY_ANSWER["zh-Hans"]), reply("你的队列有 3 件。"));
     await openAndAsk();
-    expect(await screen.findByTestId("officer-assist-ask-lead")).toHaveTextContent("这类问题请询问本殿殿主或管理员。");
+    expect(await screen.findByTestId("officer-assist-ask-lead")).toHaveTextContent("这类问题请问管理员。");
     // No letters / inbox / help link: the console has none to offer.
     expect(within(screen.getByTestId("officer-assist-panel")).queryByRole("link")).not.toBeInTheDocument();
 
