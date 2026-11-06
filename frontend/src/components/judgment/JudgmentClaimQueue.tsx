@@ -454,7 +454,9 @@ export function JudgmentClaimQueue({
    */
   const deadlineOf = (j: Judgment): { text: string; over: boolean } => {
     const left = j.deadline_remaining_seconds;
-    if (left == null || j.deferred_at) return { text: t("queue.deadline.none"), over: false };
+    // 候审中(枉死城 / 防腐到某天、到不了殿、过不了阿刻戎)还不能认领:期限从可认领那天才起算,
+    // 此刻剩下的天数是「候审 + 期限」(真机上 held_until 在 2056 年显示过「10956 日」),不是这一殿的期限。写「不计」。
+    if (left == null || j.deferred_at || onHold(j)) return { text: t("queue.deadline.none"), over: false };
     if (left < 0) return { text: t("queue.deadline.over", { n: String(Math.ceil(-left / DAY_SECONDS)) }), over: true };
     return { text: t("queue.deadline.days", { n: String(Math.ceil(left / DAY_SECONDS)) }), over: false };
   };
