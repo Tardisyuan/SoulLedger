@@ -290,8 +290,11 @@ class TestReassign:
 class TestDefer:
     def test_a_reason_is_required(self, world):
         case = _case(world.cn)
-        assert _post(world.clients["a"], case, "defer", {}).status_code == 400
-        assert _post(world.clients["a"], case, "defer", {"reason": "   "}).status_code == 400
+        for body in ({}, {"reason": "   "}):
+            response = _post(world.clients["a"], case, "defer", body)
+            assert response.status_code == 400
+            # v4 D5:按住后弹理由框,框里读的是这个码(变异:视图不再改写成 `defer_reason_required` → 红)。
+            assert response.data["code"] == "defer_reason_required"
         assert _fresh(case).deferred_at is None
 
     def test_the_reason_fits_the_column(self, world):
@@ -602,17 +605,21 @@ class TestQueueList:
     def test_counts(self, world, four_groups):
         response = world.clients["a"].get(f"{BASE}queue-counts/")
         assert response.status_code == 200
-        assert response.data == {"mine": 1, "unclaimed": 1, "others": 1, "deferred": 1, "total": 4}
+        assert response.data == {"mine": 1, "unclaimed": 1, "others": 1, "deferred": 1, "total": 4,
+                                 "overdue": 0, "returned": 0}
 
     def test_counts_follow_court_and_search_and_ignore_group(self, world, four_groups):
         by_court = world.clients["a"].get(f"{BASE}queue-counts/", {"court": "第一殿", "group": "mine"})
-        assert by_court.data == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3}
+        assert by_court.data == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
+                                 "overdue": 0, "returned": 0}
         by_name = world.clients["a"].get(f"{BASE}queue-counts/", {"search": "无人"})
-        assert by_name.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1}
+        assert by_name.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
+                                "overdue": 0, "returned": 0}
 
     def test_counts_are_tenant_scoped(self, world, four_groups):
         eu = world.clients["eu_judge"].get(f"{BASE}queue-counts/")
-        assert eu.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1}
+        assert eu.data == {"mine": 0, "unclaimed": 1, "others": 0, "deferred": 0, "total": 1,
+                           "overdue": 0, "returned": 0}
 
     def test_courts_lists_every_court_in_scope_with_pending_counts(self, world, four_groups):
         # 第一殿:mine / others / deferred 三件未结 + 一件已结;第二殿:一件。另一租户的第一殿不算。
@@ -653,7 +660,8 @@ class TestQueueList:
         }
         assert _ids(client.get(BASE, {"group": "unclaimed", "civilization": "CHINESE"})) == set()
         counts = client.get(f"{BASE}queue-counts/", {"civilization": "CHINESE"}).data
-        assert counts == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3}
+        assert counts == {"mine": 1, "unclaimed": 0, "others": 1, "deferred": 1, "total": 3,
+                          "overdue": 0, "returned": 0}
         # 另一租户的欧洲案子不因文明筛选漏进来。
         assert str(four_groups["foreign"].pk) not in _ids(client.get(BASE, {"civilization": "EUROPEAN"}))
 

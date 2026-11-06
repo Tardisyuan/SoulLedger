@@ -193,6 +193,10 @@ class JudgmentConclusionService:
         eternal=None,
         by=None,
         skip_node_orders=(),
+        fail_reasons=(),
+        fail_reason_note="",
+        greek_account="",
+        greek_curability="",
     ) -> bool:
         """
         Execute the full judgment conclusion saga.
@@ -219,6 +223,11 @@ class JudgmentConclusionService:
         judgment still open (PROPOSED / ACTIVE) concludes WITH an approval workflow, which merges that bench; an
         explicit False is refused (400 `workflow_required`). `skip_node_orders` are the stations of this realm's
         flow the judge unticked (W-1); the final review cannot be one of them.
+
+        `fail_reasons` / `fail_reason_note` / `greek_account` / `greek_curability` (v4 D6 / D8 / D7): the reasons
+        of a FAILED verdict and the Greek stamp, checked and written by `apps/judgment/fail_reasons.py`. Required
+        when an officer concludes an original case (`by` given); refused when they do not fit, before anything is
+        written. A Greek INCURABLE goes to Tartarus for ever (Grg. 525b-c, 526b-c; Rep. 615c-616a).
         """
         from apps.sentence_plan.services import CrossJudgmentOpenError, SentencePlanService
 
@@ -326,6 +335,25 @@ class JudgmentConclusionService:
             from apps.judgment.models import refuse_passed_if_five_heinous
             refuse_passed_if_five_heinous(judgment, verdict)
 
+            from apps.judgment import fail_reasons as reasons_rule
+            from apps.judgment.models import GreekCurability, Verdict
+
+            # 不可医者永罚于塔尔塔罗斯(Grg. 525b-c、526b-c;Rep. 615c-616a):去处与「永久」由标记定,判官的
+            # 「戊 · 发落」只能确认它 —— 换了门、写了年数、或明说不永久,都拒。
+            if greek_curability == GreekCurability.INCURABLE and verdict == Verdict.FAILED:
+                from apps.disposition.destination import DestinationRefusedError
+                from apps.disposition.services import DispositionService
+                from apps.realms.models import realm_by_code
+
+                tartarus = realm_by_code(DispositionService.GR_TARTARUS, tenant_id=judgment.tenant_id)
+                if (term_years is not None or eternal is False
+                        or (destination_realm_id is not None
+                            and (tartarus is None or str(destination_realm_id) != str(tartarus.pk)))):
+                    raise DestinationRefusedError(
+                        "An incurable soul is cast into Tartarus for ever; no other door or term",
+                        "incurable_is_eternal_in_tartarus")
+                destination_realm_id = term_years = eternal = None  # 自动路由:塔尔塔罗斯,永久(create_from_judgment)
+
             # 原审一律走审批流程(用户 2026-10-29,四文明):处置等流程 COMPLETED 才执行
             # (`weighing.unfinished_flow`),流程驳回就撤回处置、重开一案(`weighing.reweigh_after_rejection`)。
             # 埃及那条是称心流程(docs/02 §2.1、§5.1–5.2)。再审(天平摇摆、`hears_again`)和早夭直入芦苇原
@@ -360,6 +388,13 @@ class JudgmentConclusionService:
                     term_years=term_years, eternal=eternal,
                 )
 
+            # 「不过」的理由与希腊的标记(v4 D6 / D7 / D8):经接口结原审时必填,给了就校验。写入之前、别的拒绝之后 ——
+            # 去处、联审、天平这些拒绝照旧先答,缺理由的提示只在其余都成立时出现。
+            reasons_rule.check(
+                judgment, verdict, civilization, reasons=fail_reasons, note=fail_reason_note,
+                account=greek_account, curability=greek_curability,
+                required=by is not None and judgment.kind == JudgmentKind.ORIGINAL)
+
             # Step 0: Grounds, before the verdict they explain.
             if statute_ids:
                 StatuteCitationService.cite_many(judgment, statute_ids)
@@ -369,6 +404,11 @@ class JudgmentConclusionService:
             judgment.notes = notes
             judgment.is_final = True
             judgment.concluded_at = timezone.now()
+            # 文书时辰按所在殿的时区写死(v4 D12):存下落印那一刻的时区名。
+            judgment.concluded_tz = judgment.tenant.hall_timezone if judgment.tenant_id is not None else "UTC"
+            # 理由与希腊的标记;地府选的罪目同时写回 `offence`,下面的自动选殿读的就是它。
+            reasons_rule.apply(judgment, verdict, civilization, reasons=fail_reasons, note=fail_reason_note,
+                               account=greek_account, curability=greek_curability)
             # 落判的人:申诉复核排除他(apps/judgment/appeals.py)。进程内调用(by=None)不记。
             if getattr(by, "pk", None) is not None:
                 judgment.concluded_by = by

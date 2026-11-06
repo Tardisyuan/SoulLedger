@@ -945,7 +945,7 @@ class TestConcludeDestinationCapacityHoldsTheRealmLock:
         with patch.object(destination, "resolve_placement", spy):
             response = client.post(
                 f"/api/v1/judgment/{case.id}/conclude/",
-                {"verdict": "FAILED", "destination_realm_id": str(realm.pk)}, format="json",
+                {"verdict": "FAILED", "destination_realm_id": str(realm.pk), "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
             )
         assert response.status_code == 200, response.data
         assert seen == [True], f"resolve_placement ran with in_atomic_block={seen}"
@@ -986,7 +986,7 @@ class TestConcludeDestinationCapacityHoldsTheRealmLock:
                     assert a_inside.wait(timeout=10), "A never passed the capacity check"
                 response = clients[label].post(
                     f"/api/v1/judgment/{by_label[label].id}/conclude/",
-                    {"verdict": "FAILED", "destination_realm_id": str(realm.pk)}, format="json",
+                    {"verdict": "FAILED", "destination_realm_id": str(realm.pk), "fail_reasons": ["OTHER"], "fail_reason_note": "测"}, format="json",
                 )
                 results[label] = response.status_code
                 codes[label] = response.data.get("code")
@@ -1041,7 +1041,7 @@ class TestConcludeRechecksUnderTheLock:
             try:
                 if label == "b":
                     assert a_inside.wait(timeout=10), "A never took the lock"
-                response = clients[label].post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED"},
+                response = clients[label].post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测"},
                                                format="json")
                 results[label] = response.status_code
                 codes[label] = response.data.get("code")

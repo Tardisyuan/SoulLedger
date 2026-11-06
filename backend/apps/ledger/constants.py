@@ -122,16 +122,15 @@ INHERITANCE_DEMERIT = 1.0
 # what ordinarily happens to a Greek soul and the set says so. Gorgias 525c
 # states an exception in the other direction — those whose wrongs are incurable
 # (ἀνίατοι) are made everlasting examples instead — and the owner's ruling is
-# that both hold. The exception is not encoded anywhere, here or in
-# `DispositionService._route_greek`, because Plato's criterion is curability
-# and nothing in this system records anything that bears on it; see that
-# method's docstring, and tests/test_greek_sentence_basis.py, which pins the
-# gap as a contradiction rather than letting a threshold be invented for it.
+# that both hold. Since 2026-11-06 (v4 D7) the exception is encoded per soul,
+# not here: the judge stamps the soul curable or incurable at conclusion
+# (Gorgias 526b-c; `Judgment.greek_curability`), and an INCURABLE stamp makes
+# that soul's disposition eternal (`DispositionService.create_from_judgment`),
+# which `execute` already reads as "no next life" (SETTLED).
 #
-# For the same reason GREEK is deliberately absent from
-# TERMINAL_COSMOLOGY_REASON below: a cosmology cannot be in both, the norm is
-# rebirth, and half an entry covering only the incurable would describe a
-# population this system cannot pick out.
+# GREEK stays absent from TERMINAL_COSMOLOGY_REASON below: a cosmology cannot
+# be in both, the norm is rebirth, and the incurable are stopped by their own
+# eternal disposition, not by a rule about the whole cosmology.
 REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE, Civilization.GREEK})
 
 # Cosmologies whose routing is bound by 「功過有不可折者」.

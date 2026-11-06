@@ -93,7 +93,7 @@ def _occupy(realm, tenant, n=1):
 
 
 def _conclude(client, case, **body):
-    return client.post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED", **body}, format="json")
+    return client.post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测", **body}, format="json")
 
 
 def _nothing_written(case):
@@ -350,7 +350,8 @@ def test_not_applicable_is_the_rest_of_the_tenants_realms_and_conclude_refuses_t
     assert allowed | rest == everything and everything
     refused = cn_judge.post(
         f"/api/v1/judgment/{case.id}/conclude/",
-        {"verdict": "FAILED", "notes": "", "destination_realm_id": str(cn_realms["heaven"].pk)}, format="json",
+        {"verdict": "FAILED", "notes": "", "fail_reasons": ["OTHER"], "fail_reason_note": "测",
+         "destination_realm_id": str(cn_realms["heaven"].pk)}, format="json",
     )
     assert refused.data["code"] == "realm_not_allowed", refused.data
 

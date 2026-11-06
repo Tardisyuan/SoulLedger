@@ -19,6 +19,8 @@
 信号,每次认领 / 释放 / 改派 / 暂缓都留下一行带前后值的 AuditLog;后者不经信号,
 历史就没了。结案不碰这几列,所以已结案的案子仍带着最后的认领人。
 """
+from datetime import timedelta
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException
@@ -283,10 +285,12 @@ def _apply_undefer(judgment: Judgment, user, may_override: bool) -> None:
     if judgment.deferred_at is None:
         raise ClaimRefusedError("This judgment is not deferred.", "not_deferred")
     _assert_may_act_on(judgment, user, may_override)
+    # 待定期间不计期限(v4 D10,`apps/judgment/deadline.py`):这一段加进已结束的待定时长。
+    judgment.deferred_total += max(timezone.now() - judgment.deferred_at, timedelta(0))
     judgment.deferred_at = None
     judgment.deferred_by = None
     judgment.defer_reason = ""
-    _save(judgment, "deferred_at", "deferred_by", "defer_reason")
+    _save(judgment, "deferred_at", "deferred_by", "defer_reason", "deferred_total")
 
 
 # ---------------------------------------------------------------------------

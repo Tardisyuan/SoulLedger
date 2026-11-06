@@ -3,7 +3,7 @@ Disposition service — creates disposition from judgment verdict.
 Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition, MemoryResetMechanism
-from apps.judgment.models import OFFENCE_COURT, Judgment, JudgmentMethod, Verdict, case_civilization
+from apps.judgment.models import OFFENCE_COURT, GreekCurability, Judgment, JudgmentMethod, Verdict, case_civilization
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.souls.models import Civilization, Soul
 
@@ -182,6 +182,10 @@ class DispositionService:
             realm = cls.route_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
         if is_eternal is None:
             is_eternal = realm.is_eternal if realm else False
+        # 希腊判官加上「不可医」的标记(v4 D7,Grg. 526b-c):永远的儆戒(525b-c),出口不纳(Rep. 615c-616a)。
+        # 同一个塔尔塔罗斯收两种人,永久属于这个灵魂而不属于那个地方,所以落在处置上、不改界域。
+        if getattr(judgment, "greek_curability", "") == GreekCurability.INCURABLE and verdict == Verdict.FAILED:
+            is_eternal = True
         # 没写刑期的按界域的默认刑期(用户 2026-10-29;表与出处见 `default_terms`),判官可改。
         from apps.disposition.default_terms import fill
         sentence_years = fill(sentence_years, realm.realm_code if realm else "", is_eternal=is_eternal)
@@ -765,35 +769,40 @@ class DispositionService:
         over Minos to appeal to. `tests/test_workflow_appeal_nodes.py` records
         the same absence from the workflow side.
 
-        THE INCURABLE (ἀνίατοι) ARE NOT ROUTED, BECAUSE THEY CANNOT BE
-        IDENTIFIED. Gorgias 525c makes those whose wrongs are incurable
-        everlasting examples in Hades, while Republic X 615a-b sentences the
-        unjust to a thousand-year circuit and then sends them back to choose a
-        new life (617d-620d). The owner's ruling is that both hold: rebirth is
-        the norm and the incurable are the exception. Only the norm is
-        implemented, and the exception is left unrouted rather than
-        approximated, because Plato's criterion is *curability* — whether
-        punishment can still benefit the soul — and this system records nothing
-        that bears on it. `Soul` carries `merit_score` and `demerit_score` and
-        no other moral field; `RecordCategory` is a 功過格 vocabulary (see
-        apps/ledger/fungibility.py) with no member for incorrigibility;
-        `Judgment` has free-form notes and a citation to a `Statute`. There is
-        no number here that means 「beyond help」, and manufacturing one — a
-        demerit threshold, a record count — would be inventing the classifier,
-        which is the one repair `docs/lore-verification/README.md` §1 rules out
-        for exactly this kind of material. So every FAILED Greek soul takes the
-        same road, and how far along it stops is a question this system does not
-        answer. `tests/test_greek_sentence_basis.py` pins that as a
-        contradiction, the way `tests/test_european_hell_basis.py` pins Dante's.
+        THE INCURABLE (ἀνίατοι) TAKE THE SAME ROAD, AND STAY (v4 D7, user
+        2026-11-06). Both dialogues say the incurable are punished for ever:
+        Gorgias 525b-c makes them everlasting examples who no longer benefit,
+        Republic X 615c-616a has the mouth roar and refuse them, and they are
+        cast into Tartarus (docs/02_希腊冥府审判与人物详解.md:183, :221; the
+        comparison table at :252, 「永罚 | 不可医者 | 不可医者(同)」). The
+        curable serve Republic X's thousand-year circuit and choose a new life
+        (615a-b, 617d-620d) — the norm, unchanged.
+
+        This supersedes the paragraph that stood here until 2026-11-06, 「THE
+        INCURABLE ARE NOT ROUTED, BECAUSE THEY CANNOT BE IDENTIFIED」. Its
+        premise was that nothing in this system bears on curability, and that a
+        demerit threshold standing in for it would be the invented classifier
+        `docs/lore-verification/README.md` §1 rules out. That premise no longer
+        holds, and the classifier is still not invented: Gorgias 526b-c has the
+        judge himself look at the soul and 「set a mark on it, curable or
+        incurable」 (docs/02:185), and that is now what happens —
+        `Judgment.greek_curability`, stamped by the officer at conclusion
+        (`apps/judgment/fail_reasons.py`), not derived from any score. So the
+        road is still one road (524a: no depth, nothing to grade); what the
+        mark decides is whether the soul comes back along it.
+        `create_from_judgment` writes it as `Disposition.is_eternal=True` — on
+        the soul's disposition, not on the realm: the same Tartarus holds both
+        kinds, so the everlastingness belongs to the soul (525c), and the
+        realm's `is_eternal` stays False for the norm.
+        `tests/test_greek_sentence_basis.py` pins both halves.
         """
         if verdict == Verdict.PASSED:
             return cls.GR_ISLES
         if verdict == Verdict.FAILED:
-            # Tartarus for everyone the judges send left, with no attempt to
-            # tell the curable from the incurable — see the docstring. The
-            # realm's `is_eternal` is False, which now carries Republic X's
-            # term-served norm rather than merely declining to assert
-            # perpetuity; the exception 525c states has no column to live in.
+            # Tartarus for everyone the judges send left, curable or not — the
+            # mark decides how long, not where (see the docstring). The realm's
+            # `is_eternal` is False, the Republic X norm; an INCURABLE mark makes
+            # the disposition eternal in `create_from_judgment`.
             return cls.GR_TARTARUS
         # PURGATORY and RETRY: no road taken yet, so the soul is still on the
         # ground the judging happens on. Not a third destination.
