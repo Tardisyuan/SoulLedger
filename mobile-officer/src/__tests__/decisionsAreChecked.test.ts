@@ -4,7 +4,8 @@
  * served called their APIs directly, and an officer with the switch on concluded a case without the phone asking.
  *
  * Read from source, not imported: a call site written any other way is red here, with its file and line.
- * The low-level approve / reject calls live only in decisions.ts, inside `submitDecision` -- which is itself a decision.
+ * The low-level approve / reject calls live only in decisions.ts, inside `submitDecision` -- which is itself a decision --
+ * and so does `judgmentApi.conclude`, inside `submitVerdict` (the swipe judgment, v4 S09).
  * NOT decisions (they never ask, by design, deviceCheck.ts): comments, co-sign, claim, 放回 (`judgmentApi.release`
  * gives a claimed case back to the queue), defer / undefer, reassign, letters.
  */
@@ -12,8 +13,8 @@ import { readdirSync, readFileSync, statSync } from "fs";
 import { join, relative } from "path";
 
 const SRC = join(__dirname, "..");
-const DECISION = /\b(submitDecision|decideGrievance|dispositionApi\s*\.\s*release|sendOn|returnCase)\s*\(/g;
-const LOW_LEVEL = /\b(approveNode|approveCooldownShortening|rejectCooldownShortening|decideCrossCivilization|dispatchApi\s*\.\s*(approve|reject))\s*\(/g;
+const DECISION = /\b(submitDecision|submitVerdict|decideGrievance|dispositionApi\s*\.\s*release|sendOn|returnCase)\s*\(/g;
+const LOW_LEVEL = /\b(judgmentApi\s*\.\s*conclude|approveNode|approveCooldownShortening|rejectCooldownShortening|decideCrossCivilization|dispatchApi\s*\.\s*(approve|reject))\s*\(/g;
 const WRAP = 'confirmedDecision(t("officer_app.biometric.prompt"), () =>';
 
 function sources(dir: string): string[] {
@@ -43,7 +44,7 @@ const texts = files.map((f) => [relative(SRC, f), readFileSync(f, "utf8")] as co
 it("every decision call site goes through confirmedDecision", () => {
   const sites = texts.filter(([f]) => f !== "decisions.ts").flatMap(([f, s]) => [...s.matchAll(DECISION)].map(() => f));
   // Not vacuous: the scan still finds the four screens that send decisions.
-  expect(new Set(sites)).toEqual(new Set(["screens/sheets.tsx", "screens/wangsi.tsx", "screens/servingFact.tsx", "screens/cityGod.tsx"]));
+  expect(new Set(sites)).toEqual(new Set(["screens/sheets.tsx", "screens/wangsi.tsx", "screens/servingFact.tsx", "screens/cityGod.tsx", "screens/swipe.tsx"]));
   expect(sites.length).toBeGreaterThanOrEqual(5);
   expect(texts.flatMap(([f, s]) => unchecked(f, s))).toEqual([]);
 });
