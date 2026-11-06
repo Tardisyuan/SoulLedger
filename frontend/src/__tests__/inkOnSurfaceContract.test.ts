@@ -184,6 +184,36 @@ describe("渲染后的对比度(指示条 / 身份带 / 主按钮,四文明 × �
   });
 });
 
+/* ── 失败实底(危险按钮)· v4 neg / onNeg,用户 2026-11-06,与 App 一致 ──────────────────────
+ * 深色浅红 #F2849B 配深字 #16171A,浅色 #A81E3C 配白字。悬停 / 按下是 88% / 76% 混进 `--danger-shade`
+ * (深色 white、浅色 black,Button.tsx):深色若照旧往黑调,按下那一档只剩 3.70:1。 */
+const DANGER_SHADE: Record<ThemeName, string> = { dark: "1 0 0", light: "0 0 0" };
+/** `color-mix(in oklab, a p%, b)` 的明度 / a / b 线性插值,与浏览器一致。 */
+const mixOklabTriple = (a: string, b: string, p: number): Rgb => {
+  const lab = (t: string) => {
+    const [L, C, H] = t.trim().split(/\s+/).map(Number);
+    return [L, C * Math.cos((H * Math.PI) / 180), C * Math.sin((H * Math.PI) / 180)];
+  };
+  const [x, y] = [lab(a), lab(b)];
+  const [L, A, B] = [0, 1, 2].map((i) => p * x[i] + (1 - p) * y[i]);
+  const C = Math.hypot(A, B);
+  const H = C < 1e-9 ? 0 : (((Math.atan2(B, A) * 180) / Math.PI) + 360) % 360;
+  return oklchTripleToRgb(`${L.toFixed(6)} ${C.toFixed(6)} ${H.toFixed(4)}`);
+};
+
+describe("失败实底上的字(危险按钮静息 / 悬停 / 按下,两主题)", () => {
+  it("--danger-shade 两主题的值就是这里量的那两个", () => {
+    const shade = (sel: string) => new RegExp(`${sel}\\s*\\{[^}]*--danger-shade:\\s*([^;]+);`).exec(stripCode(CSS))?.[1].trim();
+    expect({ dark: shade(":root"), light: shade("\\.light") }).toEqual({ dark: "white", light: "black" });
+  });
+
+  it.each(THEMES.flatMap((theme) => [1, 0.88, 0.76].map((p) => [theme, p] as const)))("%s · %s ≥ 4.5:1", (theme, p) => {
+    const fill = resolveTriple(TOKENS_BY_THEME[theme], "--color-danger-strong");
+    const bg = p === 1 ? oklchTripleToRgb(fill) : mixOklabTriple(fill, DANGER_SHADE[theme], p);
+    expect(contrastRatio(rgbOf(theme, "--color-on-danger"), bg)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+});
+
 /* ── 源码扫描:规定 1–3 ─────────────────────────────────────────────────── */
 const SOURCE_DIRS = ["app", "src", "lib"].map((d) => path.join(FRONTEND_ROOT, d));
 const sourceFiles = (dir: string): string[] =>
