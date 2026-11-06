@@ -7434,11 +7434,12 @@
       "deferred": "Deferred",
       "empty_title": "No cases in hand",
       "empty_body": "Claim one from Unclaimed.",
-      "desk_only": "Ready for verdict · use the desk",
-      "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk.",
+      "desk_only": "Ready for verdict · conclude it in Swipe to judge",
+      "scope_note": "On the phone you can claim, read, comment, and conclude in Swipe to judge. Choosing a destination and citing articles are done at the desk.",
       "claim": "Claim",
       "claim_failed": "Couldn't claim",
-      "claim_taken": "Someone else claimed it first"
+      "claim_taken": "Someone else claimed it first",
+      "open_swipe": "Swipe to judge"
     },
     "continue_on_desk": "Continue on desktop",
     "search": {

@@ -140,10 +140,13 @@ describe("the other tabs have the same four states", () => {
     expect(await screen.findByTestId("state-denied")).toBeTruthy();
   });
 
-  it("judgments: a row waiting for a verdict says to use the desk", async () => {
-    mockList.mockResolvedValue({ data: { results: [{ id: "j1", case_number: "CN-2026-0007", soul_name: "李白", court: "一殿", is_final: false }] } });
+  it("judgments: a row waiting for a verdict points to 滑卡审判 (v4 S09), and carries its deadline", async () => {
+    mockList.mockResolvedValue({
+      data: { results: [{ id: "j1", case_number: "CN-2026-0007", soul_name: "李白", court: "一殿", is_final: false, deadline_remaining_seconds: -86_400, is_overdue: true }] },
+    });
     renderOfficer(<QueueTab onOpen={() => {}} />);
-    expect(await screen.findByText("◇ 待宣判 · 请在官员台")).toBeTruthy();
+    expect(await screen.findByText("◇ 待宣判 · 可在「滑卡审判」里结案")).toBeTruthy();
+    expect(screen.getByText("◐ 期限 · 超 1 日")).toBeTruthy();
   });
 
   it("judgments: a stale row says 滞留 and why; a fresh one says nothing", async () => {
