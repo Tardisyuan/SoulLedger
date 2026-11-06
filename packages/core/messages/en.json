@@ -2960,6 +2960,32 @@
       "NEUTRAL": "Neutral",
       "ANNIHILATION": "Annihilation"
     },
+    "types_by_civ": {
+      "cn": {
+        "HELL": "Hells",
+        "PURGATORY": "Holding",
+        "BLISS": "Heavens",
+        "NEUTRAL": "Courts"
+      },
+      "eu": {
+        "HELL": "Hell",
+        "PURGATORY": "Purgatory",
+        "BLISS": "Heaven",
+        "NEUTRAL": "Vestibule"
+      },
+      "eg": {
+        "PURGATORY": "The Duat",
+        "BLISS": "Field of Reeds",
+        "NEUTRAL": "Hall of Two Truths",
+        "ANNIHILATION": "Annihilation"
+      },
+      "gr": {
+        "HELL": "Tartarus",
+        "PURGATORY": "The thousand years",
+        "BLISS": "Isles of the Blessed",
+        "NEUTRAL": "The crossing"
+      }
+    },
     "codes": {
       "DY_01_HEAVEN": "天堂",
       "DY_02_YANGLIU": "杨柳宫",
@@ -7961,6 +7987,11 @@
       "used_unlimited": "{{used}} · no limit",
       "full_badge": "Full",
       "full": "{{form}} is full this month ({{used}} of {{limit}}). The soul stays among those awaiting rebirth; try next month or once the limit is raised."
+    },
+    "not_applicable": {
+      "title": "No rebirth in {{civ}}",
+      "body": "Here the road ends with the disposition; no soul is reborn. Rebirth applications exist only in Diyu and Greece.",
+      "back": "Back to the overview"
     }
   },
   "hall_settings": {
