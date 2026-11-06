@@ -9,7 +9,10 @@ import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations"
  *   - 节点 `<g class="node" id=… data-state="walked|current|ahead">`;线 `.edge` 带 `data-from` / `data-to`。
  *     id 是地府站码(`diyuStations.ts`)、界域码(`realms.names`),没有码的用小写短名(`dy-ten-courts`、`gr-death` …)。
  *   - 子格是节点里带 id 的 `<circle>`:十殿 `DY_COURT_xx`、九圈 `EU_HELL_xx`、七台 `EU_PURGATORY_Tn_*`、
- *     `EG_SEVEN_ARRWT-n`、`EG_TWENTYONE_SEBKHET-n`、`gr-millennium-n`。子格没有 `data-state`,改它的 fill / stroke。
+ *     `gr-millennium-n`。子格没有 `data-state`,改它的 fill / stroke。
+ *   - 埃及的七道通路、二十一道门户**没有子格**(第十二批第 4 条):逐门的 `EG_SEVEN_ARRWT-n` /
+ *     `EG_TWENTYONE_SEBKHET-n` 删了,换成一条不分格、没有 id 的拱门装饰带(`path.gates-ornament`),
+ *     随所在大站整体亮暗 —— 门不入行程,系统不逐门记录。当前时外框的脉动圈照整个节点画。
  *   - 图里的颜色是一个样例进度;三种状态的颜色就是图里的颜色 —— 所以调色板**从图里读**(`readPalette`),不另写一份。
  *   - 支线 `class="branch"`;根元素加 `map-hide-branches` 收起。
  *   - 缩放只缩 `#terrain`;`#labels` 只跟着平移(字号不变)。
@@ -62,7 +65,7 @@ const CSS_ESCAPE = (s: string) => s.replace(/["\\]/g, "\\$&");
 
 export const nodesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain g.node[id]"));
 const edgesOf = (svg: Element): Element[] => Array.from(svg.querySelectorAll("#terrain .edge[data-from][data-to]"));
-/** 节点里带 id 的子格(十殿、九圈、七台、各门、千年)。 */
+/** 节点里带 id 的子格(十殿、九圈、七台、千年)。 */
 const cellsOf = (node: Element): Element[] => Array.from(node.querySelectorAll("circle[id]"));
 const isBranch = (el: Element) => el.classList.contains("branch");
 
@@ -235,6 +238,8 @@ export function paintStates(svg: Element, states: MapStates, palette: MapPalette
     node.setAttribute("data-state", to);
     const cells = new Set(cellsOf(node));
     for (const el of [node, ...Array.from(node.querySelectorAll("*"))]) if (!cells.has(el)) recolor(el, from, to, palette);
+    // 门的装饰带:没走时是淡的(样例 0.55),走过 / 当前是实的。颜色由上面的 recolor 换。
+    for (const band of Array.from(node.querySelectorAll(".gates-ornament"))) band.setAttribute("stroke-opacity", to === "ahead" ? "0.55" : "1");
     for (const cell of cells) paintCell(cell, states.cells.get(cell.id) ?? (to === "current" ? "ahead" : to), palette);
   }
   const lit = (id: string) => {
