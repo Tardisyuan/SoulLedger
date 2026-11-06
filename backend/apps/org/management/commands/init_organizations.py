@@ -45,7 +45,7 @@ INITIAL_ORGANIZATIONS = [
     {"name": "城隍体系", "code": "DIYU_CHENGHUANG", "category": "CHINESE", "parent_code": "DIYU"},
     {"name": "土地公", "code": "DIYU_TUDIGONG", "category": "CHINESE", "parent_code": "DIYU"},
 
-    # ========== 欧洲天堂地狱 ==========
+    # ========== 欧洲天堂与地狱 ==========
     {
         "name": "天堂",
         "code": "HEAVEN",

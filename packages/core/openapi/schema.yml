@@ -36418,7 +36418,7 @@ components:
             所属文明体系
 
             * `CHINESE` - 中国地府
-            * `EUROPEAN` - 欧洲天堂地狱
+            * `EUROPEAN` - 欧洲天堂与地狱
             * `EGYPTIAN` - 埃及冥界
             * `GREEK` - 希腊冥界
         parent:
@@ -36449,7 +36449,7 @@ components:
       type: string
       description: |-
         * `CHINESE` - 中国地府
-        * `EUROPEAN` - 欧洲天堂地狱
+        * `EUROPEAN` - 欧洲天堂与地狱
         * `EGYPTIAN` - 埃及冥界
         * `GREEK` - 希腊冥界
     OriginEnum:
@@ -39510,7 +39510,7 @@ components:
             所属文明体系
 
             * `CHINESE` - 中国地府
-            * `EUROPEAN` - 欧洲天堂地狱
+            * `EUROPEAN` - 欧洲天堂与地狱
             * `EGYPTIAN` - 埃及冥界
             * `GREEK` - 希腊冥界
         parent:
