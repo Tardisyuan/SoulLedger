@@ -218,11 +218,11 @@
     "console": "控制台",
     "hero_title": "灵魂账本",
     "hero_subtitle": "跨文明灵魂管理系统",
-    "hero_description": "统一管理中国地府、欧洲天堂地狱、埃及冥界、希腊冥界四大文明体系的灵魂操作系统。",
+    "hero_description": "统一管理中国地府、欧洲天堂与地狱、埃及冥界、希腊冥界四大文明体系的灵魂操作系统。",
     "civilizations_title": "文明体系",
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
+      "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     },
@@ -550,7 +550,7 @@
         "stage_next_life": "下一世",
         "stage_next_life_hint": "待处置与轮回完成后确定",
         "stage_final": "终点",
-        "stage_final_hint": "这里没有转世,处置就是终点"
+        "stage_final_hint": "这里没有转生,处置就是终点"
       },
       "ledger": {
         "not_yet": "未至",
@@ -832,7 +832,7 @@
       "NANZHAN": "南瞻部洲",
       "XINIU": "西牛贺洲",
       "BEIJULU": "北俱卢洲",
-      "help": "这一世生在四大部洲的哪一洲。转世到人道时由转世那一笔改写成下一世的部洲。"
+      "help": "这一世生在四大部洲的哪一洲。转生到人道时由转生那一笔改写成下一世的部洲。"
     },
     "capture": {
       "title": "勾魂",
@@ -1653,7 +1653,7 @@
     },
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
+      "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     },
@@ -2986,8 +2986,8 @@
     "count": "个地域",
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
-      "EGYPTIAN": "埃及杜阿特",
+      "EUROPEAN": "欧洲天堂与地狱",
+      "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     },
     "types": {
@@ -3228,8 +3228,8 @@
     "subtitle": "跨文明组织管理",
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
-      "EGYPTIAN": "埃及杜阿特",
+      "EUROPEAN": "欧洲天堂与地狱",
+      "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界",
       "UNKNOWN": "未归属文明"
     },
@@ -3245,7 +3245,7 @@
     },
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
+      "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     },
@@ -4138,7 +4138,7 @@
         "send_failed": "发送失败（{{error}}），已尝试 {{attempts}} 次",
         "channel": "经 {{channel}} 发送",
         "expired": "初始密码已过期",
-        "voided": "已被重置、灵魂改密或转世作废"
+        "voided": "已被重置、灵魂改密或转生作废"
       },
       "revealed_by": "{{by}} 于 {{time}} 查看",
       "delivered_by": "{{by}} 于 {{time}} 交付",
@@ -4262,7 +4262,7 @@
       "provision_existing": "本世已有账号，未重发密码；如需新密码请重置",
       "reset_queued": "已重置，新密码将发送到联系方式",
       "reset_pending": "已重置；无可用联系方式，新密码已进入待交付列表",
-      "retired_cannot_reset": "该账号已随转世停用，不能重置",
+      "retired_cannot_reset": "该账号已随转生停用，不能重置",
       "soul_alive": "灵魂尚在世，不能开通灵魂账号",
       "soul_not_found": "灵魂不存在",
       "failed": "操作失败，请重试",
@@ -4405,7 +4405,7 @@
     "term_default": "默认 {{n}} 年",
     "release": "期满释放",
     "release_confirm": "确认期满释放？",
-    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就进入轮回中（或终局）。不可撤销。",
+    "release_warning": "记下期满，灵魂离开这一站：受刑计划还有下一站就去下一站，没有就等候转生（或终局）。不可撤销。",
     "release_success": "已期满释放",
     "release_error": {
       "term_not_ended": "期满日还没到，不能释放。",
@@ -4436,16 +4436,16 @@
       "THREE_EVIL_PATHS": "三恶道"
     },
     "error": {
-      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转世。灵魂仍在轮回中。",
-      "plan_in_progress": "{{name}}的受刑计划还没走完，不能转世。",
+      "soup_not_taken": "{{name}}还没饮孟婆汤：地府的灵魂要先饮汤才能转生。灵魂仍在轮回中。",
+      "plan_in_progress": "{{name}}的受刑计划还没走完，不能转生。",
       "eternal_sentence": "{{name}}受的是永久刑期，没有下一世。",
-      "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转世。",
-      "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转世。",
-      "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转世。",
-      "open_judgment": "{{name}}还有未结案的审判，结案或撤案之后才能转世。",
+      "rebirth_not_approved": "{{name}}的转生申请被驳回或还在审批中，不能转生。",
+      "term_not_served": "{{name}}刑期未满（至 {{date}}），期满释放后才能转生。",
+      "disposition_not_executed": "{{name}}还有没执行的处置，执行并期满之后才能转生。",
+      "open_judgment": "{{name}}还有未结案的审判，结案或撤案之后才能转生。",
       "rebirth_form_reason_required": "{{name}}的转生申请所愿是{{form}}；改选别的道要写原因。",
       "rebirth_continent_not_applicable": "四大部洲只在地府的人道：别的道、别的文明不指定部洲。",
-      "origin_flow_open": "{{name}}的原审审批流程还没走完，走完之后才能转世。"
+      "origin_flow_open": "{{name}}的原审审批流程还没走完，走完之后才能转生。"
     },
     "next_continent": "下一世部洲 · 选填",
     "next_continent_same": "同本世",
@@ -4453,7 +4453,7 @@
     "next_continent_unset": "不指定",
     "desired_form": "灵魂所愿：{{form}}",
     "form_reason": "改道原因",
-    "form_reason_hint": "与灵魂所愿不同：写明原因，记入转世记录。"
+    "form_reason_hint": "与灵魂所愿不同：写明原因，记入转生记录。"
   },
   "social": {
     "title": "动态",
@@ -4573,8 +4573,8 @@
       "cooldown_days": "转生申请冷却天数",
       "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;0 到 365,留空用默认 30 天",
       "cooldown_invalid": "请填 0 到 365 之间的整数",
-      "rebirth_quota_title": "转世配额",
-      "rebirth_quota_body": "每道每月最多办几次转世。留空 = 不限。某道满了，灵魂留在「轮回中」候位，下月或调高后再办。",
+      "rebirth_quota_title": "转生配额",
+      "rebirth_quota_body": "每道每月最多办几次转生。留空 = 不限。某道满了，灵魂留在原处等候转生，下月或调高后再办。",
       "rebirth_quota_unlimited": "不限",
       "rebirth_quota_limit_col": "每月上限",
       "rebirth_quota_used_col": "本月已办",
@@ -4655,7 +4655,7 @@
   "tenant": {
     "civilizations": {
       "CHINESE": "中国地府",
-      "EUROPEAN": "欧洲天堂地狱",
+      "EUROPEAN": "欧洲天堂与地狱",
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     }
@@ -5176,7 +5176,7 @@
       "shortening_pending": "已有一份待决的缩短冷却申请",
       "shortening_used": "这段冷却期已申请过一次缩短",
       "desired_form_required": "请先选一个希望转生的形态",
-      "rebirth_form_not_applicable": "你的文明转世不分六道，不用选形态",
+      "rebirth_form_not_applicable": "你的文明转生不分六道，不用选形态",
       "invalid_days": "天数不在可选的范围内。"
     },
     "lexicon": {
@@ -5483,7 +5483,7 @@
       },
       "post": {
         "title": "帖子",
-        "reborn": "已转世",
+        "reborn": "已转生",
         "pending": "待审 · 仅你可见",
         "pending_note": "含有需要人工确认的词，审核通过后他人才能看到。你无需做什么。",
         "hidden": "已隐藏 · 他人不可见",
@@ -5530,7 +5530,7 @@
         "mutual": "互相关注",
         "follows_you": "关注了你",
         "more_hint": "关注之后可能看到更多——有的帖子只给关注者看。",
-        "reborn": "已转世",
+        "reborn": "已转生",
         "reborn_body": "此世已止。帖子封存只读，不能再关注、表态或评论。",
         "menu": {
           "letter": "发书信",
@@ -5555,7 +5555,7 @@
       "list": {
         "following_title": "关注 {{n}}",
         "followers_title": "被关注 {{n}}",
-        "reborn_note": "已转世的灵魂留在列表里但不再有按钮。"
+        "reborn_note": "已转生的灵魂留在列表里但不再有按钮。"
       },
       "report": {
         "post": "举报帖子",
@@ -6652,7 +6652,7 @@
     "select_hint": "在左侧选一封来信",
     "thread_label": "与 {{name}} 的来往",
     "thread_empty": "这封信还没有内容",
-    "closed": "已关闭(已转世)",
+    "closed": "已关闭(已转生)",
     "no_messages": "暂无消息",
     "from_hall": "{{hall}} · {{title}} {{name}}",
     "reply_label": "以殿司名义回复",
@@ -6661,7 +6661,7 @@
     "sent": "已回复",
     "failed": "操作失败,请重试",
     "errors": {
-      "closed": "对方已转世,会话已关闭",
+      "closed": "对方已转生,会话已关闭",
       "not_inbox": "这不是殿司收件箱",
       "chat_not_configured": "聊天服务未启用",
       "chat_unavailable": "聊天服务暂时不可用",
@@ -8078,11 +8078,11 @@
       "used_of": "{{used}} / {{limit}}",
       "used_unlimited": "{{used}} · 不限",
       "full_badge": "已满",
-      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在「轮回中」候位，下月或调高配额后再办。"
+      "full": "{{form}}本月已满（{{used}} / {{limit}}）。灵魂留在原处等候转生，下月或调高配额后再办。"
     },
     "not_applicable": {
-      "title": "{{civ}}没有转世",
-      "body": "这里的路在处置之后结束，不再转世。转生申请只出现在地府和希腊。",
+      "title": "{{civ}}没有转生",
+      "body": "这里的路在处置之后结束，不再转生。转生申请只出现在地府和希腊。",
       "back": "回到概览"
     }
   },
@@ -8438,14 +8438,14 @@
   },
   "mengpoSoup": {
     "title": "孟婆汤",
-    "hint": "地府的灵魂转世前，要先饮孟婆汤。",
+    "hint": "地府的灵魂转生前，要先饮孟婆汤。",
     "not_taken": "未饮",
     "taken": "已饮 · {{time}}",
     "register": "登记已饮汤",
     "register_title": "登记{{name}}已饮孟婆汤？",
-    "register_body": "每一世饮一次。登记后不能撤回，转世完成时清空。",
+    "register_body": "每一世饮一次。登记后不能撤回，转生完成时清空。",
     "registered_toast": "已登记：{{name}}已饮孟婆汤",
-    "batch_refused": "{{n}} 位还没饮孟婆汤，没有转世，仍在轮回中：",
+    "batch_refused": "{{n}} 位还没饮孟婆汤，没有转生，仍在轮回中：",
     "error": {
       "not_diyu": "只有地府的灵魂要饮孟婆汤",
       "not_reincarnating": "只有轮回中的灵魂才能登记饮汤",
@@ -8490,7 +8490,7 @@
       "col_hall": "殿",
       "col_todo": "殿内待办",
       "col_judgments": "未结审判 · 城隍 · 枉死城 · 认领 · 无人",
-      "col_rebirth": "本月转世",
+      "col_rebirth": "本月转生",
       "col_appeals": "待复核申诉",
       "col_enter": "进入",
       "todo_approvals": "审批 {{n}}",
@@ -8597,7 +8597,7 @@
         "line": "十殿轮审，判入六道；过奈何桥前，先喝一碗孟婆汤。"
       },
       "eu": {
-        "name": "欧洲天堂地狱",
+        "name": "欧洲天堂与地狱",
         "realm": "Paradiso · Inferno",
         "line": "圣彼得守在天门，炼狱逐层涤罪，但丁的地狱九圈按罪下沉。"
       },
@@ -8675,7 +8675,7 @@
           "body": "处置排成受刑计划，一站服完才到下一站。"
         },
         "6": {
-          "name": "孟婆汤与转世",
+          "name": "孟婆汤与转生",
           "body": "刑满喝一碗孟婆汤，投入六道之一。"
         }
       },
@@ -8698,7 +8698,7 @@
         },
         "5": {
           "name": "这一生停在这里",
-          "body": "地狱没有出口。Francesca 留在第二圈，这一生停在这里。欧洲没有转世。"
+          "body": "地狱没有出口。Francesca 留在第二圈，这一生停在这里。欧洲没有转生。"
         }
       },
       "eg": {
@@ -8720,7 +8720,7 @@
         },
         "5": {
           "name": "芦苇原",
-          "body": "路的尽头是芦苇原。埃及没有转世，这一生到此为止。"
+          "body": "路的尽头是芦苇原。埃及没有转生，这一生到此为止。"
         }
       },
       "gr": {
