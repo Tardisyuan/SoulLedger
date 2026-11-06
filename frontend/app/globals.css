@@ -246,10 +246,15 @@
     'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
+  /* 规范 v4(用户 2026-11-06):拉丁 Geist / Geist Mono,引文与文书拉丁 EB Garamond、希腊 GFS Didot
+     (希腊那一支只含 greek / greek-ext 子集,拉丁字仍由 EB Garamond 出)。见 app/fonts.ts。 */
   --font-serif:
-    'SoulLedger Glyphs', var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
-    Cambria, 'Times New Roman', Times, serif;
-  /* 规范 v3:标题与展示数字用 Noto Serif SC 600 —— 身份带题字、页面 <h1>、当前这一判、
+    'SoulLedger Glyphs', var(--font-serif-latin), var(--font-serif-greek), 'Noto Serif SC Variable',
+    ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  /* 规范 v4 沿用 v3:标题与展示数字用 Noto Serif SC 600(稿子的 `.serif`)。v3 只给身份带题字、页面 <h1>、
+     当前这一判等几处;v4 把衬线标题放开到分节标题与卡片标题(用户 2026-11-06 决定,撤销「衬线只给人说的话」),
+     这一行的字体栈不变,变的是调用点。以下是 v3 的原注:
+     规范 v3:标题与展示数字用 Noto Serif SC 600 —— 身份带题字、页面 <h1>、当前这一判、
      本世余额、语料条号。中西文都由它出(v3 的拉丁标题也是这一款),所以栈里没有拉丁那一支。
      用的是 layout.tsx 已经全站加载的 @fontsource-variable 那一份(200–900 可变,101 个
      unicode-range 分片),**没有新增字体文件**:再用 next/font 拉一份静态 600,同一批汉字
@@ -328,8 +333,9 @@
      v3 的两档是新名字,新代码按用途取名而不是按尺寸取名。
      `designGuardContract` 现在只放行 0 / 9999px / 50%,这两档要等
      基础组件那一阶段连同守卫一起放开,在那之前它们不会被任何调用点用到。 */
+  /* 规范 v4(用户 2026-11-06):控件 4px 不变,面板与弹层由 8px 改 6px(稿子 `.card` 6px)。 */
   --radius-control: 4px;
-  --radius-panel: 8px;
+  --radius-panel: 6px;
 
   /* 规范 v3 的控件三档高度 —— **2026-10-01 起全站在用**(用户拍板,推翻了此前「尺寸先不动」)。
    *   sm 44px   md 48px   lg 56px      表格行 min-height 64px、表头 44px、行内动作列 44px
@@ -481,80 +487,61 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-     色板 · SoulLedger 规范 v2「朱印」(Claude Design,2026-09-29 定稿;design-cache/v2/
-     spec-final.dc.html §一「Web · 四文明共用」与 §二 状态色)。
+     色板 · SoulLedger 规范 v4(Claude Design 第七批定稿 `V4Batch07.dc.html`,2026-11-06)。
      每个颜色令牌是 OKLCH 三元组 `L C H`,消费处在 oklch() 里包 var() 取用;值由设计稿
-     交付的 hex 换算,`src/__tests__/ledgerPaletteContract.test.ts` 逐个换回 hex 对账。
+     交付的 hex 换算(行尾注释是原 hex),`src/__tests__/ledgerPaletteContract.test.ts` 逐个换回 hex 对账。
 
-     名字沿用 v1(调用点上千处),值换成 v2:
-       canvas = bg · surface-1 = s1 · surface-2 = s2 · ink / ink-muted / ink-subtle = ink / ink2 / ink3
-       line = line · line-strong = ink3(输入框边框,非文字对比 ≥ 3)· block = ink(表头下 2px 实线)
-       surface-3 / rule:v2 没有这两档,surface-3 取 line 值(幽灵按钮「按下」底色),rule 并入 line。
-     v2 没有强调色:v1 的墨蓝 accent 撤掉,accent 家族指向 ink(选中、链接、筛选生效都是墨),
-     焦点环也是 ink(A2)。用户自选强调色一并撤掉(见 SettingsDrawer)。
+     **名字一个不动,只换值**(同 v3 的 dba34ac3 / ab130a5b)。v4 的 17 个主题角色对到这里:
+       main → canvas · card → surface-1 · card2 → surface-2 · ink → ink / block
+       sub → ink-muted 与 ink-subtle(v4 的 faint 在 surface-2 上只有 3.91 / 2.94,托不住正文)
+       faint → line-strong 与 disabled-ink(输入框边框、禁用字;对 surface-1 4.29 / 3.33 ≥ 3)
+       line(白 / 黑 8%)→ line / rule / surface-3:按压在 card 上合成成不透明的值(#2C2D30 / #EBEBEB)
+       pos / neg → success / danger;onSolid #FFF → on-main
+     v4 没定义的(danger-strong、三种 tint、warning、长明灯、chart、scrim)沿用 v3 的值,
+     并在 v4 的底上重新量过,见 inkOnSurfaceContract。
 
-     文明只进匾色(§1.8 收窄):`--color-main` 由 <html data-civ="…"> 选,只给匾、立柱当前项、
-     印、行首色标、主按钮五处用;其余一切四文明共用。没有 data-civ(登录前)= 中性皮。
+     文明色的范围(用户 2026-11-06 决定,撤销 v3 的「文明只进匾色,只给匾、立柱当前项、印、行首色标、
+     主按钮五处用」):照 v4,每个文明 5 个值,按 <html data-civ="…"> 选,两套主题各一档 ——
+       --color-main       v4 solid:主按钮、身份带等实底,上面只放 on-main 白字
+       --color-main-ink   v4 civT:文明色的**字**,同时是 accent / accent-ink / focus(链接、选中、焦点环)
+       --color-glow       v4 glow:顶部光晕、当前项与选中行的底色混入(两主题同值,透明度由 --glow-alpha 管)
+       --color-metal      v4 metal:当前项的 3px 标、角饰
+       --color-side       v4 sideD / sideL:侧栏底
+     没有 data-civ(登录前)= 中性皮:accent / focus 回到 ink,其余取 `--color-civ-neutral*`。
+     中性皮 v4 没有画,值是推导的(与 App 的 v4-app-tokens 一致):ink 取 sub,solid 深 #38393E / 浅 #16171A。
      ═══════════════════════════════════════════════════════════════════════ */
   /* 深色是 :root,浅色是 .light;ThemeContext 按系统偏好或用户选择给 <html> 加类。 */
   :root {
-    /* 纸 / 墨 · 规范 v3 深色。
-       v2「朱印」的暖纸色(canvas #F4EDE0 系)整体换成 v3 的冷中性灰(canvas #EFEFEB 系)。
-       v3 只定义 5 个中性角色 —— canvas / surface / ink / muted / line —— 而这里有 9 档,
-       多出来的 surface-2、surface-3、rule、line-strong、block 按下面的规则映射,
-       **是推导不是规范**,定稿前要么让 Design 补,要么在改版页面上逐个核对:
-         surface-3 / rule / line   直接取 v3 的 line
-         block                     直接取 v3 的 ink
-         ink-muted / ink-subtle    都取 v3 的 muted(v3 只有一档次要文字;
-                                   这让 ink-subtle 的对比度从不足升到 5.48:1)
-         surface-2 / line-strong   保留 v2 的明度,只把色相与彩度挪到 v3 的中性族
-       转换用 sRGB→OKLab,逐个在 Chromium 的 canvas 上回读过十六进制值;
-       换算器先拿 v2 已有的 `#9a2f1f → 0.464883 0.145204 31.3776` 对过账,逐位相同。 */
-    --color-canvas: 0.178727 0.006829 135.0201;
-    --color-surface-1: 0.226034 0.008836 137.8312;
-    --color-surface-2: 0.280000 0.010500 136.0000;
-    --color-surface-3: 0.349944 0.013063 131.5941;
-    --color-rule: 0.349944 0.013063 131.5941;
-    --color-line: 0.349944 0.013063 131.5941;
-    --color-line-strong: 0.680983 0.012600 133.4000;
-    --color-block: 0.955447 0.009333 113.1622;
-    --color-ink: 0.955447 0.009333 113.1622;
-    --color-ink-muted: 0.738053 0.012625 133.4092;
-    --color-ink-subtle: 0.738053 0.012625 133.4092;
-    /* 立柱底(四文明共用)与匾上题字色(两个主题同值)。 */
-    --color-pillar: 0.130000 0.005000 135.0000;
+    /* 纸 / 墨 · 规范 v4 深色(`.th-dark`)。 */
+    --color-canvas: 0.178529 0.004066 285.9807; /* #111113 */
+    --color-surface-1: 0.222322 0.006013 271.1393; /* #1A1B1E */
+    --color-surface-2: 0.256756 0.007618 274.6528; /* #222327 */
+    --color-surface-3: 0.297319 0.005579 271.2268; /* #2C2D30 */
+    --color-rule: 0.297319 0.005579 271.2268;
+    --color-line: 0.297319 0.005579 271.2268;
+    --color-line-strong: 0.595896 0.009766 264.4932; /* #7C7F85 */
+    --color-block: 0.963595 0.002651 106.4490; /* #F3F3F1 */
+    --color-ink: 0.963595 0.002651 106.4490;
+    --color-ink-muted: 0.775874 0.006082 264.5259; /* #B4B6BA */
+    --color-ink-subtle: 0.775874 0.006082 264.5259;
+    /* 立柱底 = 中性侧栏底;有文明时侧栏读 --color-side。匾上题字色两个主题同值(v4 onSolid)。 */
+    --color-pillar: 0.155270 0.004214 285.8987; /* #0C0C0E */
     --color-on-main: 1 0 0;
-    /* 强调 = 墨(v2 撤掉墨蓝)。accent-contrast 是墨底上的字 = 纸。 */
-    --color-accent: 0.955447 0.009333 113.1622;
-    --color-accent-contrast: 0.178727 0.006829 135.0201;
-    --color-accent-ink: 0.955447 0.009333 113.1622;
-    --color-accent-hover: 0.738053 0.012625 133.4092;
-    /* 焦点环 · A2:2px ink,外扩 2。写成字面三元组(与 ink 同值),不引用别的令牌。 */
-    --color-focus: 0.955447 0.009333 113.1622;
-    /* 状态色 · 规范 v2 §二。失败 = 冷玫红(永远带 ✕ + 文字);警示 = 橙(带 ◇)。
-       规范 v3 只给三档状态色,按用途对上去:
-         danger        ← v3 error    浅 #A8103E → #B42350,深 #FF7A93 → #FF7A9A
-         danger-strong ← v3 danger   浅 #A8103E → #8F2430,深 #C21D4D → #C84C5A
-         warning       ← v3 warning  浅 #9F4A00 → #A65000,深 #FF9A3C → #E07A23
-       v2 里 danger 与 danger-strong 在浅色下**是同一个值**,v3 把它们分开了:
-       前者是「失败 / 出错」的文字与边框(60 处 text-、19 处 border-),后者只作
-       不可撤回删除按钮的实底(2 处 bg-)。
-
-       两处偏离 v3,都为对比度,数字是实测不是估算:
-       1. 深色 danger-strong 用 #C84C5A 而不是 v3 的 #C94D5B —— 后者上面的白字只有
-          4.47:1,差 0.03 到 4.5。只把明度降了 0.004(0.589174 → 0.585174),白字
-          4.53:1,对 surface 3.76:1(图形 ≥3 也过),肉眼与 v3 的值无从分辨。
-       2. 浅色 warning 跟着 v3 从 #9F4A00 退回 #A65000。#A65000 当初被 Design 改掉,
-          正是因为它在 v2 的羊皮纸底 #ebe1cd 上只有 4.40:1;而 v3 的底换成了更亮的
-          #EFEFEB,实测 4.83:1、在 #FBFBF8 上 5.37:1,两处都过,所以这次退回成立。
-
-       v3 没有定义 success 与长明灯,这两族连同各自的 tint 与 chart-1..6 原样保留
-       (chart 本来就是 v3 要的冷灰蓝明度梯度)。 */
-    --color-danger: 0.742166 0.164018 6.8002;
+    /* 强调 · 中性皮 = 墨;有文明时 [data-civ] 把这三个指到 --color-main-ink。accent-contrast 是强调底上的字 = 纸。 */
+    --color-accent: 0.963595 0.002651 106.4490;
+    --color-accent-contrast: 0.178529 0.004066 285.9807;
+    --color-accent-ink: 0.963595 0.002651 106.4490;
+    --color-accent-hover: 0.775874 0.006082 264.5259;
+    /* 焦点环 · 2px,外扩 2。这里写字面三元组(与 ink 同值);有文明时 [data-civ] 指到 --color-main-ink(v4 `.btn:focus-visible`)。 */
+    --color-focus: 0.963595 0.002651 106.4490;
+    /* 状态色:danger = v4 neg、success = v4 pos;其余沿用 v3(v4 没定义)。
+       danger-strong 仍是不可撤回删除按钮的实底,上面白字 —— v4 的 neg 实底配深字(onNeg),
+       与「失败实底上的字一律白」的组件约定不合,所以这一档不跟 v4。 */
+    --color-danger: 0.739946 0.135852 7.6091; /* #F2849B */
     --color-danger-strong: 0.585174 0.157720 16.6617;
     --color-danger-tint: 0.233082 0.057680 4.8370;
     --color-danger-on-tint: 0.906877 0.050597 4.3604;
-    --color-success: 0.778968 0.109344 150.2017;
+    --color-success: 0.805320 0.101985 153.6633; /* #8AD3A1 */
     /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
        明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
     --color-success-tint: 0.241388 0.040904 150.1078;
@@ -563,21 +550,47 @@
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
     --color-lamp: 0.860675 0.109733 85.2786;
     --color-lamp-bg: 0.228754 0.029413 79.2504;
-    /* 禁用 · A1:底 s2、字 ink3。 */
-    --color-disabled-ink: 0.680983 0.012600 133.4000;
-    --color-disabled-surface: 0.280000 0.010500 136.0000;
-    /* 遮罩 · A2:只用在对话框与抽屉下,按主题两值 —— 深 rgba(0,0,0,.62)。 */
+    /* 禁用:底 surface-2、字 faint。 */
+    --color-disabled-ink: 0.595896 0.009766 264.4932;
+    --color-disabled-surface: 0.256756 0.007618 274.6528;
+    /* 遮罩:只用在对话框与抽屉下,按主题两值 —— 深 rgba(0,0,0,.62)。 */
     --color-scrim: 0 0 0;
     --scrim-alpha: 0.62;
-    /* 文明皮 · 匾色(§三),深色档。 */
-    --color-civ-neutral: 0.515225 0.011900 131.5000;
-    --color-civ-cn: 0.537787 0.130919 28.6219;
-    --color-civ-eu: 0.544523 0.094860 308.8429;
-    --color-civ-eg: 0.599456 0.103508 263.0918;
-    --color-civ-gr: 0.581329 0.046847 188.4928;
+    /* 光晕透明度(v4 `--glowA`):深 .30、浅 .24。 */
+    --glow-alpha: 0.3;
+    /* 文明 · 深色档(v4 `[data-civ]` 的 D 值)。光晕两主题同值,只在这里声明。 */
+    --color-civ-neutral: 0.345507 0.008765 276.8978; /* #38393E */
+    --color-civ-neutral-ink: 0.775874 0.006082 264.5259; /* #B4B6BA */
+    --color-civ-neutral-glow: 0.642492 0.008222 260.7308; /* #8A8D92 */
+    --color-civ-neutral-metal: 0.775874 0.006082 264.5259; /* #B4B6BA */
+    --color-civ-neutral-side: 0.155270 0.004214 285.8987; /* #0C0C0E */
+    --color-civ-cn: 0.428514 0.102617 30.6112; /* #7E362B */
+    --color-civ-cn-ink: 0.710969 0.100324 32.0926; /* #D98A7A */
+    --color-civ-cn-glow: 0.611588 0.136244 30.9191; /* #C8604F */
+    --color-civ-cn-metal: 0.735339 0.098358 81.1769; /* #C9A35E */
+    --color-civ-cn-side: 0.155755 0.026149 30.8308; /* #160806 */
+    --color-civ-eu: 0.402590 0.077427 318.6416; /* #5A3A63 */
+    --color-civ-eu-ink: 0.659740 0.075298 321.6693; /* #A883AE */
+    --color-civ-eu-glow: 0.610358 0.089013 327.2939; /* #A0709F */
+    --color-civ-eu-metal: 0.811059 0.020830 257.4811; /* #B9C2CF */
+    --color-civ-eu-side: 0.152695 0.037888 307.3255; /* #100718 */
+    --color-civ-eg: 0.418933 0.082983 254.5438; /* #2B4E79 */
+    --color-civ-eg-ink: 0.779300 0.093304 250.0374; /* #89BCF1 */
+    --color-civ-eg-glow: 0.648635 0.097389 249.9778; /* #5F93C8 */
+    --color-civ-eg-metal: 0.778385 0.111230 86.4987; /* #D6B25E */
+    --color-civ-eg-side: 0.157951 0.035710 265.5927; /* #060C1C */
+    --color-civ-gr: 0.412855 0.049685 185.8153; /* #28544F */
+    --color-civ-gr-ink: 0.880378 0.049995 178.8645; /* #B5E3D8 */
+    --color-civ-gr-glow: 0.648865 0.064720 185.1646; /* #5F9C94 */
+    --color-civ-gr-metal: 0.689412 0.094212 53.9962; /* #C98B62 */
+    --color-civ-gr-side: 0.166432 0.023937 180.0758; /* #03120F */
     --color-main: var(--color-civ-neutral);
+    --color-main-ink: var(--color-civ-neutral-ink);
+    --color-glow: var(--color-civ-neutral-glow);
+    --color-metal: var(--color-civ-neutral-metal);
+    --color-side: var(--color-civ-neutral-side);
     /* 图表 · A5:灵魂状态的冷灰蓝明度梯度(OKLCH 色相 250、彩度 .045),先后有序;
-       深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。 */
+       深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。v4 没定义图表色,沿用。 */
     --color-chart-1: 0.946168 0.032488 229.2456;
     --color-chart-2: 0.869674 0.044412 250.4438;
     --color-chart-3: 0.800399 0.044801 248.3861;
@@ -611,55 +624,60 @@
   }
 
   .light {
-    /* 纸 / 墨 · 规范 v3 浅色。
-       v2「朱印」的暖纸色(canvas #F4EDE0 系)整体换成 v3 的冷中性灰(canvas #EFEFEB 系)。
-       v3 只定义 5 个中性角色 —— canvas / surface / ink / muted / line —— 而这里有 9 档,
-       多出来的 surface-2、surface-3、rule、line-strong、block 按下面的规则映射,
-       **是推导不是规范**,定稿前要么让 Design 补,要么在改版页面上逐个核对:
-         surface-3 / rule / line   直接取 v3 的 line
-         block                     直接取 v3 的 ink
-         ink-muted / ink-subtle    都取 v3 的 muted(v3 只有一档次要文字;
-                                   这让 ink-subtle 的对比度从不足升到 5.48:1)
-         surface-2 / line-strong   保留 v2 的明度,只把色相与彩度挪到 v3 的中性族
-       转换用 sRGB→OKLab,逐个在 Chromium 的 canvas 上回读过十六进制值;
-       换算器先拿 v2 已有的 `#9a2f1f → 0.464883 0.145204 31.3776` 对过账,逐位相同。 */
-    --color-canvas: 0.951016 0.005316 106.5001;
-    --color-surface-1: 0.987257 0.003952 106.4716;
-    --color-surface-2: 0.934000 0.006200 113.2000;
-    --color-surface-3: 0.863595 0.008432 121.6501;
-    --color-rule: 0.863595 0.008432 121.6501;
-    --color-line: 0.863595 0.008432 121.6501;
-    --color-line-strong: 0.480553 0.011300 131.9000;
-    --color-block: 0.214438 0.006530 134.9799;
-    --color-ink: 0.214438 0.006530 134.9799;
-    --color-ink-muted: 0.511553 0.011899 131.4694;
-    --color-ink-subtle: 0.511553 0.011899 131.4694;
-    --color-pillar: 0.214438 0.006530 134.9799;
-    --color-accent: 0.214438 0.006530 134.9799;
-    --color-accent-contrast: 0.951016 0.005316 106.5001;
-    --color-accent-ink: 0.214438 0.006530 134.9799;
-    --color-accent-hover: 0.511553 0.011899 131.4694;
-    --color-focus: 0.214438 0.006530 134.9799;
-    --color-danger: 0.509379 0.180376 8.9464;
+    /* 纸 / 墨 · 规范 v4 浅色(`.th-light`)。映射规则同深色。 */
+    --color-canvas: 0.978573 0.002641 106.4481; /* #F8F8F6 */
+    --color-surface-1: 1 0 0; /* #FFFFFF */
+    --color-surface-2: 0.957310 0.003982 106.4744; /* #F1F1EE */
+    --color-surface-3: 0.940070 0 0; /* #EBEBEB */
+    --color-rule: 0.940070 0 0;
+    --color-line: 0.940070 0 0;
+    --color-line-strong: 0.642492 0.008222 260.7308; /* #8A8D92 */
+    --color-block: 0.204832 0.006141 271.1072; /* #16171A */
+    --color-ink: 0.204832 0.006141 271.1072;
+    --color-ink-muted: 0.455822 0.008971 260.7269; /* #54575C */
+    --color-ink-subtle: 0.455822 0.008971 260.7269;
+    --color-pillar: 0.957310 0.003982 106.4744; /* #F1F1EE */
+    --color-accent: 0.204832 0.006141 271.1072;
+    --color-accent-contrast: 0.978573 0.002641 106.4481;
+    --color-accent-ink: 0.204832 0.006141 271.1072;
+    --color-accent-hover: 0.455822 0.008971 260.7269;
+    --color-focus: 0.204832 0.006141 271.1072;
+    --color-danger: 0.479318 0.171592 15.4317; /* #A81E3C */
     --color-danger-strong: 0.435794 0.141750 19.3962;
     --color-danger-tint: 0.959029 0.020979 6.6063;
     --color-danger-on-tint: 0.409460 0.155831 12.0157;
-    --color-success: 0.481178 0.119975 150.1017;
+    --color-success: 0.469880 0.102419 153.8115; /* #1F6B3F */
     --color-success-tint: 0.965876 0.035762 149.1233;
     --color-warning: 0.529090 0.135424 52.3541;
     --color-warning-tint: 0.965162 0.024981 69.4434;
     --color-lamp: 0.407751 0.090608 66.2502;
     --color-lamp-bg: 0.960430 0.029660 85.5642;
-    --color-disabled-ink: 0.480553 0.011300 131.9000;
-    --color-disabled-surface: 0.934000 0.006200 113.2000;
-    /* 浅色遮罩 = ink #151312 × .42。 */
-    --color-scrim: 0.214438 0.006530 134.9799;
+    --color-disabled-ink: 0.642492 0.008222 260.7308;
+    --color-disabled-surface: 0.957310 0.003982 106.4744;
+    /* 浅色遮罩 = ink × .42。 */
+    --color-scrim: 0.204832 0.006141 271.1072;
     --scrim-alpha: 0.42;
-    --color-civ-neutral: 0.275998 0.007000 134.0000;
-    --color-civ-cn: 0.452064 0.126889 29.1662;
-    --color-civ-eu: 0.406759 0.103847 306.5685;
-    --color-civ-eg: 0.419561 0.113409 262.1446;
-    --color-civ-gr: 0.402622 0.045196 197.6316;
+    --glow-alpha: 0.24;
+    --color-civ-neutral: 0.204832 0.006141 271.1072; /* #16171A */
+    --color-civ-neutral-ink: 0.455822 0.008971 260.7269; /* #54575C */
+    --color-civ-neutral-metal: 0.455822 0.008971 260.7269; /* #54575C */
+    --color-civ-neutral-side: 0.957310 0.003982 106.4744; /* #F1F1EE */
+    --color-civ-cn: 0.524723 0.124924 31.1018; /* #A64A3B */
+    --color-civ-cn-ink: 0.508662 0.123408 31.8759; /* #A04636 */
+    --color-civ-cn-metal: 0.543025 0.095025 83.4144; /* #8A6A24 */
+    --color-civ-cn-side: 0.965855 0.017160 35.3449; /* #FFF0EC */
+    --color-civ-eu: 0.496494 0.097231 319.2785; /* #7A4F85 */
+    --color-civ-eu-ink: 0.539412 0.102357 319.1561; /* #885A94 */
+    --color-civ-eu-metal: 0.513029 0.029377 255.6539; /* #5C6878 */
+    --color-civ-eu-side: 0.956480 0.015971 328.7762; /* #F7EDF6 */
+    --color-civ-eg: 0.515592 0.103715 255.1595; /* #3C69A2 */
+    --color-civ-eg-ink: 0.411225 0.116441 255.6633; /* #174A88 */
+    --color-civ-eg-metal: 0.531513 0.096178 84.5574; /* #86671E */
+    --color-civ-eg-side: 0.957740 0.014822 251.1570; /* #EAF2FB */
+    --color-civ-gr: 0.507348 0.062072 185.1700; /* #37716A */
+    --color-civ-gr-ink: 0.479365 0.062143 178.9771; /* #31695E */
+    --color-civ-gr-metal: 0.520618 0.085848 55.0206; /* #8F5B36 */
+    --color-civ-gr-side: 0.971025 0.019277 184.9251; /* #E8FAF7 */
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
     --color-chart-2: 0.360350 0.044648 250.3338;
@@ -669,22 +687,46 @@
     --color-chart-6: 0.620712 0.045066 249.6583;
   }
 
-  /* 文明皮:只换匾色这一个值。选择器挂在 <html> 上(TenantContext 按租户写 data-civ),
-     与 .light 同一个元素,所以 var() 取到的是当前主题那一档。 */
+  /* 文明皮(规范 v4):五个值一起换,外加强调与焦点指到文明的字色。选择器挂在 <html> 上
+     (TenantContext 按租户写 data-civ),与 .light 同一个元素,所以 var() 取到的是当前主题那一档;
+     自己带 data-civ 的子树(交付单)按它自己的文明重算。 */
   [data-civ="cn"] {
     --color-main: var(--color-civ-cn);
+    --color-main-ink: var(--color-civ-cn-ink);
+    --color-glow: var(--color-civ-cn-glow);
+    --color-metal: var(--color-civ-cn-metal);
+    --color-side: var(--color-civ-cn-side);
   }
   [data-civ="eu"] {
     --color-main: var(--color-civ-eu);
+    --color-main-ink: var(--color-civ-eu-ink);
+    --color-glow: var(--color-civ-eu-glow);
+    --color-metal: var(--color-civ-eu-metal);
+    --color-side: var(--color-civ-eu-side);
   }
   [data-civ="eg"] {
     --color-main: var(--color-civ-eg);
+    --color-main-ink: var(--color-civ-eg-ink);
+    --color-glow: var(--color-civ-eg-glow);
+    --color-metal: var(--color-civ-eg-metal);
+    --color-side: var(--color-civ-eg-side);
   }
   [data-civ="gr"] {
     --color-main: var(--color-civ-gr);
+    --color-main-ink: var(--color-civ-gr-ink);
+    --color-glow: var(--color-civ-gr-glow);
+    --color-metal: var(--color-civ-gr-metal);
+    --color-side: var(--color-civ-gr-side);
+  }
+  /* 强调、链接、焦点环随文明的字色(v4 `.btn.t` / `.tag` / `.btn:focus-visible` 都是 civT)。
+     中性皮不在这里:没有 data-civ 时三者是 :root / .light 里的墨。 */
+  [data-civ] {
+    --color-accent: var(--color-main-ink);
+    --color-accent-ink: var(--color-main-ink);
+    --color-focus: var(--color-main-ink);
   }
 
-  /* 文明皮只有上面这一条匾色。v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
+  /* (v3 时这里写「文明皮只有上面这一条匾色」;v4 起是上面五个值加强调 / 焦点。)v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
      v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩素材、残边扫描、三款印文字体)随 v3 描边印撤掉
      (2026-10-02),印的外形见下面 `.seal`;v2 的分节纹(public/v2/svg/section-*,与 `SectionTitle`
      一起)撤掉(2026-10-03)。身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。 */
@@ -863,9 +905,10 @@
   }
 
   /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
-     内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认匾色,身份带上
-     随带上的白字 —— 带本身就是匾色,匾色的印放在上面就看不见了(v3 的印也是 `color: inherit`)。
-     对比度两处都量过,见 plaqueTitleStaysLargeText.test.ts。
+     内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认文明的字色
+     (`--color-main-ink`,v4 civT),身份带上随带上的白字(v3 的印也是 `color: inherit`)。
+     v3 时默认是匾色本身;v4 的 solid 是给白字垫底的深色,深色主题下对 surface-1 只有约 2:1,
+     印是图形、要 ≥ 3:1,所以换成字色(2026-11-06)。对比度见 plaqueTitleStaysLargeText.test.ts。
      印文 Noto Serif SC 600(`--font-title`);圣书字不在 Noto Serif SC 里,接一支只含 U+13000 起
      的 Noto Sans Egyptian Hieroglyphs(unicode-range 分片,别的文明的页面不下载它)。 */
   .seal {
@@ -874,7 +917,7 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    color: oklch(var(--color-main));
+    color: oklch(var(--color-main-ink));
     border: 2px solid currentColor;
     outline: 1px solid currentColor;
     outline-offset: -6px;
@@ -1169,7 +1212,7 @@ html.theme-switching *::after {
   }
   /* A1「复选 · 单选」:原生 <input> 直接画成规范的样子,不另造组件 —— 全站 26 个文件
      写的都是原生控件,在这一层改,它们一起变,键盘、表单、读屏行为仍是平台的。
-     选中 = ink 实底(不用匾色,匾色只有五处用法);单选是正圆,这是 A2 圆角规则的例外之一。
+     选中 = ink 实底(不用文明色,沿用 v3);单选是正圆,这是 A2 圆角规则的例外之一。
      复选的 ✓ / − 是一张按主题换色的 SVG:勾的颜色 = 纸色(bg),而 data: URI 里读不到
      CSS 变量,所以这里是 bg 两个 hex 的镜像 —— 改 --color-canvas 要连这两处一起改。
      在 base 层,所以调用点的 h-4 / w-3.5 等尺寸类照样生效。 */
@@ -1193,16 +1236,16 @@ html.theme-switching *::after {
   input[type="checkbox"]:indeterminate {
     border-color: oklch(var(--color-ink));
     background-color: oklch(var(--color-ink));
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23100e0d' stroke-width='1.8'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23111113' stroke-width='1.8'/%3E%3C/svg%3E");
   }
   input[type="checkbox"]:indeterminate {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23100e0d' stroke-width='1.8'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23111113' stroke-width='1.8'/%3E%3C/svg%3E");
   }
   .light input[type="checkbox"]:checked {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23f4ede0' stroke-width='1.8'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23f8f8f6' stroke-width='1.8'/%3E%3C/svg%3E");
   }
   .light input[type="checkbox"]:indeterminate {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23f4ede0' stroke-width='1.8'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23f8f8f6' stroke-width='1.8'/%3E%3C/svg%3E");
   }
   input[type="radio"]:checked {
     border-color: oklch(var(--color-ink));
@@ -1219,15 +1262,12 @@ html.theme-switching *::after {
     border: 2px solid oklch(var(--color-danger));
   }
 
-  /* 主按钮底(Button.tsx `primary`):深色用身份带同一档 main 90% + #111,浅色就是 main。
-     Design 第六十三批:深色里 main 作底、上面有字,一律加深这一档。挂在 [data-civ] 上,
-     是因为 var() 在声明处求值:自己带 data-civ 的子树(交付单)要按它自己的 main 算。 */
+  /* 主按钮底(Button.tsx `primary`)。规范 v4:就是 solid(`--color-main`),两个主题一样 —— v4 的
+     sD / sL 本身就是给白字配的深色(白字 5.6–9.5:1)。v3 深色曾用身份带同一档 main 90% + #111
+     (Design 第六十三批),v4 不再需要。挂在 [data-civ] 上,是因为 var() 在声明处求值:自己带
+     data-civ 的子树(交付单)要按它自己的 main 算。 */
   :root,
   [data-civ] {
-    --main-fill: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
-  }
-  :root.light,
-  .light [data-civ] {
     --main-fill: oklch(var(--color-main));
   }
 

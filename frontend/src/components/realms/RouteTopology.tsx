@@ -271,10 +271,10 @@ function textTone(state: StationState): string {
 function StationMark({ state, filled, emphasis, terminal }: { state: StationState; filled: boolean; emphasis?: boolean; terminal?: boolean }) {
   const ring = emphasis ? "border-2" : "border";
   const cls = terminal
-    ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-main))]" : "bg-[oklch(var(--color-canvas))]"}`
+    ? `size-2.5 border border-dashed border-[oklch(var(--color-ink))] ${state === "current" ? "bg-[oklch(var(--color-metal))]" : "bg-[oklch(var(--color-canvas))]"}`
     :
     state === "current"
-      ? "size-3 bg-[oklch(var(--color-main))]"
+      ? "size-3 bg-[oklch(var(--color-metal))]"
       : state === "travelled" || filled
         ? `size-2 bg-[oklch(var(--color-ink))] ${emphasis ? "outline outline-1 outline-offset-1 outline-[oklch(var(--color-ink))]" : ""}`
         : `size-2 bg-[oklch(var(--color-canvas))] ${ring} border-[oklch(var(--color-ink-subtle))]`;

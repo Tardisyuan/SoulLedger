@@ -4,7 +4,7 @@
  * 决定(2026-10-01,用户拍板):
  *   - ≥ 1200 导航展开 252 / 收起 68 由用户选,存在 `localStorage["soulledger-nav-mode"]`,
  *     `[` 切换(焦点在输入框里不算);769–1199 强制收起,开合按钮还在但不可用,并说出原因;
- *   - `--color-main` 只出现在当前项上:3px 左标 + 8% 混进 surface-1 的底;
+ *   - 文明色只出现在当前项上:3px 左标(`--color-metal`,v4 2026-11-06)+ 8% main 混进 surface-1 的底;
  *   - 图标按 `menu.icon`(lucide 名)画,不认得就是中性方块,不按路径写死。
  *
  * jsdom 没有排版、没有 matchMedia:宽度靠给 `window.matchMedia` 打桩来说;
@@ -234,8 +234,8 @@ describe("769–1199:强制收起,按钮在而不可用,并说出原因", () => 
 });
 
 describe("文明色只落在当前项上", () => {
-  /** 导航里每个读 `--color-main` 的元素。 */
-  const mainReaders = () => Array.from(nav().querySelectorAll<HTMLElement>("*")).filter((el) => /--color-main/.test(el.getAttribute("class") ?? ""));
+  /** 导航里每个读文明色(`--color-main` 或 v4 的 `--color-metal`)的元素。 */
+  const mainReaders = () => Array.from(nav().querySelectorAll<HTMLElement>("*")).filter((el) => /--color-(main|metal)/.test(el.getAttribute("class") ?? ""));
 
   it("展开:恰好两处 —— 当前二级项的 8% 底,和它里面的 3px 左标", () => {
     render(<Nav />);
@@ -248,7 +248,7 @@ describe("文明色只落在当前项上", () => {
     expect(current.className).toContain("font-semibold");
     expect(current.className).toContain("text-[oklch(var(--color-ink))]");
     expect(mark.className).toContain("w-[3px]");
-    expect(mark.className).toContain("bg-[oklch(var(--color-main))]");
+    expect(mark.className).toContain("bg-[oklch(var(--color-metal))]");
     // Absence: the group that holds it, its sibling, the leaves and the nav itself stay neutral.
     expect(screen.getByRole("button", { name: "系统设置" }).className).not.toContain("--color-main");
     expect(screen.getByRole("link", { name: "Sekhem Tepy Em Djeret" }).className).not.toContain("--color-main");
@@ -281,7 +281,7 @@ describe("文明色只落在当前项上", () => {
     expect(marks).toHaveLength(1);
     expect(current).toContainElement(marks[0]);
     expect(marks[0].className).toContain("h-[3px]");
-    expect(marks[0].className).toContain("bg-[oklch(var(--color-main))]");
+    expect(marks[0].className).toContain("bg-[oklch(var(--color-metal))]");
     expect(within(bar).getByRole("link", { name: "概览" }).className).not.toContain("--color-main");
   });
 });

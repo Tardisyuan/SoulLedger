@@ -120,7 +120,8 @@ describe("workflow linear preview", () => {
  * decide it (`workflow.approve`, the gate on 提交判决).
  */
 describe("待我处理 bar", () => {
-  const bars = () => document.querySelectorAll("li [class*='--color-main']");
+  // v4(2026-11-06):3px 标改读 `--color-metal`。
+  const bars = () => document.querySelectorAll("li [class*='--color-metal']");
   afterEach(() => {
     mockUser = ADMIN;
   });

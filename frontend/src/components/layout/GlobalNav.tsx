@@ -18,8 +18,9 @@ import { judgmentAppealKeys, judgmentAppealsApi, type UserRole } from "@soulledg
 /**
  * 全局导航(规范 v3 外框),取代 v2 的近黑立柱与 200px 弹出二级栏。
  *
- * - 浅色中性:surface-1 底、右侧 1px line。文明色(`--color-main`)**只**出现在当前项上:
- *   3px 左标 + 8% main 混进 surface-1 的底,字 ink 600。这条 3px 是导航,不是表格行 ——
+ * - 浅色中性:surface-1 底、右侧 1px line。文明色**只**出现在当前项上:
+ *   3px 左标(`--color-metal`,v4 `.side .it.on::before`;2026-11-06 由 main 改,v4 深色 solid 对
+ *   surface-1 只有约 2:1,不够 3:1 的图形门槛)+ 8% main 混进 surface-1 的底,字 ink 600。这条 3px 是导航,不是表格行 ——
  *   「3px = 待我处理」那条说的是行。
  * - 一级项与顺序、图标都来自后端菜单(`useSidebarMenus`;`menu.icon` 是 lucide 图标名,
  *   见 IconPicker)。不认得的图标名落回一个中性方块,不按路径写死。
@@ -133,14 +134,14 @@ export function useNavMode() {
 
 // ── 侧栏 ────────────────────────────────────────────────────────────────
 
-/** 当前项:3px main 标(侧栏在左、底栏在顶)+ 8% main 混进 surface-1。全导航只有标与底读 `--color-main`,字一律 ink。 */
+/** 当前项:3px metal 标(侧栏在左、底栏在顶)+ 8% main 混进 surface-1。全导航只有标读 `--color-metal`、底读 `--color-main`,字一律 ink。 */
 const CURRENT_BG = "bg-[color-mix(in_oklab,oklch(var(--color-main))_8%,oklch(var(--color-surface-1)))]";
 function CurrentMark() {
-  return <span aria-hidden="true" data-testid="nav-current-mark" className="absolute inset-y-1.5 left-0 w-[3px] bg-[oklch(var(--color-main))]" />;
+  return <span aria-hidden="true" data-testid="nav-current-mark" className="absolute inset-y-1.5 left-0 w-[3px] bg-[oklch(var(--color-metal))]" />;
 }
-/** 底栏当前项的标:同一条 3px main,横在格子顶上。 */
+/** 底栏当前项的标:同一条 3px metal,横在格子顶上。 */
 function BarMark() {
-  return <span aria-hidden="true" data-testid="bar-current-mark" className="absolute inset-x-2 top-0 h-[3px] bg-[oklch(var(--color-main))]" />;
+  return <span aria-hidden="true" data-testid="bar-current-mark" className="absolute inset-x-2 top-0 h-[3px] bg-[oklch(var(--color-metal))]" />;
 }
 
 const ROW = "relative flex w-full items-center rounded-control text-xs transition-colors duration-fast";

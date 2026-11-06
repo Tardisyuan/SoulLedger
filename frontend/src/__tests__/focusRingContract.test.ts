@@ -270,6 +270,19 @@ describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", 
     expect(measured.length).toBeGreaterThanOrEqual(5);
   });
 
-
+  /* 规范 v4(用户 2026-11-06 决定文明色范围照 v4):有 data-civ 时 `[data-civ]` 把 --color-focus 指到
+   * 文明的字色 civT(v4 `.btn:focus-visible { outline: 2px solid var(--civT) }`)。上面两组只看
+   * :root / .light 的字面值(中性皮),这里把四个文明的环也放到同一组底上量。
+   * 那条「字面值、不能被内联样式改掉」的理由来自 v1 的强调色选择器,它 2026-09 已撤掉;
+   * 文明环经 var() 取的是 globals.css 自己声明的 `--color-civ-*-ink`,没有入口能写它。 */
+  it.each(THEMES.flatMap((theme) => (["cn", "eu", "eg", "gr"] as const).map((civ) => [theme, civ] as const)))(
+    "%s mode, %s: the civilization ring clears 3:1 against the canvas and every ramp step",
+    (theme, civ) => {
+      const ring = oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], `--color-civ-${civ}-ink`));
+      for (const { label, triple } of ringBackgrounds(theme)) {
+        expect({ surface: label, ok: contrastRatio(ring, oklchTripleToRgb(triple)) >= NON_TEXT_FLOOR }).toEqual({ surface: label, ok: true });
+      }
+    }
+  );
 });
 

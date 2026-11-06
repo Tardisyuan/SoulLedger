@@ -7,6 +7,8 @@
  * #5a8480 上的白字达不到 4.5:1** —— 实测 3.99:1 与 4.16:1,与 v3 自己令牌页上
  * 写的两个数逐位相同。v3 把这两格标成「仅 ≥15px 粗体」,也就是退到 WCAG 的大号
  * 文字门槛 3:1。`ledgerPaletteContract` 因此对这两格只断言 ≥3,并同时断言它确实 <4.5。
+ * (v4,2026-11-06:文明的 solid 换成专给白字配的深色,十格白字都在 5.6:1 以上,那张例外表已删;
+ * 题字仍守大号文字,是因为身份带题字的字阶本来就是大字,不再是为了借 3:1。)
  *
  * 那条放松是有代价的,而代价落在这里:**只要题字掉到大号文字以下,这两个文明的页头
  * 就成了真正的对比度不足**,而色板那份测试看不见字号,它只量颜色。
@@ -126,18 +128,19 @@ const rgb = (theme: (typeof THEMES)[number], name: string): Rgb =>
   oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
 
 /**
- * 实测值(2026-10-02,`color-mix(main 90%, #111)`),两位小数:
+ * 实测值(2026-11-06,规范 v4 的 solid,`color-mix(main 90%, #111)`),两位小数,
+ * 用与本测试同一套换算(globalsCssTokens)离线算出,未在 jest 里跑过:
  *
  *            地府   欧洲   埃及   希腊
- *   深色     6.27   5.95   4.66   4.82
- *   浅色     8.75  10.23   9.48   9.71
+ *   深色     9.48  10.26   9.35   9.37
+ *   浅色     6.57   7.20   6.42   6.45
  *
- * 混入之前的深色埃及 / 希腊是 3.99 / 4.16(ledgerPaletteContract);压暗 10% 之后是
- * 4.66 / 4.82,两格都过了 4.5,所以这里八格一律按正文门槛断言。
+ * v3 时是 深 6.27 / 5.95 / 4.66 / 4.82、浅 8.75 / 10.23 / 9.48 / 9.71:v4 的深色 solid 更暗,
+ * 浅色 solid 更亮(浅色 solid 本身就是主按钮底,白字 5.62–6.39)。
  */
 const MEASURED: Record<string, number> = {
-  "dark:cn": 6.27, "dark:eu": 5.95, "dark:eg": 4.66, "dark:gr": 4.82,
-  "light:cn": 8.75, "light:eu": 10.23, "light:eg": 9.48, "light:gr": 9.71,
+  "dark:cn": 9.48, "dark:eu": 10.26, "dark:eg": 9.35, "dark:gr": 9.37,
+  "light:cn": 6.57, "light:eu": 7.2, "light:eg": 6.42, "light:gr": 6.45,
 };
 
 describe("身份带底色(文明色压暗 10%)上的白字", () => {
@@ -188,45 +191,45 @@ describe("身份带上的链接(案号)", () => {
     });
   });
 
-  it("base 的 `a` 颜色确实托不住:这条规则是承重的,不是多余的", () => {
+  // v4(2026-11-06):深色带更暗,base 的 ink-muted 压在上面是 4.60–5.05,四格碰巧过了;浅色四格是 1.0–1.1。
+  // 所以这条现在只断言浅色那四格 —— 浅色仍让 `color: inherit` 承重。
+  it("base 的 `a` 颜色确实托不住(浅色):这条规则是承重的,不是多余的", () => {
     const base = /\n {2}a \{\s*@apply text-\[oklch\(var\((--color-[a-z-]+)\)\)\]/.exec(CSS)?.[1] as string;
     const { pct, shade } = bandMix();
-    const under = THEMES.flatMap((theme) =>
-      CIVS.filter((civ) => contrastRatio(rgb(theme, base), mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct)) < 4.5),
-    );
-    expect(under).toHaveLength(THEMES.length * CIVS.length);
+    const under = CIVS.filter((civ) => contrastRatio(rgb("light", base), mixSrgb(rgb("light", `--color-civ-${civ}`), shade, pct)) < 4.5);
+    expect(under).toHaveLength(CIVS.length);
   });
 });
 
 /**
  * 印(规范 v3 描边印)是图形,门槛是 WCAG 1.4.11 的 3:1。它是 currentColor:身份带上随带上的
- * 白字(`.identity-band .seal { color: inherit }`),别处是匾色本身 —— 落在 canvas(审判队列的
- * 裁决条、判决页)或 surface-1(导航、确认层、印字弹窗)上。surface-2 / 3 上不放印:深色地府
- * 在 surface-2 上只有 2.67。
+ * 白字(`.identity-band .seal { color: inherit }`),别处是文明的字色 civT(`--color-main-ink`,v4 起;
+ * v3 时是匾色本身)—— 落在 canvas(审判队列的裁决条、判决页)或 surface-1(导航、确认层、印字弹窗)上。
+ * 为什么不再是匾色:v4 的深色 solid 对 surface-1 只有约 2:1(ledgerPaletteContract 钉着),印会看不见。
  *
- * 实测(2026-10-02),两位小数:
+ * 实测(2026-11-06,civT;离线按同一套换算算出,未在 jest 里跑过),两位小数:
  *
  *                    地府   欧洲   埃及   希腊
- *   深色 canvas      3.46   3.64   4.72   4.52
- *   深色 surface-1   3.13   3.29   4.27   4.09
- *   浅色 canvas      6.81   8.14   7.46   7.73
- *   浅色 surface-1   7.58   9.05   8.30   8.60
+ *   深色 canvas      7.07   5.86   9.45  13.42
+ *   深色 surface-1   6.45   5.35   8.63  12.25
+ *   浅色 canvas      5.77   5.02   8.33   5.96
+ *   浅色 surface-1   6.13   5.33   8.86   6.34
  *
- * 最紧的一格是深色地府在 surface-1 上的 3.13 —— 哪天地府的深色匾色调暗一点,这里先红。
+ * 最紧的一格是浅色欧洲在 canvas 上的 5.02。
  */
 const SEAL_MEASURED: Record<string, number> = {
-  "dark:--color-canvas:cn": 3.46, "dark:--color-canvas:eu": 3.64, "dark:--color-canvas:eg": 4.72, "dark:--color-canvas:gr": 4.52,
-  "dark:--color-surface-1:cn": 3.13, "dark:--color-surface-1:eu": 3.29, "dark:--color-surface-1:eg": 4.27, "dark:--color-surface-1:gr": 4.09,
-  "light:--color-canvas:cn": 6.81, "light:--color-canvas:eu": 8.14, "light:--color-canvas:eg": 7.46, "light:--color-canvas:gr": 7.73,
-  "light:--color-surface-1:cn": 7.58, "light:--color-surface-1:eu": 9.05, "light:--color-surface-1:eg": 8.3, "light:--color-surface-1:gr": 8.6,
+  "dark:--color-canvas:cn": 7.07, "dark:--color-canvas:eu": 5.86, "dark:--color-canvas:eg": 9.45, "dark:--color-canvas:gr": 13.42,
+  "dark:--color-surface-1:cn": 6.45, "dark:--color-surface-1:eu": 5.35, "dark:--color-surface-1:eg": 8.63, "dark:--color-surface-1:gr": 12.25,
+  "light:--color-canvas:cn": 5.77, "light:--color-canvas:eu": 5.02, "light:--color-canvas:eg": 8.33, "light:--color-canvas:gr": 5.96,
+  "light:--color-surface-1:cn": 6.13, "light:--color-surface-1:eu": 5.33, "light:--color-surface-1:eg": 8.86, "light:--color-surface-1:gr": 6.34,
 };
 
 /** globals.css 里某条两格缩进的规则体(`\n  .seal {` …)。 */
 const ruleBody = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.]/g, "\\$&")} \\{([^}]*)\\}`).exec(CSS)?.[1] ?? "";
 
 describe("印的描边与印文 ≥ 3:1(图形)", () => {
-  it("印是 currentColor 的匾色,身份带上改随白字 —— 下面两组量的就是这两种颜色", () => {
-    expect(ruleBody(".seal")).toMatch(/color: oklch\(var\(--color-main\)\);[\s\S]*border: 2px solid currentColor;/);
+  it("印是 currentColor 的文明字色,身份带上改随白字 —— 下面两组量的就是这两种颜色", () => {
+    expect(ruleBody(".seal")).toMatch(/color: oklch\(var\(--color-main-ink\)\);[\s\S]*border: 2px solid currentColor;/);
     expect(ruleBody(".identity-band .seal")).toMatch(/color: inherit;/);
     expect(ruleBody(".identity-band")).toMatch(/color: oklch\(var\(--color-on-main\)\);/);
   });
@@ -236,7 +239,7 @@ describe("印的描边与印文 ≥ 3:1(图形)", () => {
       ["--color-canvas", "--color-surface-1"].flatMap((surface) => CIVS.map((civ) => [theme, surface, civ] as const)),
     ),
   )("%s · %s 上的 %s 印 ≥ 3:1,且等于实测表", (theme, surface, civ) => {
-    const ratio = contrastRatio(rgb(theme, `--color-civ-${civ}`), rgb(theme, surface));
+    const ratio = contrastRatio(rgb(theme, `--color-civ-${civ}-ink`), rgb(theme, surface));
     expect(Number(ratio.toFixed(2))).toBe(SEAL_MEASURED[`${theme}:${surface}:${civ}`]);
     expect(ratio).toBeGreaterThanOrEqual(3);
   });

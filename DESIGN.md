@@ -5,7 +5,7 @@
 That sentence is the whole point of this rewrite. The previous version of this
 document was a 259-line hand-maintained mirror of the token system, and by
 2026-09-02 it disagreed with the code in six of its nine sections — it
-prescribed **Inter** and **JetBrains Mono** (the app ships Archivo, Source
+prescribed **Inter** and **JetBrains Mono** (the app then shipped Archivo, Source
 Serif 4 and IBM Plex Mono), **8px and 12px border radii** (every radius token
 in the app is `0`), a **14px body** (the scale has no 14px step), a 1280px
 container (it is 1200px), and "no shadows, never" (nine `shadow-*` classes
@@ -26,10 +26,10 @@ recoverable from the code, and it points at the code for everything else.
 
 | What | Where | Notes |
 |---|---|---|
-| Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v1 "账簿 × 卷宗" (`a2044b28`, 2026-09-24); `ledgerPaletteContract` holds each token to the spec's hex. |
+| Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v4 (Design batch 07, `V4Batch07.dc.html`, 2026-11-06; token names unchanged since v1, only values); `ledgerPaletteContract` holds each token to the spec's hex. |
 | Type scale | `frontend/app/globals.css` `@theme` | Eight steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `xl` 28 · `display` 40 · `display-lg` 56 (px), each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
 | Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Four roles, each with one stated job — see "Four faces, one job each" below. |
-| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | One colour per civilization, `--color-civ-cn` / `eu` / `eg` / `gr` (spec v3 values), and it enters through **one** declaration: each `[data-civ]` rule sets `--color-main` from its civ token, and `--color-main` paints the plaque, the navigation's current item (a 3px mark and an 8% tint over surface-1 — the nav itself is neutral since v3), the seal, the primary button and the row's "mine" mark. Nothing else reads a civ token — `ledgerPaletteContract` asserts it. The seal (spec v3, 2026-10-02) is an outline in `currentColor` — the civ colour on surfaces, the band's white on the band — whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon) with its glyph in Noto Serif SC 600; the same `data-civ` picks the identity band's faint pattern (spec v3: 地府 grid, Europe concentric arcs, Egypt vertical rules, Greece diagonals). The band's fill is the civ colour darkened 10% (`color-mix(in srgb, main 90%, #111)`). (v1 removed this layer in `a2044b28`; spec v2 brought it back narrowed to that one route, and v3 kept the route and changed the colours.) |
+| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | Spec v4 (user decision 2026-11-06: the v4 range, replacing v3's "five uses only"). Each civilization has five values per theme — `--color-civ-cn` (the solid fill, white text on it), `-ink` (civ-coloured text), `-glow`, `-metal`, `-side` — and each `[data-civ]` rule points five generic names at them: `--color-main`, `--color-main-ink`, `--color-glow`, `--color-metal`, `--color-side`. A second `[data-civ]` rule points `--color-accent`, `--color-accent-ink` and `--color-focus` at `--color-main-ink`, so links, selection and the focus ring take the civilization's text colour; with no `data-civ` (before login) they stay ink. `--color-main` is a fill only: the dark v4 solids are about 2:1 on surface-1, so the 3px marks read `--color-metal` and the seal reads `--color-main-ink`. Nothing outside `globals.css` reads a civ token — `ledgerPaletteContract` asserts it. The seal is an outline in `currentColor` whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon); the identity band's fill is still the solid darkened 10% (`color-mix(in srgb, main 90%, #111)`) until the shell is redone. |
 | Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
 
 If a number here would ever contradict one of those files, the file wins and
@@ -42,7 +42,7 @@ this document is the bug.
 **Square corners are a decision, not an omission.** The default *shape* radius is `0`
 — `--radius` and its seven siblings. Spec v3 (2026-10) added exactly two non-zero
 steps, each with a written job: `--radius-control` 4px for inputs and filter chips,
-`--radius-panel` 8px for dialogs. **Buttons stay square** — the v3 token table says
+`--radius-panel` for dialogs — 8px in v3, **6px since spec v4** (user decision 2026-11-06). **Buttons stay square** — the v3 token table says
 "inputs and small controls", the v3 component prototype draws square buttons, and on
 2026-10-01 the prototype won; `Button.tsx` says so beside its `size` block. Pills remain
 the other exception, for avatars and spinners only, in the files listed in
@@ -69,7 +69,7 @@ every row below and checks the step, size, line-height and weight against
 | 面板标题 | `<h2>` 或 `<h3>` | `text-lg` | 20 / 28 | 600 | 界面字体 | `PageShell.test` h2 / h3 |
 | 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
 | 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
-| 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | IBM Plex Mono | `PageShell.test` |
+| 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | Geist Mono | `PageShell.test` |
 | 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
 | 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 62 | 600 | Noto Serif SC | — |
 | 展示数字 · 二档 | 灵魂详情的功 / 过余额、首字方块 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | — |
@@ -126,20 +126,21 @@ ramp was tried and broke 23 pinned ink-on-surface combinations, because the ink
 ramp is tuned tightly against the flat surfaces. Making the ladder real means
 re-deriving both ramps together, not editing four numbers.
 
-**Four faces, one job each** (`frontend/app/fonts.ts`, `--font-title` in `globals.css`):
+**Seven faces** (spec v4, user decision 2026-11-06; `frontend/app/fonts.ts`, `--font-title` in `globals.css`):
 
-- **Interface** (`font-sans`): Archivo + Noto Sans SC — body, tables, controls, labels.
-- **Identifiers and data figures** (`font-mono`): IBM Plex Mono — IDs, hashes, table numbers.
-- **Titles and display numerals** (`font-title`): Noto Serif SC 600, Latin included
-  (spec v3) — the identity-band title, page `<h1>`s, the current ruling, a soul's
-  balance, a corpus article number. Nothing else: a panel title, a button or a table
-  cell is interface type. It is the `@fontsource-variable` copy `layout.tsx` already
-  loads, so it added no font files.
-- **Things a person said** (`font-serif`): Source Serif 4 for Latin, Noto Serif SC for
-  CJK — the statute corpus, a soul's confession, the grounds of a judgment. Spec v3
-  sets quoted text in Noto Serif SC 500; our CJK quotes already are, and Latin quotes
-  keep Source Serif 4 for its optical-size axis. The serif marks quoted speech; do
-  not spend it anywhere else.
+- **Interface** (`font-sans`): Geist + Noto Sans SC — body, tables, controls, labels.
+- **Identifiers and data figures** (`font-mono`): Geist Mono — IDs, hashes, table numbers.
+- **Titles and display numerals** (`font-title`): Noto Serif SC 600, Latin included.
+  Spec v4 widens this from v3's short list (band title, page `<h1>`, current ruling,
+  balance, article number) to section and card titles as well.
+- **Quotations and documents** (`font-serif`): EB Garamond for Latin, GFS Didot for
+  Greek, Noto Serif SC for CJK — the statute corpus, confessions, the grounds of a
+  judgment, and the verdict documents' SENTENTIA / ΚΡΙΣΙΣ headings. v3's rule "the
+  serif marks quoted speech only" was withdrawn on 2026-11-06.
+- **Hieroglyphs**: Noto Sans Egyptian Hieroglyphs, behind `font-title` in the seal only.
+
+All seven are self-hosted (next/font at build time, or the `@fontsource-variable`
+packages for the two CJK faces, which ship as ~100 unicode-range slices each).
 
 **One spelling for a colour token, and it is the bracketed one.**
 `text-[oklch(var(--color-ink))]`, never `text-ink`. The bare form silently

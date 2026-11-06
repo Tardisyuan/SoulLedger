@@ -279,7 +279,7 @@ describe("立柱横排阈值(C14)", () => {
 describe("文明皮的素材表(globals.css → public/v2)", () => {
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
 
-  it.each(["cn", "eu", "eg", "gr"])("%s 只有匾色;v2 的分节纹、印素材、印文字体、匾纹都不该再有", (civ) => {
+  it.each(["cn", "eu", "eg", "gr"])("%s 有文明色(v4 五个值);v2 的分节纹、印素材、印文字体、匾纹都不该再有", (civ) => {
     const blocks = [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
     // 先证明找到了这个文明的块,再断言里面没有 v2 素材。
     expect(blocks).toMatch(/--color-main:\s*\S/);
@@ -299,7 +299,8 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
   it("印是 v3 的描边印:currentColor 描边、不填色,印文 font-title + 圣书字回退;身份带上随带上的白字", () => {
     const rule = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.[\]"=]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
     const seal = rule(".seal");
-    expect(seal).toMatch(/color: oklch\(var\(--color-main\)\);/);
+    // v4(2026-11-06):默认印色由匾色改为文明字色 civT —— 深色 v4 solid 对 surface-1 只有约 2:1。
+    expect(seal).toMatch(/color: oklch\(var\(--color-main-ink\)\);/);
     expect(seal).toMatch(/border: 2px solid currentColor;/);
     expect(seal).toMatch(/outline: 1px solid currentColor;/);
     expect(seal).not.toMatch(/background/);

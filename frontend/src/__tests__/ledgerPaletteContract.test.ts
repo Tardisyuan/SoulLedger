@@ -1,9 +1,8 @@
 /**
  * @jest-environment node
  *
- * 色板 = SoulLedger 规范 v2「朱印」(Claude Design,2026-09-29 定稿;design-cache/v2/
- * spec-final.dc.html §一「Web · 四文明共用」、§二 状态色、§三 文明皮)。
- * v1「账簿 × 卷宗」那张表在这次改版里整张换掉,这份测试随之换成 v2 的表。
+ * 色板 = SoulLedger 规范 v4(Claude Design 第七批 `V4Batch07.dc.html`,2026-11-06)。
+ * v1「账簿 × 卷宗」、v2「朱印」、v3 冷中性灰三张表先后整张换掉,这份测试随之换成 v4 的表。
  *
  * The spec ships hex; globals.css stores OKLCH triples. This converts each token
  * back to sRGB and holds it to the spec's hex within one channel step, per theme,
@@ -11,11 +10,14 @@
  *
  * Also held, because the spec states them as the reason the palette is what it is:
  * - text tokens ≥ 4.5:1 on canvas, the block line and the focus ring ≥ 3:1;
- * - onMain ≥ 4.5:1 on every plaque colour (§三 算的就是这一条);
+ * - onMain ≥ 4.5:1 on every solid colour (v4 的 solid 就是给白字配的);
+ * - each civilization's text colour (civT) ≥ 4.5:1 on canvas / surface-1 / surface-2, its metal
+ *   mark ≥ 3:1 on canvas / surface-1;
  * - the five domain states are five DIFFERENT colours;
- * - civilization enters ONLY the plaque colour (§1.8 收窄): `--color-civ-*` is read
- *   by exactly one declaration, `--color-main`, per `[data-civ]`; no source file
- *   reads a civ token directly.
+ * - civilization colour enters through `[data-civ]` only: each `[data-civ="x"]` block points the
+ *   five generic names (`--color-main` / `-main-ink` / `-glow` / `-metal` / `-side`) at its own
+ *   `--color-civ-x*` tokens and declares nothing else; no source file reads a civ token directly.
+ *   (v3 的规则是「文明只进匾色,五处用」—— 用户 2026-11-06 决定撤销,照 v4 的范围。)
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -33,35 +35,30 @@ import {
   type ThemeName,
 } from "./support/globalsCssTokens";
 
-/** 规范 v3 的色表。v2「朱印」那张暖纸色的表整张换掉,来源是 Figma 项目
- * 「Modern SoulLedger Redesign」第七轮的「令牌」页与 `src/index.css`。
+/** 规范 v4 的色表(Design 第七批定稿 `V4Batch07.dc.html` 的 `.th-dark` / `.th-light` 与四个
+ * `[data-civ]`,2026-11-06)。v3 那张冷中性灰的表整张换掉,名字不动。
  *
- * v3 只定义 canvas / surface / ink / muted / line 五个中性角色与四个文明色,
- * 其余是本仓库多出来的档,按 globals.css 里写明的规则推导,**不是规范**:
- *   surface-2 / line-strong  保留 v2 的明度,色相彩度挪到 v3 的中性族
- *   surface-3 / rule / line  取 v3 的 line;block 取 v3 的 ink
- *   ink-muted / ink-subtle   都取 v3 的单一 muted
- * 状态色按用途对上 v3 的三档:danger ← v3 error、danger-strong ← v3 danger、
- * warning ← v3 warning;success 与长明灯 v3 没定义,连同各自 tint 原样保留。
- *
- * 两处有意偏离 v3,都为对比度(数字在 globals.css 的注释里):深色 danger-strong
- * 用 #c84c5a 而非 v3 的 #c94d5b(白字 4.47 → 4.53);浅色 warning 跟 v3 退回
- * #a65000(新底 #efefeb 上实测 4.83,v2 的羊皮纸底上曾是 4.40)。 */
+ * v4 的 17 个主题角色对到这里的规则写在 globals.css 的色板抬头,摘要:
+ *   main/card/card2 → canvas/surface-1/surface-2;ink → ink/block;sub → ink-muted 与 ink-subtle;
+ *   faint → line-strong 与 disabled-ink;line(8%)压在 card 上合成 → line;pos/neg → success/danger。
+ * 文明(用户 2026-11-06 决定照 v4 的范围):solid → `--color-civ-*`(=匾色 / 主按钮底),civT →
+ * `-ink`,metal → `-metal`,side → `-side`,glow 两主题同值不在这张表(只有一个值,没有对错之分可量)。
+ * 中性皮 v4 没画,是推导值(与 App 一致)。v4 没定义的 danger-strong / tint / warning / 长明灯沿用 v3。 */
 const SPEC: Record<string, Record<ThemeName, string>> = {
-  "--color-canvas": { light: "#efefeb", dark: "#10120f" },
-  "--color-surface-1": { light: "#fbfbf8", dark: "#1a1d19" },
-  "--color-surface-2": { light: "#e9eae5", dark: "#272a25" },
-  "--color-line": { light: "#d1d3cd", dark: "#383c35" },
-  "--color-line-strong": { light: "#5b5f59", dark: "#959a93" },
-  "--color-block": { light: "#181a17", dark: "#f0f1ea" },
-  "--color-ink": { light: "#181a17", dark: "#f0f1ea" },
-  "--color-ink-muted": { light: "#646861", dark: "#a7aca4" },
-  "--color-ink-subtle": { light: "#646861", dark: "#a7aca4" },
-  "--color-pillar": { light: "#181a17", dark: "#070806" },
+  "--color-canvas": { light: "#f8f8f6", dark: "#111113" },
+  "--color-surface-1": { light: "#ffffff", dark: "#1a1b1e" },
+  "--color-surface-2": { light: "#f1f1ee", dark: "#222327" },
+  "--color-line": { light: "#ebebeb", dark: "#2c2d30" },
+  "--color-line-strong": { light: "#8a8d92", dark: "#7c7f85" },
+  "--color-block": { light: "#16171a", dark: "#f3f3f1" },
+  "--color-ink": { light: "#16171a", dark: "#f3f3f1" },
+  "--color-ink-muted": { light: "#54575c", dark: "#b4b6ba" },
+  "--color-ink-subtle": { light: "#54575c", dark: "#b4b6ba" },
+  "--color-pillar": { light: "#f1f1ee", dark: "#0c0c0e" },
   "--color-on-main": { light: "#ffffff", dark: "#ffffff" },
-  "--color-focus": { light: "#181a17", dark: "#f0f1ea" },
-  "--color-success": { light: "#197037", dark: "#82CB92" },
-  "--color-danger": { light: "#b42350", dark: "#ff7a9a" },
+  "--color-focus": { light: "#16171a", dark: "#f3f3f1" },
+  "--color-success": { light: "#1f6b3f", dark: "#8ad3a1" },
+  "--color-danger": { light: "#a81e3c", dark: "#f2849b" },
   "--color-danger-strong": { light: "#8f2430", dark: "#c84c5a" },
   "--color-danger-tint": { light: "#FFECEF", dark: "#33101A" },
   "--color-danger-on-tint": { light: "#8A0C33", dark: "#FFD3DC" },
@@ -70,13 +67,28 @@ const SPEC: Record<string, Record<ThemeName, string>> = {
   "--color-warning-tint": { light: "#FFF1E2", dark: "#301904" },
   "--color-lamp": { light: "#6A3E00", dark: "#F2CC7A" },
   "--color-lamp-bg": { light: "#FBF1DC", dark: "#241B0C" },
-  "--color-disabled-ink": { light: "#5b5f59", dark: "#959a93" },
-  "--color-disabled-surface": { light: "#e9eae5", dark: "#272a25" },
-  "--color-civ-neutral": { light: "#262925", dark: "#656962" },
-  "--color-civ-cn": { light: "#8f3329", dark: "#ad4b40" },
-  "--color-civ-eu": { light: "#583875", dark: "#80609a" },
-  "--color-civ-eg": { light: "#294a8a", dark: "#5f7fbe" },
-  "--color-civ-gr": { light: "#285051", dark: "#5a8480" },
+  "--color-disabled-ink": { light: "#8a8d92", dark: "#7c7f85" },
+  "--color-disabled-surface": { light: "#f1f1ee", dark: "#222327" },
+  "--color-civ-neutral": { light: "#16171a", dark: "#38393e" },
+  "--color-civ-neutral-ink": { light: "#54575c", dark: "#b4b6ba" },
+  "--color-civ-neutral-metal": { light: "#54575c", dark: "#b4b6ba" },
+  "--color-civ-neutral-side": { light: "#f1f1ee", dark: "#0c0c0e" },
+  "--color-civ-cn": { light: "#a64a3b", dark: "#7e362b" },
+  "--color-civ-cn-ink": { light: "#a04636", dark: "#d98a7a" },
+  "--color-civ-cn-metal": { light: "#8a6a24", dark: "#c9a35e" },
+  "--color-civ-cn-side": { light: "#fff0ec", dark: "#160806" },
+  "--color-civ-eu": { light: "#7a4f85", dark: "#5a3a63" },
+  "--color-civ-eu-ink": { light: "#885a94", dark: "#a883ae" },
+  "--color-civ-eu-metal": { light: "#5c6878", dark: "#b9c2cf" },
+  "--color-civ-eu-side": { light: "#f7edf6", dark: "#100718" },
+  "--color-civ-eg": { light: "#3c69a2", dark: "#2b4e79" },
+  "--color-civ-eg-ink": { light: "#174a88", dark: "#89bcf1" },
+  "--color-civ-eg-metal": { light: "#86671e", dark: "#d6b25e" },
+  "--color-civ-eg-side": { light: "#eaf2fb", dark: "#060c1c" },
+  "--color-civ-gr": { light: "#37716a", dark: "#28544f" },
+  "--color-civ-gr-ink": { light: "#31695e", dark: "#b5e3d8" },
+  "--color-civ-gr-metal": { light: "#8f5b36", dark: "#c98b62" },
+  "--color-civ-gr-side": { light: "#e8faf7", dark: "#03120f" },
 };
 
 const CIVS = ["neutral", "cn", "eu", "eg", "gr"] as const;
@@ -85,11 +97,11 @@ const hexRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, 
 const rgbOf = (theme: ThemeName, name: string): Rgb => oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], name));
 const CSS = readFileSync(path.join(FRONTEND_ROOT, "app", "globals.css"), "utf8");
 
-describe("palette (规范 v3)", () => {
+describe("palette (规范 v4)", () => {
   const rows = THEMES.flatMap((theme) => Object.keys(SPEC).map((name) => [theme, name] as const));
 
   it("covers every spec token in both themes (a short list checks nothing)", () => {
-    expect(rows).toHaveLength(2 * 29);
+    expect(rows).toHaveLength(2 * 44);
   });
 
   it.each(rows)("%s %s is the spec's colour", (theme, name) => {
@@ -126,27 +138,36 @@ describe("palette (规范 v3)", () => {
 });
 
 describe("the paired texts the spec measures", () => {
-  /* v2 的匾色四个文明在两套主题下白字都过 4.5:1。**v3 不是** —— 它自己的令牌页
-   * 就把深色埃及与深色希腊标成「仅 ≥15px 粗体」:
-   *   --civil-egypt  白字 8.60:1 / 3.99:1(仅 ≥15px 粗体)
-   *   --civil-greece 白字 8.91:1 / 4.16:1(仅 ≥15px 粗体)
-   * 这里实测出来的正是 3.99 与 4.16,与 v3 写的逐位相同,所以不是色值抄错,
-   * 是 v3 有意用了 WCAG 的大号文字门槛(≥18.66px 常规或 ≥14px 粗体,3:1)。
-   *
-   * 于是门槛按主题分开,而不是整体放松到 3:1 —— 放松到 3 会让另外六格也失去保护。
-   * **代价是一条落到组件上的硬约束**:深色下埃及与希腊的匾题字不得小于 15px、
-   * 不得低于粗体。那一条这份测试查不到(它只看色值),要在匾的组件里另立守卫;
-   * 在那之前它只是一条写下来的约定,不是被执行的规则。 */
-  const LARGE_TEXT_ONLY = new Set(["dark:eg", "dark:gr"]);
+  /* v3 的深色埃及 / 希腊匾色托不住白字(3.99 / 4.16:1,v3 自己标「仅 ≥15px 粗体」),这里曾有一张
+   * 大号文字例外表。v4 的 solid 是专门给白字配的深色(白字 5.62–9.46:1),例外表随之删掉 ——
+   * 十格(含中性)一律按正文门槛。 */
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s onMain on the %s solid ≥ 4.5:1", (theme, civ) => {
+    expect(contrastRatio(rgbOf(theme, "--color-on-main"), rgbOf(theme, `--color-civ-${civ}`))).toBeGreaterThanOrEqual(4.5);
+  });
 
-  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s onMain on the %s plaque", (theme, civ) => {
-    const ratio = contrastRatio(rgbOf(theme, "--color-on-main"), rgbOf(theme, `--color-civ-${civ}`));
-    if (LARGE_TEXT_ONLY.has(`${theme}:${civ}`)) {
-      // 大号文字门槛,且要真的比 4.5 低 —— 否则这一格该回到上面那条,名单里不该有它。
-      expect(ratio).toBeGreaterThanOrEqual(3);
-      expect(ratio).toBeLessThan(4.5);
-    } else {
-      expect(ratio).toBeGreaterThanOrEqual(4.5);
+  it.each(THEMES.flatMap((theme) => CIVS.flatMap((civ) => ["--color-canvas", "--color-surface-1", "--color-surface-2"].map((bg) => [theme, civ, bg] as const))))(
+    "%s %s text colour (civT) on %s ≥ 4.5:1",
+    (theme, civ, bg) => {
+      expect(contrastRatio(rgbOf(theme, `--color-civ-${civ}-ink`), rgbOf(theme, bg))).toBeGreaterThanOrEqual(4.5);
+    }
+  );
+
+  it.each(THEMES.flatMap((theme) => CIVS.flatMap((civ) => ["--color-canvas", "--color-surface-1"].map((bg) => [theme, civ, bg] as const))))(
+    "%s %s metal mark on %s ≥ 3:1",
+    (theme, civ, bg) => {
+      expect(contrastRatio(rgbOf(theme, `--color-civ-${civ}-metal`), rgbOf(theme, bg))).toBeGreaterThanOrEqual(3);
+    }
+  );
+
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("%s ink and ink-muted on the %s side ≥ 4.5:1", (theme, civ) => {
+    for (const fg of ["--color-ink", "--color-ink-muted"]) {
+      expect(contrastRatio(rgbOf(theme, fg), rgbOf(theme, `--color-civ-${civ}-side`))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("solid 托不住文明色的字、也托不住 3px 标:深色 solid 对 surface-1 不到 3:1 —— 字用 civT、标用 metal 是承重的", () => {
+    for (const civ of ["cn", "eu", "eg", "gr"]) {
+      expect(contrastRatio(rgbOf("dark", `--color-civ-${civ}`), rgbOf("dark", "--color-surface-1"))).toBeLessThan(3);
     }
   });
 
@@ -155,47 +176,59 @@ describe("the paired texts the spec measures", () => {
     expect(contrastRatio([255, 255, 255], rgbOf(theme, "--color-danger-strong"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(THEMES)("%s input border (ink3) on s1 ≥ 3:1 — the line token would not be", (theme) => {
+  it.each(THEMES)("%s input border (faint) on s1 ≥ 3:1 — the line token would not be", (theme) => {
     expect(contrastRatio(rgbOf(theme, "--color-line-strong"), rgbOf(theme, "--color-surface-1"))).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(rgbOf(theme, "--color-line"), rgbOf(theme, "--color-surface-1"))).toBeLessThan(3);
   });
 });
 
-/** `--color-main` as the stylesheet resolves it under `<html data-civ="…">`. */
-function mainUnder(civ: string): string | undefined {
-  if (civ === "neutral") return ROOT_TOKENS["--color-main"];
-  const block = new RegExp(String.raw`\[data-civ="${civ}"\]\s*\{([^}]*)\}`).exec(CSS);
-  return block ? /--color-main:\s*([^;]+);/.exec(block[1])?.[1].trim() : undefined;
+/** 文明皮的五个通用名,`[data-civ="x"]` 把它们各自指到 `--color-civ-x` 加这个后缀。 */
+const CIV_SLOTS: Record<string, string> = {
+  "--color-main": "",
+  "--color-main-ink": "-ink",
+  "--color-glow": "-glow",
+  "--color-metal": "-metal",
+  "--color-side": "-side",
+};
+
+/** `[data-civ="x"] { … }` 的声明(注释已剥掉);`.seal[data-civ="eu"]` 这类形状规则不带自定义属性,不计。 */
+function civBlocks(): Map<string, Record<string, string>> {
+  const out = new Map<string, Record<string, string>>();
+  for (const b of CSS.matchAll(/(?<![\w.-])\[data-civ="(\w+)"\]\s*\{([^}]*)\}/g)) {
+    const decls: Record<string, string> = { ...(out.get(b[1]) ?? {}) };
+    for (const d of b[2].replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) decls[d[1]] = d[2].trim();
+    out.set(b[1], decls);
+  }
+  return out;
 }
 
-describe("civilization enters only the plaque colour (规范 v2 §1.8 收窄)", () => {
-  it("no [data-civ] (before login) is the neutral skin", () => {
-    expect(ROOT_TOKENS["--color-main"]).toBe("var(--color-civ-neutral)");
+describe("civilization colour enters through [data-civ] only (规范 v4,用户 2026-11-06)", () => {
+  it("no [data-civ] (before login) is the neutral skin, slot by slot", () => {
+    for (const [slot, suffix] of Object.entries(CIV_SLOTS)) expect(ROOT_TOKENS[slot]).toBe(`var(--color-civ-neutral${suffix})`);
   });
 
-  it.each(CIVS.filter((c) => c !== "neutral"))("[data-civ=%s] points --color-main at its own plaque colour", (civ) => {
-    expect(mainUnder(civ)).toBe(`var(--color-civ-${civ})`);
-  });
-
-  // 文明皮只剩匾色(印形由 `.seal[data-civ]` 直接选,不经变量;v2 的匾纹、质感、题字字体、
-  // 印素材与印文字体随 v3 撤掉,分节纹 `--section` 于 2026-10-03 随 `SectionTitle` 撤掉),
-  // 所以 [data-civ] 块里只有 --color-main。这条守的仍是 §1.8 收窄那句话。
-  it("a [data-civ] block sets --color-main and nothing else", () => {
-    const blocks = [...CSS.matchAll(/\[data-civ="(\w+)"\]\s*\{([^}]*)\}/g)];
-    // 中性皮没有自己的块:它的匾色是 :root 的默认(上一条),它没有印、没有分节纹。
-    expect([...new Set(blocks.map((b) => b[1]))].sort()).toEqual(["cn", "eg", "eu", "gr"]);
-    const mainSetBy: string[] = [];
-    for (const b of blocks) {
-      const decls = [...b[2].matchAll(/(--[\w-]+)\s*:/g)].map((d) => d[1]);
-      const colours = decls.filter((d) => d.startsWith("--color-"));
-      expect(colours.filter((d) => d !== "--color-main")).toEqual([]);
-      if (colours.includes("--color-main")) mainSetBy.push(b[1]);
-      expect(decls.filter((d) => !d.startsWith("--color-"))).toEqual([]);
+  it("each [data-civ] block points the five slots at its own civilization and sets nothing else", () => {
+    const blocks = civBlocks();
+    expect([...blocks.keys()].sort()).toEqual(["cn", "eg", "eu", "gr"]);
+    for (const [civ, decls] of blocks) {
+      const want = Object.fromEntries(Object.entries(CIV_SLOTS).map(([slot, suffix]) => [slot, `var(--color-civ-${civ}${suffix})`]));
+      expect({ civ, decls }).toEqual({ civ, decls: want });
     }
-    expect(mainSetBy.sort()).toEqual(["cn", "eg", "eu", "gr"]);
   });
 
-  it("no source file reads a civ token directly — they go through --color-main", () => {
+  it("accent, accent-ink and focus follow the civilization's text colour, and only under [data-civ]", () => {
+    // `[data-civ]` 单独成块的有两处:这一块,和 base 层 `:root, [data-civ]` 的 `--main-fill`。取声明了 accent 的那一块。
+    const generic = [...CSS.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(?<![\w.\]-])\[data-civ\]\s*\{([^}]*)\}/g)].filter((b) => /--color-accent\s*:/.test(b[1]));
+    expect(generic).toHaveLength(1);
+    const decls = Object.fromEntries([...generic[0][1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((d) => [d[1], d[2].trim()]));
+    expect(decls).toEqual({
+      "--color-accent": "var(--color-main-ink)",
+      "--color-accent-ink": "var(--color-main-ink)",
+      "--color-focus": "var(--color-main-ink)",
+    });
+  });
+
+  it("no source file reads a civ token directly — they go through the five slots", () => {
     let hits = "";
     try {
       hits = execFileSync(
