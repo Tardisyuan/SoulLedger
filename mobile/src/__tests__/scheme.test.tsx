@@ -67,14 +67,14 @@ it.each(["dark", "light"] as const)("system %s → v4's neutrals of that scheme,
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(v4[scheme].main);
+  expect(loginGround()).toBe(v4[scheme].card);
   // 「登录」 is pressable once there is a full number and a password: only then is it the plaque button.
   fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
   fireEvent.changeText(screen.getByTestId("login-password"), "x");
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
     backgroundColor: (scheme === "dark" ? NEUTRAL_CIV.sD : NEUTRAL_CIV.sL),
   });
-  expect(loginGround()).not.toBe(v4[scheme === "dark" ? "light" : "dark"].main);
+  expect(loginGround()).not.toBe(v4[scheme === "dark" ? "light" : "dark"].card);
 });
 
 it("no system preference reported → dark (the design's primary scheme)", async () => {
