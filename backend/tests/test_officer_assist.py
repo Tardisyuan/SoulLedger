@@ -209,7 +209,8 @@ def test_queue_counts_are_this_halls_and_carry_no_soul_data(cn_tenant, eu_tenant
     _case(cn_tenant, "已结魂", verdict="PASSED", is_final=True)
 
     out = _tool_result(officer_client(judge_user), "judgment_queue_counts")
-    assert out == {"scope": "this_hall", "total": 3, "mine": 1, "unclaimed": 1, "others": 1, "deferred": 0}
+    assert out == {"scope": "this_hall", "total": 3, "mine": 1, "unclaimed": 1, "others": 1, "deferred": 0,
+                   "overdue": 0, "returned": 0}
     blob = json.dumps(out, ensure_ascii=False)
     for name in ("我的魂", "无主魂", "Foreign"):
         assert name not in blob

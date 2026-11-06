@@ -93,7 +93,10 @@ def _occupy(realm, tenant, n=1):
 
 
 def _conclude(client, case, **body):
-    return client.post(f"/api/v1/judgment/{case.id}/conclude/", {"verdict": "FAILED", "fail_reasons": ["OTHER"], "fail_reason_note": "测", **body}, format="json")
+    body = {"verdict": "FAILED", **body}
+    if body["verdict"] == "FAILED":  # v4 D6:经接口结原审 FAILED 要理由;OTHER 不改罪目,路由不变
+        body = {"fail_reasons": ["OTHER"], "fail_reason_note": "测", **body}
+    return client.post(f"/api/v1/judgment/{case.id}/conclude/", body, format="json")
 
 
 def _nothing_written(case):
