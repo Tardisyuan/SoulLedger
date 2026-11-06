@@ -16,6 +16,9 @@ import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHART_STROKE, TREND_TOKENS } from "@/lib/chart-colors";
+import { CivEmblem } from "@/src/components/brand/CivEmblem";
+import { civSkinOf } from "@/src/lib/civSkin";
+import type { SealCiv } from "@/src/components/plaque/Seal";
 
 /**
  * 概览屏(规范 v4 第七批 S04,`overview.*`):左边一张大卡(今日待审、本月已结环、三个读数),右边上「近 12 周结案」、
@@ -76,6 +79,8 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
   const { showToast } = useToast();
   const router = useRouter();
   const name = user?.display_name || user?.username || "";
+  // 右上角是本殿文明的主视觉(v4 S04,250 宽,压出卡右沿一点);中性皮(管理员、没有文明的殿)不画。
+  const skin = civSkinOf(user?.tenant?.code ?? null);
 
   // 认领下一件:取队列游标的第一件,不是自己手上的就认领,然后进审判台。队列空了说一句 `empty.body`。
   const { mutate: claimNext, isPending: claiming } = useMutation({
@@ -103,6 +108,7 @@ function HeroCard({ stats, loading, failed }: { stats?: JudgmentHallStats; loadi
   return (
     <section data-overview-hero="" className={`${CARD} flex flex-col overflow-hidden p-6 lg:row-span-2 lg:min-h-105`}>
       <span aria-hidden="true" className="v4-corner" />
+      {skin !== "neutral" && <CivEmblem civ={skin as SealCiv} size={250} className="absolute -right-1.5 top-7.5 max-md:hidden" />}
       <div className="relative max-w-xs">
         <div className="text-sm text-[oklch(var(--color-ink-muted))]">{t("overview.greet", { name })}</div>
         <div className="mt-2 flex items-center gap-4">

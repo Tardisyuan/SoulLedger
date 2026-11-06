@@ -23,6 +23,7 @@ import { realmTypeNamespace } from "@/src/lib/domainNames";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
+import { UnderworldMap } from "@/src/components/realms/UnderworldMap";
 import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
 
 /**
@@ -40,6 +41,9 @@ import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
  *
  * 在押来自 `GET /realms/occupancy/`(未离开的行程站计数,按租户划界)。容量 null
  * 是「未记录」,不是无限。满 / 将满(≥ 90%)写「■ 满」「◐ 将满」—— 字形加字,不靠颜色。
+ *
+ * v4 阶段 5:两栏之上是这个文明的冥界地图(Design 第八批的 SVG,`UnderworldMap`,世界图:全部点亮、没有「你在这里」)。
+ * 图载不到时整块不画,下面的路线图与树表照旧。
  */
 
 /** The switch's four entries. Keyed by civilization so a fifth one missing here is caught
@@ -217,40 +221,48 @@ function RealmsPageContent() {
       ) : own.length === 0 ? (
         <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] items-start gap-4 lg:gap-6 pt-2">
-          <section data-testid="realm-topology" className={`${CARD} p-4 space-y-4 min-w-0`}>
-            <h2 className="text-lg">{t("realms.map.title")}</h2>
-            <RouteMap
-              topology={buildTopology(civilization, realms)}
-              civilizationName={t(config(civilization))}
-              occupancy={occupancyQuery.isError ? undefined : occupancy}
-            />
-          </section>
-          <section className="min-w-0">
-            <div className={CARD}>
-              <div className="flex flex-wrap items-baseline gap-x-3 px-4 py-4">
-                <h2 className="text-lg">{t("realms.tree.title")}</h2>
-                <span className="text-xs text-[oklch(var(--color-ink-muted))]">
-                  {t(canManage ? "realms.tree.count_editable" : "realms.tree.count", { n: String(rows.length) })}
-                </span>
-              </div>
-              <RealmTree
-                rows={rows}
-                occupancy={occupancy}
-                occupancyFailed={occupancyQuery.isError}
-                canManage={canManage}
+        <>
+          <UnderworldMap
+            key={civilization}
+            civilization={civilization}
+            label={t(config(civilization))}
+            className={`${CARD} mt-2 p-4`}
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] items-start gap-4 lg:gap-6 pt-2">
+            <section data-testid="realm-topology" className={`${CARD} p-4 space-y-4 min-w-0`}>
+              <h2 className="text-lg">{t("realms.map.title")}</h2>
+              <RouteMap
+                topology={buildTopology(civilization, realms)}
+                civilizationName={t(config(civilization))}
+                occupancy={occupancyQuery.isError ? undefined : occupancy}
               />
-              <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))]">
-                <span>{t("realms.tree.legend_full")}</span>
-                <span>{t("realms.tree.legend_near")}</span>
-                <span>{t("realms.tree.legend_eternal")}</span>
+            </section>
+            <section className="min-w-0">
+              <div className={CARD}>
+                <div className="flex flex-wrap items-baseline gap-x-3 px-4 py-4">
+                  <h2 className="text-lg">{t("realms.tree.title")}</h2>
+                  <span className="text-xs text-[oklch(var(--color-ink-muted))]">
+                    {t(canManage ? "realms.tree.count_editable" : "realms.tree.count", { n: String(rows.length) })}
+                  </span>
+                </div>
+                <RealmTree
+                  rows={rows}
+                  occupancy={occupancy}
+                  occupancyFailed={occupancyQuery.isError}
+                  canManage={canManage}
+                />
+                <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-3 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))]">
+                  <span>{t("realms.tree.legend_full")}</span>
+                  <span>{t("realms.tree.legend_near")}</span>
+                  <span>{t("realms.tree.legend_eternal")}</span>
+                </div>
               </div>
-            </div>
-            <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-3">
-              {canManage ? t("realms.table.edit_scope") : t("realms.table.read_only")}
-            </p>
-          </section>
-        </div>
+              <p className="text-2xs text-[oklch(var(--color-ink-subtle))] mt-3">
+                {canManage ? t("realms.table.edit_scope") : t("realms.table.read_only")}
+              </p>
+            </section>
+          </div>
+        </>
       )}
     </PageShell>
   );

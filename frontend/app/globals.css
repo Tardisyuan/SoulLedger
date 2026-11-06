@@ -833,6 +833,22 @@
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+  /* 水印巨印(规范 v4 `.wm`,第七批各屏页头):300 宽的印,右 −40、上 −30,压出带的右上角;
+     文明字色(印的默认色),深色 7%、浅色 9%。和纹样层一样不是字(印文 aria-hidden),所以可以用 opacity
+     (inkOnSurfaceContract 规定 3 的白名单)。收起的 48px 带与中性皮(没有印)不画。 */
+  .identity-watermark {
+    position: absolute;
+    top: -30px;
+    right: -40px;
+    opacity: 0.07;
+    pointer-events: none;
+  }
+  .light .identity-watermark {
+    opacity: 0.09;
+  }
+  .identity-band[data-compact] .identity-watermark {
+    display: none;
+  }
   [data-civ="cn"] .identity-pattern {
     background-image:
       repeating-linear-gradient(0deg, color-mix(in srgb, oklch(var(--color-glow)) 22%, transparent) 0 1px, transparent 1px 12px),
@@ -976,6 +992,15 @@
   .band-colour {
     color: oklch(var(--color-on-main));
     background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
+  }
+  /* 落地页四张卡(规范 v4 第七批):card 底上从上往下一层文明光(glow 按 --glow-alpha 的 90% 混进 card,
+     到 70% 处淡尽),字是 ink。v3 的匾色实底(`.band-colour`)留给演示导览里的按钮。 */
+  .landing-card {
+    color: oklch(var(--color-ink));
+    background: linear-gradient(
+      color-mix(in srgb, oklch(var(--color-glow)) calc(var(--glow-alpha) * 90%), oklch(var(--color-surface-1))),
+      oklch(var(--color-surface-1)) 70%
+    );
   }
   .landing-gutter {
     padding-inline: 1rem;
@@ -1739,4 +1764,75 @@ html.theme-switching *::after {
     opacity: 1;
     transform: none;
   }
+}
+
+/* ── 冥界地图与主视觉(规范 v4 第七批 S07 / 第八批第 3 条)──────────────────────────────
+   SVG 是 Design 的文件(public/v4/maps、public/v4/emblems),插进页面前删掉了它自带的 <style>
+   (src/lib/underworldMap.ts parseMapSvg):那段样式一进文档就是全局的。这里是同样几条规则,只在 `.v4-map` 里。
+   颜色不在这里 —— 三种状态的颜色就是图里的颜色,脚本按 data-state 换 fill / stroke。 */
+.v4-map-viewport {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.v4-map-viewport[data-dragging] {
+  cursor: grabbing;
+}
+.v4-map-viewport > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.v4-map .pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: v4-map-pulse 2.4s ease-out infinite;
+}
+.v4-map .map-hide-branches .branch:not(.branch-shown) {
+  display: none;
+}
+.v4-map .you-are-here {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  fill: oklch(var(--color-ink));
+}
+/* 键盘聚焦到一站:画一圈焦点色,不靠颜色以外的东西也能看出是哪一站(站名清单里同一站是 aria-current)。 */
+.v4-map [data-focused] {
+  outline: 2px solid oklch(var(--color-focus));
+  outline-offset: 4px;
+}
+@keyframes v4-map-pulse {
+  0% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+/* 减少动态效果:脉动停在一个看得见的样子(Design 原图同值);上面那条全局 1ms 会让它播一次就停在透明。 */
+@media (prefers-reduced-motion: reduce) {
+  .v4-map .pulse {
+    animation-name: v4-map-pulse-still !important;
+    opacity: 0.5;
+    transform: scale(1.6);
+  }
+}
+@keyframes v4-map-pulse-still {
+  from,
+  to {
+    opacity: 0.5;
+    transform: scale(1.6);
+  }
+}
+
+/* 主视觉深浅两份:按 :root.light 只显示一份(不等主题上下文挂好,首帧就对)。
+   动画在 SVG 自己里面(<img> 加载,样式不进文档),减少动态效果时它自己停在静态图。 */
+:root.light .v4-emblem[data-theme="dark"],
+:root:not(.light) .v4-emblem[data-theme="light"] {
+  display: none;
 }
