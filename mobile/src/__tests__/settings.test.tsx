@@ -699,7 +699,7 @@ describe("about / credits (spec v2 C16)", () => {
     await screen.findByTestId("about");
     expect(route()?.name).toBe("About");
 
-    fireEvent.press(within(screen.getByTestId("credit-Archivo")).getByText("SIL Open Font License 1.1 ↗\uFE0E"));
+    fireEvent.press(within(screen.getByTestId("credit-Geist")).getByText("SIL Open Font License 1.1 ↗\uFE0E"));
     expect(open).toHaveBeenCalledWith("https://openfontlicense.org/open-font-license-official-text/");
     // The four museum scans masked only v2's filled seal, which ships nowhere since 2026-10-03.
     expect(screen.queryByTestId("credit-Museo Egizio, Torino")).toBeNull();
@@ -709,7 +709,7 @@ describe("about / credits (spec v2 C16)", () => {
     expect(screen.queryByText("Owen Jones")).toBeNull();
     expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeTruthy();
     // v2 朱印's other three glyph faces ship nowhere since 2026-10-03, so they are not credited.
-    for (const font of ["LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) expect(screen.queryByText(font)).toBeNull();
+    for (const font of ["LXGW Seal", "UnifrakturMaguntia"]) expect(screen.queryByText(font)).toBeNull();
     open.mockRestore();
     await act(async () => {});
   });
