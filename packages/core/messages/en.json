@@ -18,7 +18,16 @@
     "mobile_menu": "Navigation menu",
     "more": "More",
     "soul_events": "Soul events",
-    "skip_to_main": "Skip to main content"
+    "skip_to_main": "Skip to main content",
+    "appeal_review": "Appeal review",
+    "collapse_sidebar": "Collapse sidebar",
+    "expand_sidebar": "Expand sidebar",
+    "group": {
+      "souls": "Souls",
+      "system": "System",
+      "work": "Work"
+    },
+    "search_hint": "Search, jump, or give a command"
   },
   "auth": {
     "login": "Login",
@@ -3769,7 +3778,8 @@
     "title": "A system error occurred",
     "description": "Sorry, the server encountered a problem",
     "retry": "Reload",
-    "home": "Return Home"
+    "home": "Return Home",
+    "next_body": "No server response. The case is unchanged."
   },
   "not_found": {
     "title": "Page Not Found",
@@ -8644,6 +8654,381 @@
     "admin_hint": "An administrator sees all four underworlds. These are the overall numbers; audit, users and permissions, and the corpus are in the menu on the left.",
     "author": {
       "line": "{{name}} decided the domain model, the source research and the standard of verification."
+    }
+  },
+  "action": {
+    "undo": "Undo"
+  },
+  "annual": {
+    "by_civ": "Four ledgers, how many each",
+    "closing": "See you next year.",
+    "data_note": "{{year}} · recorded demo data",
+    "last_year": "Last year",
+    "lead": "This year the four underworlds took in",
+    "longest": "The longest case",
+    "longest_value": "{{n}} days",
+    "monthly": "Month by month",
+    "most_cited": "Most cited article",
+    "returned_down": "{{n}} points lower than last year",
+    "returned_up": "{{n}} points higher than last year",
+    "this_year": "This year",
+    "title": "The underworld year",
+    "total_rest": "souls. {{m}} already have a destination."
+  },
+  "cmdk": {
+    "defer": "Skip to the next · move to Deferred",
+    "group": {
+      "commands": "Commands"
+    },
+    "key": {
+      "run": "↵ Run",
+      "select": "↑↓ Select",
+      "switch": "Tab Next group"
+    },
+    "placeholder": "Search souls, cases, pages, or commands",
+    "shortcut": "{{a}} then {{b}}",
+    "verdict": {
+      "fail": "Fail · {{soul}}",
+      "fail_hint": "Choose a reason first",
+      "pass": "Pass · {{soul}}",
+      "pass_hint": "{{case}} · sealing is final"
+    },
+    "verdict_scope": "Verdicts apply to the current case only"
+  },
+  "desk": {
+    "crumb": "Judgment desk · {{case}}",
+    "deferred_toast": "Moved to Deferred",
+    "doc_card": "Judgment document · from the last seal",
+    "eg": {
+      "fail": "Heavier than the feather · fail",
+      "pass": "Lighter than the feather · pass",
+      "waver": "The scale wavers"
+    },
+    "reading": "Reading"
+  },
+  "doc": {
+    "download_pdf": "Download PDF"
+  },
+  "empty": {
+    "body": "The queue is clear. New cases appear here.",
+    "cn": "No cases in this court today",
+    "eg": "The scale is empty today",
+    "eu": "No one is waiting at court today",
+    "gr": "No one at the crossroads today",
+    "view_concluded": "View concluded cases"
+  },
+  "hours": {
+    "cn": {
+      "chen": "Hour of Chen",
+      "chou": "Hour of Chou",
+      "hai": "Hour of Hai",
+      "mao": "Hour of Mao",
+      "shen": "Hour of Shen",
+      "si": "Hour of Si",
+      "wei": "Hour of Wei",
+      "wu": "Hour of Wu",
+      "xu": "Hour of Xu",
+      "yin": "Hour of Yin",
+      "you": "Hour of You",
+      "zi": "Hour of Zi"
+    },
+    "eg": {
+      "day": "Day",
+      "night": "Night · hour {{n}}"
+    },
+    "eu": {
+      "compline": "Compline",
+      "lauds": "Lauds",
+      "matins": "Matins",
+      "none": "None",
+      "prime": "Prime",
+      "sext": "Sext",
+      "terce": "Terce",
+      "vespers": "Vespers"
+    },
+    "format": "{{name}} · {{time}}",
+    "gr": {
+      "day": "Day",
+      "night": "Night"
+    }
+  },
+  "landing": {
+    "civ": {
+      "cn": "Ten courts; the offence picks the court",
+      "eg": "The heart weighed against Maat's feather",
+      "eu": "Sink by sin, or climb through Purgatory",
+      "gr": "Three judges, a thousand years, Lethe"
+    },
+    "lede": "Four ledgers, four answers.",
+    "preview_label": "What you'll see inside",
+    "title": "One question: will this soul pass?"
+  },
+  "live": {
+    "cn_station": "Station {{n}} · {{station}}",
+    "count": "{{n}} / {{total}}",
+    "headline": "{{soul}} · {{step}}",
+    "island_sub": "{{soul}} · station {{n}}",
+    "letter": {
+      "claimed": "A judge has taken up your case."
+    },
+    "letter_title": "Letter · {{hall}}",
+    "path": {
+      "eu_down": "Downward",
+      "eu_up": "Upward",
+      "gr_isles": "By the Isles of the Blessed"
+    },
+    "title": "SoulLedger · live progress"
+  },
+  "map": {
+    "branch_only": "Moved by an officer · only this branch shown",
+    "branches_hidden": "{{n}} branches · hidden",
+    "diyu": {
+      "court10_bridges": "Court 10 · six bridges · Meng Po",
+      "ghost_gate": "Ghost Gate",
+      "inside_fengdu": "Inside Fengdu · the ten courts",
+      "mengpo_pavilion": "Meng Po's Pavilion",
+      "moved_by_officer": "Moved by an officer",
+      "nai_river": "River Nai",
+      "naihe_bridge": "Naihe Bridge",
+      "road_down": "The road down · stations 1–10",
+      "six_paths": "The Six Paths of Rebirth",
+      "ten_courts": "The Ten Courts"
+    },
+    "drag_hint": "Drag to pan · double-click to zoom",
+    "egypt": {
+      "embalming_70_days": "Embalming · seventy days",
+      "nile": "The Nile",
+      "second_death_note": "Second death · not a place",
+      "weighing": "Hall of Two Truths · the weighing"
+    },
+    "europe": {
+      "circles": "The nine circles",
+      "downward": "Downward · by sin",
+      "terraces": "Purgatory · seven terraces",
+      "upward": "Upward · cleansing"
+    },
+    "fit": "Whole map",
+    "greece": {
+      "thousand_year_cycle": "The thousand-year cycle",
+      "wait_on_bank": "A hundred years on the bank",
+      "year_n": "Year {{n}}"
+    },
+    "replay": {
+      "skip": "Tap anywhere to jump to now",
+      "start": "Replay this life",
+      "stop": "Stop the replay"
+    },
+    "soul": {
+      "ahead": "{{n}} more ahead",
+      "behind": "{{n}} places behind you",
+      "here": "You are here"
+    }
+  },
+  "overview": {
+    "claim_next": "Claim the next case",
+    "count_unit": "cases · {{n}} past their deadline",
+    "days": "{{n}} days",
+    "greet": "{{name}} · awaiting judgment today",
+    "month_done_pct": "{{pct}}% concluded this month",
+    "open_queue": "Open the queue",
+    "stat": {
+      "avg_time": "Average time",
+      "returned": "Sent back for retrial"
+    },
+    "todo": {
+      "appeal": "Appeal · {{soul}}",
+      "due_in": "Due in {{n}} days",
+      "due_today": "Due today",
+      "joint": "Joint hearing invitation · {{hall}}",
+      "returned": "Sent back · {{case}}",
+      "title": "Waiting on this hall"
+    },
+    "trend": {
+      "last_quarter": "Last quarter",
+      "last_quarter_same": "Same week last quarter",
+      "scope": "This hall · against last quarter",
+      "this_quarter": "This quarter",
+      "this_week": "This week",
+      "title": "Concluded · last 12 weeks",
+      "week": "Week {{n}} · {{date}}"
+    }
+  },
+  "queue": {
+    "col": {
+      "cause": "Cause",
+      "deadline": "Deadline",
+      "reading": {
+        "eg": "Heart and feather",
+        "eu": "Seven deadly sins",
+        "gr": "Procedure"
+      },
+      "trend": "Last 12 weeks"
+    },
+    "deadline": {
+      "days": "{{n}} days",
+      "none": "None",
+      "over": "{{n}} days over"
+    },
+    "deferred_hint": "Still yours · no deadline",
+    "tab": {
+      "overdue": "Overdue",
+      "returned": "Sent back"
+    }
+  },
+  "reject": {
+    "sheet": {
+      "by_court": "Grouped by court",
+      "cancel": "Put back",
+      "circle": "→ Circle {{n}}",
+      "cn_more_sub": "Courts 2–9 · {{n}} in all",
+      "cn_top": "{{n}} most used",
+      "confirm": "Fail · seal",
+      "eg_auto": "Listed by the scale; cannot be changed",
+      "eu_scope": "Only these lead to Hell",
+      "gr_scars": "Scars · choose any",
+      "preview_label": "Verdict preview",
+      "required": "Required",
+      "title": "Choose a reason to finish the judgment",
+      "unstamped": "{{soul}} · not sealed yet"
+    }
+  },
+  "reject_reason": {
+    "cn": {
+      "court": "Court {{n}}"
+    },
+    "eg": {
+      "false_confession": "False denial · no. {{n}}",
+      "scale_decided": "The scale has decided; no other verdict can be chosen."
+    },
+    "eu": {
+      "mortal_sin": "An unrepented mortal sin",
+      "neutral": "Registered as neutral",
+      "sin": {
+        "envy": "Envy",
+        "gluttony": "Gluttony",
+        "greed": "Greed",
+        "lust": "Lust",
+        "pride": "Pride",
+        "sloth": "Sloth",
+        "wrath": "Wrath"
+      }
+    },
+    "gr": {
+      "curable": "Curable",
+      "incurable": "Incurable",
+      "injustice": "Injustice",
+      "mark": "Add the mark",
+      "perjury": "Perjury"
+    },
+    "gr_er": {
+      "betrayal": "Betrayed a city or an army",
+      "enslavement": "Brought a city or an army into slavery",
+      "many_deaths": "Caused the deaths of many",
+      "other": "Another wrong · write one line"
+    },
+    "other": "Other · write one line"
+  },
+  "shell": {
+    "ask": {
+      "context": "About this page · {{page}}",
+      "scope_note": "Reads only this page. Never judges a case."
+    },
+    "density": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "hall_switch": "Switch hall"
+  },
+  "soul": {
+    "here": {
+      "cn_court": "{{court}} is judging your merits and faults.",
+      "eg_weighing": "Your heart is weighed against Maat's feather.",
+      "eu_realm": "You are in {{realm}}.",
+      "gr_thousand": "{{n}} years into the thousand-year road."
+    }
+  },
+  "soulmap": {
+    "life_events": "Recorded in this life",
+    "move": "Move station…",
+    "replay_line": "{{date}} · reached {{station}}",
+    "replay_progress": "{{n}} / {{total}}",
+    "title": "How far {{soul}} has come"
+  },
+  "swipe": {
+    "count": "{{n}} cases · {{m}} deferred",
+    "hint": {
+      "hold": "Hold · defer",
+      "left": "Swipe left · fail",
+      "right": "Swipe right · pass"
+    },
+    "hold_release": "Let go: skip to the next · move to Deferred",
+    "title": "Awaiting judgment",
+    "waited": "{{case}} · waiting {{n}} days"
+  },
+  "verdict_doc": {
+    "cn": {
+      "body": "{{soul}}: born {{born}}, died {{died}}. Merit {{merit}}, demerit {{demerit}}.",
+      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "seal": "Seal of {{court}}",
+      "sign": "Court {{n}} · {{king}}",
+      "title": "Judgment of {{court}}",
+      "verdict": {
+        "balanced": "Merit and demerit even: sent to the Tenth Court for dispatch, to be born again into the world of the living.",
+        "fail": "The offence, {{offence}}, falls to Court {{n}}: sent under escort to Court {{n}}.",
+        "five_heinous": "One of the five heinous crimes: bypassing every court, sent under escort to the Ninth Court, Avici Hell.",
+        "merit": "More merit than demerit: sent to the Tenth Court for dispatch, to be reborn into {{path}}."
+      }
+    },
+    "eg": {
+      "body": "The heart of {{soul}} has been weighed on the scale. Anubis tended the scale; Thoth recorded and proclaimed.",
+      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "seal": "Hall of Two Truths",
+      "sign": "Recorded and proclaimed by Thoth",
+      "title": "Hall of Two Truths · judgment",
+      "verdict": {
+        "fail": "The heart is heavier than the feather. Given to Ammit. The second death: it exists no more.",
+        "pass": "No wickedness has been found in it. Let it not be given to Ammit. Horus leads the soul before Osiris, and on to the Field of Reeds."
+      }
+    },
+    "eu": {
+      "body": "The life of {{soul}} has been referred to Christ.",
+      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "deco": "SENTENTIA",
+      "seal": "SENTENTIA",
+      "sign": "Before the judgment seat of Christ",
+      "title": "Particular judgment",
+      "verdict": {
+        "antinferno": "Registered as neutral: kept in the Vestibule of Hell.",
+        "heaven": "No unrepented mortal sin: called into Heaven.",
+        "hell": "An unrepented mortal sin: down to Circle {{n}} of Hell.",
+        "purgatory": "No unrepented mortal sin: to Terrace {{n}} of Purgatory, to be cleansed from the lowest terrace upward."
+      }
+    },
+    "gr": {
+      "body": "The judge does not ask who is being judged; he looks only at the soul.",
+      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "deco": "ΚΡΙΣΙΣ",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign_final": "Minos · final judgment",
+      "sign_first": "{{judge}}",
+      "title": "The meadow at the crossroads · judgment",
+      "verdict": {
+        "curable": "Marked: curable. Sent to Tartarus.",
+        "incurable": "Marked: incurable. Sent to Tartarus.",
+        "isles": "A life of piety and of seeking the truth: sent to the Isles of the Blessed."
+      }
+    },
+    "gr_er": {
+      "body": "The judges sit between the four openings.",
+      "date": "{{day}}/{{month}}/{{year}} · {{hour}}",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign": "The judges between the four openings",
+      "title": "Between the four openings · judgment",
+      "verdict": {
+        "incurable": "The mouth will not let them out: cast into Tartarus.",
+        "just": "The judgment worn in front; to the right, upward through the heavens. After a thousand years, back to the meadow.",
+        "unjust": "The judgment worn behind; to the left, downward. Each injustice paid ten times over, a hundred years each time; after a thousand years, back to the meadow."
+      }
     }
   }
 }

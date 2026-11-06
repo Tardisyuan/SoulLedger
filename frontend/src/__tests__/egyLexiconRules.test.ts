@@ -96,7 +96,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III"]); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER", "III", "SENTENTIA"]); // SENTENTIA: 欧洲判决文书的装饰标题与印文,拉丁文「判决」原样大写(v4 第五 / 六批,用户 2026-11-06 定); // III: 出处「Inf. III」(但丁《地狱篇》第三歌,第五十七批 c); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -580,6 +580,14 @@ const PROPER_NAMES = [
   "HEIC", "GBK", "UTF", "Excel", "Ctrl",
   // 同一条规则用于「供应商」区块的平台下拉(画布 provider-platforms,2026-09-30):厂商 / 产品名原样。
   "DeepSeek", "Qwen", "Kimi", "Doubao", "Gemini", "SiliconFlow", "OpenRouter", "Ollama",
+  // v4(Design 第七批,2026-11-06,用户同意):地府十二时辰照地府拼音的惯例(Hai 已是词根,同形,不另登);
+  // 鬼门关 Guimen、奈河 / 奈何桥 Naihe 同(第一、二批的地图键带进来的,第七批专名表漏列)。
+  "Zi", "Chou", "Yin", "Mao", "Chen", "Si", "Wu", "Wei", "Shen", "You", "Xu", "Guimen", "Naihe",
+  // 欧洲祈祷时辰写拉丁原名,和 Superbia 等罪名同一个做法。
+  "Matutinum", "Laudes", "Prima", "Tertia", "Sexta", "Nona", "Vesperae", "Completorium",
+  // Tab 是键名(同 Enter / Esc / Ctrl);阿努比斯 Anpu(判决文书「Anpu Em Fai」);欧洲文书的装饰标题 SENTENTIA。
+  // 希腊文书的 ΚΡΙΣΙΣ 不用登记:分词只取拉丁字母。
+  "Tab", "Anpu", "SENTENTIA",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
@@ -647,11 +655,17 @@ const ROOTS_BATCH63 = ["Tash", "Hut"];
 // 解除拉黑写 Sehen Shena。
 const ROOTS_BATCH67 = ["Shena"];
 /**
+ * v4 第六、七批(Design,2026-11-06,用户同意采用):右 Wenmy、左 Semehy(滑卡方向与厄尔神话的左右)、
+ * 口 / 洞口 Tephet(四口之间)、坐 Hems、夜 Gereh(时辰)、季 Tera(概览趋势)。
+ * 第三批收的 Nedjnedj 不登:它原来的两个键改用了 officer_assist.*,包里没有地方用它。
+ */
+const ROOTS_V4 = ["Wenmy", "Semehy", "Tephet", "Hems", "Gereh", "Tera"];
+/**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...ROOTS_BATCH28C, ...ROOTS_BATCH54, ...ROOTS_BATCH54B, ...ROOTS_BATCH58, ...ROOTS_BATCH59, ...ROOTS_BATCH63, ...ROOTS_BATCH67, ...ROOTS_V4, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 

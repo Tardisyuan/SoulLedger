@@ -18,7 +18,16 @@
     "mobile_menu": "Wat Medu",
     "more": "Ky",
     "soul_events": "Medew Ba",
-    "skip_to_main": "Sni Menu"
+    "skip_to_main": "Sni Menu",
+    "appeal_review": "Nehet · Maa Wehem",
+    "collapse_sidebar": "Khetem Menu",
+    "expand_sidebar": "Wen Menu",
+    "group": {
+      "souls": "Ba",
+      "system": "Smen",
+      "work": "Iri"
+    },
+    "search_hint": "Shesep · Shem · Wedja"
   },
   "auth": {
     "login": "Aq",
@@ -3549,7 +3558,8 @@
     "title": "Sethet",
     "description": "Khet Em Per Hemsu",
     "retry": "Wehem Ini",
-    "home": "Iyi Er Tepy"
+    "home": "Iyi Er Tepy",
+    "next_body": "Per Sia Nen Medu. Sep Pen Nen Khemen."
   },
   "not_found": {
     "title": "Medjat Nen Renpet",
@@ -8596,6 +8606,381 @@
     "enter": {
       "entering": "Aq Er {{civ}}",
       "skip": "Sni"
+    }
+  },
+  "action": {
+    "undo": "Sehen"
+  },
+  "annual": {
+    "by_civ": "Sesh 4 · Hesb",
+    "closing": "Renpet Ky.",
+    "data_note": "{{year}} · Maa · Sesh",
+    "last_year": "Renpet Tepy",
+    "lead": "Renpet Pen · Duat 4 Shesep",
+    "longest": "Wedja Wah",
+    "longest_value": "Hru {{n}}",
+    "monthly": "Abed Neb",
+    "most_cited": "Medu Djed Tepy",
+    "returned_down": "Nedjes {{n}} Er Renpet Tepy",
+    "returned_up": "Wer {{n}} Er Renpet Tepy",
+    "this_year": "Renpet Pen",
+    "title": "Sesh Renpet · Duat",
+    "total_rest": "Ba. {{m}}: Wetep Seth."
+  },
+  "cmdk": {
+    "defer": "Er Sep Ky · Er Wedja Djer",
+    "group": {
+      "commands": "Wedja"
+    },
+    "key": {
+      "run": "↵ Iri",
+      "select": "↑↓ Setep",
+      "switch": "Tab · Khemen"
+    },
+    "placeholder": "Shesep Ba, Ren, Per — Wedja",
+    "shortcut": "{{a}} · Khet · {{b}}",
+    "verdict": {
+      "fail": "Nen Menkh · {{soul}}",
+      "fail_hint": "Setep Khet Tepy",
+      "pass": "Menkh · {{soul}}",
+      "pass_hint": "{{case}} · Khetem: Nen Sehen"
+    },
+    "verdict_scope": "Wedja: Sesh Pen Wa"
+  },
+  "desk": {
+    "crumb": "Wedja · {{case}}",
+    "deferred_toast": "Er Wedja Djer Seth",
+    "doc_card": "Sesh Wedja · Khetem Pehwy",
+    "eg": {
+      "fail": "Ib Dens Er Shut · Nen Menkh",
+      "pass": "Ib Nen Dens Er Shut · Menkh",
+      "waver": "Fai Nen Smen"
+    },
+    "reading": "Hesb"
+  },
+  "doc": {
+    "download_pdf": "Ini PDF"
+  },
+  "empty": {
+    "body": "Wat Wedja Shu. Wedja Mawy: Dy.",
+    "cn": "Hru Pen: Nen Wedja Em Wesekhet",
+    "eg": "Hru Pen: Fai Shu",
+    "eu": "Hru Pen: Nen Ba Em Wesekhet",
+    "gr": "Hru Pen: Nen Ba Em Leimon",
+    "view_concluded": "Maa Wedja Khetem"
+  },
+  "hours": {
+    "cn": {
+      "chen": "Unut Chen",
+      "chou": "Unut Chou",
+      "hai": "Unut Hai",
+      "mao": "Unut Mao",
+      "shen": "Unut Shen",
+      "si": "Unut Si",
+      "wei": "Unut Wei",
+      "wu": "Unut Wu",
+      "xu": "Unut Xu",
+      "yin": "Unut Yin",
+      "you": "Unut You",
+      "zi": "Unut Zi"
+    },
+    "eg": {
+      "day": "Hru",
+      "night": "Gereh · Unut {{n}}"
+    },
+    "eu": {
+      "compline": "Completorium",
+      "lauds": "Laudes",
+      "matins": "Matutinum",
+      "none": "Nona",
+      "prime": "Prima",
+      "sext": "Sexta",
+      "terce": "Tertia",
+      "vespers": "Vesperae"
+    },
+    "format": "{{name}} · {{time}}",
+    "gr": {
+      "day": "Hru",
+      "night": "Gereh"
+    }
+  },
+  "landing": {
+    "civ": {
+      "cn": "Wesekhet 1 Er 10: Isfet Setep Wesekhet",
+      "eg": "Ib Em Fai · Er Shut Maat",
+      "eu": "Khery Mi Isfet · Er Hery Em Ta Hesmen",
+      "gr": "Sab 3 · Renpet 1000 · Mu Lethe"
+    },
+    "lede": "Sesh 4 · Wesheb 4.",
+    "preview_label": "Aq · Mi Pen",
+    "title": "Medu Wa: Ba Pen Menkh?"
+  },
+  "live": {
+    "cn_station": "Sekhet {{n}} · {{station}}",
+    "count": "{{n}} / {{total}}",
+    "headline": "{{soul}} · {{step}}",
+    "island_sub": "{{soul}} · Sekhet {{n}}",
+    "letter": {
+      "claimed": "Sab Shesep Wedja-Ek."
+    },
+    "letter_title": "Sesh · {{hall}}",
+    "path": {
+      "eu_down": "Khery",
+      "eu_up": "Hery",
+      "gr_isles": "Em Ta Nefer"
+    },
+    "title": "Medjat Ba · Shem Hru Pen"
+  },
+  "map": {
+    "branch_only": "Khemen Sab · Wat Pen Wa",
+    "branches_hidden": "Sekhet {{n}} · Khetem",
+    "diyu": {
+      "court10_bridges": "Wesekhet 10 · Mengpo",
+      "ghost_gate": "Sebkhet Guimen",
+      "inside_fengdu": "Nut Duat Sherer · Wesekhet 1 Er 10",
+      "mengpo_pavilion": "Per Mengpo",
+      "moved_by_officer": "Khemen Sab",
+      "nai_river": "Itru Naihe",
+      "naihe_bridge": "Shem Itru Naihe",
+      "road_down": "Er Duat · Sekhet 1 Er 10",
+      "six_paths": "Wehem Mesut Em Wat 6",
+      "ten_courts": "Wesekhet 1 Er 10"
+    },
+    "drag_hint": "Khemen · Maa Weret",
+    "egypt": {
+      "embalming_70_days": "Wet · Hru 70",
+      "nile": "Itru Kemet",
+      "second_death_note": "Mut Sen · Nen Ta",
+      "weighing": "Weret Maaty · Fai Ib"
+    },
+    "europe": {
+      "circles": "Duat 9",
+      "downward": "Khery · Mi Isfet",
+      "terraces": "Ta Hesmen 7",
+      "upward": "Hery · Isfet Fekh"
+    },
+    "fit": "Maa Neb",
+    "greece": {
+      "thousand_year_cycle": "Renpet 1000",
+      "wait_on_bank": "Renpet 100 Hena Itru",
+      "year_n": "Renpet {{n}}"
+    },
+    "replay": {
+      "skip": "Er Hru Pen",
+      "start": "Wehem Ankh Pen",
+      "stop": "Khetem Wehem"
+    },
+    "soul": {
+      "ahead": "Nen Shem Djer: {{n}}",
+      "behind": "Shem Seth: {{n}}",
+      "here": "Dy Emu"
+    }
+  },
+  "overview": {
+    "claim_next": "Shesep Sep Ky",
+    "count_unit": "Sep · {{n}} Khet Hru",
+    "days": "Hru {{n}}",
+    "greet": "{{name}} · Hru Pen: Wedja Djer",
+    "month_done_pct": "Abed Pen: Khetem {{pct}}%",
+    "open_queue": "Wen Wat Wedja",
+    "stat": {
+      "avg_time": "Hesb Hru",
+      "returned": "Wehem Wedja"
+    },
+    "todo": {
+      "appeal": "Nehet · {{soul}}",
+      "due_in": "Hru {{n}} Khery",
+      "due_today": "Hru Pen",
+      "joint": "Nis Wedja · {{hall}}",
+      "returned": "Wehem Wedja · {{case}}",
+      "title": "Iri Djer"
+    },
+    "trend": {
+      "last_quarter": "Tera Tepy",
+      "last_quarter_same": "Sefekh Tepy",
+      "scope": "Wesekhet Pen · Er Tepy",
+      "this_quarter": "Tera Pen",
+      "this_week": "Sefekh Pen",
+      "title": "Khetem · Sefekh 12",
+      "week": "Sefekh {{n}} · {{date}}"
+    }
+  },
+  "queue": {
+    "col": {
+      "cause": "Khet",
+      "deadline": "Hru",
+      "reading": {
+        "eg": "Ib Hena Shut",
+        "eu": "Isfet Wer 7",
+        "gr": "Wat"
+      },
+      "trend": "Sefekh 12"
+    },
+    "deadline": {
+      "days": "Hru {{n}}",
+      "none": "Nen Hesb",
+      "over": "Khet Hru {{n}}"
+    },
+    "deferred_hint": "Sab Pen · Nen Hru",
+    "tab": {
+      "overdue": "Khet Hru",
+      "returned": "Wehem Wedja"
+    }
+  },
+  "reject": {
+    "sheet": {
+      "by_court": "Mi Wesekhet",
+      "cancel": "Redi Er Hat",
+      "circle": "→ Duat {{n}}",
+      "cn_more_sub": "Wesekhet 2 Er 9 · {{n}}",
+      "cn_top": "{{n}} Tepy",
+      "confirm": "Nen Menkh · Khetem",
+      "eg_auto": "Fai Sesh Khet · Nen Setep Ky",
+      "eu_scope": "Khet Pen Wa: Er Duat",
+      "gr_scars": "Sesh Khat · Setep Neb",
+      "preview_label": "Maa Medu Wedja",
+      "required": "Em Tepy",
+      "title": "Setep Khet: Wedja Khetem",
+      "unstamped": "{{soul}} · Nen Khetem Djer"
+    }
+  },
+  "reject_reason": {
+    "cn": {
+      "court": "Wesekhet {{n}}"
+    },
+    "eg": {
+      "false_confession": "Djed Nen Maat · {{n}}",
+      "scale_decided": "Fai Wedja Seth · Nen Setep Ky."
+    },
+    "eu": {
+      "mortal_sin": "Isfet Wer Nen Djed",
+      "neutral": "Sesh: Nen Setep Em Ankh",
+      "sin": {
+        "envy": "Invidia",
+        "gluttony": "Gula",
+        "greed": "Avaritia",
+        "lust": "Luxuria",
+        "pride": "Superbia",
+        "sloth": "Acedia",
+        "wrath": "Ira"
+      }
+    },
+    "gr": {
+      "curable": "Pekhret",
+      "incurable": "Nen Pekhret",
+      "injustice": "Isfet",
+      "mark": "Sesh",
+      "perjury": "Ankh Nen Maat"
+    },
+    "gr_er": {
+      "betrayal": "Nut Er Mesha: Redi Er Ky Em Gereg",
+      "enslavement": "Nut Er Mesha: Er Djeret Ky",
+      "many_deaths": "Redi Mut Er Remetj Menmen",
+      "other": "Isfet Ky · Sesh Medu Wa"
+    },
+    "other": "Ky · Sesh Medu Wa"
+  },
+  "shell": {
+    "ask": {
+      "context": "Per Pen · {{page}}",
+      "scope_note": "Medew Per Pen Wa. Nen Wedja."
+    },
+    "density": {
+      "comfortable": "Nefer",
+      "compact": "Nedjes"
+    },
+    "hall_switch": "Khemen Wesekhet"
+  },
+  "soul": {
+    "here": {
+      "cn_court": "Em {{court}}: Sab Maa Nefer Hena Isfet · Ankh Pen.",
+      "eg_weighing": "Ib Em Fai · Er Shut Maat.",
+      "eu_realm": "Dy Em {{realm}}.",
+      "gr_thousand": "Wat Renpet 1000 · Renpet {{n}} Seth."
+    }
+  },
+  "soulmap": {
+    "life_events": "Sesh · Ankh Pen",
+    "move": "Khemen Sekhet…",
+    "replay_line": "{{date}} · Er {{station}}",
+    "replay_progress": "{{n}} / {{total}}",
+    "title": "{{soul}}: Shem Er Dy"
+  },
+  "swipe": {
+    "count": "Sep {{n}} · Wedja Djer {{m}}",
+    "hint": {
+      "hold": "Smen · Wedja Djer",
+      "left": "Er Semehy · Nen Menkh",
+      "right": "Er Wenmy · Menkh"
+    },
+    "hold_release": "Wah: Er Sep Ky · Er Wedja Djer",
+    "title": "Wedja Djer",
+    "waited": "{{case}} · Hru {{n}}"
+  },
+  "verdict_doc": {
+    "cn": {
+      "body": "{{soul}}: Mesut {{born}}, Mut {{died}}. Nefer {{merit}}, Isfet {{demerit}}.",
+      "date": "{{year}} · {{month}} · {{day}} · {{hour}}",
+      "seal": "Khetem {{court}}",
+      "sign": "Wesekhet {{n}} · {{king}}",
+      "title": "{{court}} · Medu Wedja",
+      "verdict": {
+        "balanced": "Nefer Hena Isfet Mi Wa. Er Wesekhet 10 · Wehem Mesut Er Remetj.",
+        "fail": "Isfet: {{offence}} · Wesekhet {{n}}. Ini Er Wesekhet {{n}}.",
+        "five_heinous": "Isfet Wer 5: Nen Wesekhet Neb. Ini Er Wesekhet 9 · Duat Pehwy.",
+        "merit": "Nefer Er Isfet. Er Wesekhet 10 · Wehem Mesut Er {{path}}."
+      }
+    },
+    "eg": {
+      "body": "Ib {{soul}}: Fai Seth. Anpu Em Fai; Djehuty Sesh Hena Djed.",
+      "date": "{{year}} · {{month}} · {{day}} · {{hour}}",
+      "seal": "Weret Maaty",
+      "sign": "Djehuty · Sesh Hena Djed",
+      "title": "Weret Maaty · Medu Wedja",
+      "verdict": {
+        "fail": "Ib Dens Er Shut. Redi Er Ammit. Mut Sen · Nen Wenen.",
+        "pass": "Nen Gem Isfet. Nen Redi Er Ammit. Heru Ini Ba Er Wesir · Er Sekhet Aaru."
+      }
+    },
+    "eu": {
+      "body": "Ankh {{soul}}: Er Kristos.",
+      "date": "{{year}} · {{month}} · {{day}} · {{hour}}",
+      "deco": "SENTENTIA",
+      "seal": "SENTENTIA",
+      "sign": "Em Wedja Kristos",
+      "title": "Wedja Ba Wa",
+      "verdict": {
+        "antinferno": "Sesh: Nen Setep Em Ankh. Smen Em Duat · Antinferno.",
+        "heaven": "Nen Isfet Wer Nen Djed. Nis Er Pet.",
+        "hell": "Isfet Wer Nen Djed. Khery Er Duat {{n}}.",
+        "purgatory": "Nen Isfet Wer Nen Djed. Er Ta Hesmen {{n}} · Isfet Fekh: Khery Er Hery."
+      }
+    },
+    "gr": {
+      "body": "Sab Nen Hehy Ren · Maa Ba Wa.",
+      "date": "{{year}} · {{month}} · {{day}} · {{hour}}",
+      "deco": "ΚΡΙΣΙΣ",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign_final": "Minos · Wedja Pehwy",
+      "sign_first": "{{judge}}",
+      "title": "Leimon · Wedja",
+      "verdict": {
+        "curable": "Sesh: Pekhret. Er Tartaros.",
+        "incurable": "Sesh: Nen Pekhret. Er Tartaros.",
+        "isles": "Ankh Neb: Dua Netjer Hena Hehy Maat. Er Ta Nefer."
+      }
+    },
+    "gr_er": {
+      "body": "Sab Hems Em Tephet 4.",
+      "date": "{{year}} · {{month}} · {{day}} · {{hour}}",
+      "seal": "ΚΡΙΣΙΣ",
+      "sign": "Sab Em Tephet 4",
+      "title": "Tephet 4 · Wedja",
+      "verdict": {
+        "incurable": "Tephet Nen Shesep. Er Tartaros.",
+        "just": "Wedja Em Tepy. Er Wenmy, Er Hery Em Pet. Renpet 1000: Er Leimon.",
+        "unjust": "Wedja Em Pehwy. Er Semehy, Er Khery. Isfet Neb: Sep 10 · Renpet 100 Em Sep. Renpet 1000: Er Leimon."
+      }
     }
   }
 }
