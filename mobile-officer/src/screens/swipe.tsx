@@ -81,7 +81,7 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   const topId = (rows ?? []).find(judgeable)?.id ?? null;
   const stack = (rows ?? []).filter(judgeable);
   const top = stack[0] ?? null;
-  // 顶上那张的详情:埃及要天平的读数(挡哪一边),欧洲要本案引用的七宗罪。
+  // 顶上那张的详情:埃及要天平的读数(挡哪一边)。
   const loadDetail = useCallback(() => (topId ? judgmentApi.get(topId).then((r) => r.data) : Promise.resolve(null)), [topId]);
   const { data: detailData } = useRemote(loadDetail);
   const current = detailData && detailData.id === topId ? detailData : null;
@@ -433,11 +433,13 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** 卡面:名字、案号与已等几天、期限,和这一文明的读数(地府功 / 过,埃及天平,欧洲本案引用的七宗罪)。 */
+/**
+ * 卡面:名字、案号与已等几天、期限,和这一文明的读数(地府功 / 过,埃及天平)。
+ * 七宗罪不上卡面(用户 2026-11-07):它只在炼狱判决里列 —— 展开详情与判决文书照旧。
+ */
 function CardBody({ j, detail }: { j: Judgment; detail?: JudgmentDetail | null }) {
   const { t } = useI18n();
   const weighed = detail?.admitted_balance?.weighing?.weighed_verdict;
-  const sins = detail?.cited_deadly_sins ?? [];
   return (
     <View style={{ gap: space[2] }}>
       <Txt variant="display">{j.soul_name}</Txt>
@@ -451,8 +453,6 @@ function CardBody({ j, detail }: { j: Judgment; detail?: JudgmentDetail | null }
         <Txt variant="valueLg">{`${j.merit_score}/${j.demerit_score ?? 0}`}</Txt>
       ) : j.civilization === "EGYPTIAN" && weighed ? (
         <Txt variant="bodyLg">{t(weighed === "FAILED" ? "desk.eg.fail" : "desk.eg.pass")}</Txt>
-      ) : j.civilization === "EUROPEAN" && sins.length > 0 ? (
-        <Txt variant="body">{`${t("queue.col.reading.eu")} · ${sins.map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ")}`}</Txt>
       ) : null}
     </View>
   );
