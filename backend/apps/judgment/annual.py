@@ -26,9 +26,26 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.judgment.hall_stats import average_days, span_seconds
+from apps.souls.models import TENANT_CIVILIZATION, UNKNOWN_CIVILIZATION, Civilization
+
+
+def _soul_civ_q(civ) -> Q:
+    """灵魂的文明是 `Soul.civilization` 这个属性(租户代码查种子表,否则读新殿登记的文明),不是列 ——
+    `soul__civilization` 查不了。与 `dispatch.capture._diyu_q` 同一个读法。"""
+    seeded = [code for code, c in TENANT_CIVILIZATION.items() if c == civ]
+    return Q(soul__tenant__code__in=seeded) | (Q(soul__tenant__declared_civilization=civ)
+                                               & ~Q(soul__tenant__code__in=list(TENANT_CIVILIZATION)))
+
+
+def _civ_of(code, declared) -> str:
+    """`Tenant.civilization` 的同一读法,给 values() 出来的两列用。"""
+    if code in TENANT_CIVILIZATION:
+        return TENANT_CIVILIZATION[code]
+    return declared if declared in Civilization.values else UNKNOWN_CIVILIZATION
+
 
 #: 「再审一次」的裁决(`models.hears_again`),写成查询:RETRY,或欧洲以外的 PURGATORY。
-HEARS_AGAIN_Q = Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~Q(soul__civilization="EUROPEAN"))
+HEARS_AGAIN_Q = Q(verdict="RETRY") | (Q(verdict="PURGATORY") & ~_soul_civ_q("EUROPEAN"))
 CIV_ORDER = ("CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK")
 
 
@@ -89,8 +106,12 @@ def report(queryset, tenant, year=None, locale="zh-Hans", now=None) -> dict:
     opened = queryset.filter(created_at__gte=start, created_at__lt=end).order_by()
     received = opened.values("soul").distinct().count()
     placed = opened.filter(is_final=True).exclude(HEARS_AGAIN_Q).values("soul").distinct().count()
-    by_civ = {row["soul__civilization"]: row["n"]
-              for row in opened.values("soul__civilization").annotate(n=Count("soul", distinct=True))}
+    by_civ: dict[str, int] = {}
+    # 一个灵魂只有一个租户,按租户分组的计数相加不会重复。
+    for row in opened.values("soul__tenant__code", "soul__tenant__declared_civilization").annotate(
+            n=Count("soul", distinct=True)):
+        civ = _civ_of(row["soul__tenant__code"], row["soul__tenant__declared_civilization"])
+        by_civ[civ] = by_civ.get(civ, 0) + row["n"]
 
     fields = ("concluded_at", "claimable_since", "created_at", "deferred_total", "verdict", "case_number", "soul__name")
     concluded = _concluded_in(queryset, start, end)
