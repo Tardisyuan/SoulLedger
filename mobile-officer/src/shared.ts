@@ -35,6 +35,7 @@ export {
   GUTTER,
   GoneState,
   useReducedMotion,
+  useReducedMotionDurations,
   useRemote,
   useReloadOnReconnect,
   useTheme,
