@@ -149,7 +149,7 @@ describe("the welcome (1b)", () => {
   });
 
   it("each civilization is entered by its underworld's name", async () => {
-    const names: [string, string][] = [["EUROPEAN", "你已进入天堂与地狱"], ["EGYPTIAN", "你已进入杜阿特"], ["GREEK", "你已进入希腊冥界"]];
+    const names: [string, string][] = [["EUROPEAN", "你已进入天堂与地狱"], ["EGYPTIAN", "你已进入杜阿特"], ["GREEK", "你已进入希腊冥府"]];
     for (const [civilization, text] of names) {
       const { view } = play(P({ civilization, home_civilization: civilization, welcomed_civilizations: [] }));
       await act(async () => {});

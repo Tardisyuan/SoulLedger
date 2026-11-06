@@ -96,7 +96,7 @@ function renderPage() {
   );
 }
 
-/** 原审一律带审批流程(d4d2bb27,2026-10-29),确认层那一键是「落判并发起」;加减项审判不强制,仍是「盖印并结案」。 */
+/** 原审一律带审批流程(d4d2bb27,2026-10-29),确认层那一键是「落判并发起」;加减项审判不强制,仍是「落印并结案」。 */
 async function conclude(button = "judgment.desk.stamp") {
   const passed = (await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!;
   fireEvent.click(passed);

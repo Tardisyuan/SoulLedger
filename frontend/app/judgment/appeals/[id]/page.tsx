@@ -54,12 +54,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function Decision({ appeal }: { appeal: JudgmentAppeal }) {
   const { t, formatDate } = useI18n();
+  const civilization = useTenant().user?.tenant?.civilization;
   return (
     <PageSection title={t(`appeals.status.${appeal.status}`)}>
       {appeal.status === "AMENDED" && (
         <Row label={t("appeals.new_verdict")}>
           <span className="inline-flex items-center gap-2 text-sm">
-            <VerdictBadge verdict={appeal.original_verdict} />→<VerdictBadge verdict={appeal.new_verdict} />
+            <VerdictBadge verdict={appeal.original_verdict} civilization={civilization} />→<VerdictBadge verdict={appeal.new_verdict} civilization={civilization} />
           </span>
         </Row>
       )}
@@ -215,7 +216,7 @@ function AppealReviewContent({ id }: { id: string }) {
             </Link>
           </Row>
           <Row label={t("appeals.original_verdict")}>
-            <VerdictBadge verdict={appeal.original_verdict} />
+            <VerdictBadge verdict={appeal.original_verdict} civilization={user?.tenant?.civilization} />
           </Row>
           <Row label={t("souls.detail.ledger.verdict_words")}>
             <p className={PROSE}>{appeal.judgment_notes || <MissingValue kind="unrecorded" />}</p>

@@ -333,7 +333,7 @@ describe("联审详情的各站", () => {
     const form = screen.getByRole("form", { name: tZh("sentence_plan.cross.fill_title") });
     const submit = within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") });
     expect(submit).toBeDisabled();
-    await screen.findByRole("option", { name: "真理大厅" });
+    await screen.findByRole("option", { name: "两真之殿" });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.realm")), { target: { value: "EG_HALL_TWO_TRUTHS" } });
     fireEvent.click(submit);
     await waitFor(() =>
@@ -347,7 +347,7 @@ describe("联审详情的各站", () => {
     as("JUDGE", "EG_DUAT", ...JUDGE);
     renderWith(<CrossJudgmentStops judgment={bench()} />);
     const form = screen.getByRole("form", { name: tZh("sentence_plan.cross.fill_title") });
-    await screen.findByRole("option", { name: "真理大厅" });
+    await screen.findByRole("option", { name: "两真之殿" });
     expect(form.querySelector('option[value="EG_HALL_TWO_TRUTHS"]')).not.toBeNull();
     expect(form.querySelector('option[value="EG_RETIRED_FIELD"]')).toBeNull();
   });
@@ -356,7 +356,7 @@ describe("联审详情的各站", () => {
     as("JUDGE", "EG_DUAT", ...JUDGE);
     renderWith(<CrossJudgmentStops judgment={bench()} />);
     const form = screen.getByRole("form", { name: tZh("sentence_plan.cross.fill_title") });
-    await screen.findByRole("option", { name: "真理大厅" });
+    await screen.findByRole("option", { name: "两真之殿" });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.realm")), { target: { value: "EG_HALL_TWO_TRUTHS" } });
     fireEvent.change(within(form).getByLabelText(tZh("sentence_plan.cross.years")), { target: { value: "-3" } });
     expect(within(form).getByRole("button", { name: tZh("sentence_plan.cross.submit") })).toBeDisabled();

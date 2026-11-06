@@ -278,10 +278,10 @@ export function SoulKarmaLedgerCard({
 
           <div className="border border-dashed border-[oklch(var(--color-hairline))] p-2 mt-2">
             <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
-              {tf(
-                "ledger.advisory_disclaimer",
-                "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出"
-              )}
+              {/* Egypt: the scale reads the admitted deeds and the officer does not choose (docs/02_奥西里斯审判详解.md:175-177). */}
+              {(life?.civilization ?? reading.civilization) === "EGYPTIAN"
+                ? tf("ledger.advisory_disclaimer_eg", "天平读采信的功过：心不重于羽即通过，重于羽即交阿米特。官员不另选。")
+                : tf("ledger.advisory_disclaimer", "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出")}
             </p>
           </div>
         </div>

@@ -93,10 +93,10 @@ def test_the_notification_handler_puts_i18n_into_the_pushed_payload(judge_user):
 
 def test_rebirth_cooldown_provisioning_and_assistant_notices_are_localized(judge_user):
     cases = [
-        ("rebirth_status_approved", {}, "转生申请状态更新", "您的转生申请状态:已批准。", "Your rebirth application was approved."),
-        ("rebirth_status_appeal_rejected", {}, "转生申请状态更新", "您的转生申请状态:申诉被驳回。",
+        ("rebirth_status_approved", {}, "转生申请状态更新", "你的转生申请状态：已批准。", "Your rebirth application was approved."),
+        ("rebirth_status_appeal_rejected", {}, "转生申请状态更新", "你的转生申请状态：申诉被驳回。",
          "The appeal on your rebirth application was rejected."),
-        ("cooldown_decided_rejected", {}, "缩短冷却申请有了结果", "您的缩短冷却申请:已驳回。",
+        ("cooldown_decided_rejected", {}, "缩短冷却申请有了结果", "你的缩短冷却申请：已驳回。",
          "Your request to shorten the cooldown was rejected."),
         ("soul_account_provisioning_failed", {"soul": "孟婆之魂", "command": "backfill_soul_accounts"}, "灵魂账号开通失败",
          "灵魂「孟婆之魂」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。",
@@ -114,8 +114,8 @@ def test_rebirth_cooldown_provisioning_and_assistant_notices_are_localized(judge
 
 
 def test_old_rows_of_these_notices_keep_their_stored_text(judge_user):
-    old = _row(judge_user, "SYSTEM", {}, title="转生申请状态更新", message="您的转生申请状态:审批中。")
-    assert _read(old, "en") == ("转生申请状态更新", "您的转生申请状态:审批中。")
+    old = _row(judge_user, "SYSTEM", {}, title="转生申请状态更新", message="你的转生申请状态：审批中。")
+    assert _read(old, "en") == ("转生申请状态更新", "你的转生申请状态：审批中。")
     # 缺占位符参数的行(只有 kind)也照原文,不露出 `{{soul}}`。
     bare = _row(judge_user, "SYSTEM", {"kind": "soul_account_provisioning_failed"}, title="灵魂账号开通失败", message="旧文")
     assert _read(bare, "en") == ("灵魂账号开通失败", "旧文")

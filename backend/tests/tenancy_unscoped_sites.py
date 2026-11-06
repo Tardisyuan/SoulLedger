@@ -246,6 +246,7 @@ SITES = [
     ('apps/sentence_plan/services.py', '_leave_waiting_station', 'Disposition.all_objects', 1, 'PK', 'disposition of one node by pk'),
     ('apps/sentence_plan/services.py', '_lock_nodes', 'SentenceNode.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/sentence_plan/services.py', '_lock_plan', 'SentencePlan.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
+    ('apps/sentence_plan/services.py', 'hall_params', 'Tenant.objects', 1, 'FANOUT', 'display names of the halls named by globally unique code in a notification (Tenant has no tenant column; only hall_names is read)'),
     ('apps/sentence_plan/services.py', '_tenant_id', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/sentence_plan/services.py', 'in_progress_plan', 'SentencePlan.all_objects', 1, 'PK', 'plan of one soul'),
     ('apps/sentence_plan/services.py', 'pardon_term', 'Disposition.all_objects', 1, 'LOCK', "locks the disposition of one pardoned node by its pk (node.disposition_id), under the soul / plan / node locks"),

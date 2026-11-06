@@ -177,7 +177,7 @@ describe("a whole-route busy screen is never silent", () => {
     const status = screen.getByRole("status");
     // zh-Hans is DEFAULT_LOCALE and no cookie is set, so this is the real
     // bundle's copy, resolved through the real lookup.
-    expect(status).toHaveTextContent("加载中...");
+    expect(status).toHaveTextContent("加载中…");
   });
 
   it("does not announce the raw key", () => {

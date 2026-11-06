@@ -90,7 +90,7 @@ describe("取消移交", () => {
     expect(mockShowToast).not.toHaveBeenCalledWith(tZh("dispatch.cancel_success"), "success");
   });
 
-  it("别的失败是笼统的「取消移交失败」", async () => {
+  it("别的失败是笼统的「取消调拨失败」", async () => {
     dispatchApi.cancel.mockRejectedValue({ response: { status: 500, data: {} } });
     renderButton();
     fireEvent.click(trigger() as HTMLElement);
