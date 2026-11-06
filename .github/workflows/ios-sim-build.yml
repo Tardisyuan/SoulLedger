@@ -1,0 +1,106 @@
+name: iOS simulator dev client
+
+# Build the Expo apps' iOS *simulator* dev clients here instead of on the Mac (user decision 2026-11-07:
+# a local Live Activity build drove the load to ~750). By hand only:
+#   gh workflow run ios-sim-build.yml --ref <branch> -f app=mobile|mobile-officer|both
+# The .app (zipped) goes to the fixed pre-release `ios-sim-dev`, named
+#   <app>-<fingerprint>-rn<react-native.config.js hash>.zip
+# by scripts/mobile-native-key.sh — the key scripts/build-mobile-dev.sh compares — so
+# scripts/ios-sim-fetch.sh can tell whether the build it needs exists. A newer build of the same app replaces
+# the older asset. The release is public (the repository is): anyone can download these builds; the user
+# accepted that. A dev client holds no JS (Metro serves it) and no secrets; no Sentry DSN, so no Sentry native code.
+# Simulator only: no signing identity, no secrets — the job token alone, with contents: write for the release.
+# EAS stays unused (user 2026-10-10, re-confirmed 2026-11-07).
+#
+# Runner: `xcode-27` (actions/runner-images, preview image on macOS 27, arm64; Xcode 27.0 / 27.1 (default) /
+# 27.2 installed, read from images/macos/xcode-27-arm64-Readme.md 2026-11-07). The Mac builds with Xcode 27.2, so
+# the job selects 27.2. macos-26 / macos-latest carry only Xcode 26.x. Standard macOS runners do not bill minutes
+# for public repositories; `-xlarge` does, so it is not used.
+# Run length: estimated, not measured — ~5 min install, ~5 min pod install, 20–40 min cold Xcode build on the
+# 3-core runner, per app; `both` runs the two apps as parallel jobs.
+# tests/test_ci_runs_on_a_budget.py holds these triggers.
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Which app to build
+        type: choice
+        options: [mobile, mobile-officer, both]
+        default: mobile
+
+concurrency:
+  group: ios-sim-${{ github.ref }}-${{ inputs.app }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(inputs.app == 'both' && '["mobile","mobile-officer"]' || format('["{0}"]', inputs.app)) }}
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      RCT_NO_LAUNCH_PACKAGER: 'true'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Select Xcode 27.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app
+          xcodebuild -version
+      # npm 11 (the lockfile's), install scripts rebuilt by hand, lockfile restored — CLAUDE.md, Build & Test.
+      - name: Install dependencies
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+          git checkout -- package-lock.json
+      # Before prebuild, from the checked-out tree: the same key the Mac computes.
+      - name: Native key
+        id: key
+        run: |
+          read -r FP RNCONFIG < <(scripts/mobile-native-key.sh "${{ matrix.app }}" ios)
+          test -n "$FP"
+          echo "asset=${{ matrix.app }}-$FP-rn$RNCONFIG.zip" >> "$GITHUB_OUTPUT"
+      - name: Prebuild and pod install
+        working-directory: ${{ matrix.app }}
+        run: |
+          npx expo prebuild --platform ios --no-install
+          cd ios && pod install
+      # The arguments expo run:ios uses for a generic simulator build (no signing arguments: Xcode signs a
+      # simulator build ad hoc), plus arm64 only — without a device, ONLY_ACTIVE_ARCH has nothing to narrow to.
+      - name: Build
+        working-directory: ${{ matrix.app }}/ios
+        run: |
+          WS=$(ls -d *.xcworkspace | head -1)
+          xcodebuild -workspace "$WS" -scheme "${WS%.xcworkspace}" -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO COCOAPODS_PARALLEL_CODE_SIGN=true build
+      - name: Zip the app
+        run: |
+          APP_PATH=$(ls -d "${{ matrix.app }}"/ios/build/Build/Products/Debug-iphonesimulator/*.app | head -1)
+          ditto -c -k --keepParent "$APP_PATH" "${{ steps.key.outputs.asset }}"
+          ls -l "${{ steps.key.outputs.asset }}"
+      - name: Upload to the ios-sim-dev release
+        run: |
+          gh release view ios-sim-dev >/dev/null 2>&1 \
+            || gh release create ios-sim-dev --prerelease --target "$GITHUB_SHA" --title "iOS simulator dev clients" \
+                 --notes "Built by .github/workflows/ios-sim-build.yml. Install with scripts/ios-sim-fetch.sh." \
+            || gh release view ios-sim-dev >/dev/null   # the other matrix job may have created it first
+          gh release upload ios-sim-dev "${{ steps.key.outputs.asset }}" --clobber
+          # Keep one build per app: drop this app's older fingerprints.
+          gh release view ios-sim-dev --json assets --jq '.assets[].name' \
+            | grep -E "^${{ matrix.app }}-[0-9a-f]+-rn[0-9a-f]*\.zip$" \
+            | grep -vxF "${{ steps.key.outputs.asset }}" \
+            | while read -r old; do gh release delete-asset ios-sim-dev "$old" --yes; done

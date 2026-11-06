@@ -18,7 +18,8 @@ def _load(name):
     return data, data.get("on", data.get(True))
 
 
-@pytest.mark.parametrize("name", ["ci.yml", "security.yml"])
+# Every workflow, not a named list: ios-sim-build.yml (2026-11-07) would otherwise be outside the guard.
+@pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml")))
 def test_triggers_stay_on_the_budget(name):
     data, on = _load(name)
     assert set(on) <= {"workflow_dispatch", "schedule", "push"}, f"{name}: {sorted(on)}"
