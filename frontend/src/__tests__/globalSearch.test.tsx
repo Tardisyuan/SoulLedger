@@ -360,7 +360,12 @@ describe("v4 命令面板:指令", () => {
     renderSearch();
     await open();
     await search("通过");
-    await waitFor(() => expect(groups()).toEqual(["command", "judgment", "soul", "statute"]));
+    // 等的是**结果行**,不是组标题:组标题在骨架(loading)时就画了,那时只有「指令」一组有可跳的行,
+    // Tab 按设计不拦(只有一组时焦点照常走)—— 第一次写这条时等的是 groups(),于是在骨架上按了 Tab。
+    await waitFor(() =>
+      expect(options().map((o) => o.getAttribute("data-option-key"))).toEqual(["command:pass", "judgment:j1", "soul:s1", "statute:t1"]),
+    );
+    expect(groups()).toEqual(["command", "judgment", "soul", "statute"]);
     expect(selected()?.getAttribute("data-option-key")).toBe("command:pass");
     fireEvent.keyDown(input(), { key: "Tab" });
     expect(selected()?.getAttribute("data-option-key")).toBe("judgment:j1");
