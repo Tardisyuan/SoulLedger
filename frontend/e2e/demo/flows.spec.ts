@@ -16,10 +16,10 @@ async function concludeOpen(page: Page, name: string, verdict: "PASSED" | "FAILE
   await page.getByTestId("queue-group-mine").getByTestId("queue-row").filter({ hasText: name }).getByRole("link").first().click();
   await page.waitForURL(/\/judgment\/[0-9a-f-]{36}/);
   await page.getByRole("radio").and(page.locator(`[value="${verdict}"]`)).check({ force: true });
-  await page.getByRole("button", { name: "进入盖印确认" }).click();
+  await page.getByRole("button", { name: "进入落印确认" }).click();
   // With the flow's stations to pick, there is one more step before the stamp.
   const next = page.getByRole("button", { name: "下一步" });
-  const final = page.getByRole("button", { name: /落判并发起|盖印并结案|不过 · 落印/ });
+  const final = page.getByRole("button", { name: /落判并发起|落印并结案|不过 · 落印/ });
   await expect(next.or(final).first()).toBeVisible();
   // v4 S10: a failed original names its reason first (the first the hall offers); the stamp stays grey until then.
   const reasons = page.getByTestId("reject-reasons");

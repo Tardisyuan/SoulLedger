@@ -464,7 +464,7 @@ describe("the shell", () => {
     expect(screen.queryByText("Chinese Afterlife")).toBeNull();
     // Me reads the role through the bundles, not the raw code.
     fireEvent.press(screen.getByTestId("tab-me"));
-    expect(await screen.findByText("审判者")).toBeTruthy();
+    expect(await screen.findByText("判官")).toBeTruthy();
     expect(screen.queryByText("JUDGE")).toBeNull();
     for (const tab of ["todo", "queue", "search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
     expect(screen.queryByTestId("mfa-banner")).toBeNull();

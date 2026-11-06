@@ -136,7 +136,8 @@ export function SoulBalance({ soul }: { soul: Soul }) {
       <p className="text-sm text-[oklch(var(--color-ink-muted))]">
         {thisLifeLabel(t, soul.civilization, (soul.life_index ?? 0) + 1) ?? t("souls.detail.life_number", { n: String((soul.life_index ?? 0) + 1) })}
         {" · "}
-        {t("ledger.advisory_disclaimer")}
+        {/* Egypt: the scale reads the admitted deeds and the officer does not choose (docs/02_奥西里斯审判详解.md:175-177). */}
+        {t(soul.civilization === "EGYPTIAN" ? "ledger.advisory_disclaimer_eg" : "ledger.advisory_disclaimer")}
       </p>
     </section>
   );

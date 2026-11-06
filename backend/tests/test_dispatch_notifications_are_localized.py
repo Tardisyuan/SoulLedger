@@ -65,7 +65,7 @@ def test_a_proposal_tells_the_target_hall_only(hall, django_capture_on_commit_ca
     _propose(hall, django_capture_on_commit_callbacks)
     [note] = _mine(hall.ub, "DISPATCH_PROPOSED")
     assert note.params == {"soul": "孟婆之魂", "source": "NT_A"}
-    assert note.related_resource == "DispatchRecord" and note.title == "收到移交提案"
+    assert note.related_resource == "DispatchRecord" and note.title == "收到调拨提案"
     assert not _mine(hall.ua).exists() and not _mine(hall.uc).exists()
     [row] = _read(hall.ub, "en")
     assert row["title"] == "Dispatch proposal received" and "孟婆之魂" in row["message"]
@@ -113,7 +113,7 @@ def test_a_cancellation_tells_the_target_hall_only_and_names_soul_and_reason(hal
     assert row["title"] == "Dispatch proposal cancelled by its sender"
     assert "孟婆之魂" in row["message"] and "改派别处" in row["message"]
     [zh] = [r for r in _read(hall.ub, "zh-Hans") if r["notification_type"] == "DISPATCH_CANCELLED"]
-    assert zh["title"] == "移交提案已被发起方取消"
+    assert zh["title"] == "调拨提案已被发起方取消"
     # egy 的词由 Design 第十九批给出(2026-10-11);此前缺词时读作 zh-Hans,而不是 500。
     [egy] = [r for r in _read(hall.ub, "egy") if r["notification_type"] == "DISPATCH_CANCELLED"]
     assert egy["title"] == "Dbh Hab-Ba Sehen Seth Em Tepy Iri"

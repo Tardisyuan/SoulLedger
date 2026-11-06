@@ -204,7 +204,7 @@ describe("application detail", () => {
     wrap(<ApplicationDetailScreen id="a1" />);
     await screen.findByTestId("application-detail");
     expect(screen.getByText("评估")).toBeTruthy();
-    expect(screen.getByText("审判者")).toBeTruthy();
+    expect(screen.getByText("判官")).toBeTruthy();
     // The unrecognized status is a badge carrying the raw member, not a guess and not a dotted key.
     const badge = screen.getByTestId("status-badge");
     expect(within(badge).getByText("未识别取值")).toBeTruthy();

@@ -28,6 +28,7 @@ from apps.sentence_plan.services import (
     _route_home_realm,
     _save,
     _tenant_id,
+    hall_params,
     last_refusal,
     notify_judges,
     pardon_term,
@@ -158,7 +159,7 @@ def _create_request(plan, soul, *, from_tenant_code, kind, changes, reason, user
     record_event(soul, EventType.SENTENCE_REQUEST_CREATED, {
         "sentence_plan_id": str(plan.pk), "request_id": str(req.pk), "kind": kind, "from_tenant": from_tenant_code,
     }, tenant_id=plan.tenant_id)
-    notify_judges({plan.tenant_id}, "sentence_request_pending", {"soul": soul.name, "tenant": from_tenant_code},
+    notify_judges({plan.tenant_id}, "sentence_request_pending", {"soul": soul.name, **hall_params([from_tenant_code])},
                   plan.pk)
     return req
 
@@ -408,7 +409,7 @@ def plan_amended(soul, plan, touched_codes, *, request_id=None, judgment_id=None
     )
     tenant_ids = {_tenant_id(code) for code in touched_codes} | {plan.tenant_id}
     notify_judges({t for t in tenant_ids if t}, "sentence_plan_amended",
-                  {"soul": soul.name, "tenant": ", ".join(sorted(touched_codes)) or "-"}, plan.pk)
+                  {"soul": soul.name, **hall_params(touched_codes)}, plan.pk)
 
 
 # ── 重开审判(Q7、N1=(a))────────────────────────────────────────────────
