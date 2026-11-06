@@ -111,9 +111,11 @@ export function SwipeScreen({ onBack }: { onBack: () => void }) {
     hold.setValue(0);
   }, [topId, pan, hold]);
 
+  // 减少动态效果时直接回原位:spring 没有 duration,上面的 `ms()` 管不到它，此前照样弹两下。
   const snapBack = useCallback(() => {
-    Animated.spring(pan, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start();
-  }, [pan]);
+    if (reduced) pan.setValue(0);
+    else Animated.spring(pan, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start();
+  }, [pan, reduced]);
   // 已经亮着就不再设:否则每一帧拖动都重排一次 2 秒。
   const flashBlocked = () => {
     if (!hint) setHint(true);
