@@ -163,7 +163,7 @@ describe("my page and the lists", () => {
     expect(screen.getByText("互相关注")).toBeTruthy();
     expect(screen.getByText("回关")).toBeTruthy();
     expect(screen.getAllByTestId("follow")).toHaveLength(2);
-    expect(screen.getByText("已转世的灵魂留在列表里但不再有按钮。")).toBeTruthy();
+    expect(screen.getByText("已转生的灵魂留在列表里但不再有按钮。")).toBeTruthy();
   });
 });
 

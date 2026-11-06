@@ -315,7 +315,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     //     名字盖住九圈，正是那份报告警告过的「把清单接到错误的结构上」。
     //   · PURGATORY_REVIEW（炼狱复核）不行。地狱恰恰是判决不可复核的地方；而且
     //     服务端 WORKFLOW_TEMPLATES 里 (EUROPEAN, PURGATORY_REVIEW) 已经是另一套
-    //     实实在在的流程（忏悔赦免审核 → 炼狱净化评估 → 天堂准入终审）。
+    //     实实在在的流程（生前告解核对 → 炼狱净化评估 → 天堂准入终审）。
     //   · CANONIZATION（封圣审查）与本套无关，同样已被服务端另一套流程占用。
     //
     // 剩下 ROUTINE，而它是对的：《地狱篇》V.4-15「Examines the transgressions at
@@ -325,7 +325,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     // 有 SPECIAL，且那套确实**跳过**十殿的审级；这里没有被跳过的审级。）
     caseType: "ROUTINE",
     name: "地狱圈层流程",
-    description: "九层地狱罪行分类",
+    description: "地狱九圈罪行分类",
     priority: 0,
     nodes: [
       // 依据：但丁《地狱篇》V.4-15（Longfellow 公版英译）——「There standeth
@@ -333,14 +333,14 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // entrance; / Judges, and sends according as he girds him」。给灵魂分配
       // 圈层的是 Minos，位置在**第二圈入口**，不是第一圈（Limbo，善良异教徒，
       // 无审无罚）。此前的「罪行核定 @ 地狱第一层」把分级判定放在了 Limbo。
-      { id: "n1", name: "Minos · 判定圈层", court: "第二层入口", type: "罪行分类", order: 1 },
+      { id: "n1", name: "Minos · 判定圈层", court: "第二圈入口", type: "罪行分类", order: 1 },
       // 他在第九圈 Judecca 冰中，三口啃噬叛徒，**不宣判**（《地狱篇》
       // XXXIV）。原文「入狱宣判」把 Minos 的职能安在了他身上。
       //
       // 名字用名册里的 `Satan` 而不是「Lucifer」：同一位（但丁称 Lucifero、
       // Dite），但模板节点名要能在 seeder 里解析到，否则这一步在流程里指向的是
       // 一个系统拿不出的人（EUROPEAN_ACTORS 有 Satan，没有 Lucifer）。
-      { id: "n2", name: "Satan · 第九层收监", court: "第九层", type: "入狱执行", order: 2 },
+      { id: "n2", name: "Satan · 第九圈收押", court: "第九圈", type: "入狱执行", order: 2 },
     ],
   },
   EUROPEAN_EMERGENCY: {

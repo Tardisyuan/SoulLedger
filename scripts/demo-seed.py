@@ -75,7 +75,7 @@ NOW = timezone.now()
 CITY_GODS = {"CN_DIYU": "都城隍", "EU_HEAVEN_HELL": "Saint Peter's Gate", "EG_DUAT": "Thoth's Scribes", "GR_HADES": "Charon's Ferry"}
 
 OFFICERS = {
-    "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "OFFICER"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "MODERATOR")],
+    "CN_DIYU": [("cui_jue", "崔珏", "JUDGE"), ("heibai", "黑白无常", "OFFICER"), ("zhong_kui", "钟馗", "JUDGE"), ("meng_po", "孟婆", "OFFICER")],
     "EU_HEAVEN_HELL": [("minos", "Minos", "JUDGE"), ("uriel", "Uriel", "OFFICER"), ("beatrice", "Beatrice", "MODERATOR")],
     "EG_DUAT": [("anubis", "Anubis", "JUDGE"), ("horus", "Horus", "OFFICER"), ("maat", "Ma'at", "MODERATOR")],
     "GR_HADES": [("rhadamanthus", "Rhadamanthus", "JUDGE"), ("aeacus", "Aeacus", "OFFICER"), ("hermes", "Hermes", "MODERATOR")],
@@ -151,7 +151,7 @@ DIED_AT = {"屈原": "汨罗", "Francesca da Rimini": "Rimini"}
 #: 判词,按各文明自己的说法(docs/01_*):埃及、欧洲没有转世。
 NOTES = {
     "CN_DIYU": {"PASSED": "功过相抵后仍有余善,准入轮回。", "FAILED": "恶业深重,依律发落。"},
-    "EU_HEAVEN_HELL": {"PASSED": "生前无大罪,准入天堂。", "FAILED": "所犯之罪依《神曲》定层,入地狱。", "PURGATORY": "其罪可涤,入炼狱逐层洗炼。"},
+    "EU_HEAVEN_HELL": {"PASSED": "生前无大罪,准入天国。", "FAILED": "所犯之罪依《神曲》定圈,入地狱。", "PURGATORY": "其罪可涤,入炼狱逐层洗炼。"},
     "EG_DUAT": {"PASSED": "心不重于羽,入芦苇原。", "FAILED": "心重于羽,交阿米特吞噬。"},
     "GR_HADES": {"PASSED": "善者往至福岛,千年后再择来生。", "FAILED": "恶者下塔尔塔罗斯。"},
 }
@@ -425,13 +425,17 @@ def seed_dispatches(tenants):
     print("dispatches:", made)
 
 
+#: 官员简介:「冥府」是希腊那一套的叫法(docs/01_希腊冥府整体架构.md),各文明写自己的。
+BIO = {"CN_DIYU": "地府当值", "EU_HEAVEN_HELL": "天国当值"}
+
+
 def seed_social(tenants):
     authors = {code: list(User.objects.filter(tenant=t).exclude(role="SOUL")) for code, t in tenants.items()}
     lines = {
-        "CN_DIYU": ["今日当值第五殿,孽镜台前无人敢抬头。", "孟婆汤新换了配方,说是少放了黄连。", "奈何桥下水位上涨,诸位摆渡注意。",
+        "CN_DIYU": ["今日当值第一殿,孽镜台前无人敢抬头。", "孟婆汤新换了配方,说是少放了黄连。", "奈何桥下水位上涨,诸位摆渡注意。",
                     "崔判官的朱笔又断了,这是本月第三支。", "第一殿排队已到午门外,请勿喧哗。"],
-        "EU_HEAVEN_HELL": ["The Ninth Circle's ice is holding nicely this season.", "Purgatory's terraces are repainted; mind the fresh mortar.",
-                           "Minos asks everyone to stop counting his tail.", "Limbo book club meets Thursday. Virgil is bringing the Aeneid, again."],
+        "EU_HEAVEN_HELL": ["第九圈的冰今季很结实。", "炼狱各层刚刷过一遍,留神未干的灰浆。",
+                           "米诺斯请大家别再数他的尾巴。", "林勃读书会周四照常,维吉尔又要带《埃涅阿斯纪》。"],
         "EG_DUAT": ["The scales were recalibrated at dawn. Ammit is fed and resting.", "Forty-two assessors on shift; bring your negative confessions in order.",
                     "Boat of Ra departs at the twelfth hour sharp.", "Field of Reeds harvest: excellent."],
         "GR_HADES": ["Charon has raised the fare. Bring two obols.", "Cerberus had all three breakfasts. Approach calmly.",
@@ -445,11 +449,11 @@ def seed_social(tenants):
     for p in posts:
         for a in authors[p.tenant.code][:2]:
             if a.pk != p.author_id:
-                Comment.objects.create(post=p, author=a, content="收到。" if p.tenant.code == "CN_DIYU" else "Noted.", tenant=p.tenant)
+                Comment.objects.create(post=p, author=a, content="收到。" if p.tenant.code in ("CN_DIYU", "EU_HEAVEN_HELL") else "Noted.", tenant=p.tenant)
                 Post.objects.filter(pk=p.pk).update(comment_count=Comment.objects.filter(post=p).count())
     for code, us in authors.items():
         for u in us:
-            UserProfile.objects.get_or_create(user=u, defaults={"bio": "冥府当值"})
+            UserProfile.objects.get_or_create(user=u, defaults={"bio": BIO.get(code, "冥府当值")})
         for a in us:
             for b in us:
                 if a.pk != b.pk and (a.pk < b.pk or a.username.startswith("demo_")):
@@ -617,7 +621,7 @@ def seed_cross_judgments(tenants):
     for soul, conclude, title in ((sitting, False, "哪吒案·两界会审"), (done, True, "项羽案·两界会审")):
         try:
             case = sent_on(soul.die(location=soul.origin_location))
-            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后冥河", cn, None)
+            cj = CrossTenantJudgmentService.create(title, "两界共审,先地府后希腊冥界", cn, None)
             cj.judgment = case
             cj.save(update_fields=["judgment"])
             seat = CrossTenantJudgmentService.add_participant(cj, gr, None, ParticipantRole.CO_JUDGE, node_order=2)
@@ -819,7 +823,8 @@ def main():
             if role == "JUDGE" and code not in judges:
                 judges[code] = u
     demo = [officer("demo_admin", "太史令", "ADMIN", None), officer("demo_judge", "崔判官", "JUDGE", tenants["CN_DIYU"]),
-            officer("demo_moderator", "孟婆", "MODERATOR", tenants["CN_DIYU"]),
+            # 殿主在地府只能是阎王;孟婆是第十殿醧忘台司汤之神,上面 OFFICERS 里是普通官员(docs/09、docs/02 §三)。
+            officer("demo_moderator", "阎罗王", "MODERATOR", tenants["CN_DIYU"]),
             officer("demo_judge_eu", "Saint Peter", "JUDGE", tenants["EU_HEAVEN_HELL"]),
             officer("demo_judge_eg", "Thoth", "JUDGE", tenants["EG_DUAT"]),
             officer("demo_judge_gr", "Minos", "JUDGE", tenants["GR_HADES"])]

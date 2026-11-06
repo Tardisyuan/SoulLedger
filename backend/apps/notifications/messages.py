@@ -136,7 +136,7 @@ MESSAGES = {
         "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
         "city_god_case_received": {"title": "New case for first review", "body": "The case of {{soul}} has reached {{city_god}} and is waiting for first review."},
         "city_god_case_returned": {"title": "Case returned for correction", "body": "{{city_god}} returned the case of {{soul}}: the record needs correcting. By {{by}}. Note: {{reason}}"},
-        "wangsi_grievance_filed": {"title": "New grievance in the City of the Wrongfully Dead", "body": "{{soul}} has filed a grievance, waiting for review."},
+        "wangsi_grievance_filed": {"title": "New grievance in the City of Wrongful Death", "body": "{{soul}} has filed a grievance, waiting for review."},
     },
     "egy": {
         "password_help_requested": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},

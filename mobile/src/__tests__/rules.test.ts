@@ -100,6 +100,11 @@ describe("lexiconKey", () => {
     }
   });
 
+  it("Europe is not judged in a 殿: its court label is its own (wording review EU-12)", () => {
+    expect(lexiconKey("eu", "court")).toBe("soul_app.lexicon.eu.court");
+    for (const civ of ["neutral", "cn", "gr"] as const) expect(lexiconKey(civ, "court")).toBe("soul_app.life.court");
+  });
+
   // Their own no-rebirth sentences went with the page (no 转生 tab for them in v4; user decision 2026-11-06).
   it("the two civilizations without rebirth carry their own no-past-lives sentence; the others do not", () => {
     for (const civ of ["eg", "eu"] as const) {

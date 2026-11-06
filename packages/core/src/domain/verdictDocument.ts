@@ -137,11 +137,16 @@ const realmNumber = (code: string | null | undefined, re: RegExp): number | null
   return m ? Number(m[1]) : null;
 };
 
+/** 否认灵魂不灭(异端)在第六圈(docs/01、docs/03)。 */
+const HERESY_CIRCLE = 6;
+
 const SIN_TERRACE: Record<string, number> = { pride: 1, envy: 2, wrath: 3, sloth: 4, greed: 5, gluttony: 6, lust: 7 };
 
 export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocumentText | null {
   const civ = CIV[input.civilization];
   if (!civ || !input.verdict || !FINAL.has(input.verdict)) return null;
+  // 地府的「存疑」不是终判:灵魂发回待审所候再审(`_route_chinese`),没有解送哪一殿,不出文书。
+  if (civ === "cn" && input.verdict === "PURGATORY") return null;
   const passed = input.verdict === "PASSED";
   const unrecorded = t("common.value.unrecorded");
   const han = input.han && civ === "cn";
@@ -209,9 +214,15 @@ export function verdictDocument(input: VerdictDocumentInput, t: T): VerdictDocum
       } else if (input.realmCode === "EU_ANTINFERNO" || (!input.realmCode && reasons.includes("NEUTRAL"))) {
         verdict = t(k("verdict.antinferno"));
       } else {
-        const n = realmNumber(input.realmCode, /^EU_HELL_(\d+)/) ?? (reasons.includes("DENIED_IMMORTALITY") ? 6 : null);
-        verdict = t(k("verdict.hell"), { n: num(n) });
-        if (cited.length) sins = cited.map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ");
+        const heresy = reasons.includes("DENIED_IMMORTALITY");
+        const n = realmNumber(input.realmCode, /^EU_HELL_(\d+)/) ?? (heresy ? HERESY_CIRCLE : null);
+        // 第一圈林勃不是刑罚,第六圈的异端理由不是大罪:各有自己的一句,不借「有未悔的大罪」(docs/01 §判决理由、docs/03)。
+        if (n === 1) verdict = t(k("verdict.limbo"));
+        else if (n === HERESY_CIRCLE && heresy) verdict = t(k("verdict.heresy"));
+        else {
+          verdict = t(k("verdict.hell"), { n: num(n) });
+          if (cited.length) sins = cited.map((s) => t(`reject_reason.eu.sin.${s}`)).join(" · ");
+        }
       }
       return {
         civ, account, vertical: false, deco: t(k("deco")), title: t(k("title")), body: t(k("body"), { soul }),
