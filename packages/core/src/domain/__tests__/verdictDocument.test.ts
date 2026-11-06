@@ -102,13 +102,30 @@ describe("埃及", () => {
 
 describe("希腊:按所选文书", () => {
   const gr = { ...base, civilization: "GREEK", soulName: "Elpenor", judgeName: "艾亚哥斯" };
-  it("高尔吉亚:一审只写判官名 + 米诺斯终裁;不可医", () => {
-    const doc = verdictDocument({ ...gr, verdict: "FAILED", greekAccount: "GORGIAS", greekCurability: "INCURABLE" }, tz)!;
+  it("高尔吉亚:米诺斯实际终裁了才写「米诺斯 终裁」;不可医", () => {
+    const doc = verdictDocument(
+      { ...gr, verdict: "FAILED", greekAccount: "GORGIAS", greekCurability: "INCURABLE", judgeId: "aeacus", finalReviewBy: "minos" },
+      tz,
+    )!;
     expect(doc.account).toBe("gr");
     expect(doc.name).toBe("Elpenor");
     expect(doc.ruling).toBe("加上标记：不可医。送往塔尔塔罗斯。");
     expect(doc.signs).toEqual(["艾亚哥斯", "米诺斯 终裁"]);
     expect(doc.date).toBe("2026年11月6日 · 昼");
+  });
+
+  it("高尔吉亚:艾亚哥斯判通过就结案,没有米诺斯(GR-5)", () => {
+    const doc = verdictDocument({ ...gr, verdict: "PASSED", greekAccount: "GORGIAS", judgeId: "aeacus", finalReviewBy: null }, tz)!;
+    expect(doc.signs).toEqual(["艾亚哥斯"]);
+    expect(doc.signs.join("")).not.toContain("米诺斯");
+  });
+
+  it("高尔吉亚:判官本人就是终裁的米诺斯时只写一行", () => {
+    const doc = verdictDocument(
+      { ...gr, judgeName: "米诺斯", verdict: "PASSED", greekAccount: "GORGIAS", judgeId: "minos", finalReviewBy: "minos" },
+      tz,
+    )!;
+    expect(doc.signs).toEqual(["米诺斯 终裁"]);
   });
 
   it("理想国:不具名的审判者,不义与不可医两种判语", () => {
