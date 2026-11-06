@@ -503,6 +503,9 @@ class MeSentenceStationSerializer(serializers.Serializer):
     started_on = serializers.DateField(allow_null=True)
     #: 已结束的站:结束那天;在受 / 暂留的站:起始 + 刑期。其余为空。
     ends_on = serializers.DateField(allow_null=True)
+    #: 希腊可医者在塔尔塔罗斯的千年已过几年(与账本 SENTENCE 读数的 `elapsed_years` 同一个数,
+    #: `soul_view.thousand_years_run`);别的站、永罚、起点没登记为空。
+    elapsed_years = serializers.IntegerField(allow_null=True)
 
 
 class MeSentencePlanSerializer(serializers.Serializer):

@@ -34478,8 +34478,12 @@ components:
           type: string
           format: date
           nullable: true
+        elapsed_years:
+          type: integer
+          nullable: true
       required:
       - civilization
+      - elapsed_years
       - ends_on
       - id
       - is_eternal

@@ -52,10 +52,15 @@ describe("soulRoute", () => {
     expect([r.line, r.path]).toEqual(["你在第九圈 - 背叛。", "下行"]);
   });
 
-  it("希腊: the (non-eternal) Tartarus is the thousand years, counted from the station's start", () => {
-    const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS"), hall: "", now: NOW }, tr)!;
+  it("希腊: the (non-eternal) Tartarus is the thousand years, counted by the ledger's elapsed_years", () => {
+    const r = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { elapsed_years: 299 }), hall: "", now: NOW }, tr)!;
     expect(r.steps[r.at]).toMatchObject({ id: "CYCLE", sub: "第 299 年" });
     expect(r.line).toBe("你在千年的路上，已经走了 299 年。");
+    // The station's start (1726, 300 years before NOW) is not the term start: no elapsed_years, no number.
+    const unknown = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { elapsed_years: null }), hall: "", now: NOW }, tr)!;
+    expect(unknown.steps[unknown.at]).toMatchObject({ id: "CYCLE" });
+    expect(unknown.steps[unknown.at].sub).toBeUndefined();
+    expect(unknown.line).toBeUndefined();
     const eternal = soulRoute({ me: me({ current_state: "DISPOSED" }), civ: "gr", plan: plan("GR_TARTARUS", { is_eternal: true, status: "eternal" }), hall: "", now: NOW }, tr)!;
     expect(eternal.steps[eternal.at]).toMatchObject({ id: "GR_TARTARUS", end: true });
   });
