@@ -24,7 +24,9 @@
   max-width: 420px;
   aspect-ratio: 210 / 297;
   overflow: hidden;
+  /* 纸色 + 各文明的纹理(`--doc-paper-image`)。打印时下面 @media print 原样放回,见那里。 */
   background: var(--doc-paper);
+  background-image: var(--doc-paper-image, none);
   color: var(--doc-ink);
   font-family: var(--font-serif);
   box-shadow: 0 1px 2px #0002, 0 18px 40px -20px #0006;
@@ -36,7 +38,7 @@
   --doc-muted: #4a3a52;
   --doc-accent: #6b4c75;
   --doc-seal: #5a3a63;
-  background: linear-gradient(#f6f0e4, #efe6d3);
+  --doc-paper-image: linear-gradient(#f6f0e4, #efe6d3);
 }
 [data-verdict-paper][data-civ="eg"] {
   --doc-paper: #e4d3a2;
@@ -44,7 +46,7 @@
   --doc-muted: #4a3d27;
   --doc-accent: #2b4e79;
   --doc-seal: #2b4e79;
-  background-image: repeating-linear-gradient(90deg, #c9b47d8c 0 1px, transparent 1px 7px),
+  --doc-paper-image: repeating-linear-gradient(90deg, #c9b47d8c 0 1px, transparent 1px 7px),
     repeating-linear-gradient(0deg, #bfa46a8c 0 1px, transparent 1px 11px);
 }
 [data-verdict-paper][data-civ="gr"] {
@@ -53,7 +55,7 @@
   --doc-muted: #4c4a45;
   --doc-accent: #5e5a52;
   --doc-seal: #5e5a52;
-  background: linear-gradient(160deg, #cfcbc2, #b9b4aa 60%, #a9a398);
+  --doc-paper-image: linear-gradient(160deg, #cfcbc2, #b9b4aa 60%, #a9a398);
 }
 
 /* ── 正文区 ─────────────────────────────────────────────────────────── */
@@ -273,13 +275,20 @@
 }
 
 /* ── 打印 ───────────────────────────────────────────────────────────── */
-/* print.css 的 `[data-print-doc] *` 把一切压成黑、去掉底色;这里用更高的特异度把「墨」放回去。 */
+/* print.css 的 `[data-print-doc] *` 把一切压成黑、去掉底色;这里用更高的特异度把「墨」与纸色放回去。 */
 @media print {
   [data-print-verdict-doc] [data-verdict-paper] {
     max-width: none;
     width: 210mm;
     height: 296mm;
     aspect-ratio: auto;
+    /* 纸张底色照印(用户 2026-11-07):print.css 的 `[data-print-doc] *` 把底色去成透明,这里放回;
+       `exact` 让浏览器打印不看「背景图形」开关,PDF 那条由 Gotenberg 的 printBackground=true 配合
+       (`backend/apps/judgment/verdict_pdf.py`)。 */
+    background-color: var(--doc-paper) !important;
+    background-image: var(--doc-paper-image, none) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   [data-print-verdict-doc] [data-verdict-paper] :is([data-doc-title], [data-doc-deco], [data-doc-border]),
   [data-print-verdict-doc] [data-verdict-paper][data-civ="eg"] [data-doc-verdict] {
