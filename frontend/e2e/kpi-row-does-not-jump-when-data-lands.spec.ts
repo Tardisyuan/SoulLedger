@@ -67,7 +67,7 @@ test("KPI 条在数据落地时不跳:加载态与落地态的卡片一样高", 
   });
 
   // 不等 networkidle:那条请求正被我们按住,networkidle 永远不会到。
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?tab=more"); // v3 待办条与普查图在「更多」里(用户 2026-11-06)
 
   const cards = page.locator("[data-kpi-card]");
   const values = page.locator("[data-kpi]");

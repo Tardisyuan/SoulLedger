@@ -78,6 +78,9 @@ describe("十三站行程条(第五十七批 S-1)", () => {
     expect(cells.slice(0, 4)).toEqual(["■", "■", "▪", "□"]);
     expect(screen.getByTestId("soul-diyu-station-now")).toHaveTextContent("第 3 / 13 站 · 望乡台");
     expect(screen.getByTestId("soul-diyu-station")).not.toHaveTextContent("WANGXIANG_TERRACE");
+    // v4 S07 卡头:「{soul} 走到了哪一步」,不再是 v3 的「十三站」小字栏目名。
+    expect(screen.getByTestId("soul-diyu-station-title")).toHaveTextContent("张三 走到了哪一步");
+    expect(screen.getByTestId("soul-diyu-station-title")).not.toHaveTextContent("十三站");
     // 每站悬浮都有站名;窄屏只写当前站名(其余的名字在 xl 以下藏起)。
     expect(document.querySelector('[data-station="EIGHTEEN_HELLS"]')).toHaveAttribute("title", "十八层地狱");
     expect(document.querySelector('[data-station="WANGXIANG_TERRACE"]')).toHaveAttribute("aria-current", "step");
