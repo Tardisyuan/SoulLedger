@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi, judgmentApi, judgmentAppealsApi } from "@soulledger/core/api";
 import type { JudgmentHallStats } from "@soulledger/core/api/judgment";
 import { localName } from "@soulledger/core/domain/localName";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -178,7 +179,7 @@ function TrendCard({ stats, loading }: { stats?: JudgmentHallStats; loading: boo
   return (
     <section data-overview-trend="" className={`${CARD} p-4`}>
       <div className="flex flex-wrap items-baseline gap-2">
-        <h2 className="text-md text-[oklch(var(--color-ink))]">{t("overview.trend.title")}</h2>
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("overview.trend.title")}</h2>
         <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("overview.trend.scope")}</span>
       </div>
       {loading ? (
@@ -329,7 +330,7 @@ function TodoCard() {
 
   return (
     <section data-overview-todo="" className={`${CARD} p-4`}>
-      <h2 className="mb-2 text-md text-[oklch(var(--color-ink))]">{t("overview.todo.title")}</h2>
+      <h2 className="mb-2 text-lg text-[oklch(var(--color-ink))]">{t("overview.todo.title")}</h2>
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((k) => (
@@ -377,7 +378,7 @@ function TodoCard() {
 export function HallOverview() {
   const { t } = useI18n();
   const statsQ = useQuery({
-    queryKey: ["judgment", "hall-stats"],
+    queryKey: [...judgmentKeys.all, "hall-stats"],
     queryFn: async () => (await judgmentApi.hallStats()).data,
     staleTime: 60_000,
   });
