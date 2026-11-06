@@ -3507,6 +3507,14 @@ export interface paths {
          *     carry a `code`: realm_not_found, realm_not_allowed, realm_full (409),
          *     term_conflict, eternal_not_allowed, destination_not_applicable. There is
          *     no undo window: the conclusion is written when this call returns.
+         *
+         *     `fail_reasons` / `fail_reason_note` (v4 D6): a FAILED original case needs
+         *     a reason from its hall's set (`apps/judgment/fail_reasons.py`); Egypt's
+         *     are listed by the scale and cannot be chosen. Greek PASSED / FAILED need
+         *     `greek_account` (GORGIAS / REPUBLIC, D8) and a Greek FAILED needs
+         *     `greek_curability` (CURABLE / INCURABLE, D7); INCURABLE is Tartarus for
+         *     ever, and a different door, a term or `eternal: false` is refused
+         *     (`incurable_is_eternal_in_tartarus`). All refusals 400 with a `code`.
          */
         post: operations["v1_judgment_conclude_create"];
         delete?: never;
@@ -3524,7 +3532,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 暂缓。`{"reason": "…"}` 必填。暂缓的案子默认不再出现在 `next/`。 */
+        /**
+         * @description 暂缓(v4 叫「待定」)。`{"reason": "…"}` 必填(用户 2026-11-06 D5:仍必填,按住圆钮后弹理由框)。
+         *     暂缓的案子默认不再出现在 `next/`,期限停表(`apps/judgment/deadline.py`)。
+         *
+         *     没给理由或只有空白:400 `{"error", "code": "defer_reason_required"}` —— 理由框据此提示,不必解析
+         *     DRF 的字段错误。别的形状错误(超过 500 字等)仍是 DRF 的字段错误。
+         */
         post: operations["v1_judgment_defer_create"];
         delete?: never;
         options?: never;
@@ -4110,6 +4124,26 @@ export interface paths {
          *     列取自列表序列化器,所以字段权限照常生效;证据、判词细节、评议不在文件里。
          */
         get: operations["v1_judgment_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/hall-stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 本殿概览(v4 `overview.*`):未结 / 已过期限、本月已结与百分比、平均用时、退回重审、近 12 周结案。
+         *     范围与列表相同(`self.get_queryset()`);时间按殿的时区。定义见 `apps/judgment/hall_stats.py`。
+         */
+        get: operations["v1_judgment_hall_stats_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9690,7 +9724,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。 */
+        /**
+         * @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关、审判期限天数与殿的时区
+         *     (v4,系统自设)。只收已知字段,`settings` 里别的键不动。
+         */
         patch: operations["v1_tenants_settings_partial_update"];
         trace?: never;
     };
@@ -13300,6 +13337,18 @@ export interface components {
             unusable_merit: number;
         };
         /**
+         * @description * `GORGIAS` - 《高尔吉亚》
+         *     * `REPUBLIC` - 《理想国》
+         * @enum {string}
+         */
+        GreekAccountEnum: "GORGIAS" | "REPUBLIC";
+        /**
+         * @description * `CURABLE` - 可医
+         *     * `INCURABLE` - 不可医
+         * @enum {string}
+         */
+        GreekCurabilityEnum: "CURABLE" | "INCURABLE";
+        /**
          * @description * `NONE` - 无冤情
          *     * `MINOR` - 轻
          *     * `MAJOR` - 重
@@ -13734,6 +13783,21 @@ export interface components {
             owner_org?: number;
             readonly owner_org_name: string;
             readonly owner_org_name_en: string;
+            readonly fail_reasons: unknown;
+            readonly fail_reason_note: string;
+            readonly greek_account: components["schemas"]["GreekAccountEnum"];
+            readonly greek_curability: components["schemas"]["GreekCurabilityEnum"];
+            readonly concluded_tz: string;
+            /** Format: date-time */
+            readonly concluded_at_local: string | null;
+            /** Format: date-time */
+            readonly claimable_since: string | null;
+            /** Format: date-time */
+            readonly deadline_at: string | null;
+            /** @description 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。 */
+            readonly deadline_remaining_seconds: number | null;
+            /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
+            readonly is_overdue: boolean;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -13896,6 +13960,13 @@ export interface components {
             destination_realm_id?: string | null;
             term_years?: number | null;
             eternal?: boolean | null;
+            fail_reasons?: string[];
+            /** @default  */
+            fail_reason_note: string;
+            /** @default  */
+            greek_account: components["schemas"]["GreekAccountEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            greek_curability: components["schemas"]["GreekCurabilityEnum"] | components["schemas"]["BlankEnum"];
         };
         /**
          * @description * `PASSED` - PASSED
@@ -14083,6 +14154,21 @@ export interface components {
             owner_org?: number;
             readonly owner_org_name: string;
             readonly owner_org_name_en: string;
+            readonly fail_reasons: unknown;
+            readonly fail_reason_note: string;
+            readonly greek_account: components["schemas"]["GreekAccountEnum"];
+            readonly greek_curability: components["schemas"]["GreekCurabilityEnum"];
+            readonly concluded_tz: string;
+            /** Format: date-time */
+            readonly concluded_at_local: string | null;
+            /** Format: date-time */
+            readonly claimable_since: string | null;
+            /** Format: date-time */
+            readonly deadline_at: string | null;
+            /** @description 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。 */
+            readonly deadline_remaining_seconds: number | null;
+            /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
+            readonly is_overdue: boolean;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14093,6 +14179,7 @@ export interface components {
             /** Format: uuid */
             readonly cross_judgment_id: string | null;
             readonly flow_progress: components["schemas"]["JudgmentFlowProgress"] | null;
+            readonly cited_deadly_sins: string[];
         };
         /** @description The draft as stored: what a save returns, and what a 409 hands back. */
         JudgmentDraft: {
@@ -14132,6 +14219,24 @@ export interface components {
             total: number;
             /** @description 处置为什么还不能执行:`weighing.unfinished_flow` 的码;没有处置、已执行或不被拦时为 null。 */
             waiting: string | null;
+        };
+        /** @description `GET /judgment/hall-stats/`:v4 概览屏的数。每个数的定义见 `apps/judgment/hall_stats.py`。 */
+        JudgmentHallStats: {
+            timezone: string;
+            pending: number;
+            overdue: number;
+            concluded_this_month: number;
+            month_done_pct: number | null;
+            /** Format: double */
+            avg_days: number | null;
+            returned_this_month: number;
+            weeks: components["schemas"]["JudgmentHallStatsWeek"][];
+        };
+        JudgmentHallStatsWeek: {
+            /** Format: date */
+            week_start: string;
+            concluded: number;
+            previous_quarter: number;
         };
         /**
          * @description * `ORIGINAL` - 原审判
@@ -14260,6 +14365,21 @@ export interface components {
             owner_org?: number;
             readonly owner_org_name: string;
             readonly owner_org_name_en: string;
+            readonly fail_reasons: unknown;
+            readonly fail_reason_note: string;
+            readonly greek_account: components["schemas"]["GreekAccountEnum"];
+            readonly greek_curability: components["schemas"]["GreekCurabilityEnum"];
+            readonly concluded_tz: string;
+            /** Format: date-time */
+            readonly concluded_at_local: string | null;
+            /** Format: date-time */
+            readonly claimable_since: string | null;
+            /** Format: date-time */
+            readonly deadline_at: string | null;
+            /** @description 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。 */
+            readonly deadline_remaining_seconds: number | null;
+            /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
+            readonly is_overdue: boolean;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14309,6 +14429,8 @@ export interface components {
             others: number;
             deferred: number;
             total: number;
+            overdue: number;
+            returned: number;
         };
         /**
          * @description The envelope `GET /api/v1/judgment/next/` returns.
@@ -17501,6 +17623,21 @@ export interface components {
             owner_org?: number;
             readonly owner_org_name?: string;
             readonly owner_org_name_en?: string;
+            readonly fail_reasons?: unknown;
+            readonly fail_reason_note?: string;
+            readonly greek_account?: components["schemas"]["GreekAccountEnum"];
+            readonly greek_curability?: components["schemas"]["GreekCurabilityEnum"];
+            readonly concluded_tz?: string;
+            /** Format: date-time */
+            readonly concluded_at_local?: string | null;
+            /** Format: date-time */
+            readonly claimable_since?: string | null;
+            /** Format: date-time */
+            readonly deadline_at?: string | null;
+            /** @description 离截止还有多少秒,过了是负数;正在待定的停在放进待定那一刻。不计期限是 null。 */
+            readonly deadline_remaining_seconds?: number | null;
+            /** @description 已过期限且不在待定里 —— 与队列 `?overdue=true` 同一条规则。 */
+            readonly is_overdue?: boolean;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;
@@ -17871,6 +18008,8 @@ export interface components {
             rebirth_monthly_quota?: {
                 [key: string]: number | null;
             };
+            judgment_deadline_days?: number | null;
+            timezone?: string;
         };
         PatchedTudiGod: {
             /** Format: uuid */
@@ -20685,6 +20824,8 @@ export interface components {
             hall_name_egy?: string;
             /** @description 书信是否开着(服务器级 `MATRIX_ENABLED`)。 */
             readonly letters_on: boolean;
+            readonly judgment_deadline_days: number | null;
+            readonly hall_timezone: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -27817,8 +27958,10 @@ export interface operations {
                 is_final?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
+                overdue?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                returned?: boolean;
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
@@ -28140,6 +28283,8 @@ export interface operations {
                 is_final?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
+                overdue?: boolean;
+                returned?: boolean;
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
@@ -28284,6 +28429,8 @@ export interface operations {
                 is_final?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
+                overdue?: boolean;
+                returned?: boolean;
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
@@ -28405,6 +28552,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentClaimRefusal"];
                 };
             };
             403: {
@@ -29566,6 +29721,25 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    v1_judgment_hall_stats_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentHallStats"];
                 };
             };
         };
