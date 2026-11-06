@@ -74,7 +74,7 @@ import { SentenceSection, useSentencePlan, type SentenceLanding } from "./senten
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 import { DIYU_STATIONS, diyuStationOrdinal } from "@soulledger/core/domain/diyuStations";
 import { useLiveProgress } from "../liveProgress";
-import { soulRoute, type RouteStep, type SoulRoute } from "../soulRoute";
+import { soulRoute, type RouteStep, type SoulRoute } from "@soulledger/core/domain/soulRoute";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the

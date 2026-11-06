@@ -17,7 +17,9 @@ test.describe("Sentence plan", () => {
     const stops = card.locator("li[data-node-order]");
     await expect(stops).toHaveCount(3);
     await expect(stops.nth(0)).toContainText("已完成");
-    await expect(stops.nth(1)).toContainText("受刑中");
+    // v4 第十批第 3 条: the second stop is in Egypt's Hall of Two Truths, which says 「等候称心」, not 「受刑中」.
+    await expect(stops.nth(1)).toContainText("等候称心");
+    await expect(stops.nth(1)).not.toContainText("受刑中");
     await expect(stops.nth(1)).toHaveAttribute("aria-current", "step");
     await expect(card.locator('li[aria-current="step"]')).toHaveCount(1);
     await expect(stops.nth(2)).toContainText("未开始");

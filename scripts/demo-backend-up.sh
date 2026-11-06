@@ -8,6 +8,8 @@ export CELERY_BROKER_URL=redis://127.0.0.1:6399/1 CELERY_RESULT_BACKEND=redis://
 # Recording only: an ADMIN without two-step verification would otherwise be refused everything (scripts/demo_settings.py).
 export DJANGO_SETTINGS_MODULE=demo_settings PYTHONPATH=/app/scripts
 export DEMO_LIVES=/sl-tmp/demo-lives.json
+# The soul accounts the recorder signs in as, one per underworld (demo-seed.py `seed_soul_logins`).
+export DEMO_SOUL_LOGINS=/sl-tmp/demo-soul-logins.json
 export ALLOWED_HOSTS=localhost,127.0.0.1 CORS_ALLOWED_ORIGINS=http://localhost:3333
 PY=/app/backend/.venv/bin/python
 

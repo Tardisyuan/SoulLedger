@@ -236,3 +236,22 @@ test("Greece: the tour's second step lights the crossing line, the third the jud
   await expect(page).toHaveURL(/\/workflow\//);
   await expect(page.locator(".demo-tour-target")).toContainText("Rhadamanthus");
 });
+
+// v4 第十批第 1 条: the band under the cards shows the soul app in a phone, and leads back to the same underworld's judge.
+for (const [skin, rebirth] of [["cn", true], ["eg", false]] as const) {
+  test(`${skin}: the soul entrance draws the app at its own size, and goes back to the judge`, async ({ page, context }) => {
+    const seen = watch(context, page);
+    await page.goto("/");
+    await page.getByTestId(`demo-soul-${skin}`).click();
+    await expect(page.getByTestId("demo-soul")).toHaveAttribute("data-civ", skin);
+    await expect(page.getByTestId("demo-soul-note")).toHaveText("这是灵魂端 App 里的样子。正式网页只给官员和管理员用。");
+    const phone = await page.getByTestId("demo-soul-phone").boundingBox();
+    expect(phone && [Math.round(phone.width), Math.round(phone.height)]).toEqual([393, 852]);
+    // 转生 only where souls go round.
+    await expect(page.getByTestId("demo-soul-phone").getByRole("button", { name: "转生" })).toHaveCount(rebirth ? 1 : 0);
+    await page.getByTestId("demo-soul-back").click();
+    await page.waitForURL((u) => u.pathname !== "/");
+    await expect(page.locator("html")).toHaveAttribute("data-civ", skin);
+    clean(seen, `soul entrance ${skin}`);
+  });
+}
