@@ -9,7 +9,7 @@
  * turn to mud at small sizes.
  */
 import type { ReactNode } from "react";
-import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import type { CivKey } from "./theme";
 
@@ -235,6 +235,27 @@ export function BandPattern({ civ, color, width, height, ringBase, testID }: { c
 const patternStyle = { position: "absolute", left: 0, top: 0 } as const;
 
 /**
+ * v4 `.glowtop`: the page header's light — `radial-gradient(70% 100% at 30% 0%, glow × glowA, transparent 70%)`
+ * on the page ground, where v3 had a solid band. glowA is v4's: dark .30, light .24 (「页头光 0.24」).
+ * Behind everything, never carrying meaning.
+ */
+export const GLOW_ALPHA = { dark: 0.3, light: 0.24 } as const;
+
+export function GlowTop({ color, scheme, width, height, testID }: { color: string; scheme: "dark" | "light"; width: number; height: number; testID?: string }) {
+  return (
+    <Svg testID={testID} pointerEvents="none" width={width} height={height} style={patternStyle}>
+      <Defs>
+        <RadialGradient id="glow-top" cx={width * 0.3} cy={0} rx={width * 0.7} ry={height} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor={color} stopOpacity={GLOW_ALPHA[scheme]} />
+          <Stop offset={0.7} stopColor={color} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x={0} y={0} width={width} height={height} fill="url(#glow-top)" />
+    </Svg>
+  );
+}
+
+/**
  * v3 `CivilizationMotif context="stage"` (App.tsx; the web's `CivMotif`, JudgmentDeskStage.tsx):
  * each civilization's abstract figure stretched over the whole 「你现在在哪」 block, behind it, in
  * the civilization's colour at 9% (`.motif-stage`) — under 10%, never carrying meaning. Lines are
@@ -307,7 +328,11 @@ export type IconName =
   | "lamp"
   | "lampLit"
   | "more"
-  | "image";
+  | "image"
+  | "tabLife"
+  | "tabRebirth"
+  | "tabLetters"
+  | "tabCircle";
 
 const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   ledger: { box: 16, body: [<Rect key="a" x={3} y={2.5} width={10} height={11} />, <Path key="b" d="M5.5 2.5v11M3 6.5h10" />] },
@@ -354,6 +379,19 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
       <Rect key="a" x={2.75} y={4.25} width={14.5} height={11.5} strokeLinejoin="miter" />,
       <Circle key="b" cx={7} cy={8.5} r={1.25} />,
       <Path key="c" d="M2.75 14l4.5-4 3 2.5 3-3 4 3.5" strokeLinejoin="miter" />,
+    ],
+  },
+  // v4's capsule tab bar (V4Batch07 05 App): 24 grid, 1.5 stroke, round caps and joins — drawn with strokeWidth 1.5.
+  tabLife: { box: 24, body: [<Path key="a" d="M12 21s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11Z" strokeLinecap="round" strokeLinejoin="round" />, <Circle key="b" cx={12} cy={10} r={2.3} />] },
+  tabRebirth: { box: 24, body: [<Path key="a" d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" strokeLinecap="round" strokeLinejoin="round" />, <Path key="b" d="M19.5 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />] },
+  tabLetters: { box: 24, body: [<Rect key="a" x={3.5} y={5.5} width={17} height={13} rx={2} />, <Path key="b" d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />] },
+  tabCircle: {
+    box: 24,
+    body: [
+      <Circle key="a" cx={9} cy={8.5} r={3} />,
+      <Path key="b" d="M3.5 19.5c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5" strokeLinecap="round" strokeLinejoin="round" />,
+      <Circle key="c" cx={16.8} cy={9.3} r={2.3} />,
+      <Path key="d" d="M16.5 14.4c2.2.1 3.6 1.6 4.1 4" strokeLinecap="round" strokeLinejoin="round" />,
     ],
   },
   more: { box: 18, body: [<Rect key="a" x={3.5} y={8.5} width={1} height={1} />, <Rect key="b" x={8.5} y={8.5} width={1} height={1} />, <Rect key="c" x={13.5} y={8.5} width={1} height={1} />] },

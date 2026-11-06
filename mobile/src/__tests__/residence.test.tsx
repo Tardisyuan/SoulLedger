@@ -12,6 +12,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react-native
 import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import Svg, { Stop } from "react-native-svg";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
@@ -73,6 +74,9 @@ beforeEach(async () => {
   persistentStore.remove(`${LIFE_OPEN_PREFIX}${PROFILE.soul_code}`);
 });
 
+/** The colour of a header light (GlowTop): its first stop. */
+const glowOf = (testID: string) =>
+  screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === testID)!.findAllByType(Stop)[0].props.stopColor;
 const background = (el: { props: { style?: unknown } }) =>
   (StyleSheet.flatten(el.props.style as never) as { backgroundColor?: string }).backgroundColor;
 
@@ -81,9 +85,10 @@ describe("a soul residing in another civilization", () => {
     stubApi({ "/me/": { status: 200, data: RESIDING }, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
     await screen.findByTestId("profile-card");
-    // v3: the skin is the identity band's colour — where the soul is, not where it belongs (jest reports light).
-    expect(background(screen.getByTestId("plaque"))).toBe(v4.civ.eg.sL);
-    expect(background(screen.getByTestId("plaque"))).not.toBe(v4.civ.cn.sL);
+    // The skin is the header light's colour — where the soul is, not where it belongs (v4: no band; jest reports light).
+    expect(glowOf("band-glow")).toBe(v4.civ.eg.glow);
+    expect(glowOf("band-glow")).not.toBe(v4.civ.cn.glow);
+    expect(background(screen.getByTestId("plaque"))).toBe(v4.light.main);
     // Home lexicon: 功 / 过 and 审判中 — none of the Duat's words.
     expect(screen.getByText("功")).toBeTruthy();
     expect(screen.getByText("过")).toBeTruthy();

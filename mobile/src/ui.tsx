@@ -133,21 +133,19 @@ export function FadeIn({
 // ── type ───────────────────────────────────────────────────────────────
 
 /**
- * v2 补足 A3: seven sizes, 11 / 12 / 13 / 15 / 20 / 28 / 40, with their line
- * heights (16 / 18 / 20 / 24 / 28 / 36 / 48). 40 is for the plaque and the login
- * page only, so no variant here uses it yet. letterSpacing is in pt.
- * (v1 had 27 / 19 / 12.5 / 11.5 / 34 and a compact step-down for display and
- * value-lg on ≤ 340pt; A3 leaves no step between 20 and 28, and 28 is already
- * smaller than v1's compact value-lg, so the step-down is gone.)
+ * v4 (定稿 V4Batch07 的手机屏; user decision 2026-11-06 一律按 v4): 11 / 12 / 13 / 14 / 15 / 20 / 30
+ * with line heights 16 / 16 / 20 / 22 / 24 / 28 / 38. Body is 14/22 (v3 13/20), the big serif
+ * title 30/38 (v3 28/36), the line under a title 13/20 in --sub (`caption`, v3 12/18). v4 tracks
+ * no control text; the eyebrow keeps its 0.08em. letterSpacing is in pt.
  */
 export const TYPE = {
-  /** v3 第一批: titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
-  display: { fontSize: 28, lineHeight: 36, fontFamily: family.title },
+  /** Titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
+  display: { fontSize: 30, lineHeight: 38, fontFamily: family.title },
   title: { fontSize: 20, lineHeight: 28, fontFamily: family.title },
-  nav: { fontSize: 15, lineHeight: 20, fontFamily: family.ui[600], letterSpacing: 0.6 },
-  body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
+  nav: { fontSize: 15, lineHeight: 22, fontFamily: family.ui[600] },
+  body: { fontSize: 14, lineHeight: 22, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
-  label: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[500], letterSpacing: 1 },
+  label: { fontSize: 12, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.4 },
   /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
   section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
   /**
@@ -157,9 +155,9 @@ export const TYPE = {
    * mono `.product-label`; the 0.08em tracking is the prototype's.
    */
   eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
-  caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
+  caption: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
-  valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
+  valueLg: { fontSize: 30, lineHeight: 38, fontFamily: family.mono[500] },
 } satisfies Record<string, TextStyle>;
 
 export type Tone = "ink" | "muted" | "subtle" | "neg" | "negInk" | "pos" | "warn";
@@ -1622,9 +1620,9 @@ export const styles = StyleSheet.create({
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
   iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },
-  // A1: App buttons are 44 high, 13 / 600 — one size for all three kinds. v4: a control, radius 4.
+  // v4 phone: buttons and rows are 48 high (v3 44), 14 / 500 untracked — one size for all three kinds; radius 4.
   button: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderRadius: radius.control,
     flexDirection: "row",
@@ -1634,7 +1632,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[2],
   },
-  buttonText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20, letterSpacing: 0.6, textAlign: "center" },
+  buttonText: { fontFamily: family.ui[500], fontSize: 14, lineHeight: 22, textAlign: "center" },
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
   failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
   failedText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20 },

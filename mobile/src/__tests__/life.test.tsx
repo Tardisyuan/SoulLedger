@@ -74,16 +74,17 @@ describe("the identity band", () => {
   it("full at the top; one compact row past 68pt; open again only back near the top", async () => {
     await open();
     expect(screen.getByTestId("identity-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
-    // The name is the band's title: v3's title serif, Noto Serif SC 600, at 20 (13 compact).
-    expect(flat(screen.getByTestId("soul-name"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20 });
+    // The name is the page's big title: the title serif, Noto Serif SC 600, at v4's 30 (13 compact).
+    expect(flat(screen.getByTestId("soul-name"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 30, lineHeight: 38 });
     expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
     expect(flat(screen.getByTestId("identity")).height).toBe(116);
     // v3's 64pt seal still fits the full band (it clips: overflow hidden): padding, meta line, gap, seal.
     const band = flat(screen.getByTestId("identity")) as Record<string, number>;
     const need = band.paddingTop + Number(flat(screen.getByTestId("identity-meta")).lineHeight) + band.gap + Number(flat(screen.getByTestId("plaque-seal")).height) + band.paddingBottom;
     expect(need).toBeLessThanOrEqual(band.height);
-    // The civilization's colour (darkened 10%, as v3 mixes it) is the band's; the page under it is neutral.
-    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.civ.cn.sL);
+    // v4: no band — the header is the page's own ground; the civilization is its light (band-glow, below).
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v4.light.main);
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).not.toBe(v4.civ.cn.sL);
     expect(flat(screen.getByTestId("life")).backgroundColor).toBe(v4.light.main);
     scrollTo(60);
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
@@ -201,15 +202,21 @@ describe("v3 civilization marks on 本世", () => {
   const svg = (testID: string) => screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === testID)!;
   const settle = () => act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
 
-  it("the band carries 中国's grid at 15% white, fading out by 72% of the width", async () => {
+  it("the header carries 中国's grid at 15% in its glow, fading out by 72% of the width, under v4's header light", async () => {
     await open();
     await settle();
     expect(svg("band-pattern").props.opacity).toBe(0.15);
-    const stops = screen.UNSAFE_getAllByType(Stop).map((s) => [s.props.offset, s.props.stopOpacity, s.props.stopColor]);
-    expect(stops).toEqual([
-      [0, 1, ON_PLAQUE],
-      [0.72, 0, ON_PLAQUE],
+    const stops = (id: string) => svg(id).findAllByType(Stop).map((s) => [s.props.offset, s.props.stopOpacity, s.props.stopColor]);
+    expect(stops("band-pattern")).toEqual([
+      [0, 1, v4.civ.cn.glow],
+      [0.72, 0, v4.civ.cn.glow],
     ]);
+    // .glowtop: the glow at v4's light-scheme 0.24, gone by 70% (jest reports light).
+    expect(stops("band-glow")).toEqual([
+      [0, 0.24, v4.civ.cn.glow],
+      [0.7, 0, v4.civ.cn.glow],
+    ]);
+    expect(stops("band-pattern").map((s) => s[2])).not.toContain(ON_PLAQUE);
   });
 
   it("「你现在在哪」 has the stage motif behind it, in the civilization's colour under 10%", async () => {
@@ -343,11 +350,17 @@ describe("地府十三站与出身部洲 (docs/06, 07; Design 第五十七批 S-
     await act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
   }
 
-  it("on the road: a 赴冥 · 十三站 card with the station, its place and what it is; the continent under the name", async () => {
-    await openAs({ diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN" });
-    expect(screen.getByTestId("life-stations-at")).toHaveTextContent("3 / 13");
-    expect(screen.getByTestId("life-station-here")).toHaveTextContent("现在在望乡台：回望人间、最后一眼看家乡的地方。");
-    expect(screen.getByTestId("life-station-here")).not.toHaveTextContent("WANGXIANG_TERRACE");
+  it("on the road: v4's 「你现在在哪」 — the station, what it is, and the road drawn down from it; the continent under the name", async () => {
+    await openAs({ diyu_station: "WANGXIANG_TERRACE", birth_continent: "NANZHAN", current_state: "DISPOSED" });
+    expect(screen.getByTestId("life-here-place")).toHaveTextContent("望乡台");
+    expect(screen.getByTestId("life-here-line")).toHaveTextContent("现在在望乡台：回望人间、最后一眼看家乡的地方。");
+    expect(screen.getByTestId("life-here-line")).not.toHaveTextContent("WANGXIANG_TERRACE");
+    // Walked (土地庙、黄泉路), here, three ahead, then the rest folded: 「后面还有 n 处」.
+    expect(screen.getByTestId("route-TUDI_TEMPLE")).toBeTruthy();
+    expect(screen.getByTestId("route-WANGXIANG_TERRACE")).toHaveTextContent(/你现在在这里/);
+    expect(screen.getByTestId("route-ahead")).toHaveTextContent("后面还有 8 处");
+    // The thirteen-glyph card is the road now; it is not drawn twice.
+    expect(screen.queryByTestId("life-stations")).toBeNull();
     expect(screen.getByTestId("soul-continent")).toHaveTextContent(/南瞻部洲/);
     expect(screen.getByTestId("life-continent")).toHaveTextContent(/南瞻部洲/);
   });
