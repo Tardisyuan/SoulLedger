@@ -14,6 +14,8 @@ import type { Locale } from "@/src/contexts/I18nContext";
  */
 const LEAF_KEYS: Record<string, string> = {
   "/dashboard": "breadcrumb.menu.dashboard",
+  // backend/apps/menus/migrations/0036_add_annual_report_menu.py:冥界年报(概览下,v4 第八批 S14)
+  "/dashboard/annual": "annual.title",
   "/admin/stats": "breadcrumb.menu.admin_stats",
   "/souls": "breadcrumb.menu.souls",
   // backend/apps/menus/migrations/0023_b37_add_soul_events_menu.py(Design 给的键是 nav.soul_events)

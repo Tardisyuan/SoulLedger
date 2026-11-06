@@ -20,6 +20,7 @@ const FLATTENED = new Set(["概览", "灵魂业务"]);
 const SOUL_DIRS = new Set(["轮回", "社交"]);
 const WORK_PATHS = new Set([
   "/dashboard",
+  "/dashboard/annual",
   "/admin/stats",
   "/halls",
   "/judgment",

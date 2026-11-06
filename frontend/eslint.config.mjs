@@ -93,6 +93,8 @@ const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/auth/LoginShell.tsx"
 // 展示数字(用户 2026-10-02):律条语料页的条号与被引用数画 40(Design A3)。按**单个文件**
 // 放行,不是目录 —— 语料的其他组件、审判台都仍然报红。加一项同样要写理由。
 const DISPLAY_NUMERAL_ALLOW = ["app/corpus/page.tsx"];
+// `text-display-xl`(88/92,规范 v4)只给「主角数字」:概览主卡的今日待审与冥界年报的总数。同样按单个文件放行。
+const DISPLAY_XL_ALLOW = ["src/components/dashboard/HallOverview.tsx", "src/components/dashboard/AnnualReport.tsx"];
 
 // 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
 // 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
@@ -337,6 +339,8 @@ const designSystem = {
           report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了七档。用 text-2xs…text-xl(11/12/13/15/20/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
         } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p)) && !DISPLAY_NUMERAL_ALLOW.includes(file)) {
           report(chunk, at, `\`text-display\`(40px)只给匾题字、登录页与律条语料页的展示数字(规范 v2 A3;DISPLAY_NUMERAL_ALLOW)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
+        } else if (bare === "text-display-xl" && !DISPLAY_XL_ALLOW.includes(file)) {
+          report(chunk, at, `\`text-display-xl\`(88px)只给概览主卡与冥界年报的主角数字(规范 v4;DISPLAY_XL_ALLOW)。当前这一判用 text-display-lg(56)`);
         }
       }
     }),

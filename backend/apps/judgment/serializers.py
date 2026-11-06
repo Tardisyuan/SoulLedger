@@ -992,6 +992,45 @@ class JudgmentHallStatsSerializer(serializers.Serializer):
     weeks = JudgmentHallStatsWeekSerializer(many=True)
 
 
+class JudgmentAnnualCivSerializer(serializers.Serializer):
+    civilization = serializers.CharField()
+    received = serializers.IntegerField()
+
+
+class JudgmentAnnualLongestSerializer(serializers.Serializer):
+    case_number = serializers.CharField()
+    soul_name = serializers.CharField()
+    days = serializers.IntegerField()
+
+
+class JudgmentAnnualStatuteSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    corpus = serializers.CharField()
+    ordinal = serializers.IntegerField()
+    corpus_size = serializers.IntegerField()
+    display_title = serializers.CharField()
+    citations = serializers.IntegerField()
+
+
+class JudgmentAnnualSerializer(serializers.Serializer):
+    """`GET /judgment/annual/`:v4 冥界年报的数。每个数的定义见 `apps/judgment/annual.py`。"""
+
+    timezone = serializers.CharField()
+    year = serializers.IntegerField()
+    received = serializers.IntegerField()
+    placed = serializers.IntegerField()
+    by_civ = JudgmentAnnualCivSerializer(many=True)
+    concluded = serializers.IntegerField()
+    avg_days = serializers.FloatField(allow_null=True)
+    longest = JudgmentAnnualLongestSerializer(allow_null=True)
+    most_cited = JudgmentAnnualStatuteSerializer(allow_null=True)
+    returned = serializers.IntegerField()
+    returned_pct = serializers.FloatField(allow_null=True)
+    last_year_returned_pct = serializers.FloatField(allow_null=True)
+    monthly = serializers.ListField(child=serializers.IntegerField(), min_length=12, max_length=12)
+    last_year_monthly = serializers.ListField(child=serializers.IntegerField(), min_length=12, max_length=12)
+
+
 class JudgmentCommentSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
 

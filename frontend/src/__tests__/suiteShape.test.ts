@@ -246,6 +246,8 @@ const COLLECTED_FILES = [
   "TrendsPanel.test.tsx",
   // 2026-11-06 v4 概览三张卡(第七批 S04):hall-stats 读数、12 周趋势的十字线、待经手三类行、认领下一件。
   "HallOverview.test.tsx",
+  // 2026-11-07 v4 冥界年报(第八批 S14,/dashboard/annual)。
+  "AnnualReport.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
   // 数据范围 B1:接口不建根(新建 / 移动必须选上级),删除被名下灵魂 / 审判挡住时说出两个数。
